@@ -21,6 +21,7 @@ Use this skill when the user or orchestrator asks for time, effort, complexity, 
 - Include a contingency buffer whenever there is cross-system work, unclear rules, sensitive data, migration risk, or external dependency risk.
 - Track estimation accuracy after work closes: compare planned estimate, SDD execution effort, human review effort, post-review fixes, and final approval/cerrado time.
 - Treat "actual time" as the full process time until human review approval, not only the first SDD implementation/verification pass.
+- **PERSISTENCE (mandatory, pre-start only):** After producing the estimation report and before implementation starts, call `mem_save` with topic key `sdd/{change}/estimate` and `capture_prompt: false`. The saved record must carry: `planned_range_hours` (low/high), `complexity`, `confidence`, and a note that human-review and gate time is included in the planned range. Use the `change` slug inherited from the requirements/entry chain — never re-derive it. See `../_shared/pre-sdd-contracts.md` for topic-key authority.
 
 ## Decision Gates
 
@@ -42,7 +43,7 @@ Use this skill when the user or orchestrator asks for time, effort, complexity, 
 5. Estimate each component in hour ranges; then add a contingency buffer based on ambiguity, coupling, data sensitivity, and production risk.
 6. Rate complexity as Low, Medium, High, or Critical. Rate confidence as Low, Medium, or High.
 7. If the work is too large for a safe single delivery, recommend SDD slicing or chained PRs and provide phase-level time guidance.
-8. Before implementation starts, return the estimation report and persist the planned ranges when the active workflow has an artifact store.
+8. Before implementation starts, return the estimation report and **persist the pre-start estimate** via `mem_save` to topic key `sdd/{change}/estimate` with `capture_prompt: false`. Include `planned_range_hours` (low/high), `complexity`, `confidence`, and a note that human-review and gate time is already accounted for in the range. Use the `change` slug inherited from the requirements/entry chain.
 9. After each SDD completes, update the estimate record with implementation/verification effort, review findings, fix effort, approval/cierre time, variance from plan, and calibration notes.
 10. Use prior actuals and variance patterns to sharpen future pre-start estimates; never hide misses.
 

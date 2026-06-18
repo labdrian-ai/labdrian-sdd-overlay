@@ -38,6 +38,8 @@ The goal is not merely to document requests. The goal is to preserve stakeholder
 - Do not let roadmap planning start from broad themes. It must start from ordered atomic requirements and their business/technical constraints.
 - If the requirement will feed SDD, produce change candidates that can become `sdd/<change-name>/{proposal,spec,design,tasks}` artifacts in Engram.
 - Genesis SDD artifacts are Engram-first. Do not create `openspec/` artifacts unless the maintainer explicitly approved that exception.
+- **CHANGE-NAME AUTHORITY (mandatory):** This skill derives `change-name` exactly once, as a kebab-case slug (lowercase, hyphen-separated, no spaces or special characters, stable once set). Emit `change-name` in the requirements brief and in the Project-Inception Handoff table. Downstream stages inherit it verbatim and NEVER re-derive it. See `../_shared/pre-sdd-contracts.md` for the full identifier contract.
+- **PERSISTENCE (mandatory):** After producing the requirements brief, call `mem_save` with topic key `project/{project}/requirements/{change}` and `capture_prompt: false`. The saved record must include the full set of EARS + R-NNN requirements (each with its `scope` enum: `new-capability | feature | fix`), and the Project-Inception Handoff table. This is required regardless of execution mode (full pipeline or Lightweight). See `../_shared/pre-sdd-contracts.md` for topic-key authority.
 
 ## Critical Patterns
 
@@ -336,6 +338,8 @@ Use this to seed the roadmap:
 17. Mark assumptions, blocking questions, contradictions, and out-of-scope items.
 18. Propose SDD change candidates with stable change ids, dependency order, and risk.
 19. Add a verification checklist that future SDD verify agents must use before PASS/archive.
+20. **Derive `change-name`** as a kebab-case slug from the primary requirement theme. Emit it in the requirements brief header and in every row of the Project-Inception Handoff table. Downstream stages inherit this slug verbatim.
+21. **Persist the brief** via `mem_save` to topic key `project/{project}/requirements/{change}` with `capture_prompt: false`. The saved record must include all R-NNN requirements with their `scope` enum (`new-capability | feature | fix`) and the Project-Inception Handoff table.
 
 ## Output Contract
 
@@ -384,6 +388,7 @@ After all blocking issues are resolved, return this structure:
 
 ## Requirements
 ### R-001 — <requirement name>
+**Scope:** <new-capability | feature | fix>
 **Type:** <fix | feature | visual correction | permission rule | data continuity | technical debt>
 **Size:** <small | medium | must split>
 **Order:** <number>
@@ -467,6 +472,36 @@ After all blocking issues are resolved, return this structure:
 - The SDD roadmap must be accurate because it is derived from small explicit requirements, not from summarized intent.
 - If implementation agents later narrow scope, they must mark the row as partial and request confirmation.
 - PASS is forbidden when any critical requirement has no evidence.
+
+## Lightweight Mode (Tier 3 — Small Fix)
+
+Use this mode when the entry tier is **3** (small fix): the source input is a single, unambiguous fix with no stakeholder transcript and no manifest/architecture involvement required.
+
+Instead of running the full Conversation-to-Requirement Pipeline, accept or produce a minimal structured requirement object:
+
+```yaml
+R-NNN: <zero-padded ID, e.g. R-001>
+scope: fix
+one_line_impact: <one sentence describing user-visible or system impact>
+acceptance_evidence: <minimum observable proof — UI state, API contract, test, or check>
+change_name: <kebab-case slug derived here; inherited verbatim downstream>
+```
+
+**When to use Lightweight Mode:**
+- The change is a small, self-contained fix (Tier 3).
+- There is no stakeholder transcript to analyze.
+- The scope is unambiguous — no contradictions, no missing rules, no permission/data/money/compliance risk.
+- The fix can be described in one EARS sentence without splitting.
+
+**What it emits:**
+The minimal object above, plus the EARS requirement sentence (`R-NNN`) and the `change-name` slug. Downstream SDD stages use these verbatim — no re-derivation.
+
+**What it does NOT do:**
+- Does not run the full contradiction/ambiguity pre-analysis (no transcript to analyze).
+- Does not produce Manifest Inputs, Architecture Inputs, or SDD Roadmap Inputs layers.
+- Does not generate a traceability matrix or verification checklist.
+
+If any ambiguity surfaces during Lightweight Mode, immediately switch to the full pipeline.
 
 ## Anti-Patterns
 
