@@ -36,7 +36,8 @@ Slug rules:
 | Roadmap | `project/{project}/roadmap` | roadmap-maker |
 | Estimate (pre-start) | `sdd/{change}/estimate` | sdd-time-estimation |
 | Entry contract | `sdd/{change}/entry` | inception-pipeline |
-| Closure actuals | `sdd/{change}/actuals` | sdd-archive (ONLY writer) |
+| Closure actuals | `sdd/{change}/actuals` | inception-pipeline closure-feedback (ONLY writer) |
+| Estimation calibration | `project/{project}/estimation-calibration` | inception-pipeline closure-feedback |
 | Pipeline state | `sdd/{change}/pipeline-state` | inception-pipeline |
 
 > **Note:** Engine keys (`sdd/{change}/{proposal,spec,design,tasks,apply-progress,verify-report,archive-report,state}`) are owned by the SDD engine and are NOT listed here — do not reuse them.

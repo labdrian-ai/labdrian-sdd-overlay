@@ -84,7 +84,7 @@ The roadmap is the faithful execution guide for what will be built — not a dis
 - deviations from the original plan and why;
 - next sequencing impact (changed ordering, dependencies, or scope).
 
-**Actuals are READ, not written here.** Actual implementation effort, verification effort, human review duration, post-review fix effort, cierre timestamp, and total wall-clock time are owned exclusively by `sdd-archive` and persisted at `sdd/{change}/actuals` (see `../_shared/pre-sdd-contracts.md`). This skill reads those records to populate the tracking section — it does NOT maintain a parallel copy. When updating the roadmap for a completed SDD, retrieve actuals via `mem_search(query: "sdd/{change}/actuals")` + `mem_get_observation` and copy the relevant fields into the tracking line.
+**Actuals are READ, not written here.** Actual implementation effort, verification effort, human review duration, post-review fix effort, cierre timestamp, and total wall-clock time are owned exclusively by `inception-pipeline` closure-feedback and persisted at `sdd/{change}/actuals` (see `../_shared/pre-sdd-contracts.md`). This skill reads those records to populate the tracking section — it does NOT maintain a parallel copy. When updating the roadmap for a completed SDD, retrieve actuals via `mem_search(query: "sdd/{change}/actuals")` + `mem_get_observation` and copy the relevant fields into the tracking line.
 
 ### 5. Update the Roadmap When Reality Diverges
 If implementation or review reveals the roadmap is wrong, UPDATE it — do not silently continue. The roadmap must show the real history of decisions, timing, drift, and corrective work. Re-open it before each new SDD starts and after each SDD reaches human-approved closure.
@@ -99,7 +99,7 @@ If implementation or review reveals the roadmap is wrong, UPDATE it — do not s
 5. Derive candidate SDD changes from the architecture's modules, contracts, integrations, and risks. For each, cite its source(s).
 6. Order them by dependency and by risk-if-done-too-early. Earlier items unblock later ones.
 7. Mark any item lacking a citable source as `[PENDIENTE DE DECISIÓN]`.
-8. For each completed SDD, read its actuals from `sdd/{change}/actuals` (single source of truth per `../_shared/pre-sdd-contracts.md`) and copy relevant fields into the tracking line. Use `[PENDIENTE]` for actuals not yet recorded.
+8. For each completed SDD, read its actuals from `sdd/{change}/actuals` (single source of truth, written by `inception-pipeline` closure-feedback per `../_shared/pre-sdd-contracts.md`) and copy relevant fields into the tracking line. Use `[PENDIENTE]` for actuals not yet recorded.
 9. Persist per the artifact store mode, then return the structured response.
 
 ## Output Format
@@ -141,7 +141,7 @@ Use this format exactly. When producing or refreshing the full roadmap output (m
 - Anti-pattern: producing a roadmap before manifest + architecture are final.
 - Anti-pattern: letting the roadmap go stale when reality diverges instead of updating it.
 - Anti-pattern: regenerating the full roadmap on `incremental-insert` — this destroys recorded actuals and per-SDD history.
-- Anti-pattern: writing actuals data directly — actuals are owned by `sdd-archive` at `sdd/{change}/actuals`; this skill only reads them.
+- Anti-pattern: writing actuals data directly — actuals are owned by `inception-pipeline` closure-feedback at `sdd/{change}/actuals`; this skill only reads them.
 
 ## Rules
 
@@ -151,7 +151,7 @@ Use this format exactly. When producing or refreshing the full roadmap output (m
 - **Do NOT redo completed work** — preserve SDD history as foundational.
 - **Always keep the roadmap persisted and current** — update it when reality diverges; never silently continue.
 - **In `incremental-insert` mode, never regenerate the full roadmap** — splice only, preserve all actuals and history.
-- **Do NOT write actuals** — read `sdd/{change}/actuals` (owner: `sdd-archive`); do not maintain a parallel copy.
+- **Do NOT write actuals** — read `sdd/{change}/actuals` (owner: `inception-pipeline` closure-feedback); do not maintain a parallel copy.
 - **ALL output in Spanish (Latin American, rioplatense tone)** — warm, direct, without ornament.
 - **When inputs are insufficient, stop and report** — do not speculate.
 
@@ -162,4 +162,4 @@ Use this format exactly. When producing or refreshing the full roadmap output (m
 ## References
 
 - `assets/roadmap-template.md` — full roadmap output template. **Load conditionally**: read when producing or refreshing the full roadmap (`build` mode). Optional in `incremental-insert` mode.
-- `../_shared/pre-sdd-contracts.md` — topic key authority, actuals schema, and change-name rules. Actuals for each SDD change live at `sdd/{change}/actuals` (writer: `sdd-archive` only). This skill is a READ-ONLY consumer of those records.
+- `../_shared/pre-sdd-contracts.md` — topic key authority, actuals schema, and change-name rules. Actuals for each SDD change live at `sdd/{change}/actuals` (writer: `inception-pipeline` closure-feedback only). This skill is a READ-ONLY consumer of those records.

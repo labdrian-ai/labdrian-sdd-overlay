@@ -21,6 +21,7 @@ Use this skill when the user or orchestrator asks for time, effort, complexity, 
 - Include a contingency buffer whenever there is cross-system work, unclear rules, sensitive data, migration risk, or external dependency risk.
 - Track estimation accuracy after work closes: compare planned estimate, SDD execution effort, human review effort, post-review fixes, and final approval/cerrado time.
 - Treat "actual time" as the full process time until human review approval, not only the first SDD implementation/verification pass.
+- **CALIBRATION (pre-start, read-only):** At pre-start, READ `project/{project}/estimation-calibration` if present (writer: `inception-pipeline` closure-feedback — see `../_shared/pre-sdd-contracts.md`). Use the recorded variance patterns to sharpen the estimate: adjust ranges and confidence to past misses. Never hide misses — if the project consistently overruns, widen the range instead of anchoring low.
 - **PERSISTENCE (mandatory, pre-start only):** After producing the estimation report and before implementation starts, call `mem_save` with topic key `sdd/{change}/estimate` and `capture_prompt: false`. The saved record must carry: `planned_range_hours` (low/high), `complexity`, `confidence`, and a note that human-review and gate time is included in the planned range. Use the `change` slug inherited from the requirements/entry chain — never re-derive it. See `../_shared/pre-sdd-contracts.md` for topic-key authority.
 
 ## Decision Gates

@@ -18,6 +18,7 @@ genesis-design-system/references/status-colors.md custom
 genesis-design-system/references/streamdown.md custom
 chat-thread-analyzer/SKILL.md custom
 project-inception/SKILL.md custom
+inception-pipeline/SKILL.md custom
 project-manifest/SKILL.md custom
 project-architect/SKILL.md custom
 roadmap-maker/SKILL.md custom
@@ -33,3 +34,4 @@ skills/project-architect/references/architecture-template.md custom
 skills/project-architect/references/blocked-response.md custom
 skills/requirements-from-transcripts/references/output-template.md custom
 skills/requirements-from-transcripts/references/patterns-catalog.md custom
+skills/inception-pipeline/references/tier-selection.md custom
