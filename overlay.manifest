@@ -27,3 +27,9 @@ sdd-time-estimation/references/local-docs.md custom
 skills/_shared/pre-sdd-contracts.md custom
 skills/_shared/entry-contract.schema.json custom
 skills/_shared/actuals-record.schema.json custom
+skills/project-manifest/references/phase-templates.md custom
+skills/project-manifest/references/universal-base-rules.md custom
+skills/project-architect/references/architecture-template.md custom
+skills/project-architect/references/blocked-response.md custom
+skills/requirements-from-transcripts/references/output-template.md custom
+skills/requirements-from-transcripts/references/patterns-catalog.md custom
