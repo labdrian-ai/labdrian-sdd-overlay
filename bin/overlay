@@ -1,0 +1,308 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+OVERLAY_DIR="$HOME/labdrian-sdd-overlay"
+SKILLS_DIR="$HOME/.claude/skills"
+TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
+MANIFEST="$OVERLAY_DIR/overlay.manifest"
+
+# ---------------------------------------------------------------------------
+# helpers
+# ---------------------------------------------------------------------------
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+info() { echo "==> $*"; }
+
+# Read manifest: emit "path tag" lines, skipping blank lines and comments
+parse_manifest() {
+  grep -v '^\s*#' "$MANIFEST" | grep -v '^\s*$'
+}
+
+# Managed files only
+managed_files() {
+  parse_manifest | awk '$2 == "managed" { print $1 }'
+}
+
+# All tracked files (managed + custom)
+all_tracked_files() {
+  parse_manifest | awk '{ print $1 }'
+}
+
+# Ensure the parent directory of a path exists
+ensure_parent() {
+  local path="$1"
+  local parent
+  parent="$(dirname "$path")"
+  mkdir -p "$parent"
+}
+
+# ---------------------------------------------------------------------------
+# bootstrap
+# ---------------------------------------------------------------------------
+
+cmd_bootstrap() {
+  info "Bootstrapping overlay repo at $OVERLAY_DIR"
+
+  # 1. Init git repo if needed
+  if [[ ! -d "$OVERLAY_DIR/.git" ]]; then
+    git init "$OVERLAY_DIR"
+  fi
+
+  cd "$OVERLAY_DIR"
+
+  # 2. Ensure all required directories exist
+  mkdir -p bin \
+    skills/sdd-spec \
+    skills/sdd-tasks \
+    skills/sdd-verify/references \
+    skills/requirements-from-transcripts
+
+  # 3. Write scaffold files if not present
+  if [[ ! -f "$OVERLAY_DIR/README.md" ]]; then
+    echo "# labdrian-sdd-overlay" > "$OVERLAY_DIR/README.md"
+  fi
+  if [[ ! -f "$OVERLAY_DIR/overlay.manifest" ]]; then
+    die "overlay.manifest not found — ensure it exists before running bootstrap"
+  fi
+  if [[ ! -f "$OVERLAY_DIR/.gitignore" ]]; then
+    printf '*.swp\n*.swo\n*~\n.DS_Store\n' > "$OVERLAY_DIR/.gitignore"
+  fi
+
+  # 4. Stage scaffold (bin/overlay itself is already here; stage it too)
+  git add README.md overlay.manifest .gitignore bin/overlay
+
+  # 5. Initial commit (only if none exists)
+  if ! git log --oneline 2>/dev/null | head -1 | grep -q .; then
+    git commit -m "chore: initial overlay scaffold"
+  fi
+
+  # 6. Create/switch to upstream branch
+  git checkout -B upstream
+
+  # 7. Extract managed files from tarball
+  info "Extracting managed files from tarball: $TARBALL"
+  if [[ ! -f "$TARBALL" ]]; then
+    die "Tarball not found: $TARBALL"
+  fi
+
+  # Pre-build tar listing once to avoid SIGPIPE issues with set -euo pipefail
+  local tar_listing
+  tar_listing="$(tar tzf "$TARBALL" 2>/dev/null)"
+
+  while IFS= read -r rel_path; do
+    tar_path="files/home/labdrian/.claude/skills/${rel_path}"
+    dest="$OVERLAY_DIR/skills/${rel_path}"
+    ensure_parent "$dest"
+
+    if echo "$tar_listing" | grep -qF "$tar_path"; then
+      tar xzf "$TARBALL" --to-stdout "$tar_path" > "$dest"
+      info "  extracted: skills/$rel_path"
+    else
+      echo "  WARNING: not found in tarball, skipping: $tar_path"
+    fi
+  done < <(managed_files)
+
+  # 8. Commit upstream baseline (only if there are changes)
+  git add skills/
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git commit -m "upstream: baseline from gentle-ai 1.40.2"
+  else
+    info "No changes to commit on upstream (already up to date)"
+  fi
+
+  # 9. Create main from upstream (AFTER upstream commit)
+  git checkout -B main upstream
+
+  # 10. Copy current customized files from ~/.claude/skills/ onto main
+  info "Layering customized files onto main..."
+  while IFS= read -r line; do
+    rel_path="$(echo "$line" | awk '{ print $1 }')"
+    src="$SKILLS_DIR/${rel_path}"
+    dest="$OVERLAY_DIR/skills/${rel_path}"
+    ensure_parent "$dest"
+
+    if [[ -f "$src" ]]; then
+      cp "$src" "$dest"
+      info "  copied: $rel_path"
+    else
+      echo "  WARNING: source file not found, skipping: $src"
+    fi
+  done < <(parse_manifest)
+
+  # 11. Commit overlay
+  git add skills/
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git commit -m "overlay: EARS notation + stable R-NNN IDs"
+  else
+    info "No customization diff detected — main is identical to upstream"
+  fi
+
+  echo ""
+  echo "Bootstrap complete."
+  echo "  upstream branch: pristine vendor baseline"
+  echo "  main branch:     your customized overlay (current)"
+  echo ""
+  git log --oneline --all
+}
+
+# ---------------------------------------------------------------------------
+# capture
+# ---------------------------------------------------------------------------
+
+cmd_capture() {
+  cd "$OVERLAY_DIR"
+
+  local from_backup=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --from-backup)
+        shift
+        from_backup="${1:-}"
+        [[ -n "$from_backup" ]] || die "--from-backup requires a path argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  local current_branch
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+  git checkout upstream
+
+  if [[ -n "$from_backup" ]]; then
+    info "Capturing managed files from tarball: $from_backup"
+    [[ -f "$from_backup" ]] || die "Tarball not found: $from_backup"
+
+    local cap_listing
+    cap_listing="$(tar tzf "$from_backup" 2>/dev/null)"
+
+    while IFS= read -r rel_path; do
+      tar_path="files/home/labdrian/.claude/skills/${rel_path}"
+      dest="$OVERLAY_DIR/skills/${rel_path}"
+      ensure_parent "$dest"
+
+      if echo "$cap_listing" | grep -qF "$tar_path"; then
+        tar xzf "$from_backup" --to-stdout "$tar_path" > "$dest"
+        info "  extracted: skills/$rel_path"
+      else
+        echo "  WARNING: not found in tarball, skipping: $tar_path"
+      fi
+    done < <(managed_files)
+  else
+    info "Capturing managed files from $SKILLS_DIR"
+    while IFS= read -r rel_path; do
+      src="$SKILLS_DIR/${rel_path}"
+      dest="$OVERLAY_DIR/skills/${rel_path}"
+      ensure_parent "$dest"
+
+      if [[ -f "$src" ]]; then
+        cp "$src" "$dest"
+        info "  copied: $rel_path"
+      else
+        echo "  WARNING: source file not found, skipping: $src"
+      fi
+    done < <(managed_files)
+  fi
+
+  git add skills/
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git commit -m "upstream: sync from gentle-ai $(date +%Y-%m-%d)"
+    info "upstream updated"
+  else
+    info "No changes detected — upstream already up to date"
+  fi
+
+  git checkout "$current_branch"
+  info "Returned to branch: $current_branch"
+}
+
+# ---------------------------------------------------------------------------
+# apply
+# ---------------------------------------------------------------------------
+
+cmd_apply() {
+  cd "$OVERLAY_DIR"
+
+  git checkout main
+
+  info "Merging upstream into main..."
+  if ! git merge upstream; then
+    echo ""
+    echo "MERGE CONFLICTS detected. Resolve the following files, then run:"
+    echo "  git -C \"$OVERLAY_DIR\" add <file>"
+    echo "  git -C \"$OVERLAY_DIR\" commit"
+    echo "  overlay apply  (re-run to deploy after resolving)"
+    echo ""
+    echo "Conflicted files:"
+    git diff --name-only --diff-filter=U
+    exit 1
+  fi
+
+  info "Deploying tracked files to $SKILLS_DIR ..."
+  while IFS= read -r rel_path; do
+    src="$OVERLAY_DIR/skills/${rel_path}"
+    dest="$SKILLS_DIR/${rel_path}"
+    ensure_parent "$dest"
+
+    if [[ -f "$src" ]]; then
+      cp "$src" "$dest"
+      echo "  deployed: $rel_path"
+    else
+      echo "  WARNING: skills/$rel_path not found in overlay, skipping"
+    fi
+  done < <(all_tracked_files)
+
+  echo ""
+  echo "Deploy complete. Files written to $SKILLS_DIR"
+}
+
+# ---------------------------------------------------------------------------
+# status
+# ---------------------------------------------------------------------------
+
+cmd_status() {
+  cd "$OVERLAY_DIR"
+
+  echo "=== Branch ==="
+  git rev-parse --abbrev-ref HEAD
+
+  echo ""
+  echo "=== Diff stat upstream..main ==="
+  git diff --stat upstream..main || echo "(no diff)"
+
+  echo ""
+  echo "=== Drift detection (repo vs ~/.claude/skills/) ==="
+  while IFS= read -r rel_path; do
+    repo_file="$OVERLAY_DIR/skills/${rel_path}"
+    live_file="$SKILLS_DIR/${rel_path}"
+
+    if [[ ! -f "$repo_file" ]]; then
+      echo "  MISSING in repo : $rel_path"
+    elif [[ ! -f "$live_file" ]]; then
+      echo "  MISSING in skills: $rel_path"
+    else
+      if diff --brief "$repo_file" "$live_file" > /dev/null 2>&1; then
+        echo "  in sync  : $rel_path"
+      else
+        echo "  DRIFTED  : $rel_path"
+      fi
+    fi
+  done < <(all_tracked_files)
+}
+
+# ---------------------------------------------------------------------------
+# dispatch
+# ---------------------------------------------------------------------------
+
+COMMAND="${1:-}"
+shift || true
+
+case "$COMMAND" in
+  bootstrap) cmd_bootstrap "$@" ;;
+  capture)   cmd_capture "$@" ;;
+  apply)     cmd_apply "$@" ;;
+  status)    cmd_status "$@" ;;
+  "")        echo "Usage: overlay <bootstrap|capture|apply|status>" >&2; exit 1 ;;
+  *)         die "Unknown command: $COMMAND" ;;
+esac
