@@ -33,7 +33,7 @@
     "tier": {
       "type": "integer",
       "enum": [1, 2, 3],
-      "description": "Complexity tier: 1=small, 2=medium, 3=large/complex."
+      "description": "Entry tier: 1=new project (full inception), 2=feature/chore (reuse manifest+architect), 3=small fix (lightweight: requirements + roadmap-insert + estimation only)."
     },
     "requirements_topic_key": {
       "type": "string",
