@@ -32,11 +32,23 @@ This skill is NOT part of the upstream SDD pipeline. It is a LOCAL extension and
 - **Writes to**: `project/{project}/roadmap` in engram + optionally `openspec/project/roadmap.md` depending on artifact store mode
 - **Invoked by**: `project-inception` as phase 3. May also be invoked standalone once manifest and architecture exist.
 
+## Mode Parameter
+
+This skill accepts a `mode` parameter that controls its behavior:
+
+| Mode | When to use |
+|------|-------------|
+| `build` | Default. Full roadmap generation from manifest + architecture. Produces or replaces the entire `project/{project}/roadmap`. |
+| `incremental-insert` | Insert ONE new roadmap item (from a single new requirement) into the EXISTING roadmap. Re-sequences dependencies as needed. MUST preserve all previously recorded per-SDD actuals and history. |
+
+> **Gotcha — incremental-insert:** Never regenerate the full roadmap on incremental insert. Doing so destroys recorded actuals, per-SDD history, and deviation notes. In `incremental-insert` mode you load the existing `project/{project}/roadmap`, splice in the new item at the correct dependency position, update only the affected dependency chains, and write back. Everything else is unchanged.
+
 ## What You Receive
 
 From the orchestrator:
 - Project name (for persistence and topic key resolution)
 - Artifact store mode (`engram | openspec | hybrid | none`)
+- `mode`: `build` (default) or `incremental-insert`
 - Optional user input describing sequencing focus or constraints
 
 This skill is **one-shot per run**: given sufficient inputs it produces or updates the roadmap in a single pass. If manifest or architecture are missing or incomplete, it reports a blocker and does NOT invent a sequence.
@@ -68,13 +80,11 @@ Before sequencing, load existing/archived SDD artifacts. Completed work appears 
 ### 4. Keep the Roadmap Persisted and Current
 The roadmap is the faithful execution guide for what will be built — not a disposable planning note. It MUST always be persisted. Per SDD in the sequence, keep updated:
 - planned scope and planned estimate (before start);
-- actual implementation effort and verification effort (after work);
-- human review duration, findings, and approval/cierre timestamp or decision;
-- post-review fix effort;
-- total real process time from SDD start to human-approved closure;
-- deviations from the original plan and why;
 - status (`completado | en curso | bloqueado | diferido | superseded | planificado`);
+- deviations from the original plan and why;
 - next sequencing impact (changed ordering, dependencies, or scope).
+
+**Actuals are READ, not written here.** Actual implementation effort, verification effort, human review duration, post-review fix effort, cierre timestamp, and total wall-clock time are owned exclusively by `sdd-archive` and persisted at `sdd/{change}/actuals` (see `../_shared/pre-sdd-contracts.md`). This skill reads those records to populate the tracking section — it does NOT maintain a parallel copy. When updating the roadmap for a completed SDD, retrieve actuals via `mem_search(query: "sdd/{change}/actuals")` + `mem_get_observation` and copy the relevant fields into the tracking line.
 
 ### 5. Update the Roadmap When Reality Diverges
 If implementation or review reveals the roadmap is wrong, UPDATE it — do not silently continue. The roadmap must show the real history of decisions, timing, drift, and corrective work. Re-open it before each new SDD starts and after each SDD reaches human-approved closure.
@@ -83,16 +93,18 @@ If implementation or review reveals the roadmap is wrong, UPDATE it — do not s
 
 1. Load required inputs (manifest context + rules, architecture). For engram, `mem_search` then `mem_get_observation` for full content. Load existing SDD history and any prior roadmap.
 2. Run the Inputs Gate. If blocked, return the blocker and stop — do NOT persist.
-3. Place completed/archived SDDs first as foundational items (status `completado`).
-4. Derive candidate SDD changes from the architecture's modules, contracts, integrations, and risks. For each, cite its source(s).
-5. Order them by dependency and by risk-if-done-too-early. Earlier items unblock later ones.
-6. Mark any item lacking a citable source as `[PENDIENTE DE DECISIÓN]`.
-7. Fill the per-SDD tracking fields (estimate/effort/review/etc.); use `[PENDIENTE]` for fields not yet known rather than guessing.
-8. Persist per the artifact store mode, then return the structured response.
+3. **If `mode` is `build`**: proceed with steps 3–7 below.  
+   **If `mode` is `incremental-insert`**: load the existing `project/{project}/roadmap`, identify the correct insertion point for the new item based on dependencies, splice it in, re-sequence only the affected chains, and go directly to step 7. Do NOT regenerate the full roadmap.
+4. Place completed/archived SDDs first as foundational items (status `completado`).
+5. Derive candidate SDD changes from the architecture's modules, contracts, integrations, and risks. For each, cite its source(s).
+6. Order them by dependency and by risk-if-done-too-early. Earlier items unblock later ones.
+7. Mark any item lacking a citable source as `[PENDIENTE DE DECISIÓN]`.
+8. For each completed SDD, read its actuals from `sdd/{change}/actuals` (single source of truth per `../_shared/pre-sdd-contracts.md`) and copy relevant fields into the tracking line. Use `[PENDIENTE]` for actuals not yet recorded.
+9. Persist per the artifact store mode, then return the structured response.
 
 ## Output Format
 
-Use this format exactly. See `assets/roadmap-template.md` for the full template.
+Use this format exactly. When producing or refreshing the full roadmap output (mode `build`), read `assets/roadmap-template.md` for the complete template. In `incremental-insert` mode, loading the template is optional — use it only if inserting the new item requires reformatting the existing structure.
 
 ```markdown
 # Roadmap SDD — {Project Name}
@@ -128,6 +140,8 @@ Use this format exactly. See `assets/roadmap-template.md` for the full template.
 - Anti-pattern: items with no manifest/architecture/history source ("porque sí").
 - Anti-pattern: producing a roadmap before manifest + architecture are final.
 - Anti-pattern: letting the roadmap go stale when reality diverges instead of updating it.
+- Anti-pattern: regenerating the full roadmap on `incremental-insert` — this destroys recorded actuals and per-SDD history.
+- Anti-pattern: writing actuals data directly — actuals are owned by `sdd-archive` at `sdd/{change}/actuals`; this skill only reads them.
 
 ## Rules
 
@@ -136,6 +150,8 @@ Use this format exactly. See `assets/roadmap-template.md` for the full template.
 - **Do NOT write spec/design/apply detail** — that belongs to each SDD change, not the roadmap.
 - **Do NOT redo completed work** — preserve SDD history as foundational.
 - **Always keep the roadmap persisted and current** — update it when reality diverges; never silently continue.
+- **In `incremental-insert` mode, never regenerate the full roadmap** — splice only, preserve all actuals and history.
+- **Do NOT write actuals** — read `sdd/{change}/actuals` (owner: `sdd-archive`); do not maintain a parallel copy.
 - **ALL output in Spanish (Latin American, rioplatense tone)** — warm, direct, without ornament.
 - **When inputs are insufficient, stop and report** — do not speculate.
 
@@ -145,4 +161,5 @@ Use this format exactly. See `assets/roadmap-template.md` for the full template.
 
 ## References
 
-- `assets/roadmap-template.md` — full roadmap output template.
+- `assets/roadmap-template.md` — full roadmap output template. **Load conditionally**: read when producing or refreshing the full roadmap (`build` mode). Optional in `incremental-insert` mode.
+- `../_shared/pre-sdd-contracts.md` — topic key authority, actuals schema, and change-name rules. Actuals for each SDD change live at `sdd/{change}/actuals` (writer: `sdd-archive` only). This skill is a READ-ONLY consumer of those records.
