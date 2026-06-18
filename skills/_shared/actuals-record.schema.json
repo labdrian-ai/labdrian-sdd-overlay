@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SDD Closure Actuals Record",
+  "description": "Single closure actuals notebook written only by sdd-archive at change closure. Read by roadmap-maker and sdd-time-estimation for calibration. Eliminates dual-notebook drift (seam S5).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "change_name",
+    "project",
+    "implementation_hours",
+    "review_gate_hours",
+    "total_wall_clock_hours",
+    "post_review_fix_hours",
+    "approval_decision",
+    "scope_drift_notes",
+    "variance_vs_plan"
+  ],
+  "properties": {
+    "change_name": {
+      "type": "string",
+      "description": "Kebab-case change slug, inherited from entry contract."
+    },
+    "project": {
+      "type": "string",
+      "description": "Project identifier, matching the entry contract."
+    },
+    "implementation_hours": {
+      "type": "number",
+      "description": "Actual hours spent in implementation (apply phase)."
+    },
+    "review_gate_hours": {
+      "type": "number",
+      "description": "Actual hours spent in review gates (verify phase + PR review)."
+    },
+    "total_wall_clock_hours": {
+      "type": "number",
+      "description": "Total elapsed wall-clock hours from first apply to archive."
+    },
+    "post_review_fix_hours": {
+      "type": "number",
+      "description": "Hours spent on post-review fixes after the initial verify pass."
+    },
+    "approval_decision": {
+      "type": "string",
+      "description": "Final approval outcome (e.g. approved, approved-with-notes, rejected)."
+    },
+    "scope_drift_notes": {
+      "type": "string",
+      "description": "Free-text notes on any scope changes discovered during implementation."
+    },
+    "variance_vs_plan": {
+      "type": "string",
+      "description": "Summary of actual vs planned hours variance and contributing factors."
+    }
+  }
+}

@@ -24,3 +24,6 @@ roadmap-maker/SKILL.md custom
 roadmap-maker/assets/roadmap-template.md custom
 sdd-time-estimation/SKILL.md custom
 sdd-time-estimation/references/local-docs.md custom
+skills/_shared/pre-sdd-contracts.md custom
+skills/_shared/entry-contract.schema.json custom
+skills/_shared/actuals-record.schema.json custom

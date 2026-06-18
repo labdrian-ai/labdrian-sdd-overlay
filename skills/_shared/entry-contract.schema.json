@@ -1,0 +1,94 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "SDD Entry Contract",
+  "description": "Artifact handed to the SDD engine by inception-pipeline. Contains topic-key references (not content) and delivery parameters.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "change_name",
+    "project",
+    "tier",
+    "requirements_topic_key",
+    "manifest_refs",
+    "architect_ref",
+    "roadmap_entry_ref",
+    "estimate_topic_key",
+    "planned_range_hours",
+    "complexity",
+    "confidence",
+    "sdd_slice_recommendation",
+    "delivery_recommendation",
+    "strict_tdd",
+    "artifact_store_mode"
+  ],
+  "properties": {
+    "change_name": {
+      "type": "string",
+      "description": "Kebab-case change slug derived by requirements-from-transcripts and inherited verbatim by all downstream stages."
+    },
+    "project": {
+      "type": "string",
+      "description": "Project identifier used in Engram topic keys."
+    },
+    "tier": {
+      "type": "integer",
+      "enum": [1, 2, 3],
+      "description": "Complexity tier: 1=small, 2=medium, 3=large/complex."
+    },
+    "requirements_topic_key": {
+      "type": "string",
+      "description": "Engram topic key for the requirements brief written by requirements-from-transcripts."
+    },
+    "manifest_refs": {
+      "type": "string",
+      "description": "Engram topic key prefix for manifest artifacts written by project-manifest (e.g. project/{project}/manifest/*)."
+    },
+    "architect_ref": {
+      "type": "string",
+      "description": "Engram topic key for the final architecture artifact written by project-architect."
+    },
+    "roadmap_entry_ref": {
+      "type": "string",
+      "description": "Engram topic key for the roadmap entry written by roadmap-maker."
+    },
+    "estimate_topic_key": {
+      "type": "string",
+      "description": "Engram topic key for the pre-start estimate written by sdd-time-estimation."
+    },
+    "planned_range_hours": {
+      "type": "object",
+      "description": "Planned implementation effort range in hours from the estimate.",
+      "additionalProperties": false,
+      "required": ["low", "high"],
+      "properties": {
+        "low": { "type": "number", "description": "Optimistic bound in hours." },
+        "high": { "type": "number", "description": "Pessimistic bound in hours." }
+      }
+    },
+    "complexity": {
+      "type": "string",
+      "description": "Human-readable complexity assessment (e.g. low, medium, high, very-high)."
+    },
+    "confidence": {
+      "type": "string",
+      "description": "Confidence level in the estimate (e.g. low, medium, high)."
+    },
+    "sdd_slice_recommendation": {
+      "type": "string",
+      "description": "Recommended SDD slice strategy for apply phase (e.g. single-batch, two-batch, chained)."
+    },
+    "delivery_recommendation": {
+      "type": "string",
+      "description": "Recommended delivery strategy (e.g. single-pr, chained-pr, ask-on-risk)."
+    },
+    "strict_tdd": {
+      "type": "boolean",
+      "description": "Whether strict TDD mode is active for this change."
+    },
+    "artifact_store_mode": {
+      "type": "string",
+      "enum": ["engram", "openspec", "hybrid", "none"],
+      "description": "Artifact persistence backend for this change."
+    }
+  }
+}
