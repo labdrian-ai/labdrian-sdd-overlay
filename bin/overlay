@@ -1,7 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-OVERLAY_DIR="$HOME/labdrian-sdd-overlay"
+# Resolve the real path of this script, following symlinks.
+# Uses a pure-bash loop instead of readlink -f so it works on macOS/BSD too.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+OVERLAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="$OVERLAY_DIR/overlay.manifest"
 
