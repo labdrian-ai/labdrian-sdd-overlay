@@ -8,29 +8,50 @@ import (
 )
 
 var (
-	colorGreen  = lipgloss.Color("42")  // healthy
-	colorYellow = lipgloss.Color("220") // needs apply
-	colorRed    = lipgloss.Color("196") // needs capture+apply
-	colorGray   = lipgloss.Color("245")
-	colorAccent = lipgloss.Color("63")
+	// Color palette — dark-terminal friendly.
+	colorGreen   = lipgloss.Color("78")  // soft green — in sync
+	colorYellow  = lipgloss.Color("214") // amber — needs apply
+	colorRed     = lipgloss.Color("203") // soft red — needs capture+apply
+	colorGray    = lipgloss.Color("242")
+	colorMuted   = lipgloss.Color("238")
+	colorAccent  = lipgloss.Color("105") // soft purple — primary accent
+	colorAccent2 = lipgloss.Color("75")  // sky blue — secondary accent
+	colorWhite   = lipgloss.Color("255")
 
 	headerStyle = lipgloss.NewStyle().
 			Bold(true).
-			Foreground(lipgloss.Color("231")).
+			Foreground(colorWhite).
 			Background(colorAccent).
-			Padding(0, 1)
+			Padding(0, 2)
+
+	subHeaderStyle = lipgloss.NewStyle().
+			Foreground(colorAccent2).
+			Background(colorMuted).
+			Padding(0, 2)
 
 	footerStyle = lipgloss.NewStyle().
 			Foreground(colorGray).
-			MarginTop(1)
+			BorderTop(true).
+			BorderStyle(lipgloss.NormalBorder()).
+			BorderForeground(colorMuted).
+			MarginTop(1).
+			PaddingTop(1)
 
-	cursorStyle = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
-	dimStyle    = lipgloss.NewStyle().Foreground(colorGray)
-	titleStyle  = lipgloss.NewStyle().Bold(true).MarginBottom(1)
+	cursorStyle    = lipgloss.NewStyle().Foreground(colorAccent).Bold(true)
+	selectedStyle  = lipgloss.NewStyle().Foreground(colorGreen).Bold(true)
+	dimStyle       = lipgloss.NewStyle().Foreground(colorGray)
+	mutingStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
+	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorWhite).MarginBottom(1)
+	highlightStyle = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
 
 	boxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(colorAccent).
+			Padding(0, 1)
+
+	warnBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorYellow).
 			Padding(0, 1)
 
 	errStyle = lipgloss.NewStyle().Foreground(colorRed).Bold(true)
@@ -59,33 +80,35 @@ func (m model) View() string {
 }
 
 func (m model) header() string {
-	title := headerStyle.Render(" overlay TUI · gentle-ai sync validator ")
+	title := headerStyle.Render(" overlay TUI ")
+	subtitle := subHeaderStyle.Render(" gentle-ai sync validator ")
+	bar := lipgloss.JoinHorizontal(lipgloss.Top, title, subtitle)
 	if m.rootErr != nil {
-		return title + "  " + errStyle.Render("repo root: "+m.rootErr.Error())
+		return bar + "\n" + errStyle.Render("  Error al localizar el repositorio: "+m.rootErr.Error())
 	}
-	return title + "  " + dimStyle.Render(m.repoRoot)
+	return bar + "\n" + mutingStyle.Render("  "+m.repoRoot)
 }
 
 func (m model) footer() string {
 	var keys string
 	switch m.scr {
 	case screenTargets:
-		keys = "↑/↓ navigate · space select · enter actions · q quit"
+		keys = "↑/↓ navegar  ·  espacio seleccionar  ·  enter continuar  ·  q salir"
 	case screenActions:
-		keys = "↑/↓ navigate · enter run · esc back · q quit"
+		keys = "↑/↓ navegar  ·  enter ejecutar  ·  esc volver  ·  q salir"
 	case screenConfirm:
-		keys = "y confirm · n cancel"
+		keys = "y confirmar  ·  n cancelar"
 	case screenRunning:
-		keys = "running…"
+		keys = "Ejecutando…"
 	case screenResult:
-		keys = "↑/↓ scroll · esc back · q quit"
+		keys = "↑/↓ desplazar  ·  esc volver  ·  q salir"
 	}
 	return footerStyle.Render(keys)
 }
 
 func (m model) viewTargets() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Select targets to operate on"))
+	b.WriteString(titleStyle.Render("Seleccionar destinos"))
 	b.WriteString("\n")
 
 	for i, t := range m.targets {
@@ -93,16 +116,23 @@ func (m model) viewTargets() string {
 		if i == m.tCursor {
 			cursor = cursorStyle.Render("▸ ")
 		}
-		check := "[ ]"
+		check := dimStyle.Render("[ ]")
 		if m.selected[i] {
-			check = lipgloss.NewStyle().Foreground(colorGreen).Render("[x]")
+			check = selectedStyle.Render("[✓]")
 		}
 		name := fmt.Sprintf("%-9s", t.Name)
-		b.WriteString(fmt.Sprintf("%s%s %s  %s\n", cursor, check, name, dimStyle.Render(t.Path)))
+		var row string
+		if i == m.tCursor {
+			row = fmt.Sprintf("%s%s %s  %s\n", cursor, check,
+				highlightStyle.Render(name), dimStyle.Render(t.Path))
+		} else {
+			row = fmt.Sprintf("%s%s %s  %s\n", cursor, check, name, mutingStyle.Render(t.Path))
+		}
+		b.WriteString(row)
 	}
 
 	if !m.anySelected() {
-		b.WriteString("\n" + dimStyle.Render("(select at least one target to continue)"))
+		b.WriteString("\n" + dimStyle.Render("(seleccionar al menos un destino para continuar)"))
 	}
 	return b.String()
 }
@@ -113,22 +143,28 @@ func (m model) viewActions() string {
 	for _, t := range m.selectedTargets() {
 		sel = append(sel, t.Name)
 	}
-	b.WriteString(titleStyle.Render("Choose an action"))
+	b.WriteString(titleStyle.Render("Elegir una acción"))
 	b.WriteString("\n")
-	b.WriteString(dimStyle.Render("targets: "+strings.Join(sel, ", ")) + "\n\n")
+	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "\n\n")
 
 	for i, a := range m.actions {
 		cursor := "  "
 		if i == m.aCursor {
 			cursor = cursorStyle.Render("▸ ")
 		}
-		tag := ""
+		var tag string
 		if a.Mutating {
-			tag = lipgloss.NewStyle().Foreground(colorYellow).Render("  (mutating · confirms)")
+			tag = lipgloss.NewStyle().Foreground(colorYellow).Render("  [modifica]")
 		} else {
-			tag = dimStyle.Render("  (read-only)")
+			tag = mutingStyle.Render("  [solo lectura]")
 		}
-		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, a.Name, tag))
+		var nameStr string
+		if i == m.aCursor {
+			nameStr = highlightStyle.Render(a.Name)
+		} else {
+			nameStr = a.Name
+		}
+		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, nameStr, tag))
 	}
 	return b.String()
 }
@@ -139,20 +175,21 @@ func (m model) viewConfirm() string {
 		sel = append(sel, t.Name)
 	}
 	msg := fmt.Sprintf(
-		"Run %s on: %s ?\n\nThis MUTATES the targets.",
-		lipgloss.NewStyle().Bold(true).Render(m.pendingAction.Name),
+		"Ejecutar %s en: %s\n\n%s Esta acción modifica los destinos.",
+		lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
 		strings.Join(sel, ", "),
+		lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Atención:"),
 	)
-	return boxStyle.BorderForeground(colorYellow).Render(msg)
+	return warnBoxStyle.Render(msg)
 }
 
 func (m model) viewRunning() string {
-	return titleStyle.Render("Running " + m.pendingAction.Name + "…")
+	return titleStyle.Render("Ejecutando " + m.pendingAction.Name + "…")
 }
 
 func (m model) viewResult() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Result · " + m.result.action.Name))
+	b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
 	b.WriteString("\n")
 
 	if len(m.result.verdicts) > 0 {
@@ -167,28 +204,30 @@ func (m model) viewResult() string {
 // viewDashboard renders the headline per-target colored sync status.
 func (m model) viewDashboard() string {
 	var b strings.Builder
-	b.WriteString(lipgloss.NewStyle().Bold(true).Render("gentle-ai sync dashboard") + "\n")
+	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(colorAccent2).Render("Estado de sincronización") + "\n")
 
 	for _, v := range m.result.verdicts {
 		var color lipgloss.Color
-		var label string
+		var icon, label string
 		switch v.Status {
 		case SyncHealthy:
-			color, label = colorGreen, "GREEN  in sync with gentle-ai (healthy)"
+			color, icon, label = colorGreen, "✓", "Sincronizado"
 		case SyncNeedsApply:
-			color, label = colorYellow, "YELLOW needs apply (overlay not deployed)"
+			color, icon, label = colorYellow, "!", "Pendiente de aplicación"
 		case SyncNeedsCapture:
-			color, label = colorRed, "RED    gentle-ai synced — needs capture+apply"
+			color, icon, label = colorRed, "✗", "Requiere capture + apply"
 		default:
-			color, label = colorGray, "?      no verdict"
+			color, icon, label = colorGray, "?", "Sin datos"
 		}
 
-		badge := lipgloss.NewStyle().Foreground(color).Bold(true).Render("●")
-		head := fmt.Sprintf("%s %-9s %s", badge, v.Target,
-			lipgloss.NewStyle().Foreground(color).Render(label))
-		counts := dimStyle.Render(fmt.Sprintf("    upstream_changed=%d  overlay_not_deployed=%d",
+		st := lipgloss.NewStyle().Foreground(color).Bold(true)
+		badge := st.Render(icon)
+		targetName := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%-9s", v.Target))
+		statusLabel := lipgloss.NewStyle().Foreground(color).Render(label)
+		head := fmt.Sprintf("  %s %s  %s", badge, targetName, statusLabel)
+		counts := mutingStyle.Render(fmt.Sprintf("       cambios upstream: %d  overlay sin desplegar: %d",
 			v.UpstreamChanged, v.OverlayNotDeployed))
-		action := dimStyle.Render("    → " + v.Action)
+		action := dimStyle.Render("       → " + v.Action)
 
 		b.WriteString(head + "\n" + counts + "\n")
 		if v.Action != "" {
@@ -229,6 +268,6 @@ func (m model) viewOutput() string {
 		hint = dimStyle.Render(fmt.Sprintf("  [lines %d-%d of %d]", start+1, end, len(lines)))
 	}
 
-	title := lipgloss.NewStyle().Bold(true).Render("output") + hint
+	title := lipgloss.NewStyle().Bold(true).Foreground(colorAccent2).Render("salida") + hint
 	return title + "\n" + boxStyle.BorderForeground(colorGray).Render(shown)
 }

@@ -14,13 +14,13 @@ import (
 func TestInitialRenderShowsTargets(t *testing.T) {
 	tm := teatest.NewTestModel(t, newModel(), teatest.WithInitialTermSize(120, 40))
 
-	// Wait for a frame that shows all three targets, each selected ([x]).
+	// Wait for a frame that shows all three targets, each selected ([✓]).
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
 		s := string(b)
 		return strings.Contains(s, "claude") &&
 			strings.Contains(s, "opencode") &&
 			strings.Contains(s, "codex") &&
-			strings.Count(s, "[x]") >= 3
+			strings.Count(s, "[✓]") >= 3
 	}, teatest.WithDuration(3*time.Second))
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})

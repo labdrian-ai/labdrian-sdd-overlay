@@ -38,10 +38,10 @@ type Action struct {
 // Actions returns the action menu in display order.
 func Actions() []Action {
 	return []Action{
-		{Name: "Status", Command: "status", Mutating: false, SupportsAll: true},
-		{Name: "Sync-check (validate gentle-ai)", Command: "sync-check", Mutating: false, SupportsAll: true},
-		{Name: "Apply (deploy)", Command: "apply", Mutating: true, SupportsAll: true},
-		{Name: "Capture (refresh upstream)", Command: "capture", Mutating: true, SupportsAll: false},
+		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true},
+		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true},
+		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true},
+		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false},
 	}
 }
 
