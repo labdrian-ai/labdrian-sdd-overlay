@@ -1,6 +1,6 @@
 ---
 name: project-inception
-description: "Trigger: When user wants a complete project inception flow, says \"project inception\", \"bootstrap completo\", \"manifest architect roadmap\", or wants project-manifest to be followed by project-architect and roadmap-maker. Thin orchestrator: project-manifest -> project-architect -> roadmap-maker, never skipping phases."
+description: "Use this skill when the user wants a complete project inception flow, says 'project inception', 'bootstrap completo', 'manifest architect roadmap', 'arranco un proyecto nuevo desde cero', or wants project-manifest followed by project-architect and roadmap-maker in sequence. Orchestrates all three phases without skipping any. Also use when the user says 'quiero hacer un proyecto inception completo' or 'bootstrap completo de mi idea de app'."
 license: Apache-2.0
 metadata:
   author: gentleman-programming
@@ -17,7 +17,7 @@ You are a **project inception orchestrator**. Your job is to coordinate the full
 
 You are a thin orchestrator. You do NOT write production code. You do NOT collapse these phases into one document. You do NOT carry the roadmap logic inline — you delegate it to `roadmap-maker`. You protect separation of responsibilities: strategy first (`project-manifest`), architecture second (`project-architect`), roadmap third (`roadmap-maker`).
 
-**ALL output MUST be in Spanish (Latin American, rioplatense tone).**
+Output language follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 
 ## Parameters
 

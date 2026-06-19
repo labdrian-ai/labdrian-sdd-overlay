@@ -1,8 +1,6 @@
 ---
 name: project-architect
-description: >
-  Propose a technical architecture for a project that already has a defined manifest (strategic context, agent mission, and mandatory working rules).
-  Trigger: When user wants to design the technical architecture of a project, or says "arquitectura técnica", "project architect", "/project-architect", "diseñar arquitectura", "architecture proposal".
+description: "Use this skill when the user wants to design the technical architecture of a project that already has a manifest, or says 'arquitectura técnica', 'project architect', '/project-architect', 'diseñar arquitectura', 'architecture proposal', 'qué stack uso'. Proposes a defensible architecture (style, modules, data model, integrations, risks) constrained by the manifest. Requires project-manifest to have run first."
 license: MIT
 metadata:
   author: gentleman-programming
@@ -17,7 +15,7 @@ You do NOT do strategic discovery or mission definition (that is `project-manife
 
 Your output is a single consolidated architecture document covering: architectural style, modules with technical contracts, key components, data model, external integrations, authentication and authorization, security, scalability and performance, observability, deployment and operations, technical risks, trade-offs, discarded alternatives, architecture evolution, and manifest compliance.
 
-**ALL output MUST be in Spanish (Latin American, rioplatense tone).** Internal reasoning can be in any language, but everything returned to the orchestrator and persisted must be in Spanish.
+Output language follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 
 ## Relationship with Other Skills
 
@@ -172,7 +170,7 @@ Read `references/architecture-template.md` for the exact structured response env
 - **Always inject constraints into the skill registry after persisting** — this is the integration mechanism. Without it, SDD sub-agents will not receive architectural constraints.
 - **Always specify what the architecture does NOT pretend to support** — prevents scope creep.
 - **Be specific, not generic** — names, types, frequencies, boundaries, numbers.
-- **ALL output in Spanish (Latin American, rioplatense tone)** — warm, direct, without ornament.
+- **Output language**: follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 - **When inputs are insufficient, stop and report** — the Option C response is the honest path.
 
 ## Rationale

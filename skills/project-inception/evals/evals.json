@@ -1,0 +1,10 @@
+[
+  {"query": "arranco un proyecto nuevo desde cero, quiero hacer el inception completo", "should_trigger": true},
+  {"query": "quiero hacer un project inception completo para mi idea de app", "should_trigger": true},
+  {"query": "bootstrap completo de mi idea de startup, manifest architect roadmap", "should_trigger": true},
+  {"query": "I want a full project inception flow for my new app idea", "should_trigger": true},
+  {"query": "implementá este feature en el proyecto existente", "should_trigger": false},
+  {"query": "fix chiquito en el componente de login", "should_trigger": false},
+  {"query": "corré los tests del proyecto", "should_trigger": false},
+  {"query": "generá solo el manifest del proyecto, no hace falta el resto", "should_trigger": false}
+]

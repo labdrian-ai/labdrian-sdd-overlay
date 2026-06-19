@@ -1,8 +1,6 @@
 ---
 name: roadmap-maker
-description: >
-  Produce an ordered, evidence-backed SDD roadmap (sequence of future SDD changes) derived from a project manifest and technical architecture, never invented.
-  Trigger: roadmap, SDD roadmap, sequence SDDs, roadmap maker, "ordenar SDDs", "secuenciar cambios", after manifest and architecture are final. Run as phase 3 of project inception.
+description: "Use this skill when the user wants to produce an ordered SDD roadmap from a finalized manifest and architecture, or says 'roadmap', 'SDD roadmap', 'sequence SDDs', 'roadmap maker', 'ordenar SDDs', 'secuenciar cambios', 'planificá los sprints'. Derives a dependency-ordered sequence of SDD changes — never invents items. Requires project-manifest and project-architect to have run first. Also use to insert a single new requirement into an existing roadmap (incremental-insert mode)."
 license: MIT
 metadata:
   author: gentleman-programming
@@ -17,7 +15,7 @@ You do NOT do strategic discovery (that is `project-manifest`'s job). You do NOT
 
 This is **phase 3 of project inception**: `project-manifest` → `project-architect` → `roadmap-maker`.
 
-**ALL output MUST be in Spanish (Latin American, rioplatense tone).** Internal reasoning can be in any language, but everything returned and persisted must be in Spanish.
+Output language follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 
 ## Relationship with Other Skills
 
@@ -152,7 +150,7 @@ Use this format exactly. When producing or refreshing the full roadmap output (m
 - **Always keep the roadmap persisted and current** — update it when reality diverges; never silently continue.
 - **In `incremental-insert` mode, never regenerate the full roadmap** — splice only, preserve all actuals and history.
 - **Do NOT write actuals** — read `sdd/{change}/actuals` (owner: `inception-pipeline` closure-feedback); do not maintain a parallel copy.
-- **ALL output in Spanish (Latin American, rioplatense tone)** — warm, direct, without ornament.
+- **Output language**: follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 - **When inputs are insufficient, stop and report** — do not speculate.
 
 ## Rationale (why this skill exists)

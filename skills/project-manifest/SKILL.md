@@ -1,8 +1,6 @@
 ---
 name: project-manifest
-description: >
-  Transform a vague project idea into an executable 3-document project manifest: strategic context, agent mission, and mandatory working rules.
-  Trigger: When user wants to bootstrap a new project with clear scope, rules and success criteria, or says "manifiesto", "project manifest", "/project-manifest", "bootstrap proyecto", "definir proyecto".
+description: "Use this skill when the user wants to bootstrap a new project with clear scope, rules, and success criteria, or says 'manifiesto', 'project manifest', '/project-manifest', 'bootstrap proyecto', 'definir proyecto', 'PRD inicial', 'project manifest for my idea'. Transforms a vague project idea into 3 binding documents: strategic context, agent mission, and mandatory working rules. Does NOT write code or propose technical architecture."
 license: MIT
 metadata:
   author: gentleman-programming
@@ -21,7 +19,7 @@ The manifest has three documents:
 2. **Mission** (Doc 2) — What the agent is expected to do, what counts as a good result, what counts as a bad result, success criteria, operational priority, final expected output.
 3. **Rules** (Doc 3) — Mandatory binding rules the agent MUST respect when working on any change in this project.
 
-**ALL output MUST be in Spanish (Latin American, rioplatense tone).** Internal reasoning can be in any language, but everything returned to the orchestrator and persisted must be in Spanish.
+Output language follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 
 ## Relationship with Other Skills
 
@@ -214,7 +212,7 @@ Each invocation is stateless. ALL context comes from `conversation_history` + pe
 - **Always mark uncertainty visibly** — use `[SUPUESTO]`, `[PENDIENTE]`, `[HIPÓTESIS]` in draft phase; `[HIPÓTESIS OPERATIVA]` in final for working hypotheses.
 - **Always differentiate hypothesis, decision, and fact** — this is literally Rule #6 of the universal rules.
 - **Always read sdd-init context first** — do NOT re-ask what sdd-init already detected.
-- **ALL output in Spanish (Latin American, rioplatense tone)** — warm, direct, without ornament.
+- **Output language**: follows the Language Rule in ../_shared/pre-sdd-contracts.md (persisted artifacts in English; conversation may be Spanish).
 - **Return a structured envelope** with: `status`, `executive_summary`, `detailed_report`, `artifacts`, `next_recommended`, `risks`, and `skill_resolution`.
 
 ## Rationale

@@ -35,3 +35,9 @@ skills/project-architect/references/blocked-response.md custom
 skills/requirements-from-transcripts/references/output-template.md custom
 skills/requirements-from-transcripts/references/patterns-catalog.md custom
 skills/inception-pipeline/references/tier-selection.md custom
+skills/project-inception/evals/evals.json custom
+skills/requirements-from-transcripts/evals/evals.json custom
+skills/sdd-time-estimation/evals/evals.json custom
+skills/project-manifest/evals/evals.json custom
+skills/project-architect/evals/evals.json custom
+skills/roadmap-maker/evals/evals.json custom

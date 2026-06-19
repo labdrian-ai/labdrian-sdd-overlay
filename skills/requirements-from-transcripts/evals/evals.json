@@ -1,0 +1,8 @@
+[
+  {"query": "convertí esta transcripción de la meet en requerimientos técnicos", "should_trigger": true},
+  {"query": "tengo una grabación de call con el cliente, extraé los reqs del proyecto", "should_trigger": true},
+  {"query": "meeting transcript to requirements, here is the conversation", "should_trigger": true},
+  {"query": "estimá cuánto tarda este cambio antes de arrancar", "should_trigger": false},
+  {"query": "tomá los requerimientos de esta charla y hacé el SDD completo", "should_trigger": false},
+  {"query": "generá el manifest del proyecto a partir de esta descripción", "should_trigger": false}
+]
