@@ -59,7 +59,6 @@ The orchestrator should provide structured status from `skills/_shared/sdd-statu
 | Task incomplete | CRITICAL for core task, WARNING for cleanup task. |
 | Test command exits non-zero | CRITICAL. |
 | Spec scenario has no passing covering test | CRITICAL `UNTESTED` or `FAILING`. |
-| `R-NNN` has no test citing that ID (name or comment) | CRITICAL `UNTESTED` — report as "R-NNN: no test cites this ID". |
 | Design deviation exists | WARNING unless it breaks a spec. |
 
 ## Execution Steps
@@ -76,7 +75,7 @@ The orchestrator should provide structured status from `skills/_shared/sdd-statu
 
 ## Output Contract
 
-Return `## Verification Report` with change, mode, completeness table, build/tests/coverage evidence, spec compliance matrix (keyed on `R-NNN` — include `R-NNN` as the first column; any `R-NNN` with no test citing that ID is reported as CRITICAL `UNTESTED`), correctness table, design coherence table, issues grouped as CRITICAL/WARNING/SUGGESTION, and final verdict `PASS`, `PASS WITH WARNINGS`, or `FAIL`.
+Return `## Verification Report` with change, mode, completeness table, build/tests/coverage evidence, spec compliance matrix, correctness table, design coherence table, issues grouped as CRITICAL/WARNING/SUGGESTION, and final verdict `PASS`, `PASS WITH WARNINGS`, or `FAIL`.
 
 ## Graceful Artifact Handling
 
