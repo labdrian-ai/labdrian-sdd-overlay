@@ -1,0 +1,8 @@
+[
+  {"query": "quiero arrancar un proyecto nuevo, no tenemos nada todavía", "should_trigger": true},
+  {"query": "I need to implement a new feature on the existing project — add a notifications module", "should_trigger": true},
+  {"query": "fix chico: el botón de submit en el form de login no responde en mobile", "should_trigger": true},
+  {"query": "estimá cuánto tarda implementar el módulo de pagos", "should_trigger": false},
+  {"query": "diseñá la arquitectura del sistema de autenticación", "should_trigger": false},
+  {"query": "corré los tests del proyecto y mostrame los que fallan", "should_trigger": false}
+]

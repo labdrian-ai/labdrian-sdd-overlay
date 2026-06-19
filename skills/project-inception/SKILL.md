@@ -1,6 +1,6 @@
 ---
 name: project-inception
-description: "Use this skill when the user wants a complete project inception flow, says 'project inception', 'bootstrap completo', 'manifest architect roadmap', 'arranco un proyecto nuevo desde cero', or wants project-manifest followed by project-architect and roadmap-maker in sequence. Orchestrates all three phases without skipping any. Also use when the user says 'quiero hacer un proyecto inception completo' or 'bootstrap completo de mi idea de app'."
+description: "Runs the manifest→architect→roadmap trilogy and is normally invoked BY inception-pipeline — use this skill directly only when you explicitly want just the trilogy without tier routing. Triggers on: 'project inception', 'bootstrap completo', 'manifest architect roadmap', 'quiero hacer un proyecto inception completo', 'bootstrap completo de mi idea de app'. For starting any unit of work (new project, feature, chore, or fix), use inception-pipeline first — it selects the tier and drives this skill when appropriate. Orchestrates project-manifest → project-architect → roadmap-maker in sequence without skipping any phase."
 license: Apache-2.0
 metadata:
   author: gentleman-programming

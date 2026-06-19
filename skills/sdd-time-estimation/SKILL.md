@@ -1,6 +1,6 @@
 ---
 name: sdd-time-estimation
-description: "Use this skill when the user or orchestrator asks how long a change will take, wants an effort or complexity estimate before starting SDD execution, or says 'cuánto tarda', 'estimá el esfuerzo', 'time estimate', 'effort estimate', 'how long will this take'. Produces a pre-start planning report with hour ranges, confidence level, contingency buffer, and human-review time included. Also use after a completed SDD to record actuals and calibrate future estimates."
+description: "Use this skill when the user or orchestrator asks how long a change will take, wants an effort or complexity estimate before starting SDD execution, or says 'cuánto tarda', 'estimá el esfuerzo', 'time estimate', 'effort estimate', 'how long will this take'. Produces a pre-start planning report with hour ranges, confidence level, contingency buffer, and human-review time included. Also use to calibrate future estimates from actuals written by inception-pipeline closure-feedback."
 license: Apache-2.0
 metadata:
   author: gentleman-programming

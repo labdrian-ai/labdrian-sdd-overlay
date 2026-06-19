@@ -6,5 +6,7 @@
   {"query": "implementá este feature en el proyecto existente", "should_trigger": false},
   {"query": "fix chiquito en el componente de login", "should_trigger": false},
   {"query": "corré los tests del proyecto", "should_trigger": false},
-  {"query": "generá solo el manifest del proyecto, no hace falta el resto", "should_trigger": false}
+  {"query": "generá solo el manifest del proyecto, no hace falta el resto", "should_trigger": false},
+  {"query": "arrancá el proyecto, nueva feature de notificaciones", "should_trigger": false},
+  {"query": "start work on a small fix for the login button", "should_trigger": false}
 ]
