@@ -2,9 +2,14 @@
 set -euo pipefail
 
 OVERLAY_DIR="$HOME/labdrian-sdd-overlay"
-SKILLS_DIR="$HOME/.claude/skills"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="$OVERLAY_DIR/overlay.manifest"
+
+declare -A TARGET_PATHS=(
+  [claude]="$HOME/.claude/skills"
+  [opencode]="$HOME/.config/opencode/skills"
+  [codex]="$HOME/.codex/skills"
+)
 
 # ---------------------------------------------------------------------------
 # helpers
@@ -34,6 +39,45 @@ ensure_parent() {
   local parent
   parent="$(dirname "$path")"
   mkdir -p "$parent"
+}
+
+# Resolve --target argument to a space-separated list of target names
+resolve_targets() {
+  local arg="${1:-all}"
+  if [[ "$arg" == "all" ]]; then
+    echo "claude opencode codex"
+  elif [[ -v TARGET_PATHS["$arg"] ]]; then
+    echo "$arg"
+  else
+    die "Unknown target: $arg. Valid: claude, opencode, codex, all"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# usage
+# ---------------------------------------------------------------------------
+
+usage() {
+  cat <<'EOF'
+Usage: overlay <command> [options]
+
+Commands:
+  bootstrap                        Initialize overlay repo and branches
+  capture [--target claude|opencode|codex] [--from-backup DIR]
+                                   Capture managed files from target (default: claude)
+  apply [--target claude|opencode|codex|all]
+                                   Merge upstream and deploy to target(s) (default: all)
+  status [--target claude|opencode|codex|all]
+                                   Show drift between repo and target(s) (default: all)
+  sync-check [--target claude|opencode|codex|all]
+                                   Validate gentle-ai sync state per target (default: all)
+  --help                           Show this help
+
+Targets:
+  claude   → ~/.claude/skills
+  opencode → ~/.config/opencode/skills
+  codex    → ~/.codex/skills
+EOF
 }
 
 # ---------------------------------------------------------------------------
@@ -117,7 +161,7 @@ cmd_bootstrap() {
   info "Layering customized files onto main..."
   while IFS= read -r line; do
     rel_path="$(echo "$line" | awk '{ print $1 }')"
-    src="$SKILLS_DIR/${rel_path}"
+    src="${TARGET_PATHS[claude]}/${rel_path}"
     dest="$OVERLAY_DIR/skills/${rel_path}"
     ensure_parent "$dest"
 
@@ -153,8 +197,15 @@ cmd_capture() {
   cd "$OVERLAY_DIR"
 
   local from_backup=""
+  local target_arg="claude"
+
   while [[ $# -gt 0 ]]; do
     case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
       --from-backup)
         shift
         from_backup="${1:-}"
@@ -164,6 +215,14 @@ cmd_capture() {
     esac
     shift || true
   done
+
+  # Validate single target (capture only supports one at a time)
+  if [[ "$target_arg" == "all" ]]; then
+    die "capture does not support --target all. Specify a single target: claude, opencode, codex"
+  fi
+  [[ -v TARGET_PATHS["$target_arg"] ]] || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+
+  local target_dir="${TARGET_PATHS[$target_arg]}"
 
   local current_branch
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
@@ -190,9 +249,9 @@ cmd_capture() {
       fi
     done < <(managed_files)
   else
-    info "Capturing managed files from $SKILLS_DIR"
+    info "Capturing managed files from $target_dir"
     while IFS= read -r rel_path; do
-      src="$SKILLS_DIR/${rel_path}"
+      src="$target_dir/${rel_path}"
       dest="$OVERLAY_DIR/skills/${rel_path}"
       ensure_parent "$dest"
 
@@ -224,6 +283,20 @@ cmd_capture() {
 cmd_apply() {
   cd "$OVERLAY_DIR"
 
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
   git checkout main
 
   info "Merging upstream into main..."
@@ -239,22 +312,41 @@ cmd_apply() {
     exit 1
   fi
 
-  info "Deploying tracked files to $SKILLS_DIR ..."
-  while IFS= read -r rel_path; do
-    src="$OVERLAY_DIR/skills/${rel_path}"
-    dest="$SKILLS_DIR/${rel_path}"
-    ensure_parent "$dest"
+  for t in $(resolve_targets "$target_arg"); do
+    local tpath="${TARGET_PATHS[$t]}"
+    echo ""
+    echo "=== Deploying to: $t ($tpath) ==="
 
-    if [[ -f "$src" ]]; then
-      cp "$src" "$dest"
-      echo "  deployed: $rel_path"
-    else
-      echo "  WARNING: skills/$rel_path not found in overlay, skipping"
+    if [[ ! -d "$tpath" ]]; then
+      mkdir -p "$tpath"
+      echo "  (created target directory: $tpath)"
     fi
-  done < <(all_tracked_files)
+
+    local deployed=0
+    local in_sync=0
+
+    while IFS= read -r rel_path; do
+      src="$OVERLAY_DIR/skills/${rel_path}"
+      dest="$tpath/${rel_path}"
+      ensure_parent "$dest"
+
+      if [[ -f "$src" ]]; then
+        if [[ -f "$dest" ]] && diff --brief "$src" "$dest" > /dev/null 2>&1; then
+          in_sync=$((in_sync + 1))
+        else
+          cp "$src" "$dest"
+          deployed=$((deployed + 1))
+        fi
+      else
+        echo "  WARNING: skills/$rel_path not found in overlay, skipping"
+      fi
+    done < <(all_tracked_files)
+
+    echo "  $t: deployed=$deployed in-sync=$in_sync"
+  done
 
   echo ""
-  echo "Deploy complete. Files written to $SKILLS_DIR"
+  echo "Deploy complete."
 }
 
 # ---------------------------------------------------------------------------
@@ -264,6 +356,20 @@ cmd_apply() {
 cmd_status() {
   cd "$OVERLAY_DIR"
 
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
   echo "=== Branch ==="
   git rev-parse --abbrev-ref HEAD
 
@@ -271,24 +377,106 @@ cmd_status() {
   echo "=== Diff stat upstream..main ==="
   git diff --stat upstream..main || echo "(no diff)"
 
-  echo ""
-  echo "=== Drift detection (repo vs ~/.claude/skills/) ==="
-  while IFS= read -r rel_path; do
-    repo_file="$OVERLAY_DIR/skills/${rel_path}"
-    live_file="$SKILLS_DIR/${rel_path}"
+  for t in $(resolve_targets "$target_arg"); do
+    local tpath="${TARGET_PATHS[$t]}"
+    echo ""
+    echo "=== Status: $t ($tpath) ==="
 
-    if [[ ! -f "$repo_file" ]]; then
-      echo "  MISSING in repo : $rel_path"
-    elif [[ ! -f "$live_file" ]]; then
-      echo "  MISSING in skills: $rel_path"
-    else
-      if diff --brief "$repo_file" "$live_file" > /dev/null 2>&1; then
-        echo "  in sync  : $rel_path"
+    while IFS= read -r rel_path; do
+      repo_file="$OVERLAY_DIR/skills/${rel_path}"
+      live_file="$tpath/${rel_path}"
+
+      if [[ ! -f "$repo_file" ]]; then
+        echo "  MISSING in repo: $rel_path"
+      elif [[ ! -f "$live_file" ]]; then
+        echo "  MISSING in target: $rel_path"
       else
-        echo "  DRIFTED  : $rel_path"
+        if diff --brief "$repo_file" "$live_file" > /dev/null 2>&1; then
+          echo "  in sync  : $rel_path"
+        else
+          echo "  DIFFERS  : $rel_path"
+        fi
       fi
+    done < <(all_tracked_files)
+  done
+}
+
+# ---------------------------------------------------------------------------
+# sync-check
+# ---------------------------------------------------------------------------
+
+cmd_sync_check() {
+  cd "$OVERLAY_DIR"
+
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  local tmpfile=""
+  tmpfile="$(mktemp)"
+  trap 'rm -f "${tmpfile:-}"' EXIT
+
+  for t in $(resolve_targets "$target_arg"); do
+    local tpath="${TARGET_PATHS[$t]}"
+    echo ""
+    echo "=== sync-check: $t ($tpath) ==="
+
+    if [[ ! -d "$tpath" ]]; then
+      echo "SYNC_CHECK:$t: target dir not found at $tpath -- skipping"
+      continue
     fi
-  done < <(all_tracked_files)
+
+    local upstream_changed=0
+    local overlay_not_deployed=0
+
+    while IFS= read -r rel_path; do
+      # Get upstream version into tmpfile
+      if ! git show "upstream:skills/${rel_path}" > "$tmpfile" 2>/dev/null; then
+        echo "  WARNING: upstream:skills/$rel_path not found in upstream branch, skipping"
+        continue
+      fi
+
+      local live_file="$tpath/${rel_path}"
+      local repo_file="$OVERLAY_DIR/skills/${rel_path}"
+
+      # Compare live vs upstream
+      if [[ ! -f "$live_file" ]]; then
+        # Missing live file counts as not matching upstream
+        upstream_changed=$((upstream_changed + 1))
+        echo "  UPSTREAM_CHANGED: skills/$rel_path (live missing)"
+      elif ! diff --brief "$tmpfile" "$live_file" > /dev/null 2>&1; then
+        upstream_changed=$((upstream_changed + 1))
+        echo "  UPSTREAM_CHANGED: skills/$rel_path"
+      fi
+
+      # Compare repo main vs live at target
+      if [[ ! -f "$live_file" ]] || ! diff --brief "$repo_file" "$live_file" > /dev/null 2>&1; then
+        overlay_not_deployed=$((overlay_not_deployed + 1))
+        echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path"
+      fi
+    done < <(managed_files)
+
+    echo ""
+    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed"
+
+    if [[ "$upstream_changed" -gt 0 ]]; then
+      echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"
+    elif [[ "$overlay_not_deployed" -gt 0 ]]; then
+      echo "ACTION:$t: run 'overlay apply --target $t'"
+    else
+      echo "ACTION:$t: in sync with gentle-ai"
+    fi
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -299,10 +487,12 @@ COMMAND="${1:-}"
 shift || true
 
 case "$COMMAND" in
-  bootstrap) cmd_bootstrap "$@" ;;
-  capture)   cmd_capture "$@" ;;
-  apply)     cmd_apply "$@" ;;
-  status)    cmd_status "$@" ;;
-  "")        echo "Usage: overlay <bootstrap|capture|apply|status>" >&2; exit 1 ;;
-  *)         die "Unknown command: $COMMAND" ;;
+  bootstrap)   cmd_bootstrap "$@" ;;
+  capture)     cmd_capture "$@" ;;
+  apply)       cmd_apply "$@" ;;
+  status)      cmd_status "$@" ;;
+  sync-check)  cmd_sync_check "$@" ;;
+  --help|-h)   usage; exit 0 ;;
+  "")          usage >&2; exit 1 ;;
+  *)           die "Unknown command: $COMMAND" ;;
 esac
