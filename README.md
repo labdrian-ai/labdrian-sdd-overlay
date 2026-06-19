@@ -113,6 +113,23 @@ overlay status [--target claude|opencode|codex|all]
 overlay sync-check [--target claude|opencode|codex|all]
     Validate gentle-ai sync state: UPSTREAM_CHANGED and OVERLAY_NOT_DEPLOYED per target (default: all).
 
+overlay tui
+    Launch the Go/Bubbletea TUI front-end (target selection + gentle-ai sync dashboard).
+
+overlay install-alias [name]
+    Symlink a command (default: labdrian) into ~/.local/bin so you can run the CLI
+    by a nicer name from anywhere, e.g. `labdrian tui`. Re-run on each machine (homelab, etc.).
+
 overlay --help
     Show this help.
+```
+
+## Nicer command name
+
+Run `overlay install-alias` once per machine to get a `labdrian` command on your PATH:
+
+```
+overlay install-alias        # creates ~/.local/bin/labdrian -> bin/overlay
+labdrian tui                 # then use the short name anywhere
+labdrian sync-check
 ```
