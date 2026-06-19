@@ -2,3 +2,7 @@
 *.swo
 *~
 .DS_Store
+
+# Compiled TUI binaries (Go source is committed; binaries are not)
+bin/overlay-tui
+tui/tui

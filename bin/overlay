@@ -71,6 +71,7 @@ Commands:
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all]
                                    Validate gentle-ai sync state per target (default: all)
+  tui                              Launch the Bubbletea TUI front-end (go run ./tui)
   --help                           Show this help
 
 Targets:
@@ -510,6 +511,19 @@ cmd_sync_check() {
 }
 
 # ---------------------------------------------------------------------------
+# tui
+# ---------------------------------------------------------------------------
+
+cmd_tui() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to run the TUI"
+  [[ -d "$OVERLAY_DIR/tui" ]] || die "tui/ not found at $OVERLAY_DIR/tui"
+  # Export repo root so the Go program can locate bin/overlay reliably.
+  export OVERLAY_DIR
+  cd "$OVERLAY_DIR"
+  exec go run ./tui
+}
+
+# ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
 
@@ -522,6 +536,7 @@ case "$COMMAND" in
   apply)       cmd_apply "$@" ;;
   status)      cmd_status "$@" ;;
   sync-check)  cmd_sync_check "$@" ;;
+  tui)         cmd_tui "$@" ;;
   --help|-h)   usage; exit 0 ;;
   "")          usage >&2; exit 1 ;;
   *)           die "Unknown command: $COMMAND" ;;
