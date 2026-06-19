@@ -422,10 +422,6 @@ cmd_sync_check() {
     shift || true
   done
 
-  local tmpfile=""
-  tmpfile="$(mktemp)"
-  trap 'rm -f "${tmpfile:-}"' EXIT
-
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
@@ -439,32 +435,66 @@ cmd_sync_check() {
     local upstream_changed=0
     local overlay_not_deployed=0
 
-    while IFS= read -r rel_path; do
-      # Get upstream version into tmpfile
-      if ! git show "upstream:skills/${rel_path}" > "$tmpfile" 2>/dev/null; then
-        echo "  WARNING: upstream:skills/$rel_path not found in upstream branch, skipping"
+    while IFS= read -r line; do
+      local rel_path tag
+      rel_path="$(echo "$line" | awk '{ print $1 }')"
+      tag="$(echo "$line" | awk '{ print $2 }')"
+
+      local live_file="$tpath/${rel_path}"
+
+      # Hash of live file (empty string if missing)
+      local live_hash=""
+      if [[ -f "$live_file" ]]; then
+        live_hash="$(sha256sum "$live_file" | awk '{ print $1 }')"
+      fi
+
+      # Hash of main version in repo
+      local main_hash=""
+      if git cat-file -e "main:skills/${rel_path}" 2>/dev/null; then
+        main_hash="$(git show "main:skills/${rel_path}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
+      fi
+
+      # PRIMARY check: live == main → IN SYNC, nothing to do
+      if [[ -n "$live_hash" && "$live_hash" == "$main_hash" ]]; then
+        echo "  IN_SYNC: skills/$rel_path"
         continue
       fi
 
-      local live_file="$tpath/${rel_path}"
-      local repo_file="$OVERLAY_DIR/skills/${rel_path}"
-
-      # Compare live vs upstream
-      if [[ ! -f "$live_file" ]]; then
-        # Missing live file counts as not matching upstream
-        upstream_changed=$((upstream_changed + 1))
-        echo "  UPSTREAM_CHANGED: skills/$rel_path (live missing)"
-      elif ! diff --brief "$tmpfile" "$live_file" > /dev/null 2>&1; then
-        upstream_changed=$((upstream_changed + 1))
-        echo "  UPSTREAM_CHANGED: skills/$rel_path"
-      fi
-
-      # Compare repo main vs live at target
-      if [[ ! -f "$live_file" ]] || ! diff --brief "$repo_file" "$live_file" > /dev/null 2>&1; then
+      # live != main (or live missing) — determine why
+      if [[ -z "$live_hash" ]]; then
+        # File missing at target
         overlay_not_deployed=$((overlay_not_deployed + 1))
-        echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path"
+        echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path (live missing)"
+        continue
       fi
-    done < <(managed_files)
+
+      # Determine if this is a MANAGED file (exists on upstream branch)
+      local is_managed=false
+      if git cat-file -e "upstream:skills/${rel_path}" 2>/dev/null; then
+        is_managed=true
+      fi
+
+      if [[ "$is_managed" == true ]]; then
+        # Compare live vs upstream to distinguish subtypes
+        local upstream_hash
+        upstream_hash="$(git show "upstream:skills/${rel_path}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
+
+        if [[ "$live_hash" == "$upstream_hash" ]]; then
+          # live == upstream but live != main → overlay not deployed (customization reverted)
+          overlay_not_deployed=$((overlay_not_deployed + 1))
+          echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path (live matches upstream, customization not deployed)"
+        else
+          # live != upstream AND live != main → upstream has a new pristine version we haven't captured
+          upstream_changed=$((upstream_changed + 1))
+          echo "  UPSTREAM_CHANGED: skills/$rel_path"
+        fi
+      else
+        # CUSTOM file (no upstream counterpart): live != main → overlay not deployed
+        overlay_not_deployed=$((overlay_not_deployed + 1))
+        echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path (custom file, not deployed)"
+      fi
+
+    done < <(parse_manifest)
 
     echo ""
     echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed"
@@ -474,7 +504,7 @@ cmd_sync_check() {
     elif [[ "$overlay_not_deployed" -gt 0 ]]; then
       echo "ACTION:$t: run 'overlay apply --target $t'"
     else
-      echo "ACTION:$t: in sync with gentle-ai"
+      echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
   done
 }
