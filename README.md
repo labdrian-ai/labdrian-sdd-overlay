@@ -2,6 +2,38 @@
 
 A vendor+overlay git framework that lets your customized gentle-ai skills survive `gentle-ai sync`/upgrade cycles — now with multi-target deploy for Claude Code, OpenCode, and Codex.
 
+## Quick start — clone, then `labdrian tui` from anywhere
+
+The goal: clone the repo, install one global command, and from **any** directory run `labdrian tui` to see whether your skills are out of date and update them on the spot.
+
+```bash
+# 1. Clone to any directory you like (~/labdrian-sdd-overlay is a sensible default,
+#    but the tool resolves its own location — any path works).
+git clone https://github.com/labdrian-ai/labdrian-sdd-overlay.git ~/labdrian-sdd-overlay
+cd ~/labdrian-sdd-overlay
+
+# 2. Materialize the upstream branch locally.
+#    A fresh clone only checks out `main`; sync-check / the TUI need a local `upstream` ref.
+git branch --force upstream origin/upstream
+
+# 3. Install the global `labdrian` command (symlinks bin/overlay into ~/.local/bin).
+bin/overlay install-alias
+
+# 4. Make sure ~/.local/bin is on your PATH. If `labdrian` is not found, add this to
+#    your ~/.bashrc or ~/.zshrc and reopen the shell:
+#      export PATH="$HOME/.local/bin:$PATH"
+```
+
+**Prerequisite:** the TUI runs `go run .`, so you need **Go installed** (`brew install go` or https://go.dev/dl).
+
+Now, from any directory:
+
+```bash
+labdrian tui     # see per-target drift / gentle-ai sync state, and apply updates
+```
+
+The TUI shows whether each target is in sync with gentle-ai and lets you re-capture and re-apply your overlay without leaving the dashboard. Prefer the CLI? Jump to [Normal update cycle](#normal-update-cycle-per-target).
+
 ## What this is
 
 `gentle-ai sync` and `upgrade` overwrite `~/.claude/skills/` with pristine vendor files. This repo uses two long-lived git branches to track the vendor baseline and your customizations separately, then merges and deploys with a single command.
@@ -73,9 +105,11 @@ ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' th
 
 ## One-time bootstrap
 
+> **Note:** This is only for *creating* the overlay from scratch (seeding `upstream`/`main` from a backup tarball). If you cloned the repo, the branches already exist — skip this and use [Quick start](#quick-start--clone-then-labdrian-tui-from-anywhere) instead.
+
 ```bash
-# Clone or copy this repo to ~/labdrian-sdd-overlay/, then:
-cd ~/labdrian-sdd-overlay
+# Clone or copy this repo anywhere, then cd into it:
+cd labdrian-sdd-overlay   # the directory you cloned into
 chmod +x bin/overlay
 bin/overlay bootstrap
 ```
