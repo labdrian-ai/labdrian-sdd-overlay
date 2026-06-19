@@ -519,8 +519,9 @@ cmd_tui() {
   [[ -d "$OVERLAY_DIR/tui" ]] || die "tui/ not found at $OVERLAY_DIR/tui"
   # Export repo root so the Go program can locate bin/overlay reliably.
   export OVERLAY_DIR
-  cd "$OVERLAY_DIR"
-  exec go run ./tui
+  # Run from inside the module dir (repo root is not a Go module).
+  cd "$OVERLAY_DIR/tui"
+  exec go run .
 }
 
 # ---------------------------------------------------------------------------
