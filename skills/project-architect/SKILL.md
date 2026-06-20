@@ -161,9 +161,11 @@ Read `references/architecture-template.md` for the exact structured response env
 - **Do NOT do strategic discovery** — that is `project-manifest`'s job. Redirect if asked.
 - **Do NOT proceed without manifest** — if context, rules, or critical sections are missing, return the Option C response and wait for user decision.
 - **Do NOT contradict the manifest** — redesign to respect manifest constraints or document the tension explicitly as a trade-off with mitigation. NEVER silently ignore a rule.
-- **Do NOT inflate sections** — if a section doesn't apply, state it clearly and briefly.
-- **Do NOT inflate module count** — if the manifest identifies 5 conceptual modules, propose 5 technical modules. Do NOT invent new modules without justification tied to a specific rule or constraint.
-- **Do NOT inflate trade-offs** — every trade-off must be real. Minimum 3 for any non-trivial architecture.
+- **Anti-inflation guidance** (section inflation, module count, trade-off inflation) is
+  consolidated in `../_shared/minimalism-contract.md` (canonical single source). This is a
+  documentation reference for deduplication; the 6-rung ladder is applied only during
+  `sdd-tasks`/`sdd-apply`, NOT during architecture/design. Do NOT add
+  `minimalism-contract.md` to this skill's `## Skills to load before work` set.
 - **Do NOT default to "industry standard"** — every decision must be defended against THIS project's manifest.
 - **Always reference manifest sections explicitly** — cite which part of the manifest justifies each decision.
 - **Always produce Section 15 (Cumplimiento de Reglas)** — non-negotiable. It is the audit trail that proves the architecture respects the manifest.

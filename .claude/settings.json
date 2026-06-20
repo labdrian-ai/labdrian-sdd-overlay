@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "engram": {
+      "env": {
+        "ENGRAM_PROJECT": "labdrian-sdd-overlay"
+      }
+    }
+  }
+}

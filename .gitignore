@@ -6,3 +6,6 @@
 # Compiled TUI binaries (Go source is committed; binaries are not)
 bin/overlay-tui
 tui/tui
+
+# Engram runtime (project resolution cache; not versioned)
+.engram/
