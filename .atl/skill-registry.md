@@ -49,7 +49,9 @@ Source: overlay.manifest + skills/ directory scan
 | pre-sdd-contracts | `skills/_shared/pre-sdd-contracts.md` | Contracts that precede SDD phases |
 | entry-contract.schema | `skills/_shared/entry-contract.schema.json` | JSON schema for entry contracts |
 | actuals-record.schema | `skills/_shared/actuals-record.schema.json` | JSON schema for actuals records |
-| minimalism-contract | `skills/_shared/minimalism-contract.md` | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into propose/spec/design/verify/archive. |
+<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
+| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+<!-- END: minimalism-contract-scope -->
 
 ---
 
