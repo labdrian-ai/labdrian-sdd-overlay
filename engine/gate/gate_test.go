@@ -590,8 +590,9 @@ func TestInjectDoubleNewlineSeparator(t *testing.T) {
 	}
 }
 
-// TC-F6a: TC-11 strengthened — missing prompt must leave updatedInput ABSENT.
-// The contract: prompt is never overwritten with empty string.
+// TC-F6a: TC-11 strengthened — missing prompt must leave hookSpecificOutput ABSENT.
+// Pass-through means zero modification: the gate returns {} with no hookSpecificOutput
+// key at all. Any presence of hookSpecificOutput (empty or not) is a regression.
 func TestMissingPromptPassThrough_NoUpdatedInput(t *testing.T) {
 	input := `{"tool_name":"Task","tool_input":{"subagent_type":"sdd-tasks"}}`
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
@@ -604,13 +605,11 @@ func TestMissingPromptPassThrough_NoUpdatedInput(t *testing.T) {
 	if err := json.Unmarshal([]byte(resp), &result); err != nil {
 		t.Fatalf("response must be valid JSON: %v\nresponse: %s", err, resp)
 	}
-	// updatedInput must be absent — pass-through means no modification.
-	if hso, ok := result["hookSpecificOutput"].(map[string]interface{}); ok {
-		if ui, ok := hso["updatedInput"].(map[string]interface{}); ok {
-			if p, ok := ui["prompt"].(string); ok && p == "" {
-				t.Errorf("updatedInput.prompt must NOT be set to empty string on pass-through; got empty string in response: %s", resp)
-			}
-		}
+	// hookSpecificOutput must be entirely absent on pass-through.
+	// If it is present (even with an empty updatedInput), the gate modified the
+	// input when it should have been a no-op — that is the regression we guard.
+	if _, present := result["hookSpecificOutput"]; present {
+		t.Errorf("hookSpecificOutput must be absent on pass-through (missing prompt); got response: %s", resp)
 	}
 }
 
