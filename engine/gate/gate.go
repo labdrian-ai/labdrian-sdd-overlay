@@ -157,35 +157,63 @@ func toSet(items []string) map[string]bool {
 // injectionHeader is the header under which the contract path is injected.
 const injectionHeader = "## Skills to load before work"
 
+// canonicalEntry returns the exact line emitted and recognized by the gate for
+// a given contract path. This is the load-bearing string for idempotency — only
+// this exact line (when present as a trimmed line) counts as "already injected".
+func canonicalEntry(contractPath string) string {
+	return fmt.Sprintf("Read fully BEFORE work: %s", contractPath)
+}
+
+// hasExactEntry reports whether prompt contains the canonical entry line for
+// contractPath as a line unto itself (trimmed match, not substring of a longer path).
+func hasExactEntry(prompt, contractPath string) bool {
+	entry := canonicalEntry(contractPath)
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.TrimSpace(line) == entry {
+			return true
+		}
+	}
+	return false
+}
+
+// hasExactHeader reports whether prompt contains the injection header as an
+// exact line (trimmed). A header variant like '## Skills to load before work
+// (extra context)' does NOT count as the exact header.
+func hasExactHeader(prompt string) bool {
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.TrimSpace(line) == injectionHeader {
+			return true
+		}
+	}
+	return false
+}
+
 // inject ensures that contractPath appears under the injectionHeader in prompt.
-// If the header already exists, the path is appended under it.
-// If the header does not exist, it is added at the end of the prompt.
+// If the exact header already exists, the entry is appended under it.
+// If the exact header does not exist, it is added at the end of the prompt.
+// Detection of "already present" uses exact line matching (F1, F2 hardening).
 func inject(prompt, contractPath string) string {
-	// Already present → no-op.
-	if strings.Contains(prompt, contractPath) {
+	entry := canonicalEntry(contractPath)
+
+	// Already present (exact match) → no-op.
+	if hasExactEntry(prompt, contractPath) {
 		return prompt
 	}
 
-	entry := fmt.Sprintf("Read fully BEFORE work: %s", contractPath)
-
-	if strings.Contains(prompt, injectionHeader) {
-		// Insert the entry right after the header line.
+	if hasExactHeader(prompt) {
+		// Insert the entry right after the exact header line.
 		lines := strings.Split(prompt, "\n")
 		var out []string
-		for i, line := range lines {
+		for _, line := range lines {
 			out = append(out, line)
 			if strings.TrimSpace(line) == injectionHeader {
-				// Check next line is not already our entry.
-				if i+1 < len(lines) && strings.Contains(lines[i+1], contractPath) {
-					continue // already there somehow
-				}
 				out = append(out, entry)
 			}
 		}
 		return strings.Join(out, "\n")
 	}
 
-	// No header present — append header + entry.
+	// No exact header present — append header + entry.
 	sep := "\n"
 	if !strings.HasSuffix(prompt, "\n") {
 		sep = "\n\n"
@@ -195,17 +223,19 @@ func inject(prompt, contractPath string) string {
 	return prompt + sep + injectionHeader + "\n" + entry + "\n"
 }
 
-// strip removes the line containing contractPath from the prompt, along with
-// any trailing blank line that would be left. The injectionHeader is NOT
-// removed (other skills may also live under it).
+// strip removes the canonical entry line for contractPath from the prompt.
+// Only the exact canonical entry (trimmed line match) is removed — lines that
+// merely contain the contract path as a substring are left untouched. The
+// injectionHeader is NOT removed (other skills may also live under it).
 func strip(prompt, contractPath string) string {
-	if !strings.Contains(prompt, contractPath) {
+	if !hasExactEntry(prompt, contractPath) {
 		return prompt
 	}
+	entry := canonicalEntry(contractPath)
 	lines := strings.Split(prompt, "\n")
 	var out []string
 	for _, line := range lines {
-		if strings.Contains(line, contractPath) {
+		if strings.TrimSpace(line) == entry {
 			continue
 		}
 		out = append(out, line)

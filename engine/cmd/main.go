@@ -118,9 +118,23 @@ func runPropagate(args []string) {
 	fmt.Println("registry: minimalism-contract scoped row inserted/updated")
 }
 
+// stdinSizeLimit caps how many bytes we read from stdin to prevent a runaway
+// producer from exhausting memory. 4 MiB is far beyond any realistic hook input.
+const stdinSizeLimit = 4 * 1024 * 1024
+
 // runGateTask implements the 'gate-task' subcommand.
 // Fails SAFE on any error (exits 0, emits pass-through response).
 func runGateTask(args []string) {
+	gateTaskCore(args, os.Stdin, os.Stdout, os.Stderr, os.ReadFile)
+}
+
+// readFileFn is the type of a function that reads a file by path (injectable for tests).
+type readFileFn func(string) ([]byte, error)
+
+// gateTaskCore is the testable core of the gate-task subcommand. It accepts
+// injectable stdin/stdout/stderr and a file-reader so unit tests can exercise
+// all branches without real files or OS I/O.
+func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, readFile readFileFn) {
 	var contractFilePath, contractPath string
 	contractPath = "skills/_shared/minimalism-contract.md" // default
 
@@ -139,25 +153,30 @@ func runGateTask(args []string) {
 		}
 	}
 
-	// Fail-safe: if contract file cannot be read, emit pass-through and exit 0.
-	var contractContent string
-	if contractFilePath != "" {
-		b, err := os.ReadFile(contractFilePath)
-		if err != nil {
-			// Fail-safe: log to stderr, pass-through on stdout, exit 0.
-			fmt.Fprintf(os.Stderr, "gate-task: warning: cannot read contract file: %v (passing through)\n", err)
-			fmt.Println("{}")
-			return
-		}
-		contractContent = string(b)
+	// F3: emit a diagnostic when --contract-file is missing so wiring mistakes
+	// during PR-B integration are immediately visible. Still fail-safe (exit 0).
+	if contractFilePath == "" {
+		fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; all Task hooks will pass through")
+		fmt.Fprintln(stdout, "{}")
+		return
 	}
 
-	// Read STDIN.
-	rawInput, err := io.ReadAll(os.Stdin)
+	// Fail-safe: if contract file cannot be read, emit diagnostic + pass-through.
+	b, err := readFile(contractFilePath)
 	if err != nil {
-		// Fail-safe: log to stderr, pass-through on stdout, exit 0.
-		fmt.Fprintf(os.Stderr, "gate-task: warning: cannot read stdin: %v (passing through)\n", err)
-		fmt.Println("{}")
+		fmt.Fprintf(stderr, "gate-task: warning: cannot read contract file: %v (passing through)\n", err)
+		fmt.Fprintln(stdout, "{}")
+		return
+	}
+	contractContent := string(b)
+
+	// F4: cap stdin reads to stdinSizeLimit so a runaway producer cannot exhaust memory.
+	// On truncation the JSON will be malformed → gate.Process absorbs it as pass-through.
+	rawInput, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit))
+	if err != nil {
+		// Fail-safe: log to stderr, pass-through on stdout.
+		fmt.Fprintf(stderr, "gate-task: warning: cannot read stdin: %v (passing through)\n", err)
+		fmt.Fprintln(stdout, "{}")
 		return
 	}
 
@@ -167,5 +186,5 @@ func runGateTask(args []string) {
 	}
 
 	resp, _ := gate.Process(string(rawInput), cfg)
-	fmt.Println(resp)
+	fmt.Fprintln(stdout, resp)
 }

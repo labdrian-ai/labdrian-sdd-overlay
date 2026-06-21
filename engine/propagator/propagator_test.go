@@ -386,3 +386,101 @@ func TestForeignBlockSurvival(t *testing.T) {
 			strings.Count(out, "BEGIN:"))
 	}
 }
+
+// TC-I: appendToSharedContracts fallback — registry has NO '### Shared Contracts'
+// section at all. The block must still be appended (at the end of the file).
+// This exercises the lastTableRowIdx == -1 fallback branch in appendToSharedContracts.
+func TestAppendFallback_NoSharedContractsSection(t *testing.T) {
+	// A registry that has NO Shared Contracts section.
+	registryNoSection := `# Skill Registry — test-project
+
+## Skills Index
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| some-skill | skills/some/SKILL.md | Does something. |
+`
+	cfg := propagator.Config{
+		ContractPath: "skills/_shared/minimalism-contract.md",
+	}
+	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter: %v", err)
+	}
+
+	out, changed, err := propagator.Propagate(registryNoSection, cfg, phases)
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true when block is missing")
+	}
+	// The block must appear somewhere in the output.
+	if !strings.Contains(out, propagator.BeginMarker) {
+		t.Error("BEGIN marker missing when no Shared Contracts section present")
+	}
+	if !strings.Contains(out, propagator.EndMarker) {
+		t.Error("END marker missing when no Shared Contracts section present")
+	}
+	if !strings.Contains(out, "sdd-tasks") {
+		t.Error("scoped row must reference sdd-tasks")
+	}
+	// The original content must be preserved.
+	if !strings.Contains(out, "some-skill") {
+		t.Error("original registry content must be preserved in output")
+	}
+}
+
+// TC-J: replaceUnscopedRow inBlock guard — a minimalism-contract table row that
+// sits INSIDE a foreign marker block must NOT be wrongly replaced. Only rows
+// outside any marker block should be replaced.
+func TestReplaceUnscopedRow_ForeignBlockProtectsRow(t *testing.T) {
+	// A registry where the minimalism-contract row is INSIDE a foreign block.
+	// This row must not be replaced by replaceUnscopedRow.
+	registryWithContractInsideForeign := `# Skill Registry — test-project
+
+## Skills Index
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-tool (auto-generated) -->
+| minimalism-contract | skills/_shared/minimalism-contract.md | Unscoped row inside foreign block. |
+<!-- END: some-other-tool -->
+`
+	cfg := propagator.Config{
+		ContractPath: "skills/_shared/minimalism-contract.md",
+	}
+	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter: %v", err)
+	}
+
+	out, changed, err := propagator.Propagate(registryWithContractInsideForeign, cfg, phases)
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+
+	// Propagate must still add the minimalism-contract block (the row inside the
+	// foreign block is protected and does not count as the "real" scoped row).
+	if !changed {
+		t.Fatal("expected changed=true: the row inside the foreign block is not the scoped block")
+	}
+	// The minimalism BEGIN/END marker must now be present.
+	if !strings.Contains(out, propagator.BeginMarker) {
+		t.Error("minimalism BEGIN marker missing after Propagate on registry with foreign-protected row")
+	}
+	// The foreign block must be preserved verbatim.
+	if !strings.Contains(out, "<!-- BEGIN: some-other-tool (auto-generated) -->") {
+		t.Error("foreign block BEGIN marker was removed or modified")
+	}
+	if !strings.Contains(out, "<!-- END: some-other-tool -->") {
+		t.Error("foreign block END marker was removed or modified")
+	}
+	// The minimalism-contract row inside the foreign block must still be there.
+	if !strings.Contains(out, "Unscoped row inside foreign block.") {
+		t.Error("minimalism-contract row inside foreign block was wrongly removed or modified")
+	}
+}

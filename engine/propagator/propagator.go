@@ -165,18 +165,19 @@ func replaceBlock(registry, newBlock string) string {
 }
 
 // hasUnscopedRow reports whether the registry has a minimalism-contract table
-// row that is NOT inside a marker block.
+// row that is NOT inside any marker block (neither ours nor a foreign one).
 func hasUnscopedRow(registry string) bool {
 	lines := strings.Split(registry, "\n")
-	inBlock := false
+	inAnyBlock := false
 	for _, line := range lines {
-		if strings.Contains(line, BeginMarker) {
-			inBlock = true
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "<!-- BEGIN:") {
+			inAnyBlock = true
 		}
-		if strings.Contains(line, EndMarker) {
-			inBlock = false
+		if strings.HasPrefix(trimmed, "<!-- END:") {
+			inAnyBlock = false
 		}
-		if !inBlock && isMinimalismContractRow(line) {
+		if !inAnyBlock && isMinimalismContractRow(line) {
 			return true
 		}
 	}
@@ -193,21 +194,23 @@ func isMinimalismContractRow(line string) bool {
 }
 
 // replaceUnscopedRow replaces the first unscoped minimalism-contract table row
-// with the new marker block.
+// (one that is NOT inside any marker block) with the new marker block.
+// Rows inside any marker block (foreign or ours) are left untouched.
 func replaceUnscopedRow(registry, newBlock string) string {
 	lines := strings.Split(registry, "\n")
-	inBlock := false
+	inAnyBlock := false
 	var out []string
 	for _, line := range lines {
-		if strings.Contains(line, BeginMarker) {
-			inBlock = true
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "<!-- BEGIN:") {
+			inAnyBlock = true
 		}
-		if strings.Contains(line, EndMarker) {
-			inBlock = false
+		if strings.HasPrefix(trimmed, "<!-- END:") {
+			inAnyBlock = false
 			out = append(out, line)
 			continue
 		}
-		if !inBlock && isMinimalismContractRow(line) {
+		if !inAnyBlock && isMinimalismContractRow(line) {
 			out = append(out, newBlock)
 			continue
 		}
