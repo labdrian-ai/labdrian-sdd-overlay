@@ -684,6 +684,75 @@ func TestMissingPromptPassThrough_NoUpdatedInput(t *testing.T) {
 	}
 }
 
+// TC-W3: a contract whose frontmatter sets a non-default injection_point causes
+// the contract path to be injected under THAT header, not the default.
+// This test FAILS if the gate ignores injection_point and falls back to the
+// default "## Skills to load before work" header instead.
+func TestCustomInjectionPoint_UsesContractHeader(t *testing.T) {
+	customContract := `---
+applies_to_phases: [sdd-tasks, sdd-apply]
+excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]
+injection_point: "## Custom Injection Header"
+---
+# Custom Header Contract
+`
+	const customInjectionHeader = "## Custom Injection Header"
+	const defaultInjectionHeader = "## Skills to load before work"
+
+	// Prompt has neither the custom header nor the default header.
+	prompt := "Do the tasks phase."
+	input := buildInput("sdd-tasks", prompt)
+	cfg := gate.Config{ContractPath: contractPath, ContractContent: customContract}
+
+	resp, err := gate.Process(input, cfg)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resp), &result); err != nil {
+		t.Fatalf("response is not valid JSON: %v\nresponse: %s", err, resp)
+	}
+
+	// Must have hookSpecificOutput (injection happened).
+	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("response missing hookSpecificOutput; got: %s", resp)
+	}
+	updatedInput, ok := hso["updatedInput"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("hookSpecificOutput missing updatedInput; got: %v", hso)
+	}
+	newPrompt, ok := updatedInput["prompt"].(string)
+	if !ok {
+		t.Fatal("updatedInput missing prompt string")
+	}
+
+	// The contract path must appear in the new prompt.
+	found := false
+	for _, line := range strings.Split(newPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("contract path %q must be injected; got:\n%s", contractPath, newPrompt)
+	}
+
+	// CRITICAL: the custom injection header must be present, not the default one.
+	// This assertion FAILS if the gate ignores injection_point and uses the default header.
+	if !strings.Contains(newPrompt, customInjectionHeader) {
+		t.Errorf("injection must use the custom injection_point header %q; got:\n%s", customInjectionHeader, newPrompt)
+	}
+
+	// The default injection header must NOT appear — it would mean injection_point was ignored.
+	if strings.Contains(newPrompt, defaultInjectionHeader) {
+		t.Errorf("default injection header %q must NOT appear when injection_point is customized; got:\n%s",
+			defaultInjectionHeader, newPrompt)
+	}
+}
+
 // TC-13: phase sets are derived from frontmatter, not hardcoded.
 // Use a swapped frontmatter (sdd-spec injects, sdd-tasks excluded) and verify
 // sdd-spec gets the injection and sdd-tasks gets stripped.

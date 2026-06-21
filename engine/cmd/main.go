@@ -8,7 +8,7 @@
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
 //
-// gate-task: reads a Claude Code PreToolUse 'Task' tool_input JSON from STDIN,
+// gate-task: reads a Claude Code PreToolUse 'Agent' tool_input JSON from STDIN,
 // inspects subagent_type, and emits the hook response that deterministically
 // injects or strips the minimalism-contract path. Fails SAFE on any error.
 //
@@ -195,7 +195,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	// F3: emit a diagnostic when --contract-file is missing so wiring mistakes
 	// during PR-B integration are immediately visible. Still fail-safe (exit 0).
 	if contractFilePath == "" {
-		fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; all Task hooks will pass through")
+		fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; all Agent hooks will pass through")
 		fmt.Fprintln(stdout, "{}")
 		return
 	}

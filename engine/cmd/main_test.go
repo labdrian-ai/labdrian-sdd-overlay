@@ -23,8 +23,10 @@ injection_point: "## Skills to load before work"
 // brokenContractContent has no YAML frontmatter.
 const brokenContractContent = "no frontmatter here"
 
-// validTaskInput is a minimal hook JSON for sdd-tasks.
-const validTaskInput = `{"tool_name":"Task","tool_input":{"subagent_type":"sdd-tasks","prompt":"Do the tasks phase."}}`
+// validTaskInput is a minimal hook JSON for sdd-tasks using the verified Agent tool format.
+// Verified reality (Claude Code 2.1.185): the sub-agent spawn tool is "Agent", NOT "Task".
+// tool_input fields: description, prompt, subagent_type, model (optional).
+const validTaskInput = `{"tool_name":"Agent","tool_input":{"description":"sdd-tasks sub-agent for scoping-fixes","subagent_type":"sdd-tasks","prompt":"Do the tasks phase."}}`
 
 // passThrough is what the gate returns on a fail-safe no-op.
 const passThrough = "{}"
@@ -165,7 +167,15 @@ func TestGateTaskCore_InputCapPassThrough(t *testing.T) {
 	}
 }
 
-// TC-CLI-6: happy path — valid contract + valid task JSON → updated prompt in response.
+// TC-CLI-6: happy path — valid contract + valid Agent JSON → full verified output contract.
+//
+// This test asserts the COMPLETE output contract at the CLI layer so that a regression
+// dropping hookSpecificOutput, permissionDecision, description, or subagent_type FAILS:
+//   - hookSpecificOutput.hookEventName == "PreToolUse"
+//   - hookSpecificOutput.permissionDecision == "allow"
+//   - hookSpecificOutput.updatedInput.prompt contains the injected contract path
+//   - hookSpecificOutput.updatedInput.description echoes the original description unchanged
+//   - hookSpecificOutput.updatedInput.subagent_type echoes the original subagent_type unchanged
 func TestGateTaskCore_HappyPath_Inject(t *testing.T) {
 	stdout, stderr := captureGateTask(
 		[]string{"--contract-file", "/fake/contract.md", "--contract-path", "skills/_shared/minimalism-contract.md"},
@@ -174,8 +184,52 @@ func TestGateTaskCore_HappyPath_Inject(t *testing.T) {
 	)
 
 	outStr := strings.TrimSpace(stdout)
-	if !strings.Contains(outStr, "skills/_shared/minimalism-contract.md") {
-		t.Errorf("happy path: response should contain injected contract path; got: %s\nstderr: %s", outStr, stderr)
+
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(outStr), &result); err != nil {
+		t.Fatalf("happy path: response must be valid JSON; got: %s\nstderr: %s\nerr: %v", outStr, stderr, err)
+	}
+
+	// hookSpecificOutput must be present — a response without it means the gate
+	// silently dropped the mutation and this test MUST fail.
+	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("happy path: response missing hookSpecificOutput; got: %s\nstderr: %s", outStr, stderr)
+	}
+
+	// hookEventName and permissionDecision are REQUIRED by Claude Code — without them
+	// updatedInput is silently ignored.
+	if hso["hookEventName"] != "PreToolUse" {
+		t.Errorf("happy path: hookSpecificOutput.hookEventName must be 'PreToolUse'; got: %v", hso["hookEventName"])
+	}
+	if hso["permissionDecision"] != "allow" {
+		t.Errorf("happy path: hookSpecificOutput.permissionDecision must be 'allow'; got: %v", hso["permissionDecision"])
+	}
+
+	// updatedInput must carry the mutated prompt AND echo all required tool_input fields.
+	updatedInput, ok := hso["updatedInput"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("happy path: hookSpecificOutput missing updatedInput; got: %v", hso)
+	}
+
+	// W-2: the injected contract path must appear in the mutated prompt.
+	newPrompt, ok := updatedInput["prompt"].(string)
+	if !ok {
+		t.Fatal("happy path: updatedInput missing prompt string")
+	}
+	if !strings.Contains(newPrompt, "skills/_shared/minimalism-contract.md") {
+		t.Errorf("happy path: updatedInput.prompt should contain injected contract path; got:\n%s", newPrompt)
+	}
+
+	// W-4: description must be echoed unchanged — dropping it causes Claude Code to
+	// reject the hook response ("required parameter description is missing").
+	if updatedInput["description"] != "sdd-tasks sub-agent for scoping-fixes" {
+		t.Errorf("happy path: updatedInput.description must echo original value unchanged; got: %v", updatedInput["description"])
+	}
+
+	// subagent_type must be echoed unchanged.
+	if updatedInput["subagent_type"] != "sdd-tasks" {
+		t.Errorf("happy path: updatedInput.subagent_type must echo original value; got: %v", updatedInput["subagent_type"])
 	}
 }
 
