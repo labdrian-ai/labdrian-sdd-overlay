@@ -1,3 +1,9 @@
+engine/go.mod managed
+engine/propagator/propagator.go managed
+engine/propagator/propagator_test.go managed
+engine/gate/gate.go managed
+engine/gate/gate_test.go managed
+engine/cmd/main.go managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
