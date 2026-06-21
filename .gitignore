@@ -9,3 +9,7 @@ tui/tui
 
 # Engram runtime (project resolution cache; not versioned)
 .engram/
+
+# Go coverage artifacts
+coverage.out
+coverage.html
