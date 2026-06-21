@@ -104,13 +104,12 @@ func TestGateTaskCore_UnparseableContract(t *testing.T) {
 	)
 
 	outStr := strings.TrimSpace(stdout)
-	if outStr == "" {
-		t.Error("unparseable contract: stdout must not be empty (should be '{}' pass-through)")
-	}
-	// The gate absorbs broken frontmatter as pass-through — stdout must be valid JSON.
-	// We accept either '{}' or a valid JSON pass-through response.
-	if outStr != "{}" && !strings.HasPrefix(outStr, "{") {
-		t.Errorf("unparseable contract: stdout must be valid JSON pass-through; got %q", outStr)
+	// Strict assertion: broken frontmatter must produce exactly '{}' pass-through,
+	// not a hook-specific response (e.g. {"hookSpecificOutput":...}). This mirrors
+	// the assertions used by TC-CLI-1/2/4 and would FAIL if the broken-frontmatter
+	// path ever injected additional content.
+	if outStr != "{}" {
+		t.Errorf("unparseable contract: stdout must be exactly '{}'; got %q", outStr)
 	}
 	// REAL ASSERTION: stderr must contain a diagnostic (non-tautological).
 	if stderr == "" {
@@ -338,6 +337,52 @@ func TestRunPropagateCore_HappyPath_InsertsScopedBlock(t *testing.T) {
 	}
 	if !strings.Contains(string(written), "sdd-tasks") {
 		t.Errorf("happy path: written registry must reference sdd-tasks; got:\n%s", string(written))
+	}
+}
+
+// TC-CLI-P6b: writeFile error on the happy path → exit 1 + stderr diagnostic.
+// This covers the previously-uncovered branch at main.go lines 135-139:
+//
+//	if err := writeFile(registryPath, []byte(out), 0644); err != nil { ... exit(1) }
+//
+// The writeFile mock returns an error only for the registry path, so we reach
+// the write call (changed == true) and hit the error branch.
+// This test would FAIL if the error branch were removed or silently swallowed.
+func TestRunPropagateCore_WriteFileError(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	registryPath := "/fake/registry.md"
+	contractFilePath := "/fake/contract.md"
+
+	runPropagateCore(
+		[]string{
+			"--registry", registryPath,
+			"--contract-file", contractFilePath,
+			"--contract-path", "skills/_shared/minimalism-contract.md",
+		},
+		&outBuf,
+		&errBuf,
+		func(path string) ([]byte, error) {
+			switch path {
+			case contractFilePath:
+				return []byte(testContractContent), nil
+			case registryPath:
+				return []byte(minimalRegistry), nil
+			}
+			return nil, errors.New("file not found: " + path)
+		},
+		func(_ string, _ []byte, _ os.FileMode) error {
+			return errors.New("simulated disk full")
+		},
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Errorf("writeFile error: expected exit 1, got %d", exitCode)
+	}
+	if errBuf.Len() == 0 {
+		t.Error("writeFile error: stderr diagnostic must be written but was empty")
 	}
 }
 
