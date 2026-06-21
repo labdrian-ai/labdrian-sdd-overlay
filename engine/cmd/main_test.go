@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -447,4 +449,176 @@ func TestRunPropagateCore_NoOp_AlreadyCorrect(t *testing.T) {
 	if !strings.Contains(outBuf.String(), "no-op") || !strings.Contains(outBuf.String(), "already correct") {
 		t.Errorf("no-op: stdout should say already correct/no-op; got: %q", outBuf.String())
 	}
+}
+
+// ---- parseMergeSettingsArgs tests -------------------------------------------
+
+// TC-MS-PARSE-1: both flags present → parsed correctly.
+func TestParseMergeSettingsArgs_BothFlags(t *testing.T) {
+	sp, hc := parseMergeSettingsArgs([]string{
+		"--settings", "/tmp/settings.json",
+		"--hook-command", "/home/user/.claude/bin/gentle-ai-overlay",
+	})
+	if sp != "/tmp/settings.json" {
+		t.Errorf("settingsPath: got %q, want /tmp/settings.json", sp)
+	}
+	if hc != "/home/user/.claude/bin/gentle-ai-overlay" {
+		t.Errorf("hookCommand: got %q", hc)
+	}
+}
+
+// TC-MS-PARSE-2: flags absent → empty strings.
+func TestParseMergeSettingsArgs_NoFlags(t *testing.T) {
+	sp, hc := parseMergeSettingsArgs([]string{})
+	if sp != "" || hc != "" {
+		t.Errorf("empty args should yield empty strings; got %q, %q", sp, hc)
+	}
+}
+
+// ---- merge-settings integration via runMergeSettings (uses real files) ------
+
+// TC-MS-CLI-1: absent settings file → created with both hooks + success stdout.
+func TestRunMergeSettings_AbsentFile_CreatesHooks(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+
+	// Redirect stdout/stderr by temporarily overriding os.Stdout/os.Stderr is not
+	// feasible for the run* functions which call os.Exit. Instead we test through
+	// runMergeSettings by checking file output after calling through a wrapper that
+	// catches the exit. Since runMergeSettings calls os.Exit on error and the happy
+	// path does not, we can call it directly and check the file.
+	//
+	// NOTE: these tests are intentionally NOT using captureRun helpers that would
+	// require intercepting os.Exit (which is complex in Go). The assertions focus on
+	// the file-system side effects (the real contract) instead of stdout capture.
+
+	// Call runMergeSettings — happy path should not panic or os.Exit.
+	runMergeSettings([]string{
+		"--settings", path,
+		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
+	})
+
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("settings.json not created: %v", err)
+	}
+	var root map[string]interface{}
+	if err := json.Unmarshal(data, &root); err != nil {
+		t.Fatalf("settings.json not valid JSON: %v", err)
+	}
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("hooks key not present in %v", root)
+	}
+	if _, ok := hooks["UserPromptSubmit"]; !ok {
+		t.Error("UserPromptSubmit not present")
+	}
+	if _, ok := hooks["PreToolUse"]; !ok {
+		t.Error("PreToolUse not present")
+	}
+}
+
+// TC-MS-CLI-2: idempotent — calling twice produces same output without duplicates.
+func TestRunMergeSettings_Idempotent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	args := []string{
+		"--settings", path,
+		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
+	}
+
+	runMergeSettings(args)
+	runMergeSettings(args)
+
+	data, _ := os.ReadFile(path)
+	var root map[string]interface{}
+	json.Unmarshal(data, &root)
+
+	hooks := root["hooks"].(map[string]interface{})
+	countEntries := func(key string) int {
+		entries, _ := hooks[key].([]interface{})
+		n := 0
+		for _, e := range entries {
+			if em, ok := e.(map[string]interface{}); ok {
+				if em["command"] == "/test/.claude/bin/gentle-ai-overlay" {
+					n++
+				}
+			}
+		}
+		return n
+	}
+	if n := countEntries("UserPromptSubmit"); n != 1 {
+		t.Errorf("UserPromptSubmit: expected 1 entry, got %d", n)
+	}
+	if n := countEntries("PreToolUse"); n != 1 {
+		t.Errorf("PreToolUse: expected 1 entry, got %d", n)
+	}
+}
+
+// TC-MS-CLI-3: backup created when file pre-exists.
+func TestRunMergeSettings_BackupCreated(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	bakPath := path + ".bak"
+
+	original := []byte(`{"existing":true}`)
+	os.WriteFile(path, original, 0644)
+
+	runMergeSettings([]string{
+		"--settings", path,
+		"--hook-command", "/test/.claude/bin/gentle-ai-overlay",
+	})
+
+	bak, err := os.ReadFile(bakPath)
+	if err != nil {
+		t.Fatalf("backup not created: %v", err)
+	}
+	if string(bak) != string(original) {
+		t.Errorf("backup content mismatch: got %q", string(bak))
+	}
+}
+
+// ---- uninstall-hooks integration via runUninstallHooks ----------------------
+
+// TC-UH-CLI-1: install then uninstall → hooks gone, other keys preserved.
+func TestRunUninstallHooks_RemovesHooks(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	hookCmd := "/test/.claude/bin/gentle-ai-overlay"
+	args := []string{"--settings", path, "--hook-command", hookCmd}
+
+	runMergeSettings(args)
+	runUninstallHooks(args)
+
+	data, _ := os.ReadFile(path)
+	var root map[string]interface{}
+	json.Unmarshal(data, &root)
+
+	hooks, _ := root["hooks"].(map[string]interface{})
+	hasCmd := func(key string) bool {
+		entries, _ := hooks[key].([]interface{})
+		for _, e := range entries {
+			if em, ok := e.(map[string]interface{}); ok && em["command"] == hookCmd {
+				return true
+			}
+		}
+		return false
+	}
+	if hasCmd("UserPromptSubmit") {
+		t.Error("UserPromptSubmit hook should be removed")
+	}
+	if hasCmd("PreToolUse") {
+		t.Error("PreToolUse hook should be removed")
+	}
+}
+
+// TC-UH-CLI-2: uninstall on absent file → no panic, no error.
+func TestRunUninstallHooks_AbsentFile_NoOp(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "nonexistent.json")
+	// Should not panic or call os.Exit(1).
+	runUninstallHooks([]string{
+		"--settings", path,
+		"--hook-command", "/test/binary",
+	})
 }

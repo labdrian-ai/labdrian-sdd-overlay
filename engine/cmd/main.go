@@ -1,7 +1,9 @@
-// Command engine provides two subcommands for the deterministic-scoping engine:
+// Command engine provides subcommands for the deterministic-scoping engine:
 //
 //	engine propagate --registry <path> --contract-file <path> [--contract-path <str>]
 //	engine gate-task --contract-file <path> [--contract-path <str>]
+//	engine merge-settings --settings <path> --hook-command <binary-path>
+//	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -9,6 +11,14 @@
 // gate-task: reads a Claude Code PreToolUse 'Task' tool_input JSON from STDIN,
 // inspects subagent_type, and emits the hook response that deterministically
 // injects or strips the minimalism-contract path. Fails SAFE on any error.
+//
+// merge-settings: safely merges two hook entries (UserPromptSubmit + PreToolUse)
+// into a Claude Code settings.json. Preserves all existing keys, is idempotent,
+// atomic (write+rename), creates a .bak backup, and refuses to write if the
+// existing file contains invalid JSON.
+//
+// uninstall-hooks: removes exactly our two hook entries from settings.json,
+// leaving all other keys and hooks intact. Idempotent; no-op if file absent.
 package main
 
 import (
@@ -18,6 +28,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
 func main() {
@@ -31,6 +42,10 @@ func main() {
 		runPropagate(os.Args[2:])
 	case "gate-task":
 		runGateTask(os.Args[2:])
+	case "merge-settings":
+		runMergeSettings(os.Args[2:])
+	case "uninstall-hooks":
+		runUninstallHooks(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -42,6 +57,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
 	fmt.Fprintln(os.Stderr, "  engine propagate --registry <path> --contract-file <path> [--contract-path <str>]")
 	fmt.Fprintln(os.Stderr, "  engine gate-task --contract-file <path> [--contract-path <str>]")
+	fmt.Fprintln(os.Stderr, "  engine merge-settings --settings <path> --hook-command <binary-path>")
+	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 }
 
 // writeFileFn is the type of a function that writes a file (injectable for tests).
@@ -216,4 +233,72 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 
 	resp, _ := gate.Process(string(rawInput), cfg)
 	fmt.Fprintln(stdout, resp)
+}
+
+// defaultHookCommand is the deployed binary path used when --hook-command is
+// not explicitly specified. This path is under ~/.claude/bin/ so it is tracked
+// by the overlay's deploy wiring.
+const defaultHookCommand = "$HOME/.claude/bin/gentle-ai-overlay"
+
+// parseMergeSettingsArgs extracts --settings and --hook-command from args.
+func parseMergeSettingsArgs(args []string) (settingsPath, hookCommand string) {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--settings":
+			i++
+			if i < len(args) {
+				settingsPath = args[i]
+			}
+		case "--hook-command":
+			i++
+			if i < len(args) {
+				hookCommand = args[i]
+			}
+		}
+	}
+	return
+}
+
+// runMergeSettings implements the 'merge-settings' subcommand.
+// Fails LOUD on any error (exits 1).
+func runMergeSettings(args []string) {
+	settingsPath, hookCommand := parseMergeSettingsArgs(args)
+
+	if settingsPath == "" {
+		fmt.Fprintln(os.Stderr, "error: --settings is required")
+		os.Exit(1)
+	}
+	if hookCommand == "" {
+		fmt.Fprintln(os.Stderr, "error: --hook-command is required")
+		os.Exit(1)
+	}
+
+	m := settings.NewMerger(settingsPath, hookCommand)
+	if err := m.Install(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: merge-settings: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Fprintln(os.Stdout, "merge-settings: hooks installed successfully")
+}
+
+// runUninstallHooks implements the 'uninstall-hooks' subcommand.
+// Fails LOUD on any error (exits 1).
+func runUninstallHooks(args []string) {
+	settingsPath, hookCommand := parseMergeSettingsArgs(args)
+
+	if settingsPath == "" {
+		fmt.Fprintln(os.Stderr, "error: --settings is required")
+		os.Exit(1)
+	}
+	if hookCommand == "" {
+		fmt.Fprintln(os.Stderr, "error: --hook-command is required")
+		os.Exit(1)
+	}
+
+	m := settings.NewMerger(settingsPath, hookCommand)
+	if err := m.Uninstall(); err != nil {
+		fmt.Fprintf(os.Stderr, "error: uninstall-hooks: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Fprintln(os.Stdout, "uninstall-hooks: hooks removed successfully")
 }

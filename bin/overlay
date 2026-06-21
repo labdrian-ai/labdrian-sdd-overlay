@@ -20,6 +20,11 @@ declare -A TARGET_PATHS=(
   [codex]="$HOME/.codex/skills"
 )
 
+# Path where the engine binary is deployed. Using ~/.claude/bin/ keeps all
+# Claude Code tooling co-located and makes the binary easy to find in hooks.
+ENGINE_BINARY="$HOME/.claude/bin/gentle-ai-overlay"
+ENGINE_SRC="$OVERLAY_DIR/engine"
+
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
@@ -80,6 +85,12 @@ Commands:
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all]
                                    Validate gentle-ai sync state per target (default: all)
+  install-hooks                    Build + deploy the engine binary, then wire the two
+                                   deterministic-scoping hooks into ~/.claude/settings.json.
+                                   DELIBERATE ACTION — not called by 'apply'. Run once to
+                                   activate; the hooks are INERT until this command runs.
+  uninstall-hooks                  Remove our two hook entries from ~/.claude/settings.json,
+                                   leaving all other keys and hooks intact.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   --help                           Show this help
@@ -88,6 +99,15 @@ Targets:
   claude   → ~/.claude/skills
   opencode → ~/.config/opencode/skills
   codex    → ~/.codex/skills
+
+Hook activation notes:
+  - 'overlay apply' does NOT call install-hooks. Deploy of skills and hook
+    wiring are intentionally separate so skills can be updated without
+    mutating ~/.claude/settings.json.
+  - Run 'overlay install-hooks' once after initial setup (or after a binary
+    update) to activate deterministic scoping.
+  - Missing-binary safety: hook commands use 'command -v <binary> && ...' so
+    they silently exit 0 if the binary is absent, never blocking a Task.
 EOF
 }
 
@@ -535,6 +555,80 @@ cmd_tui() {
 }
 
 # ---------------------------------------------------------------------------
+# install-hooks
+# ---------------------------------------------------------------------------
+#
+# Design decisions:
+#   1. SEPARATE from 'overlay apply'. Skills deployment and hook wiring are
+#      distinct operations — apply only copies files, never mutates
+#      ~/.claude/settings.json. This keeps apply non-invasive.
+#   2. DELIBERATE activation. The user must run 'overlay install-hooks'
+#      intentionally. This satisfies the "INERT until user activates" contract.
+#   3. MISSING-BINARY SAFETY. Hook commands emitted by the engine use the form:
+#        command -v <binary> &>/dev/null && <binary> ... || true
+#      This ensures any hook exits 0 even when the binary is absent, so no
+#      Claude Code Task is ever blocked by a missing binary.
+#   4. ATOMIC+BACKUP inside the engine. The engine's merge-settings subcommand
+#      writes to a temp file and renames; it also copies the original to
+#      settings.json.bak before overwriting.
+
+cmd_install_hooks() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+
+  info "Building engine binary..."
+  mkdir -p "$(dirname "$ENGINE_BINARY")"
+  (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+    || die "go build failed; binary not deployed"
+  info "Engine binary deployed to: $ENGINE_BINARY"
+
+  local settings_path="$HOME/.claude/settings.json"
+  info "Merging hooks into: $settings_path"
+  "$ENGINE_BINARY" merge-settings \
+    --settings "$settings_path" \
+    --hook-command "$ENGINE_BINARY" \
+    || die "merge-settings failed"
+
+  echo ""
+  echo "install-hooks complete."
+  echo "  binary : $ENGINE_BINARY"
+  echo "  settings: $settings_path (backup at ${settings_path}.bak)"
+  echo "  hooks   : UserPromptSubmit (propagate) + PreToolUse/Task (gate-task)"
+  echo ""
+  echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
+}
+
+# ---------------------------------------------------------------------------
+# uninstall-hooks
+# ---------------------------------------------------------------------------
+
+cmd_uninstall_hooks() {
+  local settings_path="$HOME/.claude/settings.json"
+
+  if [[ ! -f "$ENGINE_BINARY" ]]; then
+    # Binary absent: fall back to a fresh build to run uninstall.
+    # If we cannot build, error out — we cannot safely remove entries.
+    command -v go >/dev/null 2>&1 || die "engine binary not found at $ENGINE_BINARY and go is not installed; cannot uninstall"
+    [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC; cannot build for uninstall"
+    info "Engine binary not found; building to perform uninstall..."
+    mkdir -p "$(dirname "$ENGINE_BINARY")"
+    (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+      || die "go build failed; cannot uninstall hooks"
+  fi
+
+  info "Removing hooks from: $settings_path"
+  "$ENGINE_BINARY" uninstall-hooks \
+    --settings "$settings_path" \
+    --hook-command "$ENGINE_BINARY" \
+    || die "uninstall-hooks failed"
+
+  echo ""
+  echo "uninstall-hooks complete."
+  echo "  Our two hook entries have been removed from $settings_path"
+  echo "  (backup at ${settings_path}.bak if the file was modified)"
+}
+
+# ---------------------------------------------------------------------------
 # install-alias
 # ---------------------------------------------------------------------------
 
@@ -553,14 +647,16 @@ COMMAND="${1:-}"
 shift || true
 
 case "$COMMAND" in
-  bootstrap)   cmd_bootstrap "$@" ;;
-  capture)     cmd_capture "$@" ;;
-  apply)       cmd_apply "$@" ;;
-  status)      cmd_status "$@" ;;
-  sync-check)  cmd_sync_check "$@" ;;
-  tui)         cmd_tui "$@" ;;
-  install-alias) cmd_install_alias "$@" ;;
-  --help|-h)   usage; exit 0 ;;
-  "")          usage >&2; exit 1 ;;
-  *)           die "Unknown command: $COMMAND" ;;
+  bootstrap)       cmd_bootstrap "$@" ;;
+  capture)         cmd_capture "$@" ;;
+  apply)           cmd_apply "$@" ;;
+  status)          cmd_status "$@" ;;
+  sync-check)      cmd_sync_check "$@" ;;
+  install-hooks)   cmd_install_hooks "$@" ;;
+  uninstall-hooks) cmd_uninstall_hooks "$@" ;;
+  tui)             cmd_tui "$@" ;;
+  install-alias)   cmd_install_alias "$@" ;;
+  --help|-h)       usage; exit 0 ;;
+  "")              usage >&2; exit 1 ;;
+  *)               die "Unknown command: $COMMAND" ;;
 esac
