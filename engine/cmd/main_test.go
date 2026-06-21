@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 )
 
 // contractFrontmatter is a minimal valid contract used by tests.
@@ -692,4 +694,524 @@ func TestRunUninstallHooks_AbsentFile_NoOp(t *testing.T) {
 		"--settings", path,
 		"--hook-command", "/test/binary",
 	})
+}
+
+// ---------------------------------------------------------------------------
+// Task 2: filepath.Clean on --registry
+// ---------------------------------------------------------------------------
+
+// TC-CLEAN-1: a --registry path containing "../" segments must be cleaned
+// before use so the actual read path does not contain ".." traversal.
+func TestRunPropagateCore_RegistryPathCleaned(t *testing.T) {
+	// We capture which path the readFile fn was actually called with for the
+	// registry. It must NOT contain "..".
+	var calledRegistryPath string
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	contractPath := "/fake/contract.md"
+	// A registry path with traversal segments.
+	dirtyRegistryPath := "/some/dir/../other/registry.md"
+	// The expected cleaned path.
+	wantRegistryPath := "/some/other/registry.md"
+
+	readFile := func(path string) ([]byte, error) {
+		if path == contractPath {
+			return []byte(testContractContent), nil
+		}
+		// Record the first non-contract path (the registry path).
+		if calledRegistryPath == "" {
+			calledRegistryPath = path
+		}
+		return []byte(minimalRegistry), nil
+	}
+
+	runPropagateCore(
+		[]string{"--registry", dirtyRegistryPath, "--contract-file", contractPath},
+		&outBuf, &errBuf,
+		readFile,
+		func(_ string, _ []byte, _ os.FileMode) error { return nil },
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode == 1 {
+		t.Fatalf("unexpected exit 1; stderr: %s", errBuf.String())
+	}
+	if calledRegistryPath != wantRegistryPath {
+		t.Errorf("registry path not cleaned: got %q, want %q", calledRegistryPath, wantRegistryPath)
+	}
+}
+
+// TC-CLEAN-2: a normal (already clean) path must not be altered.
+func TestRunPropagateCore_RegistryPathClean_NormalPath(t *testing.T) {
+	var calledRegistryPath string
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	contractPath := "/fake/contract.md"
+	normalRegistryPath := "/project/.atl/skill-registry.md"
+
+	readFile := func(path string) ([]byte, error) {
+		if path == contractPath {
+			return []byte(testContractContent), nil
+		}
+		if calledRegistryPath == "" {
+			calledRegistryPath = path
+		}
+		return []byte(minimalRegistry), nil
+	}
+
+	runPropagateCore(
+		[]string{"--registry", normalRegistryPath, "--contract-file", contractPath},
+		&outBuf, &errBuf,
+		readFile,
+		func(_ string, _ []byte, _ os.FileMode) error { return nil },
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode == 1 {
+		t.Fatalf("unexpected exit 1; stderr: %s", errBuf.String())
+	}
+	if calledRegistryPath != normalRegistryPath {
+		t.Errorf("normal path was modified: got %q, want %q", calledRegistryPath, normalRegistryPath)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Task 4: propagate graceful no-op on missing registry
+// ---------------------------------------------------------------------------
+
+// TC-PROP-ABSENT-1: registry file absent → exit 0, stdout informative message,
+// no stderr, no error — clean no-op for projects not using the overlay.
+func TestRunPropagateCore_RegistryAbsent_NoOp(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	contractPath := "/fake/contract.md"
+	registryPath := "/project/.atl/skill-registry.md"
+
+	readFile := func(path string) ([]byte, error) {
+		if path == contractPath {
+			return []byte(testContractContent), nil
+		}
+		// Registry absent: return os.ErrNotExist.
+		return nil, os.ErrNotExist
+	}
+
+	runPropagateCore(
+		[]string{"--registry", registryPath, "--contract-file", contractPath},
+		&outBuf, &errBuf,
+		readFile,
+		func(_ string, _ []byte, _ os.FileMode) error { return nil },
+		func(code int) { exitCode = code },
+	)
+
+	// Must exit 0 (exitCode remains -1 = no exit call = success path).
+	if exitCode != -1 {
+		t.Errorf("registry absent: expected exit 0 (no exit call), got exit %d; stderr: %s", exitCode, errBuf.String())
+	}
+	// stderr must be empty — this is a clean no-op, not an error.
+	if errBuf.Len() != 0 {
+		t.Errorf("registry absent: stderr must be empty; got: %q", errBuf.String())
+	}
+	// stdout must contain an informative message.
+	out := outBuf.String()
+	if out == "" {
+		t.Error("registry absent: stdout must contain an informative message")
+	}
+	if !strings.Contains(out, "not found") && !strings.Contains(out, "no-op") {
+		t.Errorf("registry absent: stdout should mention 'not found' or 'no-op'; got: %q", out)
+	}
+}
+
+// TC-PROP-ABSENT-2: registry present but unreadable (e.g. permission error) →
+// exit 1 + stderr error. This distinguishes "absent" from "present but broken".
+func TestRunPropagateCore_RegistryUnreadable_ExitOne(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	contractPath := "/fake/contract.md"
+	registryPath := "/project/.atl/skill-registry.md"
+
+	readFile := func(path string) ([]byte, error) {
+		if path == contractPath {
+			return []byte(testContractContent), nil
+		}
+		// Present but unreadable: return a non-NotExist error.
+		return nil, errors.New("permission denied")
+	}
+
+	runPropagateCore(
+		[]string{"--registry", registryPath, "--contract-file", contractPath},
+		&outBuf, &errBuf,
+		readFile,
+		func(_ string, _ []byte, _ os.FileMode) error { return nil },
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Errorf("registry unreadable: expected exit 1, got %d; stdout: %q", exitCode, outBuf.String())
+	}
+	if errBuf.Len() == 0 {
+		t.Error("registry unreadable: stderr must contain error message")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Task 1: statusCore tests
+// ---------------------------------------------------------------------------
+
+// buildSettingsWithHooks builds a minimal settings.json map with both our
+// hook entries present (using the given hookCommand substring).
+func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
+	makeEntry := func(extraKey, extraVal string) map[string]interface{} {
+		entry := map[string]interface{}{
+			"hooks": []interface{}{map[string]interface{}{
+				"type":    "command",
+				"command": "command -v " + hookCmd + " && " + hookCmd + " gate-task || true",
+			}},
+		}
+		if extraKey != "" {
+			entry[extraKey] = extraVal
+		}
+		return entry
+	}
+
+	preToolUse := makeEntry("matcher", "Agent")
+	userPromptSubmit := makeEntry("", "")
+
+	return map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"PreToolUse":       []interface{}{preToolUse},
+			"UserPromptSubmit": []interface{}{userPromptSubmit},
+		},
+	}
+}
+
+// buildFakeHomeWithBinary creates the $HOME/.claude/bin/gentle-ai-overlay tree in a TempDir.
+func buildFakeHomeWithBinary(t *testing.T) (homeDir, binaryPath string) {
+	t.Helper()
+	homeDir = t.TempDir()
+	binaryDir := filepath.Join(homeDir, ".claude", "bin")
+	if err := os.MkdirAll(binaryDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	binaryPath = filepath.Join(binaryDir, "gentle-ai-overlay")
+	if err := os.WriteFile(binaryPath, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return
+}
+
+// buildFakeContract creates a minimalism-contract.md in the fake home's skills tree.
+func buildFakeContract(t *testing.T, homeDir string) string {
+	t.Helper()
+	contractDir := filepath.Join(homeDir, ".claude", "skills", "_shared")
+	if err := os.MkdirAll(contractDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	contractPath := filepath.Join(contractDir, "minimalism-contract.md")
+	if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return contractPath
+}
+
+// TC-STATUS-1: all checks OK → output contains [OK] for every line, no [FAIL],
+// statusCore returns true.
+func TestStatusCore_AllOK(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !result {
+		t.Errorf("statusCore: expected true (all OK); output:\n%s", out)
+	}
+	if strings.Contains(out, "[FAIL]") {
+		t.Errorf("statusCore: no [FAIL] expected when all OK; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[OK  ]") {
+		t.Errorf("statusCore: output must contain [OK  ] lines; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-2: binary missing → [FAIL] for binary check, statusCore returns false.
+func TestStatusCore_BinaryMissing(t *testing.T) {
+	homeDir := t.TempDir() // no binary created
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks("gentle-ai-overlay")
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if result {
+		t.Errorf("statusCore: expected false when binary missing; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[FAIL]") {
+		t.Errorf("statusCore: expected [FAIL] for binary; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-3: settings.json absent → [FAIL] for both hook checks.
+func TestStatusCore_SettingsAbsent(t *testing.T) {
+	homeDir, _ := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return nil, nil // file absent
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if result {
+		t.Errorf("statusCore: expected false when settings absent; output:\n%s", out)
+	}
+	// At least the two hook checks should fail.
+	if strings.Count(out, "[FAIL]") < 2 {
+		t.Errorf("statusCore: expected at least 2 [FAIL] lines; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-4: UserPromptSubmit hook missing → [FAIL] for that check only.
+func TestStatusCore_UserPromptSubmitMissing(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	// Settings with PreToolUse but no UserPromptSubmit.
+	settingsData := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"PreToolUse": []interface{}{map[string]interface{}{
+				"matcher": "Agent",
+				"hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": "command -v " + binaryPath + " && " + binaryPath + " gate-task || true",
+				}},
+			}},
+		},
+	}
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if result {
+		t.Errorf("statusCore: expected false when UserPromptSubmit missing; output:\n%s", out)
+	}
+	if !strings.Contains(out, "UserPromptSubmit") {
+		t.Errorf("statusCore: output should mention UserPromptSubmit; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-5: PreToolUse hook missing → [FAIL] for that check.
+func TestStatusCore_PreToolUseMissing(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	// Settings with UserPromptSubmit but no PreToolUse.
+	settingsData := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"UserPromptSubmit": []interface{}{map[string]interface{}{
+				"hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": "command -v " + binaryPath + " && " + binaryPath + " propagate || true",
+				}},
+			}},
+		},
+	}
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if result {
+		t.Errorf("statusCore: expected false when PreToolUse missing; output:\n%s", out)
+	}
+	if !strings.Contains(out, "gate-task") || !strings.Contains(out, "Agent") {
+		t.Errorf("statusCore: output should mention gate-task/Agent for PreToolUse check; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-6: contract missing → [FAIL] for contract check.
+func TestStatusCore_ContractMissing(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	// Do NOT create contract file.
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if result {
+		t.Errorf("statusCore: expected false when contract missing; output:\n%s", out)
+	}
+	if !strings.Contains(out, "contract") {
+		t.Errorf("statusCore: output should mention 'contract'; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-7: contract present but frontmatter broken → [FAIL] for contract check.
+func TestStatusCore_ContractBrokenFrontmatter(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+
+	// Create contract directory but write broken content.
+	contractDir := filepath.Join(homeDir, ".claude", "skills", "_shared")
+	os.MkdirAll(contractDir, 0o755)
+	contractPath := filepath.Join(contractDir, "minimalism-contract.md")
+	os.WriteFile(contractPath, []byte("no frontmatter here"), 0o644)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if result {
+		t.Errorf("statusCore: expected false when contract frontmatter broken; output:\n%s", out)
+	}
+	if !strings.Contains(out, "frontmatter") {
+		t.Errorf("statusCore: output should mention 'frontmatter'; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-8: registry check best-effort — even when registry is absent,
+// statusCore returns true (if other checks pass). The registry check never
+// fails the suite.
+func TestStatusCore_RegistryAbsent_BestEffort(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	cwdDir := t.TempDir() // no registry here
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	// Overall result must be true since registry check is best-effort.
+	if !result {
+		t.Errorf("statusCore: expected true even when registry absent; output:\n%s", out)
+	}
+	// Registry line should appear with [OK  ] and mention "not present".
+	if !strings.Contains(out, "not present") {
+		t.Errorf("statusCore: registry absent output should mention 'not present'; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-9: registry present WITH scoped block → [OK  ] with note "scoped block present".
+func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	cwdDir := t.TempDir()
+	registryDir := filepath.Join(cwdDir, ".atl")
+	os.MkdirAll(registryDir, 0o755)
+	registryContent := "# Registry\n" + propagator.BeginMarker + "\n| row |\n" + propagator.EndMarker + "\n"
+	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	result := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !result {
+		t.Errorf("statusCore: expected true when scoped block present; output:\n%s", out)
+	}
+	if !strings.Contains(out, "scoped block present") {
+		t.Errorf("statusCore: output should say 'scoped block present'; output:\n%s", out)
+	}
 }

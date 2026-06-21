@@ -91,6 +91,9 @@ Commands:
                                    activate; the hooks are INERT until this command runs.
   uninstall-hooks                  Remove our two hook entries from ~/.claude/settings.json,
                                    leaving all other keys and hooks intact.
+  status-hooks                     Check and report overlay installation health: binary
+                                   present, hooks wired, contract readable. Exits 0 if all
+                                   OK, 1 if any check fails. Safe to run at any time.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   --help                           Show this help
@@ -599,6 +602,35 @@ cmd_install_hooks() {
 }
 
 # ---------------------------------------------------------------------------
+# status-hooks
+# ---------------------------------------------------------------------------
+#
+# Checks that the overlay installation is healthy:
+#   - Engine binary present + executable at $ENGINE_BINARY
+#   - Hooks wired in ~/.claude/settings.json (UserPromptSubmit + PreToolUse/Agent)
+#   - Contract readable with valid frontmatter
+#   - (best-effort) Scoped block present in CWD's .atl/skill-registry.md
+#
+# Exits 0 if all checks pass, 1 otherwise.
+# Safe to run at any time — never modifies any file.
+
+cmd_status_hooks() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+
+  # Build binary if not already present.
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    info "Engine binary not found; building..."
+    mkdir -p "$(dirname "$ENGINE_BINARY")"
+    (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+      || die "go build failed; cannot run status-hooks"
+    info "Engine binary deployed to: $ENGINE_BINARY"
+  fi
+
+  exec "$ENGINE_BINARY" status
+}
+
+# ---------------------------------------------------------------------------
 # uninstall-hooks
 # ---------------------------------------------------------------------------
 
@@ -654,6 +686,7 @@ case "$COMMAND" in
   sync-check)      cmd_sync_check "$@" ;;
   install-hooks)   cmd_install_hooks "$@" ;;
   uninstall-hooks) cmd_uninstall_hooks "$@" ;;
+  status-hooks)    cmd_status_hooks "$@" ;;
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
   --help|-h)       usage; exit 0 ;;
