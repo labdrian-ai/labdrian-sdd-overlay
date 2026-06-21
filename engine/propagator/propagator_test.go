@@ -484,3 +484,233 @@ func TestReplaceUnscopedRow_ForeignBlockProtectsRow(t *testing.T) {
 		t.Error("minimalism-contract row inside foreign block was wrongly removed or modified")
 	}
 }
+
+// TC-K: replaceBlock guard — malformed marker blocks (lone BEGIN with no END,
+// and BEGIN/END out of order) must leave the registry unchanged.
+// Exercises the start==-1 || end==-1 || end<start guard in replaceBlock.
+func TestReplaceBlock_MalformedMarkers(t *testing.T) {
+	cfg := propagator.Config{
+		ContractPath: "skills/_shared/minimalism-contract.md",
+	}
+	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter: %v", err)
+	}
+
+	t.Run("lone BEGIN no END", func(t *testing.T) {
+		// Registry has the BEGIN marker but no END marker.
+		// replaceBlock must return the registry unchanged.
+		registryLoneBegin := `# Skill Registry
+### Shared Contracts
+| Artifact | Path | Description |
+|----------|------|-------------|
+` + propagator.BeginMarker + `
+| minimalism-contract | skills/_shared/minimalism-contract.md | stale row |
+`
+		out, changed, err := propagator.Propagate(registryLoneBegin, cfg, phases)
+		if err != nil {
+			t.Fatalf("Propagate: %v", err)
+		}
+		// replaceBlock finds BEGIN but no END → returns registry unchanged → changed=false.
+		if changed {
+			t.Errorf("lone BEGIN with no END: expected changed=false (replaceBlock guard), got changed=true; out:\n%s", out)
+		}
+		if out != registryLoneBegin {
+			t.Errorf("lone BEGIN with no END: registry content should be unchanged;\ngot:\n%s\nwant:\n%s", out, registryLoneBegin)
+		}
+	})
+
+	t.Run("BEGIN and END out of order", func(t *testing.T) {
+		// Registry has END before BEGIN — out of order.
+		// replaceBlock must return the registry unchanged.
+		registryOutOfOrder := `# Skill Registry
+### Shared Contracts
+| Artifact | Path | Description |
+|----------|------|-------------|
+` + propagator.EndMarker + `
+| minimalism-contract | skills/_shared/minimalism-contract.md | stale row |
+` + propagator.BeginMarker + `
+`
+		out, changed, err := propagator.Propagate(registryOutOfOrder, cfg, phases)
+		if err != nil {
+			t.Fatalf("Propagate: %v", err)
+		}
+		// replaceBlock finds end < start → returns registry unchanged → changed=false.
+		if changed {
+			t.Errorf("BEGIN/END out of order: expected changed=false (replaceBlock guard), got changed=true; out:\n%s", out)
+		}
+		if out != registryOutOfOrder {
+			t.Errorf("BEGIN/END out of order: registry content should be unchanged;\ngot:\n%s\nwant:\n%s", out, registryOutOfOrder)
+		}
+	})
+}
+
+// TC-L: replaceUnscopedRow inAnyBlock branches — an UNSCOPED minimalism-contract
+// row OUTSIDE any block PLUS a foreign BEGIN/END marker block in the same registry.
+// The unscoped row (outside any block) must be corrected; the foreign block untouched.
+// Exercises both the block-entry (<!-- BEGIN:) and block-exit/END (<!-- END:) branches.
+func TestReplaceUnscopedRow_InAnyBlockBranches(t *testing.T) {
+	// Registry contains:
+	// 1. A foreign BEGIN/END marker block (must survive untouched).
+	// 2. An UNSCOPED minimalism-contract row OUTSIDE any block (must be corrected).
+	const foreignBlockContent = `<!-- BEGIN: foreign-tool (auto-generated) -->
+| foreign-skill | skills/foreign/SKILL.md | Foreign skill description. |
+<!-- END: foreign-tool -->`
+
+	registryWithBothBlocks := `# Skill Registry
+### Shared Contracts
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+` + foreignBlockContent + `
+| minimalism-contract | skills/_shared/minimalism-contract.md | Response-length and minimalism rules. |
+`
+
+	cfg := propagator.Config{
+		ContractPath: "skills/_shared/minimalism-contract.md",
+	}
+	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter: %v", err)
+	}
+
+	out, changed, err := propagator.Propagate(registryWithBothBlocks, cfg, phases)
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true: unscoped row outside any block must be corrected")
+	}
+
+	// The unscoped row must be replaced with the scoped BEGIN/END block.
+	if !strings.Contains(out, propagator.BeginMarker) {
+		t.Error("minimalism BEGIN marker must be present after correcting unscoped row")
+	}
+	if !strings.Contains(out, propagator.EndMarker) {
+		t.Error("minimalism END marker must be present after correcting unscoped row")
+	}
+	if !strings.Contains(out, "sdd-tasks") {
+		t.Error("corrected block must reference sdd-tasks in description")
+	}
+
+	// The foreign block must survive verbatim (block-entry and block-exit branches
+	// protect rows inside any marker block from replacement).
+	if !strings.Contains(out, foreignBlockContent) {
+		t.Error("foreign marker block was removed or modified — must survive untouched")
+	}
+	if !strings.Contains(out, "foreign-skill") {
+		t.Error("foreign-skill row inside the foreign block must not be touched")
+	}
+
+	// No unscoped minimalism-contract row should remain outside the marker block.
+	lines := strings.Split(out, "\n")
+	inBlock := false
+	for _, line := range lines {
+		if strings.Contains(line, "<!-- BEGIN:") {
+			inBlock = true
+		}
+		if strings.Contains(line, "<!-- END:") {
+			inBlock = false
+		}
+		trimmed := strings.TrimSpace(line)
+		if !inBlock && strings.HasPrefix(trimmed, "|") &&
+			strings.Contains(trimmed, "minimalism-contract") &&
+			!strings.Contains(trimmed, "BEGIN") && !strings.Contains(trimmed, "END") &&
+			!strings.Contains(trimmed, "<!--") &&
+			!strings.Contains(trimmed, "Inject ONLY into") { // scoped row is OK
+			t.Errorf("unscoped minimalism-contract row still present outside any block: %q", line)
+		}
+	}
+}
+
+// TC-M: ParseFrontmatter missing-delimiter — input with no YAML frontmatter
+// (len(parts) < 3) must return an error with the expected struct shape.
+func TestParseFrontmatter_MissingDelimiter(t *testing.T) {
+	inputs := []string{
+		"no frontmatter at all",
+		"just some text without any dashes",
+		"",
+		"---\nonly one delimiter\n",
+	}
+
+	for _, input := range inputs {
+		phases, err := propagator.ParseFrontmatter(input)
+		if err == nil {
+			t.Errorf("ParseFrontmatter(%q): expected error for missing frontmatter delimiters, got nil", input)
+			continue
+		}
+		// Error message should be informative.
+		if !strings.Contains(err.Error(), "frontmatter") && !strings.Contains(err.Error(), "---") &&
+			!strings.Contains(err.Error(), "applies_to_phases") {
+			t.Errorf("ParseFrontmatter(%q): error message should mention frontmatter/delimiters/applies_to_phases; got: %v", input, err)
+		}
+		// The returned struct must be the zero value (no partial data).
+		if len(phases.AppliesTo) != 0 {
+			t.Errorf("ParseFrontmatter(%q): AppliesTo should be empty on error, got: %v", input, phases.AppliesTo)
+		}
+		if len(phases.Excluded) != 0 {
+			t.Errorf("ParseFrontmatter(%q): Excluded should be empty on error, got: %v", input, phases.Excluded)
+		}
+	}
+}
+
+// TC-N: appendToSharedContracts break-on-next-heading — a registry whose
+// '### Shared Contracts' section is followed by another heading before EOF.
+// The block must be inserted at the correct position (inside the Shared
+// Contracts table, NOT after the next heading).
+func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
+	// Registry whose Shared Contracts section has a table row and is followed
+	// by another '## Other Section' heading before EOF.
+	const registryWithNextHeading = `# Skill Registry
+
+## Skills Index
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+
+## Other Section
+
+| some-other | path | desc |
+`
+
+	cfg := propagator.Config{
+		ContractPath: "skills/_shared/minimalism-contract.md",
+	}
+	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter: %v", err)
+	}
+
+	out, changed, err := propagator.Propagate(registryWithNextHeading, cfg, phases)
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+	if !changed {
+		t.Fatal("expected changed=true: minimalism block was missing")
+	}
+
+	// The minimalism block must be present.
+	if !strings.Contains(out, propagator.BeginMarker) {
+		t.Error("BEGIN marker missing from output")
+	}
+
+	// The block must be inserted BEFORE '## Other Section' (inside Shared Contracts),
+	// not after it. Verify correct insert position.
+	beginIdx := strings.Index(out, propagator.BeginMarker)
+	otherSectionIdx := strings.Index(out, "## Other Section")
+	if otherSectionIdx != -1 && beginIdx > otherSectionIdx {
+		t.Errorf("minimalism block was inserted AFTER '## Other Section' — wrong position;\nbeginIdx=%d, otherSectionIdx=%d\nout:\n%s",
+			beginIdx, otherSectionIdx, out)
+	}
+
+	// The '## Other Section' content must survive unchanged.
+	if !strings.Contains(out, "## Other Section") {
+		t.Error("'## Other Section' heading was removed or modified")
+	}
+	if !strings.Contains(out, "some-other") {
+		t.Error("content under '## Other Section' was removed or modified")
+	}
+}

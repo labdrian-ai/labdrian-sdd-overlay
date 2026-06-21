@@ -44,9 +44,26 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine gate-task --contract-file <path> [--contract-path <str>]")
 }
 
+// writeFileFn is the type of a function that writes a file (injectable for tests).
+type writeFileFn func(string, []byte, os.FileMode) error
+
 // runPropagate implements the 'propagate' subcommand.
 // Fails LOUD on any error (exits 1).
 func runPropagate(args []string) {
+	runPropagateCore(args, os.Stdout, os.Stderr, os.ReadFile, os.WriteFile, os.Exit)
+}
+
+// runPropagateCore is the testable core of the propagate subcommand. It accepts
+// injectable stdout/stderr, file-reader, file-writer, and exit function so unit
+// tests can exercise all branches without real files or OS I/O.
+func runPropagateCore(
+	args []string,
+	stdout io.Writer,
+	stderr io.Writer,
+	readFile readFileFn,
+	writeFile writeFileFn,
+	exit func(int),
+) {
 	var registryPath, contractFilePath, contractPath string
 	contractPath = "skills/_shared/minimalism-contract.md" // default
 
@@ -71,51 +88,56 @@ func runPropagate(args []string) {
 	}
 
 	if registryPath == "" {
-		fmt.Fprintln(os.Stderr, "error: --registry is required")
-		usage()
-		os.Exit(1)
+		fmt.Fprintln(stderr, "error: --registry is required")
+		exit(1)
+		return
 	}
 	if contractFilePath == "" {
-		fmt.Fprintln(os.Stderr, "error: --contract-file is required")
-		usage()
-		os.Exit(1)
+		fmt.Fprintln(stderr, "error: --contract-file is required")
+		exit(1)
+		return
 	}
 
-	contractContent, err := os.ReadFile(contractFilePath)
+	contractContent, err := readFile(contractFilePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: reading contract file: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "error: reading contract file: %v\n", err)
+		exit(1)
+		return
 	}
 
 	phases, err := propagator.ParseFrontmatter(string(contractContent))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
 	}
 
-	registryContent, err := os.ReadFile(registryPath)
+	registryContent, err := readFile(registryPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: reading registry file: %v\n", err)
-		os.Exit(1)
+		fmt.Fprintf(stderr, "error: reading registry file: %v\n", err)
+		exit(1)
+		return
 	}
 
 	cfg := propagator.Config{ContractPath: contractPath}
 	out, changed, err := propagator.Propagate(string(registryContent), cfg, phases)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: %v\n", err)
-		os.Exit(1)
-	}
-
-	if !changed {
-		fmt.Println("registry: minimalism-contract scope is already correct (no-op)")
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
 		return
 	}
 
-	if err := os.WriteFile(registryPath, []byte(out), 0644); err != nil {
-		fmt.Fprintf(os.Stderr, "error: writing registry: %v\n", err)
-		os.Exit(1)
+	if !changed {
+		fmt.Fprintln(stdout, "registry: minimalism-contract scope is already correct (no-op)")
+		return
 	}
-	fmt.Println("registry: minimalism-contract scoped row inserted/updated")
+
+	if err := writeFile(registryPath, []byte(out), 0644); err != nil {
+		fmt.Fprintf(stderr, "error: writing registry: %v\n", err)
+		exit(1)
+		return
+	}
+	fmt.Fprintln(stdout, "registry: minimalism-contract scoped row inserted/updated")
 }
 
 // stdinSizeLimit caps how many bytes we read from stdin to prevent a runaway
@@ -183,6 +205,13 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	cfg := gate.Config{
 		ContractPath:    contractPath,
 		ContractContent: contractContent,
+	}
+
+	// Item 2: emit a stderr diagnostic when the contract frontmatter is broken so
+	// wiring mistakes with a corrupt contract are immediately visible. stdout stays
+	// pass-through '{}' and exit 0 (fail-safe contract UNCHANGED).
+	if _, err := propagator.ParseFrontmatter(contractContent); err != nil {
+		fmt.Fprintf(stderr, "gate-task: warning: contract frontmatter unparseable: %v (passing through)\n", err)
 	}
 
 	resp, _ := gate.Process(string(rawInput), cfg)
