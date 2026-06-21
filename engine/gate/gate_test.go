@@ -22,17 +22,37 @@ Content here.
 
 const contractPath = "skills/_shared/minimalism-contract.md"
 
-// buildInput returns a Claude Code PreToolUse hook JSON for the Task tool.
+// buildInput returns a Claude Code PreToolUse hook JSON for the Agent tool
+// with description, prompt, and subagent_type — the verified real format.
 func buildInput(subagentType, prompt string) string {
 	input := map[string]interface{}{
-		"tool_name": "Task",
+		"tool_name": "Agent",
 		"tool_input": map[string]interface{}{
+			"description":   "test sub-agent for " + subagentType,
 			"subagent_type": subagentType,
 			"prompt":        prompt,
 		},
 	}
 	b, _ := json.Marshal(input)
 	return string(b)
+}
+
+// canonicalContractEntry is the exact line the gate emits/recognizes for contractPath.
+// This is a BARE path line — just the contract path itself, no prefix.
+// This matches the orchestrator's real format (bare path lines under the header).
+const canonicalContractEntry = contractPath
+
+// assertNoCanonicalEntry checks that the canonical contract entry is not present
+// as an exact line in the prompt.
+func assertNoCanonicalEntry(t *testing.T, prompt string) {
+	t.Helper()
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.TrimSpace(line) == canonicalContractEntry {
+			t.Errorf("canonical contract entry line %q should be absent; full prompt:\n%s",
+				canonicalContractEntry, prompt)
+			return
+		}
+	}
 }
 
 // ---- tests -----------------------------------------------------------------
@@ -57,6 +77,13 @@ func TestInjectsForSddTasks(t *testing.T) {
 	if !ok {
 		t.Fatalf("response missing hookSpecificOutput; got: %s", resp)
 	}
+	// F-OUTPUT: must have hookEventName and permissionDecision.
+	if hso["hookEventName"] != "PreToolUse" {
+		t.Errorf("hookEventName must be 'PreToolUse'; got: %v", hso["hookEventName"])
+	}
+	if hso["permissionDecision"] != "allow" {
+		t.Errorf("permissionDecision must be 'allow'; got: %v", hso["permissionDecision"])
+	}
 	updatedInput, ok := hso["updatedInput"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("hookSpecificOutput missing updatedInput; got: %v", hso)
@@ -65,11 +92,26 @@ func TestInjectsForSddTasks(t *testing.T) {
 	if !ok {
 		t.Fatal("updatedInput missing prompt string")
 	}
-	if !strings.Contains(newPrompt, contractPath) {
-		t.Errorf("injected prompt should contain contract path %q; got:\n%s", contractPath, newPrompt)
+	// Contract path must appear as an exact bare line.
+	found := false
+	for _, line := range strings.Split(newPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("injected prompt should contain contract path %q as exact line; got:\n%s", contractPath, newPrompt)
 	}
 	if !strings.Contains(newPrompt, "## Skills to load before work") {
 		t.Errorf("injected prompt should contain injection_point header; got:\n%s", newPrompt)
+	}
+	// F-OUTPUT: updatedInput must echo description and subagent_type.
+	if updatedInput["description"] != "test sub-agent for sdd-tasks" {
+		t.Errorf("updatedInput must echo description; got: %v", updatedInput["description"])
+	}
+	if updatedInput["subagent_type"] != "sdd-tasks" {
+		t.Errorf("updatedInput must echo subagent_type; got: %v", updatedInput["subagent_type"])
 	}
 }
 
@@ -94,30 +136,22 @@ func TestInjectsForSddApply(t *testing.T) {
 	}
 	updatedInput, _ := hso["updatedInput"].(map[string]interface{})
 	newPrompt, _ := updatedInput["prompt"].(string)
-	if !strings.Contains(newPrompt, contractPath) {
-		t.Errorf("sdd-apply should have contract injected; got:\n%s", newPrompt)
-	}
-}
-
-// canonicalContractEntry is the exact line the gate emits/recognizes for contractPath.
-const canonicalContractEntry = "Read fully BEFORE work: " + contractPath
-
-// assertNoCanonicalEntry checks that the canonical contract entry is not present
-// as an exact line in the prompt.
-func assertNoCanonicalEntry(t *testing.T, prompt string) {
-	t.Helper()
-	for _, line := range strings.Split(prompt, "\n") {
-		if strings.TrimSpace(line) == canonicalContractEntry {
-			t.Errorf("canonical contract entry line %q should be absent; full prompt:\n%s",
-				canonicalContractEntry, prompt)
-			return
+	// Check bare path line presence.
+	found := false
+	for _, line := range strings.Split(newPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
 		}
+	}
+	if !found {
+		t.Errorf("sdd-apply should have contract injected as bare path line; got:\n%s", newPrompt)
 	}
 }
 
 // TC-3: sdd-propose → canonical contract entry stripped if present, no-op if absent.
 func TestStripsFromSddPropose(t *testing.T) {
-	// Prompt already contains the canonical contract entry — it should be stripped.
+	// Prompt already contains the canonical contract entry (bare path) — it should be stripped.
 	promptWithContract := "Do propose.\n\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-propose", promptWithContract)
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
@@ -135,6 +169,13 @@ func TestStripsFromSddPropose(t *testing.T) {
 	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("response missing hookSpecificOutput; got: %s", resp)
+	}
+	// F-OUTPUT: must have hookEventName and permissionDecision.
+	if hso["hookEventName"] != "PreToolUse" {
+		t.Errorf("hookEventName must be 'PreToolUse'; got: %v", hso["hookEventName"])
+	}
+	if hso["permissionDecision"] != "allow" {
+		t.Errorf("permissionDecision must be 'allow'; got: %v", hso["permissionDecision"])
 	}
 	updatedInput, _ := hso["updatedInput"].(map[string]interface{})
 	newPrompt, _ := updatedInput["prompt"].(string)
@@ -233,10 +274,7 @@ func TestExcludedPhaseNoContractIsPassThrough(t *testing.T) {
 		t.Fatalf("Process: %v", err)
 	}
 
-	// Should be a benign allow response (no updatedInput needed since nothing changed),
-	// or an updatedInput with the prompt unchanged. Either is acceptable — what
-	// matters is that the response is valid JSON and the prompt is NOT modified
-	// to add the contract.
+	// Should be a benign allow response (no updatedInput needed since nothing changed).
 	var result map[string]interface{}
 	if err := json.Unmarshal([]byte(resp), &result); err != nil {
 		t.Fatalf("response is not valid JSON: %v\nresponse: %s", err, resp)
@@ -314,7 +352,7 @@ func TestMalformedJSONPassThrough(t *testing.T) {
 // TC-11: missing tool_input.prompt → pass-through (FAIL-SAFE).
 func TestMissingPromptPassThrough(t *testing.T) {
 	// tool_input exists but has no "prompt" key.
-	input := `{"tool_name":"Task","tool_input":{"subagent_type":"sdd-tasks"}}`
+	input := `{"tool_name":"Agent","tool_input":{"description":"desc","subagent_type":"sdd-tasks"}}`
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
 
 	resp, err := gate.Process(input, cfg)
@@ -371,7 +409,15 @@ func TestInjectsUnderExistingHeader(t *testing.T) {
 	hso, _ := result["hookSpecificOutput"].(map[string]interface{})
 	updatedInput, _ := hso["updatedInput"].(map[string]interface{})
 	newPrompt, _ := updatedInput["prompt"].(string)
-	if !strings.Contains(newPrompt, contractPath) {
+	// Contract path must appear as exact bare line.
+	found := false
+	for _, line := range strings.Split(newPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
 		t.Errorf("contract path should be injected under existing header; got:\n%s", newPrompt)
 	}
 	// Header must appear only once.
@@ -382,7 +428,8 @@ func TestInjectsUnderExistingHeader(t *testing.T) {
 
 // TC-13c: inject when contract path is already in the prompt → no-op pass-through.
 func TestNoOpWhenContractAlreadyPresent(t *testing.T) {
-	promptAlreadyHas := "Do tasks.\n\n## Skills to load before work\nRead fully BEFORE work: " + contractPath + "\n"
+	// Prompt already has the bare contract path line.
+	promptAlreadyHas := "Do tasks.\n\n## Skills to load before work\n" + contractPath + "\n"
 	input := buildInput("sdd-tasks", promptAlreadyHas)
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
 
@@ -414,7 +461,8 @@ func TestExactMatchInjection_SubstringPathDoesNotSuppressInject(t *testing.T) {
 	// Prompt already contains a DIFFERENT path that merely contains contractPath
 	// as a substring. inject() must NOT treat this as "already present".
 	superPath := "other/skills/_shared/minimalism-contract.md"
-	prompt := "Do tasks.\n\n## Skills to load before work\nRead fully BEFORE work: " + superPath + "\n"
+	// The super-path appears as a bare line (not as the canonical entry for contractPath).
+	prompt := "Do tasks.\n\n## Skills to load before work\n" + superPath + "\n"
 	input := buildInput("sdd-tasks", prompt)
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
 
@@ -436,10 +484,16 @@ func TestExactMatchInjection_SubstringPathDoesNotSuppressInject(t *testing.T) {
 		t.Fatalf("hookSpecificOutput missing updatedInput; got: %v", hso)
 	}
 	newPrompt, _ := ui["prompt"].(string)
-	// The exact contract path entry must now be present.
-	exactEntry := "Read fully BEFORE work: " + contractPath
-	if !strings.Contains(newPrompt, exactEntry) {
-		t.Errorf("exact contract entry should be injected; got:\n%s", newPrompt)
+	// The exact contract path must now be present as a bare line.
+	found := false
+	for _, line := range strings.Split(newPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("exact contract bare path line should be injected; got:\n%s", newPrompt)
 	}
 	// The super-path line must still be present (not stripped).
 	if !strings.Contains(newPrompt, superPath) {
@@ -450,12 +504,11 @@ func TestExactMatchInjection_SubstringPathDoesNotSuppressInject(t *testing.T) {
 // TC-F1b: a 'minimalism-contract.md.bak' line in an excluded phase prompt is
 // NOT collaterally stripped — only the exact contract entry is removed.
 func TestExactMatchStrip_BackupLineNotStripped(t *testing.T) {
-	backupLine := "Read fully BEFORE work: skills/_shared/minimalism-contract.md.bak"
-	exactEntry := "Read fully BEFORE work: " + contractPath
+	backupLine := "skills/_shared/minimalism-contract.md.bak"
 	// Prompt for an excluded phase (sdd-propose) that contains:
-	//   - the exact contract entry (must be stripped)
+	//   - the exact contract entry (bare path — must be stripped)
 	//   - a .bak line that must NOT be stripped
-	prompt := "Do propose.\n\n## Skills to load before work\n" + exactEntry + "\n" + backupLine + "\n"
+	prompt := "Do propose.\n\n## Skills to load before work\n" + contractPath + "\n" + backupLine + "\n"
 	input := buildInput("sdd-propose", prompt)
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
 
@@ -474,10 +527,10 @@ func TestExactMatchStrip_BackupLineNotStripped(t *testing.T) {
 	ui, _ := hso["updatedInput"].(map[string]interface{})
 	newPrompt, _ := ui["prompt"].(string)
 
-	// The exact contract entry must be gone — check for exact line presence.
+	// The exact contract entry must be gone.
 	for _, line := range strings.Split(newPrompt, "\n") {
-		if strings.TrimSpace(line) == exactEntry {
-			t.Errorf("exact contract entry line %q should be stripped but was found; full prompt:\n%s", exactEntry, newPrompt)
+		if strings.TrimSpace(line) == contractPath {
+			t.Errorf("exact contract path line %q should be stripped but was found; full prompt:\n%s", contractPath, newPrompt)
 		}
 	}
 	// The .bak line must remain.
@@ -487,10 +540,10 @@ func TestExactMatchStrip_BackupLineNotStripped(t *testing.T) {
 }
 
 // TC-F1c: only the exact contract entry is added/removed.
-// inject() must emit exactly the canonical entry line and strip() must remove
+// inject() must emit exactly the canonical bare path line and strip() must remove
 // exactly that line (no broader text removal).
 func TestExactMatchCanonicalEntry(t *testing.T) {
-	// Inject: start from blank prompt, verify canonical entry appears.
+	// Inject: start from blank prompt, verify canonical bare path line appears.
 	prompt := "Do tasks."
 	input := buildInput("sdd-tasks", prompt)
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
@@ -506,9 +559,20 @@ func TestExactMatchCanonicalEntry(t *testing.T) {
 	hso, _ := result["hookSpecificOutput"].(map[string]interface{})
 	ui, _ := hso["updatedInput"].(map[string]interface{})
 	injectedPrompt, _ := ui["prompt"].(string)
-	canonicalEntry := "Read fully BEFORE work: " + contractPath
-	if !strings.Contains(injectedPrompt, canonicalEntry) {
-		t.Errorf("inject must emit canonical entry %q; got:\n%s", canonicalEntry, injectedPrompt)
+	// The canonical entry is the bare contract path as an exact line.
+	found := false
+	for _, line := range strings.Split(injectedPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("inject must emit canonical bare path line %q; got:\n%s", contractPath, injectedPrompt)
+	}
+	// Must NOT use the old "Read fully BEFORE work:" prefix.
+	if strings.Contains(injectedPrompt, "Read fully BEFORE work:") {
+		t.Errorf("injected entry must use bare path format, not 'Read fully BEFORE work:'; got:\n%s", injectedPrompt)
 	}
 
 	// Strip: feed the injected prompt to an excluded phase, verify removal.
@@ -524,8 +588,10 @@ func TestExactMatchCanonicalEntry(t *testing.T) {
 	hsoS, _ := stripResult["hookSpecificOutput"].(map[string]interface{})
 	uiS, _ := hsoS["updatedInput"].(map[string]interface{})
 	strippedPrompt, _ := uiS["prompt"].(string)
-	if strings.Contains(strippedPrompt, canonicalEntry) {
-		t.Errorf("strip must remove canonical entry; got:\n%s", strippedPrompt)
+	for _, line := range strings.Split(strippedPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			t.Errorf("strip must remove canonical bare path line; got:\n%s", strippedPrompt)
+		}
 	}
 	// The original task text must remain.
 	if !strings.Contains(strippedPrompt, "Do tasks.") {
@@ -553,15 +619,22 @@ func TestHeaderVariantStillInjects(t *testing.T) {
 	if err := json.Unmarshal([]byte(resp), &result); err != nil {
 		t.Fatalf("response not valid JSON: %v", err)
 	}
-	// Must inject: contract path must appear in the result.
+	// Must inject: contract path must appear as a bare line in the result.
 	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("response missing hookSpecificOutput (injection should have happened); got: %s", resp)
 	}
 	ui, _ := hso["updatedInput"].(map[string]interface{})
 	newPrompt, _ := ui["prompt"].(string)
-	if !strings.Contains(newPrompt, contractPath) {
-		t.Errorf("contract path must be injected even when header has a variant; got:\n%s", newPrompt)
+	found := false
+	for _, line := range strings.Split(newPrompt, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("contract path must be injected as bare line even when header has a variant; got:\n%s", newPrompt)
 	}
 }
 
@@ -594,7 +667,7 @@ func TestInjectDoubleNewlineSeparator(t *testing.T) {
 // Pass-through means zero modification: the gate returns {} with no hookSpecificOutput
 // key at all. Any presence of hookSpecificOutput (empty or not) is a regression.
 func TestMissingPromptPassThrough_NoUpdatedInput(t *testing.T) {
-	input := `{"tool_name":"Task","tool_input":{"subagent_type":"sdd-tasks"}}`
+	input := `{"tool_name":"Agent","tool_input":{"description":"desc","subagent_type":"sdd-tasks"}}`
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
 
 	resp, err := gate.Process(input, cfg)
@@ -606,8 +679,6 @@ func TestMissingPromptPassThrough_NoUpdatedInput(t *testing.T) {
 		t.Fatalf("response must be valid JSON: %v\nresponse: %s", err, resp)
 	}
 	// hookSpecificOutput must be entirely absent on pass-through.
-	// If it is present (even with an empty updatedInput), the gate modified the
-	// input when it should have been a no-op — that is the regression we guard.
 	if _, present := result["hookSpecificOutput"]; present {
 		t.Errorf("hookSpecificOutput must be absent on pass-through (missing prompt); got response: %s", resp)
 	}
@@ -639,12 +710,19 @@ injection_point: "## Skills to load before work"
 	hso, _ := resultSpec["hookSpecificOutput"].(map[string]interface{})
 	updatedInput, _ := hso["updatedInput"].(map[string]interface{})
 	newPromptSpec, _ := updatedInput["prompt"].(string)
-	if !strings.Contains(newPromptSpec, contractPath) {
-		t.Errorf("sdd-spec should inject when in applies_to_phases; got:\n%s", newPromptSpec)
+	found := false
+	for _, line := range strings.Split(newPromptSpec, "\n") {
+		if strings.TrimSpace(line) == contractPath {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Errorf("sdd-spec should inject bare path line when in applies_to_phases; got:\n%s", newPromptSpec)
 	}
 
 	// sdd-tasks should now STRIP (it's in excluded_phases for the swapped contract).
-	// Use the canonical entry format so strip() fires.
+	// Use the bare path canonical entry format so strip() fires.
 	promptWithContract := "Tasks.\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	inputTasks := buildInput("sdd-tasks", promptWithContract)
 	respTasks, err := gate.Process(inputTasks, cfgSwapped)

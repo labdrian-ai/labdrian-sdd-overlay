@@ -535,13 +535,30 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 	json.Unmarshal(data, &root)
 
 	hooks := root["hooks"].(map[string]interface{})
+	// countEntries uses binary-substring match inside inner hooks[].command
+	// to match the verified entry shape: {"hooks":[{"type":"command","command":"..."}]}.
 	countEntries := func(key string) int {
 		entries, _ := hooks[key].([]interface{})
 		n := 0
 		for _, e := range entries {
-			if em, ok := e.(map[string]interface{}); ok {
-				if em["command"] == "/test/.claude/bin/gentle-ai-overlay" {
-					n++
+			em, ok := e.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			innerHooks, ok := em["hooks"].([]interface{})
+			if !ok {
+				continue
+			}
+			for _, ih := range innerHooks {
+				ihm, ok := ih.(map[string]interface{})
+				if !ok {
+					continue
+				}
+				if cmdStr, ok := ihm["command"].(string); ok {
+					if strings.Contains(cmdStr, "/test/.claude/bin/gentle-ai-overlay") {
+						n++
+						break
+					}
 				}
 			}
 		}

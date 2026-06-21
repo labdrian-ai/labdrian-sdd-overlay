@@ -1,7 +1,7 @@
 // Package gate implements the fail-safe gate-task subcommand for the
 // deterministic-scoping engine.
 //
-// gate-task reads a Claude Code PreToolUse 'Task' tool_input JSON from STDIN,
+// gate-task reads a Claude Code PreToolUse 'Agent' tool_input JSON from STDIN,
 // inspects subagent_type, and:
 //   - INJECTS the minimalism-contract path into the sub-agent prompt when
 //     subagent_type is in the applies_to_phases set from contract frontmatter.
@@ -10,28 +10,55 @@
 //   - PASSES THROUGH unchanged on any error, unknown type, malformed input,
 //     or broken frontmatter.
 //
+// VERIFIED REALITY (Claude Code 2.1.185):
+//   - The sub-agent spawn tool is named "Agent", NOT "Task". Settings matcher must
+//     be "Agent".
+//   - A PreToolUse hook on "Agent" DOES fire and updatedInput DOES rewrite the
+//     sub-agent prompt.
+//   - tool_input fields: description, prompt, subagent_type, model (optional).
+//   - updatedInput MUST echo FULL tool_input (description, prompt[mutated],
+//     subagent_type, model-if-present). Returning just {prompt:...} fails schema
+//     validation ("required parameter description is missing").
+//   - hookSpecificOutput MUST include hookEventName:"PreToolUse" and
+//     permissionDecision:"allow". Without them, updatedInput is ignored.
+//   - The canonical injected entry is a BARE absolute path line. Exact trimmed-line
+//     matching prevents double-injection and makes strip work correctly.
+//
 // CRITICAL SAFETY: gate-task MUST be fail-safe. On ANY error it outputs a
 // pass-through response that leaves tool_input UNCHANGED and exits 0. It must
-// NEVER block a Task, NEVER crash, NEVER deny.
+// NEVER block an Agent call, NEVER crash, NEVER deny.
 package gate
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 )
 
+// defaultInjectionHeader is the fallback header when contract frontmatter does
+// not specify injection_point.
+const defaultInjectionHeader = "## Skills to load before work"
+
 // Config holds the runtime configuration for the gate processor.
 type Config struct {
-	// ContractPath is the path to the minimalism-contract file as it appears
-	// in skill prompts (e.g. "skills/_shared/minimalism-contract.md").
+	// ContractPath is the ABSOLUTE path to the minimalism-contract file as it
+	// appears in skill prompts. This is the bare path line injected/stripped.
+	// Example: "/home/user/.claude/skills/_shared/minimalism-contract.md"
 	ContractPath string
 
 	// ContractContent is the raw content of the contract file, used to parse
-	// the frontmatter for phase sets.
+	// the frontmatter for phase sets and injection_point.
 	ContractContent string
+}
+
+// agentToolInput represents the Agent tool's input fields.
+// All fields are preserved for faithful echo in updatedInput.
+type agentToolInput struct {
+	Description   string  `json:"description"`
+	Prompt        string  `json:"prompt"`
+	SubagentType  string  `json:"subagent_type"`
+	Model         *string `json:"model,omitempty"`
 }
 
 // hookInput represents the Claude Code PreToolUse hook JSON input shape.
@@ -40,36 +67,36 @@ type hookInput struct {
 	ToolInput json.RawMessage `json:"tool_input"`
 }
 
-// taskToolInput represents the Task tool's input fields we care about.
-type taskToolInput struct {
-	SubagentType string `json:"subagent_type"`
-	Prompt       string `json:"prompt"`
-}
-
 // hookResponse is the Claude Code PreToolUse hook response shape.
 // hookSpecificOutput is included only when the input is modified.
 type hookResponse struct {
 	HookSpecificOutput *hookSpecificOutput `json:"hookSpecificOutput,omitempty"`
 }
 
+// hookSpecificOutput carries the mutation decision and the modified input.
+// hookEventName and permissionDecision are REQUIRED by Claude Code — without
+// them, updatedInput is silently ignored.
 type hookSpecificOutput struct {
-	UpdatedInput *updatedInput `json:"updatedInput,omitempty"`
+	HookEventName      string        `json:"hookEventName"`
+	PermissionDecision string        `json:"permissionDecision"`
+	UpdatedInput       *updatedInput `json:"updatedInput,omitempty"`
 }
 
+// updatedInput is the full echo of tool_input with only prompt mutated.
+// ALL fields from the original tool_input must be present to pass schema
+// validation (Claude Code rejects the response if description is missing).
 type updatedInput struct {
-	Prompt string `json:"prompt"`
+	Description  string  `json:"description"`
+	Prompt       string  `json:"prompt"`
+	SubagentType string  `json:"subagent_type"`
+	Model        *string `json:"model,omitempty"`
 }
 
 // passThrough returns the benign allow response that leaves tool_input unchanged.
 // This is the fail-safe output used on any error or unknown state.
+// An empty JSON object {} is sufficient — Claude Code treats it as "no change".
 func passThrough() (string, error) {
-	resp := hookResponse{}
-	b, err := json.Marshal(resp)
-	if err != nil {
-		// Absolute last resort: hand-craft a minimal valid JSON.
-		return `{}`, nil
-	}
-	return string(b), nil
+	return `{}`, nil
 }
 
 // Process applies gate logic to the raw JSON input string.
@@ -78,12 +105,17 @@ func passThrough() (string, error) {
 // that would cause the caller to exit non-zero. Errors are absorbed into
 // pass-through responses.
 func Process(rawInput string, cfg Config) (string, error) {
-	// Parse the contract frontmatter to derive phase sets.
-	// On broken frontmatter → fail-safe pass-through (gate is NOT like propagate
-	// which may fail loud; see design asymmetry).
+	// Parse the contract frontmatter to derive phase sets and injection point.
+	// On broken frontmatter → fail-safe pass-through.
 	phases, err := propagator.ParseFrontmatter(cfg.ContractContent)
 	if err != nil {
 		return passThrough()
+	}
+
+	// Determine the injection header from frontmatter or use the fallback.
+	injHeader := phases.InjectionPoint
+	if injHeader == "" {
+		injHeader = defaultInjectionHeader
 	}
 
 	applySet := toSet(phases.AppliesTo)
@@ -104,7 +136,7 @@ func Process(rawInput string, cfg Config) (string, error) {
 		return passThrough()
 	}
 
-	var ti taskToolInput
+	var ti agentToolInput
 	if err := json.Unmarshal(hi.ToolInput, &ti); err != nil {
 		return passThrough()
 	}
@@ -122,13 +154,14 @@ func Process(rawInput string, cfg Config) (string, error) {
 
 	switch {
 	case applySet[ti.SubagentType]:
-		// INJECT: ensure the contract path appears under the injection_point header.
-		newPrompt := inject(ti.Prompt, cfg.ContractPath)
+		// INJECT: ensure the contract path appears under the injection_point header
+		// as a bare absolute path line.
+		newPrompt := inject(ti.Prompt, cfg.ContractPath, injHeader)
 		if newPrompt == ti.Prompt {
 			// Already present — no-op pass-through.
 			return passThrough()
 		}
-		return buildResponse(newPrompt)
+		return buildResponse(newPrompt, &ti)
 
 	case excludeSet[ti.SubagentType]:
 		// STRIP: remove the contract path if present.
@@ -137,7 +170,7 @@ func Process(rawInput string, cfg Config) (string, error) {
 			// Was not present — no-op pass-through.
 			return passThrough()
 		}
-		return buildResponse(newPrompt)
+		return buildResponse(newPrompt, &ti)
 
 	default:
 		// Unknown subagent_type → fail-safe pass-through.
@@ -154,14 +187,16 @@ func toSet(items []string) map[string]bool {
 	return m
 }
 
-// injectionHeader is the header under which the contract path is injected.
-const injectionHeader = "## Skills to load before work"
-
 // canonicalEntry returns the exact line emitted and recognized by the gate for
-// a given contract path. This is the load-bearing string for idempotency — only
-// this exact line (when present as a trimmed line) counts as "already injected".
+// a given contract path. This is a BARE absolute path line — the contract path
+// itself with no prefix. This matches the orchestrator's real format where skill
+// paths are listed as bare lines under "## Skills to load before work".
+//
+// Exact trimmed-line matching (not substring) prevents collision with paths that
+// contain the contract path as a substring (e.g. a backup path) and makes
+// double-injection detection and strip both reliable.
 func canonicalEntry(contractPath string) string {
-	return fmt.Sprintf("Read fully BEFORE work: %s", contractPath)
+	return contractPath
 }
 
 // hasExactEntry reports whether prompt contains the canonical entry line for
@@ -179,7 +214,7 @@ func hasExactEntry(prompt, contractPath string) bool {
 // hasExactHeader reports whether prompt contains the injection header as an
 // exact line (trimmed). A header variant like '## Skills to load before work
 // (extra context)' does NOT count as the exact header.
-func hasExactHeader(prompt string) bool {
+func hasExactHeader(prompt, injectionHeader string) bool {
 	for _, line := range strings.Split(prompt, "\n") {
 		if strings.TrimSpace(line) == injectionHeader {
 			return true
@@ -188,11 +223,12 @@ func hasExactHeader(prompt string) bool {
 	return false
 }
 
-// inject ensures that contractPath appears under the injectionHeader in prompt.
+// inject ensures that contractPath appears under the injectionHeader in prompt
+// as a bare path line (the canonical entry format).
 // If the exact header already exists, the entry is appended under it.
 // If the exact header does not exist, it is added at the end of the prompt.
-// Detection of "already present" uses exact line matching (F1, F2 hardening).
-func inject(prompt, contractPath string) string {
+// Detection of "already present" uses exact line matching.
+func inject(prompt, contractPath, injectionHeader string) string {
 	entry := canonicalEntry(contractPath)
 
 	// Already present (exact match) → no-op.
@@ -200,7 +236,7 @@ func inject(prompt, contractPath string) string {
 		return prompt
 	}
 
-	if hasExactHeader(prompt) {
+	if hasExactHeader(prompt, injectionHeader) {
 		// Insert the entry right after the exact header line.
 		lines := strings.Split(prompt, "\n")
 		var out []string
@@ -244,13 +280,25 @@ func strip(prompt, contractPath string) string {
 }
 
 // buildResponse constructs the Claude Code PreToolUse hook response that
-// carries the modified prompt.
-func buildResponse(newPrompt string) (string, error) {
+// carries the modified prompt and echoes the FULL tool_input.
+//
+// CRITICAL: hookSpecificOutput must include hookEventName:"PreToolUse" and
+// permissionDecision:"allow" — without these, Claude Code ignores updatedInput.
+// updatedInput must echo ALL original tool_input fields (description,
+// subagent_type, model-if-present) — Claude Code rejects the response if
+// required parameters like description are missing.
+func buildResponse(newPrompt string, ti *agentToolInput) (string, error) {
+	ui := &updatedInput{
+		Description:  ti.Description,
+		Prompt:       newPrompt,
+		SubagentType: ti.SubagentType,
+		Model:        ti.Model,
+	}
 	resp := hookResponse{
 		HookSpecificOutput: &hookSpecificOutput{
-			UpdatedInput: &updatedInput{
-				Prompt: newPrompt,
-			},
+			HookEventName:      "PreToolUse",
+			PermissionDecision: "allow",
+			UpdatedInput:       ui,
 		},
 	}
 	b, err := json.Marshal(resp)

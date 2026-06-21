@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
@@ -36,8 +37,77 @@ func parseJSON(t *testing.T, path string) map[string]interface{} {
 	return out
 }
 
-// containsHookWithCommand returns true if the JSON object at top-level key
-// "hooks" → hookKey → slice contains an entry whose "command" == cmd.
+// entryContainsBinarySubstring returns true if the hook entry has inner
+// hooks[].command that contains hookCommand as a substring.
+// This matches the verified entry shape:
+//
+//	{"hooks":[{"type":"command","command":"<bash containing binary>"}]}
+//	or
+//	{"matcher":"Agent","hooks":[{"type":"command","command":"<bash>"}]}
+func entryContainsBinarySubstring(e interface{}, hookCommand string) bool {
+	em, ok := e.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	innerHooks, ok := em["hooks"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, ih := range innerHooks {
+		ihm, ok := ih.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if cmdStr, ok := ihm["command"].(string); ok {
+			if strings.Contains(cmdStr, hookCommand) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// containsOurHook returns true if hooks[hookKey] has an entry containing
+// hookCommand as a substring in its inner hooks[].command.
+func containsOurHook(root map[string]interface{}, hookKey, hookCommand string) bool {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	entries, ok := hooks[hookKey].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, e := range entries {
+		if entryContainsBinarySubstring(e, hookCommand) {
+			return true
+		}
+	}
+	return false
+}
+
+// countOurHooks counts how many entries under hooks[hookKey] contain
+// hookCommand as a binary substring — used to verify idempotency.
+func countOurHooks(root map[string]interface{}, hookKey, hookCommand string) int {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		return 0
+	}
+	entries, ok := hooks[hookKey].([]interface{})
+	if !ok {
+		return 0
+	}
+	n := 0
+	for _, e := range entries {
+		if entryContainsBinarySubstring(e, hookCommand) {
+			n++
+		}
+	}
+	return n
+}
+
+// containsHookWithCommand is kept for third-party/other-tool checks where the
+// other hook uses a top-level "command" key (old shape used by third-party tools).
 func containsHookWithCommand(root map[string]interface{}, hookKey, cmd string) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -57,28 +127,6 @@ func containsHookWithCommand(root map[string]interface{}, hookKey, cmd string) b
 	return false
 }
 
-// countHookEntriesWithCommand counts how many entries under hooks[hookKey] have
-// the given command — used to verify idempotency.
-func countHookEntriesWithCommand(root map[string]interface{}, hookKey, cmd string) int {
-	hooks, ok := root["hooks"].(map[string]interface{})
-	if !ok {
-		return 0
-	}
-	entries, ok := hooks[hookKey].([]interface{})
-	if !ok {
-		return 0
-	}
-	n := 0
-	for _, e := range entries {
-		if m, ok := e.(map[string]interface{}); ok {
-			if m["command"] == cmd {
-				n++
-			}
-		}
-	}
-	return n
-}
-
 // --- TC-SET-1: absent file → create with both hooks ---
 
 func TestMerge_AbsentFile_CreatesWithBothHooks(t *testing.T) {
@@ -91,10 +139,10 @@ func TestMerge_AbsentFile_CreatesWithBothHooks(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if !containsHookWithCommand(root, "UserPromptSubmit", testHookCommand) {
+	if !containsOurHook(root, "UserPromptSubmit", testHookCommand) {
 		t.Errorf("absent file: UserPromptSubmit hook not found in %v", root)
 	}
-	if !containsHookWithCommand(root, "PreToolUse", testHookCommand) {
+	if !containsOurHook(root, "PreToolUse", testHookCommand) {
 		t.Errorf("absent file: PreToolUse hook not found in %v", root)
 	}
 }
@@ -131,7 +179,7 @@ func TestMerge_ExistingKeys_Preserved(t *testing.T) {
 		t.Errorf("env.MY_VAR should be preserved; got %v", root["env"])
 	}
 	// Hooks must also be present.
-	if !containsHookWithCommand(root, "UserPromptSubmit", testHookCommand) {
+	if !containsOurHook(root, "UserPromptSubmit", testHookCommand) {
 		t.Errorf("UserPromptSubmit hook not found after merge")
 	}
 }
@@ -151,10 +199,10 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if n := countHookEntriesWithCommand(root, "UserPromptSubmit", testHookCommand); n != 1 {
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 1 {
 		t.Errorf("UserPromptSubmit: expected exactly 1 entry, got %d", n)
 	}
-	if n := countHookEntriesWithCommand(root, "PreToolUse", testHookCommand); n != 1 {
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 1 {
 		t.Errorf("PreToolUse: expected exactly 1 entry, got %d", n)
 	}
 }
@@ -219,6 +267,7 @@ func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 	m := buildMerger(t, path)
 
 	// Install first to have something to uninstall.
+	// Pre-existing third-party hook uses old "command" shape at outer level.
 	initial := map[string]interface{}{
 		"theme": "dark",
 		"hooks": map[string]interface{}{
@@ -234,7 +283,7 @@ func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 	// Sanity: our hooks are present.
-	if !containsHookWithCommand(parseJSON(t, path), "UserPromptSubmit", testHookCommand) {
+	if !containsOurHook(parseJSON(t, path), "UserPromptSubmit", testHookCommand) {
 		t.Fatal("hook should be present after Install")
 	}
 
@@ -244,10 +293,10 @@ func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 
 	root := parseJSON(t, path)
 	// Our hooks must be gone.
-	if containsHookWithCommand(root, "UserPromptSubmit", testHookCommand) {
+	if containsOurHook(root, "UserPromptSubmit", testHookCommand) {
 		t.Error("UserPromptSubmit hook should be removed after Uninstall")
 	}
-	if containsHookWithCommand(root, "PreToolUse", testHookCommand) {
+	if containsOurHook(root, "PreToolUse", testHookCommand) {
 		t.Error("PreToolUse hook should be removed after Uninstall")
 	}
 	// Other hooks and keys must remain.
@@ -297,6 +346,7 @@ func TestMerge_ExistingHooksUnderSameKey_Preserved(t *testing.T) {
 	path := filepath.Join(dir, "settings.json")
 
 	// Pre-existing settings with other hooks under the same keys we add to.
+	// These use the old outer "command" shape (third-party tools).
 	initial := map[string]interface{}{
 		"hooks": map[string]interface{}{
 			"UserPromptSubmit": []interface{}{
@@ -317,7 +367,7 @@ func TestMerge_ExistingHooksUnderSameKey_Preserved(t *testing.T) {
 
 	root := parseJSON(t, path)
 	// Our hooks present.
-	if !containsHookWithCommand(root, "UserPromptSubmit", testHookCommand) {
+	if !containsOurHook(root, "UserPromptSubmit", testHookCommand) {
 		t.Error("our UserPromptSubmit hook not found")
 	}
 	// Other hooks still present.
@@ -369,10 +419,10 @@ func TestUninstall_EmptiedHookKey_IsRemoved(t *testing.T) {
 
 	// Sanity: both keys present before uninstall.
 	before := parseJSON(t, path)
-	if !containsHookWithCommand(before, "UserPromptSubmit", testHookCommand) {
+	if !containsOurHook(before, "UserPromptSubmit", testHookCommand) {
 		t.Fatal("precondition: UserPromptSubmit hook should be present before Uninstall")
 	}
-	if !containsHookWithCommand(before, "PreToolUse", testHookCommand) {
+	if !containsOurHook(before, "PreToolUse", testHookCommand) {
 		t.Fatal("precondition: PreToolUse hook should be present before Uninstall")
 	}
 
@@ -406,7 +456,7 @@ func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 	m := buildMerger(t, path)
 
 	// Start with a settings file that has a third-party entry under
-	// UserPromptSubmit, then install (adding our entry), then uninstall.
+	// UserPromptSubmit (old "command" outer shape), then install, then uninstall.
 	initial := map[string]interface{}{
 		"hooks": map[string]interface{}{
 			"UserPromptSubmit": []interface{}{
@@ -429,7 +479,7 @@ func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 	root := parseJSON(t, path)
 
 	// Our entry must be gone.
-	if containsHookWithCommand(root, "UserPromptSubmit", testHookCommand) {
+	if containsOurHook(root, "UserPromptSubmit", testHookCommand) {
 		t.Error("our UserPromptSubmit hook should be removed after Uninstall")
 	}
 
@@ -483,13 +533,14 @@ func TestBuildUserPromptSubmitEntry_RegistryPathIsRobust(t *testing.T) {
 		t.Fatal("UserPromptSubmit is not an array")
 	}
 
+	// Find our entry by binary substring in inner hooks[].command.
 	var ourEntry map[string]interface{}
 	for _, e := range entries {
 		em, ok := e.(map[string]interface{})
 		if !ok {
 			continue
 		}
-		if em["command"] == testHookCommand {
+		if entryContainsBinarySubstring(e, testHookCommand) {
 			ourEntry = em
 			break
 		}
@@ -514,34 +565,200 @@ func TestBuildUserPromptSubmitEntry_RegistryPathIsRobust(t *testing.T) {
 
 	// Must contain the CLAUDE_PROJECT_DIR-anchored form.
 	const robustFragment = `${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md`
-	if !contains(cmdStr, robustFragment) {
+	if !strings.Contains(cmdStr, robustFragment) {
 		t.Errorf("UserPromptSubmit command should contain %q for robust path resolution; got:\n%s", robustFragment, cmdStr)
 	}
 
 	// Must NOT use the bare relative form.
 	const badFragment = `--registry .atl/skill-registry.md`
-	if contains(cmdStr, badFragment) {
+	if strings.Contains(cmdStr, badFragment) {
 		t.Errorf("UserPromptSubmit command must not use bare relative path %q; got:\n%s", badFragment, cmdStr)
 	}
 
 	// Missing-binary guard must still be intact.
-	if !contains(cmdStr, "command -v") {
+	if !strings.Contains(cmdStr, "command -v") {
 		t.Errorf("missing-binary guard 'command -v' must still be present; got:\n%s", cmdStr)
 	}
-	if !contains(cmdStr, "|| true") {
+	if !strings.Contains(cmdStr, "|| true") {
 		t.Errorf("'|| true' exit-0 guard must still be present; got:\n%s", cmdStr)
 	}
 }
 
-// contains is a simple substring helper for test assertions.
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
-		func() bool {
-			for i := 0; i <= len(s)-len(substr); i++ {
-				if s[i:i+len(substr)] == substr {
-					return true
-				}
-			}
-			return false
-		}())
+// --- TC-SCHEMA: emitted settings entry has correct shape (F-MATCHER + F-SCHEMA) ---
+//
+// Verifies:
+//   - PreToolUse entry has matcher:"Agent" (not "Task")
+//   - PreToolUse entry shape: {"matcher":"Agent","hooks":[{"type":"command","command":"..."}]}
+//   - No outer "type" or "command" keys on the entry
+//   - UserPromptSubmit entry shape: {"hooks":[{"type":"command","command":"..."}]}
+//   - Install×2 is idempotent (no duplicates)
+//   - Uninstall removes by binary substring
+
+func TestSchema_PreToolUse_MatcherIsAgent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hooks map not found")
+	}
+	preToolUseEntries, ok := hooks["PreToolUse"].([]interface{})
+	if !ok {
+		t.Fatal("PreToolUse is not an array")
+	}
+
+	// Find our PreToolUse entry.
+	var ourEntry map[string]interface{}
+	for _, e := range preToolUseEntries {
+		if entryContainsBinarySubstring(e, testHookCommand) {
+			ourEntry, _ = e.(map[string]interface{})
+			break
+		}
+	}
+	if ourEntry == nil {
+		t.Fatal("our PreToolUse entry not found")
+	}
+
+	// F-MATCHER: matcher must be "Agent".
+	if ourEntry["matcher"] != "Agent" {
+		t.Errorf("PreToolUse entry matcher must be 'Agent'; got: %v", ourEntry["matcher"])
+	}
+
+	// F-SCHEMA: no outer "type" or "command" keys.
+	if _, hasType := ourEntry["type"]; hasType {
+		t.Errorf("PreToolUse entry must NOT have outer 'type' key; got: %v", ourEntry)
+	}
+	if _, hasCmd := ourEntry["command"]; hasCmd {
+		t.Errorf("PreToolUse entry must NOT have outer 'command' key; got: %v", ourEntry)
+	}
+
+	// Must have inner hooks array.
+	innerHooks, ok := ourEntry["hooks"].([]interface{})
+	if !ok || len(innerHooks) == 0 {
+		t.Fatalf("PreToolUse entry must have inner hooks array; got: %v", ourEntry)
+	}
+	innerHook, ok := innerHooks[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("inner hook must be a map; got: %T", innerHooks[0])
+	}
+	if innerHook["type"] != "command" {
+		t.Errorf("inner hook type must be 'command'; got: %v", innerHook["type"])
+	}
+	cmdStr, ok := innerHook["command"].(string)
+	if !ok {
+		t.Fatalf("inner hook command must be a string; got: %T", innerHook["command"])
+	}
+	if !strings.Contains(cmdStr, testHookCommand) {
+		t.Errorf("inner hook command must contain binary path; got: %s", cmdStr)
+	}
+
+	// F-PATH: must pass --contract-path with absolute $HOME-anchored path.
+	const absPathFragment = `--contract-path "$HOME/.claude/skills/_shared/minimalism-contract.md"`
+	if !strings.Contains(cmdStr, absPathFragment) {
+		t.Errorf("PreToolUse command must contain absolute contract-path flag; got:\n%s", cmdStr)
+	}
+}
+
+func TestSchema_UserPromptSubmit_NoOuterKeys(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hooks map not found")
+	}
+	upsEntries, ok := hooks["UserPromptSubmit"].([]interface{})
+	if !ok {
+		t.Fatal("UserPromptSubmit is not an array")
+	}
+
+	var ourEntry map[string]interface{}
+	for _, e := range upsEntries {
+		if entryContainsBinarySubstring(e, testHookCommand) {
+			ourEntry, _ = e.(map[string]interface{})
+			break
+		}
+	}
+	if ourEntry == nil {
+		t.Fatal("our UserPromptSubmit entry not found")
+	}
+
+	// F-SCHEMA: no outer "type" or "command" keys.
+	if _, hasType := ourEntry["type"]; hasType {
+		t.Errorf("UserPromptSubmit entry must NOT have outer 'type' key; got: %v", ourEntry)
+	}
+	if _, hasCmd := ourEntry["command"]; hasCmd {
+		t.Errorf("UserPromptSubmit entry must NOT have outer 'command' key; got: %v", ourEntry)
+	}
+
+	// Must have inner hooks array with type:command.
+	innerHooks, ok := ourEntry["hooks"].([]interface{})
+	if !ok || len(innerHooks) == 0 {
+		t.Fatalf("UserPromptSubmit entry must have inner hooks array; got: %v", ourEntry)
+	}
+	innerHook, ok := innerHooks[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("inner hook must be a map; got: %T", innerHooks[0])
+	}
+	if innerHook["type"] != "command" {
+		t.Errorf("inner hook type must be 'command'; got: %v", innerHook["type"])
+	}
+}
+
+func TestSchema_InstallTwice_Idempotent(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("first Install: %v", err)
+	}
+	if err := m.Install(); err != nil {
+		t.Fatalf("second Install: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 1 {
+		t.Errorf("Install×2: UserPromptSubmit should have exactly 1 entry; got %d", n)
+	}
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 1 {
+		t.Errorf("Install×2: PreToolUse should have exactly 1 entry; got %d", n)
+	}
+}
+
+func TestSchema_Uninstall_RemovesByBinarySubstring(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if !containsOurHook(parseJSON(t, path), "PreToolUse", testHookCommand) {
+		t.Fatal("PreToolUse hook should be present after Install")
+	}
+
+	if err := m.Uninstall(); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	if containsOurHook(root, "UserPromptSubmit", testHookCommand) {
+		t.Error("UserPromptSubmit hook should be gone after Uninstall")
+	}
+	if containsOurHook(root, "PreToolUse", testHookCommand) {
+		t.Error("PreToolUse hook should be gone after Uninstall")
+	}
 }

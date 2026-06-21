@@ -6,8 +6,21 @@
 //     The operation is PRESERVE (all other keys intact), IDEMPOTENT (no duplicates),
 //     ATOMIC (write to temp then rename), and creates a .bak before overwrite.
 //
-//   - Uninstall: removes exactly our two hook entries identified by command path,
-//     leaving all other keys and hooks intact. Also idempotent.
+//   - Uninstall: removes exactly our two hook entries identified by binary path
+//     substring inside hooks[].command, leaving all other keys and hooks intact.
+//     Also idempotent.
+//
+// VERIFIED HOOK ENTRY SHAPE (Claude Code 2.1.185 / docs):
+//
+//	UserPromptSubmit entry:
+//	  {"hooks":[{"type":"command","command":"<bash>"}]}
+//
+//	PreToolUse entry (with matcher):
+//	  {"matcher":"Agent","hooks":[{"type":"command","command":"<bash>"}]}
+//
+// No outer "type" or "command" keys — those were wrong and are now removed.
+// Dedup/uninstall identity uses binary path SUBSTRING inside hooks[].command,
+// not an outer "command" key.
 //
 // SAFETY: neither Install nor Uninstall ever reads or writes the live
 // ~/.claude/settings.json; callers must pass the explicit settings path.
@@ -19,6 +32,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // Merger performs safe install/uninstall of deterministic-scoping hooks into
@@ -29,7 +43,7 @@ type Merger struct {
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
-// hookCommand as the unique identity for our entries.
+// hookCommand as the unique identity (binary path substring) for our entries.
 func NewMerger(settingsPath, hookCommand string) *Merger {
 	return &Merger{
 		settingsPath: settingsPath,
@@ -102,12 +116,12 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
 
-	if !hasCommand(hooks, "UserPromptSubmit", m.hookCommand) {
+	if !hasCommandInInnerHooks(hooks, "UserPromptSubmit", m.hookCommand) {
 		appendHook(hooks, "UserPromptSubmit", m.buildUserPromptSubmitEntry())
 		changed = true
 	}
 
-	if !hasCommand(hooks, "PreToolUse", m.hookCommand) {
+	if !hasCommandInInnerHooks(hooks, "PreToolUse", m.hookCommand) {
 		appendHook(hooks, "PreToolUse", m.buildPreToolUseEntry())
 		changed = true
 	}
@@ -117,6 +131,8 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 }
 
 // removeHooks removes our hook entries. Returns true if any change was made.
+// Identity uses binary path SUBSTRING inside hooks[].command — matches the
+// new entry shape where there is no outer "command" key.
 func (m *Merger) removeHooks(root map[string]interface{}) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -131,8 +147,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			em, ok := e.(map[string]interface{})
-			if ok && em["command"] == m.hookCommand {
+			if entryContainsBinary(e, m.hookCommand) {
 				changed = true
 				continue
 			}
@@ -208,16 +223,40 @@ func ensureHooksMap(root map[string]interface{}) map[string]interface{} {
 	return h
 }
 
-// hasCommand reports whether hooks[key] already contains an entry with the
-// given command value.
-func hasCommand(hooks map[string]interface{}, key, cmd string) bool {
+// hasCommandInInnerHooks reports whether hooks[key] already contains an entry
+// whose inner hooks[].command contains hookCommand as a substring.
+// This matches the new entry shape: {"hooks":[{"type":"command","command":"..."}]}.
+func hasCommandInInnerHooks(hooks map[string]interface{}, key, hookCommand string) bool {
 	entries, ok := hooks[key].([]interface{})
 	if !ok {
 		return false
 	}
 	for _, e := range entries {
-		if em, ok := e.(map[string]interface{}); ok {
-			if em["command"] == cmd {
+		if entryContainsBinary(e, hookCommand) {
+			return true
+		}
+	}
+	return false
+}
+
+// entryContainsBinary returns true if the hook entry (an outer object) contains
+// hookCommand as a substring in any of its inner hooks[].command strings.
+func entryContainsBinary(e interface{}, hookCommand string) bool {
+	em, ok := e.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	innerHooks, ok := em["hooks"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, ih := range innerHooks {
+		ihm, ok := ih.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if cmdStr, ok := ihm["command"].(string); ok {
+			if strings.Contains(cmdStr, hookCommand) {
 				return true
 			}
 		}
@@ -237,12 +276,17 @@ func appendHook(hooks map[string]interface{}, key string, entry map[string]inter
 // buildUserPromptSubmitEntry returns the hook entry for propagate.
 // The hook runs 'gentle-ai-overlay propagate' to ensure the scoped block
 // exists in the current project's .atl/skill-registry.md.
+//
+// VERIFIED SHAPE (Claude Code docs):
+//
+//	{"hooks":[{"type":"command","command":"<bash>"}]}
+//
 // Missing-binary safety: the command uses 'bash -c' with a guard:
 //
 //	command -v <binary> &>/dev/null && <binary> ... || true
 //
-// This ensures the hook exits 0 even if the binary is absent, so no Task
-// is ever blocked by a missing binary.
+// This ensures the hook exits 0 even if the binary is absent, so no Agent
+// call is ever blocked by a missing binary.
 func (m *Merger) buildUserPromptSubmitEntry() map[string]interface{} {
 	// CLAUDE_PROJECT_DIR is the env var Claude Code sets for hooks to point at
 	// the project root. The :- fallback to "." keeps the command functional
@@ -253,24 +297,38 @@ func (m *Merger) buildUserPromptSubmitEntry() map[string]interface{} {
 		m.hookCommand, m.hookCommand,
 	)
 	return map[string]interface{}{
-		"type":    "command",
-		"command": m.hookCommand,
-		"hooks":   []interface{}{map[string]interface{}{"command": cmd}},
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
 	}
 }
 
-// buildPreToolUseEntry returns the hook entry for gate-task (matcher: Task tool).
+// buildPreToolUseEntry returns the hook entry for gate-task (matcher: Agent tool).
+//
+// VERIFIED SHAPE (Claude Code 2.1.185):
+//
+//	{"matcher":"Agent","hooks":[{"type":"command","command":"<bash>"}]}
+//
+// The matcher MUST be "Agent" (not "Task") — empirically verified: the sub-agent
+// spawn tool is named "Agent" in CC 2.1.185. A "Task" matcher fires on nothing.
+//
+// F-PATH: the --contract-path flag passes the ABSOLUTE path ($HOME-expanded) so
+// a sub-agent in any project cwd can read the contract file. The injected bare
+// path line in the Agent prompt will be this absolute path.
+//
 // Missing-binary safety: same guard pattern as UserPromptSubmit.
 func (m *Merger) buildPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s gate-task --contract-file ~/.claude/skills/_shared/minimalism-contract.md || true`,
+		`command -v %s &>/dev/null && %s gate-task --contract-file ~/.claude/skills/_shared/minimalism-contract.md --contract-path "$HOME/.claude/skills/_shared/minimalism-contract.md" || true`,
 		m.hookCommand, m.hookCommand,
 	)
 	return map[string]interface{}{
-		"type":    "command",
-		"command": m.hookCommand,
-		"matcher": "Task",
-		"hooks":   []interface{}{map[string]interface{}{"command": cmd}},
+		"matcher": "Agent",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
 	}
 }
 

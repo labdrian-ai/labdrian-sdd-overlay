@@ -28,8 +28,9 @@ const (
 
 // ContractPhases holds the phase scope parsed from the contract frontmatter.
 type ContractPhases struct {
-	AppliesTo []string
-	Excluded  []string
+	AppliesTo      []string
+	Excluded       []string
+	InjectionPoint string // from injection_point frontmatter key; may be empty
 }
 
 // Config holds the contract path used in the generated registry row.
@@ -69,6 +70,12 @@ func ParseFrontmatter(content string) (ContractPhases, error) {
 		}
 		if strings.HasPrefix(line, "excluded_phases:") {
 			phases.Excluded = parseInlineList(strings.TrimPrefix(line, "excluded_phases:"))
+		}
+		if strings.HasPrefix(line, "injection_point:") {
+			raw := strings.TrimSpace(strings.TrimPrefix(line, "injection_point:"))
+			// Strip surrounding quotes if present.
+			raw = strings.Trim(raw, `"'`)
+			phases.InjectionPoint = raw
 		}
 	}
 
