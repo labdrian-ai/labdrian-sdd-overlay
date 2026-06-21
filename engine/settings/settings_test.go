@@ -349,3 +349,199 @@ func TestMerge_OutputIsValidJSON(t *testing.T) {
 		t.Errorf("output is not valid JSON: %v\n%s", err, string(data))
 	}
 }
+
+// --- TC-SET-11 (W-1): uninstall of sole entry removes the hook key entirely ---
+//
+// Regression guard for the "null array" bug: when removing the only entry
+// under a hook key, the key must be DELETED from the map, not set to null
+// (uninitialized []interface{}) or []. Writing null would break Claude Code's
+// settings parser.
+
+func TestUninstall_EmptiedHookKey_IsRemoved(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	// Install so both hook keys exist with our entry as the sole occupant.
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	// Sanity: both keys present before uninstall.
+	before := parseJSON(t, path)
+	if !containsHookWithCommand(before, "UserPromptSubmit", testHookCommand) {
+		t.Fatal("precondition: UserPromptSubmit hook should be present before Uninstall")
+	}
+	if !containsHookWithCommand(before, "PreToolUse", testHookCommand) {
+		t.Fatal("precondition: PreToolUse hook should be present before Uninstall")
+	}
+
+	if err := m.Uninstall(); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		// hooks key absent entirely is also acceptable.
+		return
+	}
+
+	// The keys must be gone, not null. A null value would unmarshal as nil,
+	// not a []interface{}, so checking for the key's existence is sufficient.
+	if val, exists := hooks["UserPromptSubmit"]; exists {
+		t.Errorf("UserPromptSubmit key should be removed when emptied; got %T %v", val, val)
+	}
+	if val, exists := hooks["PreToolUse"]; exists {
+		t.Errorf("PreToolUse key should be removed when emptied; got %T %v", val, val)
+	}
+}
+
+// TestUninstall_EmptiedKey_OtherEntriesPreserved ensures that a hook key
+// retaining other entries is preserved with those entries intact after we
+// remove only our own entry.
+func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	// Start with a settings file that has a third-party entry under
+	// UserPromptSubmit, then install (adding our entry), then uninstall.
+	initial := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"UserPromptSubmit": []interface{}{
+				map[string]interface{}{"command": "third-party-tool"},
+			},
+		},
+	}
+	data, _ := json.Marshal(initial)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	if err := m.Uninstall(); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	root := parseJSON(t, path)
+
+	// Our entry must be gone.
+	if containsHookWithCommand(root, "UserPromptSubmit", testHookCommand) {
+		t.Error("our UserPromptSubmit hook should be removed after Uninstall")
+	}
+
+	// The third-party entry must survive.
+	if !containsHookWithCommand(root, "UserPromptSubmit", "third-party-tool") {
+		t.Error("third-party-tool hook should be preserved after Uninstall")
+	}
+
+	// The UserPromptSubmit key must still exist (it has remaining entries).
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hooks map should still exist")
+	}
+	entries, ok := hooks["UserPromptSubmit"].([]interface{})
+	if !ok {
+		t.Fatalf("UserPromptSubmit should be a non-null array; got %T", hooks["UserPromptSubmit"])
+	}
+	if len(entries) != 1 {
+		t.Errorf("UserPromptSubmit should have exactly 1 remaining entry; got %d", len(entries))
+	}
+
+	// PreToolUse was emptied — its key should be removed.
+	if val, exists := hooks["PreToolUse"]; exists {
+		t.Errorf("PreToolUse key should be removed when emptied; got %T %v", val, val)
+	}
+}
+
+// --- TC-SET-12 (W-2): emitted UserPromptSubmit command uses robust registry path ---
+//
+// Regression guard for the CWD-relative registry path bug. The emitted command
+// must use "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" so that the hook
+// resolves the registry against the project root regardless of the CWD Claude
+// Code uses when firing the hook.
+
+func TestBuildUserPromptSubmitEntry_RegistryPathIsRobust(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hooks map not found")
+	}
+	entries, ok := hooks["UserPromptSubmit"].([]interface{})
+	if !ok {
+		t.Fatal("UserPromptSubmit is not an array")
+	}
+
+	var ourEntry map[string]interface{}
+	for _, e := range entries {
+		em, ok := e.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if em["command"] == testHookCommand {
+			ourEntry = em
+			break
+		}
+	}
+	if ourEntry == nil {
+		t.Fatal("our UserPromptSubmit entry not found")
+	}
+
+	// Drill into hooks[0].command to get the bash command string.
+	innerHooks, ok := ourEntry["hooks"].([]interface{})
+	if !ok || len(innerHooks) == 0 {
+		t.Fatalf("inner hooks not found or empty: %v", ourEntry["hooks"])
+	}
+	innerCmd, ok := innerHooks[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("inner hook entry is not a map: %T", innerHooks[0])
+	}
+	cmdStr, ok := innerCmd["command"].(string)
+	if !ok {
+		t.Fatalf("inner hook command is not a string: %T", innerCmd["command"])
+	}
+
+	// Must contain the CLAUDE_PROJECT_DIR-anchored form.
+	const robustFragment = `${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md`
+	if !contains(cmdStr, robustFragment) {
+		t.Errorf("UserPromptSubmit command should contain %q for robust path resolution; got:\n%s", robustFragment, cmdStr)
+	}
+
+	// Must NOT use the bare relative form.
+	const badFragment = `--registry .atl/skill-registry.md`
+	if contains(cmdStr, badFragment) {
+		t.Errorf("UserPromptSubmit command must not use bare relative path %q; got:\n%s", badFragment, cmdStr)
+	}
+
+	// Missing-binary guard must still be intact.
+	if !contains(cmdStr, "command -v") {
+		t.Errorf("missing-binary guard 'command -v' must still be present; got:\n%s", cmdStr)
+	}
+	if !contains(cmdStr, "|| true") {
+		t.Errorf("'|| true' exit-0 guard must still be present; got:\n%s", cmdStr)
+	}
+}
+
+// contains is a simple substring helper for test assertions.
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(substr) == 0 ||
+		func() bool {
+			for i := 0; i <= len(s)-len(substr); i++ {
+				if s[i:i+len(substr)] == substr {
+					return true
+				}
+			}
+			return false
+		}())
+}

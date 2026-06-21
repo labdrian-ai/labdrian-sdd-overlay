@@ -138,7 +138,13 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 			}
 			filtered = append(filtered, e)
 		}
-		hooks[key] = filtered
+		if len(filtered) == 0 {
+			// Remove the key entirely rather than writing null or an empty
+			// array — avoids structural noise in the emitted JSON.
+			delete(hooks, key)
+		} else {
+			hooks[key] = filtered
+		}
 	}
 
 	root["hooks"] = hooks
@@ -238,8 +244,12 @@ func appendHook(hooks map[string]interface{}, key string, entry map[string]inter
 // This ensures the hook exits 0 even if the binary is absent, so no Task
 // is ever blocked by a missing binary.
 func (m *Merger) buildUserPromptSubmitEntry() map[string]interface{} {
+	// CLAUDE_PROJECT_DIR is the env var Claude Code sets for hooks to point at
+	// the project root. The :- fallback to "." keeps the command functional
+	// when the env var is absent (e.g. local testing), but the primary path
+	// is always anchored to the project root when Claude Code fires the hook.
 	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s propagate --registry .atl/skill-registry.md --contract-file ~/.claude/skills/_shared/minimalism-contract.md || true`,
+		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --contract-file ~/.claude/skills/_shared/minimalism-contract.md || true`,
 		m.hookCommand, m.hookCommand,
 	)
 	return map[string]interface{}{
