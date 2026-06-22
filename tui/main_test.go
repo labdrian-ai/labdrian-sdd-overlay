@@ -659,7 +659,7 @@ func TestStatusHooksSkipsConfirm(t *testing.T) {
 		}
 	}
 	if statusIdx < 0 {
-		t.Skip("status-hooks not yet in Actions()")
+		t.Fatal("status-hooks not found in Actions(); hooks actions are required by this change")
 	}
 
 	m.aCursor = statusIdx
@@ -688,7 +688,7 @@ func TestInstallHooksRequiresConfirm(t *testing.T) {
 		}
 	}
 	if installIdx < 0 {
-		t.Skip("install-hooks not yet in Actions()")
+		t.Fatal("install-hooks not found in Actions(); hooks actions are required by this change")
 	}
 
 	m.aCursor = installIdx
@@ -697,6 +697,103 @@ func TestInstallHooksRequiresConfirm(t *testing.T) {
 
 	if m.scr != screenConfirm {
 		t.Errorf("install-hooks (mutating) must route to screenConfirm, got screen %d", m.scr)
+	}
+}
+
+// TestUninstallHooksRequiresConfirm verifies uninstall-hooks (mutating) routes to
+// screenConfirm before running (mirrors TestInstallHooksRequiresConfirm).
+func TestUninstallHooksRequiresConfirm(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+
+	uninstallIdx := -1
+	for i, a := range m.actions {
+		if a.Command == "uninstall-hooks" {
+			uninstallIdx = i
+			break
+		}
+	}
+	if uninstallIdx < 0 {
+		t.Fatal("uninstall-hooks not found in Actions(); hooks actions are required by this change")
+	}
+
+	m.aCursor = uninstallIdx
+	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	if m.scr != screenConfirm {
+		t.Errorf("uninstall-hooks (mutating) must route to screenConfirm, got screen %d", m.scr)
+	}
+}
+
+// TestKeyboardNavigationOverSeparator verifies that driving real key events through
+// updateActions never lands aCursor on a phantom separator entry.
+//
+// The separator rendered by viewActions is display-only — it is NOT in m.actions.
+// This test guards against a future index mismatch if a separator item were ever
+// accidentally inserted into the actions slice.
+//
+// Assertions:
+//
+//	(a) Every cursor position after each "down" press maps to a valid m.actions entry
+//	    (i.e. m.actions[m.aCursor].Name is non-empty).
+//	(b) Navigating down through the full list eventually reaches a hooks action
+//	    (install-hooks or uninstall-hooks) and pressing enter there transitions to
+//	    screenConfirm.
+func TestKeyboardNavigationOverSeparator(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+
+	if len(m.actions) == 0 {
+		t.Fatal("Actions() must be non-empty")
+	}
+
+	// Verify initial cursor is valid.
+	if m.actions[m.aCursor].Name == "" {
+		t.Fatalf("initial aCursor=%d points to an action with empty Name", m.aCursor)
+	}
+
+	// Drive "down" repeatedly through the full list (one extra press to confirm
+	// the cursor saturates at the last valid index, not beyond).
+	totalActions := len(m.actions)
+	downKey := tea.KeyMsg{Type: tea.KeyDown}
+
+	for step := 0; step < totalActions+2; step++ {
+		updated, _ := m.updateActions(downKey)
+		m = updated.(model)
+
+		// Assertion (a): cursor must always index a real action.
+		if m.aCursor < 0 || m.aCursor >= len(m.actions) {
+			t.Fatalf("after %d down-presses: aCursor=%d is out of bounds [0,%d)",
+				step+1, m.aCursor, len(m.actions))
+		}
+		a := m.actions[m.aCursor]
+		if a.Name == "" {
+			t.Fatalf("after %d down-presses: aCursor=%d points to an action with empty Name (phantom separator?)",
+				step+1, m.aCursor)
+		}
+	}
+
+	// Assertion (b): find a hooks mutating action and confirm enter → screenConfirm.
+	hooksIdx := -1
+	for i, a := range m.actions {
+		if a.Command == "install-hooks" || a.Command == "uninstall-hooks" {
+			hooksIdx = i
+			break
+		}
+	}
+	if hooksIdx < 0 {
+		t.Fatal("no hooks mutating action found in Actions(); required by this change")
+	}
+
+	m2 := newModel()
+	m2.scr = screenActions
+	m2.aCursor = hooksIdx
+	updated, _ := m2.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m2 = updated.(model)
+	if m2.scr != screenConfirm {
+		t.Errorf("hooks action at index %d must route to screenConfirm on enter, got screen %d",
+			hooksIdx, m2.scr)
 	}
 }
 
