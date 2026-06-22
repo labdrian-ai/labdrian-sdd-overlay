@@ -49,6 +49,13 @@ var (
 			BorderForeground(colorAccent).
 			Padding(0, 1)
 
+	// outputBoxStyle is the named style for the raw command output box.
+	// It uses a gray border to visually distinguish from the dashboard box (accent border).
+	outputBoxStyle = lipgloss.NewStyle().
+			Border(lipgloss.RoundedBorder()).
+			BorderForeground(colorGray).
+			Padding(0, 1)
+
 	warnBoxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
 			BorderForeground(colorYellow).
@@ -76,13 +83,17 @@ func (m model) View() string {
 		body = m.viewResult()
 	}
 
-	return strings.Join([]string{m.header(), body, m.footer()}, "\n")
+	w := m.contentWidth()
+	composed := strings.Join([]string{m.header(), body, m.footer()}, "\n")
+	return lipgloss.NewStyle().MaxWidth(w).Render(composed)
 }
 
 func (m model) header() string {
+	w := m.contentWidth()
 	title := headerStyle.Render(" overlay TUI ")
 	subtitle := subHeaderStyle.Render(" gentle-ai sync validator ")
 	bar := lipgloss.JoinHorizontal(lipgloss.Top, title, subtitle)
+	bar = lipgloss.NewStyle().Width(w).Render(bar)
 	if m.rootErr != nil {
 		return bar + "\n" + errStyle.Render("  Error al localizar el repositorio: "+m.rootErr.Error())
 	}
@@ -90,26 +101,26 @@ func (m model) header() string {
 }
 
 func (m model) footer() string {
+	w := m.contentWidth()
 	var keys string
 	switch m.scr {
 	case screenTargets:
-		keys = "↑/↓ navegar  ·  espacio seleccionar  ·  enter continuar  ·  q salir"
+		keys = "↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir"
 	case screenActions:
 		keys = "↑/↓ navegar  ·  enter ejecutar  ·  esc volver  ·  q salir"
 	case screenConfirm:
-		keys = "y confirmar  ·  n cancelar"
+		keys = "y confirmar  ·  esc/n cancelar"
 	case screenRunning:
 		keys = "Ejecutando…"
 	case screenResult:
-		keys = "↑/↓ desplazar  ·  esc volver  ·  q salir"
+		keys = "↑/↓ desplazar  ·  esc/enter volver  ·  q salir"
 	}
-	return footerStyle.Render(keys)
+	return footerStyle.Width(w).Render(keys)
 }
 
 func (m model) viewTargets() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Seleccionar destinos"))
-	b.WriteString("\n")
 
 	for i, t := range m.targets {
 		cursor := "  "
@@ -144,7 +155,6 @@ func (m model) viewActions() string {
 		sel = append(sel, t.Name)
 	}
 	b.WriteString(titleStyle.Render("Elegir una acción"))
-	b.WriteString("\n")
 	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "\n\n")
 
 	for i, a := range m.actions {
@@ -174,27 +184,56 @@ func (m model) viewConfirm() string {
 	for _, t := range m.selectedTargets() {
 		sel = append(sel, t.Name)
 	}
-	msg := fmt.Sprintf(
-		"Ejecutar %s en: %s\n\n%s Esta acción modifica los destinos.",
-		lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
-		strings.Join(sel, ", "),
-		lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Atención:"),
-	)
+
+	detail := "Esta acción modifica los destinos."
+	if m.pendingAction.ConfirmMessage != "" {
+		detail = m.pendingAction.ConfirmMessage
+	}
+
+	var msg string
+	if m.pendingAction.TargetAgnostic {
+		msg = fmt.Sprintf(
+			"Ejecutar %s\n\n%s %s",
+			lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
+			lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Atención:"),
+			detail,
+		)
+	} else {
+		msg = fmt.Sprintf(
+			"Ejecutar %s en: %s\n\n%s %s",
+			lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
+			strings.Join(sel, ", "),
+			lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Atención:"),
+			detail,
+		)
+	}
 	return warnBoxStyle.Render(msg)
 }
 
 func (m model) viewRunning() string {
-	return titleStyle.Render("Ejecutando " + m.pendingAction.Name + "…")
+	return titleStyle.Render(m.spinner.View() + " Ejecutando " + m.pendingAction.Name + "…")
 }
 
 func (m model) viewResult() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
-	b.WriteString("\n")
+
+	if m.result.err != nil {
+		b.WriteString(errStyle.Render("Resultado · " + m.result.action.Name))
+		b.WriteString("\n")
+		b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("  ✗ Comando falló"))
+		b.WriteString("\n")
+	} else {
+		b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
+	}
 
 	if len(m.result.verdicts) > 0 {
 		b.WriteString(m.viewDashboard())
 		b.WriteString("\n")
+	}
+
+	// Empty-verdict note for sync-check.
+	if m.result.action.Command == "sync-check" && len(m.result.verdicts) == 0 {
+		b.WriteString(dimStyle.Render("No se pudieron analizar veredictos") + "\n")
 	}
 
 	b.WriteString(m.viewOutput())
@@ -203,6 +242,7 @@ func (m model) viewResult() string {
 
 // viewDashboard renders the headline per-target colored sync status.
 func (m model) viewDashboard() string {
+	w := m.contentWidth()
 	var b strings.Builder
 	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(colorAccent2).Render("Estado de sincronización") + "\n")
 
@@ -234,12 +274,13 @@ func (m model) viewDashboard() string {
 			b.WriteString(action + "\n")
 		}
 	}
-	return boxStyle.Render(strings.TrimRight(b.String(), "\n"))
+	return boxStyle.Width(w - 2).Render(strings.TrimRight(b.String(), "\n"))
 }
 
 // viewOutput renders the raw command output, scrollable.
 func (m model) viewOutput() string {
-	lines := strings.Split(strings.TrimRight(m.result.output, "\n"), "\n")
+	w := m.contentWidth()
+	lines := splitOutputLines(m.result.output)
 
 	// Reserve vertical room for header/footer/title/dashboard.
 	viewport := m.height - 10
@@ -269,5 +310,10 @@ func (m model) viewOutput() string {
 	}
 
 	title := lipgloss.NewStyle().Bold(true).Foreground(colorAccent2).Render("salida") + hint
-	return title + "\n" + boxStyle.BorderForeground(colorGray).Render(shown)
+	return title + "\n" + outputBoxStyle.Width(w-2).Render(shown)
+}
+
+// splitOutputLines splits output text into lines, trimming the trailing newline.
+func splitOutputLines(output string) []string {
+	return strings.Split(strings.TrimRight(output, "\n"), "\n")
 }

@@ -1,7 +1,9 @@
 package main
 
 import (
+	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 )
 
 // screen identifies the active view in the TUI.
@@ -31,11 +33,13 @@ type model struct {
 
 	pendingAction Action // action awaiting confirmation / running
 
-	result   commandResult
-	scroll   int // line offset into the output pane
+	result commandResult
+	scroll int // line offset into the output pane
 
 	width  int
 	height int
+
+	spinner spinner.Model
 
 	quitting bool
 }
@@ -50,6 +54,10 @@ func newModel() model {
 
 	root, err := RepoRoot()
 
+	sp := spinner.New()
+	sp.Spinner = spinner.Dot
+	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
+
 	return model{
 		repoRoot: root,
 		rootErr:  err,
@@ -57,6 +65,7 @@ func newModel() model {
 		targets:  targets,
 		selected: selected,
 		actions:  Actions(),
+		spinner:  sp,
 	}
 }
 
@@ -94,6 +103,46 @@ func (m model) anySelected() bool {
 	return false
 }
 
+// allSelected returns true iff every target is currently selected.
+func (m model) allSelected() bool {
+	for i := range m.targets {
+		if !m.selected[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// contentWidth returns m.width with an 80-column fallback when no
+// WindowSizeMsg has been received yet (m.width == 0).
+func (m model) contentWidth() int {
+	if m.width <= 0 {
+		return 80
+	}
+	return m.width
+}
+
+// maxScroll returns the maximum valid scroll offset for the output pane,
+// clamped to max(0, totalLines-viewport).
+func (m model) maxScroll() int {
+	if m.result.output == "" {
+		return 0
+	}
+	lines := splitOutputLines(m.result.output)
+	viewport := m.height - 10
+	if len(m.result.verdicts) > 0 {
+		viewport -= len(m.result.verdicts)*3 + 3
+	}
+	if viewport < 5 {
+		viewport = 5
+	}
+	max := len(lines) - viewport
+	if max < 0 {
+		return 0
+	}
+	return max
+}
+
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
@@ -106,6 +155,15 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scroll = 0
 		m.scr = screenResult
 		return m, nil
+
+	case spinner.TickMsg:
+		if m.scr != screenRunning {
+			// Drop ticks once we've left screenRunning — stops the self-perpetuating loop.
+			return m, nil
+		}
+		var cmd tea.Cmd
+		m.spinner, cmd = m.spinner.Update(msg)
+		return m, cmd
 
 	case tea.KeyMsg:
 		// Global quit.
@@ -144,6 +202,12 @@ func (m model) updateTargets(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case " ":
 		m.selected[m.tCursor] = !m.selected[m.tCursor]
+	case "a":
+		// Toggle all: if all selected → deselect all; otherwise → select all.
+		target := !m.allSelected()
+		for i := range m.targets {
+			m.selected[i] = target
+		}
 	case "enter":
 		if m.anySelected() {
 			m.scr = screenActions
@@ -175,7 +239,7 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		m.scr = screenRunning
-		return m, m.runActionCmd(action)
+		return m, tea.Batch(m.spinner.Tick, m.runActionCmd(action))
 	}
 	return m, nil
 }
@@ -184,7 +248,7 @@ func (m model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "enter":
 		m.scr = screenRunning
-		return m, m.runActionCmd(m.pendingAction)
+		return m, tea.Batch(m.spinner.Tick, m.runActionCmd(m.pendingAction))
 	case "n", "N", "esc", "q":
 		m.scr = screenActions
 	}
@@ -204,7 +268,9 @@ func (m model) updateResult(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			m.scroll--
 		}
 	case "down", "j":
-		m.scroll++
+		if m.scroll < m.maxScroll() {
+			m.scroll++
+		}
 	}
 	return m, nil
 }

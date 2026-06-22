@@ -29,10 +29,12 @@ func AllTargets() []Target {
 
 // Action is a backend subcommand the TUI can invoke.
 type Action struct {
-	Name      string // label shown in the menu
-	Command   string // bin/overlay subcommand
-	Mutating  bool   // requires confirmation
-	SupportsAll bool // can pass --target all when every target is selected
+	Name           string // label shown in the menu
+	Command        string // bin/overlay subcommand
+	Mutating       bool   // requires confirmation
+	SupportsAll    bool   // can pass --target all when every target is selected
+	TargetAgnostic bool   // when true: invoke WITHOUT --target, skip target selection
+	ConfirmMessage string // per-action confirm copy; empty falls back to generic
 }
 
 // Actions returns the action menu in display order.
