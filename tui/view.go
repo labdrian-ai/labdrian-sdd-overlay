@@ -158,6 +158,13 @@ func (m model) viewActions() string {
 	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "\n\n")
 
 	for i, a := range m.actions {
+		// Render a decorative separator before the first TargetAgnostic action.
+		// The separator is display-only — it is not in the actions slice, so
+		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
+		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
+			b.WriteString(dimStyle.Render("  ─── Hooks ───") + "\n")
+		}
+
 		cursor := "  "
 		if i == m.aCursor {
 			cursor = cursorStyle.Render("▸ ")

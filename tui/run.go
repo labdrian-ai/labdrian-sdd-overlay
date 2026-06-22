@@ -38,12 +38,32 @@ type Action struct {
 }
 
 // Actions returns the action menu in display order.
+//
+// Operational actions (target-bound) are listed first; hooks actions
+// (TargetAgnostic) follow under the "─── Hooks ───" separator rendered
+// by viewActions.
 func Actions() []Action {
 	return []Action{
 		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true},
 		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true},
 		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true},
 		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false},
+		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
+		{Name: "Estado de hooks", Command: "status-hooks", Mutating: false, TargetAgnostic: true},
+		{
+			Name:           "Instalar hooks",
+			Command:        "install-hooks",
+			Mutating:       true,
+			TargetAgnostic: true,
+			ConfirmMessage: "Modifica ~/.claude/settings.json (se crea un respaldo .bak antes de escribir).",
+		},
+		{
+			Name:           "Desinstalar hooks",
+			Command:        "uninstall-hooks",
+			Mutating:       true,
+			TargetAgnostic: true,
+			ConfirmMessage: "Elimina los hooks de ~/.claude/settings.json (se crea un respaldo .bak antes de modificar).",
+		},
 	}
 }
 
@@ -213,25 +233,46 @@ type commandResult struct {
 	err       error
 }
 
+// buildArgSets constructs the argument sets to pass to the backend binary.
+//
+// Routing priority:
+//  1. TargetAgnostic: single invocation with NO --target. The three hooks
+//     subcommands (status-hooks, install-hooks, uninstall-hooks) operate on
+//     ~/.claude/settings.json globally and do not accept --target. Verified
+//     against bin/overlay: cmd_status_hooks, cmd_install_hooks, and
+//     cmd_uninstall_hooks receive "$@" from the dispatcher but parse no
+//     arguments; extra flags are silently ignored. We omit --target anyway
+//     because it is semantically incorrect and future-proofs against stricter
+//     argument parsing.
+//  2. SupportsAll + allSelected: single `--target all` invocation.
+//  3. Default: one invocation per selected target.
+func buildArgSets(action Action, selected []Target, allSelected bool) [][]string {
+	switch {
+	case action.TargetAgnostic:
+		return [][]string{{action.Command}}
+	case action.SupportsAll && allSelected:
+		return [][]string{{action.Command, "--target", "all"}}
+	default:
+		var sets [][]string
+		for _, t := range selected {
+			sets = append(sets, []string{action.Command, "--target", t.Name})
+		}
+		return sets
+	}
+}
+
 // runBackend executes the backend action for the selected targets.
 //
 // When the action supports `all` and every target is selected, it issues a
 // single `--target all` invocation. Otherwise it iterates per target (this is
-// required for `capture`, which rejects `--target all`).
+// required for `capture`, which rejects `--target all`). For TargetAgnostic
+// actions (hooks lifecycle), no --target is emitted at all.
 func runBackend(root string, action Action, selected []Target) commandResult {
 	res := commandResult{action: action, targets: selected}
 	bin := filepath.Join(root, "bin", "overlay")
 
 	allSelected := len(selected) == len(AllTargets())
-
-	var argSets [][]string
-	if action.SupportsAll && allSelected {
-		argSets = [][]string{{action.Command, "--target", "all"}}
-	} else {
-		for _, t := range selected {
-			argSets = append(argSets, []string{action.Command, "--target", t.Name})
-		}
-	}
+	argSets := buildArgSets(action, selected, allSelected)
 
 	var sb strings.Builder
 	for i, args := range argSets {

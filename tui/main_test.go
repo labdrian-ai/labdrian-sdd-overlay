@@ -495,6 +495,226 @@ func TestFooterLegendCorrectness(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// PR-2: Hooks command coverage (R-008, R-009, R-010)
+// ---------------------------------------------------------------------------
+
+// TestBuildArgSets verifies the pure buildArgSets helper:
+//   - TargetAgnostic action → single arg set with no --target (R-008 Scenario 8.1)
+//   - Non-TargetAgnostic action with one target → args include --target (R-008 Scenario 8.2)
+func TestBuildArgSets(t *testing.T) {
+	t.Run("TargetAgnostic omits --target", func(t *testing.T) {
+		action := Action{TargetAgnostic: true, Command: "status-hooks"}
+		sets := buildArgSets(action, nil, false)
+		if len(sets) != 1 {
+			t.Fatalf("expected 1 arg set, got %d", len(sets))
+		}
+		for _, arg := range sets[0] {
+			if arg == "--target" {
+				t.Fatal("TargetAgnostic action must NOT include --target in arg set")
+			}
+		}
+		if sets[0][0] != "status-hooks" {
+			t.Fatalf("first arg must be command name, got %q", sets[0][0])
+		}
+	})
+
+	t.Run("non-TargetAgnostic with one target includes --target", func(t *testing.T) {
+		action := Action{TargetAgnostic: false, Command: "apply", SupportsAll: true}
+		targets := []Target{{Name: "agent-x", Path: "/some/path"}}
+		sets := buildArgSets(action, targets, false)
+		if len(sets) != 1 {
+			t.Fatalf("expected 1 arg set, got %d", len(sets))
+		}
+		args := sets[0]
+		foundTarget := false
+		for i, arg := range args {
+			if arg == "--target" && i+1 < len(args) && args[i+1] == "agent-x" {
+				foundTarget = true
+			}
+		}
+		if !foundTarget {
+			t.Fatalf("non-TargetAgnostic action must include --target agent-x, got %v", args)
+		}
+	})
+}
+
+// TestHooksActionsRegistered verifies all three hooks actions are in Actions() with
+// correct TargetAgnostic and Mutating values (R-009 Scenario 9.1).
+func TestHooksActionsRegistered(t *testing.T) {
+	actions := Actions()
+	byCmd := make(map[string]Action)
+	for _, a := range actions {
+		byCmd[a.Command] = a
+	}
+
+	for _, cmd := range []string{"status-hooks", "install-hooks", "uninstall-hooks"} {
+		a, ok := byCmd[cmd]
+		if !ok {
+			t.Errorf("Actions() must contain %q", cmd)
+			continue
+		}
+		if !a.TargetAgnostic {
+			t.Errorf("%s must have TargetAgnostic: true", cmd)
+		}
+	}
+
+	if sh, ok := byCmd["status-hooks"]; ok && sh.Mutating {
+		t.Error("status-hooks must have Mutating: false (read-only)")
+	}
+	for _, cmd := range []string{"install-hooks", "uninstall-hooks"} {
+		if a, ok := byCmd[cmd]; ok && !a.Mutating {
+			t.Errorf("%s must have Mutating: true", cmd)
+		}
+	}
+}
+
+// TestConfirmMessageSelection verifies:
+//   - Empty ConfirmMessage → generic fallback shown (R-010 Scenario 10.2)
+//   - install-hooks ConfirmMessage → specific copy shown (R-010 Scenario 10.3)
+//   - TargetAgnostic on screenConfirm → no target list shown (R-010, backwards-compat)
+func TestConfirmMessageSelection(t *testing.T) {
+	t.Run("empty ConfirmMessage shows generic copy", func(t *testing.T) {
+		m := newModel()
+		m.scr = screenConfirm
+		m.pendingAction = Action{
+			Name:    "Aplicar cambios",
+			Command: "apply",
+			Mutating: true,
+			// ConfirmMessage is empty (zero value)
+		}
+		rendered := m.View()
+		if !strings.Contains(rendered, "Esta acción modifica los destinos") {
+			t.Errorf("empty ConfirmMessage must show generic copy, got:\n%s", rendered)
+		}
+	})
+
+	t.Run("install-hooks ConfirmMessage shows settings.json and .bak", func(t *testing.T) {
+		// Find the install-hooks action from Actions().
+		var installAction Action
+		for _, a := range Actions() {
+			if a.Command == "install-hooks" {
+				installAction = a
+				break
+			}
+		}
+		if installAction.Command == "" {
+			t.Skip("install-hooks not yet registered in Actions()")
+		}
+
+		m := newModel()
+		m.scr = screenConfirm
+		m.pendingAction = installAction
+		rendered := m.View()
+		if !strings.Contains(rendered, "settings.json") {
+			t.Errorf("install-hooks confirm must mention 'settings.json', got:\n%s", rendered)
+		}
+		if !strings.Contains(rendered, ".bak") {
+			t.Errorf("install-hooks confirm must mention '.bak', got:\n%s", rendered)
+		}
+	})
+
+	t.Run("TargetAgnostic action on screenConfirm hides target list", func(t *testing.T) {
+		m := newModel()
+		m.scr = screenConfirm
+		m.pendingAction = Action{
+			Name:           "Estado de hooks",
+			Command:        "status-hooks",
+			Mutating:       true,
+			TargetAgnostic: true,
+			ConfirmMessage: "Acción global sin destinos.",
+		}
+		rendered := m.View()
+		// The "en: <targets>" clause must NOT appear for TargetAgnostic actions.
+		if strings.Contains(rendered, "en: claude") {
+			t.Errorf("TargetAgnostic confirm must NOT show target list, got:\n%s", rendered)
+		}
+	})
+}
+
+// TestHooksSeparatorVisible verifies the "─── Hooks ───" separator renders on
+// screenActions when hooks actions are registered (R-009 Scenario 9.2).
+func TestHooksSeparatorVisible(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+	rendered := m.View()
+	if !strings.Contains(rendered, "─── Hooks ───") {
+		t.Errorf("screenActions must contain '─── Hooks ───' separator, got:\n%s", rendered)
+	}
+}
+
+// TestStatusHooksSkipsConfirm verifies status-hooks (non-mutating) goes directly
+// to screenRunning, not screenConfirm (R-009 Scenario 9.3).
+func TestStatusHooksSkipsConfirm(t *testing.T) {
+	m := newModel()
+	// Navigate to screenActions.
+	m.scr = screenActions
+
+	// Find the index of status-hooks in the actions list.
+	statusIdx := -1
+	for i, a := range m.actions {
+		if a.Command == "status-hooks" {
+			statusIdx = i
+			break
+		}
+	}
+	if statusIdx < 0 {
+		t.Skip("status-hooks not yet in Actions()")
+	}
+
+	m.aCursor = statusIdx
+	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	if m.scr == screenConfirm {
+		t.Error("status-hooks (read-only) must NOT go to screenConfirm")
+	}
+	if m.scr != screenRunning {
+		t.Errorf("status-hooks must transition to screenRunning, got screen %d", m.scr)
+	}
+}
+
+// TestInstallHooksRequiresConfirm verifies install-hooks (mutating) routes to
+// screenConfirm before running (R-009 Scenario 9.4).
+func TestInstallHooksRequiresConfirm(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+
+	installIdx := -1
+	for i, a := range m.actions {
+		if a.Command == "install-hooks" {
+			installIdx = i
+			break
+		}
+	}
+	if installIdx < 0 {
+		t.Skip("install-hooks not yet in Actions()")
+	}
+
+	m.aCursor = installIdx
+	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	if m.scr != screenConfirm {
+		t.Errorf("install-hooks (mutating) must route to screenConfirm, got screen %d", m.scr)
+	}
+}
+
+// TestBackwardsCompatZeroValues verifies existing actions have zero-value TargetAgnostic
+// and empty ConfirmMessage, preserving prior behavior (R-010 Scenario 10.4, backwards-compat).
+func TestBackwardsCompatZeroValues(t *testing.T) {
+	for _, a := range Actions() {
+		if a.Command == "apply" || a.Command == "capture" {
+			if a.TargetAgnostic {
+				t.Errorf("%s must have TargetAgnostic: false (backwards compat)", a.Command)
+			}
+			if a.ConfirmMessage != "" {
+				t.Errorf("%s must have empty ConfirmMessage (backwards compat), got %q", a.Command, a.ConfirmMessage)
+			}
+		}
+	}
+}
+
 // TestClassifyPrecedence verifies UPSTREAM_CHANGED wins over OVERLAY_NOT_DEPLOYED.
 func TestClassifyPrecedence(t *testing.T) {
 	if classify(2, 5) != SyncNeedsCapture {
