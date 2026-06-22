@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
 )
 
@@ -112,7 +113,6 @@ ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then
 }
 
 // TestSpinnerPresentOnRunning verifies a spinner glyph is present in screenRunning.
-// RED: will fail until bubbles/spinner is added and embedded in model.
 func TestSpinnerPresentOnRunning(t *testing.T) {
 	m := newModel()
 	// Advance into screenRunning by choosing a non-mutating action.
@@ -139,9 +139,60 @@ func TestSpinnerPresentOnRunning(t *testing.T) {
 	}
 }
 
+// TestSpinnerAbsentOutsideRunning verifies the spinner glyph does NOT appear in
+// screens other than screenRunning. This guards the TickMsg screen-guard in model.go
+// (~line 162): if removed, spinner ticks would advance and embed the spinner everywhere.
+func TestSpinnerAbsentOutsideRunning(t *testing.T) {
+	// Advance the spinner to a known frame so we have a real glyph to look for.
+	base := newModel()
+	base.scr = screenRunning
+	updated, _ := base.Update(spinnerTickMsgForTest())
+	base = updated.(model)
+	spinnerGlyph := base.spinner.View()
+	if spinnerGlyph == "" {
+		t.Fatal("test setup: spinner.View() must be non-empty after a tick")
+	}
+
+	screens := []struct {
+		name string
+		scr  screen
+	}{
+		{"screenTargets", screenTargets},
+		{"screenActions", screenActions},
+		{"screenConfirm", screenConfirm},
+		{"screenResult", screenResult},
+	}
+
+	for _, tc := range screens {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newModel()
+			// Copy the already-advanced spinner into the model so the glyph is
+			// at a known non-default state and would be visible if rendered.
+			m.spinner = base.spinner
+			m.scr = tc.scr
+
+			// For screenConfirm we need a pending action.
+			if tc.scr == screenConfirm {
+				m.pendingAction = Action{Name: "Aplicar cambios", Command: "apply", Mutating: true}
+			}
+			// For screenResult we need a result.
+			if tc.scr == screenResult {
+				m.result = commandResult{
+					action: Action{Name: "Estado", Command: "status"},
+					output: "some output",
+				}
+			}
+
+			rendered := m.View()
+			if strings.Contains(rendered, spinnerGlyph) {
+				t.Errorf("%s must NOT render spinner glyph %q, got:\n%s", tc.name, spinnerGlyph, rendered)
+			}
+		})
+	}
+}
+
 // TestOutputBoxStyleDeclared is a compile-gate: outputBoxStyle must be a
 // non-zero lipgloss.Style accessible from the package.
-// RED: will fail until outputBoxStyle constant is declared in view.go.
 func TestOutputBoxStyleDeclared(t *testing.T) {
 	// outputBoxStyle is a package-level var; accessing it here ensures it
 	// compiles and is non-zero (has at least a border set).
@@ -155,7 +206,6 @@ func TestOutputBoxStyleDeclared(t *testing.T) {
 
 // TestNoDoubleGapInAnyScreen asserts no three consecutive newlines appear in
 // rendered home or result screens (double-gap elimination).
-// RED: will fail until redundant "\n" after titleStyle.Render() calls are removed.
 func TestNoDoubleGapInAnyScreen(t *testing.T) {
 	m := newModel()
 	// Home screen (screenTargets).
@@ -176,49 +226,104 @@ func TestNoDoubleGapInAnyScreen(t *testing.T) {
 	}
 }
 
-// TestWidthResponsiveRendering asserts that no rendered line exceeds the
-// terminal width when a narrow terminal size is used (R-001).
+// TestWidthResponsiveRendering asserts that no rendered line exceeds the terminal
+// width when a narrow terminal size is used (R-001). It checks multiple screens
+// and uses lipgloss.Width to correctly measure visible width ignoring ANSI sequences.
 func TestWidthResponsiveRendering(t *testing.T) {
-	m := newModel()
-	// Simulate receiving a narrow WindowSizeMsg.
-	updated, _ := m.Update(tea.WindowSizeMsg{Width: 40, Height: 20})
-	m = updated.(model)
+	const narrowWidth = 40
 
-	rendered := m.View()
-	// Strip ANSI escape sequences for accurate line-width measurement.
-	plain := stripANSI(rendered)
-	for i, line := range strings.Split(plain, "\n") {
-		runes := []rune(line)
-		if len(runes) > 40 {
-			t.Errorf("line %d exceeds 40 columns (%d runes): %q", i+1, len(runes), line)
+	buildResultModel := func(output string) model {
+		m := newModel()
+		updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
+		m = updated.(model)
+		m.scr = screenResult
+		m.result = commandResult{
+			action: Action{Name: "Estado", Command: "status"},
+			output: output,
 		}
+		return m
 	}
-}
 
-// stripANSI removes ANSI escape sequences from a string for width measurement.
-func stripANSI(s string) string {
-	var result strings.Builder
-	inEscape := false
-	for _, r := range s {
-		if r == '\x1b' {
-			inEscape = true
-			continue
-		}
-		if inEscape {
-			if (r >= 'A' && r <= 'Z') || (r >= 'a' && r <= 'z') {
-				inEscape = false
+	// Build a long output string to stress the result screen.
+	var longLines []string
+	for i := 0; i < 20; i++ {
+		longLines = append(longLines, fmt.Sprintf("this is a rather long output line number %d that might overflow the terminal width", i))
+	}
+	longOutput := strings.Join(longLines, "\n")
+
+	cases := []struct {
+		name    string
+		prepare func() model
+	}{
+		{
+			name: "screenTargets",
+			prepare: func() model {
+				m := newModel()
+				updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
+				m = updated.(model)
+				return m
+			},
+		},
+		{
+			name: "screenActions",
+			prepare: func() model {
+				m := newModel()
+				updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
+				m = updated.(model)
+				m.scr = screenActions
+				return m
+			},
+		},
+		{
+			name: "screenResult with long output",
+			prepare: func() model {
+				return buildResultModel(longOutput)
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := tc.prepare()
+			rendered := m.View()
+			for i, line := range strings.Split(rendered, "\n") {
+				w := lipgloss.Width(line)
+				if w > narrowWidth {
+					t.Errorf("line %d exceeds %d columns (%d visible): %q", i+1, narrowWidth, w, line)
+				}
 			}
-			continue
-		}
-		result.WriteRune(r)
+		})
 	}
-	return result.String()
 }
 
-// TestScrollClamp verifies m.scroll is clamped to maxScroll() and never goes
-// negative (R-005).
+// TestWidthFallbackTo80 verifies that a fresh newModel() (width==0) renders at 80
+// columns via the contentWidth() fallback. Must fail if the fallback is removed.
+func TestWidthFallbackTo80(t *testing.T) {
+	m := newModel()
+	// Confirm no WindowSizeMsg has been received — width must be 0.
+	if m.width != 0 {
+		t.Fatalf("newModel() must have width==0 before any WindowSizeMsg, got %d", m.width)
+	}
+
+	if m.contentWidth() != 80 {
+		t.Fatalf("contentWidth() with width==0 must return 80 (fallback), got %d", m.contentWidth())
+	}
+
+	// Also verify the rendered View() respects the 80-col constraint.
+	rendered := m.View()
+	for i, line := range strings.Split(rendered, "\n") {
+		w := lipgloss.Width(line)
+		if w > 80 {
+			t.Errorf("line %d exceeds 80 columns (%d visible) in zero-width fallback: %q", i+1, w, line)
+		}
+	}
+}
+
+// TestScrollClamp verifies m.scroll is clamped to EXACTLY maxScroll() (not merely
+// <= some value) and never goes negative (R-005). This catches off-by-one errors.
 func TestScrollClamp(t *testing.T) {
 	m := newModel()
+	m.width = 80
 	m.height = 20
 	m.scr = screenResult
 	// Build multi-line output that exceeds the viewport.
@@ -236,16 +341,14 @@ func TestScrollClamp(t *testing.T) {
 		t.Fatalf("maxScroll() should be > 0 for 30 lines with height 20, got %d", max)
 	}
 
-	// Drive 100 down-key messages — scroll must saturate at maxScroll.
+	// Drive 100 down-key messages — scroll must saturate at EXACTLY maxScroll.
 	for i := 0; i < 100; i++ {
 		updated, _ := m.updateResult(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("j")})
 		m = updated.(model)
 	}
-	if m.scroll > max {
-		t.Errorf("scroll %d exceeded maxScroll %d", m.scroll, max)
-	}
-	if m.scroll < 0 {
-		t.Errorf("scroll went negative: %d", m.scroll)
+	// Exact upper-bound assertion: must equal max, not merely be <= max.
+	if m.scroll != max {
+		t.Errorf("scroll after saturation: got %d, want exactly maxScroll()=%d", m.scroll, max)
 	}
 
 	// Drive up past zero — scroll must not go negative.
@@ -255,6 +358,9 @@ func TestScrollClamp(t *testing.T) {
 	}
 	if m.scroll < 0 {
 		t.Errorf("scroll went negative after many up-keys: %d", m.scroll)
+	}
+	if m.scroll != 0 {
+		t.Errorf("scroll after full rewind: got %d, want exactly 0", m.scroll)
 	}
 }
 
@@ -279,14 +385,6 @@ func TestSelectAllToggle(t *testing.T) {
 	if !m.allSelected() {
 		t.Fatal("after 'a' when none selected, all should be selected")
 	}
-
-	// 'a' on screenHome (via updateTargets from a different scr) should not panic.
-	m2 := newModel()
-	m2.scr = screenActions
-	// updateTargets is only called by Update when scr==screenTargets, so calling it
-	// directly here is the correct unit-test approach (no screen guard inside).
-	updated, _ = m2.updateTargets(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("a")})
-	_ = updated // just ensure no panic
 }
 
 // TestErrorBannerOnFailure verifies a red "Comando falló" banner when result.err != nil,
@@ -313,7 +411,9 @@ func TestErrorBannerOnFailure(t *testing.T) {
 	}
 }
 
-// TestEmptyVerdictNote verifies the dim note when sync-check produces zero verdicts (R-004).
+// TestEmptyVerdictNote verifies the dim note when sync-check produces zero
+// verdicts (R-004), and that a non-sync-check command does NOT show the note
+// even when verdicts are also empty.
 func TestEmptyVerdictNote(t *testing.T) {
 	m := newModel()
 	m.scr = screenResult
@@ -334,16 +434,51 @@ func TestEmptyVerdictNote(t *testing.T) {
 	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
 		t.Errorf("sync-check with verdicts must NOT show dim note")
 	}
+
+	// NEGATIVE PATH: a non-sync-check command with zero verdicts must NOT show
+	// the note — guards the Command=="sync-check" gate in viewResult.
+	m.result = commandResult{
+		action:   Action{Name: "Estado", Command: "status"},
+		output:   "some output",
+		verdicts: nil,
+	}
+	rendered = m.View()
+	if strings.Contains(rendered, "No se pudieron analizar veredictos") {
+		t.Errorf("non-sync-check command with 0 verdicts must NOT show dim note, got:\n%s", rendered)
+	}
 }
 
-// TestFooterLegendCorrectness verifies result screen shows esc/enter and
-// confirm screen shows esc/n cancel (R-007).
+// TestFooterLegendCorrectness verifies footer key hints for all interactive screens
+// (R-007). Covers targets, actions, result, and confirm screens.
 func TestFooterLegendCorrectness(t *testing.T) {
 	m := newModel()
 
+	// screenTargets footer.
+	rendered := m.View()
+	if !strings.Contains(rendered, "espacio seleccionar") {
+		t.Errorf("targets screen footer must contain 'espacio seleccionar', got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "enter continuar") {
+		t.Errorf("targets screen footer must contain 'enter continuar', got:\n%s", rendered)
+	}
+
+	// screenActions footer.
+	m.scr = screenActions
+	rendered = m.View()
+	if !strings.Contains(rendered, "enter ejecutar") {
+		t.Errorf("actions screen footer must contain 'enter ejecutar', got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "esc volver") {
+		t.Errorf("actions screen footer must contain 'esc volver', got:\n%s", rendered)
+	}
+
 	// Result screen footer.
 	m.scr = screenResult
-	rendered := m.View()
+	m.result = commandResult{
+		action: Action{Name: "Estado", Command: "status"},
+		output: "ok",
+	}
+	rendered = m.View()
 	if !strings.Contains(rendered, "esc/enter") {
 		t.Errorf("result screen footer must contain 'esc/enter', got footer section in:\n%s", rendered)
 	}
