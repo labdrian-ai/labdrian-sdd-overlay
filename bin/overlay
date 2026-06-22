@@ -261,6 +261,10 @@ cmd_capture() {
   local current_branch
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
+  # Always return to the original branch, even if a later step fails under
+  # 'set -euo pipefail' — prevents stranding the working tree on 'upstream'.
+  trap 'git checkout "$current_branch" >/dev/null 2>&1 || true' EXIT
+
   git checkout upstream
 
   if [[ -n "$from_backup" ]]; then
@@ -299,14 +303,18 @@ cmd_capture() {
   fi
 
   git add skills/
-  if [[ -n "$(git status --porcelain)" ]]; then
+  # Commit only if skills/ has STAGED changes. `git diff --cached --quiet`
+  # ignores unrelated untracked paths (.engram/, tui/) present on 'upstream'
+  # that previously caused a doomed `git commit` (exit 1) stranding the tree.
+  if git diff --cached --quiet; then
+    info "No changes detected — upstream already up to date"
+  else
     git commit -m "upstream: sync from gentle-ai $(date +%Y-%m-%d)"
     info "upstream updated"
-  else
-    info "No changes detected — upstream already up to date"
   fi
 
   git checkout "$current_branch"
+  trap - EXIT
   info "Returned to branch: $current_branch"
 }
 
