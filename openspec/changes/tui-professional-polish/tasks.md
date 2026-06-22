@@ -32,34 +32,34 @@ Chain strategy: feature-branch-chain
 
 ### Phase 1 — Dependency + Style Constants (Foundation)
 
-- [ ] 1.1 **[RED R-002]** Write failing test `TestSpinnerPresentOnRunning` in `tui/main_test.go`: advance model into `screenRunning`, assert spinner glyph present in rendered output. Run `go test ./...` → must fail (import missing).
-- [ ] 1.2 **[GREEN R-002]** Add `github.com/charmbracelet/bubbles` to `tui/go.mod` and run `go mod tidy` to update `go.sum`. Confirm `go build ./...` passes.
-- [ ] 1.3 **[RED R-S1]** Write compile-gate test `TestOutputBoxStyleDeclared` in `tui/main_test.go` asserting `outputBoxStyle` is a non-zero lipgloss.Style (reachable from the package). Run → fail.
-- [ ] 1.4 **[GREEN R-S1]** Add `outputBoxStyle` named constant to `tui/view.go` style vars block; remove inline `.BorderForeground(colorGray)` call from `viewOutput`. Run test → green.
-- [ ] 1.5 **[RED R-S3]** Write test `TestNoDoublGapInAnyScreen` asserting `!strings.Contains(rendered, "\n\n\n")` for home + result screens. Run → fail.
-- [ ] 1.6 **[GREEN R-S2, R-S3]** Remove redundant explicit `"\n"` after `titleStyle.Render(...)` calls in `tui/view.go` (view.go:112, 147, 193); extract shared padding/indent constant. Run tests → green.
+- [x] 1.1 **[RED R-002]** Write failing test `TestSpinnerPresentOnRunning` in `tui/main_test.go`: advance model into `screenRunning`, assert spinner glyph present in rendered output. Run `go test ./...` → must fail (import missing).
+- [x] 1.2 **[GREEN R-002]** Add `github.com/charmbracelet/bubbles` to `tui/go.mod` and run `go mod tidy` to update `go.sum`. Confirm `go build ./...` passes.
+- [x] 1.3 **[RED R-S1]** Write compile-gate test `TestOutputBoxStyleDeclared` in `tui/main_test.go` asserting `outputBoxStyle` is a non-zero lipgloss.Style (reachable from the package). Run → fail.
+- [x] 1.4 **[GREEN R-S1]** Add `outputBoxStyle` named constant to `tui/view.go` style vars block; remove inline `.BorderForeground(colorGray)` call from `viewOutput`. Run test → green.
+- [x] 1.5 **[RED R-S3]** Write test `TestNoDoubleGapInAnyScreen` asserting `!strings.Contains(rendered, "\n\n\n")` for home + result screens. Run → fail.
+- [x] 1.6 **[GREEN R-S2, R-S3]** Remove redundant explicit `"\n"` after `titleStyle.Render(...)` calls in `tui/view.go`; extract `splitOutputLines` helper. Run tests → green.
 
 ### Phase 2 — Core Behavior (model.go + view.go)
 
-- [ ] 2.1 **[RED R-001]** Write test `TestWidthResponsiveRendering` using `teatest.WithInitialTermSize(40, 20)`: strip ANSI, assert every rendered line `<= 40` runes wide. Run → fail.
-- [ ] 2.2 **[GREEN R-001]** Add `func (m model) contentWidth() int` to `tui/model.go` (returns `m.width` or 80 fallback). Apply `.Width(w)` to header/footer in `tui/view.go`, `.MaxWidth(w)` to outer `View()`, `.Width(w-2)` to output box and dashboard box. Run test → green.
-- [ ] 2.3 **[GREEN R-002]** Embed `spinner.Model` in `model` struct (`tui/model.go`); initialize in `newModel()`; batch `m.spinner.Tick` with `runActionCmd` on `screenRunning` entry in `updateActions` and `updateConfirm`; handle `spinner.TickMsg` in top-level `Update` (drop ticks when `scr != screenRunning`); render `m.spinner.View()` in `viewRunning` (`tui/view.go`). Run `TestSpinnerPresentOnRunning` → green.
-- [ ] 2.4 **[RED R-005]** Write unit test `TestScrollClamp` in `tui/main_test.go`: build a model with short output + small height, drive repeated `down` key messages via `updateResult`, assert `m.scroll` never exceeds `m.maxScroll()` and never goes negative. Run → fail.
-- [ ] 2.5 **[GREEN R-005]** Add `func (m model) maxScroll() int` helper to `tui/model.go`; clamp down-key branch in `updateResult` against `m.maxScroll()`. Run `TestScrollClamp` → green.
-- [ ] 2.6 **[RED R-006]** Write unit test `TestSelectAllToggle` in `tui/main_test.go`: from all-selected state, press `a` → none; press `a` again → all; press `a` on `screenHome` → no change. Run → fail.
-- [ ] 2.7 **[GREEN R-006]** Add `func (m model) allSelected() bool` to `tui/model.go`; add `case "a"` to `updateTargets` switch with toggle logic. Run `TestSelectAllToggle` → green.
-- [ ] 2.8 **[RED R-003]** Write test `TestErrorBannerOnFailure` in `tui/main_test.go`: construct model with `scr: screenResult, result.err != nil`, render, assert "Comando falló" present; also assert success path does NOT contain banner. Run → fail.
-- [ ] 2.9 **[GREEN R-003]** Branch `viewResult` in `tui/view.go` on `m.result.err != nil`: render title with `errStyle` + red "Comando falló" banner. Run `TestErrorBannerOnFailure` → green.
-- [ ] 2.10 **[RED R-004]** Write unit test `TestEmptyVerdictNote` in `tui/main_test.go`: model with `action.Command == "sync-check"`, zero verdicts → rendered result contains "No se pudieron analizar veredictos"; non-empty verdicts → note absent. Run → fail.
-- [ ] 2.11 **[GREEN R-004]** Add empty-verdict note branch in `viewResult` (`tui/view.go`): when sync-check and `len(m.result.verdicts) == 0`, emit `dimStyle.Render("No se pudieron analizar veredictos")`. Run → green.
-- [ ] 2.12 **[RED R-007]** Write test `TestFooterLegendCorrectness` in `tui/main_test.go`: assert result screen footer contains `esc/enter`; confirm screen footer contains `esc` and `enter`. Run → fail.
-- [ ] 2.13 **[GREEN R-007]** Update `footer()` in `tui/view.go` to return correct copy per screen: result → `esc/enter volver`; confirm → `y confirmar · esc/n cancelar`. Run `TestFooterLegendCorrectness` → green.
+- [x] 2.1 **[RED R-001]** Write test `TestWidthResponsiveRendering` using `tea.WindowSizeMsg{Width:40}`: strip ANSI, assert every rendered line `<= 40` runes wide. Run → fail.
+- [x] 2.2 **[GREEN R-001]** Add `func (m model) contentWidth() int` to `tui/model.go` (returns `m.width` or 80 fallback). Apply `.Width(w)` to header/footer in `tui/view.go`, `.MaxWidth(w)` to outer `View()`, `.Width(w-2)` to output box and dashboard box. Run test → green.
+- [x] 2.3 **[GREEN R-002]** Embed `spinner.Model` in `model` struct (`tui/model.go`); initialize in `newModel()`; batch `m.spinner.Tick` with `runActionCmd` on `screenRunning` entry in `updateActions` and `updateConfirm`; handle `spinner.TickMsg` in top-level `Update` (drop ticks when `scr != screenRunning`); render `m.spinner.View()` in `viewRunning` (`tui/view.go`). Run `TestSpinnerPresentOnRunning` → green.
+- [x] 2.4 **[RED R-005]** Write unit test `TestScrollClamp` in `tui/main_test.go`: build a model with short output + small height, drive repeated `down` key messages via `updateResult`, assert `m.scroll` never exceeds `m.maxScroll()` and never goes negative. Run → fail.
+- [x] 2.5 **[GREEN R-005]** Add `func (m model) maxScroll() int` helper to `tui/model.go`; clamp down-key branch in `updateResult` against `m.maxScroll()`. Run `TestScrollClamp` → green.
+- [x] 2.6 **[RED R-006]** Write unit test `TestSelectAllToggle` in `tui/main_test.go`: from all-selected state, press `a` → none; press `a` again → all; press `a` on `screenHome` → no change. Run → fail.
+- [x] 2.7 **[GREEN R-006]** Add `func (m model) allSelected() bool` to `tui/model.go`; add `case "a"` to `updateTargets` switch with toggle logic. Run `TestSelectAllToggle` → green.
+- [x] 2.8 **[RED R-003]** Write test `TestErrorBannerOnFailure` in `tui/main_test.go`: construct model with `scr: screenResult, result.err != nil`, render, assert "Comando falló" present; also assert success path does NOT contain banner. Run → fail.
+- [x] 2.9 **[GREEN R-003]** Branch `viewResult` in `tui/view.go` on `m.result.err != nil`: render title with `errStyle` + red "✗ Comando falló" banner. Run `TestErrorBannerOnFailure` → green.
+- [x] 2.10 **[RED R-004]** Write unit test `TestEmptyVerdictNote` in `tui/main_test.go`: model with `action.Command == "sync-check"`, zero verdicts → rendered result contains "No se pudieron analizar veredictos"; non-empty verdicts → note absent. Run → fail.
+- [x] 2.11 **[GREEN R-004]** Add empty-verdict note branch in `viewResult` (`tui/view.go`): when sync-check and `len(m.result.verdicts) == 0`, emit `dimStyle.Render("No se pudieron analizar veredictos")`. Run → green.
+- [x] 2.12 **[RED R-007]** Write test `TestFooterLegendCorrectness` in `tui/main_test.go`: assert result screen footer contains `esc/enter`; confirm screen footer contains `esc/n` and `y confirmar`. Run → fail.
+- [x] 2.13 **[GREEN R-007]** Update `footer()` in `tui/view.go` to return correct copy per screen: result → `esc/enter volver`; confirm → `y confirmar · esc/n cancelar`. Run `TestFooterLegendCorrectness` → green.
 
 ### Phase 3 — PR-1 Verification Gate
 
-- [ ] 3.1 **[R-011]** Run `cd tui && go test ./...`: confirm all pre-existing tests green and all new tests (2.1–2.13) green. Zero failures.
-- [ ] 3.2 **[R-011]** Run `go vet ./...` and `go build ./...` from `tui/`: confirm no errors (validates R-S1, R-S3 compile gates).
-- [ ] 3.3 **[R-012]** Review all string literals added in `tui/view.go` and `tui/model.go` in the PR-1 diff: confirm no Spanish string has been anglicized (banner, footer, notes stay in Spanish).
+- [x] 3.1 **[R-011]** Run `cd tui && go test ./...`: confirm all pre-existing tests green and all new tests (2.1–2.13) green. Zero failures. (13/13 pass)
+- [x] 3.2 **[R-011]** Run `go vet ./...` and `go build ./...` from `tui/`: confirm no errors (validates R-S1, R-S3 compile gates).
+- [x] 3.3 **[R-012]** Review all string literals added in `tui/view.go` and `tui/model.go` in the PR-1 diff: confirm no Spanish string has been anglicized (banner, footer, notes stay in Spanish).
 
 ---
 
