@@ -509,19 +509,18 @@ func TestDefaultOpenCodeConfigRootIgnoresRelativeXDGConfigHome(t *testing.T) {
 }
 
 func TestOpenCodePluginBehaviorFixture(t *testing.T) {
-	// R-001/R-103: execute the actual plugin module with Node to prove hook behavior and marker write.
+	// R-001/R-103: execute the installed OpenCode plugin artifact with Node to prove hook behavior and marker write.
 	root := t.TempDir()
-	pluginDir := filepath.Join(root, "plugins")
-	if err := os.MkdirAll(pluginDir, 0o755); err != nil {
-		t.Fatalf("mkdir plugin dir: %v", err)
+	adapter := engineRuntime.NewOpenCodeAdapter(root)
+	if result := adapter.Install(); result.Status != engineRuntime.CapabilityRestartRequired {
+		t.Fatalf("Install() = %#v", result)
 	}
-	source, err := os.ReadFile("labdrian-runtime-parity-plugin.mjs")
-	if err != nil {
-		t.Fatalf("read plugin source: %v", err)
+	if err := os.WriteFile(filepath.Join(root, "package.json"), []byte(`{"type":"module"}`), 0o644); err != nil {
+		t.Fatalf("write package.json for installed .js ESM fixture: %v", err)
 	}
-	pluginPath := filepath.Join(pluginDir, "labdrian-runtime-parity-plugin.mjs")
-	if err := os.WriteFile(pluginPath, source, 0o644); err != nil {
-		t.Fatalf("write temp plugin: %v", err)
+	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
+	if _, err := os.Stat(pluginPath); err != nil {
+		t.Fatalf("installed plugin artifact should exist at %s: %v", pluginPath, err)
 	}
 	customConfigPath := filepath.Join(root, "labdrian-runtime-parity.json")
 	customConfig := map[string]any{
