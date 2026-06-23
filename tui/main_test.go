@@ -402,23 +402,51 @@ func TestScrollClamp(t *testing.T) {
 	}
 }
 
-func TestViewOutputUsesSharedViewportSizing(t *testing.T) {
-	// Runtime parity review warning: viewOutput must not duplicate viewport sizing
-	// literals already centralized in model.go.
-	source, err := os.ReadFile("view.go")
-	if err != nil {
-		t.Fatalf("read view.go: %v", err)
+func TestResultViewportSizingMatchesRenderAndScrollBehavior(t *testing.T) {
+	// Runtime parity review warning: prove the rendered output window and scroll
+	// clamp honor the same dashboard-aware viewport sizing behavior.
+	lines := make([]string, 12)
+	for i := range lines {
+		lines[i] = fmt.Sprintf("line-%02d", i+1)
 	}
-	text := string(source)
-	for _, forbidden := range []string{
-		"m.height - 10",
-		"*3 + 3",
-		"*2 + 3",
-		"viewport < 5",
-		"viewport = 5",
-	} {
-		if strings.Contains(text, forbidden) {
-			t.Fatalf("viewOutput should use shared viewport sizing helper/constants, found %q", forbidden)
+	m := newModel()
+	m.width = 90
+	m.height = 18
+	m.scr = screenResult
+	m.result = commandResult{
+		output: strings.Join(lines, "\n"),
+		verdicts: []TargetVerdict{
+			{Target: "claude", Status: SyncHealthy, Action: "healthy"},
+		},
+		runtimeStatuses: []RuntimeStatus{
+			{Target: "opencode", Status: RuntimeRestartRequired, Message: "restart required"},
+		},
+	}
+
+	if got := m.maxScroll(); got != 7 {
+		t.Fatalf("maxScroll() = %d, want 7 for 12 lines with 5-line minimum viewport", got)
+	}
+	rendered := m.View()
+	for _, want := range []string{"[lines 1-5 of 12]", "line-01", "line-05"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered output should contain %q; got:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "line-06") {
+		t.Fatalf("rendered output should stop at the 5-line viewport before scrolling; got:\n%s", rendered)
+	}
+
+	for i := 0; i < 20; i++ {
+		updated, _ := m.updateResult(tea.KeyMsg{Type: tea.KeyDown})
+		m = updated.(model)
+	}
+	if m.scroll != 7 {
+		t.Fatalf("scroll after saturation = %d, want 7", m.scroll)
+	}
+	rendered = m.View()
+	for _, want := range []string{"[lines 8-12 of 12]", "line-08", "line-12"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("scrolled output should contain %q; got:\n%s", want, rendered)
 		}
 	}
 }
@@ -920,20 +948,22 @@ func TestParseRuntimeStatuses(t *testing.T) {
 [claude] status: supported — Claude hooks remain the deterministic baseline
 [opencode] status: restart_required — OpenCode restart required to activate plugin hash abc
 [codex] status: partial — Codex support is conditional — reasons: deterministic scoped subagent/task rewrite not verified
+[opencode] status: unsupported — OpenCode runtime support disabled by local configuration
 `
 
 	statuses := ParseRuntimeStatuses(output)
-	if len(statuses) != 3 {
-		t.Fatalf("expected 3 statuses, got %d", len(statuses))
+	if len(statuses) != 4 {
+		t.Fatalf("expected 4 statuses, got %d", len(statuses))
 	}
-	want := map[string]RuntimeCapabilityStatus{
-		"claude":   RuntimeSupported,
-		"opencode": RuntimeRestartRequired,
-		"codex":    RuntimePartial,
+	want := []RuntimeStatus{
+		{Target: "claude", Status: RuntimeSupported},
+		{Target: "opencode", Status: RuntimeRestartRequired},
+		{Target: "codex", Status: RuntimePartial},
+		{Target: "opencode", Status: RuntimeUnsupported},
 	}
-	for _, status := range statuses {
-		if status.Status != want[status.Target] {
-			t.Errorf("%s status = %d, want %d", status.Target, status.Status, want[status.Target])
+	for i, status := range statuses {
+		if status.Target != want[i].Target || status.Status != want[i].Status {
+			t.Errorf("status[%d] = {%s %d}, want {%s %d}", i, status.Target, status.Status, want[i].Target, want[i].Status)
 		}
 		if status.Message == "" {
 			t.Errorf("%s message should not be empty", status.Target)
@@ -965,15 +995,16 @@ func TestRuntimeDashboardRendersCapabilityStatuses(t *testing.T) {
 	m.scr = screenResult
 	m.result = commandResult{
 		action: Action{Name: "Runtime status", Command: "status"},
-		output: "[opencode] status: restart_required — restart OpenCode\n[codex] status: partial — deterministic rewrite not verified\n",
+		output: "[opencode] status: restart_required — restart OpenCode\n[codex] status: partial — deterministic rewrite not verified\n[opencode] status: unsupported — support disabled\n",
 		runtimeStatuses: []RuntimeStatus{
 			{Target: "opencode", Status: RuntimeRestartRequired, Message: "restart OpenCode"},
 			{Target: "codex", Status: RuntimePartial, Message: "deterministic rewrite not verified"},
+			{Target: "opencode", Status: RuntimeUnsupported, Message: "support disabled"},
 		},
 	}
 
 	rendered := m.View()
-	for _, want := range []string{"Runtime capabilities", "restart_required", "partial", "opencode", "codex"} {
+	for _, want := range []string{"Runtime capabilities", "restart_required", "partial", "unsupported", "opencode", "codex"} {
 		if !strings.Contains(rendered, want) {
 			t.Errorf("runtime dashboard should contain %q; got:\n%s", want, rendered)
 		}
