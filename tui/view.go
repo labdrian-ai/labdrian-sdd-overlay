@@ -237,6 +237,10 @@ func (m model) viewResult() string {
 		b.WriteString(m.viewDashboard())
 		b.WriteString("\n")
 	}
+	if len(m.result.runtimeStatuses) > 0 {
+		b.WriteString(m.viewRuntimeDashboard())
+		b.WriteString("\n")
+	}
 
 	// Empty-verdict note for sync-check.
 	if m.result.action.Command == "sync-check" && len(m.result.verdicts) == 0 {
@@ -263,6 +267,8 @@ func (m model) viewDashboard() string {
 			color, icon, label = colorYellow, "!", "Pendiente de aplicación"
 		case SyncNeedsCapture:
 			color, icon, label = colorRed, "✗", "Requiere capture + apply"
+		case SyncTargetMissing:
+			color, icon, label = colorRed, "✗", "Directorio target ausente"
 		default:
 			color, icon, label = colorGray, "?", "Sin datos"
 		}
@@ -284,19 +290,43 @@ func (m model) viewDashboard() string {
 	return boxStyle.Width(w - 2).Render(strings.TrimRight(b.String(), "\n"))
 }
 
+func (m model) viewRuntimeDashboard() string {
+	w := m.contentWidth()
+	var b strings.Builder
+	b.WriteString(lipgloss.NewStyle().Bold(true).Foreground(colorAccent2).Render("Runtime capabilities") + "\n")
+
+	for _, status := range m.result.runtimeStatuses {
+		var color lipgloss.Color
+		var label string
+		switch status.Status {
+		case RuntimeSupported:
+			color, label = colorGreen, "supported"
+		case RuntimePartial:
+			color, label = colorYellow, "partial"
+		case RuntimeRestartRequired:
+			color, label = colorYellow, "restart_required"
+		case RuntimeUnsupported:
+			color, label = colorRed, "unsupported"
+		default:
+			color, label = colorGray, "unknown"
+		}
+		name := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%-9s", status.Target))
+		badge := lipgloss.NewStyle().Foreground(color).Bold(true).Render(label)
+		message := dimStyle.Render("       → " + status.Message)
+		b.WriteString(fmt.Sprintf("  %s  %s\n", name, badge))
+		if status.Message != "" {
+			b.WriteString(message + "\n")
+		}
+	}
+	return boxStyle.Width(w - 2).Render(strings.TrimRight(b.String(), "\n"))
+}
+
 // viewOutput renders the raw command output, scrollable.
 func (m model) viewOutput() string {
 	w := m.contentWidth()
 	lines := splitOutputLines(m.result.output)
 
-	// Reserve vertical room for header/footer/title/dashboard.
-	viewport := m.height - 10
-	if len(m.result.verdicts) > 0 {
-		viewport -= len(m.result.verdicts)*3 + 3
-	}
-	if viewport < 5 {
-		viewport = 5
-	}
+	viewport := m.resultViewportHeight()
 
 	start := m.scroll
 	if start > len(lines)-1 {

@@ -2,6 +2,8 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
@@ -85,8 +87,8 @@ ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then
 	}
 
 	want := []struct {
-		target string
-		status SyncStatus
+		target  string
+		status  SyncStatus
 		uc, ond int
 	}{
 		{"claude", SyncHealthy, 0, 0},
@@ -109,6 +111,42 @@ ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then
 		if v.Action == "" {
 			t.Errorf("%s: action should not be empty", w.target)
 		}
+	}
+}
+
+func TestParseSyncCheckMissingTargetIsNotHealthy(t *testing.T) {
+	// R-101: a missing target directory must never render as synchronized/healthy.
+	sample := `
+=== sync-check: codex (/tmp/missing) ===
+SYNC_CHECK:codex: target dir not found at /tmp/missing -- skipping
+VERDICT:codex:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 TARGET_MISSING=1
+ACTION:codex: target directory missing; run 'overlay apply --target codex'
+[codex] sync-check: partial — engine binary not installed
+`
+
+	verdicts := ParseSyncCheck(sample)
+	if len(verdicts) != 1 {
+		t.Fatalf("expected one verdict, got %d", len(verdicts))
+	}
+	if verdicts[0].Status != SyncTargetMissing || !verdicts[0].TargetMissing {
+		t.Fatalf("missing target should parse as SyncTargetMissing, got %#v", verdicts[0])
+	}
+	statuses := ParseRuntimeStatuses(sample)
+	if len(statuses) != 1 || statuses[0].Status != RuntimePartial {
+		t.Fatalf("missing target output should still include runtime partial evidence, got %#v", statuses)
+	}
+
+	m := newModel()
+	m.width = 100
+	m.height = 30
+	m.scr = screenResult
+	m.result = commandResult{action: Action{Command: "sync-check"}, output: sample, verdicts: verdicts, runtimeStatuses: statuses}
+	rendered := m.View()
+	if strings.Contains(rendered, "Sincronizado") {
+		t.Fatalf("missing target must not render as synchronized, got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "Directorio target ausente") {
+		t.Fatalf("missing target should render explicit missing-target label, got:\n%s", rendered)
 	}
 }
 
@@ -364,6 +402,73 @@ func TestScrollClamp(t *testing.T) {
 	}
 }
 
+func TestResultViewportSizingMatchesRenderAndScrollBehavior(t *testing.T) {
+	// Runtime parity review warning: prove the rendered output window and scroll
+	// clamp honor the same dashboard-aware viewport sizing behavior.
+	lines := make([]string, 12)
+	for i := range lines {
+		lines[i] = fmt.Sprintf("line-%02d", i+1)
+	}
+	m := newModel()
+	m.width = 90
+	m.height = 18
+	m.scr = screenResult
+	m.result = commandResult{
+		output: strings.Join(lines, "\n"),
+		verdicts: []TargetVerdict{
+			{Target: "claude", Status: SyncHealthy, Action: "healthy"},
+		},
+		runtimeStatuses: []RuntimeStatus{
+			{Target: "opencode", Status: RuntimeRestartRequired, Message: "restart required"},
+		},
+	}
+
+	if got := m.maxScroll(); got != 7 {
+		t.Fatalf("maxScroll() = %d, want 7 for 12 lines with 5-line minimum viewport", got)
+	}
+	rendered := m.View()
+	for _, want := range []string{"[lines 1-5 of 12]", "line-01", "line-05"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("rendered output should contain %q; got:\n%s", want, rendered)
+		}
+	}
+	if strings.Contains(rendered, "line-06") {
+		t.Fatalf("rendered output should stop at the 5-line viewport before scrolling; got:\n%s", rendered)
+	}
+
+	for i := 0; i < 20; i++ {
+		updated, _ := m.updateResult(tea.KeyMsg{Type: tea.KeyDown})
+		m = updated.(model)
+	}
+	if m.scroll != 7 {
+		t.Fatalf("scroll after saturation = %d, want 7", m.scroll)
+	}
+	rendered = m.View()
+	for _, want := range []string{"[lines 8-12 of 12]", "line-08", "line-12"} {
+		if !strings.Contains(rendered, want) {
+			t.Fatalf("scrolled output should contain %q; got:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestAllTargetsIgnoresRelativeXDGConfigHome(t *testing.T) {
+	// R-103: TUI target paths must not point OpenCode at a repo-relative XDG root.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join("relative", "xdg"))
+	targets := AllTargets()
+	var opencodePath string
+	for _, target := range targets {
+		if target.Name == "opencode" {
+			opencodePath = target.Path
+		}
+	}
+	want := filepath.Join(home, ".config", "opencode", "skills")
+	if opencodePath != want {
+		t.Fatalf("opencode target path = %q, want %q", opencodePath, want)
+	}
+}
+
 // TestSelectAllToggle verifies 'a' on screenTargets toggles all selections (R-006).
 func TestSelectAllToggle(t *testing.T) {
 	m := newModel()
@@ -578,8 +683,8 @@ func TestConfirmMessageSelection(t *testing.T) {
 		m := newModel()
 		m.scr = screenConfirm
 		m.pendingAction = Action{
-			Name:    "Aplicar cambios",
-			Command: "apply",
+			Name:     "Aplicar cambios",
+			Command:  "apply",
 			Mutating: true,
 			// ConfirmMessage is empty (zero value)
 		}
@@ -812,15 +917,196 @@ func TestBackwardsCompatZeroValues(t *testing.T) {
 	}
 }
 
+func TestRuntimeLifecycleActionsRegistered(t *testing.T) {
+	// R-101/R-106: TUI exposes target-aware lifecycle commands documented for all runtimes.
+	actions := Actions()
+	byCmd := make(map[string]Action)
+	for _, action := range actions {
+		byCmd[action.Command] = action
+	}
+
+	for _, cmd := range []string{"install", "update", "rollback", "uninstall", "status", "sync-check"} {
+		action, ok := byCmd[cmd]
+		if !ok {
+			t.Fatalf("Actions() must contain runtime lifecycle command %q", cmd)
+		}
+		if !action.SupportsAll {
+			t.Errorf("%s must support --target all", cmd)
+		}
+	}
+
+	for _, cmd := range []string{"install", "update", "rollback", "uninstall"} {
+		if !byCmd[cmd].Mutating {
+			t.Errorf("%s must require confirmation", cmd)
+		}
+	}
+}
+
+func TestParseRuntimeStatuses(t *testing.T) {
+	// R-101/R-104: user-visible runtime statuses include supported, restart_required, partial, and unsupported.
+	output := `
+[claude] status: supported — Claude hooks remain the deterministic baseline
+[opencode] status: restart_required — OpenCode restart required to activate plugin hash abc
+[codex] status: partial — Codex support is conditional — reasons: deterministic scoped subagent/task rewrite not verified
+[opencode] status: unsupported — OpenCode runtime support disabled by local configuration
+`
+
+	statuses := ParseRuntimeStatuses(output)
+	if len(statuses) != 4 {
+		t.Fatalf("expected 4 statuses, got %d", len(statuses))
+	}
+	want := []RuntimeStatus{
+		{Target: "claude", Status: RuntimeSupported},
+		{Target: "opencode", Status: RuntimeRestartRequired},
+		{Target: "codex", Status: RuntimePartial},
+		{Target: "opencode", Status: RuntimeUnsupported},
+	}
+	for i, status := range statuses {
+		if status.Target != want[i].Target || status.Status != want[i].Status {
+			t.Errorf("status[%d] = {%s %d}, want {%s %d}", i, status.Target, status.Status, want[i].Target, want[i].Status)
+		}
+		if status.Message == "" {
+			t.Errorf("%s message should not be empty", status.Target)
+		}
+	}
+}
+
+func TestParseRuntimeStatusesIgnoresHookStatusLines(t *testing.T) {
+	output := `
+[OK  ] binary: /tmp/gentle-ai-overlay
+[FAIL] contract: missing
+[claude] status: partial — engine binary not installed
+`
+
+	statuses := ParseRuntimeStatuses(output)
+	if len(statuses) != 1 {
+		t.Fatalf("expected only runtime target status, got %#v", statuses)
+	}
+	if statuses[0].Target != "claude" || statuses[0].Status != RuntimePartial {
+		t.Fatalf("unexpected runtime status parse result: %#v", statuses[0])
+	}
+}
+
+func TestRuntimeDashboardRendersCapabilityStatuses(t *testing.T) {
+	// R-106: dashboard renders target-specific limitations without overclaiming parity.
+	m := newModel()
+	m.width = 100
+	m.height = 30
+	m.scr = screenResult
+	m.result = commandResult{
+		action: Action{Name: "Runtime status", Command: "status"},
+		output: "[opencode] status: restart_required — restart OpenCode\n[codex] status: partial — deterministic rewrite not verified\n[opencode] status: unsupported — support disabled\n",
+		runtimeStatuses: []RuntimeStatus{
+			{Target: "opencode", Status: RuntimeRestartRequired, Message: "restart OpenCode"},
+			{Target: "codex", Status: RuntimePartial, Message: "deterministic rewrite not verified"},
+			{Target: "opencode", Status: RuntimeUnsupported, Message: "support disabled"},
+		},
+	}
+
+	rendered := m.View()
+	for _, want := range []string{"Runtime capabilities", "restart_required", "partial", "unsupported", "opencode", "codex"} {
+		if !strings.Contains(rendered, want) {
+			t.Errorf("runtime dashboard should contain %q; got:\n%s", want, rendered)
+		}
+	}
+}
+
+func TestRunBackendExecutesTargetAgnosticHooksWithoutTargetFlag(t *testing.T) {
+	// R-102: hook actions are behavior-level target-agnostic shell invocations.
+	root := t.TempDir()
+	binDir := filepath.Join(root, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	backend := filepath.Join(binDir, "overlay")
+	if err := os.WriteFile(backend, []byte("#!/usr/bin/env bash\nprintf 'args:%s\\n' \"$*\"\n"), 0o755); err != nil {
+		t.Fatalf("write fake backend: %v", err)
+	}
+
+	result := runBackend(root, Action{Command: "install-hooks", TargetAgnostic: true}, AllTargets())
+	if result.err != nil {
+		t.Fatalf("runBackend returned error: %v\n%s", result.err, result.output)
+	}
+	if !strings.Contains(result.output, "$ bin/overlay install-hooks") || strings.Contains(result.output, "--target") {
+		t.Fatalf("target-agnostic hook action should execute once without --target, got:\n%s", result.output)
+	}
+}
+
+func TestRunBackendParsesRuntimeAndSyncStatusFromBehaviorOutput(t *testing.T) {
+	// R-101/R-104: backend execution output feeds both sync verdict and runtime status dashboards.
+	root := t.TempDir()
+	binDir := filepath.Join(root, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	backend := filepath.Join(binDir, "overlay")
+	script := `#!/usr/bin/env bash
+printf 'VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0\n'
+printf 'ACTION:claude: in sync with gentle-ai (healthy)\n'
+printf '[claude] status: supported — Claude hooks remain deterministic\n'
+`
+	if err := os.WriteFile(backend, []byte(script), 0o755); err != nil {
+		t.Fatalf("write fake backend: %v", err)
+	}
+
+	result := runBackend(root, Action{Command: "sync-check", SupportsAll: true}, AllTargets())
+	if result.err != nil {
+		t.Fatalf("runBackend returned error: %v\n%s", result.err, result.output)
+	}
+	if !strings.Contains(result.output, "$ bin/overlay sync-check --target all") {
+		t.Fatalf("all-selected sync-check should use --target all, got:\n%s", result.output)
+	}
+	if len(result.verdicts) != 1 || result.verdicts[0].Status != SyncHealthy {
+		t.Fatalf("runBackend should parse sync verdicts, got %#v", result.verdicts)
+	}
+	if len(result.runtimeStatuses) != 1 || result.runtimeStatuses[0].Status != RuntimeSupported {
+		t.Fatalf("runBackend should parse runtime statuses, got %#v", result.runtimeStatuses)
+	}
+}
+
+func TestModelConfirmAndResultNavigation(t *testing.T) {
+	// R-106: runtime result screens preserve navigation and scroll behavior with dashboard content.
+	m := newModel()
+	m.scr = screenConfirm
+	m.pendingAction = Action{Name: "Instalar runtime", Command: "install", Mutating: true}
+	updated, cmd := m.updateConfirm(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("n")})
+	m = updated.(model)
+	if cmd != nil || m.scr != screenActions {
+		t.Fatalf("negative confirmation should return to actions without a command, screen=%v cmd=%v", m.scr, cmd)
+	}
+
+	m.scr = screenResult
+	m.height = 12
+	m.result = commandResult{
+		output: strings.Repeat("line\n", 30),
+		runtimeStatuses: []RuntimeStatus{
+			{Target: "opencode", Status: RuntimeRestartRequired, Message: "restart required"},
+		},
+	}
+	updated, _ = m.updateResult(tea.KeyMsg{Type: tea.KeyDown})
+	m = updated.(model)
+	if m.scroll == 0 {
+		t.Fatal("down key should scroll result output when content exceeds viewport")
+	}
+	updated, _ = m.updateResult(tea.KeyMsg{Type: tea.KeyEsc})
+	m = updated.(model)
+	if m.scr != screenActions || m.scroll != 0 {
+		t.Fatalf("escape should return to actions and reset scroll, screen=%v scroll=%d", m.scr, m.scroll)
+	}
+}
+
 // TestClassifyPrecedence verifies UPSTREAM_CHANGED wins over OVERLAY_NOT_DEPLOYED.
 func TestClassifyPrecedence(t *testing.T) {
-	if classify(2, 5) != SyncNeedsCapture {
+	if classify(2, 5, false) != SyncNeedsCapture {
 		t.Fatal("upstream_changed>0 must classify as needs-capture (RED)")
 	}
-	if classify(0, 1) != SyncNeedsApply {
+	if classify(0, 1, false) != SyncNeedsApply {
 		t.Fatal("overlay_not_deployed>0 must classify as needs-apply (YELLOW)")
 	}
-	if classify(0, 0) != SyncHealthy {
+	if classify(0, 0, false) != SyncHealthy {
 		t.Fatal("zero counts must classify as healthy (GREEN)")
+	}
+	if classify(0, 0, true) != SyncTargetMissing {
+		t.Fatal("target_missing must not classify as healthy even with zero counts")
 	}
 }

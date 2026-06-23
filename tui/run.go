@@ -20,9 +20,13 @@ type Target struct {
 // Paths mirror the bash backend's TARGET_PATHS map.
 func AllTargets() []Target {
 	home, _ := os.UserHomeDir()
+	opencodeConfigRoot := filepath.Join(home, ".config", "opencode")
+	if xdg := strings.TrimSpace(os.Getenv("XDG_CONFIG_HOME")); xdg != "" && filepath.IsAbs(xdg) {
+		opencodeConfigRoot = filepath.Join(xdg, "opencode")
+	}
 	return []Target{
 		{Name: "claude", Path: filepath.Join(home, ".claude", "skills")},
-		{Name: "opencode", Path: filepath.Join(home, ".config", "opencode", "skills")},
+		{Name: "opencode", Path: filepath.Join(opencodeConfigRoot, "skills")},
 		{Name: "codex", Path: filepath.Join(home, ".codex", "skills")},
 	}
 }
@@ -46,6 +50,10 @@ func Actions() []Action {
 	return []Action{
 		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true},
 		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true},
+		{Name: "Instalar runtime", Command: "install", Mutating: true, SupportsAll: true},
+		{Name: "Actualizar runtime", Command: "update", Mutating: true, SupportsAll: true},
+		{Name: "Revertir runtime", Command: "rollback", Mutating: true, SupportsAll: true},
+		{Name: "Desinstalar runtime", Command: "uninstall", Mutating: true, SupportsAll: true},
 		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true},
 		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false},
 		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
@@ -79,15 +87,85 @@ const (
 	SyncNeedsApply
 	// SyncNeedsCapture means upstream (gentle-ai) changed (capture + apply required).
 	SyncNeedsCapture
+	// SyncTargetMissing means the target skills directory is absent and must be created/deployed.
+	SyncTargetMissing
 )
 
 // TargetVerdict holds the parsed sync-check result for one target.
 type TargetVerdict struct {
-	Target            string
-	UpstreamChanged   int
+	Target             string
+	UpstreamChanged    int
 	OverlayNotDeployed int
-	Action            string
-	Status            SyncStatus
+	Action             string
+	Status             SyncStatus
+	TargetMissing      bool
+}
+
+type RuntimeCapabilityStatus int
+
+const (
+	RuntimeUnknown RuntimeCapabilityStatus = iota
+	RuntimeSupported
+	RuntimePartial
+	RuntimeUnsupported
+	RuntimeRestartRequired
+)
+
+type RuntimeStatus struct {
+	Target  string
+	Status  RuntimeCapabilityStatus
+	Message string
+}
+
+func ParseRuntimeStatuses(output string) []RuntimeStatus {
+	var statuses []RuntimeStatus
+	scanner := bufio.NewScanner(strings.NewReader(output))
+	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if !strings.HasPrefix(line, "[") {
+			continue
+		}
+		end := strings.Index(line, "]")
+		if end <= 1 {
+			continue
+		}
+		target := line[1:end]
+		if target != "claude" && target != "opencode" && target != "codex" {
+			continue
+		}
+		rest := strings.TrimSpace(line[end+1:])
+		_, afterAction, ok := strings.Cut(rest, ":")
+		if !ok {
+			continue
+		}
+		statusText, message, _ := strings.Cut(strings.TrimSpace(afterAction), " — ")
+		status := parseRuntimeCapabilityStatus(statusText)
+		if status == RuntimeUnknown {
+			continue
+		}
+		statuses = append(statuses, RuntimeStatus{
+			Target:  target,
+			Status:  status,
+			Message: strings.TrimSpace(message),
+		})
+	}
+	return statuses
+}
+
+func parseRuntimeCapabilityStatus(status string) RuntimeCapabilityStatus {
+	switch strings.TrimSpace(status) {
+	case "supported":
+		return RuntimeSupported
+	case "partial":
+		return RuntimePartial
+	case "unsupported":
+		return RuntimeUnsupported
+	case "restart_required":
+		return RuntimeRestartRequired
+	default:
+		return RuntimeUnknown
+	}
 }
 
 // classify maps verdict counts to a color status.
@@ -96,8 +174,10 @@ type TargetVerdict struct {
 //   - UPSTREAM_CHANGED > 0  -> RED   (gentle-ai synced, needs capture+apply)
 //   - OVERLAY_NOT_DEPLOYED > 0 -> YELLOW (needs apply)
 //   - otherwise -> GREEN (healthy)
-func classify(upstreamChanged, overlayNotDeployed int) SyncStatus {
+func classify(upstreamChanged, overlayNotDeployed int, targetMissing bool) SyncStatus {
 	switch {
+	case targetMissing:
+		return SyncTargetMissing
 	case upstreamChanged > 0:
 		return SyncNeedsCapture
 	case overlayNotDeployed > 0:
@@ -135,7 +215,7 @@ func ParseSyncCheck(output string) []TargetVerdict {
 		line := strings.TrimSpace(scanner.Text())
 
 		if rest, ok := strings.CutPrefix(line, "VERDICT:"); ok {
-			// rest = "<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M"
+			// rest = "<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M [TARGET_MISSING=1]"
 			target, counts, ok := strings.Cut(rest, ":")
 			if !ok {
 				continue
@@ -152,9 +232,11 @@ func ParseSyncCheck(output string) []TargetVerdict {
 					v.UpstreamChanged = n
 				case "OVERLAY_NOT_DEPLOYED":
 					v.OverlayNotDeployed = n
+				case "TARGET_MISSING":
+					v.TargetMissing = n > 0
 				}
 			}
-			v.Status = classify(v.UpstreamChanged, v.OverlayNotDeployed)
+			v.Status = classify(v.UpstreamChanged, v.OverlayNotDeployed, v.TargetMissing)
 			continue
 		}
 
@@ -226,11 +308,12 @@ func walkUpForBackend(start string) (string, bool) {
 
 // commandResult is the outcome of running the backend for one or more targets.
 type commandResult struct {
-	action    Action
-	targets   []Target
-	output    string // combined stdout+stderr across invocations
-	verdicts  []TargetVerdict
-	err       error
+	action          Action
+	targets         []Target
+	output          string // combined stdout+stderr across invocations
+	verdicts        []TargetVerdict
+	runtimeStatuses []RuntimeStatus
+	err             error
 }
 
 // buildArgSets constructs the argument sets to pass to the backend binary.
@@ -295,5 +378,6 @@ func runBackend(root string, action Action, selected []Target) commandResult {
 	if action.Command == "sync-check" {
 		res.verdicts = ParseSyncCheck(res.output)
 	}
+	res.runtimeStatuses = ParseRuntimeStatuses(res.output)
 	return res
 }
