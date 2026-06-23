@@ -57,7 +57,7 @@ func assertNoCanonicalEntry(t *testing.T, prompt string) {
 
 // ---- tests -----------------------------------------------------------------
 
-// TC-1: sdd-tasks → contract path injected into prompt under injection_point header.
+// TC-1 / R-001: sdd-tasks → contract path injected into prompt under injection_point header.
 func TestInjectsForSddTasks(t *testing.T) {
 	input := buildInput("sdd-tasks", "Do the tasks phase.")
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
@@ -115,7 +115,7 @@ func TestInjectsForSddTasks(t *testing.T) {
 	}
 }
 
-// TC-2: sdd-apply → contract path injected into prompt.
+// TC-2 / R-001: sdd-apply → contract path injected into prompt.
 func TestInjectsForSddApply(t *testing.T) {
 	input := buildInput("sdd-apply", "Apply the tasks.")
 	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
@@ -149,7 +149,7 @@ func TestInjectsForSddApply(t *testing.T) {
 	}
 }
 
-// TC-3: sdd-propose → canonical contract entry stripped if present, no-op if absent.
+// TC-3 / R-001: sdd-propose → canonical contract entry stripped if present, no-op if absent.
 func TestStripsFromSddPropose(t *testing.T) {
 	// Prompt already contains the canonical contract entry (bare path) — it should be stripped.
 	promptWithContract := "Do propose.\n\n## Skills to load before work\n" + canonicalContractEntry + "\n"
@@ -224,7 +224,7 @@ func TestStripsFromSddDesign(t *testing.T) {
 	assertNoCanonicalEntry(t, newPrompt)
 }
 
-// TC-6: sdd-verify → canonical contract entry stripped.
+// TC-6 / R-001: sdd-verify → canonical contract entry stripped.
 func TestStripsFromSddVerify(t *testing.T) {
 	promptWithContract := "Verify.\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-verify", promptWithContract)

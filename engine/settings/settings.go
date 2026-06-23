@@ -42,6 +42,14 @@ type Merger struct {
 	hookCommand  string
 }
 
+func DefaultClaudeSettingsPath(home string) string {
+	return filepath.Join(home, ".claude", "settings.json")
+}
+
+func DefaultClaudeContractPath(home string) string {
+	return filepath.Join(home, ".claude", "skills", "_shared", "minimalism-contract.md")
+}
+
 // NewMerger returns a Merger that will merge hooks into settingsPath using
 // hookCommand as the unique identity (binary path substring) for our entries.
 func NewMerger(settingsPath, hookCommand string) *Merger {
