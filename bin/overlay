@@ -13,10 +13,15 @@ SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 OVERLAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="$OVERLAY_DIR/overlay.manifest"
+if [[ -n "${XDG_CONFIG_HOME:-}" && "${XDG_CONFIG_HOME:-}" = /* ]]; then
+  OPENCODE_CONFIG_ROOT="$XDG_CONFIG_HOME/opencode"
+else
+  OPENCODE_CONFIG_ROOT="$HOME/.config/opencode"
+fi
 
 declare -A TARGET_PATHS=(
   [claude]="$HOME/.claude/skills"
-  [opencode]="$HOME/.config/opencode/skills"
+  [opencode]="$OPENCODE_CONFIG_ROOT/skills"
   [codex]="$HOME/.codex/skills"
 )
 
@@ -31,6 +36,62 @@ ENGINE_SRC="$OVERLAY_DIR/engine"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
+
+engine_source_newer_than() {
+  local comparison_path="$1"
+  local src
+  for src in "$ENGINE_SRC"/cmd/*.go "$ENGINE_SRC"/runtime/*.go "$ENGINE_SRC"/runtime/*.mjs "$ENGINE_SRC"/settings/*.go "$ENGINE_SRC"/gate/*.go "$ENGINE_SRC"/propagator/*.go "$ENGINE_SRC"/go.mod "$OVERLAY_DIR"/skills/_shared/minimalism-contract.md; do
+    if [[ -e "$src" && "$src" -nt "$comparison_path" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+ensure_engine_binary() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+  local build_reason=""
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    build_reason="Engine binary not found"
+  elif engine_source_newer_than "$ENGINE_BINARY"; then
+    build_reason="Engine source is newer than deployed binary"
+  fi
+  if [[ -n "$build_reason" ]]; then
+    info "$build_reason; building..."
+    mkdir -p "$(dirname "$ENGINE_BINARY")"
+    local tmp_binary
+    tmp_binary="$(mktemp "$(dirname "$ENGINE_BINARY")/.gentle-ai-overlay.tmp.XXXXXX")"
+    if (cd "$ENGINE_SRC" && go build -o "$tmp_binary" ./cmd/); then
+      mv -f "$tmp_binary" "$ENGINE_BINARY"
+      chmod +x "$ENGINE_BINARY"
+    else
+      rm -f "$tmp_binary"
+      die "go build failed; previous binary left unchanged"
+    fi
+  fi
+}
+
+run_engine_lifecycle() {
+  local action="$1"
+  local target="$2"
+  ensure_engine_binary
+  LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" "$action" "$target"
+}
+
+run_engine_lifecycle_readonly() {
+  local action="$1"
+  local target="$2"
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    echo "[$target] $action: partial — engine binary not installed at $ENGINE_BINARY; run a mutating install command before relying on runtime lifecycle status"
+    return 0
+  fi
+  if engine_source_newer_than "$ENGINE_BINARY"; then
+    echo "[$target] $action: partial — engine binary at $ENGINE_BINARY is older than engine source; run a mutating install/update command before relying on runtime lifecycle status"
+    return 0
+  fi
+  LABDRIAN_OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" "$action" "$target"
+}
 
 # Read manifest: emit "path tag" lines, skipping blank lines and comments
 parse_manifest() {
@@ -81,6 +142,8 @@ Commands:
                                    Capture managed files from target (default: claude)
   apply [--target claude|opencode|codex|all]
                                    Merge upstream and deploy to target(s) (default: all)
+  install|update|rollback|uninstall [--target claude|opencode|codex|all]
+                                   Run target runtime lifecycle actions (default: all)
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all]
@@ -440,6 +503,9 @@ cmd_status() {
         fi
       fi
     done < <(all_tracked_files)
+
+    echo ""
+    run_engine_lifecycle_readonly status "$t"
   done
 }
 
@@ -471,6 +537,10 @@ cmd_sync_check() {
 
     if [[ ! -d "$tpath" ]]; then
       echo "SYNC_CHECK:$t: target dir not found at $tpath -- skipping"
+      echo "VERDICT:$t:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 TARGET_MISSING=1"
+      echo "ACTION:$t: target directory missing; run 'overlay apply --target $t'"
+      echo ""
+      run_engine_lifecycle_readonly sync-check "$t"
       continue
     fi
 
@@ -548,6 +618,35 @@ cmd_sync_check() {
     else
       echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
+
+    echo ""
+    run_engine_lifecycle_readonly sync-check "$t"
+  done
+}
+
+# ---------------------------------------------------------------------------
+# runtime lifecycle
+# ---------------------------------------------------------------------------
+
+cmd_lifecycle() {
+  local action="$1"
+  shift || true
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  for t in $(resolve_targets "$target_arg"); do
+    run_engine_lifecycle "$action" "$t"
   done
 }
 
@@ -690,11 +789,12 @@ case "$COMMAND" in
   bootstrap)       cmd_bootstrap "$@" ;;
   capture)         cmd_capture "$@" ;;
   apply)           cmd_apply "$@" ;;
+  install|update|rollback|uninstall) cmd_lifecycle "$COMMAND" "$@" ;;
   status)          cmd_status "$@" ;;
   sync-check)      cmd_sync_check "$@" ;;
-  install-hooks)   cmd_install_hooks "$@" ;;
-  uninstall-hooks) cmd_uninstall_hooks "$@" ;;
-  status-hooks)    cmd_status_hooks "$@" ;;
+  install-hooks)    cmd_install_hooks "$@" ;;
+  uninstall-hooks)  cmd_uninstall_hooks "$@" ;;
+  status-hooks)     cmd_status_hooks "$@" ;;
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
   --help|-h)       usage; exit 0 ;;

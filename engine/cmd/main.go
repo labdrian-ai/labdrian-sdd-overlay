@@ -4,7 +4,8 @@
 //	engine gate-task --contract-file <path> [--contract-path <str>]
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
-//	engine status
+//	engine status [claude|opencode|codex|all]
+//	engine apply|install|sync-check|update|rollback|uninstall <claude|opencode|codex|all>
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -21,9 +22,11 @@
 // uninstall-hooks: removes exactly our two hook entries from settings.json,
 // leaving all other keys and hooks intact. Idempotent; no-op if file absent.
 //
-// status: checks and reports the health of the overlay installation (binary,
-// hooks wired in settings.json, contract readable). Exits 0 if all OK, 1 if
-// any check fails. Intended for manual diagnostics — never called by hooks.
+// status/sync-check: report target runtime capability and drift state for
+// Claude, OpenCode, Codex, or all targets without mutating runtime artifacts.
+//
+// apply/install/update/rollback/uninstall: execute target-aware lifecycle
+// actions through runtime adapters while preserving legacy Claude hook commands.
 package main
 
 import (
@@ -36,6 +39,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
@@ -52,10 +56,22 @@ func main() {
 		runGateTask(os.Args[2:])
 	case "merge-settings":
 		runMergeSettings(os.Args[2:])
+	case "apply":
+		runLifecycle(engineRuntime.ActionApply, os.Args[2:])
+	case "install":
+		runLifecycle(engineRuntime.ActionInstall, os.Args[2:])
 	case "uninstall-hooks":
 		runUninstallHooks(os.Args[2:])
 	case "status":
 		runStatus(os.Args[2:])
+	case "sync-check":
+		runLifecycle(engineRuntime.ActionSyncCheck, os.Args[2:])
+	case "update":
+		runLifecycle(engineRuntime.ActionUpdate, os.Args[2:])
+	case "rollback":
+		runLifecycle(engineRuntime.ActionRollback, os.Args[2:])
+	case "uninstall":
+		runLifecycle(engineRuntime.ActionUninstall, os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -69,7 +85,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine gate-task --contract-file <path> [--contract-path <str>]")
 	fmt.Fprintln(os.Stderr, "  engine merge-settings --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
-	fmt.Fprintln(os.Stderr, "  engine status")
+	fmt.Fprintln(os.Stderr, "  engine status [claude|opencode|codex|all]")
+	fmt.Fprintln(os.Stderr, "  engine apply|install|sync-check|update|rollback|uninstall <claude|opencode|codex|all>")
 }
 
 // writeFileFn is the type of a function that writes a file (injectable for tests).
@@ -316,6 +333,71 @@ func runUninstallHooks(args []string) {
 	fmt.Fprintln(os.Stdout, "uninstall-hooks: hooks removed successfully")
 }
 
+type lifecycleDeps struct {
+	adapterFor func(engineRuntime.Target) engineRuntime.Adapter
+}
+
+func runLifecycle(action engineRuntime.Action, args []string) {
+	runLifecycleCore(action, args, os.Stdout, os.Stderr, lifecycleDeps{
+		adapterFor: engineRuntime.NewFoundationAdapter,
+	}, os.Exit)
+}
+
+func runLifecycleCore(
+	action engineRuntime.Action,
+	args []string,
+	stdout io.Writer,
+	stderr io.Writer,
+	deps lifecycleDeps,
+	exit func(int),
+) {
+	if len(args) == 0 {
+		fmt.Fprintf(stderr, "error: target is required for %s\n", action)
+		exit(1)
+		return
+	}
+	target, err := engineRuntime.ParseTarget(args[0])
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+	adapterFor := deps.adapterFor
+	if adapterFor == nil {
+		adapterFor = engineRuntime.NewFoundationAdapter
+	}
+	for _, expandedTarget := range engineRuntime.ExpandTarget(target) {
+		adapter := adapterFor(expandedTarget)
+		fmt.Fprintln(stdout, dispatchLifecycle(adapter, action))
+	}
+}
+
+func dispatchLifecycle(adapter engineRuntime.Adapter, action engineRuntime.Action) engineRuntime.LifecycleResult {
+	switch action {
+	case engineRuntime.ActionApply:
+		return adapter.Apply()
+	case engineRuntime.ActionInstall:
+		return adapter.Install()
+	case engineRuntime.ActionStatus:
+		return adapter.Status()
+	case engineRuntime.ActionSyncCheck:
+		return adapter.SyncCheck()
+	case engineRuntime.ActionUpdate:
+		return adapter.Update()
+	case engineRuntime.ActionRollback:
+		return adapter.Rollback()
+	case engineRuntime.ActionUninstall:
+		return adapter.Uninstall()
+	default:
+		return engineRuntime.LifecycleResult{
+			Target:  adapter.Target(),
+			Action:  action,
+			Status:  engineRuntime.CapabilityUnsupported,
+			Message: "unknown lifecycle action",
+		}
+	}
+}
+
 // ---------------------------------------------------------------------------
 // status subcommand
 // ---------------------------------------------------------------------------
@@ -365,7 +447,11 @@ func defaultStatusDeps() statusDeps {
 
 // runStatus is the public entry point for the 'status' subcommand.
 // It uses real OS deps and exits with the result code from statusCore.
-func runStatus(_ []string) {
+func runStatus(args []string) {
+	if len(args) > 0 {
+		runLifecycle(engineRuntime.ActionStatus, args)
+		return
+	}
 	allOK := statusCore(os.Stdout, defaultStatusDeps())
 	if !allOK {
 		os.Exit(1)
@@ -388,8 +474,8 @@ const binaryIdentity = "gentle-ai-overlay"
 func statusCore(stdout io.Writer, deps statusDeps) bool {
 	home := deps.home()
 	binaryPath := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
-	settingsPath := filepath.Join(home, ".claude", "settings.json")
-	contractPath := filepath.Join(home, ".claude", "skills", "_shared", "minimalism-contract.md")
+	settingsPath := settings.DefaultClaudeSettingsPath(home)
+	contractPath := settings.DefaultClaudeContractPath(home)
 
 	var checks []checkResult
 
