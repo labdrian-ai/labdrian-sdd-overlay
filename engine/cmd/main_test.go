@@ -1533,6 +1533,75 @@ func TestOverlayShellLifecycleCommandsAndClaudeCompatibility(t *testing.T) {
 	}
 }
 
+func TestOverlayShellLifecycleAllTargetsAggregatesFailures(t *testing.T) {
+	// R-101: shell dispatch for the default mutating lifecycle target set must
+	// run every engine target even when an earlier target returns partial/failure.
+	repoRoot := filepath.Join("..", "..")
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name string
+		args []string
+	}{
+		{name: "default all", args: []string{"install"}},
+		{name: "explicit all", args: []string{"install", "--target", "all"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			invocations := filepath.Join(home, "lifecycle-invocations.log")
+			writeFutureFakeLifecycleEngine(t, home)
+
+			cmd := exec.Command(overlay, tt.args...)
+			cmd.Dir = repoRoot
+			cmd.Env = append(os.Environ(), "HOME="+home, "LABDRIAN_TEST_INVOCATIONS="+invocations)
+			out, err := cmd.CombinedOutput()
+			if err == nil {
+				t.Fatalf("lifecycle all should return non-zero when any target fails/partials; output:\n%s", string(out))
+			}
+			logBytes, readErr := os.ReadFile(invocations)
+			if readErr != nil {
+				t.Fatalf("read lifecycle invocations: %v\noutput:\n%s", readErr, string(out))
+			}
+			got := strings.TrimSpace(string(logBytes))
+			want := strings.Join([]string{
+				"install claude",
+				"install opencode",
+				"install codex",
+			}, "\n")
+			if got != want {
+				t.Fatalf("lifecycle all should visit every target in order despite failures\nwant:\n%s\ngot:\n%s\noutput:\n%s", want, got, string(out))
+			}
+		})
+	}
+}
+
+func writeFutureFakeLifecycleEngine(t *testing.T, home string) {
+	t.Helper()
+	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+	if err := os.MkdirAll(filepath.Dir(engineBinary), 0o755); err != nil {
+		t.Fatalf("mkdir fake engine dir: %v", err)
+	}
+	fakeEngine := `#!/usr/bin/env bash
+printf '%s %s\n' "$1" "$2" >> "$LABDRIAN_TEST_INVOCATIONS"
+case "$2" in
+  claude) echo "partial"; exit 2 ;;
+  opencode) echo "ok"; exit 0 ;;
+  codex) echo "unsupported"; exit 3 ;;
+  *) echo "unexpected target: $2"; exit 4 ;;
+esac
+`
+	if err := os.WriteFile(engineBinary, []byte(fakeEngine), 0o755); err != nil {
+		t.Fatalf("write fake lifecycle engine: %v", err)
+	}
+	future := time.Now().Add(2 * time.Hour)
+	if err := os.Chtimes(engineBinary, future, future); err != nil {
+		t.Fatalf("set fake engine time: %v", err)
+	}
+}
+
 func TestOverlayReadOnlyLifecycleDoesNotBuildEngineAndReportsRuntimeEvidence(t *testing.T) {
 	// R-101/R-102/R-104: status/sync-check remain read-only and still emit runtime status if target dirs are missing.
 	repoRoot := filepath.Join("..", "..")
@@ -1634,17 +1703,16 @@ func TestOverlayMutatingLifecycleRebuildsStaleEngineBinary(t *testing.T) {
 
 func TestOverlayLifecycleFreshnessIncludesEmbeddedPluginSource(t *testing.T) {
 	// R-103: embedded runtime assets such as the OpenCode plugin source participate in freshness checks.
-	repoRoot := filepath.Join("..", "..")
+	realRepoRoot := filepath.Join("..", "..")
+	repoRoot := makeTempOverlayRepoWithPlugin(t, realRepoRoot)
 	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
 	if err != nil {
 		t.Fatalf("resolve overlay path: %v", err)
 	}
 	pluginSource := filepath.Join(repoRoot, "engine", "runtime", "labdrian-runtime-parity-plugin.mjs")
-	info, err := os.Stat(pluginSource)
-	if err != nil {
+	if _, err := os.Stat(pluginSource); err != nil {
 		t.Fatalf("stat plugin source: %v", err)
 	}
-	t.Cleanup(func() { _ = os.Chtimes(pluginSource, info.ModTime(), info.ModTime()) })
 
 	home := t.TempDir()
 	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
@@ -1672,6 +1740,53 @@ func TestOverlayLifecycleFreshnessIncludesEmbeddedPluginSource(t *testing.T) {
 	}
 	if strings.Contains(string(out), "should-not-run") || !strings.Contains(string(out), "older than engine source") {
 		t.Fatalf("read-only status should treat newer embedded plugin source as stale evidence, got:\n%s", string(out))
+	}
+}
+
+func makeTempOverlayRepoWithPlugin(t *testing.T, realRepoRoot string) string {
+	t.Helper()
+	root := t.TempDir()
+	for _, dir := range []string{filepath.Join(root, "bin"), filepath.Join(root, "engine", "runtime")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	copyFileForTest(t, filepath.Join(realRepoRoot, "bin", "overlay"), filepath.Join(root, "bin", "overlay"), 0o755)
+	copyFileForTest(t,
+		filepath.Join(realRepoRoot, "engine", "runtime", "labdrian-runtime-parity-plugin.mjs"),
+		filepath.Join(root, "engine", "runtime", "labdrian-runtime-parity-plugin.mjs"),
+		0o644,
+	)
+	if err := os.WriteFile(filepath.Join(root, "overlay.manifest"), []byte(""), 0o644); err != nil {
+		t.Fatalf("write temp overlay manifest: %v", err)
+	}
+	cmd := exec.Command("git", "init", "-b", "main")
+	cmd.Dir = root
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("init temp git repo: %v\n%s", err, string(out))
+	}
+	cmd = exec.Command("git", "commit", "--allow-empty", "-m", "test baseline")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("commit temp git baseline: %v\n%s", err, string(out))
+	}
+	return root
+}
+
+func copyFileForTest(t *testing.T, src, dst string, mode os.FileMode) {
+	t.Helper()
+	content, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatalf("read %s: %v", src, err)
+	}
+	if err := os.WriteFile(dst, content, mode); err != nil {
+		t.Fatalf("write %s: %v", dst, err)
 	}
 }
 

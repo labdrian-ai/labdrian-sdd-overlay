@@ -57,6 +57,13 @@ The TUI shows whether each target is in sync with gentle-ai and lets you re-capt
 
 Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (all three targets). Default for `capture` is `claude`.
 
+## Runtime guarantees
+
+- Claude Code is the deterministic baseline for scoped SDD task injection through the installed hook lifecycle.
+- OpenCode plugin changes require an OpenCode restart before the runtime can prove the updated plugin is loaded.
+- Codex is a first-class target with explicit `unsupported`/`partial`/`supported` states instead of silent success.
+- GADU is intentionally out of scope for this overlay runtime parity work.
+
 ## Tracked files (overlay.manifest)
 
 | File | Type |

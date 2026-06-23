@@ -645,9 +645,13 @@ cmd_lifecycle() {
     shift || true
   done
 
+  local exit_code=0
   for t in $(resolve_targets "$target_arg"); do
-    run_engine_lifecycle "$action" "$t"
+    if ! run_engine_lifecycle "$action" "$t"; then
+      exit_code=1
+    fi
   done
+  return "$exit_code"
 }
 
 # ---------------------------------------------------------------------------
