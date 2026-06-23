@@ -366,9 +366,37 @@ func runLifecycleCore(
 	if adapterFor == nil {
 		adapterFor = engineRuntime.NewFoundationAdapter
 	}
+	exitCode := 0
 	for _, expandedTarget := range engineRuntime.ExpandTarget(target) {
 		adapter := adapterFor(expandedTarget)
-		fmt.Fprintln(stdout, dispatchLifecycle(adapter, action))
+		result := dispatchLifecycle(adapter, action)
+		fmt.Fprintln(stdout, result)
+		if lifecycleResultRequiresFailure(action, result) {
+			exitCode = 1
+		}
+	}
+	if exitCode != 0 {
+		exit(exitCode)
+	}
+}
+
+func lifecycleResultRequiresFailure(action engineRuntime.Action, result engineRuntime.LifecycleResult) bool {
+	if !isMutatingLifecycleAction(action) {
+		return false
+	}
+	return result.Status == engineRuntime.CapabilityPartial || result.Status == engineRuntime.CapabilityUnsupported
+}
+
+func isMutatingLifecycleAction(action engineRuntime.Action) bool {
+	switch action {
+	case engineRuntime.ActionApply,
+		engineRuntime.ActionInstall,
+		engineRuntime.ActionUpdate,
+		engineRuntime.ActionRollback,
+		engineRuntime.ActionUninstall:
+		return true
+	default:
+		return false
 	}
 }
 
