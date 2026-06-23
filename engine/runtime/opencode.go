@@ -102,12 +102,6 @@ func (a OpenCodeAdapter) install(action Action) LifecycleResult {
 	if err := a.validateRoot(); err != nil {
 		return a.result(action, CapabilityUnsupported, err.Error())
 	}
-	if err := os.MkdirAll(filepath.Dir(a.pluginPath()), 0o755); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
-	}
-	if err := os.WriteFile(a.pluginPath(), []byte(openCodePluginSource), 0o644); err != nil {
-		return a.result(action, CapabilityUnsupported, err.Error())
-	}
 	promptConfig, err := loadOpenCodePromptConfig()
 	if err != nil {
 		return a.result(action, CapabilityPartial, "OpenCode prompt config could not be derived from minimalism-contract frontmatter: "+err.Error())
@@ -124,6 +118,12 @@ func (a OpenCodeAdapter) install(action Action) LifecycleResult {
 	}
 	if err := a.writeConfig(cfg); err != nil {
 		return a.result(action, CapabilityPartial, err.Error())
+	}
+	if err := os.MkdirAll(filepath.Dir(a.pluginPath()), 0o755); err != nil {
+		return a.result(action, CapabilityUnsupported, err.Error())
+	}
+	if err := os.WriteFile(a.pluginPath(), []byte(openCodePluginSource), 0o644); err != nil {
+		return a.result(action, CapabilityUnsupported, err.Error())
 	}
 	return a.result(action, CapabilityRestartRequired, "OpenCode plugin changed; restart OpenCode to load version "+cfg.InstalledVersion)
 }

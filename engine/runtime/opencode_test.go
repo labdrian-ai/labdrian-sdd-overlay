@@ -103,6 +103,26 @@ func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 	}
 }
 
+func TestOpenCodeInstallDoesNotWritePluginWhenPromptConfigCannotBeDerived(t *testing.T) {
+	// R-103: fail closed so OpenCode cannot auto-load a plugin before valid config exists.
+	root := t.TempDir()
+	t.Setenv("LABDRIAN_OVERLAY_DIR", t.TempDir())
+	adapter := engineRuntime.NewOpenCodeAdapter(root)
+
+	result := adapter.Install()
+	if result.Status != engineRuntime.CapabilityPartial || !strings.Contains(result.Message, "prompt config could not be derived") {
+		t.Fatalf("Install() should fail before writing plugin when prompt config is unavailable, got %#v", result)
+	}
+	pluginPath := filepath.Join(root, "plugins", "labdrian-runtime-parity.js")
+	if _, err := os.Stat(pluginPath); !os.IsNotExist(err) {
+		t.Fatalf("plugin must not be written without valid config, stat err: %v", err)
+	}
+	configPath := filepath.Join(root, "labdrian-runtime-parity.json")
+	if _, err := os.Stat(configPath); !os.IsNotExist(err) {
+		t.Fatalf("config must not be written when prompt config derivation fails, stat err: %v", err)
+	}
+}
+
 func TestOpenCodeUninstallRemovesPluginAndConfig(t *testing.T) {
 	// R-105: uninstall removes OpenCode-specific runtime artifacts.
 	root := t.TempDir()
@@ -601,7 +621,7 @@ console.log(JSON.stringify({ taskPrompt, applyPrompt, existingHeaderPrompt, stri
 	if result.IgnoredToolPrompt != "Do tasks" || result.GeneralPrompt != "Do general" {
 		t.Fatalf("plugin should ignore non-task tools and unrelated phases, got %#v", result)
 	}
-	if result.Marker.ActiveVersion != engineRuntime.OpenCodePluginVersion || result.Marker.ActiveHash == "" || result.Marker.PromptHash != "custom-prompt-hash" || result.Marker.PluginPath != pluginPath || result.Marker.ConfigRoot != root {
+	if result.Marker.ActiveVersion != engineRuntime.OpenCodePluginVersion || result.Marker.ActiveHash != engineRuntime.OpenCodePluginHash() || result.Marker.PromptHash != "custom-prompt-hash" || result.Marker.PluginPath != pluginPath || result.Marker.ConfigRoot != root {
 		t.Fatalf("plugin should write active marker identity, got %#v", result.Marker)
 	}
 }
