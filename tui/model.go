@@ -17,6 +17,16 @@ const (
 	screenResult                // output pane + sync dashboard
 )
 
+const (
+	defaultContentWidth        = 80
+	resultViewportChromeLines  = 10
+	verdictViewportLineCost    = 3
+	verdictViewportPadding     = 3
+	runtimeViewportLineCost    = 2
+	runtimeViewportPadding     = 3
+	minimumResultViewportLines = 5
+)
+
 // model is the root bubbletea state.
 type model struct {
 	repoRoot string
@@ -117,7 +127,7 @@ func (m model) allSelected() bool {
 // WindowSizeMsg has been received yet (m.width == 0).
 func (m model) contentWidth() int {
 	if m.width <= 0 {
-		return 80
+		return defaultContentWidth
 	}
 	return m.width
 }
@@ -129,18 +139,26 @@ func (m model) maxScroll() int {
 		return 0
 	}
 	lines := splitOutputLines(m.result.output)
-	viewport := m.height - 10
-	if len(m.result.verdicts) > 0 {
-		viewport -= len(m.result.verdicts)*3 + 3
-	}
-	if viewport < 5 {
-		viewport = 5
-	}
+	viewport := m.resultViewportHeight()
 	max := len(lines) - viewport
 	if max < 0 {
 		return 0
 	}
 	return max
+}
+
+func (m model) resultViewportHeight() int {
+	viewport := m.height - resultViewportChromeLines
+	if len(m.result.verdicts) > 0 {
+		viewport -= len(m.result.verdicts)*verdictViewportLineCost + verdictViewportPadding
+	}
+	if len(m.result.runtimeStatuses) > 0 {
+		viewport -= len(m.result.runtimeStatuses)*runtimeViewportLineCost + runtimeViewportPadding
+	}
+	if viewport < minimumResultViewportLines {
+		viewport = minimumResultViewportLines
+	}
+	return viewport
 }
 
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
