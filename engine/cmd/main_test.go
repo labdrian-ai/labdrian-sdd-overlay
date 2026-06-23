@@ -6,11 +6,14 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
 // contractFrontmatter is a minimal valid contract used by tests.
@@ -331,8 +334,8 @@ func TestRunPropagateCore_BrokenFrontmatter(t *testing.T) {
 	_, stderr, exitCode := capturePropagateCore(
 		[]string{"--registry", "/fake/registry.md", "--contract-file", "/fake/contract.md"},
 		map[string][]byte{
-			"/fake/contract.md":  []byte("no frontmatter"),
-			"/fake/registry.md":  []byte(minimalRegistry),
+			"/fake/contract.md": []byte("no frontmatter"),
+			"/fake/registry.md": []byte(minimalRegistry),
 		},
 		nil, nil,
 	)
@@ -1213,5 +1216,715 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	}
 	if !strings.Contains(out, "scoped block present") {
 		t.Errorf("statusCore: output should say 'scoped block present'; output:\n%s", out)
+	}
+}
+
+func TestLifecycleCoreAcceptsTargetAwareActions(t *testing.T) {
+	tests := []struct {
+		name         string
+		action       engineRuntime.Action
+		target       string
+		wantContains []string
+		wantExit     int
+	}{
+		{name: "apply claude fails on unsupported", action: engineRuntime.ActionApply, target: "claude", wantContains: []string{"apply", "claude", "unsupported"}, wantExit: 1},
+		{name: "status opencode remains read-only", action: engineRuntime.ActionStatus, target: "opencode", wantContains: []string{"status", "opencode", "unsupported"}, wantExit: -1},
+		{name: "sync codex remains read-only", action: engineRuntime.ActionSyncCheck, target: "codex", wantContains: []string{"sync-check", "codex", "unsupported"}, wantExit: -1},
+		{name: "update all expands before failing", action: engineRuntime.ActionUpdate, target: "all", wantContains: []string{"update", "claude", "opencode", "codex"}, wantExit: 1},
+		{name: "rollback claude fails on unsupported", action: engineRuntime.ActionRollback, target: "claude", wantContains: []string{"rollback", "claude", "unsupported"}, wantExit: 1},
+		{name: "uninstall opencode fails on unsupported", action: engineRuntime.ActionUninstall, target: "opencode", wantContains: []string{"uninstall", "opencode", "unsupported"}, wantExit: 1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var outBuf, errBuf bytes.Buffer
+			exitCode := -1
+
+			runLifecycleCore(tt.action, []string{tt.target}, &outBuf, &errBuf, lifecycleDeps{
+				adapterFor: newTestLifecycleAdapter,
+			}, func(code int) { exitCode = code })
+
+			if exitCode != tt.wantExit {
+				t.Fatalf("exit code = %d, want %d; stdout: %s stderr: %s", exitCode, tt.wantExit, outBuf.String(), errBuf.String())
+			}
+			out := outBuf.String()
+			for _, want := range tt.wantContains {
+				if !strings.Contains(out, want) {
+					t.Errorf("output should include %q; got %q", want, out)
+				}
+			}
+		})
+	}
+}
+
+type testLifecycleAdapter struct {
+	target engineRuntime.Target
+	status engineRuntime.CapabilityStatus
+}
+
+func newTestLifecycleAdapter(target engineRuntime.Target) engineRuntime.Adapter {
+	return testLifecycleAdapter{target: target, status: engineRuntime.CapabilityUnsupported}
+}
+
+func newTestLifecycleAdapterWithStatus(status engineRuntime.CapabilityStatus) func(engineRuntime.Target) engineRuntime.Adapter {
+	return func(target engineRuntime.Target) engineRuntime.Adapter {
+		return testLifecycleAdapter{target: target, status: status}
+	}
+}
+
+func (a testLifecycleAdapter) Target() engineRuntime.Target { return a.target }
+func (a testLifecycleAdapter) Apply() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionApply)
+}
+func (a testLifecycleAdapter) Install() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionInstall)
+}
+func (a testLifecycleAdapter) Status() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionStatus)
+}
+func (a testLifecycleAdapter) SyncCheck() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionSyncCheck)
+}
+func (a testLifecycleAdapter) Update() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionUpdate)
+}
+func (a testLifecycleAdapter) Rollback() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionRollback)
+}
+func (a testLifecycleAdapter) Uninstall() engineRuntime.LifecycleResult {
+	return a.result(engineRuntime.ActionUninstall)
+}
+func (a testLifecycleAdapter) result(action engineRuntime.Action) engineRuntime.LifecycleResult {
+	return engineRuntime.NewLifecycleResult(a.target, action, a.status, "test adapter: no filesystem writes", nil)
+}
+
+func TestLifecycleCoreReportsClaudeLifecycleHonesty(t *testing.T) {
+	// R-102: target-aware Claude lifecycle must not return false supported for hook state.
+	tests := []struct {
+		action   engineRuntime.Action
+		wantExit int
+	}{
+		{action: engineRuntime.ActionInstall, wantExit: 1},
+		{action: engineRuntime.ActionStatus, wantExit: -1},
+		{action: engineRuntime.ActionSyncCheck, wantExit: -1},
+		{action: engineRuntime.ActionUpdate, wantExit: 1},
+		{action: engineRuntime.ActionRollback, wantExit: 1},
+		{action: engineRuntime.ActionUninstall, wantExit: 1},
+	}
+	for _, tt := range tests {
+		var outBuf, errBuf bytes.Buffer
+		exitCode := -1
+		runLifecycleCore(tt.action, []string{"claude"}, &outBuf, &errBuf, lifecycleDeps{
+			adapterFor: engineRuntime.NewFoundationAdapter,
+		}, func(code int) { exitCode = code })
+		if exitCode != tt.wantExit {
+			t.Fatalf("Claude %s exit = %d, want %d; stdout=%q stderr=%q", tt.action, exitCode, tt.wantExit, outBuf.String(), errBuf.String())
+		}
+		out := outBuf.String()
+		if !strings.Contains(out, "partial") || !strings.Contains(out, "install-hooks") || !strings.Contains(out, "status-hooks") {
+			t.Fatalf("Claude %s should report honest partial legacy lifecycle guidance, got stdout=%q stderr=%q", tt.action, out, errBuf.String())
+		}
+	}
+}
+
+func TestLifecycleCoreExitCodePolicy(t *testing.T) {
+	tests := []struct {
+		name     string
+		action   engineRuntime.Action
+		adapter  func(engineRuntime.Target) engineRuntime.Adapter
+		wantExit int
+	}{
+		{name: "mutating unsupported exits non-zero", action: engineRuntime.ActionInstall, adapter: newTestLifecycleAdapterWithStatus(engineRuntime.CapabilityUnsupported), wantExit: 1},
+		{name: "mutating partial exits non-zero", action: engineRuntime.ActionUpdate, adapter: newTestLifecycleAdapterWithStatus(engineRuntime.CapabilityPartial), wantExit: 1},
+		{name: "mutating supported exits zero", action: engineRuntime.ActionInstall, adapter: newTestLifecycleAdapterWithStatus(engineRuntime.CapabilitySupported), wantExit: -1},
+		{name: "mutating restart-required exits zero", action: engineRuntime.ActionUninstall, adapter: newTestLifecycleAdapterWithStatus(engineRuntime.CapabilityRestartRequired), wantExit: -1},
+		{name: "status partial preserves zero", action: engineRuntime.ActionStatus, adapter: newTestLifecycleAdapterWithStatus(engineRuntime.CapabilityPartial), wantExit: -1},
+		{name: "sync-check unsupported preserves zero", action: engineRuntime.ActionSyncCheck, adapter: newTestLifecycleAdapterWithStatus(engineRuntime.CapabilityUnsupported), wantExit: -1},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var outBuf, errBuf bytes.Buffer
+			exitCode := -1
+			runLifecycleCore(tt.action, []string{"claude"}, &outBuf, &errBuf, lifecycleDeps{
+				adapterFor: tt.adapter,
+			}, func(code int) { exitCode = code })
+			if exitCode != tt.wantExit {
+				t.Fatalf("exit code = %d, want %d; stdout=%q stderr=%q", exitCode, tt.wantExit, outBuf.String(), errBuf.String())
+			}
+		})
+	}
+}
+
+func TestLifecycleCoreRejectsUnknownTarget(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	runLifecycleCore(engineRuntime.ActionApply, []string{"future-cli"}, &outBuf, &errBuf, lifecycleDeps{
+		adapterFor: engineRuntime.NewFoundationAdapter,
+	}, func(code int) { exitCode = code })
+
+	if exitCode != 1 {
+		t.Fatalf("unknown target should exit 1, got %d; stdout: %s", exitCode, outBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "future-cli") {
+		t.Errorf("stderr should name rejected target, got %q", errBuf.String())
+	}
+}
+
+func TestLifecycleWrappersAndDefaultActionBranches(t *testing.T) {
+	// R-101/R-104: public lifecycle wrappers and unknown actions preserve target-specific status output.
+	runLifecycle(engineRuntime.ActionStatus, []string{"claude"})
+	runStatus([]string{"codex"})
+
+	result := dispatchLifecycle(engineRuntime.NewFoundationAdapter(engineRuntime.Target("future")), engineRuntime.Action("future-action"))
+	if result.Target != engineRuntime.Target("future") || result.Status != engineRuntime.CapabilityUnsupported || !strings.Contains(result.Message, "unknown lifecycle action") {
+		t.Fatalf("unknown lifecycle action should report unsupported with reason, got %#v", result)
+	}
+}
+
+func TestDefaultStatusDepsLoadSettingsBranches(t *testing.T) {
+	// R-102: production status dependencies distinguish absent, invalid, and valid Claude settings.
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	deps := defaultStatusDeps()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+
+	missing, err := deps.loadSettings(settingsPath)
+	if err != nil || missing != nil {
+		t.Fatalf("missing settings should load as nil without error, got settings=%#v err=%v", missing, err)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatalf("mkdir settings dir: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, []byte("not json"), 0o644); err != nil {
+		t.Fatalf("write invalid settings: %v", err)
+	}
+	if _, err := deps.loadSettings(settingsPath); err == nil || !strings.Contains(err.Error(), "invalid JSON") {
+		t.Fatalf("invalid settings should return invalid JSON error, got %v", err)
+	}
+
+	if err := os.WriteFile(settingsPath, []byte(`{"hooks":{}}`), 0o644); err != nil {
+		t.Fatalf("write valid settings: %v", err)
+	}
+	loaded, err := deps.loadSettings(settingsPath)
+	if err != nil || loaded["hooks"] == nil {
+		t.Fatalf("valid settings should decode hooks, got settings=%#v err=%v", loaded, err)
+	}
+	if deps.home() != home {
+		t.Fatalf("default status home = %q, want %q", deps.home(), home)
+	}
+	if deps.cwd() == "" {
+		t.Fatal("default status cwd should not be empty")
+	}
+}
+
+func TestPublicCommandWrappersHappyPaths(t *testing.T) {
+	// R-001/R-102: production wrappers execute successful paths without hitting os.Exit.
+	t.Run("usage", func(t *testing.T) {
+		usage()
+	})
+
+	t.Run("runGateTaskMissingContract", func(t *testing.T) {
+		oldStdin := os.Stdin
+		r, w, err := os.Pipe()
+		if err != nil {
+			t.Fatalf("pipe stdin: %v", err)
+		}
+		if err := w.Close(); err != nil {
+			t.Fatalf("close stdin writer: %v", err)
+		}
+		os.Stdin = r
+		defer func() {
+			os.Stdin = oldStdin
+			_ = r.Close()
+		}()
+		runGateTask(nil)
+	})
+
+	t.Run("runPropagate", func(t *testing.T) {
+		root := t.TempDir()
+		registry := filepath.Join(root, ".atl", "skill-registry.md")
+		contract := filepath.Join(root, "minimalism-contract.md")
+		if err := os.MkdirAll(filepath.Dir(registry), 0o755); err != nil {
+			t.Fatalf("mkdir registry dir: %v", err)
+		}
+		if err := os.WriteFile(registry, []byte("# Registry\n"), 0o644); err != nil {
+			t.Fatalf("write registry: %v", err)
+		}
+		if err := os.WriteFile(contract, []byte(testContractContent), 0o644); err != nil {
+			t.Fatalf("write contract: %v", err)
+		}
+		runPropagate([]string{"--registry", registry, "--contract-file", contract})
+		updated, err := os.ReadFile(registry)
+		if err != nil {
+			t.Fatalf("read propagated registry: %v", err)
+		}
+		if !strings.Contains(string(updated), "minimalism-contract") {
+			t.Fatalf("runPropagate should update registry, got:\n%s", string(updated))
+		}
+	})
+
+	t.Run("runStatus", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("HOME", home)
+		binaryPath := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+		settingsPath := filepath.Join(home, ".claude", "settings.json")
+		contractPath := filepath.Join(home, ".claude", "skills", "_shared", "minimalism-contract.md")
+		for _, dir := range []string{filepath.Dir(binaryPath), filepath.Dir(settingsPath), filepath.Dir(contractPath)} {
+			if err := os.MkdirAll(dir, 0o755); err != nil {
+				t.Fatalf("mkdir %s: %v", dir, err)
+			}
+		}
+		if err := os.WriteFile(binaryPath, []byte("#!/usr/bin/env bash\n"), 0o755); err != nil {
+			t.Fatalf("write binary: %v", err)
+		}
+		settingsJSON := `{"hooks":{"UserPromptSubmit":[{"hooks":[{"command":"/tmp/gentle-ai-overlay propagate"}]}],"PreToolUse":[{"matcher":"Agent","hooks":[{"command":"/tmp/gentle-ai-overlay gate-task"}]}]}}`
+		settingsJSON = strings.ReplaceAll(settingsJSON, `\"`, `"`)
+		if err := os.WriteFile(settingsPath, []byte(settingsJSON), 0o644); err != nil {
+			t.Fatalf("write settings: %v", err)
+		}
+		if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+			t.Fatalf("write contract: %v", err)
+		}
+		runStatus(nil)
+	})
+}
+
+func TestOverlayShellLifecycleCommandsAndClaudeCompatibility(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("..", "..", "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("read bin/overlay: %v", err)
+	}
+	text := string(source)
+
+	// R-101: target lifecycle commands remain adapter-backed.
+	for _, want := range []string{
+		"install|update|rollback|uninstall",
+		"cmd_lifecycle",
+		"run_engine_lifecycle",
+		"run_engine_lifecycle_readonly",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("bin/overlay should contain %q", want)
+		}
+	}
+
+	// R-102: legacy Claude hook commands must call the real hook functions,
+	// not the target lifecycle status stubs.
+	for _, want := range []string{
+		"install-hooks)    cmd_install_hooks \"$@\"",
+		"uninstall-hooks)  cmd_uninstall_hooks \"$@\"",
+		"status-hooks)     cmd_status_hooks \"$@\"",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("legacy hook dispatch should contain %q", want)
+		}
+	}
+	for _, forbidden := range []string{
+		"install-hooks)    cmd_lifecycle install --target claude",
+		"uninstall-hooks)  cmd_lifecycle uninstall --target claude",
+		"status-hooks)     cmd_lifecycle status --target claude",
+	} {
+		if strings.Contains(text, forbidden) {
+			t.Errorf("legacy hook dispatch must not use lifecycle stub %q", forbidden)
+		}
+	}
+}
+
+func TestOverlayShellLifecycleAllTargetsAggregatesFailures(t *testing.T) {
+	// R-101: shell dispatch for the default mutating lifecycle target set must
+	// run every engine target even when an earlier target returns partial/failure.
+	repoRoot := filepath.Join("..", "..")
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+
+	for _, tt := range []struct {
+		name string
+		args []string
+	}{
+		{name: "default all", args: []string{"install"}},
+		{name: "explicit all", args: []string{"install", "--target", "all"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			home := t.TempDir()
+			invocations := filepath.Join(home, "lifecycle-invocations.log")
+			writeFutureFakeLifecycleEngine(t, home)
+
+			cmd := exec.Command(overlay, tt.args...)
+			cmd.Dir = repoRoot
+			cmd.Env = append(os.Environ(), "HOME="+home, "LABDRIAN_TEST_INVOCATIONS="+invocations)
+			out, err := cmd.CombinedOutput()
+			if err == nil {
+				t.Fatalf("lifecycle all should return non-zero when any target fails/partials; output:\n%s", string(out))
+			}
+			logBytes, readErr := os.ReadFile(invocations)
+			if readErr != nil {
+				t.Fatalf("read lifecycle invocations: %v\noutput:\n%s", readErr, string(out))
+			}
+			got := strings.TrimSpace(string(logBytes))
+			want := strings.Join([]string{
+				"install claude",
+				"install opencode",
+				"install codex",
+			}, "\n")
+			if got != want {
+				t.Fatalf("lifecycle all should visit every target in order despite failures\nwant:\n%s\ngot:\n%s\noutput:\n%s", want, got, string(out))
+			}
+		})
+	}
+}
+
+func writeFutureFakeLifecycleEngine(t *testing.T, home string) {
+	t.Helper()
+	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+	if err := os.MkdirAll(filepath.Dir(engineBinary), 0o755); err != nil {
+		t.Fatalf("mkdir fake engine dir: %v", err)
+	}
+	fakeEngine := `#!/usr/bin/env bash
+printf '%s %s\n' "$1" "$2" >> "$LABDRIAN_TEST_INVOCATIONS"
+case "$2" in
+  claude) echo "partial"; exit 2 ;;
+  opencode) echo "ok"; exit 0 ;;
+  codex) echo "unsupported"; exit 3 ;;
+  *) echo "unexpected target: $2"; exit 4 ;;
+esac
+`
+	if err := os.WriteFile(engineBinary, []byte(fakeEngine), 0o755); err != nil {
+		t.Fatalf("write fake lifecycle engine: %v", err)
+	}
+	future := time.Now().Add(2 * time.Hour)
+	if err := os.Chtimes(engineBinary, future, future); err != nil {
+		t.Fatalf("set fake engine time: %v", err)
+	}
+}
+
+func TestOverlayReadOnlyLifecycleDoesNotBuildEngineAndReportsRuntimeEvidence(t *testing.T) {
+	// R-101/R-102/R-104: status/sync-check remain read-only and still emit runtime status if target dirs are missing.
+	repoRoot := filepath.Join("..", "..")
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+	home := t.TempDir()
+	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+
+	runOverlay := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command(overlay, args...)
+		cmd.Dir = repoRoot
+		cmd.Env = append(os.Environ(), "HOME="+home)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("bin/overlay %s failed: %v\n%s", strings.Join(args, " "), err, string(out))
+		}
+		return string(out)
+	}
+
+	statusOut := runOverlay("status", "--target", "claude")
+	if _, err := os.Stat(engineBinary); !os.IsNotExist(err) {
+		t.Fatalf("read-only status must not build engine binary, stat err: %v", err)
+	}
+	if !strings.Contains(statusOut, "[claude] status: partial") || !strings.Contains(statusOut, "engine binary not installed") {
+		t.Fatalf("status should emit partial runtime evidence without binary, got:\n%s", statusOut)
+	}
+
+	if err := os.MkdirAll(filepath.Dir(engineBinary), 0o755); err != nil {
+		t.Fatalf("mkdir engine binary dir: %v", err)
+	}
+	if err := os.WriteFile(engineBinary, []byte("#!/usr/bin/env bash\necho stale\n"), 0o755); err != nil {
+		t.Fatalf("write stale engine binary: %v", err)
+	}
+	oldTime := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(engineBinary, oldTime, oldTime); err != nil {
+		t.Fatalf("set stale engine binary time: %v", err)
+	}
+	staleOut := runOverlay("status", "--target", "claude")
+	if strings.Contains(staleOut, "stale") || !strings.Contains(staleOut, "older than engine source") {
+		t.Fatalf("read-only status should not execute stale engine binary, got:\n%s", staleOut)
+	}
+	if err := os.Remove(engineBinary); err != nil {
+		t.Fatalf("remove stale engine binary: %v", err)
+	}
+
+	syncOut := runOverlay("sync-check", "--target", "codex")
+	if _, err := os.Stat(engineBinary); !os.IsNotExist(err) {
+		t.Fatalf("read-only sync-check must not build engine binary, stat err: %v", err)
+	}
+	if !strings.Contains(syncOut, "target dir not found") || !strings.Contains(syncOut, "[codex] sync-check: partial") {
+		t.Fatalf("sync-check should emit runtime evidence even when target dir is missing, got:\n%s", syncOut)
+	}
+}
+
+func TestOverlayMutatingLifecycleRebuildsStaleEngineBinary(t *testing.T) {
+	// R-101: mutating lifecycle commands may build and must refresh stale deployed engine binaries.
+	repoRoot := filepath.Join("..", "..")
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+	home := t.TempDir()
+	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+	if err := os.MkdirAll(filepath.Dir(engineBinary), 0o755); err != nil {
+		t.Fatalf("mkdir engine binary dir: %v", err)
+	}
+	if err := os.WriteFile(engineBinary, []byte("#!/usr/bin/env bash\necho stale\n"), 0o755); err != nil {
+		t.Fatalf("write stale engine binary: %v", err)
+	}
+	oldTime := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(engineBinary, oldTime, oldTime); err != nil {
+		t.Fatalf("set stale engine binary time: %v", err)
+	}
+
+	cmd := exec.Command(overlay, "install", "--target", "codex")
+	cmd.Dir = repoRoot
+	cmd.Env = append(os.Environ(), "HOME="+home)
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("mutating lifecycle should fail after rebuilding because Codex install is unsupported:\n%s", string(out))
+	}
+	if strings.Contains(string(out), "stale") {
+		t.Fatalf("mutating lifecycle should rebuild stale binary before execution, got:\n%s", string(out))
+	}
+	if !strings.Contains(string(out), "unsupported") {
+		t.Fatalf("mutating lifecycle should report unsupported target result, got:\n%s", string(out))
+	}
+	rebuilt, err := os.ReadFile(engineBinary)
+	if err != nil {
+		t.Fatalf("read rebuilt engine binary: %v", err)
+	}
+	if strings.Contains(string(rebuilt), "echo stale") {
+		t.Fatalf("engine binary was not refreshed from stale script")
+	}
+}
+
+func TestOverlayLifecycleFreshnessIncludesEmbeddedPluginSource(t *testing.T) {
+	// R-103: embedded runtime assets such as the OpenCode plugin source participate in freshness checks.
+	realRepoRoot := filepath.Join("..", "..")
+	repoRoot := makeTempOverlayRepoWithPlugin(t, realRepoRoot)
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+	pluginSource := filepath.Join(repoRoot, "engine", "runtime", "labdrian-runtime-parity-plugin.mjs")
+	if _, err := os.Stat(pluginSource); err != nil {
+		t.Fatalf("stat plugin source: %v", err)
+	}
+
+	home := t.TempDir()
+	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+	if err := os.MkdirAll(filepath.Dir(engineBinary), 0o755); err != nil {
+		t.Fatalf("mkdir engine binary dir: %v", err)
+	}
+	futureBinary := time.Now().Add(2 * time.Hour)
+	if err := os.WriteFile(engineBinary, []byte("#!/usr/bin/env bash\necho should-not-run\n"), 0o755); err != nil {
+		t.Fatalf("write engine binary: %v", err)
+	}
+	if err := os.Chtimes(engineBinary, futureBinary, futureBinary); err != nil {
+		t.Fatalf("set engine binary time: %v", err)
+	}
+	futurePlugin := futureBinary.Add(time.Hour)
+	if err := os.Chtimes(pluginSource, futurePlugin, futurePlugin); err != nil {
+		t.Fatalf("set plugin source time: %v", err)
+	}
+
+	cmd := exec.Command(overlay, "status", "--target", "opencode")
+	cmd.Dir = repoRoot
+	cmd.Env = append(os.Environ(), "HOME="+home)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("read-only status failed: %v\n%s", err, string(out))
+	}
+	if strings.Contains(string(out), "should-not-run") || !strings.Contains(string(out), "older than engine source") {
+		t.Fatalf("read-only status should treat newer embedded plugin source as stale evidence, got:\n%s", string(out))
+	}
+}
+
+func makeTempOverlayRepoWithPlugin(t *testing.T, realRepoRoot string) string {
+	t.Helper()
+	root := t.TempDir()
+	for _, dir := range []string{filepath.Join(root, "bin"), filepath.Join(root, "engine", "runtime")} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+	copyFileForTest(t, filepath.Join(realRepoRoot, "bin", "overlay"), filepath.Join(root, "bin", "overlay"), 0o755)
+	copyFileForTest(t,
+		filepath.Join(realRepoRoot, "engine", "runtime", "labdrian-runtime-parity-plugin.mjs"),
+		filepath.Join(root, "engine", "runtime", "labdrian-runtime-parity-plugin.mjs"),
+		0o644,
+	)
+	if err := os.WriteFile(filepath.Join(root, "overlay.manifest"), []byte(""), 0o644); err != nil {
+		t.Fatalf("write temp overlay manifest: %v", err)
+	}
+	cmd := exec.Command("git", "init", "-b", "main")
+	cmd.Dir = root
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("init temp git repo: %v\n%s", err, string(out))
+	}
+	cmd = exec.Command("git", "commit", "--allow-empty", "-m", "test baseline")
+	cmd.Dir = root
+	cmd.Env = append(os.Environ(),
+		"GIT_AUTHOR_NAME=Test",
+		"GIT_AUTHOR_EMAIL=test@example.com",
+		"GIT_COMMITTER_NAME=Test",
+		"GIT_COMMITTER_EMAIL=test@example.com",
+	)
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("commit temp git baseline: %v\n%s", err, string(out))
+	}
+	return root
+}
+
+func copyFileForTest(t *testing.T, src, dst string, mode os.FileMode) {
+	t.Helper()
+	content, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatalf("read %s: %v", src, err)
+	}
+	if err := os.WriteFile(dst, content, mode); err != nil {
+		t.Fatalf("write %s: %v", dst, err)
+	}
+}
+
+func TestOverlayAtomicRebuildPreservesPreviousBinaryOnFailure(t *testing.T) {
+	// R-101: failed mutating rebuild must leave the last-known-good binary in place.
+	repoRoot := filepath.Join("..", "..")
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+	home := t.TempDir()
+	engineBinary := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
+	if err := os.MkdirAll(filepath.Dir(engineBinary), 0o755); err != nil {
+		t.Fatalf("mkdir engine binary dir: %v", err)
+	}
+	oldContent := []byte("#!/usr/bin/env bash\necho last-known-good\n")
+	if err := os.WriteFile(engineBinary, oldContent, 0o755); err != nil {
+		t.Fatalf("write old engine binary: %v", err)
+	}
+	oldTime := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(engineBinary, oldTime, oldTime); err != nil {
+		t.Fatalf("set stale engine binary time: %v", err)
+	}
+
+	cmd := exec.Command(overlay, "install", "--target", "codex")
+	cmd.Dir = repoRoot
+	cmd.Env = append(os.Environ(), "HOME="+home, "GOFLAGS=-definitely-invalid-flag")
+	out, err := cmd.CombinedOutput()
+	if err == nil {
+		t.Fatalf("expected mutating rebuild to fail with invalid GOFLAGS, got success:\n%s", string(out))
+	}
+	kept, readErr := os.ReadFile(engineBinary)
+	if readErr != nil {
+		t.Fatalf("previous binary should remain readable: %v", readErr)
+	}
+	if string(kept) != string(oldContent) {
+		t.Fatalf("failed rebuild should preserve previous binary, got:\n%s", string(kept))
+	}
+}
+
+func TestOverlayShellIgnoresRelativeXDGConfigHomeForOpenCodeRoot(t *testing.T) {
+	// R-103: shell target paths must not deploy/status-check OpenCode under a relative XDG_CONFIG_HOME.
+	source, err := os.ReadFile(filepath.Join("..", "..", "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("read bin/overlay: %v", err)
+	}
+	text := string(source)
+	for _, want := range []string{
+		`if [[ -n "${XDG_CONFIG_HOME:-}" && "${XDG_CONFIG_HOME:-}" = /* ]]; then`,
+		`OPENCODE_CONFIG_ROOT="$XDG_CONFIG_HOME/opencode"`,
+		`OPENCODE_CONFIG_ROOT="$HOME/.config/opencode"`,
+	} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("bin/overlay should ignore relative XDG_CONFIG_HOME and use an absolute OpenCode root; missing %q", want)
+		}
+	}
+}
+
+func TestReadmeDocumentsThreeRuntimeGuarantees(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	text := string(readme)
+	for _, want := range []string{
+		"Claude Code is the deterministic baseline",
+		"OpenCode plugin changes require an OpenCode restart",
+		"Codex is a first-class target with explicit `unsupported`/`partial`/`supported` states",
+		"GADU is intentionally out of scope",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("README should document %q", want)
+		}
+	}
+}
+
+func TestOverlayShellLegacyHookCommandsExecuteRealHookLifecycle(t *testing.T) {
+	// R-102/R-105: execute the shell wrapper against a temporary HOME so legacy
+	// hook commands prove real install/status/uninstall behavior, not just dispatch text.
+	repoRoot := filepath.Join("..", "..")
+	overlay, err := filepath.Abs(filepath.Join(repoRoot, "bin", "overlay"))
+	if err != nil {
+		t.Fatalf("resolve overlay path: %v", err)
+	}
+	home := t.TempDir()
+	settingsPath := filepath.Join(home, ".claude", "settings.json")
+
+	runOverlay := func(args ...string) string {
+		t.Helper()
+		cmd := exec.Command(overlay, args...)
+		cmd.Dir = repoRoot
+		cmd.Env = append(os.Environ(), "HOME="+home)
+		out, err := cmd.CombinedOutput()
+		if err != nil {
+			t.Fatalf("bin/overlay %s failed: %v\n%s", strings.Join(args, " "), err, string(out))
+		}
+		return string(out)
+	}
+
+	installOut := runOverlay("install-hooks")
+	if !strings.Contains(installOut, "install-hooks complete") || !strings.Contains(installOut, "Deterministic scoping is now ACTIVE") {
+		t.Fatalf("install-hooks should report real hook installation, got:\n%s", installOut)
+	}
+	settingsAfterInstall, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("install-hooks should create Claude settings at %s: %v", settingsPath, err)
+	}
+	for _, want := range []string{"UserPromptSubmit", "PreToolUse", "gate-task", "propagate"} {
+		if !strings.Contains(string(settingsAfterInstall), want) {
+			t.Fatalf("settings after install-hooks should contain %q, got:\n%s", want, string(settingsAfterInstall))
+		}
+	}
+	contractPath := filepath.Join(home, ".claude", "skills", "_shared", "minimalism-contract.md")
+	if err := os.MkdirAll(filepath.Dir(contractPath), 0o755); err != nil {
+		t.Fatalf("mkdir contract dir: %v", err)
+	}
+	if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+		t.Fatalf("write contract for status-hooks: %v", err)
+	}
+
+	statusOut := runOverlay("status-hooks")
+	for _, want := range []string{"binary:", "hook: UserPromptSubmit", "hook: PreToolUse", "contract:"} {
+		if !strings.Contains(statusOut, want) {
+			t.Fatalf("status-hooks should report %q, got:\n%s", want, statusOut)
+		}
+	}
+
+	uninstallOut := runOverlay("uninstall-hooks")
+	if !strings.Contains(uninstallOut, "uninstall-hooks complete") {
+		t.Fatalf("uninstall-hooks should report real hook removal, got:\n%s", uninstallOut)
+	}
+	settingsAfterUninstall, err := os.ReadFile(settingsPath)
+	if err != nil {
+		t.Fatalf("settings should remain readable after uninstall-hooks: %v", err)
+	}
+	for _, forbidden := range []string{"gate-task", "propagate"} {
+		if strings.Contains(string(settingsAfterUninstall), forbidden) {
+			t.Fatalf("settings after uninstall-hooks should remove %q, got:\n%s", forbidden, string(settingsAfterUninstall))
+		}
 	}
 }
