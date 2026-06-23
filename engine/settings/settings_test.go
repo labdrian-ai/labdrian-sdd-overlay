@@ -16,6 +16,17 @@ import (
 // binary path. It is NOT the real ~/.claude/bin path — tests are isolated.
 const testHookCommand = "/home/testuser/.claude/bin/gentle-ai-overlay"
 
+func TestDefaultClaudePaths(t *testing.T) {
+	home := filepath.Join(t.TempDir(), "home")
+
+	if got, want := settings.DefaultClaudeSettingsPath(home), filepath.Join(home, ".claude", "settings.json"); got != want {
+		t.Fatalf("DefaultClaudeSettingsPath() = %q, want %q", got, want)
+	}
+	if got, want := settings.DefaultClaudeContractPath(home), filepath.Join(home, ".claude", "skills", "_shared", "minimalism-contract.md"); got != want {
+		t.Fatalf("DefaultClaudeContractPath() = %q, want %q", got, want)
+	}
+}
+
 // buildMerger creates a Merger pointed at the given settings path with the
 // test binary path. This is the test's single entry point into the package.
 func buildMerger(t *testing.T, settingsPath string) *settings.Merger { //nolint:unparam
