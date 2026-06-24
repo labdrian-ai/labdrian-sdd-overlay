@@ -66,18 +66,38 @@ Batch: 2 of 3
 
 ---
 
+## Post-verify fixes (PR-2, conditional GO remediation)
+
+- [x] **W-3 fix** — TopicKey + Validate empty Project guard  
+  Files: `engine/prespec/brief.go`, `engine/prespec/brief_test.go`  
+  Commit: `fix(engine/prespec): guard TopicKey and Validate against empty Project (W-3)`  
+  TopicKey now panics on empty Project (before the sdd/ check) — prevents silent malformed key
+  `project//prespec/<ULID>`. Validate now rejects empty Project as well.  
+  New tests: TestTopicKeyEmptyProjectPanic, TestValidateRequiresProject.
+
+- [x] **W-1 fix** — Narrow bundles-concerns lint rule  
+  Files: `engine/prespec/lint.go`, `engine/prespec/lint_test.go`, `engine/prespec/prespec_test.go`  
+  Commit: `fix(engine/prespec): narrow bundles-concerns to compound-ask signals only (W-1)`  
+  Replaced bare `\band\b` with specific signals: `\band also\b`, `as well as`,
+  `\band\s+(what|how|why|when|where|who)\b`. Incidental "and" in noun phrases and
+  conditional clauses no longer fires. Removed redundant local `min()` (Go 1.21 built-in).
+  Added LintResult comment (supersedes R-007a naming); added Brief spec field mapping comment.  
+  New tests: TestLintBundlesConcernsRejects (8 cases), TestLintBundlesConcernsPasses (3 cases).
+
+---
+
 ## Remaining
 
 - [ ] **T-07** — SKILL.md + coverage-taxonomy.md (PR-3)
 
 ---
 
-## Test output (PR-2 final state)
+## Test output (PR-2 final state after W-1/W-3 fixes)
 
 ```
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd        0.027s
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate       0.003s
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec    0.003s
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator 0.002s
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings   0.005s
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd        0.019s
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate       (cached)
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec    0.004s
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator (cached)
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings   (cached)
 ```
