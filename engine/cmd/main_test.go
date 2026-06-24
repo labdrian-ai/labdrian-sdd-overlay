@@ -1181,6 +1181,71 @@ func TestStatusCore_RegistryAbsent_BestEffort(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// T-06: prespec subcommand dispatch (cmd layer)
+// ---------------------------------------------------------------------------
+
+// TC-PRESPEC-1: lint verb wired into main dispatch — happy path.
+// Verifies runPrespec passes the verb and stdin to PrespecCore correctly.
+func TestRunPrespec_LintHappyPath(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	code := -1
+	runPrespecCore(
+		"lint",
+		strings.NewReader(`{"question":"What is the main obstacle?"}`),
+		&outBuf,
+		&errBuf,
+		func(c int) { code = c },
+	)
+	if code != -1 {
+		t.Fatalf("lint happy path: unexpected exit %d; stderr=%q", code, errBuf.String())
+	}
+	var out struct {
+		Accepted bool `json:"accepted"`
+	}
+	if err := json.Unmarshal([]byte(strings.TrimSpace(outBuf.String())), &out); err != nil {
+		t.Fatalf("lint happy path: invalid JSON output: %v\nout=%q", err, outBuf.String())
+	}
+	if !out.Accepted {
+		t.Error("lint happy path: expected accepted=true")
+	}
+}
+
+// TC-PRESPEC-2: unknown verb exits 1.
+func TestRunPrespec_UnknownVerbExitsOne(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	code := -1
+	runPrespecCore(
+		"bad-verb",
+		strings.NewReader("{}"),
+		&outBuf,
+		&errBuf,
+		func(c int) { code = c },
+	)
+	if code != 1 {
+		t.Errorf("unknown verb: want exit 1; got %d", code)
+	}
+}
+
+// TC-PRESPEC-3: malformed JSON exits 1 with stderr diagnostic.
+func TestRunPrespec_MalformedJSONExitsOne(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	code := -1
+	runPrespecCore(
+		"rank",
+		strings.NewReader("not-json"),
+		&outBuf,
+		&errBuf,
+		func(c int) { code = c },
+	)
+	if code != 1 {
+		t.Errorf("malformed JSON: want exit 1; got %d", code)
+	}
+	if errBuf.Len() == 0 {
+		t.Error("malformed JSON: expected stderr diagnostic")
+	}
+}
+
 // TC-STATUS-9: registry present WITH scoped block → [OK  ] with note "scoped block present".
 func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	homeDir, binaryPath := buildFakeHomeWithBinary(t)
