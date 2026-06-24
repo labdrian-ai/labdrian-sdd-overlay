@@ -173,6 +173,7 @@ func TestBudgetRemaining(t *testing.T) {
 	}{
 		{"standard asked=0", 0, "standard", 5},
 		{"standard asked=5", 5, "standard", 0},
+		{"asked over budget clamps to zero", 6, "standard", 0},
 		{"unknown mode safe default", 0, "unknown", 5},
 	}
 	for _, tc := range cases {
