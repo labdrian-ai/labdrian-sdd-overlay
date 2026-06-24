@@ -1,8 +1,8 @@
 # Apply Progress: prespec-malandra
 
-PR slice: **PR-2** (branch `prespec-malandra/pr-2-lint-brief-dispatch`)  
+PR slice: **PR-3** (branch `prespec-malandra/pr-3-skill`)  
 Last updated: 2026-06-24  
-Batch: 2 of 3  
+Batch: 3 of 3 — IMPLEMENTATION COMPLETE  
 
 ---
 
@@ -86,9 +86,28 @@ Batch: 2 of 3
 
 ---
 
+## Completed (PR-3)
+
+- [x] **T-07** — SKILL.md + coverage taxonomy reference  
+  Files: `skills/prespec-malandra/SKILL.md`,
+         `skills/prespec-malandra/references/coverage-taxonomy.md`  
+  Commit: `feat(skills): prespec-malandra Socratic interview skill and coverage taxonomy reference`  
+  7-stage interview (0-6): Mom-Test cold start, 5-archetype MCQ fallback, refusal floor
+  (needs-more-input on no actionable goal), anti-solution bounce, bounded readback (job only),
+  adaptive loop with engine rank/lint/readiness calls, Stage 4 bounded assumptions (cap 3,
+  each marked [ASSUMPTION] and interrogated against job), Stage 5 convergence gate (0.6),
+  Stage 6 brief emission + mem_save to project/{project}/prespec/{ULID}, final non-leading readback.  
+  Red lines encoded: no change-name derivation, no invented strawman, no self-grading,
+  no-metric-yet escape for success-metric cell, namespace guard (never sdd/ prefix),
+  no mem_save before gate passes. Hand-off contract to requirements-from-transcripts stated.  
+  Coverage taxonomy reference: 10-cell table with I×U scores, ranking formula + tie-break,
+  lint rejection checklist (3 rules + examples), stop conditions in priority order,
+  no-metric-yet escape documented.  
+  skill-registry updated with prespec-malandra entry.
+
 ## Remaining
 
-- [ ] **T-07** — SKILL.md + coverage-taxonomy.md (PR-3)
+None — all tasks complete.
 
 ---
 

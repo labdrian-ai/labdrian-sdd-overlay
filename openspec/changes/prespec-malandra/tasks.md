@@ -413,7 +413,7 @@ feat(engine): prespec subcommand dispatch wired to main.go (test-first)
 
 ---
 
-## T-07 — SKILL.md authoring and coverage taxonomy reference
+## [x] T-07 — SKILL.md authoring and coverage taxonomy reference
 
 **Spec**: S-R-001 through S-R-006, R-001 through R-004, R-008, R-013  
 **Files**: `skills/prespec-malandra/SKILL.md`,
