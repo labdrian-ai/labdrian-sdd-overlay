@@ -31,6 +31,7 @@ ENGINE_SRC="$OVERLAY_DIR/engine"
 
 die() { echo "ERROR: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
+warn() { echo "WARN: $*" >&2; }
 
 # Read manifest: emit "path tag" lines, skipping blank lines and comments
 parse_manifest() {
@@ -94,6 +95,10 @@ Commands:
   status-hooks                     Check and report overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
                                    OK, 1 if any check fails. Safe to run at any time.
+  doctor                           Read-only host-toolchain preflight: checks go (required),
+                                   gentle-ai, fd/eza/bat, the engine binary, and a non-empty
+                                   skill-registry. Prints PASS/WARN/FAIL per check; exits
+                                   non-zero only on a hard FAIL. Safe to run at any time.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   --help                           Show this help
@@ -261,6 +266,10 @@ cmd_capture() {
   local current_branch
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
+  # Always return to the original branch, even if a later step fails under
+  # 'set -euo pipefail' — prevents stranding the working tree on 'upstream'.
+  trap 'git checkout "$current_branch" >/dev/null 2>&1 || true' EXIT
+
   git checkout upstream
 
   if [[ -n "$from_backup" ]]; then
@@ -299,14 +308,18 @@ cmd_capture() {
   fi
 
   git add skills/
-  if [[ -n "$(git status --porcelain)" ]]; then
+  # Commit only if skills/ has STAGED changes. `git diff --cached --quiet`
+  # ignores unrelated untracked paths (.engram/, tui/) present on 'upstream'
+  # that previously caused a doomed `git commit` (exit 1) stranding the tree.
+  if git diff --cached --quiet; then
+    info "No changes detected — upstream already up to date"
+  else
     git commit -m "upstream: sync from gentle-ai $(date +%Y-%m-%d)"
     info "upstream updated"
-  else
-    info "No changes detected — upstream already up to date"
   fi
 
   git checkout "$current_branch"
+  trap - EXIT
   info "Returned to branch: $current_branch"
 }
 
@@ -577,6 +590,7 @@ cmd_tui() {
 
 cmd_install_hooks() {
   command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
+  command -v gentle-ai >/dev/null 2>&1 || warn "gentle-ai not found on PATH — the overlay layers onto gentle-ai; hooks will install but skill propagation/scoping may be inert until gentle-ai is installed. Run 'overlay doctor' for a full preflight."
   [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
 
   info "Building engine binary..."
@@ -594,11 +608,28 @@ cmd_install_hooks() {
 
   echo ""
   echo "install-hooks complete."
-  echo "  binary : $ENGINE_BINARY"
+  echo "  binary  : $ENGINE_BINARY"
   echo "  settings: $settings_path (backup at ${settings_path}.bak)"
-  echo "  hooks   : UserPromptSubmit (propagate) + PreToolUse/Task (gate-task)"
+  echo "  hooks   : two hook pairs (minimalism-contract + skill-discovery-safety) wired"
+  echo "            into UserPromptSubmit and PreToolUse/Agent (four entries total)."
   echo ""
   echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
+  echo ""
+  echo "Run 'overlay doctor' to verify the full installation."
+
+  # Guard: if the standalone skill-discovery-safety.md has not been deployed yet
+  # (user ran install-hooks but not 'overlay apply'), warn loudly so the safety
+  # contract is not silently absent from the skill registry.
+  local safety_path="$HOME/.claude/skills/_shared/skill-discovery-safety.md"
+  if test -f "$safety_path"; then
+    :
+  else
+    echo ""
+    echo "WARNING: $safety_path not found."
+    echo "  The safety contract is embedded in the engine binary and will propagate"
+    echo "  via hooks, but the standalone copy has not been deployed yet."
+    echo "  Run 'overlay apply' to deploy all skills, then 'overlay doctor' to verify."
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -656,8 +687,11 @@ cmd_uninstall_hooks() {
 
   echo ""
   echo "uninstall-hooks complete."
-  echo "  Our two hook entries have been removed from $settings_path"
+  echo "  Our four hook entries (two pairs: minimalism-contract + skill-discovery-safety)"
+  echo "  have been removed from $settings_path"
   echo "  (backup at ${settings_path}.bak if the file was modified)"
+  echo ""
+  echo "Run 'overlay doctor' to verify the installation state."
 }
 
 # ---------------------------------------------------------------------------
@@ -669,6 +703,106 @@ cmd_install_alias() {
   mkdir -p "$HOME/.local/bin"
   ln -sf "$OVERLAY_DIR/bin/overlay" "$HOME/.local/bin/$name"
   echo "Linked '$name' -> overlay. Run '$name tui' (needs ~/.local/bin on PATH)."
+}
+
+# ---------------------------------------------------------------------------
+# doctor
+# ---------------------------------------------------------------------------
+#
+# Read-only host-toolchain preflight. Prints PASS / WARN / FAIL per check and
+# exits non-zero only on a hard FAIL (missing REQUIRED tool or empty registry).
+#
+# Honors the three robustness principles:
+#   - PORTABLE DISCOVERY: every tool is probed with 'command -v'; the registry
+#     check uses only POSIX 'test'. Never calls fd/eza/bat directly.
+#   - FAIL-LOUD: no bare '2>/dev/null' on discovery; command-not-found stays
+#     visible. A missing required tool or an empty registry is a hard FAIL with
+#     an actionable message.
+#   - REGISTRY-AUTHORITATIVE: the registry file is the source of truth. An empty
+#     or whitespace-only registry is reported as FAIL ("inconclusive, not zero
+#     skills"), never silently passed.
+#
+# Classification:
+#   FAIL  -> registry empty/whitespace-only or unreadable; go absent
+#   WARN  -> registry absent; gentle-ai absent; engine binary absent; fd/eza/bat absent
+#   PASS  -> check satisfied
+
+cmd_doctor() {
+  local fail=0
+
+  echo "overlay doctor — host-toolchain preflight"
+  echo ""
+
+  # (a) REQUIRED: go on PATH (needed to build the engine binary).
+  if command -v go >/dev/null 2>&1; then
+    echo "PASS  go on PATH"
+  else
+    echo "FAIL  go not found on PATH — required to build the engine binary (run 'overlay install-hooks')."
+    fail=1
+  fi
+
+  # (b) REQUIRED-with-context: gentle-ai on PATH. The overlay layers onto
+  #     gentle-ai; absence is a loud WARN, not a hard FAIL (overlay can still
+  #     install and run, but propagation/scoping may be inert).
+  if command -v gentle-ai >/dev/null 2>&1; then
+    echo "PASS  gentle-ai on PATH"
+  else
+    echo "WARN  gentle-ai not found on PATH — the overlay layers onto gentle-ai; skill propagation/scoping may be inert until it is installed."
+  fi
+
+  # (c) fd / eza / bat — the silent-empty trap. Absence is a WARN, never an
+  #     error: the standard POSIX tools are valid fallbacks.
+  local missing_discovery=()
+  command -v fd  >/dev/null 2>&1 || missing_discovery+=("fd")
+  command -v eza >/dev/null 2>&1 || missing_discovery+=("eza")
+  command -v bat >/dev/null 2>&1 || missing_discovery+=("bat")
+  if [[ ${#missing_discovery[@]} -eq 0 ]]; then
+    echo "PASS  fd/eza/bat on PATH"
+  else
+    echo "WARN  not found: ${missing_discovery[*]}. Skill discovery MUST use the registry (.atl/skill-registry.md or engram), never a filesystem scan. Never pipe discovery through '2>/dev/null | head/wc' — an empty result is INCONCLUSIVE, not zero skills."
+  fi
+
+  # (d) Engine binary present + executable. Absent is a WARN with a hint.
+  if [[ -x "$ENGINE_BINARY" ]]; then
+    echo "PASS  engine binary present at $ENGINE_BINARY"
+  else
+    echo "WARN  engine binary not found at $ENGINE_BINARY — run 'overlay install-hooks' to build and deploy it."
+  fi
+
+  # (e) REGISTRY-AUTHORITATIVE + FAIL-LOUD: registry present AND non-empty.
+  #     Resolve under OVERLAY_DIR first, then CWD. A missing or empty/
+  #     whitespace-only registry is a hard FAIL.
+  local registry=""
+  if [[ -f "$OVERLAY_DIR/.atl/skill-registry.md" ]]; then
+    registry="$OVERLAY_DIR/.atl/skill-registry.md"
+  elif [[ -f "$PWD/.atl/skill-registry.md" ]]; then
+    registry="$PWD/.atl/skill-registry.md"
+  fi
+
+  if [[ -z "$registry" ]]; then
+    echo "WARN  skill-registry.md not found under $OVERLAY_DIR/.atl or $PWD/.atl — project may not use the overlay. Run skill-registry to generate it; do NOT conclude skills are absent."
+  elif [[ ! -s "$registry" ]]; then
+    echo "FAIL  registry empty (zero bytes): $registry — run skill-registry; do NOT conclude skills are absent."
+    fail=1
+  else
+    # Reject a whitespace-only file too. Capture content to a var (no pipe)
+    # to avoid SIGPIPE under 'set -euo pipefail'.
+    local registry_content
+    registry_content="$(tr -d '[:space:]' < "$registry")"
+    if [[ -z "$registry_content" ]]; then
+      echo "FAIL  registry whitespace-only: $registry — run skill-registry; an empty scan is INCONCLUSIVE, not zero skills."
+      fail=1
+    else
+      echo "PASS  registry present and non-empty: $registry"
+    fi
+  fi
+
+  echo ""
+  if [[ "$fail" -ne 0 ]]; then
+    echo "doctor: FAIL — one or more required checks did not pass (see above)." >&2
+    exit 1
+  fi
+  echo "doctor: OK — required checks passed (review any WARN above)."
 }
 
 # ---------------------------------------------------------------------------
@@ -687,6 +821,7 @@ case "$COMMAND" in
   install-hooks)   cmd_install_hooks "$@" ;;
   uninstall-hooks) cmd_uninstall_hooks "$@" ;;
   status-hooks)    cmd_status_hooks "$@" ;;
+  doctor)          cmd_doctor "$@" ;;
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
   --help|-h)       usage; exit 0 ;;

@@ -110,24 +110,69 @@ func (m *Merger) loadOrEmpty() (map[string]interface{}, error) {
 	return root, nil
 }
 
+// embeddedSafetyName is the engine-owned managed contract that propagates the
+// skill-discovery-safety guard (REGISTRY-AUTHORITATIVE + FAIL-LOUD + PORTABLE
+// DISCOVERY). It rides the same propagate/gate-task machinery as the minimalism
+// contract but writes a DISTINCT registry block and injects into the phases that
+// discover skills or files.
+const embeddedSafetyName = "skill-discovery-safety"
+
+// safetyIdentity is the distinguishing token used to dedup/remove the safety
+// hook entries independently of the minimalism entries. Both pairs reference the
+// same binary path, so the binary substring alone is NOT a unique identity — we
+// also key on this token (the --embedded-contract argument) so the second pair
+// installs instead of being collapsed as a duplicate.
+const safetyIdentity = "--embedded-contract " + embeddedSafetyName
+
 // mergeHooks inserts our hook entries if not already present. Returns true if
-// any change was made.
+// any change was made. It installs TWO pairs: the minimalism-contract pair and
+// the skill-discovery-safety pair. Each pair is deduped by its own identity so
+// both coexist.
 func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
 
-	if !hasCommandInInnerHooks(hooks, "UserPromptSubmit", m.hookCommand) {
+	// Minimalism-contract pair (identity: binary path, scoped to the entry that
+	// does NOT carry the safety token).
+	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isMinimalismEntry) {
 		appendHook(hooks, "UserPromptSubmit", m.buildUserPromptSubmitEntry())
 		changed = true
 	}
-
-	if !hasCommandInInnerHooks(hooks, "PreToolUse", m.hookCommand) {
+	if !hasEntryMatching(hooks, "PreToolUse", m.isMinimalismEntry) {
 		appendHook(hooks, "PreToolUse", m.buildPreToolUseEntry())
+		changed = true
+	}
+
+	// Skill-discovery-safety pair (identity: binary path + safetyIdentity).
+	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isSafetyEntry) {
+		appendHook(hooks, "UserPromptSubmit", m.buildSafetyUserPromptSubmitEntry())
+		changed = true
+	}
+	if !hasEntryMatching(hooks, "PreToolUse", m.isSafetyEntry) {
+		appendHook(hooks, "PreToolUse", m.buildSafetyPreToolUseEntry())
 		changed = true
 	}
 
 	root["hooks"] = hooks
 	return changed
+}
+
+// minimalismIdentity is the distinguishing token for the minimalism-contract
+// hook entries. Using a positive token (the --contract-file argument) keeps
+// the identity symmetric with isSafetyEntry and avoids collapsing a third
+// contract into the minimalism identity via NOT-logic.
+const minimalismIdentity = "minimalism-contract.md"
+
+// isMinimalismEntry reports whether a hook entry is our minimalism-contract
+// entry: it references our binary AND the minimalism identity token.
+func (m *Merger) isMinimalismEntry(e interface{}) bool {
+	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, minimalismIdentity)
+}
+
+// isSafetyEntry reports whether a hook entry is our skill-discovery-safety entry:
+// it references our binary AND the safety token.
+func (m *Merger) isSafetyEntry(e interface{}) bool {
+	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, safetyIdentity)
 }
 
 // removeHooks removes our hook entries. Returns true if any change was made.
@@ -223,16 +268,16 @@ func ensureHooksMap(root map[string]interface{}) map[string]interface{} {
 	return h
 }
 
-// hasCommandInInnerHooks reports whether hooks[key] already contains an entry
-// whose inner hooks[].command contains hookCommand as a substring.
-// This matches the new entry shape: {"hooks":[{"type":"command","command":"..."}]}.
-func hasCommandInInnerHooks(hooks map[string]interface{}, key, hookCommand string) bool {
+// hasEntryMatching reports whether hooks[key] already contains an entry for
+// which the predicate returns true. Used to dedup each of our hook pairs by its
+// own identity so adding a second pair does not collapse into the first.
+func hasEntryMatching(hooks map[string]interface{}, key string, match func(interface{}) bool) bool {
 	entries, ok := hooks[key].([]interface{})
 	if !ok {
 		return false
 	}
 	for _, e := range entries {
-		if entryContainsBinary(e, hookCommand) {
+		if match(e) {
 			return true
 		}
 	}
@@ -322,6 +367,47 @@ func (m *Merger) buildPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --contract-file ~/.claude/skills/_shared/minimalism-contract.md --contract-path "$HOME/.claude/skills/_shared/minimalism-contract.md" || true`,
 		m.hookCommand, m.hookCommand,
+	)
+	return map[string]interface{}{
+		"matcher": "Agent",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildSafetyUserPromptSubmitEntry returns the UserPromptSubmit entry that
+// propagates the skill-discovery-safety guard. It uses --embedded-contract so
+// the contract text ships in the engine binary (no external file dependency):
+// the guard propagates on every install regardless of the global persona rule.
+//
+// Same missing-binary guard as the minimalism entry. The --embedded-contract
+// argument doubles as this entry's dedup/uninstall identity.
+func (m *Merger) buildSafetyUserPromptSubmitEntry() map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
+		m.hookCommand, m.hookCommand, embeddedSafetyName,
+	)
+	return map[string]interface{}{
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildSafetyPreToolUseEntry returns the PreToolUse/Agent entry that injects the
+// skill-discovery-safety contract path into in-scope sub-agent prompts. The
+// contract content is embedded (--embedded-contract); --contract-path is the
+// absolute path the engine emits as the bare injected line so a sub-agent in any
+// cwd can resolve it.
+//
+// Same missing-binary guard and matcher="Agent" as the minimalism entry.
+func (m *Merger) buildSafetyPreToolUseEntry() map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/skill-discovery-safety.md" || true`,
+		m.hookCommand, m.hookCommand, embeddedSafetyName,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",

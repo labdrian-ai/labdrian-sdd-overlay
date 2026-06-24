@@ -411,6 +411,27 @@ func TestErrorBannerOnFailure(t *testing.T) {
 	}
 }
 
+// TestDegradedBannerOnExitTwo verifies that a commandResult with exitCode==2 renders
+// the YELLOW "Degradado" banner and NOT the red "Comando falló" banner (exit-2 path).
+func TestDegradedBannerOnExitTwo(t *testing.T) {
+	m := newModel()
+	m.scr = screenResult
+	m.result = commandResult{
+		action:   Action{Name: "Aplicar cambios", Command: "apply"},
+		output:   "degraded output",
+		err:      fmt.Errorf("exit status 2"),
+		exitCode: 2,
+	}
+
+	rendered := m.View()
+	if !strings.Contains(rendered, "Degradado") {
+		t.Errorf("exitCode==2 result must contain 'Degradado', got:\n%s", rendered)
+	}
+	if strings.Contains(rendered, "Comando falló") {
+		t.Errorf("exitCode==2 result must NOT contain 'Comando falló', got:\n%s", rendered)
+	}
+}
+
 // TestEmptyVerdictNote verifies the dim note when sync-check produces zero
 // verdicts (R-004), and that a non-sync-check command does NOT show the note
 // even when verdicts are also empty.

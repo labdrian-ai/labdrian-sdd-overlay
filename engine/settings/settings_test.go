@@ -185,7 +185,10 @@ func TestMerge_ExistingKeys_Preserved(t *testing.T) {
 }
 
 // --- TC-SET-3: idempotent — running twice produces no duplicates ---
-
+//
+// We install TWO pairs (minimalism-contract + skill-discovery-safety), so each
+// hook key carries exactly 2 of our entries. Idempotency means a second Install
+// adds NO more — the count stays 2, not 4.
 func TestMerge_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
@@ -199,11 +202,18 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 1 {
-		t.Errorf("UserPromptSubmit: expected exactly 1 entry, got %d", n)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
+		t.Errorf("UserPromptSubmit: expected exactly 2 entries (minimalism + safety), got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 1 {
-		t.Errorf("PreToolUse: expected exactly 1 entry, got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
+		t.Errorf("PreToolUse: expected exactly 2 entries (minimalism + safety), got %d", n)
+	}
+	// Both pairs must be distinguishable: exactly one safety entry per key.
+	if n := countOurHooks(root, "UserPromptSubmit", "--embedded-contract skill-discovery-safety"); n != 1 {
+		t.Errorf("UserPromptSubmit: expected exactly 1 safety entry, got %d", n)
+	}
+	if n := countOurHooks(root, "PreToolUse", "--embedded-contract skill-discovery-safety"); n != 1 {
+		t.Errorf("PreToolUse: expected exactly 1 safety entry, got %d", n)
 	}
 }
 
@@ -507,6 +517,40 @@ func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 	}
 }
 
+// TC-SET-UNINSTALL-COUNT: after Install then Uninstall, both hook keys must
+// contain exactly zero of our entries. This asserts the dual-pair (minimalism +
+// safety) are fully removed — previously no count assertion existed.
+func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	// Precondition: both keys carry exactly 2 of our entries after Install.
+	before := parseJSON(t, path)
+	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 2 {
+		t.Fatalf("precondition: expected 2 UserPromptSubmit entries after Install, got %d", n)
+	}
+	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 2 {
+		t.Fatalf("precondition: expected 2 PreToolUse entries after Install, got %d", n)
+	}
+
+	if err := m.Uninstall(); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	after := parseJSON(t, path)
+	if n := countOurHooks(after, "UserPromptSubmit", testHookCommand); n != 0 {
+		t.Errorf("after Uninstall: expected 0 UserPromptSubmit entries, got %d", n)
+	}
+	if n := countOurHooks(after, "PreToolUse", testHookCommand); n != 0 {
+		t.Errorf("after Uninstall: expected 0 PreToolUse entries, got %d", n)
+	}
+}
+
 // --- TC-SET-12 (W-2): emitted UserPromptSubmit command uses robust registry path ---
 //
 // Regression guard for the CWD-relative registry path bug. The emitted command
@@ -730,11 +774,13 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 1 {
-		t.Errorf("Install×2: UserPromptSubmit should have exactly 1 entry; got %d", n)
+	// Two pairs install (minimalism + safety) → 2 entries per key; a second
+	// Install adds no more.
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
+		t.Errorf("Install×2: UserPromptSubmit should have exactly 2 entries; got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 1 {
-		t.Errorf("Install×2: PreToolUse should have exactly 1 entry; got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
+		t.Errorf("Install×2: PreToolUse should have exactly 2 entries; got %d", n)
 	}
 }
 
