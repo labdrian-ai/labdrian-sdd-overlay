@@ -90,15 +90,21 @@ Commands:
                                    deterministic-scoping hooks into ~/.claude/settings.json.
                                    DELIBERATE ACTION — not called by 'apply'. Run once to
                                    activate; the hooks are INERT until this command runs.
+                                   Also best-effort installs discovery tools (bat rg fd sd
+                                   eza) via Homebrew so agents never hit the silent-empty
+                                   footgun. Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out.
   uninstall-hooks                  Remove our two hook entries from ~/.claude/settings.json,
                                    leaving all other keys and hooks intact.
   status-hooks                     Check and report overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all
                                    OK, 1 if any check fails. Safe to run at any time.
-  doctor                           Read-only host-toolchain preflight: checks go (required),
-                                   gentle-ai, fd/eza/bat, the engine binary, and a non-empty
-                                   skill-registry. Prints PASS/WARN/FAIL per check; exits
-                                   non-zero only on a hard FAIL. Safe to run at any time.
+  doctor [--fix]                   Read-only host-toolchain preflight: checks go (required),
+                                   gentle-ai, bat/rg/fd/sd/eza, the engine binary, and a
+                                   non-empty skill-registry. Prints PASS/WARN/FAIL per check;
+                                   exits non-zero only on a hard FAIL. Safe to run at any time.
+                                   --fix: after the checks, attempt to install any missing
+                                   discovery tools (bat rg fd sd eza) via Homebrew (best-effort,
+                                   non-fatal), then re-check and report the result.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   --help                           Show this help
@@ -571,6 +577,118 @@ cmd_tui() {
 }
 
 # ---------------------------------------------------------------------------
+# Discovery tools — canonical list used by ensure_discovery_tools,
+# recheck_discovery_tools, and cmd_doctor. Change once here to update all.
+# ---------------------------------------------------------------------------
+
+DISCOVERY_TOOLS=(bat rg fd sd eza)
+
+# ---------------------------------------------------------------------------
+# ensure_discovery_tools
+# ---------------------------------------------------------------------------
+#
+# Best-effort, NON-FATAL, idempotent provisioner for the five CLI tools the
+# persona rule mandates: bat rg fd sd eza.
+#
+# Contract:
+#   - PORTABLE: uses only 'command -v' for detection; never calls fd/eza/bat
+#     inside the helper itself.
+#   - NON-FATAL: a provisioning failure MUST NOT abort the caller. All brew
+#     invocations are guarded against 'set -e' via explicit if/then/else.
+#   - TRANSPARENT: prints exactly what it will install and what succeeded/failed.
+#   - IDEMPOTENT: skips tools already present; re-runs are safe.
+#   - NO SIGPIPE: all output captured to vars before any comparison.
+#
+# Called by:
+#   - cmd_install_hooks (best-effort, auto): runs after hooks are wired.
+#   - cmd_doctor --fix (explicit opt-in): runs then re-checks tool status.
+
+ensure_discovery_tools() {
+  local -a missing=()
+
+  # Probe each of the five mandated tools with 'command -v' — never assume
+  # any are present, never use them for the probe itself.
+  local t
+  for t in "${DISCOVERY_TOOLS[@]}"; do
+    command -v "$t" >/dev/null 2>&1 || missing+=("$t")
+  done
+
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    info "Discovery tools: all present (bat rg fd sd eza) — nothing to install."
+    return 0
+  fi
+
+  if command -v brew >/dev/null 2>&1; then
+    echo "==> Discovery tools missing: ${missing[*]}"
+    echo "    Installing via Homebrew (best-effort)..."
+    local -a succeeded=()
+    local -a failed=()
+    local tool
+    for tool in "${missing[@]}"; do
+      if brew install "$tool"; then
+        # Re-probe after install to confirm it landed on PATH.
+        if command -v "$tool" >/dev/null 2>&1; then
+          succeeded+=("$tool")
+        else
+          # brew reported success but binary still not on PATH (e.g. PATH not
+          # refreshed, cask install, prefix mismatch). Treat as non-fatal warn.
+          warn "brew install $tool reported success but '$tool' is still not on PATH. You may need to reload your shell or adjust PATH."
+          failed+=("$tool")
+        fi
+      else
+        warn "brew install $tool failed — skipping (non-fatal)."
+        failed+=("$tool")
+      fi
+    done
+    if [[ ${#succeeded[@]} -gt 0 ]]; then
+      info "Installed: ${succeeded[*]}"
+    fi
+    if [[ ${#failed[@]} -gt 0 ]]; then
+      warn "Could not install: ${failed[*]}"
+      warn "Install them manually so agents do not hit the silent-empty footgun."
+      warn "The skill-discovery-safety guard remains the fallback for any session."
+    fi
+  else
+    # No brew — warn loudly about the silent-empty trap but stay non-fatal.
+    warn "Homebrew not found. The following discovery tools are missing: ${missing[*]}"
+    warn "Without them, agents that run e.g. 'fd ... 2>/dev/null' get an empty"
+    warn "result (command not found, swallowed) and may misread it as zero skills."
+    warn "Install manually — typical options:"
+    warn "  cargo install bat ripgrep fd-find sd eza   (Rust/cargo — most reliable)"
+    warn "  Debian/Ubuntu (apt): 'bat' installs as 'batcat', 'fd' as 'fd-find' (binary:"
+    warn "    'fdfind'); 'sd' and 'eza' are often absent or only in recent repos —"
+    warn "    prefer cargo or a newer apt source for those."
+    warn "  Fedora/RHEL (dnf): bat ripgrep fd-find eza  (sd may need cargo)"
+    warn "  Arch (pacman): bat ripgrep fd sd eza"
+    warn "The skill-discovery-safety guard is the fallback but not a substitute."
+  fi
+
+  return 0  # always non-fatal
+}
+
+# ---------------------------------------------------------------------------
+# recheck_discovery_tools
+# ---------------------------------------------------------------------------
+#
+# Re-probes DISCOVERY_TOOLS after a provisioning attempt and prints
+# PASS or WARN. Single source of truth — used by both branches of cmd_doctor
+# --fix (fail!=0 and fail==0). Always returns 0 (non-fatal).
+
+recheck_discovery_tools() {
+  local -a recheck_missing=()
+  local t
+  for t in "${DISCOVERY_TOOLS[@]}"; do
+    command -v "$t" >/dev/null 2>&1 || recheck_missing+=("$t")
+  done
+  if [[ ${#recheck_missing[@]} -eq 0 ]]; then
+    echo "PASS  ${DISCOVERY_TOOLS[*]} all present after provisioning."
+  else
+    echo "WARN  still missing after provisioning: ${recheck_missing[*]}"
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------------------
 # install-hooks
 # ---------------------------------------------------------------------------
 #
@@ -629,6 +747,21 @@ cmd_install_hooks() {
     echo "  The safety contract is embedded in the engine binary and will propagate"
     echo "  via hooks, but the standalone copy has not been deployed yet."
     echo "  Run 'overlay apply' to deploy all skills, then 'overlay doctor' to verify."
+  fi
+
+  # Best-effort: provision discovery tools so agents don't hit the silent-empty
+  # footgun on a fresh install. Non-fatal — a failure here must never abort
+  # install-hooks. The skill-discovery-safety guard is the fallback.
+  # Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out (e.g. in CI or managed hosts).
+  if [[ -n "${OVERLAY_SKIP_TOOL_INSTALL:-}" ]]; then
+    info "OVERLAY_SKIP_TOOL_INSTALL is set — skipping automatic discovery-tool installation."
+    warn "Discovery tools (bat rg fd sd eza) were NOT auto-installed."
+    warn "Run 'overlay doctor --fix' later to provision them when ready."
+  else
+    echo ""
+    echo "==> Installing host packages via Homebrew: discovery tools (bat rg fd sd eza)."
+    echo "    Set OVERLAY_SKIP_TOOL_INSTALL=1 to skip this step."
+    ensure_discovery_tools
   fi
 }
 
@@ -729,6 +862,15 @@ cmd_install_alias() {
 
 cmd_doctor() {
   local fail=0
+  local fix=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --fix) fix=1 ;;
+      *) die "Unknown option: $1. Usage: overlay doctor [--fix]" ;;
+    esac
+    shift || true
+  done
 
   echo "overlay doctor — host-toolchain preflight"
   echo ""
@@ -750,16 +892,23 @@ cmd_doctor() {
     echo "WARN  gentle-ai not found on PATH — the overlay layers onto gentle-ai; skill propagation/scoping may be inert until it is installed."
   fi
 
-  # (c) fd / eza / bat — the silent-empty trap. Absence is a WARN, never an
-  #     error: the standard POSIX tools are valid fallbacks.
+  # (c) bat / rg / fd / sd / eza — the full set the persona rule mandates.
+  #     Absence is a WARN, never a hard FAIL: the safety guard is the fallback.
+  #     Run 'overlay doctor --fix' to auto-install via Homebrew when available.
   local missing_discovery=()
-  command -v fd  >/dev/null 2>&1 || missing_discovery+=("fd")
-  command -v eza >/dev/null 2>&1 || missing_discovery+=("eza")
-  command -v bat >/dev/null 2>&1 || missing_discovery+=("bat")
+  local t
+  for t in "${DISCOVERY_TOOLS[@]}"; do
+    command -v "$t" >/dev/null 2>&1 || missing_discovery+=("$t")
+  done
   if [[ ${#missing_discovery[@]} -eq 0 ]]; then
-    echo "PASS  fd/eza/bat on PATH"
+    echo "PASS  bat/rg/fd/sd/eza on PATH"
   else
-    echo "WARN  not found: ${missing_discovery[*]}. Skill discovery MUST use the registry (.atl/skill-registry.md or engram), never a filesystem scan. Never pipe discovery through '2>/dev/null | head/wc' — an empty result is INCONCLUSIVE, not zero skills."
+    echo "WARN  not found: ${missing_discovery[*]}. Without these tools agents that run"
+    echo "      e.g. 'fd ... 2>/dev/null' get empty output (command not found, swallowed)"
+    echo "      and may misread it as zero skills — the silent-empty footgun."
+    echo "      Run 'overlay doctor --fix' to auto-install via Homebrew (if available)."
+    echo "      Skill discovery MUST use the registry (.atl/skill-registry.md or engram),"
+    echo "      never a bare filesystem scan. An empty result is INCONCLUSIVE, not zero skills."
   fi
 
   # (d) Engine binary present + executable. Absent is a WARN with a hint.
@@ -800,9 +949,28 @@ cmd_doctor() {
   echo ""
   if [[ "$fail" -ne 0 ]]; then
     echo "doctor: FAIL — one or more required checks did not pass (see above)." >&2
+    # Still run --fix provisioning if requested, then re-check tools, but exit 1 after.
+    if [[ "$fix" -eq 1 ]]; then
+      echo ""
+      echo "==> --fix: attempting to provision discovery tools despite FAIL above..."
+      ensure_discovery_tools
+      echo ""
+      echo "==> Re-checking discovery tools after provisioning..."
+      recheck_discovery_tools
+    fi
     exit 1
   fi
   echo "doctor: OK — required checks passed (review any WARN above)."
+
+  # --fix: explicit opt-in to provision missing discovery tools, then re-check.
+  if [[ "$fix" -eq 1 ]]; then
+    echo ""
+    echo "==> --fix: provisioning discovery tools (${DISCOVERY_TOOLS[*]})..."
+    ensure_discovery_tools
+    echo ""
+    echo "==> Re-checking discovery tools after provisioning..."
+    recheck_discovery_tools
+  fi
 }
 
 # ---------------------------------------------------------------------------
