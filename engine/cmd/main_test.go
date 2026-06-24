@@ -620,11 +620,13 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		}
 		return n
 	}
-	if n := countEntries("UserPromptSubmit"); n != 1 {
-		t.Errorf("UserPromptSubmit: expected 1 entry, got %d", n)
+	// Two pairs install (minimalism + skill-discovery-safety) → 2 entries per
+	// key; merge-settings run twice stays at 2 (idempotent).
+	if n := countEntries("UserPromptSubmit"); n != 2 {
+		t.Errorf("UserPromptSubmit: expected 2 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 1 {
-		t.Errorf("PreToolUse: expected 1 entry, got %d", n)
+	if n := countEntries("PreToolUse"); n != 2 {
+		t.Errorf("PreToolUse: expected 2 entries, got %d", n)
 	}
 }
 
@@ -936,7 +938,7 @@ func TestStatusCore_AllOK(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if !result {
@@ -967,7 +969,7 @@ func TestStatusCore_BinaryMissing(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if result {
@@ -994,7 +996,7 @@ func TestStatusCore_SettingsAbsent(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if result {
@@ -1035,7 +1037,7 @@ func TestStatusCore_UserPromptSubmitMissing(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if result {
@@ -1074,7 +1076,7 @@ func TestStatusCore_PreToolUseMissing(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if result {
@@ -1102,7 +1104,7 @@ func TestStatusCore_ContractMissing(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if result {
@@ -1135,7 +1137,7 @@ func TestStatusCore_ContractBrokenFrontmatter(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if result {
@@ -1147,8 +1149,9 @@ func TestStatusCore_ContractBrokenFrontmatter(t *testing.T) {
 }
 
 // TC-STATUS-8: registry check best-effort — even when registry is absent,
-// statusCore returns true (if other checks pass). The registry check never
-// fails the suite.
+// statusCore returns true (if other checks pass). An absent registry is a
+// benign no-op (the project simply may not use the overlay); it is NOT a hard
+// failure. The registry check only fails on a real IO error or an empty file.
 func TestStatusCore_RegistryAbsent_BestEffort(t *testing.T) {
 	homeDir, binaryPath := buildFakeHomeWithBinary(t)
 	buildFakeContract(t, homeDir)
@@ -1168,7 +1171,7 @@ func TestStatusCore_RegistryAbsent_BestEffort(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	// Overall result must be true since registry check is best-effort.
@@ -1181,7 +1184,7 @@ func TestStatusCore_RegistryAbsent_BestEffort(t *testing.T) {
 	}
 }
 
-// TC-STATUS-9: registry present WITH scoped block → [OK  ] with note "scoped block present".
+// TC-STATUS-9: registry present WITH both scoped blocks → [OK  ] with note "scoped block present".
 func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	homeDir, binaryPath := buildFakeHomeWithBinary(t)
 	buildFakeContract(t, homeDir)
@@ -1191,7 +1194,10 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	cwdDir := t.TempDir()
 	registryDir := filepath.Join(cwdDir, ".atl")
 	os.MkdirAll(registryDir, 0o755)
-	registryContent := "# Registry\n" + propagator.BeginMarker + "\n| row |\n" + propagator.EndMarker + "\n"
+	// Registry must contain BOTH managed contract blocks to report [OK].
+	registryContent := "# Registry\n" +
+		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
+		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n"
 	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
 
 	deps := statusDeps{
@@ -1205,13 +1211,392 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result := statusCore(&outBuf, deps)
+	result, _ := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if !result {
-		t.Errorf("statusCore: expected true when scoped block present; output:\n%s", out)
+		t.Errorf("statusCore: expected true when both scoped blocks present; output:\n%s", out)
 	}
 	if !strings.Contains(out, "scoped block present") {
 		t.Errorf("statusCore: output should say 'scoped block present'; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-9b: registry present with only the minimalism block (safety block missing)
+// → WARN/degraded, naming which block is absent.
+func TestStatusCore_RegistryOnlyMinimalismBlock_Degraded(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	cwdDir := t.TempDir()
+	registryDir := filepath.Join(cwdDir, ".atl")
+	os.MkdirAll(registryDir, 0o755)
+	registryContent := "# Registry\n" + propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n"
+	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, degraded := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !allOK {
+		t.Errorf("statusCore: expected allOK=true (no hard FAIL) for missing safety block; output:\n%s", out)
+	}
+	if !degraded {
+		t.Errorf("statusCore: expected degraded=true for missing safety block; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[WARN]") {
+		t.Errorf("statusCore: output should contain [WARN] for degraded registry; output:\n%s", out)
+	}
+	if !strings.Contains(out, "skill-discovery-safety-scope") {
+		t.Errorf("statusCore: WARN note should name which block is absent; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-9c: registry present with only the safety block (minimalism block missing)
+// → WARN/degraded, naming which block is absent.
+func TestStatusCore_RegistryOnlySafetyBlock_Degraded(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	cwdDir := t.TempDir()
+	registryDir := filepath.Join(cwdDir, ".atl")
+	os.MkdirAll(registryDir, 0o755)
+	registryContent := "# Registry\n" +
+		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n"
+	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, degraded := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !allOK {
+		t.Errorf("statusCore: expected allOK=true (no hard FAIL) for missing minimalism block; output:\n%s", out)
+	}
+	if !degraded {
+		t.Errorf("statusCore: expected degraded=true for missing minimalism block; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[WARN]") {
+		t.Errorf("statusCore: output should contain [WARN] for degraded registry; output:\n%s", out)
+	}
+	if !strings.Contains(out, "minimalism-contract-scope") {
+		t.Errorf("statusCore: WARN note should name which block is absent; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-10: registry present but scoped block MISSING → WARN/degraded.
+// statusCore returns allOK=true (no hard FAIL) and degraded=true, and the
+// report shows [WARN]. This is the fail-loud-but-not-fatal tier.
+func TestStatusCore_RegistryScopedBlockMissing_Degraded(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	cwdDir := t.TempDir()
+	registryDir := filepath.Join(cwdDir, ".atl")
+	os.MkdirAll(registryDir, 0o755)
+	// Present and non-empty, but with NO scoped marker block.
+	registryContent := "# Registry\n\n## Skills\n| a | b | c |\n"
+	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, degraded := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !allOK {
+		t.Errorf("statusCore: expected allOK=true (no hard FAIL) for missing scoped block; output:\n%s", out)
+	}
+	if !degraded {
+		t.Errorf("statusCore: expected degraded=true for missing scoped block; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[WARN]") {
+		t.Errorf("statusCore: output should contain [WARN] for degraded registry; output:\n%s", out)
+	}
+	if !strings.Contains(out, "scoped block") || !strings.Contains(out, "missing") {
+		t.Errorf("statusCore: output should mention 'scoped block' and 'missing'; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-11: registry present but EMPTY/whitespace-only → hard FAIL.
+// An emptied registry is the incident's misread state and must be loud, never
+// treated as "zero skills".
+func TestStatusCore_RegistryEmpty_Fails(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	cwdDir := t.TempDir()
+	registryDir := filepath.Join(cwdDir, ".atl")
+	os.MkdirAll(registryDir, 0o755)
+	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte("   \n\t\n"), 0o644)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, _ := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if allOK {
+		t.Errorf("statusCore: expected allOK=false for empty registry; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[FAIL]") {
+		t.Errorf("statusCore: empty registry should produce [FAIL]; output:\n%s", out)
+	}
+	if !strings.Contains(out, "EMPTY") {
+		t.Errorf("statusCore: empty registry note should mention EMPTY; output:\n%s", out)
+	}
+}
+
+// TC-STATUS-12: registry present but UNREADABLE (real OS error, not IsNotExist)
+// → hard FAIL. A genuine OS error must surface, never be downgraded to OK.
+func TestStatusCore_RegistryUnreadable_Fails(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+	cwdDir := t.TempDir()
+
+	// readFile returns a non-IsNotExist error only for the registry path.
+	registryPath := filepath.Join(cwdDir, ".atl", "skill-registry.md")
+	readFile := func(path string) ([]byte, error) {
+		if path == registryPath {
+			return nil, errors.New("permission denied")
+		}
+		return os.ReadFile(path)
+	}
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: readFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return cwdDir },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, _ := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if allOK {
+		t.Errorf("statusCore: expected allOK=false for unreadable registry; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[FAIL]") || !strings.Contains(out, "cannot read") {
+		t.Errorf("statusCore: unreadable registry should FAIL with 'cannot read'; output:\n%s", out)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// propagate --require-registry
+// ---------------------------------------------------------------------------
+
+// TC-PROP-REQUIRE-1: --require-registry + registry absent → exit 1 + stderr.
+// Default (no flag) keeps the silent no-op; the flag turns absence into a loud
+// error so an expected-but-missing registry is never an invisible no-op.
+func TestRunPropagateCore_RequireRegistry_AbsentFails(t *testing.T) {
+	contractPath := "/fake/contract.md"
+	registryPath := "/project/.atl/skill-registry.md"
+
+	_, stderr, exitCode := capturePropagateCore(
+		[]string{"--registry", registryPath, "--contract-file", contractPath, "--require-registry"},
+		map[string][]byte{contractPath: []byte(testContractContent)},
+		map[string]error{registryPath: os.ErrNotExist},
+		nil,
+	)
+
+	if exitCode != 1 {
+		t.Errorf("--require-registry absent: expected exit 1, got %d", exitCode)
+	}
+	if !strings.Contains(stderr, "registry required") {
+		t.Errorf("--require-registry absent: stderr should mention 'registry required'; got %q", stderr)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// embedded skill-discovery-safety contract
+// ---------------------------------------------------------------------------
+
+// TC-EMBED-PROP-1: --embedded-contract skill-discovery-safety writes a DISTINCT
+// marker block (skill-discovery-safety-scope), never the minimalism-contract one,
+// so the two contracts cannot fight over the same block.
+func TestRunPropagateCore_EmbeddedSafetyContract_DistinctBlock(t *testing.T) {
+	registryPath := "/project/.atl/skill-registry.md"
+	written := make(map[string][]byte)
+
+	stdout, stderr, exitCode := capturePropagateCore(
+		[]string{"--registry", registryPath, "--embedded-contract", "skill-discovery-safety"},
+		map[string][]byte{registryPath: []byte(minimalRegistry)},
+		nil,
+		written,
+	)
+
+	if exitCode != -1 {
+		t.Fatalf("embedded safety: unexpected exit %d; stderr: %s", exitCode, stderr)
+	}
+	out := string(written[registryPath])
+	if !strings.Contains(out, propagator.DiscoverySafetyBeginMarker) {
+		t.Errorf("embedded safety: registry should contain the distinct BEGIN marker; out:\n%s", out)
+	}
+	if strings.Contains(out, propagator.BeginMarker) {
+		t.Errorf("embedded safety: must NOT write the minimalism-contract block; out:\n%s", out)
+	}
+	if !strings.Contains(out, "skill-discovery-safety") {
+		t.Errorf("embedded safety: row label should be skill-discovery-safety; out:\n%s", out)
+	}
+	if !strings.Contains(stdout, "skill-discovery-safety scoped row inserted/updated") {
+		t.Errorf("embedded safety: stdout should confirm the labeled row; got %q", stdout)
+	}
+}
+
+// TC-EMBED-PROP-2: unknown embedded contract → exit 1 + stderr (fail loud).
+func TestRunPropagateCore_EmbeddedUnknown_Fails(t *testing.T) {
+	registryPath := "/project/.atl/skill-registry.md"
+	_, stderr, exitCode := capturePropagateCore(
+		[]string{"--registry", registryPath, "--embedded-contract", "does-not-exist"},
+		map[string][]byte{registryPath: []byte(minimalRegistry)},
+		nil, nil,
+	)
+	if exitCode != 1 {
+		t.Errorf("unknown embedded contract: expected exit 1, got %d", exitCode)
+	}
+	if !strings.Contains(stderr, "unknown embedded contract") {
+		t.Errorf("unknown embedded contract: stderr should mention it; got %q", stderr)
+	}
+}
+
+// TC-EMBED-PROP-3: minimalism + safety blocks coexist — propagating the safety
+// contract into a registry that already has the minimalism block leaves the
+// minimalism block intact and adds a second, distinct block.
+func TestRunPropagateCore_EmbeddedSafety_CoexistsWithMinimalism(t *testing.T) {
+	registryPath := "/project/.atl/skill-registry.md"
+
+	// Registry already carries the minimalism-contract block.
+	base := minimalRegistry + "\n" + propagator.BeginMarker +
+		"\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n"
+
+	written := make(map[string][]byte)
+	_, stderr, exitCode := capturePropagateCore(
+		[]string{"--registry", registryPath, "--embedded-contract", "skill-discovery-safety"},
+		map[string][]byte{registryPath: []byte(base)},
+		nil, written,
+	)
+	if exitCode != -1 {
+		t.Fatalf("coexist: unexpected exit %d; stderr: %s", exitCode, stderr)
+	}
+	out := string(written[registryPath])
+	if !strings.Contains(out, propagator.BeginMarker) {
+		t.Errorf("coexist: minimalism block must remain; out:\n%s", out)
+	}
+	if !strings.Contains(out, propagator.DiscoverySafetyBeginMarker) {
+		t.Errorf("coexist: safety block must be added; out:\n%s", out)
+	}
+}
+
+// TC-EMBED-GATE-1: gate-task with --embedded-contract injects the safety contract
+// path into an in-scope sub-agent prompt (sdd-explore) without any contract file.
+func TestGateTaskCore_EmbeddedSafetyContract_Injects(t *testing.T) {
+	input := `{"tool_name":"Agent","tool_input":{"description":"explore","subagent_type":"sdd-explore","prompt":"Do the explore phase."}}`
+	contractAbsPath := "/home/user/.claude/engine/skill-discovery-safety.md"
+
+	var outBuf, errBuf bytes.Buffer
+	gateTaskCore(
+		[]string{"--embedded-contract", "skill-discovery-safety", "--contract-path", contractAbsPath},
+		strings.NewReader(input), &outBuf, &errBuf,
+		func(_ string) ([]byte, error) { return nil, errors.New("must not read a file in embedded mode") },
+	)
+
+	out := outBuf.String()
+	if !strings.Contains(out, contractAbsPath) {
+		t.Errorf("embedded gate: expected injection of %q; got %q", contractAbsPath, out)
+	}
+	if !strings.Contains(out, `"hookEventName":"PreToolUse"`) {
+		t.Errorf("embedded gate: response should carry PreToolUse hookSpecificOutput; got %q", out)
+	}
+}
+
+// TC-EMBED-GATE-2: gate-task with --embedded-contract passes through an
+// out-of-scope sub-agent (sdd-archive is excluded) — fail-safe '{}'.
+func TestGateTaskCore_EmbeddedSafetyContract_PassThroughExcluded(t *testing.T) {
+	input := `{"tool_name":"Agent","tool_input":{"description":"archive","subagent_type":"sdd-archive","prompt":"Do the archive phase."}}`
+
+	var outBuf, errBuf bytes.Buffer
+	gateTaskCore(
+		[]string{"--embedded-contract", "skill-discovery-safety"},
+		strings.NewReader(input), &outBuf, &errBuf,
+		func(_ string) ([]byte, error) { return nil, errors.New("must not read a file in embedded mode") },
+	)
+
+	if strings.TrimSpace(outBuf.String()) != "{}" {
+		t.Errorf("embedded gate excluded: expected pass-through '{}'; got %q", outBuf.String())
+	}
+}
+
+// TC-EMBED-GATE-3: gate-task --embedded-contract without --contract-path must
+// inject the embedded contract's own default path (skills/_shared/skill-discovery-safety.md),
+// NOT the minimalism-contract default. This validates fix C: contractPath must
+// fall back to spec.defaultPath rather than the hardcoded minimalism path.
+func TestGateTaskCore_EmbeddedSafetyContract_DefaultPath(t *testing.T) {
+	input := `{"tool_name":"Agent","tool_input":{"description":"explore","subagent_type":"sdd-explore","prompt":"Do the explore phase."}}`
+
+	var outBuf, errBuf bytes.Buffer
+	gateTaskCore(
+		// NO --contract-path: the embedded contract's defaultPath must be used.
+		[]string{"--embedded-contract", "skill-discovery-safety"},
+		strings.NewReader(input), &outBuf, &errBuf,
+		func(_ string) ([]byte, error) { return nil, errors.New("must not read a file in embedded mode") },
+	)
+
+	out := outBuf.String()
+	const safetyDefaultPath = "skills/_shared/skill-discovery-safety.md"
+	const minimalistPath = "skills/_shared/minimalism-contract.md"
+	if !strings.Contains(out, safetyDefaultPath) {
+		t.Errorf("embedded gate default path: expected injection of %q; got %q", safetyDefaultPath, out)
+	}
+	if strings.Contains(out, minimalistPath) {
+		t.Errorf("embedded gate default path: must NOT inject minimalism path %q; got %q", minimalistPath, out)
 	}
 }

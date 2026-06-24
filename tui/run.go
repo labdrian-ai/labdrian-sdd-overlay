@@ -226,11 +226,15 @@ func walkUpForBackend(start string) (string, bool) {
 
 // commandResult is the outcome of running the backend for one or more targets.
 type commandResult struct {
-	action    Action
-	targets   []Target
-	output    string // combined stdout+stderr across invocations
-	verdicts  []TargetVerdict
-	err       error
+	action   Action
+	targets  []Target
+	output   string // combined stdout+stderr across invocations
+	verdicts []TargetVerdict
+	err      error
+	// exitCode captures the process exit code when err is non-nil. It
+	// distinguishes a hard failure (code 1) from a degraded/warning result
+	// (code 2, e.g. 'engine status' DEGRADED). Zero when err is nil.
+	exitCode int
 }
 
 // buildArgSets constructs the argument sets to pass to the backend binary.
@@ -288,6 +292,13 @@ func runBackend(root string, action Action, selected []Target) commandResult {
 		if err != nil {
 			sb.WriteString(fmt.Sprintf("\n[exit error: %v]\n", err))
 			res.err = err
+			// Extract the exit code so callers can distinguish a hard failure
+			// (exit 1) from a degraded/warning result (exit 2).
+			if ee, ok := err.(*exec.ExitError); ok {
+				res.exitCode = ee.ExitCode()
+			} else {
+				res.exitCode = -1
+			}
 		}
 	}
 

@@ -225,10 +225,19 @@ func (m model) viewResult() string {
 	var b strings.Builder
 
 	if m.result.err != nil {
-		b.WriteString(errStyle.Render("Resultado · " + m.result.action.Name))
-		b.WriteString("\n")
-		b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("  ✗ Comando falló"))
-		b.WriteString("\n")
+		if m.result.exitCode == 2 {
+			// Exit 2 means DEGRADED (e.g. 'engine status' with a warning): not a
+			// hard failure, but the install needs attention. Render as a warning.
+			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Resultado · " + m.result.action.Name))
+			b.WriteString("\n")
+			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("  ! Degradado — revisá la salida"))
+			b.WriteString("\n")
+		} else {
+			b.WriteString(errStyle.Render("Resultado · " + m.result.action.Name))
+			b.WriteString("\n")
+			b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("  ✗ Comando falló"))
+			b.WriteString("\n")
+		}
 	} else {
 		b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
 	}
