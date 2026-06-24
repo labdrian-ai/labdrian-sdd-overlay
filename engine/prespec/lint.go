@@ -6,6 +6,7 @@ import (
 )
 
 // LintResult is the outcome of a lint check on a proposed interview question.
+// Supersedes spec R-007a naming (Check/Violation → Lint/LintResult).
 type LintResult struct {
 	// Accepted is true when the question passes all rules.
 	Accepted bool
@@ -41,9 +42,14 @@ var lintRules = []lintRule{
 		reason: "question names an implementation artifact; ask about the problem or outcome instead",
 	},
 	{
-		name:   "bundles-concerns",
-		re:     regexp.MustCompile(`(?i)\band\b`),
-		reason: "question bundles multiple concerns with 'and'; ask one thing at a time",
+		name: "bundles-concerns",
+		// minimal: rung 6 — the signal must be specific enough to distinguish compound
+		// questions from incidental "and" in noun phrases or conditional clauses.
+		// Fires on: "and also", "as well as", or "and" immediately followed by an
+		// interrogative word (what/how/why/when/where/who) — each signals a second
+		// independent question being appended to the first.
+		re:     regexp.MustCompile(`(?i)\band also\b|as well as|\band\s+(what|how|why|when|where|who)\b`),
+		reason: "question bundles multiple concerns ('and also', 'as well as', or 'and <interrogative>'); ask one thing at a time",
 	},
 }
 

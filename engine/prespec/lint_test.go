@@ -80,15 +80,21 @@ func TestLintPresupposesSolution(t *testing.T) {
 	}
 }
 
-// TestLintBundlesConcerns verifies the bundles-concerns rule fires when a question
-// contains " and " joining two distinct clauses.
-func TestLintBundlesConcerns(t *testing.T) {
+// TestLintBundlesConcernsRejects verifies the bundles-concerns rule fires on genuine
+// compound-ask signals: "and also", "as well as", or "and" followed by an interrogative word.
+func TestLintBundlesConcernsRejects(t *testing.T) {
 	cases := []struct {
 		name     string
 		question string
 	}{
-		{"two clauses with and", "What is the job to be done and who are the users?"},
-		{"three clauses", "What is the goal and what is the constraint and who benefits?"},
+		{"and what", "What is the goal and what is the constraint?"},
+		{"and how", "Who is affected and how do they cope today?"},
+		{"and why", "What do they need and why is the current approach failing?"},
+		{"and when", "What triggers the problem and when does it occur most?"},
+		{"and where", "Who experiences this and where in the workflow does it happen?"},
+		{"and who", "What is the outcome and who benefits from it?"},
+		{"and also", "What is the bottleneck and also what workarounds exist?"},
+		{"as well as", "What is the main pain as well as what success looks like?"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -98,6 +104,27 @@ func TestLintBundlesConcerns(t *testing.T) {
 			}
 			if r.Rule != "bundles-concerns" {
 				t.Errorf("expected rule=bundles-concerns; got %q (question=%q)", r.Rule, tc.question)
+			}
+		})
+	}
+}
+
+// TestLintBundlesConcernsPasses verifies that legitimate single-topic questions
+// containing incidental "and" are NOT rejected by bundles-concerns (W-1 narrow fix).
+func TestLintBundlesConcernsPasses(t *testing.T) {
+	cases := []struct {
+		name     string
+		question string
+	}{
+		{"contextual and in clause", "What happens when a user logs in and the token is expired?"},
+		{"and joining noun phrases", "How do customers handle returns and refunds today?"},
+		{"and in team names", "Which teams are responsible for design and delivery?"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			r := Lint(tc.question)
+			if !r.Accepted {
+				t.Errorf("expected accepted (no bundles-concerns violation); got rule=%q question=%q", r.Rule, tc.question)
 			}
 		})
 	}
