@@ -81,6 +81,19 @@ func TestTopicKeySDDPanic(t *testing.T) {
 	_ = b.TopicKey()
 }
 
+// TestTopicKeyEmptyProjectPanic verifies TopicKey panics when Project is empty (W-3).
+// Without this guard an empty Project silently produces the malformed key
+// "project//prespec/<ULID>".
+func TestTopicKeyEmptyProjectPanic(t *testing.T) {
+	defer func() {
+		if r := recover(); r == nil {
+			t.Error("expected panic for empty Project; got none")
+		}
+	}()
+	b := Brief{DiscoveryID: "01HXXXXXXXXXXXXXXXXXXXXXX", Project: ""}
+	_ = b.TopicKey()
+}
+
 // TestValidatePassesGate verifies Validate returns nil when readiness passes.
 func TestValidatePassesGate(t *testing.T) {
 	cells := make([]Cell, 10)
@@ -152,6 +165,24 @@ func TestValidateRequiresTranscript(t *testing.T) {
 	}
 	if err := b.Validate(cells); err == nil {
 		t.Error("Validate() should fail when Transcript is empty")
+	}
+}
+
+// TestValidateRequiresProject verifies Validate returns an error when Project is empty (W-3).
+func TestValidateRequiresProject(t *testing.T) {
+	cells := make([]Cell, 10)
+	for i := 0; i < 6; i++ {
+		cells[i].State = Clear
+	}
+	b := Brief{
+		DiscoveryID: NewIDFrom(fixedTime, zeroBits{}),
+		Project:     "", // empty
+		Job:         "Do something",
+		Sections:    [6]string{"s1", "s2", "s3", "s4", "s5", "s6"},
+		Transcript:  "Q: what? A: this.",
+	}
+	if err := b.Validate(cells); err == nil {
+		t.Error("Validate() should fail when Project is empty")
 	}
 }
 

@@ -98,6 +98,7 @@ const (
 // Brief is the structured discovery output produced after a completed interview.
 // DiscoveryID (not ChangeName) is the unique identifier — R-012 forbids ChangeName
 // because a brief may cover multiple future changes.
+// Spec field mapping: JobStatement→Job, Section1..Section6→Sections[0..5].
 type Brief struct {
 	// DiscoveryID is the hand-rolled ULID that uniquely identifies this brief (R-014).
 	DiscoveryID string
@@ -114,8 +115,12 @@ type Brief struct {
 }
 
 // TopicKey returns the Engram key for this brief: project/{project}/prespec/{ULID}.
-// Panics if Project starts with "sdd/" to enforce the namespace guard (R-017).
+// Panics if Project is empty or starts with "sdd/" to enforce the namespace guard (R-017).
+// An empty Project would silently produce the malformed key "project//prespec/<ULID>".
 func (b Brief) TopicKey() string {
+	if strings.TrimSpace(b.Project) == "" {
+		panic("prespec: Brief.Project must not be empty")
+	}
 	if strings.HasPrefix(b.Project, "sdd/") {
 		panic(fmt.Sprintf("prespec: Brief.Project must not start with 'sdd/'; got %q", b.Project))
 	}
@@ -131,6 +136,9 @@ func (b Brief) Validate(cells []Cell) error {
 			"prespec: readiness score %.2f is below gate %.2f; interview is not complete",
 			score.Value, ReadinessGate,
 		)
+	}
+	if strings.TrimSpace(b.Project) == "" {
+		return errors.New("prespec: Brief.Project is required")
 	}
 	if strings.TrimSpace(b.Job) == "" {
 		return errors.New("prespec: Brief.Job is required")
