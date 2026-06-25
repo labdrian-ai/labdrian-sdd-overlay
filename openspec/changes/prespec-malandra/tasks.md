@@ -198,7 +198,7 @@ feat(engine/prespec): readiness score and 0.6 gate with Partial=0.5 weight (test
 
 ---
 
-## T-04 — Lint: no-leading question rules (test-first)
+## [x] T-04 — Lint: no-leading question rules (test-first)
 
 **Spec**: R-007  
 **Files**: `engine/prespec/lint.go`, `engine/prespec/lint_test.go`
@@ -251,7 +251,7 @@ feat(engine/prespec): no-leading lint rules with regex patterns (test-first)
 
 ---
 
-## T-05 — Brief: ULID generation, schema, render, validate, TopicKey (test-first)
+## [x] T-05 — Brief: ULID generation, schema, render, validate, TopicKey (test-first)
 
 **Spec**: R-011, R-012, R-014, R-017, R-018  
 **Files**: `engine/prespec/brief.go`, `engine/prespec/brief_test.go`,
@@ -352,7 +352,7 @@ feat(engine/prespec): Brief schema, ULID generation, render, validate, and Topic
 
 ---
 
-## T-06 — Orchestration layer + subcommand dispatch + dispatch tests (test-first)
+## [x] T-06 — Orchestration layer + subcommand dispatch + dispatch tests (test-first)
 
 **Spec**: R-005 through R-019 (invocation seam), design §invocation seam  
 **Files**: `engine/prespec/prespec.go`, `engine/prespec/prespec_test.go`,
@@ -413,7 +413,7 @@ feat(engine): prespec subcommand dispatch wired to main.go (test-first)
 
 ---
 
-## T-07 — SKILL.md authoring and coverage taxonomy reference
+## [x] T-07 — SKILL.md authoring and coverage taxonomy reference
 
 **Spec**: S-R-001 through S-R-006, R-001 through R-004, R-008, R-013  
 **Files**: `skills/prespec-malandra/SKILL.md`,

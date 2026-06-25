@@ -1,121 +1,134 @@
-# Verify Report: prespec-malandra — PR-1
+# Verify Report: prespec-malandra — PR-2
 
-**Scope**: T-01, T-02, T-03 only (branch `prespec-malandra/pr-1-domain`)  
-**Verified**: 2026-06-24  
-**TDD Mode**: STRICT  
-**Verdict**: GO — 0 CRITICAL, 2 WARNING, 2 SUGGESTION
+**Branch**: `prespec-malandra/pr-2-lint-brief-dispatch`  
+**Scope**: T-04 (lint), T-05 (brief+ULID), T-06 (dispatch)  
+**Date**: 2026-06-24  
+**Verdict**: CONDITIONAL GO — 0 CRITICAL, 3 WARNING, 2 SUGGESTION
 
 ---
 
-## Test Suite Output
+## Test Output
 
 ```
-go clean -testcache && cd engine && go test ./... -v
-```
-
-All 5 packages pass. Fresh run (cache cleared):
-
-```
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd        0.016s
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/cmd        0.013s
 ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate       0.003s
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec    0.002s  coverage: 97.7%
-ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator 0.001s
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec    0.003s
+ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator 0.002s
 ok  github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings   0.004s
 ```
 
-**engine/prespec tests (14 total, 0 failures)**:
-
-- TestCellStateTransitions (5 subtests)
-- TestCellDefinitions
-- TestGridNew
-- TestRankUncovered (3 subtests)
-- TestCoverageCount (2 subtests)
-- TestBudgetRemaining (3 subtests)
-- TestShouldStop (4 subtests)
-- TestReadinessCompute (6 subtests)
-- TestReadinessGate (5 subtests)
-- TestReadinessGateConstantExported
-
-**Coverage**: 97.7% of statements. Only uncovered branch: `rem < 0` guard in `BudgetRemaining`.
+`go vet ./...`: clean (no output).
 
 ---
 
-## Requirement Compliance Grid
+## CRITICAL Issues
 
-| Req | Description | Status | Covering Test(s) |
-|-----|-------------|--------|-----------------|
-| R-005a | 10-cell taxonomy (ID, Impact, Uncertainty, initial state) | PASS | TestCellDefinitions |
-| R-005b | Grid.New() → all 10 cells in Missing state | PASS | TestGridNew |
-| R-005c | I×U descending rank; ascending-index tie-break | PASS | TestRankUncovered/all-missing, TestRankUncovered/clear_cells_excluded, TestRankUncovered/fully-cleared |
-| R-006 / R-006a | BudgetRemaining: standard=5, unknown mode→5 safe default | PASS | TestBudgetRemaining (3 cases) |
-| R-009 | Readiness formula (ADR-5 authoritative: Partial=0.5) | PASS | TestReadinessCompute (6 cases including boundary) |
-| R-010 | Gate >= 0.6 inclusive; ReadinessGate exported constant | PASS | TestReadinessGate, TestReadinessGateConstantExported |
-| R-015 | Cell state transitions: forward valid, Clear regressions rejected, state unchanged on rejection | PASS | TestCellStateTransitions (5 cases) |
-| R-016 | CoverageCount returns (clear, partial, empty) tuple | PASS | TestCoverageCount (fresh grid + mixed grid) |
-| R-019 | ShouldStop: budget > convergence > user-signal priority | PASS | TestShouldStop (4 cases, all priority branches) |
-
-**Out-of-scope requirements (deferred — DO NOT flag as failures)**:
-
-- R-001..R-004, R-008, R-013: Skill layer (T-07, PR-3)
-- R-007: Lint (T-04, PR-2)
-- R-011, R-012, R-014, R-017, R-018: Brief/ULID (T-05, PR-2)
-- S-R-001..S-R-006: Skill layer (T-07, PR-3)
+None.
 
 ---
 
-## Issues
+## WARNING Issues
 
-### WARNING-1 — BudgetRemaining defensive branch not tested
+### W-1: `bundles-concerns` regex is over-broad — false-positive boundary untested
 
-**File**: `engine/prespec/grid.go:111`  
-**Detail**: The `if rem < 0 { return 0 }` guard handles `asked > budget` (e.g., `asked=6, mode="standard"`). This branch is reachable in integration scenarios (skill over-asks). 85.7% branch coverage on this function. Not a spec violation — the spec only defines `budget - asked` for valid inputs — but the guard is semantically meaningful and should be exercised.  
-**Action**: Add `{"asked=6 over budget", 6, "standard", 0}` case to `TestBudgetRemaining` in PR-2 or as a follow-up commit on this branch.
+**Rule**: `(?i)\band\b` fires on ANY occurrence of the word "and" in a question.
 
-### WARNING-2 — Spec R-009b formula divergence requires annotation
+**Evidence**: The following legitimate single-topic Socratic probes are all rejected:
+- "What happens when a user logs in and the token is expired?" → rejected (bundles-concerns)
+- "What is the relationship between the team and their deadline pressure?" → rejected
+- "What are the costs and benefits?" → rejected
 
-**Files**: `openspec/changes/prespec-malandra/specs/prespec-malandra/spec.md:289` vs `engine/prespec/readiness.go:35`  
-**Detail**: Spec R-009b states `score = count(Clear)/10.0` (no partial credit). The implementation uses `(Clear + 0.5*Partial)/10` per ADR-5 from the design. This is a documented, intentional decision (tasks.md records: "Spec R-009b (no partial credit) is superseded by the design's ADR-5"). No code defect. However, a reader of spec.md alone will see a contradiction: R-009b says no partial credit, yet spec scenario "5 Clear 3 Partial → 0.65" implies Partial=0.5. The spec has an internal inconsistency that should be annotated or corrected in the next spec revision.  
-**Action**: Add a spec errata note to R-009b in PR-3 (or when spec.md is next touched): "Superseded by ADR-5; see design.md."
+These are single-information-seeking questions that naturally use "and" as a connector within a clause, not to join two independent interrogative intents. The SKILL will need to reformulate any such question before asking it.
 
-### SUGGESTION-1 — CellState naming: Missing vs Empty
+**Test gap**: The existing test suite has zero cases where a question containing "and" is expected to pass lint. The false-positive behavior is entirely untested and may be mistaken for an oversight rather than a deliberate trade-off.
 
-**Detail**: Spec prose (R-005, R-015 text) uses "Empty" throughout. Implementation exports `Missing` (matching tasks.md). No defect — the tasks artifact is the authoritative naming source. Consider a one-line comment in grid.go: `// Missing corresponds to "Empty" in spec prose — name chosen to be explicit.`
+**Recommendation**: One of:
+- (a) Accept the aggressive rule and add explicit test cases that confirm single-topic questions with embedded "and" ARE rejected, with a comment explaining the intentional choice (enforces the skill to always reformulate to pure single-clause probes).
+- (b) Narrow the pattern to target multi-clause bundling more precisely (e.g. require "and" to be preceded and followed by full interrogative sub-clauses, or require two "?" indicators).
 
-### SUGGESTION-2 — TestRankUncovered lacks mixed Empty+Partial subtest
+Option (a) is lower-risk for PR-2 since no production behavior changes. Option (b) requires new test coverage and a regex update.
 
-**Detail**: R-005c defines a scenario where `current-gap` is `Partial` (not just `Missing`) and must still appear before `why-now` on a tie. The test's tie-break verification uses all-Missing cells, which does cover the sort logic correctly. An explicit `Partial-included-in-rank` subtest would improve spec traceability and guard against a future regression where someone incorrectly excludes Partial from ranking.
-
----
-
-## Design Conformance
-
-| ADR / Design Decision | Expected | Actual | Status |
-|-----------------------|----------|--------|--------|
-| Flat package (not sub-packages) | `engine/prespec/*.go` | `engine/prespec/grid.go`, `readiness.go` — no nested dirs | PASS |
-| Stateless pure functions | No I/O, no persistence in Go | Confirmed — stdlib only, no side effects | PASS |
-| sort.SliceStable for tie-break | Deterministic on equal scores | `sort.SliceStable` at grid.go:78 | PASS |
-| ADR-5 Partial=0.5 formula | `(Clear + 0.5*Partial)/10` | readiness.go:35: exact formula | PASS |
-| ReadinessGate exported | `const ReadinessGate = 0.6` | readiness.go:6 | PASS |
-| Fail-loud on bad input | ADR-4 | Not applicable to PR-1 (dispatch in T-06, PR-2) | DEFERRED |
+**Severity rationale**: WARNING not CRITICAL because the rule is mechanically consistent with the spec's literal scenarios, no test currently fails, and the SKILL can compensate. But the untested boundary is a real correctness risk at the skill-authoring layer.
 
 ---
 
-## Tasks Checklist State
+### W-2: R-007a / R-011a API contract diverges from spec without annotation
 
-- [x] T-01 — complete, committed, tested
-- [x] T-02 — complete, committed, tested
-- [x] T-03 — complete, committed, tested
-- [ ] T-04 — deferred (PR-2)
-- [ ] T-05 — deferred (PR-2)
-- [ ] T-06 — deferred (PR-2)
-- [ ] T-07 — deferred (PR-3)
+**Spec R-007a says**:
+```go
+type Violation struct { Rule string; Detail string }
+func Check(question string) []Violation
+```
 
-Task state matches apply-progress.md and openspec tasks.md checkboxes.
+**Implementation exports**:
+```go
+type LintResult struct { Accepted bool; Rule string; Reason string }
+func Lint(question string) LintResult
+```
+
+The design is authoritative over the spec on this (tasks artifact explicitly states this). The dispatch wires correctly. But a SKILL.md author reading the spec verbatim will write calls to `Check()` and `Violation.Detail` that do not compile.
+
+**Recommendation**: Add a comment in `lint.go` citing R-007a and noting that `Lint`/`LintResult` is the design-authoritative API shape, superseding the spec's `Check`/`Violation` names.
 
 ---
 
-## Verdict
+### W-3: R-017 / R-018 partial — empty Project not guarded, Assumptions field absent
 
-**GO for PR-1.**
+**R-017**: `TopicKey()` panics on `Project` starting with `"sdd/"` but NOT on empty `Project`. An empty project produces a valid-looking but malformed key: `"project//prespec/<ULID>"`. There is no test for this case. `Validate()` does not check `Project` emptiness.
 
-0 CRITICAL issues. 2 WARNINGs (both addressable in PR-2 without reopening this PR). 2 SUGGESTIONS (stylistic/traceability). The domain logic is correct, the tests are meaningful and cover all spec boundary conditions, coverage is 97.7%, and no regressions were introduced in existing packages.
+**R-018**: Specifies `Validate` must reject: empty/invalid DiscoveryID, empty Project, `len(Assumptions) > 3`, and `ReadinessScore < 0.6`. Current `Validate()` only checks: readiness (via `cells`), empty `Job`, empty `Transcript`. The `Brief` struct has no `Assumptions` field and no `ReadinessScore` field.
+
+**Assessment**: The `Assumptions` and `ReadinessScore` fields may be intentionally omitted (they are skill-layer concerns; the SKILL enforces the 3-assumption cap). The empty-Project gap is the concrete risk: a skill bug sending `""` as project produces a structurally broken TopicKey that would corrupt engram namespace.
+
+**Recommendation**: Add an empty-Project guard to `TopicKey()` (or `Validate()`) with a test.
+
+---
+
+## SUGGESTION Issues
+
+### S-1: Brief struct field names diverge from spec R-011a without cross-reference
+
+Spec names: `JobStatement`, `Section1`..`Section6`, `Assumptions`, `ReadinessScore`.  
+Implementation: `Job`, `Sections [6]string` (array), no `Assumptions`, no `ReadinessScore`.  
+The array form is superior Go ergonomics and the design is authoritative. A comment mapping spec field names to implementation names would help future readers.
+
+### S-2: Local `min()` helper in prespec_test.go is redundant under Go 1.21
+
+`go.mod` specifies `go 1.21`, where `min()` is a built-in. The local definition at line 253 of `prespec_test.go` is harmless but can be removed. Minor cleanup only.
+
+---
+
+## Per-Requirement Coverage Map (PR-2 scope)
+
+| Req | Description | Covering Test(s) | Status |
+|-----|-------------|------------------|--------|
+| R-007 / T-04 | Lint: 3 rules, first-match wins | TestLintAccepted, TestLintSmuggleAnswer, TestLintPresupposesSolution, TestLintBundlesConcerns, TestLintFirstFailingRuleWins, TestLintReasonNonEmpty | PASS |
+| R-014 / T-05 | ULID format, uniqueness, deterministic seam | TestNewIDFormat, TestNewIDFromDeterministic, TestNewIDUniqueness | PASS |
+| R-011 / T-05 | Brief schema, render, golden file | TestRenderBriefGolden | PASS |
+| R-017 / T-05 | TopicKey sdd/ guard | TestTopicKeySDDPanic | PASS (partial — empty project untested) |
+| R-017 / T-05 | TopicKey correct format | TestTopicKeyFormat | PASS |
+| R-018 / T-05 | Validate: gate, empty Job, empty Transcript | TestValidatePassesGate, TestValidateFailsGate, TestValidateRequiresJob, TestValidateRequiresTranscript | PASS (partial — empty Project, DiscoveryID format not validated) |
+| R-012 / T-05 | No ChangeName field | Struct definition (compiler-checked) | PASS |
+| T-06 dispatch | 4 verbs, JSON-over-stdin, fail-loud | TestPrespecRankVerb, TestPrespecLintVerb, TestPrespecLintVerbRejects, TestPrespecReadinessVerb, TestPrespecBriefVerb, TestPrespecBriefVerbFailsGate, TestPrespecUnknownVerb, TestPrespecRankVerbMalformedJSON | PASS |
+| T-06 cmd layer | prespec subcommand in main | TestRunPrespec_LintHappyPath, TestRunPrespec_UnknownVerbExitsOne, TestRunPrespec_MalformedJSONExitsOne | PASS |
+| ADR-2 / T-06 | Engine stateless, no persistence imports | Import list inspection | PASS |
+
+---
+
+## Confirmed Passing Properties
+
+- **ULID**: Independent encoding verification confirms `NewIDFrom(fixedTime, zeroBits{})` produces `066GSAY4800000000000000000`, matching the golden file. Matches `^[0-9A-HJKMNP-TV-Z]{26}$`. Not kebab-compatible (uppercase letters, no hyphens). Zero new deps: `go.mod` is unchanged (stdlib only, `go 1.21`).
+- **Dispatch statelessness**: `engine/prespec/prespec.go` imports only `encoding/json`, `fmt`, `io`, `strings`, `time`. No engram, no file I/O.
+- **Golden file determinism**: Render output is byte-stable; time injected via `Brief.CreatedAt`; random component injected via `NewIDFrom` seam. `UPDATE_GOLDEN=1` path documented and tested.
+- **T-04/T-05/T-06 tasks**: All three marked `[x]` complete in apply-progress with matching commit messages.
+- **TopicKey namespace guard**: `sdd/` prefix in Project panics — R-017 positive path covered with test.
+
+---
+
+## GO / NO-GO
+
+**CONDITIONAL GO for PR-2.**
+
+No blockers that prevent opening the PR. The 3 warnings should be tracked as follow-up items (ideally addressed in PR-2 via a review comment or small fix before merge). W-3 (empty Project guard) is the highest-priority fix since it is a concrete namespace corruption risk, not just a documentation gap.
+
+PR-3 (SKILL.md) is out of scope for this verification as specified.

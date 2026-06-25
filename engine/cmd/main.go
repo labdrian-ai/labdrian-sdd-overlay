@@ -35,6 +35,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
@@ -56,6 +57,8 @@ func main() {
 		runUninstallHooks(os.Args[2:])
 	case "status":
 		runStatus(os.Args[2:])
+	case "prespec":
+		runPrespec(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -70,6 +73,33 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine merge-settings --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
+	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
+}
+
+// runPrespec implements the 'prespec <verb>' subcommand.
+// Requires exactly one verb argument; fails LOUD on missing or unknown verb (ADR-4).
+func runPrespec(args []string) {
+	runPrespecCore(verbFromArgs(args), os.Stdin, os.Stdout, os.Stderr, os.Exit)
+}
+
+// runPrespecCore is the testable core of the prespec subcommand.
+func runPrespecCore(verb string, stdin io.Reader, stdout io.Writer, stderr io.Writer, exit func(int)) {
+	if verb == "" {
+		fmt.Fprintln(stderr, "error: prespec requires a verb: rank, lint, readiness, brief")
+		exit(1)
+		return
+	}
+	prespec.PrespecCore(verb, stdin, stdout, stderr, exit)
+}
+
+// verbFromArgs extracts the first positional argument as the verb, empty if absent.
+func verbFromArgs(args []string) string {
+	for _, a := range args {
+		if !strings.HasPrefix(a, "-") {
+			return a
+		}
+	}
+	return ""
 }
 
 // writeFileFn is the type of a function that writes a file (injectable for tests).
