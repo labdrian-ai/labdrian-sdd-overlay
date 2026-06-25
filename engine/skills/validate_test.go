@@ -121,6 +121,83 @@ func TestDiff(t *testing.T) {
 			t.Errorf("expected 2 divergences (full scan), got %d: %v", len(divs), divs)
 		}
 	})
+
+	t.Run("mixed_tag_emitted", func(t *testing.T) {
+		// A manifest dir with HasConflict = true must produce DivMixedTag.
+		// Tag still matches the registry (managed/core), so no TAG_MISMATCH, only MIXED_TAG.
+		reg := makeReg([]Entry{coreEntry("foo")})
+		mv := ManifestView{
+			"foo": {Dir: "foo", Tag: "managed", HasConflict: true},
+		}
+		divs := Diff(reg, mv)
+		var hasMixed bool
+		for _, d := range divs {
+			if d.Class == DivMixedTag && d.Path == "foo" {
+				hasMixed = true
+			}
+		}
+		if !hasMixed {
+			t.Errorf("expected DivMixedTag for foo, got: %v", divs)
+		}
+	})
+
+	t.Run("mixed_tag_detail_names_dir", func(t *testing.T) {
+		// The DivMixedTag divergence detail must name the conflicting dir.
+		reg := makeReg([]Entry{customEntry("conflict-dir")})
+		mv := ManifestView{
+			"conflict-dir": {Dir: "conflict-dir", Tag: "custom", HasConflict: true},
+		}
+		divs := Diff(reg, mv)
+		for _, d := range divs {
+			if d.Class == DivMixedTag {
+				if !strings.Contains(d.Detail, "conflict-dir") {
+					t.Errorf("DivMixedTag detail must name the dir; got %q", d.Detail)
+				}
+				return
+			}
+		}
+		t.Errorf("expected DivMixedTag divergence, got: %v", divs)
+	})
+
+	t.Run("no_conflict_no_mixed_tag", func(t *testing.T) {
+		// A manifest dir with HasConflict = false must NOT produce DivMixedTag.
+		reg := makeReg([]Entry{coreEntry("clean-dir")})
+		mv := ManifestView{
+			"clean-dir": {Dir: "clean-dir", Tag: "managed", HasConflict: false},
+		}
+		divs := Diff(reg, mv)
+		for _, d := range divs {
+			if d.Class == DivMixedTag {
+				t.Errorf("expected no DivMixedTag for clean dir, got one: %v", d)
+			}
+		}
+	})
+
+	t.Run("mixed_tag_uncovered_by_registry", func(t *testing.T) {
+		// A manifest dir with HasConflict = true but no registry entry emits
+		// both DivMissingInRegistry and DivMixedTag.
+		reg := makeReg(nil)
+		mv := ManifestView{
+			"orphan-conflict": {Dir: "orphan-conflict", Tag: "managed", HasConflict: true},
+		}
+		divs := Diff(reg, mv)
+		hasMissing := false
+		hasMixed := false
+		for _, d := range divs {
+			if d.Class == DivMissingInRegistry && d.Path == "orphan-conflict" {
+				hasMissing = true
+			}
+			if d.Class == DivMixedTag && d.Path == "orphan-conflict" {
+				hasMixed = true
+			}
+		}
+		if !hasMissing {
+			t.Errorf("expected DivMissingInRegistry for orphan-conflict, got: %v", divs)
+		}
+		if !hasMixed {
+			t.Errorf("expected DivMixedTag for orphan-conflict, got: %v", divs)
+		}
+	})
 }
 
 func TestValidate(t *testing.T) {
@@ -179,6 +256,35 @@ func TestValidate(t *testing.T) {
 		_, err := Validate(reg, "/nonexistent/overlay.manifest")
 		if err == nil {
 			t.Error("expected error for missing manifest file")
+		}
+	})
+
+	t.Run("mixed_tag_manifest_reports_mixed_tag_divergence", func(t *testing.T) {
+		// End-to-end: a manifest file with conflicting SKILL.md rows for the same dir
+		// must cause Validate to return a DivMixedTag divergence and a non-nil error.
+		dir := t.TempDir()
+		manifestPath := filepath.Join(dir, "overlay.manifest")
+		// "foo" has both managed and custom SKILL.md rows.
+		content := "foo/SKILL.md managed\nfoo/SKILL.md custom\n"
+		if err := os.WriteFile(manifestPath, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		reg := Registry{Version: "1", Skills: []Entry{coreEntry("foo")}}
+		divs, err := Validate(reg, manifestPath)
+		if err == nil {
+			t.Error("expected non-nil error for mixed-tag manifest")
+		}
+		var hasMixed bool
+		for _, d := range divs {
+			if d.Class == DivMixedTag {
+				hasMixed = true
+				if !strings.Contains(d.Detail, "foo") {
+					t.Errorf("DivMixedTag detail must name the dir; got %q", d.Detail)
+				}
+			}
+		}
+		if !hasMixed {
+			t.Errorf("expected DivMixedTag in divergences, got: %v", divs)
 		}
 	})
 }

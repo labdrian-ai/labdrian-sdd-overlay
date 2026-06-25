@@ -1000,14 +1000,28 @@ cmd_prespec() {
   exec "$ENGINE_BINARY" prespec "$@"
 }
 
-# cmd_skills forwards to the engine binary's `skills` subcommand, passing
-# args straight through. Supports verbs: list, status, validate.
-# (e.g. `labdrian skills list` or `labdrian skills validate`)
+# cmd_skills forwards to the engine binary's `skills` subcommand.
+# Injects default --registry and --manifest paths from $OVERLAY_DIR so that
+# `labdrian skills list` / `labdrian skills validate` work from any cwd.
+# Flags already supplied by the caller are never overridden.
 cmd_skills() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
     die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
   fi
-  exec "$ENGINE_BINARY" skills "$@"
+
+  local has_registry=0 has_manifest=0
+  for arg in "$@"; do
+    [[ "$arg" == "--registry" ]] && has_registry=1
+    [[ "$arg" == "--manifest" ]] && has_manifest=1
+  done
+
+  local -a defaults=()
+  [[ "$has_registry" -eq 0 ]] && defaults+=("--registry" "$OVERLAY_DIR/skills.registry.yaml")
+  [[ "$has_manifest" -eq 0 ]] && defaults+=("--manifest" "$OVERLAY_DIR/overlay.manifest")
+
+  # Verb-first: "$@" carries the verb (and any user flags); injected defaults go
+  # AFTER it so the engine's positional verb extraction is not shadowed by a flag value.
+  exec "$ENGINE_BINARY" skills "$@" "${defaults[@]}"
 }
 
 # ---------------------------------------------------------------------------

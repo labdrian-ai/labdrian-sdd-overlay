@@ -13,8 +13,9 @@ var infraPrefixes = []string{"engine/", "_shared/"}
 
 // ManifestEntry records the skill directory name and its raw manifest tag.
 type ManifestEntry struct {
-	Dir string // first path component of the SKILL.md row (e.g. "sdd-spec")
-	Tag string // raw manifest tag: "managed" or "custom"
+	Dir         string // first path component of the SKILL.md row (e.g. "sdd-spec")
+	Tag         string // raw manifest tag: "managed" or "custom"
+	HasConflict bool   // true when the same dir has SKILL.md rows with different tags
 }
 
 // ManifestView is a map from skill directory name to ManifestEntry.
@@ -70,13 +71,16 @@ func LoadManifestView(path string) (ManifestView, error) {
 			continue
 		}
 
-		// First SKILL.md row wins for each dir.
-		// TODO(MIXED_TAG): if a later row for the same dir carries a different tag,
-		// the conflict is currently swallowed. Emit DivMixedTag from Validate before
-		// PR-4 wires the cross-check against the real overlay.manifest.
-		if _, exists := mv[dirName]; !exists {
+		if existing, exists := mv[dirName]; !exists {
+			// First SKILL.md row for this dir.
 			mv[dirName] = ManifestEntry{Dir: dirName, Tag: tag}
+		} else if tag != existing.Tag {
+			// A later SKILL.md row for the same dir carries a different tag: record conflict.
+			me := mv[dirName]
+			me.HasConflict = true
+			mv[dirName] = me
 		}
+		// Same tag seen again: no-op (no conflict, first row already recorded).
 	}
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("manifest: read %s: %w", path, err)
