@@ -186,4 +186,79 @@ func TestParseRegistry(t *testing.T) {
 			t.Fatal("expected non-nil error for empty input, got nil")
 		}
 	})
+
+	// --- FIX 1: inline trailing comments must be rejected (ADR-1) ---
+
+	t.Run("inline_comment_unquoted_rejected", func(t *testing.T) {
+		// Unquoted scalar with trailing " # ..." must error, not silently absorb the comment.
+		yaml := "version: \"1\"\nskills:\n  - id: sdd-spec # my skill\n    path: sdd-spec\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("expected error for inline comment in unquoted value, got nil")
+		}
+		if !strings.Contains(err.Error(), "inline comment") {
+			t.Errorf("error %q should mention inline comment", err.Error())
+		}
+	})
+
+	t.Run("hash_inside_quoted_value_accepted", func(t *testing.T) {
+		// A # inside a properly quoted value must NOT trigger the inline-comment error.
+		yaml := "version: \"1\"\nskills:\n  - id: \"a # b\"\n    path: skill-path\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		reg, err := ParseRegistry(strings.NewReader(yaml))
+		if err != nil {
+			t.Fatalf("unexpected error for # inside quoted value: %v", err)
+		}
+		if len(reg.Skills) != 1 || reg.Skills[0].ID != "a # b" {
+			t.Errorf("expected ID %q, got Skills=%v", "a # b", reg.Skills)
+		}
+	})
+
+	// --- FIX 2: unterminated quoted strings must error (ADR-1) ---
+
+	t.Run("unterminated_double_quote", func(t *testing.T) {
+		yaml := "version: \"1\"\nskills:\n  - id: \"unterminated\n    path: some-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("expected error for unterminated double-quoted string, got nil")
+		}
+		if !strings.Contains(err.Error(), "unterminated") {
+			t.Errorf("error %q should mention unterminated", err.Error())
+		}
+	})
+
+	t.Run("unterminated_single_quote", func(t *testing.T) {
+		yaml := "version: \"1\"\nskills:\n  - id: 'unterminated\n    path: some-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("expected error for unterminated single-quoted string, got nil")
+		}
+		if !strings.Contains(err.Error(), "unterminated") {
+			t.Errorf("error %q should mention unterminated", err.Error())
+		}
+	})
+
+	// --- FIX 3: R-005 coverage — core entry, upstream present, owner empty ---
+
+	t.Run("upstream_empty_owner_core_entry", func(t *testing.T) {
+		// R-005: core entry with upstream block present but owner field empty → error.
+		yaml := "version: \"1\"\nskills:\n  - id: some-core\n    path: some-core\n    source:\n      type: core\n      upstream:\n        owner:\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: vendor-merge\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("expected non-nil error for core entry with empty upstream.owner, got nil")
+		}
+	})
+
+	// --- SUGGESTION-2: |-/|+ must emit "block scalars not supported", not a generic format error ---
+
+	t.Run("block_scalar_chomping_clear_error", func(t *testing.T) {
+		// ADR-1: |- and |+ are block scalar indicators; error must name them explicitly.
+		yaml := "version: \"1\"\nskills:\n  - id: some-skill\n    path: some-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: |-\n        overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("expected error for block scalar indicator |-, got nil")
+		}
+		if !strings.Contains(err.Error(), "block scalar") {
+			t.Errorf("error %q should mention block scalars, not generic format error", err.Error())
+		}
+	})
 }

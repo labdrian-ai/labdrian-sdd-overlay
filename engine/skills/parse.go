@@ -92,9 +92,11 @@ func tokenize(r io.Reader) ([]tok, error) {
 			return nil, fmt.Errorf("line %d: YAML tags (!) are not supported", lineNum)
 		}
 
-		// Reject block scalars (| or > as the sole value after a key).
+		// Reject block scalars: any value starting with | or > after a key (covers
+		// |, >, |-, |+, >-, >+, |2, etc.).
 		if idx := strings.Index(trimmed, ": "); idx >= 0 {
-			if valPart := strings.TrimSpace(trimmed[idx+2:]); valPart == "|" || valPart == ">" {
+			valPart := strings.TrimSpace(trimmed[idx+2:])
+			if len(valPart) > 0 && (valPart[0] == '|' || valPart[0] == '>') {
 				return nil, fmt.Errorf("line %d: block scalars (| and >) are not supported", lineNum)
 			}
 		}
@@ -150,9 +152,20 @@ func parseContent(content string, indent, lineNum int, isSeqItem bool) (tok, err
 	}
 
 	if colonIdx < 0 {
-		// No key separator: plain scalar (only valid inside a sequence).
+		// SUGGESTION-2: block scalar indicator on a standalone line (e.g. just "|-").
+		if len(content) > 0 && (content[0] == '|' || content[0] == '>') {
+			return tok{}, fmt.Errorf("line %d: block scalars (| and >) are not supported", lineNum)
+		}
 		if isSeqItem {
-			return tok{kind: tokSeqScalar, indent: indent, val: unquoteScalar(content), lineNum: lineNum}, nil
+			// FIX 1: reject inline trailing comment in unquoted sequence scalar.
+			if !isQuotedScalar(content) && strings.Contains(content, " # ") {
+				return tok{}, fmt.Errorf("line %d: inline comments are not supported", lineNum)
+			}
+			val, err := unquoteScalar(content, lineNum)
+			if err != nil {
+				return tok{}, err
+			}
+			return tok{kind: tokSeqScalar, indent: indent, val: val, lineNum: lineNum}, nil
 		}
 		return tok{}, fmt.Errorf("line %d: expected 'key: value' or 'key:' format, got %q", lineNum, content)
 	}
@@ -171,21 +184,46 @@ func parseContent(content string, indent, lineNum int, isSeqItem bool) (tok, err
 	}
 
 	// key: value
-	val := unquoteScalar(strings.TrimSpace(content[colonIdx+2:]))
+	rawVal := strings.TrimSpace(content[colonIdx+2:])
+	// FIX 1: reject inline trailing comment in unquoted values.
+	if !isQuotedScalar(rawVal) && strings.Contains(rawVal, " # ") {
+		return tok{}, fmt.Errorf("line %d: inline comments are not supported", lineNum)
+	}
+	// FIX 2: detect unterminated quoted strings.
+	val, err := unquoteScalar(rawVal, lineNum)
+	if err != nil {
+		return tok{}, err
+	}
 	if isSeqItem {
 		return tok{kind: tokSeqMapping, indent: indent, key: key, val: val, lineNum: lineNum}, nil
 	}
 	return tok{kind: tokKeyValue, indent: indent, key: key, val: val, lineNum: lineNum}, nil
 }
 
-// unquoteScalar strips a matching surrounding pair of single or double quotes.
-func unquoteScalar(s string) string {
-	if len(s) >= 2 {
-		if (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'') {
-			return s[1 : len(s)-1]
-		}
+// isQuotedScalar reports whether s is a properly paired quoted string
+// (starts and ends with the same quote character, length >= 2).
+func isQuotedScalar(s string) bool {
+	if len(s) < 2 {
+		return false
 	}
-	return s
+	return (s[0] == '"' && s[len(s)-1] == '"') || (s[0] == '\'' && s[len(s)-1] == '\'')
+}
+
+// unquoteScalar strips a matching surrounding pair of single or double quotes.
+// FIX 2: if the scalar starts with a quote character but has no matching closing
+// quote it returns a line-numbered error (unterminated quoted string).
+func unquoteScalar(s string, lineNum int) (string, error) {
+	if len(s) == 0 {
+		return "", nil
+	}
+	if s[0] == '"' || s[0] == '\'' {
+		q := s[0]
+		if len(s) >= 2 && s[len(s)-1] == q {
+			return s[1 : len(s)-1], nil
+		}
+		return "", fmt.Errorf("line %d: unterminated quoted string", lineNum)
+	}
+	return s, nil
 }
 
 // --- token-stream parser ---
