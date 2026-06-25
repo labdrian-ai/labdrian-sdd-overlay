@@ -127,4 +127,46 @@ func TestLoadManifestView(t *testing.T) {
 			t.Fatalf("expected 1 entry, got %d", len(mv))
 		}
 	})
+
+	t.Run("mixed_tags_flagged", func(t *testing.T) {
+		// Two SKILL.md rows for the same dir with different tags must set HasConflict = true.
+		dir := t.TempDir()
+		path := filepath.Join(dir, "overlay.manifest")
+		content := "foo/SKILL.md managed\nfoo/SKILL.md custom\n"
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		mv, err := LoadManifestView(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		e, ok := mv["foo"]
+		if !ok {
+			t.Fatal("expected entry for foo")
+		}
+		if !e.HasConflict {
+			t.Errorf("expected HasConflict = true when rows carry mixed tags, got false")
+		}
+	})
+
+	t.Run("same_tag_not_flagged", func(t *testing.T) {
+		// Two SKILL.md rows for the same dir with the same tag must NOT set HasConflict.
+		dir := t.TempDir()
+		path := filepath.Join(dir, "overlay.manifest")
+		content := "bar/SKILL.md managed\nbar/SKILL.md managed\n"
+		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		mv, err := LoadManifestView(path)
+		if err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		e, ok := mv["bar"]
+		if !ok {
+			t.Fatal("expected entry for bar")
+		}
+		if e.HasConflict {
+			t.Errorf("expected HasConflict = false when rows carry the same tag, got true")
+		}
+	})
 }

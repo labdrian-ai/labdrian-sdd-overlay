@@ -73,12 +73,20 @@ func Diff(reg Registry, mv ManifestView) []Divergence {
 	}
 
 	// Any manifest dir not covered by a registry entry is MISSING_IN_REGISTRY.
-	for dir := range mv {
+	// Separately, any manifest dir with conflicting tags emits DivMixedTag (full scan).
+	for dir, me := range mv {
 		if !covered[dir] {
 			divs = append(divs, Divergence{
 				Class:  DivMissingInRegistry,
 				Path:   dir,
 				Detail: fmt.Sprintf("manifest skill dir %q has no entry in registry", dir),
+			})
+		}
+		if me.HasConflict {
+			divs = append(divs, Divergence{
+				Class:  DivMixedTag,
+				Path:   dir,
+				Detail: fmt.Sprintf("manifest skill dir %q has rows with both managed and custom tags", dir),
 			})
 		}
 	}
