@@ -573,7 +573,16 @@ cmd_sync_check() {
 cmd_tui() {
   command -v go >/dev/null 2>&1 || die "go is not installed; required to run the TUI"
   [[ -d "$OVERLAY_DIR/tui" ]] || die "tui/ not found at $OVERLAY_DIR/tui"
-  # Export repo root so the Go program can locate bin/overlay reliably.
+  # First-run convenience: a fresh clone only checks out `main`, but sync-check and
+  # the dashboard need a local `upstream` ref. Materialize it from origin/upstream if
+  # missing, so the user can go straight from `install-alias` to `tui` and do
+  # everything else (capture / apply / install-hooks) from inside the dashboard.
+  if ! git -C "$OVERLAY_DIR" show-ref --verify --quiet refs/heads/upstream \
+     && git -C "$OVERLAY_DIR" show-ref --verify --quiet refs/remotes/origin/upstream; then
+    git -C "$OVERLAY_DIR" branch --force upstream origin/upstream >/dev/null 2>&1 \
+      && info "Materialized local 'upstream' branch from origin/upstream."
+  fi
+  # Export repo root so the Go program can locate bin/labdrian-overlay reliably.
   export OVERLAY_DIR
   # Run from inside the module dir (repo root is not a Go module).
   cd "$OVERLAY_DIR/tui"
