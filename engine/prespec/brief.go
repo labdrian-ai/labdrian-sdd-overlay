@@ -87,18 +87,18 @@ func NewID() string {
 
 // Section keys for the six discovery sections (in order).
 const (
-	SectionProblemStatement = 0
-	SectionOutcomeGap       = 1
-	SectionConstraints      = 2
-	SectionHypothesis       = 3
-	SectionContext          = 4
-	SectionSuccessSignal    = 5
+	SectionJobStatement          = 0
+	SectionCurrentGap            = 1
+	SectionWhyNow                = 2
+	SectionUsersStakeholders     = 3
+	SectionConstraintsAlternatives = 4
+	SectionAssumptions           = 5
 )
 
 // Brief is the structured discovery output produced after a completed interview.
 // DiscoveryID (not ChangeName) is the unique identifier — R-012 forbids ChangeName
 // because a brief may cover multiple future changes.
-// Spec field mapping: JobStatement→Job, Section1..Section6→Sections[0..5].
+// Spec field mapping: Job→Job statement summary, Sections[0..5]→JobStatement/CurrentGap/WhyNow/UsersStakeholders/ConstraintsAlternatives/Assumptions.
 type Brief struct {
 	// DiscoveryID is the hand-rolled ULID that uniquely identifies this brief (R-014).
 	DiscoveryID string
@@ -151,12 +151,12 @@ func (b Brief) Validate(cells []Cell) error {
 
 // sectionHeaders are the human-readable names for the six discovery sections.
 var sectionHeaders = [6]string{
-	"1. Problem Statement",
-	"2. Outcome Gap",
-	"3. Constraints",
-	"4. Hypothesis",
-	"5. Context",
-	"6. Success Signal",
+	"1. Job Statement",
+	"2. Current Gap & Problem Evidence",
+	"3. Why Now",
+	"4. Users & Stakeholders",
+	"5. Constraints & Alternatives",
+	"6. Assumptions",
 }
 
 // RenderBrief produces the canonical Markdown representation of a Brief (R-011, R-018).
