@@ -9,6 +9,20 @@ on:
       - "**"
 
 jobs:
+  lint-shell:
+    name: Shell Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Syntax check bin/overlay
+        run: bash -n bin/overlay
+
+      - name: ShellCheck bin/overlay
+        run: shellcheck bin/overlay || true
+
   test-engine:
     name: Engine Tests
     runs-on: ubuntu-latest

@@ -1,0 +1,35 @@
+# EXTERNAL PATCH — DO NOT apply inside this repo.
+#
+# Rationale: skill-resolver.md is an external gentleman-programming skill file distributed to
+# both ~/.claude/skills/_shared/skill-resolver.md and
+# ~/.config/opencode/skills/_shared/skill-resolver.md (byte-identical copies — apply this
+# patch to BOTH). The repo does not own a copy of this file. Step 1 resolution order
+# (lines 19-23) collapses "no registry found" and "resolution failed/inconclusive" into a
+# single silent "proceed without project skills" outcome, which let a transient discovery
+# failure be misread as a confirmed absence of skills. The fix distinguishes three outcomes
+# and FAILS LOUD on the inconclusive/error case.
+#
+# Honors REGISTRY-AUTHORITATIVE (an inconclusive resolution is never treated as "zero") and
+# FAIL-LOUD (errors are surfaced, not silently swallowed by "proceed without skills").
+
+--- a/skills/_shared/skill-resolver.md
++++ b/skills/_shared/skill-resolver.md
+@@ -17,10 +17,21 @@ The registry is an **index** of skill names, triggers, scopes, and exact `SKILL.
+
+ Resolution order:
+ 1. Use the session cache if present.
+ 2. `mem_search(query: "skill-registry", project: "{project}")` → `mem_get_observation(id)` for full content.
+ 3. Fallback: read `.atl/skill-registry.md` from the project root.
+-4. No registry found → proceed without project skills and warn the user to run `gentle-ai skill-registry refresh`.
++4. Classify the outcome into exactly one of three cases — never collapse them:
++   - **registry-found** → use it.
++   - **registry-genuinely-empty (verified)** → the registry was read successfully and lists
++     zero skills. Only then proceed without project skills.
++   - **resolution-inconclusive / error** → Engram unreachable, `.atl/skill-registry.md`
++     unreadable, or a discovery command failed (e.g. a missing `fd`/`eza`). This is NOT
++     "no skills". FAIL LOUD: warn the user with the exact tool and error, do NOT silently
++     "proceed without project skills", and do NOT treat the result as zero. Re-attempt with
++     portable tools (`find`/`ls`) before concluding anything.
++
++   Skill presence is decided by the registry, never by a raw filesystem scan. An empty or
++   failed scan is INCONCLUSIVE; it is never proof that skills are absent or "virtual".

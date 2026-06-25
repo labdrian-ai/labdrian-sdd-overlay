@@ -1,0 +1,40 @@
+# EXTERNAL PATCH — DO NOT apply inside this repo.
+#
+# Rationale: skill-registry/SKILL.md is an external gentleman-programming skill file
+# distributed to both ~/.claude/skills/skill-registry/SKILL.md and
+# ~/.config/opencode/skills/skill-registry/SKILL.md (byte-identical copies — apply this patch
+# to BOTH). The repo does not own a copy of this file. Two lines make a transient discovery
+# failure authoritative:
+#   - line 29 "No skills found -> Write an empty registry so agents stop searching blindly"
+#     lets an empty/failed scan (fd/eza missing, stdout swallowed by 2>/dev/null) be PERSISTED
+#     as an empty registry — turning a tool failure into authoritative wrong data.
+#   - line 34 "Scan all known user and project skill directories for */SKILL.md" prescribes a
+#     bare scan with no portability guard and no fail-loud handling.
+#
+# Honors REGISTRY-AUTHORITATIVE (never persist "zero" from an unverified scan), PORTABLE
+# DISCOVERY (command -v guard + POSIX fallback), and FAIL-LOUD (no bare 2>/dev/null or
+# || true; missing tool / unreadable source => visible message + scan marked inconclusive).
+
+--- a/skills/skill-registry/SKILL.md
++++ b/skills/skill-registry/SKILL.md
+@@ -23,12 +23,16 @@
+
+ ## Decision Gates
+
+ | Situation | Action |
+ | --- | --- |
+ | Same skill exists globally and in project | Keep the project-level skill |
+ | Same skill exists in multiple global locations | Keep the first source in scan order |
+-| No skills found | Write an empty registry so agents stop searching blindly |
++| Scan returned zero AND every source dir was confirmed present and readable | Genuinely empty: write an empty registry |
++| Scan returned zero but a source dir was missing/unreadable, or a discovery tool was absent/errored | INCONCLUSIVE — do NOT overwrite the registry as empty. Preserve any existing registry, emit a visible warning naming the tool/dir/error, and stop. A failed scan is never proof of "zero skills". |
+ | Agent will delegate work | Select matching registry rows and pass their `SKILL.md` paths |
+
+ ## Execution Steps
+
+-1. Scan all known user and project skill directories for `*/SKILL.md`.
++1. Scan all known user and project skill directories for `*/SKILL.md` using portable, tool-guarded discovery: guard every discovery command with `command -v <tool>` and fall back to POSIX `find`/`ls`; never assume `fd`/`eza`/`bat` exist. NEVER append a bare `2>/dev/null` or `|| true` to a discovery command — a missing tool or unreadable source dir MUST produce a visible, actionable message and mark the scan INCONCLUSIVE rather than empty (see Decision Gates).
+ 2. Read frontmatter only as needed to extract `name` and `description` trigger text.
+ 3. Render `.atl/skill-registry.md` with scanned sources, registry contract, skill name, trigger/description, scope, and exact path.
+ 4. Persist to Engram when available using `title: skill-registry`, `topic_key: skill-registry`, `type: config`, and `capture_prompt: false`.
+ 5. Return the registry path, skill count, cache status, and whether Engram was updated.

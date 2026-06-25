@@ -1,6 +1,12 @@
 # labdrian-sdd-overlay
 
-A vendor+overlay git framework that lets your customized gentle-ai skills survive `gentle-ai sync`/upgrade cycles — now with multi-target deploy for Claude Code, OpenCode, and Codex.
+A customization layer over `gentle-ai` (an SDD-driven, multi-agent dev runtime) that lets your overlaid skills and rules **survive `gentle-ai` updates**, via a two-branch model: `upstream` (pristine vendor baseline) + `main` (your customizations on top).
+
+**What it does:**
+
+- Tracks vendor-managed and custom skills in a git overlay, so `gentle-ai sync`/`upgrade` never silently clobbers your changes.
+- Deploys your overlaid skills to **three agent runtimes**: Claude Code (`~/.claude/skills`), opencode (`~/.config/opencode/skills`), and codex (`~/.codex/skills`).
+- Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject a minimalism contract **only** into the code-writing SDD phases (`sdd-tasks`/`sdd-apply`) and exclude it from all others. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
 
@@ -32,7 +38,7 @@ Now, from any directory:
 labdrian tui     # see per-target drift / gentle-ai sync state, and apply updates
 ```
 
-The TUI shows whether each target is in sync with gentle-ai and lets you re-capture and re-apply your overlay without leaving the dashboard. Prefer the CLI? Jump to [Normal update cycle](#normal-update-cycle-per-target).
+The TUI shows whether each target is in sync with gentle-ai and lets you re-capture and re-apply your overlay without leaving the dashboard. Prefer the CLI? See [Usage](#usage) below.
 
 ## What this is
 
@@ -64,6 +70,74 @@ Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default
 
 **managed**: tracked on both `upstream` and `main`. Gets merged when upstream updates.
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
+
+## Usage
+
+`labdrian` is the alias to `bin/overlay`, installed via `overlay install-alias`. All commands below work as `labdrian <command>` or `overlay <command>` from the repo root.
+
+### Launch
+
+```bash
+labdrian tui          # recommended: full TUI dashboard
+```
+
+The TUI wraps the CLI — everything below is also available as individual commands.
+
+### Action map
+
+| Command | Mode | What it does |
+|---------|------|--------------|
+| `status` | read-only | Per-file drift between repo and each live target |
+| `sync-check` | read-only | **The compass** — tells you exactly what to do (see verdicts below) |
+| `apply [--target claude\|opencode\|codex\|all]` | **modifies** | Merge upstream→main, then deploy overlay to target(s). Shows confirmation before mutating. |
+| `capture [--target claude\|opencode\|codex]` | **modifies** | Pull a gentle-ai update into the `upstream` branch. Single target only. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
+| `uninstall-hooks` | **modifies** | Remove the two overlay hook entries from `~/.claude/settings.json`, leaving all other keys intact. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contract readable — exits 0 if all healthy. |
+| `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
+
+### The 3 workflows
+
+**1. Day-to-day — nothing to do.**
+The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism contract into `sdd-tasks`/`sdd-apply` automatically.
+
+**2. gentle-ai released an update.**
+```bash
+labdrian sync-check                         # UPSTREAM_CHANGED detected
+labdrian capture --target claude            # pull new vendor files into upstream
+labdrian apply                              # re-merge your customizations + redeploy
+labdrian sync-check                         # confirm: healthy
+```
+
+**3. You edited a skill.**
+```bash
+# edit skills/<path>.md in your editor
+labdrian apply                              # redeploy to all targets
+labdrian sync-check                         # confirm in-sync
+```
+
+**4. One-time hooks setup (run once per machine).**
+```bash
+labdrian install-hooks                      # build engine, wire hooks into settings.json
+labdrian status-hooks                       # all green?
+```
+
+### The compass — sync-check verdicts
+
+`sync-check` compares three things per target: live file vs. `main` (overlay) and live file vs. `upstream` (vendor baseline).
+
+| Verdict | Meaning | Action |
+|---------|---------|--------|
+| `UPSTREAM_CHANGED` | gentle-ai updated a file; overlay not yet re-captured | `capture` → `apply` |
+| `OVERLAY_NOT_DEPLOYED` | your customization exists in the repo but isn't live | `apply` |
+| healthy (no flags) | everything in sync | nothing to do |
+
+```
+VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0
+ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' then 'overlay apply'
+```
+
+> **Convention:** commands that **read only** are always safe to run. Commands marked **modifies** show a confirmation first and, for hook operations, write a `.bak` backup before touching `~/.claude/settings.json`.
 
 ## Normal update cycle (per target)
 
@@ -146,6 +220,19 @@ overlay status [--target claude|opencode|codex|all]
 
 overlay sync-check [--target claude|opencode|codex|all]
     Validate gentle-ai sync state: UPSTREAM_CHANGED and OVERLAY_NOT_DEPLOYED per target (default: all).
+
+overlay install-hooks
+    Build the Go engine binary and wire the two deterministic-scoping hooks into
+    ~/.claude/settings.json (UserPromptSubmit + PreToolUse/Agent). Backs up settings.json
+    to settings.json.bak before modifying. Run once to activate; inert until then.
+
+overlay uninstall-hooks
+    Remove the two overlay hook entries from ~/.claude/settings.json, leaving all
+    other keys and hooks intact.
+
+overlay status-hooks
+    Check overlay installation health: binary present, hooks wired, contract readable.
+    Exits 0 if all OK, 1 if any check fails. Safe to run at any time.
 
 overlay tui
     Launch the Go/Bubbletea TUI front-end (target selection + gentle-ai sync dashboard).

@@ -22,8 +22,17 @@
 // leaving all other keys and hooks intact. Idempotent; no-op if file absent.
 //
 // status: checks and reports the health of the overlay installation (binary,
-// hooks wired in settings.json, contract readable). Exits 0 if all OK, 1 if
-// any check fails. Intended for manual diagnostics — never called by hooks.
+// hooks wired in settings.json, contract readable, registry state). Exit codes:
+// 0 = all OK, 1 = a hard check FAILED, 2 = no hard failure but a check is
+// DEGRADED (e.g. registry present but its scoped block is missing). The registry
+// is fail-loud: an empty or unreadable registry is a FAIL, never a silent OK.
+// Intended for manual diagnostics — never called by hooks.
+//
+// propagate/gate-task accept --embedded-contract <name> to source an
+// engine-owned managed contract (e.g. skill-discovery-safety) from the binary
+// instead of an external file; propagate then writes that contract's DISTINCT
+// marker block. propagate also accepts --require-registry to turn an absent
+// registry into a fail-loud error instead of a silent no-op.
 package main
 
 import (
@@ -34,11 +43,47 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
+
+// embeddedContract resolves a named engine-owned managed contract to its content
+// and (for propagate) the distinct marker pair + row label that scope its block.
+// Returns ok=false for an unknown name so callers can fail loud.
+//
+// Adding a second managed contract here is the supported extension point: the
+// engine ships the canonical text, so the guard propagates on every install with
+// no dependency on an external, regenerable skill file.
+func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
+	switch name {
+	case "skill-discovery-safety":
+		return embeddedContractSpec{
+			content:     assets.SkillDiscoverySafety,
+			beginMarker: propagator.DiscoverySafetyBeginMarker,
+			endMarker:   propagator.DiscoverySafetyEndMarker,
+			rowLabel:    "skill-discovery-safety",
+			// defaultPath is the registry-row Path cell / bare injected line when
+			// the caller does not override --contract-path. It is where the
+			// overlay deploys the standalone copy of this contract.
+			defaultPath: "skills/_shared/skill-discovery-safety.md",
+		}, true
+	default:
+		return embeddedContractSpec{}, false
+	}
+}
+
+// embeddedContractSpec bundles the resolved attributes of an engine-owned
+// managed contract.
+type embeddedContractSpec struct {
+	content     string
+	beginMarker string
+	endMarker   string
+	rowLabel    string
+	defaultPath string
+}
 
 func main() {
 	if len(os.Args) < 2 {
@@ -68,12 +113,15 @@ func main() {
 
 func usage() {
 	fmt.Fprintln(os.Stderr, "Usage:")
-	fmt.Fprintln(os.Stderr, "  engine propagate --registry <path> --contract-file <path> [--contract-path <str>]")
-	fmt.Fprintln(os.Stderr, "  engine gate-task --contract-file <path> [--contract-path <str>]")
+	fmt.Fprintln(os.Stderr, "  engine propagate --registry <path> (--contract-file <path> [--contract-path <str>] | --embedded-contract <name>) [--require-registry]")
+	fmt.Fprintln(os.Stderr, "  engine gate-task (--contract-file <path> | --embedded-contract <name>) [--contract-path <str>]")
 	fmt.Fprintln(os.Stderr, "  engine merge-settings --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
+	fmt.Fprintln(os.Stderr, "")
+	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety")
+	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.
@@ -122,8 +170,10 @@ func runPropagateCore(
 	writeFile writeFileFn,
 	exit func(int),
 ) {
-	var registryPath, contractFilePath, contractPath string
+	var registryPath, contractFilePath, contractPath, embeddedName string
 	contractPath = "skills/_shared/minimalism-contract.md" // default
+	contractPathExplicit := false
+	requireRegistry := false
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -141,7 +191,15 @@ func runPropagateCore(
 			i++
 			if i < len(args) {
 				contractPath = args[i]
+				contractPathExplicit = true
 			}
+		case "--embedded-contract":
+			i++
+			if i < len(args) {
+				embeddedName = args[i]
+			}
+		case "--require-registry":
+			requireRegistry = true
 		}
 	}
 
@@ -152,20 +210,47 @@ func runPropagateCore(
 	}
 	// Clean the registry path to prevent path-traversal via "../" segments.
 	registryPath = filepath.Clean(registryPath)
-	if contractFilePath == "" {
-		fmt.Fprintln(stderr, "error: --contract-file is required")
-		exit(1)
-		return
+
+	// Resolve the contract content and its block scope. An embedded contract
+	// (engine-owned managed text) takes precedence and overrides marker/label so
+	// it writes a DISTINCT block that never collides with minimalism-contract.
+	cfg := propagator.Config{ContractPath: contractPath}
+	rowLabelForMsg := "minimalism-contract"
+	var contractContent string
+
+	if embeddedName != "" {
+		spec, ok := embeddedContract(embeddedName)
+		if !ok {
+			fmt.Fprintf(stderr, "error: unknown embedded contract %q\n", embeddedName)
+			exit(1)
+			return
+		}
+		contractContent = spec.content
+		cfg.BeginMarker = spec.beginMarker
+		cfg.EndMarker = spec.endMarker
+		cfg.RowLabel = spec.rowLabel
+		rowLabelForMsg = spec.rowLabel
+		// Use the embedded contract's own path in the registry row unless the
+		// caller explicitly overrode --contract-path.
+		if !contractPathExplicit {
+			cfg.ContractPath = spec.defaultPath
+		}
+	} else {
+		if contractFilePath == "" {
+			fmt.Fprintln(stderr, "error: --contract-file is required")
+			exit(1)
+			return
+		}
+		b, err := readFile(contractFilePath)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: reading contract file: %v\n", err)
+			exit(1)
+			return
+		}
+		contractContent = string(b)
 	}
 
-	contractContent, err := readFile(contractFilePath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading contract file: %v\n", err)
-		exit(1)
-		return
-	}
-
-	phases, err := propagator.ParseFrontmatter(string(contractContent))
+	phases, err := propagator.ParseFrontmatter(contractContent)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
@@ -175,7 +260,14 @@ func runPropagateCore(
 	registryContent, err := readFile(registryPath)
 	if err != nil {
 		if os.IsNotExist(err) {
-			// Registry absent: this project does not use the overlay. Clean no-op.
+			// Registry absent. Default: clean no-op (project does not use the
+			// overlay). Strict: fail loud so a misconfiguration where the
+			// registry was EXPECTED is never an invisible no-op.
+			if requireRegistry {
+				fmt.Fprintf(stderr, "error: registry required but not found at %s (--require-registry)\n", registryPath)
+				exit(1)
+				return
+			}
 			fmt.Fprintf(stdout, "propagate: registry not found at %s — project does not use the overlay (no-op)\n", registryPath)
 			return
 		}
@@ -184,7 +276,6 @@ func runPropagateCore(
 		return
 	}
 
-	cfg := propagator.Config{ContractPath: contractPath}
 	out, changed, err := propagator.Propagate(string(registryContent), cfg, phases)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
@@ -193,7 +284,7 @@ func runPropagateCore(
 	}
 
 	if !changed {
-		fmt.Fprintln(stdout, "registry: minimalism-contract scope is already correct (no-op)")
+		fmt.Fprintf(stdout, "registry: %s scope is already correct (no-op)\n", rowLabelForMsg)
 		return
 	}
 
@@ -202,7 +293,7 @@ func runPropagateCore(
 		exit(1)
 		return
 	}
-	fmt.Fprintln(stdout, "registry: minimalism-contract scoped row inserted/updated")
+	fmt.Fprintf(stdout, "registry: %s scoped row inserted/updated\n", rowLabelForMsg)
 }
 
 // stdinSizeLimit caps how many bytes we read from stdin to prevent a runaway
@@ -222,8 +313,9 @@ type readFileFn func(string) ([]byte, error)
 // injectable stdin/stdout/stderr and a file-reader so unit tests can exercise
 // all branches without real files or OS I/O.
 func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, readFile readFileFn) {
-	var contractFilePath, contractPath string
-	contractPath = "skills/_shared/minimalism-contract.md" // default
+	var contractFilePath, contractPath, embeddedName string
+	contractPath = "skills/_shared/minimalism-contract.md" // default (minimalism)
+	contractPathExplicit := false
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -236,26 +328,52 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 			i++
 			if i < len(args) {
 				contractPath = args[i]
+				contractPathExplicit = true
+			}
+		case "--embedded-contract":
+			i++
+			if i < len(args) {
+				embeddedName = args[i]
 			}
 		}
 	}
 
-	// F3: emit a diagnostic when --contract-file is missing so wiring mistakes
-	// during PR-B integration are immediately visible. Still fail-safe (exit 0).
-	if contractFilePath == "" {
-		fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; all Agent hooks will pass through")
-		fmt.Fprintln(stdout, "{}")
-		return
-	}
+	var contractContent string
 
-	// Fail-safe: if contract file cannot be read, emit diagnostic + pass-through.
-	b, err := readFile(contractFilePath)
-	if err != nil {
-		fmt.Fprintf(stderr, "gate-task: warning: cannot read contract file: %v (passing through)\n", err)
-		fmt.Fprintln(stdout, "{}")
-		return
+	if embeddedName != "" {
+		// Engine-owned managed contract: content ships in the binary, so the
+		// guard injects even when no external contract file exists. Unknown
+		// names stay fail-safe (pass-through) per the gate-task contract.
+		spec, ok := embeddedContract(embeddedName)
+		if !ok {
+			fmt.Fprintf(stderr, "gate-task: warning: unknown embedded contract %q (passing through)\n", embeddedName)
+			fmt.Fprintln(stdout, "{}")
+			return
+		}
+		contractContent = spec.content
+		// When --contract-path was not explicitly provided, use the embedded
+		// contract's own default path (mirrors runPropagateCore behaviour).
+		if !contractPathExplicit {
+			contractPath = spec.defaultPath
+		}
+	} else {
+		// F3: emit a diagnostic when --contract-file is missing so wiring mistakes
+		// during PR-B integration are immediately visible. Still fail-safe (exit 0).
+		if contractFilePath == "" {
+			fmt.Fprintln(stderr, "gate-task: warning: --contract-file not provided; all Agent hooks will pass through")
+			fmt.Fprintln(stdout, "{}")
+			return
+		}
+
+		// Fail-safe: if contract file cannot be read, emit diagnostic + pass-through.
+		b, err := readFile(contractFilePath)
+		if err != nil {
+			fmt.Fprintf(stderr, "gate-task: warning: cannot read contract file: %v (passing through)\n", err)
+			fmt.Fprintln(stdout, "{}")
+			return
+		}
+		contractContent = string(b)
 	}
-	contractContent := string(b)
 
 	// F4: cap stdin reads to stdinSizeLimit so a runaway producer cannot exhaust memory.
 	// On truncation the JSON will be malformed → gate.Process absorbs it as pass-through.
@@ -394,19 +512,32 @@ func defaultStatusDeps() statusDeps {
 }
 
 // runStatus is the public entry point for the 'status' subcommand.
-// It uses real OS deps and exits with the result code from statusCore.
+// It uses real OS deps and chooses the process exit code:
+//
+//	0 — every check passed (healthy).
+//	1 — at least one hard check FAILED.
+//	2 — no hard failure, but at least one check is DEGRADED (e.g. the registry
+//	    exists but its scoped block is missing). Distinct from 1 so callers can
+//	    tell "broken" from "present-but-needs-attention".
 func runStatus(_ []string) {
-	allOK := statusCore(os.Stdout, defaultStatusDeps())
-	if !allOK {
+	allOK, degraded := statusCore(os.Stdout, defaultStatusDeps())
+	switch {
+	case !allOK:
 		os.Exit(1)
+	case degraded:
+		os.Exit(2)
 	}
 }
 
 // checkResult holds the result of a single status check.
+//
+// Three tiers: ok=true & degraded=false → OK; ok=false → FAIL (hard);
+// ok=true & degraded=true → WARN (degraded but not a hard failure).
 type checkResult struct {
-	label string
-	ok    bool
-	note  string
+	label    string
+	ok       bool
+	degraded bool
+	note     string
 }
 
 // binaryIdentity is the substring used to identify our hook entries in
@@ -414,8 +545,9 @@ type checkResult struct {
 const binaryIdentity = "gentle-ai-overlay"
 
 // statusCore runs all checks and writes the report to stdout.
-// Returns true if every check passed (caller may exit 0), false otherwise.
-func statusCore(stdout io.Writer, deps statusDeps) bool {
+// Returns (allOK, degraded): allOK is true only when no check FAILED; degraded
+// is true when no check FAILED but at least one is in the WARN/degraded tier.
+func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	home := deps.home()
 	binaryPath := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
 	settingsPath := filepath.Join(home, ".claude", "settings.json")
@@ -442,12 +574,16 @@ func statusCore(stdout io.Writer, deps statusDeps) bool {
 	}
 
 	// Emit report.
-	allOK := true
+	allOK = true
 	for _, c := range checks {
 		status := "OK  "
-		if !c.ok {
+		switch {
+		case !c.ok:
 			status = "FAIL"
 			allOK = false
+		case c.degraded:
+			status = "WARN"
+			degraded = true
 		}
 		if c.note != "" {
 			fmt.Fprintf(stdout, "[%s] %s — %s\n", status, c.label, c.note)
@@ -455,7 +591,7 @@ func statusCore(stdout io.Writer, deps statusDeps) bool {
 			fmt.Fprintf(stdout, "[%s] %s\n", status, c.label)
 		}
 	}
-	return allOK
+	return allOK, degraded
 }
 
 // checkBinary verifies the engine binary is present and executable.
@@ -571,21 +707,45 @@ func checkContract(contractPath string, readFile readFileFn) checkResult {
 	return checkResult{label: label, ok: true}
 }
 
-// checkRegistry is a best-effort check: reports whether a .atl/skill-registry.md
-// exists in cwd and contains the scoped minimalism-contract block.
-// Never returns ok=false — it's best-effort (always reports but never fails the suite).
+// checkRegistry reports on the .atl/skill-registry.md in cwd, distinguishing
+// three outcomes per the fix principles (REGISTRY-AUTHORITATIVE + FAIL-LOUD):
+//
+//   - ABSENT → OK, quiet. A project that does not use the overlay is not a
+//     problem; this is the only branch that stays silently OK.
+//   - UNREADABLE (real IO error, not IsNotExist) → FAIL. A genuine OS error must
+//     surface, never be downgraded to an OK note.
+//   - PRESENT BUT EMPTY / whitespace-only → FAIL. An emptied registry is the
+//     incident's misread state: it must be loud, never treated as "zero skills".
+//   - PRESENT, scoped block MISSING → WARN (degraded). Actionable, not fatal.
+//   - PRESENT, scoped block FOUND → OK.
 func checkRegistry(registryPath string, readFile readFileFn) checkResult {
-	label := "registry (best-effort): " + registryPath
+	label := "registry: " + registryPath
 	data, err := readFile(registryPath)
 	if err != nil {
 		if os.IsNotExist(err) {
 			return checkResult{label: label, ok: true, note: "not present (project may not use the overlay)"}
 		}
-		return checkResult{label: label, ok: true, note: "cannot read: " + err.Error()}
+		// A real OS error is a genuine failure — fail loud, do not downgrade.
+		return checkResult{label: label, ok: false, note: "cannot read: " + err.Error()}
 	}
 	content := string(data)
-	if containsSubstring(content, propagator.BeginMarker) {
-		return checkResult{label: label, ok: true, note: "scoped block present"}
+	if strings.TrimSpace(content) == "" {
+		return checkResult{
+			label: label,
+			ok:    false,
+			note:  "present but EMPTY — run skill-registry refresh; do NOT conclude skills are absent (an empty registry is inconclusive, not zero)",
+		}
 	}
-	return checkResult{label: label, ok: true, note: "present but scoped block missing (run 'overlay install-hooks' or propagate)"}
+	hasMinimalism := containsSubstring(content, propagator.BeginMarker)
+	hasSafety := containsSubstring(content, propagator.DiscoverySafetyBeginMarker)
+	switch {
+	case hasMinimalism && hasSafety:
+		return checkResult{label: label, ok: true, note: "scoped block present"}
+	case !hasMinimalism && !hasSafety:
+		return checkResult{label: label, ok: true, degraded: true, note: "present but both scoped blocks missing (run 'overlay install-hooks' or propagate)"}
+	case !hasMinimalism:
+		return checkResult{label: label, ok: true, degraded: true, note: "present but minimalism-contract-scope block missing (run 'overlay install-hooks' or propagate)"}
+	default: // !hasSafety
+		return checkResult{label: label, ok: true, degraded: true, note: "present but skill-discovery-safety-scope block missing (run 'overlay install-hooks' or propagate)"}
+	}
 }
