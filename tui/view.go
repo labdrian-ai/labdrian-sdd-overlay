@@ -18,17 +18,6 @@ var (
 	colorAccent2 = lipgloss.Color("75")  // sky blue — secondary accent
 	colorWhite   = lipgloss.Color("255")
 
-	headerStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(colorWhite).
-			Background(colorAccent).
-			Padding(0, 2)
-
-	subHeaderStyle = lipgloss.NewStyle().
-			Foreground(colorAccent2).
-			Background(colorMuted).
-			Padding(0, 2)
-
 	footerStyle = lipgloss.NewStyle().
 			Foreground(colorGray).
 			BorderTop(true).
@@ -41,7 +30,7 @@ var (
 	selectedStyle  = lipgloss.NewStyle().Foreground(colorGreen).Bold(true)
 	dimStyle       = lipgloss.NewStyle().Foreground(colorGray)
 	mutingStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorWhite).MarginBottom(1)
+	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
 	highlightStyle = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
 	sectionStyle   = lipgloss.NewStyle().Bold(true).Foreground(colorAccent2)
 
@@ -84,44 +73,197 @@ func (m model) View() string {
 		body = m.viewResult()
 	}
 
-	w := m.contentWidth()
-	composed := strings.Join([]string{m.header(), body, m.footer()}, "\n")
-	return lipgloss.NewStyle().MaxWidth(w).Render(composed)
-}
+	termW := m.contentWidth()
+	repoLine := m.repoLine()
+	keys := m.footerKeys()
 
-func (m model) header() string {
-	w := m.contentWidth()
-	title := headerStyle.Render(" overlay TUI ")
-	subtitle := subHeaderStyle.Render(" gentle-ai sync validator ")
-	bar := lipgloss.JoinHorizontal(lipgloss.Top, title, subtitle)
-	bar = lipgloss.NewStyle().Width(w).Render(bar)
-	if m.rootErr != nil {
-		return bar + "\n" + errStyle.Render("  Error al localizar el repositorio: "+m.rootErr.Error())
+	// colW is the single content-column width for this screen: the widest
+	// body/footer/repo line. The logo is excluded from the max (so it does not
+	// inflate the column) but used as a floor so the hero art never clips.
+	// Capped to the terminal width for narrow-width safety.
+	colW := maxLineWidth(body)
+	if w := maxLineWidth(keys); w > colW {
+		colW = w
 	}
-	return bar + "\n" + mutingStyle.Render("  "+m.repoRoot)
+	if w := maxLineWidth(repoLine); w > colW {
+		colW = w
+	}
+	if lw := maxLineWidth(logoBanner(0)); lw > colW {
+		colW = lw
+	}
+	if colW > termW {
+		colW = termW
+	}
+	if colW < 1 {
+		colW = 1
+	}
+
+	// Single vertical axis: the logo is centered WITHIN the column; body and
+	// footer are left-aligned at the column's left edge. Then the whole column
+	// is centered on screen by one uniform leftPad, so header + body + footer all
+	// share the exact same left edge.
+	header := logoBanner(colW) + "\n" + repoLine
+	footer := footerStyle.Width(colW).Render(keys)
+	composed := strings.Join([]string{header, body, footer}, "\n")
+
+	leftPad := (termW - colW) / 2
+	if leftPad < 0 {
+		leftPad = 0
+	}
+	composed = indentBlock(composed, leftPad)
+
+	return lipgloss.NewStyle().MaxWidth(termW).Render(composed)
 }
 
-func (m model) footer() string {
-	w := m.contentWidth()
-	var keys string
+// repoLine renders the repo-root path (or the locate error) at the column's
+// left edge — no hardcoded indent.
+func (m model) repoLine() string {
+	if m.rootErr != nil {
+		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
+	}
+	return mutingStyle.Render(m.repoRoot)
+}
+
+// footerKeys returns the raw key-hint legend for the active screen. The width
+// styling and column alignment are applied by View().
+func (m model) footerKeys() string {
 	switch m.scr {
 	case screenTargets:
-		keys = "↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir"
+		return "↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir"
 	case screenActions:
-		keys = "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
+		return "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
 	case screenConfirm:
-		keys = "y/enter confirmar  ·  n/esc cancelar"
+		return "y/enter confirmar  ·  n/esc cancelar"
 	case screenRunning:
-		keys = "Ejecutando…"
+		return "Ejecutando…"
 	case screenResult:
-		keys = "↑/↓ desplazar  ·  esc/enter volver  ·  q salir"
+		return "↑/↓ desplazar  ·  esc/enter volver  ·  q salir"
 	}
-	return footerStyle.Width(w).Render(keys)
+	return ""
+}
+
+// maxLineWidth returns the widest visible line width (ANSI-aware) in s.
+func maxLineWidth(s string) int {
+	w := 0
+	for _, line := range strings.Split(s, "\n") {
+		if lw := lipgloss.Width(line); lw > w {
+			w = lw
+		}
+	}
+	return w
+}
+
+// indentBlock prepends pad spaces to every non-empty line, shifting an entire
+// block to a shared left edge without filling blank lines with whitespace.
+func indentBlock(s string, pad int) string {
+	if pad <= 0 {
+		return s
+	}
+	prefix := strings.Repeat(" ", pad)
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		if line == "" {
+			continue
+		}
+		lines[i] = prefix + line
+	}
+	return strings.Join(lines, "\n")
+}
+
+// ouroborosArt is the labdrian hero logo: an ouroboros (a serpent biting its
+// own tail) rasterized from an image into Braille glyphs, matching gentle-ai's
+// dithered logo style. 34 cells wide.
+var ouroborosArt = []string{
+	"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠀⠐⣧⡀",
+	"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢷⣦⣻⡻⣶⣄",
+	"⠀⠀⠀⠀⠀⠀⢀⣤⠴⠖⠛⣋⠋⣝⣫⣛⡛⠟⢶⣦⣿⣿⣯⣽⣗⣷",
+	"⠀⠀⠀⠀⣠⢞⣩⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⠤⠈⡽⢿⣿⣿⠟⡿",
+	"⠀⠀⠀⣼⣷⠿⠛⠉⠀⠀⠀⠀⠀⠉⣽⡿⣋⣥⣶⣿⣆⠃⠹⣿⡼⡿⣆⠠⣤⡀",
+	"⠀⠀⣸⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⣻⣟⠿⢿⣿⣿⣾⣤⣤⡴⠎⢷⣿⣷⣦⣴⡆",
+	"⠀⢠⢿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⣽⣶⠺⢿⣿⡏⠻⣿⣄⠀⣴⣝⢿⣿⣅",
+	"⠀⢸⡼⢿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠉⠀⠀⠉⠁⠀⠹⣿⣆⠉⢛⣸⡿⠾⠇",
+	"⠀⣿⣶⣦⠻⣧⠀⢀⣾⣿⣆⣴⣶⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣎⢹",
+	"⢰⢿⣿⣷⣿⣿⣧⣌⣿⣿⠈⣯⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿⠂",
+	"⠀⠞⡿⠻⣿⣿⠨⡯⣿⣿⡿⣧⣯⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⠃",
+	"⠀⠀⠀⠀⠘⢿⣶⣧⠼⠟⣿⢿⣿⣙⡶⣤⣀⠀⠀⠀⠀⠀⠀⣀⣤⢾⣱⠟⠁",
+	"⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⣀⣥⠼⡎⢻⡱⡖⢊⠼⣉⣵⣷⠿⠋",
+	"⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠿⠿⣿⣿⣿⣿⣿⣿⣷⡿⠿⠿⠛⠉⠁",
+}
+
+// logoRowColor gives a top-to-bottom gradient: bright head, purple body,
+// sky-blue lower coils — a vertical fade like gentle-ai's logo.
+func logoRowColor(i, n int) lipgloss.Color {
+	switch {
+	case i < 4:
+		return colorWhite
+	case i < n-4:
+		return colorAccent
+	default:
+		return colorAccent2
+	}
+}
+
+// centerBlock left-pads every line by the same amount so the block's true
+// content bounding box is centered within width w. A uniform pad (not per-line
+// centering) preserves the art's internal column alignment.
+func centerBlock(lines []string, contentW, w int) string {
+	pad := 0
+	if w > contentW {
+		pad = (w - contentW) / 2
+	}
+	prefix := strings.Repeat(" ", pad)
+	return prefix + strings.Join(lines, "\n"+prefix)
+}
+
+// logoBanner renders the ouroboros hero logo centered to width w, with the
+// labdrian wordmark centered below it (gentle-ai header anatomy: centered art).
+func logoBanner(w int) string {
+	const blank = '⠀' // Braille blank — visually empty but width 1
+
+	// Crop all rows to the true content bounding box [left,right] so the serpent
+	// is centered by its own mass, independent of the source image framing.
+	rows := make([][]rune, len(ouroborosArt))
+	left, right := 1<<30, -1
+	for i, r := range ouroborosArt {
+		rr := []rune(r)
+		rows[i] = rr
+		for c, ch := range rr {
+			if ch != blank && ch != ' ' {
+				if c < left {
+					left = c
+				}
+				if c > right {
+					right = c
+				}
+			}
+		}
+	}
+	if right < left {
+		left, right = 0, 0
+	}
+	cropW := right - left + 1
+
+	n := len(rows)
+	art := make([]string, n)
+	for i, rr := range rows {
+		var line strings.Builder
+		for c := left; c <= right; c++ {
+			if c < len(rr) {
+				line.WriteRune(rr[c])
+			} else {
+				line.WriteRune(blank)
+			}
+		}
+		art[i] = lipgloss.NewStyle().Foreground(logoRowColor(i, n)).Render(line.String())
+	}
+
+	mark := highlightStyle.Render("labdrian") + mutingStyle.Render("  ·  overlay sobre gentle-ai")
+	return centerBlock(art, cropW, w) + "\n\n" + centerBlock([]string{mark}, lipgloss.Width(mark), w)
 }
 
 func (m model) viewTargets() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Seleccionar destinos"))
+	b.WriteString(titleStyle.Render("Seleccionar destinos") + "\n")
 
 	for i, t := range m.targets {
 		cursor := "  "
@@ -155,7 +297,7 @@ func (m model) viewActions() string {
 	for _, t := range m.selectedTargets() {
 		sel = append(sel, t.Name)
 	}
-	b.WriteString(titleStyle.Render("Elegir una acción"))
+	b.WriteString(titleStyle.Render("Elegir una acción") + "\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(colorWhite).
 		Render("Ejecutá capture, apply y la gestión de hooks desde acá — no hace falta la CLI.") + "\n")
 	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "    " +
@@ -164,13 +306,13 @@ func (m model) viewActions() string {
 	for i, a := range m.actions {
 		// Operational group header before the first action.
 		if i == 0 {
-			b.WriteString(sectionStyle.Render("  ── Sincronización ──") + "\n")
+			b.WriteString(sectionStyle.Render("── Sincronización ──") + "\n")
 		}
 		// Hooks group header before the first TargetAgnostic action.
 		// These headers are display-only — they are not in the actions slice, so
 		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
-			b.WriteString("\n" + sectionStyle.Render("  ── Hooks (global ~/.claude) ──") + "\n")
+			b.WriteString("\n" + sectionStyle.Render("── Hooks (global ~/.claude) ──") + "\n")
 		}
 
 		cursor := "  "
@@ -240,18 +382,19 @@ func (m model) viewResult() string {
 			// hard failure, but the install needs attention. Render as a warning.
 			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Resultado · " + m.result.action.Name))
 			b.WriteString("\n")
-			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("  ! Degradado — revisá la salida"))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("! Degradado — revisá la salida"))
 			b.WriteString("\n")
 		} else {
 			b.WriteString(errStyle.Render("Resultado · " + m.result.action.Name))
 			b.WriteString("\n")
-			b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("  ✗ Comando falló"))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("✗ Comando falló"))
 			b.WriteString("\n")
 		}
 	} else {
 		b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
+		b.WriteString("\n")
 		b.WriteString(lipgloss.NewStyle().Foreground(colorGreen).Bold(true).
-			Render("  ✓ Completado") + "\n")
+			Render("✓ Completado") + "\n")
 	}
 
 	if len(m.result.verdicts) > 0 {
@@ -292,10 +435,10 @@ func (m model) viewDashboard() string {
 		badge := st.Render(icon)
 		targetName := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%-9s", v.Target))
 		statusLabel := lipgloss.NewStyle().Foreground(color).Render(label)
-		head := fmt.Sprintf("  %s %s  %s", badge, targetName, statusLabel)
-		counts := mutingStyle.Render(fmt.Sprintf("       cambios upstream: %d  overlay sin desplegar: %d",
+		head := fmt.Sprintf("%s %s  %s", badge, targetName, statusLabel)
+		counts := mutingStyle.Render(fmt.Sprintf("  cambios upstream: %d  overlay sin desplegar: %d",
 			v.UpstreamChanged, v.OverlayNotDeployed))
-		action := dimStyle.Render("       → " + v.Action)
+		action := dimStyle.Render("  → " + v.Action)
 
 		b.WriteString(head + "\n" + counts + "\n")
 		if v.Action != "" {

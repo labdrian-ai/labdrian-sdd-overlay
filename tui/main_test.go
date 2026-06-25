@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,88 @@ import (
 	"github.com/charmbracelet/lipgloss"
 	"github.com/charmbracelet/x/exp/teatest"
 )
+
+// ansiRE matches SGR color escape sequences for ANSI-stripping in assertions.
+var ansiRE = regexp.MustCompile("\x1b\\[[0-9;]*m")
+
+func stripANSI(s string) string { return ansiRE.ReplaceAllString(s, "") }
+
+func leadingSpaces(s string) int { return len(s) - len(strings.TrimLeft(s, " ")) }
+
+// TestConsistentLeftAxis locks in the single-axis invariant: at a fixed width,
+// the menu title, the first menu row, and the footer legend all start at the
+// exact same left edge (the centered content column), and the logo block is
+// centered WITHIN that same column (never left of the column edge, never
+// centered to the full screen independently). Verified on both the targets and
+// actions screens so the gutter/base column is uniform across them.
+func TestConsistentLeftAxis(t *testing.T) {
+	const width = 100
+
+	cases := []struct {
+		name      string
+		scr       screen
+		titleText string
+		footerSub string
+	}{
+		{"targets", screenTargets, "Seleccionar destinos", "navegar"},
+		{"actions", screenActions, "Elegir una acción", "ejecutar"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newModel()
+			updated, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: 40})
+			m = updated.(model)
+			m.scr = tc.scr
+
+			lines := strings.Split(stripANSI(m.View()), "\n")
+
+			// The cursor row ("▸ ") reveals the true column left edge — the menu
+			// gutter is the only left affordance and is uniform across screens.
+			titlePad, rowPad, footerPad := -1, -1, -1
+			logoMin := 1 << 30
+			for _, ln := range lines {
+				if titlePad < 0 && strings.Contains(ln, tc.titleText) {
+					titlePad = leadingSpaces(ln)
+				}
+				if rowPad < 0 && strings.Contains(ln, "▸") {
+					rowPad = leadingSpaces(ln)
+				}
+				if footerPad < 0 && strings.Contains(ln, tc.footerSub) {
+					footerPad = leadingSpaces(ln)
+				}
+				// Logo rows are the only lines made of Braille glyphs.
+				if strings.TrimSpace(ln) != "" && strings.ContainsAny(ln, "⠀⣀⣧⣶⣿⢷⣦") {
+					if p := leadingSpaces(ln); p < logoMin {
+						logoMin = p
+					}
+				}
+			}
+
+			if titlePad < 0 || rowPad < 0 || footerPad < 0 || logoMin == 1<<30 {
+				t.Fatalf("could not locate all anchors (title=%d row=%d footer=%d logo=%d):\n%s",
+					titlePad, rowPad, footerPad, logoMin, strings.Join(lines, "\n"))
+			}
+
+			// Single axis: title, first row, and footer share the same left edge.
+			if titlePad != rowPad {
+				t.Errorf("title pad %d != first row pad %d — column edge not shared", titlePad, rowPad)
+			}
+			if titlePad != footerPad {
+				t.Errorf("title pad %d != footer pad %d — column edge not shared", titlePad, footerPad)
+			}
+
+			// Logo is centered within the SAME column: its left edge never sits to
+			// the left of the column, and (since it is centered) it is inset further.
+			if logoMin < titlePad {
+				t.Errorf("logo left edge %d is left of the column edge %d", logoMin, titlePad)
+			}
+			if logoMin <= titlePad {
+				t.Errorf("logo edge %d should be inset past the column edge %d (centered over the column)", logoMin, titlePad)
+			}
+		})
+	}
+}
 
 // spinnerTickMsgForTest creates a spinner.TickMsg to advance the spinner in tests.
 func spinnerTickMsgForTest() tea.Msg {
