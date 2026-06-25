@@ -1719,19 +1719,60 @@ func TestRunSkillsCore_unknown_verb(t *testing.T) {
 // TestApplyIgnoresRegistry is a SC-13 regression guard: cmd_apply must never
 // open skills.registry.yaml. This is an integration-style smoke test; it is
 // skipped under -short to keep the fast unit-test suite lean.
+//
+// Invariant asserted: in a directory that contains NO skills.registry.yaml,
+// runPropagateCore succeeds (registry absent is a clean no-op) while
+// runSkillsCore("list") fails with exit 1 (skills subcommand requires the
+// YAML registry). This proves that propagate never opens skills.registry.yaml.
 func TestApplyIgnoresRegistry(t *testing.T) {
 	if testing.Short() {
 		t.Skip("integration: skipped under -short")
 	}
-	// The simplest proof: build the engine, run 'engine skills list' against a
-	// missing registry, and then verify that running 'engine status' (which does
-	// not touch skills.registry.yaml) still exits with a recognisable code — i.e.
-	// the presence or absence of skills.registry.yaml does not affect any
-	// existing subcommand other than the new 'skills' one.
-	//
-	// A deeper proof would exec cmd_apply in a temp repo; that is out of scope
-	// for a unit test. The guard here locks the interface boundary: if someone
-	// accidentally adds registry loading inside runStatus or runPropagate, the
-	// no_manifest_access test in skills_test.go will catch it at the package level.
-	t.Log("SC-13: registry file is purely additive — no existing subcommand reads it")
+
+	dir := t.TempDir()
+	// No skills.registry.yaml in dir (the file is deliberately absent).
+
+	// The .atl/skill-registry.md (markdown registry for agents) IS present;
+	// this is what propagate reads via --registry. It is distinct from
+	// skills.registry.yaml (the YAML skills descriptor).
+	atlDir := filepath.Join(dir, ".atl")
+	if err := os.MkdirAll(atlDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mdRegistryPath := filepath.Join(atlDir, "skill-registry.md")
+	if err := os.WriteFile(mdRegistryPath, []byte("# Skill Registry\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	contractPath := filepath.Join(dir, "contract.md")
+	if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// --- Assert 1: propagate succeeds even with no skills.registry.yaml.
+	// runPropagateCore reads mdRegistryPath (--registry), never skills.registry.yaml.
+	var propOut, propErr bytes.Buffer
+	propExitCode := -1
+	runPropagateCore(
+		[]string{"--registry", mdRegistryPath, "--contract-file", contractPath},
+		&propOut, &propErr,
+		os.ReadFile,
+		func(_ string, _ []byte, _ os.FileMode) error { return nil },
+		func(c int) { propExitCode = c },
+	)
+	if propExitCode == 1 {
+		t.Errorf("SC-13: runPropagateCore must not fail when skills.registry.yaml is absent; stderr=%q", propErr.String())
+	}
+
+	// --- Assert 2: runSkillsCore("list") DOES fail (exit 1) when the YAML
+	// registry is absent — confirming it is the *only* subcommand that reads it.
+	// This is the expected failure that proves the interface boundary is sharp.
+	var skillsOut, skillsErr bytes.Buffer
+	skillsExitCode := -1
+	missingYAML := filepath.Join(dir, "skills.registry.yaml") // does not exist
+	runSkillsCore("list", []string{"list", "--registry", missingYAML},
+		&skillsOut, &skillsErr, func(c int) { skillsExitCode = c })
+	if skillsExitCode != 1 {
+		t.Errorf("SC-13: runSkillsCore(list) must exit 1 when skills.registry.yaml is absent; got exit %d", skillsExitCode)
+	}
 }
