@@ -152,7 +152,7 @@ Repeat this loop until a stop condition fires:
 ### 3a — Pick next cell
 
 ```json
-echo '{"cells":[...current grid state...]}' | engine prespec rank
+echo '{"cells":[...current grid state...]}' | labdrian prespec rank
 ```
 
 The engine returns a `ranked` array sorted by Impact×Uncertainty descending. Pick `ranked[0]` — the highest-priority uncovered cell.
@@ -169,7 +169,7 @@ Draft ONE question targeting the top-ranked cell. The question must:
 ### 3c — Lint the question
 
 ```json
-echo '{"question":"[your drafted question]"}' | engine prespec lint
+echo '{"question":"[your drafted question]"}' | labdrian prespec lint
 ```
 
 If `accepted: false`:
@@ -191,7 +191,7 @@ Increment asked count.
 ### 3e — Check stop conditions
 
 ```json
-echo '{"cells":[...updated grid state...]}' | engine prespec readiness
+echo '{"cells":[...updated grid state...]}' | labdrian prespec readiness
 ```
 
 Also check:
@@ -227,7 +227,7 @@ Does this contradict "track inventory across warehouse locations"? No — consis
 Call readiness one final time:
 
 ```json
-echo '{"cells":[...final grid state...]}' | engine prespec readiness
+echo '{"cells":[...final grid state...]}' | labdrian prespec readiness
 ```
 
 ### 5a — Gate fails (score < 0.6)
@@ -240,7 +240,7 @@ Uncovered areas: [list cell keys with state "missing" or "partial"].
 No brief generated. Resume the interview to cover these areas.
 ```
 
-Stop. Do not call `engine prespec brief`. Do not call `mem_save`.
+Stop. Do not call `labdrian prespec brief`. Do not call `mem_save`.
 
 ### 5b — Gate passes (score ≥ 0.6)
 
@@ -283,7 +283,7 @@ echo '{
   ],
   "transcript": "[full conversation transcript]",
   "cells": [...final grid state...]
-}' | engine prespec brief
+}' | labdrian prespec brief
 ```
 
 The engine returns:
@@ -358,16 +358,16 @@ Quick reference for all engine calls in this skill:
 
 ```bash
 # Stage 3a — pick next cell
-echo '{"cells":[{"key":"jtbd-job","impact":5,"uncertainty":5,"state":"clear"},{"key":"current-gap","impact":5,"uncertainty":4,"state":"missing"},...]}' | engine prespec rank
+echo '{"cells":[{"key":"jtbd-job","impact":5,"uncertainty":5,"state":"clear"},{"key":"current-gap","impact":5,"uncertainty":4,"state":"missing"},...]}' | labdrian prespec rank
 
 # Stage 3c — lint a question before asking
-echo '{"question":"What happens when the current process breaks down?"}' | engine prespec lint
+echo '{"question":"What happens when the current process breaks down?"}' | labdrian prespec lint
 
 # Stage 3e / Stage 5 — check readiness
-echo '{"cells":[...]}' | engine prespec readiness
+echo '{"cells":[...]}' | labdrian prespec readiness
 
 # Stage 6c — emit brief
-echo '{"project":"myproject","job":"...","sections":["...","...","...","...","...","..."],"transcript":"...","cells":[...]}' | engine prespec brief
+echo '{"project":"myproject","job":"...","sections":["...","...","...","...","...","..."],"transcript":"...","cells":[...]}' | labdrian prespec brief
 ```
 
 All verbs: JSON over stdin → JSON over stdout. Exit 1 on malformed input — check stderr.

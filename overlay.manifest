@@ -14,6 +14,8 @@ sdd-verify/references/report-format.md managed
 sdd-verify/strict-tdd-verify.md managed
 gadu-orchestrate/SKILL.md custom
 requirements-from-transcripts/SKILL.md custom
+prespec-malandra/SKILL.md custom
+prespec-malandra/references/coverage-taxonomy.md custom
 kadia-content-guard/SKILL.md custom
 kadia-ui-fix/SKILL.md custom
 kadia-visual-qa/SKILL.md custom

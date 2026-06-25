@@ -107,6 +107,10 @@ Commands:
                                    non-fatal), then re-check and report the result.
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
+  prespec <verb>                   Forward to the engine's prespec discovery core
+                                   (verbs: rank, lint, readiness, brief). Reads JSON
+                                   from stdin, writes JSON to stdout. Used by the
+                                   prespec-malandra skill.
   --help                           Show this help
 
 Targets:
@@ -973,6 +977,16 @@ cmd_doctor() {
   fi
 }
 
+# cmd_prespec forwards to the engine binary's `prespec` subcommand, passing
+# stdin/stdout/args straight through. This is the user-facing entry point the
+# prespec-malandra skill calls (e.g. `labdrian prespec lint`).
+cmd_prespec() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" prespec "$@"
+}
+
 # ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
@@ -992,6 +1006,7 @@ case "$COMMAND" in
   doctor)          cmd_doctor "$@" ;;
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
+  prespec)         cmd_prespec "$@" ;;
   --help|-h)       usage; exit 0 ;;
   "")              usage >&2; exit 1 ;;
   *)               die "Unknown command: $COMMAND" ;;
