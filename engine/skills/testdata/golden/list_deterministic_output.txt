@@ -1,0 +1,3 @@
+alpha-skill	core	vendor-merge	claude,opencode
+middle-skill	custom	overlay-only	codex
+zebra-skill	custom	overlay-only	claude
