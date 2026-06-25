@@ -57,7 +57,7 @@ complete the parser chain first to avoid blocked validate tests.
 Target branch: `feat/skill-package-manager`
 All tasks sequential.
 
-### T-01 · Types skeleton
+### [x] T-01 · Types skeleton
 **Files**: `engine/skills/types.go` (new)
 **Spec**: R-001..R-012 (type contract), A-1
 **Work**: Define Go structs: `Registry{Version string; Skills []Entry}`,
@@ -67,7 +67,7 @@ All tasks sequential.
 No logic — pure data declarations. No test file needed for bare struct types.
 **Commit**: `feat(skills): add engine/skills types skeleton`
 
-### T-02 · Parser test suite (TDD — write first)
+### [x] T-02 · Parser test suite (TDD — write first)
 **Files**: `engine/skills/parse_test.go` (new), `engine/skills/testdata/` (new dir)
 **Spec**: SC-01, SC-02, SC-03, SC-04, SC-05 + R-001..R-012
 **Work**: Table-driven `TestParseRegistry` covering:
@@ -89,7 +89,7 @@ No logic — pure data declarations. No test file needed for bare struct types.
 Add YAML fixture files under `engine/skills/testdata/`.
 **Commit**: `test(skills): add ParseRegistry table tests and YAML fixtures`
 
-### T-03 · YAML subset parser implementation
+### [x] T-03 · YAML subset parser implementation
 **Files**: `engine/skills/parse.go` (new)
 **Spec**: R-001..R-012, ADR-1
 **Work**: Implement `ParseRegistry(r io.Reader) (Registry, error)`.
@@ -106,7 +106,7 @@ updateStrategy in {vendor-merge,overlay-only}.
 All T-02 tests must pass before merge.
 **Commit**: `feat(skills): implement hand-rolled YAML subset parser`
 
-### T-04 · Load adapter tests (TDD — write first)
+### [x] T-04 · Load adapter tests (TDD — write first)
 **Files**: `engine/skills/load_test.go` (new)
 **Spec**: R-022 (fail-loud on unreadable)
 **Work**: Tests for `Load(path string)` using `t.TempDir()`:
@@ -115,7 +115,7 @@ All T-02 tests must pass before merge.
 - `invalid_yaml`: malformed YAML in temp file → error non-nil.
 **Commit**: `test(skills): add Load adapter tests`
 
-### T-05 · Load adapter implementation
+### [x] T-05 · Load adapter implementation
 **Files**: `engine/skills/load.go` (new)
 **Spec**: R-022, R-023 (default path context)
 **Work**: Implement `Load(path string) (Registry, error)` — opens file, defers close,
@@ -130,7 +130,7 @@ All T-04 tests must pass before merge.
 Target branch: PR-1 branch (feature-branch-chain: each PR targets the previous PR branch)
 All tasks sequential.
 
-### T-06 · ManifestView tests (TDD — write first)
+### [x] T-06 · ManifestView tests (TDD — write first)
 **Files**: `engine/skills/manifest_test.go` (new), additional testdata fixtures
 **Spec**: R-013..R-016, ADR-3 (INFRA_PREFIXES)
 **Work**: Tests for `LoadManifestView(path string)` using `t.TempDir()`:
@@ -145,7 +145,7 @@ All tasks sequential.
 - `missing_file`: path absent → error non-nil.
 **Commit**: `test(skills): add LoadManifestView tests`
 
-### T-07 · ManifestView implementation
+### [x] T-07 · ManifestView implementation
 **Files**: `engine/skills/manifest.go` (new)
 **Spec**: R-013..R-016, ADR-3
 **Work**: Define `ManifestEntry{Dir, Tag string}` and `ManifestView map[string]ManifestEntry`.
@@ -157,7 +157,7 @@ Implement `LoadManifestView(path string)(ManifestView, error)`:
 All T-06 tests must pass before merge.
 **Commit**: `feat(skills): implement ManifestView manifest parser`
 
-### T-08 · Validate tests (TDD — write first)
+### [x] T-08 · Validate tests (TDD — write first)
 **Files**: `engine/skills/validate_test.go` (new), additional testdata fixtures
 **Spec**: SC-09, SC-10, SC-11, SC-12 + R-028..R-035
 **Work**: Table-driven tests for `Diff(reg Registry, mv ManifestView)[]Divergence`:
@@ -174,7 +174,7 @@ Also test `Validate(reg, manifestPath)` integration: aligned → nil error; dive
 with divergence list in message.
 **Commit**: `test(skills): add Diff and Validate tests`
 
-### T-09 · Validate implementation
+### [x] T-09 · Validate implementation
 **Files**: `engine/skills/validate.go` (new)
 **Spec**: R-028..R-035, ADR-3
 **Work**: Define `DivergenceClass` enum string (MISSING_IN_MANIFEST, MISSING_IN_REGISTRY,
@@ -195,7 +195,7 @@ All T-08 tests must pass before merge.
 Target branch: PR-2 branch
 All tasks sequential.
 
-### T-10 · RenderList tests (TDD — write first)
+### [x] T-10 · RenderList tests (TDD — write first)
 **Files**: `engine/skills/list_test.go` (new), golden files under `testdata/`
 **Spec**: SC-06, SC-07 + R-019..R-023
 **Work**:
@@ -207,7 +207,7 @@ All tasks sequential.
 - `invalid_registry`: inject file-reader returning bad YAML → exit 1.
 **Commit**: `test(skills): add RenderList tests and golden files`
 
-### T-11 · RenderList implementation
+### [x] T-11 · RenderList implementation
 **Files**: `engine/skills/list.go` (new)
 **Spec**: R-019..R-023
 **Work**: Implement `RenderListCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int))`:
@@ -218,7 +218,7 @@ All tasks sequential.
 All T-10 tests must pass before merge.
 **Commit**: `feat(skills): implement RenderList`
 
-### T-12 · RenderStatus tests (TDD — write first)
+### [x] T-12 · RenderStatus tests (TDD — write first)
 **Files**: `engine/skills/status_test.go` (new)
 **Spec**: SC-08 + R-024..R-027
 **Work**:
@@ -229,7 +229,7 @@ All T-10 tests must pass before merge.
 - Verify status does NOT open manifest (R-026): inject nil manifest reader; no failure.
 **Commit**: `test(skills): add RenderStatus tests`
 
-### T-13 · RenderStatus implementation
+### [x] T-13 · RenderStatus implementation
 **Files**: `engine/skills/status.go` (new)
 **Spec**: R-024..R-027
 **Work**: Implement `RenderStatusCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int))`:
@@ -240,7 +240,7 @@ All T-10 tests must pass before merge.
 All T-12 tests must pass before merge.
 **Commit**: `feat(skills): implement RenderStatus`
 
-### T-14 · SkillsCore dispatcher tests (TDD — write first)
+### [x] T-14 · SkillsCore dispatcher tests (TDD — write first)
 **Files**: `engine/skills/skills_test.go` (new)
 **Spec**: ADR-2, R-039 (read-only invariant enforced by verb set)
 **Work**: Tests for `SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int))`:
@@ -251,7 +251,7 @@ All T-12 tests must pass before merge.
 - `empty_verb`: empty string → exit 1.
 **Commit**: `test(skills): add SkillsCore dispatcher tests`
 
-### T-15 · SkillsCore dispatcher implementation
+### [x] T-15 · SkillsCore dispatcher implementation
 **Files**: `engine/skills/skills.go` (new)
 **Spec**: ADR-2, R-019..R-035
 **Work**: Implement `SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int))`:
@@ -262,7 +262,7 @@ No global state; all I/O injected.
 All T-14 tests must pass before merge.
 **Commit**: `feat(skills): implement SkillsCore verb dispatcher`
 
-### T-16 · engine/cmd/main.go wiring
+### [x] T-16 · engine/cmd/main.go wiring
 **Files**: `engine/cmd/main.go` (modified)
 **Spec**: R-019..R-035, ADR-4
 **Work**:
@@ -275,7 +275,7 @@ All T-14 tests must pass before merge.
 - Update package doc comment at top of file.
 **Commit**: `feat(engine): wire skills subcommand in cmd/main.go`
 
-### T-17 · engine/cmd/main_test.go tests
+### [x] T-17 · engine/cmd/main_test.go tests
 **Files**: `engine/cmd/main_test.go` (modified)
 **Spec**: R-040..R-042, SC-13
 **Work**:
@@ -286,7 +286,7 @@ All T-14 tests must pass before merge.
 All tests must pass with `go test ./engine/cmd/ -short`.
 **Commit**: `test(engine): add skills dispatch and SC-13 regression tests`
 
-### T-18 · bin/labdrian-overlay cmd_skills
+### [x] T-18 · bin/labdrian-overlay cmd_skills
 **Files**: `bin/labdrian-overlay` (modified)
 **Spec**: R-036, R-037, R-038
 **Work**:
