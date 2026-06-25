@@ -508,11 +508,11 @@ func TestFooterLegendCorrectness(t *testing.T) {
 	m.scr = screenConfirm
 	m.pendingAction = Action{Name: "Aplicar cambios", Command: "apply", Mutating: true}
 	rendered = m.View()
-	if !strings.Contains(rendered, "esc/n") {
-		t.Errorf("confirm screen footer must contain 'esc/n', got:\n%s", rendered)
+	if !strings.Contains(rendered, "n/esc") {
+		t.Errorf("confirm screen footer must contain 'n/esc', got:\n%s", rendered)
 	}
-	if !strings.Contains(rendered, "y confirmar") {
-		t.Errorf("confirm screen footer must contain 'y confirmar', got:\n%s", rendered)
+	if !strings.Contains(rendered, "y/enter confirmar") {
+		t.Errorf("confirm screen footer must contain 'y/enter confirmar', got:\n%s", rendered)
 	}
 }
 
@@ -653,14 +653,75 @@ func TestConfirmMessageSelection(t *testing.T) {
 	})
 }
 
-// TestHooksSeparatorVisible verifies the "─── Hooks ───" separator renders on
+// TestHooksSeparatorVisible verifies the Hooks group header renders on
 // screenActions when hooks actions are registered (R-009 Scenario 9.2).
 func TestHooksSeparatorVisible(t *testing.T) {
 	m := newModel()
 	m.scr = screenActions
 	rendered := m.View()
-	if !strings.Contains(rendered, "─── Hooks ───") {
-		t.Errorf("screenActions must contain '─── Hooks ───' separator, got:\n%s", rendered)
+	if !strings.Contains(rendered, "── Hooks (global ~/.claude) ──") {
+		t.Errorf("screenActions must contain Hooks group header, got:\n%s", rendered)
+	}
+}
+
+// TestActionGroupHeadersVisible verifies BOTH action groups are labeled with
+// section headers — the operational ("Sincronización") and hooks groups. This
+// locks in the discoverability fix: the top group is no longer silent.
+func TestActionGroupHeadersVisible(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+	rendered := m.View()
+	if !strings.Contains(rendered, "── Sincronización ──") {
+		t.Errorf("screenActions must contain operational group header '── Sincronización ──', got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "── Hooks (global ~/.claude) ──") {
+		t.Errorf("screenActions must contain hooks group header, got:\n%s", rendered)
+	}
+}
+
+// TestActionMenuShowsHintsAndTags verifies per-row purpose hints and danger tags
+// render, asserting presence and grouping (token-level) rather than column spacing,
+// since the %-32s/%-40s padding makes exact whitespace brittle.
+func TestActionMenuShowsHintsAndTags(t *testing.T) {
+	m := newModel()
+	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	m = updated.(model)
+	m.scr = screenActions
+	rendered := m.View()
+
+	for _, token := range []string{
+		"Aplicar cambios",
+		"Despliega el overlay en los destinos",
+		"Capturar (actualizar upstream)",
+		"Trae cambios de upstream al overlay",
+		"[modifica]",
+		"[solo lectura]",
+	} {
+		if !strings.Contains(rendered, token) {
+			t.Errorf("action menu must contain %q, got:\n%s", token, rendered)
+		}
+	}
+}
+
+// TestSuccessBannerOnResult verifies the green success affordance renders on the
+// success path and is absent on failure (locks in the positive-affordance fix).
+func TestSuccessBannerOnResult(t *testing.T) {
+	m := newModel()
+	m.scr = screenResult
+	m.result = commandResult{
+		action: Action{Name: "Estado", Command: "status"},
+		output: "ok",
+	}
+	rendered := m.View()
+	if !strings.Contains(rendered, "✓ Completado") {
+		t.Errorf("success result must contain '✓ Completado', got:\n%s", rendered)
+	}
+
+	// Failure path must NOT show the success banner.
+	m.result.err = fmt.Errorf("exit status 1")
+	rendered = m.View()
+	if strings.Contains(rendered, "✓ Completado") {
+		t.Errorf("failure result must NOT contain '✓ Completado', got:\n%s", rendered)
 	}
 }
 
