@@ -1019,7 +1019,9 @@ cmd_skills() {
   [[ "$has_registry" -eq 0 ]] && defaults+=("--registry" "$OVERLAY_DIR/skills.registry.yaml")
   [[ "$has_manifest" -eq 0 ]] && defaults+=("--manifest" "$OVERLAY_DIR/overlay.manifest")
 
-  exec "$ENGINE_BINARY" skills "${defaults[@]}" "$@"
+  # Verb-first: "$@" carries the verb (and any user flags); injected defaults go
+  # AFTER it so the engine's positional verb extraction is not shadowed by a flag value.
+  exec "$ENGINE_BINARY" skills "$@" "${defaults[@]}"
 }
 
 # ---------------------------------------------------------------------------
