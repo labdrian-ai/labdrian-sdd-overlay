@@ -30,7 +30,7 @@ var (
 	selectedStyle  = lipgloss.NewStyle().Foreground(colorGreen).Bold(true)
 	dimStyle       = lipgloss.NewStyle().Foreground(colorGray)
 	mutingStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
-	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorWhite).MarginBottom(1)
+	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorWhite)
 	highlightStyle = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
 	sectionStyle   = lipgloss.NewStyle().Bold(true).Foreground(colorAccent2)
 
@@ -73,9 +73,101 @@ func (m model) View() string {
 		body = m.viewResult()
 	}
 
-	w := m.contentWidth()
-	composed := strings.Join([]string{m.header(), body, m.footer()}, "\n")
-	return lipgloss.NewStyle().MaxWidth(w).Render(composed)
+	termW := m.contentWidth()
+	repoLine := m.repoLine()
+	keys := m.footerKeys()
+
+	// colW is the single content-column width for this screen: the widest
+	// body/footer/repo line. The logo is excluded from the max (so it does not
+	// inflate the column) but used as a floor so the hero art never clips.
+	// Capped to the terminal width for narrow-width safety.
+	colW := maxLineWidth(body)
+	if w := maxLineWidth(keys); w > colW {
+		colW = w
+	}
+	if w := maxLineWidth(repoLine); w > colW {
+		colW = w
+	}
+	if lw := maxLineWidth(logoBanner(0)); lw > colW {
+		colW = lw
+	}
+	if colW > termW {
+		colW = termW
+	}
+	if colW < 1 {
+		colW = 1
+	}
+
+	// Single vertical axis: the logo is centered WITHIN the column; body and
+	// footer are left-aligned at the column's left edge. Then the whole column
+	// is centered on screen by one uniform leftPad, so header + body + footer all
+	// share the exact same left edge.
+	header := logoBanner(colW) + "\n" + repoLine
+	footer := footerStyle.Width(colW).Render(keys)
+	composed := strings.Join([]string{header, body, footer}, "\n")
+
+	leftPad := (termW - colW) / 2
+	if leftPad < 0 {
+		leftPad = 0
+	}
+	composed = indentBlock(composed, leftPad)
+
+	return lipgloss.NewStyle().MaxWidth(termW).Render(composed)
+}
+
+// repoLine renders the repo-root path (or the locate error) at the column's
+// left edge — no hardcoded indent.
+func (m model) repoLine() string {
+	if m.rootErr != nil {
+		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
+	}
+	return mutingStyle.Render(m.repoRoot)
+}
+
+// footerKeys returns the raw key-hint legend for the active screen. The width
+// styling and column alignment are applied by View().
+func (m model) footerKeys() string {
+	switch m.scr {
+	case screenTargets:
+		return "↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir"
+	case screenActions:
+		return "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
+	case screenConfirm:
+		return "y/enter confirmar  ·  n/esc cancelar"
+	case screenRunning:
+		return "Ejecutando…"
+	case screenResult:
+		return "↑/↓ desplazar  ·  esc/enter volver  ·  q salir"
+	}
+	return ""
+}
+
+// maxLineWidth returns the widest visible line width (ANSI-aware) in s.
+func maxLineWidth(s string) int {
+	w := 0
+	for _, line := range strings.Split(s, "\n") {
+		if lw := lipgloss.Width(line); lw > w {
+			w = lw
+		}
+	}
+	return w
+}
+
+// indentBlock prepends pad spaces to every non-empty line, shifting an entire
+// block to a shared left edge without filling blank lines with whitespace.
+func indentBlock(s string, pad int) string {
+	if pad <= 0 {
+		return s
+	}
+	prefix := strings.Repeat(" ", pad)
+	lines := strings.Split(s, "\n")
+	for i, line := range lines {
+		if line == "" {
+			continue
+		}
+		lines[i] = prefix + line
+	}
+	return strings.Join(lines, "\n")
 }
 
 // ouroborosArt is the labdrian hero logo: an ouroboros (a serpent biting its
@@ -169,35 +261,9 @@ func logoBanner(w int) string {
 	return centerBlock(art, cropW, w) + "\n\n" + centerBlock([]string{mark}, lipgloss.Width(mark), w)
 }
 
-func (m model) header() string {
-	logo := logoBanner(m.contentWidth())
-	if m.rootErr != nil {
-		return logo + "\n" + errStyle.Render("  Error al localizar el repositorio: "+m.rootErr.Error())
-	}
-	return logo + "\n" + mutingStyle.Render("  "+m.repoRoot)
-}
-
-func (m model) footer() string {
-	w := m.contentWidth()
-	var keys string
-	switch m.scr {
-	case screenTargets:
-		keys = "↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir"
-	case screenActions:
-		keys = "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
-	case screenConfirm:
-		keys = "y/enter confirmar  ·  n/esc cancelar"
-	case screenRunning:
-		keys = "Ejecutando…"
-	case screenResult:
-		keys = "↑/↓ desplazar  ·  esc/enter volver  ·  q salir"
-	}
-	return footerStyle.Width(w).Render(keys)
-}
-
 func (m model) viewTargets() string {
 	var b strings.Builder
-	b.WriteString(titleStyle.Render("Seleccionar destinos"))
+	b.WriteString(titleStyle.Render("Seleccionar destinos") + "\n")
 
 	for i, t := range m.targets {
 		cursor := "  "
@@ -231,7 +297,7 @@ func (m model) viewActions() string {
 	for _, t := range m.selectedTargets() {
 		sel = append(sel, t.Name)
 	}
-	b.WriteString(titleStyle.Render("Elegir una acción"))
+	b.WriteString(titleStyle.Render("Elegir una acción") + "\n")
 	b.WriteString(lipgloss.NewStyle().Foreground(colorWhite).
 		Render("Ejecutá capture, apply y la gestión de hooks desde acá — no hace falta la CLI.") + "\n")
 	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "    " +
@@ -240,13 +306,13 @@ func (m model) viewActions() string {
 	for i, a := range m.actions {
 		// Operational group header before the first action.
 		if i == 0 {
-			b.WriteString(sectionStyle.Render("  ── Sincronización ──") + "\n")
+			b.WriteString(sectionStyle.Render("── Sincronización ──") + "\n")
 		}
 		// Hooks group header before the first TargetAgnostic action.
 		// These headers are display-only — they are not in the actions slice, so
 		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
-			b.WriteString("\n" + sectionStyle.Render("  ── Hooks (global ~/.claude) ──") + "\n")
+			b.WriteString("\n" + sectionStyle.Render("── Hooks (global ~/.claude) ──") + "\n")
 		}
 
 		cursor := "  "
@@ -316,18 +382,19 @@ func (m model) viewResult() string {
 			// hard failure, but the install needs attention. Render as a warning.
 			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("Resultado · " + m.result.action.Name))
 			b.WriteString("\n")
-			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("  ! Degradado — revisá la salida"))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("! Degradado — revisá la salida"))
 			b.WriteString("\n")
 		} else {
 			b.WriteString(errStyle.Render("Resultado · " + m.result.action.Name))
 			b.WriteString("\n")
-			b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("  ✗ Comando falló"))
+			b.WriteString(lipgloss.NewStyle().Foreground(colorRed).Bold(true).Render("✗ Comando falló"))
 			b.WriteString("\n")
 		}
 	} else {
 		b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
+		b.WriteString("\n")
 		b.WriteString(lipgloss.NewStyle().Foreground(colorGreen).Bold(true).
-			Render("  ✓ Completado") + "\n")
+			Render("✓ Completado") + "\n")
 	}
 
 	if len(m.result.verdicts) > 0 {
@@ -368,10 +435,10 @@ func (m model) viewDashboard() string {
 		badge := st.Render(icon)
 		targetName := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%-9s", v.Target))
 		statusLabel := lipgloss.NewStyle().Foreground(color).Render(label)
-		head := fmt.Sprintf("  %s %s  %s", badge, targetName, statusLabel)
-		counts := mutingStyle.Render(fmt.Sprintf("       cambios upstream: %d  overlay sin desplegar: %d",
+		head := fmt.Sprintf("%s %s  %s", badge, targetName, statusLabel)
+		counts := mutingStyle.Render(fmt.Sprintf("  cambios upstream: %d  overlay sin desplegar: %d",
 			v.UpstreamChanged, v.OverlayNotDeployed))
-		action := dimStyle.Render("       → " + v.Action)
+		action := dimStyle.Render("  → " + v.Action)
 
 		b.WriteString(head + "\n" + counts + "\n")
 		if v.Action != "" {
