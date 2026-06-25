@@ -5,27 +5,27 @@
 **Created**: 2024-01-15T10:30:00Z  
 **Job**: Ship faster without breaking things
 
-## 1. Problem Statement
+## 1. Job Statement
 
 Engineers need to deploy 10×/day but manual QA is the bottleneck.
 
-## 2. Outcome Gap
+## 2. Current Gap & Problem Evidence
 
 Current pipeline takes 3h; teams want under 15 min.
 
-## 3. Constraints
+## 3. Why Now
 
 Hiring freeze means we can't add QA headcount.
 
-## 4. Hypothesis
+## 4. Users & Stakeholders
 
 Incremental automated coverage with human sign-off on critical paths.
 
-## 5. Context
+## 5. Constraints & Alternatives
 
 The current CI system already supports parallelism.
 
-## 6. Success Signal
+## 6. Assumptions
 
 Reduced deploy cycle time and zero Sev-1 regressions post-deploy.
 
