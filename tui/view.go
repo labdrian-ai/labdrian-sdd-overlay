@@ -18,17 +18,6 @@ var (
 	colorAccent2 = lipgloss.Color("75")  // sky blue — secondary accent
 	colorWhite   = lipgloss.Color("255")
 
-	headerStyle = lipgloss.NewStyle().
-			Bold(true).
-			Foreground(colorWhite).
-			Background(colorAccent).
-			Padding(0, 2)
-
-	subHeaderStyle = lipgloss.NewStyle().
-			Foreground(colorAccent2).
-			Background(colorMuted).
-			Padding(0, 2)
-
 	footerStyle = lipgloss.NewStyle().
 			Foreground(colorGray).
 			BorderTop(true).
@@ -89,16 +78,66 @@ func (m model) View() string {
 	return lipgloss.NewStyle().MaxWidth(w).Render(composed)
 }
 
-func (m model) header() string {
-	w := m.contentWidth()
-	title := headerStyle.Render(" overlay TUI ")
-	subtitle := subHeaderStyle.Render(" gentle-ai sync validator ")
-	bar := lipgloss.JoinHorizontal(lipgloss.Top, title, subtitle)
-	bar = lipgloss.NewStyle().Width(w).Render(bar)
-	if m.rootErr != nil {
-		return bar + "\n" + errStyle.Render("  Error al localizar el repositorio: "+m.rootErr.Error())
+// ouroborosArt is the labdrian hero logo: an ouroboros (a serpent biting its
+// own tail) rasterized from an image into Braille glyphs, matching gentle-ai's
+// dithered logo style. 34 cells wide.
+var ouroborosArt = []string{
+	"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣀⠀⠐⣧⡀",
+	"⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⢷⣦⣻⡻⣶⣄",
+	"⠀⠀⠀⠀⠀⠀⢀⣤⠴⠖⠛⣋⠋⣝⣫⣛⡛⠟⢶⣦⣿⣿⣯⣽⣗⣷",
+	"⠀⠀⠀⠀⣠⢞⣩⣴⣶⣿⣿⣿⣿⣿⣿⣿⣿⣿⠤⠈⡽⢿⣿⣿⠟⡿",
+	"⠀⠀⠀⣼⣷⠿⠛⠉⠀⠀⠀⠀⠀⠉⣽⡿⣋⣥⣶⣿⣆⠃⠹⣿⡼⡿⣆⠠⣤⡀",
+	"⠀⠀⣸⣿⠃⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⠙⣻⣟⠿⢿⣿⣿⣾⣤⣤⡴⠎⢷⣿⣷⣦⣴⡆",
+	"⠀⢠⢿⣿⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠻⣽⣶⠺⢿⣿⡏⠻⣿⣄⠀⣴⣝⢿⣿⣅",
+	"⠀⢸⡼⢿⣇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠉⠀⠀⠉⠁⠀⠹⣿⣆⠉⢛⣸⡿⠾⠇",
+	"⠀⣿⣶⣦⠻⣧⠀⢀⣾⣿⣆⣴⣶⡄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢻⣿⣎⢹",
+	"⢰⢿⣿⣷⣿⣿⣧⣌⣿⣿⠈⣯⠟⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠈⣿⣿⠂",
+	"⠀⠞⡿⠻⣿⣿⠨⡯⣿⣿⡿⣧⣯⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣼⣿⠃",
+	"⠀⠀⠀⠀⠘⢿⣶⣧⠼⠟⣿⢿⣿⣙⡶⣤⣀⠀⠀⠀⠀⠀⠀⣀⣤⢾⣱⠟⠁",
+	"⠀⠀⠀⠀⠀⠀⠙⢿⣿⣿⣿⣿⣿⣀⣥⠼⡎⢻⡱⡖⢊⠼⣉⣵⣷⠿⠋",
+	"⠀⠀⠀⠀⠀⠀⠀⠀⠉⠛⠿⠿⣿⣿⣿⣿⣿⣿⣷⡿⠿⠿⠛⠉⠁",
+}
+
+// logoRowColor gives a top-to-bottom gradient: bright head, purple body,
+// sky-blue lower coils — a vertical fade like gentle-ai's logo.
+func logoRowColor(i, n int) lipgloss.Color {
+	switch {
+	case i < 4:
+		return colorWhite
+	case i < n-4:
+		return colorAccent
+	default:
+		return colorAccent2
 	}
-	return bar + "\n" + mutingStyle.Render("  "+m.repoRoot)
+}
+
+// logoBanner renders the ouroboros hero logo centered to width w, with the
+// labdrian wordmark below it (gentle-ai header anatomy: centered art + title).
+func logoBanner(w int) string {
+	const artW = 34
+	pad := 0
+	if w > artW {
+		pad = (w - artW) / 2
+	}
+	prefix := strings.Repeat(" ", pad)
+	var b strings.Builder
+	n := len(ouroborosArt)
+	for i, row := range ouroborosArt {
+		b.WriteString(prefix)
+		b.WriteString(lipgloss.NewStyle().Foreground(logoRowColor(i, n)).Render(row))
+		b.WriteByte('\n')
+	}
+	b.WriteString("  " + highlightStyle.Render("labdrian"))
+	b.WriteString(mutingStyle.Render("  ·  overlay sobre gentle-ai  ·  sync validator"))
+	return b.String()
+}
+
+func (m model) header() string {
+	logo := logoBanner(m.contentWidth())
+	if m.rootErr != nil {
+		return logo + "\n" + errStyle.Render("  Error al localizar el repositorio: "+m.rootErr.Error())
+	}
+	return logo + "\n" + mutingStyle.Render("  "+m.repoRoot)
 }
 
 func (m model) footer() string {
