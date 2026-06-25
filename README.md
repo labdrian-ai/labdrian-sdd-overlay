@@ -22,8 +22,8 @@ cd ~/labdrian-sdd-overlay
 #    A fresh clone only checks out `main`; sync-check / the TUI need a local `upstream` ref.
 git branch --force upstream origin/upstream
 
-# 3. Install the global `labdrian` command (symlinks bin/overlay into ~/.local/bin).
-bin/overlay install-alias
+# 3. Install the global `labdrian` command (symlinks bin/labdrian-overlay into ~/.local/bin).
+bin/labdrian-overlay install-alias
 
 # 4. Make sure ~/.local/bin is on your PATH. If `labdrian` is not found, add this to
 #    your ~/.bashrc or ~/.zshrc and reopen the shell:
@@ -73,7 +73,7 @@ Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default
 
 ## Usage
 
-`labdrian` is the alias to `bin/overlay`, installed via `overlay install-alias`. All commands below work as `labdrian <command>` or `overlay <command>` from the repo root.
+`labdrian` is the alias to `bin/labdrian-overlay`, installed via `labdrian-overlay install-alias`. All commands below work as `labdrian <command>` or `bin/labdrian-overlay <command>` from the repo root. (The pristine `bin/overlay` is a vendored copy of gentle-ai upstream — labdrian never edits it, so it never conflicts on sync.)
 
 ### Launch
 
@@ -184,8 +184,8 @@ ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' th
 ```bash
 # Clone or copy this repo anywhere, then cd into it:
 cd labdrian-sdd-overlay   # the directory you cloned into
-chmod +x bin/overlay
-bin/overlay bootstrap
+chmod +x bin/labdrian-overlay
+bin/labdrian-overlay bootstrap
 ```
 
 Bootstrap will:
