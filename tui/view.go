@@ -111,25 +111,62 @@ func logoRowColor(i, n int) lipgloss.Color {
 	}
 }
 
-// logoBanner renders the ouroboros hero logo centered to width w, with the
-// labdrian wordmark below it (gentle-ai header anatomy: centered art + title).
-func logoBanner(w int) string {
-	const artW = 34
+// centerBlock left-pads every line by the same amount so the block's true
+// content bounding box is centered within width w. A uniform pad (not per-line
+// centering) preserves the art's internal column alignment.
+func centerBlock(lines []string, contentW, w int) string {
 	pad := 0
-	if w > artW {
-		pad = (w - artW) / 2
+	if w > contentW {
+		pad = (w - contentW) / 2
 	}
 	prefix := strings.Repeat(" ", pad)
-	var b strings.Builder
-	n := len(ouroborosArt)
-	for i, row := range ouroborosArt {
-		b.WriteString(prefix)
-		b.WriteString(lipgloss.NewStyle().Foreground(logoRowColor(i, n)).Render(row))
-		b.WriteByte('\n')
+	return prefix + strings.Join(lines, "\n"+prefix)
+}
+
+// logoBanner renders the ouroboros hero logo centered to width w, with the
+// labdrian wordmark centered below it (gentle-ai header anatomy: centered art).
+func logoBanner(w int) string {
+	const blank = '⠀' // Braille blank — visually empty but width 1
+
+	// Crop all rows to the true content bounding box [left,right] so the serpent
+	// is centered by its own mass, independent of the source image framing.
+	rows := make([][]rune, len(ouroborosArt))
+	left, right := 1<<30, -1
+	for i, r := range ouroborosArt {
+		rr := []rune(r)
+		rows[i] = rr
+		for c, ch := range rr {
+			if ch != blank && ch != ' ' {
+				if c < left {
+					left = c
+				}
+				if c > right {
+					right = c
+				}
+			}
+		}
 	}
-	b.WriteString("  " + highlightStyle.Render("labdrian"))
-	b.WriteString(mutingStyle.Render("  ·  overlay sobre gentle-ai  ·  sync validator"))
-	return b.String()
+	if right < left {
+		left, right = 0, 0
+	}
+	cropW := right - left + 1
+
+	n := len(rows)
+	art := make([]string, n)
+	for i, rr := range rows {
+		var line strings.Builder
+		for c := left; c <= right; c++ {
+			if c < len(rr) {
+				line.WriteRune(rr[c])
+			} else {
+				line.WriteRune(blank)
+			}
+		}
+		art[i] = lipgloss.NewStyle().Foreground(logoRowColor(i, n)).Render(line.String())
+	}
+
+	mark := highlightStyle.Render("labdrian") + mutingStyle.Render("  ·  overlay sobre gentle-ai")
+	return centerBlock(art, cropW, w) + "\n\n" + centerBlock([]string{mark}, lipgloss.Width(mark), w)
 }
 
 func (m model) header() string {
