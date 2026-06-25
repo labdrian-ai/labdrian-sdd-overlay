@@ -71,6 +71,9 @@ func LoadManifestView(path string) (ManifestView, error) {
 		}
 
 		// First SKILL.md row wins for each dir.
+		// TODO(MIXED_TAG): if a later row for the same dir carries a different tag,
+		// the conflict is currently swallowed. Emit DivMixedTag from Validate before
+		// PR-4 wires the cross-check against the real overlay.manifest.
 		if _, exists := mv[dirName]; !exists {
 			mv[dirName] = ManifestEntry{Dir: dirName, Tag: tag}
 		}
