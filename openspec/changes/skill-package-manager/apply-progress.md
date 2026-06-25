@@ -65,6 +65,20 @@ go.mod unchanged: still `go 1.21`, no `require` block.
 
 ---
 
-## Remaining (PR-4)
+## PR-4 — Initial registry population + manifest tracking rows (COMPLETE)
 
-- [ ] T-19..T-20 (PR-4): Initial registry population + manifest tracking rows
+Branch: `skill-package-manager/pr-4-registry-data` (stacked on pr-3-cli)
+Commits: 4653c6c (skills.registry.yaml), fb88328 (manifest rows)
+
+- [x] T-19: `skills.registry.yaml` (repo root) — 18 skills (3 core: sdd-spec/sdd-tasks/sdd-verify + 15 custom), zero inline comments, strict YAML subset, passes parser; `engine skills validate` exits 0
+- [x] T-20: `overlay.manifest` — 8 `engine/skills/*.go managed` rows + `skills.registry.yaml custom` row; engine/ excluded by INFRA_PREFIXES, validate still exits 0
+
+Acceptance gate: `engine skills validate --registry skills.registry.yaml --manifest overlay.manifest` → "registry and manifest aligned (18 skills)", exit 0.
+`engine skills list` → 18 lines (3 core/vendor-merge, 15 custom/overlay-only), all targets: claude,opencode,codex.
+`cd engine && go test ./...` → all 7 packages ok, exit 0.
+go.mod unchanged: go 1.21, no require block. Zero new dependencies.
+No MIXED_TAG situation — each skill directory has exactly one SKILL.md row with a consistent tag.
+
+---
+
+## IMPLEMENTATION COMPLETE — All tasks T-01..T-20 done across 4 PRs.
