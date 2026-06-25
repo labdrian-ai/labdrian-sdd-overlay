@@ -1,0 +1,1013 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Resolve the real path of this script, following symlinks.
+# Uses a pure-bash loop instead of readlink -f so it works on macOS/BSD too.
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do
+  DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+  SOURCE="$(readlink "$SOURCE")"
+  [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
+done
+SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
+OVERLAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
+MANIFEST="$OVERLAY_DIR/overlay.manifest"
+
+declare -A TARGET_PATHS=(
+  [claude]="$HOME/.claude/skills"
+  [opencode]="$HOME/.config/opencode/skills"
+  [codex]="$HOME/.codex/skills"
+)
+
+# Path where the engine binary is deployed. Using ~/.claude/bin/ keeps all
+# Claude Code tooling co-located and makes the binary easy to find in hooks.
+ENGINE_BINARY="$HOME/.claude/bin/gentle-ai-overlay"
+ENGINE_SRC="$OVERLAY_DIR/engine"
+
+# ---------------------------------------------------------------------------
+# helpers
+# ---------------------------------------------------------------------------
+
+die() { echo "ERROR: $*" >&2; exit 1; }
+info() { echo "==> $*"; }
+warn() { echo "WARN: $*" >&2; }
+
+# Read manifest: emit "path tag" lines, skipping blank lines and comments
+parse_manifest() {
+  grep -v '^\s*#' "$MANIFEST" | grep -v '^\s*$'
+}
+
+# Managed files only
+managed_files() {
+  parse_manifest | awk '$2 == "managed" { print $1 }'
+}
+
+# All tracked files (managed + custom)
+all_tracked_files() {
+  parse_manifest | awk '{ print $1 }'
+}
+
+# Ensure the parent directory of a path exists
+ensure_parent() {
+  local path="$1"
+  local parent
+  parent="$(dirname "$path")"
+  mkdir -p "$parent"
+}
+
+# Resolve --target argument to a space-separated list of target names
+resolve_targets() {
+  local arg="${1:-all}"
+  if [[ "$arg" == "all" ]]; then
+    echo "claude opencode codex"
+  elif [[ -v TARGET_PATHS["$arg"] ]]; then
+    echo "$arg"
+  else
+    die "Unknown target: $arg. Valid: claude, opencode, codex, all"
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# usage
+# ---------------------------------------------------------------------------
+
+usage() {
+  cat <<'EOF'
+Usage: overlay <command> [options]
+
+Commands:
+  bootstrap                        Initialize overlay repo and branches
+  capture [--target claude|opencode|codex] [--from-backup DIR]
+                                   Capture managed files from target (default: claude)
+  apply [--target claude|opencode|codex|all]
+                                   Merge upstream and deploy to target(s) (default: all)
+  status [--target claude|opencode|codex|all]
+                                   Show drift between repo and target(s) (default: all)
+  sync-check [--target claude|opencode|codex|all]
+                                   Validate gentle-ai sync state per target (default: all)
+  install-hooks                    Build + deploy the engine binary, then wire the two
+                                   deterministic-scoping hooks into ~/.claude/settings.json.
+                                   DELIBERATE ACTION — not called by 'apply'. Run once to
+                                   activate; the hooks are INERT until this command runs.
+                                   Also best-effort installs discovery tools (bat rg fd sd
+                                   eza) via Homebrew so agents never hit the silent-empty
+                                   footgun. Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out.
+  uninstall-hooks                  Remove our two hook entries from ~/.claude/settings.json,
+                                   leaving all other keys and hooks intact.
+  status-hooks                     Check and report overlay installation health: binary
+                                   present, hooks wired, contract readable. Exits 0 if all
+                                   OK, 1 if any check fails. Safe to run at any time.
+  doctor [--fix]                   Read-only host-toolchain preflight: checks go (required),
+                                   gentle-ai, bat/rg/fd/sd/eza, the engine binary, and a
+                                   non-empty skill-registry. Prints PASS/WARN/FAIL per check;
+                                   exits non-zero only on a hard FAIL. Safe to run at any time.
+                                   --fix: after the checks, attempt to install any missing
+                                   discovery tools (bat rg fd sd eza) via Homebrew (best-effort,
+                                   non-fatal), then re-check and report the result.
+  tui                              Launch the Bubbletea TUI front-end
+  install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
+  prespec <verb>                   Forward to the engine's prespec discovery core
+                                   (verbs: rank, lint, readiness, brief). Reads JSON
+                                   from stdin, writes JSON to stdout. Used by the
+                                   prespec-malandra skill.
+  --help                           Show this help
+
+Targets:
+  claude   → ~/.claude/skills
+  opencode → ~/.config/opencode/skills
+  codex    → ~/.codex/skills
+
+Hook activation notes:
+  - 'overlay apply' does NOT call install-hooks. Deploy of skills and hook
+    wiring are intentionally separate so skills can be updated without
+    mutating ~/.claude/settings.json.
+  - Run 'overlay install-hooks' once after initial setup (or after a binary
+    update) to activate deterministic scoping.
+  - Missing-binary safety: hook commands use 'command -v <binary> && ...' so
+    they silently exit 0 if the binary is absent, never blocking a Task.
+EOF
+}
+
+# ---------------------------------------------------------------------------
+# bootstrap
+# ---------------------------------------------------------------------------
+
+cmd_bootstrap() {
+  info "Bootstrapping overlay repo at $OVERLAY_DIR"
+
+  # 1. Init git repo if needed
+  if [[ ! -d "$OVERLAY_DIR/.git" ]]; then
+    git init "$OVERLAY_DIR"
+  fi
+
+  cd "$OVERLAY_DIR"
+
+  # 2. Ensure all required directories exist
+  mkdir -p bin \
+    skills/sdd-spec \
+    skills/sdd-tasks \
+    skills/sdd-verify/references \
+    skills/requirements-from-transcripts
+
+  # 3. Write scaffold files if not present
+  if [[ ! -f "$OVERLAY_DIR/README.md" ]]; then
+    echo "# labdrian-sdd-overlay" > "$OVERLAY_DIR/README.md"
+  fi
+  if [[ ! -f "$OVERLAY_DIR/overlay.manifest" ]]; then
+    die "overlay.manifest not found — ensure it exists before running bootstrap"
+  fi
+  if [[ ! -f "$OVERLAY_DIR/.gitignore" ]]; then
+    printf '*.swp\n*.swo\n*~\n.DS_Store\n' > "$OVERLAY_DIR/.gitignore"
+  fi
+
+  # 4. Stage scaffold (bin/overlay itself is already here; stage it too)
+  git add README.md overlay.manifest .gitignore bin/overlay
+
+  # 5. Initial commit (only if none exists)
+  if ! git log --oneline 2>/dev/null | head -1 | grep -q .; then
+    git commit -m "chore: initial overlay scaffold"
+  fi
+
+  # 6. Create/switch to upstream branch
+  git checkout -B upstream
+
+  # 7. Extract managed files from tarball
+  info "Extracting managed files from tarball: $TARBALL"
+  if [[ ! -f "$TARBALL" ]]; then
+    die "Tarball not found: $TARBALL"
+  fi
+
+  # Pre-build tar listing once to avoid SIGPIPE issues with set -euo pipefail
+  local tar_listing
+  tar_listing="$(tar tzf "$TARBALL" 2>/dev/null)"
+
+  while IFS= read -r rel_path; do
+    tar_path="files/home/labdrian/.claude/skills/${rel_path}"
+    dest="$OVERLAY_DIR/skills/${rel_path}"
+    ensure_parent "$dest"
+
+    if echo "$tar_listing" | grep -qF "$tar_path"; then
+      tar xzf "$TARBALL" --to-stdout "$tar_path" > "$dest"
+      info "  extracted: skills/$rel_path"
+    else
+      echo "  WARNING: not found in tarball, skipping: $tar_path"
+    fi
+  done < <(managed_files)
+
+  # 8. Commit upstream baseline (only if there are changes)
+  git add skills/
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git commit -m "upstream: baseline from gentle-ai 1.40.2"
+  else
+    info "No changes to commit on upstream (already up to date)"
+  fi
+
+  # 9. Create main from upstream (AFTER upstream commit)
+  git checkout -B main upstream
+
+  # 10. Copy current customized files from ~/.claude/skills/ onto main
+  info "Layering customized files onto main..."
+  while IFS= read -r line; do
+    rel_path="$(echo "$line" | awk '{ print $1 }')"
+    src="${TARGET_PATHS[claude]}/${rel_path}"
+    dest="$OVERLAY_DIR/skills/${rel_path}"
+    ensure_parent "$dest"
+
+    if [[ -f "$src" ]]; then
+      cp "$src" "$dest"
+      info "  copied: $rel_path"
+    else
+      echo "  WARNING: source file not found, skipping: $src"
+    fi
+  done < <(parse_manifest)
+
+  # 11. Commit overlay
+  git add skills/
+  if [[ -n "$(git status --porcelain)" ]]; then
+    git commit -m "overlay: EARS notation + stable R-NNN IDs"
+  else
+    info "No customization diff detected — main is identical to upstream"
+  fi
+
+  echo ""
+  echo "Bootstrap complete."
+  echo "  upstream branch: pristine vendor baseline"
+  echo "  main branch:     your customized overlay (current)"
+  echo ""
+  git log --oneline --all
+}
+
+# ---------------------------------------------------------------------------
+# capture
+# ---------------------------------------------------------------------------
+
+cmd_capture() {
+  cd "$OVERLAY_DIR"
+
+  local from_backup=""
+  local target_arg="claude"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      --from-backup)
+        shift
+        from_backup="${1:-}"
+        [[ -n "$from_backup" ]] || die "--from-backup requires a path argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  # Validate single target (capture only supports one at a time)
+  if [[ "$target_arg" == "all" ]]; then
+    die "capture does not support --target all. Specify a single target: claude, opencode, codex"
+  fi
+  [[ -v TARGET_PATHS["$target_arg"] ]] || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+
+  local target_dir="${TARGET_PATHS[$target_arg]}"
+
+  local current_branch
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+  # Always return to the original branch, even if a later step fails under
+  # 'set -euo pipefail' — prevents stranding the working tree on 'upstream'.
+  trap 'git checkout "$current_branch" >/dev/null 2>&1 || true' EXIT
+
+  git checkout upstream
+
+  if [[ -n "$from_backup" ]]; then
+    info "Capturing managed files from tarball: $from_backup"
+    [[ -f "$from_backup" ]] || die "Tarball not found: $from_backup"
+
+    local cap_listing
+    cap_listing="$(tar tzf "$from_backup" 2>/dev/null)"
+
+    while IFS= read -r rel_path; do
+      tar_path="files/home/labdrian/.claude/skills/${rel_path}"
+      dest="$OVERLAY_DIR/skills/${rel_path}"
+      ensure_parent "$dest"
+
+      if echo "$cap_listing" | grep -qF "$tar_path"; then
+        tar xzf "$from_backup" --to-stdout "$tar_path" > "$dest"
+        info "  extracted: skills/$rel_path"
+      else
+        echo "  WARNING: not found in tarball, skipping: $tar_path"
+      fi
+    done < <(managed_files)
+  else
+    info "Capturing managed files from $target_dir"
+    while IFS= read -r rel_path; do
+      src="$target_dir/${rel_path}"
+      dest="$OVERLAY_DIR/skills/${rel_path}"
+      ensure_parent "$dest"
+
+      if [[ -f "$src" ]]; then
+        cp "$src" "$dest"
+        info "  copied: $rel_path"
+      else
+        echo "  WARNING: source file not found, skipping: $src"
+      fi
+    done < <(managed_files)
+  fi
+
+  git add skills/
+  # Commit only if skills/ has STAGED changes. `git diff --cached --quiet`
+  # ignores unrelated untracked paths (.engram/, tui/) present on 'upstream'
+  # that previously caused a doomed `git commit` (exit 1) stranding the tree.
+  if git diff --cached --quiet; then
+    info "No changes detected — upstream already up to date"
+  else
+    git commit -m "upstream: sync from gentle-ai $(date +%Y-%m-%d)"
+    info "upstream updated"
+  fi
+
+  git checkout "$current_branch"
+  trap - EXIT
+  info "Returned to branch: $current_branch"
+}
+
+# ---------------------------------------------------------------------------
+# apply
+# ---------------------------------------------------------------------------
+
+cmd_apply() {
+  cd "$OVERLAY_DIR"
+
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  git checkout main
+
+  info "Merging upstream into main..."
+  if ! git merge upstream; then
+    echo ""
+    echo "MERGE CONFLICTS detected. Resolve the following files, then run:"
+    echo "  git -C \"$OVERLAY_DIR\" add <file>"
+    echo "  git -C \"$OVERLAY_DIR\" commit"
+    echo "  overlay apply  (re-run to deploy after resolving)"
+    echo ""
+    echo "Conflicted files:"
+    git diff --name-only --diff-filter=U
+    exit 1
+  fi
+
+  for t in $(resolve_targets "$target_arg"); do
+    local tpath="${TARGET_PATHS[$t]}"
+    echo ""
+    echo "=== Deploying to: $t ($tpath) ==="
+
+    if [[ ! -d "$tpath" ]]; then
+      mkdir -p "$tpath"
+      echo "  (created target directory: $tpath)"
+    fi
+
+    local deployed=0
+    local in_sync=0
+
+    while IFS= read -r rel_path; do
+      src="$OVERLAY_DIR/skills/${rel_path}"
+      dest="$tpath/${rel_path}"
+      ensure_parent "$dest"
+
+      if [[ -f "$src" ]]; then
+        if [[ -f "$dest" ]] && diff --brief "$src" "$dest" > /dev/null 2>&1; then
+          in_sync=$((in_sync + 1))
+        else
+          cp "$src" "$dest"
+          deployed=$((deployed + 1))
+        fi
+      else
+        echo "  WARNING: skills/$rel_path not found in overlay, skipping"
+      fi
+    done < <(all_tracked_files)
+
+    echo "  $t: deployed=$deployed in-sync=$in_sync"
+  done
+
+  echo ""
+  echo "Deploy complete."
+}
+
+# ---------------------------------------------------------------------------
+# status
+# ---------------------------------------------------------------------------
+
+cmd_status() {
+  cd "$OVERLAY_DIR"
+
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  echo "=== Branch ==="
+  git rev-parse --abbrev-ref HEAD
+
+  echo ""
+  echo "=== Diff stat upstream..main ==="
+  git diff --stat upstream..main || echo "(no diff)"
+
+  for t in $(resolve_targets "$target_arg"); do
+    local tpath="${TARGET_PATHS[$t]}"
+    echo ""
+    echo "=== Status: $t ($tpath) ==="
+
+    while IFS= read -r rel_path; do
+      repo_file="$OVERLAY_DIR/skills/${rel_path}"
+      live_file="$tpath/${rel_path}"
+
+      if [[ ! -f "$repo_file" ]]; then
+        echo "  MISSING in repo: $rel_path"
+      elif [[ ! -f "$live_file" ]]; then
+        echo "  MISSING in target: $rel_path"
+      else
+        if diff --brief "$repo_file" "$live_file" > /dev/null 2>&1; then
+          echo "  in sync  : $rel_path"
+        else
+          echo "  DIFFERS  : $rel_path"
+        fi
+      fi
+    done < <(all_tracked_files)
+  done
+}
+
+# ---------------------------------------------------------------------------
+# sync-check
+# ---------------------------------------------------------------------------
+
+cmd_sync_check() {
+  cd "$OVERLAY_DIR"
+
+  local target_arg="all"
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  for t in $(resolve_targets "$target_arg"); do
+    local tpath="${TARGET_PATHS[$t]}"
+    echo ""
+    echo "=== sync-check: $t ($tpath) ==="
+
+    if [[ ! -d "$tpath" ]]; then
+      echo "SYNC_CHECK:$t: target dir not found at $tpath -- skipping"
+      continue
+    fi
+
+    local upstream_changed=0
+    local overlay_not_deployed=0
+
+    while IFS= read -r line; do
+      local rel_path tag
+      rel_path="$(echo "$line" | awk '{ print $1 }')"
+      tag="$(echo "$line" | awk '{ print $2 }')"
+
+      local live_file="$tpath/${rel_path}"
+
+      # Hash of live file (empty string if missing)
+      local live_hash=""
+      if [[ -f "$live_file" ]]; then
+        live_hash="$(sha256sum "$live_file" | awk '{ print $1 }')"
+      fi
+
+      # Hash of main version in repo
+      local main_hash=""
+      if git cat-file -e "main:skills/${rel_path}" 2>/dev/null; then
+        main_hash="$(git show "main:skills/${rel_path}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
+      fi
+
+      # PRIMARY check: live == main → IN SYNC, nothing to do
+      if [[ -n "$live_hash" && "$live_hash" == "$main_hash" ]]; then
+        echo "  IN_SYNC: skills/$rel_path"
+        continue
+      fi
+
+      # live != main (or live missing) — determine why
+      if [[ -z "$live_hash" ]]; then
+        # File missing at target
+        overlay_not_deployed=$((overlay_not_deployed + 1))
+        echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path (live missing)"
+        continue
+      fi
+
+      # Determine if this is a MANAGED file (exists on upstream branch)
+      local is_managed=false
+      if git cat-file -e "upstream:skills/${rel_path}" 2>/dev/null; then
+        is_managed=true
+      fi
+
+      if [[ "$is_managed" == true ]]; then
+        # Compare live vs upstream to distinguish subtypes
+        local upstream_hash
+        upstream_hash="$(git show "upstream:skills/${rel_path}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
+
+        if [[ "$live_hash" == "$upstream_hash" ]]; then
+          # live == upstream but live != main → overlay not deployed (customization reverted)
+          overlay_not_deployed=$((overlay_not_deployed + 1))
+          echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path (live matches upstream, customization not deployed)"
+        else
+          # live != upstream AND live != main → upstream has a new pristine version we haven't captured
+          upstream_changed=$((upstream_changed + 1))
+          echo "  UPSTREAM_CHANGED: skills/$rel_path"
+        fi
+      else
+        # CUSTOM file (no upstream counterpart): live != main → overlay not deployed
+        overlay_not_deployed=$((overlay_not_deployed + 1))
+        echo "  OVERLAY_NOT_DEPLOYED: skills/$rel_path (custom file, not deployed)"
+      fi
+
+    done < <(parse_manifest)
+
+    echo ""
+    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed"
+
+    if [[ "$upstream_changed" -gt 0 ]]; then
+      echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"
+    elif [[ "$overlay_not_deployed" -gt 0 ]]; then
+      echo "ACTION:$t: run 'overlay apply --target $t'"
+    else
+      echo "ACTION:$t: in sync with gentle-ai (healthy)"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# tui
+# ---------------------------------------------------------------------------
+
+cmd_tui() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to run the TUI"
+  [[ -d "$OVERLAY_DIR/tui" ]] || die "tui/ not found at $OVERLAY_DIR/tui"
+  # Export repo root so the Go program can locate bin/overlay reliably.
+  export OVERLAY_DIR
+  # Run from inside the module dir (repo root is not a Go module).
+  cd "$OVERLAY_DIR/tui"
+  exec go run .
+}
+
+# ---------------------------------------------------------------------------
+# Discovery tools — canonical list used by ensure_discovery_tools,
+# recheck_discovery_tools, and cmd_doctor. Change once here to update all.
+# ---------------------------------------------------------------------------
+
+DISCOVERY_TOOLS=(bat rg fd sd eza)
+
+# ---------------------------------------------------------------------------
+# ensure_discovery_tools
+# ---------------------------------------------------------------------------
+#
+# Best-effort, NON-FATAL, idempotent provisioner for the five CLI tools the
+# persona rule mandates: bat rg fd sd eza.
+#
+# Contract:
+#   - PORTABLE: uses only 'command -v' for detection; never calls fd/eza/bat
+#     inside the helper itself.
+#   - NON-FATAL: a provisioning failure MUST NOT abort the caller. All brew
+#     invocations are guarded against 'set -e' via explicit if/then/else.
+#   - TRANSPARENT: prints exactly what it will install and what succeeded/failed.
+#   - IDEMPOTENT: skips tools already present; re-runs are safe.
+#   - NO SIGPIPE: all output captured to vars before any comparison.
+#
+# Called by:
+#   - cmd_install_hooks (best-effort, auto): runs after hooks are wired.
+#   - cmd_doctor --fix (explicit opt-in): runs then re-checks tool status.
+
+ensure_discovery_tools() {
+  local -a missing=()
+
+  # Probe each of the five mandated tools with 'command -v' — never assume
+  # any are present, never use them for the probe itself.
+  local t
+  for t in "${DISCOVERY_TOOLS[@]}"; do
+    command -v "$t" >/dev/null 2>&1 || missing+=("$t")
+  done
+
+  if [[ ${#missing[@]} -eq 0 ]]; then
+    info "Discovery tools: all present (bat rg fd sd eza) — nothing to install."
+    return 0
+  fi
+
+  if command -v brew >/dev/null 2>&1; then
+    echo "==> Discovery tools missing: ${missing[*]}"
+    echo "    Installing via Homebrew (best-effort)..."
+    local -a succeeded=()
+    local -a failed=()
+    local tool
+    for tool in "${missing[@]}"; do
+      if brew install "$tool"; then
+        # Re-probe after install to confirm it landed on PATH.
+        if command -v "$tool" >/dev/null 2>&1; then
+          succeeded+=("$tool")
+        else
+          # brew reported success but binary still not on PATH (e.g. PATH not
+          # refreshed, cask install, prefix mismatch). Treat as non-fatal warn.
+          warn "brew install $tool reported success but '$tool' is still not on PATH. You may need to reload your shell or adjust PATH."
+          failed+=("$tool")
+        fi
+      else
+        warn "brew install $tool failed — skipping (non-fatal)."
+        failed+=("$tool")
+      fi
+    done
+    if [[ ${#succeeded[@]} -gt 0 ]]; then
+      info "Installed: ${succeeded[*]}"
+    fi
+    if [[ ${#failed[@]} -gt 0 ]]; then
+      warn "Could not install: ${failed[*]}"
+      warn "Install them manually so agents do not hit the silent-empty footgun."
+      warn "The skill-discovery-safety guard remains the fallback for any session."
+    fi
+  else
+    # No brew — warn loudly about the silent-empty trap but stay non-fatal.
+    warn "Homebrew not found. The following discovery tools are missing: ${missing[*]}"
+    warn "Without them, agents that run e.g. 'fd ... 2>/dev/null' get an empty"
+    warn "result (command not found, swallowed) and may misread it as zero skills."
+    warn "Install manually — typical options:"
+    warn "  cargo install bat ripgrep fd-find sd eza   (Rust/cargo — most reliable)"
+    warn "  Debian/Ubuntu (apt): 'bat' installs as 'batcat', 'fd' as 'fd-find' (binary:"
+    warn "    'fdfind'); 'sd' and 'eza' are often absent or only in recent repos —"
+    warn "    prefer cargo or a newer apt source for those."
+    warn "  Fedora/RHEL (dnf): bat ripgrep fd-find eza  (sd may need cargo)"
+    warn "  Arch (pacman): bat ripgrep fd sd eza"
+    warn "The skill-discovery-safety guard is the fallback but not a substitute."
+  fi
+
+  return 0  # always non-fatal
+}
+
+# ---------------------------------------------------------------------------
+# recheck_discovery_tools
+# ---------------------------------------------------------------------------
+#
+# Re-probes DISCOVERY_TOOLS after a provisioning attempt and prints
+# PASS or WARN. Single source of truth — used by both branches of cmd_doctor
+# --fix (fail!=0 and fail==0). Always returns 0 (non-fatal).
+
+recheck_discovery_tools() {
+  local -a recheck_missing=()
+  local t
+  for t in "${DISCOVERY_TOOLS[@]}"; do
+    command -v "$t" >/dev/null 2>&1 || recheck_missing+=("$t")
+  done
+  if [[ ${#recheck_missing[@]} -eq 0 ]]; then
+    echo "PASS  ${DISCOVERY_TOOLS[*]} all present after provisioning."
+  else
+    echo "WARN  still missing after provisioning: ${recheck_missing[*]}"
+  fi
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# install-hooks
+# ---------------------------------------------------------------------------
+#
+# Design decisions:
+#   1. SEPARATE from 'overlay apply'. Skills deployment and hook wiring are
+#      distinct operations — apply only copies files, never mutates
+#      ~/.claude/settings.json. This keeps apply non-invasive.
+#   2. DELIBERATE activation. The user must run 'overlay install-hooks'
+#      intentionally. This satisfies the "INERT until user activates" contract.
+#   3. MISSING-BINARY SAFETY. Hook commands emitted by the engine use the form:
+#        command -v <binary> &>/dev/null && <binary> ... || true
+#      This ensures any hook exits 0 even when the binary is absent, so no
+#      Claude Code Task is ever blocked by a missing binary.
+#   4. ATOMIC+BACKUP inside the engine. The engine's merge-settings subcommand
+#      writes to a temp file and renames; it also copies the original to
+#      settings.json.bak before overwriting.
+
+cmd_install_hooks() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
+  command -v gentle-ai >/dev/null 2>&1 || warn "gentle-ai not found on PATH — the overlay layers onto gentle-ai; hooks will install but skill propagation/scoping may be inert until gentle-ai is installed. Run 'overlay doctor' for a full preflight."
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+
+  info "Building engine binary..."
+  mkdir -p "$(dirname "$ENGINE_BINARY")"
+  (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+    || die "go build failed; binary not deployed"
+  info "Engine binary deployed to: $ENGINE_BINARY"
+
+  local settings_path="$HOME/.claude/settings.json"
+  info "Merging hooks into: $settings_path"
+  "$ENGINE_BINARY" merge-settings \
+    --settings "$settings_path" \
+    --hook-command "$ENGINE_BINARY" \
+    || die "merge-settings failed"
+
+  echo ""
+  echo "install-hooks complete."
+  echo "  binary  : $ENGINE_BINARY"
+  echo "  settings: $settings_path (backup at ${settings_path}.bak)"
+  echo "  hooks   : two hook pairs (minimalism-contract + skill-discovery-safety) wired"
+  echo "            into UserPromptSubmit and PreToolUse/Agent (four entries total)."
+  echo ""
+  echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
+  echo ""
+  echo "Run 'overlay doctor' to verify the full installation."
+
+  # Guard: if the standalone skill-discovery-safety.md has not been deployed yet
+  # (user ran install-hooks but not 'overlay apply'), warn loudly so the safety
+  # contract is not silently absent from the skill registry.
+  local safety_path="$HOME/.claude/skills/_shared/skill-discovery-safety.md"
+  if test -f "$safety_path"; then
+    :
+  else
+    echo ""
+    echo "WARNING: $safety_path not found."
+    echo "  The safety contract is embedded in the engine binary and will propagate"
+    echo "  via hooks, but the standalone copy has not been deployed yet."
+    echo "  Run 'overlay apply' to deploy all skills, then 'overlay doctor' to verify."
+  fi
+
+  # Best-effort: provision discovery tools so agents don't hit the silent-empty
+  # footgun on a fresh install. Non-fatal — a failure here must never abort
+  # install-hooks. The skill-discovery-safety guard is the fallback.
+  # Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out (e.g. in CI or managed hosts).
+  if [[ -n "${OVERLAY_SKIP_TOOL_INSTALL:-}" ]]; then
+    info "OVERLAY_SKIP_TOOL_INSTALL is set — skipping automatic discovery-tool installation."
+    warn "Discovery tools (bat rg fd sd eza) were NOT auto-installed."
+    warn "Run 'overlay doctor --fix' later to provision them when ready."
+  else
+    echo ""
+    echo "==> Installing host packages via Homebrew: discovery tools (bat rg fd sd eza)."
+    echo "    Set OVERLAY_SKIP_TOOL_INSTALL=1 to skip this step."
+    ensure_discovery_tools
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# status-hooks
+# ---------------------------------------------------------------------------
+#
+# Checks that the overlay installation is healthy:
+#   - Engine binary present + executable at $ENGINE_BINARY
+#   - Hooks wired in ~/.claude/settings.json (UserPromptSubmit + PreToolUse/Agent)
+#   - Contract readable with valid frontmatter
+#   - (best-effort) Scoped block present in CWD's .atl/skill-registry.md
+#
+# Exits 0 if all checks pass, 1 otherwise.
+# Safe to run at any time — never modifies any file.
+
+cmd_status_hooks() {
+  command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+
+  # Build binary if not already present.
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    info "Engine binary not found; building..."
+    mkdir -p "$(dirname "$ENGINE_BINARY")"
+    (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+      || die "go build failed; cannot run status-hooks"
+    info "Engine binary deployed to: $ENGINE_BINARY"
+  fi
+
+  exec "$ENGINE_BINARY" status
+}
+
+# ---------------------------------------------------------------------------
+# uninstall-hooks
+# ---------------------------------------------------------------------------
+
+cmd_uninstall_hooks() {
+  local settings_path="$HOME/.claude/settings.json"
+
+  if [[ ! -f "$ENGINE_BINARY" ]]; then
+    # Binary absent: fall back to a fresh build to run uninstall.
+    # If we cannot build, error out — we cannot safely remove entries.
+    command -v go >/dev/null 2>&1 || die "engine binary not found at $ENGINE_BINARY and go is not installed; cannot uninstall"
+    [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC; cannot build for uninstall"
+    info "Engine binary not found; building to perform uninstall..."
+    mkdir -p "$(dirname "$ENGINE_BINARY")"
+    (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+      || die "go build failed; cannot uninstall hooks"
+  fi
+
+  info "Removing hooks from: $settings_path"
+  "$ENGINE_BINARY" uninstall-hooks \
+    --settings "$settings_path" \
+    --hook-command "$ENGINE_BINARY" \
+    || die "uninstall-hooks failed"
+
+  echo ""
+  echo "uninstall-hooks complete."
+  echo "  Our four hook entries (two pairs: minimalism-contract + skill-discovery-safety)"
+  echo "  have been removed from $settings_path"
+  echo "  (backup at ${settings_path}.bak if the file was modified)"
+  echo ""
+  echo "Run 'overlay doctor' to verify the installation state."
+}
+
+# ---------------------------------------------------------------------------
+# install-alias
+# ---------------------------------------------------------------------------
+
+cmd_install_alias() {
+  local name="${1:-labdrian}"
+  mkdir -p "$HOME/.local/bin"
+  ln -sf "$OVERLAY_DIR/bin/labdrian-overlay" "$HOME/.local/bin/$name"
+  echo "Linked '$name' -> overlay. Run '$name tui' (needs ~/.local/bin on PATH)."
+}
+
+# ---------------------------------------------------------------------------
+# doctor
+# ---------------------------------------------------------------------------
+#
+# Read-only host-toolchain preflight. Prints PASS / WARN / FAIL per check and
+# exits non-zero only on a hard FAIL (missing REQUIRED tool or empty registry).
+#
+# Honors the three robustness principles:
+#   - PORTABLE DISCOVERY: every tool is probed with 'command -v'; the registry
+#     check uses only POSIX 'test'. Never calls fd/eza/bat directly.
+#   - FAIL-LOUD: no bare '2>/dev/null' on discovery; command-not-found stays
+#     visible. A missing required tool or an empty registry is a hard FAIL with
+#     an actionable message.
+#   - REGISTRY-AUTHORITATIVE: the registry file is the source of truth. An empty
+#     or whitespace-only registry is reported as FAIL ("inconclusive, not zero
+#     skills"), never silently passed.
+#
+# Classification:
+#   FAIL  -> registry empty/whitespace-only or unreadable; go absent
+#   WARN  -> registry absent; gentle-ai absent; engine binary absent; fd/eza/bat absent
+#   PASS  -> check satisfied
+
+cmd_doctor() {
+  local fail=0
+  local fix=0
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --fix) fix=1 ;;
+      *) die "Unknown option: $1. Usage: overlay doctor [--fix]" ;;
+    esac
+    shift || true
+  done
+
+  echo "overlay doctor — host-toolchain preflight"
+  echo ""
+
+  # (a) REQUIRED: go on PATH (needed to build the engine binary).
+  if command -v go >/dev/null 2>&1; then
+    echo "PASS  go on PATH"
+  else
+    echo "FAIL  go not found on PATH — required to build the engine binary (run 'overlay install-hooks')."
+    fail=1
+  fi
+
+  # (b) REQUIRED-with-context: gentle-ai on PATH. The overlay layers onto
+  #     gentle-ai; absence is a loud WARN, not a hard FAIL (overlay can still
+  #     install and run, but propagation/scoping may be inert).
+  if command -v gentle-ai >/dev/null 2>&1; then
+    echo "PASS  gentle-ai on PATH"
+  else
+    echo "WARN  gentle-ai not found on PATH — the overlay layers onto gentle-ai; skill propagation/scoping may be inert until it is installed."
+  fi
+
+  # (c) bat / rg / fd / sd / eza — the full set the persona rule mandates.
+  #     Absence is a WARN, never a hard FAIL: the safety guard is the fallback.
+  #     Run 'overlay doctor --fix' to auto-install via Homebrew when available.
+  local missing_discovery=()
+  local t
+  for t in "${DISCOVERY_TOOLS[@]}"; do
+    command -v "$t" >/dev/null 2>&1 || missing_discovery+=("$t")
+  done
+  if [[ ${#missing_discovery[@]} -eq 0 ]]; then
+    echo "PASS  bat/rg/fd/sd/eza on PATH"
+  else
+    echo "WARN  not found: ${missing_discovery[*]}. Without these tools agents that run"
+    echo "      e.g. 'fd ... 2>/dev/null' get empty output (command not found, swallowed)"
+    echo "      and may misread it as zero skills — the silent-empty footgun."
+    echo "      Run 'overlay doctor --fix' to auto-install via Homebrew (if available)."
+    echo "      Skill discovery MUST use the registry (.atl/skill-registry.md or engram),"
+    echo "      never a bare filesystem scan. An empty result is INCONCLUSIVE, not zero skills."
+  fi
+
+  # (d) Engine binary present + executable. Absent is a WARN with a hint.
+  if [[ -x "$ENGINE_BINARY" ]]; then
+    echo "PASS  engine binary present at $ENGINE_BINARY"
+  else
+    echo "WARN  engine binary not found at $ENGINE_BINARY — run 'overlay install-hooks' to build and deploy it."
+  fi
+
+  # (e) REGISTRY-AUTHORITATIVE + FAIL-LOUD: registry present AND non-empty.
+  #     Resolve under OVERLAY_DIR first, then CWD. A missing or empty/
+  #     whitespace-only registry is a hard FAIL.
+  local registry=""
+  if [[ -f "$OVERLAY_DIR/.atl/skill-registry.md" ]]; then
+    registry="$OVERLAY_DIR/.atl/skill-registry.md"
+  elif [[ -f "$PWD/.atl/skill-registry.md" ]]; then
+    registry="$PWD/.atl/skill-registry.md"
+  fi
+
+  if [[ -z "$registry" ]]; then
+    echo "WARN  skill-registry.md not found under $OVERLAY_DIR/.atl or $PWD/.atl — project may not use the overlay. Run skill-registry to generate it; do NOT conclude skills are absent."
+  elif [[ ! -s "$registry" ]]; then
+    echo "FAIL  registry empty (zero bytes): $registry — run skill-registry; do NOT conclude skills are absent."
+    fail=1
+  else
+    # Reject a whitespace-only file too. Capture content to a var (no pipe)
+    # to avoid SIGPIPE under 'set -euo pipefail'.
+    local registry_content
+    registry_content="$(tr -d '[:space:]' < "$registry")"
+    if [[ -z "$registry_content" ]]; then
+      echo "FAIL  registry whitespace-only: $registry — run skill-registry; an empty scan is INCONCLUSIVE, not zero skills."
+      fail=1
+    else
+      echo "PASS  registry present and non-empty: $registry"
+    fi
+  fi
+
+  echo ""
+  if [[ "$fail" -ne 0 ]]; then
+    echo "doctor: FAIL — one or more required checks did not pass (see above)." >&2
+    # Still run --fix provisioning if requested, then re-check tools, but exit 1 after.
+    if [[ "$fix" -eq 1 ]]; then
+      echo ""
+      echo "==> --fix: attempting to provision discovery tools despite FAIL above..."
+      ensure_discovery_tools
+      echo ""
+      echo "==> Re-checking discovery tools after provisioning..."
+      recheck_discovery_tools
+    fi
+    exit 1
+  fi
+  echo "doctor: OK — required checks passed (review any WARN above)."
+
+  # --fix: explicit opt-in to provision missing discovery tools, then re-check.
+  if [[ "$fix" -eq 1 ]]; then
+    echo ""
+    echo "==> --fix: provisioning discovery tools (${DISCOVERY_TOOLS[*]})..."
+    ensure_discovery_tools
+    echo ""
+    echo "==> Re-checking discovery tools after provisioning..."
+    recheck_discovery_tools
+  fi
+}
+
+# cmd_prespec forwards to the engine binary's `prespec` subcommand, passing
+# stdin/stdout/args straight through. This is the user-facing entry point the
+# prespec-malandra skill calls (e.g. `labdrian prespec lint`).
+cmd_prespec() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" prespec "$@"
+}
+
+# ---------------------------------------------------------------------------
+# dispatch
+# ---------------------------------------------------------------------------
+
+COMMAND="${1:-}"
+shift || true
+
+case "$COMMAND" in
+  bootstrap)       cmd_bootstrap "$@" ;;
+  capture)         cmd_capture "$@" ;;
+  apply)           cmd_apply "$@" ;;
+  status)          cmd_status "$@" ;;
+  sync-check)      cmd_sync_check "$@" ;;
+  install-hooks)   cmd_install_hooks "$@" ;;
+  uninstall-hooks) cmd_uninstall_hooks "$@" ;;
+  status-hooks)    cmd_status_hooks "$@" ;;
+  doctor)          cmd_doctor "$@" ;;
+  tui)             cmd_tui "$@" ;;
+  install-alias)   cmd_install_alias "$@" ;;
+  prespec)         cmd_prespec "$@" ;;
+  --help|-h)       usage; exit 0 ;;
+  "")              usage >&2; exit 1 ;;
+  *)               die "Unknown command: $COMMAND" ;;
+esac

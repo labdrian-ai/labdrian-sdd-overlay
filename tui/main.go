@@ -1,7 +1,7 @@
-// Command tui is a Bubbletea front-end for the bin/overlay bash CLI.
+// Command tui is a Bubbletea front-end for the bin/labdrian-overlay bash CLI.
 //
 // It does NOT reimplement deploy/sync logic — the bash backend remains the
-// single source of truth. The TUI shells out to bin/overlay and renders the
+// single source of truth. The TUI shells out to bin/labdrian-overlay and renders the
 // results, with a colored gentle-ai sync dashboard for `sync-check`.
 package main
 

@@ -30,7 +30,7 @@ func AllTargets() []Target {
 // Action is a backend subcommand the TUI can invoke.
 type Action struct {
 	Name           string // label shown in the menu
-	Command        string // bin/overlay subcommand
+	Command        string // bin/labdrian-overlay subcommand
 	Mutating       bool   // requires confirmation
 	SupportsAll    bool   // can pass --target all when every target is selected
 	TargetAgnostic bool   // when true: invoke WITHOUT --target, skip target selection
@@ -181,8 +181,8 @@ func ParseSyncCheck(output string) []TargetVerdict {
 //
 // Resolution order:
 //  1. OVERLAY_DIR env var (set by the bash wrapper when launching the TUI)
-//  2. walk up from the executable's directory looking for bin/overlay
-//  3. walk up from the current working directory looking for bin/overlay
+//  2. walk up from the executable's directory looking for bin/labdrian-overlay
+//  3. walk up from the current working directory looking for bin/labdrian-overlay
 func RepoRoot() (string, error) {
 	if dir := os.Getenv("OVERLAY_DIR"); dir != "" {
 		if hasBackend(dir) {
@@ -202,11 +202,11 @@ func RepoRoot() (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("could not locate overlay repo root (bin/overlay not found); set OVERLAY_DIR")
+	return "", fmt.Errorf("could not locate overlay repo root (bin/labdrian-overlay not found); set OVERLAY_DIR")
 }
 
 func hasBackend(root string) bool {
-	info, err := os.Stat(filepath.Join(root, "bin", "overlay"))
+	info, err := os.Stat(filepath.Join(root, "bin", "labdrian-overlay"))
 	return err == nil && !info.IsDir()
 }
 
@@ -243,7 +243,7 @@ type commandResult struct {
 //  1. TargetAgnostic: single invocation with NO --target. The three hooks
 //     subcommands (status-hooks, install-hooks, uninstall-hooks) operate on
 //     ~/.claude/settings.json globally and do not accept --target. Verified
-//     against bin/overlay: cmd_status_hooks, cmd_install_hooks, and
+//     against bin/labdrian-overlay: cmd_status_hooks, cmd_install_hooks, and
 //     cmd_uninstall_hooks receive "$@" from the dispatcher but parse no
 //     arguments; extra flags are silently ignored. We omit --target anyway
 //     because it is semantically incorrect and future-proofs against stricter
@@ -273,7 +273,7 @@ func buildArgSets(action Action, selected []Target, allSelected bool) [][]string
 // actions (hooks lifecycle), no --target is emitted at all.
 func runBackend(root string, action Action, selected []Target) commandResult {
 	res := commandResult{action: action, targets: selected}
-	bin := filepath.Join(root, "bin", "overlay")
+	bin := filepath.Join(root, "bin", "labdrian-overlay")
 
 	allSelected := len(selected) == len(AllTargets())
 	argSets := buildArgSets(action, selected, allSelected)
@@ -283,7 +283,7 @@ func runBackend(root string, action Action, selected []Target) commandResult {
 		if i > 0 {
 			sb.WriteString("\n")
 		}
-		sb.WriteString(fmt.Sprintf("$ bin/overlay %s\n", strings.Join(args, " ")))
+		sb.WriteString(fmt.Sprintf("$ bin/labdrian-overlay %s\n", strings.Join(args, " ")))
 
 		cmd := exec.Command(bin, args...)
 		cmd.Dir = root
