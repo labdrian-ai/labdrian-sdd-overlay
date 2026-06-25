@@ -43,6 +43,7 @@ var (
 	mutingStyle    = lipgloss.NewStyle().Foreground(lipgloss.Color("240"))
 	titleStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorWhite).MarginBottom(1)
 	highlightStyle = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
+	sectionStyle   = lipgloss.NewStyle().Bold(true).Foreground(colorAccent2)
 
 	boxStyle = lipgloss.NewStyle().
 			Border(lipgloss.RoundedBorder()).
@@ -107,9 +108,9 @@ func (m model) footer() string {
 	case screenTargets:
 		keys = "↑/↓ navegar  ·  espacio seleccionar  ·  a selec. todos  ·  enter continuar  ·  q salir"
 	case screenActions:
-		keys = "↑/↓ navegar  ·  enter ejecutar  ·  esc volver  ·  q salir"
+		keys = "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
 	case screenConfirm:
-		keys = "y confirmar  ·  esc/n cancelar"
+		keys = "y/enter confirmar  ·  n/esc cancelar"
 	case screenRunning:
 		keys = "Ejecutando…"
 	case screenResult:
@@ -155,33 +156,42 @@ func (m model) viewActions() string {
 		sel = append(sel, t.Name)
 	}
 	b.WriteString(titleStyle.Render("Elegir una acción"))
-	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "\n\n")
+	b.WriteString(lipgloss.NewStyle().Foreground(colorWhite).
+		Render("Ejecutá capture, apply y la gestión de hooks desde acá — no hace falta la CLI.") + "\n")
+	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "    " +
+		dimStyle.Render("Flujo típico:  Verificar → Capturar → Aplicar") + "\n\n")
 
 	for i, a := range m.actions {
-		// Render a decorative separator before the first TargetAgnostic action.
-		// The separator is display-only — it is not in the actions slice, so
+		// Operational group header before the first action.
+		if i == 0 {
+			b.WriteString(sectionStyle.Render("  ── Sincronización ──") + "\n")
+		}
+		// Hooks group header before the first TargetAgnostic action.
+		// These headers are display-only — they are not in the actions slice, so
 		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
-			b.WriteString(dimStyle.Render("  ─── Hooks ───") + "\n")
+			b.WriteString("\n" + sectionStyle.Render("  ── Hooks (global ~/.claude) ──") + "\n")
 		}
 
 		cursor := "  "
 		if i == m.aCursor {
 			cursor = cursorStyle.Render("▸ ")
 		}
+
 		var tag string
 		if a.Mutating {
-			tag = lipgloss.NewStyle().Foreground(colorYellow).Render("  [modifica]")
+			tag = lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("[modifica]")
 		} else {
-			tag = mutingStyle.Render("  [solo lectura]")
+			tag = mutingStyle.Render("[solo lectura]")
 		}
-		var nameStr string
+
+		name := fmt.Sprintf("%-32s", a.Name)
 		if i == m.aCursor {
-			nameStr = highlightStyle.Render(a.Name)
-		} else {
-			nameStr = a.Name
+			name = highlightStyle.Render(name)
 		}
-		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, nameStr, tag))
+		hint := dimStyle.Render(fmt.Sprintf("%-40s", a.Hint))
+
+		b.WriteString(fmt.Sprintf("%s%s%s%s\n", cursor, name, hint, tag))
 	}
 	return b.String()
 }
@@ -240,6 +250,8 @@ func (m model) viewResult() string {
 		}
 	} else {
 		b.WriteString(titleStyle.Render("Resultado · " + m.result.action.Name))
+		b.WriteString(lipgloss.NewStyle().Foreground(colorGreen).Bold(true).
+			Render("  ✓ Completado") + "\n")
 	}
 
 	if len(m.result.verdicts) > 0 {

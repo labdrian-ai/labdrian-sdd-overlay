@@ -35,27 +35,34 @@ type Action struct {
 	SupportsAll    bool   // can pass --target all when every target is selected
 	TargetAgnostic bool   // when true: invoke WITHOUT --target, skip target selection
 	ConfirmMessage string // per-action confirm copy; empty falls back to generic
+	Hint           string // one-line purpose scent shown in the menu
 }
 
 // Actions returns the action menu in display order.
 //
-// Operational actions (target-bound) are listed first; hooks actions
-// (TargetAgnostic) follow under the "─── Hooks ───" separator rendered
-// by viewActions.
+// Operational actions (target-bound) are listed first under the
+// "── Sincronización ──" header; hooks actions (TargetAgnostic) follow under
+// the "── Hooks (global ~/.claude) ──" header rendered by viewActions.
 func Actions() []Action {
 	return []Action{
-		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true},
-		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true},
-		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true},
-		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false},
+		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true,
+			Hint: "Resumen del estado actual"},
+		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true,
+			Hint: "Compara overlay vs upstream"},
+		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true,
+			Hint: "Despliega el overlay en los destinos"},
+		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false,
+			Hint: "Trae cambios de upstream al overlay"},
 		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
-		{Name: "Estado de hooks", Command: "status-hooks", Mutating: false, TargetAgnostic: true},
+		{Name: "Estado de hooks", Command: "status-hooks", Mutating: false, TargetAgnostic: true,
+			Hint: "Muestra si los hooks están instalados"},
 		{
 			Name:           "Instalar hooks",
 			Command:        "install-hooks",
 			Mutating:       true,
 			TargetAgnostic: true,
 			ConfirmMessage: "Modifica ~/.claude/settings.json (se crea un respaldo .bak antes de escribir).",
+			Hint:           "Compila engine y cablea hooks (paso 1)",
 		},
 		{
 			Name:           "Desinstalar hooks",
@@ -63,6 +70,7 @@ func Actions() []Action {
 			Mutating:       true,
 			TargetAgnostic: true,
 			ConfirmMessage: "Elimina los hooks de ~/.claude/settings.json (se crea un respaldo .bak antes de modificar).",
+			Hint:           "Quita los hooks de settings.json",
 		},
 	}
 }
