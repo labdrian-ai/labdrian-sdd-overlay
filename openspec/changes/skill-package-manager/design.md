@@ -209,6 +209,16 @@ target (`apply` copies `skills/${path}` → `TARGET/skills/${path}`). Deploying 
 repo-management descriptor into every agent's skills dir is wrong; the file is
 not a skill. Root-level git tracking is the correct home.
 
+**Amendment (reconciles spec R-044).** The implementation keeps a single inert
+`skills.registry.yaml custom` row in `overlay.manifest`, matching spec R-044. This
+is ACCEPTED and does NOT weaken the survival guarantee above: `custom` files are
+never read by `capture` (it only touches `managed_files()`), and the repo-root
+path is skipped by `apply` (it resolves `skills/skills.registry.yaml`, which does
+not exist). So the file stays invisible to the vendor machinery either way. The
+row therefore serves purely as ownership/tracking documentation, consistent with
+the already-inert `engine/*` rows. The original "NOT in manifest" stance and this
+row are functionally equivalent; the row is the conventional, lower-churn choice.
+
 **engine/skills/*.go manifest rows (cosmetic).** Existing `engine/*` rows are
 tagged `managed` but are **inert** (apply/capture skip them — `engine/` is not
 under `skills/`). Adding `engine/skills/*.go` rows is optional documentation. If
