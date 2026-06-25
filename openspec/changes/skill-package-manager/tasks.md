@@ -304,7 +304,7 @@ All tests must pass with `go test ./engine/cmd/ -short`.
 Target branch: PR-3 branch
 All tasks sequential.
 
-### T-19 · Populate skills.registry.yaml
+### [x] T-19 · Populate skills.registry.yaml
 **Files**: `skills.registry.yaml` (new, repo root)
 **Spec**: R-013..R-018, A-3, A-5, ADR-5
 **Work**: Hand-author initial registry from overlay.manifest.
@@ -321,7 +321,7 @@ Each entry: `id` from dir name, `source.type` from manifest tag,
 Run `engine skills validate` after authoring; MUST exit 0 before commit.
 **Commit**: `feat(skills): add initial skills.registry.yaml (20 skills)`
 
-### T-20 · overlay.manifest tracking rows
+### [x] T-20 · overlay.manifest tracking rows
 **Files**: `overlay.manifest` (modified)
 **Spec**: R-043, R-044
 **Work**:
