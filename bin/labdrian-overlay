@@ -111,6 +111,10 @@ Commands:
                                    (verbs: rank, lint, readiness, brief). Reads JSON
                                    from stdin, writes JSON to stdout. Used by the
                                    prespec-malandra skill.
+  skills <verb>                    Forward to the engine's skills registry core
+                                     list      print sorted registry entries
+                                     status    print count summary
+                                     validate  cross-check registry vs overlay.manifest
   --help                           Show this help
 
 Targets:
@@ -996,6 +1000,16 @@ cmd_prespec() {
   exec "$ENGINE_BINARY" prespec "$@"
 }
 
+# cmd_skills forwards to the engine binary's `skills` subcommand, passing
+# args straight through. Supports verbs: list, status, validate.
+# (e.g. `labdrian skills list` or `labdrian skills validate`)
+cmd_skills() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" skills "$@"
+}
+
 # ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
@@ -1016,6 +1030,7 @@ case "$COMMAND" in
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
   prespec)         cmd_prespec "$@" ;;
+  skills)          cmd_skills "$@" ;;
   --help|-h)       usage; exit 0 ;;
   "")              usage >&2; exit 1 ;;
   *)               die "Unknown command: $COMMAND" ;;
