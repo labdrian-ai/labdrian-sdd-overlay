@@ -178,16 +178,15 @@ where the value arrives as a string anyway.
 
 | Old | New |
 |---|---|
-| `DefaultScope != "global"` → error | `validScopes = {global, project}`; reject anything else, line-numbered |
-| (none) | `DefaultScope == "project"` ⇒ `len(AllowedProjects) > 0`, else fail loud |
-| (none) | `DefaultScope == "global"` ⇒ `AllowedProjects` MUST be empty (cross-scope misuse fails loud) |
+| `DefaultScope != "global"` → error | `validScopes = {global, project}`; reject anything else, line-numbered in `parseInstall` |
+| (none) | `DefaultScope == "global"` ⇒ `AllowedProjects` MUST be empty (cross-scope misuse fails loud, in `validateEntry`) |
+| (none) | `DefaultScope == "project"` with absent/empty `allowedProjects` → VALID, entry is simply never installable (R-041/SC-13); not an error |
 
 **Fail-loud matrix (proposal success criteria → enforcement point):**
 
 | Condition | Where | Result |
 |---|---|---|
-| Unknown scope value (`workspace`, typo) | `validateEntry` | exit 1, line number |
-| `project` scope with empty `allowedProjects` | `validateEntry` | exit 1 |
+| Unknown scope value (`workspace`, typo) | `parseInstall` (line-numbered) | exit 1, line number + invalid value |
 | `global` scope with non-empty `allowedProjects` | `validateEntry` | exit 1 |
 | Source dir `<sourceRoot>/<path>` missing | `ExecuteInstall` | exit 1, names the skill + path |
 | Install requested but no project skill admits cwd | `RenderInstallCore` | exit 0, informational |
