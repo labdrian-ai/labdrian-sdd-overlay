@@ -378,7 +378,7 @@ func (p *tokParser) applyEntryKey(e *Entry, key, val string, entryIndent, lineNu
 	case "path":
 		e.Path = val
 	case "source":
-		src, err := p.parseSource(entryIndent+2, lineNum)
+		src, err := p.parseSource(entryIndent+2, lineNum, e.ID)
 		if err != nil {
 			return err
 		}
@@ -401,10 +401,13 @@ func (p *tokParser) applyEntryKey(e *Entry, key, val string, entryIndent, lineNu
 	return nil
 }
 
-// parseSource parses the source mapping.
-func (p *tokParser) parseSource(indent, lineNum int) (Source, error) {
+// parseSource parses the source mapping. entryID is the owning entry's id (may be
+// empty if id appears after source in the YAML) and is used in cross-field error
+// messages (R-114, R-115). sourceLineNum is the line of the "source:" key itself.
+func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (Source, error) {
 	var src Source
 	seen := make(map[string]bool)
+	var repoLineNum, refLineNum int
 
 	for {
 		t := p.peek()
@@ -428,9 +431,32 @@ func (p *tokParser) parseSource(indent, lineNum int) (Source, error) {
 				return Source{}, err
 			}
 			src.Upstream = &u
+		case "repo":
+			src.Repo = t.val
+			repoLineNum = t.lineNum
+		case "ref":
+			src.Ref = t.val
+			refLineNum = t.lineNum
 		default:
 			return Source{}, fmt.Errorf("line %d: unknown key %q in source", t.lineNum, t.key)
 		}
+	}
+
+	// Cross-field validation (R-114, R-115, ADR-11): these checks run after all
+	// source keys are consumed so field order in YAML is irrelevant.
+	if src.Type != "" && src.Type != "external" {
+		// repo or ref on a non-external entry is a hard error (mirrors allowedProjects-on-global).
+		if src.Repo != "" {
+			return Source{}, fmt.Errorf("skills: entry %q: source.repo is not allowed when source.type is %q (line %d)", entryID, src.Type, repoLineNum)
+		}
+		if src.Ref != "" {
+			return Source{}, fmt.Errorf("skills: entry %q: source.ref is not allowed when source.type is %q (line %d)", entryID, src.Type, refLineNum)
+		}
+	}
+	if src.Type == "external" && src.Repo == "" {
+		// repo is required for external entries; reference the source block's opening line
+		// so the message carries a location that reviewers can find (R-114).
+		return Source{}, fmt.Errorf("skills: entry %q: source.repo is required when source.type is 'external' (line %d)", entryID, sourceLineNum)
 	}
 
 	return src, nil
@@ -559,7 +585,7 @@ func (p *tokParser) parseScalarSequence(indent, lineNum int) ([]string, error) {
 
 // --- schema validation ---
 
-var validSourceTypes = map[string]bool{"core": true, "custom": true}
+var validSourceTypes = map[string]bool{"core": true, "custom": true, "external": true}
 var validTargets = map[string]bool{"claude": true, "opencode": true, "codex": true}
 var validUpdateStrategies = map[string]bool{"vendor-merge": true, "overlay-only": true}
 
@@ -569,7 +595,7 @@ func validateEntry(e *Entry) error {
 		return fmt.Errorf("skills: entry is missing required field 'id'")
 	}
 	if !validSourceTypes[e.Source.Type] {
-		return fmt.Errorf("skills: entry %q: source.type %q is not valid; must be 'core' or 'custom'", e.ID, e.Source.Type)
+		return fmt.Errorf("skills: entry %q: source.type %q is not valid; must be 'core', 'custom', or 'external'", e.ID, e.Source.Type)
 	}
 	if e.Source.Type == "custom" && e.Source.Upstream != nil {
 		return fmt.Errorf("skills: entry %q: source.upstream is not allowed when source.type is 'custom'", e.ID)
