@@ -200,6 +200,66 @@ func TestDiff(t *testing.T) {
 	})
 }
 
+// TestTagMatchesSourceType verifies SC-62: tagMatchesSourceType must treat
+// "external" as matching the "custom" manifest tag (ADR-13, R-122).
+func TestTagMatchesSourceType(t *testing.T) {
+	tests := []struct {
+		tag        string
+		sourceType string
+		want       bool
+	}{
+		// SC-62: external matches custom tag
+		{tag: "custom", sourceType: "external", want: true},
+		{tag: "managed", sourceType: "external", want: false},
+		// Regression: existing mappings unchanged
+		{tag: "managed", sourceType: "core", want: true},
+		{tag: "custom", sourceType: "custom", want: true},
+		{tag: "managed", sourceType: "custom", want: false},
+		{tag: "custom", sourceType: "core", want: false},
+		{tag: "unknown", sourceType: "core", want: false},
+	}
+	for _, tt := range tests {
+		got := tagMatchesSourceType(tt.tag, tt.sourceType)
+		if got != tt.want {
+			t.Errorf("tagMatchesSourceType(%q, %q) = %v, want %v", tt.tag, tt.sourceType, got, tt.want)
+		}
+	}
+}
+
+// TestDiffExternalEntry verifies SC-63: a registry with an external entry
+// aligned against a manifest tag of "custom" must produce zero divergences.
+func TestDiffExternalEntry(t *testing.T) {
+	extEntry := Entry{
+		ID:        "my-ext-skill",
+		Path:      "my-ext-skill",
+		Source:    Source{Type: "external", Repo: "https://github.com/example/skills", Ref: "a1b2c3d"},
+		Install:   Install{DefaultScope: "global", Targets: []string{"claude"}},
+		Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+	}
+
+	t.Run("SC-63_external_aligned_custom_tag", func(t *testing.T) {
+		reg := Registry{Version: "1", Skills: []Entry{extEntry}}
+		mv := ManifestView{
+			"my-ext-skill": {Dir: "my-ext-skill", Tag: "custom"},
+		}
+		divs := Diff(reg, mv)
+		if len(divs) != 0 {
+			t.Errorf("expected zero divergences for external entry with custom tag, got %d: %v", len(divs), divs)
+		}
+	})
+
+	t.Run("SC-63_external_managed_tag_produces_mismatch", func(t *testing.T) {
+		reg := Registry{Version: "1", Skills: []Entry{extEntry}}
+		mv := ManifestView{
+			"my-ext-skill": {Dir: "my-ext-skill", Tag: "managed"},
+		}
+		divs := Diff(reg, mv)
+		if len(divs) != 1 || divs[0].Class != DivTagMismatch {
+			t.Errorf("expected TAG_MISMATCH for external+managed, got %v", divs)
+		}
+	})
+}
+
 func TestValidate(t *testing.T) {
 	coreEntry := func(id string) Entry {
 		return Entry{

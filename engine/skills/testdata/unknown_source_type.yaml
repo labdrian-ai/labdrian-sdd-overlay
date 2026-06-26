@@ -3,7 +3,7 @@ skills:
   - id: some-skill
     path: some-skill
     source:
-      type: external
+      type: bogus
     install:
       defaultScope: global
       targets:

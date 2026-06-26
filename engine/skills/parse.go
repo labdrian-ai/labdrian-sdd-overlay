@@ -442,8 +442,9 @@ func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (Sour
 		}
 	}
 
-	// Cross-field validation (R-114, R-115, ADR-11): these checks run after all
-	// source keys are consumed so field order in YAML is irrelevant.
+	// Cross-field validation (R-114, R-115, ADR-11): lives here in parseSource
+	// (not validateEntry) so it can reference per-field line numbers from repoLineNum/refLineNum.
+	// These checks run after all source keys are consumed so YAML field order is irrelevant.
 	if src.Type != "" && src.Type != "external" {
 		// repo or ref on a non-external entry is a hard error (mirrors allowedProjects-on-global).
 		if src.Repo != "" {
@@ -599,6 +600,10 @@ func validateEntry(e *Entry) error {
 	}
 	if e.Source.Type == "custom" && e.Source.Upstream != nil {
 		return fmt.Errorf("skills: entry %q: source.upstream is not allowed when source.type is 'custom'", e.ID)
+	}
+	// WARNING-1: external entries must not carry an upstream block (ADR-11).
+	if e.Source.Type == "external" && e.Source.Upstream != nil {
+		return fmt.Errorf("skills: entry %q: source.upstream is not allowed when source.type is 'external'", e.ID)
 	}
 	if e.Source.Type == "core" && e.Source.Upstream != nil && e.Source.Upstream.Owner == "" {
 		return fmt.Errorf("skills: entry %q: source.upstream.owner must not be empty", e.ID)

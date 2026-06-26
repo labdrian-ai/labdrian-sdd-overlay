@@ -27,16 +27,9 @@ type Divergence struct {
 }
 
 // tagMatchesSourceType reports whether a manifest tag agrees with a registry source type.
-// managed ↔ core, custom ↔ custom.
+// Delegates to manifestTagFor (ADR-13) — single source of truth for the mapping.
 func tagMatchesSourceType(tag, sourceType string) bool {
-	switch tag {
-	case "managed":
-		return sourceType == "core"
-	case "custom":
-		return sourceType == "custom"
-	default:
-		return false
-	}
+	return tag == manifestTagFor(sourceType)
 }
 
 // Diff performs a bidirectional cross-check between a Registry and a ManifestView.

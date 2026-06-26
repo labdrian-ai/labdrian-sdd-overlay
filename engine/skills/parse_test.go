@@ -89,7 +89,7 @@ func TestParseRegistry(t *testing.T) {
 	})
 
 	t.Run("unknown_source_type", func(t *testing.T) {
-		// SC-03: source.type: external → error (R-003).
+		// source.type: bogus (genuinely unknown) → error. ('external' is now a valid type.)
 		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "unknown_source_type")))
 		if err == nil {
 			t.Fatal("expected non-nil error for unknown source.type, got nil")
@@ -452,6 +452,40 @@ func TestParseRegistry(t *testing.T) {
 		}
 		if !strings.ContainsAny(err.Error(), "0123456789") {
 			t.Errorf("SC-59: error %q should contain a line number", err.Error())
+		}
+	})
+
+	t.Run("WARNING1_external_with_upstream_errors", func(t *testing.T) {
+		// WARNING-1: external entry with upstream block must be rejected (ADR-11).
+		// Mirrors the custom+upstream rejection in validateEntry.
+		yaml := `version: "1"
+skills:
+  - id: bad-ext
+    path: bad-ext
+    source:
+      type: external
+      repo: https://github.com/example/skills
+      upstream:
+        owner: someone
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("WARNING-1: expected non-nil error for external entry with upstream block, got nil")
+		}
+		if !strings.Contains(err.Error(), "bad-ext") {
+			t.Errorf("WARNING-1: error %q should contain the entry id", err.Error())
+		}
+		if !strings.Contains(err.Error(), "upstream") {
+			t.Errorf("WARNING-1: error %q should mention upstream", err.Error())
+		}
+		if !strings.Contains(err.Error(), "external") {
+			t.Errorf("WARNING-1: error %q should mention external", err.Error())
 		}
 	})
 }
