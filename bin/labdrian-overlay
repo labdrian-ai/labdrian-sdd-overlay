@@ -118,6 +118,7 @@ Commands:
                                      install   copy project-scoped skills into <cwd>/.claude/skills
                                      add <id>  register a new custom skill in registry + manifest
                                      remove <id> unregister a skill from registry + manifest
+                                     sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
   --help                           Show this help
 
 Targets:
