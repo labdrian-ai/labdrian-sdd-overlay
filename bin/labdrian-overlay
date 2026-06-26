@@ -116,6 +116,8 @@ Commands:
                                      status    print count summary
                                      validate  cross-check registry vs overlay.manifest
                                      install   copy project-scoped skills into <cwd>/.claude/skills
+                                     add <id>  register a new custom skill in registry + manifest
+                                     remove <id> unregister a skill from registry + manifest
   --help                           Show this help
 
 Targets:
