@@ -19,8 +19,12 @@ var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 //   - id fails the slug guard (R-062)
 //   - id is already present in reg.Skills (R-061)
 //
+// repo and ref control the source type (ADR-14):
+//   - repo == "" → Source.Type = "custom" (backward-compatible default, R-128)
+//   - repo != "" → Source.Type = "external" with Repo/Ref set (R-127)
+//
 // The input registry is never mutated (pure function).
-func AddEntry(reg Registry, id string) (Registry, error) {
+func AddEntry(reg Registry, id, repo, ref string) (Registry, error) {
 	if !slugRe.MatchString(id) {
 		return Registry{}, fmt.Errorf("id %q: invalid slug (must match ^[a-z0-9][a-z0-9-]*$)", id)
 	}
@@ -30,13 +34,15 @@ func AddEntry(reg Registry, id string) (Registry, error) {
 		}
 	}
 
+	src := Source{Type: "custom"}
+	if repo != "" {
+		src = Source{Type: "external", Repo: repo, Ref: ref}
+	}
+
 	newEntry := Entry{
-		ID:   id,
-		Path: id,
-		Source: Source{
-			Type:     "custom",
-			Upstream: nil,
-		},
+		ID:     id,
+		Path:   id,
+		Source: src,
 		Install: Install{
 			DefaultScope:    "global",
 			Targets:         []string{"claude", "opencode", "codex"},
@@ -149,9 +155,9 @@ func filterManifestLines(src []byte, id string) []byte {
 	return out
 }
 
-// parseFlags extracts --registry, --manifest, --source-root flag values and
-// the first non-flag positional argument (the skill id) from args.
-func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id string) {
+// parseFlags extracts --registry, --manifest, --source-root, --repo, --ref flag
+// values and the first non-flag positional argument (the skill id) from args.
+func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo, ref string) {
 	registryPath = "skills.registry.yaml"
 	manifestPath = "overlay.manifest"
 	sourceRoot = "skills"
@@ -172,13 +178,23 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id strin
 				sourceRoot = args[i+1]
 				i++
 			}
+		case "--repo":
+			if i+1 < len(args) {
+				repo = args[i+1]
+				i++
+			}
+		case "--ref":
+			if i+1 < len(args) {
+				ref = args[i+1]
+				i++
+			}
 		default:
 			if !strings.HasPrefix(args[i], "--") && id == "" {
 				id = args[i]
 			}
 		}
 	}
-	return registryPath, manifestPath, sourceRoot, id
+	return registryPath, manifestPath, sourceRoot, id, repo, ref
 }
 
 // AddCore is the testable CLI core for `engine skills add <id>`.
@@ -193,10 +209,18 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id strin
 //   - Serialize + re-parse of new registry is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
 func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
-	registryPath, manifestPath, sourceRoot, id := parseFlags(args)
+	registryPath, manifestPath, sourceRoot, id, repo, ref := parseFlags(args)
 
 	if id == "" {
 		fmt.Fprintln(stderr, "error: skills add requires an <id> argument")
+		exit(1)
+		return
+	}
+
+	// Defensive guard: --ref without --repo is a usability error (ADR-14).
+	// A lone ref on a custom entry would be silently dropped — reject loudly instead.
+	if ref != "" && repo == "" {
+		fmt.Fprintln(stderr, "error: --ref requires --repo (ref is only valid for external entries)")
 		exit(1)
 		return
 	}
@@ -216,7 +240,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 	}
 
 	// 2. Apply the pure transform.
-	newReg, err := AddEntry(reg, id)
+	newReg, err := AddEntry(reg, id, repo, ref)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
@@ -313,7 +337,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 // the in-memory state, then writes both files atomically (manifest-first per
 // ADR-9). All side effects are injected; no global state is used.
 func RemoveCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	registryPath, manifestPath, _, id := parseFlags(args)
+	registryPath, manifestPath, _, id, _, _ := parseFlags(args)
 
 	if id == "" {
 		fmt.Fprintln(stderr, "error: skills remove requires an <id> argument")

@@ -17,8 +17,10 @@ type Entry struct {
 
 // Source describes where a skill originates.
 type Source struct {
-	Type     string    // "core" or "custom"
+	Type     string    // "core", "custom", or "external"
 	Upstream *Upstream // optional; only valid when Type == "core"
+	Repo     string    // origin URL; non-empty only for external entries (A-8)
+	Ref      string    // vendored commit SHA or tag; optional, non-empty only for external entries (A-8)
 }
 
 // Upstream describes the upstream provider for a core skill.

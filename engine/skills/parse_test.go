@@ -89,7 +89,7 @@ func TestParseRegistry(t *testing.T) {
 	})
 
 	t.Run("unknown_source_type", func(t *testing.T) {
-		// SC-03: source.type: external → error (R-003).
+		// source.type: bogus (genuinely unknown) → error. ('external' is now a valid type.)
 		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "unknown_source_type")))
 		if err == nil {
 			t.Fatal("expected non-nil error for unknown source.type, got nil")
@@ -352,6 +352,140 @@ func TestParseRegistry(t *testing.T) {
 		}
 		if len(e.Install.AllowedProjects) != 1 || e.Install.AllowedProjects[0] != "labdrian-sdd-overlay" {
 			t.Errorf("AllowedProjects = %v, want [labdrian-sdd-overlay]", e.Install.AllowedProjects)
+		}
+	})
+
+	// --- SC-55..SC-59: external source type (R-112..R-117) ---
+
+	t.Run("SC-55_parse_external_with_repo_and_ref", func(t *testing.T) {
+		// SC-55: external entry with repo and ref — both fields set, no error.
+		yaml := "version: \"1\"\nskills:\n  - id: my-ext-skill\n    path: my-ext-skill\n    source:\n      type: external\n      repo: https://github.com/example/skills\n      ref: a1b2c3d\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		reg, err := ParseRegistry(strings.NewReader(yaml))
+		if err != nil {
+			t.Fatalf("SC-55: unexpected error: %v", err)
+		}
+		if len(reg.Skills) != 1 {
+			t.Fatalf("SC-55: len(Skills) = %d, want 1", len(reg.Skills))
+		}
+		e := reg.Skills[0]
+		if e.Source.Type != "external" {
+			t.Errorf("SC-55: Source.Type = %q, want external", e.Source.Type)
+		}
+		if e.Source.Repo != "https://github.com/example/skills" {
+			t.Errorf("SC-55: Source.Repo = %q, want https://github.com/example/skills", e.Source.Repo)
+		}
+		if e.Source.Ref != "a1b2c3d" {
+			t.Errorf("SC-55: Source.Ref = %q, want a1b2c3d", e.Source.Ref)
+		}
+	})
+
+	t.Run("SC-56_parse_external_repo_only_no_ref", func(t *testing.T) {
+		// SC-56: external entry with repo present, ref absent — Ref empty, no error.
+		yaml := "version: \"1\"\nskills:\n  - id: my-ext-skill\n    path: my-ext-skill\n    source:\n      type: external\n      repo: https://github.com/example/skills\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		reg, err := ParseRegistry(strings.NewReader(yaml))
+		if err != nil {
+			t.Fatalf("SC-56: unexpected error: %v", err)
+		}
+		e := reg.Skills[0]
+		if e.Source.Repo == "" {
+			t.Error("SC-56: Source.Repo is empty, want non-empty")
+		}
+		if e.Source.Ref != "" {
+			t.Errorf("SC-56: Source.Ref = %q, want empty string", e.Source.Ref)
+		}
+	})
+
+	t.Run("SC-57_parse_external_missing_repo_errors", func(t *testing.T) {
+		// SC-57: external entry with no repo field → error naming id, "repo", and line number.
+		yaml := "version: \"1\"\nskills:\n  - id: my-ext-skill\n    path: my-ext-skill\n    source:\n      type: external\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("SC-57: expected non-nil error for external entry missing repo, got nil")
+		}
+		if !strings.Contains(err.Error(), "my-ext-skill") {
+			t.Errorf("SC-57: error %q should contain the entry id", err.Error())
+		}
+		if !strings.Contains(err.Error(), "repo") {
+			t.Errorf("SC-57: error %q should mention repo", err.Error())
+		}
+		if !strings.ContainsAny(err.Error(), "0123456789") {
+			t.Errorf("SC-57: error %q should contain a line number", err.Error())
+		}
+	})
+
+	t.Run("SC-58_parse_core_with_repo_errors", func(t *testing.T) {
+		// SC-58: core entry with repo field → error naming id, "repo", "core", and line number.
+		yaml := "version: \"1\"\nskills:\n  - id: sdd-spec\n    path: sdd-spec\n    source:\n      type: core\n      upstream:\n        owner: gentleman-programming\n      repo: https://github.com/example/skills\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: vendor-merge\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("SC-58: expected non-nil error for core entry with repo, got nil")
+		}
+		if !strings.Contains(err.Error(), "sdd-spec") {
+			t.Errorf("SC-58: error %q should contain the entry id", err.Error())
+		}
+		if !strings.Contains(err.Error(), "repo") {
+			t.Errorf("SC-58: error %q should mention repo", err.Error())
+		}
+		if !strings.Contains(err.Error(), "core") {
+			t.Errorf("SC-58: error %q should mention the actual source type (core)", err.Error())
+		}
+		if !strings.ContainsAny(err.Error(), "0123456789") {
+			t.Errorf("SC-58: error %q should contain a line number", err.Error())
+		}
+	})
+
+	t.Run("SC-59_parse_custom_with_ref_errors", func(t *testing.T) {
+		// SC-59: custom entry with ref field → error naming id, "ref", "custom", and line number.
+		yaml := "version: \"1\"\nskills:\n  - id: my-custom-skill\n    path: my-custom-skill\n    source:\n      type: custom\n      ref: deadbeef\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("SC-59: expected non-nil error for custom entry with ref, got nil")
+		}
+		if !strings.Contains(err.Error(), "my-custom-skill") {
+			t.Errorf("SC-59: error %q should contain the entry id", err.Error())
+		}
+		if !strings.Contains(err.Error(), "ref") {
+			t.Errorf("SC-59: error %q should mention ref", err.Error())
+		}
+		if !strings.Contains(err.Error(), "custom") {
+			t.Errorf("SC-59: error %q should mention the actual source type (custom)", err.Error())
+		}
+		if !strings.ContainsAny(err.Error(), "0123456789") {
+			t.Errorf("SC-59: error %q should contain a line number", err.Error())
+		}
+	})
+
+	t.Run("WARNING1_external_with_upstream_errors", func(t *testing.T) {
+		// WARNING-1: external entry with upstream block must be rejected (ADR-11).
+		// Mirrors the custom+upstream rejection in validateEntry.
+		yaml := `version: "1"
+skills:
+  - id: bad-ext
+    path: bad-ext
+    source:
+      type: external
+      repo: https://github.com/example/skills
+      upstream:
+        owner: someone
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("WARNING-1: expected non-nil error for external entry with upstream block, got nil")
+		}
+		if !strings.Contains(err.Error(), "bad-ext") {
+			t.Errorf("WARNING-1: error %q should contain the entry id", err.Error())
+		}
+		if !strings.Contains(err.Error(), "upstream") {
+			t.Errorf("WARNING-1: error %q should mention upstream", err.Error())
+		}
+		if !strings.Contains(err.Error(), "external") {
+			t.Errorf("WARNING-1: error %q should mention external", err.Error())
 		}
 	})
 }

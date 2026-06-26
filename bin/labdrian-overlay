@@ -116,7 +116,11 @@ Commands:
                                      status    print count summary
                                      validate  cross-check registry vs overlay.manifest
                                      install   copy project-scoped skills into <cwd>/.claude/skills
-                                     add <id>  register a new custom skill in registry + manifest
+                                     add <id> [--repo <url>] [--ref <sha>]
+                                               register a skill: custom (no --repo) or
+                                               external=vendored provenance (--repo set).
+                                               The overlay NEVER fetches; --repo/--ref are
+                                               inert labels for a file you already committed.
                                      remove <id> unregister a skill from registry + manifest
                                      sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
   --help                           Show this help

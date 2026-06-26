@@ -70,6 +70,7 @@ Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default
 
 **managed**: tracked on both `upstream` and `main`. Gets merged when upstream updates.
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
+**external**: `source.type: external` — records provenance metadata only (`repo` = origin URL, `ref` = vendored commit/ref). The overlay **never fetches, clones, or executes any remote resource**. Vendoring is a human responsibility; `--repo`/`--ref` are inert labels for a file you have already reviewed and committed locally.
 
 ## Usage
 

@@ -327,6 +327,33 @@ func assertStringSlice(t *testing.T, label string, got, want []string) {
 	}
 }
 
+// TestSyncManifestExternalEntry verifies SC-64: SyncManifest with an external
+// entry must emit "<path>/SKILL.md custom" and report Added (ADR-13, R-125).
+func TestSyncManifestExternalEntry(t *testing.T) {
+	ext := Entry{
+		ID:        "my-ext-skill",
+		Path:      "my-ext-skill",
+		Source:    Source{Type: "external", Repo: "https://github.com/example/skills", Ref: "a1b2c3d"},
+		Install:   Install{DefaultScope: "global", Targets: []string{"claude"}},
+		Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+	}
+	reg := mkReg(ext)
+	out, report, err := SyncManifest(reg, []byte(""))
+	if err != nil {
+		t.Fatalf("SyncManifest with external entry: unexpected error: %v", err)
+	}
+	outStr := string(out)
+	if !strings.Contains(outStr, "my-ext-skill/SKILL.md custom") {
+		t.Errorf("output should contain %q; got %q", "my-ext-skill/SKILL.md custom", outStr)
+	}
+	if strings.Contains(outStr, "my-ext-skill/SKILL.md managed") {
+		t.Errorf("output must NOT contain managed tag for external; got %q", outStr)
+	}
+	if len(report.Added) != 1 || report.Added[0] != "my-ext-skill" {
+		t.Errorf("report.Added = %v, want [my-ext-skill]", report.Added)
+	}
+}
+
 // ── T-03: TestSyncCore (I/O shell) ───────────────────────────────────────────
 
 // syncCoreTestReg is a two-entry registry fixture for SyncCore tests.
