@@ -115,6 +115,7 @@ Commands:
                                      list      print sorted registry entries
                                      status    print count summary
                                      validate  cross-check registry vs overlay.manifest
+                                     install   copy project-scoped skills into <cwd>/.claude/skills
   --help                           Show this help
 
 Targets:
@@ -1009,15 +1010,17 @@ cmd_skills() {
     die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
   fi
 
-  local has_registry=0 has_manifest=0
+  local has_registry=0 has_manifest=0 has_source_root=0
   for arg in "$@"; do
     [[ "$arg" == "--registry" ]] && has_registry=1
     [[ "$arg" == "--manifest" ]] && has_manifest=1
+    [[ "$arg" == "--source-root" ]] && has_source_root=1
   done
 
   local -a defaults=()
   [[ "$has_registry" -eq 0 ]] && defaults+=("--registry" "$OVERLAY_DIR/skills.registry.yaml")
   [[ "$has_manifest" -eq 0 ]] && defaults+=("--manifest" "$OVERLAY_DIR/overlay.manifest")
+  [[ "$has_source_root" -eq 0 ]] && defaults+=("--source-root" "$OVERLAY_DIR/skills")
 
   # Verb-first: "$@" carries the verb (and any user flags); injected defaults go
   # AFTER it so the engine's positional verb extraction is not shadowed by a flag value.

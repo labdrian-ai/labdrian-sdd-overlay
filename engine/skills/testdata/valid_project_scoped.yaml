@@ -1,12 +1,14 @@
 version: "1"
 skills:
-  - id: some-skill
-    path: some-skill
+  - id: prespec-malandra
+    path: prespec-malandra
     source:
       type: custom
     install:
-      defaultScope: workspace
+      defaultScope: project
       targets:
         - claude
+      allowedProjects:
+        - labdrian-sdd-overlay
     lifecycle:
       updateStrategy: overlay-only

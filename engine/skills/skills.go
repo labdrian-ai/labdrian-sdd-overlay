@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"os"
 )
 
 // SkillsCore is the testable CLI core for `engine skills <verb>`.
@@ -18,11 +19,13 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 		RenderStatusCore(args, readFile, stdout, stderr, exit)
 	case "validate":
 		RenderValidateCore(args, readFile, stdout, stderr, exit)
+	case "install":
+		RenderInstallCore(args, readFile, os.Getwd, stdout, stderr, exit)
 	case "":
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install")
 		exit(1)
 	default:
-		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate)\n", verb)
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install)\n", verb)
 		exit(1)
 	}
 }
