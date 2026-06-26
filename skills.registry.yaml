@@ -54,6 +54,18 @@ skills:
         - codex
     lifecycle:
       updateStrategy: overlay-only
+  - id: gadu-operator
+    path: gadu-operator
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
   - id: requirements-from-transcripts
     path: requirements-from-transcripts
     source:
