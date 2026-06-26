@@ -44,6 +44,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
@@ -104,6 +105,8 @@ func main() {
 		runStatus(os.Args[2:])
 	case "prespec":
 		runPrespec(os.Args[2:])
+	case "gadu-generate":
+		runGaduGenerate(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -119,9 +122,59 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
+	fmt.Fprintln(os.Stderr, "  engine gadu-generate [--check]")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
+}
+
+// overlayRoot resolves the overlay repo root from the running binary or
+// the OVERLAY_DIR environment variable (for tests and CI).
+func overlayRoot() string {
+	if dir := os.Getenv("OVERLAY_DIR"); dir != "" {
+		return dir
+	}
+	// The binary lives at <repo>/engine/bin/...; resolve to <repo>.
+	// During development (go run ./cmd) the "binary" is a temp path —
+	// fall back to two levels above the engine module root.
+	exe, err := os.Executable()
+	if err != nil {
+		// Can't determine — return working directory as best effort.
+		wd, _ := os.Getwd()
+		return wd
+	}
+	// Walk up: bin/ → engine/ → repo root
+	return filepath.Join(filepath.Dir(exe), "..", "..")
+}
+
+// runGaduGenerate implements the 'gadu-generate [--check]' subcommand.
+// Without --check: calls gadu.Generate(repoRoot) to write both artifacts.
+// With    --check: calls gadu.Check(repoRoot)    to verify they are not stale.
+// Exits non-zero on error.
+func runGaduGenerate(args []string) {
+	checkMode := false
+	for _, a := range args {
+		if a == "--check" {
+			checkMode = true
+		}
+	}
+
+	root := overlayRoot()
+
+	if checkMode {
+		if err := gadu.Check(root); err != nil {
+			fmt.Fprintf(os.Stderr, "gadu-generate --check: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintln(os.Stdout, "gadu-generate --check: OK (committed artifacts match generator output)")
+		return
+	}
+
+	if err := gadu.Generate(root); err != nil {
+		fmt.Fprintf(os.Stderr, "gadu-generate: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md and skills/gadu-operator/SKILL.md written")
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.
