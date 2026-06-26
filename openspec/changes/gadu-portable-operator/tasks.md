@@ -15,7 +15,7 @@
 
 **Must complete and document BEFORE writing any guard code. R-013, D4.**
 
-- [ ] **A0**: Run experiment E1.
+- [x] **A0**: Run experiment E1.
   - Back up `~/.claude/agents/` to a local scratch directory.
   - Plant sentinel file `~/.claude/agents/_overlay-durability-probe.md` (record its
     sha256 + mtime).
@@ -39,7 +39,7 @@ Branch: `feat/gadu-generator` → target `main`
 
 ### A1 — RED: Failing generator tests
 
-- [ ] **A1**: Create `engine/gadu/gadu_test.go` with all scenarios. Tests MUST fail
+- [x] **A1**: Create `engine/gadu/gadu_test.go` with all scenarios. Tests MUST fail
   because `engine/gadu` package does not yet exist. Use `t.TempDir()` for all
   file-emission assertions.
   - `TestGenerate_BothFilesEmitted`: call `Generate` with a tempdir as repo root;
@@ -67,7 +67,7 @@ Branch: `feat/gadu-generator` → target `main`
 
 ### A2 — Canonical persona body
 
-- [ ] **A2**: Create `engine/gadu/persona/body.md`.
+- [x] **A2**: Create `engine/gadu/persona/body.md`.
   - Port verbatim (in substance) from existing `~/.claude/agents/GADU.md` (mtime
     2026-06-23): the six non-negotiable defining traits (Judgment, Red-team, No
     sycophancy, Highest-probability path, Autonomy/agent orchestration,
@@ -82,7 +82,7 @@ Branch: `feat/gadu-generator` → target `main`
 
 ### A3 — GREEN: Implement generator package
 
-- [ ] **A3**: Create `engine/gadu/gadu.go` (package `gadu`) to make A1's tests pass.
+- [x] **A3**: Create `engine/gadu/gadu.go` (package `gadu`) to make A1's tests pass.
   - `//go:embed persona/body.md` (path relative to `engine/gadu/gadu.go`).
   - Frontmatter template for the agent file (`agents/GADU.md`):
     ```
@@ -111,7 +111,7 @@ Branch: `feat/gadu-generator` → target `main`
 
 ### A4 — Wire gadu-generate subcommand
 
-- [ ] **A4**: Modify `engine/cmd/main.go`.
+- [x] **A4**: Modify `engine/cmd/main.go`.
   - Add `"gadu-generate"` to the main switch.
   - `runGaduGenerate(args []string)`: parses optional `--check` flag; calls
     `gadu.Generate(overlayRoot)` or `gadu.Check(overlayRoot)` where `overlayRoot` is
@@ -124,7 +124,7 @@ Branch: `feat/gadu-generator` → target `main`
 
 ### A5 — Run generator; commit generated artifacts
 
-- [ ] **A5**: Execute `cd engine && go run ./cmd gadu-generate` from the overlay repo root.
+- [x] **A5**: Execute `cd engine && go run ./cmd gadu-generate` from the overlay repo root.
   - Confirm `agents/GADU.md` and `skills/gadu-operator/SKILL.md` are written.
   - Verify YAML frontmatter in `agents/GADU.md` is valid (parse it; assert `name`,
     `model`, `description`, `tools` fields present).
@@ -137,7 +137,7 @@ Branch: `feat/gadu-generator` → target `main`
 
 ### A6 — Manifest GADU rows
 
-- [ ] **A6**: Add two rows to `overlay.manifest`:
+- [x] **A6**: Add two rows to `overlay.manifest`:
   ```
   gadu-operator/SKILL.md   custom
   GADU.md                  custom   agent
