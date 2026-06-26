@@ -43,13 +43,19 @@ func isSkillRow(line string) (dir string, ok bool) {
 	return dirName, true
 }
 
-// registryTag returns the manifest tag implied by an entry's source.type.
-// "core" → "managed", anything else → "custom".
-func registryTag(e Entry) string {
-	if e.Source.Type == "core" {
+// manifestTagFor returns the manifest tag a registry source type maps to.
+// core → managed; custom and external → custom (both are labdrian-owned, not upstream-synced).
+// This is the single authority for source-type → manifest-tag (ADR-13).
+func manifestTagFor(sourceType string) string {
+	if sourceType == "core" {
 		return "managed"
 	}
 	return "custom"
+}
+
+// registryTag returns the manifest tag implied by an entry's source.type.
+func registryTag(e Entry) string {
+	return manifestTagFor(e.Source.Type)
 }
 
 // SyncManifest regenerates */SKILL.md rows in manifest from reg, preserving every
