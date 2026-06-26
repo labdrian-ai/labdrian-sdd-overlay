@@ -115,6 +115,7 @@ Commands:
                                      list      print sorted registry entries
                                      status    print count summary
                                      validate  cross-check registry vs overlay.manifest
+                                     install   copy project-scoped skills into <cwd>/.claude/skills
   --help                           Show this help
 
 Targets:
