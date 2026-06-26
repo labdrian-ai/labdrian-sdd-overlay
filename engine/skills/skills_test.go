@@ -264,3 +264,82 @@ func TestSkillsCoreUnknownVerbMessage(t *testing.T) {
 		t.Errorf("stderr %q should contain 'remove' in supported verb list", errBuf.String())
 	}
 }
+
+// ── T-05: sync-manifest dispatch tests (SC-51, SC-52) ────────────────────────
+
+// TestSkillsCoreDispatchSyncManifest verifies that SkillsCore routes
+// "sync-manifest" to SyncCore (SC-51) and that unknown verbs list
+// "sync-manifest" in the error message (SC-52).
+func TestSkillsCoreDispatchSyncManifest(t *testing.T) {
+	const syncDispatchReg = `version: "1"
+skills:
+  - id: sc51-alpha
+    path: sc51-alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+	t.Run("SC-51_routes_to_SyncCore", func(t *testing.T) {
+		// Set up a t.TempDir with an aligned registry + manifest so SyncCore exits 0.
+		dir := t.TempDir()
+		regPath := filepath.Join(dir, "registry.yaml")
+		mfPath := filepath.Join(dir, "overlay.manifest")
+
+		if err := os.WriteFile(regPath, []byte(syncDispatchReg), 0644); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(mfPath, []byte("sc51-alpha/SKILL.md custom\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		SkillsCore(
+			"sync-manifest",
+			[]string{"--registry", regPath, "--manifest", mfPath},
+			os.ReadFile, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+
+		if strings.Contains(errBuf.String(), "unknown skills verb") {
+			t.Errorf("stderr %q should not contain 'unknown skills verb'", errBuf.String())
+		}
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
+		}
+		// stdout should contain the summary or "already in sync"
+		outStr := out.String()
+		if !strings.Contains(outStr, "sync-manifest") && !strings.Contains(outStr, "already in sync") {
+			t.Errorf("stdout %q should contain sync-manifest summary or 'already in sync'", outStr)
+		}
+	})
+
+	t.Run("SC-52_unknown_verb_lists_sync_manifest", func(t *testing.T) {
+		var out, errBuf bytes.Buffer
+		exitCode := 0
+		SkillsCore("bogus-after-sync", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(errBuf.String(), "sync-manifest") {
+			t.Errorf("stderr %q should contain 'sync-manifest' in supported verb list", errBuf.String())
+		}
+	})
+
+	t.Run("SC-52_empty_verb_lists_sync_manifest", func(t *testing.T) {
+		var out, errBuf bytes.Buffer
+		exitCode := 0
+		SkillsCore("", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(errBuf.String(), "sync-manifest") {
+			t.Errorf("stderr %q should contain 'sync-manifest' in supported verb list", errBuf.String())
+		}
+	})
+}

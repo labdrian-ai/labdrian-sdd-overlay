@@ -25,11 +25,13 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
 	case "remove":
 		RemoveCore(stripVerb(args, "remove"), readFile, stdout, stderr, exit)
+	case "sync-manifest":
+		SyncCore(stripVerb(args, "sync-manifest"), readFile, stdout, stderr, exit)
 	case "":
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest")
 		exit(1)
 	default:
-		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove)\n", verb)
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove, sync-manifest)\n", verb)
 		exit(1)
 	}
 }
