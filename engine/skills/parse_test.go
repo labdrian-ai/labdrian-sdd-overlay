@@ -299,6 +299,11 @@ func TestParseRegistry(t *testing.T) {
 		if !strings.Contains(err.Error(), "workspace") {
 			t.Errorf("SC-11: error %q should contain the invalid value %q", err.Error(), "workspace")
 		}
+		// R-040 MUST: error must include the line number of the bad defaultScope line.
+		// In the inline YAML above, "defaultScope: workspace" is on line 8.
+		if !strings.Contains(err.Error(), "line 8") {
+			t.Errorf("SC-11: error %q should contain the line number (line 8)", err.Error())
+		}
 	})
 
 	t.Run("SC-12_allowedProjects_forbidden_on_global", func(t *testing.T) {
