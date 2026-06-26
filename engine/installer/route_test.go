@@ -489,7 +489,9 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 	if err != nil {
 		t.Fatalf("overlay sync-check (after deploy): %v\noutput:\n%s", err, outSync)
 	}
-	if strings.Contains(outSync, "OVERLAY_NOT_DEPLOYED") {
+	// Check for per-file "OVERLAY_NOT_DEPLOYED: <path>" status lines only.
+	// The VERDICT line always contains "OVERLAY_NOT_DEPLOYED=N" (with =), not ": ".
+	if strings.Contains(outSync, "OVERLAY_NOT_DEPLOYED: ") {
 		t.Errorf("L511 regression: sync-check reports OVERLAY_NOT_DEPLOYED for deployed agent file\noutput:\n%s", outSync)
 	}
 	if !strings.Contains(outSync, "IN_SYNC") {
@@ -502,7 +504,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 	}
 
 	outMissing, _ := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
-	if !strings.Contains(outMissing, "OVERLAY_NOT_DEPLOYED") {
+	if !strings.Contains(outMissing, "OVERLAY_NOT_DEPLOYED: ") {
 		t.Errorf("sync-check should report OVERLAY_NOT_DEPLOYED after agent file removed\noutput:\n%s", outMissing)
 	}
 }
