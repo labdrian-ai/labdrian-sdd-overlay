@@ -137,4 +137,43 @@ skills:
 			t.Error("stderr must be non-empty on empty verb")
 		}
 	})
+
+	t.Run("SC_23_install_verb_routes_to_install_core", func(t *testing.T) {
+		// SC-23: verb "install" routes to RenderInstallCore, not the default error branch.
+		// We pass --project-id and --source-root so the core can run cleanly.
+		// The mock registry has only global skills → empty plan → exit 0 with notice.
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		SkillsCore(
+			"install",
+			[]string{"--registry", "reg.yaml", "--source-root", "/nonexistent", "--project-id", "test-project"},
+			skillsMockReadFile,
+			&out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		// Must not produce "unknown skills verb" error.
+		if strings.Contains(errBuf.String(), "unknown skills verb") {
+			t.Errorf("stderr %q should not contain 'unknown skills verb'", errBuf.String())
+		}
+		// Empty plan (mock registry has global skills only) → exit 0.
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr: %q", exitCode, errBuf.String())
+		}
+		if !strings.Contains(out.String(), "no project-scoped skills") {
+			t.Errorf("stdout %q should contain empty-plan notice", out.String())
+		}
+	})
+
+	t.Run("SC_24_unknown_verb_lists_install", func(t *testing.T) {
+		// SC-24: unknown verb → exit 1, stderr contains "install" in the supported verb list.
+		var out, errBuf bytes.Buffer
+		exitCode := 0
+		SkillsCore("frobnicate", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(errBuf.String(), "install") {
+			t.Errorf("stderr %q should contain 'install' in supported verb list", errBuf.String())
+		}
+	})
 }
