@@ -3,6 +3,7 @@ package skills
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"strings"
 )
@@ -40,9 +41,14 @@ func LoadManifestView(path string) (ManifestView, error) {
 		return nil, fmt.Errorf("manifest: open %s: %w", path, err)
 	}
 	defer f.Close()
+	return loadManifestViewReader(f)
+}
 
+// loadManifestViewReader parses a ManifestView from r. It is the pure, reader-based
+// core of LoadManifestView, extracted to allow in-memory callers (ADR-9 step 7).
+func loadManifestViewReader(r io.Reader) (ManifestView, error) {
 	mv := make(ManifestView)
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
 		if line == "" || strings.HasPrefix(line, "#") {
@@ -83,7 +89,7 @@ func LoadManifestView(path string) (ManifestView, error) {
 		// Same tag seen again: no-op (no conflict, first row already recorded).
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, fmt.Errorf("manifest: read %s: %w", path, err)
+		return nil, fmt.Errorf("manifest: read error: %w", err)
 	}
 	return mv, nil
 }
