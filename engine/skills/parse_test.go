@@ -454,4 +454,38 @@ func TestParseRegistry(t *testing.T) {
 			t.Errorf("SC-59: error %q should contain a line number", err.Error())
 		}
 	})
+
+	t.Run("WARNING1_external_with_upstream_errors", func(t *testing.T) {
+		// WARNING-1: external entry with upstream block must be rejected (ADR-11).
+		// Mirrors the custom+upstream rejection in validateEntry.
+		yaml := `version: "1"
+skills:
+  - id: bad-ext
+    path: bad-ext
+    source:
+      type: external
+      repo: https://github.com/example/skills
+      upstream:
+        owner: someone
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("WARNING-1: expected non-nil error for external entry with upstream block, got nil")
+		}
+		if !strings.Contains(err.Error(), "bad-ext") {
+			t.Errorf("WARNING-1: error %q should contain the entry id", err.Error())
+		}
+		if !strings.Contains(err.Error(), "upstream") {
+			t.Errorf("WARNING-1: error %q should mention upstream", err.Error())
+		}
+		if !strings.Contains(err.Error(), "external") {
+			t.Errorf("WARNING-1: error %q should mention external", err.Error())
+		}
+	})
 }
