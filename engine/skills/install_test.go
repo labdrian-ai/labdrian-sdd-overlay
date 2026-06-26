@@ -167,6 +167,93 @@ func TestPlanInstall(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
+// CRITICAL-1: PlanInstall path-traversal guard tests (R-055)
+// ---------------------------------------------------------------------------
+
+// TestPlanInstallTraversalGuard verifies that crafted id/path values with ..
+// are rejected by PlanInstall before any CopyOp is produced.
+func TestPlanInstallTraversalGuard(t *testing.T) {
+	const sourceRoot = "/overlay/skills"
+	const targetRoot = "/target-repo"
+
+	t.Run("id_dotdot_dst_escapes_skills_root", func(t *testing.T) {
+		// id="../../outside" → Dst would land outside .claude/skills/ → error.
+		reg := buildRegistry([]struct {
+			id              string
+			scope           string
+			allowedProjects []string
+		}{
+			{"../../outside", "project", []string{"target-repo"}},
+		})
+		ops, err := PlanInstall(reg, "target-repo", sourceRoot, targetRoot)
+		if err == nil {
+			t.Fatal("expected error for traversal id, got nil")
+		}
+		if len(ops) != 0 {
+			t.Errorf("expected no CopyOp on traversal id, got %d", len(ops))
+		}
+	})
+
+	t.Run("path_dotdot_src_escapes_source_root", func(t *testing.T) {
+		// path="../../etc" → Src would escape sourceRoot → error.
+		reg := Registry{Version: "1", Skills: []Entry{{
+			ID:   "legit-id",
+			Path: "../../etc",
+			Source: Source{Type: "custom"},
+			Install: Install{
+				DefaultScope:    "project",
+				Targets:         []string{"claude"},
+				AllowedProjects: []string{"target-repo"},
+			},
+			Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+		}}}
+		ops, err := PlanInstall(reg, "target-repo", sourceRoot, targetRoot)
+		if err == nil {
+			t.Fatal("expected error for path traversal, got nil")
+		}
+		if len(ops) != 0 {
+			t.Errorf("expected no CopyOp on path traversal, got %d", len(ops))
+		}
+	})
+
+	t.Run("id_equals_source_root_rejected", func(t *testing.T) {
+		// id=".." directly → Dst would equal the skills root itself, not a subdir.
+		reg := buildRegistry([]struct {
+			id              string
+			scope           string
+			allowedProjects []string
+		}{
+			{"..", "project", []string{"target-repo"}},
+		})
+		ops, err := PlanInstall(reg, "target-repo", sourceRoot, targetRoot)
+		if err == nil {
+			t.Fatal("expected error for '..' id, got nil")
+		}
+		if len(ops) != 0 {
+			t.Errorf("expected no CopyOp on '..' id, got %d", len(ops))
+		}
+	})
+
+	t.Run("clean_id_passes_guard", func(t *testing.T) {
+		// Normal id with no traversal → guard passes, plan succeeds.
+		reg := buildRegistry([]struct {
+			id              string
+			scope           string
+			allowedProjects []string
+		}{
+			{"safe-skill", "project", []string{"target-repo"}},
+		})
+		ops, err := PlanInstall(reg, "target-repo", sourceRoot, targetRoot)
+		if err != nil {
+			t.Fatalf("unexpected error for clean id: %v", err)
+		}
+		if len(ops) != 1 {
+			t.Fatalf("expected 1 op, got %d", len(ops))
+		}
+	})
+}
+
+// ---------------------------------------------------------------------------
 // T-04: ExecuteInstall tests (SC-15, SC-16, SC-19)
 // ---------------------------------------------------------------------------
 
@@ -323,6 +410,43 @@ func TestExecuteInstall(t *testing.T) {
 		}
 		if !strings.Contains(errBuf.String(), "ghost-b") {
 			t.Errorf("stderr %q should contain 'ghost-b'", errBuf.String())
+		}
+	})
+
+	t.Run("R054_write_failure_fail_loud", func(t *testing.T) {
+		// R-054: a write failure during copy → non-nil error, stderr non-empty.
+		// Skip when running as root (root bypasses permission checks).
+		if os.Getuid() == 0 {
+			t.Skip("skipping write-failure test: running as root")
+		}
+
+		overlayDir := t.TempDir()
+		targetDir := t.TempDir()
+		makeSourceSkill(t, overlayDir, "my-skill", map[string]string{"SKILL.md": "content"})
+
+		// Make the destination parent read-only so MkdirAll for Dst fails.
+		skillsParent := filepath.Join(targetDir, ".claude", "skills")
+		if err := os.MkdirAll(skillsParent, 0755); err != nil {
+			t.Fatalf("setup MkdirAll: %v", err)
+		}
+		if err := os.Chmod(skillsParent, 0555); err != nil {
+			t.Fatalf("setup Chmod: %v", err)
+		}
+		defer os.Chmod(skillsParent, 0755) // restore for t.TempDir cleanup
+
+		plan := []CopyOp{{
+			SkillID: "my-skill",
+			Src:     filepath.Join(overlayDir, "my-skill"),
+			Dst:     filepath.Join(skillsParent, "my-skill"),
+		}}
+
+		var out, errBuf bytes.Buffer
+		err := ExecuteInstall(plan, &out, &errBuf)
+		if err == nil {
+			t.Fatal("expected error on write failure, got nil")
+		}
+		if errBuf.Len() == 0 {
+			t.Error("stderr must be non-empty on write failure")
 		}
 	})
 

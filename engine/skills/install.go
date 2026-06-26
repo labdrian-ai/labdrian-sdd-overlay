@@ -7,6 +7,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // CopyOp is a single file-tree copy directive: copy the Src/ tree to Dst/.
@@ -19,7 +20,14 @@ type CopyOp struct {
 // PlanInstall filters reg for project-scoped skills allowed for projectID,
 // building one CopyOp per admitted entry. Pure: no filesystem access.
 // Declaration order from reg.Skills is preserved in the returned slice.
+// Returns a non-nil error if any entry's id or path contains a traversal
+// sequence that would place Dst outside <targetRoot>/.claude/skills/ or
+// Src outside sourceRoot (R-055).
 func PlanInstall(reg Registry, projectID, sourceRoot, targetRoot string) ([]CopyOp, error) {
+	// Pre-compute clean containment roots for traversal checks.
+	srcRoot := filepath.Clean(sourceRoot) + string(os.PathSeparator)
+	dstRoot := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills")) + string(os.PathSeparator)
+
 	var ops []CopyOp
 	for _, e := range reg.Skills {
 		if e.Install.DefaultScope != "project" {
@@ -28,10 +36,22 @@ func PlanInstall(reg Registry, projectID, sourceRoot, targetRoot string) ([]Copy
 		if !containsString(e.Install.AllowedProjects, projectID) {
 			continue
 		}
+
+		src := filepath.Clean(filepath.Join(sourceRoot, e.Path))
+		dst := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills", e.ID))
+
+		// R-055: reject traversal in both src and dst (fail-loud, pure).
+		if !strings.HasPrefix(src+string(os.PathSeparator), srcRoot) {
+			return nil, fmt.Errorf("skill %q: path %q escapes source root — possible traversal", e.ID, e.Path)
+		}
+		if !strings.HasPrefix(dst+string(os.PathSeparator), dstRoot) {
+			return nil, fmt.Errorf("skill %q: id %q escapes target skills root — possible traversal", e.ID, e.ID)
+		}
+
 		ops = append(ops, CopyOp{
 			SkillID: e.ID,
-			Src:     filepath.Join(sourceRoot, e.Path),
-			Dst:     filepath.Join(targetRoot, ".claude", "skills", e.ID),
+			Src:     src,
+			Dst:     dst,
 		})
 	}
 	return ops, nil
