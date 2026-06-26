@@ -335,4 +335,23 @@ func TestParseRegistry(t *testing.T) {
 			t.Errorf("SC-13: AllowedProjects = %v, want nil", reg.Skills[0].Install.AllowedProjects)
 		}
 	})
+
+	t.Run("T07_valid_project_scoped_fixture", func(t *testing.T) {
+		// T-07: the testdata project-scoped fixture parses cleanly and produces
+		// one entry with defaultScope=project and allowedProjects=[labdrian-sdd-overlay].
+		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "valid_project_scoped")))
+		if err != nil {
+			t.Fatalf("T-07 fixture parse error: %v", err)
+		}
+		if len(reg.Skills) != 1 {
+			t.Fatalf("len(Skills) = %d, want 1", len(reg.Skills))
+		}
+		e := reg.Skills[0]
+		if e.Install.DefaultScope != "project" {
+			t.Errorf("DefaultScope = %q, want project", e.Install.DefaultScope)
+		}
+		if len(e.Install.AllowedProjects) != 1 || e.Install.AllowedProjects[0] != "labdrian-sdd-overlay" {
+			t.Errorf("AllowedProjects = %v, want [labdrian-sdd-overlay]", e.Install.AllowedProjects)
+		}
+	})
 }
