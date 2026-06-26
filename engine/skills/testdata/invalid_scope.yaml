@@ -5,7 +5,7 @@ skills:
     source:
       type: custom
     install:
-      defaultScope: project
+      defaultScope: workspace
       targets:
         - claude
     lifecycle:

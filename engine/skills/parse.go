@@ -492,6 +492,12 @@ func (p *tokParser) parseInstall(indent, lineNum int) (Install, error) {
 				return Install{}, err
 			}
 			inst.Targets = targets
+		case "allowedProjects":
+			projects, err := p.parseScalarSequence(indent+2, t.lineNum)
+			if err != nil {
+				return Install{}, err
+			}
+			inst.AllowedProjects = projects
 		default:
 			return Install{}, fmt.Errorf("line %d: unknown key %q in install", t.lineNum, t.key)
 		}
@@ -568,8 +574,12 @@ func validateEntry(e *Entry) error {
 	if e.Source.Type == "core" && e.Source.Upstream != nil && e.Source.Upstream.Owner == "" {
 		return fmt.Errorf("skills: entry %q: source.upstream.owner must not be empty", e.ID)
 	}
-	if e.Install.DefaultScope != "global" {
-		return fmt.Errorf("skills: entry %q: install.defaultScope %q is not valid; must be 'global'", e.ID, e.Install.DefaultScope)
+	validScopes := map[string]bool{"global": true, "project": true}
+	if !validScopes[e.Install.DefaultScope] {
+		return fmt.Errorf("skills: entry %q: install.defaultScope %q is not valid; must be 'global' or 'project'", e.ID, e.Install.DefaultScope)
+	}
+	if e.Install.DefaultScope == "global" && len(e.Install.AllowedProjects) > 0 {
+		return fmt.Errorf("skills: entry %q: allowedProjects is only valid for project-scoped entries", e.ID)
 	}
 	if len(e.Install.Targets) == 0 {
 		return fmt.Errorf("skills: entry %q: install.targets must not be empty (R-007)", e.ID)
