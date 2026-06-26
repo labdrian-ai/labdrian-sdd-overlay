@@ -28,8 +28,9 @@ type Upstream struct {
 
 // Install describes installation parameters for a skill.
 type Install struct {
-	DefaultScope string   // "global" only in this slice (A-1)
-	Targets      []string // non-empty subset of {"claude","opencode","codex"} (A-1)
+	DefaultScope    string   // "global" | "project" (enum; validated in parse.go)
+	Targets         []string // non-empty subset of {"claude","opencode","codex"} (A-1)
+	AllowedProjects []string // optional; required when DefaultScope == "project"
 }
 
 // Lifecycle describes how a skill is updated over time.
