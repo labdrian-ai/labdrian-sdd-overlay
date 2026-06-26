@@ -11,12 +11,65 @@ import (
 
 // ── T-04: Pure-transform tests (AddEntry / RemoveEntry) ──────────────────────
 
+// TestAddEntryProvenance verifies T-06 pure-function paths for AddEntry (ADR-14).
+func TestAddEntryProvenance(t *testing.T) {
+	reg := Registry{Version: "1"}
+
+	t.Run("no_repo_produces_custom", func(t *testing.T) {
+		// SC-67 (pure): repo=="" → Source.Type=="custom", Repo=="", ref ignored.
+		got, err := AddEntry(reg, "baz", "", "")
+		if err != nil {
+			t.Fatalf("AddEntry: %v", err)
+		}
+		e := got.Skills[0]
+		if e.Source.Type != "custom" {
+			t.Errorf("Source.Type = %q, want custom", e.Source.Type)
+		}
+		if e.Source.Repo != "" {
+			t.Errorf("Source.Repo = %q, want empty", e.Source.Repo)
+		}
+	})
+
+	t.Run("repo_produces_external", func(t *testing.T) {
+		// SC-65/SC-66 (pure): repo set → Source.Type=="external", Repo set.
+		got, err := AddEntry(reg, "foo", "https://github.com/example/skills", "")
+		if err != nil {
+			t.Fatalf("AddEntry: %v", err)
+		}
+		e := got.Skills[0]
+		if e.Source.Type != "external" {
+			t.Errorf("Source.Type = %q, want external", e.Source.Type)
+		}
+		if e.Source.Repo != "https://github.com/example/skills" {
+			t.Errorf("Source.Repo = %q, want https://github.com/example/skills", e.Source.Repo)
+		}
+		if e.Source.Ref != "" {
+			t.Errorf("Source.Ref = %q, want empty", e.Source.Ref)
+		}
+	})
+
+	t.Run("repo_and_ref_produces_external_with_ref", func(t *testing.T) {
+		// SC-66 (pure): repo+ref → Source.Ref set.
+		got, err := AddEntry(reg, "bar", "https://example.com/repo", "deadbeef")
+		if err != nil {
+			t.Fatalf("AddEntry: %v", err)
+		}
+		e := got.Skills[0]
+		if e.Source.Type != "external" {
+			t.Errorf("Source.Type = %q, want external", e.Source.Type)
+		}
+		if e.Source.Ref != "deadbeef" {
+			t.Errorf("Source.Ref = %q, want deadbeef", e.Source.Ref)
+		}
+	})
+}
+
 // TestAddEntryDefaults verifies R-062: AddEntry on a valid id and empty registry
 // returns an entry populated with all required default values.
 func TestAddEntryDefaults(t *testing.T) {
 	reg := Registry{Version: "1"}
 
-	got, err := AddEntry(reg, "my-skill")
+	got, err := AddEntry(reg, "my-skill", "", "")
 	if err != nil {
 		t.Fatalf("AddEntry: unexpected error: %v", err)
 	}
@@ -54,7 +107,7 @@ func TestAddEntryDefaults(t *testing.T) {
 func TestAddEntryNilAllowedProjects(t *testing.T) {
 	reg := Registry{Version: "1"}
 
-	got, err := AddEntry(reg, "skill1")
+	got, err := AddEntry(reg, "skill1", "", "")
 	if err != nil {
 		t.Fatalf("AddEntry: %v", err)
 	}
@@ -96,13 +149,13 @@ func TestAddEntrySlugGuard(t *testing.T) {
 	reg := Registry{Version: "1"}
 
 	for _, id := range invalidStrict {
-		_, err := AddEntry(reg, id)
+		_, err := AddEntry(reg, id, "", "")
 		if err == nil {
 			t.Errorf("AddEntry(%q): expected error, got nil", id)
 		}
 	}
 	for _, id := range valid {
-		_, err := AddEntry(reg, id)
+		_, err := AddEntry(reg, id, "", "")
 		if err != nil {
 			t.Errorf("AddEntry(%q): unexpected error: %v", id, err)
 		}
@@ -129,7 +182,7 @@ func TestAddEntryDuplicate(t *testing.T) {
 		},
 	}
 
-	_, err := AddEntry(reg, "existing")
+	_, err := AddEntry(reg, "existing", "", "")
 	if err == nil {
 		t.Error("AddEntry with duplicate id: expected error, got nil")
 	}
@@ -184,11 +237,11 @@ func TestRemoveEntryAbsent(t *testing.T) {
 func TestAddEntryOrderPreservation(t *testing.T) {
 	reg := Registry{Version: "1"}
 
-	reg1, err := AddEntry(reg, "first")
+	reg1, err := AddEntry(reg, "first", "", "")
 	if err != nil {
 		t.Fatalf("AddEntry first: %v", err)
 	}
-	reg2, err := AddEntry(reg1, "second")
+	reg2, err := AddEntry(reg1, "second", "", "")
 	if err != nil {
 		t.Fatalf("AddEntry second: %v", err)
 	}
@@ -230,7 +283,7 @@ func TestAddEntryRoundTrip(t *testing.T) {
 		},
 	}
 
-	got, err := AddEntry(base, "new-skill")
+	got, err := AddEntry(base, "new-skill", "", "")
 	if err != nil {
 		t.Fatalf("AddEntry: %v", err)
 	}
@@ -709,4 +762,247 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 
 	runRemoveCore()
 	checkValidate("after remove", 1)
+}
+
+// ── T-06: SC-65..SC-68 external provenance via AddCore ───────────────────────
+
+// TestAddCoreExternalRepo verifies SC-65: AddCore --repo creates an external
+// entry with the custom manifest tag and Validate returns nil (R-127, R-130).
+func TestAddCoreExternalRepo(t *testing.T) {
+	dir := t.TempDir()
+	regPath, mfPath, skillsRoot := setupFixture(t, dir,
+		minimalRegistry("existing"),
+		minimalManifest("existing"),
+		[]string{"existing", "foo"},
+	)
+
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
+			"foo", "--repo", "https://github.com/example/skills"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("SC-65: AddCore exit %d; stderr=%q", exitCode, errBuf.String())
+	}
+
+	// Registry must have an external entry for foo.
+	regBytes, err := os.ReadFile(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	if err != nil {
+		t.Fatalf("SC-65: re-parse: %v", err)
+	}
+	var found *Entry
+	for i := range reg.Skills {
+		if reg.Skills[i].ID == "foo" {
+			found = &reg.Skills[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("SC-65: entry 'foo' not found in registry")
+	}
+	if found.Source.Type != "external" {
+		t.Errorf("SC-65: Source.Type = %q, want external", found.Source.Type)
+	}
+	if found.Source.Repo != "https://github.com/example/skills" {
+		t.Errorf("SC-65: Source.Repo = %q, want https://github.com/example/skills", found.Source.Repo)
+	}
+
+	// Manifest must contain foo/SKILL.md custom (not managed).
+	mfBytes, err := os.ReadFile(mfPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mfStr := string(mfBytes)
+	if !strings.Contains(mfStr, "foo/SKILL.md custom") {
+		t.Errorf("SC-65: manifest missing 'foo/SKILL.md custom'; content=%q", mfStr)
+	}
+	if strings.Contains(mfStr, "foo/SKILL.md managed") {
+		t.Errorf("SC-65: manifest must not have 'foo/SKILL.md managed'; content=%q", mfStr)
+	}
+
+	// Validate must return zero divergences.
+	divs, vErr := Validate(reg, mfPath)
+	if vErr != nil || len(divs) > 0 {
+		t.Errorf("SC-65: Validate after external add: err=%v, divs=%v", vErr, divs)
+	}
+}
+
+// TestAddCoreExternalRepoRef verifies SC-66: --repo --ref sets Source.Ref and
+// the round-trip holds (R-127, R-129).
+func TestAddCoreExternalRepoRef(t *testing.T) {
+	dir := t.TempDir()
+	regPath, mfPath, skillsRoot := setupFixture(t, dir,
+		minimalRegistry("existing"),
+		minimalManifest("existing"),
+		[]string{"existing", "bar"},
+	)
+
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
+			"bar", "--repo", "https://example.com/repo", "--ref", "deadbeef"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("SC-66: AddCore exit %d; stderr=%q", exitCode, errBuf.String())
+	}
+
+	regBytes, err := os.ReadFile(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	if err != nil {
+		t.Fatalf("SC-66: re-parse: %v", err)
+	}
+
+	var found *Entry
+	for i := range reg.Skills {
+		if reg.Skills[i].ID == "bar" {
+			found = &reg.Skills[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("SC-66: entry 'bar' not found")
+	}
+	if found.Source.Ref != "deadbeef" {
+		t.Errorf("SC-66: Source.Ref = %q, want deadbeef", found.Source.Ref)
+	}
+
+	// Round-trip: parse(serialize(reg)) must DeepEqual reg.
+	serialized, serErr := Serialize(reg)
+	if serErr != nil {
+		t.Fatalf("SC-66: Serialize: %v", serErr)
+	}
+	reparsed, rpErr := ParseRegistry(bytes.NewReader(serialized))
+	if rpErr != nil {
+		t.Fatalf("SC-66: re-parse after serialize: %v", rpErr)
+	}
+	if !reflect.DeepEqual(reg, reparsed) {
+		t.Errorf("SC-66: round-trip not equal:\n  before: %+v\n  after:  %+v", reg, reparsed)
+	}
+}
+
+// TestAddCoreNoRepoStaysCustom verifies SC-67: AddCore without --repo produces
+// a custom entry (non-regression, R-128).
+func TestAddCoreNoRepoStaysCustom(t *testing.T) {
+	dir := t.TempDir()
+	regPath, mfPath, skillsRoot := setupFixture(t, dir,
+		minimalRegistry("existing"),
+		minimalManifest("existing"),
+		[]string{"existing", "baz"},
+	)
+
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "baz"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("SC-67: AddCore exit %d; stderr=%q", exitCode, errBuf.String())
+	}
+
+	regBytes, err := os.ReadFile(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	if err != nil {
+		t.Fatalf("SC-67: re-parse: %v", err)
+	}
+
+	var found *Entry
+	for i := range reg.Skills {
+		if reg.Skills[i].ID == "baz" {
+			found = &reg.Skills[i]
+		}
+	}
+	if found == nil {
+		t.Fatal("SC-67: entry 'baz' not found")
+	}
+	if found.Source.Type != "custom" {
+		t.Errorf("SC-67: Source.Type = %q, want custom", found.Source.Type)
+	}
+	if found.Source.Repo != "" {
+		t.Errorf("SC-67: Source.Repo = %q, want empty", found.Source.Repo)
+	}
+}
+
+// TestAddCoreExternalMissingSkillMD verifies SC-68: --repo still enforces the
+// SKILL.md precondition; missing dir → exit != 0, files unchanged (R-129).
+func TestAddCoreExternalMissingSkillMD(t *testing.T) {
+	dir := t.TempDir()
+	regContent := minimalRegistry("existing")
+	mfContent := minimalManifest("existing")
+	regPath, mfPath, skillsRoot := setupFixture(t, dir, regContent, mfContent, []string{"existing"})
+
+	var out, errBuf bytes.Buffer
+	exitCode := 0
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
+			"missing", "--repo", "https://example.com/repo"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode == 0 {
+		t.Fatal("SC-68: expected non-zero exit for missing SKILL.md with --repo")
+	}
+	if !strings.Contains(errBuf.String(), "missing") {
+		t.Errorf("SC-68: stderr %q should mention 'missing'", errBuf.String())
+	}
+
+	// Files must be byte-unchanged.
+	gotReg, _ := os.ReadFile(regPath)
+	if string(gotReg) != regContent {
+		t.Error("SC-68: registry was mutated despite missing SKILL.md")
+	}
+	gotMf, _ := os.ReadFile(mfPath)
+	if string(gotMf) != mfContent {
+		t.Error("SC-68: manifest was mutated despite missing SKILL.md")
+	}
+}
+
+// TestAddCoreRefWithoutRepo verifies ADR-14: --ref without --repo must fail loudly.
+func TestAddCoreRefWithoutRepo(t *testing.T) {
+	dir := t.TempDir()
+	regPath, mfPath, skillsRoot := setupFixture(t, dir,
+		minimalRegistry("existing"),
+		minimalManifest("existing"),
+		[]string{"existing", "foo"},
+	)
+
+	var out, errBuf bytes.Buffer
+	exitCode := 0
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
+			"foo", "--ref", "deadbeef"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode == 0 {
+		t.Fatal("ADR-14: expected non-zero exit for --ref without --repo")
+	}
+	if errBuf.Len() == 0 {
+		t.Error("ADR-14: expected non-empty stderr for --ref without --repo")
+	}
 }

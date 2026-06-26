@@ -202,7 +202,7 @@ func SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error) {
 // On any failure after the temp file is created, the temp file is removed and
 // overlay.manifest is left byte-unchanged (R-102).
 func SyncCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	registryPath, manifestPath, _, _ := parseFlags(args)
+	registryPath, manifestPath, _, _, _, _ := parseFlags(args)
 
 	// 1. Read and parse the registry.
 	regData, err := readFile(registryPath)
