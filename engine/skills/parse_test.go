@@ -89,7 +89,7 @@ func TestParseRegistry(t *testing.T) {
 	})
 
 	t.Run("unknown_source_type", func(t *testing.T) {
-		// SC-03: source.type: external → error (R-003).
+		// source.type: bogus (genuinely unknown) → error. ('external' is now a valid type.)
 		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "unknown_source_type")))
 		if err == nil {
 			t.Fatal("expected non-nil error for unknown source.type, got nil")
