@@ -325,3 +325,70 @@ func TestSerializeRoundTripRealRegistry(t *testing.T) {
 
 	t.Logf("real registry round-tripped: %d entries", len(original.Skills))
 }
+
+// externalEntry returns a minimal valid external Registry entry for use in tests.
+func externalEntry(id, repo, ref string) Entry {
+	return Entry{
+		ID:   id,
+		Path: id,
+		Source: Source{
+			Type: "external",
+			Repo: repo,
+			Ref:  ref,
+		},
+		Install: Install{
+			DefaultScope: "global",
+			Targets:      []string{"claude"},
+		},
+		Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+	}
+}
+
+// TestSerializeRoundTripExternal verifies SC-60: parse(serialize(r)) == r for a Registry
+// containing an external entry with both Repo and Ref set.
+func TestSerializeRoundTripExternal(t *testing.T) {
+	reg := Registry{
+		Version: "1",
+		Skills:  []Entry{externalEntry("my-ext-skill", "https://github.com/example/skills", "a1b2c3d")},
+	}
+
+	out := mustSerialize(t, reg)
+
+	// Serialized bytes must contain "repo:" and "ref:" under the source block.
+	if !strings.Contains(string(out), "repo:") {
+		t.Errorf("SC-60: serialized output does not contain 'repo:'\n%s", out)
+	}
+	if !strings.Contains(string(out), "ref:") {
+		t.Errorf("SC-60: serialized output does not contain 'ref:'\n%s", out)
+	}
+
+	parsed := mustParseBytes(t, out)
+
+	if !reflect.DeepEqual(reg, parsed) {
+		t.Errorf("SC-60: round-trip mismatch\noriginal: %+v\ngot:      %+v", reg, parsed)
+	}
+}
+
+// TestSerializeExternalRejectsForbiddenRepo verifies SC-61: a repo value containing a
+// forbidden character causes Serialize to return a non-nil error naming the entry id
+// and "source.repo".
+func TestSerializeExternalRejectsForbiddenRepo(t *testing.T) {
+	reg := Registry{
+		Version: "1",
+		Skills:  []Entry{externalEntry("bad-entry", "https://example.com/{repo}", "")},
+	}
+
+	out, err := Serialize(reg)
+	if err == nil {
+		t.Fatalf("SC-61: expected non-nil error for repo with forbidden char, got nil; output:\n%s", out)
+	}
+	if len(out) != 0 {
+		t.Errorf("SC-61: expected nil bytes on error, got %d bytes", len(out))
+	}
+	if !strings.Contains(err.Error(), "bad-entry") {
+		t.Errorf("SC-61: error %q should name the entry id", err.Error())
+	}
+	if !strings.Contains(err.Error(), "source.repo") {
+		t.Errorf("SC-61: error %q should mention source.repo", err.Error())
+	}
+}
