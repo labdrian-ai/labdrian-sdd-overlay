@@ -7,6 +7,16 @@ engine/cmd/main.go managed
 engine/cmd/main_test.go managed
 engine/settings/settings.go managed
 engine/settings/settings_test.go managed
+engine/skills/types.go managed
+engine/skills/parse.go managed
+engine/skills/load.go managed
+engine/skills/manifest.go managed
+engine/skills/validate.go managed
+engine/skills/list.go managed
+engine/skills/status.go managed
+engine/skills/skills.go managed
+engine/skills/sync.go managed
+engine/skills/sync_test.go managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
@@ -56,5 +66,6 @@ project-manifest/evals/evals.json custom
 project-architect/evals/evals.json custom
 roadmap-maker/evals/evals.json custom
 inception-pipeline/evals/evals.json custom
+skills.registry.yaml custom
 gadu-operator/SKILL.md   custom
 GADU.md                  custom   agent

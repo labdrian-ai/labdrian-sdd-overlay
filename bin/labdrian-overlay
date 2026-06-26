@@ -126,6 +126,18 @@ Commands:
                                    (verbs: rank, lint, readiness, brief). Reads JSON
                                    from stdin, writes JSON to stdout. Used by the
                                    prespec-malandra skill.
+  skills <verb>                    Forward to the engine's skills registry core
+                                     list      print sorted registry entries
+                                     status    print count summary
+                                     validate  cross-check registry vs overlay.manifest
+                                     install   copy project-scoped skills into <cwd>/.claude/skills
+                                     add <id> [--repo <url>] [--ref <sha>]
+                                               register a skill: custom (no --repo) or
+                                               external=vendored provenance (--repo set).
+                                               The overlay NEVER fetches; --repo/--ref are
+                                               inert labels for a file you already committed.
+                                     remove <id> unregister a skill from registry + manifest
+                                     sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
   --help                           Show this help
 
 Targets:
@@ -1141,6 +1153,32 @@ cmd_prespec() {
   exec "$ENGINE_BINARY" prespec "$@"
 }
 
+# cmd_skills forwards to the engine binary's `skills` subcommand.
+# Injects default --registry and --manifest paths from $OVERLAY_DIR so that
+# `labdrian skills list` / `labdrian skills validate` work from any cwd.
+# Flags already supplied by the caller are never overridden.
+cmd_skills() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+  fi
+
+  local has_registry=0 has_manifest=0 has_source_root=0
+  for arg in "$@"; do
+    [[ "$arg" == "--registry" ]] && has_registry=1
+    [[ "$arg" == "--manifest" ]] && has_manifest=1
+    [[ "$arg" == "--source-root" ]] && has_source_root=1
+  done
+
+  local -a defaults=()
+  [[ "$has_registry" -eq 0 ]] && defaults+=("--registry" "$OVERLAY_DIR/skills.registry.yaml")
+  [[ "$has_manifest" -eq 0 ]] && defaults+=("--manifest" "$OVERLAY_DIR/overlay.manifest")
+  [[ "$has_source_root" -eq 0 ]] && defaults+=("--source-root" "$OVERLAY_DIR/skills")
+
+  # Verb-first: "$@" carries the verb (and any user flags); injected defaults go
+  # AFTER it so the engine's positional verb extraction is not shadowed by a flag value.
+  exec "$ENGINE_BINARY" skills "$@" "${defaults[@]}"
+}
+
 # ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
@@ -1161,6 +1199,7 @@ case "$COMMAND" in
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
   prespec)         cmd_prespec "$@" ;;
+  skills)          cmd_skills "$@" ;;
   --help|-h)       usage; exit 0 ;;
   "")              usage >&2; exit 1 ;;
   *)               die "Unknown command: $COMMAND" ;;

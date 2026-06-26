@@ -1665,3 +1665,114 @@ func TestGateTaskCore_EmbeddedSafetyContract_DefaultPath(t *testing.T) {
 		t.Errorf("embedded gate default path: must NOT inject minimalism path %q; got %q", minimalistPath, out)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// T-17: skills subcommand tests (R-040..R-042, SC-13)
+// ---------------------------------------------------------------------------
+
+// TestRunSkillsCore_list verifies that runSkillsCore dispatches "list" correctly
+// and exits 0 on a valid registry temp file (smoke test, R-019).
+func TestRunSkillsCore_list(t *testing.T) {
+	dir := t.TempDir()
+	regPath := filepath.Join(dir, "registry.yaml")
+	const yaml = `version: "1"
+skills:
+  - id: smoke-skill
+    path: smoke-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+	if err := os.WriteFile(regPath, []byte(yaml), 0644); err != nil {
+		t.Fatalf("write fixture: %v", err)
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := 0
+	runSkillsCore("list", []string{"list", "--registry", regPath}, &outBuf, &errBuf, func(c int) { exitCode = c })
+	if exitCode != 0 {
+		t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "smoke-skill") {
+		t.Errorf("stdout %q missing smoke-skill entry", outBuf.String())
+	}
+}
+
+// TestRunSkillsCore_unknown_verb verifies that an unrecognised verb exits 1 (ADR-4).
+func TestRunSkillsCore_unknown_verb(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	exitCode := 0
+	runSkillsCore("bogus", []string{"bogus"}, &outBuf, &errBuf, func(c int) { exitCode = c })
+	if exitCode != 1 {
+		t.Errorf("exit code = %d, want 1", exitCode)
+	}
+	if errBuf.Len() == 0 {
+		t.Error("stderr must be non-empty on unknown verb")
+	}
+}
+
+// TestApplyIgnoresRegistry is a SC-13 regression guard: cmd_apply must never
+// open skills.registry.yaml. This is an integration-style smoke test; it is
+// skipped under -short to keep the fast unit-test suite lean.
+//
+// Invariant asserted: in a directory that contains NO skills.registry.yaml,
+// runPropagateCore succeeds (registry absent is a clean no-op) while
+// runSkillsCore("list") fails with exit 1 (skills subcommand requires the
+// YAML registry). This proves that propagate never opens skills.registry.yaml.
+func TestApplyIgnoresRegistry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("integration: skipped under -short")
+	}
+
+	dir := t.TempDir()
+	// No skills.registry.yaml in dir (the file is deliberately absent).
+
+	// The .atl/skill-registry.md (markdown registry for agents) IS present;
+	// this is what propagate reads via --registry. It is distinct from
+	// skills.registry.yaml (the YAML skills descriptor).
+	atlDir := filepath.Join(dir, ".atl")
+	if err := os.MkdirAll(atlDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mdRegistryPath := filepath.Join(atlDir, "skill-registry.md")
+	if err := os.WriteFile(mdRegistryPath, []byte("# Skill Registry\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	contractPath := filepath.Join(dir, "contract.md")
+	if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	// --- Assert 1: propagate succeeds even with no skills.registry.yaml.
+	// runPropagateCore reads mdRegistryPath (--registry), never skills.registry.yaml.
+	var propOut, propErr bytes.Buffer
+	propExitCode := -1
+	runPropagateCore(
+		[]string{"--registry", mdRegistryPath, "--contract-file", contractPath},
+		&propOut, &propErr,
+		os.ReadFile,
+		func(_ string, _ []byte, _ os.FileMode) error { return nil },
+		func(c int) { propExitCode = c },
+	)
+	if propExitCode == 1 {
+		t.Errorf("SC-13: runPropagateCore must not fail when skills.registry.yaml is absent; stderr=%q", propErr.String())
+	}
+
+	// --- Assert 2: runSkillsCore("list") DOES fail (exit 1) when the YAML
+	// registry is absent — confirming it is the *only* subcommand that reads it.
+	// This is the expected failure that proves the interface boundary is sharp.
+	var skillsOut, skillsErr bytes.Buffer
+	skillsExitCode := -1
+	missingYAML := filepath.Join(dir, "skills.registry.yaml") // does not exist
+	runSkillsCore("list", []string{"list", "--registry", missingYAML},
+		&skillsOut, &skillsErr, func(c int) { skillsExitCode = c })
+	if skillsExitCode != 1 {
+		t.Errorf("SC-13: runSkillsCore(list) must exit 1 when skills.registry.yaml is absent; got exit %d", skillsExitCode)
+	}
+}

@@ -5,6 +5,7 @@
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status
+//	engine skills <verb>  (verbs: list, status, validate)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -33,6 +34,10 @@
 // instead of an external file; propagate then writes that contract's DISTINCT
 // marker block. propagate also accepts --require-registry to turn an absent
 // registry into a fail-loud error instead of a silent no-op.
+//
+// skills: read-only semantic commands for skills.registry.yaml.
+// list: print sorted registry entries. status: print count summary.
+// validate: cross-check registry against overlay.manifest; exit 1 on divergence.
 package main
 
 import (
@@ -49,6 +54,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // embeddedContract resolves a named engine-owned managed contract to its content
@@ -107,6 +113,8 @@ func main() {
 		runPrespec(os.Args[2:])
 	case "gadu-generate":
 		runGaduGenerate(os.Args[2:])
+	case "skills":
+		runSkills(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -123,6 +131,10 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
+	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate)")
+	fmt.Fprintln(os.Stderr, "    list     --registry <path>            print sorted registry entries")
+	fmt.Fprintln(os.Stderr, "    status   --registry <path>            print count summary")
+	fmt.Fprintln(os.Stderr, "    validate --registry <path> --manifest <path>  cross-check registry vs manifest")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
@@ -189,6 +201,22 @@ func runPrespecCore(verb string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 		return
 	}
 	prespec.PrespecCore(verb, stdin, stdout, stderr, exit)
+}
+
+// runSkills implements the 'skills <verb>' subcommand.
+// Requires exactly one verb argument; fails LOUD on missing or unknown verb (ADR-4).
+func runSkills(args []string) {
+	runSkillsCore(verbFromArgs(args), args, os.Stdout, os.Stderr, os.Exit)
+}
+
+// runSkillsCore is the testable core of the skills subcommand.
+func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
+	if verb == "" {
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate")
+		exit(1)
+		return
+	}
+	skills.SkillsCore(verb, args, os.ReadFile, stdout, stderr, exit)
 }
 
 // verbFromArgs extracts the first positional argument as the verb, empty if absent.
