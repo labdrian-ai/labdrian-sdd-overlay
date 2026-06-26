@@ -23,7 +23,7 @@ T-04 → T-05 ──────────────────────
 ## Task List
 
 ### T-01 — Write failing serializer tests
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/serialize_test.go` (new), `engine/skills/testdata/golden/` (dir, created by test)
 **Requires**: nothing (types.go and parse.go already exist)
 **Spec**: SC-20..SC-25; tests for R-050..R-059
@@ -41,7 +41,7 @@ Tests to write (TDD first):
 ---
 
 ### T-02 — Implement serialize.go
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/serialize.go` (new), `engine/skills/testdata/golden/two_entry.yaml` (generated on first -update run)
 **Requires**: T-01 (tests must exist and fail first)
 **Spec**: R-050..R-059
@@ -64,7 +64,7 @@ All SC-20..SC-25 + unrepresentable test must pass. `go test ./engine/skills/... 
 ---
 
 ### T-03 — Refactor manifest.go: extract loadManifestViewReader
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/manifest.go` (modified)
 **Requires**: nothing (independent refactor)
 **Spec**: ADR-9 step 7 precondition (in-memory cross-check)
@@ -80,7 +80,7 @@ All SC-20..SC-25 + unrepresentable test must pass. `go test ./engine/skills/... 
 ---
 
 ### T-04 — Write failing pure-transform tests
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/lifecycle_test.go` (new, pure section)
 **Requires**: nothing (types.go and parse.go already exist)
 **Spec**: R-061, R-062, R-069, R-070; ADR-8 (slug guard, nil AllowedProjects)
@@ -97,7 +97,7 @@ Tests to write:
 ---
 
 ### T-05 — Implement AddEntry / RemoveEntry pure functions
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/lifecycle.go` (new, pure section only)
 **Requires**: T-04 (tests must exist and fail first)
 **Spec**: R-061, R-062, R-069, R-070; ADR-8
@@ -117,7 +117,7 @@ All T-04 tests must pass. No I/O. Stdlib only (`regexp`).
 ---
 
 ### T-06 — Write failing I/O core tests
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/lifecycle_test.go` (extend — I/O section)
 **Requires**: T-02 (Serialize), T-03 (loadManifestViewReader), T-05 (AddEntry/RemoveEntry)
 **Spec**: R-060..R-075, R-082, R-083; SC-26..SC-35
@@ -138,7 +138,7 @@ Tests to write:
 ---
 
 ### T-07 — Implement AddCore / RemoveCore + writeFileAtomic
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/lifecycle.go` (extend — I/O section)
 **Requires**: T-06 (tests must exist and fail first)
 **Spec**: R-060..R-075, R-077, R-082, R-083; ADR-9
@@ -170,7 +170,7 @@ All T-06 tests must pass. `go test ./engine/skills/...` green.
 ---
 
 ### T-08 — Write failing CLI dispatch tests
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/skills_test.go` (extend)
 **Requires**: T-07 (AddCore/RemoveCore must exist)
 **Spec**: R-076, R-080; SC-36, SC-37
@@ -183,7 +183,7 @@ Tests to write:
 ---
 
 ### T-09 — Update skills.go: add/remove dispatch + verb error messages
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: `engine/skills/skills.go` (modified)
 **Requires**: T-08 (tests must exist and fail first)
 **Spec**: R-076, R-080
@@ -199,7 +199,7 @@ All T-08 tests must pass. Existing `SkillsCore` tests must remain green.
 ---
 
 ### T-10 — Verification: stdlib-only imports + unchanged files confirmation
-**Status**: [ ] pending
+**Status**: [x] done
 **Files**: none modified (verification only)
 **Requires**: T-09 (all implementation complete)
 **Spec**: R-078, R-079, R-081; SC-38
