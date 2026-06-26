@@ -10,15 +10,30 @@ while [ -h "$SOURCE" ]; do
   [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
 done
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
-OVERLAY_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
+# Allow OVERLAY_DIR to be overridden via environment variable (useful for tests
+# and power-user workflows; normal use leaves it unset so it auto-detects here).
+OVERLAY_DIR="${OVERLAY_DIR:-"$(cd "$SCRIPT_DIR/.." && pwd)"}"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
-MANIFEST="$OVERLAY_DIR/overlay.manifest"
+MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
 declare -A TARGET_PATHS=(
   [claude]="$HOME/.claude/skills"
   [opencode]="$HOME/.config/opencode/skills"
   [codex]="$HOME/.codex/skills"
 )
+
+# Agent-route destinations: only claude supports agent files (R-006, D2).
+declare -A AGENT_TARGET_PATHS=(
+  [claude]="$HOME/.claude/agents"
+)
+
+# Known limitations (explicitly out of scope for this change, R-009):
+#   - The bootstrap init block's human-readable info echoes (dir creation) and
+#     the `git add skills/` in the initial scaffold commit remain skills-only.
+#     They are a no-op for GADU (custom rows) and only matter for a hypothetical
+#     future managed agent row.
+#   - No native opencode/Codex agent-definition files are produced (R-009).
+#   - No SDD orchestrator auto-spawn wiring (R-009).
 
 # Path where the engine binary is deployed. Using ~/.claude/bin/ keeps all
 # Claude Code tooling co-located and makes the binary easy to find in hooks.
@@ -127,6 +142,56 @@ Hook activation notes:
   - Missing-binary safety: hook commands use 'command -v <binary> && ...' so
     they silently exit 0 if the binary is absent, never blocking a Task.
 EOF
+}
+
+# ---------------------------------------------------------------------------
+# route_resolve — single source of truth for manifest entry → routing
+# ---------------------------------------------------------------------------
+#
+# route_resolve <manifest_path>
+#
+# Reads the optional third column of the overlay.manifest row whose first field
+# equals <manifest_path>. Emits ONE tab-separated line (side-effect-free):
+#
+#   <route>\t<repo_source_abs>\t<target_name>:<dest_abs> [...]
+#
+# route=skill (default; all existing bare two-column rows):
+#   repo_source = $OVERLAY_DIR/skills/<path>
+#   targets     = claude:<CLAUDE_SKILLS>/<path>  opencode:<OC_SKILLS>/<path>  codex:<CODEX_SKILLS>/<path>
+#
+# route=agent (third column == "agent"):
+#   repo_source = $OVERLAY_DIR/agents/<path>
+#   targets     = claude:$HOME/.claude/agents/<path>
+#
+# Callers intersect the emitted target set with their --target selection:
+#   --target opencode + agent row → zero applicable targets (no work, not an error).
+#
+# Back-compat invariant: bare two-column skill rows emit BYTE-IDENTICAL results
+# to pre-route_resolve behavior (pinned by TestRouteResolve_LegacySkillRow).
+
+route_resolve() {
+  local manifest_path="$1"
+  local route
+  route="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
+  route="${route:-skill}"
+
+  local repo_source
+  local targets=()
+  local tname
+
+  if [[ "$route" == "agent" ]]; then
+    repo_source="$OVERLAY_DIR/agents/${manifest_path}"
+    for tname in "${!AGENT_TARGET_PATHS[@]}"; do
+      targets+=("${tname}:${AGENT_TARGET_PATHS[$tname]}/${manifest_path}")
+    done
+  else
+    repo_source="$OVERLAY_DIR/skills/${manifest_path}"
+    for tname in "${!TARGET_PATHS[@]}"; do
+      targets+=("${tname}:${TARGET_PATHS[$tname]}/${manifest_path}")
+    done
+  fi
+
+  printf '%s\t%s\t%s\n' "$route" "$repo_source" "${targets[*]}"
 }
 
 # ---------------------------------------------------------------------------
