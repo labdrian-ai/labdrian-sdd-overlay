@@ -81,7 +81,7 @@ func Serialize(reg Registry) ([]byte, error) {
 			b.WriteByte('\n')
 		}
 
-		// source block
+		// source block (field order: type → upstream → repo → ref; ADR-12)
 		b.WriteString("    source:\n")
 		b.WriteString("      type: ")
 		b.WriteString(scalar(e.Source.Type))
@@ -90,6 +90,16 @@ func Serialize(reg Registry) ([]byte, error) {
 			b.WriteString("      upstream:\n")
 			b.WriteString("        owner: ")
 			b.WriteString(scalar(e.Source.Upstream.Owner))
+			b.WriteByte('\n')
+		}
+		if e.Source.Repo != "" {
+			b.WriteString("      repo: ")
+			b.WriteString(scalar(e.Source.Repo))
+			b.WriteByte('\n')
+		}
+		if e.Source.Ref != "" {
+			b.WriteString("      ref: ")
+			b.WriteString(scalar(e.Source.Ref))
 			b.WriteByte('\n')
 		}
 
@@ -150,6 +160,14 @@ func checkRepresentable(reg Registry) error {
 				return fmt.Errorf("serialize: entry %q: source.upstream.owner %q contains unrepresentable characters",
 					e.ID, e.Source.Upstream.Owner)
 			}
+		}
+		if !representable(e.Source.Repo) {
+			return fmt.Errorf("serialize: entry %q: source.repo %q contains unrepresentable characters",
+				e.ID, e.Source.Repo)
+		}
+		if !representable(e.Source.Ref) {
+			return fmt.Errorf("serialize: entry %q: source.ref %q contains unrepresentable characters",
+				e.ID, e.Source.Ref)
 		}
 		for _, t := range e.Install.Targets {
 			if !representable(t) {
