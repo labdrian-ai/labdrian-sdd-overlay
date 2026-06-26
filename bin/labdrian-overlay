@@ -560,7 +560,7 @@ cmd_status() {
     echo "=== Status: $t ($tpath) ==="
 
     while IFS= read -r rel_path; do
-      local rr_line rr_src rr_rest rr_targets rr_dest rr_pair
+      local rr_line rr_src rr_targets rr_dest rr_pair
       rr_line="$(route_resolve "$rel_path")"
       rr_src="${rr_line#*$'\t'}"; rr_src="${rr_src%%$'\t'*}"
       rr_targets="${rr_line##*$'\t'}"

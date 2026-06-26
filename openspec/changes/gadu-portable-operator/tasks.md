@@ -163,7 +163,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B0 — RED: Failing installer route tests
 
-- [ ] **B0**: Create `engine/installer/route_test.go` (package `installer_test`). All
+- [x] **B0**: Create `engine/installer/route_test.go` (package `installer_test`). All
   tests MUST fail because `route_resolve` does not yet exist in `bin/labdrian-overlay`.
   Use `exec.Command("bash", "-c", "source … && route_resolve …")` to shell into the
   function. Use `t.TempDir()` for sandbox HOME in integration tests. Mark integration
@@ -208,7 +208,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B1 — AGENT_TARGET_PATHS declaration
 
-- [ ] **B1**: In `bin/labdrian-overlay`, add immediately below the existing
+- [x] **B1**: In `bin/labdrian-overlay`, add immediately below the existing
   `TARGET_PATHS` declaration (after the closing parenthesis):
   ```bash
   declare -A AGENT_TARGET_PATHS=( [claude]="$HOME/.claude/agents" )
@@ -219,7 +219,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B2 — GREEN: Implement route_resolve
 
-- [ ] **B2**: Add `route_resolve()` bash function to `bin/labdrian-overlay` (after the
+- [x] **B2**: Add `route_resolve()` bash function to `bin/labdrian-overlay` (after the
   helper block, before `cmd_bootstrap`). Side-effect-free: only echoes one line.
   Contract (from D2):
   ```
@@ -248,7 +248,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B3 — Wire route_resolve into cmd_apply
 
-- [ ] **B3**: Modify `cmd_apply` in `bin/labdrian-overlay`.
+- [x] **B3**: Modify `cmd_apply` in `bin/labdrian-overlay`.
   - In the inner `while IFS= read -r rel_path` loop (currently: `src="$OVERLAY_DIR/skills/${rel_path}"` and
     `dest="$tpath/${rel_path}"`):
     - Call `route_resolve "$rel_path"` to get the record.
@@ -263,7 +263,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B4 — Wire route_resolve into cmd_status
 
-- [ ] **B4**: Modify `cmd_status` in `bin/labdrian-overlay`.
+- [x] **B4**: Modify `cmd_status` in `bin/labdrian-overlay`.
   - Replace `repo_file="$OVERLAY_DIR/skills/${rel_path}"` and `live_file="$tpath/${rel_path}"`
     with values from `route_resolve`.
   - For targets not applicable to the row's route (e.g. agent row when target is
@@ -273,7 +273,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B5 — Wire route_resolve into cmd_sync_check (CORRECTNESS-CRITICAL)
 
-- [ ] **B5**: Modify `cmd_sync_check` in `bin/labdrian-overlay`.
+- [x] **B5**: Modify `cmd_sync_check` in `bin/labdrian-overlay`.
   - Replace `local live_file="$tpath/${rel_path}"` with the route-resolved live path
     (from `route_resolve`).
   - Replace **both** git-ref lookups for the `main` branch:
@@ -291,7 +291,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B6 — Wire route_resolve into cmd_capture
 
-- [ ] **B6**: Modify `cmd_capture` in `bin/labdrian-overlay`.
+- [x] **B6**: Modify `cmd_capture` in `bin/labdrian-overlay`.
   - In the `from_backup` branch and the live-copy branch, replace hardcoded
     `skills/${rel_path}` source/dest/tar_path with route-resolved values.
   - GADU rows are `custom`, so `managed_files()` already excludes them from capture
@@ -301,7 +301,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B7 — Wire route_resolve into cmd_bootstrap + git add agents/
 
-- [ ] **B7**: Modify `cmd_bootstrap` in `bin/labdrian-overlay`.
+- [x] **B7**: Modify `cmd_bootstrap` in `bin/labdrian-overlay`.
   - In the tarball-extract loop (`managed_files()` loop):
     - Replace `tar_path="files/home/labdrian/.claude/skills/${rel_path}"` and
       `dest="$OVERLAY_DIR/skills/${rel_path}"` with route-resolved values.
@@ -320,7 +320,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B8 — Known limitations note (documentation only, no code)
 
-- [ ] **B8**: Add a comment block near the top of `bin/labdrian-overlay` (below the
+- [x] **B8**: Add a comment block near the top of `bin/labdrian-overlay` (below the
   `AGENT_TARGET_PATHS` declaration) documenting the following as known limitations
   that are explicitly OUT OF SCOPE for this change (per design):
   - The `bootstrap` init block's human-readable info echoes (dir creation) and the
@@ -333,7 +333,7 @@ Depends on: Slice A merged (manifest GADU rows present).
 
 ### B9 — Verify full suite passes (no new task, checkpoint)
 
-- [ ] **B9**: Run `cd engine && go test ./... && cd tui && go test ./...`.
+- [x] **B9**: Run `cd engine && go test ./... && cd tui && go test ./...`.
   - All installer unit tests (TestRouteResolve_*) pass.
   - All integration tests (TestApply_*, TestStatus_*, TestSyncCheck_*) pass or are
     skipped with `testing.Short()`.
