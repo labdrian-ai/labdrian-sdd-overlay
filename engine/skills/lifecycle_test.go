@@ -75,20 +75,8 @@ func TestAddEntryNilAllowedProjects(t *testing.T) {
 
 // TestAddEntrySlugGuard verifies ADR-8: invalid ids are rejected before touching the registry.
 func TestAddEntrySlugGuard(t *testing.T) {
-	invalid := []string{
-		"",
-		"../evil",
-		"foo bar",
-		"FOO",
-		"Skill",
-		"-leading-dash",
-		"has/slash",
-		"has.dot",
-		"..",
-		"0abc", // starts with digit — actually valid per ^[a-z0-9][a-z0-9-]*$
-	}
-	// ids starting with digit ARE valid per the regex; remove from invalid set.
-	// The regex is ^[a-z0-9][a-z0-9-]*$ so "0abc" actually passes.
+	// Note: a digit-starting id like "0abc" is VALID per ^[a-z0-9][a-z0-9-]*$,
+	// so it lives in `valid` below, not here.
 	invalidStrict := []string{
 		"",
 		"../evil",
@@ -118,9 +106,6 @@ func TestAddEntrySlugGuard(t *testing.T) {
 		// Reset for next iteration (avoid duplicate errors).
 		reg = Registry{Version: "1"}
 	}
-
-	// Suppress the unused variable warning from the first slice.
-	_ = invalid
 }
 
 // TestAddEntryDuplicate verifies R-061: AddEntry with an id already present returns a non-nil error.
