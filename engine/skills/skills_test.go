@@ -177,3 +177,90 @@ skills:
 		}
 	})
 }
+
+// ── T-08: CLI dispatch tests for add/remove ──────────────────────────────────
+
+// TestSkillsCoreDispatchAddRemove verifies SC-36: SkillsCore routes "add" and
+// "remove" verbs without emitting "unknown skills verb" to stderr.
+func TestSkillsCoreDispatchAddRemove(t *testing.T) {
+	dir := t.TempDir()
+	regPath := filepath.Join(dir, "registry.yaml")
+	mfPath := filepath.Join(dir, "overlay.manifest")
+	skillsRoot := filepath.Join(dir, "skills")
+
+	const regYAML = `version: "1"
+skills:
+  - id: existing
+    path: existing
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+	if err := os.WriteFile(regPath, []byte(regYAML), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(mfPath, []byte("existing/SKILL.md custom\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(filepath.Join(skillsRoot, "new-skill"), 0755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(skillsRoot, "new-skill", "SKILL.md"), []byte("# new-skill\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("add_routes_without_unknown_verb_error", func(t *testing.T) {
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		SkillsCore("add",
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
+			os.ReadFile, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if strings.Contains(errBuf.String(), "unknown skills verb") {
+			t.Errorf("stderr %q should not contain 'unknown skills verb'", errBuf.String())
+		}
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
+		}
+	})
+
+	t.Run("remove_routes_without_unknown_verb_error", func(t *testing.T) {
+		// Registry now has "existing" + "new-skill" (added above); remove "new-skill".
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		SkillsCore("remove",
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
+			os.ReadFile, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if strings.Contains(errBuf.String(), "unknown skills verb") {
+			t.Errorf("stderr %q should not contain 'unknown skills verb'", errBuf.String())
+		}
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
+		}
+	})
+}
+
+// TestSkillsCoreUnknownVerbMessage verifies SC-37: an unknown verb exits 1 and
+// the error message lists both "add" and "remove" as supported verbs.
+func TestSkillsCoreUnknownVerbMessage(t *testing.T) {
+	var out, errBuf bytes.Buffer
+	exitCode := 0
+	SkillsCore("bogus", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+	if exitCode != 1 {
+		t.Errorf("exit code = %d, want 1", exitCode)
+	}
+	if !strings.Contains(errBuf.String(), "add") {
+		t.Errorf("stderr %q should contain 'add' in supported verb list", errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "remove") {
+		t.Errorf("stderr %q should contain 'remove' in supported verb list", errBuf.String())
+	}
+}

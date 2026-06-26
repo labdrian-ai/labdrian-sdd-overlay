@@ -21,13 +21,32 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 		RenderValidateCore(args, readFile, stdout, stderr, exit)
 	case "install":
 		RenderInstallCore(args, readFile, os.Getwd, stdout, stderr, exit)
+	case "add":
+		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
+	case "remove":
+		RemoveCore(stripVerb(args, "remove"), readFile, stdout, stderr, exit)
 	case "":
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove")
 		exit(1)
 	default:
-		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install)\n", verb)
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove)\n", verb)
 		exit(1)
 	}
+}
+
+// stripVerb removes the first occurrence of verb from args (used so that
+// SkillsCore can dispatch to AddCore / RemoveCore without the verb token
+// appearing as a spurious positional argument in the downstream flag parser).
+func stripVerb(args []string, verb string) []string {
+	for i, a := range args {
+		if a == verb {
+			out := make([]string, 0, len(args)-1)
+			out = append(out, args[:i]...)
+			out = append(out, args[i+1:]...)
+			return out
+		}
+	}
+	return args
 }
 
 // RenderValidateCore is the testable CLI core for `engine skills validate`.
