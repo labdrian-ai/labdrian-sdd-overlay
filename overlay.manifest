@@ -15,6 +15,8 @@ engine/skills/validate.go managed
 engine/skills/list.go managed
 engine/skills/status.go managed
 engine/skills/skills.go managed
+engine/skills/sync.go managed
+engine/skills/sync_test.go managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
