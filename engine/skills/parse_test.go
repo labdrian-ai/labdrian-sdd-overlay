@@ -261,4 +261,78 @@ func TestParseRegistry(t *testing.T) {
 			t.Errorf("error %q should mention block scalars, not generic format error", err.Error())
 		}
 	})
+
+	// --- SC-10..SC-14: project scope + allowedProjects (T-02) ---
+
+	t.Run("SC-10_project_scope_with_allowedProjects", func(t *testing.T) {
+		// SC-10: defaultScope: project + allowedProjects → accepted; fields populated.
+		yaml := "version: \"1\"\nskills:\n  - id: my-skill\n    path: my-skill\n    source:\n      type: custom\n    install:\n      defaultScope: project\n      targets:\n        - claude\n      allowedProjects:\n        - labdrian-sdd-overlay\n        - other-repo\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		reg, err := ParseRegistry(strings.NewReader(yaml))
+		if err != nil {
+			t.Fatalf("SC-10: unexpected error: %v", err)
+		}
+		if len(reg.Skills) != 1 {
+			t.Fatalf("SC-10: len(Skills) = %d, want 1", len(reg.Skills))
+		}
+		e := reg.Skills[0]
+		if e.Install.DefaultScope != "project" {
+			t.Errorf("SC-10: DefaultScope = %q, want project", e.Install.DefaultScope)
+		}
+		want := []string{"labdrian-sdd-overlay", "other-repo"}
+		if len(e.Install.AllowedProjects) != len(want) {
+			t.Fatalf("SC-10: AllowedProjects = %v, want %v", e.Install.AllowedProjects, want)
+		}
+		for i, v := range want {
+			if e.Install.AllowedProjects[i] != v {
+				t.Errorf("SC-10: AllowedProjects[%d] = %q, want %q", i, e.Install.AllowedProjects[i], v)
+			}
+		}
+	})
+
+	t.Run("SC-11_unknown_scope_rejected", func(t *testing.T) {
+		// SC-11: defaultScope: workspace → error with line number and invalid value.
+		yaml := "version: \"1\"\nskills:\n  - id: bad-skill\n    path: bad-skill\n    source:\n      type: custom\n    install:\n      defaultScope: workspace\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("SC-11: expected non-nil error for unknown defaultScope, got nil")
+		}
+		if !strings.Contains(err.Error(), "workspace") {
+			t.Errorf("SC-11: error %q should contain the invalid value %q", err.Error(), "workspace")
+		}
+		// R-040 MUST: error must include the line number of the bad defaultScope line.
+		// In the inline YAML above, "defaultScope: workspace" is on line 8.
+		if !strings.Contains(err.Error(), "line 8") {
+			t.Errorf("SC-11: error %q should contain the line number (line 8)", err.Error())
+		}
+	})
+
+	t.Run("SC-12_allowedProjects_forbidden_on_global", func(t *testing.T) {
+		// SC-12: defaultScope: global + allowedProjects present → error referencing entry id.
+		yaml := "version: \"1\"\nskills:\n  - id: global-skill\n    path: global-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n      allowedProjects:\n        - some-repo\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err == nil {
+			t.Fatal("SC-12: expected non-nil error for global + allowedProjects, got nil")
+		}
+		if !strings.Contains(err.Error(), "global-skill") {
+			t.Errorf("SC-12: error %q should reference entry id %q", err.Error(), "global-skill")
+		}
+		if !strings.Contains(err.Error(), "allowedProjects") {
+			t.Errorf("SC-12: error %q should mention allowedProjects", err.Error())
+		}
+	})
+
+	t.Run("SC-13_project_scope_no_allowedProjects", func(t *testing.T) {
+		// SC-13: defaultScope: project with no allowedProjects key → valid, AllowedProjects == nil.
+		yaml := "version: \"1\"\nskills:\n  - id: proj-skill\n    path: proj-skill\n    source:\n      type: custom\n    install:\n      defaultScope: project\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		reg, err := ParseRegistry(strings.NewReader(yaml))
+		if err != nil {
+			t.Fatalf("SC-13: unexpected error: %v", err)
+		}
+		if len(reg.Skills) != 1 {
+			t.Fatalf("SC-13: len(Skills) = %d, want 1", len(reg.Skills))
+		}
+		if reg.Skills[0].Install.AllowedProjects != nil {
+			t.Errorf("SC-13: AllowedProjects = %v, want nil", reg.Skills[0].Install.AllowedProjects)
+		}
+	})
 }
