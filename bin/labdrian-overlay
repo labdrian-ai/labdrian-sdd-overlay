@@ -508,7 +508,7 @@ cmd_apply() {
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
-    echo "=== Deploying to: $t ($tpath) ==="
+    echo "=== Deploying to: $t ==="
 
     if [[ ! -d "$tpath" ]]; then
       mkdir -p "$tpath"
@@ -587,7 +587,7 @@ cmd_status() {
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
-    echo "=== Status: $t ($tpath) ==="
+    echo "=== Status: $t ==="
 
     while IFS= read -r rel_path; do
       local rr_line rr_src rr_targets rr_dest rr_pair

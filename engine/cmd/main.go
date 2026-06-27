@@ -35,9 +35,12 @@
 // marker block. propagate also accepts --require-registry to turn an absent
 // registry into a fail-loud error instead of a silent no-op.
 //
-// skills: read-only semantic commands for skills.registry.yaml.
+// skills: registry management commands for skills.registry.yaml and overlay.manifest.
 // list: print sorted registry entries. status: print count summary.
-// validate: cross-check registry against overlay.manifest; exit 1 on divergence.
+// validate: cross-check registry vs overlay.manifest; exit 1 on divergence.
+// install: copy project-scoped skills into <cwd>/.claude/skills.
+// add: register a skill (custom or vendored). remove: unregister from registry + manifest.
+// sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
 package main
 
 import (
