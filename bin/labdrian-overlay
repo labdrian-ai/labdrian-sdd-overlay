@@ -187,6 +187,24 @@ route_resolve() {
   route="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
   route="${route:-skill}"
 
+  # Detect structurally non-deployable rows: paths that cannot map to a skill
+  # or agent source directory. Overlay engine source files (engine/*) and
+  # root-level files (no path separator, e.g. skills.registry.yaml) are
+  # tracked in the manifest for diff/sync-check purposes only; they are never
+  # copied to skills/ or agents/ targets.
+  #
+  # Rule: for skill-route rows (non-agent), if the first path segment equals
+  # the full path (no "/") or equals "engine", the row is non-deployable.
+  # Callers skip non-deployable rows silently because the emitted target list
+  # is empty and their existing [[ -z "$rr_dest" ]] && continue guards fire.
+  if [[ "$route" != "agent" ]]; then
+    local first_seg="${manifest_path%%/*}"
+    if [[ "$first_seg" == "$manifest_path" || "$first_seg" == "engine" ]]; then
+      printf 'non-deployable\t\t\n'
+      return
+    fi
+  fi
+
   local repo_source
   local targets=()
   local tname

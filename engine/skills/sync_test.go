@@ -146,6 +146,21 @@ func TestSyncManifest(t *testing.T) {
 			),
 			wantAdded: []string{"alpha"},
 		},
+		// SC-XX: non-SKILL.md agent row (e.g. GADU.md custom agent) is preserved
+		// verbatim. isSkillRow must return false for a row whose path does not end
+		// with /SKILL.md, so the row is treated as a non-skill line and kept intact.
+		{
+			name: "non_skill_md_agent_row_preserved",
+			reg:  mkReg(alpha),
+			manifest: []byte(
+				"GADU.md   custom   agent\n" +
+					"alpha/SKILL.md custom\n",
+			),
+			wantOut: []byte(
+				"GADU.md   custom   agent\n" +
+					"alpha/SKILL.md custom\n",
+			),
+		},
 		// SC-48: post-condition invariant — Diff must be empty for every output
 		// (tested inline via the post-condition self-check inside SyncManifest)
 		// The table entries above all implicitly cover this; here we test an
@@ -323,6 +338,38 @@ func assertStringSlice(t *testing.T, label string, got, want []string) {
 	for k, v := range wantSet {
 		if v != 0 {
 			t.Errorf("%s: element %q count mismatch (diff=%d); got=%v want=%v", label, k, v, got, want)
+		}
+	}
+}
+
+// TestIsSkillRow_NonSkillMdAgentRow pins that isSkillRow returns false for a
+// row whose path does not end with /SKILL.md (e.g. the GADU agent row
+// "GADU.md   custom   agent"). Such rows must be preserved verbatim by
+// SyncManifest and never treated as skill directories.
+func TestIsSkillRow_NonSkillMdAgentRow(t *testing.T) {
+	cases := []struct {
+		line    string
+		wantOk  bool
+		wantDir string
+	}{
+		// Standard skill rows (must be classified as skill rows).
+		{"alpha/SKILL.md custom", true, "alpha"},
+		{"beta/SKILL.md managed", true, "beta"},
+		// Non-SKILL.md agent row: three-column GADU.md entry.
+		{"GADU.md   custom   agent", false, ""},
+		// Root-level file row without /SKILL.md suffix.
+		{"skills.registry.yaml custom", false, ""},
+		// Infra row (engine/ prefix, filtered by isInfraDir).
+		{"engine/go.mod managed", false, ""},
+	}
+
+	for _, tc := range cases {
+		dir, ok := isSkillRow(tc.line)
+		if ok != tc.wantOk {
+			t.Errorf("isSkillRow(%q): ok=%v, want %v", tc.line, ok, tc.wantOk)
+		}
+		if dir != tc.wantDir {
+			t.Errorf("isSkillRow(%q): dir=%q, want %q", tc.line, dir, tc.wantDir)
 		}
 	}
 }

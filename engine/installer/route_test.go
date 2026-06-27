@@ -235,6 +235,66 @@ func TestRouteResolve_GADUAgentRow(t *testing.T) {
 	}
 }
 
+// TestRouteResolve_NonDeployableRows pins that structurally non-deployable rows
+// — engine/*.go overlay-source rows and root-level files like skills.registry.yaml
+// — produce an empty target set from route_resolve so that the deploy and sync
+// loops skip them silently (no WARNING, no OVERLAY_NOT_DEPLOYED noise). The
+// back-compat invariant for real skill rows is preserved.
+func TestRouteResolve_NonDeployableRows(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	// Manifest with infra rows that must be non-deployable plus one real skill row.
+	const infraManifest = `sdd-spec/SKILL.md   managed
+engine/go.mod   managed
+skills.registry.yaml   custom
+`
+	cases := []struct {
+		name         string
+		manifestPath string
+		wantRoute    string
+		wantTargets  int // expected number of deploy targets
+	}{
+		{
+			name:         "engine_go_mod_non_deployable",
+			manifestPath: "engine/go.mod",
+			wantRoute:    "non-deployable",
+			wantTargets:  0,
+		},
+		{
+			name:         "skills_registry_yaml_non_deployable",
+			manifestPath: "skills.registry.yaml",
+			wantRoute:    "non-deployable",
+			wantTargets:  0,
+		},
+		{
+			// Back-compat: a real skill row must still resolve normally.
+			name:         "sdd_spec_skill_back_compat",
+			manifestPath: "sdd-spec/SKILL.md",
+			wantRoute:    "skill",
+			wantTargets:  3,
+		},
+	}
+
+	for _, tc := range cases {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := callRouteResolve(t, overlay, overlayDir, home, infraManifest, tc.manifestPath)
+			if err != nil {
+				t.Fatalf("route_resolve(%q): %v", tc.manifestPath, err)
+			}
+			if got.Route != tc.wantRoute {
+				t.Errorf("route_resolve(%q): route=%q, want %q", tc.manifestPath, got.Route, tc.wantRoute)
+			}
+			if len(got.Targets) != tc.wantTargets {
+				t.Errorf("route_resolve(%q): %d targets, want %d: %v",
+					tc.manifestPath, len(got.Targets), tc.wantTargets, got.Targets)
+			}
+		})
+	}
+}
+
 // ---------------------------------------------------------------------------
 // Target-flag unit tests — pin the D2 --target intersection rule
 // ---------------------------------------------------------------------------

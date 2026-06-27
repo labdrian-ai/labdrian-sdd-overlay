@@ -5,7 +5,7 @@
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status
-//	engine skills <verb>  (verbs: list, status, validate)
+//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -131,7 +131,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
-	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate)")
+	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list     --registry <path>            print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status   --registry <path>            print count summary")
 	fmt.Fprintln(os.Stderr, "    validate --registry <path> --manifest <path>  cross-check registry vs manifest")
@@ -212,7 +212,7 @@ func runSkills(args []string) {
 // runSkillsCore is the testable core of the skills subcommand.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest")
 		exit(1)
 		return
 	}
