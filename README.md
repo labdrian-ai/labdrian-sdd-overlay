@@ -6,6 +6,7 @@ A customization layer over `gentle-ai` (an SDD-driven, multi-agent dev runtime) 
 
 - Tracks vendor-managed and custom skills in a git overlay, so `gentle-ai sync`/`upgrade` never silently clobbers your changes.
 - Deploys your overlaid skills to **three agent runtimes**: Claude Code (`~/.claude/skills`), opencode (`~/.config/opencode/skills`), and codex (`~/.codex/skills`).
+- Deploys Claude Code **agent definitions** (e.g. GADU) to `~/.claude/agents/` — agents are Claude Code-only; opencode/codex receive the portable skill form instead.
 - Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject a minimalism contract **only** into the code-writing SDD phases (`sdd-tasks`/`sdd-apply`) and exclude it from all others. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
@@ -57,6 +58,8 @@ The TUI shows whether each target is in sync with gentle-ai and lets you re-capt
 
 Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (all three targets). Default for `capture` is `claude`.
 
+The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only). `--target opencode` or `--target codex` on an agent row is a no-op — zero applicable targets.
+
 ## Tracked files (overlay.manifest)
 
 | File | Type |
@@ -71,6 +74,8 @@ Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default
 **managed**: tracked on both `upstream` and `main`. Gets merged when upstream updates.
 **custom**: only on `main`. Never on upstream. Added as a customization with no vendor counterpart.
 **external**: `source.type: external` — records provenance metadata only (`repo` = origin URL, `ref` = vendored commit/ref). The overlay **never fetches, clones, or executes any remote resource**. Vendoring is a human responsibility; `--repo`/`--ref` are inert labels for a file you have already reviewed and committed locally.
+
+**`route` column (optional third column):** each manifest row may end with `skill` or `agent` (default: `skill` when omitted). Bare two-column rows are unchanged. The `agent` route tells the installer to source from `agents/<path>` and deploy to `~/.claude/agents` instead of any skills directory. Non-deployable rows (engine source files, root-level files) are recognized by the installer and skipped silently.
 
 ## Usage
 
@@ -203,6 +208,19 @@ Bootstrap will:
 3. Copy your customized version into `skills/<path>` and commit on `main`
 4. Run `overlay apply` to deploy to all targets (or `--target <name>` for one)
 
+**To add an agent instead**: place the file under `agents/`, add a manifest row `agents/<NAME>.md  custom  agent`, and run `overlay apply`. The agent deploys to `~/.claude/agents` only (Claude Code); no skill path is touched.
+
+## GADU — shipped portable operator
+
+The overlay ships **GADU**, a portable operator persona generated from a single canonical source: `engine/gadu/persona/body.md`.
+
+Running `overlay gadu-generate` produces two artifacts from that one source:
+
+- `agents/GADU.md` — Claude Code agent definition (deployed to `~/.claude/agents`)
+- `skills/gadu-operator/SKILL.md` — portable skill (deployed to all three skill runtimes)
+
+Both generated files carry a `<!-- do-not-edit: generated from engine/gadu/persona/body.md -->` header. Edit the canonical source, then regenerate — do not edit the output files directly.
+
 ## CLI reference
 
 ```
@@ -240,6 +258,11 @@ overlay tui
 
 overlay install-alias [name]
     Symlink a `labdrian` command into ~/.local/bin (run once per machine), then `labdrian tui`.
+
+overlay gadu-generate [--check]
+    Regenerate agents/GADU.md and skills/gadu-operator/SKILL.md from the canonical source
+    (engine/gadu/persona/body.md). Requires OVERLAY_DIR to be set or the command to be run
+    from the repo root. --check verifies the generated files are up to date without writing.
 
 overlay --help
     Show this help.
