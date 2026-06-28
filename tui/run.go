@@ -141,6 +141,10 @@ func classify(upstreamChanged, overlayNotDeployed int) SyncStatus {
 //	VERDICT:<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M
 //	ACTION:<target>: <text>
 //
+// It also tracks `=== sync-check: <target> ===` section headers to set the
+// active target scope, and captures per-file `agents/...` status lines
+// (format: `  <path>: <STATUS>`) into [TargetVerdict.AgentFiles].
+//
 // Verdicts are returned in first-seen order.
 func ParseSyncCheck(output string) []TargetVerdict {
 	order := []string{}
