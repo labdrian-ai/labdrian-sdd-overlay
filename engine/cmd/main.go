@@ -5,7 +5,7 @@
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status
-//	engine skills <verb>  (verbs: list, status, validate)
+//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -35,9 +35,12 @@
 // marker block. propagate also accepts --require-registry to turn an absent
 // registry into a fail-loud error instead of a silent no-op.
 //
-// skills: read-only semantic commands for skills.registry.yaml.
+// skills: registry management commands for skills.registry.yaml and overlay.manifest.
 // list: print sorted registry entries. status: print count summary.
-// validate: cross-check registry against overlay.manifest; exit 1 on divergence.
+// validate: cross-check registry vs overlay.manifest; exit 1 on divergence.
+// install: copy project-scoped skills into <cwd>/.claude/skills.
+// add: register a skill (custom or vendored). remove: unregister from registry + manifest.
+// sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
 package main
 
 import (
@@ -49,6 +52,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
@@ -110,6 +114,8 @@ func main() {
 		runStatus(os.Args[2:])
 	case "prespec":
 		runPrespec(os.Args[2:])
+	case "gadu-generate":
+		runGaduGenerate(os.Args[2:])
 	case "skills":
 		runSkills(os.Args[2:])
 	default:
@@ -127,13 +133,61 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
-	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate)")
+	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
+	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list     --registry <path>            print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status   --registry <path>            print count summary")
 	fmt.Fprintln(os.Stderr, "    validate --registry <path> --manifest <path>  cross-check registry vs manifest")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
+}
+
+// overlayRoot resolves the overlay repo root from the OVERLAY_DIR environment
+// variable. The installed binary at ~/.claude/bin/gentle-ai-overlay cannot
+// reliably locate the repo root via os.Executable() (it resolves to ~, not
+// the overlay repo), so OVERLAY_DIR is required. Returns an error when unset.
+func overlayRoot() (string, error) {
+	if dir := os.Getenv("OVERLAY_DIR"); dir != "" {
+		return dir, nil
+	}
+	return "", fmt.Errorf("OVERLAY_DIR is not set\n" +
+		"  Run: OVERLAY_DIR=<overlay-repo-root> gentle-ai-overlay gadu-generate")
+}
+
+// runGaduGenerate implements the 'gadu-generate [--check]' subcommand.
+// Without --check: calls gadu.Generate(repoRoot) to write both artifacts.
+// With    --check: calls gadu.Check(repoRoot)    to verify they are not stale.
+// Exits non-zero on error. OVERLAY_DIR must be set; the installed binary
+// cannot resolve the repo root reliably via os.Executable().
+func runGaduGenerate(args []string) {
+	checkMode := false
+	for _, a := range args {
+		if a == "--check" {
+			checkMode = true
+		}
+	}
+
+	root, err := overlayRoot()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "gadu-generate: %v\n", err)
+		os.Exit(1)
+	}
+
+	if checkMode {
+		if err := gadu.Check(root); err != nil {
+			fmt.Fprintf(os.Stderr, "gadu-generate --check: %v\n", err)
+			os.Exit(1)
+		}
+		fmt.Fprintln(os.Stdout, "gadu-generate --check: OK (committed artifacts match generator output)")
+		return
+	}
+
+	if err := gadu.Generate(root); err != nil {
+		fmt.Fprintf(os.Stderr, "gadu-generate: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md and skills/gadu-operator/SKILL.md written")
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.
@@ -161,7 +215,7 @@ func runSkills(args []string) {
 // runSkillsCore is the testable core of the skills subcommand.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest")
 		exit(1)
 		return
 	}

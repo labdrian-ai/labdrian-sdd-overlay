@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -317,6 +318,40 @@ func TestValidate(t *testing.T) {
 		if err == nil {
 			t.Error("expected error for missing manifest file")
 		}
+	})
+
+	// TestValidateRealRegistryAndManifest: integration check that the committed
+	// skills.registry.yaml and overlay.manifest are aligned. A future registry or
+	// manifest change that creates a divergence (MISSING_IN_REGISTRY,
+	// MISSING_IN_MANIFEST, TAG_MISMATCH) will be caught by `go test` rather than
+	// silently regretting at runtime. Modelled on TestSerializeRoundTripRealRegistry.
+	t.Run("real_registry_and_manifest_aligned", func(t *testing.T) {
+		// Tests run with cwd = engine/skills/; repo root is two levels up.
+		repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+		if err != nil {
+			t.Fatalf("resolving repo root: %v", err)
+		}
+		registryPath := filepath.Join(repoRoot, "skills.registry.yaml")
+		manifestPath := filepath.Join(repoRoot, "overlay.manifest")
+
+		data, err := os.ReadFile(registryPath)
+		if err != nil {
+			t.Fatalf("reading real registry %s: %v", registryPath, err)
+		}
+		reg, err := ParseRegistry(bytes.NewReader(data))
+		if err != nil {
+			t.Fatalf("parsing real registry: %v", err)
+		}
+
+		divs, err := Validate(reg, manifestPath)
+		if err != nil {
+			t.Errorf("real registry/manifest diverged (%d divergence(s)):", len(divs))
+			for _, d := range divs {
+				t.Errorf("  [%s] %s: %s", d.Class, d.Path, d.Detail)
+			}
+			t.Errorf("error: %v", err)
+		}
+		t.Logf("real registry and manifest aligned (%d skills)", len(reg.Skills))
 	})
 
 	t.Run("mixed_tag_manifest_reports_mixed_tag_divergence", func(t *testing.T) {
