@@ -87,7 +87,11 @@ The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) addition
 labdrian tui          # recommended: full TUI dashboard
 ```
 
-The TUI wraps the CLI — everything below is also available as individual commands.
+The TUI wraps the CLI — everything below is also available as individual commands. The
+dashboard surfaces per-target drift for **agent files** (e.g. the GADU agent in
+`~/.claude/agents`) as a dedicated Agents sub-section alongside skills. Read-only skills
+registry actions (`skills validate`, `list`, `status`) are available directly from the
+action menu without leaving the dashboard.
 
 ### Action map
 
