@@ -989,3 +989,214 @@ func TestClassifyPrecedence(t *testing.T) {
 		t.Fatal("zero counts must classify as healthy (GREEN)")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// GAP 1: Surface agents in the TUI dashboard
+// ---------------------------------------------------------------------------
+
+// TestParseSyncCheckAgentFiles verifies that per-file agent lines under a target
+// section are captured into AgentFiles on the corresponding TargetVerdict.
+func TestParseSyncCheckAgentFiles(t *testing.T) {
+	sample := `
+=== sync-check: claude (/home/user/.claude) ===
+  IN_SYNC: skills/foo
+  OVERLAY_NOT_DEPLOYED: agents/GADU.md (live missing)
+VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1
+ACTION:claude: run 'overlay apply --target claude'
+
+=== sync-check: opencode (/home/user/.config/opencode) ===
+  IN_SYNC: skills/bar
+VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0
+ACTION:opencode: in sync with gentle-ai (healthy)
+`
+	verdicts := ParseSyncCheck(sample)
+	if len(verdicts) != 2 {
+		t.Fatalf("expected 2 verdicts, got %d", len(verdicts))
+	}
+
+	claudeV := verdicts[0]
+	if claudeV.Target != "claude" {
+		t.Fatalf("first verdict target = %q, want claude", claudeV.Target)
+	}
+	if len(claudeV.AgentFiles) != 1 {
+		t.Fatalf("claude: expected 1 agent file entry, got %d: %+v", len(claudeV.AgentFiles), claudeV.AgentFiles)
+	}
+	af := claudeV.AgentFiles[0]
+	if af.Path != "agents/GADU.md" {
+		t.Errorf("claude agent file path = %q, want %q", af.Path, "agents/GADU.md")
+	}
+	if af.Status != "OVERLAY_NOT_DEPLOYED" {
+		t.Errorf("claude agent file status = %q, want OVERLAY_NOT_DEPLOYED", af.Status)
+	}
+
+	// skills/foo must NOT appear in AgentFiles (not an agents/ path).
+	opencodeV := verdicts[1]
+	if len(opencodeV.AgentFiles) != 0 {
+		t.Errorf("opencode: expected 0 agent file entries, got %d: %+v", len(opencodeV.AgentFiles), opencodeV.AgentFiles)
+	}
+}
+
+// TestParseSyncCheckAgentFilesAllStatuses verifies all three per-file statuses
+// (IN_SYNC, OVERLAY_NOT_DEPLOYED, UPSTREAM_CHANGED) are captured correctly.
+func TestParseSyncCheckAgentFilesAllStatuses(t *testing.T) {
+	cases := []struct {
+		line   string
+		status string
+	}{
+		{"  IN_SYNC: agents/GADU.md", "IN_SYNC"},
+		{"  OVERLAY_NOT_DEPLOYED: agents/GADU.md (live missing)", "OVERLAY_NOT_DEPLOYED"},
+		{"  UPSTREAM_CHANGED: agents/GADU.md", "UPSTREAM_CHANGED"},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.status, func(t *testing.T) {
+			sample := "=== sync-check: claude (/home/user/.claude) ===\n" + tc.line + "\nVERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0\n"
+			verdicts := ParseSyncCheck(sample)
+			if len(verdicts) != 1 {
+				t.Fatalf("expected 1 verdict, got %d", len(verdicts))
+			}
+			if len(verdicts[0].AgentFiles) != 1 {
+				t.Fatalf("expected 1 agent file entry, got %d", len(verdicts[0].AgentFiles))
+			}
+			if verdicts[0].AgentFiles[0].Status != tc.status {
+				t.Errorf("status = %q, want %q", verdicts[0].AgentFiles[0].Status, tc.status)
+			}
+			if verdicts[0].AgentFiles[0].Path != "agents/GADU.md" {
+				t.Errorf("path = %q, want agents/GADU.md", verdicts[0].AgentFiles[0].Path)
+			}
+		})
+	}
+}
+
+// TestViewDashboardShowsAgentsSection verifies the Agents sub-section renders
+// in viewDashboard when a verdict has AgentFiles populated.
+func TestViewDashboardShowsAgentsSection(t *testing.T) {
+	m := newModel()
+	m.width = 80
+	m.scr = screenResult
+	m.result = commandResult{
+		action: Action{Name: "Verificar sincronización", Command: "sync-check"},
+		verdicts: []TargetVerdict{
+			{
+				Target:             "claude",
+				Status:             SyncNeedsApply,
+				OverlayNotDeployed: 1,
+				Action:             "run 'overlay apply --target claude'",
+				AgentFiles: []AgentFileEntry{
+					{Path: "agents/GADU.md", Status: "OVERLAY_NOT_DEPLOYED"},
+				},
+			},
+		},
+		output: "ok",
+	}
+
+	rendered := stripANSI(m.viewDashboard())
+	if !strings.Contains(rendered, "agents/GADU.md") {
+		t.Errorf("viewDashboard must show agent file path 'agents/GADU.md', got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "Agents") {
+		t.Errorf("viewDashboard must show 'Agents' sub-section label, got:\n%s", rendered)
+	}
+}
+
+// TestViewDashboardNoAgentsSectionWhenEmpty verifies the Agents sub-section is
+// absent when AgentFiles is empty (no spurious label for skills-only targets).
+func TestViewDashboardNoAgentsSectionWhenEmpty(t *testing.T) {
+	m := newModel()
+	m.width = 80
+	m.scr = screenResult
+	m.result = commandResult{
+		action: Action{Name: "Verificar sincronización", Command: "sync-check"},
+		verdicts: []TargetVerdict{
+			{Target: "opencode", Status: SyncHealthy, Action: "in sync"},
+		},
+		output: "ok",
+	}
+
+	rendered := stripANSI(m.viewDashboard())
+	if strings.Contains(rendered, "Agents") {
+		t.Errorf("viewDashboard must NOT show 'Agents' label when AgentFiles is empty, got:\n%s", rendered)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// GAP 2: Skills registry actions
+// ---------------------------------------------------------------------------
+
+// TestBuildArgSetsAppendsArgs verifies that action.Args are appended after
+// action.Command for TargetAgnostic actions.
+func TestBuildArgSetsAppendsArgs(t *testing.T) {
+	action := Action{
+		TargetAgnostic: true,
+		Command:        "skills",
+		Args:           []string{"validate"},
+	}
+	sets := buildArgSets(action, nil, false)
+	if len(sets) != 1 {
+		t.Fatalf("expected 1 arg set, got %d", len(sets))
+	}
+	args := sets[0]
+	if len(args) < 2 {
+		t.Fatalf("expected at least 2 args (command + verb), got %v", args)
+	}
+	if args[0] != "skills" {
+		t.Errorf("args[0] = %q, want skills", args[0])
+	}
+	if args[1] != "validate" {
+		t.Errorf("args[1] = %q, want validate", args[1])
+	}
+}
+
+// TestBuildArgSetsNoArgsUnchanged verifies a TargetAgnostic action with no Args
+// produces the same single-element arg set (backwards-compat for hooks actions).
+func TestBuildArgSetsNoArgsUnchanged(t *testing.T) {
+	action := Action{TargetAgnostic: true, Command: "status-hooks"}
+	sets := buildArgSets(action, nil, false)
+	if len(sets) != 1 || len(sets[0]) != 1 {
+		t.Fatalf("expected [[status-hooks]], got %v", sets)
+	}
+	if sets[0][0] != "status-hooks" {
+		t.Errorf("sets[0][0] = %q, want status-hooks", sets[0][0])
+	}
+}
+
+// TestSkillsActionsRegistered verifies the three skills actions are in Actions()
+// with correct field values.
+func TestSkillsActionsRegistered(t *testing.T) {
+	actions := Actions()
+	byVerb := make(map[string]Action) // key: Args[0] verb
+	for _, a := range actions {
+		if a.Command == "skills" && len(a.Args) > 0 {
+			byVerb[a.Args[0]] = a
+		}
+	}
+
+	for _, verb := range []string{"validate", "list", "status"} {
+		a, ok := byVerb[verb]
+		if !ok {
+			t.Errorf("Actions() must contain a skills action with Args[0]=%q", verb)
+			continue
+		}
+		if !a.TargetAgnostic {
+			t.Errorf("skills %s must have TargetAgnostic: true", verb)
+		}
+		if a.Mutating {
+			t.Errorf("skills %s must have Mutating: false (read-only)", verb)
+		}
+		if a.Hint == "" {
+			t.Errorf("skills %s must have a non-empty Hint", verb)
+		}
+	}
+}
+
+// TestSkillsActionsSectionHeaderVisible verifies a "── Skills ──" section header
+// renders on screenActions when skills actions are registered.
+func TestSkillsActionsSectionHeaderVisible(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+	rendered := m.View()
+	if !strings.Contains(rendered, "── Skills ──") {
+		t.Errorf("screenActions must contain '── Skills ──' section header, got:\n%s", rendered)
+	}
+}
+

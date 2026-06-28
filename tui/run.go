@@ -29,13 +29,14 @@ func AllTargets() []Target {
 
 // Action is a backend subcommand the TUI can invoke.
 type Action struct {
-	Name           string // label shown in the menu
-	Command        string // bin/labdrian-overlay subcommand
-	Mutating       bool   // requires confirmation
-	SupportsAll    bool   // can pass --target all when every target is selected
-	TargetAgnostic bool   // when true: invoke WITHOUT --target, skip target selection
-	ConfirmMessage string // per-action confirm copy; empty falls back to generic
-	Hint           string // one-line purpose scent shown in the menu
+	Name           string   // label shown in the menu
+	Command        string   // bin/labdrian-overlay subcommand
+	Args           []string // additional positional args appended after Command
+	Mutating       bool     // requires confirmation
+	SupportsAll    bool     // can pass --target all when every target is selected
+	TargetAgnostic bool     // when true: invoke WITHOUT --target, skip target selection
+	ConfirmMessage string   // per-action confirm copy; empty falls back to generic
+	Hint           string   // one-line purpose scent shown in the menu
 }
 
 // Actions returns the action menu in display order.
@@ -72,7 +73,24 @@ func Actions() []Action {
 			ConfirmMessage: "Elimina los hooks de ~/.claude/settings.json (se crea un respaldo .bak antes de modificar).",
 			Hint:           "Quita los hooks de settings.json",
 		},
+		// Skills registry — read-only, TargetAgnostic. The bash backend injects
+		// --registry/--manifest/--source-root defaults, so no flags are needed here.
+		{Name: "Validar skills", Command: "skills", Args: []string{"validate"},
+			TargetAgnostic: true, Mutating: false,
+			Hint: "Valida el registro de skills"},
+		{Name: "Listar skills", Command: "skills", Args: []string{"list"},
+			TargetAgnostic: true, Mutating: false,
+			Hint: "Lista los skills del overlay"},
+		{Name: "Estado skills", Command: "skills", Args: []string{"status"},
+			TargetAgnostic: true, Mutating: false,
+			Hint: "Estado del registro de skills"},
 	}
+}
+
+// AgentFileEntry records the per-file sync status of a single agent file.
+type AgentFileEntry struct {
+	Path   string // relative path, e.g. "agents/GADU.md"
+	Status string // "IN_SYNC", "OVERLAY_NOT_DEPLOYED", "UPSTREAM_CHANGED"
 }
 
 // SyncStatus is a color-coded health classification for a single target.
@@ -91,11 +109,12 @@ const (
 
 // TargetVerdict holds the parsed sync-check result for one target.
 type TargetVerdict struct {
-	Target            string
-	UpstreamChanged   int
+	Target             string
+	UpstreamChanged    int
 	OverlayNotDeployed int
-	Action            string
-	Status            SyncStatus
+	Action             string
+	Status             SyncStatus
+	AgentFiles         []AgentFileEntry // per-file statuses for agents/ paths
 }
 
 // classify maps verdict counts to a color status.
@@ -122,6 +141,10 @@ func classify(upstreamChanged, overlayNotDeployed int) SyncStatus {
 //	VERDICT:<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M
 //	ACTION:<target>: <text>
 //
+// It also tracks `=== sync-check: <target> ===` section headers to set the
+// active target scope, and captures per-file `agents/...` status lines
+// (format: `  <path>: <STATUS>`) into [TargetVerdict.AgentFiles].
+//
 // Verdicts are returned in first-seen order.
 func ParseSyncCheck(output string) []TargetVerdict {
 	order := []string{}
@@ -139,8 +162,16 @@ func ParseSyncCheck(output string) []TargetVerdict {
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var currentTarget string // tracks the active section for per-file lines
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
+
+		// Section header: "=== sync-check: <target> (<path>) ==="
+		if strings.HasPrefix(line, "=== sync-check: ") {
+			rest := strings.TrimPrefix(line, "=== sync-check: ")
+			currentTarget, _, _ = strings.Cut(rest, " ")
+			continue
+		}
 
 		if rest, ok := strings.CutPrefix(line, "VERDICT:"); ok {
 			// rest = "<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M"
@@ -175,6 +206,18 @@ func ParseSyncCheck(output string) []TargetVerdict {
 			v := get(target)
 			v.Action = strings.TrimSpace(text)
 			continue
+		}
+
+		// Per-file lines: capture agents/ file statuses within the current section.
+		for _, s := range []string{"IN_SYNC", "OVERLAY_NOT_DEPLOYED", "UPSTREAM_CHANGED"} {
+			if rest, ok := strings.CutPrefix(line, s+": "); ok {
+				if strings.HasPrefix(rest, "agents/") && currentTarget != "" {
+					path, _, _ := strings.Cut(rest, " ") // strip "(detail)" suffix
+					v := get(currentTarget)
+					v.AgentFiles = append(v.AgentFiles, AgentFileEntry{Path: path, Status: s})
+				}
+				break
+			}
 		}
 	}
 
@@ -261,7 +304,7 @@ type commandResult struct {
 func buildArgSets(action Action, selected []Target, allSelected bool) [][]string {
 	switch {
 	case action.TargetAgnostic:
-		return [][]string{{action.Command}}
+		return [][]string{append([]string{action.Command}, action.Args...)}
 	case action.SupportsAll && allSelected:
 		return [][]string{{action.Command, "--target", "all"}}
 	default:

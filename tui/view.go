@@ -314,6 +314,10 @@ func (m model) viewActions() string {
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
 			b.WriteString("\n" + sectionStyle.Render("── Hooks (global ~/.claude) ──") + "\n")
 		}
+		// Skills group header before the first skills action.
+		if a.Command == "skills" && (i == 0 || m.actions[i-1].Command != "skills") {
+			b.WriteString("\n" + sectionStyle.Render("── Skills ──") + "\n")
+		}
 
 		cursor := "  "
 		if i == m.aCursor {
@@ -443,6 +447,25 @@ func (m model) viewDashboard() string {
 		b.WriteString(head + "\n" + counts + "\n")
 		if v.Action != "" {
 			b.WriteString(action + "\n")
+		}
+		if len(v.AgentFiles) > 0 {
+			b.WriteString(dimStyle.Render("  Agents:") + "\n")
+			for _, af := range v.AgentFiles {
+				var color lipgloss.Color
+				var icon string
+				switch af.Status {
+				case "IN_SYNC":
+					color, icon = colorGreen, "✓"
+				case "OVERLAY_NOT_DEPLOYED":
+					color, icon = colorYellow, "!"
+				case "UPSTREAM_CHANGED":
+					color, icon = colorRed, "✗"
+				default:
+					color, icon = colorGray, "?"
+				}
+				b.WriteString(lipgloss.NewStyle().Foreground(color).Render(
+					fmt.Sprintf("    %s %s", icon, af.Path)) + "\n")
+			}
 		}
 	}
 	return boxStyle.Width(w - 2).Render(strings.TrimRight(b.String(), "\n"))
