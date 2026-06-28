@@ -75,6 +75,12 @@ func Actions() []Action {
 	}
 }
 
+// AgentFileEntry records the per-file sync status of a single agent file.
+type AgentFileEntry struct {
+	Path   string // relative path, e.g. "agents/GADU.md"
+	Status string // "IN_SYNC", "OVERLAY_NOT_DEPLOYED", "UPSTREAM_CHANGED"
+}
+
 // SyncStatus is a color-coded health classification for a single target.
 type SyncStatus int
 
@@ -91,11 +97,12 @@ const (
 
 // TargetVerdict holds the parsed sync-check result for one target.
 type TargetVerdict struct {
-	Target            string
-	UpstreamChanged   int
+	Target             string
+	UpstreamChanged    int
 	OverlayNotDeployed int
-	Action            string
-	Status            SyncStatus
+	Action             string
+	Status             SyncStatus
+	AgentFiles         []AgentFileEntry // per-file statuses for agents/ paths
 }
 
 // classify maps verdict counts to a color status.
@@ -139,8 +146,16 @@ func ParseSyncCheck(output string) []TargetVerdict {
 
 	scanner := bufio.NewScanner(strings.NewReader(output))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
+	var currentTarget string // tracks the active section for per-file lines
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
+
+		// Section header: "=== sync-check: <target> (<path>) ==="
+		if strings.HasPrefix(line, "=== sync-check: ") {
+			rest := strings.TrimPrefix(line, "=== sync-check: ")
+			currentTarget, _, _ = strings.Cut(rest, " ")
+			continue
+		}
 
 		if rest, ok := strings.CutPrefix(line, "VERDICT:"); ok {
 			// rest = "<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M"
@@ -175,6 +190,18 @@ func ParseSyncCheck(output string) []TargetVerdict {
 			v := get(target)
 			v.Action = strings.TrimSpace(text)
 			continue
+		}
+
+		// Per-file lines: capture agents/ file statuses within the current section.
+		for _, s := range []string{"IN_SYNC", "OVERLAY_NOT_DEPLOYED", "UPSTREAM_CHANGED"} {
+			if rest, ok := strings.CutPrefix(line, s+": "); ok {
+				if strings.HasPrefix(rest, "agents/") && currentTarget != "" {
+					path, _, _ := strings.Cut(rest, " ") // strip "(detail)" suffix
+					v := get(currentTarget)
+					v.AgentFiles = append(v.AgentFiles, AgentFileEntry{Path: path, Status: s})
+				}
+				break
+			}
 		}
 	}
 

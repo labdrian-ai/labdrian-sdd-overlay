@@ -444,6 +444,25 @@ func (m model) viewDashboard() string {
 		if v.Action != "" {
 			b.WriteString(action + "\n")
 		}
+		if len(v.AgentFiles) > 0 {
+			b.WriteString(dimStyle.Render("  Agents:") + "\n")
+			for _, af := range v.AgentFiles {
+				var color lipgloss.Color
+				var icon string
+				switch af.Status {
+				case "IN_SYNC":
+					color, icon = colorGreen, "✓"
+				case "OVERLAY_NOT_DEPLOYED":
+					color, icon = colorYellow, "!"
+				case "UPSTREAM_CHANGED":
+					color, icon = colorRed, "✗"
+				default:
+					color, icon = colorGray, "?"
+				}
+				b.WriteString(lipgloss.NewStyle().Foreground(color).Render(
+					fmt.Sprintf("    %s %s", icon, af.Path)) + "\n")
+			}
+		}
 	}
 	return boxStyle.Width(w - 2).Render(strings.TrimRight(b.String(), "\n"))
 }
