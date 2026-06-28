@@ -161,6 +161,21 @@ func TestSyncManifest(t *testing.T) {
 					"alpha/SKILL.md custom\n",
 			),
 		},
+		// SC-XX+1: GADU.md agent row AFTER the last skill row — the real overlay.manifest
+		// layout. SyncManifest must place GADU.md in preservedAfter and emit it verbatim
+		// after the skill block (the anchor-replacement "preservedAfter" path).
+		{
+			name: "non_skill_md_agent_row_after_skill_preserved",
+			reg:  mkReg(alpha),
+			manifest: []byte(
+				"alpha/SKILL.md custom\n" +
+					"GADU.md   custom   agent\n",
+			),
+			wantOut: []byte(
+				"alpha/SKILL.md custom\n" +
+					"GADU.md   custom   agent\n",
+			),
+		},
 		// SC-48: post-condition invariant — Diff must be empty for every output
 		// (tested inline via the post-condition self-check inside SyncManifest)
 		// The table entries above all implicitly cover this; here we test an

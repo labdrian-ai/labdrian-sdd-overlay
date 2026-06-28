@@ -268,6 +268,16 @@ overlay gadu-generate [--check]
     (engine/gadu/persona/body.md). Requires OVERLAY_DIR to be set or the command to be run
     from the repo root. --check verifies the generated files are up to date without writing.
 
+overlay skills <verb>
+    Manage the skills registry (skills.registry.yaml) and overlay.manifest.
+    list         [--registry <path>]                                               print sorted registry entries (id, source type, update strategy, targets)
+    status       [--registry <path>]                                               print count summary (total / core / custom)
+    validate     [--registry <path>] [--manifest <path>]                           cross-check registry vs manifest; exit 1 on any divergence
+    install      [--registry <path>] [--source-root <path>] [--project-id <id>]   copy project-scoped skills into <cwd>/.claude/skills/
+    add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external)
+    remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
+    sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
+
 overlay --help
     Show this help.
 ```
