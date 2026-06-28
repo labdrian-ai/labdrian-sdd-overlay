@@ -314,6 +314,10 @@ func (m model) viewActions() string {
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
 			b.WriteString("\n" + sectionStyle.Render("── Hooks (global ~/.claude) ──") + "\n")
 		}
+		// Skills group header before the first skills action.
+		if a.Command == "skills" && (i == 0 || m.actions[i-1].Command != "skills") {
+			b.WriteString("\n" + sectionStyle.Render("── Skills ──") + "\n")
+		}
 
 		cursor := "  "
 		if i == m.aCursor {

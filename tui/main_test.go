@@ -1119,3 +1119,84 @@ func TestViewDashboardNoAgentsSectionWhenEmpty(t *testing.T) {
 	}
 }
 
+// ---------------------------------------------------------------------------
+// GAP 2: Skills registry actions
+// ---------------------------------------------------------------------------
+
+// TestBuildArgSetsAppendsArgs verifies that action.Args are appended after
+// action.Command for TargetAgnostic actions.
+func TestBuildArgSetsAppendsArgs(t *testing.T) {
+	action := Action{
+		TargetAgnostic: true,
+		Command:        "skills",
+		Args:           []string{"validate"},
+	}
+	sets := buildArgSets(action, nil, false)
+	if len(sets) != 1 {
+		t.Fatalf("expected 1 arg set, got %d", len(sets))
+	}
+	args := sets[0]
+	if len(args) < 2 {
+		t.Fatalf("expected at least 2 args (command + verb), got %v", args)
+	}
+	if args[0] != "skills" {
+		t.Errorf("args[0] = %q, want skills", args[0])
+	}
+	if args[1] != "validate" {
+		t.Errorf("args[1] = %q, want validate", args[1])
+	}
+}
+
+// TestBuildArgSetsNoArgsUnchanged verifies a TargetAgnostic action with no Args
+// produces the same single-element arg set (backwards-compat for hooks actions).
+func TestBuildArgSetsNoArgsUnchanged(t *testing.T) {
+	action := Action{TargetAgnostic: true, Command: "status-hooks"}
+	sets := buildArgSets(action, nil, false)
+	if len(sets) != 1 || len(sets[0]) != 1 {
+		t.Fatalf("expected [[status-hooks]], got %v", sets)
+	}
+	if sets[0][0] != "status-hooks" {
+		t.Errorf("sets[0][0] = %q, want status-hooks", sets[0][0])
+	}
+}
+
+// TestSkillsActionsRegistered verifies the three skills actions are in Actions()
+// with correct field values.
+func TestSkillsActionsRegistered(t *testing.T) {
+	actions := Actions()
+	byVerb := make(map[string]Action) // key: Args[0] verb
+	for _, a := range actions {
+		if a.Command == "skills" && len(a.Args) > 0 {
+			byVerb[a.Args[0]] = a
+		}
+	}
+
+	for _, verb := range []string{"validate", "list", "status"} {
+		a, ok := byVerb[verb]
+		if !ok {
+			t.Errorf("Actions() must contain a skills action with Args[0]=%q", verb)
+			continue
+		}
+		if !a.TargetAgnostic {
+			t.Errorf("skills %s must have TargetAgnostic: true", verb)
+		}
+		if a.Mutating {
+			t.Errorf("skills %s must have Mutating: false (read-only)", verb)
+		}
+		if a.Hint == "" {
+			t.Errorf("skills %s must have a non-empty Hint", verb)
+		}
+	}
+}
+
+// TestSkillsActionsSectionHeaderVisible verifies a "── Skills ──" section header
+// renders on screenActions when skills actions are registered.
+func TestSkillsActionsSectionHeaderVisible(t *testing.T) {
+	m := newModel()
+	m.scr = screenActions
+	rendered := m.View()
+	if !strings.Contains(rendered, "── Skills ──") {
+		t.Errorf("screenActions must contain '── Skills ──' section header, got:\n%s", rendered)
+	}
+}
+
