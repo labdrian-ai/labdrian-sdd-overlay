@@ -84,6 +84,9 @@ func Actions() []Action {
 		{Name: "Estado skills", Command: "skills", Args: []string{"status"},
 			TargetAgnostic: true, Mutating: false,
 			Hint: "Estado del registro de skills"},
+		{Name: "Actualizar registry SDD Codex", Command: "skill-registry", Args: []string{"refresh", "--target", "codex"},
+			TargetAgnostic: true, Mutating: true,
+			Hint: "Refresh + executors sdd-* de Codex"},
 	}
 }
 
