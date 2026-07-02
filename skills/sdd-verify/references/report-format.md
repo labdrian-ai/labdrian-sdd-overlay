@@ -37,10 +37,10 @@
 **Coverage**: {N}% / threshold: {N}% → ✅ Above / ⚠️ Below / ➖ Not available
 
 ### Spec Compliance Matrix
-| R-NNN | Requirement | Scenario | Test | Result |
-|-------|-------------|----------|------|--------|
-| R-001 | {Requirement name} | {Scenario} | `{file} > {test}` | ✅ COMPLIANT |
-| R-002 | {Requirement name} | {Scenario} | (none found) | ❌ UNTESTED |
+| Requirement | Scenario | Test | Result |
+|-------------|----------|------|--------|
+| {REQ-01} | {Scenario} | `{file} > {test}` | ✅ COMPLIANT |
+| {REQ-02} | {Scenario} | (none found) | ❌ UNTESTED |
 
 **Compliance summary**: {N}/{total} scenarios compliant
 

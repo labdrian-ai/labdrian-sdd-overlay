@@ -244,7 +244,7 @@ Return to the orchestrator:
 
 - ALWAYS reference concrete file paths in tasks
 - Tasks MUST be ordered by dependency — Phase 1 tasks shouldn't depend on Phase 2
-- Testing tasks MUST cite their `R-NNN` requirement ID (e.g. "Write test for R-001: ..."); the test itself must also cite that ID in its name or a comment — this closes the `task cites R-NNN → test cites R-NNN` traceability chain
+- Testing tasks should reference specific scenarios from the specs
 - Each task should be completable in ONE session (if a task feels too big, split it)
 - Use hierarchical numbering: 1.1, 1.2, 2.1, 2.2, etc.
 - NEVER include vague tasks like "implement feature" or "add tests"
