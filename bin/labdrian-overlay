@@ -9,6 +9,7 @@ while [ -h "$SOURCE" ]; do
   SOURCE="$(readlink "$SOURCE")"
   [[ "$SOURCE" != /* ]] && SOURCE="$DIR/$SOURCE"
 done
+CALLER_CWD="$PWD"
 SCRIPT_DIR="$(cd -P "$(dirname "$SOURCE")" && pwd)"
 # Allow OVERLAY_DIR to be overridden via environment variable (useful for tests
 # and power-user workflows; normal use leaves it unset so it auto-detects here).
@@ -120,6 +121,14 @@ Commands:
                                    --fix: after the checks, attempt to install any missing
                                    discovery tools (bat rg fd sd eza) via Homebrew (best-effort,
                                    non-fatal), then re-check and report the result.
+  repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]
+                                   Refresh and repair .atl/skill-registry.md so existing
+                                   sdd-* phase executor skills stay resolvable after
+                                   gentle-ai sync/skill-registry refresh.
+  skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair]
+                                   Run gentle-ai skill-registry refresh, then immediately
+                                   repair sdd-* executor rows for the selected target
+                                   (default target: codex).
   tui                              Launch the Bubbletea TUI front-end
   install-alias [name]             Symlink a command (default: labdrian) into ~/.local/bin
   prespec <verb>                   Forward to the engine's prespec discovery core
@@ -154,6 +163,110 @@ Hook activation notes:
   - Missing-binary safety: hook commands use 'command -v <binary> && ...' so
     they silently exit 0 if the binary is absent, never blocking a Task.
 EOF
+}
+
+SDD_EXECUTOR_SKILLS=(
+  sdd-apply
+  sdd-archive
+  sdd-design
+  sdd-explore
+  sdd-init
+  sdd-onboard
+  sdd-propose
+  sdd-spec
+  sdd-tasks
+  sdd-time-estimation
+  sdd-verify
+)
+
+skill_frontmatter_description() {
+  local skill_file="$1"
+  awk '
+    /^description:[[:space:]]*/ {
+      sub(/^description:[[:space:]]*/, "")
+      gsub(/^"/, "")
+      gsub(/"$/, "")
+      gsub(/\|/, "\\|")
+      print
+      exit
+    }
+  ' "$skill_file"
+}
+
+repair_sdd_registry_file() {
+  local registry="$1"
+  local target="$2"
+  local skill_root="${TARGET_PATHS[$target]}"
+
+  mkdir -p "$(dirname "$registry")"
+  if [[ ! -f "$registry" ]]; then
+    cat > "$registry" <<EOF
+# Skill Registry — $(basename "$(dirname "$(dirname "$registry")")")
+
+## Skills
+
+| Skill | Trigger / description | Scope | Path |
+| --- | --- | --- | --- |
+
+## Loading protocol
+
+1. Match task context and target files against the \`Trigger / description\` column.
+2. Pass only the matching \`Path\` values to the subagent under \`## Skills to load before work\`.
+EOF
+  fi
+
+  grep -q '^## Skills$' "$registry" || die "registry has no '## Skills' section: $registry"
+  grep -q '^## Loading protocol$' "$registry" || die "registry has no '## Loading protocol' section: $registry"
+
+  local block tmp
+  block="$(mktemp)"
+  tmp="$(mktemp)"
+  trap 'rm -f "$block" "$tmp"' RETURN
+
+  local name path desc missing=0
+  for name in "${SDD_EXECUTOR_SKILLS[@]}"; do
+    path="$skill_root/$name/SKILL.md"
+    if [[ ! -f "$path" ]]; then
+      warn "missing $target SDD executor skill: $path"
+      missing=$((missing + 1))
+      continue
+    fi
+    desc="$(skill_frontmatter_description "$path")"
+    [[ -n "$desc" ]] || desc="SDD phase executor: $name."
+    printf '| `%s` | %s | executor | `%s` |\n' "$name" "$desc" "$path" >> "$block"
+  done
+
+  local note
+  note='`sdd-*` phase skills are executor contracts. Gentle may skip them as user-invocable skills, but this registry keeps their paths visible so SDD delegation can resolve the existing installed files.'
+
+  awk -v note="$note" -v block="$block" '
+    $0 == note { next }
+    $0 ~ /^\| `sdd-[^`]+` \|/ { next }
+    $0 == "## Skills" {
+      print note
+      print ""
+      print
+      next
+    }
+    $0 == "## Loading protocol" {
+      while ((getline line < block) > 0) {
+        print line
+      }
+      close(block)
+      print ""
+      print
+      next
+    }
+    { print }
+  ' "$registry" > "$tmp"
+
+  mv "$tmp" "$registry"
+  rm -f "$block"
+  trap - RETURN
+
+  local count
+  count="$(grep -c '^| `sdd-' "$registry" || true)"
+  echo "repair-sdd-registry: registry=$registry target=$target sdd_executors=$count missing=$missing"
 }
 
 # ---------------------------------------------------------------------------
@@ -1161,6 +1274,112 @@ cmd_doctor() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# repair-sdd-registry
+# ---------------------------------------------------------------------------
+#
+# Gentle's default skill-registry intentionally skips sdd-* phase skills because
+# they are executor contracts, not normal user-invocable skills. Codex/Gentle SDD
+# delegation still needs their exact paths. This command makes the registry
+# durable after `gentle-ai sync` / `gentle-ai skill-registry refresh` by
+# refreshing first, then re-inserting installed sdd-* rows with Scope=executor.
+
+cmd_repair_sdd_registry() {
+  local cwd="$CALLER_CWD"
+  local target="codex"
+  local refresh=1
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --cwd)
+        shift
+        cwd="${1:-}"
+        [[ -n "$cwd" ]] || die "--cwd requires an argument"
+        ;;
+      --target)
+        shift
+        target="${1:-}"
+        [[ -n "$target" ]] || die "--target requires an argument"
+        [[ -v TARGET_PATHS["$target"] ]] || die "Unknown target: $target. Valid: claude, opencode, codex"
+        ;;
+      --no-refresh)
+        refresh=0
+        ;;
+      *) die "Unknown option: $1. Usage: overlay repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]" ;;
+    esac
+    shift || true
+  done
+
+  [[ -d "$cwd" ]] || die "--cwd is not a directory: $cwd"
+
+  if [[ "$refresh" -eq 1 ]]; then
+    command -v gentle-ai >/dev/null 2>&1 || die "gentle-ai not found on PATH; use --no-refresh to repair an existing registry only"
+    gentle-ai skill-registry refresh --cwd "$cwd" --force --quiet --no-gitignore
+  fi
+
+  repair_sdd_registry_file "$cwd/.atl/skill-registry.md" "$target"
+}
+
+# ---------------------------------------------------------------------------
+# skill-registry refresh
+# ---------------------------------------------------------------------------
+#
+# Wrapper around `gentle-ai skill-registry refresh` that applies the overlay's
+# SDD executor repair immediately after the generated registry is refreshed.
+# This prevents the known Gentle default skip of sdd-* phase skills from
+# reappearing every time users refresh the registry through the overlay.
+
+cmd_skill_registry() {
+  local verb="${1:-}"
+  [[ "$verb" == "refresh" ]] || die "Usage: overlay skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]"
+  shift || true
+
+  local cwd="$CALLER_CWD"
+  local target="codex"
+  local repair=1
+  local saw_no_gitignore=0
+  local -a gentle_args=("skill-registry" "refresh")
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --cwd)
+        shift
+        cwd="${1:-}"
+        [[ -n "$cwd" ]] || die "--cwd requires an argument"
+        gentle_args+=("--cwd" "$cwd")
+        ;;
+      --target)
+        shift
+        target="${1:-}"
+        [[ -n "$target" ]] || die "--target requires an argument"
+        [[ -v TARGET_PATHS["$target"] ]] || die "Unknown target: $target. Valid: claude, opencode, codex"
+        ;;
+      --no-repair)
+        repair=0
+        ;;
+      --no-gitignore)
+        saw_no_gitignore=1
+        gentle_args+=("$1")
+        ;;
+      --force|--quiet)
+        gentle_args+=("$1")
+        ;;
+      *) die "Unknown option: $1. Usage: overlay skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]" ;;
+    esac
+    shift || true
+  done
+
+  [[ -d "$cwd" ]] || die "--cwd is not a directory: $cwd"
+  [[ "$saw_no_gitignore" -eq 1 ]] || gentle_args+=("--no-gitignore")
+
+  command -v gentle-ai >/dev/null 2>&1 || die "gentle-ai not found on PATH"
+  gentle-ai "${gentle_args[@]}"
+
+  if [[ "$repair" -eq 1 ]]; then
+    repair_sdd_registry_file "$cwd/.atl/skill-registry.md" "$target"
+  fi
+}
+
 # cmd_prespec forwards to the engine binary's `prespec` subcommand, passing
 # stdin/stdout/args straight through. This is the user-facing entry point the
 # prespec-malandra skill calls (e.g. `labdrian prespec lint`).
@@ -1214,6 +1433,8 @@ case "$COMMAND" in
   uninstall-hooks) cmd_uninstall_hooks "$@" ;;
   status-hooks)    cmd_status_hooks "$@" ;;
   doctor)          cmd_doctor "$@" ;;
+  repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
+  skill-registry)  cmd_skill_registry "$@" ;;
   tui)             cmd_tui "$@" ;;
   install-alias)   cmd_install_alias "$@" ;;
   prespec)         cmd_prespec "$@" ;;
