@@ -142,7 +142,7 @@ func TestGenerate_OpenCodeAgentFrontmatter(t *testing.T) {
 		wantVal string
 	}{
 		{"mode", "mode", "all"},
-		{"model", "model", "anthropic/claude-opus-4-6"},
+		{"model", "model", "openai/gpt-5.5"},
 	}
 	for _, tc := range cases {
 		t.Run(tc.field, func(t *testing.T) {

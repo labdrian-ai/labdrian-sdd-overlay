@@ -36,7 +36,7 @@ tools: '*'
 const opencodeAgentFrontmatter = `---
 description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
 mode: all
-model: anthropic/claude-opus-4-6
+model: openai/gpt-5.5
 permission:
   task: allow
 ---`
