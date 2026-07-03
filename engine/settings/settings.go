@@ -35,11 +35,84 @@ import (
 	"strings"
 )
 
+// ClaudeRuntimeConfigRoot is the default root validator for Claude runtime path
+// resolution. The helper intentionally returns the same error language used by the
+// runtime adapters so status and mutating commands stay aligned.
+const claudeRuntimeRootRequiredMessage = "Claude config root could not be resolved; set HOME"
+
 // Merger performs safe install/uninstall of deterministic-scoping hooks into
 // a Claude Code settings.json.
 type Merger struct {
 	settingsPath string
 	hookCommand  string
+}
+
+const (
+	// Minimalism and safety identity tokens are exposed to status checks so caller
+	// code can assert provable Labdrian ownership without duplicating parsing
+	// logic.
+	LabdrianMinimalismIdentity = "minimalism-contract.md"
+	LabdrianSafetyIdentity     = "--embedded-contract " + embeddedSafetyName
+)
+
+// ValidateClaudeConfigRoot validates that root is non-empty and absolute.
+func ValidateClaudeConfigRoot(root string) error {
+	if strings.TrimSpace(root) == "" {
+		return fmt.Errorf(claudeRuntimeRootRequiredMessage)
+	}
+	if !filepath.IsAbs(root) {
+		return fmt.Errorf("Claude config root must be absolute, got %q", root)
+	}
+	return nil
+}
+
+// ResolveClaudeSettingsPath returns the settings.json path for a Claude root after
+// validating the root.
+func ResolveClaudeSettingsPath(configRoot string) (string, error) {
+	if err := ValidateClaudeConfigRoot(configRoot); err != nil {
+		return "", err
+	}
+	return filepath.Join(configRoot, "settings.json"), nil
+}
+
+// ResolveClaudeHookCommandPath returns the on-disk hook command location for a
+// Claude runtime root after validating the root.
+func ResolveClaudeHookCommandPath(configRoot string) (string, error) {
+	if err := ValidateClaudeConfigRoot(configRoot); err != nil {
+		return "", err
+	}
+	return filepath.Join(configRoot, "bin", "gentle-ai-overlay"), nil
+}
+
+// HasLabdrianOwnedHook reports whether a hook key contains at least one entry
+// for the provided identity token.
+func HasLabdrianOwnedHook(root map[string]interface{}, key, hookCommand, identity string) bool {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	return hasEntryMatching(hooks, key, func(e interface{}) bool {
+		return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, identity)
+	})
+}
+
+// HasLabdrianMinimalismHook reports whether key has our minimalism-contract hook.
+func HasLabdrianMinimalismHook(root map[string]interface{}, key, hookCommand string) bool {
+	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianMinimalismIdentity)
+}
+
+// HasLabdrianSafetyHook reports whether key has our safety embedded-contract hook.
+func HasLabdrianSafetyHook(root map[string]interface{}, key, hookCommand string) bool {
+	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianSafetyIdentity)
+}
+
+// HasSupportedClaudeLifecycleState reports whether settings contain all known
+// Labdrian-owned Claude hook families.
+func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
+	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
+		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
+		HasLabdrianSafetyHook(root, "UserPromptSubmit", hookCommand) &&
+		HasLabdrianSafetyHook(root, "PreToolUse", hookCommand)
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -176,8 +249,8 @@ func (m *Merger) isSafetyEntry(e interface{}) bool {
 }
 
 // removeHooks removes our hook entries. Returns true if any change was made.
-// Identity uses binary path SUBSTRING inside hooks[].command — matches the
-// new entry shape where there is no outer "command" key.
+// Identity is Labdrian-owned entry shape: our minimalism or safety entries,
+// not merely any entry that happens to reference the same binary path.
 func (m *Merger) removeHooks(root map[string]interface{}) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -192,7 +265,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if entryContainsBinary(e, m.hookCommand) {
+			if m.isMinimalismEntry(e) || m.isSafetyEntry(e) {
 				changed = true
 				continue
 			}

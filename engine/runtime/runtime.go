@@ -3,6 +3,8 @@ package runtime
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
@@ -204,12 +206,22 @@ func NewFoundationAdapter(target Target) Adapter {
 		return NewOpenCodeAdapter(DefaultOpenCodeConfigRoot())
 	}
 	if target == TargetClaude {
-		return NewClaudeAdapter()
+		return NewClaudeAdapter(DefaultClaudeConfigRoot())
 	}
 	if target == TargetCodex {
 		return NewCodexAdapter()
 	}
 	return foundationAdapter{target: target}
+}
+
+func DefaultClaudeConfigRoot() string {
+	if home := strings.TrimSpace(os.Getenv("HOME")); home != "" {
+		return filepath.Join(home, ".claude")
+	}
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		return filepath.Join(home, ".claude")
+	}
+	return ""
 }
 
 type foundationAdapter struct {

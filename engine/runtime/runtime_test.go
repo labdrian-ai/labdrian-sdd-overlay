@@ -179,12 +179,13 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 		t.Fatalf("ExpandTarget(codex) = %#v", single)
 	}
 
+	t.Setenv("HOME", t.TempDir())
 	claude := engineRuntime.NewFoundationAdapter(engineRuntime.TargetClaude)
 	if _, ok := claude.(engineRuntime.ClaudeAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(claude) should return ClaudeAdapter foundation")
 	}
 	if claude.Target() != engineRuntime.TargetClaude || claude.Status().Status != engineRuntime.CapabilityUnsupported {
-		t.Fatalf("Claude foundation status should be unsupported in the OpenCode-only salvage, got target=%q status=%q", claude.Target(), claude.Status().Status)
+		t.Fatalf("Claude foundation status should be unsupported in an empty HOME sandbox, got target=%q status=%q", claude.Target(), claude.Status().Status)
 	}
 
 	codex := engineRuntime.NewFoundationAdapter(engineRuntime.TargetCodex)

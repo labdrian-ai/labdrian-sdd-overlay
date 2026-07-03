@@ -188,6 +188,8 @@ func TestRunRuntimeCore_ReportsNonOpenCodeTargetAsLifecycleResult(t *testing.T) 
 	overlayRoot := writeMinimalismOverlayFixture(t)
 	configRoot := t.TempDir()
 	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
@@ -210,33 +212,97 @@ func TestRunRuntimeCore_ReportsNonOpenCodeTargetAsLifecycleResult(t *testing.T) 
 	}
 }
 
-func TestRunRuntimeCore_AllTargetsHonorsFoundationAndOpenCodeTargets(t *testing.T) {
+func TestRunRuntimeCore_AllTargets_AdvisoryCodexWhenOtherTargetsSucceed(t *testing.T) {
 	overlayRoot := writeMinimalismOverlayFixture(t)
 	configRoot := t.TempDir()
+	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	runRuntimeCore(
+		[]string{"install", "--target", "all", "--config-root", configRoot},
+		&outBuf,
+		&errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("runtime install --target all should succeed with codex advisory, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("runtime install --target all should not print parse errors, got %q", errBuf.String())
+	}
+
+	out := outBuf.String()
+	for _, want := range []string{"[claude] install", "[opencode] install", "[codex] install"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("runtime install --target all output missing %q: %q", want, out)
+		}
+	}
+	if !strings.Contains(out, "(advisory)") {
+		t.Fatalf("runtime install --target all should include advisory for codex: %q", out)
+	}
+
+	if _, err := os.Stat(filepath.Join(configRoot, "settings.json")); err != nil {
+		t.Fatalf("expected claude settings at config root %q: %v", filepath.Join(configRoot, "settings.json"), err)
+	}
+	if _, err := os.Stat(filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js")); err != nil {
+		t.Fatalf("expected opencode plugin at config root %q: %v", filepath.Join(configRoot, "plugins", "labdrian-runtime-parity.js"), err)
+	}
+}
+
+func TestRunRuntimeCore_ClaudeDefaultsToHOMEWhenConfigRootNotProvided(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
 	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 
 	runRuntimeCore(
-		[]string{"status", "--target", "all", "--config-root", configRoot},
+		[]string{"install", "--target", "claude"},
 		&outBuf,
 		&errBuf,
 		func(code int) { exitCode = code },
 	)
 
-	if exitCode != 1 {
-		t.Fatalf("runtime status --target all should exit 1 while open/runtime foundations are mixed, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
+	if exitCode != 0 {
+		t.Fatalf("runtime install --target claude should succeed with default root, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
 	}
-	if errBuf.Len() != 0 {
-		t.Fatalf("runtime status --target all should not print parse errors, got %q", errBuf.String())
+	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); err != nil {
+		t.Fatalf("expected Claude settings in default HOME root, got %v", err)
 	}
+}
 
-	out := outBuf.String()
-	for _, want := range []string{"[claude] status", "[opencode] status", "[codex] status"} {
-		if !strings.Contains(out, want) {
-			t.Fatalf("runtime status --target all output missing %q: %q", want, out)
-		}
+func TestRunRuntimeCore_ClaudeExplicitConfigRootIsolatedFromHOME(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+	home := t.TempDir()
+	explicitRoot := filepath.Join(t.TempDir(), "explicit")
+	t.Setenv("HOME", home)
+	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	runRuntimeCore(
+		[]string{"install", "--target", "claude", "--config-root", explicitRoot},
+		&outBuf,
+		&errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("runtime install --target claude with explicit root should succeed, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	if _, err := os.Stat(filepath.Join(explicitRoot, "settings.json")); err != nil {
+		t.Fatalf("expected Claude settings in explicit root %q: %v", filepath.Join(explicitRoot, "settings.json"), err)
+	}
+	if _, err := os.Stat(filepath.Join(home, ".claude", "settings.json")); !os.IsNotExist(err) {
+		t.Fatalf("explicit root should avoid default HOME root settings, got stat=%v", err)
 	}
 }
 
