@@ -9,6 +9,9 @@
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
+// Concurrency-safe: serializes via an exclusive flock on <registry>.lock,
+// writes the registry atomically (temp file + rename), and refuses (exit 1)
+// to propagate over a registry that exists but is empty/whitespace-only.
 //
 // gate-task: reads a Claude Code PreToolUse 'Agent' tool_input JSON from STDIN,
 // inspects subagent_type, and emits the hook response that deterministically
@@ -50,6 +53,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
@@ -239,10 +243,85 @@ func verbFromArgs(args []string) string {
 // writeFileFn is the type of a function that writes a file (injectable for tests).
 type writeFileFn func(string, []byte, os.FileMode) error
 
+// atomicWriteFile writes data to a temp file in the same directory as path and
+// renames it into place. Unlike os.WriteFile (O_TRUNC), a concurrent reader can
+// never observe a partially-written or empty registry: rename(2) is atomic on
+// POSIX filesystems, so readers see either the old content or the new content.
+func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return err
+	}
+	tmpPath := tmp.Name()
+	// Best-effort cleanup on any failure path; no-op after a successful rename.
+	defer os.Remove(tmpPath)
+	if _, err := tmp.Write(data); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmpPath, perm); err != nil {
+		return err
+	}
+	return os.Rename(tmpPath, path)
+}
+
+// acquireRegistryLock takes an exclusive advisory flock(2) on lockPath (a
+// sidecar file next to the registry), blocking until it is granted. It
+// serializes the read-modify-write cycle across concurrent propagate processes
+// (both contract hooks fire on every UserPromptSubmit). Returns a release func.
+//
+// Unix-only by design: this tool runs on Linux and the lock is dependency-free.
+// The kernel releases the lock on process exit, so an os.Exit inside the core
+// (which skips defers) can never leave the lock held.
+func acquireRegistryLock(lockPath string) (release func(), err error) {
+	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
+	if err != nil {
+		return nil, err
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		f.Close()
+		return nil, err
+	}
+	return func() {
+		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+		f.Close()
+	}, nil
+}
+
+// registryPathFromArgs extracts the cleaned --registry value, empty if absent.
+// Used by runPropagate to know which sidecar lock to take before the core runs;
+// the core re-parses args itself and stays lock-free (hermetic for unit tests).
+func registryPathFromArgs(args []string) string {
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--registry" && i+1 < len(args) {
+			return filepath.Clean(args[i+1])
+		}
+	}
+	return ""
+}
+
 // runPropagate implements the 'propagate' subcommand.
 // Fails LOUD on any error (exits 1).
+//
+// Concurrency safety (two layers, plus the empty-registry guard in the core):
+//  1. an exclusive flock on <registry>.lock serializes the read-modify-write
+//     against the sibling propagate process spawned by the other contract hook;
+//  2. the registry write itself is atomic (temp file + rename), so even a
+//     reader outside the lock can never observe a truncated/empty registry.
 func runPropagate(args []string) {
-	runPropagateCore(args, os.Stdout, os.Stderr, os.ReadFile, os.WriteFile, os.Exit)
+	if registryPath := registryPathFromArgs(args); registryPath != "" {
+		release, err := acquireRegistryLock(registryPath + ".lock")
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: acquiring registry lock: %v\n", err)
+			os.Exit(1)
+		}
+		defer release()
+	}
+	runPropagateCore(args, os.Stdout, os.Stderr, os.ReadFile, atomicWriteFile, os.Exit)
 }
 
 // runPropagateCore is the testable core of the propagate subcommand. It accepts
@@ -358,6 +437,16 @@ func runPropagateCore(
 			return
 		}
 		fmt.Fprintf(stderr, "error: reading registry file: %v\n", err)
+		exit(1)
+		return
+	}
+
+	// Fail-loud guard: a registry that EXISTS but is empty/whitespace-only is
+	// never a valid input — it is the signature of a torn concurrent read (the
+	// incident state) or an otherwise corrupted file. Propagating over it would
+	// replace the whole registry with a lone marker block, so refuse instead.
+	if strings.TrimSpace(string(registryContent)) == "" {
+		fmt.Fprintln(stderr, "error: registry exists but is empty — refusing to propagate over it")
 		exit(1)
 		return
 	}
