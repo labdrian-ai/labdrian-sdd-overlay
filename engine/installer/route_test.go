@@ -41,7 +41,7 @@ func overlayScript(t *testing.T) string {
 
 // resolveResult holds the parsed output of a single route_resolve call.
 type resolveResult struct {
-	Route   string            // "skill" or "agent"
+	Route   string            // "skill", "agent", or "opencode-agent"
 	RepoSrc string            // absolute repo source path
 	Targets map[string]string // target_name -> absolute dest path
 }
@@ -120,6 +120,97 @@ route_resolve %q
 		RepoSrc: parts[1],
 		Targets: targets,
 	}, nil
+}
+
+// createTarball writes the provided relative paths into a temporary directory and
+// returns a tar.gz path containing them under a `files/` root.
+func createTarball(t *testing.T, files map[string]string) string {
+	t.Helper()
+
+	tarRoot := t.TempDir()
+	for rel, body := range files {
+		p := filepath.Join(tarRoot, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
+		}
+		if err := os.WriteFile(p, []byte(body), 0o644); err != nil {
+			t.Fatalf("write tar fixture %s: %v", rel, err)
+		}
+	}
+
+	// Tarball naming can be deterministic per test path; keep this stable but
+	// unique by placing it in a temp dir.
+	tarPath := filepath.Join(t.TempDir(), "snapshot.tar.gz")
+	cmd := exec.Command("tar", "-czf", tarPath, "-C", tarRoot, "files")
+	if _, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("create tarball: %v", err)
+	}
+
+	return tarPath
+}
+
+// setupCaptureFromBackupSandbox creates an overlay git repo + environment pair
+// suitable for testing `overlay capture --from-backup`.
+func setupCaptureFromBackupSandbox(t *testing.T, home string) (string, []string) {
+	t.Helper()
+
+	overlayDir := t.TempDir()
+
+	const manifest = "test-skill/SKILL.md   managed\n" +
+		"GADU.md   managed   agent\n" +
+		"opencode/agents/GADU.md   managed   opencode-agent\n"
+
+	files := map[string]string{
+		"overlay.manifest":           manifest,
+		"skills/test-skill/SKILL.md": "# overlay skill\n",
+		"agents/GADU.md":             "---\nname: GADU\n---\n# overlay agent\n",
+		"opencode/agents/GADU.md":    "---\nname: GADU\n---\n# overlay open-agent\n",
+	}
+
+	for rel, content := range files {
+		p := filepath.Join(overlayDir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", rel, err)
+		}
+	}
+
+	runGit := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=test",
+			"GIT_AUTHOR_EMAIL=test@test.com",
+			"GIT_COMMITTER_NAME=test",
+			"GIT_COMMITTER_EMAIL=test@test.com",
+			"HOME="+home,
+		)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+
+	runGit(overlayDir, "init")
+	runGit(overlayDir, "config", "user.email", "test@test.com")
+	runGit(overlayDir, "config", "user.name", "test")
+	runGit(overlayDir, "checkout", "-b", "upstream")
+	runGit(overlayDir, "add", ".")
+	runGit(overlayDir, "commit", "-m", "upstream: baseline")
+	runGit(overlayDir, "checkout", "-b", "main")
+
+	env := []string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"GIT_AUTHOR_NAME=test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+		"PATH=" + os.Getenv("PATH"),
+	}
+	return overlayDir, env
 }
 
 // fixtureManifest contains rows used by unit tests: a legacy skill row,
@@ -432,6 +523,135 @@ func TestRouteResolve_TargetFlag_SkillRowOpencode(t *testing.T) {
 	}
 }
 
+// TestCaptureFromBackup_UsesRouteAwareTarPaths asserts that managed rows are
+// restored from the correct route-specific paths inside the snapshot.
+func TestCaptureFromBackup_UsesRouteAwareTarPaths(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	home := t.TempDir()
+	overlayDir, env := setupCaptureFromBackupSandbox(t, home)
+
+	createdBackup := createTarball(t, map[string]string{
+		"files/home/labdrian/.claude/skills/test-skill/SKILL.md": "# backup skill\n",
+		"files/home/labdrian/.claude/agents/GADU.md":             "---\nname: GADU\n---\n# backup claude agent\n",
+		"files/home/labdrian/.config/opencode/agents/GADU.md":    "---\ndescription: test agent\nmodel: openai/gpt-5.5\n---\n# backup opencode agent\n",
+	})
+	backup := filepath.Join(home, ".gentle-ai", "backups", "upgrade-20260615T175529Z", "snapshot.tar.gz")
+	if err := os.MkdirAll(filepath.Dir(backup), 0755); err != nil {
+		t.Fatalf("mkdir backup parent: %v", err)
+	}
+	backupBytes, err := os.ReadFile(createdBackup)
+	if err != nil {
+		t.Fatalf("read created backup: %v", err)
+	}
+	if err := os.WriteFile(backup, backupBytes, 0644); err != nil {
+		t.Fatalf("write backup: %v", err)
+	}
+
+	out, err := runOverlay(t, overlay, env, "capture", "--from-backup", backup)
+	if err != nil {
+		t.Fatalf("overlay capture --from-backup: %v\noutput:\n%s", err, out)
+	}
+
+	assertFileEquals := func(relPath, want string) {
+		cmd := exec.Command("git", "show", "upstream:"+relPath)
+		cmd.Dir = overlayDir
+		got, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("git show upstream:%s: %v", relPath, err)
+		}
+		if string(got) != want {
+			t.Fatalf("upstream:%s content mismatch:\n  got:  %q\n  want: %q\noutput:\n%s", relPath, string(got), want, out)
+		}
+	}
+
+	assertFileEquals("skills/test-skill/SKILL.md", "# backup skill\n")
+	assertFileEquals("agents/GADU.md", "---\nname: GADU\n---\n# backup claude agent\n")
+	assertFileEquals("opencode/agents/GADU.md", "---\ndescription: test agent\nmodel: openai/gpt-5.5\n---\n# backup opencode agent\n")
+}
+
+// TestBootstrap_UsesRouteAwareTarPaths ensures bootstrap reads route-specific
+// backup locations (including opencode-agent under ~/.config/opencode).
+func TestBootstrap_UsesRouteAwareTarPaths(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	home := t.TempDir()
+	overlayDir := t.TempDir()
+
+	if err := os.WriteFile(filepath.Join(overlayDir, "overlay.manifest"), []byte("test-skill/SKILL.md   managed\n"+
+		"GADU.md   managed   agent\n"+
+		"opencode/agents/GADU.md   managed   opencode-agent\n"), 0644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	scriptDst := filepath.Join(overlayDir, "bin", "overlay")
+	if err := os.MkdirAll(filepath.Dir(scriptDst), 0755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	scriptBody, err := os.ReadFile(overlay)
+	if err != nil {
+		t.Fatalf("read overlay script: %v", err)
+	}
+	if err := os.WriteFile(scriptDst, scriptBody, 0755); err != nil {
+		t.Fatalf("write overlay script: %v", err)
+	}
+
+	createdBackup := createTarball(t, map[string]string{
+		"files/home/labdrian/.claude/skills/test-skill/SKILL.md": "# backup skill\n",
+		"files/home/labdrian/.claude/agents/GADU.md":             "---\nname: GADU\n---\n# backup claude agent\n",
+		"files/home/labdrian/.config/opencode/agents/GADU.md":    "---\ndescription: test agent\nmodel: openai/gpt-5.5\n---\n# backup opencode agent\n",
+	})
+	backup := filepath.Join(home, ".gentle-ai", "backups", "upgrade-20260615T175529Z", "snapshot.tar.gz")
+	if err := os.MkdirAll(filepath.Dir(backup), 0755); err != nil {
+		t.Fatalf("mkdir backup parent: %v", err)
+	}
+	backupBytes, err := os.ReadFile(createdBackup)
+	if err != nil {
+		t.Fatalf("read created backup: %v", err)
+	}
+	if err := os.WriteFile(backup, backupBytes, 0644); err != nil {
+		t.Fatalf("write backup to default path: %v", err)
+	}
+
+	env := []string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"GIT_AUTHOR_NAME=test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+		"PATH=" + os.Getenv("PATH"),
+	}
+
+	out, err := runOverlay(t, overlay, env, "bootstrap")
+	if err != nil {
+		t.Fatalf("overlay bootstrap: %v\noutput:\n%s", err, out)
+	}
+
+	assertBranchFileEquals := func(branch, relPath, want string) {
+		cmd := exec.Command("git", "show", branch+":"+relPath)
+		cmd.Dir = overlayDir
+		got, err := cmd.Output()
+		if err != nil {
+			t.Fatalf("git show %s:%s: %v", branch, relPath, err)
+		}
+		if string(got) != want {
+			t.Fatalf("%s:%s content mismatch:\n  got:  %q\n  want: %q\noutput:\n%s", branch, relPath, string(got), want, out)
+		}
+	}
+
+	assertBranchFileEquals("upstream", "skills/test-skill/SKILL.md", "# backup skill\n")
+	assertBranchFileEquals("upstream", "agents/GADU.md", "---\nname: GADU\n---\n# backup claude agent\n")
+	assertBranchFileEquals("upstream", "opencode/agents/GADU.md", "---\ndescription: test agent\nmodel: openai/gpt-5.5\n---\n# backup opencode agent\n")
+	assertBranchFileEquals("main", "opencode/agents/GADU.md", "---\ndescription: test agent\nmodel: openai/gpt-5.5\n---\n# backup opencode agent\n")
+}
+
 // ---------------------------------------------------------------------------
 // Integration tests — skip under -short
 // ---------------------------------------------------------------------------
@@ -448,7 +668,7 @@ func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 		fixtureManifestInteg        = "test-skill/SKILL.md   managed\nGADU.md   custom   agent\nopencode/agents/GADU.md   custom   opencode-agent\n"
 		fixtureSkillContent         = "# test skill\n"
 		fixtureAgentContent         = "---\nname: GADU\ndescription: test agent\nmodel: opus\ntools: '*'\n---\n# GADU\n"
-		fixtureOpenCodeAgentContent = "---\ndescription: test agent\nmode: all\nmodel: anthropic/claude-opus-4-6\npermission:\n  task: allow\n---\n# GADU\n"
+		fixtureOpenCodeAgentContent = "---\ndescription: test agent\nmode: all\nmodel: openai/gpt-5.5\npermission:\n  task: allow\n---\n# GADU\n"
 	)
 
 	files := map[string]string{

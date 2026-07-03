@@ -368,6 +368,23 @@ route_repo_rel() {
   esac
 }
 
+# route_tar_path resolves where a manifest row is stored inside a backup tarball.
+# The legacy backup layout is under ~/.claude. OpenCode-native agent rows must use
+# ~/.config/opencode instead.
+route_tar_path() {
+  local route="$1"
+  local repo_rel="$2"  # output of route_repo_rel()
+
+  case "$route" in
+    opencode-agent)
+      printf 'files/home/labdrian/.config/opencode/%s' "${repo_rel#opencode/}"
+      ;;
+    *)
+      printf 'files/home/labdrian/.claude/%s' "$repo_rel"
+      ;;
+  esac
+}
+
 # ---------------------------------------------------------------------------
 # bootstrap
 # ---------------------------------------------------------------------------
@@ -429,7 +446,7 @@ cmd_bootstrap() {
     rr_src="${rr_rest%%$'\t'*}"
     rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
 
-    tar_path="files/home/labdrian/.claude/${rr_repo_rel}"
+    tar_path="$(route_tar_path "$rr_route" "$rr_repo_rel")"
     dest="$rr_src"
     ensure_parent "$dest"
 
@@ -559,7 +576,7 @@ cmd_capture() {
       rr_src="${rr_rest%%$'\t'*}"
       rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
 
-      tar_path="files/home/labdrian/.claude/${rr_repo_rel}"
+      tar_path="$(route_tar_path "$rr_route" "$rr_repo_rel")"
       dest="$rr_src"
       ensure_parent "$dest"
 
