@@ -23,17 +23,18 @@ declare -A TARGET_PATHS=(
   [codex]="$HOME/.codex/skills"
 )
 
-# Agent-route destinations: only claude supports agent files (R-006, D2).
+# Native agent-route destinations. Claude Code and OpenCode use different
+# frontmatter schemas, so they are deployed from separate generated files.
 declare -A AGENT_TARGET_PATHS=(
   [claude]="$HOME/.claude/agents"
+  [opencode]="$HOME/.config/opencode/agents"
 )
 
 # Known limitations (explicitly out of scope for this change, R-009):
-#   - The bootstrap init block's human-readable info echoes (dir creation) and
-#     the `git add skills/` in the initial scaffold commit remain skills-only.
-#     They are a no-op for GADU (custom rows) and only matter for a hypothetical
-#     future managed agent row.
-#   - No native opencode/Codex agent-definition files are produced (R-009).
+#   - The bootstrap init block's human-readable info echoes (dir creation) remain
+#     skills-first. They are a no-op for GADU (custom rows) and only matter for a
+#     hypothetical future managed agent row.
+#   - No native Codex agent-definition files are produced (R-009).
 #   - No SDD orchestrator auto-spawn wiring (R-009).
 
 # Path where the engine binary is deployed. Using ~/.claude/bin/ keeps all
@@ -288,8 +289,12 @@ EOF
 #   repo_source = $OVERLAY_DIR/agents/<path>
 #   targets     = claude:$HOME/.claude/agents/<path>
 #
+# route=opencode-agent (third column == "opencode-agent"):
+#   repo_source = $OVERLAY_DIR/opencode/agents/<path>
+#   targets     = opencode:$HOME/.config/opencode/agents/<path>
+#
 # Callers intersect the emitted target set with their --target selection:
-#   --target opencode + agent row → zero applicable targets (no work, not an error).
+#   --target codex + agent row → zero applicable targets (no work, not an error).
 #
 # Back-compat invariant: bare two-column skill rows emit BYTE-IDENTICAL results
 # to pre-route_resolve behavior (pinned by TestRouteResolve_LegacySkillRow).
@@ -324,9 +329,15 @@ route_resolve() {
 
   if [[ "$route" == "agent" ]]; then
     repo_source="$OVERLAY_DIR/agents/${manifest_path}"
-    for tname in "${!AGENT_TARGET_PATHS[@]}"; do
-      targets+=("${tname}:${AGENT_TARGET_PATHS[$tname]}/${manifest_path}")
-    done
+    targets+=("claude:${AGENT_TARGET_PATHS[claude]}/${manifest_path}")
+  elif [[ "$route" == "opencode-agent" ]]; then
+    local opencode_agent_rel="${manifest_path#opencode/agents/}"
+    if [[ "$opencode_agent_rel" == "$manifest_path" || -z "$opencode_agent_rel" ]]; then
+      printf 'non-deployable\t\t\n'
+      return
+    fi
+    repo_source="$OVERLAY_DIR/${manifest_path}"
+    targets+=("opencode:${AGENT_TARGET_PATHS[opencode]}/${opencode_agent_rel}")
   else
     repo_source="$OVERLAY_DIR/skills/${manifest_path}"
     for tname in "${!TARGET_PATHS[@]}"; do
@@ -335,6 +346,26 @@ route_resolve() {
   fi
 
   printf '%s\t%s\t%s\n' "$route" "$repo_source" "${targets[*]}"
+}
+
+route_repo_rel() {
+  local route="$1"
+  local manifest_path="$2"
+
+  case "$route" in
+    agent)
+      printf 'agents/%s' "$manifest_path"
+      ;;
+    opencode-agent)
+      printf '%s' "$manifest_path"
+      ;;
+    skill)
+      printf 'skills/%s' "$manifest_path"
+      ;;
+    *)
+      printf '%s' "$manifest_path"
+      ;;
+  esac
 }
 
 # ---------------------------------------------------------------------------
@@ -391,20 +422,20 @@ cmd_bootstrap() {
   tar_listing="$(tar tzf "$TARBALL" 2>/dev/null)"
 
   while IFS= read -r rel_path; do
-    local rr_line rr_route rr_src rr_rest rr_subdir
+    local rr_line rr_route rr_src rr_rest rr_repo_rel
     rr_line="$(route_resolve "$rel_path")"
     rr_route="${rr_line%%$'\t'*}"
     rr_rest="${rr_line#*$'\t'}"
     rr_src="${rr_rest%%$'\t'*}"
-    [[ "$rr_route" == "agent" ]] && rr_subdir="agents" || rr_subdir="skills"
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
 
-    tar_path="files/home/labdrian/.claude/${rr_subdir}/${rel_path}"
+    tar_path="files/home/labdrian/.claude/${rr_repo_rel}"
     dest="$rr_src"
     ensure_parent "$dest"
 
     if echo "$tar_listing" | grep -qF "$tar_path"; then
       tar xzf "$TARBALL" --to-stdout "$tar_path" > "$dest"
-      info "  extracted: ${rr_subdir}/$rel_path"
+      info "  extracted: ${rr_repo_rel}"
     else
       echo "  WARNING: not found in tarball, skipping: $tar_path"
     fi
@@ -413,6 +444,7 @@ cmd_bootstrap() {
   # 8. Commit upstream baseline (only if there are changes)
   git add skills/
   test -d agents && git add agents/ || true
+  test -d opencode && git add opencode/ || true
   if [[ -n "$(git status --porcelain)" ]]; then
     git commit -m "upstream: baseline from gentle-ai 1.40.2"
   else
@@ -431,11 +463,12 @@ cmd_bootstrap() {
     rr_rest="${rr_line#*$'\t'}"
     rr_src="${rr_rest%%$'\t'*}"      # repo dest
     rr_targets="${rr_rest#*$'\t'}"
-    # Source from the claude live location (bootstrap always layers from claude)
+    # Source from the claude live location when applicable (bootstrap layers from claude).
     rr_dest=""
     for rr_pair in $rr_targets; do
       [[ "${rr_pair%%:*}" == "claude" ]] && rr_dest="${rr_pair#*:}" && break
     done
+    [[ -z "$rr_dest" ]] && continue
 
     src="${rr_dest}"
     dest="$rr_src"
@@ -452,6 +485,7 @@ cmd_bootstrap() {
   # 11. Commit overlay
   git add skills/
   test -d agents && git add agents/ || true
+  test -d opencode && git add opencode/ || true
   if [[ -n "$(git status --porcelain)" ]]; then
     git commit -m "overlay: EARS notation + stable R-NNN IDs"
   else
@@ -518,20 +552,20 @@ cmd_capture() {
     cap_listing="$(tar tzf "$from_backup" 2>/dev/null)"
 
     while IFS= read -r rel_path; do
-      local rr_line rr_route rr_src rr_rest rr_subdir
+      local rr_line rr_route rr_src rr_rest rr_repo_rel
       rr_line="$(route_resolve "$rel_path")"
       rr_route="${rr_line%%$'\t'*}"
       rr_rest="${rr_line#*$'\t'}"
       rr_src="${rr_rest%%$'\t'*}"
-      [[ "$rr_route" == "agent" ]] && rr_subdir="agents" || rr_subdir="skills"
+      rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
 
-      tar_path="files/home/labdrian/.claude/${rr_subdir}/${rel_path}"
+      tar_path="files/home/labdrian/.claude/${rr_repo_rel}"
       dest="$rr_src"
       ensure_parent "$dest"
 
       if echo "$cap_listing" | grep -qF "$tar_path"; then
         tar xzf "$from_backup" --to-stdout "$tar_path" > "$dest"
-        info "  extracted: ${rr_subdir}/$rel_path"
+        info "  extracted: ${rr_repo_rel}"
       else
         echo "  WARNING: not found in tarball, skipping: $tar_path"
       fi
@@ -545,7 +579,7 @@ cmd_capture() {
       rr_rest="${rr_line#*$'\t'}"
       rr_src="${rr_rest%%$'\t'*}"
       rr_targets="${rr_rest#*$'\t'}"
-      # Find live path for the requested target; skip if not applicable (e.g. agent + opencode)
+      # Find live path for the requested target; skip if not applicable (e.g. native agent + codex)
       rr_dest=""
       for rr_pair in $rr_targets; do
         [[ "${rr_pair%%:*}" == "$target_arg" ]] && rr_dest="${rr_pair#*:}" && break
@@ -567,7 +601,8 @@ cmd_capture() {
 
   git add skills/
   test -d "$OVERLAY_DIR/agents" && git add agents/ || true
-  # Commit only if skills/ has STAGED changes. `git diff --cached --quiet`
+  test -d "$OVERLAY_DIR/opencode" && git add opencode/ || true
+  # Commit only if deployable tracked files have STAGED changes. `git diff --cached --quiet`
   # ignores unrelated untracked paths (.engram/, tui/) present on 'upstream'
   # that previously caused a doomed `git commit` (exit 1) stranding the tree.
   if git diff --cached --quiet; then
@@ -632,7 +667,7 @@ cmd_apply() {
     local in_sync=0
 
     while IFS= read -r rel_path; do
-      local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_subdir
+      local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel
       rr_line="$(route_resolve "$rel_path")"
       rr_route="${rr_line%%$'\t'*}"
       rr_rest="${rr_line#*$'\t'}"
@@ -657,8 +692,8 @@ cmd_apply() {
           deployed=$((deployed + 1))
         fi
       else
-        [[ "$rr_route" == "agent" ]] && rr_subdir="agents" || rr_subdir="skills"
-        echo "  WARNING: ${rr_subdir}/$rel_path not found in overlay, skipping"
+        rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+        echo "  WARNING: ${rr_repo_rel} not found in overlay, skipping"
       fi
     done < <(all_tracked_files)
 
@@ -767,7 +802,7 @@ cmd_sync_check() {
     local overlay_not_deployed=0
 
     while IFS= read -r line; do
-      local rel_path tag rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_subdir
+      local rel_path tag rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel
       rel_path="$(echo "$line" | awk '{ print $1 }')"
       tag="$(echo "$line" | awk '{ print $2 }')"
 
@@ -776,7 +811,7 @@ cmd_sync_check() {
       rr_rest="${rr_line#*$'\t'}"
       rr_src="${rr_rest%%$'\t'*}"
       rr_targets="${rr_rest#*$'\t'}"
-      [[ "$rr_route" == "agent" ]] && rr_subdir="agents" || rr_subdir="skills"
+      rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
 
       # Find live_file for this target; skip row if route not applicable
       rr_dest=""
@@ -795,13 +830,13 @@ cmd_sync_check() {
 
       # Hash of main version in repo (CORRECTNESS-CRITICAL: use route subdir, not hardcoded skills/)
       local main_hash=""
-      if git cat-file -e "main:${rr_subdir}/${rel_path}" 2>/dev/null; then
-        main_hash="$(git show "main:${rr_subdir}/${rel_path}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
+      if git cat-file -e "main:${rr_repo_rel}" 2>/dev/null; then
+        main_hash="$(git show "main:${rr_repo_rel}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
       fi
 
       # PRIMARY check: live == main → IN SYNC, nothing to do
       if [[ -n "$live_hash" && "$live_hash" == "$main_hash" ]]; then
-        echo "  IN_SYNC: ${rr_subdir}/$rel_path"
+        echo "  IN_SYNC: ${rr_repo_rel}"
         continue
       fi
 
@@ -809,34 +844,34 @@ cmd_sync_check() {
       if [[ -z "$live_hash" ]]; then
         # File missing at target
         overlay_not_deployed=$((overlay_not_deployed + 1))
-        echo "  OVERLAY_NOT_DEPLOYED: ${rr_subdir}/$rel_path (live missing)"
+        echo "  OVERLAY_NOT_DEPLOYED: ${rr_repo_rel} (live missing)"
         continue
       fi
 
       # Determine if this is a MANAGED file (exists on upstream branch)
       local is_managed=false
-      if git cat-file -e "upstream:${rr_subdir}/${rel_path}" 2>/dev/null; then
+      if git cat-file -e "upstream:${rr_repo_rel}" 2>/dev/null; then
         is_managed=true
       fi
 
       if [[ "$is_managed" == true ]]; then
         # Compare live vs upstream to distinguish subtypes
         local upstream_hash
-        upstream_hash="$(git show "upstream:${rr_subdir}/${rel_path}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
+        upstream_hash="$(git show "upstream:${rr_repo_rel}" 2>/dev/null | sha256sum | awk '{ print $1 }')"
 
         if [[ "$live_hash" == "$upstream_hash" ]]; then
           # live == upstream but live != main → overlay not deployed (customization reverted)
           overlay_not_deployed=$((overlay_not_deployed + 1))
-          echo "  OVERLAY_NOT_DEPLOYED: ${rr_subdir}/$rel_path (live matches upstream, customization not deployed)"
+          echo "  OVERLAY_NOT_DEPLOYED: ${rr_repo_rel} (live matches upstream, customization not deployed)"
         else
           # live != upstream AND live != main → upstream has a new pristine version we haven't captured
           upstream_changed=$((upstream_changed + 1))
-          echo "  UPSTREAM_CHANGED: ${rr_subdir}/$rel_path"
+          echo "  UPSTREAM_CHANGED: ${rr_repo_rel}"
         fi
       else
         # CUSTOM file (no upstream counterpart): live != main → overlay not deployed
         overlay_not_deployed=$((overlay_not_deployed + 1))
-        echo "  OVERLAY_NOT_DEPLOYED: ${rr_subdir}/$rel_path (custom file, not deployed)"
+        echo "  OVERLAY_NOT_DEPLOYED: ${rr_repo_rel} (custom file, not deployed)"
       fi
 
     done < <(parse_manifest)

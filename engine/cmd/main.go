@@ -160,7 +160,7 @@ func overlayRoot() (string, error) {
 }
 
 // runGaduGenerate implements the 'gadu-generate [--check]' subcommand.
-// Without --check: calls gadu.Generate(repoRoot) to write both artifacts.
+// Without --check: calls gadu.Generate(repoRoot) to write all artifacts.
 // With    --check: calls gadu.Check(repoRoot)    to verify they are not stale.
 // Exits non-zero on error. OVERLAY_DIR must be set; the installed binary
 // cannot resolve the repo root reliably via os.Executable().
@@ -191,7 +191,7 @@ func runGaduGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "gadu-generate: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md and skills/gadu-operator/SKILL.md written")
+	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md written")
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.

@@ -70,7 +70,7 @@ OVERLAY_DIR=%q
 MANIFEST=%q
 HOME=%q
 declare -A TARGET_PATHS=( [claude]=%q [opencode]=%q [codex]=%q )
-declare -A AGENT_TARGET_PATHS=( [claude]=%q )
+declare -A AGENT_TARGET_PATHS=( [claude]=%q [opencode]=%q )
 eval "$(awk '/^route_resolve\(\)/,/^}$/' %q)"
 route_resolve %q
 `,
@@ -81,6 +81,7 @@ route_resolve %q
 		filepath.Join(home, ".config", "opencode", "skills"),
 		filepath.Join(home, ".codex", "skills"),
 		filepath.Join(home, ".claude", "agents"),
+		filepath.Join(home, ".config", "opencode", "agents"),
 		overlayPath,
 		manifestPath,
 	)
@@ -126,6 +127,7 @@ route_resolve %q
 const fixtureManifest = `sdd-spec/SKILL.md   managed
 gadu-operator/SKILL.md   custom
 GADU.md   custom   agent
+opencode/agents/GADU.md   custom   opencode-agent
 `
 
 // ---------------------------------------------------------------------------
@@ -200,7 +202,7 @@ func TestRouteResolve_GADUSkillRow(t *testing.T) {
 	}
 }
 
-// TestRouteResolve_GADUAgentRow verifies that the GADU agent row (route=agent)
+// TestRouteResolve_GADUAgentRow verifies that the Claude Code GADU agent row (route=agent)
 // resolves to route=agent, agents/ repo source, and exactly ONE claude target.
 func TestRouteResolve_GADUAgentRow(t *testing.T) {
 	overlay := overlayScript(t)
@@ -231,6 +233,41 @@ func TestRouteResolve_GADUAgentRow(t *testing.T) {
 	for _, tname := range []string{"opencode", "codex"} {
 		if _, ok := got.Targets[tname]; ok {
 			t.Errorf("unexpected target %q for agent row", tname)
+		}
+	}
+}
+
+// TestRouteResolve_GADUOpenCodeAgentRow verifies that the OpenCode GADU agent
+// row resolves to the OpenCode-specific generated source and exactly one
+// OpenCode agent target.
+func TestRouteResolve_GADUOpenCodeAgentRow(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "opencode/agents/GADU.md")
+	if err != nil {
+		t.Fatalf("route_resolve: %v", err)
+	}
+
+	if got.Route != "opencode-agent" {
+		t.Errorf("Route: got %q, want %q", got.Route, "opencode-agent")
+	}
+	if !strings.HasSuffix(got.RepoSrc, "opencode/agents/GADU.md") {
+		t.Errorf("RepoSrc %q: want suffix opencode/agents/GADU.md", got.RepoSrc)
+	}
+	if len(got.Targets) != 1 {
+		t.Errorf("expected exactly 1 target (opencode), got %d: %v", len(got.Targets), got.Targets)
+	}
+	dest, ok := got.Targets["opencode"]
+	if !ok {
+		t.Errorf("missing opencode target; got: %v", got.Targets)
+	} else if !strings.HasSuffix(dest, ".config/opencode/agents/GADU.md") {
+		t.Errorf("opencode dest %q: want suffix .config/opencode/agents/GADU.md", dest)
+	}
+	for _, tname := range []string{"claude", "codex"} {
+		if _, ok := got.Targets[tname]; ok {
+			t.Errorf("unexpected target %q for opencode-agent row", tname)
 		}
 	}
 }
@@ -311,8 +348,8 @@ func intersectTargets(targets map[string]string, requested string) map[string]st
 	return map[string]string{}
 }
 
-// TestRouteResolve_TargetFlag_AgentRowOpencode pins that an agent row + --target opencode
-// yields ZERO applicable targets (agent route is claude-only, D2).
+// TestRouteResolve_TargetFlag_AgentRowOpencode pins that the Claude Code agent
+// row + --target opencode yields ZERO applicable targets.
 func TestRouteResolve_TargetFlag_AgentRowOpencode(t *testing.T) {
 	overlay := overlayScript(t)
 	overlayDir := t.TempDir()
@@ -326,6 +363,28 @@ func TestRouteResolve_TargetFlag_AgentRowOpencode(t *testing.T) {
 	applicable := intersectTargets(got.Targets, "opencode")
 	if len(applicable) != 0 {
 		t.Errorf("expected 0 applicable targets (agent row + --target opencode), got: %v", applicable)
+	}
+}
+
+// TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode pins that the OpenCode
+// native agent row + --target opencode yields the OpenCode agent destination.
+func TestRouteResolve_TargetFlag_OpenCodeAgentRowOpencode(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callRouteResolve(t, overlay, overlayDir, home, fixtureManifest, "opencode/agents/GADU.md")
+	if err != nil {
+		t.Fatalf("route_resolve: %v", err)
+	}
+
+	applicable := intersectTargets(got.Targets, "opencode")
+	if len(applicable) != 1 {
+		t.Errorf("expected 1 applicable target (opencode), got: %v", applicable)
+	}
+	dest := applicable["opencode"]
+	if !strings.HasSuffix(dest, ".config/opencode/agents/GADU.md") {
+		t.Errorf("opencode dest %q: want suffix .config/opencode/agents/GADU.md", dest)
 	}
 }
 
@@ -378,7 +437,7 @@ func TestRouteResolve_TargetFlag_SkillRowOpencode(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // setupSandboxOverlay creates a minimal overlay git repo with upstream+main
-// branches containing: agents/GADU.md, skills/test-skill/SKILL.md, overlay.manifest.
+// branches containing native GADU agent files, skills/test-skill/SKILL.md, overlay.manifest.
 // The sandbox HOME is provided by the caller. Returns overlayDir and the
 // environment slice for exec.Command (includes OVERLAY_DIR and HOME overrides).
 func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
@@ -386,15 +445,17 @@ func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 	overlayDir := t.TempDir()
 
 	const (
-		fixtureManifestInteg = "test-skill/SKILL.md   managed\nGADU.md   custom   agent\n"
-		fixtureSkillContent  = "# test skill\n"
-		fixtureAgentContent  = "---\nname: GADU\ndescription: test agent\nmodel: opus\ntools: '*'\n---\n# GADU\n"
+		fixtureManifestInteg        = "test-skill/SKILL.md   managed\nGADU.md   custom   agent\nopencode/agents/GADU.md   custom   opencode-agent\n"
+		fixtureSkillContent         = "# test skill\n"
+		fixtureAgentContent         = "---\nname: GADU\ndescription: test agent\nmodel: opus\ntools: '*'\n---\n# GADU\n"
+		fixtureOpenCodeAgentContent = "---\ndescription: test agent\nmode: all\nmodel: anthropic/claude-opus-4-6\npermission:\n  task: allow\n---\n# GADU\n"
 	)
 
 	files := map[string]string{
 		"overlay.manifest":           fixtureManifestInteg,
 		"skills/test-skill/SKILL.md": fixtureSkillContent,
 		"agents/GADU.md":             fixtureAgentContent,
+		"opencode/agents/GADU.md":    fixtureOpenCodeAgentContent,
 	}
 	for rel, content := range files {
 		p := filepath.Join(overlayDir, rel)
@@ -453,11 +514,12 @@ func runOverlay(t *testing.T, overlayPath string, env []string, args ...string) 
 	return string(out), err
 }
 
-// TestApply_AgentLandsInClaudeAgents asserts that after overlay apply:
+// TestApply_AgentsLandInNativeAgentDirs asserts that after overlay apply:
 // - agents/GADU.md lands at $HOME/.claude/agents/GADU.md (not .claude/skills)
+// - opencode/agents/GADU.md lands at $HOME/.config/opencode/agents/GADU.md
 // - skills/test-skill/SKILL.md lands in all 3 skills dirs
 // - no skill file is in .claude/agents except GADU.md (AC-3)
-func TestApply_AgentLandsInClaudeAgents(t *testing.T) {
+func TestApply_AgentsLandInNativeAgentDirs(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
 	}
@@ -474,6 +536,10 @@ func TestApply_AgentLandsInClaudeAgents(t *testing.T) {
 	agentDest := filepath.Join(home, ".claude", "agents", "GADU.md")
 	if _, err := os.Stat(agentDest); err != nil {
 		t.Errorf("agent file not found at %s: %v\napply output:\n%s", agentDest, err, out)
+	}
+	opencodeAgentDest := filepath.Join(home, ".config", "opencode", "agents", "GADU.md")
+	if _, err := os.Stat(opencodeAgentDest); err != nil {
+		t.Errorf("opencode agent file not found at %s: %v\napply output:\n%s", opencodeAgentDest, err, out)
 	}
 
 	skillDests := []string{
