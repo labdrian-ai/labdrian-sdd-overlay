@@ -1,0 +1,51 @@
+schema: spec-driven
+
+context: |
+  Tech stack: Go monorepo (engine + tui)
+  Architecture: Multi-module repository (`engine/`, `tui/`) with command/validator flow and Bubbletea TUI
+  Testing: `go test ./...` in each Go module, `go vet`, and ShellCheck for shell entrypoint
+  Style: Go tooling defaults (`gofmt`), shell syntax check (`bash -n`)
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group tasks by phase (infrastructure, implementation, testing)
+    - Use hierarchical numbering (1.1, 1.2, etc.)
+    - Keep tasks small enough to complete in one session
+  apply:
+    rules:
+      - Follow existing patterns and conventions
+    tdd: true
+    test_command: |
+      cd engine && go test ./... && cd ../tui && go test ./...
+  verify:
+    test_command: |
+      cd engine && go test ./... && cd ../tui && go test ./...
+    build_command: |
+      cd engine && go test ./... && cd ../tui && go test ./...
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas
+
+testing:
+  strict_tdd: true
+  layers:
+    - name: engine
+      framework: go test
+      command: cd engine && go test ./...
+      vet: cd engine && go vet ./...
+    - name: tui
+      framework: go test
+      command: cd tui && go test ./...
+      vet: cd tui && go vet ./...
+    - name: shell
+      framework: shell
+      command: bash -n bin/overlay && shellcheck bin/overlay
+      coverage: none
