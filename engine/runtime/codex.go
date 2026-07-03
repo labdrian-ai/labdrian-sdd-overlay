@@ -22,5 +22,5 @@ func (a CodexAdapter) Rollback() LifecycleResult  { return a.result(ActionRollba
 func (a CodexAdapter) Uninstall() LifecycleResult { return a.result(ActionUninstall) }
 
 func (a CodexAdapter) result(action Action) LifecycleResult {
-	return NewLifecycleResult(a.target, action, CapabilityUnsupported, "runtime adapter foundation present; Codex implementation is scheduled for a later PR slice", nil)
+	return NewLifecycleResult(a.target, action, CapabilityUnsupported, "runtime adapter foundation present; Codex implementation is scheduled for a later PR slice (advisory)", nil)
 }

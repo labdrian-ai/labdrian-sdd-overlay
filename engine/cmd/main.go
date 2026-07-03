@@ -240,20 +240,30 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		return
 	}
 	targets := runtimepkg.ExpandTarget(target)
-	if includesOpenCodeTarget(targets) && configRoot == "" {
-		configRoot = runtimepkg.DefaultOpenCodeConfigRoot()
-	}
 
 	failed := false
+	nonCodexFailureCount := 0
+	allTargets := len(targets) > 1
 	for _, current := range targets {
-		adapter := runtimeAdapterForTarget(current, configRoot)
+		targetRoot := configRoot
+		if current == runtimepkg.TargetOpenCode && targetRoot == "" {
+			targetRoot = runtimepkg.DefaultOpenCodeConfigRoot()
+		}
+		adapter := runtimeAdapterForTarget(current, targetRoot)
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		actionFailed := result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial
 		if action == "status" && result.Status == runtimepkg.CapabilityRestartRequired {
 			actionFailed = true
 		}
+		if current == runtimepkg.TargetCodex && allTargets && actionFailed && nonCodexFailureCount == 0 {
+			// Transitional advisory: Codex remains unsupported in this slice.
+			continue
+		}
 		if actionFailed {
+			if current != runtimepkg.TargetCodex {
+				nonCodexFailureCount++
+			}
 			failed = true
 		}
 	}
@@ -268,6 +278,9 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtimepkg.Adapter {
 	if target == runtimepkg.TargetOpenCode {
 		return runtimepkg.NewOpenCodeAdapter(configRoot)
+	}
+	if target == runtimepkg.TargetClaude {
+		return runtimepkg.NewClaudeAdapter(configRoot)
 	}
 	return runtimepkg.NewFoundationAdapter(target)
 }
