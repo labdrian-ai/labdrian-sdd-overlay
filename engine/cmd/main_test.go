@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
+	"syscall"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
@@ -1774,5 +1776,222 @@ func TestApplyIgnoresRegistry(t *testing.T) {
 		&skillsOut, &skillsErr, func(c int) { skillsExitCode = c })
 	if skillsExitCode != 1 {
 		t.Errorf("SC-13: runSkillsCore(list) must exit 1 when skills.registry.yaml is absent; got exit %d", skillsExitCode)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// propagate write-race fix: empty-registry guard, atomic write, registry lock
+// ---------------------------------------------------------------------------
+
+// TC-RACE-1: registry exists but is empty (or whitespace-only) → exit 1,
+// stderr diagnostic, and NO write. Propagating over an emptied registry would
+// replace the whole file with a lone marker block — the incident state.
+func TestRunPropagateCore_EmptyRegistry_FailLoudNoWrite(t *testing.T) {
+	for _, content := range []string{"", "   \n\t\n"} {
+		writtenFiles := make(map[string][]byte)
+		_, stderr, exitCode := capturePropagateCore(
+			[]string{"--registry", "/fake/registry.md", "--contract-file", "/fake/contract.md"},
+			map[string][]byte{
+				"/fake/contract.md": []byte(testContractContent),
+				"/fake/registry.md": []byte(content),
+			},
+			nil,
+			writtenFiles,
+		)
+		if exitCode != 1 {
+			t.Errorf("empty registry %q: expected exit 1, got %d", content, exitCode)
+		}
+		if !strings.Contains(stderr, "empty") || !strings.Contains(stderr, "refusing") {
+			t.Errorf("empty registry %q: stderr should say empty + refusing; got %q", content, stderr)
+		}
+		if len(writtenFiles) != 0 {
+			t.Errorf("empty registry %q: nothing must be written; wrote %v", content, writtenFiles)
+		}
+	}
+}
+
+// TC-RACE-2: atomicWriteFile writes the exact content into place and leaves no
+// temp file behind, both when creating a new file and when replacing one.
+func TestAtomicWriteFile_ContentAndNoLeftoverTemp(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "skill-registry.md")
+
+	if err := atomicWriteFile(path, []byte("first version\n"), 0o644); err != nil {
+		t.Fatalf("atomicWriteFile (create): %v", err)
+	}
+	if err := atomicWriteFile(path, []byte("second version\n"), 0o644); err != nil {
+		t.Fatalf("atomicWriteFile (replace): %v", err)
+	}
+
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading result: %v", err)
+	}
+	if string(got) != "second version\n" {
+		t.Errorf("content mismatch: got %q", string(got))
+	}
+
+	// The directory must contain ONLY the target file — no leftover temp files.
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		if e.Name() != "skill-registry.md" {
+			t.Errorf("leftover file in dir: %s", e.Name())
+		}
+	}
+}
+
+// TC-RACE-3: atomicWriteFile is wired as the real registry writer — the end-to-end
+// propagate path against a real temp dir must produce the scoped block on disk.
+func TestRunPropagateCore_AtomicWriter_EndToEnd(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "skill-registry.md")
+	contractPath := filepath.Join(dir, "contract.md")
+	if err := os.WriteFile(registryPath, []byte(minimalRegistry), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPropagateCore(
+		[]string{"--registry", registryPath, "--contract-file", contractPath},
+		&outBuf, &errBuf,
+		os.ReadFile,
+		atomicWriteFile, // the production writer
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != -1 {
+		t.Fatalf("unexpected exit %d; stderr: %s", exitCode, errBuf.String())
+	}
+	got, err := os.ReadFile(registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(got), propagator.BeginMarker) {
+		t.Errorf("registry on disk must contain scoped BEGIN marker; got:\n%s", string(got))
+	}
+	entries, _ := os.ReadDir(dir)
+	if len(entries) != 2 { // registry + contract only, no temp leftovers
+		t.Errorf("expected exactly 2 files in dir, got %d: %v", len(entries), entries)
+	}
+}
+
+// TC-RACE-4: acquireRegistryLock takes an exclusive flock — while held, a
+// second non-blocking flock on the same path fails with EWOULDBLOCK; after
+// release it succeeds. flock is per open-file-description, so a second fd in
+// the same process is an honest contention probe.
+func TestAcquireRegistryLock_Exclusive(t *testing.T) {
+	lockPath := filepath.Join(t.TempDir(), "skill-registry.md.lock")
+
+	release, err := acquireRegistryLock(lockPath)
+	if err != nil {
+		t.Fatalf("acquireRegistryLock: %v", err)
+	}
+
+	probe := func() error {
+		f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0o644)
+		if err != nil {
+			t.Fatalf("opening probe fd: %v", err)
+		}
+		defer f.Close()
+		return syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB)
+	}
+
+	if err := probe(); err != syscall.EWOULDBLOCK {
+		t.Errorf("lock held: probe flock should fail with EWOULDBLOCK; got %v", err)
+	}
+
+	release()
+
+	if err := probe(); err != nil {
+		t.Errorf("lock released: probe flock should succeed; got %v", err)
+	}
+}
+
+// TC-RACE-5: registryPathFromArgs extracts and cleans --registry, empty if absent.
+func TestRegistryPathFromArgs(t *testing.T) {
+	if got := registryPathFromArgs([]string{"--registry", "/a/b/../c/registry.md"}); got != "/a/c/registry.md" {
+		t.Errorf("cleaned path: got %q", got)
+	}
+	if got := registryPathFromArgs([]string{"--contract-file", "/x.md"}); got != "" {
+		t.Errorf("absent flag: got %q, want empty", got)
+	}
+	if got := registryPathFromArgs([]string{"--registry"}); got != "" {
+		t.Errorf("dangling flag: got %q, want empty", got)
+	}
+}
+
+// TC-RACE-6: concurrency regression. N goroutines run the same composition the
+// real runPropagate uses — acquire the registry lock, then run the core with
+// os.ReadFile + atomicWriteFile — alternating between the two contracts that
+// fire concurrently in production (minimalism via --contract-file and the
+// embedded skill-discovery-safety). The registry must never be gutted: the
+// final file keeps the original row and gains BOTH scoped blocks.
+func TestPropagate_ConcurrentProcesses_RegistryNeverGutted(t *testing.T) {
+	dir := t.TempDir()
+	registryPath := filepath.Join(dir, "skill-registry.md")
+	contractPath := filepath.Join(dir, "contract.md")
+	if err := os.WriteFile(registryPath, []byte(minimalRegistry), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(contractPath, []byte(testContractContent), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	argSets := [][]string{
+		{"--registry", registryPath, "--contract-file", contractPath},
+		{"--registry", registryPath, "--embedded-contract", "skill-discovery-safety"},
+	}
+
+	const rounds = 8
+	var wg sync.WaitGroup
+	errCh := make(chan string, rounds*len(argSets))
+	for r := 0; r < rounds; r++ {
+		for _, args := range argSets {
+			wg.Add(1)
+			go func(args []string) {
+				defer wg.Done()
+				release, err := acquireRegistryLock(registryPath + ".lock")
+				if err != nil {
+					errCh <- "lock: " + err.Error()
+					return
+				}
+				defer release()
+				var outBuf, errBuf bytes.Buffer
+				exitCode := -1
+				runPropagateCore(args, &outBuf, &errBuf,
+					os.ReadFile, atomicWriteFile,
+					func(c int) { exitCode = c })
+				if exitCode != -1 {
+					errCh <- "exit " + errBuf.String()
+				}
+			}(args)
+		}
+	}
+	wg.Wait()
+	close(errCh)
+	for msg := range errCh {
+		t.Errorf("concurrent propagate failed: %s", msg)
+	}
+
+	got, err := os.ReadFile(registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	content := string(got)
+	if !strings.Contains(content, "pre-sdd-contracts") {
+		t.Errorf("original registry row was lost:\n%s", content)
+	}
+	if !strings.Contains(content, propagator.BeginMarker) {
+		t.Errorf("minimalism scoped block missing:\n%s", content)
+	}
+	if !strings.Contains(content, propagator.DiscoverySafetyBeginMarker) {
+		t.Errorf("skill-discovery-safety scoped block missing:\n%s", content)
 	}
 }
