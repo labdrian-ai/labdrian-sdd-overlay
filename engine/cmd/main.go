@@ -296,12 +296,15 @@ func acquireRegistryLock(lockPath string) (release func(), err error) {
 // Used by runPropagate to know which sidecar lock to take before the core runs;
 // the core re-parses args itself and stays lock-free (hermetic for unit tests).
 func registryPathFromArgs(args []string) string {
+	// Keep the LAST occurrence to match runPropagateCore's parser, so the
+	// sidecar lock always guards the same file the core reads and writes.
+	path := ""
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--registry" && i+1 < len(args) {
-			return filepath.Clean(args[i+1])
+			path = filepath.Clean(args[i+1])
 		}
 	}
-	return ""
+	return path
 }
 
 // runPropagate implements the 'propagate' subcommand.
