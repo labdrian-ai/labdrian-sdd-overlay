@@ -56,6 +56,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
@@ -114,6 +115,8 @@ func main() {
 		runStatus(os.Args[2:])
 	case "prespec":
 		runPrespec(os.Args[2:])
+	case "runtime":
+		runRuntime(os.Args[2:])
 	case "gadu-generate":
 		runGaduGenerate(os.Args[2:])
 	case "skills":
@@ -133,6 +136,9 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
+	fmt.Fprintln(os.Stderr, "  engine runtime <action> [--target claude|opencode|codex|all] [--config-root <path>]")
+	fmt.Fprintln(os.Stderr, "    action: status | install | update | uninstall")
+	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, or all")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
 	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
@@ -160,7 +166,7 @@ func overlayRoot() (string, error) {
 }
 
 // runGaduGenerate implements the 'gadu-generate [--check]' subcommand.
-// Without --check: calls gadu.Generate(repoRoot) to write both artifacts.
+// Without --check: calls gadu.Generate(repoRoot) to write all artifacts.
 // With    --check: calls gadu.Check(repoRoot)    to verify they are not stale.
 // Exits non-zero on error. OVERLAY_DIR must be set; the installed binary
 // cannot resolve the repo root reliably via os.Executable().
@@ -191,7 +197,7 @@ func runGaduGenerate(args []string) {
 		fmt.Fprintf(os.Stderr, "gadu-generate: %v\n", err)
 		os.Exit(1)
 	}
-	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md and skills/gadu-operator/SKILL.md written")
+	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md written")
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.
@@ -208,6 +214,126 @@ func runPrespecCore(verb string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 		return
 	}
 	prespec.PrespecCore(verb, stdin, stdout, stderr, exit)
+}
+
+// ---------------------------------------------------------------------------
+// runtime subcommand
+// ---------------------------------------------------------------------------
+
+// runRuntime implements the 'runtime <action>' subcommand.
+// Supported actions: status, install, update, uninstall.
+func runRuntime(args []string) {
+	runRuntimeCore(args, os.Stdout, os.Stderr, os.Exit)
+}
+
+// runRuntimeCore is the testable core for the 'runtime' subcommand.
+func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
+	action, target, configRoot, err := parseRuntimeArgs(args)
+	if err != nil {
+		fmt.Fprintln(stderr, err)
+		usage()
+		exit(1)
+		return
+	}
+	targets := runtimepkg.ExpandTarget(target)
+	if includesOpenCodeTarget(targets) && configRoot == "" {
+		configRoot = runtimepkg.DefaultOpenCodeConfigRoot()
+	}
+
+	failed := false
+	for _, current := range targets {
+		adapter := runtimeAdapterForTarget(current, configRoot)
+		result := runtimeLifecycleResult(adapter, action)
+		fmt.Fprintln(stdout, result.String())
+		actionFailed := result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial
+		if action == "status" && result.Status == runtimepkg.CapabilityRestartRequired {
+			actionFailed = true
+		}
+		if actionFailed {
+			failed = true
+		}
+	}
+
+	if failed {
+		exit(1)
+		return
+	}
+	exit(0)
+}
+
+func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtimepkg.Adapter {
+	if target == runtimepkg.TargetOpenCode {
+		return runtimepkg.NewOpenCodeAdapter(configRoot)
+	}
+	return runtimepkg.NewFoundationAdapter(target)
+}
+
+func includesOpenCodeTarget(targets []runtimepkg.Target) bool {
+	for _, t := range targets {
+		if t == runtimepkg.TargetOpenCode {
+			return true
+		}
+	}
+	return false
+}
+
+// parseRuntimeArgs parses minimal runtime subcommand arguments.
+func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, configRoot string, err error) {
+	if len(args) == 0 {
+		return "", "", "", fmt.Errorf("error: runtime requires an action")
+	}
+	action = args[0]
+	if strings.HasPrefix(action, "-") {
+		return "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall")
+	}
+
+	target = runtimepkg.TargetOpenCode
+	for i := 1; i < len(args); i++ {
+		a := args[i]
+		switch a {
+		case "--target":
+			i++
+			if i >= len(args) {
+				return "", "", "", fmt.Errorf("error: --target requires a value")
+			}
+			target, err = runtimepkg.ParseTarget(args[i])
+			if err != nil {
+				return "", "", "", err
+			}
+		case "--config-root":
+			i++
+			if i >= len(args) {
+				return "", "", "", fmt.Errorf("error: --config-root requires a value")
+			}
+			configRoot = args[i]
+		default:
+			if strings.HasPrefix(a, "--") {
+				return "", "", "", fmt.Errorf("error: unknown flag %q", a)
+			}
+			return "", "", "", fmt.Errorf("error: unexpected runtime argument %q", a)
+		}
+	}
+
+	if action != "status" && action != "install" && action != "update" && action != "uninstall" {
+		return "", "", "", fmt.Errorf("error: unknown runtime action %q", action)
+	}
+
+	return action, target, configRoot, nil
+}
+
+func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {
+	switch action {
+	case "status":
+		return adapter.Status()
+	case "install":
+		return adapter.Install()
+	case "update":
+		return adapter.Update()
+	case "uninstall":
+		return adapter.Uninstall()
+	default:
+		return runtimepkg.NewLifecycleResult(adapter.Target(), "status", runtimepkg.CapabilityUnsupported, "unknown runtime action", nil)
+	}
 }
 
 // runSkills implements the 'skills <verb>' subcommand.

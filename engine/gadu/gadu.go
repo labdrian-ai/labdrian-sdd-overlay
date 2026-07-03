@@ -1,10 +1,11 @@
 // Package gadu implements the GADU persona generator.
 // It reads the canonical persona body (engine/gadu/persona/body.md) and emits
-// two delivery artifacts:
-//   - agents/GADU.md        (Claude Code agent file)
-//   - skills/gadu-operator/SKILL.md  (portable overlay skill)
+// three delivery artifacts:
+//   - agents/GADU.md                  (Claude Code agent file)
+//   - opencode/agents/GADU.md         (OpenCode agent file)
+//   - skills/gadu-operator/SKILL.md   (portable overlay skill)
 //
-// Both artifacts carry identical persona body content and are never hand-edited.
+// All artifacts carry identical persona body content and are never hand-edited.
 // Use Generate to write them; use Check to assert they are not stale.
 package gadu
 
@@ -20,12 +21,24 @@ import (
 var personaBody string
 
 // agentFrontmatter is the generator-owned template for agents/GADU.md (D7).
-// Matching the existing hand-made file so @GADU invocation works identically.
+// Matching the existing hand-made Claude Code file so @GADU invocation works identically.
 const agentFrontmatter = `---
 name: GADU
 description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
 model: opus
 tools: '*'
+---`
+
+// opencodeAgentFrontmatter is the generator-owned template for
+// opencode/agents/GADU.md. OpenCode requires provider-prefixed model IDs and
+// rejects Claude Code's `tools: '*'` frontmatter, so this native file keeps the
+// same persona body while using OpenCode's agent schema.
+const opencodeAgentFrontmatter = `---
+description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
+mode: all
+model: openai/gpt-5.5
+permission:
+  task: allow
 ---`
 
 // skillFrontmatter is the generator-owned template for skills/gadu-operator/SKILL.md (D7, R-005).
@@ -55,21 +68,27 @@ spawn_agent (codex) — never a runtime-specific workflow tool — so the behavi
 // It appears immediately after the closing frontmatter "---" in every output file.
 const doNotEditHeader = "<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->"
 
-// Generate writes both delivery artifacts under repoRoot:
+// Generate writes all delivery artifacts under repoRoot:
 //   - <repoRoot>/agents/GADU.md
+//   - <repoRoot>/opencode/agents/GADU.md
 //   - <repoRoot>/skills/gadu-operator/SKILL.md
 //
 // Parent directories are created as needed. Generate is idempotent and
 // overwrites any existing files.
 func Generate(repoRoot string) error {
 	agentContent := buildAgentFile()
+	opencodeAgentContent := buildOpenCodeAgentFile()
 	skillContent := buildSkillFile()
 
 	agentPath := filepath.Join(repoRoot, "agents", "GADU.md")
+	opencodeAgentPath := filepath.Join(repoRoot, "opencode", "agents", "GADU.md")
 	skillPath := filepath.Join(repoRoot, "skills", "gadu-operator", "SKILL.md")
 
 	if err := writeFile(agentPath, agentContent); err != nil {
 		return fmt.Errorf("writing agents/GADU.md: %w", err)
+	}
+	if err := writeFile(opencodeAgentPath, opencodeAgentContent); err != nil {
+		return fmt.Errorf("writing opencode/agents/GADU.md: %w", err)
 	}
 	if err := writeFile(skillPath, skillContent); err != nil {
 		return fmt.Errorf("writing skills/gadu-operator/SKILL.md: %w", err)
@@ -92,7 +111,7 @@ func Check(repoRoot string) error {
 	}
 
 	pairs := []struct {
-		label    string
+		label     string
 		committed string
 		generated string
 	}{
@@ -100,6 +119,11 @@ func Check(repoRoot string) error {
 			label:     "agents/GADU.md",
 			committed: filepath.Join(repoRoot, "agents", "GADU.md"),
 			generated: filepath.Join(tmpDir, "agents", "GADU.md"),
+		},
+		{
+			label:     "opencode/agents/GADU.md",
+			committed: filepath.Join(repoRoot, "opencode", "agents", "GADU.md"),
+			generated: filepath.Join(tmpDir, "opencode", "agents", "GADU.md"),
 		},
 		{
 			label:     "skills/gadu-operator/SKILL.md",
@@ -138,6 +162,12 @@ func Check(repoRoot string) error {
 // buildAgentFile assembles the complete content for agents/GADU.md.
 func buildAgentFile() string {
 	return agentFrontmatter + "\n\n" + doNotEditHeader + "\n\n" + personaBody
+}
+
+// buildOpenCodeAgentFile assembles the complete content for
+// opencode/agents/GADU.md.
+func buildOpenCodeAgentFile() string {
+	return opencodeAgentFrontmatter + "\n\n" + doNotEditHeader + "\n\n" + personaBody
 }
 
 // buildSkillFile assembles the complete content for skills/gadu-operator/SKILL.md.

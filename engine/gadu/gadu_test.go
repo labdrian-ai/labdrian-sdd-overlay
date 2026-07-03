@@ -20,26 +20,27 @@ func repoRoot(t *testing.T) string {
 	return filepath.Join(wd, "..", "..")
 }
 
-// TestGenerate_BothFilesEmitted verifies that Generate writes both delivery
+// TestGenerate_AllFilesEmitted verifies that Generate writes all delivery
 // artifacts into the repo-root-shaped tempdir.
-func TestGenerate_BothFilesEmitted(t *testing.T) {
+func TestGenerate_AllFilesEmitted(t *testing.T) {
 	dir := t.TempDir()
 	if err := gadu.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
 	}
 
 	agentPath := filepath.Join(dir, "agents", "GADU.md")
+	opencodeAgentPath := filepath.Join(dir, "opencode", "agents", "GADU.md")
 	skillPath := filepath.Join(dir, "skills", "gadu-operator", "SKILL.md")
 
-	for _, p := range []string{agentPath, skillPath} {
+	for _, p := range []string{agentPath, opencodeAgentPath, skillPath} {
 		if _, err := os.Stat(p); err != nil {
 			t.Errorf("expected file to exist: %s — %v", p, err)
 		}
 	}
 }
 
-// TestGenerate_BodyIsIdentical verifies that both emitted files contain the
-// canonical persona body bytes byte-for-byte (D7: same body bytes in both outputs).
+// TestGenerate_BodyIsIdentical verifies that all emitted files contain the
+// canonical persona body bytes byte-for-byte (D7: same body bytes in every output).
 func TestGenerate_BodyIsIdentical(t *testing.T) {
 	dir := t.TempDir()
 	if err := gadu.Generate(dir); err != nil {
@@ -55,6 +56,10 @@ func TestGenerate_BodyIsIdentical(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read agent file: %v", err)
 	}
+	opencodeAgentBytes, err := os.ReadFile(filepath.Join(dir, "opencode", "agents", "GADU.md"))
+	if err != nil {
+		t.Fatalf("read opencode agent file: %v", err)
+	}
 	skillBytes, err := os.ReadFile(filepath.Join(dir, "skills", "gadu-operator", "SKILL.md"))
 	if err != nil {
 		t.Fatalf("read skill file: %v", err)
@@ -64,14 +69,17 @@ func TestGenerate_BodyIsIdentical(t *testing.T) {
 	if !strings.Contains(string(agentBytes), canonicalBody) {
 		t.Error("agents/GADU.md does not contain the canonical persona body verbatim")
 	}
+	if !strings.Contains(string(opencodeAgentBytes), canonicalBody) {
+		t.Error("opencode/agents/GADU.md does not contain the canonical persona body verbatim")
+	}
 	if !strings.Contains(string(skillBytes), canonicalBody) {
 		t.Error("skills/gadu-operator/SKILL.md does not contain the canonical persona body verbatim")
 	}
 }
 
-// TestGenerate_AgentFrontmatter verifies the agent file frontmatter has the
-// required fields: name, description, model: opus, tools. (R-004)
-func TestGenerate_AgentFrontmatter(t *testing.T) {
+// TestGenerate_ClaudeAgentFrontmatter verifies the Claude Code agent file
+// frontmatter has the required fields: name, description, model: opus, tools. (R-004)
+func TestGenerate_ClaudeAgentFrontmatter(t *testing.T) {
 	dir := t.TempDir()
 	if err := gadu.Generate(dir); err != nil {
 		t.Fatalf("Generate: %v", err)
@@ -86,10 +94,10 @@ func TestGenerate_AgentFrontmatter(t *testing.T) {
 	fm := extractFrontmatter(s)
 
 	cases := []struct {
-		field    string
-		wantKey  string
-		wantVal  string
-		exact    bool
+		field   string
+		wantKey string
+		wantVal string
+		exact   bool
 	}{
 		{"name", "name", "GADU", true},
 		{"model", "model", "opus", true},
@@ -110,6 +118,47 @@ func TestGenerate_AgentFrontmatter(t *testing.T) {
 				t.Errorf("frontmatter %q must be non-empty", tc.wantKey)
 			}
 		})
+	}
+}
+
+// TestGenerate_OpenCodeAgentFrontmatter verifies the OpenCode native agent file
+// has OpenCode-compatible frontmatter: provider-prefixed model, mode, and no
+// Claude Code-only `tools: '*'` field.
+func TestGenerate_OpenCodeAgentFrontmatter(t *testing.T) {
+	dir := t.TempDir()
+	if err := gadu.Generate(dir); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	content, err := os.ReadFile(filepath.Join(dir, "opencode", "agents", "GADU.md"))
+	if err != nil {
+		t.Fatalf("read opencode agent: %v", err)
+	}
+	fm := extractFrontmatter(string(content))
+
+	cases := []struct {
+		field   string
+		wantKey string
+		wantVal string
+	}{
+		{"mode", "mode", "all"},
+		{"model", "model", "openai/gpt-5.5"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.field, func(t *testing.T) {
+			if got := fm[tc.wantKey]; got != tc.wantVal {
+				t.Errorf("frontmatter %q = %q, want %q", tc.wantKey, got, tc.wantVal)
+			}
+		})
+	}
+	if desc := fm["description"]; desc == "" {
+		t.Error("frontmatter description must be non-empty")
+	}
+	if got, ok := fm["tools"]; ok {
+		t.Errorf("opencode agent frontmatter must not use Claude Code tools field; got %q", got)
+	}
+	if !strings.Contains(string(content), "permission:\n  task: allow") {
+		t.Error("opencode agent must allow task delegation for GADU orchestration")
 	}
 }
 
@@ -180,8 +229,9 @@ func TestGenerate_DoNotEditHeader(t *testing.T) {
 	}
 
 	files := map[string]string{
-		"agent": filepath.Join(dir, "agents", "GADU.md"),
-		"skill": filepath.Join(dir, "skills", "gadu-operator", "SKILL.md"),
+		"claude agent":   filepath.Join(dir, "agents", "GADU.md"),
+		"opencode agent": filepath.Join(dir, "opencode", "agents", "GADU.md"),
+		"skill":          filepath.Join(dir, "skills", "gadu-operator", "SKILL.md"),
 	}
 	for label, path := range files {
 		t.Run(label, func(t *testing.T) {
@@ -242,9 +292,13 @@ func TestCheck_PassesWhenInSync(t *testing.T) {
 
 	// Skip if the generated files are not yet on disk (pre-A5).
 	agentPath := filepath.Join(root, "agents", "GADU.md")
+	opencodeAgentPath := filepath.Join(root, "opencode", "agents", "GADU.md")
 	skillPath := filepath.Join(root, "skills", "gadu-operator", "SKILL.md")
 	if _, err := os.Stat(agentPath); os.IsNotExist(err) {
 		t.Skip("agents/GADU.md not yet generated (pre-A5) — skipping staleness check")
+	}
+	if _, err := os.Stat(opencodeAgentPath); os.IsNotExist(err) {
+		t.Skip("opencode/agents/GADU.md not yet generated — skipping staleness check")
 	}
 	if _, err := os.Stat(skillPath); os.IsNotExist(err) {
 		t.Skip("skills/gadu-operator/SKILL.md not yet generated (pre-A5) — skipping staleness check")

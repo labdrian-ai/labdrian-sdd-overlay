@@ -1200,3 +1200,31 @@ func TestSkillsActionsSectionHeaderVisible(t *testing.T) {
 	}
 }
 
+func TestSkillRegistryRefreshRepairsCodexSDDExecutors(t *testing.T) {
+	var refresh Action
+	for _, a := range Actions() {
+		if a.Command == "skill-registry" && len(a.Args) > 0 && a.Args[0] == "refresh" {
+			refresh = a
+			break
+		}
+	}
+
+	if refresh.Command == "" {
+		t.Fatal("Actions() must contain skill-registry refresh")
+	}
+	if !refresh.Mutating {
+		t.Error("skill-registry refresh must require confirmation because it rewrites .atl/skill-registry.md")
+	}
+	if !refresh.TargetAgnostic {
+		t.Error("skill-registry refresh TUI action must be target-agnostic so all-selected targets do not trigger repeated refreshes")
+	}
+	if refresh.SupportsAll {
+		t.Error("skill-registry refresh must not use --target all")
+	}
+	if len(refresh.Args) != 3 || refresh.Args[0] != "refresh" || refresh.Args[1] != "--target" || refresh.Args[2] != "codex" {
+		t.Errorf("skill-registry refresh TUI action must refresh and repair Codex, got Args=%v", refresh.Args)
+	}
+	if !strings.Contains(refresh.Hint, "sdd-*") {
+		t.Errorf("skill-registry refresh hint should mention sdd-* executors, got %q", refresh.Hint)
+	}
+}
