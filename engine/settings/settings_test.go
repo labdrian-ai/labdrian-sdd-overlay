@@ -67,6 +67,70 @@ func entryContainsBinarySubstring(e interface{}, hookCommand string) bool {
 	return false
 }
 
+// entryContainsCommandIdentity returns true if any inner hook command contains the
+// given identity marker.
+func entryContainsCommandIdentity(e interface{}, identity string) bool {
+	em, ok := e.(map[string]interface{})
+	if !ok {
+		return false
+	}
+	innerHooks, ok := em["hooks"].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, ih := range innerHooks {
+		ihm, ok := ih.(map[string]interface{})
+		if !ok {
+			continue
+		}
+		if cmdStr, ok := ihm["command"].(string); ok {
+			if strings.Contains(cmdStr, identity) {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// countLabdrianIdentityEntries counts hook entries for hookKey that contain our
+// hook binary and a specific identity marker.
+func countLabdrianIdentityEntries(root map[string]interface{}, hookKey, hookCommand, identity string) int {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		return 0
+	}
+	entries, ok := hooks[hookKey].([]interface{})
+	if !ok {
+		return 0
+	}
+	n := 0
+	for _, e := range entries {
+		if entryContainsBinarySubstring(e, hookCommand) && entryContainsCommandIdentity(e, identity) {
+			n++
+		}
+	}
+	return n
+}
+
+// containsInnerCommand returns true if hooks[hookKey] has an inner command that
+// contains the provided command fragment.
+func containsInnerCommand(root map[string]interface{}, hookKey, commandFragment string) bool {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+	entries, ok := hooks[hookKey].([]interface{})
+	if !ok {
+		return false
+	}
+	for _, e := range entries {
+		if entryContainsCommandIdentity(e, commandFragment) {
+			return true
+		}
+	}
+	return false
+}
+
 // containsOurHook returns true if hooks[hookKey] has an entry containing
 // hookCommand as a substring in its inner hooks[].command.
 func containsOurHook(root map[string]interface{}, hookKey, hookCommand string) bool {
@@ -315,6 +379,71 @@ func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 	}
 	if !containsHookWithCommand(root, "UserPromptSubmit", "other-tool") {
 		t.Errorf("'other-tool' hook should survive Uninstall; got %v", root["hooks"])
+	}
+}
+
+// --- TC-SET-6a (W-3): uninstall preserves same-binary third-party hooks ---
+//
+// Regression guard for broad binary-only matching in removeHooks: third-party
+// hooks that invoke the same binary path but do not carry Labdrian ownership
+// tokens must be preserved.
+func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	thirdPartyCommand := testHookCommand + " --third-party-tool-hook"
+	thirdPartyCommandWithPath := testHookCommand + " --other-arg"
+	ownedMinimalCommand := testHookCommand + " --contract-file /foo/bar/minimalism-contract.md"
+	ownedSafetyCommand := testHookCommand + " --embedded-contract skill-discovery-safety"
+
+	initial := map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"UserPromptSubmit": []interface{}{
+				map[string]interface{}{"hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": thirdPartyCommand,
+				}}},
+				map[string]interface{}{"hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": ownedMinimalCommand,
+				}}},
+			},
+			"PreToolUse": []interface{}{
+				map[string]interface{}{"matcher": "Agent", "hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": thirdPartyCommandWithPath,
+				}}},
+				map[string]interface{}{"matcher": "Agent", "hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": ownedSafetyCommand,
+				}}},
+			},
+		},
+	}
+	data, _ := json.Marshal(initial)
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := m.Uninstall(); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	root := parseJSON(t, path)
+
+	if countLabdrianIdentityEntries(root, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity) != 0 {
+		t.Errorf("minimalism-owned UserPromptSubmit hook should be removed")
+	}
+	if countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianSafetyIdentity) != 0 {
+		t.Errorf("safety-owned PreToolUse hook should be removed")
+	}
+
+	if !containsInnerCommand(root, "UserPromptSubmit", thirdPartyCommand) {
+		t.Error("same-binary third-party UserPromptSubmit hook should be preserved")
+	}
+	if !containsInnerCommand(root, "PreToolUse", thirdPartyCommandWithPath) {
+		t.Error("same-binary third-party PreToolUse hook should be preserved")
 	}
 }
 
