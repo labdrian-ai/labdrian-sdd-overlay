@@ -242,8 +242,8 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 	targets := runtimepkg.ExpandTarget(target)
 
 	failed := false
-	nonCodexFailureCount := 0
 	allTargets := len(targets) > 1
+
 	for _, current := range targets {
 		targetRoot := configRoot
 		if current == runtimepkg.TargetOpenCode && targetRoot == "" {
@@ -252,18 +252,22 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		adapter := runtimeAdapterForTarget(current, targetRoot)
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
-		actionFailed := result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial
-		if action == "status" && result.Status == runtimepkg.CapabilityRestartRequired {
-			actionFailed = true
-		}
-		if current == runtimepkg.TargetCodex && allTargets && actionFailed && nonCodexFailureCount == 0 {
-			// Transitional advisory: Codex remains unsupported in this slice.
-			continue
+		actionFailed := false
+		switch action {
+		case "status":
+			switch {
+			case result.Status == runtimepkg.CapabilityUnsupported,
+				result.Status == runtimepkg.CapabilityRestartRequired:
+				actionFailed = true
+			case result.Status == runtimepkg.CapabilityPartial && !(allTargets && current == runtimepkg.TargetCodex):
+				actionFailed = true
+			}
+		default:
+			if result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial {
+				actionFailed = true
+			}
 		}
 		if actionFailed {
-			if current != runtimepkg.TargetCodex {
-				nonCodexFailureCount++
-			}
 			failed = true
 		}
 	}
@@ -282,16 +286,10 @@ func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtim
 	if target == runtimepkg.TargetClaude {
 		return runtimepkg.NewClaudeAdapter(configRoot)
 	}
-	return runtimepkg.NewFoundationAdapter(target)
-}
-
-func includesOpenCodeTarget(targets []runtimepkg.Target) bool {
-	for _, t := range targets {
-		if t == runtimepkg.TargetOpenCode {
-			return true
-		}
+	if target == runtimepkg.TargetCodex {
+		return runtimepkg.NewCodexAdapter(configRoot)
 	}
-	return false
+	return runtimepkg.NewFoundationAdapter(target)
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.

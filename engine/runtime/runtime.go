@@ -209,7 +209,7 @@ func NewFoundationAdapter(target Target) Adapter {
 		return NewClaudeAdapter(DefaultClaudeConfigRoot())
 	}
 	if target == TargetCodex {
-		return NewCodexAdapter()
+		return NewCodexAdapter(DefaultCodexConfigRoot())
 	}
 	return foundationAdapter{target: target}
 }
