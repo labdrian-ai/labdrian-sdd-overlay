@@ -192,8 +192,8 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 	if _, ok := codex.(engineRuntime.CodexAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(codex) should return CodexAdapter foundation")
 	}
-	if codex.Target() != engineRuntime.TargetCodex || codex.Status().Status != engineRuntime.CapabilityUnsupported {
-		t.Fatalf("Codex foundation status should be unsupported in the OpenCode-only salvage, got target=%q status=%q", codex.Target(), codex.Status().Status)
+	if codex.Target() != engineRuntime.TargetCodex || codex.Status().Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("Codex foundation status should be partial in an empty HOME sandbox, got target=%q status=%q", codex.Target(), codex.Status().Status)
 	}
 
 	unknown := engineRuntime.NewFoundationAdapter(engineRuntime.Target("future"))
