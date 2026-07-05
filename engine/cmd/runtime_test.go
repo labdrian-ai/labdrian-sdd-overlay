@@ -158,6 +158,7 @@ func TestRunRuntimeCore_ClaudeUpdateAndUninstallPreserveLegacyBehavior(t *testin
 	configRoot := t.TempDir()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", "")
 	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
 
 	var installOut, installErr bytes.Buffer
