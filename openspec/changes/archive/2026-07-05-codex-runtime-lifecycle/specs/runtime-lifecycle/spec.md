@@ -1,84 +1,6 @@
-# Runtime Lifecycle Specification
+# Delta for Runtime Lifecycle
 
-## Purpose
-
-Define CLI runtime lifecycle behavior for Claude, OpenCode, and Codex targets, including safe configuration mutation, target aggregation, and compatibility boundaries.
-
-## Requirements
-
-### Requirement: Claude Lifecycle Support
-
-The system MUST support Claude runtime `status`, `install`, `update`, and `uninstall` through the runtime lifecycle command surface.
-
-#### Scenario: Claude install succeeds
-
-- GIVEN Claude settings are writable
-- WHEN the user runs runtime install for target `claude`
-- THEN the command succeeds
-- AND Claude status becomes provably healthy as `supported`
-
-#### Scenario: Claude status is honest
-
-- GIVEN Claude lifecycle state cannot be proven installed and healthy
-- WHEN the user runs runtime status for target `claude`
-- THEN the command MUST NOT report healthy `supported`
-
-#### Scenario: Claude update refreshes lifecycle state
-
-- GIVEN Claude is already installed by Labdrian
-- WHEN the user runs runtime update for target `claude`
-- THEN the command succeeds
-- AND Claude remains provably healthy as `supported`
-
-#### Scenario: Claude uninstall removes owned lifecycle state
-
-- GIVEN Claude has Labdrian-owned lifecycle entries installed
-- WHEN the user runs runtime uninstall for target `claude`
-- THEN the command succeeds
-- AND subsequent Claude status is not healthy `supported`
-
-### Requirement: Claude Config Root Selection
-
-Claude runtime commands MUST use the real Claude Code settings location by default and SHALL use `--config-root` only when explicitly provided.
-
-#### Scenario: Default root uses real settings
-
-- GIVEN no `--config-root` is provided
-- WHEN Claude lifecycle action runs
-- THEN the action targets the default Claude Code settings location
-
-#### Scenario: Explicit config root isolates operation
-
-- GIVEN `--config-root` points to a sandbox root
-- WHEN Claude lifecycle action runs
-- THEN the action mutates only that sandbox root
-
-### Requirement: Labdrian-Owned Mutation Boundary
-
-Claude lifecycle commands MUST mutate only Labdrian-owned hooks and settings entries and MUST NOT rewrite unrelated user configuration.
-
-#### Scenario: User settings are preserved
-
-- GIVEN settings contain Labdrian entries and unrelated user entries
-- WHEN install, update, or uninstall runs for `claude`
-- THEN unrelated user entries remain semantically unchanged
-
-### Requirement: Safe Backup and Rollback
-
-Configuration writes MUST use safe merge and backup semantics, and failures SHALL leave a recoverable previous settings state.
-
-#### Scenario: Backup supports rollback
-
-- GIVEN a writable Claude settings file exists
-- WHEN Claude lifecycle mutation succeeds
-- THEN a recoverable backup of the prior settings state is available
-
-#### Scenario: Failed mutation preserves prior state
-
-- GIVEN Claude settings cannot be safely written
-- WHEN Claude lifecycle mutation is attempted
-- THEN the command fails
-- AND the previous settings state remains usable
+## ADDED Requirements
 
 ### Requirement: Codex Root Resolution
 
@@ -164,9 +86,12 @@ Codex status must never return `supported` when activation/reload state cannot b
 - THEN status reports `partial`, not `supported`
 - AND status output includes the uncertainty reason text
 
+## MODIFIED Requirements
+
 ### Requirement: Existing Runtime Behavior Non-Regression
 
 The system MUST preserve legacy Claude hook/settings commands, Claude runtime lifecycle behavior, and current OpenCode runtime lifecycle behavior while adding Codex lifecycle support.
+(Previously: preserved legacy Claude commands and OpenCode lifecycle behavior only.)
 
 #### Scenario: Legacy Claude commands still work
 
@@ -180,9 +105,16 @@ The system MUST preserve legacy Claude hook/settings commands, Claude runtime li
 - WHEN OpenCode status, install, update, or uninstall runs
 - THEN behavior remains compatible with the existing OpenCode contract
 
-### Requirement: Target Aggregation
+#### Scenario: Claude lifecycle remains unchanged
+
+- GIVEN Claude runtime lifecycle is installed or managed
+- WHEN Claude status, install, update, or uninstall runs
+- THEN behavior remains compatible with the existing Claude contract
+
+### Requirement: Transitional Target Aggregation
 
 The system MUST include Codex in `--target all` aggregation as a real runtime target after Codex support, and MUST NOT mask Claude or OpenCode failures behind Codex results.
+(Previously: `--target all` succeeded with an advisory when Codex remained temporarily unsupported.)
 
 #### Scenario: Target all includes Codex support
 
