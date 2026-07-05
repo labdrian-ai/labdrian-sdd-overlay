@@ -501,16 +501,15 @@ func TestRunRuntimeCore_CodexStatusWithoutManifestIsPartial(t *testing.T) {
 
 func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *testing.T) {
 	overlayRoot := writeMinimalismOverlayFixture(t)
+	configRoot := t.TempDir()
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
 
-	installCodexRoot := t.TempDir()
-	t.Setenv("CODEX_HOME", installCodexRoot)
 	var installOut, installErr bytes.Buffer
 	installExit := -1
 	runRuntimeCore(
-		[]string{"install", "--target", "all"},
+		[]string{"install", "--target", "all", "--config-root", configRoot},
 		&installOut,
 		&installErr,
 		func(code int) { installExit = code },
@@ -519,20 +518,20 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 		t.Fatalf("runtime install --target all should succeed before status check, got %d\nout=%q\nerr=%q", installExit, installOut.String(), installErr.String())
 	}
 
-	codeHome := filepath.Join(home, ".config", "opencode")
+	codeHome := configRoot
 	configPath := filepath.Join(codeHome, "labdrian-runtime-parity.json")
 	if err := writeOpenCodeActiveMarkerFromConfig(t, codeHome, configPath); err != nil {
 		t.Fatalf("write matching OpenCode active marker: %v", err)
 	}
 
-	if err := os.Remove(filepath.Join(installCodexRoot, "labdrian-runtime-lifecycle.json")); err != nil {
+	if err := os.Remove(filepath.Join(configRoot, "labdrian-runtime-lifecycle.json")); err != nil {
 		t.Fatalf("remove codex manifest: %v", err)
 	}
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
 	runRuntimeCore(
-		[]string{"status", "--target", "all"},
+		[]string{"status", "--target", "all", "--config-root", configRoot},
 		&outBuf,
 		&errBuf,
 		func(code int) { exitCode = code },
