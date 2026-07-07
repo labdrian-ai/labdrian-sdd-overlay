@@ -103,7 +103,7 @@ action menu without leaving the dashboard.
 | `capture [--target claude\|opencode\|codex]` | **modifies** | Pull a gentle-ai update into the `upstream` branch. Single target only. |
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
 | `uninstall-hooks` | **modifies** | Remove the two overlay hook entries from `~/.claude/settings.json`, leaving all other keys intact. |
-| `status-hooks` | read-only | Check engine binary, hooks wired, contract readable — exits 0 if all healthy. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contract readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
 
 ### The 3 workflows
@@ -218,12 +218,15 @@ Bootstrap will:
 
 The overlay ships **GADU**, a portable operator persona generated from a single canonical source: `engine/gadu/persona/body.md`.
 
-Running `overlay gadu-generate` produces two artifacts from that one source:
+Running `overlay gadu-generate [--check]` forwards to the engine with
+`OVERLAY_DIR` set to the repository root. Without `--check`, it regenerates
+three artifacts from that one canonical source:
 
 - `agents/GADU.md` — Claude Code agent definition (deployed to `~/.claude/agents`)
+- `opencode/agents/GADU.md` — Opencode-native agent definition
 - `skills/gadu-operator/SKILL.md` — portable skill (deployed to all three skill runtimes)
 
-Both generated files carry a `<!-- do-not-edit: generated from engine/gadu/persona/body.md -->` header. Edit the canonical source, then regenerate — do not edit the output files directly.
+All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly.
 
 ## CLI reference
 
@@ -255,6 +258,7 @@ overlay uninstall-hooks
 
 overlay status-hooks
     Check overlay installation health: binary present, hooks wired, contract readable.
+    If the engine binary is missing, exits non-zero and directs users to run `overlay install-hooks`.
     Exits 0 if all OK, 1 if any check fails. Safe to run at any time.
 
 overlay tui
@@ -264,9 +268,12 @@ overlay install-alias [name]
     Symlink a `labdrian` command into ~/.local/bin (run once per machine), then `labdrian tui`.
 
 overlay gadu-generate [--check]
-    Regenerate agents/GADU.md and skills/gadu-operator/SKILL.md from the canonical source
-    (engine/gadu/persona/body.md). Requires OVERLAY_DIR to be set or the command to be run
-    from the repo root. --check verifies the generated files are up to date without writing.
+    Forward to the engine `gadu-generate` command with OVERLAY_DIR set to this repo root.
+    Regenerates (or checks):
+    - agents/GADU.md
+    - opencode/agents/GADU.md
+    - skills/gadu-operator/SKILL.md
+    from engine/gadu/persona/body.md.
 
 overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.
