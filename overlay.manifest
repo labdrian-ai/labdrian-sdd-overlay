@@ -50,6 +50,7 @@ sdd-time-estimation/references/local-docs.md custom
 _shared/pre-sdd-contracts.md custom
 _shared/minimalism-contract.md custom
 _shared/skill-discovery-safety.md custom
+_shared/anti-generic-design.md custom
 _shared/entry-contract.schema.json custom
 _shared/actuals-record.schema.json custom
 project-manifest/references/phase-templates.md custom

@@ -80,6 +80,6 @@ touched. See new task 4.5 below to reconcile once Phase 4 lands.
 
 ## Phase 6: Build, install, live verification
 
-- [ ] 6.1 Rebuild `~/.claude/bin/gentle-ai-overlay` and run `merge-settings` (`overlay install-hooks`) — Merger installs the third hook pair; no manual `settings.json` edits.
-- [ ] 6.2 Run `propagate --embedded-contract anti-generic-design` (or `overlay apply`) against the live registry; confirm `anti-generic-design-scope` block appears in `.atl/skill-registry.md`.
-- [ ] 6.3 Run `overlay status`/`overlay check` — new block reported healthy; run `go test ./... && go vet ./...` in `engine/`.
+- [x] 6.1 Rebuild `~/.claude/bin/gentle-ai-overlay` and run `merge-settings` (`overlay install-hooks`) — Merger installs the third hook pair; no manual `settings.json` edits.
+- [x] 6.2 Run `propagate --embedded-contract anti-generic-design` (or `overlay apply`) against the live registry; confirm `anti-generic-design-scope` block appears in `.atl/skill-registry.md`.
+- [x] 6.3 Run `overlay status`/`overlay check` — new block reported healthy; run `go test ./... && go vet ./...` in `engine/`.
