@@ -10,47 +10,12 @@ import (
 	"testing"
 
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
-// injectDesignHookPair patches an already-installed Claude settings.json to
-// add the anti-generic-design UserPromptSubmit/PreToolUse hook pair by hand.
-// mergeHooks does not install this pair yet (Phase 4 of the
-// anti-generic-design-runtime-wiring chain, a later PR) — this helper lets
-// tests that only care about OTHER lifecycle-state behavior (e.g. the codex
-// partial-status exemption) keep Claude "supported" without depending on
-// that future work.
-func injectDesignHookPair(t *testing.T, settingsPath, hookCommand string) {
-	t.Helper()
-	data, err := os.ReadFile(settingsPath)
-	if err != nil {
-		t.Fatalf("injectDesignHookPair: read %s: %v", settingsPath, err)
-	}
-	var root map[string]interface{}
-	if err := json.Unmarshal(data, &root); err != nil {
-		t.Fatalf("injectDesignHookPair: unmarshal: %v", err)
-	}
-	hooks, ok := root["hooks"].(map[string]interface{})
-	if !ok {
-		t.Fatalf("injectDesignHookPair: settings has no hooks map")
-	}
-	command := hookCommand + " " + settings.LabdrianDesignIdentity
-	hooks["UserPromptSubmit"] = append(hooks["UserPromptSubmit"].([]interface{}), map[string]interface{}{
-		"hooks": []interface{}{map[string]interface{}{"type": "command", "command": command}},
-	})
-	hooks["PreToolUse"] = append(hooks["PreToolUse"].([]interface{}), map[string]interface{}{
-		"matcher": "Agent",
-		"hooks":   []interface{}{map[string]interface{}{"type": "command", "command": command}},
-	})
-	root["hooks"] = hooks
-	patched, err := json.Marshal(root)
-	if err != nil {
-		t.Fatalf("injectDesignHookPair: marshal: %v", err)
-	}
-	if err := os.WriteFile(settingsPath, patched, 0644); err != nil {
-		t.Fatalf("injectDesignHookPair: write %s: %v", settingsPath, err)
-	}
-}
+// NOTE (Phase 4, PR-3): the injectDesignHookPair test-fixture workaround that
+// previously lived here has been removed now that Merger.mergeHooks installs
+// the real anti-generic-design pair — TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing
+// below exercises the real Install() path end-to-end.
 
 func TestRunRuntimeCore_OpenCodeStatusReportsMissingPlugin(t *testing.T) {
 	overlayRoot := writeMinimalismOverlayFixture(t)
@@ -558,11 +523,10 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 		t.Fatalf("runtime install --target all should succeed before status check, got %d\nout=%q\nerr=%q", installExit, installOut.String(), installErr.String())
 	}
 
-	// mergeHooks does not install the anti-generic-design pair yet (Phase 4 —
-	// a later PR in the chain). Inject it by hand so Claude's status stays
-	// "supported", keeping this test isolated to the codex partial-status
-	// exemption it is actually verifying.
-	injectDesignHookPair(t, filepath.Join(configRoot, "settings.json"), filepath.Join(configRoot, "bin", "gentle-ai-overlay"))
+	// mergeHooks installs the anti-generic-design pair via the real
+	// Merger.Install() path above (Phase 4, PR-3) — Claude's status is
+	// "supported" without any test-fixture workaround, keeping this test
+	// isolated to the codex partial-status exemption it is actually verifying.
 
 	codeHome := configRoot
 	configPath := filepath.Join(codeHome, "labdrian-runtime-parity.json")

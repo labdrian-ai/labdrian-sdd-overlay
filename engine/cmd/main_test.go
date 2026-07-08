@@ -623,13 +623,13 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		}
 		return n
 	}
-	// Two pairs install (minimalism + skill-discovery-safety) → 2 entries per
-	// key; merge-settings run twice stays at 2 (idempotent).
-	if n := countEntries("UserPromptSubmit"); n != 2 {
-		t.Errorf("UserPromptSubmit: expected 2 entries, got %d", n)
+	// Three pairs install (minimalism + skill-discovery-safety + anti-generic-
+	// design) → 3 entries per key; merge-settings run twice stays at 3 (idempotent).
+	if n := countEntries("UserPromptSubmit"); n != 3 {
+		t.Errorf("UserPromptSubmit: expected 3 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 2 {
-		t.Errorf("PreToolUse: expected 2 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 3 {
+		t.Errorf("PreToolUse: expected 3 entries, got %d", n)
 	}
 }
 
