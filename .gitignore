@@ -19,3 +19,5 @@ tui/tui
 # Go coverage artifacts
 coverage.out
 coverage.html
+# Local AI runtime state
+.atl/
