@@ -85,6 +85,17 @@ func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 			// overlay deploys the standalone copy of this contract.
 			defaultPath: "skills/_shared/skill-discovery-safety.md",
 		}, true
+	case "anti-generic-design":
+		return embeddedContractSpec{
+			content:     assets.AntiGenericDesign,
+			beginMarker: propagator.AntiGenericDesignBeginMarker,
+			endMarker:   propagator.AntiGenericDesignEndMarker,
+			rowLabel:    "anti-generic-design",
+			// defaultPath is the registry-row Path cell / bare injected line when
+			// the caller does not override --contract-path. It is where the
+			// overlay deploys the standalone copy of this contract.
+			defaultPath: "skills/_shared/anti-generic-design.md",
+		}, true
 	default:
 		return embeddedContractSpec{}, false
 	}
@@ -153,7 +164,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest")
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety")
+	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety, anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
 }
 
@@ -1091,14 +1102,25 @@ func checkRegistry(registryPath string, readFile readFileFn) checkResult {
 	}
 	hasMinimalism := containsSubstring(content, propagator.BeginMarker)
 	hasSafety := containsSubstring(content, propagator.DiscoverySafetyBeginMarker)
-	switch {
-	case hasMinimalism && hasSafety:
+	hasDesign := containsSubstring(content, propagator.AntiGenericDesignBeginMarker)
+
+	if hasMinimalism && hasSafety && hasDesign {
 		return checkResult{label: label, ok: true, note: "scoped block present"}
-	case !hasMinimalism && !hasSafety:
-		return checkResult{label: label, ok: true, degraded: true, note: "present but both scoped blocks missing (run 'overlay install-hooks' or propagate)"}
-	case !hasMinimalism:
-		return checkResult{label: label, ok: true, degraded: true, note: "present but minimalism-contract-scope block missing (run 'overlay install-hooks' or propagate)"}
-	default: // !hasSafety
-		return checkResult{label: label, ok: true, degraded: true, note: "present but skill-discovery-safety-scope block missing (run 'overlay install-hooks' or propagate)"}
 	}
+
+	var missing []string
+	if !hasMinimalism {
+		missing = append(missing, "minimalism-contract-scope")
+	}
+	if !hasSafety {
+		missing = append(missing, "skill-discovery-safety-scope")
+	}
+	if !hasDesign {
+		missing = append(missing, "anti-generic-design-scope")
+	}
+	note := fmt.Sprintf(
+		"present but scoped block(s) missing: %s (run 'overlay install-hooks' or propagate)",
+		strings.Join(missing, ", "),
+	)
+	return checkResult{label: label, ok: true, degraded: true, note: note}
 }

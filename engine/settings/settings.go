@@ -48,11 +48,12 @@ type Merger struct {
 }
 
 const (
-	// Minimalism and safety identity tokens are exposed to status checks so caller
-	// code can assert provable Labdrian ownership without duplicating parsing
-	// logic.
+	// Minimalism, safety, and design identity tokens are exposed to status
+	// checks so caller code can assert provable Labdrian ownership without
+	// duplicating parsing logic.
 	LabdrianMinimalismIdentity = "minimalism-contract.md"
 	LabdrianSafetyIdentity     = "--embedded-contract " + embeddedSafetyName
+	LabdrianDesignIdentity     = "--embedded-contract " + embeddedDesignName
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -106,13 +107,21 @@ func HasLabdrianSafetyHook(root map[string]interface{}, key, hookCommand string)
 	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianSafetyIdentity)
 }
 
+// HasLabdrianDesignHook reports whether key has our anti-generic-design
+// embedded-contract hook.
+func HasLabdrianDesignHook(root map[string]interface{}, key, hookCommand string) bool {
+	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianDesignIdentity)
+}
+
 // HasSupportedClaudeLifecycleState reports whether settings contain all known
 // Labdrian-owned Claude hook families.
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianSafetyHook(root, "UserPromptSubmit", hookCommand) &&
-		HasLabdrianSafetyHook(root, "PreToolUse", hookCommand)
+		HasLabdrianSafetyHook(root, "PreToolUse", hookCommand) &&
+		HasLabdrianDesignHook(root, "UserPromptSubmit", hookCommand) &&
+		HasLabdrianDesignHook(root, "PreToolUse", hookCommand)
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -197,10 +206,23 @@ const embeddedSafetyName = "skill-discovery-safety"
 // installs instead of being collapsed as a duplicate.
 const safetyIdentity = "--embedded-contract " + embeddedSafetyName
 
+// embeddedDesignName is the engine-owned managed contract that propagates the
+// anti-generic-design guard (countering the model's default "Claude/SaaS
+// look" design bias). It rides the same propagate/gate-task machinery as the
+// minimalism and safety contracts but writes a DISTINCT registry block.
+const embeddedDesignName = "anti-generic-design"
+
+// designIdentity is the distinguishing token used to dedup/remove the design
+// hook entries independently of the minimalism and safety entries. Mirrors
+// safetyIdentity: the binary substring alone is not a unique identity once a
+// third pair rides the same binary, so we also key on this token (the
+// --embedded-contract argument).
+const designIdentity = "--embedded-contract " + embeddedDesignName
+
 // mergeHooks inserts our hook entries if not already present. Returns true if
-// any change was made. It installs TWO pairs: the minimalism-contract pair and
-// the skill-discovery-safety pair. Each pair is deduped by its own identity so
-// both coexist.
+// any change was made. It installs THREE pairs: the minimalism-contract pair,
+// the skill-discovery-safety pair, and the anti-generic-design pair. Each pair
+// is deduped by its own identity so all three coexist.
 func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
@@ -226,6 +248,16 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
+	// Anti-generic-design pair (identity: binary path + designIdentity).
+	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isDesignEntry) {
+		appendHook(hooks, "UserPromptSubmit", m.buildDesignUserPromptSubmitEntry())
+		changed = true
+	}
+	if !hasEntryMatching(hooks, "PreToolUse", m.isDesignEntry) {
+		appendHook(hooks, "PreToolUse", m.buildDesignPreToolUseEntry())
+		changed = true
+	}
+
 	root["hooks"] = hooks
 	return changed
 }
@@ -248,9 +280,15 @@ func (m *Merger) isSafetyEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, safetyIdentity)
 }
 
+// isDesignEntry reports whether a hook entry is our anti-generic-design entry:
+// it references our binary AND the design token.
+func (m *Merger) isDesignEntry(e interface{}) bool {
+	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, designIdentity)
+}
+
 // removeHooks removes our hook entries. Returns true if any change was made.
-// Identity is Labdrian-owned entry shape: our minimalism or safety entries,
-// not merely any entry that happens to reference the same binary path.
+// Identity is Labdrian-owned entry shape: our minimalism, safety, or design
+// entries, not merely any entry that happens to reference the same binary path.
 func (m *Merger) removeHooks(root map[string]interface{}) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -265,7 +303,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isSafetyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isSafetyEntry(e) || m.isDesignEntry(e) {
 				changed = true
 				continue
 			}
@@ -481,6 +519,47 @@ func (m *Merger) buildSafetyPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/skill-discovery-safety.md" || true`,
 		m.hookCommand, m.hookCommand, embeddedSafetyName,
+	)
+	return map[string]interface{}{
+		"matcher": "Agent",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildDesignUserPromptSubmitEntry returns the UserPromptSubmit entry that
+// propagates the anti-generic-design guard. Mirrors
+// buildSafetyUserPromptSubmitEntry exactly: it uses --embedded-contract so the
+// contract text ships in the engine binary (no external file dependency), and
+// the --embedded-contract argument doubles as this entry's dedup/uninstall
+// identity.
+func (m *Merger) buildDesignUserPromptSubmitEntry() map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
+		m.hookCommand, m.hookCommand, embeddedDesignName,
+	)
+	return map[string]interface{}{
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildDesignPreToolUseEntry returns the PreToolUse/Agent entry that injects
+// the anti-generic-design contract path into in-scope sub-agent prompts. The
+// contract content is embedded (--embedded-contract); --contract-path is the
+// absolute path the engine emits as the bare injected line so a sub-agent in
+// any cwd can resolve it.
+//
+// Same missing-binary guard and matcher="Agent" as the minimalism and safety
+// entries.
+func (m *Merger) buildDesignPreToolUseEntry() map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/anti-generic-design.md" || true`,
+		m.hookCommand, m.hookCommand, embeddedDesignName,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",
