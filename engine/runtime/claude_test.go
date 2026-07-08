@@ -19,6 +19,15 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 		t.Fatalf("Install() = %#v", result)
 	}
 
+	// mergeHooks does not install the anti-generic-design pair yet (Phase 4 —
+	// a later PR in the anti-generic-design-runtime-wiring chain). Inject it
+	// by hand so this test can still verify the minimalism+safety install
+	// path reports "supported" once HasSupportedClaudeLifecycleState also
+	// requires the design pair.
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	injectDesignHookPair(t, settingsPath, hookCommand)
+
 	status := adapter.Status()
 	if status.Status != engineRuntime.CapabilitySupported {
 		t.Fatalf("Status() after install = %#v", status)
@@ -27,10 +36,7 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 		t.Fatalf("status message should report installed and owned state, got %q", status.Message)
 	}
 
-	settingsPath := filepath.Join(root, "settings.json")
 	rootSettings := parseClaudeSettingsFile(t, settingsPath)
-
-	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
 	if !hasOwnedClaudeHook(rootSettings, "UserPromptSubmit", hookCommand, settings.LabdrianMinimalismIdentity) {
 		t.Fatalf("settings after install should include minimalism UserPromptSubmit hook: %#v", rootSettings["hooks"])
 	}
@@ -56,6 +62,14 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 	if result := adapter.Update(); result.Status != engineRuntime.CapabilityRestartRequired {
 		t.Fatalf("Update() = %#v", result)
 	}
+
+	// mergeHooks does not install the anti-generic-design pair yet (Phase 4 —
+	// a later PR in the chain). Inject it by hand so this test can still
+	// verify Update() keeps the (minimalism+safety+design) lifecycle state
+	// "supported".
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	injectDesignHookPair(t, settingsPath, hookCommand)
 
 	status := adapter.Status()
 	if status.Status != engineRuntime.CapabilitySupported {
@@ -282,4 +296,35 @@ func dropEntriesWithIdentity(root map[string]interface{}, key, hookCommand, iden
 	hooks[key] = kept
 	root["hooks"] = hooks
 	return root, nil
+}
+
+// injectDesignHookPair patches an already-installed settings.json to add the
+// anti-generic-design UserPromptSubmit/PreToolUse hook pair by hand.
+// Merger.mergeHooks does not install this pair yet (Phase 4 of the
+// anti-generic-design-runtime-wiring chain, a later PR) — tests that only
+// care about OTHER lifecycle-state behavior use this helper to keep Claude
+// "supported" without depending on that future work.
+func injectDesignHookPair(t *testing.T, settingsPath, hookCommand string) {
+	t.Helper()
+	root := parseClaudeSettingsFile(t, settingsPath)
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("injectDesignHookPair: settings has no hooks map")
+	}
+	command := hookCommand + " " + settings.LabdrianDesignIdentity
+	hooks["UserPromptSubmit"] = append(hooks["UserPromptSubmit"].([]interface{}), map[string]interface{}{
+		"hooks": []interface{}{map[string]interface{}{"type": "command", "command": command}},
+	})
+	hooks["PreToolUse"] = append(hooks["PreToolUse"].([]interface{}), map[string]interface{}{
+		"matcher": "Agent",
+		"hooks":   []interface{}{map[string]interface{}{"type": "command", "command": command}},
+	})
+	root["hooks"] = hooks
+	patched, err := json.Marshal(root)
+	if err != nil {
+		t.Fatalf("injectDesignHookPair: marshal: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, patched, 0644); err != nil {
+		t.Fatalf("injectDesignHookPair: write %s: %v", settingsPath, err)
+	}
 }

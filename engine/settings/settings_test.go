@@ -937,3 +937,68 @@ func TestSchema_Uninstall_RemovesByBinarySubstring(t *testing.T) {
 		t.Error("PreToolUse hook should be gone after Uninstall")
 	}
 }
+
+// ---------------------------------------------------------------------------
+// T-18: HasSupportedClaudeLifecycleState recognizes the anti-generic-design
+// pair (Phase 3, PR-2 of the anti-generic-design-runtime-wiring chain).
+// ---------------------------------------------------------------------------
+
+// buildRootWithPairs builds a raw settings root map carrying exactly the
+// requested set of Labdrian-owned hook pairs (minimalism, safety, design),
+// each present in both UserPromptSubmit and PreToolUse. This mirrors the
+// on-disk hook entry shape without depending on Merger.Install(), so the
+// design pair — not yet wired by mergeHooks (Phase 4) — can still be
+// represented for this direct HasSupportedClaudeLifecycleState test.
+func buildRootWithPairs(hookCommand string, includeMinimalism, includeSafety, includeDesign bool) map[string]interface{} {
+	var promptEntries, preToolEntries []interface{}
+
+	addPair := func(identity string) {
+		command := hookCommand + " " + identity
+		promptEntries = append(promptEntries, map[string]interface{}{
+			"hooks": []interface{}{map[string]interface{}{
+				"type":    "command",
+				"command": command,
+			}},
+		})
+		preToolEntries = append(preToolEntries, map[string]interface{}{
+			"matcher": "Agent",
+			"hooks": []interface{}{map[string]interface{}{
+				"type":    "command",
+				"command": command,
+			}},
+		})
+	}
+
+	if includeMinimalism {
+		addPair("--contract-file /foo/bar/minimalism-contract.md")
+	}
+	if includeSafety {
+		addPair(settings.LabdrianSafetyIdentity)
+	}
+	if includeDesign {
+		addPair(settings.LabdrianDesignIdentity)
+	}
+
+	return map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"UserPromptSubmit": promptEntries,
+			"PreToolUse":       preToolEntries,
+		},
+	}
+}
+
+// TestHasSupportedClaudeLifecycleState_RequiresDesignPair asserts the
+// lifecycle-state check returns false when the anti-generic-design pair is
+// absent even with minimalism+safety present, and true only when all three
+// pairs exist.
+func TestHasSupportedClaudeLifecycleState_RequiresDesignPair(t *testing.T) {
+	onlyMinimalismAndSafety := buildRootWithPairs(testHookCommand, true, true, false)
+	if settings.HasSupportedClaudeLifecycleState(onlyMinimalismAndSafety, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false when the design pair is absent")
+	}
+
+	allThree := buildRootWithPairs(testHookCommand, true, true, true)
+	if !settings.HasSupportedClaudeLifecycleState(allThree, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true when all three pairs exist")
+	}
+}
