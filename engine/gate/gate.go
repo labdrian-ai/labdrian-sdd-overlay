@@ -31,6 +31,7 @@ package gate
 
 import (
 	"encoding/json"
+	"errors"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
@@ -50,15 +51,37 @@ type Config struct {
 	// ContractContent is the raw content of the contract file, used to parse
 	// the frontmatter for phase sets and injection_point.
 	ContractContent string
+
+	// Contracts is the multi-contract configuration. When empty, ContractPath and
+	// ContractContent are adapted into a single contract for backward compatibility.
+	Contracts []ContractConfig
+
+	// WorkContext is trusted work metadata supplied by the runtime adapter. It is
+	// the only source used for context-aware contracts; prompt text is ignored.
+	WorkContext *WorkContext
+}
+
+// ContractConfig describes one managed guidance contract.
+type ContractConfig struct {
+	Path    string
+	Content string
+}
+
+// WorkContext is explicit metadata about the current unit of work.
+type WorkContext struct {
+	Trusted     bool     `json:"trusted"`
+	Languages   []string `json:"languages"`
+	Activations []string `json:"activations"`
+	WorkKinds   []string `json:"work_kinds"`
 }
 
 // agentToolInput represents the Agent tool's input fields.
 // All fields are preserved for faithful echo in updatedInput.
 type agentToolInput struct {
-	Description   string  `json:"description"`
-	Prompt        string  `json:"prompt"`
-	SubagentType  string  `json:"subagent_type"`
-	Model         *string `json:"model,omitempty"`
+	Description  string  `json:"description"`
+	Prompt       string  `json:"prompt"`
+	SubagentType string  `json:"subagent_type"`
+	Model        *string `json:"model,omitempty"`
 }
 
 // hookInput represents the Claude Code PreToolUse hook JSON input shape.
@@ -105,22 +128,6 @@ func passThrough() (string, error) {
 // that would cause the caller to exit non-zero. Errors are absorbed into
 // pass-through responses.
 func Process(rawInput string, cfg Config) (string, error) {
-	// Parse the contract frontmatter to derive phase sets and injection point.
-	// On broken frontmatter → fail-safe pass-through.
-	phases, err := propagator.ParseFrontmatter(cfg.ContractContent)
-	if err != nil {
-		return passThrough()
-	}
-
-	// Determine the injection header from frontmatter or use the fallback.
-	injHeader := phases.InjectionPoint
-	if injHeader == "" {
-		injHeader = defaultInjectionHeader
-	}
-
-	applySet := toSet(phases.AppliesTo)
-	excludeSet := toSet(phases.Excluded)
-
 	// Parse the hook input JSON. On any parse failure → fail-safe pass-through.
 	if strings.TrimSpace(rawInput) == "" {
 		return passThrough()
@@ -152,30 +159,144 @@ func Process(rawInput string, cfg Config) (string, error) {
 		return passThrough()
 	}
 
-	switch {
-	case applySet[ti.SubagentType]:
-		// INJECT: ensure the contract path appears under the injection_point header
-		// as a bare absolute path line.
-		newPrompt := inject(ti.Prompt, cfg.ContractPath, injHeader)
-		if newPrompt == ti.Prompt {
-			// Already present — no-op pass-through.
-			return passThrough()
+	newPrompt := ti.Prompt
+	for _, contract := range cfg.contracts() {
+		candidate, ok := evaluateContract(newPrompt, ti.SubagentType, contract, cfg.WorkContext)
+		if !ok {
+			continue
 		}
-		return buildResponse(newPrompt, &ti)
-
-	case excludeSet[ti.SubagentType]:
-		// STRIP: remove the contract path if present.
-		newPrompt := strip(ti.Prompt, cfg.ContractPath)
-		if newPrompt == ti.Prompt {
-			// Was not present — no-op pass-through.
-			return passThrough()
-		}
-		return buildResponse(newPrompt, &ti)
-
-	default:
-		// Unknown subagent_type → fail-safe pass-through.
+		newPrompt = candidate
+	}
+	if newPrompt == ti.Prompt {
 		return passThrough()
 	}
+	return buildResponse(newPrompt, &ti)
+}
+
+func (c Config) contracts() []ContractConfig {
+	if len(c.Contracts) > 0 {
+		return c.Contracts
+	}
+	if c.ContractPath == "" && c.ContractContent == "" {
+		return nil
+	}
+	return []ContractConfig{{Path: c.ContractPath, Content: c.ContractContent}}
+}
+
+type contractMetadata struct {
+	phases          propagator.ContractPhases
+	languages       []string
+	activations     []string
+	contextRequired bool
+}
+
+func evaluateContract(prompt, subagentType string, contract ContractConfig, workContext *WorkContext) (string, bool) {
+	metadata, err := parseContractMetadata(contract.Content)
+	if err != nil {
+		return prompt, false
+	}
+	injHeader := metadata.phases.InjectionPoint
+	if injHeader == "" {
+		injHeader = defaultInjectionHeader
+	}
+	applySet := toSet(metadata.phases.AppliesTo)
+	excludeSet := toSet(metadata.phases.Excluded)
+	if excludeSet[subagentType] {
+		return strip(prompt, contract.Path), true
+	}
+	if !applySet[subagentType] {
+		return prompt, true
+	}
+	if metadata.contextRequired && !workContextMatches(workContext, metadata) {
+		return prompt, true
+	}
+	return inject(prompt, contract.Path, injHeader), true
+}
+
+func parseContractMetadata(content string) (contractMetadata, error) {
+	phases, err := propagator.ParseFrontmatter(content)
+	if err != nil {
+		return contractMetadata{}, err
+	}
+	metadata := contractMetadata{phases: phases}
+	parts := strings.SplitN(content, "---", 3)
+	if len(parts) < 3 {
+		return contractMetadata{}, err
+	}
+	for _, line := range strings.Split(parts[1], "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "language_context:"):
+			items, ok := parseStrictInlineList(strings.TrimPrefix(line, "language_context:"))
+			if !ok {
+				return contractMetadata{}, errors.New("malformed language_context")
+			}
+			metadata.languages = items
+		case strings.HasPrefix(line, "activation_context:"):
+			items, ok := parseStrictInlineList(strings.TrimPrefix(line, "activation_context:"))
+			if !ok {
+				return contractMetadata{}, errors.New("malformed activation_context")
+			}
+			metadata.activations = items
+		case strings.HasPrefix(line, "context_operator:"):
+			return contractMetadata{}, errors.New("unsupported context_operator")
+		}
+	}
+	metadata.contextRequired = len(metadata.languages) > 0 || len(metadata.activations) > 0
+	return metadata, nil
+}
+
+func parseStrictInlineList(raw string) ([]string, bool) {
+	raw = strings.TrimSpace(raw)
+	if !strings.HasPrefix(raw, "[") || !strings.HasSuffix(raw, "]") {
+		return nil, false
+	}
+	raw = strings.TrimPrefix(strings.TrimSuffix(raw, "]"), "[")
+	var out []string
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.Trim(strings.TrimSpace(item), `"'`)
+		if item != "" {
+			out = append(out, strings.ToLower(item))
+		}
+	}
+	return out, true
+}
+
+func workContextMatches(workContext *WorkContext, metadata contractMetadata) bool {
+	if workContext == nil || !workContext.Trusted {
+		return false
+	}
+	if len(metadata.languages) > 0 && !intersects(metadata.languages, workContext.Languages) {
+		return false
+	}
+	if len(metadata.activations) > 0 && !intersects(metadata.activations, workContext.Activations) {
+		return false
+	}
+	if len(workContext.WorkKinds) == 0 {
+		return false
+	}
+	if !containsFold(workContext.WorkKinds, "application-code") {
+		return false
+	}
+	return true
+}
+
+func intersects(want, got []string) bool {
+	for _, w := range want {
+		if containsFold(got, w) {
+			return true
+		}
+	}
+	return false
+}
+
+func containsFold(items []string, want string) bool {
+	for _, item := range items {
+		if strings.EqualFold(strings.TrimSpace(item), want) {
+			return true
+		}
+	}
+	return false
 }
 
 // toSet converts a string slice to a lookup map.

@@ -22,6 +22,18 @@ Content here.
 
 const contractPath = "skills/_shared/minimalism-contract.md"
 
+const ooContractContent = `---
+applies_to_phases: [sdd-design, sdd-tasks, sdd-apply]
+excluded_phases: [sdd-propose, sdd-spec, sdd-archive, sdd-verify]
+injection_point: "## Skills to load before work"
+language_context: [typescript, nestjs]
+activation_context: [oo-domain-design, domain-heavy-application-code, review]
+---
+# OO Quality Contract
+`
+
+const ooContractPath = "skills/_shared/oo-quality-contract.md"
+
 // buildInput returns a Claude Code PreToolUse hook JSON for the Agent tool
 // with description, prompt, and subagent_type — the verified real format.
 func buildInput(subagentType, prompt string) string {
@@ -806,4 +818,228 @@ injection_point: "## Skills to load before work"
 	updatedInputT, _ := hsoT["updatedInput"].(map[string]interface{})
 	newPromptTasks, _ := updatedInputT["prompt"].(string)
 	assertNoCanonicalEntry(t, newPromptTasks)
+}
+
+func TestMultiContractDecisionsAreIndependent(t *testing.T) {
+	prompt := "Apply implementation."
+	input := buildInput("sdd-apply", prompt)
+	cfg := gate.Config{Contracts: []gate.ContractConfig{
+		{Path: contractPath, Content: contractContent},
+		{Path: ooContractPath, Content: ooContractContent},
+	}}
+
+	resp, err := gate.Process(input, cfg)
+	if err != nil {
+		t.Fatalf("Process: %v", err)
+	}
+	newPrompt := responsePrompt(t, resp)
+	if !hasLine(newPrompt, contractPath) {
+		t.Fatalf("phase-only contract should still inject; got:\n%s", newPrompt)
+	}
+	if hasLine(newPrompt, ooContractPath) {
+		t.Fatalf("OO contract must not inject without trusted work context; got:\n%s", newPrompt)
+	}
+}
+
+func TestOOContractRequiresTrustedMatchingContext(t *testing.T) {
+	tests := []struct {
+		name        string
+		workContext *gate.WorkContext
+		wantInject  bool
+	}{
+		{
+			name: "trusted TypeScript domain work injects",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+				WorkKinds:   []string{"application-code"},
+			},
+			wantInject: true,
+		},
+		{
+			name:        "prompt text is not proof",
+			workContext: nil,
+			wantInject:  false,
+		},
+		{
+			name: "non-domain Go work passes through",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"go"},
+				Activations: []string{"non-domain"},
+				WorkKinds:   []string{"application-code"},
+			},
+			wantInject: false,
+		},
+		{
+			name: "untrusted matching context passes through",
+			workContext: &gate.WorkContext{
+				Trusted:     false,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+				WorkKinds:   []string{"application-code"},
+			},
+			wantInject: false,
+		},
+		{
+			name: "missing work kinds are insufficient proof",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+			},
+			wantInject: false,
+		},
+		{
+			name: "empty work kinds are insufficient proof",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+				WorkKinds:   []string{},
+			},
+			wantInject: false,
+		},
+		{
+			name: "docs work passes through",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+				WorkKinds:   []string{"docs"},
+			},
+			wantInject: false,
+		},
+		{
+			name: "config work passes through",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+				WorkKinds:   []string{"config"},
+			},
+			wantInject: false,
+		},
+		{
+			name: "generated artifact work passes through",
+			workContext: &gate.WorkContext{
+				Trusted:     true,
+				Languages:   []string{"typescript"},
+				Activations: []string{"oo-domain-design"},
+				WorkKinds:   []string{"generated-artifact"},
+			},
+			wantInject: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input := buildInput("sdd-apply", "Please work on TypeScript NestJS SOLID domain modeling.")
+			cfg := gate.Config{
+				Contracts:   []gate.ContractConfig{{Path: ooContractPath, Content: ooContractContent}},
+				WorkContext: tt.workContext,
+			}
+			resp, err := gate.Process(input, cfg)
+			if err != nil {
+				t.Fatalf("Process: %v", err)
+			}
+			prompt := promptOrOriginal(t, resp, "Please work on TypeScript NestJS SOLID domain modeling.")
+			if got := hasLine(prompt, ooContractPath); got != tt.wantInject {
+				t.Fatalf("OO injection = %v, want %v; prompt:\n%s", got, tt.wantInject, prompt)
+			}
+		})
+	}
+}
+
+func TestMalformedOrUnsupportedContextContractSkipsOnlyThatContract(t *testing.T) {
+	malformedOO := `---
+applies_to_phases: [sdd-apply]
+excluded_phases: []
+injection_point: "## Skills to load before work"
+language_context: typescript
+activation_context: [oo-domain-design]
+---
+# Broken OO Contract
+`
+	unsupportedOO := `---
+applies_to_phases: [sdd-apply]
+excluded_phases: []
+injection_point: "## Skills to load before work"
+language_context: [typescript]
+activation_context: [oo-domain-design]
+context_operator: prompt_contains
+---
+# Unsupported OO Contract
+`
+
+	for _, content := range []string{malformedOO, unsupportedOO} {
+		input := buildInput("sdd-apply", "Apply implementation.")
+		cfg := gate.Config{Contracts: []gate.ContractConfig{
+			{Path: contractPath, Content: contractContent},
+			{Path: ooContractPath, Content: content},
+		}, WorkContext: &gate.WorkContext{Trusted: true, Languages: []string{"typescript"}, Activations: []string{"oo-domain-design"}}}
+		resp, err := gate.Process(input, cfg)
+		if err != nil {
+			t.Fatalf("Process: %v", err)
+		}
+		prompt := responsePrompt(t, resp)
+		if !hasLine(prompt, contractPath) {
+			t.Fatalf("valid phase-only contract should still inject; got:\n%s", prompt)
+		}
+		if hasLine(prompt, ooContractPath) {
+			t.Fatalf("bad OO contract should be skipped; got:\n%s", prompt)
+		}
+	}
+}
+
+func responsePrompt(t *testing.T, resp string) string {
+	t.Helper()
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resp), &result); err != nil {
+		t.Fatalf("response not JSON: %v", err)
+	}
+	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("response missing hookSpecificOutput: %s", resp)
+	}
+	updatedInput, ok := hso["updatedInput"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("response missing updatedInput: %s", resp)
+	}
+	prompt, ok := updatedInput["prompt"].(string)
+	if !ok {
+		t.Fatalf("response missing prompt: %s", resp)
+	}
+	return prompt
+}
+
+func promptOrOriginal(t *testing.T, resp, original string) string {
+	t.Helper()
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resp), &result); err != nil {
+		t.Fatalf("response not JSON: %v", err)
+	}
+	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
+	if !ok {
+		return original
+	}
+	updatedInput, ok := hso["updatedInput"].(map[string]interface{})
+	if !ok {
+		return original
+	}
+	prompt, ok := updatedInput["prompt"].(string)
+	if !ok {
+		return original
+	}
+	return prompt
+}
+
+func hasLine(prompt, want string) bool {
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.TrimSpace(line) == want {
+			return true
+		}
+	}
+	return false
 }
