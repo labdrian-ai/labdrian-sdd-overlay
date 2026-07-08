@@ -40,7 +40,8 @@ func TestGenerate_AllFilesEmitted(t *testing.T) {
 }
 
 // TestGenerate_BodyIsIdentical verifies that all emitted files contain the
-// canonical persona body bytes byte-for-byte (D7: same body bytes in every output).
+// canonical persona body bytes byte-for-byte (D7: same body bytes in every output)
+// and do not carry runtime-anchored wording from the canonical body.
 func TestGenerate_BodyIsIdentical(t *testing.T) {
 	dir := t.TempDir()
 	if err := gadu.Generate(dir); err != nil {
@@ -65,7 +66,7 @@ func TestGenerate_BodyIsIdentical(t *testing.T) {
 		t.Fatalf("read skill file: %v", err)
 	}
 
-	// Both files must contain the canonical body verbatim (D7).
+	// All generated files must contain the canonical body verbatim (D7).
 	if !strings.Contains(string(agentBytes), canonicalBody) {
 		t.Error("agents/GADU.md does not contain the canonical persona body verbatim")
 	}
@@ -74,6 +75,19 @@ func TestGenerate_BodyIsIdentical(t *testing.T) {
 	}
 	if !strings.Contains(string(skillBytes), canonicalBody) {
 		t.Error("skills/gadu-operator/SKILL.md does not contain the canonical persona body verbatim")
+	}
+
+	for _, file := range []struct {
+		name string
+		blob []byte
+	}{
+		{"agents/GADU.md", agentBytes},
+		{"opencode/agents/GADU.md", opencodeAgentBytes},
+		{"skills/gadu-operator/SKILL.md", skillBytes},
+	} {
+		if strings.Contains(string(file.blob), "You run on Claude") {
+			t.Errorf("%s contains runtime-specific phrase 'You run on Claude'", file.name)
+		}
 	}
 }
 
