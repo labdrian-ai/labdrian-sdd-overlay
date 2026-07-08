@@ -913,6 +913,23 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	}
 }
 
+func TestInstall_DoesNotEnableOOQualityHookIdentityByDefault(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := parseJSON(t, path)
+	for _, hookKey := range []string{"UserPromptSubmit", "PreToolUse"} {
+		if countLabdrianIdentityEntries(root, hookKey, testHookCommand, "oo-quality-contract.md") != 0 {
+			t.Fatalf("%s must not install OO quality hook identity unless explicitly enabled", hookKey)
+		}
+	}
+}
+
 func TestSchema_Uninstall_RemovesByBinarySubstring(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")

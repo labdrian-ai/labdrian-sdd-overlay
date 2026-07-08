@@ -32,6 +32,18 @@ const brokenContractContent = "no frontmatter here"
 // tool_input fields: description, prompt, subagent_type, model (optional).
 const validTaskInput = `{"tool_name":"Agent","tool_input":{"description":"sdd-tasks sub-agent for scoping-fixes","subagent_type":"sdd-tasks","prompt":"Do the tasks phase."}}`
 
+const validApplyInput = `{"tool_name":"Agent","tool_input":{"description":"sdd-apply sub-agent for runtime wiring","subagent_type":"sdd-apply","prompt":"Apply TypeScript NestJS SOLID domain work."}}`
+
+const testOOContractContent = `---
+applies_to_phases: [sdd-design, sdd-tasks, sdd-apply]
+excluded_phases: [sdd-propose, sdd-spec, sdd-archive, sdd-verify]
+injection_point: "## Skills to load before work"
+language_context: [typescript, nestjs]
+activation_context: [oo-domain-design, domain-heavy-application-code, review]
+---
+# OO Quality Contract
+`
+
 // passThrough is what the gate returns on a fail-safe no-op.
 const passThrough = "{}"
 
@@ -237,6 +249,55 @@ func TestGateTaskCore_HappyPath_Inject(t *testing.T) {
 	}
 }
 
+func TestGateTaskCore_WorkContextJSONControlsContextAwareContract(t *testing.T) {
+	stdout, stderr := captureGateTask(
+		[]string{
+			"--contract-file", "/fake/oo-contract.md",
+			"--contract-path", "skills/_shared/oo-quality-contract.md",
+			"--work-context-json", `{"trusted":true,"languages":["typescript"],"activations":["oo-domain-design"],"work_kinds":["application-code"]}`,
+		},
+		validApplyInput,
+		[]byte(testOOContractContent), nil,
+	)
+	if stderr != "" {
+		t.Fatalf("unexpected stderr: %s", stderr)
+	}
+	if !strings.Contains(stdout, "skills/_shared/oo-quality-contract.md") {
+		t.Fatalf("trusted matching work context should inject OO contract; stdout=%s", stdout)
+	}
+
+	stdout, _ = captureGateTask(
+		[]string{
+			"--contract-file", "/fake/oo-contract.md",
+			"--contract-path", "skills/_shared/oo-quality-contract.md",
+			"--work-context-json", `{"trusted":true,"languages":["go"],"activations":["non-domain"],"work_kinds":["application-code"]}`,
+		},
+		validApplyInput,
+		[]byte(testOOContractContent), nil,
+	)
+	if strings.Contains(stdout, "skills/_shared/oo-quality-contract.md") {
+		t.Fatalf("non-domain work context must not inject OO contract; stdout=%s", stdout)
+	}
+}
+
+func TestGateTaskCore_MalformedWorkContextPassesThroughContextAwareContract(t *testing.T) {
+	stdout, stderr := captureGateTask(
+		[]string{
+			"--contract-file", "/fake/oo-contract.md",
+			"--contract-path", "skills/_shared/oo-quality-contract.md",
+			"--work-context-json", `{not-json}`,
+		},
+		validApplyInput,
+		[]byte(testOOContractContent), nil,
+	)
+	if !strings.Contains(stderr, "work context") {
+		t.Fatalf("malformed work context should emit diagnostic; stderr=%q", stderr)
+	}
+	if strings.Contains(stdout, "skills/_shared/oo-quality-contract.md") {
+		t.Fatalf("malformed work context must pass through for OO contract; stdout=%s", stdout)
+	}
+}
+
 // ---- runPropagateCore tests (item 7 coverage) --------------------------------
 
 // minimalRegistry is a bare-bones registry missing the minimalism-contract row.
@@ -333,8 +394,8 @@ func TestRunPropagateCore_BrokenFrontmatter(t *testing.T) {
 	_, stderr, exitCode := capturePropagateCore(
 		[]string{"--registry", "/fake/registry.md", "--contract-file", "/fake/contract.md"},
 		map[string][]byte{
-			"/fake/contract.md":  []byte("no frontmatter"),
-			"/fake/registry.md":  []byte(minimalRegistry),
+			"/fake/contract.md": []byte("no frontmatter"),
+			"/fake/registry.md": []byte(minimalRegistry),
 		},
 		nil, nil,
 	)
