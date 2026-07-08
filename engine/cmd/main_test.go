@@ -12,6 +12,7 @@ import (
 	"syscall"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 )
 
@@ -1251,7 +1252,7 @@ func TestRunPrespec_MalformedJSONExitsOne(t *testing.T) {
 	}
 }
 
-// TC-STATUS-9: registry present WITH both scoped blocks → [OK  ] with note "scoped block present".
+// TC-STATUS-9: registry present WITH all three scoped blocks → [OK  ] with note "scoped block present".
 func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	homeDir, binaryPath := buildFakeHomeWithBinary(t)
 	buildFakeContract(t, homeDir)
@@ -1261,10 +1262,11 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	cwdDir := t.TempDir()
 	registryDir := filepath.Join(cwdDir, ".atl")
 	os.MkdirAll(registryDir, 0o755)
-	// Registry must contain BOTH managed contract blocks to report [OK].
+	// Registry must contain ALL THREE managed contract blocks to report [OK].
 	registryContent := "# Registry\n" +
 		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
-		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n"
+		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n" +
+		propagator.AntiGenericDesignBeginMarker + "\n| anti-generic-design | c | d |\n" + propagator.AntiGenericDesignEndMarker + "\n"
 	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
 
 	deps := statusDeps{
@@ -1282,7 +1284,7 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	out := outBuf.String()
 
 	if !result {
-		t.Errorf("statusCore: expected true when both scoped blocks present; output:\n%s", out)
+		t.Errorf("statusCore: expected true when all three scoped blocks present; output:\n%s", out)
 	}
 	if !strings.Contains(out, "scoped block present") {
 		t.Errorf("statusCore: output should say 'scoped block present'; output:\n%s", out)
@@ -1665,6 +1667,150 @@ func TestGateTaskCore_EmbeddedSafetyContract_DefaultPath(t *testing.T) {
 	}
 	if strings.Contains(out, minimalistPath) {
 		t.Errorf("embedded gate default path: must NOT inject minimalism path %q; got %q", minimalistPath, out)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// T-16b: anti-generic-design embedded contract wiring (R-102, PR-2 of the
+// anti-generic-design-runtime-wiring chain)
+// ---------------------------------------------------------------------------
+
+// TC-EMBED-DESIGN-1: embeddedContract("anti-generic-design") resolves to the
+// R-101 marker pair, the compiled-in asset content, the "anti-generic-design"
+// row label, and the skills/_shared default path.
+func TestEmbeddedContract_AntiGenericDesign(t *testing.T) {
+	spec, ok := embeddedContract("anti-generic-design")
+	if !ok {
+		t.Fatalf("embeddedContract(\"anti-generic-design\"): expected ok=true, got ok=false")
+	}
+	if spec.content != assets.AntiGenericDesign {
+		t.Errorf("embeddedContract: content should be assets.AntiGenericDesign")
+	}
+	if spec.beginMarker != propagator.AntiGenericDesignBeginMarker {
+		t.Errorf("embeddedContract: beginMarker = %q, want %q", spec.beginMarker, propagator.AntiGenericDesignBeginMarker)
+	}
+	if spec.endMarker != propagator.AntiGenericDesignEndMarker {
+		t.Errorf("embeddedContract: endMarker = %q, want %q", spec.endMarker, propagator.AntiGenericDesignEndMarker)
+	}
+	if spec.rowLabel != "anti-generic-design" {
+		t.Errorf("embeddedContract: rowLabel = %q, want %q", spec.rowLabel, "anti-generic-design")
+	}
+	if spec.defaultPath != "skills/_shared/anti-generic-design.md" {
+		t.Errorf("embeddedContract: defaultPath = %q, want %q", spec.defaultPath, "skills/_shared/anti-generic-design.md")
+	}
+}
+
+// TC-EMBED-PROP-DESIGN-1: propagate --embedded-contract anti-generic-design
+// does not hit the "unknown embedded contract" fail-loud branch, and the
+// registry row's Path cell reads skills/_shared/anti-generic-design.md.
+func TestRunPropagateCore_EmbeddedDesignContract_ResolvesAndWritesPath(t *testing.T) {
+	registryPath := "/project/.atl/skill-registry.md"
+	written := make(map[string][]byte)
+
+	stdout, stderr, exitCode := capturePropagateCore(
+		[]string{"--registry", registryPath, "--embedded-contract", "anti-generic-design"},
+		map[string][]byte{registryPath: []byte(minimalRegistry)},
+		nil,
+		written,
+	)
+
+	if exitCode != -1 {
+		t.Fatalf("embedded design: unexpected exit %d; stderr: %s", exitCode, stderr)
+	}
+	if strings.Contains(stderr, "unknown embedded contract") {
+		t.Errorf("embedded design: must not hit the unknown embedded contract branch; stderr: %s", stderr)
+	}
+	out := string(written[registryPath])
+	if !strings.Contains(out, propagator.AntiGenericDesignBeginMarker) {
+		t.Errorf("embedded design: registry should contain the distinct BEGIN marker; out:\n%s", out)
+	}
+	if !strings.Contains(out, "skills/_shared/anti-generic-design.md") {
+		t.Errorf("embedded design: row Path cell should read skills/_shared/anti-generic-design.md; out:\n%s", out)
+	}
+	if !strings.Contains(stdout, "anti-generic-design scoped row inserted/updated") {
+		t.Errorf("embedded design: stdout should confirm the labeled row; got %q", stdout)
+	}
+}
+
+// TC-EMBED-GATE-DESIGN-1: gate-task --embedded-contract anti-generic-design on
+// a well-formed PreToolUse Agent payload for an in-scope phase (sdd-apply)
+// emits an injection referencing the contract path, not the {} fail-safe.
+func TestGateTaskCore_EmbeddedDesignContract_Injects(t *testing.T) {
+	input := `{"tool_name":"Agent","tool_input":{"description":"apply","subagent_type":"sdd-apply","prompt":"Do the apply phase."}}`
+	contractAbsPath := "/home/user/.claude/engine/anti-generic-design.md"
+
+	var outBuf, errBuf bytes.Buffer
+	gateTaskCore(
+		[]string{"--embedded-contract", "anti-generic-design", "--contract-path", contractAbsPath},
+		strings.NewReader(input), &outBuf, &errBuf,
+		func(_ string) ([]byte, error) { return nil, errors.New("must not read a file in embedded mode") },
+	)
+
+	out := outBuf.String()
+	if out == "" || strings.TrimSpace(out) == "{}" {
+		t.Fatalf("embedded design gate: expected an injection response, got fail-safe pass-through %q; stderr: %s", out, errBuf.String())
+	}
+	if !strings.Contains(out, contractAbsPath) {
+		t.Errorf("embedded design gate: expected injection of %q; got %q", contractAbsPath, out)
+	}
+	if !strings.Contains(out, `"hookEventName":"PreToolUse"`) {
+		t.Errorf("embedded design gate: response should carry PreToolUse hookSpecificOutput; got %q", out)
+	}
+}
+
+// TC-CHECKREG-DESIGN: checkRegistry recognizes the third
+// anti-generic-design-scope marker alongside the two pre-existing blocks.
+// All three present -> ok, not degraded. Only anti-generic-design-scope
+// missing -> ok, degraded, note names it.
+func TestCheckRegistry_ThreeBlockCombinations(t *testing.T) {
+	const registryPath = "/project/.atl/skill-registry.md"
+
+	allThree := "# Registry\n" +
+		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
+		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n" +
+		propagator.AntiGenericDesignBeginMarker + "\n| anti-generic-design | c | d |\n" + propagator.AntiGenericDesignEndMarker + "\n"
+
+	onlyMinimalismAndSafety := "# Registry\n" +
+		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
+		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n"
+
+	tests := []struct {
+		name         string
+		content      string
+		wantOK       bool
+		wantDegraded bool
+		wantNoteHas  string
+	}{
+		{
+			name:         "all three blocks present",
+			content:      allThree,
+			wantOK:       true,
+			wantDegraded: false,
+			wantNoteHas:  "scoped block",
+		},
+		{
+			name:         "only anti-generic-design-scope missing",
+			content:      onlyMinimalismAndSafety,
+			wantOK:       true,
+			wantDegraded: true,
+			wantNoteHas:  "anti-generic-design-scope",
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			readFile := func(_ string) ([]byte, error) { return []byte(tc.content), nil }
+			result := checkRegistry(registryPath, readFile)
+			if result.ok != tc.wantOK {
+				t.Errorf("checkRegistry(%s): ok = %v, want %v (note: %s)", tc.name, result.ok, tc.wantOK, result.note)
+			}
+			if result.degraded != tc.wantDegraded {
+				t.Errorf("checkRegistry(%s): degraded = %v, want %v (note: %s)", tc.name, result.degraded, tc.wantDegraded, result.note)
+			}
+			if !strings.Contains(result.note, tc.wantNoteHas) {
+				t.Errorf("checkRegistry(%s): note = %q, want it to contain %q", tc.name, result.note, tc.wantNoteHas)
+			}
+		})
 	}
 }
 

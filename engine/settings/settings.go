@@ -48,11 +48,12 @@ type Merger struct {
 }
 
 const (
-	// Minimalism and safety identity tokens are exposed to status checks so caller
-	// code can assert provable Labdrian ownership without duplicating parsing
-	// logic.
+	// Minimalism, safety, and design identity tokens are exposed to status
+	// checks so caller code can assert provable Labdrian ownership without
+	// duplicating parsing logic.
 	LabdrianMinimalismIdentity = "minimalism-contract.md"
 	LabdrianSafetyIdentity     = "--embedded-contract " + embeddedSafetyName
+	LabdrianDesignIdentity     = "--embedded-contract " + embeddedDesignName
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -106,13 +107,21 @@ func HasLabdrianSafetyHook(root map[string]interface{}, key, hookCommand string)
 	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianSafetyIdentity)
 }
 
+// HasLabdrianDesignHook reports whether key has our anti-generic-design
+// embedded-contract hook.
+func HasLabdrianDesignHook(root map[string]interface{}, key, hookCommand string) bool {
+	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianDesignIdentity)
+}
+
 // HasSupportedClaudeLifecycleState reports whether settings contain all known
 // Labdrian-owned Claude hook families.
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianSafetyHook(root, "UserPromptSubmit", hookCommand) &&
-		HasLabdrianSafetyHook(root, "PreToolUse", hookCommand)
+		HasLabdrianSafetyHook(root, "PreToolUse", hookCommand) &&
+		HasLabdrianDesignHook(root, "UserPromptSubmit", hookCommand) &&
+		HasLabdrianDesignHook(root, "PreToolUse", hookCommand)
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -196,6 +205,17 @@ const embeddedSafetyName = "skill-discovery-safety"
 // also key on this token (the --embedded-contract argument) so the second pair
 // installs instead of being collapsed as a duplicate.
 const safetyIdentity = "--embedded-contract " + embeddedSafetyName
+
+// embeddedDesignName is the engine-owned managed contract that propagates the
+// anti-generic-design guard (countering the model's default "Claude/SaaS
+// look" design bias). It rides the same propagate/gate-task machinery as the
+// minimalism and safety contracts but writes a DISTINCT registry block.
+//
+// Phase 3 (this constant + LabdrianDesignIdentity + HasLabdrianDesignHook)
+// only wires status/check recognition. mergeHooks/removeHooks installation of
+// the design hook pair is Phase 4, a later PR in the
+// anti-generic-design-runtime-wiring chain.
+const embeddedDesignName = "anti-generic-design"
 
 // mergeHooks inserts our hook entries if not already present. Returns true if
 // any change was made. It installs TWO pairs: the minimalism-contract pair and
