@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -250,9 +251,10 @@ func TestMerge_ExistingKeys_Preserved(t *testing.T) {
 
 // --- TC-SET-3: idempotent — running twice produces no duplicates ---
 //
-// We install TWO pairs (minimalism-contract + skill-discovery-safety), so each
-// hook key carries exactly 2 of our entries. Idempotency means a second Install
-// adds NO more — the count stays 2, not 4.
+// We install THREE pairs (minimalism-contract + skill-discovery-safety +
+// anti-generic-design — Phase 4 of the anti-generic-design-runtime-wiring
+// chain, PR-3), so each hook key carries exactly 3 of our entries.
+// Idempotency means a second Install adds NO more — the count stays 3, not 6.
 func TestMerge_Idempotent(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
@@ -266,18 +268,24 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
-		t.Errorf("UserPromptSubmit: expected exactly 2 entries (minimalism + safety), got %d", n)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
+		t.Errorf("UserPromptSubmit: expected exactly 3 entries (minimalism + safety + design), got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
-		t.Errorf("PreToolUse: expected exactly 2 entries (minimalism + safety), got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 3 {
+		t.Errorf("PreToolUse: expected exactly 3 entries (minimalism + safety + design), got %d", n)
 	}
-	// Both pairs must be distinguishable: exactly one safety entry per key.
+	// All three pairs must be distinguishable: exactly one entry per identity per key.
 	if n := countOurHooks(root, "UserPromptSubmit", "--embedded-contract skill-discovery-safety"); n != 1 {
 		t.Errorf("UserPromptSubmit: expected exactly 1 safety entry, got %d", n)
 	}
 	if n := countOurHooks(root, "PreToolUse", "--embedded-contract skill-discovery-safety"); n != 1 {
 		t.Errorf("PreToolUse: expected exactly 1 safety entry, got %d", n)
+	}
+	if n := countOurHooks(root, "UserPromptSubmit", settings.LabdrianDesignIdentity); n != 1 {
+		t.Errorf("UserPromptSubmit: expected exactly 1 design entry, got %d", n)
+	}
+	if n := countOurHooks(root, "PreToolUse", settings.LabdrianDesignIdentity); n != 1 {
+		t.Errorf("PreToolUse: expected exactly 1 design entry, got %d", n)
 	}
 }
 
@@ -386,7 +394,9 @@ func TestUninstall_RemovesOurHooks_LeavesRest(t *testing.T) {
 //
 // Regression guard for broad binary-only matching in removeHooks: third-party
 // hooks that invoke the same binary path but do not carry Labdrian ownership
-// tokens must be preserved.
+// tokens must be preserved. Extended (Phase 4, PR-3) to also cover the
+// anti-generic-design pair: removeHooks must strip it by identity exactly
+// like the minimalism and safety pairs, while third-party hooks survive.
 func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
@@ -396,6 +406,7 @@ func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *
 	thirdPartyCommandWithPath := testHookCommand + " --other-arg"
 	ownedMinimalCommand := testHookCommand + " --contract-file /foo/bar/minimalism-contract.md"
 	ownedSafetyCommand := testHookCommand + " --embedded-contract skill-discovery-safety"
+	ownedDesignCommand := testHookCommand + " " + settings.LabdrianDesignIdentity
 
 	initial := map[string]interface{}{
 		"hooks": map[string]interface{}{
@@ -408,6 +419,10 @@ func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *
 					"type":    "command",
 					"command": ownedMinimalCommand,
 				}}},
+				map[string]interface{}{"hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": ownedDesignCommand,
+				}}},
 			},
 			"PreToolUse": []interface{}{
 				map[string]interface{}{"matcher": "Agent", "hooks": []interface{}{map[string]interface{}{
@@ -417,6 +432,10 @@ func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *
 				map[string]interface{}{"matcher": "Agent", "hooks": []interface{}{map[string]interface{}{
 					"type":    "command",
 					"command": ownedSafetyCommand,
+				}}},
+				map[string]interface{}{"matcher": "Agent", "hooks": []interface{}{map[string]interface{}{
+					"type":    "command",
+					"command": ownedDesignCommand,
 				}}},
 			},
 		},
@@ -437,6 +456,12 @@ func TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity(t *
 	}
 	if countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianSafetyIdentity) != 0 {
 		t.Errorf("safety-owned PreToolUse hook should be removed")
+	}
+	if countLabdrianIdentityEntries(root, "UserPromptSubmit", testHookCommand, settings.LabdrianDesignIdentity) != 0 {
+		t.Errorf("design-owned UserPromptSubmit hook should be removed by identity")
+	}
+	if countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianDesignIdentity) != 0 {
+		t.Errorf("design-owned PreToolUse hook should be removed by identity")
 	}
 
 	if !containsInnerCommand(root, "UserPromptSubmit", thirdPartyCommand) {
@@ -647,8 +672,9 @@ func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 }
 
 // TC-SET-UNINSTALL-COUNT: after Install then Uninstall, both hook keys must
-// contain exactly zero of our entries. This asserts the dual-pair (minimalism +
-// safety) are fully removed — previously no count assertion existed.
+// contain exactly zero of our entries. This asserts the triple-pair
+// (minimalism + safety + design) are fully removed — previously no count
+// assertion existed.
 func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
@@ -658,13 +684,13 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 
-	// Precondition: both keys carry exactly 2 of our entries after Install.
+	// Precondition: both keys carry exactly 3 of our entries after Install.
 	before := parseJSON(t, path)
-	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 2 {
-		t.Fatalf("precondition: expected 2 UserPromptSubmit entries after Install, got %d", n)
+	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 3 {
+		t.Fatalf("precondition: expected 3 UserPromptSubmit entries after Install, got %d", n)
 	}
-	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 2 {
-		t.Fatalf("precondition: expected 2 PreToolUse entries after Install, got %d", n)
+	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 3 {
+		t.Fatalf("precondition: expected 3 PreToolUse entries after Install, got %d", n)
 	}
 
 	if err := m.Uninstall(); err != nil {
@@ -903,13 +929,13 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	// Two pairs install (minimalism + safety) → 2 entries per key; a second
-	// Install adds no more.
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
-		t.Errorf("Install×2: UserPromptSubmit should have exactly 2 entries; got %d", n)
+	// Three pairs install (minimalism + safety + design) → 3 entries per key;
+	// a second Install adds no more.
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
+		t.Errorf("Install×2: UserPromptSubmit should have exactly 3 entries; got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
-		t.Errorf("Install×2: PreToolUse should have exactly 2 entries; got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 3 {
+		t.Errorf("Install×2: PreToolUse should have exactly 3 entries; got %d", n)
 	}
 }
 
@@ -1000,5 +1026,117 @@ func TestHasSupportedClaudeLifecycleState_RequiresDesignPair(t *testing.T) {
 	allThree := buildRootWithPairs(testHookCommand, true, true, true)
 	if !settings.HasSupportedClaudeLifecycleState(allThree, testHookCommand) {
 		t.Error("HasSupportedClaudeLifecycleState: expected true when all three pairs exist")
+	}
+}
+
+// findEntry locates the single hook entry under hooks[hookKey] that carries
+// both hookCommand and identity, and fails the test unless exactly one such
+// entry exists. Used to extract entries for field-for-field comparison.
+func findEntry(t *testing.T, root map[string]interface{}, hookKey, hookCommand, identity string) map[string]interface{} {
+	t.Helper()
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatalf("findEntry: hooks map not found in root")
+	}
+	entries, ok := hooks[hookKey].([]interface{})
+	if !ok {
+		t.Fatalf("findEntry: %s is not an array", hookKey)
+	}
+	var found map[string]interface{}
+	count := 0
+	for _, e := range entries {
+		if entryContainsBinarySubstring(e, hookCommand) && entryContainsCommandIdentity(e, identity) {
+			em, ok := e.(map[string]interface{})
+			if !ok {
+				continue
+			}
+			found = em
+			count++
+		}
+	}
+	if count != 1 {
+		t.Fatalf("findEntry: expected exactly 1 matching entry for %s/%q, got %d", hookKey, identity, count)
+	}
+	return found
+}
+
+// TestInstall_UpgradesTwoPairsToThree_PreservesExisting covers the real-world
+// upgrade path (spec R-105, "Existing hook entries untouched" scenario;
+// design.md Migration/Rollout section): a machine already carries the
+// minimalism + safety hook pairs (the state PR-2's binary leaves after
+// running merge-settings), and PR-3/PR-4's rebuilt binary re-runs Install(),
+// which must add the design pair while leaving the pre-existing minimalism
+// and safety entries completely unchanged.
+func TestInstall_UpgradesTwoPairsToThree_PreservesExisting(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+
+	// Seed fixture: post-PR-2 state — minimalism + safety pairs only, no
+	// design pair yet.
+	seed := buildRootWithPairs(testHookCommand, true, true, false)
+	data, err := json.Marshal(seed)
+	if err != nil {
+		t.Fatalf("marshal seed fixture: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	// Capture the pre-existing entries verbatim before Install for later
+	// field-for-field comparison.
+	before := parseJSON(t, path)
+	origMinimalismPrompt := findEntry(t, before, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
+	origMinimalismPreTool := findEntry(t, before, "PreToolUse", testHookCommand, settings.LabdrianMinimalismIdentity)
+	origSafetyPrompt := findEntry(t, before, "UserPromptSubmit", testHookCommand, settings.LabdrianSafetyIdentity)
+	origSafetyPreTool := findEntry(t, before, "PreToolUse", testHookCommand, settings.LabdrianSafetyIdentity)
+
+	m := buildMerger(t, path)
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install on pre-existing minimalism+safety fixture: %v", err)
+	}
+
+	root := parseJSON(t, path)
+
+	// The design pair must now be present, exactly once, in both hook keys.
+	if n := countLabdrianIdentityEntries(root, "UserPromptSubmit", testHookCommand, settings.LabdrianDesignIdentity); n != 1 {
+		t.Errorf("expected exactly 1 design entry under UserPromptSubmit after upgrade install; got %d", n)
+	}
+	if n := countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianDesignIdentity); n != 1 {
+		t.Errorf("expected exactly 1 design entry under PreToolUse after upgrade install; got %d", n)
+	}
+
+	// Pre-existing minimalism and safety entries must be unchanged, field for
+	// field — not merely "still present".
+	newMinimalismPrompt := findEntry(t, root, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
+	newMinimalismPreTool := findEntry(t, root, "PreToolUse", testHookCommand, settings.LabdrianMinimalismIdentity)
+	newSafetyPrompt := findEntry(t, root, "UserPromptSubmit", testHookCommand, settings.LabdrianSafetyIdentity)
+	newSafetyPreTool := findEntry(t, root, "PreToolUse", testHookCommand, settings.LabdrianSafetyIdentity)
+
+	if !reflect.DeepEqual(origMinimalismPrompt, newMinimalismPrompt) {
+		t.Errorf("minimalism UserPromptSubmit entry changed after upgrade install:\nbefore: %v\nafter:  %v", origMinimalismPrompt, newMinimalismPrompt)
+	}
+	if !reflect.DeepEqual(origMinimalismPreTool, newMinimalismPreTool) {
+		t.Errorf("minimalism PreToolUse entry changed after upgrade install:\nbefore: %v\nafter:  %v", origMinimalismPreTool, newMinimalismPreTool)
+	}
+	if !reflect.DeepEqual(origSafetyPrompt, newSafetyPrompt) {
+		t.Errorf("safety UserPromptSubmit entry changed after upgrade install:\nbefore: %v\nafter:  %v", origSafetyPrompt, newSafetyPrompt)
+	}
+	if !reflect.DeepEqual(origSafetyPreTool, newSafetyPreTool) {
+		t.Errorf("safety PreToolUse entry changed after upgrade install:\nbefore: %v\nafter:  %v", origSafetyPreTool, newSafetyPreTool)
+	}
+
+	// Sanity: exactly one minimalism and one safety entry remain per key — the
+	// upgrade install must not duplicate the pre-existing pairs.
+	if n := countLabdrianIdentityEntries(root, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity); n != 1 {
+		t.Errorf("expected exactly 1 minimalism entry under UserPromptSubmit; got %d", n)
+	}
+	if n := countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianMinimalismIdentity); n != 1 {
+		t.Errorf("expected exactly 1 minimalism entry under PreToolUse; got %d", n)
+	}
+	if n := countLabdrianIdentityEntries(root, "UserPromptSubmit", testHookCommand, settings.LabdrianSafetyIdentity); n != 1 {
+		t.Errorf("expected exactly 1 safety entry under UserPromptSubmit; got %d", n)
+	}
+	if n := countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianSafetyIdentity); n != 1 {
+		t.Errorf("expected exactly 1 safety entry under PreToolUse; got %d", n)
 	}
 }

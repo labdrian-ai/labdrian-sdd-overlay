@@ -22,7 +22,7 @@ Chain strategy: feature-branch-chain
 |------|------|-----------|-------|
 | 1 | Marker pair + embedded asset + frontmatter test (Phase 1) | PR 1 | base = tracker branch; unused until Unit 2 wires it — COMPLETE |
 | 2 | `embeddedContract()` case + `checkRegistry`/`HasSupportedClaudeLifecycleState` recognition (Phases 2-3) | PR 2 | base = PR 1 branch; depends on Unit 1 — COMPLETE |
-| 3 | Merger hook pair + isolation/drift guards + standalone copy (Phases 4-5) | PR 3 | base = PR 2 branch; depends on Unit 2 |
+| 3 | Merger hook pair + isolation/drift guards + standalone copy (Phases 4-5) | PR 3 | base = PR 2 branch; depends on Unit 2 — COMPLETE |
 | 4 | Rebuild, `install-hooks`, live registry/status verification (Phase 6) | PR 4 | base = PR 3 branch; depends on Unit 3 |
 
 ## Phase 1: Foundation — marker pair + embedded asset (R-101, R-103, R-104) — COMPLETE (PR-1)
@@ -60,21 +60,23 @@ not install the design pair yet (that's Phase 4, PR-3). Fixed with a local
 those 3 tests stay isolated to the behavior they actually verify. No Phase 4 production code was
 touched. See new task 4.5 below to reconcile once Phase 4 lands.
 
-## Phase 4: Merger hook wiring (R-105)
+## Phase 4: Merger hook wiring (R-105) — COMPLETE (PR-3)
 
-- [ ] 4.1 RED: `settings_test.go` — `mergeHooks` installs a third UserPromptSubmit/PreToolUse pair (`gate-task`/`propagate --embedded-contract anti-generic-design`, same `command -v ... || true` shape), idempotent on re-run.
-- [ ] 4.2 GREEN: add `designIdentity`, `isDesignEntry`, `buildDesignUserPromptSubmitEntry`, `buildDesignPreToolUseEntry` to `engine/settings/settings.go` (reuse the `embeddedDesignName` const already added in Phase 3); wire the pair into `mergeHooks`.
-- [ ] 4.3 RED: `settings_test.go` — `removeHooks` strips the design pair by identity, leaves minimalism+safety entries unchanged.
-- [ ] 4.4 GREEN: extend `removeHooks` to also match `isDesignEntry`.
-- [ ] 4.5 (new, discovered during PR-2 apply) Reconcile the `injectDesignHookPair` test-fixture workaround in `engine/cmd/runtime_test.go` and `engine/runtime/claude_test.go`: once `mergeHooks` installs the real pair, remove the hand-patch calls from the 3 tests listed above so they exercise the real `Install()` path end-to-end again.
+- [x] 4.1 RED: `settings_test.go` — `mergeHooks` installs a third UserPromptSubmit/PreToolUse pair (`gate-task`/`propagate --embedded-contract anti-generic-design`, same `command -v ... || true` shape), idempotent on re-run. Implemented by extending `TestMerge_Idempotent` with design-pair assertions (count 2→3, +1 design entry per key). Confirmed RED: got 2 entries, 0 design entries.
+- [x] 4.2 GREEN: added `designIdentity`, `isDesignEntry`, `buildDesignUserPromptSubmitEntry`, `buildDesignPreToolUseEntry` to `engine/settings/settings.go` (reusing the `embeddedDesignName` const already added in Phase 3); wired the pair into `mergeHooks`.
+- [x] 4.3 RED: `settings_test.go` — `removeHooks` strips the design pair by identity, leaves third-party entries unchanged. Implemented by extending `TestUninstall_PreservesSameBinaryThirdPartyHooksWithoutLabdrianIdentity` with an `ownedDesignCommand` fixture entry + assertions. Confirmed RED: design entries were not removed (pre-4.4 `removeHooks` did not check `isDesignEntry`).
+- [x] 4.4 GREEN: extended `removeHooks` to also match `isDesignEntry`.
+- [x] 4.5 Reconciled the `injectDesignHookPair` test-fixture workaround: removed the helper function and its call sites from `engine/cmd/runtime_test.go` (`TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing`) and `engine/runtime/claude_test.go` (`TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus`, `TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus`) — all three now exercise the real `Merger.Install()`/`Update()` path end-to-end; `claude_test.go`'s install test additionally asserts the design hook is present via the real install (not just minimalism+safety). Removed the now-unused `settings` import from `cmd/runtime_test.go`.
 
-## Phase 5: Isolation, drift guard, R-106 verification
+**Cross-cutting fallout of 4.2 (documented, not silent):** wiring the design pair into `mergeHooks` raised the per-key owned-hook count from 2 to 3, breaking 3 pre-existing hardcoded-count tests: `TestMerge_Idempotent`, `TestUninstall_CountIsZeroAfterInstall` (`engine/settings/settings_test.go`), `TestSchema_InstallTwice_Idempotent` (`engine/settings/settings_test.go`), and `TestRunMergeSettings_Idempotent` (`engine/cmd/main_test.go`). All four updated from `!= 2` to `!= 3` with updated comments — this is the expected GREEN-phase fallout of a real pair-count change, not scope creep.
 
-- [ ] 5.1 RED/lock: `propagator_test.go` — propagating `anti-generic-design` after minimalism+safety already exist leaves both pre-existing blocks byte-identical; re-propagate is idempotent (R-101 scenarios).
-- [ ] 5.2 Create `skills/_shared/anti-generic-design.md` — deployed copy, byte-identical to `engine/assets/anti-generic-design.md`.
-- [ ] 5.3 RED: add a Go test (e.g. `engine/assets/assets_test.go`) asserting `assets.AntiGenericDesign` and the file contents of `skills/_shared/anti-generic-design.md` are byte-identical — drift guard for the two-copy design risk.
-- [ ] 5.4 GREEN: reconcile 5.2 against 5.3 until the guard passes.
-- [ ] 5.5 Verify (no code change): `skills/anti-generic-design/SKILL.md` is byte-identical to its pre-change git ref (R-106).
+## Phase 5: Isolation, drift guard, R-106 verification — COMPLETE (PR-3)
+
+- [x] 5.1 RED/lock: `propagator_test.go` — added `TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency`: propagating `anti-generic-design` into a registry that already has correctly-scoped minimalism+safety blocks leaves both pre-existing blocks byte-identical, adds a third distinct block, and re-propagate is idempotent (byte-identical output, `changed=false`). This is a LOCK test, not a true RED gate: `propagator.Propagate()` was already written generically in Phase 1-3 to support arbitrary `Config` marker pairs, so the test passed immediately on first run — it characterizes and locks in already-correct behavior rather than driving new production code.
+- [x] 5.2 Created `skills/_shared/anti-generic-design.md` — deployed copy, byte-identical to `engine/assets/anti-generic-design.md` (verified via `diff`, zero output).
+- [x] 5.3 RED: added `TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset` in `engine/assets/assets_test.go` asserting `assets.AntiGenericDesign` and the file contents of `skills/_shared/anti-generic-design.md` are byte-identical — drift guard for the two-copy design risk. Confirmed RED before 5.2: `open .../skills/_shared/anti-generic-design.md: no such file or directory`.
+- [x] 5.4 GREEN: 5.2's `cp` reconciled the guard; confirmed passing.
+- [x] 5.5 Verified (no code change): `git log --oneline -- skills/anti-generic-design/SKILL.md` shows exactly one commit (its creation, `64165e5`); `git diff --stat 64165e5 -- skills/anti-generic-design/SKILL.md` and `git status --short skills/anti-generic-design/` are both empty — the file is untouched by this change (R-106).
 
 ## Phase 6: Build, install, live verification
 
