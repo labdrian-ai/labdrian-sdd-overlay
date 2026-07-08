@@ -37,6 +37,15 @@ const (
 	DiscoverySafetyEndMarker   = "<!-- END: skill-discovery-safety-scope -->"
 )
 
+// Markers wrapping the scoped anti-generic-design row. A DISTINCT marker pair
+// is mandatory: reusing either the minimalism-contract or skill-discovery-safety
+// pair would make Propagate overwrite that contract's block instead of the two
+// coexisting (see package doc).
+const (
+	AntiGenericDesignBeginMarker = "<!-- BEGIN: anti-generic-design-scope (auto-generated) -->"
+	AntiGenericDesignEndMarker   = "<!-- END: anti-generic-design-scope -->"
+)
+
 // defaultRowLabel is the leading table-cell label used when Config.RowLabel is
 // empty, preserving the original minimalism-contract behavior.
 const defaultRowLabel = "minimalism-contract"

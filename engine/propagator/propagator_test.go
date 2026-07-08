@@ -714,3 +714,37 @@ func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
 		t.Error("content under '## Other Section' was removed or modified")
 	}
 }
+
+// TestAntiGenericDesignMarkersAreDistinct: the third managed contract
+// (anti-generic-design) MUST own its own BEGIN/END marker pair, distinct from
+// both the minimalism-contract defaults and the skill-discovery-safety pair.
+// Reusing any existing marker pair would make Propagate overwrite a foreign
+// contract's block instead of coexisting with it (see package doc).
+func TestAntiGenericDesignMarkersAreDistinct(t *testing.T) {
+	if propagator.AntiGenericDesignBeginMarker == "" {
+		t.Fatal("AntiGenericDesignBeginMarker must not be empty")
+	}
+	if propagator.AntiGenericDesignEndMarker == "" {
+		t.Fatal("AntiGenericDesignEndMarker must not be empty")
+	}
+
+	pairs := map[string]string{
+		"minimalism-contract (Begin)":    propagator.BeginMarker,
+		"minimalism-contract (End)":      propagator.EndMarker,
+		"skill-discovery-safety (Begin)": propagator.DiscoverySafetyBeginMarker,
+		"skill-discovery-safety (End)":   propagator.DiscoverySafetyEndMarker,
+	}
+
+	for label, marker := range pairs {
+		if propagator.AntiGenericDesignBeginMarker == marker {
+			t.Errorf("AntiGenericDesignBeginMarker collides with %s marker %q", label, marker)
+		}
+		if propagator.AntiGenericDesignEndMarker == marker {
+			t.Errorf("AntiGenericDesignEndMarker collides with %s marker %q", label, marker)
+		}
+	}
+
+	if propagator.AntiGenericDesignBeginMarker == propagator.AntiGenericDesignEndMarker {
+		t.Error("AntiGenericDesignBeginMarker and AntiGenericDesignEndMarker must not be equal")
+	}
+}
