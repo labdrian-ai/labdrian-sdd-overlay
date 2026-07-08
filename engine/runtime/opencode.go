@@ -9,13 +9,15 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 )
 
 const openCodePluginFile = "labdrian-runtime-parity.js"
 const openCodeConfigFile = "labdrian-runtime-parity.json"
 const openCodeActiveFile = "labdrian-runtime-parity.active.json"
 
-const OpenCodePluginVersion = "2026-06-22-runtime-parity-3"
+const OpenCodePluginVersion = "2026-07-08-runtime-parity-4"
 
 //go:embed labdrian-runtime-parity-plugin.mjs
 var openCodePluginSource string
@@ -38,10 +40,161 @@ type openCodeConfig struct {
 }
 
 type openCodePromptConfig struct {
-	ContractPath   string   `json:"contract_path"`
-	IncludedPhases []string `json:"included_phases"`
-	ExcludedPhases []string `json:"excluded_phases"`
-	InjectionPoint string   `json:"injection_point"`
+	ContractPath           string                   `json:"contract_path"`
+	IncludedPhases         []string                 `json:"included_phases"`
+	ExcludedPhases         []string                 `json:"excluded_phases"`
+	InjectionPoint         string                   `json:"injection_point"`
+	LanguageContext        []string                 `json:"language_context,omitempty"`
+	ActivationContext      []string                 `json:"activation_context,omitempty"`
+	ContextOperator        *string                  `json:"context_operator,omitempty"`
+	ContextOperatorPresent bool                     `json:"-"`
+	Contracts              []openCodeContractConfig `json:"contracts,omitempty"`
+}
+
+type openCodeContractConfig struct {
+	ContractPath           string   `json:"contract_path"`
+	IncludedPhases         []string `json:"included_phases"`
+	ExcludedPhases         []string `json:"excluded_phases"`
+	InjectionPoint         string   `json:"injection_point"`
+	LanguageContext        []string `json:"language_context,omitempty"`
+	ActivationContext      []string `json:"activation_context,omitempty"`
+	ContextOperator        *string  `json:"context_operator,omitempty"`
+	ContextOperatorPresent bool     `json:"-"`
+}
+
+func (c openCodePromptConfig) MarshalJSON() ([]byte, error) {
+	contextOperator, err := marshalContextOperator(c.ContextOperator, c.ContextOperatorPresent)
+	if err != nil {
+		return nil, err
+	}
+	type promptConfigJSON struct {
+		ContractPath      string                   `json:"contract_path"`
+		IncludedPhases    []string                 `json:"included_phases"`
+		ExcludedPhases    []string                 `json:"excluded_phases"`
+		InjectionPoint    string                   `json:"injection_point"`
+		LanguageContext   []string                 `json:"language_context,omitempty"`
+		ActivationContext []string                 `json:"activation_context,omitempty"`
+		ContextOperator   json.RawMessage          `json:"context_operator,omitempty"`
+		Contracts         []openCodeContractConfig `json:"contracts,omitempty"`
+	}
+	return json.Marshal(promptConfigJSON{
+		ContractPath:      c.ContractPath,
+		IncludedPhases:    c.IncludedPhases,
+		ExcludedPhases:    c.ExcludedPhases,
+		InjectionPoint:    c.InjectionPoint,
+		LanguageContext:   c.LanguageContext,
+		ActivationContext: c.ActivationContext,
+		ContextOperator:   contextOperator,
+		Contracts:         c.Contracts,
+	})
+}
+
+func (c *openCodePromptConfig) UnmarshalJSON(data []byte) error {
+	type promptConfigJSON struct {
+		ContractPath      string                   `json:"contract_path"`
+		IncludedPhases    []string                 `json:"included_phases"`
+		ExcludedPhases    []string                 `json:"excluded_phases"`
+		InjectionPoint    string                   `json:"injection_point"`
+		LanguageContext   []string                 `json:"language_context,omitempty"`
+		ActivationContext []string                 `json:"activation_context,omitempty"`
+		ContextOperator   *string                  `json:"context_operator,omitempty"`
+		Contracts         []openCodeContractConfig `json:"contracts,omitempty"`
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	var decoded promptConfigJSON
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*c = openCodePromptConfig{
+		ContractPath:           decoded.ContractPath,
+		IncludedPhases:         decoded.IncludedPhases,
+		ExcludedPhases:         decoded.ExcludedPhases,
+		InjectionPoint:         decoded.InjectionPoint,
+		LanguageContext:        decoded.LanguageContext,
+		ActivationContext:      decoded.ActivationContext,
+		ContextOperator:        decoded.ContextOperator,
+		ContextOperatorPresent: hasJSONKey(raw, "context_operator"),
+		Contracts:              decoded.Contracts,
+	}
+	return nil
+}
+
+func (c openCodeContractConfig) MarshalJSON() ([]byte, error) {
+	contextOperator, err := marshalContextOperator(c.ContextOperator, c.ContextOperatorPresent)
+	if err != nil {
+		return nil, err
+	}
+	type contractConfigJSON struct {
+		ContractPath      string          `json:"contract_path"`
+		IncludedPhases    []string        `json:"included_phases"`
+		ExcludedPhases    []string        `json:"excluded_phases"`
+		InjectionPoint    string          `json:"injection_point"`
+		LanguageContext   []string        `json:"language_context,omitempty"`
+		ActivationContext []string        `json:"activation_context,omitempty"`
+		ContextOperator   json.RawMessage `json:"context_operator,omitempty"`
+	}
+	return json.Marshal(contractConfigJSON{
+		ContractPath:      c.ContractPath,
+		IncludedPhases:    c.IncludedPhases,
+		ExcludedPhases:    c.ExcludedPhases,
+		InjectionPoint:    c.InjectionPoint,
+		LanguageContext:   c.LanguageContext,
+		ActivationContext: c.ActivationContext,
+		ContextOperator:   contextOperator,
+	})
+}
+
+func (c *openCodeContractConfig) UnmarshalJSON(data []byte) error {
+	type contractConfigJSON struct {
+		ContractPath      string   `json:"contract_path"`
+		IncludedPhases    []string `json:"included_phases"`
+		ExcludedPhases    []string `json:"excluded_phases"`
+		InjectionPoint    string   `json:"injection_point"`
+		LanguageContext   []string `json:"language_context,omitempty"`
+		ActivationContext []string `json:"activation_context,omitempty"`
+		ContextOperator   *string  `json:"context_operator,omitempty"`
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	var decoded contractConfigJSON
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+	*c = openCodeContractConfig{
+		ContractPath:           decoded.ContractPath,
+		IncludedPhases:         decoded.IncludedPhases,
+		ExcludedPhases:         decoded.ExcludedPhases,
+		InjectionPoint:         decoded.InjectionPoint,
+		LanguageContext:        decoded.LanguageContext,
+		ActivationContext:      decoded.ActivationContext,
+		ContextOperator:        decoded.ContextOperator,
+		ContextOperatorPresent: hasJSONKey(raw, "context_operator"),
+	}
+	return nil
+}
+
+func marshalContextOperator(value *string, present bool) (json.RawMessage, error) {
+	if !present {
+		return nil, nil
+	}
+	if value == nil {
+		return json.RawMessage("null"), nil
+	}
+	encoded, err := json.Marshal(*value)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(encoded), nil
+}
+
+func hasJSONKey(raw map[string]json.RawMessage, key string) bool {
+	_, ok := raw[key]
+	return ok
 }
 
 type openCodeActiveMarker struct {
@@ -316,12 +469,99 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 	if err != nil {
 		return openCodePromptConfig{}, err
 	}
-	return openCodePromptConfig{
+	minimalism := openCodeContractConfig{
 		ContractPath:   filepath.ToSlash(contractPath),
 		IncludedPhases: append([]string(nil), phases.AppliesTo...),
 		ExcludedPhases: append([]string(nil), phases.Excluded...),
 		InjectionPoint: injectionHeader(phases),
+	}
+	contracts := []openCodeContractConfig{minimalism}
+	safety, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "skill-discovery-safety.md"), assets.SkillDiscoverySafety)
+	if err != nil {
+		return openCodePromptConfig{}, err
+	}
+	contracts = append(contracts, safety)
+	ooPath := filepath.Join("skills", "_shared", "oo-quality-contract.md")
+	ooContent, err := os.ReadFile(filepath.Join(root, ooPath))
+	if err != nil {
+		if !os.IsNotExist(err) {
+			return openCodePromptConfig{}, err
+		}
+	} else {
+		oo, err := openCodeContractFromContent(ooPath, string(ooContent))
+		if err == nil {
+			contracts = append(contracts, oo)
+		}
+	}
+	return openCodePromptConfig{
+		ContractPath:   minimalism.ContractPath,
+		IncludedPhases: minimalism.IncludedPhases,
+		ExcludedPhases: minimalism.ExcludedPhases,
+		InjectionPoint: minimalism.InjectionPoint,
+		Contracts:      contracts,
 	}, nil
+}
+
+func openCodeContractFromContent(path, content string) (openCodeContractConfig, error) {
+	phases, err := LoadContractPhases(content)
+	if err != nil {
+		return openCodeContractConfig{}, err
+	}
+	languages, activations, err := parseOpenCodeContext(content)
+	if err != nil {
+		return openCodeContractConfig{}, err
+	}
+	return openCodeContractConfig{
+		ContractPath:      filepath.ToSlash(path),
+		IncludedPhases:    append([]string(nil), phases.AppliesTo...),
+		ExcludedPhases:    append([]string(nil), phases.Excluded...),
+		InjectionPoint:    injectionHeader(phases),
+		LanguageContext:   languages,
+		ActivationContext: activations,
+		ContextOperator:   nil,
+	}, nil
+}
+
+func parseOpenCodeContext(content string) (languages, activations []string, err error) {
+	parts := strings.SplitN(content, "---", 3)
+	if len(parts) < 3 {
+		return nil, nil, nil
+	}
+	for _, line := range strings.Split(parts[1], "\n") {
+		line = strings.TrimSpace(line)
+		switch {
+		case strings.HasPrefix(line, "language_context:"):
+			languages, err = parseOpenCodeInlineList(strings.TrimPrefix(line, "language_context:"))
+			if err != nil {
+				return nil, nil, fmt.Errorf("malformed language_context")
+			}
+		case strings.HasPrefix(line, "activation_context:"):
+			activations, err = parseOpenCodeInlineList(strings.TrimPrefix(line, "activation_context:"))
+			if err != nil {
+				return nil, nil, fmt.Errorf("malformed activation_context")
+			}
+		case strings.HasPrefix(line, "context_operator:"):
+			return nil, nil, fmt.Errorf("unsupported context_operator")
+		}
+	}
+	return languages, activations, nil
+}
+
+func parseOpenCodeInlineList(raw string) ([]string, error) {
+	raw = strings.TrimSpace(raw)
+	if !strings.HasPrefix(raw, "[") || !strings.HasSuffix(raw, "]") {
+		return nil, fmt.Errorf("strict inline list required")
+	}
+	raw = strings.TrimPrefix(raw, "[")
+	raw = strings.TrimSuffix(raw, "]")
+	var out []string
+	for _, item := range strings.Split(raw, ",") {
+		item = strings.Trim(strings.TrimSpace(item), `"'`)
+		if item != "" {
+			out = append(out, item)
+		}
+	}
+	return out, nil
 }
 
 type promptConfigMismatchError struct {
@@ -362,7 +602,59 @@ func validatePromptConfig(got, want openCodePromptConfig) error {
 	if got.InjectionPoint != want.InjectionPoint {
 		return fmt.Errorf("prompt_config.injection_point %q is not current %q", got.InjectionPoint, want.InjectionPoint)
 	}
+	if !equalStringSlices(got.LanguageContext, want.LanguageContext) {
+		return fmt.Errorf("prompt_config.language_context %v is not current %v", got.LanguageContext, want.LanguageContext)
+	}
+	if !equalStringSlices(got.ActivationContext, want.ActivationContext) {
+		return fmt.Errorf("prompt_config.activation_context %v is not current %v", got.ActivationContext, want.ActivationContext)
+	}
+	if !equalOptionalString(got.ContextOperator, got.ContextOperatorPresent, want.ContextOperator, want.ContextOperatorPresent) {
+		return fmt.Errorf("prompt_config.context_operator %s is not current %s", formatOptionalString(got.ContextOperator, got.ContextOperatorPresent), formatOptionalString(want.ContextOperator, want.ContextOperatorPresent))
+	}
+	if !equalContractConfigs(got.Contracts, want.Contracts) {
+		return fmt.Errorf("prompt_config.contracts is not current")
+	}
 	return nil
+}
+
+func equalContractConfigs(a, b []openCodeContractConfig) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i].ContractPath != b[i].ContractPath || a[i].InjectionPoint != b[i].InjectionPoint ||
+			!equalStringSlices(a[i].IncludedPhases, b[i].IncludedPhases) ||
+			!equalStringSlices(a[i].ExcludedPhases, b[i].ExcludedPhases) ||
+			!equalStringSlices(a[i].LanguageContext, b[i].LanguageContext) ||
+			!equalStringSlices(a[i].ActivationContext, b[i].ActivationContext) ||
+			!equalOptionalString(a[i].ContextOperator, a[i].ContextOperatorPresent, b[i].ContextOperator, b[i].ContextOperatorPresent) {
+			return false
+		}
+	}
+	return true
+}
+
+func equalOptionalString(a *string, aPresent bool, b *string, bPresent bool) bool {
+	if aPresent != bPresent {
+		return false
+	}
+	if !aPresent {
+		return true
+	}
+	if a == nil || b == nil {
+		return a == nil && b == nil
+	}
+	return *a == *b
+}
+
+func formatOptionalString(value *string, present bool) string {
+	if !present {
+		return "<absent>"
+	}
+	if value == nil {
+		return "null"
+	}
+	return fmt.Sprintf("%q", *value)
 }
 
 func equalStringSlices(a, b []string) bool {
