@@ -9,8 +9,11 @@ the output.
 [ ] no violet→blue (or indigo→purple) gradient on background/hero/CTA      → PASS
 [ ] cards are not styled by a generic soft box-shadow alone                 → PASS
 [ ] layout is not a flat, even 3-column grid                                → PASS
-[ ] palette is near-monochrome + ≤1 warm accent (see palette-typography.md) → PASS
+[ ] accent usage is scoped/deliberate, matching an observed range in palette-typography.md
+    (zero to two, functional not decorative — the max observed in the capture) — not
+    unscoped decorative color sprawl → PASS
 [ ] at least one editorial/asymmetric signal present                        → PASS
+[ ] token set is NOT >80% traceable to a single cited anchor                → PASS
 ```
 
 Any unchecked (failing) line means the design should be revised before it ships. This
