@@ -47,6 +47,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -472,7 +473,123 @@ func runPropagate(args []string) {
 		}
 		defer release()
 	}
-	runPropagateCore(args, os.Stdout, os.Stderr, os.ReadFile, atomicWriteFile, os.Exit)
+	runPropagateVerified(args, os.Stdout, os.Stderr, os.ReadFile, atomicWriteFile, os.Exit)
+}
+
+// maxPropagateWriteAttempts bounds the read-decide-write-verify retry loop in
+// runPropagateVerified. It exists to defend against a foreign, uncoordinated
+// writer (e.g. "gentle-ai skill-registry refresh", a completely separate
+// binary with no knowledge of this project's marker-block convention and no
+// participation in <registry>.lock) clobbering the registry between our
+// atomic write and our verification read. A handful of attempts is enough to
+// win a race against a single competing write; it is intentionally bounded
+// (not infinite) so a registry that is being rewritten in a tight loop by
+// something else fails LOUD instead of spinning forever.
+const maxPropagateWriteAttempts = 3
+
+// runPropagateVerified wraps runPropagateCore with a bounded write-then-verify
+// retry loop. runPropagateCore trusts a successful writeFile call
+// unconditionally: once writeFile returns nil it reports success and exits,
+// with no confirmation that the write actually persisted. That trust is safe
+// against OTHER "engine propagate" invocations (serialized via the
+// <registry>.lock flock acquired in runPropagate below), but NOT against any
+// other process that writes the same file outside that lock — such as the
+// separate "gentle-ai skill-registry refresh" binary, which regenerates
+// .atl/skill-registry.md wholesale and has no reason to know about, respect,
+// or even see our lock file.
+//
+// After each write, runPropagateVerified re-reads the registry and confirms
+// the bytes on disk are byte-identical to what was just written. If not — a
+// foreign writer won the race — it retries the ENTIRE read-decide-write
+// cycle (not just the write) from scratch, because the correct output may
+// itself have changed (e.g. the foreign tool may have removed rows this
+// propagator needs to coexist with). This directly implements re-verifying
+// the actual current on-disk content immediately before trusting any
+// decision, rather than trusting a single point-in-time read.
+//
+// A genuine no-op (registry already correct) never enters the retry loop: no
+// write means nothing to verify, so it costs exactly the one read
+// runPropagateCore already performs — no behavior change for the common case.
+func runPropagateVerified(
+	args []string,
+	stdout io.Writer,
+	stderr io.Writer,
+	readFile readFileFn,
+	writeFile writeFileFn,
+	exit func(int),
+) {
+	registryPath := registryPathFromArgs(args)
+
+	for attempt := 1; attempt <= maxPropagateWriteAttempts; attempt++ {
+		var outBuf, errBuf bytes.Buffer
+		var written []byte
+		wrote := false
+		coreExit := -1
+
+		verifyingWrite := func(path string, data []byte, perm os.FileMode) error {
+			if err := writeFile(path, data, perm); err != nil {
+				return err
+			}
+			written = append([]byte(nil), data...)
+			wrote = true
+			return nil
+		}
+		coreExitFn := func(code int) { coreExit = code }
+
+		runPropagateCore(args, &outBuf, &errBuf, readFile, verifyingWrite, coreExitFn)
+
+		if coreExit != -1 {
+			// Hard failure (bad args, unreadable contract/registry, broken
+			// frontmatter, or a real write I/O error) has nothing to do with
+			// an external write race — forward it as-is, no retry.
+			io.Copy(stdout, &outBuf) //nolint:errcheck
+			io.Copy(stderr, &errBuf) //nolint:errcheck
+			exit(coreExit)
+			return
+		}
+
+		if !wrote {
+			// No-op (already correct) or registry absent — nothing was
+			// written, so there is nothing a foreign writer could have
+			// clobbered. Forward the result unchanged.
+			io.Copy(stdout, &outBuf) //nolint:errcheck
+			io.Copy(stderr, &errBuf) //nolint:errcheck
+			return
+		}
+
+		// Re-verify: read the registry back and confirm our write actually
+		// stuck, byte-for-byte. A foreign writer landing between our atomic
+		// rename and this read is exactly the race this loop defends against.
+		// A non-nil readErr here is a DIFFERENT failure mode (permission
+		// error, transient I/O error) than a byte mismatch, and must not be
+		// reported to the operator as if a foreign writer were clobbering
+		// the file — the two are distinguished below.
+		onDisk, readErr := readFile(registryPath)
+		if readErr == nil && bytes.Equal(onDisk, written) {
+			io.Copy(stdout, &outBuf) //nolint:errcheck
+			io.Copy(stderr, &errBuf) //nolint:errcheck
+			return
+		}
+
+		if attempt == maxPropagateWriteAttempts {
+			if readErr != nil {
+				fmt.Fprintf(stderr,
+					"error: registry write to %s could not be verified after %d attempts — "+
+						"the verification read itself failed: %v\n",
+					registryPath, maxPropagateWriteAttempts, readErr)
+			} else {
+				fmt.Fprintf(stderr,
+					"error: registry write to %s did not persist after %d attempts — "+
+						"a concurrent external writer (unrelated to engine propagate) "+
+						"appears to be clobbering it\n",
+					registryPath, maxPropagateWriteAttempts)
+			}
+			exit(1)
+			return
+		}
+		// Otherwise: loop and retry the whole read-decide-write-verify cycle
+		// against whatever is on disk now.
+	}
 }
 
 // runPropagateCore is the testable core of the propagate subcommand. It accepts

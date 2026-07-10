@@ -2202,3 +2202,267 @@ func TestPropagate_ConcurrentProcesses_RegistryNeverGutted(t *testing.T) {
 		t.Errorf("skill-discovery-safety scoped block missing:\n%s", content)
 	}
 }
+
+// ---- runPropagateVerified tests (write-then-verify-then-retry) -------------
+//
+// Bug being fixed: a separate, uncoordinated binary (e.g. "gentle-ai
+// skill-registry refresh") can regenerate .atl/skill-registry.md wholesale at
+// any moment, including the instant right after our own atomic write lands.
+// runPropagateCore trusts its own write unconditionally: once writeFile
+// returns nil, it reports "scoped row inserted/updated" and exits — with no
+// verification that the write actually stuck. If a foreign writer clobbers
+// the file microseconds later, propagate's success report is a LIE and the
+// registry is left wiped until some future invocation happens to catch it.
+//
+// runPropagateVerified wraps runPropagateCore with a bounded read-back
+// verification + retry loop: after a successful write, it re-reads the
+// registry and confirms the bytes on disk are exactly what was written. If
+// not (a foreign writer won the race), it retries the whole
+// read-decide-write cycle instead of reporting false success.
+
+// TestRunPropagateVerified_RetriesWhenWriteClobberedByForeignWriter models a
+// single shared "disk state" mutated by both sides, exactly like a real
+// filesystem: our writeFile sets it, and — for the first `foreignWinsRemaining`
+// writes only — a foreign, uncoordinated writer (like "gentle-ai
+// skill-registry refresh") immediately clobbers it back to the unscoped state
+// before our verification read observes it. Once the foreign writer stops
+// interfering, our next write is expected to stick and be observed as such.
+func TestRunPropagateVerified_RetriesWhenWriteClobberedByForeignWriter(t *testing.T) {
+	const registryPath = "/fake/registry.md"
+	const contractFilePath = "/fake/contract.md"
+
+	diskState := []byte(minimalRegistry)
+	foreignWinsRemaining := 1
+	var writeCount int
+
+	readFile := func(path string) ([]byte, error) {
+		if path == contractFilePath {
+			return []byte(testContractContent), nil
+		}
+		return diskState, nil
+	}
+	writeFile := func(_ string, data []byte, _ os.FileMode) error {
+		writeCount++
+		diskState = data
+		if foreignWinsRemaining > 0 {
+			// The foreign writer lands microseconds after our atomic rename
+			// and clobbers the file back to its unscoped state, before our
+			// verification read observes it.
+			foreignWinsRemaining--
+			diskState = []byte(minimalRegistry)
+		}
+		return nil
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPropagateVerified(
+		[]string{
+			"--registry", registryPath,
+			"--contract-file", contractFilePath,
+			"--contract-path", "skills/_shared/minimalism-contract.md",
+		},
+		&outBuf, &errBuf, readFile, writeFile, func(c int) { exitCode = c },
+	)
+
+	if exitCode != -1 {
+		t.Fatalf("expected eventual success (no exit call) once the foreign clobbering stops, got exit=%d stderr=%s", exitCode, errBuf.String())
+	}
+	if writeCount < 2 {
+		t.Errorf("expected propagate to retry the write after detecting the foreign clobber via read-back verification; write count = %d", writeCount)
+	}
+	if !strings.Contains(string(diskState), "<!-- BEGIN: minimalism-contract-scope (auto-generated) -->") {
+		t.Errorf("final persisted write must contain the scoped block; got:\n%s", string(diskState))
+	}
+	if !strings.Contains(outBuf.String(), "inserted/updated") {
+		t.Errorf("stdout should report success once the write is verified to have stuck; got: %q", outBuf.String())
+	}
+}
+
+// TestRunPropagateVerified_GivesUpAfterMaxAttempts proves the retry loop is
+// BOUNDED: if a foreign writer wins every single round (persistent, not a
+// one-off race), propagate must eventually fail LOUD (exit 1) with a
+// diagnostic message rather than retrying forever or silently reporting
+// success for a write that never once stuck.
+func TestRunPropagateVerified_GivesUpAfterMaxAttempts(t *testing.T) {
+	const registryPath = "/fake/registry.md"
+	const contractFilePath = "/fake/contract.md"
+
+	var writeCount int
+	readFile := func(path string) ([]byte, error) {
+		if path == contractFilePath {
+			return []byte(testContractContent), nil
+		}
+		// The foreign writer ALWAYS wins: every read (initial and every
+		// verification) observes the unscoped content, never our write.
+		return []byte(minimalRegistry), nil
+	}
+	writeFile := func(_ string, _ []byte, _ os.FileMode) error {
+		writeCount++
+		return nil
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPropagateVerified(
+		[]string{
+			"--registry", registryPath,
+			"--contract-file", contractFilePath,
+			"--contract-path", "skills/_shared/minimalism-contract.md",
+		},
+		&outBuf, &errBuf, readFile, writeFile, func(c int) { exitCode = c },
+	)
+
+	if exitCode != 1 {
+		t.Errorf("expected exit 1 after exhausting retries against a persistent foreign clobber, got exit=%d", exitCode)
+	}
+	if errBuf.Len() == 0 {
+		t.Error("stderr diagnostic must not be empty when giving up after max attempts")
+	}
+	if writeCount != maxPropagateWriteAttempts {
+		t.Errorf("expected exactly maxPropagateWriteAttempts (%d) write attempts before giving up, got %d", maxPropagateWriteAttempts, writeCount)
+	}
+}
+
+// TestRunPropagateVerified_VerificationReadErrorReportedDistinctly proves that
+// when the post-write verification read itself fails (e.g. permission error,
+// transient I/O error) — as opposed to succeeding but observing different
+// bytes — the final diagnostic does not misreport it as a foreign writer
+// clobbering the file. The two failure modes have different causes and must
+// not share a message that blames an external writer for a plain read error.
+func TestRunPropagateVerified_VerificationReadErrorReportedDistinctly(t *testing.T) {
+	const registryPath = "/fake/registry.md"
+	const contractFilePath = "/fake/contract.md"
+
+	readErr := errors.New("permission denied")
+	registryReadCount := 0
+	readFile := func(path string) ([]byte, error) {
+		if path == contractFilePath {
+			return []byte(testContractContent), nil
+		}
+		registryReadCount++
+		// Odd calls are runPropagateCore's own decisive read (must succeed
+		// so it proceeds to write on every attempt); even calls are the
+		// wrapper's post-write verification read (which fails every time).
+		if registryReadCount%2 == 1 {
+			return []byte(minimalRegistry), nil
+		}
+		return nil, readErr
+	}
+	writeFile := func(_ string, _ []byte, _ os.FileMode) error {
+		return nil
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPropagateVerified(
+		[]string{
+			"--registry", registryPath,
+			"--contract-file", contractFilePath,
+			"--contract-path", "skills/_shared/minimalism-contract.md",
+		},
+		&outBuf, &errBuf, readFile, writeFile, func(c int) { exitCode = c },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("expected exit 1 when the verification read keeps failing, got exit=%d", exitCode)
+	}
+	if strings.Contains(errBuf.String(), "concurrent external writer") {
+		t.Errorf("a verification READ error must not be reported as a foreign-writer clobber; got: %q", errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "verification read itself failed") {
+		t.Errorf("stderr should distinctly report that the verification read failed; got: %q", errBuf.String())
+	}
+}
+
+// TestRunPropagateVerified_NoOpDoesNotRetryOrWrite proves the verification
+// layer never write on a genuine no-op: when the registry already contains
+// the correct scoped block, runPropagateVerified must behave exactly like
+// runPropagateCore's no-op path — zero writes, zero verification reads
+// beyond the single decisive read, and no retry loop entered.
+func TestRunPropagateVerified_NoOpDoesNotRetryOrWrite(t *testing.T) {
+	const registryPath = "/fake/registry.md"
+	const contractFilePath = "/fake/contract.md"
+
+	// Build the already-correctly-scoped registry via a real Propagate call so
+	// the fixture can never drift from what BuildScopedRow actually produces.
+	phases, err := propagator.ParseFrontmatter(testContractContent)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter: %v", err)
+	}
+	alreadyScoped, _, err := propagator.Propagate(minimalRegistry, propagator.Config{
+		ContractPath: "skills/_shared/minimalism-contract.md",
+	}, phases)
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+
+	var readCount, writeCount int
+	readFile := func(path string) ([]byte, error) {
+		if path == contractFilePath {
+			return []byte(testContractContent), nil
+		}
+		readCount++
+		return []byte(alreadyScoped), nil
+	}
+	writeFile := func(_ string, _ []byte, _ os.FileMode) error {
+		writeCount++
+		return nil
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runPropagateVerified(
+		[]string{
+			"--registry", registryPath,
+			"--contract-file", contractFilePath,
+			"--contract-path", "skills/_shared/minimalism-contract.md",
+		},
+		&outBuf, &errBuf, readFile, writeFile, func(c int) { exitCode = c },
+	)
+
+	if exitCode != -1 {
+		t.Fatalf("no-op path should not exit with an error, got exit=%d stderr=%s", exitCode, errBuf.String())
+	}
+	if writeCount != 0 {
+		t.Errorf("no-op path must never write; write count = %d", writeCount)
+	}
+	if readCount != 1 {
+		t.Errorf("no-op path must read the registry exactly once (no verification read needed when nothing was written); read count = %d", readCount)
+	}
+	if !strings.Contains(outBuf.String(), "already correct") {
+		t.Errorf("stdout should report the no-op; got: %q", outBuf.String())
+	}
+}
+
+// TestRunPropagateVerified_HardErrorPassesThroughWithoutRetry proves that a
+// genuine hard failure inside runPropagateCore (e.g. a required flag missing)
+// is forwarded immediately — no retry loop is entered for errors that have
+// nothing to do with a write race.
+func TestRunPropagateVerified_HardErrorPassesThroughWithoutRetry(t *testing.T) {
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	readCalls := 0
+	runPropagateVerified(
+		[]string{"--contract-file", "/fake/contract.md"}, // missing --registry
+		&outBuf, &errBuf,
+		func(path string) ([]byte, error) {
+			readCalls++
+			return nil, errors.New("should not be reached: " + path)
+		},
+		func(_ string, _ []byte, _ os.FileMode) error {
+			t.Fatal("writeFile must not be called when --registry is missing")
+			return nil
+		},
+		func(c int) { exitCode = c },
+	)
+	if exitCode != 1 {
+		t.Errorf("missing --registry: expected exit 1, got %d", exitCode)
+	}
+	if !strings.Contains(errBuf.String(), "registry") {
+		t.Errorf("missing --registry: stderr should mention 'registry'; got %q", errBuf.String())
+	}
+	if readCalls != 0 {
+		t.Errorf("missing --registry: readFile should never be called; read count = %d", readCalls)
+	}
+}
