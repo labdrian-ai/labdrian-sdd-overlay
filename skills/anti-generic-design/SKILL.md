@@ -41,18 +41,19 @@ default, and frontend-design does not flag them. They are hard-forbidden here:
 
 ## Steer toward
 
-Distilled from 4 real award-gallery sites (see `references/palette-typography.md` for full
-attribution):
+Steer per DIMENSION using the contrasting anchors in the dated, first-party capture in
+`references/palette-typography.md` — combine choices ACROSS dimensions rather than copying one
+site's full kit (that is exactly what the anti-mimicry checklist line below catches):
 
-- **Near-monochrome base + a single warm accent**, used sparingly, instead of a gradient.
-- **Editorial typography pairing** — an oversized display face + restrained body text, never
-  Inter.
+- **Canvas polarity, accent scarcity, corner-radius signature, depth mechanism, and type
+  philosophy** — each dimension has 2–3 real, visibly-disagreeing sector-leader anchors; pick a
+  combination, never one site's whole kit.
 - **Numbered / indexed sequencing** (01, 02…) for sections instead of a plain grid.
 - **Asymmetric / broken-grid layout** instead of a flat, even 3-column grid.
 - **Conversational, first-person copy** instead of generic marketing-speak.
 
-See `references/palette-typography.md` for the attributed table and
-`references/example-output.md` for a worked before/after pass.
+See `references/palette-typography.md` for the dimension table and the compositional-signals
+subsection, and `references/example-output.md` for a worked before/after pass.
 
 ## Self-critique checklist (v1, manual)
 
@@ -63,8 +64,11 @@ Run this by hand against any generated design output — no script or tool requi
 [ ] no violet→blue (or indigo→purple) gradient on background/hero/CTA      → PASS
 [ ] cards are not styled by a generic soft box-shadow alone                 → PASS
 [ ] layout is not a flat, even 3-column grid                                → PASS
-[ ] palette is near-monochrome + ≤1 warm accent (see palette-typography.md) → PASS
+[ ] accent usage is scoped/deliberate, matching an observed range in palette-typography.md
+    (zero to two, functional not decorative — the max observed in the capture) — not
+    unscoped decorative color sprawl → PASS
 [ ] at least one editorial/asymmetric signal present                        → PASS
+[ ] token set is NOT >80% traceable to a single cited anchor                → PASS
 ```
 
 Any unchecked line is a flag to revise the design before shipping it. Automated tooling for
@@ -72,8 +76,10 @@ this check is explicitly deferred to a future v2 — this checklist is v1 and ma
 
 ## References
 
-- `references/palette-typography.md` — attributed palette/typography directions, distilled
-  (not copied) from depoluxe.xyz, bymonolog.com, collection.industries, useportal.net.
+- `references/palette-typography.md` — dimension-indexed, dated capture from 6 sector-leader
+  sites (Vercel, Stripe, Ferrari, SpaceX, Nintendo, Aesop); the compositional-signals
+  subsection (sequencing/layout/voice) remains attributed to the original 4 sites (depoluxe.xyz,
+  bymonolog.com, collection.industries, useportal.net).
 - `references/example-output.md` — a worked "before (generic) → after (distinctive)" pass.
 - `references/critique-template.md` — the blank, copy-paste v1 self-critique checklist.
 </content>
