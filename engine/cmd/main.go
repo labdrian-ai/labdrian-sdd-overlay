@@ -476,6 +476,25 @@ func runPropagate(args []string) {
 	runPropagateVerified(args, os.Stdout, os.Stderr, os.ReadFile, atomicWriteFile, os.Exit)
 }
 
+// emptyRegistryErrMsg is the exact stderr line runPropagateCore prints when a
+// registry exists but is empty/whitespace-only (see the fail-loud guard
+// inside runPropagateCore below, which references this same const directly).
+// classifyReadRace matches this sentinel via FULL trimmed-equality (core
+// prints exactly this one line then exits) to recognize a torn/empty read as
+// retryable without changing core's signature. Because core references this
+// const directly rather than duplicating the literal, independent wording
+// drift between the two sites is structurally impossible; the guard test
+// TestEmptyRegistryMsgPinned instead protects against a future edit
+// reintroducing an inline literal in either place.
+const emptyRegistryErrMsg = "error: registry exists but is empty — refusing to propagate over it"
+
+// registryAbsentNoopMarker is a stable, path-independent substring of the
+// stdout message runPropagateCore emits when the registry is absent and
+// --require-registry was not supplied (see runPropagateCore below).
+// classifyReadRace matches on this substring to recognize a no-write, no-exit
+// outcome as the "registry absent" no-op. Pinned by TestAbsentNoopMarkerPinned.
+const registryAbsentNoopMarker = "project does not use the overlay (no-op)"
+
 // maxPropagateWriteAttempts bounds the read-decide-write-verify retry loop in
 // runPropagateVerified. It exists to defend against a foreign, uncoordinated
 // writer (e.g. "gentle-ai skill-registry refresh", a completely separate
@@ -484,8 +503,79 @@ func runPropagate(args []string) {
 // atomic write and our verification read. A handful of attempts is enough to
 // win a race against a single competing write; it is intentionally bounded
 // (not infinite) so a registry that is being rewritten in a tight loop by
-// something else fails LOUD instead of spinning forever.
+// something else fails LOUD instead of spinning forever. It also bounds the
+// read-side race retries (torn/empty read, transient-absent read) classified
+// by classifyReadRace below — the same foreign writer that can clobber a
+// verified write can just as easily tear or momentarily remove a read.
 const maxPropagateWriteAttempts = 3
+
+// readRaceKind classifies one runPropagateCore attempt's outcome as either a
+// retryable read-side race or raceNone (a genuine, non-retryable outcome —
+// covers hard failures, an already-correct no-op, and a completed write
+// awaiting write-side verification, all of which the existing loop branches
+// already handle correctly).
+type readRaceKind int
+
+const (
+	// raceNone is not a read race: forward/handle via the existing branches.
+	raceNone readRaceKind = iota
+	// raceEmptyRegistry is a torn/empty read (core's fail-loud guard fired).
+	raceEmptyRegistry
+	// raceAbsentRegistry is a transient absent-registry read (core's no-op
+	// branch fired because the registry did not exist on this attempt).
+	raceAbsentRegistry
+)
+
+// classifyReadRace inspects one runPropagateCore attempt's buffered outcome
+// and classifies it per design.md's "Architecture Decisions": a write
+// (wrote=true) is NEVER a read race — it belongs to the existing
+// write-then-verify branch, so it always classifies as raceNone regardless
+// of coreExit/stdout/stderr. Among no-write outcomes: an exit(1) whose
+// stderr is a FULL trimmed-equality match against emptyRegistryErrMsg (core
+// prints exactly one line then exits) is raceEmptyRegistry; any OTHER
+// exit(1) — a genuine hard failure — is raceNone so it forwards immediately
+// with no retry. A no-exit (coreExit == -1) outcome whose stdout contains
+// registryAbsentNoopMarker is raceAbsentRegistry; otherwise it is the
+// existing already-correct no-op, raceNone.
+func classifyReadRace(coreExit int, wrote bool, stdout, stderr string) readRaceKind {
+	if wrote {
+		return raceNone
+	}
+	if coreExit != -1 {
+		// Literal 1, not a named constant: the exact trimmed-equality match
+		// against emptyRegistryErrMsg below already fully disambiguates this
+		// branch from any other exit(1) path, so a named exit-code constant
+		// would only imply an enforced invariant across core's other exit(1)
+		// call sites that does not exist (they remain plain literals).
+		if coreExit == 1 && strings.TrimSpace(stderr) == emptyRegistryErrMsg {
+			return raceEmptyRegistry
+		}
+		return raceNone
+	}
+	if strings.Contains(stdout, registryAbsentNoopMarker) {
+		return raceAbsentRegistry
+	}
+	return raceNone
+}
+
+// reportInconsistentRegistryState emits the fail-loud diagnostic shared by the
+// two mixed-evidence exhaustion outcomes in runPropagateVerified below: a
+// mixed read-race sequence exhausting under raceEmptyRegistry (an earlier
+// attempt read absent or wrote successfully), and the raceAbsentRegistry
+// tie-break where an earlier attempt proved the registry exists. Factored
+// into one place so the two call sites can never drift apart on wording.
+//
+// Deliberately cause-agnostic: earlier wording asserted "a concurrent
+// external writer may be tearing reads", but a mixed/inconsistent sequence
+// does not always mean a foreign writer race — e.g. a project could
+// genuinely stop using the overlay mid-invocation (an uninstall step
+// deleting the registry between retries). State the observation, not a
+// specific cause.
+func reportInconsistentRegistryState(stderr io.Writer, registryPath string, attempts int) {
+	fmt.Fprintf(stderr,
+		"error: the registry at %s was in an inconsistent state across %d attempts — refusing to propagate\n",
+		registryPath, attempts)
+}
 
 // runPropagateVerified wraps runPropagateCore with a bounded write-then-verify
 // retry loop. runPropagateCore trusts a successful writeFile call
@@ -507,9 +597,12 @@ const maxPropagateWriteAttempts = 3
 // the actual current on-disk content immediately before trusting any
 // decision, rather than trusting a single point-in-time read.
 //
-// A genuine no-op (registry already correct) never enters the retry loop: no
-// write means nothing to verify, so it costs exactly the one read
-// runPropagateCore already performs — no behavior change for the common case.
+// An "already correct" no-op (registry unchanged) never enters the retry
+// loop: no write means nothing to verify, so it costs exactly the one read
+// runPropagateCore already performs. An absent-registry no-op is different:
+// classifyReadRace treats it as a potential mid-refresh race window and does
+// retry it (up to maxPropagateWriteAttempts reads) before concluding the
+// project genuinely does not use the overlay — see raceAbsentRegistry below.
 func runPropagateVerified(
 	args []string,
 	stdout io.Writer,
@@ -519,6 +612,24 @@ func runPropagateVerified(
 	exit func(int),
 ) {
 	registryPath := registryPathFromArgs(args)
+
+	// sawEmptyRegistry/sawAbsentRegistry/sawWrote track which evidence kinds
+	// were ACTUALLY observed across every attempt in this run (not just the
+	// current/last one), so the exhaustion messages below can accurately
+	// describe a mixed sequence (e.g. attempt 1 absent, attempts 2-3 empty)
+	// instead of always claiming the terminal attempt's kind held throughout.
+	//
+	// sawWrote covers a case classifyReadRace deliberately makes invisible to
+	// read-race classification: any attempt where wrote==true (core
+	// successfully wrote, even if a later verification found the bytes
+	// clobbered) is STRONGER proof the registry exists than either read-race
+	// kind — a write cannot happen against a registry that isn't there. Without
+	// tracking it separately, a sequence like "attempt 1 writes valid content
+	// but is clobbered before verification, attempts 2-3 read absent" would
+	// exhaust with none of the read-race evidence flags set and silently take
+	// the exit-0 no-op path, even though attempt 1 proved this project DOES use
+	// the overlay.
+	var sawEmptyRegistry, sawAbsentRegistry, sawWrote bool
 
 	for attempt := 1; attempt <= maxPropagateWriteAttempts; attempt++ {
 		var outBuf, errBuf bytes.Buffer
@@ -537,6 +648,88 @@ func runPropagateVerified(
 		coreExitFn := func(code int) { coreExit = code }
 
 		runPropagateCore(args, &outBuf, &errBuf, readFile, verifyingWrite, coreExitFn)
+
+		if wrote {
+			// Record this evidence BEFORE classification: classifyReadRace
+			// always returns raceNone for wrote==true (a write belongs to the
+			// existing write-then-verify branch, never a read race), so this
+			// attempt would otherwise be invisible to the exhaustion
+			// tie-breaks below even though it is direct proof the registry
+			// exists.
+			sawWrote = true
+		}
+
+		// Classify this attempt's outcome BEFORE the generic hard-failure
+		// forward below, so a torn/empty read (which core reports as
+		// exit(1), same as a genuine hard failure) is intercepted as
+		// retryable instead of being forwarded as a terminal error. Per
+		// design.md's Data Flow: order matters — raceEmptyRegistry is
+		// checked first, then the unchanged coreExit!=-1 forward, then
+		// raceAbsentRegistry (checked before the unchanged !wrote forward).
+		switch classifyReadRace(coreExit, wrote, outBuf.String(), errBuf.String()) {
+		case raceNone:
+			// Not a read race: fall through to the existing hard-failure/
+			// no-op/write-verify branches below, unchanged.
+		case raceEmptyRegistry:
+			sawEmptyRegistry = true
+			if attempt < maxPropagateWriteAttempts {
+				// Discard this attempt's buffers (they hold core's exit(1)
+				// diagnostic, not a real terminal failure) and retry the
+				// whole read-decide-write cycle — a torn/empty read is the
+				// signature of a concurrent foreign rewrite in progress.
+				continue
+			}
+			if sawAbsentRegistry || sawWrote {
+				// A mixed sequence: at least one earlier attempt classified
+				// as raceAbsentRegistry, or wrote successfully (proof the
+				// registry existed) before it was clobbered — either way
+				// "empty on every attempt" would be inaccurate.
+				reportInconsistentRegistryState(stderr, registryPath, maxPropagateWriteAttempts)
+			} else {
+				// Every classified attempt in this run was genuinely
+				// raceEmptyRegistry, so the "read empty on every attempt"
+				// framing is accurate — but cause-agnostic per
+				// reportInconsistentRegistryState's rationale above: a
+				// persistently empty/whitespace-only registry does not prove
+				// an active concurrent writer race (e.g. a one-time crash or
+				// an aborted write left it empty, with no live race at all).
+				// State the observation, not a specific cause.
+				fmt.Fprintf(stderr,
+					"error: the registry at %s read empty on all %d attempts — "+
+						"refusing to propagate\n",
+					registryPath, maxPropagateWriteAttempts)
+			}
+			exit(1)
+			return
+		case raceAbsentRegistry:
+			sawAbsentRegistry = true
+			if attempt < maxPropagateWriteAttempts {
+				// Discard this attempt's buffers and retry — a transient
+				// absent read may be a foreign writer's unlink-then-recreate
+				// window rather than a genuine "project does not use the
+				// overlay" state.
+				continue
+			}
+			if sawEmptyRegistry || sawWrote {
+				// An earlier attempt in THIS run observed the registry file
+				// existing (torn/empty, or a successful write that was later
+				// clobbered) before later attempts classified as absent. That
+				// is direct proof this project DOES use the overlay, so
+				// exhausting the budget on the absent branch must not
+				// silently no-op — prefer the fail-loud outcome over
+				// discarding that evidence.
+				reportInconsistentRegistryState(stderr, registryPath, maxPropagateWriteAttempts)
+				exit(1)
+				return
+			}
+			// Persistently absent after exhausting attempts, with no earlier
+			// proof the registry exists: forward the existing exit-0 no-op
+			// unchanged — this really is a project that does not use the
+			// overlay.
+			io.Copy(stdout, &outBuf) //nolint:errcheck
+			io.Copy(stderr, &errBuf) //nolint:errcheck
+			return
+		}
 
 		if coreExit != -1 {
 			// Hard failure (bad args, unreadable contract/registry, broken
@@ -578,6 +771,16 @@ func runPropagateVerified(
 						"the verification read itself failed: %v\n",
 					registryPath, maxPropagateWriteAttempts, readErr)
 			} else {
+				// Intentionally cause-specific, unlike the read-race
+				// exhaustion messages above (reportInconsistentRegistryState
+				// and the uniform-empty branch), which are deliberately
+				// cause-agnostic because they have no direct evidence of an
+				// active writer. Here the certainty level is different: the
+				// bytes just written and the bytes on disk provably do not
+				// match, which IS strong, direct evidence of a foreign writer
+				// clobbering the file between our atomic write and this
+				// verification read. Naming that cause is warranted, not an
+				// oversight of the wording asymmetry.
 				fmt.Fprintf(stderr,
 					"error: registry write to %s did not persist after %d attempts — "+
 						"a concurrent external writer (unrelated to engine propagate) "+
@@ -696,12 +899,24 @@ func runPropagateCore(
 			// Registry absent. Default: clean no-op (project does not use the
 			// overlay). Strict: fail loud so a misconfiguration where the
 			// registry was EXPECTED is never an invisible no-op.
+			//
+			// NOTE (design.md "Decision: Transient absent registry"): this
+			// --require-registry branch is a genuine hard failure (coreExit
+			// != -1, stderr does not match emptyRegistryErrMsg) and therefore
+			// gets ZERO of runPropagateVerified's read-race retry protection
+			// — classifyReadRace classifies it as raceNone and it forwards
+			// immediately on the first attempt, by design (explicit opt-in
+			// callers should fail fast, not spend the retry budget on a
+			// requirement they asked to enforce strictly). A future caller
+			// adopting --require-registry must not assume it is shielded from
+			// the exact torn/absent-read race this change closes for the
+			// default (non-strict) path.
 			if requireRegistry {
 				fmt.Fprintf(stderr, "error: registry required but not found at %s (--require-registry)\n", registryPath)
 				exit(1)
 				return
 			}
-			fmt.Fprintf(stdout, "propagate: registry not found at %s — project does not use the overlay (no-op)\n", registryPath)
+			fmt.Fprintf(stdout, "propagate: registry not found at %s — %s\n", registryPath, registryAbsentNoopMarker)
 			return
 		}
 		fmt.Fprintf(stderr, "error: reading registry file: %v\n", err)
@@ -714,7 +929,7 @@ func runPropagateCore(
 	// incident state) or an otherwise corrupted file. Propagating over it would
 	// replace the whole registry with a lone marker block, so refuse instead.
 	if strings.TrimSpace(string(registryContent)) == "" {
-		fmt.Fprintln(stderr, "error: registry exists but is empty — refusing to propagate over it")
+		fmt.Fprintln(stderr, emptyRegistryErrMsg)
 		exit(1)
 		return
 	}
