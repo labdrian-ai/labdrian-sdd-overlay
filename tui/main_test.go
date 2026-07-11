@@ -173,7 +173,7 @@ ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then
 		uc, ond, rbo int
 	}{
 		{"claude", SyncHealthy, 0, 0, 0},
-		{"opencode", SyncNeedsApply, 0, 2, -1},
+		{"opencode", SyncNeedsApply, 0, 2, RepoBehindOriginNA},
 		{"codex", SyncNeedsCapture, 3, 1, 5},
 	}
 

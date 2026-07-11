@@ -818,16 +818,21 @@ cmd_status() {
 # half-up, black-holed proxy) cannot hang sync-check indefinitely; a
 # `low-speed` git config guards the HTTPS-transport case the same way.
 #
-# The scoped SYNC_CHECK warning on fetch failure is written to stderr (not
-# stdout) so it does not contaminate the count/NA value captured by callers
-# via command substitution. It includes the first line of git's own error
-# text so a security-relevant failure (e.g. a host-key mismatch or TLS
-# verification error) is distinguishable from a benign offline failure,
-# instead of both collapsing into the same generic message.
+# Every NA-producing branch below writes a one-line explanation to stderr
+# (not stdout, so it never contaminates the count/NA value captured by
+# callers via command substitution) using the `SYNC_CHECK:(repo):` prefix --
+# "(repo)" is a deliberate, documented repo-scope marker distinct from the
+# `SYNC_CHECK:$t:` per-target prefix used elsewhere in this file (this
+# comparison is repo-level, not target-scoped, and no real target name would
+# fit here). The fetch-failure branch additionally includes the first line
+# of git's own error text, so a security-relevant failure (e.g. a host-key
+# mismatch or TLS verification error) is distinguishable from a benign
+# offline failure instead of both collapsing into the same generic message.
 compute_repo_behind_origin() {
   local check_origin="$1"
 
   if ! git remote get-url origin >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_ORIGIN unavailable" >&2
     echo "NA"
     return
   fi
@@ -841,13 +846,14 @@ compute_repo_behind_origin() {
     fi
     if [[ "$fetch_ok" == false ]]; then
       local fetch_err_line="${fetch_err%%$'\n'*}"
-      echo "SYNC_CHECK:*: git fetch origin failed -- degrading REPO_BEHIND_ORIGIN to NA (${fetch_err_line:-no error output})" >&2
+      echo "SYNC_CHECK:(repo): git fetch origin failed -- degrading REPO_BEHIND_ORIGIN to NA (${fetch_err_line:-no error output})" >&2
       echo "NA"
       return
     fi
   fi
 
   if ! git rev-parse --verify -q refs/remotes/origin/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no cached refs/remotes/origin/main (never fetched) -- REPO_BEHIND_ORIGIN unavailable" >&2
     echo "NA"
     return
   fi
@@ -856,6 +862,7 @@ compute_repo_behind_origin() {
   if count="$(git rev-list HEAD..origin/main --count 2>/dev/null)"; then
     echo "$count"
   else
+    echo "SYNC_CHECK:(repo): git rev-list HEAD..origin/main failed -- REPO_BEHIND_ORIGIN unavailable" >&2
     echo "NA"
   fi
 }

@@ -230,6 +230,45 @@ func TestSyncCheck_NoOriginRemote_ReportsNA(t *testing.T) {
 	if !strings.Contains(out, "VERDICT:claude:") {
 		t.Errorf("expected existing VERDICT line to still be emitted, got:\n%s", out)
 	}
+	// Post-merge audit finding RES-002: this NA-producing branch must explain
+	// itself on stderr like the fetch-failure branch does, instead of being
+	// the only one of the four that stays silent.
+	if !strings.Contains(out, "SYNC_CHECK:") || !strings.Contains(out, "no 'origin' remote configured") {
+		t.Errorf("expected a SYNC_CHECK warning explaining the missing origin remote, got:\n%s", out)
+	}
+}
+
+// TestSyncCheck_CheckOriginFlag_NoOriginRemote_ReportsNA pins R-003/R-004's
+// scenario "with or without --check-origin" for the no-origin-remote case
+// specifically: --check-origin must short-circuit to NA via the remote
+// existence check BEFORE ever attempting a fetch (no fetch-related warning
+// should appear), matching the code path's actual precedence.
+func TestSyncCheck_CheckOriginFlag_NoOriginRemote_ReportsNA(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	home := t.TempDir()
+	_, env := setupSandboxOverlay(t, home) // no origin remote configured
+
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+		t.Fatalf("overlay apply: %v", err)
+	}
+
+	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude", "--check-origin")
+	if err != nil {
+		t.Fatalf("overlay sync-check --check-origin must not hard-fail with no origin remote: %v\noutput:\n%s", err, out)
+	}
+	if !strings.Contains(out, "REPO_BEHIND_ORIGIN=NA") {
+		t.Errorf("expected literal REPO_BEHIND_ORIGIN=NA with no origin remote (even with --check-origin), got:\n%s", out)
+	}
+	if !strings.Contains(out, "no 'origin' remote configured") {
+		t.Errorf("expected the no-remote warning, got:\n%s", out)
+	}
+	if strings.Contains(out, "git fetch origin failed") {
+		t.Errorf("must short-circuit before attempting a fetch when no origin remote exists, got a fetch-failure warning instead:\n%s", out)
+	}
 }
 
 // TestSyncCheck_NoCachedRef_ReportsNA pins R-004: origin configured but
@@ -253,6 +292,11 @@ func TestSyncCheck_NoCachedRef_ReportsNA(t *testing.T) {
 	}
 	if !strings.Contains(out, "REPO_BEHIND_ORIGIN=NA") {
 		t.Errorf("expected literal REPO_BEHIND_ORIGIN=NA with no cached ref, got:\n%s", out)
+	}
+	// Post-merge audit finding RES-002: this NA-producing branch must explain
+	// itself on stderr too.
+	if !strings.Contains(out, "SYNC_CHECK:") || !strings.Contains(out, "no cached refs/remotes/origin/main") {
+		t.Errorf("expected a SYNC_CHECK warning explaining the missing cached ref, got:\n%s", out)
 	}
 }
 
@@ -321,5 +365,11 @@ func TestSyncCheck_CheckOriginFlag_FetchFailure_DegradesToNA(t *testing.T) {
 	// is indistinguishable from a benign offline failure.
 	if !strings.Contains(out, "does not appear to be a git repository") {
 		t.Errorf("expected the real git fetch error text surfaced in the warning, got:\n%s", out)
+	}
+	// Post-merge audit finding READ-002: the repo-scope warning prefix must
+	// be a documented marker, not a bare "*" masquerading as a target name
+	// (which breaks the SYNC_CHECK:$t: convention used everywhere else).
+	if !strings.Contains(out, "SYNC_CHECK:(repo):") {
+		t.Errorf("expected the SYNC_CHECK:(repo): repo-scope prefix, got:\n%s", out)
 	}
 }

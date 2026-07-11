@@ -114,12 +114,19 @@ const (
 	SyncBehindOrigin
 )
 
+// RepoBehindOriginNA is the sentinel value for TargetVerdict.RepoBehindOrigin
+// when the origin comparison is unavailable (no remote, no cached ref, or a
+// requested fetch failed) — distinct from a confirmed 0 commits behind. A
+// single named constant (instead of a magic -1 repeated at each use site)
+// keeps every producer/consumer of this field agreeing by construction.
+const RepoBehindOriginNA = -1
+
 // TargetVerdict holds the parsed sync-check result for one target.
 type TargetVerdict struct {
 	Target             string
 	UpstreamChanged    int
 	OverlayNotDeployed int
-	RepoBehindOrigin   int // count; -1 = unavailable (no remote/no cached ref/fetch failed)
+	RepoBehindOrigin   int // count; RepoBehindOriginNA when unavailable
 	Action             string
 	Status             SyncStatus
 	AgentFiles         []AgentFileEntry // per-file statuses for agents/ paths
@@ -164,10 +171,10 @@ func ParseSyncCheck(output string) []TargetVerdict {
 	get := func(name string) *TargetVerdict {
 		v, ok := byTarget[name]
 		if !ok {
-			// RepoBehindOrigin defaults to -1 (unavailable) until a VERDICT
+			// RepoBehindOrigin defaults to RepoBehindOriginNA until a VERDICT
 			// line explicitly sets it — mirrors the backend's NA sentinel and
 			// avoids a defensive zero-value collapsing into "0 behind".
-			v = &TargetVerdict{Target: name, RepoBehindOrigin: -1}
+			v = &TargetVerdict{Target: name, RepoBehindOrigin: RepoBehindOriginNA}
 			byTarget[name] = v
 			order = append(order, name)
 		}
@@ -216,7 +223,7 @@ func ParseSyncCheck(output string) []TargetVerdict {
 					// behind" and reproducing the exact silent-healthy bug class
 					// R-006 exists to eliminate.
 					if val == "NA" {
-						v.RepoBehindOrigin = -1
+						v.RepoBehindOrigin = RepoBehindOriginNA
 					} else if n, err := strconv.Atoi(val); err == nil {
 						v.RepoBehindOrigin = n
 					}
