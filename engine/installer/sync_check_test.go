@@ -151,6 +151,35 @@ func TestSyncCheck_ReportsRepoBehindOrigin_CachedRef(t *testing.T) {
 	}
 }
 
+// TestSyncCheck_BehindOriginOnly_ActionHintsGitPull pins the ACTION-hint gap
+// found by judgment-day on PR2: when a target is behind origin/main with no
+// other drift (UPSTREAM_CHANGED=0, OVERLAY_NOT_DEPLOYED=0), the ACTION line
+// must tell the user to git pull, not falsely claim "in sync (healthy)".
+func TestSyncCheck_BehindOriginOnly_ActionHintsGitPull(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	home := t.TempDir()
+	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 3, true)
+
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+		t.Fatalf("overlay apply: %v", err)
+	}
+
+	out, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	if err != nil {
+		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, out)
+	}
+	if strings.Contains(out, "in sync with gentle-ai (healthy)") {
+		t.Errorf("ACTION falsely claims healthy while REPO_BEHIND_ORIGIN>0:\n%s", out)
+	}
+	if !strings.Contains(out, "git pull") {
+		t.Errorf("expected ACTION to hint 'git pull' when behind origin with no other drift, got:\n%s", out)
+	}
+}
+
 // TestSyncCheck_EvenWithOrigin_ReportsZero pins R-002: HEAD even with the
 // cached origin/main ref reports REPO_BEHIND_ORIGIN=0.
 func TestSyncCheck_EvenWithOrigin_ReportsZero(t *testing.T) {

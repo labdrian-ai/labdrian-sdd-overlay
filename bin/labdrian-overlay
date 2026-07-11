@@ -101,8 +101,15 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all)
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
-  sync-check [--target claude|opencode|codex|all]
-                                   Validate gentle-ai sync state per target (default: all)
+  sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
+                                   Validate gentle-ai sync state per target (default: all).
+                                   Also reports REPO_BEHIND_ORIGIN=<count|NA> on each VERDICT
+                                   line: how many commits local HEAD is behind this repo's own
+                                   origin/main. Default is a cached-ref comparison (no network
+                                   call); pass --check-origin (alias --fetch) to run
+                                   'git fetch origin' first for a live count. NA means the
+                                   comparison is unavailable (no origin remote, no cached ref,
+                                   or a requested fetch failed) -- other checks still complete.
   install-hooks                    Build + deploy the engine binary, then wire the two
                                    deterministic-scoping hooks into ~/.claude/settings.json.
                                    DELIBERATE ACTION — not called by 'apply'. Run once to
@@ -956,6 +963,8 @@ cmd_sync_check() {
       echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"
     elif [[ "$overlay_not_deployed" -gt 0 ]]; then
       echo "ACTION:$t: run 'overlay apply --target $t'"
+    elif [[ "$repo_behind_origin" != "NA" && "$repo_behind_origin" -gt 0 ]]; then
+      echo "ACTION:$t: run 'git pull' to update your local clone (behind origin/main by $repo_behind_origin commit(s))"
     else
       echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
