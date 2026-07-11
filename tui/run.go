@@ -40,13 +40,11 @@ type Action struct {
 	Also           []Action // nested sub-actions merged into this menu entry (invisible in the menu)
 }
 
-// Actions returns the action menu in display order.
-//
-// The order matches the "Flujo típico: Verificar → Capturar → Aplicar" copy
-// rendered by viewActions: Estado, then sync-check, then capture, then apply,
-// then the hooks lifecycle, then skills. Related read-only sub-actions
-// (status-hooks; skills validate/list) are folded into their primary entry
-// via Also instead of appearing as separate top-level menu rows.
+// Actions returns the action menu in display order: Estado, then sync-check,
+// then capture, then apply (the natural usage flow), then the hooks
+// lifecycle, then skills. Related read-only sub-actions (status-hooks;
+// skills validate/list) are folded into their primary entry via Also instead
+// of appearing as separate top-level menu rows.
 func Actions() []Action {
 	return []Action{
 		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true,

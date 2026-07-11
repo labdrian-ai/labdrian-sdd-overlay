@@ -103,7 +103,10 @@ func (m model) View() string {
 	// footer are left-aligned at the column's left edge. Then the whole column
 	// is centered on screen by one uniform leftPad, so header + body + footer all
 	// share the exact same left edge.
-	header := logoBanner(colW) + "\n" + repoLine
+	header := logoBanner(colW)
+	if repoLine != "" {
+		header += "\n" + repoLine
+	}
 	footer := footerStyle.Width(colW).Render(keys)
 	composed := strings.Join([]string{header, body, footer}, "\n")
 
@@ -116,13 +119,14 @@ func (m model) View() string {
 	return lipgloss.NewStyle().MaxWidth(termW).Render(composed)
 }
 
-// repoLine renders the repo-root path (or the locate error) at the column's
-// left edge — no hardcoded indent.
+// repoLine surfaces the repo-locate error, if any, at the column's left edge
+// — no hardcoded indent. Silent (empty) when the repo root resolved fine;
+// the path itself isn't useful chrome to show on every screen.
 func (m model) repoLine() string {
 	if m.rootErr != nil {
 		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
 	}
-	return mutingStyle.Render(m.repoRoot)
+	return ""
 }
 
 // footerKeys returns the raw key-hint legend for the active screen. The width
@@ -278,10 +282,9 @@ func (m model) viewTargets() string {
 		name := fmt.Sprintf("%-9s", t.Name)
 		var row string
 		if i == m.tCursor {
-			row = fmt.Sprintf("%s%s %s  %s\n", cursor, check,
-				highlightStyle.Render(name), dimStyle.Render(t.Path))
+			row = fmt.Sprintf("%s%s %s\n", cursor, check, highlightStyle.Render(name))
 		} else {
-			row = fmt.Sprintf("%s%s %s  %s\n", cursor, check, name, mutingStyle.Render(t.Path))
+			row = fmt.Sprintf("%s%s %s\n", cursor, check, name)
 		}
 		b.WriteString(row)
 	}
@@ -294,15 +297,7 @@ func (m model) viewTargets() string {
 
 func (m model) viewActions() string {
 	var b strings.Builder
-	sel := []string{}
-	for _, t := range m.selectedTargets() {
-		sel = append(sel, t.Name)
-	}
-	b.WriteString(titleStyle.Render("Elegir una acción") + "\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(colorWhite).
-		Render("Ejecutá capture, apply y la gestión de hooks desde acá — no hace falta la CLI.") + "\n")
-	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "    " +
-		dimStyle.Render("Flujo típico:  Verificar → Capturar → Aplicar") + "\n\n")
+	b.WriteString(titleStyle.Render("Elegir una acción") + "\n\n")
 
 	for i, a := range m.actions {
 		// Operational group header before the first action.
@@ -313,7 +308,7 @@ func (m model) viewActions() string {
 		// These headers are display-only — they are not in the actions slice, so
 		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
-			b.WriteString("\n" + sectionStyle.Render("── Hooks (global ~/.claude) ──") + "\n")
+			b.WriteString("\n" + sectionStyle.Render("── Hooks ──") + "\n")
 		}
 		// Skills group header before the first skills action.
 		if a.Command == "skills" && (i == 0 || m.actions[i-1].Command != "skills") {
@@ -325,20 +320,13 @@ func (m model) viewActions() string {
 			cursor = cursorStyle.Render("▸ ")
 		}
 
-		var tag string
-		if a.Mutating {
-			tag = lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("[modifica]")
-		} else {
-			tag = mutingStyle.Render("[solo lectura]")
-		}
-
 		name := fmt.Sprintf("%-32s", a.Name)
 		if i == m.aCursor {
 			name = highlightStyle.Render(name)
 		}
-		hint := dimStyle.Render(fmt.Sprintf("%-40s", a.Hint))
+		hint := dimStyle.Render(a.Hint)
 
-		b.WriteString(fmt.Sprintf("%s%s%s%s\n", cursor, name, hint, tag))
+		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, name, hint))
 	}
 	return b.String()
 }
