@@ -278,10 +278,9 @@ func (m model) viewTargets() string {
 		name := fmt.Sprintf("%-9s", t.Name)
 		var row string
 		if i == m.tCursor {
-			row = fmt.Sprintf("%s%s %s  %s\n", cursor, check,
-				highlightStyle.Render(name), dimStyle.Render(t.Path))
+			row = fmt.Sprintf("%s%s %s\n", cursor, check, highlightStyle.Render(name))
 		} else {
-			row = fmt.Sprintf("%s%s %s  %s\n", cursor, check, name, mutingStyle.Render(t.Path))
+			row = fmt.Sprintf("%s%s %s\n", cursor, check, name)
 		}
 		b.WriteString(row)
 	}
@@ -299,10 +298,7 @@ func (m model) viewActions() string {
 		sel = append(sel, t.Name)
 	}
 	b.WriteString(titleStyle.Render("Elegir una acción") + "\n")
-	b.WriteString(lipgloss.NewStyle().Foreground(colorWhite).
-		Render("Ejecutá capture, apply y la gestión de hooks desde acá — no hace falta la CLI.") + "\n")
-	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "    " +
-		dimStyle.Render("Flujo típico:  Verificar → Capturar → Aplicar") + "\n\n")
+	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "\n\n")
 
 	for i, a := range m.actions {
 		// Operational group header before the first action.
@@ -313,7 +309,7 @@ func (m model) viewActions() string {
 		// These headers are display-only — they are not in the actions slice, so
 		// cursor navigation and m.actions[m.aCursor] indexing are unaffected.
 		if a.TargetAgnostic && (i == 0 || !m.actions[i-1].TargetAgnostic) {
-			b.WriteString("\n" + sectionStyle.Render("── Hooks (global ~/.claude) ──") + "\n")
+			b.WriteString("\n" + sectionStyle.Render("── Hooks ──") + "\n")
 		}
 		// Skills group header before the first skills action.
 		if a.Command == "skills" && (i == 0 || m.actions[i-1].Command != "skills") {
@@ -325,20 +321,13 @@ func (m model) viewActions() string {
 			cursor = cursorStyle.Render("▸ ")
 		}
 
-		var tag string
-		if a.Mutating {
-			tag = lipgloss.NewStyle().Foreground(colorYellow).Bold(true).Render("[modifica]")
-		} else {
-			tag = mutingStyle.Render("[solo lectura]")
-		}
-
 		name := fmt.Sprintf("%-32s", a.Name)
 		if i == m.aCursor {
 			name = highlightStyle.Render(name)
 		}
-		hint := dimStyle.Render(fmt.Sprintf("%-40s", a.Hint))
+		hint := dimStyle.Render(a.Hint)
 
-		b.WriteString(fmt.Sprintf("%s%s%s%s\n", cursor, name, hint, tag))
+		b.WriteString(fmt.Sprintf("%s%s%s\n", cursor, name, hint))
 	}
 	return b.String()
 }

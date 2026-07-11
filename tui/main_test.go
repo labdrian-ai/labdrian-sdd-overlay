@@ -749,7 +749,7 @@ func TestHooksSeparatorVisible(t *testing.T) {
 	m := newModel()
 	m.scr = screenActions
 	rendered := m.View()
-	if !strings.Contains(rendered, "── Hooks (global ~/.claude) ──") {
+	if !strings.Contains(rendered, "── Hooks ──") {
 		t.Errorf("screenActions must contain Hooks group header, got:\n%s", rendered)
 	}
 }
@@ -764,15 +764,15 @@ func TestActionGroupHeadersVisible(t *testing.T) {
 	if !strings.Contains(rendered, "── Sincronización ──") {
 		t.Errorf("screenActions must contain operational group header '── Sincronización ──', got:\n%s", rendered)
 	}
-	if !strings.Contains(rendered, "── Hooks (global ~/.claude) ──") {
+	if !strings.Contains(rendered, "── Hooks ──") {
 		t.Errorf("screenActions must contain hooks group header, got:\n%s", rendered)
 	}
 }
 
-// TestActionMenuShowsHintsAndTags verifies per-row purpose hints and danger tags
-// render, asserting presence and grouping (token-level) rather than column spacing,
-// since the %-32s/%-40s padding makes exact whitespace brittle.
-func TestActionMenuShowsHintsAndTags(t *testing.T) {
+// TestActionMenuShowsHints verifies per-row purpose hints render, asserting
+// presence (token-level) rather than column spacing, since the %-32s padding
+// makes exact whitespace brittle.
+func TestActionMenuShowsHints(t *testing.T) {
 	m := newModel()
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m = updated.(model)
@@ -784,8 +784,6 @@ func TestActionMenuShowsHintsAndTags(t *testing.T) {
 		"Despliega el overlay en los destinos",
 		"Capturar (actualizar upstream)",
 		"Trae cambios de upstream al overlay",
-		"[modifica]",
-		"[solo lectura]",
 	} {
 		if !strings.Contains(rendered, token) {
 			t.Errorf("action menu must contain %q, got:\n%s", token, rendered)
