@@ -51,14 +51,14 @@ Revises entry's `single-pr` advisory: combined total is near/over budget, driven
 
 ## Phase 4: TUI Rendering (RED -> GREEN)
 
-- [ ] 4.1 RED new `tui/view_test.go`: `TestViewDashboard_ShowsOriginBehindIndicator` (R-005, n>0), `TestViewDashboard_ZeroOriginBehind_NoIndicator` (R-005, n=0), `TestViewDashboard_NeverHealthyWhileBehindOrigin` (R-006).
-- [ ] 4.2 GREEN `tui/view.go` `viewDashboard()`: add `SyncBehindOrigin` switch case; always render origin-behind count when `RepoBehindOrigin >= 0`.
+- [x] 4.1 RED new `tui/view_test.go`: `TestViewDashboard_ShowsOriginBehindIndicator` (R-005, n>0), `TestViewDashboard_ZeroOriginBehind_NoIndicator` (R-005, n=0), `TestViewDashboard_NeverHealthyWhileBehindOrigin` (R-006). **Note**: production code (`SyncBehindOrigin` case + counts append) was already present on this branch from PR1's defensive fix. RED was proven by temporarily reverting that case/append, confirming 2/3 new tests failed (`TestViewDashboard_ShowsOriginBehindIndicator`, `TestViewDashboard_NeverHealthyWhileBehindOrigin`), then restoring the exact original code (`git diff --stat` empty after restore) before re-running GREEN.
+- [x] 4.2 GREEN `tui/view.go` `viewDashboard()`: `SyncBehindOrigin` switch case (colorAmber, "~", "Detrás de origin") and counts-line append confirmed already correct against spec R-005 (only shown when `RepoBehindOrigin > 0`, per the "Zero count renders no origin indicator" scenario — this correctly follows the spec over design.md's looser ">=0" prose in the File Changes table, noted as a deviation below). No production code changes needed; all 3 new tests pass.
 
 ## Phase 5: Integration & Regression
 
-- [ ] 5.1 Run `go test ./...` + `shellcheck`; confirm legacy `TestClassifyPrecedence`/`TestParseSyncCheckDashboard` cases unchanged.
-- [ ] 5.2 Dogfood: run `sync-check` on this repo's own clone; confirm `REPO_BEHIND_ORIGIN` appears (success criteria).
+- [x] 5.1 Run `go test ./...` + `shellcheck`; confirm legacy `TestClassifyPrecedence`/`TestParseSyncCheckDashboard` cases unchanged. **Note**: `cd engine && go test ./...` and `cd tui && go test ./...` both pass in full (all packages `ok`, `go vet` clean on both modules). `TestClassifyPrecedence` and `TestParseSyncCheckDashboard` (both already extended in Phase 3) pass unchanged. `shellcheck` remains not installed in this environment (same pre-existing gap flagged in task 2.4); `bash -n bin/labdrian-overlay` passes as the syntax-only substitute. Flagged again as a risk for CI/verify to run shellcheck where available.
+- [x] 5.2 Dogfood: run `sync-check` on this repo's own clone; confirm `REPO_BEHIND_ORIGIN` appears (success criteria). **Result**: `bash bin/labdrian-overlay sync-check --target claude` emits `VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0` — field present, no network call, no error. `REPO_BEHIND_ORIGIN=0` correctly reflects this clone's actual state (`git rev-list HEAD..origin/main --count` == 0 on `feat/sync-check-repo-behind-origin-view`, confirmed independently). The n>0 detection path itself is covered by Phase 1's git-fixture integration tests (`TestSyncCheck_ReportsRepoBehindOrigin_CachedRef`), which construct a real behind-by-N fixture.
 
 ## Phase 6: Documentation
 
-- [ ] 6.1 Update `sync-check` help block (`bin/labdrian-overlay` ~line 104) for `--check-origin`/`--fetch` and `REPO_BEHIND_ORIGIN`.
+- [x] 6.1 Update `sync-check` help block (`bin/labdrian-overlay` ~line 104) for `--check-origin`/`--fetch` and `REPO_BEHIND_ORIGIN`. **Result**: `usage()` heredoc now documents the `--check-origin`/`--fetch` flag, the `REPO_BEHIND_ORIGIN=<count|NA>` VERDICT field, the cached-vs-fetch default behavior, and the `NA` degrade condition. Verified with `bash -n` (syntax OK) and by running `bin/labdrian-overlay` with no args to confirm the heredoc renders correctly. This closes the WARNING both PR1 judgment-day judges flagged.
