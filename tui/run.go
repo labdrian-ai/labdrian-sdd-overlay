@@ -37,26 +37,30 @@ type Action struct {
 	TargetAgnostic bool     // when true: invoke WITHOUT --target, skip target selection
 	ConfirmMessage string   // per-action confirm copy; empty falls back to generic
 	Hint           string   // one-line purpose scent shown in the menu
+	Also           []Action // nested sub-actions merged into this menu entry (invisible in the menu)
 }
 
 // Actions returns the action menu in display order.
 //
-// Operational actions (target-bound) are listed first under the
-// "── Sincronización ──" header; hooks actions (TargetAgnostic) follow under
-// the "── Hooks (global ~/.claude) ──" header rendered by viewActions.
+// The order matches the "Flujo típico: Verificar → Capturar → Aplicar" copy
+// rendered by viewActions: Estado, then sync-check, then capture, then apply,
+// then the hooks lifecycle, then skills. Related read-only sub-actions
+// (status-hooks; skills validate/list) are folded into their primary entry
+// via Also instead of appearing as separate top-level menu rows.
 func Actions() []Action {
 	return []Action{
 		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true,
-			Hint: "Resumen del estado actual"},
+			Hint: "Resumen del estado actual (targets + hooks)",
+			Also: []Action{
+				{Command: "status-hooks", TargetAgnostic: true},
+			}},
 		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true,
 			Hint: "Compara overlay vs upstream"},
-		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true,
-			Hint: "Despliega el overlay en los destinos"},
 		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false,
 			Hint: "Trae cambios de upstream al overlay"},
+		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true,
+			Hint: "Despliega el overlay en los destinos"},
 		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
-		{Name: "Estado de hooks", Command: "status-hooks", Mutating: false, TargetAgnostic: true,
-			Hint: "Muestra si los hooks están instalados"},
 		{
 			Name:           "Instalar hooks",
 			Command:        "install-hooks",
@@ -75,18 +79,13 @@ func Actions() []Action {
 		},
 		// Skills registry — read-only, TargetAgnostic. The bash backend injects
 		// --registry/--manifest/--source-root defaults, so no flags are needed here.
-		{Name: "Validar skills", Command: "skills", Args: []string{"validate"},
+		{Name: "Skills", Command: "skills", Args: []string{"status"},
 			TargetAgnostic: true, Mutating: false,
-			Hint: "Valida el registro de skills"},
-		{Name: "Listar skills", Command: "skills", Args: []string{"list"},
-			TargetAgnostic: true, Mutating: false,
-			Hint: "Lista los skills del overlay"},
-		{Name: "Estado skills", Command: "skills", Args: []string{"status"},
-			TargetAgnostic: true, Mutating: false,
-			Hint: "Estado del registro de skills"},
-		{Name: "Actualizar registry SDD Codex", Command: "skill-registry", Args: []string{"refresh", "--target", "codex"},
-			TargetAgnostic: true, Mutating: true,
-			Hint: "Refresh + executors sdd-* de Codex"},
+			Hint: "Estado + valida + lista el registro",
+			Also: []Action{
+				{Command: "skills", Args: []string{"validate"}, TargetAgnostic: true},
+				{Command: "skills", Args: []string{"list"}, TargetAgnostic: true},
+			}},
 	}
 }
 
@@ -352,20 +351,50 @@ func buildArgSets(action Action, selected []Target, allSelected bool) [][]string
 	}
 }
 
+// allArgSets flattens the primary action's arg sets with those of every
+// nested Also action, each routed through buildArgSets independently.
+func allArgSets(action Action, selected []Target, allSelected bool) [][]string {
+	sets := buildArgSets(action, selected, allSelected)
+	for _, sub := range action.Also {
+		sets = append(sets, buildArgSets(sub, selected, allSelected)...)
+	}
+	return sets
+}
+
+// invocationSeverity ranks a single invocation's outcome so runBackend can
+// aggregate multiple invocations (primary action plus any merged Also
+// actions, which may be structurally different backend subcommands with
+// different exit-code contracts) by worst outcome rather than by which one
+// ran last. Exit code 2 ("degraded") ranks below any other non-nil error
+// ("hard failure"); a nil err ranks lowest of all.
+func invocationSeverity(err error, exitCode int) int {
+	switch {
+	case err == nil:
+		return 0
+	case exitCode == 2:
+		return 1 // degraded
+	default:
+		return 2 // hard failure
+	}
+}
+
 // runBackend executes the backend action for the selected targets.
 //
 // When the action supports `all` and every target is selected, it issues a
 // single `--target all` invocation. Otherwise it iterates per target (this is
 // required for `capture`, which rejects `--target all`). For TargetAgnostic
-// actions (hooks lifecycle), no --target is emitted at all.
+// actions (hooks lifecycle), no --target is emitted at all. Nested Also
+// actions contribute their own invocations, routed and appended after the
+// primary action's.
 func runBackend(root string, action Action, selected []Target) commandResult {
 	res := commandResult{action: action, targets: selected}
 	bin := filepath.Join(root, "bin", "labdrian-overlay")
 
 	allSelected := len(selected) == len(AllTargets())
-	argSets := buildArgSets(action, selected, allSelected)
+	argSets := allArgSets(action, selected, allSelected)
 
 	var sb strings.Builder
+	severity := 0
 	for i, args := range argSets {
 		if i > 0 {
 			sb.WriteString("\n")
@@ -378,13 +407,21 @@ func runBackend(root string, action Action, selected []Target) commandResult {
 		sb.Write(out)
 		if err != nil {
 			sb.WriteString(fmt.Sprintf("\n[exit error: %v]\n", err))
-			res.err = err
 			// Extract the exit code so callers can distinguish a hard failure
 			// (exit 1) from a degraded/warning result (exit 2).
+			exitCode := -1
 			if ee, ok := err.(*exec.ExitError); ok {
-				res.exitCode = ee.ExitCode()
-			} else {
-				res.exitCode = -1
+				exitCode = ee.ExitCode()
+			}
+			// Aggregate by worst severity seen across all invocations in this
+			// commandResult, not "last failing invocation wins": a later
+			// degraded (exit 2) invocation must never mask an earlier hard
+			// failure (or vice versa) once the Also merge concatenates
+			// invocations from different backend subcommands into this loop.
+			if sev := invocationSeverity(err, exitCode); sev > severity {
+				severity = sev
+				res.err = err
+				res.exitCode = exitCode
 			}
 		}
 	}

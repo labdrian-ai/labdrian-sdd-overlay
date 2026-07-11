@@ -653,6 +653,10 @@ func TestHooksActionsRegistered(t *testing.T) {
 	byCmd := make(map[string]Action)
 	for _, a := range actions {
 		byCmd[a.Command] = a
+		// status-hooks is nested under Estado's Also slice, not top-level.
+		for _, sub := range a.Also {
+			byCmd[sub.Command] = sub
+		}
 	}
 
 	for _, cmd := range []string{"status-hooks", "install-hooks", "uninstall-hooks"} {
@@ -811,23 +815,36 @@ func TestSuccessBannerOnResult(t *testing.T) {
 	}
 }
 
-// TestStatusHooksSkipsConfirm verifies status-hooks (non-mutating) goes directly
-// to screenRunning, not screenConfirm (R-009 Scenario 9.3).
-func TestStatusHooksSkipsConfirm(t *testing.T) {
+// TestEstadoSkipsConfirmAndMergesStatusHooks verifies the top-level "Estado"
+// action (non-mutating) goes directly to screenRunning, not screenConfirm
+// (R-009 Scenario 9.3), and that status-hooks was merged into it via Also
+// rather than dropped.
+func TestEstadoSkipsConfirmAndMergesStatusHooks(t *testing.T) {
 	m := newModel()
 	// Navigate to screenActions.
 	m.scr = screenActions
 
-	// Find the index of status-hooks in the actions list.
+	// Find the index of the top-level "status" (Estado) action.
 	statusIdx := -1
 	for i, a := range m.actions {
-		if a.Command == "status-hooks" {
+		if a.Command == "status" {
 			statusIdx = i
 			break
 		}
 	}
 	if statusIdx < 0 {
-		t.Fatal("status-hooks not found in Actions(); hooks actions are required by this change")
+		t.Fatal("status (Estado) not found in Actions(); required by this change")
+	}
+
+	// Lock in the merge: status-hooks must be nested under Estado's Also.
+	hasStatusHooks := false
+	for _, sub := range m.actions[statusIdx].Also {
+		if sub.Command == "status-hooks" {
+			hasStatusHooks = true
+		}
+	}
+	if !hasStatusHooks {
+		t.Error("Estado action must have status-hooks nested under Also")
 	}
 
 	m.aCursor = statusIdx
@@ -835,10 +852,10 @@ func TestStatusHooksSkipsConfirm(t *testing.T) {
 	m = updated.(model)
 
 	if m.scr == screenConfirm {
-		t.Error("status-hooks (read-only) must NOT go to screenConfirm")
+		t.Error("Estado (read-only) must NOT go to screenConfirm")
 	}
 	if m.scr != screenRunning {
-		t.Errorf("status-hooks must transition to screenRunning, got screen %d", m.scr)
+		t.Errorf("Estado must transition to screenRunning, got screen %d", m.scr)
 	}
 }
 
@@ -1167,31 +1184,57 @@ func TestBuildArgSetsNoArgsUnchanged(t *testing.T) {
 	}
 }
 
-// TestSkillsActionsRegistered verifies the three skills actions are in Actions()
-// with correct field values.
+// TestSkillsActionsRegistered verifies the single top-level "skills" action
+// (status verb) is registered with correct field values, and that validate/
+// list are merged into it via Also rather than appearing as separate
+// top-level entries.
 func TestSkillsActionsRegistered(t *testing.T) {
-	actions := Actions()
-	byVerb := make(map[string]Action) // key: Args[0] verb
-	for _, a := range actions {
-		if a.Command == "skills" && len(a.Args) > 0 {
-			byVerb[a.Args[0]] = a
+	var skills Action
+	found := false
+	for _, a := range Actions() {
+		if a.Command == "skills" {
+			skills = a
+			found = true
+			break
 		}
 	}
+	if !found {
+		t.Fatal("Actions() must contain a top-level skills action")
+	}
+	if len(skills.Args) == 0 || skills.Args[0] != "status" {
+		t.Errorf("top-level skills action Args[0] = %v, want [status ...]", skills.Args)
+	}
+	if !skills.TargetAgnostic {
+		t.Error("skills action must have TargetAgnostic: true")
+	}
+	if skills.Mutating {
+		t.Error("skills action must have Mutating: false (read-only)")
+	}
+	if skills.Hint == "" {
+		t.Error("skills action must have a non-empty Hint")
+	}
 
-	for _, verb := range []string{"validate", "list", "status"} {
-		a, ok := byVerb[verb]
+	if len(skills.Also) != 2 {
+		t.Fatalf("skills action must have exactly 2 Also entries, got %d: %+v", len(skills.Also), skills.Also)
+	}
+	byVerb := make(map[string]Action)
+	for _, sub := range skills.Also {
+		if sub.Command != "skills" {
+			t.Errorf("Also entry must have Command %q, got %q", "skills", sub.Command)
+		}
+		if len(sub.Args) == 0 {
+			t.Fatalf("Also entry must have a non-empty Args, got %+v", sub)
+		}
+		byVerb[sub.Args[0]] = sub
+	}
+	for _, verb := range []string{"validate", "list"} {
+		sub, ok := byVerb[verb]
 		if !ok {
-			t.Errorf("Actions() must contain a skills action with Args[0]=%q", verb)
+			t.Errorf("skills Also must contain a verb %q, got %+v", verb, skills.Also)
 			continue
 		}
-		if !a.TargetAgnostic {
-			t.Errorf("skills %s must have TargetAgnostic: true", verb)
-		}
-		if a.Mutating {
-			t.Errorf("skills %s must have Mutating: false (read-only)", verb)
-		}
-		if a.Hint == "" {
-			t.Errorf("skills %s must have a non-empty Hint", verb)
+		if !sub.TargetAgnostic {
+			t.Errorf("skills %s (Also) must have TargetAgnostic: true", verb)
 		}
 	}
 }
@@ -1207,31 +1250,110 @@ func TestSkillsActionsSectionHeaderVisible(t *testing.T) {
 	}
 }
 
-func TestSkillRegistryRefreshRepairsCodexSDDExecutors(t *testing.T) {
-	var refresh Action
+// TestSkillRegistryRefreshNotInTUIMenu is a regression guard: the
+// "Actualizar registry SDD Codex" (skill-registry refresh) action was
+// intentionally removed from the TUI menu as part of the 11->7 simplification.
+// The backend capability (bin/labdrian-overlay skill-registry refresh) is
+// untouched and remains reachable via the bash CLI directly — only its TUI
+// menu entry is dropped, and it must not exist anywhere in the menu, top-level
+// or nested under Also.
+func TestSkillRegistryRefreshNotInTUIMenu(t *testing.T) {
 	for _, a := range Actions() {
-		if a.Command == "skill-registry" && len(a.Args) > 0 && a.Args[0] == "refresh" {
-			refresh = a
+		if a.Command == "skill-registry" {
+			t.Errorf("Actions() must NOT contain a top-level skill-registry action, found %+v", a)
+		}
+		for _, sub := range a.Also {
+			if sub.Command == "skill-registry" {
+				t.Errorf("Actions() must NOT contain a nested skill-registry action, found %+v under %q", sub, a.Name)
+			}
+		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// GAP 3: Action menu simplification (11 -> 7) and Also composition
+// ---------------------------------------------------------------------------
+
+// TestAllArgSetsFlattensPrimaryThenAlso verifies allArgSets returns the
+// primary action's arg set(s) followed by each Also entry's arg set(s), in
+// that order.
+func TestAllArgSetsFlattensPrimaryThenAlso(t *testing.T) {
+	action := Action{
+		Command:     "status",
+		SupportsAll: true,
+		Also: []Action{
+			{Command: "status-hooks", TargetAgnostic: true},
+		},
+	}
+	targets := []Target{{Name: "claude", Path: "/some/path"}}
+
+	sets := allArgSets(action, targets, false)
+	if len(sets) != 2 {
+		t.Fatalf("expected 2 arg sets, got %d: %v", len(sets), sets)
+	}
+	if sets[0][0] != "status" {
+		t.Errorf("first arg set must start with %q, got %v", "status", sets[0])
+	}
+	want := []string{"status-hooks"}
+	if len(sets[1]) != len(want) || sets[1][0] != want[0] {
+		t.Errorf("second arg set = %v, want %v", sets[1], want)
+	}
+}
+
+// TestAllArgSetsSkillsActionComposition verifies allArgSets on the actual
+// Skills action from Actions() yields the status/validate/list arg sets in
+// order.
+func TestAllArgSetsSkillsActionComposition(t *testing.T) {
+	var skills Action
+	for _, a := range Actions() {
+		if a.Command == "skills" {
+			skills = a
 			break
 		}
 	}
+	if skills.Command == "" {
+		t.Fatal("Actions() must contain a top-level skills action")
+	}
 
-	if refresh.Command == "" {
-		t.Fatal("Actions() must contain skill-registry refresh")
+	sets := allArgSets(skills, nil, false)
+	want := [][]string{
+		{"skills", "status"},
+		{"skills", "validate"},
+		{"skills", "list"},
 	}
-	if !refresh.Mutating {
-		t.Error("skill-registry refresh must require confirmation because it rewrites .atl/skill-registry.md")
+	if len(sets) != len(want) {
+		t.Fatalf("expected %d arg sets, got %d: %v", len(want), len(sets), sets)
 	}
-	if !refresh.TargetAgnostic {
-		t.Error("skill-registry refresh TUI action must be target-agnostic so all-selected targets do not trigger repeated refreshes")
+	for i, w := range want {
+		if len(sets[i]) != len(w) {
+			t.Fatalf("arg set %d = %v, want %v", i, sets[i], w)
+		}
+		for j := range w {
+			if sets[i][j] != w[j] {
+				t.Errorf("arg set %d = %v, want %v", i, sets[i], w)
+				break
+			}
+		}
 	}
-	if refresh.SupportsAll {
-		t.Error("skill-registry refresh must not use --target all")
+}
+
+// TestActionMenuShapeAndOrder locks in the 11->7 simplification: exactly 7
+// top-level actions, in the order matching the "Verificar → Capturar →
+// Aplicar" flow copy (viewActions), with Capturar coming before Aplicar.
+func TestActionMenuShapeAndOrder(t *testing.T) {
+	actions := Actions()
+	if len(actions) != 7 {
+		t.Fatalf("expected 7 top-level actions, got %d: %v", len(actions), actions)
 	}
-	if len(refresh.Args) != 3 || refresh.Args[0] != "refresh" || refresh.Args[1] != "--target" || refresh.Args[2] != "codex" {
-		t.Errorf("skill-registry refresh TUI action must refresh and repair Codex, got Args=%v", refresh.Args)
+
+	want := []string{"status", "sync-check", "capture", "apply", "install-hooks", "uninstall-hooks", "skills"}
+	got := make([]string, len(actions))
+	for i, a := range actions {
+		got[i] = a.Command
 	}
-	if !strings.Contains(refresh.Hint, "sdd-*") {
-		t.Errorf("skill-registry refresh hint should mention sdd-* executors, got %q", refresh.Hint)
+	for i, w := range want {
+		if got[i] != w {
+			t.Errorf("action %d: Command = %q, want %q (full sequence: %v)", i, got[i], w, got)
+		}
 	}
 }
