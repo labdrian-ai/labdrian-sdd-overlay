@@ -12,6 +12,7 @@ var (
 	colorGreen   = lipgloss.Color("78")  // soft green — in sync
 	colorYellow  = lipgloss.Color("214") // amber — needs apply
 	colorRed     = lipgloss.Color("203") // soft red — needs capture+apply
+	colorAmber   = lipgloss.Color("179") // dull gold — behind origin (informational, distinct from needs-apply yellow)
 	colorGray    = lipgloss.Color("242")
 	colorMuted   = lipgloss.Color("238")
 	colorAccent  = lipgloss.Color("105") // soft purple — primary accent
@@ -431,6 +432,8 @@ func (m model) viewDashboard() string {
 			color, icon, label = colorYellow, "!", "Pendiente de aplicación"
 		case SyncNeedsCapture:
 			color, icon, label = colorRed, "✗", "Requiere capture + apply"
+		case SyncBehindOrigin:
+			color, icon, label = colorAmber, "~", "Detrás de origin"
 		default:
 			color, icon, label = colorGray, "?", "Sin datos"
 		}
@@ -440,8 +443,12 @@ func (m model) viewDashboard() string {
 		targetName := lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%-9s", v.Target))
 		statusLabel := lipgloss.NewStyle().Foreground(color).Render(label)
 		head := fmt.Sprintf("%s %s  %s", badge, targetName, statusLabel)
-		counts := mutingStyle.Render(fmt.Sprintf("  cambios upstream: %d  overlay sin desplegar: %d",
-			v.UpstreamChanged, v.OverlayNotDeployed))
+		countsText := fmt.Sprintf("  cambios upstream: %d  overlay sin desplegar: %d",
+			v.UpstreamChanged, v.OverlayNotDeployed)
+		if v.RepoBehindOrigin > 0 {
+			countsText += fmt.Sprintf("  detrás de origin: %d", v.RepoBehindOrigin)
+		}
+		counts := mutingStyle.Render(countsText)
 		action := dimStyle.Render("  → " + v.Action)
 
 		b.WriteString(head + "\n" + counts + "\n")

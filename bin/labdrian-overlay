@@ -792,10 +792,56 @@ cmd_status() {
 # sync-check
 # ---------------------------------------------------------------------------
 
+# Computes how many commits local HEAD is behind this repo's own origin/main,
+# repo-level (not target-scoped). Emits an integer count on stdout, or the
+# literal token "NA" when the comparison is unavailable (no origin remote, no
+# cached ref, or a requested live fetch failed).
+#
+# When check_origin is "true", runs `git fetch origin` first for a live
+# comparison. Every new git invocation here is wrapped in the same
+# `if <cmd> 2>/dev/null; then ... else ...NA...; fi` guard idiom already used
+# elsewhere in this function (precedent: line ~854, `if git cat-file -e
+# "main:${rr_repo_rel}" 2>/dev/null; then ...`), so a missing remote/ref or a
+# failed fetch degrades to NA instead of aborting the script under
+# `set -euo pipefail`.
+#
+# The scoped SYNC_CHECK warning on fetch failure is written to stderr (not
+# stdout) so it does not contaminate the count/NA value captured by callers
+# via command substitution.
+compute_repo_behind_origin() {
+  local check_origin="$1"
+
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    echo "NA"
+    return
+  fi
+
+  if [[ "$check_origin" == true ]]; then
+    if ! git fetch origin >/dev/null 2>&1; then
+      echo "SYNC_CHECK:*: git fetch origin failed -- degrading REPO_BEHIND_ORIGIN to NA" >&2
+      echo "NA"
+      return
+    fi
+  fi
+
+  if ! git rev-parse --verify -q refs/remotes/origin/main >/dev/null 2>&1; then
+    echo "NA"
+    return
+  fi
+
+  local count
+  if count="$(git rev-list HEAD..origin/main --count 2>/dev/null)"; then
+    echo "$count"
+  else
+    echo "NA"
+  fi
+}
+
 cmd_sync_check() {
   cd "$OVERLAY_DIR"
 
   local target_arg="all"
+  local check_origin=false
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -804,10 +850,16 @@ cmd_sync_check() {
         target_arg="${1:-}"
         [[ -n "$target_arg" ]] || die "--target requires an argument"
         ;;
+      --check-origin|--fetch)
+        check_origin=true
+        ;;
       *) die "Unknown option: $1" ;;
     esac
     shift || true
   done
+
+  local repo_behind_origin
+  repo_behind_origin="$(compute_repo_behind_origin "$check_origin")"
 
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
@@ -898,7 +950,7 @@ cmd_sync_check() {
     done < <(parse_manifest)
 
     echo ""
-    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed"
+    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed REPO_BEHIND_ORIGIN=$repo_behind_origin"
 
     if [[ "$upstream_changed" -gt 0 ]]; then
       echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"

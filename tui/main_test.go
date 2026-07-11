@@ -148,17 +148,17 @@ func TestParseSyncCheckDashboard(t *testing.T) {
 	sample := `
 === sync-check: claude ===
   IN_SYNC: skills/foo
-VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0
+VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0
 ACTION:claude: in sync with gentle-ai (healthy)
 
 === sync-check: opencode ===
   OVERLAY_NOT_DEPLOYED: skills/bar (live missing)
-VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2
+VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=NA
 ACTION:opencode: run 'overlay apply --target opencode'
 
 === sync-check: codex ===
   UPSTREAM_CHANGED: skills/baz
-VERDICT:codex:UPSTREAM_CHANGED=3 OVERLAY_NOT_DEPLOYED=1
+VERDICT:codex:UPSTREAM_CHANGED=3 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=5
 ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then 'overlay apply'
 `
 
@@ -168,13 +168,13 @@ ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then
 	}
 
 	want := []struct {
-		target string
-		status SyncStatus
-		uc, ond int
+		target       string
+		status       SyncStatus
+		uc, ond, rbo int
 	}{
-		{"claude", SyncHealthy, 0, 0},
-		{"opencode", SyncNeedsApply, 0, 2},
-		{"codex", SyncNeedsCapture, 3, 1},
+		{"claude", SyncHealthy, 0, 0, 0},
+		{"opencode", SyncNeedsApply, 0, 2, -1},
+		{"codex", SyncNeedsCapture, 3, 1, 5},
 	}
 
 	for i, w := range want {
@@ -188,6 +188,9 @@ ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then
 		if v.UpstreamChanged != w.uc || v.OverlayNotDeployed != w.ond {
 			t.Errorf("%s: counts = (%d,%d), want (%d,%d)",
 				w.target, v.UpstreamChanged, v.OverlayNotDeployed, w.uc, w.ond)
+		}
+		if v.RepoBehindOrigin != w.rbo {
+			t.Errorf("%s: RepoBehindOrigin = %d, want %d (R-002/R-004 NA->-1 parsing)", w.target, v.RepoBehindOrigin, w.rbo)
 		}
 		if v.Action == "" {
 			t.Errorf("%s: action should not be empty", w.target)
@@ -682,8 +685,8 @@ func TestConfirmMessageSelection(t *testing.T) {
 		m := newModel()
 		m.scr = screenConfirm
 		m.pendingAction = Action{
-			Name:    "Aplicar cambios",
-			Command: "apply",
+			Name:     "Aplicar cambios",
+			Command:  "apply",
 			Mutating: true,
 			// ConfirmMessage is empty (zero value)
 		}
@@ -977,15 +980,19 @@ func TestBackwardsCompatZeroValues(t *testing.T) {
 	}
 }
 
-// TestClassifyPrecedence verifies UPSTREAM_CHANGED wins over OVERLAY_NOT_DEPLOYED.
+// TestClassifyPrecedence verifies UPSTREAM_CHANGED wins over OVERLAY_NOT_DEPLOYED,
+// which in turn wins over REPO_BEHIND_ORIGIN (R-006 additive precedence).
 func TestClassifyPrecedence(t *testing.T) {
-	if classify(2, 5) != SyncNeedsCapture {
+	if classify(2, 5, 0) != SyncNeedsCapture {
 		t.Fatal("upstream_changed>0 must classify as needs-capture (RED)")
 	}
-	if classify(0, 1) != SyncNeedsApply {
+	if classify(0, 1, 0) != SyncNeedsApply {
 		t.Fatal("overlay_not_deployed>0 must classify as needs-apply (YELLOW)")
 	}
-	if classify(0, 0) != SyncHealthy {
+	if classify(0, 0, 3) != SyncBehindOrigin {
+		t.Fatal("repo_behind_origin>0 alone must classify as SyncBehindOrigin (R-006: never silently healthy)")
+	}
+	if classify(0, 0, 0) != SyncHealthy {
 		t.Fatal("zero counts must classify as healthy (GREEN)")
 	}
 }

@@ -108,6 +108,10 @@ const (
 	SyncNeedsApply
 	// SyncNeedsCapture means upstream (gentle-ai) changed (capture + apply required).
 	SyncNeedsCapture
+	// SyncBehindOrigin means local HEAD is behind this repo's own origin/main
+	// (informational drift; never overridden by, and never masks, the other
+	// two verdicts — see classify's precedence and R-006).
+	SyncBehindOrigin
 )
 
 // TargetVerdict holds the parsed sync-check result for one target.
@@ -115,6 +119,7 @@ type TargetVerdict struct {
 	Target             string
 	UpstreamChanged    int
 	OverlayNotDeployed int
+	RepoBehindOrigin   int // count; -1 = unavailable (no remote/no cached ref/fetch failed)
 	Action             string
 	Status             SyncStatus
 	AgentFiles         []AgentFileEntry // per-file statuses for agents/ paths
@@ -122,16 +127,19 @@ type TargetVerdict struct {
 
 // classify maps verdict counts to a color status.
 //
-// Priority (matches the backend ACTION precedence):
-//   - UPSTREAM_CHANGED > 0  -> RED   (gentle-ai synced, needs capture+apply)
-//   - OVERLAY_NOT_DEPLOYED > 0 -> YELLOW (needs apply)
-//   - otherwise -> GREEN (healthy)
-func classify(upstreamChanged, overlayNotDeployed int) SyncStatus {
+// Priority (matches the backend ACTION precedence, extended by R-006):
+//   - UPSTREAM_CHANGED > 0      -> RED    (gentle-ai synced, needs capture+apply)
+//   - OVERLAY_NOT_DEPLOYED > 0  -> YELLOW (needs apply)
+//   - REPO_BEHIND_ORIGIN > 0    -> behind-origin (never silently healthy)
+//   - otherwise                 -> GREEN (healthy)
+func classify(upstreamChanged, overlayNotDeployed, repoBehindOrigin int) SyncStatus {
 	switch {
 	case upstreamChanged > 0:
 		return SyncNeedsCapture
 	case overlayNotDeployed > 0:
 		return SyncNeedsApply
+	case repoBehindOrigin > 0:
+		return SyncBehindOrigin
 	default:
 		return SyncHealthy
 	}
@@ -141,7 +149,7 @@ func classify(upstreamChanged, overlayNotDeployed int) SyncStatus {
 //
 // It reads the machine-friendly lines emitted by the backend:
 //
-//	VERDICT:<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M
+//	VERDICT:<target>:UPSTREAM_CHANGED=N OVERLAY_NOT_DEPLOYED=M REPO_BEHIND_ORIGIN=<n|NA>
 //	ACTION:<target>: <text>
 //
 // It also tracks `=== sync-check: <target> ===` section headers to set the
@@ -156,7 +164,10 @@ func ParseSyncCheck(output string) []TargetVerdict {
 	get := func(name string) *TargetVerdict {
 		v, ok := byTarget[name]
 		if !ok {
-			v = &TargetVerdict{Target: name}
+			// RepoBehindOrigin defaults to -1 (unavailable) until a VERDICT
+			// line explicitly sets it — mirrors the backend's NA sentinel and
+			// avoids a defensive zero-value collapsing into "0 behind".
+			v = &TargetVerdict{Target: name, RepoBehindOrigin: -1}
 			byTarget[name] = v
 			order = append(order, name)
 		}
@@ -188,15 +199,30 @@ func ParseSyncCheck(output string) []TargetVerdict {
 				if !ok {
 					continue
 				}
-				n, _ := strconv.Atoi(val)
 				switch key {
 				case "UPSTREAM_CHANGED":
+					n, _ := strconv.Atoi(val)
 					v.UpstreamChanged = n
 				case "OVERLAY_NOT_DEPLOYED":
+					n, _ := strconv.Atoi(val)
 					v.OverlayNotDeployed = n
+				case "REPO_BEHIND_ORIGIN":
+					// Dedicated NA pre-check: the field's literal "NA" sentinel
+					// MUST be handled before strconv.Atoi. Falling through to a
+					// generic `n, _ := strconv.Atoi(val)` (as UPSTREAM_CHANGED/
+					// OVERLAY_NOT_DEPLOYED do) would discard the parse error and
+					// silently collapse "NA" (or an omitted field) to Go's
+					// zero-value 0 — indistinguishable from "confirmed 0 commits
+					// behind" and reproducing the exact silent-healthy bug class
+					// R-006 exists to eliminate.
+					if val == "NA" {
+						v.RepoBehindOrigin = -1
+					} else if n, err := strconv.Atoi(val); err == nil {
+						v.RepoBehindOrigin = n
+					}
 				}
 			}
-			v.Status = classify(v.UpstreamChanged, v.OverlayNotDeployed)
+			v.Status = classify(v.UpstreamChanged, v.OverlayNotDeployed, v.RepoBehindOrigin)
 			continue
 		}
 
