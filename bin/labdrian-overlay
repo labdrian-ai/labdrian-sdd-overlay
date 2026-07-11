@@ -812,9 +812,18 @@ cmd_status() {
 # failed fetch degrades to NA instead of aborting the script under
 # `set -euo pipefail`.
 #
+# The fetch is best-effort time-bounded (wrapped in `timeout` when that
+# coreutil is available -- not on stock macOS, so this degrades gracefully
+# rather than being a hard new dependency) so a stalled network path (VPN
+# half-up, black-holed proxy) cannot hang sync-check indefinitely; a
+# `low-speed` git config guards the HTTPS-transport case the same way.
+#
 # The scoped SYNC_CHECK warning on fetch failure is written to stderr (not
 # stdout) so it does not contaminate the count/NA value captured by callers
-# via command substitution.
+# via command substitution. It includes the first line of git's own error
+# text so a security-relevant failure (e.g. a host-key mismatch or TLS
+# verification error) is distinguishable from a benign offline failure,
+# instead of both collapsing into the same generic message.
 compute_repo_behind_origin() {
   local check_origin="$1"
 
@@ -824,8 +833,15 @@ compute_repo_behind_origin() {
   fi
 
   if [[ "$check_origin" == true ]]; then
-    if ! git fetch origin >/dev/null 2>&1; then
-      echo "SYNC_CHECK:*: git fetch origin failed -- degrading REPO_BEHIND_ORIGIN to NA" >&2
+    local fetch_err="" fetch_ok=true
+    if command -v timeout >/dev/null 2>&1; then
+      fetch_err="$(timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin 2>&1 >/dev/null)" || fetch_ok=false
+    else
+      fetch_err="$(git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin 2>&1 >/dev/null)" || fetch_ok=false
+    fi
+    if [[ "$fetch_ok" == false ]]; then
+      local fetch_err_line="${fetch_err%%$'\n'*}"
+      echo "SYNC_CHECK:*: git fetch origin failed -- degrading REPO_BEHIND_ORIGIN to NA (${fetch_err_line:-no error output})" >&2
       echo "NA"
       return
     fi

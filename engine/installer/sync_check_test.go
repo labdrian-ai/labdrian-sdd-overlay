@@ -315,4 +315,11 @@ func TestSyncCheck_CheckOriginFlag_FetchFailure_DegradesToNA(t *testing.T) {
 	if !strings.Contains(out, "VERDICT:claude:") {
 		t.Errorf("expected VERDICT line still emitted despite fetch failure, got:\n%s", out)
 	}
+	// Post-merge audit finding RISK-001: the warning must surface git's own
+	// diagnostic text, not just the generic "degrading to NA" message --
+	// otherwise a security-relevant fetch failure (e.g. a host-key mismatch)
+	// is indistinguishable from a benign offline failure.
+	if !strings.Contains(out, "does not appear to be a git repository") {
+		t.Errorf("expected the real git fetch error text surfaced in the warning, got:\n%s", out)
+	}
 }
