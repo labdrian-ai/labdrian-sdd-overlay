@@ -103,7 +103,10 @@ func (m model) View() string {
 	// footer are left-aligned at the column's left edge. Then the whole column
 	// is centered on screen by one uniform leftPad, so header + body + footer all
 	// share the exact same left edge.
-	header := logoBanner(colW) + "\n" + repoLine
+	header := logoBanner(colW)
+	if repoLine != "" {
+		header += "\n" + repoLine
+	}
 	footer := footerStyle.Width(colW).Render(keys)
 	composed := strings.Join([]string{header, body, footer}, "\n")
 
@@ -116,13 +119,14 @@ func (m model) View() string {
 	return lipgloss.NewStyle().MaxWidth(termW).Render(composed)
 }
 
-// repoLine renders the repo-root path (or the locate error) at the column's
-// left edge — no hardcoded indent.
+// repoLine surfaces the repo-locate error, if any, at the column's left edge
+// — no hardcoded indent. Silent (empty) when the repo root resolved fine;
+// the path itself isn't useful chrome to show on every screen.
 func (m model) repoLine() string {
 	if m.rootErr != nil {
 		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
 	}
-	return mutingStyle.Render(m.repoRoot)
+	return ""
 }
 
 // footerKeys returns the raw key-hint legend for the active screen. The width
@@ -293,12 +297,7 @@ func (m model) viewTargets() string {
 
 func (m model) viewActions() string {
 	var b strings.Builder
-	sel := []string{}
-	for _, t := range m.selectedTargets() {
-		sel = append(sel, t.Name)
-	}
-	b.WriteString(titleStyle.Render("Elegir una acción") + "\n")
-	b.WriteString(dimStyle.Render("destinos: "+strings.Join(sel, ", ")) + "\n\n")
+	b.WriteString(titleStyle.Render("Elegir una acción") + "\n\n")
 
 	for i, a := range m.actions {
 		// Operational group header before the first action.
