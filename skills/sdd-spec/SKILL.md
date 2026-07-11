@@ -109,49 +109,6 @@ Why copy-full-then-edit?
 → If adding NEW behavior WITHOUT changing existing behavior, use ADDED instead
 ```
 
-#### Requirement Sentence Format — EARS (CRITICAL)
-
-Every requirement body MUST be written as ONE EARS sentence with exactly one
-`SHALL`. EARS removes ambiguity and makes each requirement directly testable.
-
-| Pattern | Template | Use when |
-|---------|----------|----------|
-| Ubiquitous | `The {system} SHALL {response}.` | Always-true invariant, no trigger. |
-| Event-driven | `WHEN {trigger}, the {system} SHALL {response}.` | A discrete event occurs. |
-| State-driven | `WHILE {state}, the {system} SHALL {response}.` | Behavior holds during a state. |
-| Unwanted behavior | `IF {condition}, THEN the {system} SHALL {response}.` | Errors, validation, edge cases. |
-| Optional feature | `WHERE {feature present}, the {system} SHALL {response}.` | Behavior gated by a flag/capability. |
-
-Compose when needed: `WHILE {state}, WHEN {trigger}, the {system} SHALL {response}.`
-One SHALL per requirement. If you need two SHALLs, write two requirements.
-
-**Banned soft verbs — ONLY as the SHALL response verb** (they make the response
-untestable): `might`, `could`, `should`, `would`, `as appropriate`, `if possible`,
-`support`, `handle`, `manage`, `robust`, `user-friendly`. This ban applies ONLY to
-the response slot. RFC 2119 `MAY`/`SHOULD` remain LEGAL to express requirement
-strength — do NOT strip them. Keep: "The system SHOULD cache results" (strength).
-Kill: "WHEN X, the system SHALL handle it" (vague response → name the action:
-return / persist / display / reject / emit / set / block).
-
-**Stable Requirement IDs** — every requirement carries a stable ID in the format
-`R-001`, `R-002`, ... (zero-padded, dash), matching the upstream
-requirements-from-transcripts contract:
-
-- The ID lives OFF the heading line, as the first body line: `ID: R-001`.
-- The heading line stays EXACTLY `### Requirement: {Name}` so archive's
-  name-exact matching and the MODIFIED block-replace are never broken.
-- Assign IDs once. NEVER renumber. MODIFIED and RENAMED KEEP their original ID.
-- REMOVED IDs are retired and NEVER reused.
-- If the upstream requirements brief already assigned `R-001` IDs, carry them
-  forward VERBATIM — do NOT re-mint and do NOT reformat.
-
-**Traceability contract**: every `R-NNN` MUST map to >=1 test, and every test MUST
-cite its `R-NNN` (in the test name or a comment). Scenarios stay in
-Given/When/Then and become the concrete test cases for that requirement.
-Downstream, sdd-tasks cites `R-NNN` per task and sdd-verify keys its compliance
-matrix on `R-NNN`. When Strict TDD is active, the RED test for each task MUST
-cite the `R-NNN` it covers.
-
 #### Delta Spec Format
 
 ```markdown
@@ -161,10 +118,9 @@ cite the `R-NNN` it covers.
 
 ### Requirement: {Requirement Name}
 
-ID: R-NNN
+{Description using RFC 2119 keywords: MUST, SHALL, SHOULD, MAY}
 
-WHEN {trigger}, the {system} SHALL {observable response}.
-<!-- Use the matching EARS pattern; one SHALL per requirement. -->
+The system {MUST/SHALL/SHOULD} {do something specific}.
 
 #### Scenario: {Happy path scenario}
 
@@ -183,17 +139,20 @@ WHEN {trigger}, the {system} SHALL {observable response}.
 
 ### Requirement: {Existing Requirement Name}
 
-ID: R-NNN
+{Full updated requirement text — replaces the existing one entirely}
+(Previously: {what it was before, in one line})
 
-{Full updated requirement as a single EARS SHALL sentence — replaces ONLY the
-previous requirement sentence; the existing ID is preserved.}
+#### Scenario: {Unchanged scenario — keep if still valid}
 
-#### Scenario: {all existing scenarios preserved verbatim}
-- GIVEN ...
-- WHEN ...
-- THEN ...
-<!-- Copy the FULL existing block first, then edit only the EARS sentence.
-     Do NOT drop scenarios. ID R-NNN preserved across this modification. -->
+- GIVEN {precondition}
+- WHEN {action}
+- THEN {outcome}
+
+#### Scenario: {Updated or new scenario}
+
+- GIVEN {updated precondition}
+- WHEN {updated action}
+- THEN {updated outcome}
 
 ## REMOVED Requirements
 
@@ -225,10 +184,7 @@ If this is a completely new domain, create a FULL spec (not a delta):
 
 ### Requirement: {Name}
 
-ID: R-001
-
-WHEN {trigger}, the {system} SHALL {observable response}.
-<!-- Use the matching EARS pattern; one SHALL per requirement. -->
+The system {MUST/SHALL/SHOULD} {behavior}.
 
 #### Scenario: {Name}
 
@@ -256,9 +212,9 @@ Return to the orchestrator:
 **Change**: {change-name}
 
 ### Specs Written
-| Domain | Type | Requirement IDs | Scenarios |
-|--------|------|-----------------|-----------|
-| {domain} | Delta/New | R-001, R-002, R-003 (3 added, 0 mod) | {total scenarios} |
+| Domain | Type | Requirements | Scenarios |
+|--------|------|-------------|-----------|
+| {domain} | Delta/New | {N added, M modified, K removed} | {total scenarios} |
 
 ### Coverage
 - Happy paths: {covered/missing}
@@ -273,13 +229,6 @@ Ready for design (sdd-design). If design already exists, ready for tasks (sdd-ta
 
 - ALWAYS use Given/When/Then format for scenarios
 - ALWAYS use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY) for requirement strength
-- ALWAYS write each requirement body as ONE EARS sentence with exactly one SHALL (see EARS section)
-- ALWAYS assign a stable `R-NNN` ID as the first body line; keep the heading line EXACTLY `### Requirement: {Name}` (archive matches by exact heading)
-- When promoting an upstream requirements brief, reformat each `### R-NNN — <name>` brief heading to `### Requirement: {Name}` with `ID: R-NNN` as the first body line — never embed the ID in the heading.
-- ALWAYS preserve IDs across MODIFIED/RENAMED, retire on REMOVED, never reuse; carry upstream `R-NNN` forward verbatim
-- NEVER use soft verbs (might/could/should/handle/support/manage) as the SHALL response verb; RFC 2119 MAY/SHOULD stay legal for strength
-- For MODIFIED, copy the FULL existing block (all scenarios) first, then rewrite only the EARS sentence — never drop scenarios
-- Every `R-NNN` MUST have >=1 Given/When/Then scenario a covering test can cite back (traceability contract)
 - Read the proposal's **Capabilities section** first — it tells you exactly which spec files to create
 - If existing specs exist, write DELTA specs (ADDED/MODIFIED/REMOVED sections)
 - If NO existing specs exist for the domain, write a FULL spec

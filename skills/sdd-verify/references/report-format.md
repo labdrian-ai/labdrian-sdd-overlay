@@ -10,6 +10,22 @@
 ## Report Template
 
 ~~~markdown
+```yaml
+schema: gentle-ai.verify-result/v1
+evidence_revision: sha256:{current-evidence-digest}
+verdict: pass
+blockers: 0
+critical_findings: 0
+requirements: {complete}/{actual-total}
+scenarios: {complete}/{actual-total}
+test_command: {exact command}
+test_exit_code: 0
+test_output_hash: sha256:{exact-output-digest}
+build_command: {exact command}
+build_exit_code: 0
+build_output_hash: sha256:{exact-output-digest}
+```
+
 ## Verification Report
 
 **Change**: {change-name}
@@ -37,10 +53,10 @@
 **Coverage**: {N}% / threshold: {N}% → ✅ Above / ⚠️ Below / ➖ Not available
 
 ### Spec Compliance Matrix
-| R-NNN | Requirement | Scenario | Test | Result |
-|-------|-------------|----------|------|--------|
-| R-001 | {Requirement name} | {Scenario} | `{file} > {test}` | ✅ COMPLIANT |
-| R-002 | {Requirement name} | {Scenario} | (none found) | ❌ UNTESTED |
+| Requirement | Scenario | Test | Result |
+|-------------|----------|------|--------|
+| {REQ-01} | {Scenario} | `{file} > {test}` | ✅ COMPLIANT |
+| {REQ-02} | {Scenario} | (none found) | ❌ UNTESTED |
 
 **Compliance summary**: {N}/{total} scenarios compliant
 
@@ -63,5 +79,7 @@
 {PASS / PASS WITH WARNINGS / FAIL}
 {one-line reason}
 ~~~
+
+The YAML envelope MUST be the first non-empty content and contains every field exactly once. Counts come from the actual retrieved specs. Passing requires current test and build/type-check commands with zero exit codes and SHA-256 output digests. Invalid, unknown, missing, contradictory, blocker-bearing, critical-bearing, incomplete, or stale evidence fails closed. Human prose after the envelope never controls routing. Model/provider/profile/effort selection remains user-owned.
 
 When Strict TDD is active, insert the TDD compliance, test layer distribution, changed-file coverage, and quality metrics sections from `strict-tdd-verify.md`.
