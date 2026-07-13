@@ -258,7 +258,6 @@ If zero issues found, report: "**Assertion quality**: ✅ All assertions verify 
 
 ## Rules (Strict TDD Verify specific)
 
-- ALWAYS verify that the RED test for each task cites its `R-NNN` (in the test name or a comment); a RED test without an `R-NNN` citation is CRITICAL — it cannot be traced back to a spec requirement
 - ALWAYS check the TDD Cycle Evidence table from apply-progress — it's the primary artifact
 - ALWAYS cross-reference reported test files against actual execution — don't trust the report blindly
 - ALWAYS run the Assertion Quality Audit (Step 5f) — trivial tests are WORSE than missing tests
