@@ -1,6 +1,6 @@
 # Roadmap SDD — labdrian-sdd-overlay
 
-**Date**: 2026-07-08
+**Date**: 2026-07-21
 **Based on**:
 - OpenSpec: `openspec/project/manifest/context.md`, `openspec/project/manifest/rules.md`, `openspec/project/manifest/mission.md`, `openspec/project/architect/final.md`
 - SDD history: active + archived changes under `openspec/changes`, PR #66, PR #68, PR #69, PR #78
@@ -56,6 +56,16 @@
 - **Risk if done early**: over-injecting OO/SOLID guidance or bypassing higher-precedence specs, design, project conventions, the minimalism contract, and review-budget boundaries.
 - **Command**: `/sdd-archive oo-quality-contract-runtime-wiring`
 - **Tracking**: estimate 500-750 changed lines originally · impl completed · verify PASS · review completed with blocker fixes applied · closure archived on 2026-07-08 · deviation actual review size exceeded the original 800-line budget forecast and requires reviewer-burden/size-exception handling before PR or equivalent review submission · impact converted the advisory artifact into scoped runtime behavior without broadening governance scope.
+
+### restore-skill-registry-scoped-blocks — Restore generated registry scope blocks
+- **Status**: completed
+- **Goal**: restore a healthy hook-status signal by regenerating exactly the `minimalism-contract-scope`, `skill-discovery-safety-scope`, and `anti-generic-design-scope` blocks through the authoritative propagation path while preserving unrelated registry content.
+- **Derived from**: archived change `openspec/changes/archive/2026-07-21-restore-skill-registry-scoped-blocks/` R-001 and AC-001 through AC-004; manifest rules requiring the trusted engine control-plane and minimal surface change; architecture contracts for `engine/propagator`, marker-based generated registry sections, and semantic status exit codes.
+- **Dependencies**: current `engine/propagator` marker-based replacement behavior and current `.atl/skill-registry.md`; independent of the planned `skill-package-manager` → `skill-lifecycle` → `skill-project-scope` hardening chain.
+- **Acceptance evidence**: all three required BEGIN/END marker pairs and generated rows occur exactly once; unrelated registry content is preserved; `bin/labdrian-overlay status-hooks` exits `0`; runtime/TUI hook status is healthy and healthy binaries, hooks, contracts, and synchronized targets remain untouched.
+- **Risk if done early**: using a broad install or synchronization path, or hand-authoring generated rows, could mutate healthy surfaces or duplicate blocks; expected `upstream..main` TUI diff noise remains a separate non-goal.
+- **Command**: `/sdd-archive restore-skill-registry-scoped-blocks` completed 2026-07-21
+- **Tracking**: estimate 3-5h · actual 1.30h · impl completed (11/11 tasks) · verify PASS WITH WARNINGS (4/4 requirements, 5/5 scenarios) · review approved recovered lineage `review-bc87e2c7d46b98f7` · fixes completed with historical absent-lock cleanup and rollback evidence marked non-reusable · closure archive completed 2026-07-21 · deviation actual 1.70-3.70h below estimate · impact restored healthy runtime/TUI hook status without source changes or later roadmap dependency changes.
 
 ### skill-package-manager — Package manager and install lifecycle hardening
 - **Status**: planned
