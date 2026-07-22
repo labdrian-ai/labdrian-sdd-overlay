@@ -1,0 +1,20 @@
+{
+  "change_name": "restore-skill-registry-scoped-blocks",
+  "project": "labdrian-sdd-overlay",
+  "tier": 3,
+  "requirements_topic_key": "project/labdrian-sdd-overlay/requirements/restore-skill-registry-scoped-blocks",
+  "manifest_refs": "project/labdrian-sdd-overlay/manifest/context",
+  "architect_ref": "project/labdrian-sdd-overlay/architect/final",
+  "roadmap_entry_ref": "project/labdrian-sdd-overlay/roadmap",
+  "estimate_topic_key": "sdd/restore-skill-registry-scoped-blocks/estimate",
+  "planned_range_hours": {
+    "low": 3.0,
+    "high": 5.0
+  },
+  "complexity": "Low",
+  "confidence": "High (approximately 80%)",
+  "sdd_slice_recommendation": "execution_mode=auto; slim implementation slice using the existing propagator only; do not modify implementation code",
+  "delivery_recommendation": "delivery_strategy=force-chained; chain_strategy=stacked-to-main; review_budget_lines=800",
+  "strict_tdd": true,
+  "artifact_store_mode": "hybrid"
+}
