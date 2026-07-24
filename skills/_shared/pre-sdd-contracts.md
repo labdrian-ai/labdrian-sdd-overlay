@@ -59,7 +59,7 @@ EARS-formatted requirement items (R-NNN), each carrying a `scope` enum of `new-c
 
 ### Estimate Record Shape
 
-Planned effort range in hours (`low` / `high`), a human-readable `complexity` assessment, a `confidence` level, and a note that human-review and gate time are included in the planned range.
+Two effort ranges — `planned_range_hours` (low/high, agent-compute-time basis) and `human_equivalent_hours` (low/high, secondary complexity/tiering signal only, never the headline) — plus `expected_checkpoints` (count of human-confirmation checkpoints), a human-readable `complexity` assessment, a `confidence` level, and the calibration sample size (`n`) the estimate was built from. See `sdd-time-estimation/SKILL.md` for the full agent-compute-time model.
 
 ---
 

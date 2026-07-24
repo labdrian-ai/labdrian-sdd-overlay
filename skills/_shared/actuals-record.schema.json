@@ -51,6 +51,22 @@
     "variance_vs_plan": {
       "type": "string",
       "description": "Summary of actual vs planned hours variance and contributing factors."
+    },
+    "requirement_count": {
+      "type": "integer",
+      "description": "Optional. Number of EARS requirements (R-NNN) in the change's spec, read from sdd/{change}/spec. Complexity-unit divisor for sdd-time-estimation's agent-compute-time-per-requirement calibration rate. Omit if the spec could not be read."
+    },
+    "changed_lines": {
+      "type": "integer",
+      "description": "Optional. Actual realized changed-line count at archive (e.g. a diff-stat total against the base commit, or the archive-report's recorded total). Do NOT source this from sdd/{change}/tasks's Review Workload Forecast — that figure is a pre-implementation planning guard, not an exact diff count (see sdd-tasks/SKILL.md). Complexity-unit divisor for the agent-compute-time-per-changed-line calibration rate. Omit if not available."
+    },
+    "review_lens_count": {
+      "type": "integer",
+      "description": "Optional. Number of review lenses actually run during the review gate (0, 1, or up to 4 under the 4R tier) — the length of `selected_lenses` in the native `gentle-ai.review-receipt/v2`, if one exists for this change. Complexity-unit divisor for the review_gate_hours calibration rate. Omit if not available."
+    },
+    "checkpoint_count": {
+      "type": "integer",
+      "description": "Optional. A structural LOWER BOUND on human-confirmation checkpoints, not a complete count: tiering go-ahead (always 1) + ambiguity clarifying question if fired (0-1), both read from sdd/{change}/pipeline-state — the only checkpoints inception-pipeline itself durably records. Deliberately excludes live interactive checkpoints it has no durable record of (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) — a fuller reconstruction, if available, belongs in variance_vs_plan free text instead. This is the real calendar-time driver for agent-orchestrated delivery, tracked separately from compute-time hours. Omit if not available."
     }
   }
 }

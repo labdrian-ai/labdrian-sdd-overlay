@@ -4,7 +4,7 @@ description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — 
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "1.0"
+  version: "1.1"
 ---
 
 ## Purpose
@@ -95,11 +95,18 @@ These gates belong to the orchestrator running the SDD engine. inception-pipelin
 Fire this AFTER the SDD engine archives the change. inception-pipeline is the **single writer** of `sdd/{change}/actuals` — this avoids forking the managed `sdd-archive` skill while keeping one authoritative actuals source.
 
 **Plan** — read the engine's native outputs (do NOT modify them):
-- `sdd/{change}/archive-report`
+- `sdd/{change}/archive-report` (for `changed_lines`, if it records a realized diff-stat total; otherwise compute a diff-stat against the base commit)
 - `sdd/{change}/verify-report`
 - `sdd/{change}/apply-progress`
+- `sdd/{change}/spec` (for `requirement_count`)
+- `sdd/{change}/pipeline-state` (for the tier-selection outcome, and the ambiguity clarifying question if rule 4 fired — the only checkpoints inception-pipeline itself durably records)
+- the native `gentle-ai review` receipt (`gentle-ai.review-receipt/v2`), if one exists (its `selected_lenses` array length is `review_lens_count`)
 
-**Validate** — compute the actuals object **once** (implementation_hours, review_gate_hours, total_wall_clock_hours, post_review_fix_hours, approval_decision, scope_drift_notes, variance_vs_plan) and validate it against `../_shared/actuals-record.schema.json`. If it fails validation, report and STOP — do not partial-write.
+Do NOT source `changed_lines` from `sdd/{change}/tasks` — its Review Workload Forecast is a pre-implementation planning guard, not an exact diff count (see `sdd-tasks/SKILL.md`).
+
+**`checkpoint_count` is a structural lower bound, not a complete count.** inception-pipeline hands routing of proposal → spec → design → tasks → apply → verify → archive to the SDD engine and does not durably observe every live confirmation exchanged during those phases (e.g. mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) — do not claim "your own record" of checkpoints you never routed, and do not invent a field on `sdd/{change}/entry` to proxy them. Sum ONLY what `sdd/{change}/pipeline-state` actually carries: tiering go-ahead (always 1) + ambiguity clarifying question if rule 4 fired (0-1). If a fuller count is reconstructable from the session itself, record the narrative in `variance_vs_plan` free text instead (as was done for this project's first calibration record) rather than inflating the structured field.
+
+**Validate** — compute the actuals object **once** (implementation_hours, review_gate_hours, total_wall_clock_hours, post_review_fix_hours, approval_decision, scope_drift_notes, variance_vs_plan, plus the optional complexity-unit fields `requirement_count`, `changed_lines`, `review_lens_count`, `checkpoint_count` when their source artifact is readable) and validate it against `../_shared/actuals-record.schema.json`. The complexity-unit fields feed `sdd-time-estimation`'s per-unit calibration rate (hours per requirement, hours per changed line) once a project accumulates enough actuals — omit any field whose source artifact could not be read rather than guessing. If validation fails, report and STOP — do not partial-write.
 
 **Execute** — write both, in order:
 1. `sdd/{change}/actuals` (the authoritative single actuals notebook).
