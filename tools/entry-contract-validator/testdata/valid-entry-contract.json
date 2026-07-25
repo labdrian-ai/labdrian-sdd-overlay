@@ -1,0 +1,134 @@
+{
+  "contract_version": "2.0.0",
+  "change_name": "generic-entry-contract-repair",
+  "project": "example-platform",
+  "tier": 2,
+  "interaction_mode": "interactive",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/generic-entry-contract-repair/entry",
+      "openspec_path": "openspec/changes/generic-entry-contract-repair/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/example-platform/requirements/generic-entry-contract-repair",
+      "openspec_path": "openspec/changes/generic-entry-contract-repair/requirements.md"
+    },
+    "manifest": {
+      "context": {
+        "topic_key": "project/example-platform/manifest/context",
+        "openspec_path": "openspec/project/manifest/context.md"
+      },
+      "mission": {
+        "topic_key": "project/example-platform/manifest/mission",
+        "openspec_path": "openspec/project/manifest/mission.md"
+      },
+      "rules": {
+        "topic_key": "project/example-platform/manifest/rules",
+        "openspec_path": "openspec/project/manifest/rules.md"
+      }
+    },
+    "architecture": {
+      "topic_key": "project/example-platform/architect/final",
+      "openspec_path": "openspec/project/architect/final.md"
+    },
+    "roadmap": {
+      "topic_key": "project/example-platform/roadmap",
+      "openspec_path": "openspec/project/roadmap.md"
+    },
+    "estimate": {
+      "topic_key": "sdd/generic-entry-contract-repair/estimate",
+      "openspec_path": "openspec/changes/generic-entry-contract-repair/estimate.md"
+    },
+    "sdd_init": {
+      "topic_key": "sdd-init/example-platform",
+      "openspec_path": "openspec/config.yaml"
+    },
+    "pipeline_state": {
+      "topic_key": "sdd/generic-entry-contract-repair/pipeline-state",
+      "openspec_path": "openspec/changes/generic-entry-contract-repair/pipeline-state.json"
+    },
+    "delivery": {
+      "topic_key": "delivery/generic-entry-contract-repair",
+      "openspec_path": "openspec/changes/generic-entry-contract-repair/delivery.json"
+    }
+  },
+  "estimate": {
+    "planned_range_hours": {
+      "low": 24,
+      "high": 40
+    },
+    "complexity": "high",
+    "confidence": "medium",
+    "human_review_included": true
+  },
+  "requested_pr_strategy": "force-chained",
+  "delivery_strategy": "auto-chain",
+  "chaining_required": true,
+  "chain_strategy": "feature-branch-chain",
+  "review_budget": {
+    "max_changed_lines_per_slice": 400,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": {
+      "state": "not-needed"
+    }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "go test ./internal/contract -run TestEntryContract"
+      ],
+      "broad": [
+        "go test ./..."
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "contract-schema",
+      "title": "Define the closed contract schema",
+      "requirements": ["R-001", "R-002"],
+      "dependencies": [],
+      "estimated_changed_lines": {
+        "low": 80,
+        "high": 120
+      }
+    },
+    {
+      "order": 2,
+      "id": "semantic-validator",
+      "title": "Validate cross-field invariants",
+      "requirements": ["R-003"],
+      "dependencies": ["contract-schema"],
+      "estimated_changed_lines": {
+        "low": 100,
+        "high": 160
+      }
+    },
+    {
+      "order": 3,
+      "id": "asset-propagation",
+      "title": "Propagate version-matched assets",
+      "requirements": ["R-004", "R-005"],
+      "dependencies": ["contract-schema", "semantic-validator"],
+      "estimated_changed_lines": {
+        "low": 70,
+        "high": 110
+      }
+    },
+    {
+      "order": 4,
+      "id": "release-readiness",
+      "title": "Verify installation readiness",
+      "requirements": ["R-006"],
+      "dependencies": ["asset-propagation"],
+      "estimated_changed_lines": {
+        "low": 40,
+        "high": 80
+      }
+    }
+  ],
+  "expected_native_next_recommendation": "sdd-new"
+}

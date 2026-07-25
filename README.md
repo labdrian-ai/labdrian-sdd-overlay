@@ -104,6 +104,7 @@ action menu without leaving the dashboard.
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
 | `uninstall-hooks` | **modifies** | Remove the two overlay hook entries from `~/.claude/settings.json`, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contract readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
+| `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
 
 ### The 3 workflows
@@ -124,6 +125,16 @@ labdrian sync-check                         # confirm: healthy
 # edit skills/<path>.md in your editor
 labdrian apply                              # redeploy to all targets
 labdrian sync-check                         # confirm in-sync
+```
+
+The pre-SDD entry bundle is tracked as four inseparable assets: `inception-pipeline/SKILL.md`, `_shared/pre-sdd-contracts.md`, `_shared/entry-contract.schema.json`, and `_shared/actuals-record.schema.json`. Version `2.0.0` also uses the isolated validator in `tools/entry-contract-validator`; its dependency is intentionally not added to `engine/go.mod`.
+
+`labdrian apply` propagates all four tracked assets to Claude, OpenCode, and Codex. Restart any already-running client after deployment so it reloads the updated skill and shared contracts. Validate a candidate without deploying anything:
+
+```bash
+labdrian validate-entry-contract \
+  --schema skills/_shared/entry-contract.schema.json \
+  --instance /path/to/entry-candidate.json
 ```
 
 **4. One-time hooks setup (run once per machine).**
@@ -274,6 +285,11 @@ overlay gadu-generate [--check]
     - opencode/agents/GADU.md
     - skills/gadu-operator/SKILL.md
     from engine/gadu/persona/body.md.
+
+overlay validate-entry-contract --schema PATH --instance PATH
+    Build and run the isolated v2 entry-contract validator from a temporary binary.
+    Relative paths resolve from the caller's working directory. Exit codes 2-6 are
+    preserved; no installed skill root is modified.
 
 overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.
