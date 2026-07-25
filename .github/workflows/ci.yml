@@ -18,10 +18,10 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Syntax check bin/overlay
-        run: bash -n bin/overlay
+        run: bash -n bin/overlay && bash -n bin/labdrian-overlay
 
-      - name: ShellCheck bin/overlay
-        run: shellcheck bin/overlay || true
+      - name: ShellCheck wrappers
+        run: shellcheck bin/overlay bin/labdrian-overlay || true
 
   test-engine:
     name: Engine Tests
@@ -43,6 +43,44 @@ jobs:
       - name: Test
         working-directory: engine
         run: go test ./... -cover
+
+      - name: Validate skills registry
+        working-directory: engine
+        run: go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest
+
+  test-entry-contract-validator:
+    name: Entry Contract Validator
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/entry-contract-validator/go.mod
+
+      - name: Test
+        working-directory: tools/entry-contract-validator
+        run: go test ./... -cover
+
+      - name: Validate fixtures
+        working-directory: tools/entry-contract-validator
+        run: |
+          go build -o "$RUNNER_TEMP/entry-contract-validator" .
+          "$RUNNER_TEMP/entry-contract-validator" \
+            --schema ../../skills/_shared/entry-contract.schema.json \
+            --instance testdata/valid-entry-contract.json
+          if "$RUNNER_TEMP/entry-contract-validator" \
+            --schema ../../skills/_shared/entry-contract.schema.json \
+            --instance testdata/invalid-entry-contract.json; then
+            echo "invalid fixture was accepted" >&2
+            exit 1
+          else
+            status=$?
+          fi
+          test "$status" -eq 5
 
   test-tui:
     name: TUI Tests
