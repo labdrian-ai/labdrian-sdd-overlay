@@ -101,7 +101,8 @@
         "planned_range_hours": { "$ref": "#/$defs/nonnegative_number_range" },
         "complexity": {
           "type": "string",
-          "enum": ["low", "medium", "high", "very-high"]
+          "enum": ["low", "medium", "high", "very-high", "critical"],
+          "description": "Normalized lowercase estimate complexity; for example, Critical becomes critical."
         },
         "confidence": {
           "type": "string",
@@ -237,7 +238,7 @@
     },
     "expected_native_next_recommendation": {
       "type": "string",
-      "enum": ["sdd-new", "sdd-explore", "sdd-propose", "sdd-spec", "sdd-design", "sdd-tasks", "sdd-apply", "sdd-verify", "sdd-archive"],
+      "enum": ["sdd-new", "select-change", "propose", "spec", "design", "tasks", "apply", "verify", "remediate", "review", "resolve-review", "archive"],
       "description": "Expected nextRecommended value from the native dispatcher immediately after the validated handoff is persisted."
     }
   },

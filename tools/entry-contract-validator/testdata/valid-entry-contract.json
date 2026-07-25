@@ -58,7 +58,7 @@
       "low": 24,
       "high": 40
     },
-    "complexity": "high",
+    "complexity": "critical",
     "confidence": "medium",
     "human_review_included": true
   },
@@ -130,5 +130,5 @@
       }
     }
   ],
-  "expected_native_next_recommendation": "sdd-new"
+  "expected_native_next_recommendation": "propose"
 }

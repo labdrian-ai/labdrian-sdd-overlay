@@ -70,7 +70,7 @@ Assemble one candidate JSON object in a temporary file. It MUST contain every re
 
 - Identity: `contract_version`, inherited `change_name`, `project`, selected `tier`, `interaction_mode`, and `artifact_store_mode`.
 - `artifact_refs`: entry, requirements, manifest context/mission/rules, architecture, roadmap, estimate, SDD init, pipeline state, and delivery plan.
-- Estimate cache: `planned_range_hours`, `complexity`, `confidence`, and `human_review_included: true`. Keep richer estimate-only calibration fields in `sdd/{change}/estimate`; do not duplicate them here.
+- Estimate cache: `planned_range_hours`, lowercase-normalized `complexity` (`Critical` → `critical`), `confidence`, and `human_review_included: true`. Keep richer estimate-only calibration fields in `sdd/{change}/estimate`; do not duplicate them here.
 - Delivery decision: `requested_pr_strategy`, normalized `delivery_strategy`, `chaining_required`, `chain_strategy`, and `review_budget` including size-exception state.
 - Test/review plan: `strict_tdd.enabled`, non-empty focused and broad test command lists, ordered requirement-linked `review_slices`, and `expected_native_next_recommendation`.
 
@@ -102,9 +102,10 @@ gentle-ai sdd-status {change} --cwd {project-root} --json --instructions
 ```
 
 - Read `nextRecommended` and `blockedReasons` from the JSON. Treat them as authoritative over any free text.
+- Preserve the native token exactly: phase recommendations are unprefixed (`propose`, `spec`, `design`, `tasks`, `apply`, `verify`, `remediate`, `archive`); control/review recommendations include `sdd-new`, `select-change`, `review`, and `resolve-review`.
 - Assert `nextRecommended` matches `expected_native_next_recommendation` in the validated entry. A mismatch means the handoff is stale or incomplete: **STOP**, refresh evidence, and rebuild the candidate rather than editing one field in place.
-- If `blockedReasons` is non-empty AND `nextRecommended` is not `sdd-verify`, **STOP** and report the blockers. Do not hand off, do not archive.
-- If `nextRecommended` is `sdd-verify`, verification/remediation may run to refresh evidence.
+- If `blockedReasons` is non-empty AND `nextRecommended` is not `verify`, **STOP** and report the blockers. Do not hand off, do not archive.
+- If `nextRecommended` is `verify`, verification/remediation may run to refresh evidence.
 - Hand off to the SDD engine (gentleman-agents-team-lite) and let it route every SDD phase by `nextRecommended`. inception-pipeline does NOT route phases itself.
 
 ## Gate Compliance (non-negotiable orchestrator gates)

@@ -78,6 +78,40 @@ func TestValidateFilesAcceptsV2Fixture(t *testing.T) {
 	}
 }
 
+func TestValidateFilesAcceptsNativeDispatcherContractValues(t *testing.T) {
+	for _, token := range []string{
+		"sdd-new",
+		"select-change",
+		"propose",
+		"spec",
+		"design",
+		"tasks",
+		"apply",
+		"verify",
+		"remediate",
+		"review",
+		"resolve-review",
+		"archive",
+	} {
+		t.Run("next recommendation "+token, func(t *testing.T) {
+			if err := validateMutation(t, func(contract map[string]any) {
+				contract["expected_native_next_recommendation"] = token
+			}); err != nil {
+				t.Fatalf("native dispatcher token %q rejected: %v", token, err)
+			}
+		})
+	}
+
+	t.Run("critical complexity", func(t *testing.T) {
+		if err := validateMutation(t, func(contract map[string]any) {
+			estimate := contract["estimate"].(map[string]any)
+			estimate["complexity"] = "critical"
+		}); err != nil {
+			t.Fatalf("normalized critical complexity rejected: %v", err)
+		}
+	})
+}
+
 func TestValidateFilesRejectsInvalidContracts(t *testing.T) {
 	tests := []struct {
 		name       string
@@ -94,6 +128,12 @@ func TestValidateFilesRejectsInvalidContracts(t *testing.T) {
 			name: "mismatched contract version",
 			mutate: func(contract map[string]any) {
 				contract["contract_version"] = "1.0.0"
+			},
+		},
+		{
+			name: "stale prefixed dispatcher phase",
+			mutate: func(contract map[string]any) {
+				contract["expected_native_next_recommendation"] = "sdd-propose"
 			},
 		},
 		{
