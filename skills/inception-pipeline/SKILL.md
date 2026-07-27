@@ -4,7 +4,7 @@ description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — 
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "1.1"
+  version: "2.0.0"
 ---
 
 ## Purpose
@@ -13,7 +13,7 @@ You are a **thin pre-SDD orchestrator**. You stand in front of the SDD engine an
 
 1. **Select the entry tier** (1 / 2 / 3) with a reasoning-based checklist.
 2. **Sequence the pre-SDD producers** as delegated sub-agents (requirements-capture, project-inception, roadmap-maker, sdd-time-estimation).
-3. **Assemble + validate** the `sdd/{change}/entry` contract against `../_shared/entry-contract.schema.json`.
+3. **Assemble + deterministically validate** the versioned `sdd/{change}/entry` contract.
 4. **Confirm readiness** via the native dispatcher and hand off to the SDD engine (gentleman-agents-team-lite).
 5. **Fire closure-feedback** after the engine archives the change.
 
@@ -40,7 +40,7 @@ Rules:
 
 ## Tier Flows (each ends the same way)
 
-Every flow finishes with the identical tail: **assemble `sdd/{change}/entry` → validate against `../_shared/entry-contract.schema.json` → `gentle-ai sdd-status {change} --json` gate → hand to team-lite (route ONLY by `nextRecommended`) → closure-feedback after archive.**
+Every flow finishes with the identical tail: **assemble a temporary entry candidate → validate it with the version-matched schema + deterministic validator → persist the exact validated bytes to `sdd/{change}/entry` → `gentle-ai sdd-status {change} --cwd {project-root} --json --instructions` gate → hand to team-lite (route ONLY by `nextRecommended`) → closure-feedback after archive.**
 
 `change-name` is derived **once** by the requirements-capture step (`requirements-from-transcripts`) as a kebab-case slug and inherited verbatim downstream. Never re-derive it.
 
@@ -62,16 +62,48 @@ Every flow finishes with the identical tail: **assemble `sdd/{change}/entry` →
 3. Delegate **sdd-time-estimation** → writes `sdd/{change}/estimate`.
 4. Assemble + validate entry → dispatcher gate → engine (recommend a **slim slice**) → closure-feedback.
 
-## Dispatcher Gate & Handoff (route by `--json` only)
+## Entry Contract Assembly & Validation (v2; fail closed)
+
+Read `../_shared/pre-sdd-contracts.md` and `../_shared/entry-contract.schema.json` before assembly. The skill metadata, shared authority, entry schema, actuals schema, and validator MUST all declare contract bundle `2.0.0`. If an asset is missing or mismatched, **STOP**. Do not reconstruct a schema from memory or fall back to prose validation.
+
+Assemble one candidate JSON object in a temporary file. It MUST contain every required v2 group:
+
+- Identity: `contract_version`, inherited `change_name`, `project`, selected `tier`, `interaction_mode`, and `artifact_store_mode`.
+- `artifact_refs`: entry, requirements, manifest context/mission/rules, architecture, roadmap, estimate, SDD init, pipeline state, and delivery plan.
+- Estimate cache: `planned_range_hours`, lowercase-normalized `complexity` (`Critical` → `critical`), `confidence`, and `human_review_included: true`. Keep richer estimate-only calibration fields in `sdd/{change}/estimate`; do not duplicate them here.
+- Delivery decision: `requested_pr_strategy`, normalized `delivery_strategy`, `chaining_required`, `chain_strategy`, and `review_budget` including size-exception state.
+- Test/review plan: `strict_tdd.enabled`, non-empty focused and broad test command lists, ordered requirement-linked `review_slices`, and `expected_native_next_recommendation`.
+
+Artifact references carry the stable topic keys defined by the shared authority. Before validation, assert every producer artifact exists. Include `openspec_path` only for a real, normalized repository-relative path below `openspec/`; omit it when no such artifact exists. Never synthesize a path from a topic key. In `engram` or `none` mode, omit every `openspec_path`.
+
+Normalize delivery before validation:
+
+- `force-chained` resolves to `auto-chain`, `chaining_required: true`, and a concrete non-`none` chain strategy.
+- `force-single` resolves to `single-pr` when every slice is within budget, or `exception-ok` only with an explicitly approved size exception.
+- `auto-chain` always means chaining is required. `single-pr` and `exception-ok` always mean it is not.
+- Slice order starts at 1 and is contiguous. IDs are unique; dependencies name prior slices only. A slice over budget requires an approved exception.
+
+Run the repository wrapper so caller-relative paths work and validator exit codes remain visible:
+
+```bash
+labdrian validate-entry-contract \
+  --schema skills/_shared/entry-contract.schema.json \
+  --instance /absolute/path/to/entry-candidate.json
+```
+
+Any non-zero result is a hard stop. Do not persist a partially validated object. On success, persist the exact candidate bytes to `sdd/{change}/entry` with `capture_prompt: false` and, only when a real OpenSpec entry path was declared, atomically write the same object there. Then delete the temporary candidate.
+
+## Dispatcher Gate & Handoff (route by native JSON only)
 
 Route SDD **only** through the native dispatcher status JSON:
 
 ```
-gentle-ai sdd-status {change} --json
+gentle-ai sdd-status {change} --cwd {project-root} --json --instructions
 ```
 
 - Read `nextRecommended` and `blockedReasons` from the JSON. Treat them as authoritative over any free text.
-- **Do NOT pass `--instructions`** — it is not a real flag in 1.40.2.
+- Preserve the native token exactly: phase recommendations are unprefixed (`propose`, `spec`, `design`, `tasks`, `apply`, `verify`, `remediate`, `archive`); control/review recommendations include `sdd-new`, `select-change`, `review`, and `resolve-review`.
+- Assert `nextRecommended` matches `expected_native_next_recommendation` in the validated entry. A mismatch means the handoff is stale or incomplete: **STOP**, refresh evidence, and rebuild the candidate rather than editing one field in place.
 - If `blockedReasons` is non-empty AND `nextRecommended` is not `verify`, **STOP** and report the blockers. Do not hand off, do not archive.
 - If `nextRecommended` is `verify`, verification/remediation may run to refresh evidence.
 - Hand off to the SDD engine (gentleman-agents-team-lite) and let it route every SDD phase by `nextRecommended`. inception-pipeline does NOT route phases itself.
@@ -81,6 +113,8 @@ gentle-ai sdd-status {change} --json
 When sequencing producers and handing off, the orchestrator MUST honor every standing gate:
 
 - **SDD Init Guard** — before any SDD command, confirm `sdd-init` ran for the project; if not, run it first.
+- **Version-matched entry gate** — all v2 bundle assets must exist and the deterministic validator must return 0 before the entry is persisted or the dispatcher runs.
+- **Artifact-reference truthfulness** — every topic key resolves; every declared OpenSpec path is real and normalized. Missing evidence stops the flow.
 - **Model gate** — every Agent / sub-agent call MUST include `model`. No model → no call.
 - **Launch dedup** — track `(phase, fingerprint)` pairs; emit exactly one launch per distinct task.
 - **Skill-resolver injection** — resolve matching `SKILL.md` paths from the registry and inject them as `## Skills to load before work` in each sub-agent prompt (pass paths, not summaries).
@@ -124,7 +158,8 @@ Downstream consumers read on their next run — you do NOT push to them:
 - **Never route SDD phases.** The native dispatcher owns proposal → … → archive. inception-pipeline only sequences PRE-SDD producers + POST-SDD closure.
 - **Assert foundation before Tier 2/3.** manifest + architect MUST exist in engram before choosing Tier 2 or 3. Missing manifest → Tier 1.
 - **Default up on ambiguity.** When the tier is unclear, choose the higher tier, record rationale in `sdd/{change}/pipeline-state`, ask at most one question.
-- **Route by JSON only.** Use `gentle-ai sdd-status {change} --json` → `nextRecommended` / `blockedReasons`. Never `--instructions`.
+- **Route by native JSON only.** Use `gentle-ai sdd-status {change} --cwd {project-root} --json --instructions` → `nextRecommended` / `blockedReasons`.
+- **Never weaken validation.** Missing/mismatched v2 assets, validator failures, stale dispatcher recommendations, and fabricated OpenSpec paths all stop the handoff.
 - **change-name is derived once.** requirements-capture owns it; inherit verbatim, never re-derive downstream.
 - **Stop on partial closure writes.** If actuals or calibration write fails, report and stop — do not leave the stores inconsistent.
 

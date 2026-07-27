@@ -12,6 +12,7 @@ package installer_test
 //     sync-check commands against a git-repo sandbox with a sandbox HOME.
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"os"
@@ -665,17 +666,31 @@ func setupSandboxOverlay(t *testing.T, home string) (string, []string) {
 	overlayDir := t.TempDir()
 
 	const (
-		fixtureManifestInteg        = "test-skill/SKILL.md   managed\nGADU.md   custom   agent\nopencode/agents/GADU.md   custom   opencode-agent\n"
+		fixtureManifestInteg = "test-skill/SKILL.md   managed\n" +
+			"inception-pipeline/SKILL.md   custom\n" +
+			"_shared/pre-sdd-contracts.md   custom\n" +
+			"_shared/entry-contract.schema.json   custom\n" +
+			"_shared/actuals-record.schema.json   custom\n" +
+			"GADU.md   custom   agent\n" +
+			"opencode/agents/GADU.md   custom   opencode-agent\n"
 		fixtureSkillContent         = "# test skill\n"
+		fixtureInceptionContent     = "---\nname: inception-pipeline\n---\n# inception pipeline\n"
+		fixtureContractsContent     = "# pre-SDD contracts\n"
+		fixtureEntrySchemaContent   = "{\"title\":\"entry contract\"}\n"
+		fixtureActualsSchemaContent = "{\"title\":\"actuals record\"}\n"
 		fixtureAgentContent         = "---\nname: GADU\ndescription: test agent\nmodel: opus\ntools: '*'\n---\n# GADU\n"
 		fixtureOpenCodeAgentContent = "---\ndescription: test agent\nmode: all\nmodel: openai/gpt-5.5\npermission:\n  task: allow\n---\n# GADU\n"
 	)
 
 	files := map[string]string{
-		"overlay.manifest":           fixtureManifestInteg,
-		"skills/test-skill/SKILL.md": fixtureSkillContent,
-		"agents/GADU.md":             fixtureAgentContent,
-		"opencode/agents/GADU.md":    fixtureOpenCodeAgentContent,
+		"overlay.manifest":                          fixtureManifestInteg,
+		"skills/test-skill/SKILL.md":                fixtureSkillContent,
+		"skills/inception-pipeline/SKILL.md":        fixtureInceptionContent,
+		"skills/_shared/pre-sdd-contracts.md":       fixtureContractsContent,
+		"skills/_shared/entry-contract.schema.json": fixtureEntrySchemaContent,
+		"skills/_shared/actuals-record.schema.json": fixtureActualsSchemaContent,
+		"agents/GADU.md":                            fixtureAgentContent,
+		"opencode/agents/GADU.md":                   fixtureOpenCodeAgentContent,
 	}
 	for rel, content := range files {
 		p := filepath.Join(overlayDir, rel)
@@ -889,6 +904,80 @@ func TestUnrelatedSkillUnchanged(t *testing.T) {
 		if string(got) != string(srcContent) {
 			t.Errorf("deployed skill content differs from source at %s", p)
 		}
+	}
+}
+
+func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	home := t.TempDir()
+	overlayDir, env := setupSandboxOverlay(t, home)
+
+	if out, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+		t.Fatalf("overlay apply: %v\noutput:\n%s", err, out)
+	}
+
+	assets := []string{
+		"inception-pipeline/SKILL.md",
+		"_shared/pre-sdd-contracts.md",
+		"_shared/entry-contract.schema.json",
+		"_shared/actuals-record.schema.json",
+	}
+	targetRoots := []string{
+		filepath.Join(home, ".claude", "skills"),
+		filepath.Join(home, ".config", "opencode", "skills"),
+		filepath.Join(home, ".codex", "skills"),
+	}
+	for _, rel := range assets {
+		want, err := os.ReadFile(filepath.Join(overlayDir, "skills", rel))
+		if err != nil {
+			t.Fatalf("read source asset %s: %v", rel, err)
+		}
+		for _, targetRoot := range targetRoots {
+			got, err := os.ReadFile(filepath.Join(targetRoot, rel))
+			if err != nil {
+				t.Errorf("read deployed asset %s under %s: %v", rel, targetRoot, err)
+				continue
+			}
+			if !bytes.Equal(got, want) {
+				t.Errorf("deployed asset %s differs under %s", rel, targetRoot)
+			}
+		}
+	}
+
+	missingRel := "_shared/entry-contract.schema.json"
+	driftedRel := "_shared/pre-sdd-contracts.md"
+	opencodeRoot := filepath.Join(home, ".config", "opencode", "skills")
+	if err := os.Remove(filepath.Join(opencodeRoot, missingRel)); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(opencodeRoot, driftedRel), []byte("drifted\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	statusOut, err := runOverlay(t, overlay, env, "status", "--target", "opencode")
+	if err != nil {
+		t.Fatalf("overlay status: %v\noutput:\n%s", err, statusOut)
+	}
+	if !strings.Contains(statusOut, "MISSING in target: "+missingRel) {
+		t.Errorf("status did not report missing shared asset\noutput:\n%s", statusOut)
+	}
+	if !strings.Contains(statusOut, "DIFFERS  : "+driftedRel) {
+		t.Errorf("status did not report drifted shared asset\noutput:\n%s", statusOut)
+	}
+
+	syncOut, err := runOverlay(t, overlay, env, "sync-check", "--target", "opencode")
+	if err != nil {
+		t.Fatalf("overlay sync-check: %v\noutput:\n%s", err, syncOut)
+	}
+	if !strings.Contains(syncOut, "OVERLAY_NOT_DEPLOYED: skills/"+missingRel) {
+		t.Errorf("sync-check did not report %s as not deployed\noutput:\n%s", missingRel, syncOut)
+	}
+	if !strings.Contains(syncOut, "UPSTREAM_CHANGED: skills/"+driftedRel) {
+		t.Errorf("sync-check did not report %s as drifted\noutput:\n%s", driftedRel, syncOut)
 	}
 }
 

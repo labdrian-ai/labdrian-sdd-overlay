@@ -155,6 +155,10 @@ Commands:
                                              inert labels for a file you already committed.
                                    remove <id> unregister a skill from registry + manifest
                                    sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
+  validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
+    --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
+                                   resolved from the caller's working directory. Preserves validator
+                                   exit codes 2-6 and does not modify installed skill roots.
   gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
@@ -1549,6 +1553,68 @@ cmd_skills() {
 }
 
 # ---------------------------------------------------------------------------
+# validate-entry-contract
+# ---------------------------------------------------------------------------
+
+cmd_validate_entry_contract() {
+  local validator_src="$OVERLAY_DIR/tools/entry-contract-validator"
+  if [[ ! -f "$validator_src/go.mod" || ! -f "$validator_src/main.go" ]]; then
+    echo "error: entry-contract validator source is unavailable under $validator_src" >&2
+    return 3
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    echo "error: go is required to build the entry-contract validator" >&2
+    return 3
+  fi
+
+  local -a normalized_args=()
+  local flag value
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --schema|--instance)
+        flag="$1"
+        shift
+        if [[ $# -eq 0 ]]; then
+          normalized_args+=("$flag")
+          break
+        fi
+        value="$1"
+        [[ "$value" == /* ]] || value="$CALLER_CWD/$value"
+        normalized_args+=("$flag" "$value")
+        ;;
+      --schema=*|--instance=*)
+        flag="${1%%=*}"
+        value="${1#*=}"
+        [[ "$value" == /* ]] || value="$CALLER_CWD/$value"
+        normalized_args+=("$flag=$value")
+        ;;
+      *)
+        normalized_args+=("$1")
+        ;;
+    esac
+    shift
+  done
+
+  local validator_binary
+  if ! validator_binary="$(mktemp "${TMPDIR:-/tmp}/entry-contract-validator.XXXXXX")"; then
+    echo "error: could not allocate a temporary entry-contract validator binary" >&2
+    return 3
+  fi
+  rm -f "$validator_binary"
+
+  if ! (cd "$validator_src" && go build -o "$validator_binary" .); then
+    rm -f "$validator_binary"
+    echo "error: could not build the entry-contract validator" >&2
+    return 3
+  fi
+
+  local status=0
+  "$validator_binary" "${normalized_args[@]}" || status=$?
+  rm -f "$validator_binary"
+  return "$status"
+}
+
+# ---------------------------------------------------------------------------
 # gadu-generate
 # ---------------------------------------------------------------------------
 
@@ -1582,6 +1648,7 @@ case "$COMMAND" in
   install-alias)   cmd_install_alias "$@" ;;
   prespec)         cmd_prespec "$@" ;;
   skills)          cmd_skills "$@" ;;
+  validate-entry-contract) cmd_validate_entry_contract "$@" ;;
   gadu-generate)   cmd_gadu_generate "$@" ;;
   --help|-h)       usage; exit 0 ;;
   "")              usage >&2; exit 1 ;;

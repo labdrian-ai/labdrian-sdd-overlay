@@ -32,7 +32,7 @@ func TestLoadManifestView(t *testing.T) {
 	t.Run("infra_prefixes_excluded", func(t *testing.T) {
 		dir := t.TempDir()
 		path := filepath.Join(dir, "overlay.manifest")
-		content := "engine/cmd/main.go managed\n_shared/minimalism-contract.md custom\n"
+		content := "engine/cmd/main.go managed\n_shared/SKILL.md custom\n_shared/minimalism-contract.md custom\n"
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
