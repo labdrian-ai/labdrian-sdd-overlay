@@ -68,25 +68,25 @@ The CALIBRATION rule's per-phase agent-compute-time baseline MUST exclude the el
 - WHEN read
 - THEN its baseline inputs are exactly those three fields; `total_wall_clock_hours` is absent
 
-### Requirement: Delivery Window From a Declared Formula, With a Fixed Uncalibrated Buffer Below n=3 (R-010)
+### Requirement: Delivery Window From a Declared Formula, With a Separate Fixed Uncalibrated Allowance (R-010)
 
-The delivery-window output MUST derive from a declared formula (checkpoint count × round-trip latency + interruption allowance) with all inputs disclosed. Until calibration reaches n≥3 records, the interruption allowance MUST be a fixed, explicitly-disclosed buffer marked "uncalibrated," and MUST NOT scale with expected checkpoint count.
+The delivery-window output MUST derive from a declared formula (checkpoint count × round-trip latency + interruption allowance) with all inputs disclosed. Until explicit interruption evidence exists, the separate interruption allowance MUST be a fixed, explicitly-disclosed buffer marked "uncalibrated," and MUST NOT scale with expected checkpoint count.
 
 #### Scenario: Formula, inputs, and fixed buffer disclosed
 
-- GIVEN a pre-start report with fewer than 3 calibration records
+- GIVEN a pre-start report without explicit interruption evidence
 - WHEN it states a delivery window
-- THEN it discloses checkpoint count, latency rate, and a fixed interruption buffer marked uncalibrated, independent of expected checkpoint count
+- THEN it discloses checkpoint count, latency rate, and a separate fixed interruption buffer marked uncalibrated, independent of expected checkpoint count
 
 ### Requirement: Latency Rate Is a Formula Shape, Not a Shipped Calibrated Number (R-011)
 
-This change MUST define the round-trip-latency-rate formula and begin populating its inputs; it MUST NOT ship the rate as a calibrated figure. WHEN n=0, a stated bootstrap default MUST be used with confidence marked Low. WHEN n≥1, the rate MUST cite its calibration sample and disclosed n.
+This change MUST define the round-trip-latency-rate formula and begin populating its inputs; it MUST NOT ship the rate as a calibrated figure. Calibration MUST use only interruption-clean residual samples with positive `checkpoint_count`; session/rate-limit/provider-interruption samples MUST be excluded, never adjusted by subtracting guessed interruption duration. WHEN no eligible clean sample exists, a disclosed bootstrap default MUST be used with confidence marked Low; otherwise the rate MUST cite its eligible clean sample and disclosed n.
 
-#### Scenario: n=1 stays disclosed bootstrap, not calibrated
+#### Scenario: Interrupted n=1 leaves no eligible clean sample
 
-- GIVEN exactly one corrected actuals record
+- GIVEN exactly one corrected actuals record and it contains a provider interruption
 - WHEN a delivery-window estimate is produced
-- THEN the rate discloses n=1 and is marked Low-confidence/bootstrap — never presented as a calibrated rate
+- THEN the interruption-contaminated record is excluded, eligible clean-sample n=0 is disclosed, and the rate is marked Low-confidence/bootstrap — never adjusted or presented as calibrated
 
 ### Requirement: Actuals Output and Roadmap Tracking Report Units Distinctly (R-012, R-013)
 
@@ -100,7 +100,7 @@ The Actuals and Calibration output section MUST report elapsed-calendar-time and
 
 ### Requirement: Historical Record Corrected With a Mandatory Provenance Disclaimer (R-014)
 
-`sdd/sync-check-repo-behind-origin/actuals` MUST be corrected in place: `total_wall_clock_hours` set to a best-estimate approximate value (~36 hours, ~1.5 days) reconstructed from the closure narrative — not a conservative lower bound — accompanied by an explicit, unmissable statement that this figure is reconstructed, not measured. `checkpoint_count` MUST be added at 11, itemized 1+3+4+1+1+1 in `variance_vs_plan`, distinguishing the 1 durably-observed checkpoint (tiering go-ahead) from the 10 reconstructed from the closure narrative, per the R-007 disclosure rule above.
+`sdd/sync-check-repo-behind-origin/actuals` MUST be corrected in place: `total_wall_clock_hours` set to a best-estimate approximate value (~36 hours, ~1.5 days) reconstructed from the closure narrative — not a conservative lower bound — accompanied by an explicit, unmissable statement that this figure is reconstructed, not measured. `checkpoint_count` MUST be added at 12, itemized 1 tiering go-ahead + 1 AMB-001 ambiguity clarifying question + 3+4+1+1+1 = 12 in `variance_vs_plan`, distinguishing the 2 durably-observed checkpoints supported by `pipeline-state` from the 10 reconstructed from the closure narrative, per the R-007 disclosure rule above.
 
 #### Scenario: Provenance disclaimer present (mandatory — fails if absent)
 
@@ -108,8 +108,8 @@ The Actuals and Calibration output section MUST report elapsed-calendar-time and
 - WHEN `total_wall_clock_hours` is read as ~36
 - THEN the record explicitly states this value is reconstructed from the closure narrative, not measured — a corrected record missing this statement FAILS this requirement
 
-#### Scenario: Checkpoint count added and itemized to 11
+#### Scenario: Checkpoint count added and itemized to 12
 
 - GIVEN the corrected record
 - WHEN `checkpoint_count` is read
-- THEN it reads 11, with `variance_vs_plan` itemizing 1+3+4+1+1+1 summing to 11, marking the tiering-go-ahead item as durably observed and the remaining ten as reconstructed from the closure narrative
+- THEN it reads 12, with `variance_vs_plan` itemizing 1 tiering go-ahead + 1 AMB-001 ambiguity clarifying question + 3+4+1+1+1 = 12, marking the first two as the durable floor supported by `pipeline-state` and the remaining ten as reconstructed from the closure narrative

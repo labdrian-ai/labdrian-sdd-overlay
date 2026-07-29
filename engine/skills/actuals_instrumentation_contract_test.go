@@ -50,7 +50,10 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
 		for _, want := range []string{
 			"NEVER an input to the agent-compute-time baseline",
-			"total − sum(phase hours)",
+			"interruption-clean residual samples with positive `checkpoint_count`",
+			"`(total_wall_clock_hours − sum(phase hours)) / checkpoint_count`",
+			"Exclude any residual known or narrated to include a session, rate-limit, or provider interruption",
+			"never subtract a guessed interruption amount",
 		} {
 			if !strings.Contains(skill, want) {
 				t.Fatalf("CALIBRATION rule must contain %q", want)
@@ -66,6 +69,8 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		for _, want := range []string{
 			"expected checkpoints × round-trip latency + interruption allowance",
 			"does not scale with checkpoint count",
+			"no interruption-clean residual sample exists",
+			"fixed, explicitly-disclosed buffer marked \"uncalibrated\"",
 		} {
 			if !strings.Contains(skill, want) {
 				t.Fatalf("Output item 6 must contain %q", want)
@@ -96,8 +101,8 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 
 		checkpointCount, ok := fixture["checkpoint_count"].(float64)
-		if !ok || checkpointCount != 11 {
-			t.Fatalf("fixture checkpoint_count = %v, want 11", fixture["checkpoint_count"])
+		if !ok || checkpointCount != 12 {
+			t.Fatalf("fixture checkpoint_count = %v, want 12", fixture["checkpoint_count"])
 		}
 
 		wallClock, ok := fixture["total_wall_clock_hours"].(float64)
@@ -113,11 +118,16 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			"RECONSTRUCTED FROM THE CLOSURE NARRATIVE, NOT MEASURED",
 			"durably observed",
 			"reconstructed from narrative",
-			"= 11",
+			"= 12",
+			"Durable floor: 2 of 12",
+			"AMB-001",
 		} {
 			if !strings.Contains(variance, want) {
 				t.Fatalf("fixture variance_vs_plan must contain %q", want)
 			}
+		}
+		if strings.Contains(variance, "the only checkpoint inception-pipeline itself durably records") {
+			t.Fatal("fixture variance_vs_plan must not claim tiering go-ahead is the only durably recorded checkpoint")
 		}
 	})
 
