@@ -71,4 +71,5 @@ inception-pipeline/evals/evals.json custom
 skills.registry.yaml custom
 gadu-operator/SKILL.md custom
 GADU.md                  custom   agent
+sdd-explore.md           managed  agent
 opencode/agents/GADU.md custom   opencode-agent
