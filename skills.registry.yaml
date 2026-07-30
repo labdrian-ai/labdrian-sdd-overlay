@@ -234,3 +234,15 @@ skills:
         - codex
     lifecycle:
       updateStrategy: overlay-only
+  - id: anti-generic-design
+    path: anti-generic-design
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
