@@ -216,11 +216,17 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		if schema.AdditionalProperties == nil {
 			t.Fatal("schema must declare additionalProperties: the closed-record flag is absent")
 		}
-		var closedRecord bool
+		// Decoding into *bool rather than bool keeps a JSON `null` distinguishable too:
+		// unmarshalling null into a plain bool is a no-op that returns no error, so it
+		// would silently read as a passing `false` and leave the record unprovably closed.
+		var closedRecord *bool
 		if err := json.Unmarshal(schema.AdditionalProperties, &closedRecord); err != nil {
 			t.Fatalf("schema additionalProperties must be the boolean false, got %s: %v", schema.AdditionalProperties, err)
 		}
-		if closedRecord {
+		if closedRecord == nil {
+			t.Fatalf("schema additionalProperties must be the boolean false, got %s: a null flag does not close the record", schema.AdditionalProperties)
+		}
+		if *closedRecord {
 			t.Fatal("schema additionalProperties must be false, got true: the record is no longer closed")
 		}
 
@@ -319,7 +325,10 @@ func markdownSectionBody(t *testing.T, doc, heading string) string {
 		t.Fatalf("heading anchor %q must be '#'-prefixed markdown heading text", heading)
 	}
 
-	lines := strings.Split(doc, "\n")
+	// Normalise CRLF up front. Splitting on "\n" alone would leave a trailing carriage
+	// return on every line, so an encoding-only re-save would make the heading match fail
+	// and take the whole gate down on a change that altered no visible character.
+	lines := strings.Split(strings.ReplaceAll(doc, "\r\n", "\n"), "\n")
 	start := -1
 	inFence := false
 	for i, line := range lines {
@@ -357,7 +366,7 @@ func markdownSectionBody(t *testing.T, doc, heading string) string {
 // failure messages.
 func markdownListItemContaining(t *testing.T, section, sectionName, marker string) string {
 	t.Helper()
-	lines := strings.Split(section, "\n")
+	lines := strings.Split(strings.ReplaceAll(section, "\r\n", "\n"), "\n")
 	hit := -1
 	for i, line := range lines {
 		if strings.Contains(line, marker) {
