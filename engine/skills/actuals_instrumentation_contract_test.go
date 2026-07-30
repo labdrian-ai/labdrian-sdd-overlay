@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -622,7 +623,7 @@ var lineEndingFixtureTerminators = []string{
 	"\r",   // - R-001/R-002 keep the three units separate
 	"\n",   //   never summed or averaged into one figure
 	"\r\n", // - unrelated rule
-	"\r",   // blank separator — a "\n" here would pair with a lone "\r" above and collapse
+	"\r",   // blank separator — one of the two lone-CR entries; mixLineEndings enforces the rest
 	"\n",   // ## Output Contract
 	"\r\n", // - trailing item
 }
@@ -639,13 +640,38 @@ func mixLineEndings(t *testing.T, doc string, terminators []string) string {
 		t.Fatalf("fixture error: document has %d terminated lines but %d terminators were named — "+
 			"name the new line's terminator in lineEndingFixtureTerminators", len(lines)-1, len(terminators))
 	}
+	// The rotation this replaced guaranteed all three conventions structurally, because it
+	// cycled a three-element list. An explicit list cannot promise that on its own: flattening
+	// every entry to "\n" would keep the count guard happy and silently turn the mixed case
+	// into a byte-for-byte duplicate of the LF case, which is a decorative test. Assert the
+	// property directly instead of trusting the list to be written correctly.
+	for _, convention := range []string{"\n", "\r\n", "\r"} {
+		if !slices.Contains(terminators, convention) {
+			t.Fatalf("fixture error: terminators must exercise LF, CRLF and lone CR, but %q is absent — "+
+				"the mixed-endings case stops being mixed without it", convention)
+		}
+	}
+
 	var b strings.Builder
 	for i, line := range lines[:len(lines)-1] {
 		b.WriteString(line)
 		b.WriteString(terminators[i])
 	}
 	b.WriteString(lines[len(lines)-1])
-	return b.String()
+	mixed := b.String()
+
+	// The count guard above catches a missing terminator but not a misplaced one. Naming a
+	// terminator at the wrong index — or reordering the list — can still put a lone "\r"
+	// immediately before a "\n", where the two collapse into a single newline during
+	// normalisation, swallowing the blank separator and truncating the multi-line list item.
+	// Round-tripping closes that whole class: whatever terminators are named, normalising the
+	// mixed document must reproduce the LF fixture exactly, or the fixture is wrong rather
+	// than the slicer.
+	if got := normaliseLineEndings(mixed); got != doc {
+		t.Fatalf("fixture error: mixed document does not normalise back to the LF fixture — "+
+			"a terminator is named at the wrong index or out of order.\n got %q\nwant %q", got, doc)
+	}
+	return mixed
 }
 
 // TestActualsInstrumentationGateHelpers exercises the pure cores behind
