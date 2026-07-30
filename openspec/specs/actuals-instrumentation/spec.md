@@ -90,7 +90,7 @@ This change MUST define the round-trip-latency-rate formula and begin populating
 
 ### Requirement: Actuals Output and Roadmap Tracking Report Units Distinctly (R-012, R-013)
 
-The Actuals and Calibration output section (`sdd-time-estimation/SKILL.md` Output item 14) MUST report elapsed-calendar-time and checkpoint count under labels separate from agent-compute-time, never blended. `roadmap-maker` MUST NOT source tracking-line figures from the agent-compute-time field.
+The Actuals and Calibration output section (`sdd-time-estimation/SKILL.md` Output item 14) MUST report elapsed-calendar-time and checkpoint count under labels separate from agent-compute-time, never blended. `skills/roadmap-maker/SKILL.md` MUST NOT reference any structured actuals field name — `total_wall_clock_hours`, `checkpoint_count`, `implementation_hours`, `review_gate_hours`, `post_review_fix_hours` — as a tracking-line data source. The enforcing gate is a whole-file forbid list over those five names, so the prohibition is absolute: none of them may appear anywhere in the file, including inside ownership-attribution prose. `roadmap-maker` refers to the actuals record by its topic (`sdd/{change}/actuals`) and describes the effort it consumes in prose instead of naming fields.
 
 #### Scenario: Actuals output labels units distinctly
 
@@ -102,9 +102,9 @@ The Actuals and Calibration output section (`sdd-time-estimation/SKILL.md` Outpu
 
 - GIVEN `skills/roadmap-maker/SKILL.md`
 - WHEN scanned for structured actuals field names (`total_wall_clock_hours`, `checkpoint_count`, `implementation_hours`, `review_gate_hours`, `post_review_fix_hours`)
-- THEN none appear as a tracking-line data source, and its only actuals-related mention is prose correctly attributing ownership of those fields to `inception-pipeline` closure-feedback
+- THEN none of those five names appears anywhere in the file, and every actuals-related mention (nine prose lines, not one) refers to the actuals record by its topic (`sdd/{change}/actuals`) and attributes ownership to `inception-pipeline` closure-feedback without naming any structured field
 
-**Scope note (deliberate deferral):** extending the `roadmap-maker` tracking-line template (`skills/roadmap-maker/SKILL.md`, `## Output Format`, the `**Tracking**:` line) with dedicated elapsed-calendar-time and checkpoint-count slots — the positive counterpart of "source tracking-line figures from the corrected fields" — is deliberately OUT OF SCOPE for this change and deferred to a future change. Design decision D6 explicitly chose not to edit `roadmap-maker`, and the template has no such slots today. R-013 above covers only the negative obligation (never source figures from the compute-time field); it does not claim, and this change does not deliver, the positive tracking-line-sourcing obligation.
+**Scope note (deliberate deferral):** extending the `roadmap-maker` tracking-line template (`skills/roadmap-maker/SKILL.md`, `## Output Format`, the `**Tracking**:` line) with dedicated elapsed-calendar-time and checkpoint-count slots — the positive counterpart of "source tracking-line figures from the corrected fields" — is deliberately OUT OF SCOPE for this change and deferred to a future change. Design decision D6 explicitly chose not to edit `roadmap-maker`, and the template has no such slots today. R-013 above covers only the negative obligation (never reference any of the five structured actuals field names); it does not claim, and this change does not deliver, the positive tracking-line-sourcing obligation.
 
 ### Requirement: Historical Record Corrected With a Mandatory Provenance Disclaimer (R-014)
 

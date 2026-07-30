@@ -1,5 +1,26 @@
 # Tasks: Actuals Calendar-Time / Checkpoint-Count Instrumentation Fix
 
+## Post-Archive Amendment (2026-07-30)
+
+**Added after archive.** The task text below is preserved **verbatim** as the historical record of what was instructed at the time — it was **not** edited, reworded, or renumbered. Five of its lines prescribe a contract that was superseded before delivery; they are corrected in this note rather than in place.
+
+Line numbers below refer to this file **as archived**, before this note was inserted. This note added 21 lines, so each cited line now appears 21 lines lower.
+
+| Archived line | What it prescribes | Final shipped contract |
+|---|---|---|
+| 37 | Group 3 pins the CALIBRATION proxy formula as `total − sum(phase hours)`. | The shipped residual is per-checkpoint: `(total_wall_clock_hours − sum(phase hours)) / checkpoint_count`. |
+| 40 | Group 6 asserts `checkpoint_count == 11` and a `"= 11"` itemization marker. | `checkpoint_count` is **12**; the shipped markers are `"= 12"`, `"Durable floor: 2 of 12"`, and `"AMB-001"`. |
+| 46 | The fixture task prescribes `checkpoint_count: 11`, an itemization summing to 11, and a `1 durable, 10 reconstructed` split. | **12** total — **2 durable** (tiering go-ahead + AMB-001 ambiguity clarifying question, both durably observed via `pipeline-state`) + **10 reconstructed** from the closure narrative. |
+| 56 | Task 3.2 prescribes the same combined proxy formula `total − sum(phase hours)`. | Same correction as line 37: the shipped formula divides the residual by `checkpoint_count`. |
+| 57 | Task 3.3 gates the fixed, uncalibrated interruption buffer on being "below n=3". | No three-sample gate exists anywhere in the estimator skill. The allowance stays separate, fixed, and explicitly marked uncalibrated **until independent interruption evidence exists**. |
+
+The authoritative contract now lives in:
+
+- `openspec/specs/actuals-instrumentation/spec.md` — requirements and scenarios (R-010/R-011 for the interruption allowance, R-014 for the 12 total / 2 durable / 10 reconstructed arithmetic).
+- `engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json` — the corrected record's exact bytes.
+
+---
+
 ## Review Workload Forecast
 
 | File | Action | Est. changed lines |

@@ -107,6 +107,7 @@ The archive captures the change as complete per its requirements; the following 
 - **W-4 in verify-report**: inception-pipeline scopes durable ambiguity to "rule 4 fired", but schema/spec say "if fired" with no restriction. sync-check-repo-behind-origin recorded rule 1 ambiguity durably. Reconcile in future change when broadening ambiguity capture.
 - **Schema invariant weakness** (W-1): Closed-schema invariant test does not assert `additionalProperties: false` directly. Verified independently; schema remains closed. Add assertion in future refactor.
 - **Marker precision** (W-2, W-5): Content assertions are file-scoped; some markers replicable across sections; fixture pins weaker than designed. Not spec violations; consider tightening drift guards in next cycle.
+- **Dead RED-era branch** (W-6): `D2_D5_closed_schema_invariant` silently `return`s when the fixture is unreadable, self-disabling half that group. Absence is still caught loudly by group 6's `readRepoFile`, so no scenario fails; the dead branch should be deleted. (Not resolved in the archived candidate — addressed in a follow-up commit on this branch.)
 - **Future roadmap** (R-013 scope note): Extending `roadmap-maker` tracking-line template with dedicated calendar-time and checkpoint-count slots is deliberately OUT OF SCOPE, deferred to future change.
 
 ## Artifact Checksum Summary
