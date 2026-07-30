@@ -107,14 +107,36 @@ The skill MUST be structured as `skills/anti-generic-design/SKILL.md` plus a `re
 - **THEN** it contains `SKILL.md` and a `references/` subdirectory
 - **AND** it contains no engine/TUI source code
 
-### Requirement: Skill is indexed via skill-registry refresh, not hand-edited YAML
-After `skills/anti-generic-design/SKILL.md` exists, `anti-generic-design` MUST be indexed by running `gentle-ai skill-registry refresh --force` (or the `/skill-registry` skill), which scans `*/SKILL.md` under the repo's `skills/` directory and regenerates `.atl/skill-registry.md`. `skills.registry.yaml` MUST NOT be hand-edited as part of this change — the registry command is the sole mechanism for indexing.
+### Requirement: Skill is registered for deployment and indexed for discovery
+After `skills/anti-generic-design/SKILL.md` exists, the skill MUST be both **registered for deployment** and **indexed for discovery**. These are two distinct artifacts written by two distinct commands, and satisfying one does not satisfy the other:
 
-#### Scenario: Skill appears in the regenerated registry
+| Artifact | Purpose | Sole mechanism |
+|---|---|---|
+| `skills.registry.yaml` + `overlay.manifest` | Deployment — decides whether `labdrian apply` copies the skill to the runtime targets | `labdrian skills add <id>`, then `labdrian skills sync-manifest` |
+| `.atl/skill-registry.md` | Discovery — the delegator index a launching agent reads to select skills | `gentle-ai skill-registry refresh --force`, or the `/skill-registry` skill |
+
+Neither `skills.registry.yaml` nor the `*/SKILL.md` row in `overlay.manifest` may be hand-edited; `labdrian skills add` writes both, and `labdrian skills sync-manifest` places the row in the registry-ordered block. `references/` rows in `overlay.manifest` MUST be added directly, because `sync-manifest` regenerates only `*/SKILL.md` rows by design and never reference files.
+
+> Superseded wording: this requirement previously named `gentle-ai skill-registry refresh --force` as "the sole mechanism for indexing" while also forbidding hand-edits to `skills.registry.yaml`. That route is impossible — `skill-registry refresh` regenerates `.atl/skill-registry.md` and cannot write `skills.registry.yaml` at all — and following it literally left the skill registered nowhere, undeployed to all three runtimes, while `apply`, `sync-check` and `skills validate` all reported green.
+
+#### Scenario: Skill is registered for deployment
+- **GIVEN** `skills/anti-generic-design/SKILL.md` exists
+- **WHEN** `labdrian skills add anti-generic-design` is run, followed by `labdrian skills sync-manifest`
+- **THEN** `skills.registry.yaml` contains an entry for `anti-generic-design` targeting claude, opencode and codex
+- **AND** `overlay.manifest` contains an `anti-generic-design/SKILL.md` row inside the registry-ordered skill block
+- **AND** every file under `skills/anti-generic-design/`, `references/` included, has a deploying `overlay.manifest` row
+- **AND** neither file was hand-edited to produce the `SKILL.md` row
+
+#### Scenario: Skill appears in the regenerated discovery index
 - **GIVEN** `skills/anti-generic-design/SKILL.md` exists
 - **WHEN** `gentle-ai skill-registry refresh --force` is run
 - **THEN** `.atl/skill-registry.md` contains a row for `anti-generic-design` with its trigger/description and path
-- **AND** no manual edits were made to `skills.registry.yaml` to achieve this
+
+#### Scenario: An unregistered skill fails the build
+- **GIVEN** a skill directory present under `skills/` with no deploying `overlay.manifest` row
+- **WHEN** the engine test suite runs
+- **THEN** `TestRepositorySkillsAreFullyRegistered` fails and names every unregistered path
+- **AND** the failure is reported as `UNREGISTERED_ON_DISK`
 
 ## OUT OF SCOPE (unchanged from proposal)
 

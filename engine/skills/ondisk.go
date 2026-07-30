@@ -1,0 +1,174 @@
+package skills
+
+import (
+	"bufio"
+	"fmt"
+	"io"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"sort"
+	"strings"
+)
+
+// Divergence classes for the on-disk cross-check. They are deliberately distinct
+// from the registry/manifest classes in validate.go: Diff compares two
+// REGISTRATION artifacts against each other, so a skill absent from both reads as
+// aligned. DiffOnDisk compares the filesystem against the manifest, which is the
+// only way that case becomes visible.
+const (
+	// DivUnregisteredOnDisk reports a file under skills/ with no deploying
+	// manifest row. Such a file is never copied to any runtime target.
+	DivUnregisteredOnDisk DivergenceClass = "UNREGISTERED_ON_DISK"
+	// DivMissingOnDisk reports a deploying manifest row whose source file is
+	// absent from skills/. The deploy step cannot satisfy such a row.
+	DivMissingOnDisk DivergenceClass = "MISSING_ON_DISK"
+)
+
+// nonSkillRoutes lists the third-column route values that send a manifest row
+// somewhere other than skills/. Mirrors route_resolve in bin/labdrian-overlay,
+// where any other third-column value falls through to the default skill route.
+var nonSkillRoutes = map[string]bool{
+	"agent":          true,
+	"opencode-agent": true,
+}
+
+// DeployableManifestPaths parses a manifest and returns the set of row paths that
+// route to skills/, keyed by the row path exactly as written.
+//
+// It mirrors route_resolve in bin/labdrian-overlay, which is the single source of
+// truth for row → routing:
+//   - Blank lines and lines starting with '#' are skipped.
+//   - A row needs at least two fields; the first is the path.
+//   - A third column of "agent" or "opencode-agent" routes outside skills/.
+//     Any other third-column value falls through to the skill route.
+//   - On the skill route, a path with no '/' is a root-level bookkeeping row and
+//     a path whose first segment is "engine" is overlay infra. Both are tracked
+//     for diff purposes only and are never deployed.
+func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
+	paths := make(map[string]struct{})
+	scanner := bufio.NewScanner(r)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		fields := strings.Fields(line)
+		if len(fields) < 2 {
+			continue
+		}
+		rowPath := fields[0]
+
+		if len(fields) >= 3 && nonSkillRoutes[fields[2]] {
+			continue
+		}
+
+		slashIdx := strings.IndexByte(rowPath, '/')
+		if slashIdx < 0 {
+			continue
+		}
+		if rowPath[:slashIdx] == "engine" {
+			continue
+		}
+
+		paths[rowPath] = struct{}{}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("ondisk: read manifest: %w", err)
+	}
+	return paths, nil
+}
+
+// ScanSkillFiles walks skillsDir and returns every regular file it contains as a
+// slash-separated path relative to skillsDir, sorted.
+//
+// Entries whose name begins with '.' are skipped, files and directories alike.
+// Nothing the overlay deploys is dot-prefixed, so this keeps editor scratch files
+// and VCS metadata from being reported as unregistered content without weakening
+// the guard for anything real.
+func ScanSkillFiles(skillsDir string) ([]string, error) {
+	info, err := os.Stat(skillsDir)
+	if err != nil {
+		return nil, fmt.Errorf("ondisk: stat skills dir %s: %w", skillsDir, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("ondisk: %s is not a directory", skillsDir)
+	}
+
+	var out []string
+	err = filepath.WalkDir(skillsDir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if path == skillsDir {
+			return nil
+		}
+		if strings.HasPrefix(d.Name(), ".") {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if d.IsDir() {
+			return nil
+		}
+		if !d.Type().IsRegular() {
+			return nil
+		}
+		rel, relErr := filepath.Rel(skillsDir, path)
+		if relErr != nil {
+			return relErr
+		}
+		out = append(out, filepath.ToSlash(rel))
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("ondisk: walk %s: %w", skillsDir, err)
+	}
+
+	sort.Strings(out)
+	return out, nil
+}
+
+// DiffOnDisk cross-checks the files actually present under skills/ against the
+// manifest rows that deploy from it, in both directions. It performs a full scan
+// and never stops at the first divergence. Results are ordered: unregistered
+// files first in disk order, then missing sources in sorted row order.
+func DiffOnDisk(diskPaths []string, manifestPaths map[string]struct{}) []Divergence {
+	var divs []Divergence
+
+	onDisk := make(map[string]struct{}, len(diskPaths))
+	for _, p := range diskPaths {
+		onDisk[p] = struct{}{}
+		if _, ok := manifestPaths[p]; !ok {
+			divs = append(divs, Divergence{
+				Class: DivUnregisteredOnDisk,
+				Path:  p,
+				Detail: fmt.Sprintf(
+					"skills/%s exists on disk but no overlay.manifest row deploys it, so it never reaches any target",
+					p,
+				),
+			})
+		}
+	}
+
+	var missing []string
+	for p := range manifestPaths {
+		if _, ok := onDisk[p]; !ok {
+			missing = append(missing, p)
+		}
+	}
+	sort.Strings(missing)
+	for _, p := range missing {
+		divs = append(divs, Divergence{
+			Class: DivMissingOnDisk,
+			Path:  p,
+			Detail: fmt.Sprintf(
+				"overlay.manifest deploys %q but skills/%s does not exist",
+				p, p,
+			),
+		})
+	}
+
+	return divs
+}
