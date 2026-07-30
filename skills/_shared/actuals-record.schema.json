@@ -35,7 +35,7 @@
     },
     "total_wall_clock_hours": {
       "type": "number",
-      "description": "Total elapsed wall-clock hours from first apply to archive."
+      "description": "Total elapsed calendar-clock hours from the tiering go-ahead checkpoint to archive, including interruption gaps (e.g. provider rate/session limits). Measured independently of the agent-compute-time phase fields (implementation_hours, review_gate_hours, post_review_fix_hours) below and never blended into their sum."
     },
     "post_review_fix_hours": {
       "type": "number",
@@ -67,7 +67,7 @@
     },
     "checkpoint_count": {
       "type": "integer",
-      "description": "Optional. A structural LOWER BOUND on human-confirmation checkpoints, not a complete count: tiering go-ahead (always 1) + ambiguity clarifying question if fired (0-1), both read from sdd/{change}/pipeline-state — the only checkpoints inception-pipeline itself durably records. Deliberately excludes live interactive checkpoints it has no durable record of (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) — a fuller reconstruction, if available, belongs in variance_vs_plan free text instead. This is the real calendar-time driver for agent-orchestrated delivery, tracked separately from compute-time hours. Omit if not available."
+      "description": "Optional. The total human-confirmation checkpoint count for the change, one unit per distinct human round-trip reply, counted uniformly regardless of how many decisions a single reply resolved. Shares the tiering-go-ahead-to-archive boundary with total_wall_clock_hours. Always includes the durable floor read from sdd/{change}/pipeline-state (tiering go-ahead, always 1; ambiguity clarifying question if fired, 0-1) — the only checkpoints inception-pipeline itself durably records. Also includes checkpoints inception-pipeline has no durable record of (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) when reconstructable from the closure narrative. This single field does not distinguish durable from reconstructed provenance; that split is disclosed in variance_vs_plan free text. This is the real calendar-time driver for agent-orchestrated delivery, tracked separately from compute-time hours. Omit if not available."
     }
   }
 }
