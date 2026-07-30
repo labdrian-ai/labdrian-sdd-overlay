@@ -90,13 +90,21 @@ This change MUST define the round-trip-latency-rate formula and begin populating
 
 ### Requirement: Actuals Output and Roadmap Tracking Report Units Distinctly (R-012, R-013)
 
-The Actuals and Calibration output section MUST report elapsed-calendar-time and checkpoint count under labels separate from agent-compute-time. `roadmap-maker` MUST source tracking-line figures from these corrected fields, never from the compute-time field.
+The Actuals and Calibration output section (`sdd-time-estimation/SKILL.md` Output item 14) MUST report elapsed-calendar-time and checkpoint count under labels separate from agent-compute-time, never blended. `roadmap-maker` MUST NOT source tracking-line figures from the agent-compute-time field.
 
-#### Scenario: Report and tracking line both correctly labeled
+#### Scenario: Actuals output labels units distinctly
 
-- GIVEN a completed change's estimation report and its roadmap-maker tracking line
-- WHEN both are read
-- THEN calendar-time and checkpoint count appear under their own labels in the report, and the tracking line's figures match the corrected actuals fields
+- GIVEN a completed change's Actuals and Calibration output section
+- WHEN it is read
+- THEN elapsed-calendar-time and checkpoint count appear under their own labels, separate from agent-compute-time, never summed into one figure
+
+#### Scenario: roadmap-maker never sources tracking figures from compute-time
+
+- GIVEN `skills/roadmap-maker/SKILL.md`
+- WHEN scanned for structured actuals field names (`total_wall_clock_hours`, `checkpoint_count`, `implementation_hours`, `review_gate_hours`, `post_review_fix_hours`)
+- THEN none appear as a tracking-line data source, and its only actuals-related mention is prose correctly attributing ownership of those fields to `inception-pipeline` closure-feedback
+
+**Scope note (deliberate deferral):** extending the `roadmap-maker` tracking-line template (`skills/roadmap-maker/SKILL.md`, `## Output Format`, the `**Tracking**:` line) with dedicated elapsed-calendar-time and checkpoint-count slots — the positive counterpart of "source tracking-line figures from the corrected fields" — is deliberately OUT OF SCOPE for this change and deferred to a future change. Design decision D6 explicitly chose not to edit `roadmap-maker`, and the template has no such slots today. R-013 above covers only the negative obligation (never source figures from the compute-time field); it does not claim, and this change does not deliver, the positive tracking-line-sourcing obligation.
 
 ### Requirement: Historical Record Corrected With a Mandatory Provenance Disclaimer (R-014)
 

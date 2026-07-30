@@ -13,6 +13,7 @@ const (
 	actualsSchemaRelPath           = "skills/_shared/actuals-record.schema.json"
 	timeEstimationSkillRelPath     = "skills/sdd-time-estimation/SKILL.md"
 	inceptionPipelineSkillRelPath  = "skills/inception-pipeline/SKILL.md"
+	roadmapMakerSkillRelPath       = "skills/roadmap-maker/SKILL.md"
 	correctedActualsFixtureRelPath = "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
 )
 
@@ -128,6 +129,43 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		if strings.Contains(variance, "the only checkpoint inception-pipeline itself durably records") {
 			t.Fatal("fixture variance_vs_plan must not claim tiering go-ahead is the only durably recorded checkpoint")
+		}
+	})
+
+	t.Run("R001_R002_three_units_never_blended", func(t *testing.T) {
+		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
+		for _, want := range []string{
+			"R-001/R-002",
+			"never summed or averaged into one figure",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("Hard Rules must contain %q", want)
+			}
+		}
+	})
+
+	t.Run("R012_actuals_output_separate_labels", func(t *testing.T) {
+		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
+		want := "elapsed-calendar-time, and checkpoint count under separate labels, never blended"
+		if !strings.Contains(skill, want) {
+			t.Fatalf("Output item 14 must contain %q", want)
+		}
+	})
+
+	t.Run("R013_roadmap_maker_no_compute_time_source_invariant", func(t *testing.T) {
+		// Invariant, same precedent as D2_D5_closed_schema_invariant: roadmap-maker/SKILL.md
+		// is unchanged versus main (design D6 forbids editing it), so this FORBID-list
+		// regression guard is GREEN-by-construction on both main and HEAD. It is NOT RED
+		// coverage for R-013 — it only guards against a future regression that sources a
+		// tracking-line figure from one of the compute-time/calendar-time fields.
+		skill := readRepoFile(t, repoRoot, roadmapMakerSkillRelPath)
+		for _, forbidden := range []string{
+			"total_wall_clock_hours", "checkpoint_count", "implementation_hours",
+			"review_gate_hours", "post_review_fix_hours",
+		} {
+			if strings.Contains(skill, forbidden) {
+				t.Fatalf("roadmap-maker must not source tracking-line data from %q", forbidden)
+			}
 		}
 	})
 
