@@ -20,17 +20,26 @@ engine/skills/sync_test.go managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
-sdd-verify/references/report-format.md managed
-sdd-verify/strict-tdd-verify.md managed
 gadu-orchestrate/SKILL.md custom
+gadu-operator/SKILL.md custom
 requirements-from-transcripts/SKILL.md custom
 prespec-malandra/SKILL.md custom
-prespec-malandra/references/coverage-taxonomy.md custom
 kadia-content-guard/SKILL.md custom
 kadia-ui-fix/SKILL.md custom
 kadia-visual-qa/SKILL.md custom
 genesis-delivery-workflow/SKILL.md custom
 genesis-design-system/SKILL.md custom
+chat-thread-analyzer/SKILL.md custom
+project-inception/SKILL.md custom
+inception-pipeline/SKILL.md custom
+project-manifest/SKILL.md custom
+project-architect/SKILL.md custom
+roadmap-maker/SKILL.md custom
+sdd-time-estimation/SKILL.md custom
+anti-generic-design/SKILL.md custom
+sdd-verify/references/report-format.md managed
+sdd-verify/strict-tdd-verify.md managed
+prespec-malandra/references/coverage-taxonomy.md custom
 genesis-design-system/references/component-composition.md custom
 genesis-design-system/references/dialogs.md custom
 genesis-design-system/references/forms.md custom
@@ -38,15 +47,11 @@ genesis-design-system/references/migration-notes.md custom
 genesis-design-system/references/page-list-recipes.md custom
 genesis-design-system/references/status-colors.md custom
 genesis-design-system/references/streamdown.md custom
-chat-thread-analyzer/SKILL.md custom
-project-inception/SKILL.md custom
-inception-pipeline/SKILL.md custom
-project-manifest/SKILL.md custom
-project-architect/SKILL.md custom
-roadmap-maker/SKILL.md custom
 roadmap-maker/assets/roadmap-template.md custom
-sdd-time-estimation/SKILL.md custom
 sdd-time-estimation/references/local-docs.md custom
+anti-generic-design/references/critique-template.md custom
+anti-generic-design/references/example-output.md custom
+anti-generic-design/references/palette-typography.md custom
 _shared/pre-sdd-contracts.md custom
 _shared/minimalism-contract.md custom
 _shared/oo-quality-contract.md custom
@@ -69,7 +74,6 @@ project-architect/evals/evals.json custom
 roadmap-maker/evals/evals.json custom
 inception-pipeline/evals/evals.json custom
 skills.registry.yaml custom
-gadu-operator/SKILL.md custom
 GADU.md                  custom   agent
 sdd-explore.md           managed  agent
 opencode/agents/GADU.md custom   opencode-agent
