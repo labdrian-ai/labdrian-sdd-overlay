@@ -1,5 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://labdrian.ai/schemas/actuals-record/2.0.0",
   "title": "SDD Closure Actuals Record",
   "description": "Single closure actuals notebook written only by inception-pipeline closure-feedback after the SDD engine archives the change (it reads the engine's native archive-report, verify-report, and apply-progress; it does not modify the managed sdd-archive skill). Read by roadmap-maker and sdd-time-estimation for calibration. Eliminates dual-notebook drift (seam S5).",
   "type": "object",
@@ -34,7 +35,7 @@
     },
     "total_wall_clock_hours": {
       "type": "number",
-      "description": "Total elapsed wall-clock hours from first apply to archive."
+      "description": "Total elapsed calendar-clock hours from the tiering go-ahead checkpoint to archive, including interruption gaps (e.g. provider rate/session limits). Measured independently of the agent-compute-time phase fields (implementation_hours, review_gate_hours, post_review_fix_hours) below and never blended into their sum."
     },
     "post_review_fix_hours": {
       "type": "number",
@@ -51,6 +52,22 @@
     "variance_vs_plan": {
       "type": "string",
       "description": "Summary of actual vs planned hours variance and contributing factors."
+    },
+    "requirement_count": {
+      "type": "integer",
+      "description": "Optional. Number of EARS requirements (R-NNN) in the change's spec, read from sdd/{change}/spec. Complexity-unit divisor for sdd-time-estimation's agent-compute-time-per-requirement calibration rate. Omit if the spec could not be read."
+    },
+    "changed_lines": {
+      "type": "integer",
+      "description": "Optional. Actual realized changed-line count at archive (e.g. a diff-stat total against the base commit, or the archive-report's recorded total). Do NOT source this from sdd/{change}/tasks's Review Workload Forecast — that figure is a pre-implementation planning guard, not an exact diff count (see sdd-tasks/SKILL.md). Complexity-unit divisor for the agent-compute-time-per-changed-line calibration rate. Omit if not available."
+    },
+    "review_lens_count": {
+      "type": "integer",
+      "description": "Optional. Number of review lenses actually run during the review gate (0, 1, or up to 4 under the 4R tier) — the length of `selected_lenses` in the native `gentle-ai.review-receipt/v2`, if one exists for this change. Complexity-unit divisor for the review_gate_hours calibration rate. Omit if not available."
+    },
+    "checkpoint_count": {
+      "type": "integer",
+      "description": "Optional. The total human-confirmation checkpoint count for the change, one unit per distinct human round-trip reply, counted uniformly regardless of how many decisions a single reply resolved. Shares the tiering-go-ahead-to-archive boundary with total_wall_clock_hours. Always includes the durable floor read from sdd/{change}/pipeline-state (tiering go-ahead, always 1; ambiguity clarifying question if fired, 0-1) — the only checkpoints inception-pipeline itself durably records. Also includes checkpoints inception-pipeline has no durable record of (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) when reconstructable from the closure narrative. This single field does not distinguish durable from reconstructed provenance; that split is disclosed in variance_vs_plan free text. This is the real calendar-time driver for agent-orchestrated delivery, tracked separately from compute-time hours. Omit if not available."
     }
   }
 }
