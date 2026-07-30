@@ -436,6 +436,19 @@ func normaliseLineEndings(doc string) string {
 	return strings.ReplaceAll(strings.ReplaceAll(doc, "\r\n", "\n"), "\r", "\n")
 }
 
+// markdownHeadingLineMatches reports whether line is the heading line for heading, ignoring
+// trailing spaces, tabs and carriage returns.
+//
+// "\r" is in the cutset as defence in depth for its only production caller: by the time
+// sliceMarkdownSection reaches this predicate, normaliseLineEndings has already removed every
+// carriage return, so no document shape can drive that byte of the cutset from there. It is a
+// separate function precisely so the cutset stops being unpinned — the heading_line_matching
+// table calls it directly, bypassing normalisation, so deleting "\r" from the cutset now turns
+// a case red instead of leaving the suite green.
+func markdownHeadingLineMatches(line, heading string) bool {
+	return strings.TrimRight(line, " \t\r") == heading
+}
+
 // sliceMarkdownSection is the pure core of markdownSectionBody: it returns the body of the
 // section introduced by the exact heading line, ending at the next heading of the same or
 // higher level. It returns an error instead of failing a test so the not-found path is
@@ -456,10 +469,7 @@ func sliceMarkdownSection(doc, heading string) (string, error) {
 			inFence = !inFence
 			continue
 		}
-		// "\r" belongs in the cutset as defence in depth, not because it is reachable from
-		// here: normaliseLineEndings above already removed every carriage return. It matters
-		// only if a future caller reaches this comparison with un-normalised lines.
-		if !inFence && strings.TrimRight(line, " \t\r") == heading {
+		if !inFence && markdownHeadingLineMatches(line, heading) {
 			start = i + 1
 			break
 		}
@@ -591,15 +601,48 @@ const lineEndingFixture = "# Doc\n" +
 	"## Output Contract\n" +
 	"- trailing item\n"
 
-// mixLineEndings re-terminates each line with a different convention in rotation, so a
-// single document exercises LF, CRLF and lone CR simultaneously.
-func mixLineEndings(doc string) string {
-	terminators := []string{"\n", "\r\n", "\r"}
+// lineEndingFixtureTerminators names the terminator of every lineEndingFixture line
+// explicitly and in order, so the mixed-endings encoding is a property of the line rather
+// than of the line's position. The list must stay parallel to the fixture above; adding a
+// fixture line without adding its terminator here is a fixture error that mixLineEndings
+// reports as such.
+//
+// The rotation this replaced derived each terminator from the line's index, which made a
+// benign fixture edit dangerous. Inserting a single line shifted the blank separator to an
+// index that took a "\n" terminator while the line above it took a lone "\r". The separator
+// carries no text of its own, so those two bytes landed adjacent as a "\r\n" pair, which
+// collapses to one newline in normaliseLineEndings' first pass. The separator vanished, the
+// multi-line list item was truncated where it used to end, and only the mixed-endings case
+// went red — with a message blaming the section slicer for a fixture defect.
+//
+// All three conventions must stay represented, otherwise the mixed case stops being mixed.
+var lineEndingFixtureTerminators = []string{
+	"\n",   // # Doc
+	"\r\n", // ## Hard Rules
+	"\r",   // - R-001/R-002 keep the three units separate
+	"\n",   //   never summed or averaged into one figure
+	"\r\n", // - unrelated rule
+	"\r",   // blank separator — a "\n" here would pair with a lone "\r" above and collapse
+	"\n",   // ## Output Contract
+	"\r\n", // - trailing item
+}
+
+// mixLineEndings re-terminates each line of doc with its own named terminator, so a single
+// document exercises LF, CRLF and lone CR simultaneously. It fails the test rather than
+// panicking or silently truncating when the two lists have drifted apart, so a fixture edit
+// that forgets a terminator surfaces as a fixture error instead of as a mysterious slicing
+// failure.
+func mixLineEndings(t *testing.T, doc string, terminators []string) string {
+	t.Helper()
 	lines := strings.Split(doc, "\n")
+	if len(lines)-1 != len(terminators) {
+		t.Fatalf("fixture error: document has %d terminated lines but %d terminators were named — "+
+			"name the new line's terminator in lineEndingFixtureTerminators", len(lines)-1, len(terminators))
+	}
 	var b strings.Builder
 	for i, line := range lines[:len(lines)-1] {
 		b.WriteString(line)
-		b.WriteString(terminators[i%len(terminators)])
+		b.WriteString(terminators[i])
 	}
 	b.WriteString(lines[len(lines)-1])
 	return b.String()
@@ -664,7 +707,7 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 			{name: "lf endings", doc: lineEndingFixture},
 			{name: "crlf endings", doc: strings.ReplaceAll(lineEndingFixture, "\n", "\r\n")},
 			{name: "lone cr endings", doc: strings.ReplaceAll(lineEndingFixture, "\n", "\r")},
-			{name: "mixed endings", doc: mixLineEndings(lineEndingFixture)},
+			{name: "mixed endings", doc: mixLineEndings(t, lineEndingFixture, lineEndingFixtureTerminators)},
 		}
 		for _, tt := range tests {
 			t.Run(tt.name, func(t *testing.T) {
@@ -717,6 +760,34 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 		}
 	})
 
+	t.Run("heading_line_matching", func(t *testing.T) {
+		// markdownHeadingLineMatches is called directly here, bypassing normaliseLineEndings,
+		// because that is the only way to reach the "\r" byte of its trim cutset: every path
+		// through sliceMarkdownSection normalises first, so the cutset would otherwise be
+		// unpinned and a revert of that byte would leave the whole suite green.
+		tests := []struct {
+			name    string
+			line    string
+			heading string
+			want    bool
+		}{
+			{name: "exact match", line: "## Hard Rules", heading: timeEstimationHardRulesHeading, want: true},
+			{name: "trailing spaces are trimmed", line: "## Hard Rules   ", heading: timeEstimationHardRulesHeading, want: true},
+			{name: "trailing tabs are trimmed", line: "## Hard Rules\t\t", heading: timeEstimationHardRulesHeading, want: true},
+			{name: "trailing carriage return is trimmed", line: "## Hard Rules\r", heading: timeEstimationHardRulesHeading, want: true},
+			{name: "trailing carriage return before spaces is trimmed", line: "## Hard Rules\r  ", heading: timeEstimationHardRulesHeading, want: true},
+			{name: "trailing carriage return after spaces is trimmed", line: "## Hard Rules  \r", heading: timeEstimationHardRulesHeading, want: true},
+			{name: "a different heading does not match", line: "## Output Contract", heading: timeEstimationHardRulesHeading, want: false},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				if got := markdownHeadingLineMatches(tt.line, tt.heading); got != tt.want {
+					t.Fatalf("markdownHeadingLineMatches(%q, %q) = %t, want %t", tt.line, tt.heading, got, tt.want)
+				}
+			})
+		}
+	})
+
 	t.Run("section_slicing", func(t *testing.T) {
 		tests := []struct {
 			name    string
@@ -754,6 +825,19 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 				doc:     "# Doc\n## Hard Rules\nbody\nmore body\n",
 				heading: timeEstimationHardRulesHeading,
 				want:    "body\nmore body\n",
+			},
+			{
+				// The one input shape that returns an empty body with a nil error, pinned
+				// because sliceMarkdownSection's own doc comment calls the empty-versus-error
+				// distinction load-bearing. Allowing it is deliberate, not an oversight: the
+				// gate's REQUIRE assertions all fail on an empty section, and its FORBID
+				// assertions are deliberately whole-file rather than section-scoped, so an
+				// empty body can never silently satisfy a prohibition. Promoting this shape to
+				// an error would change what the ten content-gate groups assert.
+				name:    "heading as the final line yields an empty body and no error",
+				doc:     "# Doc\nbody\n## Hard Rules\n",
+				heading: timeEstimationHardRulesHeading,
+				want:    "",
 			},
 			{
 				name:    "terminates at the next heading of the same level",
