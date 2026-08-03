@@ -46,6 +46,50 @@ func classify(c check) bool {
 	return c.blocking && c.deterministic
 }
 
+// Process exit codes returned by selectOutcome (D4).
+const (
+	outcomePassed                  = 0
+	outcomeVerificationFailed      = 1
+	outcomeProceduralToolingFailed = 3
+)
+
+// result is the outcome of executing one check. unavailable (could not run)
+// and a plain failing exitCode (ran, found problems) are distinct states;
+// runnerErr marks a runner-internal fault. Rows keep the raw exit code.
+// count, top, and logPath land with the Phase-3 renderer.
+type result struct {
+	check       check
+	exitCode    int
+	unavailable bool
+	runnerErr   bool
+}
+
+// selectOutcome is the single place outcome precedence lives (amended
+// R-016): (1) an unexecutable blocking-set check or a runner error →
+// procedural_tooling_failed, outranking everything else; (2) otherwise a
+// blocking-set check that ran and failed → verification_failed; (3)
+// otherwise → passed. A WARNING-only check (e.g. deadcode) can never alone
+// reach gate 1, and never suppresses a real blocking failure or
+// unavailability elsewhere.
+func selectOutcome(results []result) int {
+	for _, r := range results {
+		if r.runnerErr {
+			return outcomeProceduralToolingFailed
+		}
+	}
+	for _, r := range results {
+		if r.unavailable && classify(r.check) {
+			return outcomeProceduralToolingFailed
+		}
+	}
+	for _, r := range results {
+		if !r.unavailable && !r.runnerErr && classify(r.check) && r.exitCode != 0 {
+			return outcomeVerificationFailed
+		}
+	}
+	return outcomePassed
+}
+
 // discoverModules walks root for go.mod files and returns their containing
 // directories as absolute, sorted paths. root is normalized to absolute
 // first, so a relative root resolves against the caller's cwd.

@@ -208,3 +208,50 @@ func TestClassifyDeadcodeNonBlocking(t *testing.T) {
 	}
 	t.Fatal("deadcode not found in registry")
 }
+
+// findRegistryCheck looks up a check by name in the real registry so outcome
+// tests exercise selectOutcome against actual v1 classify() semantics.
+func findRegistryCheck(t *testing.T, name string) check {
+	t.Helper()
+	for _, c := range registry {
+		if c.name == name {
+			return c
+		}
+	}
+	t.Fatalf("check %q not found in registry", name)
+	return check{}
+}
+
+// TestSelectOutcomePrecedence covers the full amended-R-016 precedence
+// matrix: unexecutable BLOCKING-set check or a runner error outrank a
+// failed blocking check, which outranks passed; a WARNING-only tool
+// (deadcode) being unavailable never alone forces procedural_tooling_failed
+// and never suppresses a real blocking failure.
+func TestSelectOutcomePrecedence(t *testing.T) {
+	gofmt := findRegistryCheck(t, "gofmt")
+	staticcheck := findRegistryCheck(t, "staticcheck")
+	deadcode := findRegistryCheck(t, "deadcode")
+
+	tests := []struct {
+		name    string
+		results []result
+		want    int
+	}{
+		{"all checks pass", []result{{check: gofmt}, {check: staticcheck}, {check: deadcode}}, 0},
+		{"blocking deterministic check failed", []result{{check: gofmt}, {check: staticcheck, exitCode: 1}, {check: deadcode}}, 1},
+		{"blocking-set check unexecutable", []result{{check: gofmt}, {check: staticcheck, exitCode: 127, unavailable: true}, {check: deadcode}}, 3},
+		{"runner-internal error", []result{{check: gofmt}, {runnerErr: true}}, 3},
+		{"deadcode unavailable, everything else green", []result{{check: gofmt}, {check: staticcheck}, {check: deadcode, exitCode: 127, unavailable: true}}, 0},
+		{"deadcode unavailable and a blocking check failed", []result{{check: gofmt, exitCode: 1}, {check: staticcheck}, {check: deadcode, exitCode: 127, unavailable: true}}, 1},
+		{"blocking-set unexecutable and blocking failure both present", []result{{check: gofmt, exitCode: 1}, {check: staticcheck, exitCode: 127, unavailable: true}, {check: deadcode}}, 3},
+		{"non-blocking check red does not affect outcome", []result{{check: gofmt}, {check: staticcheck}, {check: deadcode, exitCode: 1}}, 0},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := selectOutcome(tt.results); got != tt.want {
+				t.Errorf("selectOutcome(%q) = %d, want %d", tt.name, got, tt.want)
+			}
+		})
+	}
+}
