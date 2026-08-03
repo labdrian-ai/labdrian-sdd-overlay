@@ -146,8 +146,8 @@ PR 3 (base: PR2 branch). Re-split into 6 ledger objectives — each its own RED�
 
 ### 3D. runner-parse-deadcode (R-006 remainder, R-007 — audit finding, obs #2709/#2711/#2712) — est. 70-110 lines — depends on 3A
 
-- [ ] 3D.1 RED: add table-driven `TestParseDeadcode` against `testdata/` fixtures captured from the pinned `go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...` invocation (3A). Assert findings are counted from parsed **stdout only**, never from `deadcode`'s exit code — confirmed empirically: 20-21 real findings, exit 0. Stdout must be captured separately from stderr: the Go toolchain-switch message lands on stderr and inflates the count if merged.
-- [ ] 3D.2 GREEN: implement `parseDeadcode` (stdout-only counting) + its `failed(exit,count)` predicate (`count>0`, exit code ignored — `deadcode` stays WARNING-only via `classify()` regardless of this predicate). Tests pass.
+- [x] 3D.1 RED: add table-driven `TestParseDeadcode` against `testdata/` fixtures captured from the pinned `go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...` invocation (3A). Assert findings are counted from parsed **stdout only**, never from `deadcode`'s exit code — confirmed empirically: 20-21 real findings, exit 0. Stdout must be captured separately from stderr: the Go toolchain-switch message lands on stderr and inflates the count if merged.
+- [x] 3D.2 GREEN: implement `parseDeadcode` (stdout-only counting) + its `failed(exit,count)` predicate (`count>0`, exit code ignored — `deadcode` stays WARNING-only via `classify()` regardless of this predicate). Tests pass.
 
 ### 3E. runner-summary-and-cap (R-007, R-008) — est. 130-160 lines — depends on 3B, 3C, 3D
 
