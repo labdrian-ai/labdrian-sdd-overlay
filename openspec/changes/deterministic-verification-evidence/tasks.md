@@ -226,10 +226,10 @@ The grouping rule comes from what actually caused the two Phase 3 overruns: it w
 
 Each groups pieces that share one concern, so none carries more than two lines of independent reasoning.
 
-- [ ] 4.1 RED: add `TestSubcommandUsage` — no subcommand → non-zero exit, usage names both `normalize` and `check`.
-- [ ] 4.2 GREEN: add subcommand dispatch; wire `checkArgv`/`normalizeArgv` per check. Test passes.
-- [ ] 4.3 RED: add `TestCheckNeverMutates` — `checkArgv` allowlist contains no fixer flags.
-- [ ] 4.4 GREEN: enforce no fixer flag in any `checkArgv` (no `gofmt -w`, no `staticcheck -fix`). Test passes.
+- [x] 4.1 RED: add `TestSubcommandUsage` — no subcommand → non-zero exit, usage names both `normalize` and `check`.
+- [x] 4.2 GREEN: add subcommand dispatch; wire `checkArgv`/`normalizeArgv` per check. Test passes.
+- [x] 4.3 RED: add `TestCheckNeverMutates` — `checkArgv` allowlist contains no fixer flags.
+- [x] 4.4 GREEN: enforce no fixer flag in any `checkArgv` (no `gofmt -w`, no `staticcheck -fix`). Test passes.
 - [ ] 4.5 RED: add `TestCheckByteNeutral` (integration, skip in `-short`) — `t.TempDir()` git fixture, dirty tree + a 0755-mode file; snapshot `git status --porcelain` + per-file `(mode, size, sha256)` before/after `check`.
 - [ ] 4.6 GREEN: guarantee `check` runs only read-only argv. Integration test passes.
 - [ ] 4.7 RED: add `TestOutDirGuard` — `check --out-dir <path inside repo root>` → usage error (threat matrix: git repository selection).
