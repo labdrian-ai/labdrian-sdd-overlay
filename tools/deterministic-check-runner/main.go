@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"fmt"
 	"io"
 	"io/fs"
@@ -299,6 +300,85 @@ func selectOutcome(results []result) int {
 		}
 	}
 	return outcomePassed
+}
+
+// Phase 3E: summary rendering, --top-n, payload cap, banned-literal guard
+// (R-007, R-008, R-013); wired into run()/emitRows by 3F.
+const (
+	defaultTopN       = 5
+	excerptCharCap    = 200
+	payloadByteCap    = 4 * 1024 * 1024 // R-013 capture-evidence boundary
+	defaultOutDirName = "labdrian-deterministic-checks"
+)
+
+// bannedSummaryLiterals are the status words upstream rejects by regex (R-008).
+var bannedSummaryLiterals = []string{"PASS", "PASSED", "SUCCESS", "N/A", "NA", "NONE", "TODO", "TBD", "PLACEHOLDER"}
+
+// isBannedSummaryLiteral reports whether summary, as a whole, is banned (case-insensitive).
+func isBannedSummaryLiteral(summary string) bool {
+	trimmed := strings.TrimSpace(summary)
+	for _, literal := range bannedSummaryLiterals {
+		if strings.EqualFold(trimmed, literal) {
+			return true
+		}
+	}
+	return false
+}
+
+// capExcerpt truncates s to excerptCharCap runes without splitting a rune.
+func capExcerpt(s string) string {
+	r := []rune(s)
+	if len(r) <= excerptCharCap {
+		return s
+	}
+	return string(r[:excerptCharCap])
+}
+
+// renderSummary renders D6's bounded summary "count=N; top: e1; …; full:
+// <path>". Zero findings render the literal digit "0" — never a status
+// word (R-008): upstream rejects narrated evidence by regex.
+func renderSummary(count int, top []string, topN int, logPath string) string {
+	if count == 0 {
+		return "0"
+	}
+	if topN < 0 {
+		topN = 0
+	}
+	shown := top
+	if len(shown) > topN {
+		shown = shown[:topN]
+	}
+	excerpts := make([]string, len(shown))
+	for i, e := range shown {
+		excerpts[i] = capExcerpt(e)
+	}
+	return fmt.Sprintf("count=%d; top: %s; full: %s", count, strings.Join(excerpts, "; "), logPath)
+}
+
+// logPathFor returns the stable full-log path for tool (D6); spaces become "-".
+func logPathFor(tool string) string {
+	return filepath.Join(os.TempDir(), defaultOutDirName, strings.ReplaceAll(tool, " ", "-")+".log")
+}
+
+// parseTopN extracts --top-n from args (default defaultTopN); malformed
+// falls back to the default rather than aborting.
+func parseTopN(args []string) int {
+	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	topN := fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
+	if err := fs.Parse(args); err != nil {
+		return defaultTopN
+	}
+	return *topN
+}
+
+// capPayload enforces the capture-evidence input boundary (R-013):
+// unchanged at or under the cap, deterministically truncated otherwise.
+func capPayload(payload []byte) []byte {
+	if len(payload) <= payloadByteCap {
+		return payload
+	}
+	return payload[:payloadByteCap]
 }
 
 // discoverModules walks root for go.mod files and returns their containing

@@ -387,6 +387,101 @@ func TestRunEndToEnd(t *testing.T) {
 	}
 }
 
+// TestSummaryRendering covers 3E's renderer: zero/one/N/N+1 findings, the
+// 200-char excerpt cap, and determinism across repeated calls (R-007).
+func TestSummaryRendering(t *testing.T) {
+	const logPath = "/tmp/labdrian-deterministic-checks/gofmt.log"
+	longExcerpt := strings.Repeat("x", excerptCharCap+50)
+
+	tests := []struct {
+		name  string
+		count int
+		top   []string
+		topN  int
+		want  string
+	}{
+		{"zero findings render the literal 0", 0, nil, defaultTopN, "0"},
+		{"one finding", 1, []string{"file.go:1:1: finding"}, defaultTopN, "count=1; top: file.go:1:1: finding; full: " + logPath},
+		{"more findings than top-n truncates, keeps full count", 7, []string{"f1", "f2", "f3", "f4", "f5", "f6", "f7"}, 3, "count=7; top: f1; f2; f3; full: " + logPath},
+		{"excerpt over 200 chars is capped", 1, []string{longExcerpt}, defaultTopN, "count=1; top: " + longExcerpt[:excerptCharCap] + "; full: " + logPath},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := renderSummary(tt.count, tt.top, tt.topN, logPath); got != tt.want {
+				t.Errorf("renderSummary(%d, %v, %d, ...) = %q, want %q", tt.count, tt.top, tt.topN, got, tt.want)
+			}
+		})
+	}
+
+	top := []string{"f1", "f2"}
+	if a, b := renderSummary(2, top, defaultTopN, logPath), renderSummary(2, top, defaultTopN, logPath); a != b {
+		t.Errorf("renderSummary is not deterministic: %q != %q", a, b)
+	}
+}
+
+// TestLogPathForStable covers D6's stable (never timestamped) out-dir path.
+func TestLogPathForStable(t *testing.T) {
+	if a, b := logPathFor("go vet"), logPathFor("go vet"); a != b || strings.Contains(a, " ") {
+		t.Errorf("logPathFor(go vet) = %q / %q, want stable and space-free", a, b)
+	}
+}
+
+// TestParseTopN covers the --top-n flag: default, explicit, malformed (R-007).
+func TestParseTopN(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want int
+	}{
+		{"no flag uses the default", nil, defaultTopN},
+		{"explicit value", []string{"--top-n", "3"}, 3},
+		{"malformed value falls back to the default", []string{"--top-n", "not-a-number"}, defaultTopN},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := parseTopN(tt.args); got != tt.want {
+				t.Errorf("parseTopN(%v) = %d, want %d", tt.args, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestBannedLiterals covers R-008, including the adversarial case where a
+// finding's own text is a banned word: renderSummary must never collapse
+// into a bare literal. Checking only the zero case would miss that.
+func TestBannedLiterals(t *testing.T) {
+	logPath := logPathFor("gofmt")
+	if s := renderSummary(0, nil, defaultTopN, logPath); s != "0" || isBannedSummaryLiteral(s) {
+		t.Errorf("renderSummary(0, ...) = %q, want literal 0, not a banned literal", s)
+	}
+	for _, literal := range bannedLiterals {
+		t.Run(literal, func(t *testing.T) {
+			got := renderSummary(1, []string{literal}, defaultTopN, logPath)
+			if strings.EqualFold(got, literal) || isBannedSummaryLiteral(got) {
+				t.Errorf("renderSummary(1, [%q], ...) = %q, want it not to be a bare/banned literal", literal, got)
+			}
+		})
+	}
+}
+
+// TestCapPayload covers R-013: within-cap passthrough and oversized-payload
+// truncation, synthesized in memory rather than a multi-megabyte fixture.
+func TestCapPayload(t *testing.T) {
+	small := []byte("gofmt | 0 | 0\n")
+	if got := capPayload(small); string(got) != string(small) {
+		t.Errorf("capPayload(small) = %q, want unchanged", got)
+	}
+
+	huge := []byte(strings.Repeat("x", payloadByteCap+4096))
+	got := capPayload(huge)
+	if len(got) != payloadByteCap {
+		t.Errorf("capPayload(huge) is %d bytes, want exactly %d", len(got), payloadByteCap)
+	}
+	if second := capPayload(huge); !bytes.Equal(got, second) {
+		t.Errorf("capPayload is not deterministic")
+	}
+}
+
 // readTestdata loads a fixture captured from real tool output.
 func readTestdata(t *testing.T, name string) []byte {
 	t.Helper()
