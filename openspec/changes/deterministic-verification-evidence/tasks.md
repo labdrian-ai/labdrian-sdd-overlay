@@ -174,15 +174,29 @@ The original single `runner-golden-wiring` objective was estimated at 90-140 lin
 - [x] 3F.2 GREEN: wire `runCheck` to capture stdout and stderr separately per module (`cmd.Stdout`/`cmd.Stderr` buffers, per D3/obs #2712), call the matching `parse` func, populate `result.count`/`result.top`/`result.logPath`, and replace `emitRows`'s Phase-2 placeholder `exit=%d` text with the real renderer output from 3E. `TestRunEndToEnd`'s banned-literal assertion (Phase 2D, unchanged) still passes.
 - [x] 3F.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — wiring GREEN.
 
-### 3G. runner-goldens-and-payload-cap (R-007 goldens, R-013 cap correction) — est. 80-120 lines — depends on 3F
+### 3G/3H/3I second re-split (decided 2026-08-03, before any 3G code was written)
+
+3G was estimated at 80-120 lines when it held only the `capPayload` correction and the goldens. Verifying 3F then added a higher-severity defect (3G.0) and a stream ambiguity (3G.0b) that were never in that estimate. Itemizing the combined load — outcome-routing fix plus test, stream resolution plus test, structural `capPayload` rework plus test, capped-output assertions, goldens — lands at roughly 160-230 raw lines, over the 200-line cap.
+
+Split into three cohesive objectives rather than one that overruns. Ordering is by severity, not by convenience: the outcome-routing defect lands first because a golden test written over an incorrect routing decision would freeze the bug into a fixture.
+
+### 3G. runner-outcome-routing-fix (R-016 correctness) — est. 50-80 lines — depends on 3F
 
 - [ ] 3G.0 **Wire `isStaticcheckToolchainMismatch` to `result.unavailable`** — highest-severity open defect, found while verifying 3F. The detector exists and is unit-tested, and `parseStaticcheck` calls it, but nothing ever sets `result.unavailable` for a toolchain mismatch: `unavailable` is assigned only at the two `exec.LookPath` failure sites (exit 127). A real mismatch therefore produces `count=0, exitCode=1, unavailable=false`, and `selectOutcome` sees a blocking check with a non-zero exit and returns `verification_failed`. The code's own comments already state the intended behaviour ("unavailable so selectOutcome routes it to procedural_tooling_failed") — the wiring does not honour them. This is precisely the obs #2668 dead end: a tool that could not analyze the code is counted as a verification failure, burning the single correction attempt, and `retry-final-verification` rejects the resulting terminal state. Set `unavailable` on mismatch and add a test asserting a mismatch routes to `procedural_tooling_failed` (exit 3), never `verification_failed` (exit 1).
 - [ ] 3G.0b Resolve which stream carries the mismatch message. `staticcheckToolchainMismatchPattern`'s doc comment says stderr, but `runCheck` passes only stdout to `parse`. Determine the real stream from an actual mismatch run and make the code and comment agree, with a test pinning it.
-- [ ] 3G.1 **Correct `capPayload` to match design D6** (obs #2719). As delivered in 3E it is `return payload[:payloadByteCap]` — a raw byte truncate that can slice a row mid-line, split a UTF-8 rune, and silently drop every row past the cut. D6 specifies dropping excerpts while keeping counts and paths. It could not be fixed in 3E because the signature receives already-flattened bytes; 3F's wiring is where the structured rows still exist. Move capping so it operates on rows before flattening: at the cap, drop excerpts and retain every row's tool, exit code, and count — never drop a row. If a byte-level backstop remains, it must cut on a line boundary and never split a rune.
-- [ ] 3G.2 RED: assert the capped output still contains exactly one row per configured check and is valid UTF-8.
-- [ ] 3G.3 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
-- [ ] 3G.4 GREEN: generate goldens with `-update`, rerun without — byte-identical.
-- [ ] 3G.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN.
+- [ ] 3G.2 Run `cd tools/deterministic-check-runner && go test ./... -cover` — routing GREEN.
+
+### 3H. runner-payload-cap-correction (R-013) — est. 70-100 lines — depends on 3G
+
+- [ ] 3H.1 **Correct `capPayload` to match design D6** (obs #2719). As delivered in 3E it is `return payload[:payloadByteCap]` — a raw byte truncate that can slice a row mid-line, split a UTF-8 rune, and silently drop every row past the cut. D6 specifies dropping excerpts while keeping counts and paths. It could not be fixed in 3E because the signature receives already-flattened bytes; 3F's wiring is where the structured rows still exist. Move capping so it operates on rows before flattening: at the cap, drop excerpts and retain every row's tool, exit code, and count — never drop a row. If a byte-level backstop remains, it must cut on a line boundary and never split a rune.
+- [ ] 3H.2 RED: assert the capped output still contains exactly one row per configured check and is valid UTF-8.
+- [ ] 3H.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — cap GREEN.
+
+### 3I. runner-goldens (R-007 goldens) — est. 40-70 lines — depends on 3H
+
+- [ ] 3I.1 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
+- [ ] 3I.2 GREEN: generate goldens with `-update`, rerun without — byte-identical.
+- [ ] 3I.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN.
 
 ## Phase 4: runner-mode-separation (R-009, R-010)
 
