@@ -437,9 +437,10 @@ func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
 }
 
 // TestRunEndToEnd exercises discoverModules x registry x exec x
-// classify/selectOutcome x emitRows against this repo's own module set.
-// Per-tool exit codes are environment-dependent, so only row structure
-// (count, order, shape, banned-literal guard) is asserted.
+// classify/selectOutcome x emitRows against this repo's own module set via
+// the "check" subcommand. Per-tool exit codes are environment-dependent, so
+// only row structure (count, order, shape, banned-literal guard) is
+// asserted.
 func TestRunEndToEnd(t *testing.T) {
 	root := repoRoot(t)
 	previousWD, err := os.Getwd()
@@ -456,7 +457,7 @@ func TestRunEndToEnd(t *testing.T) {
 	}()
 
 	var stdout, stderr bytes.Buffer
-	run(nil, &stdout, &stderr)
+	run([]string{"check"}, &stdout, &stderr)
 
 	lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
 	if len(lines) != len(registry) {
@@ -464,6 +465,33 @@ func TestRunEndToEnd(t *testing.T) {
 	}
 	for i, line := range lines {
 		assertRow(t, i, line, registry[i].name)
+	}
+}
+
+// TestSubcommandUsage is 4.1's RED test (R-009): no subcommand exits
+// non-zero and usage names both normalize and check.
+func TestSubcommandUsage(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	got := run(nil, &stdout, &stderr)
+	if got == 0 {
+		t.Fatalf("run(nil) exit code = %d, want non-zero", got)
+	}
+	usage := stdout.String() + stderr.String()
+	if !strings.Contains(usage, "normalize") {
+		t.Errorf("usage text %q does not name normalize", usage)
+	}
+	if !strings.Contains(usage, "check") {
+		t.Errorf("usage text %q does not name check", usage)
+	}
+}
+
+// TestCheckNeverMutates is 4.3's RED test (R-009/R-010/D5): no registry
+// checkArgv may contain a known fixer flag (e.g. gofmt -w, staticcheck -fix).
+func TestCheckNeverMutates(t *testing.T) {
+	for _, c := range registry {
+		if containsFixerFlag(c.checkArgv) {
+			t.Errorf("check %q: checkArgv %v contains a fixer flag, want check mode incapable of mutating", c.name, c.checkArgv)
+		}
 	}
 }
 

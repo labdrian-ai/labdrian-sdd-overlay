@@ -19,29 +19,70 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-// run wires discoverModules x registry x exec x classify/selectOutcome x
-// emitRows into the working end-to-end command. Row summaries use the
-// Phase-3 bounded renderer (D6), driven by --top-n (parseTopN).
+// usageText names both permitted subcommands (R-009): normalize (mutating,
+// pre-freeze only) and check (read-only, sole permitted post-freeze step).
+const usageText = "usage: deterministic-check-runner <normalize|check> [--top-n N]\n"
+
+// run dispatches to the normalize or check subcommand (Phase 4 mode split).
 func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
+
 	root, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(stderr, "resolve working directory: %v\n", err)
 		return outcomeProceduralToolingFailed
 	}
-
 	modules, err := discoverModules(root)
 	if err != nil {
 		fmt.Fprintf(stderr, "discover modules: %v\n", err)
 		return outcomeProceduralToolingFailed
 	}
 
+	switch args[0] {
+	case "check":
+		return runCheckMode(modules, args[1:], stdout)
+	case "normalize":
+		return runNormalize(modules)
+	default:
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
+}
+
+// runCheckMode wires registry x exec x classify/selectOutcome x emitRows
+// into the read-only check subcommand; argv is checkArgv only, never a
+// fixer (R-009/R-010).
+func runCheckMode(modules []string, args []string, stdout io.Writer) int {
 	results := make([]result, len(registry))
 	for i, c := range registry {
 		results[i] = runCheck(c, modules)
 	}
-
 	emitRows(stdout, results, parseTopN(args))
 	return selectOutcome(results)
+}
+
+// runNormalize runs each check's normalizeArgv fixer (nil = no fixer)
+// across every module. The only mutating subcommand; pre-freeze only (R-011).
+func runNormalize(modules []string) int {
+	for _, c := range registry {
+		if c.normalizeArgv == nil {
+			continue
+		}
+		for _, module := range modules {
+			cmd := exec.Command(c.normalizeArgv[0], c.normalizeArgv[1:]...)
+			cmd.Dir = module
+			if err := cmd.Run(); err != nil {
+				var exitErr *exec.ExitError
+				if !errors.As(err, &exitErr) {
+					return outcomeProceduralToolingFailed
+				}
+			}
+		}
+	}
+	return outcomePassed
 }
 
 // runCheck runs c.checkArgv in every module dir and aggregates to one
@@ -126,14 +167,15 @@ func renderRowBlock(results []result, topN int) []byte {
 // tool's own exit code is not always authoritative (gofmt -l exits 0 while
 // listing violations). unavailableIf is optional (nil for most checks): when
 // set, it detects that the tool ran but could not analyze the code at all
-// (D4/R-016) — see buildResult. All four registry entries now declare
-// parse/failed. normalizeArgv is deferred to runner-mode-separation and is
-// intentionally absent here to avoid rework.
+// (D4/R-016) — see buildResult. normalizeArgv is the mode-split fixer
+// invocation (Phase 4), nil when the tool has no fixer; checkArgv must never
+// contain a fixer flag (enforced by containsFixerFlag/init below).
 type check struct {
 	name          string
 	deterministic bool
 	blocking      bool
 	checkArgv     []string
+	normalizeArgv []string
 	parse         func(exit int, out []byte) (count int, top []string)
 	failed        func(exit, count int) bool
 	unavailableIf func(out []byte) bool
@@ -147,10 +189,36 @@ type check struct {
 // so both agree on tool availability and honor the same version pin
 // (TestCheckArgvPinnedToCIInvocation enforces this parity).
 var registry = []check{
-	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, parse: parseGofmt, failed: failedGofmt},
+	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, normalizeArgv: []string{"gofmt", "-w", "."}, parse: parseGofmt, failed: failedGofmt},
 	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
 	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck, unavailableIf: isStaticcheckToolchainMismatch},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}, parse: parseDeadcode, failed: failedDeadcode},
+}
+
+// fixerFlags are argv tokens indicating a tool would mutate files; no
+// checkArgv entry may contain one (R-009/R-010/D5).
+var fixerFlags = []string{"-w", "-fix"}
+
+// containsFixerFlag reports whether argv contains any known fixer flag.
+func containsFixerFlag(argv []string) bool {
+	for _, arg := range argv {
+		for _, fixer := range fixerFlags {
+			if arg == fixer {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// init enforces the checkArgv allowlist as a real registry check: a fixer
+// flag added to checkArgv fails loud at program start.
+func init() {
+	for _, c := range registry {
+		if containsFixerFlag(c.checkArgv) {
+			panic(fmt.Sprintf("registry invariant violated: check %q checkArgv %v contains fixer flag", c.name, c.checkArgv))
+		}
+	}
 }
 
 // goVetDiagnosticPattern matches go vet's diagnostic lines
@@ -306,10 +374,12 @@ func classify(c check) bool {
 	return c.blocking && c.deterministic
 }
 
-// Process exit codes returned by selectOutcome (D4).
+// Process exit codes returned by selectOutcome (D4). outcomeUsage (2) is
+// returned by run directly for a missing/unrecognized subcommand.
 const (
 	outcomePassed                  = 0
 	outcomeVerificationFailed      = 1
+	outcomeUsage                   = 2
 	outcomeProceduralToolingFailed = 3
 )
 
