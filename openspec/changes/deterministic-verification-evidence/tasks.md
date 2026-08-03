@@ -159,13 +159,28 @@ PR 3 (base: PR2 branch). Re-split into 6 ledger objectives — each its own RED�
 - [x] 3E.6 GREEN: implement `capPayload` (D6). Test passes.
 - [x] 3E.7 Run `cd tools/deterministic-check-runner && go test ./... -run 'TestSummaryRendering|TestBannedLiterals|TestCapPayload'` — GREEN.
 
-### 3F. runner-golden-wiring (R-006 remainder, R-007 goldens) — est. 90-140 lines — depends on 3E
+### 3F/3G ledger re-split (decided 2026-08-03, before any 3F code was written)
+
+The original single `runner-golden-wiring` objective was estimated at 90-140 lines. Two signals said that estimate was unsafe:
+
+1. **The estimator under-forecasts units carrying fixtures or dense tests.** Realized versus estimated across Phase 3: 3A 66 (est. 40-70, fit), 3B 146 (est. 80-120, over), 3C 134 (est. 90-130, marginal), 3D 93 (est. 70-110, fit), 3E 193 (est. 130-160, over). Two of five overran, both of them the fixture-heavy ones.
+2. **3E closed at 193/200** — a seven-line margin, the tightest of eleven objectives — and its first draft measured 242 raw before two trim passes.
+
+3F also absorbed a correction that was not in the original estimate (see 3G.1), so it was split before implementation rather than after an overrun with code already written.
+
+### 3F. runner-wiring (R-006 remainder) — est. 70-110 lines — depends on 3E
 
 - [ ] 3F.1 RED: extend the `runCheck`-facing test to require real per-module stdout/stderr capture (currently discarded — only the exit code is kept), asserting `result.count`/`result.top`/`result.logPath` are populated by wiring the Phase-3 `parse` funcs into `runCheck` in place of the Phase-2 placeholder summary.
 - [ ] 3F.2 GREEN: wire `runCheck` to capture stdout and stderr separately per module (`cmd.Stdout`/`cmd.Stderr` buffers, per D3/obs #2712), call the matching `parse` func, populate `result.count`/`result.top`/`result.logPath`, and replace `emitRows`'s Phase-2 placeholder `exit=%d` text with the real renderer output from 3E. `TestRunEndToEnd`'s banned-literal assertion (Phase 2D, unchanged) still passes.
-- [ ] 3F.3 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
-- [ ] 3F.4 GREEN: generate goldens with `-update`, rerun without — byte-identical.
-- [ ] 3F.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN.
+- [ ] 3F.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — wiring GREEN.
+
+### 3G. runner-goldens-and-payload-cap (R-007 goldens, R-013 cap correction) — est. 80-120 lines — depends on 3F
+
+- [ ] 3G.1 **Correct `capPayload` to match design D6** (obs #2719). As delivered in 3E it is `return payload[:payloadByteCap]` — a raw byte truncate that can slice a row mid-line, split a UTF-8 rune, and silently drop every row past the cut. D6 specifies dropping excerpts while keeping counts and paths. It could not be fixed in 3E because the signature receives already-flattened bytes; 3F's wiring is where the structured rows still exist. Move capping so it operates on rows before flattening: at the cap, drop excerpts and retain every row's tool, exit code, and count — never drop a row. If a byte-level backstop remains, it must cut on a line boundary and never split a rune.
+- [ ] 3G.2 RED: assert the capped output still contains exactly one row per configured check and is valid UTF-8.
+- [ ] 3G.3 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
+- [ ] 3G.4 GREEN: generate goldens with `-update`, rerun without — byte-identical.
+- [ ] 3G.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN.
 
 ## Phase 4: runner-mode-separation (R-009, R-010)
 
