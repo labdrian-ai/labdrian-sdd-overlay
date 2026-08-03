@@ -188,9 +188,9 @@ Split into three cohesive objectives rather than one that overruns. Ordering is 
 
 ### 3H. runner-payload-cap-correction (R-013) — est. 70-100 lines — depends on 3G
 
-- [ ] 3H.1 **Correct `capPayload` to match design D6** (obs #2719). As delivered in 3E it is `return payload[:payloadByteCap]` — a raw byte truncate that can slice a row mid-line, split a UTF-8 rune, and silently drop every row past the cut. D6 specifies dropping excerpts while keeping counts and paths. It could not be fixed in 3E because the signature receives already-flattened bytes; 3F's wiring is where the structured rows still exist. Move capping so it operates on rows before flattening: at the cap, drop excerpts and retain every row's tool, exit code, and count — never drop a row. If a byte-level backstop remains, it must cut on a line boundary and never split a rune.
-- [ ] 3H.2 RED: assert the capped output still contains exactly one row per configured check and is valid UTF-8.
-- [ ] 3H.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — cap GREEN.
+- [x] 3H.1 **Correct `capPayload` to match design D6** (obs #2719). As delivered in 3E it is `return payload[:payloadByteCap]` — a raw byte truncate that can slice a row mid-line, split a UTF-8 rune, and silently drop every row past the cut. D6 specifies dropping excerpts while keeping counts and paths. It could not be fixed in 3E because the signature receives already-flattened bytes; 3F's wiring is where the structured rows still exist. Move capping so it operates on rows before flattening: at the cap, drop excerpts and retain every row's tool, exit code, and count — never drop a row. If a byte-level backstop remains, it must cut on a line boundary and never split a rune.
+- [x] 3H.2 RED: assert the capped output still contains exactly one row per configured check and is valid UTF-8.
+- [x] 3H.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — cap GREEN.
 
 ### 3I. runner-goldens (R-007 goldens) — est. 40-70 lines — depends on 3H
 
