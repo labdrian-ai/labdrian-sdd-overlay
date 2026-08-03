@@ -93,12 +93,30 @@ func buildResult(c check, exitCode int, stdout []byte) result {
 
 // emitRows writes one "tool | exit_code | summary" row per result, in
 // order, with summary rendered by renderSummary (D6); topN bounds how many
-// excerpts each row shows.
+// excerpts each row shows. If the full block would exceed the
+// capture-evidence input boundary (R-013), rows are re-rendered with
+// excerpts dropped (topN 0) instead of truncating raw flattened bytes —
+// every row still appears, keeping its tool, exit code, and count (D6,
+// correction for obs #2719). capPayload remains only as a last-resort,
+// line-safe backstop for the degraded block.
 func emitRows(w io.Writer, results []result, topN int) {
+	block := renderRowBlock(results, topN)
+	if len(block) > payloadByteCap {
+		block = renderRowBlock(results, 0)
+	}
+	w.Write(capPayload(block))
+}
+
+// renderRowBlock renders every result as one "tool | exit_code | summary"
+// row, in order, never omitting a row: this is the structured form emitRows
+// caps before flattening (obs #2719).
+func renderRowBlock(results []result, topN int) []byte {
+	var buf bytes.Buffer
 	for _, r := range results {
 		summary := renderSummary(r.count, r.top, topN, r.logPath)
-		fmt.Fprintf(w, "%s | %d | %s\n", r.check.name, r.exitCode, summary)
+		fmt.Fprintf(&buf, "%s | %d | %s\n", r.check.name, r.exitCode, summary)
 	}
+	return buf.Bytes()
 }
 
 // check describes one verification tool. deterministic and blocking are
@@ -406,13 +424,23 @@ func parseTopN(args []string) int {
 	return *topN
 }
 
-// capPayload enforces the capture-evidence input boundary (R-013):
-// unchanged at or under the cap, deterministically truncated otherwise.
+// capPayload is the last-resort byte-level backstop for R-013 (correction
+// for obs #2719): emitRows already sheds excerpts row-by-row before
+// flattening when the block is oversized, so this only guards a
+// pathological remainder (e.g. an unbounded log path) that is still over
+// payloadByteCap after that degrade. It cuts on the last complete line at or
+// before the cap, never mid-row and never mid-rune — cutting immediately
+// after '\n' is always rune-safe, since '\n' is a single ASCII byte. If no
+// line boundary exists within the cap, it returns empty rather than emit a
+// partial, possibly rune-split line.
 func capPayload(payload []byte) []byte {
 	if len(payload) <= payloadByteCap {
 		return payload
 	}
-	return payload[:payloadByteCap]
+	if cut := bytes.LastIndexByte(payload[:payloadByteCap], '\n'); cut >= 0 {
+		return payload[:cut+1]
+	}
+	return payload[:0]
 }
 
 // discoverModules walks root for go.mod files and returns their containing

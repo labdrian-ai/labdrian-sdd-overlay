@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 var rowPattern = regexp.MustCompile(`^(.+) \| (\d+) \| (.+)$`)
@@ -312,6 +313,43 @@ func TestRowEmission(t *testing.T) {
 	}
 }
 
+// TestEmitRowsCapsByDroppingExcerptsNotRows is 3H's RED test for obs #2719:
+// capPayload's raw byte truncate could slice a row mid-line, split a UTF-8
+// rune, and silently drop every row past the cut. D6 requires the cap to
+// operate on structured rows before flattening — dropping excerpts while
+// keeping every row's tool, exit code, and count. A payload well over the
+// 4 MiB cap is synthesized in memory (never a committed fixture).
+func TestEmitRowsCapsByDroppingExcerptsNotRows(t *testing.T) {
+	excerpt := strings.Repeat("x", excerptCharCap) // at the char cap, so it survives capExcerpt unchanged
+	top := make([]string, 25000)                   // >4 MiB once rendered, forcing the cap
+	for i := range top {
+		top[i] = excerpt
+	}
+	results := []result{
+		{check: check{name: "gofmt"}, exitCode: 0},
+		{check: check{name: "go vet"}, exitCode: 1, count: len(top), top: top, logPath: "/tmp/go-vet.log"},
+		{check: check{name: "staticcheck"}, exitCode: 0},
+		{check: check{name: "deadcode"}, exitCode: 0},
+	}
+	var buf bytes.Buffer
+	emitRows(&buf, results, len(top))
+	out := buf.Bytes()
+
+	if !utf8.Valid(out) {
+		t.Errorf("capped emitRows output is not valid UTF-8: %q", out[:64])
+	}
+	lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
+	if len(lines) != len(results) {
+		t.Fatalf("capped emitRows wrote %d lines, want exactly one row per configured check (%d) — a row must never be dropped", len(lines), len(results))
+	}
+	if strings.Contains(string(out), excerpt) {
+		t.Errorf("capped output still contains excerpt text; want excerpts dropped, counts/paths retained")
+	}
+	if !strings.Contains(lines[1], "count=25000") || !strings.Contains(lines[1], "/tmp/go-vet.log") {
+		t.Errorf("row 1 = %q, want count and full log path retained after the cap degrades excerpts", lines[1])
+	}
+}
+
 // TestRunCheckSeparatesStreamsAndPopulatesSummary is 3F's RED test:
 // runCheck must capture stdout and stderr into distinct buffers (never
 // merged) and call c.parse on stdout alone, populating
@@ -500,18 +538,30 @@ func TestBannedLiterals(t *testing.T) {
 	}
 }
 
-// TestCapPayload covers R-013: within-cap passthrough and oversized-payload
-// truncation, synthesized in memory rather than a multi-megabyte fixture.
+// TestCapPayload covers R-013's last-resort backstop (obs #2719 correction):
+// capPayload now cuts on a line boundary, never mid-row or mid-rune, rather
+// than an exact byte offset. Synthesized in memory, never a multi-megabyte
+// fixture.
 func TestCapPayload(t *testing.T) {
 	small := []byte("gofmt | 0 | 0\n")
 	if got := capPayload(small); string(got) != string(small) {
 		t.Errorf("capPayload(small) = %q, want unchanged", got)
 	}
 
-	huge := []byte(strings.Repeat("x", payloadByteCap+4096))
+	line := "gofmt | 0 | 0\n"
+	huge := []byte(strings.Repeat(line, (payloadByteCap/len(line))+1000))
 	got := capPayload(huge)
-	if len(got) != payloadByteCap {
-		t.Errorf("capPayload(huge) is %d bytes, want exactly %d", len(got), payloadByteCap)
+	if len(got) > payloadByteCap {
+		t.Errorf("capPayload(huge) is %d bytes, want at most %d", len(got), payloadByteCap)
+	}
+	if len(got) == 0 || got[len(got)-1] != '\n' {
+		t.Errorf("capPayload(huge) does not end on a line boundary: %q", got)
+	}
+	if !bytes.HasPrefix(huge, got) {
+		t.Errorf("capPayload(huge) is not a prefix of the original payload — it must not alter kept lines")
+	}
+	if !utf8.Valid(got) {
+		t.Errorf("capPayload(huge) is not valid UTF-8")
 	}
 	if second := capPayload(huge); !bytes.Equal(got, second) {
 		t.Errorf("capPayload is not deterministic")
