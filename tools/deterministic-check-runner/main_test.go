@@ -523,3 +523,42 @@ func TestParseStaticcheckToolchainMismatch(t *testing.T) {
 		t.Errorf("parseStaticcheck top = %v, want nil", top)
 	}
 }
+
+// TestParseDeadcode covers the audit finding (obs #2709/#2711/#2712):
+// deadcode exits 0 even when it reports findings (measured in this
+// repository: 21 findings, exit code 0), so count — never exit code — must
+// drive failedDeadcode. The last case reproduces the counting trap already
+// hit once during the audit: when stdout and stderr are merged, the Go
+// toolchain-switch message ("switching to goX.Y.Z") lands in the stream and
+// would inflate the count by one if mistaken for a finding line; the fixture
+// includes that line to prove parseDeadcode does not count it. Fixtures are
+// real `deadcode@v0.48.0` stdout.
+func TestParseDeadcode(t *testing.T) {
+	tests := []struct {
+		name       string
+		fixture    string
+		exit       int
+		wantCount  int
+		wantFailed bool
+	}{
+		{"zero findings, exit 0", "deadcode-clean.txt", 0, 0, false},
+		{"one finding, exit 0", "deadcode-one-finding.txt", 0, 1, true},
+		{"several findings, exit 0", "deadcode-several-findings.txt", 0, 3, true},
+		{"non-finding line not counted, exit 0", "deadcode-with-toolchain-switch-line.txt", 0, 2, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := readTestdata(t, tt.fixture)
+			count, top := parseDeadcode(tt.exit, out)
+			if count != tt.wantCount {
+				t.Errorf("parseDeadcode count = %d, want %d", count, tt.wantCount)
+			}
+			if len(top) != tt.wantCount {
+				t.Errorf("parseDeadcode top has %d entries, want %d", len(top), tt.wantCount)
+			}
+			if got := failedDeadcode(tt.exit, count); got != tt.wantFailed {
+				t.Errorf("failedDeadcode(%d, %d) = %v, want %v", tt.exit, count, got, tt.wantFailed)
+			}
+		})
+	}
+}

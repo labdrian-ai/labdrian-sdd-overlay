@@ -82,8 +82,7 @@ func emitRows(w io.Writer, results []result) {
 // parse turns a check's captured output into a finding count and excerpts;
 // failed decides pass/fail from exit code and count together (D3), since a
 // tool's own exit code is not always authoritative (gofmt -l exits 0 while
-// listing violations). Both are nil until a check's parse/failed pair is
-// implemented (staticcheck, deadcode land in later work units).
+// listing violations). All four registry entries now declare parse/failed.
 // normalizeArgv is deferred to runner-mode-separation and is intentionally
 // absent here to avoid rework.
 type check struct {
@@ -106,7 +105,7 @@ var registry = []check{
 	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, parse: parseGofmt, failed: failedGofmt},
 	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
 	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck},
-	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}},
+	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}, parse: parseDeadcode, failed: failedDeadcode},
 }
 
 // goVetDiagnosticPattern matches go vet's diagnostic lines
@@ -211,6 +210,44 @@ func parseStaticcheck(exit int, out []byte) (count int, top []string) {
 // ever consulted as a verification result (D4/R-016).
 func failedStaticcheck(exit, count int) bool {
 	return exit != 0
+}
+
+// deadcodeFindingPattern matches deadcode's finding lines
+// ("path:line:col: unreachable func: Name").
+var deadcodeFindingPattern = regexp.MustCompile(`^\S+:\d+:\d+: unreachable func: \S+$`)
+
+// parseDeadcode counts deadcode's findings from its captured stdout only.
+// deadcode exits 0 even when it reports findings (measured in this
+// repository: 21 findings, exit code 0), so its exit code can never signal a
+// clean run — only the count can, the mirror image of gofmt's D3 trap.
+// Callers must pass stdout alone: when stdout and stderr are merged, the Go
+// toolchain-switch message ("switching to goX.Y.Z") lands in the stream and
+// would inflate the count by one if mistaken for a finding line (audit
+// finding, obs #2712). deadcodeFindingPattern only matches genuine
+// "unreachable func" lines, so a stray non-finding line never counts even if
+// it appears in the parsed stream.
+func parseDeadcode(exit int, out []byte) (count int, top []string) {
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return 0, nil
+	}
+	for _, line := range strings.Split(trimmed, "\n") {
+		if deadcodeFindingPattern.MatchString(line) {
+			top = append(top, line)
+		}
+	}
+	return len(top), top
+}
+
+// failedDeadcode trusts the count, never the exit code: deadcode exits 0
+// even when it reports findings, so exit==0 must not be read as "clean"
+// (D3-class trap, mirrored — gofmt fails despite exit 0 for the opposite
+// reason: findings without a failing exit). deadcode is registered
+// blocking: false (amended R-016), so classify() prevents this predicate
+// from ever escalating the run outcome; failedDeadcode only decides the
+// row's own pass/fail state.
+func failedDeadcode(exit, count int) bool {
+	return count > 0
 }
 
 // classify is the single enforcement point for effective blocking: a check
