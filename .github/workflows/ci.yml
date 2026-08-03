@@ -42,12 +42,12 @@ jobs:
 
       - name: Staticcheck
         working-directory: engine
-        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
 
       - name: Deadcode (informational)
         working-directory: engine
         continue-on-error: true
-        run: go run golang.org/x/tools/cmd/deadcode@latest ./...
+        run: go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...
 
       - name: Test
         working-directory: engine
@@ -110,12 +110,12 @@ jobs:
 
       - name: Staticcheck
         working-directory: tui
-        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
 
       - name: Deadcode (informational)
         working-directory: tui
         continue-on-error: true
-        run: go run golang.org/x/tools/cmd/deadcode@latest ./...
+        run: go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...
 
       - name: Test
         working-directory: tui
