@@ -98,12 +98,12 @@ PR 2 (base: PR1 branch). Split into 4 ledger objectives — each its own RED→G
 
 ### 2D. runner-row-emission-and-ci-job (R-006 core remainder, R-005 CI acceptance) — est. 115-160 lines — depends on 2A, 2B, 2C
 
-- [ ] 2D.1 RED: add `TestRowEmission` — `%s | %d | %s\n` format, one row per configured check, stable declared registry order, `exit_code` field is a typed integer (R-006).
-- [ ] 2D.2 GREEN: implement `emitRows(w io.Writer, results []result)`. Test passes.
-- [ ] 2D.3 RED: add `TestRunEndToEnd` — `run(args, stdout, stderr)` executes each configured check's `checkArgv` per discovered module and emits exactly 4 rows in registry order against this repo's own module set; summary text is a placeholder (`exit=<code>`) pending the Phase-3 renderer and must not be a banned literal.
-- [ ] 2D.4 GREEN: wire `run()` — `discoverModules` × registry × `exec.Command(checkArgv...)` per module × `classify`/`selectOutcome` × `emitRows`. Test passes.
-- [ ] 2D.5 Add CI job `test-deterministic-check-runner` to `.github/workflows/ci.yml` mirroring `test-entry-contract-validator` (`go test ./... -cover`) — R-005 acceptance.
-- [ ] 2D.6 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
+- [x] 2D.1 RED: add `TestRowEmission` — `%s | %d | %s\n` format, one row per configured check, stable declared registry order, `exit_code` field is a typed integer (R-006).
+- [x] 2D.2 GREEN: implement `emitRows(w io.Writer, results []result)`. Test passes.
+- [x] 2D.3 RED: add `TestRunEndToEnd` — `run(args, stdout, stderr)` executes each configured check's `checkArgv` per discovered module and emits exactly 4 rows in registry order against this repo's own module set; summary text is a placeholder (`exit=<code>`) pending the Phase-3 renderer and must not be a banned literal.
+- [x] 2D.4 GREEN: wire `run()` — `discoverModules` × registry × `exec.Command(checkArgv...)` per module × `classify`/`selectOutcome` × `emitRows`. Test passes.
+- [x] 2D.5 Add CI job `test-deterministic-check-runner` to `.github/workflows/ci.yml` mirroring `test-entry-contract-validator` (`go test ./... -cover`) — R-005 acceptance.
+- [x] 2D.6 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
 
 ## Phase 3: runner-summary-rendering (R-006 remainder, R-007, R-008)
 
