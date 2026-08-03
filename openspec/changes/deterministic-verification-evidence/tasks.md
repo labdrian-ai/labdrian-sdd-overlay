@@ -170,9 +170,9 @@ The original single `runner-golden-wiring` objective was estimated at 90-140 lin
 
 ### 3F. runner-wiring (R-006 remainder) — est. 70-110 lines — depends on 3E
 
-- [ ] 3F.1 RED: extend the `runCheck`-facing test to require real per-module stdout/stderr capture (currently discarded — only the exit code is kept), asserting `result.count`/`result.top`/`result.logPath` are populated by wiring the Phase-3 `parse` funcs into `runCheck` in place of the Phase-2 placeholder summary.
-- [ ] 3F.2 GREEN: wire `runCheck` to capture stdout and stderr separately per module (`cmd.Stdout`/`cmd.Stderr` buffers, per D3/obs #2712), call the matching `parse` func, populate `result.count`/`result.top`/`result.logPath`, and replace `emitRows`'s Phase-2 placeholder `exit=%d` text with the real renderer output from 3E. `TestRunEndToEnd`'s banned-literal assertion (Phase 2D, unchanged) still passes.
-- [ ] 3F.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — wiring GREEN.
+- [x] 3F.1 RED: extend the `runCheck`-facing test to require real per-module stdout/stderr capture (currently discarded — only the exit code is kept), asserting `result.count`/`result.top`/`result.logPath` are populated by wiring the Phase-3 `parse` funcs into `runCheck` in place of the Phase-2 placeholder summary.
+- [x] 3F.2 GREEN: wire `runCheck` to capture stdout and stderr separately per module (`cmd.Stdout`/`cmd.Stderr` buffers, per D3/obs #2712), call the matching `parse` func, populate `result.count`/`result.top`/`result.logPath`, and replace `emitRows`'s Phase-2 placeholder `exit=%d` text with the real renderer output from 3E. `TestRunEndToEnd`'s banned-literal assertion (Phase 2D, unchanged) still passes.
+- [x] 3F.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — wiring GREEN.
 
 ### 3G. runner-goldens-and-payload-cap (R-007 goldens, R-013 cap correction) — est. 80-120 lines — depends on 3F
 
