@@ -230,10 +230,10 @@ Each groups pieces that share one concern, so none carries more than two lines o
 - [x] 4.2 GREEN: add subcommand dispatch; wire `checkArgv`/`normalizeArgv` per check. Test passes.
 - [x] 4.3 RED: add `TestCheckNeverMutates` — `checkArgv` allowlist contains no fixer flags.
 - [x] 4.4 GREEN: enforce no fixer flag in any `checkArgv` (no `gofmt -w`, no `staticcheck -fix`). Test passes.
-- [ ] 4.5 RED: add `TestCheckByteNeutral` (integration, skip in `-short`) — `t.TempDir()` git fixture, dirty tree + a 0755-mode file; snapshot `git status --porcelain` + per-file `(mode, size, sha256)` before/after `check`.
-- [ ] 4.6 GREEN: guarantee `check` runs only read-only argv. Integration test passes.
-- [ ] 4.7 RED: add `TestOutDirGuard` — `check --out-dir <path inside repo root>` → usage error (threat matrix: git repository selection).
-- [ ] 4.8 GREEN: implement the out-dir guard. Test passes.
+- [x] 4.5 RED: add `TestCheckByteNeutral` (integration, skip in `-short`) — `t.TempDir()` git fixture, dirty tree + a 0755-mode file; snapshot `git status --porcelain` + per-file `(mode, size, sha256)` before/after `check`.
+- [x] 4.6 GREEN: guarantee `check` runs only read-only argv. Integration test passes.
+- [x] 4.7 RED: add `TestOutDirGuard` — `check --out-dir <path inside repo root>` → usage error (threat matrix: git repository selection).
+- [x] 4.8 GREEN: implement the out-dir guard. Test passes.
 - [ ] 4.9 RED: add `TestMissingToolStubbedPATH` (integration) — stub `PATH` so a BLOCKING-set tool is unavailable (assert row `unavailable=true`, `selectOutcome`→3); separately stub only `deadcode` unavailable (assert WARNING row, `selectOutcome` unaffected when all else green).
 - [ ] 4.10 GREEN: implement exit-127 unavailable-tool detection feeding `result.unavailable`; confirm precedence holds. Test passes.
 - [ ] 4.11 Run `cd tools/deterministic-check-runner && go test ./...` (full suite) — GREEN.
