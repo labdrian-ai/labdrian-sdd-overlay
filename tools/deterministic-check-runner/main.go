@@ -1,9 +1,12 @@
 package main
 
 import (
+	"errors"
+	"fmt"
 	"io"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 )
@@ -12,10 +15,64 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-// run is the testable entry point. Check execution is not wired yet — this
-// is the scaffold stub only.
+// run wires discoverModules x registry x exec x classify/selectOutcome x
+// emitRows into the working end-to-end command. Row summaries are a
+// placeholder pending the Phase-3 renderer.
 func run(args []string, stdout, stderr io.Writer) int {
-	return 0
+	root, err := os.Getwd()
+	if err != nil {
+		fmt.Fprintf(stderr, "resolve working directory: %v\n", err)
+		return outcomeProceduralToolingFailed
+	}
+
+	modules, err := discoverModules(root)
+	if err != nil {
+		fmt.Fprintf(stderr, "discover modules: %v\n", err)
+		return outcomeProceduralToolingFailed
+	}
+
+	results := make([]result, len(registry))
+	for i, c := range registry {
+		results[i] = runCheck(c, modules)
+	}
+
+	emitRows(stdout, results)
+	return selectOutcome(results)
+}
+
+// runCheck runs c.checkArgv in every module dir and aggregates to one
+// result: unavailable if the tool is missing from PATH, else the max exit
+// code observed across modules.
+func runCheck(c check, modules []string) result {
+	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
+	if lookErr != nil {
+		return result{check: c, exitCode: 127, unavailable: true}
+	}
+
+	exitCode := 0
+	for _, module := range modules {
+		cmd := exec.Command(toolPath, c.checkArgv[1:]...)
+		cmd.Dir = module
+		if runErr := cmd.Run(); runErr != nil {
+			var exitErr *exec.ExitError
+			if errors.As(runErr, &exitErr) {
+				if code := exitErr.ExitCode(); code > exitCode {
+					exitCode = code
+				}
+				continue
+			}
+			return result{check: c, exitCode: 127, unavailable: true}
+		}
+	}
+	return result{check: c, exitCode: exitCode}
+}
+
+// emitRows writes one "tool | exit_code | summary" row per result, in
+// order; the placeholder summary can never equal a banned literal.
+func emitRows(w io.Writer, results []result) {
+	for _, r := range results {
+		fmt.Fprintf(w, "%s | %d | exit=%d\n", r.check.name, r.exitCode, r.exitCode)
+	}
 }
 
 // check describes one verification tool. deterministic and blocking are

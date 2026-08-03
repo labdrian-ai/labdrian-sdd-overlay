@@ -1,12 +1,19 @@
 package main
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"reflect"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
+
+var rowPattern = regexp.MustCompile(`^(.+) \| (\d+) \| (.+)$`)
+
+var bannedLiterals = []string{"PASS", "PASSED", "SUCCESS", "N/A", "NA", "NONE", "TODO", "TBD", "PLACEHOLDER"}
 
 func repoRoot(t *testing.T) string {
 	t.Helper()
@@ -253,5 +260,79 @@ func TestSelectOutcomePrecedence(t *testing.T) {
 				t.Errorf("selectOutcome(%q) = %d, want %d", tt.name, got, tt.want)
 			}
 		})
+	}
+}
+
+// assertRow validates one row against the "tool | exit_code | summary"
+// shape, the expected tool name, and the banned-literal guard; it returns
+// the exit_code field for caller-specific checks.
+func assertRow(t *testing.T, i int, line, wantTool string) string {
+	t.Helper()
+	m := rowPattern.FindStringSubmatch(line)
+	if m == nil {
+		t.Fatalf("row %d = %q does not match 'tool | exit_code | summary'", i, line)
+	}
+	if m[1] != wantTool {
+		t.Errorf("row %d tool = %q, want %q (registry order)", i, m[1], wantTool)
+	}
+	for _, word := range bannedLiterals {
+		if strings.EqualFold(m[3], word) {
+			t.Errorf("row %d summary %q is a banned literal", i, m[3])
+		}
+	}
+	return m[2]
+}
+
+// TestRowEmission asserts emitRows format, ordering, and count (R-006).
+func TestRowEmission(t *testing.T) {
+	results := []result{
+		{check: check{name: "gofmt"}, exitCode: 0},
+		{check: check{name: "go vet"}, exitCode: 1},
+		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true},
+		{check: check{name: "deadcode"}, exitCode: 0},
+	}
+	var buf bytes.Buffer
+	emitRows(&buf, results)
+
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+	if len(lines) != len(results) {
+		t.Fatalf("emitRows wrote %d lines, want %d", len(lines), len(results))
+	}
+	for i, line := range lines {
+		gotExit := assertRow(t, i, line, results[i].check.name)
+		if wantExit := strconv.Itoa(results[i].exitCode); gotExit != wantExit {
+			t.Errorf("line %d exit_code = %q, want %q", i, gotExit, wantExit)
+		}
+	}
+}
+
+// TestRunEndToEnd exercises discoverModules x registry x exec x
+// classify/selectOutcome x emitRows against this repo's own module set.
+// Per-tool exit codes are environment-dependent, so only row structure
+// (count, order, shape, banned-literal guard) is asserted.
+func TestRunEndToEnd(t *testing.T) {
+	root := repoRoot(t)
+	previousWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	if err := os.Chdir(root); err != nil {
+		t.Fatalf("chdir into repo root: %v", err)
+	}
+	defer func() {
+		if err := os.Chdir(previousWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	}()
+
+	var stdout, stderr bytes.Buffer
+	run(nil, &stdout, &stderr)
+
+	lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
+	if len(lines) != len(registry) {
+		t.Fatalf("run() wrote %d rows, want %d: %q", len(lines), len(registry), stdout.String())
+	}
+	for i, line := range lines {
+		assertRow(t, i, line, registry[i].name)
 	}
 }
