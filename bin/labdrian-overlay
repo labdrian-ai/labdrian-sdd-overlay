@@ -159,6 +159,10 @@ Commands:
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator
                                    exit codes 2-6 and does not modify installed skill roots.
+  deterministic-checks             Run the hardcoded v1 check set (gofmt, go vet, staticcheck,
+    <normalize|check> [--top-n N]  deadcode) via the overlay-owned runner. 'check' never mutates;
+                                   'normalize' applies fixers. Exit 0=passed, 1=verification_failed,
+                                   3=procedural_tooling_failed; propagated unchanged from the runner.
   gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
@@ -1615,6 +1619,40 @@ cmd_validate_entry_contract() {
 }
 
 # ---------------------------------------------------------------------------
+# deterministic-checks
+# ---------------------------------------------------------------------------
+
+cmd_deterministic_checks() {
+  local runner_src="$OVERLAY_DIR/tools/deterministic-check-runner"
+  if [[ ! -f "$runner_src/go.mod" || ! -f "$runner_src/main.go" ]]; then
+    echo "error: deterministic-check-runner source is unavailable under $runner_src" >&2
+    return 3
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    echo "error: go is required to build the deterministic-check-runner" >&2
+    return 3
+  fi
+
+  local runner_binary
+  if ! runner_binary="$(mktemp "${TMPDIR:-/tmp}/deterministic-check-runner.XXXXXX")"; then
+    echo "error: could not allocate a temporary deterministic-check-runner binary" >&2
+    return 3
+  fi
+  rm -f "$runner_binary"
+
+  if ! (cd "$runner_src" && go build -o "$runner_binary" .); then
+    rm -f "$runner_binary"
+    echo "error: could not build the deterministic-check-runner" >&2
+    return 3
+  fi
+
+  local status=0
+  (cd "$CALLER_CWD" && "$runner_binary" "$@") || status=$?
+  rm -f "$runner_binary"
+  return "$status"
+}
+
+# ---------------------------------------------------------------------------
 # gadu-generate
 # ---------------------------------------------------------------------------
 
@@ -1649,6 +1687,7 @@ case "$COMMAND" in
   prespec)         cmd_prespec "$@" ;;
   skills)          cmd_skills "$@" ;;
   validate-entry-contract) cmd_validate_entry_contract "$@" ;;
+  deterministic-checks) cmd_deterministic_checks "$@" ;;
   gadu-generate)   cmd_gadu_generate "$@" ;;
   --help|-h)       usage; exit 0 ;;
   "")              usage >&2; exit 1 ;;
