@@ -1019,3 +1019,56 @@ func mustWriteFile(t *testing.T, path, content string, mode fs.FileMode) {
 		t.Fatalf("chmod %s: %v", path, err)
 	}
 }
+
+// writeExecutable writes an executable shell script named name in dir.
+func writeExecutable(t *testing.T, dir, name, script string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
+		t.Fatalf("write executable %s/%s: %v", filepath.Join(dir, name), name, err)
+	}
+}
+
+// TestMissingToolStubbedPATH is 4.9's RED test (amended R-016, obs #2700):
+// unavailability is severity-proportional. Scenario A confirms an
+// unavailable BLOCKING-set tool still forces procedural_tooling_failed.
+// Scenario B is load-bearing: deadcode's checkArgv[0] is "go", shared with
+// go vet/staticcheck, so it cannot be isolated by hiding "go" from PATH
+// without also breaking those two. It is isolated instead by making the
+// stubbed "go" itself exit 127 — the same convention exec.LookPath failure
+// already synthesizes — proving the real-process detection 4.10 adds
+// composes with the existing LookPath sites rather than duplicating them.
+func TestMissingToolStubbedPATH(t *testing.T) {
+	t.Run("blocking-set tool unavailable forces procedural_tooling_failed", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir()) // no gofmt anywhere on PATH
+		gofmt := findRegistryCheck(t, "gofmt")
+
+		got := runCheck(gofmt, []string{t.TempDir()})
+		if !got.unavailable {
+			t.Fatalf("runCheck(gofmt, stubbed PATH).unavailable = false, want true")
+		}
+		if outcome := selectOutcome([]result{got}); outcome != outcomeProceduralToolingFailed {
+			t.Errorf("selectOutcome([]result{gofmt unavailable}) = %d, want %d", outcome, outcomeProceduralToolingFailed)
+		}
+	})
+
+	t.Run("deadcode alone unavailable never forces procedural_tooling_failed", func(t *testing.T) {
+		stubDir := t.TempDir()
+		writeExecutable(t, stubDir, "go", "#!/bin/sh\nexit 127\n")
+		t.Setenv("PATH", stubDir)
+		deadcode := findRegistryCheck(t, "deadcode")
+
+		got := runCheck(deadcode, []string{t.TempDir()})
+		if !got.unavailable {
+			t.Fatalf("runCheck(deadcode, exit-127 stub).unavailable = false, want true (WARNING row, not silently clean)")
+		}
+		if classify(got.check) {
+			t.Fatalf("classify(deadcode) = true, want false (WARNING-only, never blocking)")
+		}
+
+		gofmt, goVet, staticcheck := findRegistryCheck(t, "gofmt"), findRegistryCheck(t, "go vet"), findRegistryCheck(t, "staticcheck")
+		outcome := selectOutcome([]result{{check: gofmt}, {check: goVet}, {check: staticcheck}, got})
+		if outcome != outcomePassed {
+			t.Errorf("selectOutcome(deadcode unavailable, rest green) = %d, want %d (outcomePassed) — an absent WARNING-only tool must not invalidate the run", outcome, outcomePassed)
+		}
+	})
+}

@@ -99,7 +99,7 @@ func runNormalize(modules []string) int {
 func runCheck(c check, modules []string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
-		return result{check: c, exitCode: 127, unavailable: true}
+		return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 	}
 
 	exitCode := 0
@@ -112,16 +112,27 @@ func runCheck(c check, modules []string) result {
 		if runErr := cmd.Run(); runErr != nil {
 			var exitErr *exec.ExitError
 			if errors.As(runErr, &exitErr) {
-				if code := exitErr.ExitCode(); code > exitCode {
+				code := exitErr.ExitCode()
+				if code == unavailableExitCode {
+					return result{check: c, exitCode: unavailableExitCode, unavailable: true}
+				}
+				if code > exitCode {
 					exitCode = code
 				}
 				continue
 			}
-			return result{check: c, exitCode: 127, unavailable: true}
+			return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 		}
 	}
 	return buildResult(c, exitCode, stdout.Bytes())
 }
+
+// unavailableExitCode is the POSIX "command not found" convention: it is
+// synthesized when exec.LookPath fails, and also honored when the process
+// itself exits 127 (e.g. a "go run <module>@version" invocation whose
+// module cannot be resolved) — a real subprocess exit this composes with
+// the LookPath sites for rather than duplicating (4.10, amended R-016).
+const unavailableExitCode = 127
 
 // buildResult constructs a check's result from its captured stdout: count
 // and top come from c.parse; unavailable is set when c.unavailableIf
