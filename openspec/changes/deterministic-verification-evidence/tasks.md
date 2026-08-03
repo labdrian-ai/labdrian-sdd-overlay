@@ -90,11 +90,11 @@ PR 2 (base: PR1 branch). Split into 4 ledger objectives — each its own RED→G
 - [x] 2B.4 GREEN: implement `classify(c check) bool { return c.blocking && c.deterministic }` — the sole enforcement point. Test passes.
 - [x] 2B.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
 
-### 2C. runner-result-and-outcome (R-006 core) — est. 100-150 lines — depends on 2B
+### 2C. runner-result-and-outcome (R-006 core) — est. 100-150 lines — depends on 2B — COMPLETE
 
-- [ ] 2C.1 RED: add `TestSelectOutcomePrecedence` — 6 cases: BLOCKING-set check unavailable alone → 3; `deadcode` unavailable alone → 0; `deadcode` unavailable + a blocking check failed → 1; runner-internal error → 3; non-blocking (`deadcode`) red alone → 0; all clean → 0.
-- [ ] 2C.2 GREEN: add `result` struct (`check check`, `exitCode int`, `unavailable bool`, `runnerErr bool` — `count`/`top`/`logPath` land with the Phase-3 renderer) and `selectOutcome([]result) int` per D4 precedence. Test passes.
-- [ ] 2C.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
+- [x] 2C.1 RED: add `TestSelectOutcomePrecedence` — 6 cases: BLOCKING-set check unavailable alone → 3; `deadcode` unavailable alone → 0; `deadcode` unavailable + a blocking check failed → 1; runner-internal error → 3; non-blocking (`deadcode`) red alone → 0; all clean → 0.
+- [x] 2C.2 GREEN: add `result` struct (`check check`, `exitCode int`, `unavailable bool`, `runnerErr bool` — `count`/`top`/`logPath` land with the Phase-3 renderer) and `selectOutcome([]result) int` per D4 precedence. Test passes.
+- [x] 2C.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
 
 ### 2D. runner-row-emission-and-ci-job (R-006 core remainder, R-005 CI acceptance) — est. 115-160 lines — depends on 2A, 2B, 2C
 
