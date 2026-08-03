@@ -655,6 +655,41 @@ func TestParseStaticcheckToolchainMismatch(t *testing.T) {
 	}
 }
 
+// TestBuildResultStaticcheckToolchainMismatchRoutesToProceduralToolingFailed
+// covers the highest-severity open defect found while verifying 3F (obs
+// #2668/#2719-adjacent): isStaticcheckToolchainMismatch existed and was
+// unit-tested, but nothing wired it to result.unavailable, so a real
+// mismatch produced count=0, exitCode=1, unavailable=false and
+// selectOutcome routed it to verification_failed instead of the
+// R-016-mandated procedural_tooling_failed. buildResult is runCheck's own
+// post-parse result construction (extracted so this defect is directly
+// testable without shelling out to a real toolchain-mismatched module), so
+// this exercises the real wiring, not a reimplementation of it. The fixture
+// is real staticcheck@v0.7.0 stdout (obs #2711/#2668 stream analysis: the
+// message reaches stdout, not stderr — see staticcheckToolchainMismatchPattern).
+func TestBuildResultStaticcheckToolchainMismatchRoutesToProceduralToolingFailed(t *testing.T) {
+	staticcheck := findRegistryCheck(t, "staticcheck")
+	out := readTestdata(t, "staticcheck-toolchain-mismatch.txt")
+
+	r := buildResult(staticcheck, 1, out)
+	if !r.unavailable {
+		t.Fatal("buildResult(staticcheck, 1, mismatch fixture).unavailable = false, want true")
+	}
+	if r.exitCode != 1 {
+		t.Errorf("buildResult(...).exitCode = %d, want 1 (rows keep the raw exit code)", r.exitCode)
+	}
+
+	got := selectOutcome([]result{r})
+	if got != outcomeProceduralToolingFailed {
+		t.Errorf("selectOutcome([]result{mismatch}) = %d, want %d (outcomeProceduralToolingFailed) — a mismatch must never route to outcomeVerificationFailed (%d)", got, outcomeProceduralToolingFailed, outcomeVerificationFailed)
+	}
+
+	clean := buildResult(staticcheck, 0, readTestdata(t, "staticcheck-clean.txt"))
+	if clean.unavailable {
+		t.Error("buildResult(staticcheck, 0, clean fixture).unavailable = true, want false")
+	}
+}
+
 // TestParseDeadcode covers the audit finding (obs #2709/#2711/#2712):
 // deadcode exits 0 even when it reports findings (measured in this
 // repository: 21 findings, exit code 0), so count — never exit code — must

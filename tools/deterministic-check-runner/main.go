@@ -75,8 +75,20 @@ func runCheck(c check, modules []string) result {
 			return result{check: c, exitCode: 127, unavailable: true}
 		}
 	}
-	count, top := c.parse(exitCode, stdout.Bytes())
-	return result{check: c, exitCode: exitCode, count: count, top: top, logPath: logPathFor(c.name)}
+	return buildResult(c, exitCode, stdout.Bytes())
+}
+
+// buildResult constructs a check's result from its captured stdout: count
+// and top come from c.parse; unavailable is set when c.unavailableIf
+// detects the tool could not analyze the code at all (e.g. a staticcheck
+// toolchain mismatch), so selectOutcome routes it to
+// procedural_tooling_failed rather than verification_failed (D4/R-016).
+// Extracted from runCheck so this wiring is directly unit-testable without
+// shelling out to a real toolchain-mismatched module.
+func buildResult(c check, exitCode int, stdout []byte) result {
+	count, top := c.parse(exitCode, stdout)
+	unavailable := c.unavailableIf != nil && c.unavailableIf(stdout)
+	return result{check: c, exitCode: exitCode, unavailable: unavailable, count: count, top: top, logPath: logPathFor(c.name)}
 }
 
 // emitRows writes one "tool | exit_code | summary" row per result, in
@@ -94,9 +106,11 @@ func emitRows(w io.Writer, results []result, topN int) {
 // parse turns a check's captured output into a finding count and excerpts;
 // failed decides pass/fail from exit code and count together (D3), since a
 // tool's own exit code is not always authoritative (gofmt -l exits 0 while
-// listing violations). All four registry entries now declare parse/failed.
-// normalizeArgv is deferred to runner-mode-separation and is intentionally
-// absent here to avoid rework.
+// listing violations). unavailableIf is optional (nil for most checks): when
+// set, it detects that the tool ran but could not analyze the code at all
+// (D4/R-016) — see buildResult. All four registry entries now declare
+// parse/failed. normalizeArgv is deferred to runner-mode-separation and is
+// intentionally absent here to avoid rework.
 type check struct {
 	name          string
 	deterministic bool
@@ -104,6 +118,7 @@ type check struct {
 	checkArgv     []string
 	parse         func(exit int, out []byte) (count int, top []string)
 	failed        func(exit, count int) bool
+	unavailableIf func(out []byte) bool
 }
 
 // registry is the hardcoded v1 check set. It is not configurable: gofmt,
@@ -116,7 +131,7 @@ type check struct {
 var registry = []check{
 	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, parse: parseGofmt, failed: failedGofmt},
 	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
-	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck},
+	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck, unavailableIf: isStaticcheckToolchainMismatch},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}, parse: parseDeadcode, failed: failedDeadcode},
 }
 
@@ -175,20 +190,24 @@ func failedGoVet(exit, count int) bool {
 // first regardless so that distinction never has to rely on this regex.
 var staticcheckFindingPattern = regexp.MustCompile(`^\S+:\d+:\d+: .+\([A-Z]+\d+\)$`)
 
-// staticcheckToolchainMismatchPattern matches staticcheck's stderr when the
+// staticcheckToolchainMismatchPattern matches staticcheck's stdout when the
 // local Go build toolchain is older than a module's declared go directive
-// (reproduced against tui/go.mod's go 1.26.1 with a go1.25 build). This is
-// not a verification finding: staticcheck could not analyze the module at
-// all.
+// (reproduced against tui/go.mod's go 1.26.1 with a go1.25 build). Confirmed
+// via honnef.co/go/tools@v0.7.0's lintcmd/lint.go: this per-package load
+// error becomes a "compile"-category diagnostic (lint.go's failed()),
+// rendered through the same textFormatter{W: os.Stdout} as real findings
+// (cmd.go) — never stderr. Not a verification finding: staticcheck could not
+// analyze the module at all.
 var staticcheckToolchainMismatchPattern = regexp.MustCompile(`requires newer Go version`)
 
 // isStaticcheckToolchainMismatch reports whether out is staticcheck's
 // toolchain-mismatch failure rather than real findings (audit finding, obs
 // #2711). Both cases exit non-zero, so exit code alone cannot distinguish
-// them — a later work unit wires this into runCheck to mark the result
-// unavailable so selectOutcome routes it to procedural_tooling_failed and
-// never verification_failed (D4/R-016), never burning the single correction
-// attempt on an environment problem instead of a real finding.
+// them — wired as the staticcheck registry entry's unavailableIf so
+// buildResult marks the result unavailable and selectOutcome routes it to
+// procedural_tooling_failed, never verification_failed (D4/R-016), never
+// burning the single correction attempt on an environment problem instead of
+// a real finding.
 func isStaticcheckToolchainMismatch(out []byte) bool {
 	return staticcheckToolchainMismatchPattern.Match(out)
 }
