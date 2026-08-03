@@ -194,10 +194,10 @@ Split into three cohesive objectives rather than one that overruns. Ordering is 
 
 ### 3I. runner-goldens (R-007 goldens) — est. 40-70 lines — depends on 3H
 
-- [ ] 3I.0 **Enforce the banned-literal guard at runtime, or delete it.** Found by the runner reporting dead code in itself during 3H: `deadcode` flagged `main.go:370:6: unreachable func: isBannedSummaryLiteral`. The guard is defined and unit-tested but never called from production code, so nothing prevents a banned literal from being emitted at runtime — the protection exists only in the test suite. Either call it from the render path so a banned summary fails loud, or remove it and rely on the renderer's construction plus the existing test. Do not leave a guard that looks enforced and is not. Note this also clears the runner's only self-reported dead-code finding.
-- [ ] 3I.1 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
-- [ ] 3I.2 GREEN: generate goldens with `-update`, rerun without — byte-identical.
-- [ ] 3I.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN.
+- [x] 3I.0 **Enforce the banned-literal guard at runtime, or delete it.** Found by the runner reporting dead code in itself during 3H: `deadcode` flagged `main.go:370:6: unreachable func: isBannedSummaryLiteral`. The guard is defined and unit-tested but never called from production code, so nothing prevents a banned literal from being emitted at runtime — the protection exists only in the test suite. Either call it from the render path so a banned summary fails loud, or remove it and rely on the renderer's construction plus the existing test. Do not leave a guard that looks enforced and is not. Note this also clears the runner's only self-reported dead-code finding. **Chosen: wired it in.** Extracted `guardAgainstBannedSummary(summary string)`, called from `renderSummary`'s single construction site, panicking on a broken invariant (precedent: `engine/prespec/brief.go`). Deletion was rejected because construction-only protection is exactly the "looks enforced, is not" trap the task warns against — a future edit to `renderSummary` could silently regress with no runtime backstop. Confirmed against the live runner: deadcode's finding count dropped from 21 to 20; `isBannedSummaryLiteral` no longer appears.
+- [x] 3I.1 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
+- [x] 3I.2 GREEN: generate goldens with `-update`, rerun without — byte-identical.
+- [x] 3I.3 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN. 26/26 tests pass, coverage 88.1% (up from 87.1%).
 
 ## Phase 4: runner-mode-separation (R-009, R-010)
 
