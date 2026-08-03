@@ -306,6 +306,56 @@ func TestRowEmission(t *testing.T) {
 	}
 }
 
+// pinnedInvocationPattern matches CI's "go run <module>@<version> ./..."
+// step invocations verbatim.
+var pinnedInvocationPattern = regexp.MustCompile(`go run (\S+)@(\S+) \./\.\.\.`)
+
+// TestCheckArgvPinnedToCIInvocation parses .github/workflows/ci.yml for the
+// pinned "go run <module>@<version> ./..." invocations CI uses for
+// staticcheck and deadcode, and asserts the registry's checkArgv match them
+// exactly. This is the audit-finding regression guard (obs #2714): the
+// runner previously resolved staticcheck/deadcode as bare PATH binaries
+// (exit 127 when absent) while CI always uses a pinned `go run`, so a future
+// CI version bump not mirrored here must fail loud rather than silently
+// drift.
+func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
+	root := repoRoot(t)
+	data, err := os.ReadFile(filepath.Join(root, ".github", "workflows", "ci.yml"))
+	if err != nil {
+		t.Fatalf("read ci.yml: %v", err)
+	}
+
+	pinned := map[string]string{}
+	for _, m := range pinnedInvocationPattern.FindAllStringSubmatch(string(data), -1) {
+		module, invocation := m[1], m[0]
+		var tool string
+		switch {
+		case strings.Contains(module, "staticcheck"):
+			tool = "staticcheck"
+		case strings.Contains(module, "deadcode"):
+			tool = "deadcode"
+		default:
+			continue
+		}
+		if prev, ok := pinned[tool]; ok && prev != invocation {
+			t.Fatalf("ci.yml pins %s inconsistently across jobs: %q vs %q", tool, prev, invocation)
+		}
+		pinned[tool] = invocation
+	}
+
+	for _, tool := range []string{"staticcheck", "deadcode"} {
+		want, ok := pinned[tool]
+		if !ok {
+			t.Fatalf("ci.yml has no pinned 'go run <module>@<version> ./...' invocation for %s", tool)
+		}
+		c := findRegistryCheck(t, tool)
+		got := strings.Join(c.checkArgv, " ")
+		if got != want {
+			t.Errorf("registry checkArgv for %s = %q, want %q (parity with ci.yml pinned invocation)", tool, got, want)
+		}
+	}
+}
+
 // TestRunEndToEnd exercises discoverModules x registry x exec x
 // classify/selectOutcome x emitRows against this repo's own module set.
 // Per-tool exit codes are environment-dependent, so only row structure

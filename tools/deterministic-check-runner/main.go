@@ -88,12 +88,16 @@ type check struct {
 
 // registry is the hardcoded v1 check set. It is not configurable: gofmt,
 // go vet, and staticcheck are deterministic and blocking; deadcode is
-// deterministic but WARNING-only (amended R-016).
+// deterministic but WARNING-only (amended R-016). staticcheck and deadcode
+// use the same pinned `go run <module>@<version>` invocation CI uses
+// (.github/workflows/ci.yml) rather than resolving bare binaries from PATH,
+// so both agree on tool availability and honor the same version pin
+// (TestCheckArgvPinnedToCIInvocation enforces this parity).
 var registry = []check{
 	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}},
 	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}},
-	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"staticcheck", "./..."}},
-	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"deadcode", "./..."}},
+	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}},
+	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}},
 }
 
 // classify is the single enforcement point for effective blocking: a check
