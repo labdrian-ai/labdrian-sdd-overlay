@@ -141,8 +141,8 @@ PR 3 (base: PR2 branch). Re-split into 6 ledger objectives — each its own RED�
 
 ### 3C. runner-parse-staticcheck (R-006 remainder, R-007 — audit finding, obs #2711) — est. 90-130 lines — depends on 3A
 
-- [ ] 3C.1 RED: add table-driven `TestParseStaticcheck` (clean/N-findings cases) against `testdata/` fixtures captured from the pinned `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...` invocation (3A). Add `TestParseStaticcheckToolchainMismatch` — fixture reproduced against `tui/go.mod`'s `go 1.26.1` directive, error text `requires newer Go version`; asserts the result is marked `unavailable`/unexecutable, never a counted failure.
-- [ ] 3C.2 GREEN: implement `parseStaticcheck` + its `failed(exit,count)` predicate. `parseStaticcheck` recognizes the toolchain-mismatch stderr signature and marks the result `unavailable` instead of counting it — `selectOutcome` (Phase 2C, unchanged) then routes it to `procedural_tooling_failed`, never `verification_failed`, per D4/R-016. Tests pass.
+- [x] 3C.1 RED: add table-driven `TestParseStaticcheck` (clean/N-findings cases) against `testdata/` fixtures captured from the pinned `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...` invocation (3A). Add `TestParseStaticcheckToolchainMismatch` — fixture reproduced against `tui/go.mod`'s `go 1.26.1` directive, error text `requires newer Go version`; asserts the result is marked `unavailable`/unexecutable, never a counted failure.
+- [x] 3C.2 GREEN: implement `parseStaticcheck` + its `failed(exit,count)` predicate. `parseStaticcheck` recognizes the toolchain-mismatch stderr signature and marks the result `unavailable` instead of counting it — `selectOutcome` (Phase 2C, unchanged) then routes it to `procedural_tooling_failed`, never `verification_failed`, per D4/R-016. Tests pass.
 
 ### 3D. runner-parse-deadcode (R-006 remainder, R-007 — audit finding, obs #2709/#2711/#2712) — est. 70-110 lines — depends on 3A
 
