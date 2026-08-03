@@ -283,16 +283,18 @@ func assertRow(t *testing.T, i int, line, wantTool string) string {
 	return m[2]
 }
 
-// TestRowEmission asserts emitRows format, ordering, and count (R-006).
+// TestRowEmission asserts emitRows format, ordering, count (R-006), and that
+// summaries come from the real 3E renderer, not the retired Phase-2
+// "exit=%d" placeholder.
 func TestRowEmission(t *testing.T) {
 	results := []result{
 		{check: check{name: "gofmt"}, exitCode: 0},
-		{check: check{name: "go vet"}, exitCode: 1},
+		{check: check{name: "go vet"}, exitCode: 1, count: 2, top: []string{"a", "b"}, logPath: "/tmp/go-vet.log"},
 		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true},
 		{check: check{name: "deadcode"}, exitCode: 0},
 	}
 	var buf bytes.Buffer
-	emitRows(&buf, results)
+	emitRows(&buf, results, defaultTopN)
 
 	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
 	if len(lines) != len(results) {
@@ -303,6 +305,40 @@ func TestRowEmission(t *testing.T) {
 		if wantExit := strconv.Itoa(results[i].exitCode); gotExit != wantExit {
 			t.Errorf("line %d exit_code = %q, want %q", i, gotExit, wantExit)
 		}
+	}
+	wantSummary := renderSummary(2, []string{"a", "b"}, defaultTopN, "/tmp/go-vet.log")
+	if got := rowPattern.FindStringSubmatch(lines[1])[3]; got != wantSummary {
+		t.Errorf("row 1 summary = %q, want real renderer output %q (not the exit=%%d placeholder)", got, wantSummary)
+	}
+}
+
+// TestRunCheckSeparatesStreamsAndPopulatesSummary is 3F's RED test:
+// runCheck must capture stdout and stderr into distinct buffers (never
+// merged) and call c.parse on stdout alone, populating
+// result.count/top/logPath. A merged-stream regression would double-count
+// the line this test writes to both streams (audit finding, obs #2712).
+func TestRunCheckSeparatesStreamsAndPopulatesSummary(t *testing.T) {
+	c := check{
+		name:      "fake",
+		checkArgv: []string{"sh", "-c", "printf 'stdout-line\\n'; printf 'stderr-line\\n' >&2"},
+		parse: func(exit int, out []byte) (int, []string) {
+			trimmed := strings.TrimSpace(string(out))
+			if trimmed == "" {
+				return 0, nil
+			}
+			return len(strings.Split(trimmed, "\n")), strings.Split(trimmed, "\n")
+		},
+	}
+	got := runCheck(c, []string{t.TempDir()})
+
+	if got.count != 1 {
+		t.Fatalf("runCheck count = %d, want 1 (stderr must not be merged into parsed stdout)", got.count)
+	}
+	if len(got.top) != 1 || got.top[0] != "stdout-line" {
+		t.Fatalf("runCheck top = %v, want [\"stdout-line\"]", got.top)
+	}
+	if want := logPathFor("fake"); got.logPath != want {
+		t.Errorf("runCheck logPath = %q, want %q", got.logPath, want)
 	}
 }
 

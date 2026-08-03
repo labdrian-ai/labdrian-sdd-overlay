@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,8 +20,8 @@ func main() {
 }
 
 // run wires discoverModules x registry x exec x classify/selectOutcome x
-// emitRows into the working end-to-end command. Row summaries are a
-// placeholder pending the Phase-3 renderer.
+// emitRows into the working end-to-end command. Row summaries use the
+// Phase-3 bounded renderer (D6), driven by --top-n (parseTopN).
 func run(args []string, stdout, stderr io.Writer) int {
 	root, err := os.Getwd()
 	if err != nil {
@@ -39,13 +40,17 @@ func run(args []string, stdout, stderr io.Writer) int {
 		results[i] = runCheck(c, modules)
 	}
 
-	emitRows(stdout, results)
+	emitRows(stdout, results, parseTopN(args))
 	return selectOutcome(results)
 }
 
 // runCheck runs c.checkArgv in every module dir and aggregates to one
 // result: unavailable if the tool is missing from PATH, else the max exit
-// code observed across modules.
+// code observed across modules. stdout and stderr are captured into
+// distinct buffers, never merged: c.parse trusts stdout alone (per-parse-func
+// docs), and merging streams has already inflated a finding count once by
+// letting a Go toolchain-switch message land in the parsed stream (obs
+// #2712). stderr is captured but not yet consumed by any decision here.
 func runCheck(c check, modules []string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
@@ -53,9 +58,12 @@ func runCheck(c check, modules []string) result {
 	}
 
 	exitCode := 0
+	var stdout, stderr bytes.Buffer
 	for _, module := range modules {
 		cmd := exec.Command(toolPath, c.checkArgv[1:]...)
 		cmd.Dir = module
+		cmd.Stdout = &stdout
+		cmd.Stderr = &stderr
 		if runErr := cmd.Run(); runErr != nil {
 			var exitErr *exec.ExitError
 			if errors.As(runErr, &exitErr) {
@@ -67,14 +75,17 @@ func runCheck(c check, modules []string) result {
 			return result{check: c, exitCode: 127, unavailable: true}
 		}
 	}
-	return result{check: c, exitCode: exitCode}
+	count, top := c.parse(exitCode, stdout.Bytes())
+	return result{check: c, exitCode: exitCode, count: count, top: top, logPath: logPathFor(c.name)}
 }
 
 // emitRows writes one "tool | exit_code | summary" row per result, in
-// order; the placeholder summary can never equal a banned literal.
-func emitRows(w io.Writer, results []result) {
+// order, with summary rendered by renderSummary (D6); topN bounds how many
+// excerpts each row shows.
+func emitRows(w io.Writer, results []result, topN int) {
 	for _, r := range results {
-		fmt.Fprintf(w, "%s | %d | exit=%d\n", r.check.name, r.exitCode, r.exitCode)
+		summary := renderSummary(r.count, r.top, topN, r.logPath)
+		fmt.Fprintf(w, "%s | %d | %s\n", r.check.name, r.exitCode, summary)
 	}
 }
 
@@ -268,12 +279,16 @@ const (
 // result is the outcome of executing one check. unavailable (could not run)
 // and a plain failing exitCode (ran, found problems) are distinct states;
 // runnerErr marks a runner-internal fault. Rows keep the raw exit code.
-// count, top, and logPath land with the Phase-3 renderer.
+// count, top, and logPath are populated by runCheck from c.parse's stdout
+// parse and logPathFor; they stay zero-value when the tool never ran.
 type result struct {
 	check       check
 	exitCode    int
 	unavailable bool
 	runnerErr   bool
+	count       int
+	top         []string
+	logPath     string
 }
 
 // selectOutcome is the single place outcome precedence lives (amended
