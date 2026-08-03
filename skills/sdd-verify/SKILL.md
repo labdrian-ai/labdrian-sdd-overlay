@@ -64,6 +64,11 @@ test_exit_code: 125
 build_exit_code: 125
 ```
 
+## Deterministic Check Evidence (R-011, R-012, R-013)
+
+- `normalize` runs before `review start`; once the candidate freezes, `check` is the only `deterministic-check-runner` subcommand this skill may execute — any mutating step after freeze would invalidate the receipt (R-011).
+- `bin/labdrian-overlay deterministic-checks check` stdout pipes directly into `gentle-ai review capture-evidence --input -`; the runner's own row output is the captured evidence bytes, never a paraphrase.
+
 ## Decision Gates
 
 | Condition | Action |

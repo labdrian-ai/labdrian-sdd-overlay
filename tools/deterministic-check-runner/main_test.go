@@ -630,6 +630,60 @@ func TestCapPayload(t *testing.T) {
 	}
 }
 
+// TestPayloadBoundaryContract is 5.7's test pinning the evidence-piping
+// contract's two boundary invariants that SKILL.md's "Deterministic Check
+// Evidence" section (5.8) documents: capture-evidence's schema requires
+// minLength 1, and rejects nothing over payloadByteCap by truncating
+// instead (R-013). Neither invariant is reimplemented here — the registry
+// is hardcoded non-empty (2B) and the cap already degrades by dropping
+// excerpts before falling back to capPayload (3H) — this test only proves
+// the contract holds at the boundary, confirmed genuine via mutation
+// testing (temporarily emptied the registry / bypassed capPayload,
+// observed real failures, reverted; see apply-progress evidence).
+func TestPayloadBoundaryContract(t *testing.T) {
+	t.Run("a real run is never empty, so the payload always satisfies minLength 1", func(t *testing.T) {
+		if len(registry) == 0 {
+			t.Fatal("registry is empty: a real run would emit zero bytes, violating capture-evidence's minLength 1 (R-013)")
+		}
+		results := make([]result, len(registry))
+		for i, c := range registry {
+			results[i] = buildResult(c, 0, nil) // clean run: every check exits 0, finds nothing
+		}
+		var buf bytes.Buffer
+		emitRows(&buf, results, defaultTopN)
+		if buf.Len() < 1 {
+			t.Fatalf("emitRows wrote %d bytes for an all-clean run, want at least 1 (minLength 1, R-013)", buf.Len())
+		}
+	})
+
+	t.Run("a payload over 4194304 bytes truncates, never rejected", func(t *testing.T) {
+		if payloadByteCap != 4194304 {
+			t.Fatalf("payloadByteCap = %d, want 4194304 (R-013's exact capture-evidence boundary)", payloadByteCap)
+		}
+		excerpt := strings.Repeat("y", excerptCharCap)
+		top := make([]string, 30000) // renders well past the 4194304-byte boundary
+		for i := range top {
+			top[i] = excerpt
+		}
+		results := []result{
+			{check: check{name: "gofmt"}, exitCode: 0},
+			{check: check{name: "go vet"}, exitCode: 1, count: len(top), top: top, logPath: "/tmp/go-vet.log"},
+			{check: check{name: "staticcheck"}, exitCode: 0},
+			{check: check{name: "deadcode"}, exitCode: 0},
+		}
+		var buf bytes.Buffer
+		emitRows(&buf, results, len(top))
+		got := buf.Bytes()
+
+		if len(got) > payloadByteCap {
+			t.Fatalf("emitRows wrote %d bytes, want at most %d — an oversized payload must truncate, never exceed the boundary", len(got), payloadByteCap)
+		}
+		if len(got) < 1 {
+			t.Fatal("emitRows wrote 0 bytes for an oversized run: truncation must never reject the payload down to nothing")
+		}
+	})
+}
+
 // readTestdata loads a fixture captured from real tool output.
 func readTestdata(t *testing.T, name string) []byte {
 	t.Helper()
