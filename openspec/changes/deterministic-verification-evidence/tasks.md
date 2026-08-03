@@ -234,9 +234,9 @@ Each groups pieces that share one concern, so none carries more than two lines o
 - [x] 4.6 GREEN: guarantee `check` runs only read-only argv. Integration test passes.
 - [x] 4.7 RED: add `TestOutDirGuard` — `check --out-dir <path inside repo root>` → usage error (threat matrix: git repository selection).
 - [x] 4.8 GREEN: implement the out-dir guard. Test passes.
-- [ ] 4.9 RED: add `TestMissingToolStubbedPATH` (integration) — stub `PATH` so a BLOCKING-set tool is unavailable (assert row `unavailable=true`, `selectOutcome`→3); separately stub only `deadcode` unavailable (assert WARNING row, `selectOutcome` unaffected when all else green).
-- [ ] 4.10 GREEN: implement exit-127 unavailable-tool detection feeding `result.unavailable`; confirm precedence holds. Test passes.
-- [ ] 4.11 Run `cd tools/deterministic-check-runner && go test ./...` (full suite) — GREEN.
+- [x] 4.9 RED: add `TestMissingToolStubbedPATH` (integration) — stub `PATH` so a BLOCKING-set tool is unavailable (assert row `unavailable=true`, `selectOutcome`→3); separately stub only `deadcode` unavailable (assert WARNING row, `selectOutcome` unaffected when all else green).
+- [x] 4.10 GREEN: implement exit-127 unavailable-tool detection feeding `result.unavailable`; confirm precedence holds. Test passes.
+- [x] 4.11 Run `cd tools/deterministic-check-runner && go test ./...` (full suite) — GREEN.
 
 ## Phase 5: capture-evidence-wiring (R-011, R-012, R-013, R-014, R-015, R-016, R-019)
 
