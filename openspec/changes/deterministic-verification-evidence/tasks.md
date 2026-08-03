@@ -136,8 +136,8 @@ PR 3 (base: PR2 branch). Re-split into 6 ledger objectives — each its own RED�
 
 ### 3B. runner-parse-simple-checks (R-006 remainder, R-007, R-008) — est. 80-120 lines — depends on 3A
 
-- [ ] 3B.1 RED: add table-driven `TestParseGofmt` and `TestParseGoVet` against `testdata/` fixtures; assert `gofmt -l` non-empty file-list output at exit 0 still yields `count>0` via `failed(exit,count)` (D3 — `gofmt`'s own exit code is not authoritative), and `go vet`'s count derives from parsed diagnostic lines with `failed` following its exit code directly.
-- [ ] 3B.2 GREEN: implement `parseGofmt`, `parseGoVet`, and their `failed(exit,count)` predicates. Tests pass.
+- [x] 3B.1 RED: add table-driven `TestParseGofmt` and `TestParseGoVet` against `testdata/` fixtures; assert `gofmt -l` non-empty file-list output at exit 0 still yields `count>0` via `failed(exit,count)` (D3 — `gofmt`'s own exit code is not authoritative), and `go vet`'s count derives from parsed diagnostic lines with `failed` following its exit code directly.
+- [x] 3B.2 GREEN: implement `parseGofmt`, `parseGoVet`, and their `failed(exit,count)` predicates. Tests pass.
 
 ### 3C. runner-parse-staticcheck (R-006 remainder, R-007 — audit finding, obs #2711) — est. 90-130 lines — depends on 3A
 
