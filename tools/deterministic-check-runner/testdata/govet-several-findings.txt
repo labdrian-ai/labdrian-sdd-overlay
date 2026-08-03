@@ -1,0 +1,2 @@
+pkgtwo/b.go:6:14: fmt.Printf format %s has arg 42 of wrong type int
+pkgone/a.go:6:14: fmt.Printf format %d has arg "bad" of wrong type string

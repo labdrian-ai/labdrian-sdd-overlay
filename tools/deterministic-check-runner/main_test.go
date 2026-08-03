@@ -386,3 +386,77 @@ func TestRunEndToEnd(t *testing.T) {
 		assertRow(t, i, line, registry[i].name)
 	}
 }
+
+// readTestdata loads a fixture captured from real tool output.
+func readTestdata(t *testing.T, name string) []byte {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", name))
+	if err != nil {
+		t.Fatalf("read testdata/%s: %v", name, err)
+	}
+	return data
+}
+
+// TestParseGofmt covers D3: gofmt -l exits 0 even when it lists
+// unformatted files, so parseGofmt's count (not gofmt's exit code) must
+// drive failedGofmt. Fixtures are real `gofmt -l` output.
+func TestParseGofmt(t *testing.T) {
+	tests := []struct {
+		name       string
+		fixture    string
+		exit       int
+		wantCount  int
+		wantFailed bool
+	}{
+		{"zero findings", "gofmt-clean.txt", 0, 0, false},
+		{"one finding, exit 0", "gofmt-one-finding.txt", 0, 1, true},
+		{"several findings, exit 0", "gofmt-several-findings.txt", 0, 2, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := readTestdata(t, tt.fixture)
+			count, top := parseGofmt(tt.exit, out)
+			if count != tt.wantCount {
+				t.Errorf("parseGofmt count = %d, want %d", count, tt.wantCount)
+			}
+			if len(top) != tt.wantCount {
+				t.Errorf("parseGofmt top has %d entries, want %d", len(top), tt.wantCount)
+			}
+			if got := failedGofmt(tt.exit, count); got != tt.wantFailed {
+				t.Errorf("failedGofmt(%d, %d) = %v, want %v", tt.exit, count, got, tt.wantFailed)
+			}
+		})
+	}
+}
+
+// TestParseGoVet covers the counterpart case: go vet's own exit code is
+// authoritative, so failedGoVet follows exit directly. Fixtures are real
+// `go vet ./...` stderr output.
+func TestParseGoVet(t *testing.T) {
+	tests := []struct {
+		name       string
+		fixture    string
+		exit       int
+		wantCount  int
+		wantFailed bool
+	}{
+		{"zero findings, exit 0", "govet-clean.txt", 0, 0, false},
+		{"one finding, exit 1", "govet-one-finding.txt", 1, 1, true},
+		{"several findings, exit 1", "govet-several-findings.txt", 1, 2, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := readTestdata(t, tt.fixture)
+			count, top := parseGoVet(tt.exit, out)
+			if count != tt.wantCount {
+				t.Errorf("parseGoVet count = %d, want %d", count, tt.wantCount)
+			}
+			if len(top) != tt.wantCount {
+				t.Errorf("parseGoVet top has %d entries, want %d", len(top), tt.wantCount)
+			}
+			if got := failedGoVet(tt.exit, count); got != tt.wantFailed {
+				t.Errorf("failedGoVet(%d, %d) = %v, want %v", tt.exit, count, got, tt.wantFailed)
+			}
+		})
+	}
+}

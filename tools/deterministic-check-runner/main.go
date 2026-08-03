@@ -8,7 +8,9 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
+	"strings"
 )
 
 func main() {
@@ -77,13 +79,20 @@ func emitRows(w io.Writer, results []result) {
 
 // check describes one verification tool. deterministic and blocking are
 // declared independently; classify() is the sole place they are combined.
-// normalizeArgv, parse, and failed are deferred to later work units and are
-// intentionally absent here to avoid rework.
+// parse turns a check's captured output into a finding count and excerpts;
+// failed decides pass/fail from exit code and count together (D3), since a
+// tool's own exit code is not always authoritative (gofmt -l exits 0 while
+// listing violations). Both are nil until a check's parse/failed pair is
+// implemented (staticcheck, deadcode land in later work units).
+// normalizeArgv is deferred to runner-mode-separation and is intentionally
+// absent here to avoid rework.
 type check struct {
 	name          string
 	deterministic bool
 	blocking      bool
 	checkArgv     []string
+	parse         func(exit int, out []byte) (count int, top []string)
+	failed        func(exit, count int) bool
 }
 
 // registry is the hardcoded v1 check set. It is not configurable: gofmt,
@@ -94,10 +103,55 @@ type check struct {
 // so both agree on tool availability and honor the same version pin
 // (TestCheckArgvPinnedToCIInvocation enforces this parity).
 var registry = []check{
-	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}},
-	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}},
+	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, parse: parseGofmt, failed: failedGofmt},
+	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
 	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}},
+}
+
+// goVetDiagnosticPattern matches go vet's diagnostic lines
+// ("file.go:line:col: message"), distinguishing them from the "# package"
+// headers go vet ./... prints ahead of each package's findings.
+var goVetDiagnosticPattern = regexp.MustCompile(`^\S+\.go:\d+:\d+:`)
+
+// parseGofmt counts gofmt -l's reported files from its stdout. gofmt -l
+// exits 0 even when it lists unformatted files, so a caller must not treat
+// a zero exit code as a clean result (D3) — failedGofmt trusts count.
+func parseGofmt(exit int, out []byte) (count int, top []string) {
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return 0, nil
+	}
+	lines := strings.Split(trimmed, "\n")
+	return len(lines), lines
+}
+
+// failedGofmt is D3's failure predicate for gofmt: any listed file fails
+// the check regardless of exit code, and a non-zero exit (e.g. a genuine
+// invocation error) fails it too.
+func failedGofmt(exit, count int) bool {
+	return count > 0 || exit != 0
+}
+
+// parseGoVet counts go vet's diagnostic lines from its captured output,
+// skipping "# package" headers.
+func parseGoVet(exit int, out []byte) (count int, top []string) {
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return 0, nil
+	}
+	for _, line := range strings.Split(trimmed, "\n") {
+		if goVetDiagnosticPattern.MatchString(strings.TrimSpace(line)) {
+			top = append(top, line)
+		}
+	}
+	return len(top), top
+}
+
+// failedGoVet trusts go vet's own exit code directly, unlike gofmt: go vet
+// exits non-zero exactly when it has diagnostics to report.
+func failedGoVet(exit, count int) bool {
+	return exit != 0
 }
 
 // classify is the single enforcement point for effective blocking: a check
