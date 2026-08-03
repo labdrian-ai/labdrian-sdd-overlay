@@ -460,3 +460,66 @@ func TestParseGoVet(t *testing.T) {
 		})
 	}
 }
+
+// TestParseStaticcheck covers count extraction from staticcheck's finding
+// lines ("path:line:col: message (CODE)"). CODE is not uniformly two
+// letters: U1000 is one letter + four digits, ST1005/SA1006 are two + four
+// (audit finding, obs #2711 — a two-letter-only pattern silently undercounts
+// U-series findings). Fixtures are real `staticcheck@v0.7.0` output.
+func TestParseStaticcheck(t *testing.T) {
+	tests := []struct {
+		name       string
+		fixture    string
+		exit       int
+		wantCount  int
+		wantFailed bool
+	}{
+		{"zero findings, exit 0", "staticcheck-clean.txt", 0, 0, false},
+		{"one finding, exit 1", "staticcheck-one-finding.txt", 1, 1, true},
+		{"several findings mixing one- and two-letter codes, exit 1", "staticcheck-several-findings.txt", 1, 3, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			out := readTestdata(t, tt.fixture)
+			count, top := parseStaticcheck(tt.exit, out)
+			if count != tt.wantCount {
+				t.Errorf("parseStaticcheck count = %d, want %d", count, tt.wantCount)
+			}
+			if len(top) != tt.wantCount {
+				t.Errorf("parseStaticcheck top has %d entries, want %d", len(top), tt.wantCount)
+			}
+			if got := failedStaticcheck(tt.exit, count); got != tt.wantFailed {
+				t.Errorf("failedStaticcheck(%d, %d) = %v, want %v", tt.exit, count, got, tt.wantFailed)
+			}
+		})
+	}
+}
+
+// TestParseStaticcheckToolchainMismatch covers the audit finding (obs
+// #2711): staticcheck@v0.7.0 cannot analyze a module whose go directive
+// exceeds its build toolchain (reproduced against tui/go.mod's go 1.26.1).
+// That failure is not a verification finding — the tool could not analyze
+// the code at all — so parseStaticcheck must not count it, and
+// isStaticcheckToolchainMismatch must distinguish it from real findings even
+// though both exit non-zero.
+func TestParseStaticcheckToolchainMismatch(t *testing.T) {
+	out := readTestdata(t, "staticcheck-toolchain-mismatch.txt")
+
+	if !isStaticcheckToolchainMismatch(out) {
+		t.Fatal("isStaticcheckToolchainMismatch(toolchain-mismatch fixture) = false, want true")
+	}
+	if isStaticcheckToolchainMismatch(readTestdata(t, "staticcheck-clean.txt")) {
+		t.Error("isStaticcheckToolchainMismatch(clean fixture) = true, want false")
+	}
+	if isStaticcheckToolchainMismatch(readTestdata(t, "staticcheck-one-finding.txt")) {
+		t.Error("isStaticcheckToolchainMismatch(one-finding fixture) = true, want false")
+	}
+
+	count, top := parseStaticcheck(1, out)
+	if count != 0 {
+		t.Errorf("parseStaticcheck count = %d, want 0 (toolchain mismatch is not a finding)", count)
+	}
+	if top != nil {
+		t.Errorf("parseStaticcheck top = %v, want nil", top)
+	}
+}

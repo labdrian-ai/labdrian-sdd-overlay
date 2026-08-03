@@ -1,0 +1,2 @@
+-: /path/tui/main.go:6:1: package requires newer Go version go1.26 (application built with go1.25) (compile)
+exit status 1

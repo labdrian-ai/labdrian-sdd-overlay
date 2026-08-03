@@ -105,7 +105,7 @@ type check struct {
 var registry = []check{
 	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, parse: parseGofmt, failed: failedGofmt},
 	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
-	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}},
+	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}},
 }
 
@@ -151,6 +151,65 @@ func parseGoVet(exit int, out []byte) (count int, top []string) {
 // failedGoVet trusts go vet's own exit code directly, unlike gofmt: go vet
 // exits non-zero exactly when it has diagnostics to report.
 func failedGoVet(exit, count int) bool {
+	return exit != 0
+}
+
+// staticcheckFindingPattern matches staticcheck's finding lines
+// ("path:line:col: message (CODE)"). CODE is not uniformly two letters —
+// U1000 is one letter + four digits, ST1005/SA1006 are two + four — so the
+// pattern accepts a variable-length uppercase-letter prefix. A pattern keyed
+// to two letters silently undercounts U-series findings (audit finding, obs
+// #2711). The toolchain-mismatch line ends in "(compile)", which this
+// pattern does not match, but isStaticcheckToolchainMismatch is checked
+// first regardless so that distinction never has to rely on this regex.
+var staticcheckFindingPattern = regexp.MustCompile(`^\S+:\d+:\d+: .+\([A-Z]+\d+\)$`)
+
+// staticcheckToolchainMismatchPattern matches staticcheck's stderr when the
+// local Go build toolchain is older than a module's declared go directive
+// (reproduced against tui/go.mod's go 1.26.1 with a go1.25 build). This is
+// not a verification finding: staticcheck could not analyze the module at
+// all.
+var staticcheckToolchainMismatchPattern = regexp.MustCompile(`requires newer Go version`)
+
+// isStaticcheckToolchainMismatch reports whether out is staticcheck's
+// toolchain-mismatch failure rather than real findings (audit finding, obs
+// #2711). Both cases exit non-zero, so exit code alone cannot distinguish
+// them — a later work unit wires this into runCheck to mark the result
+// unavailable so selectOutcome routes it to procedural_tooling_failed and
+// never verification_failed (D4/R-016), never burning the single correction
+// attempt on an environment problem instead of a real finding.
+func isStaticcheckToolchainMismatch(out []byte) bool {
+	return staticcheckToolchainMismatchPattern.Match(out)
+}
+
+// parseStaticcheck counts staticcheck's findings from its captured output,
+// one per line. A toolchain mismatch is not counted as a finding — the tool
+// could not analyze the code at all — so it is excluded before line parsing
+// (see isStaticcheckToolchainMismatch).
+func parseStaticcheck(exit int, out []byte) (count int, top []string) {
+	if isStaticcheckToolchainMismatch(out) {
+		return 0, nil
+	}
+	trimmed := strings.TrimSpace(string(out))
+	if trimmed == "" {
+		return 0, nil
+	}
+	for _, line := range strings.Split(trimmed, "\n") {
+		if staticcheckFindingPattern.MatchString(line) {
+			top = append(top, line)
+		}
+	}
+	return len(top), top
+}
+
+// failedStaticcheck trusts staticcheck's own exit code, like failedGoVet:
+// staticcheck exits non-zero exactly when it reports findings. Exit alone
+// cannot distinguish a genuine finding from a toolchain-mismatch failure —
+// both exit non-zero — which is why that distinction is not this
+// predicate's job: isStaticcheckToolchainMismatch must be checked ahead of
+// failed so a mismatch is classified unavailable/procedural before failed is
+// ever consulted as a verification result (D4/R-016).
+func failedStaticcheck(exit, count int) bool {
 	return exit != 0
 }
 
