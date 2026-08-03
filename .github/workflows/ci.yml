@@ -40,6 +40,15 @@ jobs:
         working-directory: engine
         run: go vet ./...
 
+      - name: Staticcheck
+        working-directory: engine
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+      - name: Deadcode (informational)
+        working-directory: engine
+        continue-on-error: true
+        run: go run golang.org/x/tools/cmd/deadcode@latest ./...
+
       - name: Test
         working-directory: engine
         run: go test ./... -cover
@@ -98,6 +107,15 @@ jobs:
       - name: Vet
         working-directory: tui
         run: go vet ./...
+
+      - name: Staticcheck
+        working-directory: tui
+        run: go run honnef.co/go/tools/cmd/staticcheck@latest ./...
+
+      - name: Deadcode (informational)
+        working-directory: tui
+        continue-on-error: true
+        run: go run golang.org/x/tools/cmd/deadcode@latest ./...
 
       - name: Test
         working-directory: tui
