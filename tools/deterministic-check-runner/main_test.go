@@ -116,3 +116,95 @@ func TestModuleDiscovery(t *testing.T) {
 		assertModules(t, outer, []string{inner})
 	})
 }
+
+// TestCheckRegistry asserts the hardcoded v1 check set: exactly 4 checks,
+// each declaring deterministic and blocking explicitly, each with a
+// non-empty checkArgv.
+func TestCheckRegistry(t *testing.T) {
+	if len(registry) != 4 {
+		t.Fatalf("len(registry) = %d, want 4", len(registry))
+	}
+
+	wantBlocking := map[string]bool{
+		"gofmt":       true,
+		"go vet":      true,
+		"staticcheck": true,
+		"deadcode":    false,
+	}
+
+	seen := map[string]bool{}
+	for _, c := range registry {
+		seen[c.name] = true
+		if !c.deterministic {
+			t.Errorf("check %q: deterministic = false, want true for all v1 checks", c.name)
+		}
+		want, ok := wantBlocking[c.name]
+		if !ok {
+			t.Errorf("check %q: unexpected name in registry", c.name)
+			continue
+		}
+		if c.blocking != want {
+			t.Errorf("check %q: blocking = %v, want %v", c.name, c.blocking, want)
+		}
+		if len(c.checkArgv) == 0 {
+			t.Errorf("check %q: checkArgv is empty, want non-empty", c.name)
+		}
+	}
+	for name := range wantBlocking {
+		if !seen[name] {
+			t.Errorf("registry missing expected check %q", name)
+		}
+	}
+}
+
+// TestClassify asserts classify is the sole enforcement point combining
+// deterministic and blocking: a non-deterministic check can never classify
+// as blocking, regardless of its blocking field (R-002).
+func TestClassify(t *testing.T) {
+	tests := []struct {
+		name          string
+		deterministic bool
+		blocking      bool
+		want          bool
+	}{
+		{"deterministic and blocking", true, true, true},
+		{"deterministic, not blocking", true, false, false},
+		{"not deterministic, blocking", false, true, false},
+		{"neither deterministic nor blocking", false, false, false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := check{name: "test", deterministic: tt.deterministic, blocking: tt.blocking, checkArgv: []string{"true"}}
+			if got := classify(c); got != tt.want {
+				t.Errorf("classify(%+v) = %v, want %v", c, got, tt.want)
+			}
+		})
+	}
+}
+
+// TestRegistryInvariantNonDeterministicNeverBlocking guards the registry
+// itself: no entry may declare blocking=true without deterministic=true.
+// This must fail if a future edit adds a violating entry.
+func TestRegistryInvariantNonDeterministicNeverBlocking(t *testing.T) {
+	for _, c := range registry {
+		if c.blocking && !c.deterministic {
+			t.Errorf("registry invariant violated: check %q has blocking=true and deterministic=false", c.name)
+		}
+	}
+}
+
+// TestClassifyDeadcodeNonBlocking asserts deadcode classifies as
+// non-blocking (WARNING severity) per the amended R-016 severity-
+// proportional rule.
+func TestClassifyDeadcodeNonBlocking(t *testing.T) {
+	for _, c := range registry {
+		if c.name != "deadcode" {
+			continue
+		}
+		if classify(c) {
+			t.Errorf("classify(deadcode) = true, want false (deadcode is WARNING-only)")
+		}
+		return
+	}
+	t.Fatal("deadcode not found in registry")
+}
