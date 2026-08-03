@@ -1,0 +1,4 @@
+gofmt | 0 | 0
+go vet | 1 | count=6; top: main.go:10:2: unused variable x; main.go:22:5: shadowed err; main.go:40:1: missing return; main.go:58:9: nil pointer dereference; main.go:71:3: unreachable code; full: /tmp/labdrian-deterministic-checks/go-vet.log
+staticcheck | 127 | 0
+deadcode | 0 | 0

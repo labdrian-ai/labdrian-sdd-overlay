@@ -388,7 +388,12 @@ func capExcerpt(s string) string {
 
 // renderSummary renders D6's bounded summary "count=N; top: e1; …; full:
 // <path>". Zero findings render the literal digit "0" — never a status
-// word (R-008): upstream rejects narrated evidence by regex.
+// word (R-008): upstream rejects narrated evidence by regex. The trailing
+// guardAgainstBannedSummary call wires isBannedSummaryLiteral into the
+// render path (3I.0): renderSummary is the sole place a row's summary text
+// is constructed, so this is the one call site that catches a future edit
+// letting a bare banned literal through construction before it reaches
+// capture-evidence.
 func renderSummary(count int, top []string, topN int, logPath string) string {
 	if count == 0 {
 		return "0"
@@ -404,7 +409,24 @@ func renderSummary(count int, top []string, topN int, logPath string) string {
 	for i, e := range shown {
 		excerpts[i] = capExcerpt(e)
 	}
-	return fmt.Sprintf("count=%d; top: %s; full: %s", count, strings.Join(excerpts, "; "), logPath)
+	summary := fmt.Sprintf("count=%d; top: %s; full: %s", count, strings.Join(excerpts, "; "), logPath)
+	guardAgainstBannedSummary(summary)
+	return summary
+}
+
+// guardAgainstBannedSummary panics if summary is itself a bare banned
+// literal (R-008). Before this, isBannedSummaryLiteral was defined and
+// unit-tested but never called from production code — deadcode flagged it
+// as unreachable during 3H (obs: main.go:370:6) — so nothing prevented a
+// banned literal from being emitted at runtime; the protection lived only
+// in the test suite. Panicking on a broken invariant mirrors the existing
+// precedent in engine/prespec/brief.go: a bare banned literal here is a
+// programmer error in renderSummary's own construction, not a recoverable
+// operational failure, so failing loud beats emitting rejected evidence.
+func guardAgainstBannedSummary(summary string) {
+	if isBannedSummaryLiteral(summary) {
+		panic(fmt.Sprintf("renderSummary produced a banned literal %q (R-008): refusing to emit narrated evidence", summary))
+	}
 }
 
 // logPathFor returns the stable full-log path for tool (D6); spaces become "-".

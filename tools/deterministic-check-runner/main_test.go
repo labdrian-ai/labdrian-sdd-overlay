@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"flag"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -11,6 +12,11 @@ import (
 	"testing"
 	"unicode/utf8"
 )
+
+// updateGolden is the standard Go golden-file flag: `go test -run
+// TestGoldenRowBlock -update` regenerates testdata/golden-row-block.txt from
+// the current renderer; a plain `go test` run only compares against it.
+var updateGolden = flag.Bool("update", false, "update golden test fixtures")
 
 var rowPattern = regexp.MustCompile(`^(.+) \| (\d+) \| (.+)$`)
 
@@ -538,6 +544,29 @@ func TestBannedLiterals(t *testing.T) {
 	}
 }
 
+// TestGuardAgainstBannedSummaryPanics is 3I.0's RED test: it wires
+// isBannedSummaryLiteral into the render path via guardAgainstBannedSummary,
+// which renderSummary now calls on every constructed summary. Before this,
+// the guard was defined and unit-tested but never invoked from production
+// code (deadcode flagged it as unreachable during 3H), so nothing prevented
+// a banned literal from being emitted at runtime.
+func TestGuardAgainstBannedSummaryPanics(t *testing.T) {
+	for _, literal := range bannedLiterals {
+		t.Run(literal, func(t *testing.T) {
+			defer func() {
+				if r := recover(); r == nil {
+					t.Fatalf("guardAgainstBannedSummary(%q) did not panic, want it to fail loud on a bare banned literal", literal)
+				}
+			}()
+			guardAgainstBannedSummary(literal)
+		})
+	}
+
+	// A well-formed summary must never panic; if it did, this call itself
+	// would fail the test.
+	guardAgainstBannedSummary("count=1; top: finding; full: /tmp/x.log")
+}
+
 // TestCapPayload covers R-013's last-resort backstop (obs #2719 correction):
 // capPayload now cuts on a line boundary, never mid-row or mid-rune, rather
 // than an exact byte offset. Synthesized in memory, never a multi-megabyte
@@ -776,5 +805,62 @@ func TestParseDeadcode(t *testing.T) {
 				t.Errorf("failedDeadcode(%d, %d) = %v, want %v", tt.exit, count, got, tt.wantFailed)
 			}
 		})
+	}
+}
+
+// goldenRowBlockResults builds the fixed, synthetic results the golden test
+// renders. These are never a live run: a golden pinned to this repository's
+// actual deadcode/staticcheck findings would be brittle and would fail on
+// unrelated commits (their count and excerpts drift as the repo changes).
+// This fixture instead proves the *renderer* (emitRows/renderRowBlock/
+// renderSummary) is deterministic for a fixed input — one row per outcome
+// shape: clean, findings truncated by top-N, and unavailable.
+func goldenRowBlockResults() []result {
+	return []result{
+		{check: check{name: "gofmt"}, exitCode: 0},
+		{check: check{name: "go vet"}, exitCode: 1, count: 6, top: []string{
+			"main.go:10:2: unused variable x",
+			"main.go:22:5: shadowed err",
+			"main.go:40:1: missing return",
+			"main.go:58:9: nil pointer dereference",
+			"main.go:71:3: unreachable code",
+			"main.go:88:14: composite literal uses unkeyed fields",
+		}, logPath: logPathFor("go vet")},
+		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true, logPath: logPathFor("staticcheck")},
+		{check: check{name: "deadcode"}, exitCode: 0, count: 0},
+	}
+}
+
+// TestGoldenRowBlock is 3I.1-3I.2's golden test (R-006, R-007): renders
+// goldenRowBlockResults through the real emitRows and compares the full
+// stdout row block against testdata/golden-row-block.txt. Run with
+// `-update` to regenerate the fixture, then rerun without `-update` — the
+// two runs must be byte-identical, because reproducibility is what makes
+// the runner's output evidence rather than narration.
+func TestGoldenRowBlock(t *testing.T) {
+	const goldenPath = "testdata/golden-row-block.txt"
+
+	var buf bytes.Buffer
+	emitRows(&buf, goldenRowBlockResults(), defaultTopN)
+	got := buf.Bytes()
+
+	if *updateGolden {
+		if err := os.WriteFile(goldenPath, got, 0o644); err != nil {
+			t.Fatalf("write golden %s: %v", goldenPath, err)
+		}
+	}
+
+	want, err := os.ReadFile(goldenPath)
+	if err != nil {
+		t.Fatalf("read golden %s (run with -update to generate it): %v", goldenPath, err)
+	}
+	if !bytes.Equal(got, want) {
+		t.Errorf("emitRows(goldenRowBlockResults()) does not match %s (run with -update to inspect/regenerate)\ngot:\n%s\nwant:\n%s", goldenPath, got, want)
+	}
+
+	var rerun bytes.Buffer
+	emitRows(&rerun, goldenRowBlockResults(), defaultTopN)
+	if !bytes.Equal(got, rerun.Bytes()) {
+		t.Error("emitRows(goldenRowBlockResults()) is not deterministic across repeated calls")
 	}
 }
