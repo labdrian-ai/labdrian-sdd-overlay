@@ -36,6 +36,10 @@ jobs:
         with:
           go-version-file: engine/go.mod
 
+      - name: Gofmt
+        working-directory: engine
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
       - name: Vet
         working-directory: engine
         run: go vet ./...
@@ -103,6 +107,10 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: tui/go.mod
+
+      - name: Gofmt
+        working-directory: tui
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
 
       - name: Vet
         working-directory: tui

@@ -45,14 +45,14 @@ func TestSyncManifest(t *testing.T) {
 	beta := mkEntry("beta", "beta", "core")
 
 	tests := []struct {
-		name        string
-		reg         Registry
-		manifest    []byte
-		wantOut     []byte
-		wantAdded   []string
-		wantDropped []string
+		name         string
+		reg          Registry
+		manifest     []byte
+		wantOut      []byte
+		wantAdded    []string
+		wantDropped  []string
 		wantRetagged []string
-		wantErr     bool
+		wantErr      bool
 	}{
 		// SC-40: aligned manifest — byte-identical output, empty ChangeReport
 		{
@@ -187,7 +187,7 @@ func TestSyncManifest(t *testing.T) {
 				"alpha/SKILL.md managed\n" + // wrong tag
 					"orphan/SKILL.md custom\n", // not in registry
 			),
-			wantOut: []byte("alpha/SKILL.md custom\nbeta/SKILL.md managed\n"),
+			wantOut:      []byte("alpha/SKILL.md custom\nbeta/SKILL.md managed\n"),
 			wantRetagged: []string{"alpha"},
 			wantDropped:  []string{"orphan"},
 			wantAdded:    []string{"beta"},
@@ -202,14 +202,14 @@ func TestSyncManifest(t *testing.T) {
 		// SC-54: tag mapping — core→managed, custom→custom
 		{
 			name:         "SC-54_tag_core_to_managed",
-			reg:          mkReg(beta), // core
+			reg:          mkReg(beta),                      // core
 			manifest:     []byte("beta/SKILL.md custom\n"), // wrong tag
 			wantOut:      []byte("beta/SKILL.md managed\n"),
 			wantRetagged: []string{"beta"},
 		},
 		{
 			name:         "SC-54_tag_custom_to_custom",
-			reg:          mkReg(alpha), // custom
+			reg:          mkReg(alpha),                       // custom
 			manifest:     []byte("alpha/SKILL.md managed\n"), // wrong tag
 			wantOut:      []byte("alpha/SKILL.md custom\n"),
 			wantRetagged: []string{"alpha"},

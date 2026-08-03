@@ -166,9 +166,9 @@ func TestCoverageCount(t *testing.T) {
 
 func TestBudgetRemaining(t *testing.T) {
 	cases := []struct {
-		name   string
-		asked  int
-		mode   string
+		name    string
+		asked   int
+		mode    string
 		wantRem int
 	}{
 		{"standard asked=0", 0, "standard", 5},
