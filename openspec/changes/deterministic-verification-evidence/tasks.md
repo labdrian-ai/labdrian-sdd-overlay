@@ -201,7 +201,30 @@ Split into three cohesive objectives rather than one that overruns. Ordering is 
 
 ## Phase 4: runner-mode-separation (R-009, R-010)
 
-> Forward assessment (not executed in this pass — scope is out of bounds for the current Phase-3-only re-split): original estimate 180-340 raw lines. Tasks 4.1-4.4 (dispatch + fixer-flag guard) and 4.5-4.10 (byte-neutral integration test, out-dir guard, missing-tool stubbed-PATH test) are two natural seams; the 340-line upper bound alone is unlikely to clear the 200-line ledger cap as one objective, and even the two-seam split's upper half (byte-neutral + out-dir + stubbed-PATH combined) risks landing near or over 200 given the ledger's ~8-12-line overcount observed across all four Phase 2 objectives (obs #2713). Recommend a dedicated `sdd-tasks` re-split pass before `sdd-apply` begins Phase 4, following the same pattern used here for Phase 3.
+### Phase 4 ledger re-split (decided 2026-08-03, before any Phase 4 code was written)
+
+Itemized against the 200-line-per-objective ledger cap, using the fifteen completed objectives as calibration (raw → ledger: 174→184, 120→132, 91→99, 161→173, 57→66, 142→146, 130→134, 86→93, 175→193, 75→81, 82→88, 98→104, 110→124 — the ledger adds roughly 4-18 lines):
+
+| Tasks | Piece | Est. raw |
+|---|---|---|
+| 4.1-4.2 | Subcommand dispatch + usage | 40-60 |
+| 4.3-4.4 | Fixer-flag guard | 25-40 |
+| 4.5-4.6 | Byte-neutral integration test (git fixture, mode/size/sha256 snapshot) | 60-90 |
+| 4.7-4.8 | Out-dir guard | 30-45 |
+| 4.9-4.10 | Stubbed-PATH tests + exit-127 unavailable detection | 50-70 |
+| | **Total** | **205-305** |
+
+Over the cap as one objective. **Split into three, grouped by cohesion rather than arithmetic.**
+
+The grouping rule comes from what actually caused the two Phase 3 overruns: it was never the estimated size, it was the **number of independently-reasoned pieces** in one objective. 3E carried five (renderer, `--top-n`, excerpt cap, `capPayload`, guard) and needed two trim passes, closing at 193/200 after silently degrading a design decision. 3I carried two and closed comfortably. Same estimate band, opposite outcomes.
+
+| Ledger objective | Tasks | Scope | Est. raw |
+|---|---|---|---|
+| `runner-subcommand-dispatch` | 4.1-4.4 | Dispatch, usage naming both modes, `normalizeArgv` wiring, fixer-flag allowlist guard — all about which argv each mode may use | 65-100 |
+| `runner-byte-neutrality` | 4.5-4.8 | Byte-neutral integration proof plus the out-dir guard — both about `check` mode never writing | 90-135 |
+| `runner-unavailable-detection` | 4.9-4.11 | Stubbed-PATH scenarios and exit-127 detection feeding `result.unavailable` | 50-70 |
+
+Each groups pieces that share one concern, so none carries more than two lines of independent reasoning.
 
 - [ ] 4.1 RED: add `TestSubcommandUsage` — no subcommand → non-zero exit, usage names both `normalize` and `check`.
 - [ ] 4.2 GREEN: add subcommand dispatch; wire `checkArgv`/`normalizeArgv` per check. Test passes.
