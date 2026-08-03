@@ -46,7 +46,26 @@ Both land comfortably under 800 (120-180 line margin at the high end vs. the ori
 
 Every objective targets the 120-150 line zone requested for real margin; the low end of each range still clears 200 with comfortable room even if the ledger over-counts relative to raw diff (as it did in slice 1, ~2x). `check.normalizeArgv` and `check.parse`/`check.failed` are intentionally NOT added yet — they land additively in `runner-mode-separation` (Phase 4) and `runner-summary-rendering` (Phase 3) respectively, so this split introduces no rework, only field growth on an existing struct. Row summaries emitted by `runner-row-emission-and-ci-job` are placeholder text (e.g. `exit=<code>`) — real bounded-summary text (`count=N; top: …`) is Phase 3's job; the placeholder still satisfies the banned-literal guard by construction (no literal PASS/N/A/etc. ever appears) even though the guard itself isn't tested until Phase 3.
 
-**Forward assessment — `runner-summary-rendering` (Phase 3, PR3, 420-680 raw-line estimate) will hit the same wall and should be pre-split before that PR starts:** its upper bound (680) is higher than `runner-registry-and-rows`'s pre-split upper bound (560) was, so a single-objective attempt is very unlikely to land under 200. The design's own contents there decompose cleanly into 3 ledger objectives along existing seams: (a) `runner-parse-functions` — the 4 `parse` funcs + `failed()` predicates, including the two audit-confirmed edge cases (deadcode's exit-0-with-findings, staticcheck's toolchain-mismatch-on-`tui`); (b) `runner-summary-and-cap` — the bounded renderer, `--top-n`, `capPayload`, banned-literal guard; (c) `runner-golden-wiring` — replacing the Phase-2 placeholder summary with the real renderer output in `run()`, plus the stdout goldens. This is a recommendation for the next `sdd-tasks` re-plan pass on Phase 3, not executed in this pass.
+**Forward assessment (executed) — `runner-summary-rendering` (Phase 3, PR3) was re-split before implementation started.** See "Phase 3 Ledger Re-split" below for the executed 6-objective split (grown from the originally-sketched 3-objective seam to absorb two audit findings and the invocation-strategy gap discovered while running Phase 2, obs #2714).
+
+## Phase 3 Ledger Re-split — `runner-summary-rendering` (mandatory — 200-line-per-objective ledger cap)
+
+**Calibration data — four completed Phase 2 objectives (obs #2713/#2714):** raw → ledger: 174→184, 120→132, 91→99, 161→173. The ledger consistently counts the code diff plus roughly 8-12 lines; the first Phase 2 unit landed at 184/200 (16-line margin). Target **≤160 raw** per sub-unit here, not the full 200, to keep real margin.
+
+`runner-summary-rendering` (420-680 raw-line original estimate) does not fit one 200-line ledger objective — its upper bound is higher than `runner-registry-and-rows`'s pre-split upper bound (560) was. The design's own seam (`runner-parse-functions` / `runner-summary-and-cap` / `runner-golden-wiring`) does not fit either once the two audit findings (staticcheck toolchain mismatch, deadcode exit-code untrustworthiness) and the invocation-strategy gap (obs #2714) are itemized: parsing four distinct tools' real output, two of them with a dedicated edge-case fixture each, is denser than one "parse functions" objective can hold at ≤160 raw lines. Split into 6 ledger objectives, ordered, all landing on PR3 (base: PR2 branch) as separate commits/attempts within that PR:
+
+| Ledger objective | Scope | Depends on | Est. raw lines | Margin to 200 |
+|---|---|---|---|---|
+| `runner-pinned-invocation-parity` | Align `staticcheck`/`deadcode` `checkArgv` with CI's pinned `go run <module>@<version>` invocation (audit finding, obs #2714) | Phase 2D | 40-70 | 130-160 |
+| `runner-parse-simple-checks` | `parseGofmt`, `parseGoVet`, their `failed(exit,count)` predicates, fixtures | `runner-pinned-invocation-parity` | 80-120 | 80-120 |
+| `runner-parse-staticcheck` | `parseStaticcheck` + `failed()`, toolchain-mismatch edge case (audit finding, obs #2711) | `runner-pinned-invocation-parity` | 90-130 | 70-110 |
+| `runner-parse-deadcode` | `parseDeadcode` + `failed()`, stdout-vs-exit-code divergence (audit finding, obs #2709/#2711/#2712) | `runner-pinned-invocation-parity` | 70-110 | 90-130 |
+| `runner-summary-and-cap` | Bounded renderer (count/top-N/path, 200-char cap), `--top-n` flag, `capPayload`, banned-literal guard | `runner-parse-simple-checks`, `runner-parse-staticcheck`, `runner-parse-deadcode` | 130-160 | 40-70 |
+| `runner-golden-wiring` | Wire real stdout/stderr capture into `runCheck`, replace Phase-2 placeholder summary in `run()` with the real renderer, stdout goldens | `runner-summary-and-cap` | 90-140 | 60-110 |
+
+Total range 500-730 raw — higher than the original 420-680 forecast because the invocation-parity fix (previously undiscovered) and the split-by-tool granularity for staticcheck/deadcode add real, honest scope; still comfortably under the 800-line PR review budget for PR3. Why 6 and not the sketched 3: combining `parseStaticcheck` and `parseDeadcode` into one "parse functions" objective sums to 160-240 raw lines — the low end already meets the 160 target and the high end blows past it, and both audit findings deserve isolated rollback/test boundaries given they were the two things the audit flagged by name. `runner-pinned-invocation-parity` is its own objective (not folded into `runner-parse-staticcheck`/`runner-parse-deadcode`) because it changes existing Phase-2-delivered registry data via a content-parity test against `ci.yml`, is independently revertible, and gates the other two parse objectives' fixtures (fixture stderr/stdout must be captured from the actual pinned invocation, not a bare-binary invocation that may format differently).
+
+**Why `runner-pinned-invocation-parity` belongs in Phase 3, not Phase 4:** Phase 4 (`runner-mode-separation`) is about the `normalize`/`check` subcommand split and byte-neutrality — orthogonal to which binary a check invokes. Phase 3 is the phase where check output becomes real (parse functions consume actual tool stdout/stderr), and the two richest parse objectives here (`runner-parse-staticcheck`, `runner-parse-deadcode`) are only trustworthy if their fixtures come from the same invocation CI actually runs — a bare `staticcheck ./...` binary run and a pinned `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...` run could in principle format diagnostics differently, and CI is the ground truth this whole change exists to match (obs #2714). Deferring the fix to Phase 4 would mean writing Phase 3's staticcheck/deadcode fixtures against the wrong invocation and reworking them later.
 
 ### Suggested Work Units
 
@@ -54,7 +73,7 @@ Every objective targets the 120-150 line zone requested for real margin; the low
 |------|------|-----------|----------------------|-----------------|-------------------|
 | 1 | `severity-policy-and-ci-gates` — CRITICAL severity, staticcheck/deadcode CI gates, `tools` test layer | PR 1 (base: tracker) | `rg` content assertions (see 1.1/1.3/1.5) | N/A — markdown/YAML policy edit, no runtime path | Revert `strict-tdd-verify.md`, `SKILL.md` ordering line, `ci.yml`, `openspec/config.yaml` |
 | 2 | `runner-registry-and-rows` — 4 ledger objectives (`runner-scaffold-and-discovery` → `runner-registry-and-classify` → `runner-result-and-outcome` → `runner-row-emission-and-ci-job`; see Slice 2 Ledger Re-split) | PR 2 (base: PR1 branch) | `cd tools/deterministic-check-runner && go test ./... -run 'TestClassify\|TestSelectOutcome\|TestModuleDiscovery\|TestRowEmission'` | `go run . check` against this repo's own `go.mod` set | Delete `tools/deterministic-check-runner/` module |
-| 3 | `runner-summary-rendering` — parse funcs, bounded summaries, capPayload, goldens | PR 3 (base: PR2 branch) | `cd tools/deterministic-check-runner && go test ./... -cover` | `go run . check --top-n 5` against a fixture with 200+ synthetic findings | Revert additive files only (parse funcs, renderer, goldens); registry/rows from PR2 stay intact |
+| 3 | `runner-summary-rendering` — 6 ledger objectives (`runner-pinned-invocation-parity` → `runner-parse-simple-checks`/`runner-parse-staticcheck`/`runner-parse-deadcode` → `runner-summary-and-cap` → `runner-golden-wiring`; see Phase 3 Ledger Re-split) | PR 3 (base: PR2 branch) | `cd tools/deterministic-check-runner && go test ./... -cover` | `go run . check --top-n 5` against a fixture with 200+ synthetic findings | Revert additive files only (parse funcs, renderer, goldens, pinned checkArgv); registry structure/rows from PR2 stay intact |
 | 4 | `runner-mode-separation` — normalize/check split, byte-neutrality | PR 4 (base: PR3 branch) | `cd tools/deterministic-check-runner && go test ./...` (includes `-short`-skippable integration test) | `check` invoked twice on a dirty `t.TempDir()` git fixture with a 0755 file; diff `git status --porcelain` before/after | Revert subcommand dispatch + out-dir guard; core runner from PR2/3 stays functional single-mode |
 | 5 | `capture-evidence-wiring` — CLI dispatch, capture-evidence piping, outcome mapping, R-001/R-019 gates | PR 5 (base: PR4 branch) | `bash -n bin/labdrian-overlay && shellcheck bin/labdrian-overlay`; `cd tools/deterministic-check-runner && go test ./...` | `bin/labdrian-overlay deterministic-checks check` end-to-end on this repo | Revert `cmd_deterministic_checks`, dispatch line, help text, `SKILL.md` wiring |
 
@@ -107,23 +126,50 @@ PR 2 (base: PR1 branch). Split into 4 ledger objectives — each its own RED→G
 
 ## Phase 3: runner-summary-rendering (R-006 remainder, R-007, R-008)
 
-> Assessed but not yet re-sliced: at 420-680 raw lines this phase likely needs the same 4-objective-style ledger split as Phase 2 before implementation starts (see "Slice 2 Ledger Re-split" forward assessment above). Do that split in a dedicated `sdd-tasks` pass before `sdd-apply` begins Phase 3.
+PR 3 (base: PR2 branch). Re-split into 6 ledger objectives — each its own RED→GREEN attempt under the 200-line-per-objective ledger cap (see "Phase 3 Ledger Re-split" above). Dependencies name prior objectives only; all 6 land as separate commits on the PR3 branch. `runner-pinned-invocation-parity` is a mandatory prerequisite for the two audit-finding objectives (`runner-parse-staticcheck`, `runner-parse-deadcode`) because their fixtures must be captured from the actual pinned invocation, not a bare-binary run.
 
-- [ ] 3.1 RED: add table-driven `TestParseGofmt`/`TestParseGoVet`/`TestParseStaticcheck`/`TestParseDeadcode` against `testdata/` fixtures; assert `gofmt -l` non-empty output at exit 0 still yields `count>0` via `failed(exit,count)` (D3). Two additional cases (audit findings, obs #2709/#2711):
-  - `TestParseDeadcode` must count findings from parsed **stdout**, never trust `deadcode`'s exit code — confirmed empirically: 20-21 real findings, exit 0 (same class as `gofmt -l`; stdout must be captured separately from stderr, since the Go toolchain-switch message lands on stderr and inflates the count if merged — see obs #2712).
-  - `TestParseStaticcheckToolchainMismatch` — `staticcheck@v0.7.0` analyzing a module whose `go` directive exceeds its build toolchain (reproduced against `tui/go.mod`'s `go 1.26.1`, error text `requires newer Go version`) must mark the result `unavailable`/unexecutable, never a counted failure.
-- [ ] 3.2 GREEN: implement the 4 `parse` funcs + per-check `failed(exit,count)` predicates. `parseDeadcode` counts stdout findings regardless of exit code. `parseStaticcheck` recognizes the toolchain-mismatch stderr signature and marks the result `unavailable` instead of counting it as a failed check — `selectOutcome` (Phase 2C) then routes it to `procedural_tooling_failed`, never `verification_failed`, per D4/R-016. Tests pass.
-- [ ] 3.3 RED: add `TestSummaryRendering` over 0/1/N/N+1 findings — `count=N; top: …; full: <path>`, 200-char excerpt cap, `--top-n` honored (default 5), zero renders literal `0`.
-- [ ] 3.4 GREEN: implement renderer + `--top-n` flag + stable out-dir `${TMPDIR}/labdrian-deterministic-checks/<tool>.log` (D6). Test passes.
-- [ ] 3.5 RED: add `TestBannedLiterals` scanning every emitted summary for PASS/PASSED/SUCCESS/N/A/NA/NONE/TODO/TBD/PLACEHOLDER as a standalone value, including the zero-findings case.
-- [ ] 3.6 GREEN: confirm/guard renderer never emits a banned literal standalone. Test passes.
-- [ ] 3.7 RED: add `TestCapPayload` — payload over 4 MiB truncates to counts+paths, never rejects.
-- [ ] 3.8 GREEN: implement `capPayload` (D6). Test passes.
-- [ ] 3.9 RED: add golden test for the full stdout row block via the `-update` path.
-- [ ] 3.10 GREEN: generate goldens with `-update`, rerun without — byte-identical.
-- [ ] 3.11 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
+### 3A. runner-pinned-invocation-parity (audit finding — invocation-strategy gap, obs #2714) — est. 40-70 lines — depends on Phase 2D
+
+- [ ] 3A.1 RED: add `TestCheckArgvPinnedToCIInvocation` — parses `.github/workflows/ci.yml`'s pinned `go run honnef.co/go/tools/cmd/staticcheck@vX.Y.Z ./...` and `go run golang.org/x/tools/cmd/deadcode@vX.Y.Z ./...` invocation strings and asserts the registry's `staticcheck` and `deadcode` `checkArgv` match them exactly (module path + pinned version), so a future CI version bump that isn't mirrored in the runner fails loud. Currently fails: the Phase-2 registry resolves bare `staticcheck`/`deadcode` from `PATH`, producing exit 127 on any machine without those binaries installed while CI (which uses pinned `go run`) stays green on the same commit.
+- [ ] 3A.2 GREEN: change the `registry`'s `staticcheck` and `deadcode` entries' `checkArgv` to `[]string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}` and `[]string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}` respectively (`gofmt`/`go vet` unchanged — no separate CI pin exists for them). Test passes.
+- [ ] 3A.3 Run `cd tools/deterministic-check-runner && go test ./... -run 'TestCheckArgv|TestCheckRegistry|TestSelectOutcomePrecedence|TestRunEndToEnd'` — GREEN, confirming the Phase 2 registry/outcome/row tests still pass unmodified against the new argv values.
+
+### 3B. runner-parse-simple-checks (R-006 remainder, R-007, R-008) — est. 80-120 lines — depends on 3A
+
+- [ ] 3B.1 RED: add table-driven `TestParseGofmt` and `TestParseGoVet` against `testdata/` fixtures; assert `gofmt -l` non-empty file-list output at exit 0 still yields `count>0` via `failed(exit,count)` (D3 — `gofmt`'s own exit code is not authoritative), and `go vet`'s count derives from parsed diagnostic lines with `failed` following its exit code directly.
+- [ ] 3B.2 GREEN: implement `parseGofmt`, `parseGoVet`, and their `failed(exit,count)` predicates. Tests pass.
+
+### 3C. runner-parse-staticcheck (R-006 remainder, R-007 — audit finding, obs #2711) — est. 90-130 lines — depends on 3A
+
+- [ ] 3C.1 RED: add table-driven `TestParseStaticcheck` (clean/N-findings cases) against `testdata/` fixtures captured from the pinned `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...` invocation (3A). Add `TestParseStaticcheckToolchainMismatch` — fixture reproduced against `tui/go.mod`'s `go 1.26.1` directive, error text `requires newer Go version`; asserts the result is marked `unavailable`/unexecutable, never a counted failure.
+- [ ] 3C.2 GREEN: implement `parseStaticcheck` + its `failed(exit,count)` predicate. `parseStaticcheck` recognizes the toolchain-mismatch stderr signature and marks the result `unavailable` instead of counting it — `selectOutcome` (Phase 2C, unchanged) then routes it to `procedural_tooling_failed`, never `verification_failed`, per D4/R-016. Tests pass.
+
+### 3D. runner-parse-deadcode (R-006 remainder, R-007 — audit finding, obs #2709/#2711/#2712) — est. 70-110 lines — depends on 3A
+
+- [ ] 3D.1 RED: add table-driven `TestParseDeadcode` against `testdata/` fixtures captured from the pinned `go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...` invocation (3A). Assert findings are counted from parsed **stdout only**, never from `deadcode`'s exit code — confirmed empirically: 20-21 real findings, exit 0. Stdout must be captured separately from stderr: the Go toolchain-switch message lands on stderr and inflates the count if merged.
+- [ ] 3D.2 GREEN: implement `parseDeadcode` (stdout-only counting) + its `failed(exit,count)` predicate (`count>0`, exit code ignored — `deadcode` stays WARNING-only via `classify()` regardless of this predicate). Tests pass.
+
+### 3E. runner-summary-and-cap (R-007, R-008) — est. 130-160 lines — depends on 3B, 3C, 3D
+
+- [ ] 3E.1 RED: add `TestSummaryRendering` over 0/1/N/N+1 findings — `count=N; top: …; full: <path>`, 200-char excerpt cap, `--top-n` honored (default 5), zero renders literal `0`.
+- [ ] 3E.2 GREEN: implement the summary renderer + `--top-n` flag + stable out-dir `${TMPDIR}/labdrian-deterministic-checks/<tool>.log` (D6, overwritten on rerun). Test passes.
+- [ ] 3E.3 RED: add `TestBannedLiterals` scanning every emitted summary for PASS/PASSED/SUCCESS/N/A/NA/NONE/TODO/TBD/PLACEHOLDER as a standalone value, including the zero-findings case.
+- [ ] 3E.4 GREEN: confirm/guard the renderer never emits a banned literal standalone. Test passes.
+- [ ] 3E.5 RED: add `TestCapPayload` — payload over 4 MiB truncates to counts+paths, never rejects.
+- [ ] 3E.6 GREEN: implement `capPayload` (D6). Test passes.
+- [ ] 3E.7 Run `cd tools/deterministic-check-runner && go test ./... -run 'TestSummaryRendering|TestBannedLiterals|TestCapPayload'` — GREEN.
+
+### 3F. runner-golden-wiring (R-006 remainder, R-007 goldens) — est. 90-140 lines — depends on 3E
+
+- [ ] 3F.1 RED: extend the `runCheck`-facing test to require real per-module stdout/stderr capture (currently discarded — only the exit code is kept), asserting `result.count`/`result.top`/`result.logPath` are populated by wiring the Phase-3 `parse` funcs into `runCheck` in place of the Phase-2 placeholder summary.
+- [ ] 3F.2 GREEN: wire `runCheck` to capture stdout and stderr separately per module (`cmd.Stdout`/`cmd.Stderr` buffers, per D3/obs #2712), call the matching `parse` func, populate `result.count`/`result.top`/`result.logPath`, and replace `emitRows`'s Phase-2 placeholder `exit=%d` text with the real renderer output from 3E. `TestRunEndToEnd`'s banned-literal assertion (Phase 2D, unchanged) still passes.
+- [ ] 3F.3 RED: add a golden test for the full stdout row block via the `-update` path (R-006).
+- [ ] 3F.4 GREEN: generate goldens with `-update`, rerun without — byte-identical.
+- [ ] 3F.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — full Phase 3 GREEN.
 
 ## Phase 4: runner-mode-separation (R-009, R-010)
+
+> Forward assessment (not executed in this pass — scope is out of bounds for the current Phase-3-only re-split): original estimate 180-340 raw lines. Tasks 4.1-4.4 (dispatch + fixer-flag guard) and 4.5-4.10 (byte-neutral integration test, out-dir guard, missing-tool stubbed-PATH test) are two natural seams; the 340-line upper bound alone is unlikely to clear the 200-line ledger cap as one objective, and even the two-seam split's upper half (byte-neutral + out-dir + stubbed-PATH combined) risks landing near or over 200 given the ledger's ~8-12-line overcount observed across all four Phase 2 objectives (obs #2713). Recommend a dedicated `sdd-tasks` re-split pass before `sdd-apply` begins Phase 4, following the same pattern used here for Phase 3.
 
 - [ ] 4.1 RED: add `TestSubcommandUsage` — no subcommand → non-zero exit, usage names both `normalize` and `check`.
 - [ ] 4.2 GREEN: add subcommand dispatch; wire `checkArgv`/`normalizeArgv` per check. Test passes.
@@ -138,6 +184,8 @@ PR 2 (base: PR1 branch). Split into 4 ledger objectives — each its own RED→G
 - [ ] 4.11 Run `cd tools/deterministic-check-runner && go test ./...` (full suite) — GREEN.
 
 ## Phase 5: capture-evidence-wiring (R-011, R-012, R-013, R-014, R-015, R-016, R-019)
+
+> Forward assessment (not executed in this pass — scope is out of bounds for the current Phase-3-only re-split): original estimate 240-420 raw lines, comparable in magnitude to Phase 2's pre-split `runner-registry-and-rows` (380-560). Much of this phase is shell/`SKILL.md` prose rather than Go (5.1-5.6, 5.11-5.12), which the ledger appears to undercount relative to code (slice 1 recorded 67 against 668 insertions of mostly-planning-doc content, per obs #2713) — so Phase 5 may fit in fewer, larger objectives than a pure line-count read suggests. Still, 5.9-5.10 (outcome-mapping tests + implementation) and 5.13 (full regression) are Go/shell-heavy and should not be assumed to fit one 200-line objective without measurement. Recommend a dedicated `sdd-tasks` re-split pass before `sdd-apply` begins Phase 5, informed by the actual ledger counts Phases 3 and 4 produce.
 
 - [ ] 5.1 RED: record failing `rg` assertion — `skills/sdd-verify/SKILL.md` does not yet declare `normalize` pre-`review start` / `check` as sole post-freeze step.
 - [ ] 5.2 GREEN: edit `SKILL.md` to declare the ordering (R-011). Rerun — pass.
