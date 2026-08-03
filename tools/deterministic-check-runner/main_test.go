@@ -2,8 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"errors"
 	"flag"
+	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -890,5 +895,127 @@ func TestGoldenRowBlock(t *testing.T) {
 	emitRows(&rerun, goldenRowBlockResults(), defaultTopN)
 	if !bytes.Equal(got, rerun.Bytes()) {
 		t.Error("emitRows(goldenRowBlockResults()) is not deterministic across repeated calls")
+	}
+}
+
+// TestOutDirGuard is 4.7's RED test: --out-dir inside root is a usage error.
+func TestOutDirGuard(t *testing.T) {
+	root := repoRoot(t)
+	chdir(t, root)
+	inside := filepath.Join(root, "tmp-out-dir-guard-test")
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check", "--out-dir", inside}, &stdout, &stderr)
+	if got != outcomeUsage {
+		t.Fatalf("run(check --out-dir %s) = %d, want outcomeUsage (%d)", inside, got, outcomeUsage)
+	}
+	if !strings.Contains(stderr.String(), "out-dir") {
+		t.Errorf("stderr %q does not mention out-dir", stderr.String())
+	}
+}
+
+// chdir enters dir and restores the previous cwd via t.Cleanup.
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	previousWD, _ := os.Getwd()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir into %s: %v", dir, err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(previousWD) })
+}
+
+// gitOutput runs a git subcommand in dir, returning its stdout.
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, stderr.String())
+	}
+	return stdout.String()
+}
+
+// fileState is a per-file (mode, size, sha256) fingerprint (D5).
+type fileState struct {
+	mode fs.FileMode
+	size int64
+	sha  string
+}
+
+// snapshotTree captures status plus per-file fileState, skipping .git (D5).
+func snapshotTree(t *testing.T, dir string) (status string, files map[string]fileState) {
+	t.Helper()
+	status = gitOutput(t, dir, "status", "--porcelain")
+	files = make(map[string]fileState)
+	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		info, statErr := d.Info()
+		content, readErr := os.ReadFile(path)
+		rel, relErr := filepath.Rel(dir, path)
+		if statErr != nil || readErr != nil || relErr != nil {
+			return errors.Join(statErr, readErr, relErr)
+		}
+		sum := sha256.Sum256(content)
+		files[rel] = fileState{mode: info.Mode(), size: info.Size(), sha: fmt.Sprintf("%x", sum)}
+		return nil
+	})
+	if walkErr != nil {
+		t.Fatalf("walk %s: %v", dir, walkErr)
+	}
+	return status, files
+}
+
+// TestCheckByteNeutral is 4.5's RED test (D5): check must leave a dirty
+// tree, including a 0755 file, byte- and mode-identical.
+func TestCheckByteNeutral(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	fixture := t.TempDir()
+	gitOutput(t, fixture, "init", "-q")
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/fixture\n\ngo 1.21\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nfunc main() {}\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "script.sh"), "#!/bin/sh\necho hi\n", 0o755)
+	gitOutput(t, fixture, "add", "-A")
+	gitOutput(t, fixture, "-c", "user.email=fixture@example.com", "-c", "user.name=Fixture", "commit", "-q", "-m", "initial")
+
+	// dirty tree: an uncommitted edit plus an untracked file
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nfunc main() {}\n\n// dirty\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "untracked.txt"), "scratch\n", 0o644)
+
+	beforeStatus, beforeFiles := snapshotTree(t, fixture)
+	chdir(t, fixture)
+	var stdout, stderr bytes.Buffer
+	run([]string{"check"}, &stdout, &stderr)
+	afterStatus, afterFiles := snapshotTree(t, fixture)
+	if beforeStatus != afterStatus {
+		t.Errorf("git status --porcelain changed:\nbefore:\n%s\nafter:\n%s", beforeStatus, afterStatus)
+	}
+	if !reflect.DeepEqual(beforeFiles, afterFiles) {
+		t.Errorf("per-file (mode, size, sha256) changed:\nbefore: %+v\nafter: %+v", beforeFiles, afterFiles)
+	}
+}
+
+// mustWriteFile writes content to path and chmods it to mode.
+func mustWriteFile(t *testing.T, path, content string, mode fs.FileMode) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), mode); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+	if err := os.Chmod(path, mode); err != nil {
+		t.Fatalf("chmod %s: %v", path, err)
 	}
 }

@@ -43,7 +43,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 
 	switch args[0] {
 	case "check":
-		return runCheckMode(modules, args[1:], stdout)
+		return runCheckMode(modules, args[1:], root, stdout, stderr)
 	case "normalize":
 		return runNormalize(modules)
 	default:
@@ -52,10 +52,14 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-// runCheckMode wires registry x exec x classify/selectOutcome x emitRows
-// into the read-only check subcommand; argv is checkArgv only, never a
-// fixer (R-009/R-010).
-func runCheckMode(modules []string, args []string, stdout io.Writer) int {
+// runCheckMode wires the read-only check subcommand (R-009/R-010);
+// --out-dir inside root is a usage error (D5).
+func runCheckMode(modules []string, args []string, root string, stdout, stderr io.Writer) int {
+	if outDir := parseOutDir(args); outDir != "" && pathInsideRoot(root, outDir) {
+		fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
 	results := make([]result, len(registry))
 	for i, c := range registry {
 		results[i] = runCheck(c, modules)
@@ -514,6 +518,28 @@ func parseTopN(args []string) int {
 		return defaultTopN
 	}
 	return *topN
+}
+
+// parseOutDir extracts --out-dir from check-mode args (empty = unset).
+func parseOutDir(args []string) string {
+	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
+	outDir := fs.String("out-dir", "", "directory for full check logs")
+	if err := fs.Parse(args); err != nil {
+		return ""
+	}
+	return *outDir
+}
+
+// pathInsideRoot reports whether path is at or under root (R-010 guard).
+func pathInsideRoot(root, path string) bool {
+	absRoot, rootErr := filepath.Abs(root)
+	absPath, pathErr := filepath.Abs(path)
+	if rootErr != nil || pathErr != nil {
+		return false
+	}
+	return absPath == absRoot || strings.HasPrefix(absPath, absRoot+string(filepath.Separator))
 }
 
 // capPayload is the last-resort byte-level backstop for R-013 (correction
