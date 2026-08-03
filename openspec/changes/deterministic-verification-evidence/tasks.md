@@ -149,15 +149,15 @@ PR 3 (base: PR2 branch). Re-split into 6 ledger objectives — each its own RED�
 - [x] 3D.1 RED: add table-driven `TestParseDeadcode` against `testdata/` fixtures captured from the pinned `go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...` invocation (3A). Assert findings are counted from parsed **stdout only**, never from `deadcode`'s exit code — confirmed empirically: 20-21 real findings, exit 0. Stdout must be captured separately from stderr: the Go toolchain-switch message lands on stderr and inflates the count if merged.
 - [x] 3D.2 GREEN: implement `parseDeadcode` (stdout-only counting) + its `failed(exit,count)` predicate (`count>0`, exit code ignored — `deadcode` stays WARNING-only via `classify()` regardless of this predicate). Tests pass.
 
-### 3E. runner-summary-and-cap (R-007, R-008) — est. 130-160 lines — depends on 3B, 3C, 3D
+### 3E. runner-summary-and-cap (R-007, R-008) — est. 130-160 lines — depends on 3B, 3C, 3D — COMPLETE
 
-- [ ] 3E.1 RED: add `TestSummaryRendering` over 0/1/N/N+1 findings — `count=N; top: …; full: <path>`, 200-char excerpt cap, `--top-n` honored (default 5), zero renders literal `0`.
-- [ ] 3E.2 GREEN: implement the summary renderer + `--top-n` flag + stable out-dir `${TMPDIR}/labdrian-deterministic-checks/<tool>.log` (D6, overwritten on rerun). Test passes.
-- [ ] 3E.3 RED: add `TestBannedLiterals` scanning every emitted summary for PASS/PASSED/SUCCESS/N/A/NA/NONE/TODO/TBD/PLACEHOLDER as a standalone value, including the zero-findings case.
-- [ ] 3E.4 GREEN: confirm/guard the renderer never emits a banned literal standalone. Test passes.
-- [ ] 3E.5 RED: add `TestCapPayload` — payload over 4 MiB truncates to counts+paths, never rejects.
-- [ ] 3E.6 GREEN: implement `capPayload` (D6). Test passes.
-- [ ] 3E.7 Run `cd tools/deterministic-check-runner && go test ./... -run 'TestSummaryRendering|TestBannedLiterals|TestCapPayload'` — GREEN.
+- [x] 3E.1 RED: add `TestSummaryRendering` over 0/1/N/N+1 findings — `count=N; top: …; full: <path>`, 200-char excerpt cap, `--top-n` honored (default 5), zero renders literal `0`.
+- [x] 3E.2 GREEN: implement the summary renderer + `--top-n` flag + stable out-dir `${TMPDIR}/labdrian-deterministic-checks/<tool>.log` (D6, overwritten on rerun). Test passes.
+- [x] 3E.3 RED: add `TestBannedLiterals` scanning every emitted summary for PASS/PASSED/SUCCESS/N/A/NA/NONE/TODO/TBD/PLACEHOLDER as a standalone value, including the zero-findings case.
+- [x] 3E.4 GREEN: confirm/guard the renderer never emits a banned literal standalone. Test passes.
+- [x] 3E.5 RED: add `TestCapPayload` — payload over 4 MiB truncates to counts+paths, never rejects.
+- [x] 3E.6 GREEN: implement `capPayload` (D6). Test passes.
+- [x] 3E.7 Run `cd tools/deterministic-check-runner && go test ./... -run 'TestSummaryRendering|TestBannedLiterals|TestCapPayload'` — GREEN.
 
 ### 3F. runner-golden-wiring (R-006 remainder, R-007 goldens) — est. 90-140 lines — depends on 3E
 
