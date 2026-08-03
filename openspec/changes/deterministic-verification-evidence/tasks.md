@@ -242,6 +242,34 @@ Each groups pieces that share one concern, so none carries more than two lines o
 
 > Forward assessment (not executed in this pass — scope is out of bounds for the current Phase-3-only re-split): original estimate 240-420 raw lines, comparable in magnitude to Phase 2's pre-split `runner-registry-and-rows` (380-560). Much of this phase is shell/`SKILL.md` prose rather than Go (5.1-5.6, 5.11-5.12), which the ledger appears to undercount relative to code (slice 1 recorded 67 against 668 insertions of mostly-planning-doc content, per obs #2713) — so Phase 5 may fit in fewer, larger objectives than a pure line-count read suggests. Still, 5.9-5.10 (outcome-mapping tests + implementation) and 5.13 (full regression) are Go/shell-heavy and should not be assumed to fit one 200-line objective without measurement. Recommend a dedicated `sdd-tasks` re-split pass before `sdd-apply` begins Phase 5, informed by the actual ledger counts Phases 3 and 4 produce.
 
+### Phase 5 ledger re-split (decided 2026-08-03, before any Phase 5 code was written)
+
+Itemized against the 200-line-per-objective cap, using the eighteen completed objectives as calibration (raw → ledger: 174→184, 120→132, 91→99, 161→173, 57→66, 142→146, 130→134, 86→93, 175→193, 75→81, 82→88, 98→104, 110→124, 126→134, 163→171, 67→76 — the ledger adds roughly 4-18 lines):
+
+| Tasks | Piece | Est. raw |
+|---|---|---|
+| 5.1-5.2 | Ordering declaration in `SKILL.md` | 15-30 |
+| 5.3-5.4 | `cmd_deterministic_checks()` shell command plus its two exit-3 guards | 80-120 |
+| 5.5-5.6 | Guard smoke-test script | 30-50 |
+| 5.7-5.8 | Payload-boundary test plus piping documentation | 40-60 |
+| 5.9-5.10 | Exit-code to `--outcome` mapping plus the absent-CLI guard | 60-90 |
+| 5.11-5.13 | Closing verification | 0-10 |
+| | **Total** | **225-360** |
+
+Over the cap. **Split into four, grouped by concern.**
+
+Two calibration notes shaped the cut:
+
+1. **The estimator undershoots test-heavy units.** Objective 4B was estimated 90-135 and landed at 163 raw — about 21% past its high end, after three trim passes. Applying that correction to a combined 5.3-5.6 unit (110-170 estimated) projects roughly 205 raw, over the cap. That is why the shell command and its smoke test are separate objectives rather than one.
+2. **This phase is mostly shell and markdown, not Go.** The ledger appears to count prose very differently: slice 1 recorded 67 against a commit carrying 668 insertions of mostly planning documentation. That rule is undocumented and rests on a single observation, so these estimates are deliberately conservative rather than assuming prose is cheap. Measure the first markdown-heavy objective's actual ledger count and recalibrate the rest from it.
+
+| Ledger objective | Tasks | Scope | Est. raw |
+|---|---|---|---|
+| `verify-skill-ordering-and-piping` | 5.1, 5.2, 5.7, 5.8 | What `sdd-verify` declares about normalization ordering, and documenting the `capture-evidence --input -` piping, with the payload-boundary test | 55-90 |
+| `overlay-dispatch-command` | 5.3, 5.4 | `cmd_deterministic_checks()` mirroring `cmd_validate_entry_contract`, its two exit-3 guards, dispatch case and help entry | 80-120 |
+| `overlay-dispatch-smoke` | 5.5, 5.6 | Smoke test proving both guards fire with explicit stderr | 30-50 |
+| `outcome-mapping-and-closure` | 5.9-5.13 | Mechanical exit-code to `--outcome` mapping, the absent-CLI guard, and the closing R-019/R-001/regression verification | 60-100 |
+
 - [ ] 5.1 RED: record failing `rg` assertion — `skills/sdd-verify/SKILL.md` does not yet declare `normalize` pre-`review start` / `check` as sole post-freeze step.
 - [ ] 5.2 GREEN: edit `SKILL.md` to declare the ordering (R-011). Rerun — pass.
 - [ ] 5.3 RED: record failing dispatch-smoke assertion — `bin/labdrian-overlay` has no `deterministic-checks` subcommand.
