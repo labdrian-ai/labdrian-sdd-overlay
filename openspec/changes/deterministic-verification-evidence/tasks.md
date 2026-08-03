@@ -82,13 +82,13 @@ PR 2 (base: PR1 branch). Split into 4 ledger objectives — each its own RED→G
 - [x] 2A.4 GREEN: implement `discoverModules(root string) ([]string, error)` rooted at `CALLER_CWD`-normalized cwd, sorted `go.mod` walk. Test passes.
 - [x] 2A.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
 
-### 2B. runner-registry-and-classify (R-002 test half, R-006 partial) — est. 90-130 lines — depends on 2A
+### 2B. runner-registry-and-classify (R-002 test half, R-006 partial) — est. 90-130 lines — depends on 2A — COMPLETE
 
-- [ ] 2B.1 RED: add `TestCheckRegistry` — exactly 4 checks; each declares `deterministic` and `blocking`; `checkArgv` is non-empty for all 4.
-- [ ] 2B.2 GREEN: add `check` struct (`name`, `deterministic`, `blocking`, `checkArgv` fields — `normalizeArgv` lands in Phase 4, `parse`/`failed` land in Phase 3) and hardcoded `[]check` registry: `gofmt` (`checkArgv: []string{"gofmt","-l","."}`, deterministic+blocking), `go vet` (deterministic+blocking), `staticcheck` (deterministic+blocking), `deadcode` (`blocking: false`). Test passes.
-- [ ] 2B.3 RED: add `TestClassify` — a check without `deterministic=true` never classifies CRITICAL regardless of `blocking` (R-002).
-- [ ] 2B.4 GREEN: implement `classify(c check) bool { return c.blocking && c.deterministic }` — the sole enforcement point. Test passes.
-- [ ] 2B.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
+- [x] 2B.1 RED: add `TestCheckRegistry` — exactly 4 checks; each declares `deterministic` and `blocking`; `checkArgv` is non-empty for all 4.
+- [x] 2B.2 GREEN: add `check` struct (`name`, `deterministic`, `blocking`, `checkArgv` fields — `normalizeArgv` lands in Phase 4, `parse`/`failed` land in Phase 3) and hardcoded `[]check` registry: `gofmt` (`checkArgv: []string{"gofmt","-l","."}`, deterministic+blocking), `go vet` (deterministic+blocking), `staticcheck` (deterministic+blocking), `deadcode` (`blocking: false`). Test passes.
+- [x] 2B.3 RED: add `TestClassify` — a check without `deterministic=true` never classifies CRITICAL regardless of `blocking` (R-002).
+- [x] 2B.4 GREEN: implement `classify(c check) bool { return c.blocking && c.deterministic }` — the sole enforcement point. Test passes.
+- [x] 2B.5 Run `cd tools/deterministic-check-runner && go test ./... -cover` — GREEN.
 
 ### 2C. runner-result-and-outcome (R-006 core) — est. 100-150 lines — depends on 2B
 
