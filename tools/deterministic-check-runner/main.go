@@ -21,7 +21,7 @@ func main() {
 
 // usageText names both permitted subcommands (R-009): normalize (mutating,
 // pre-freeze only) and check (read-only, sole permitted post-freeze step).
-const usageText = "usage: deterministic-check-runner <normalize|check> [--top-n N]\n"
+const usageText = "usage: deterministic-check-runner <normalize|check> [--top-n N] [--out-dir DIR]\n"
 
 // run dispatches to the normalize or check subcommand (Phase 4 mode split).
 func run(args []string, stdout, stderr io.Writer) int {
@@ -53,16 +53,26 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 // runCheckMode wires the read-only check subcommand (R-009/R-010);
-// --out-dir inside root is a usage error (D5).
+// --out-dir inside root is a usage error (D5), checked against the raw flag
+// value before any resolution or write — a log written inside root would
+// mutate the candidate under review. Once past the guard, the flag value (or
+// os.TempDir() when unset) is resolved exactly once and threaded to every
+// check's log write, so the guard and the write always agree on the same
+// directory (correction A3: previously the guard read the flag but the
+// write always used os.TempDir() regardless).
 func runCheckMode(modules []string, args []string, root string, stdout, stderr io.Writer) int {
-	if outDir := parseOutDir(args); outDir != "" && pathInsideRoot(root, outDir) {
+	outDir := parseOutDir(args)
+	if outDir != "" && pathInsideRoot(root, outDir) {
 		fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
 	}
+	if outDir == "" {
+		outDir = os.TempDir()
+	}
 	results := make([]result, len(registry))
 	for i, c := range registry {
-		results[i] = runCheck(c, modules)
+		results[i] = runCheck(c, modules, outDir)
 	}
 	emitRows(stdout, results, parseTopN(args))
 	return selectOutcome(results)
@@ -100,7 +110,7 @@ func runNormalize(modules []string) int {
 // full-log path (D6) via writeLog; a failed write clears the returned
 // result's logPath rather than failing the check itself (a full /tmp must
 // never hold verification hostage).
-func runCheck(c check, modules []string) result {
+func runCheck(c check, modules []string, outDir string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
 		return result{check: c, exitCode: unavailableExitCode, unavailable: true}
@@ -132,7 +142,7 @@ func runCheck(c check, modules []string) result {
 	if c.stderrFindings {
 		findings = stderr.Bytes()
 	}
-	r := buildResult(c, exitCode, findings)
+	r := buildResult(c, exitCode, findings, outDir)
 	if !writeLog(r.logPath, findings) {
 		r.logPath = ""
 	}
@@ -168,10 +178,10 @@ const unavailableExitCode = 127
 // procedural_tooling_failed rather than verification_failed (D4/R-016).
 // Extracted from runCheck so this wiring is directly unit-testable without
 // shelling out to a real toolchain-mismatched module.
-func buildResult(c check, exitCode int, stdout []byte) result {
+func buildResult(c check, exitCode int, stdout []byte, outDir string) result {
 	count, top := c.parse(exitCode, stdout)
 	unavailable := c.unavailableIf != nil && c.unavailableIf(stdout)
-	return result{check: c, exitCode: exitCode, unavailable: unavailable, count: count, top: top, logPath: logPathFor(c.name)}
+	return result{check: c, exitCode: exitCode, unavailable: unavailable, count: count, top: top, logPath: logPathFor(c.name, outDir)}
 }
 
 // emitRows writes one "tool | exit_code | summary" row per result, in
@@ -556,9 +566,12 @@ func guardAgainstBannedSummary(summary string) {
 	}
 }
 
-// logPathFor returns the stable full-log path for tool (D6); spaces become "-".
-func logPathFor(tool string) string {
-	return filepath.Join(os.TempDir(), defaultOutDirName, strings.ReplaceAll(tool, " ", "-")+".log")
+// logPathFor returns the stable full-log path for tool under outDir (D6);
+// spaces become "-". Callers resolve outDir once (flag-or-default,
+// runCheckMode) and pass it in; this function never reads os.TempDir()
+// itself (correction A3).
+func logPathFor(tool, outDir string) string {
+	return filepath.Join(outDir, defaultOutDirName, strings.ReplaceAll(tool, " ", "-")+".log")
 }
 
 // parseTopN extracts --top-n from args (default defaultTopN); malformed

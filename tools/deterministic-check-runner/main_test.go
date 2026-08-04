@@ -393,7 +393,8 @@ func TestRunCheckSeparatesStreamsAndPopulatesSummary(t *testing.T) {
 			return len(strings.Split(trimmed, "\n")), strings.Split(trimmed, "\n")
 		},
 	}
-	got := runCheck(c, []string{t.TempDir()})
+	outDir := t.TempDir()
+	got := runCheck(c, []string{t.TempDir()}, outDir)
 
 	if got.count != 1 {
 		t.Fatalf("runCheck count = %d, want 1 (stderr must not be merged into parsed stdout)", got.count)
@@ -401,7 +402,7 @@ func TestRunCheckSeparatesStreamsAndPopulatesSummary(t *testing.T) {
 	if len(got.top) != 1 || got.top[0] != "stdout-line" {
 		t.Fatalf("runCheck top = %v, want [\"stdout-line\"]", got.top)
 	}
-	if want := logPathFor("fake"); got.logPath != want {
+	if want := logPathFor("fake", outDir); got.logPath != want {
 		t.Errorf("runCheck logPath = %q, want %q", got.logPath, want)
 	}
 }
@@ -549,7 +550,8 @@ func TestSummaryRendering(t *testing.T) {
 
 // TestLogPathForStable covers D6's stable (never timestamped) out-dir path.
 func TestLogPathForStable(t *testing.T) {
-	if a, b := logPathFor("go vet"), logPathFor("go vet"); a != b || strings.Contains(a, " ") {
+	outDir := t.TempDir()
+	if a, b := logPathFor("go vet", outDir), logPathFor("go vet", outDir); a != b || strings.Contains(a, " ") {
 		t.Errorf("logPathFor(go vet) = %q / %q, want stable and space-free", a, b)
 	}
 }
@@ -578,7 +580,7 @@ func TestParseTopN(t *testing.T) {
 // finding's own text is a banned word: renderSummary must never collapse
 // into a bare literal. Checking only the zero case would miss that.
 func TestBannedLiterals(t *testing.T) {
-	logPath := logPathFor("gofmt")
+	logPath := logPathFor("gofmt", t.TempDir())
 	if s := renderSummary(0, nil, defaultTopN, logPath); s != "0" || isBannedSummaryLiteral(s) {
 		t.Errorf("renderSummary(0, ...) = %q, want literal 0, not a banned literal", s)
 	}
@@ -661,8 +663,9 @@ func TestPayloadBoundaryContract(t *testing.T) {
 			t.Fatal("registry is empty: a real run would emit zero bytes, violating capture-evidence's minLength 1 (R-013)")
 		}
 		results := make([]result, len(registry))
+		outDir := t.TempDir()
 		for i, c := range registry {
-			results[i] = buildResult(c, 0, nil) // clean run: every check exits 0, finds nothing
+			results[i] = buildResult(c, 0, nil, outDir) // clean run: every check exits 0, finds nothing
 		}
 		var buf bytes.Buffer
 		emitRows(&buf, results, defaultTopN)
@@ -851,8 +854,9 @@ func TestParseStaticcheckToolchainMismatch(t *testing.T) {
 func TestBuildResultStaticcheckToolchainMismatchRoutesToProceduralToolingFailed(t *testing.T) {
 	staticcheck := findRegistryCheck(t, "staticcheck")
 	out := readTestdata(t, "staticcheck-toolchain-mismatch.txt")
+	outDir := t.TempDir()
 
-	r := buildResult(staticcheck, 1, out)
+	r := buildResult(staticcheck, 1, out, outDir)
 	if !r.unavailable {
 		t.Fatal("buildResult(staticcheck, 1, mismatch fixture).unavailable = false, want true")
 	}
@@ -865,7 +869,7 @@ func TestBuildResultStaticcheckToolchainMismatchRoutesToProceduralToolingFailed(
 		t.Errorf("selectOutcome([]result{mismatch}) = %d, want %d (outcomeProceduralToolingFailed) — a mismatch must never route to outcomeVerificationFailed (%d)", got, outcomeProceduralToolingFailed, outcomeVerificationFailed)
 	}
 
-	clean := buildResult(staticcheck, 0, readTestdata(t, "staticcheck-clean.txt"))
+	clean := buildResult(staticcheck, 0, readTestdata(t, "staticcheck-clean.txt"), outDir)
 	if clean.unavailable {
 		t.Error("buildResult(staticcheck, 0, clean fixture).unavailable = true, want false")
 	}
@@ -927,8 +931,8 @@ func goldenRowBlockResults() []result {
 			"main.go:58:9: nil pointer dereference",
 			"main.go:71:3: unreachable code",
 			"main.go:88:14: composite literal uses unkeyed fields",
-		}, logPath: logPathFor("go vet")},
-		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true, logPath: logPathFor("staticcheck")},
+		}, logPath: logPathFor("go vet", os.TempDir())},
+		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true, logPath: logPathFor("staticcheck", os.TempDir())},
 		{check: check{name: "deadcode"}, exitCode: 0, count: 0},
 	}
 }
@@ -979,6 +983,43 @@ func TestOutDirGuard(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "out-dir") {
 		t.Errorf("stderr %q does not mention out-dir", stderr.String())
+	}
+}
+
+// TestOutDirAcceptedWritesLogsThere is correction A3's RED test for the
+// accepted branch: TestOutDirGuard only proves an inside-root --out-dir is
+// rejected, never that an outside-root value does anything. Before this fix,
+// parseOutDir's return was discarded past the guard and logPathFor
+// hardcoded os.TempDir(), so an accepted --out-dir was silently inert. This
+// does not assert on any internal signature — it drives the real run()
+// entry point and checks the observable filesystem effect: a log lands
+// under the requested directory, and the default os.TempDir() log is left
+// exactly as it was before this call.
+func TestOutDirAcceptedWritesLogsThere(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/outdirfixture\n\ngo 1.21\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nfunc main() {}\n", 0o644)
+	chdir(t, fixture)
+
+	defaultLogPath := filepath.Join(os.TempDir(), defaultOutDirName, "gofmt.log")
+	beforeContent, _ := os.ReadFile(defaultLogPath)
+
+	outDir := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	run([]string{"check", "--out-dir", outDir}, &stdout, &stderr)
+
+	wantLogPath := filepath.Join(outDir, defaultOutDirName, "gofmt.log")
+	if _, err := os.Stat(wantLogPath); err != nil {
+		t.Fatalf("stat %s: %v (want the log written under the requested --out-dir)", wantLogPath, err)
+	}
+
+	afterContent, _ := os.ReadFile(defaultLogPath)
+	if !bytes.Equal(beforeContent, afterContent) {
+		t.Errorf("default os.TempDir() log %s changed during a --out-dir run; want writes confined to the requested --out-dir", defaultLogPath)
 	}
 }
 
@@ -1111,7 +1152,7 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 		t.Setenv("PATH", t.TempDir()) // no gofmt anywhere on PATH
 		gofmt := findRegistryCheck(t, "gofmt")
 
-		got := runCheck(gofmt, []string{t.TempDir()})
+		got := runCheck(gofmt, []string{t.TempDir()}, t.TempDir())
 		if !got.unavailable {
 			t.Fatalf("runCheck(gofmt, stubbed PATH).unavailable = false, want true")
 		}
@@ -1126,7 +1167,7 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 		t.Setenv("PATH", stubDir)
 		deadcode := findRegistryCheck(t, "deadcode")
 
-		got := runCheck(deadcode, []string{t.TempDir()})
+		got := runCheck(deadcode, []string{t.TempDir()}, t.TempDir())
 		if !got.unavailable {
 			t.Fatalf("runCheck(deadcode, exit-127 stub).unavailable = false, want true (WARNING row, not silently clean)")
 		}
@@ -1161,7 +1202,7 @@ func TestRunCheckGoVetFindingsReachRow(t *testing.T) {
 	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/vetfixture\n\ngo 1.21\n", 0o644)
 	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Printf(\"%d\\n\", \"not-a-number\")\n}\n", 0o644)
 
-	got := runCheck(findRegistryCheck(t, "go vet"), []string{fixture})
+	got := runCheck(findRegistryCheck(t, "go vet"), []string{fixture}, t.TempDir())
 
 	var stdout bytes.Buffer
 	emitRows(&stdout, []result{got}, 5)
@@ -1193,14 +1234,14 @@ func TestRunCheckGoVetFindingsReachRow(t *testing.T) {
 // path must exist and its content must be the real captured findings
 // stream, verified through assertRow (which os.Stat's it) and a direct read.
 func TestRunCheckWritesFindingsToLogFile(t *testing.T) {
-	t.Setenv("TMPDIR", t.TempDir())
+	outDir := t.TempDir()
 
 	c := check{
 		name:      "fake",
 		checkArgv: []string{"sh", "-c", "printf 'finding-line\\n'; exit 1"},
 		parse:     func(exit int, out []byte) (int, []string) { return 1, []string{"finding-line"} },
 	}
-	got := runCheck(c, []string{t.TempDir()})
+	got := runCheck(c, []string{t.TempDir()}, outDir)
 
 	if got.logPath == "" {
 		t.Fatal("runCheck logPath = \"\", want the check's stable full-log path (write must succeed here)")
@@ -1224,19 +1265,18 @@ func TestRunCheckWritesFindingsToLogFile(t *testing.T) {
 // row's count/excerpts intact — it must never become a runnerErr or
 // otherwise change selectOutcome, because a full /tmp must not hold
 // verification hostage. The write is forced to fail deterministically by
-// pointing TMPDIR at a directory where the expected log subdirectory name is
+// pointing outDir at a directory where the expected log subdirectory name is
 // already taken by a regular file, so os.MkdirAll fails.
 func TestRunCheckOmitsFullClauseWhenLogWriteFails(t *testing.T) {
-	tmpDir := t.TempDir()
-	mustWriteFile(t, filepath.Join(tmpDir, defaultOutDirName), "blocking file, not a directory", 0o644)
-	t.Setenv("TMPDIR", tmpDir)
+	outDir := t.TempDir()
+	mustWriteFile(t, filepath.Join(outDir, defaultOutDirName), "blocking file, not a directory", 0o644)
 
 	c := check{
 		name:      "fake",
 		checkArgv: []string{"sh", "-c", "printf 'finding-line\\n'; exit 1"},
 		parse:     func(exit int, out []byte) (int, []string) { return 1, []string{"finding-line"} },
 	}
-	got := runCheck(c, []string{t.TempDir()})
+	got := runCheck(c, []string{t.TempDir()}, outDir)
 
 	if got.logPath != "" {
 		t.Fatalf("runCheck logPath = %q, want \"\" (write must fail deterministically here)", got.logPath)
