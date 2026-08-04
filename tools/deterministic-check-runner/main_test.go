@@ -264,6 +264,7 @@ func TestSelectOutcomePrecedence(t *testing.T) {
 		{"deadcode unavailable and a blocking check failed", []result{{check: gofmt, exitCode: 1}, {check: staticcheck}, {check: deadcode, exitCode: 127, unavailable: true}}, 1},
 		{"blocking-set unexecutable and blocking failure both present", []result{{check: gofmt, exitCode: 1}, {check: staticcheck, exitCode: 127, unavailable: true}, {check: deadcode}}, 3},
 		{"non-blocking check red does not affect outcome", []result{{check: gofmt}, {check: staticcheck}, {check: deadcode, exitCode: 1}}, 0},
+		{"gofmt reports findings via count with exit 0 (D3 trap, obs #2735)", []result{{check: gofmt, exitCode: 0, count: 1}, {check: staticcheck}, {check: deadcode}}, 1},
 	}
 
 	for _, tt := range tests {
