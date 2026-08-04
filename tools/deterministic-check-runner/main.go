@@ -99,51 +99,84 @@ func runNormalize(modules []string) int {
 	return outcomePassed
 }
 
-// runCheck runs c.checkArgv in every module dir and aggregates to one
-// result: unavailable if the tool is missing from PATH, else the max exit
-// code observed across modules. stdout and stderr are captured into
-// distinct buffers, never merged: merging streams has already inflated a
-// finding count once by letting a Go toolchain-switch message land in the
-// parsed stream (obs #2712). c.stderrFindings picks which buffer reaches
-// c.parse — go vet writes its diagnostics to stderr, every other check to
-// stdout. The same findings stream is also written to the check's stable
-// full-log path (D6) via writeLog; a failed write clears the returned
-// result's logPath rather than failing the check itself (a full /tmp must
-// never hold verification hostage).
+// runCheck runs c.checkArgv in every module dir and combines each module's
+// own result into one row. Every module gets its own stdout/stderr buffer,
+// analyzed independently via buildResult, never concatenated across modules
+// (correction B1): a shared buffer let one module's toolchain-mismatch text
+// or a bare 127 exit erase every other module's genuine findings (obs
+// #2712-class bug, one level up — module isolation, not stream isolation).
+// Combination rule, chosen to match what selectOutcome consumes:
+//   - findings SUM across modules and their excerpts concatenate in module
+//     order (discoverModules already sorts) — a module with 3 findings and
+//     one with 2 is 5, never either alone;
+//   - a module is excluded from the sum when the tool could not analyze it
+//     at all: exit 127, an unrunnable process, or c.unavailableIf matches
+//     its own output — that module contributed no genuine result, but the
+//     others still can;
+//   - the check as a whole is unavailable only when it could not run
+//     ANYWHERE, i.e. every attempted module was excluded that way. Zero
+//     discovered modules is unrelated and left as-is (out of scope:
+//     zero-module false green);
+//   - the row's exit code is the max across the modules that DID
+//     contribute — the same max rule as before, now scoped to genuinely
+//     usable modules instead of a run a single bad module could poison.
+//
+// No early return: every discovered module is attempted regardless of an
+// earlier module's outcome. The combined, in-order findings stream is
+// written once to the check's stable full-log path (D6) via writeLog; a
+// failed write clears the returned result's logPath rather than failing the
+// check itself (a full /tmp must never hold verification hostage).
 func runCheck(c check, modules []string, outDir string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
 		return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 	}
 
-	exitCode := 0
-	var stdout, stderr bytes.Buffer
+	attempted, usable := 0, 0
+	exitCode, totalCount := 0, 0
+	var top []string
+	var combined bytes.Buffer
 	for _, module := range modules {
+		attempted++
+		var stdout, stderr bytes.Buffer
 		cmd := exec.Command(toolPath, c.checkArgv[1:]...)
 		cmd.Dir = module
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
+		moduleExit := 0
 		if runErr := cmd.Run(); runErr != nil {
 			var exitErr *exec.ExitError
-			if errors.As(runErr, &exitErr) {
-				code := exitErr.ExitCode()
-				if code == unavailableExitCode {
-					return result{check: c, exitCode: unavailableExitCode, unavailable: true}
-				}
-				if code > exitCode {
-					exitCode = code
-				}
-				continue
+			if !errors.As(runErr, &exitErr) {
+				continue // this module's process could not run at all; excluded, not fatal to the whole check
 			}
-			return result{check: c, exitCode: unavailableExitCode, unavailable: true}
+			moduleExit = exitErr.ExitCode()
 		}
+		if moduleExit == unavailableExitCode {
+			continue // e.g. an unresolved "go run <module>@version"; this module only
+		}
+		findings := stdout.Bytes()
+		if c.stderrFindings {
+			findings = stderr.Bytes()
+		}
+		mr := buildResult(c, moduleExit, findings, outDir)
+		if mr.unavailable {
+			continue // e.g. a staticcheck toolchain mismatch; this module only
+		}
+		usable++
+		if moduleExit > exitCode {
+			exitCode = moduleExit
+		}
+		totalCount += mr.count
+		top = append(top, mr.top...)
+		combined.Write(findings)
 	}
-	findings := stdout.Bytes()
-	if c.stderrFindings {
-		findings = stderr.Bytes()
+
+	unavailable := attempted > 0 && usable == 0
+	if unavailable {
+		exitCode = unavailableExitCode
 	}
-	r := buildResult(c, exitCode, findings, outDir)
-	if !writeLog(r.logPath, findings) {
+	r := result{check: c, exitCode: exitCode, unavailable: unavailable, count: totalCount, top: top, logPath: logPathFor(c.name, outDir)}
+	if !writeLog(r.logPath, combined.Bytes()) {
 		r.logPath = ""
 	}
 	return r

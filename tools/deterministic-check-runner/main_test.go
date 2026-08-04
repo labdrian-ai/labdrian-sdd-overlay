@@ -1289,3 +1289,111 @@ func TestRunCheckOmitsFullClauseWhenLogWriteFails(t *testing.T) {
 		t.Errorf("summary %q lost its count/excerpts when the log write failed", summary)
 	}
 }
+
+// TestRunCheckSurvivesExit127FromEarlierModule is B1's cross-module RED test
+// for the early-return symptom: runCheck used to return immediately on a 127
+// exit from ANY module, discarding every module already processed and
+// skipping every module still to come. Two real directories are passed in
+// discoverModules' sort order (a-unavailable before z-violating); the fake
+// tool exits 127 only in the first (a real, mundane way a single module can
+// be inapplicable — e.g. an unresolved "go run <module>@version" — without
+// the tool itself being globally missing) and prints a genuine, parseable
+// finding in the second. The later module's finding must survive, and the
+// check as a whole must not be marked unavailable just because one module
+// could not run it (unavailable is per module, not global).
+func TestRunCheckSurvivesExit127FromEarlierModule(t *testing.T) {
+	parent := t.TempDir()
+	unavailableModule := filepath.Join(parent, "a-unavailable")
+	violatingModule := filepath.Join(parent, "z-violating")
+	for _, dir := range []string{unavailableModule, violatingModule} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+
+	c := check{
+		name: "fake",
+		checkArgv: []string{"sh", "-c",
+			`if [ "$(basename "$PWD")" = "a-unavailable" ]; then exit 127; fi; printf 'finding-line\n'; exit 1`,
+		},
+		parse: func(exit int, out []byte) (int, []string) {
+			trimmed := strings.TrimSpace(string(out))
+			if trimmed == "" {
+				return 0, nil
+			}
+			lines := strings.Split(trimmed, "\n")
+			return len(lines), lines
+		},
+	}
+
+	got := runCheck(c, []string{unavailableModule, violatingModule}, t.TempDir())
+
+	if got.unavailable {
+		t.Fatal("runCheck([a-unavailable(127), z-violating]).unavailable = true, want false — one module's 127 must not erase a check that ran successfully elsewhere")
+	}
+	if got.count != 1 {
+		t.Fatalf("runCheck([a-unavailable(127), z-violating]).count = %d, want 1 — the later module's finding must survive an earlier module's 127 exit (no early return)", got.count)
+	}
+	if len(got.top) != 1 || got.top[0] != "finding-line" {
+		t.Fatalf("runCheck(...).top = %v, want [\"finding-line\"]", got.top)
+	}
+}
+
+// TestRunCheckToolchainMismatchInOneModuleDoesNotEraseFindingsInAnother is
+// B1's sharper RED test for the shared-buffer symptom: runCheck used to
+// concatenate every module's output into one buffer and call
+// c.unavailableIf/c.parse on that concatenation exactly once, so a single
+// module's toolchain-mismatch-shaped output made the ENTIRE check
+// unavailable and discarded genuine findings from every other module (via
+// parseStaticcheck's own defensive isStaticcheckToolchainMismatch check,
+// which fires against the whole concatenation). The two check-struct fields
+// under test (unavailableIf, parse) are the real staticcheck wiring; only
+// checkArgv is faked, for a hermetic, network-free reproduction of the
+// documented tui/go.mod (go 1.26.1) vs engine/go.mod (go 1.21) mismatch.
+func TestRunCheckToolchainMismatchInOneModuleDoesNotEraseFindingsInAnother(t *testing.T) {
+	fixtures := t.TempDir()
+	mismatchFile := filepath.Join(fixtures, "mismatch.out")
+	findingFile := filepath.Join(fixtures, "finding.out")
+	mustWriteFile(t, mismatchFile, "-: /path/tui/main.go:6:1: package requires newer Go version go1.26 (application built with go1.25) (compile)\nexit status 1\n", 0o644)
+	mustWriteFile(t, findingFile, "cmd/main_test.go:49:7: const passThrough is unused (U1000)\n", 0o644)
+	t.Setenv("FAKE_MISMATCH_FILE", mismatchFile)
+	t.Setenv("FAKE_FINDING_FILE", findingFile)
+
+	parent := t.TempDir()
+	mismatchModule := filepath.Join(parent, "a-mismatch")
+	findingModule := filepath.Join(parent, "z-finding")
+	for _, dir := range []string{mismatchModule, findingModule} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+
+	c := check{
+		name:          "fake-staticcheck",
+		blocking:      true,
+		deterministic: true,
+		checkArgv: []string{"sh", "-c",
+			`if [ "$(basename "$PWD")" = "a-mismatch" ]; then cat "$FAKE_MISMATCH_FILE"; else cat "$FAKE_FINDING_FILE"; fi; exit 1`,
+		},
+		parse:         parseStaticcheck,
+		failed:        failedStaticcheck,
+		unavailableIf: isStaticcheckToolchainMismatch,
+	}
+
+	got := runCheck(c, []string{mismatchModule, findingModule}, t.TempDir())
+
+	if got.unavailable {
+		t.Fatal("runCheck([mismatch, finding]).unavailable = true, want false — a mismatch in one module must not erase a check that produced real findings in another")
+	}
+	if got.count != 1 {
+		t.Fatalf("runCheck([mismatch, finding]).count = %d, want 1 — the finding module's result must survive the other module's toolchain mismatch", got.count)
+	}
+	if len(got.top) != 1 || !strings.Contains(got.top[0], "U1000") {
+		t.Fatalf("runCheck(...).top = %v, want the finding module's line", got.top)
+	}
+
+	outcome := selectOutcome([]result{got})
+	if outcome != outcomeVerificationFailed {
+		t.Errorf("selectOutcome([]result{got}) = %d, want %d (outcomeVerificationFailed) — a real finding elsewhere must not be rewritten to outcomeProceduralToolingFailed (%d) by an unrelated module's mismatch", outcome, outcomeVerificationFailed, outcomeProceduralToolingFailed)
+	}
+}
