@@ -309,8 +309,8 @@ The audit confirms this is **one** wiring gap, not four: `unavailableIf` was alr
 - [x] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
 - [x] 5.7 RED: add payload-size-boundary unit test on the evidence-piping contract — empty run still satisfies `minLength 1`; payload over 4194304 bytes truncates, never rejected (R-013).
 - [x] 5.8 GREEN: document `gentle-ai review capture-evidence --input -` piping the runner's `check` stdout in `SKILL.md`; test passes.
-- [ ] 5.9 RED: add unit tests asserting exit-code→`--outcome` mapping is mechanical: 0→`passed`, 1→`verification_failed`, 3→`procedural_tooling_failed`, including both precedence scenarios (BLOCKING-set unavailable wins over a failing check; missing WARNING-only tool never masks/escalates).
-- [ ] 5.10 GREEN: implement/document the mapping; add `command -v labdrian-overlay` guard — absent CLI → `procedural_tooling_failed`, never silent pass, never `verification_failed` (D8). Tests pass.
-- [ ] 5.11 Verify R-019: confirm no new file under `skills/` (edits only touch `strict-tdd-verify.md`/`SKILL.md`, rows 22/41). If a new `skills/` file is ever added, add its `overlay.manifest` row and run `skills validate` — exit 0.
-- [ ] 5.12 Re-verify R-001: `git diff main -- bin/overlay` still empty.
-- [ ] 5.13 Run full regression: `cd engine && go test ./...`, `cd tui && go test ./...`, `cd tools/deterministic-check-runner && go test ./... -cover`; confirm green CI (staticcheck gate, deadcode visible+green, runner job).
+- [x] 5.9 RED: add unit tests asserting exit-code→`--outcome` mapping is mechanical: 0→`passed`, 1→`verification_failed`, 3→`procedural_tooling_failed`, including both precedence scenarios (BLOCKING-set unavailable wins over a failing check; missing WARNING-only tool never masks/escalates).
+- [x] 5.10 GREEN: implement/document the mapping; add `command -v labdrian-overlay` guard — absent CLI → `procedural_tooling_failed`, never silent pass, never `verification_failed` (D8). Tests pass.
+- [x] 5.11 Verify R-019: confirm no new file under `skills/` (edits only touch `strict-tdd-verify.md`/`SKILL.md`, rows 22/41). If a new `skills/` file is ever added, add its `overlay.manifest` row and run `skills validate` — exit 0.
+- [x] 5.12 Re-verify R-001: `git diff main -- bin/overlay` still empty.
+- [x] 5.13 Run full regression: `cd engine && go test ./...`, `cd tui && go test ./...`, `cd tools/deterministic-check-runner && go test ./... -cover`; confirm green CI (staticcheck gate, deadcode visible+green, runner job).
