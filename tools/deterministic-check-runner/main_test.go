@@ -276,9 +276,16 @@ func TestSelectOutcomePrecedence(t *testing.T) {
 	}
 }
 
+// fullLogPathPattern extracts the "full: <path>" clause's path from a
+// rendered row summary, when present.
+var fullLogPathPattern = regexp.MustCompile(`full: (\S+)$`)
+
 // assertRow validates one row against the "tool | exit_code | summary"
 // shape, the expected tool name, and the banned-literal guard; it returns
-// the exit_code field for caller-specific checks.
+// the exit_code field for caller-specific checks. When the summary carries a
+// "full: <path>" clause, it also os.Stat's that path: the row's claim is
+// only true evidence (skills/sdd-verify/SKILL.md:70) if the named file
+// genuinely exists, so a row must never advertise a path nothing wrote.
 func assertRow(t *testing.T, i int, line, wantTool string) string {
 	t.Helper()
 	m := rowPattern.FindStringSubmatch(line)
@@ -293,6 +300,11 @@ func assertRow(t *testing.T, i int, line, wantTool string) string {
 			t.Errorf("row %d summary %q is a banned literal", i, m[3])
 		}
 	}
+	if lp := fullLogPathPattern.FindStringSubmatch(m[3]); lp != nil {
+		if _, err := os.Stat(lp[1]); err != nil {
+			t.Errorf("row %d names full log path %q, but it does not exist/is not readable: %v", i, lp[1], err)
+		}
+	}
 	return m[2]
 }
 
@@ -300,9 +312,11 @@ func assertRow(t *testing.T, i int, line, wantTool string) string {
 // summaries come from the real 3E renderer, not the retired Phase-2
 // "exit=%d" placeholder.
 func TestRowEmission(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "go-vet.log")
+	mustWriteFile(t, logPath, "a\nb\n", 0o644)
 	results := []result{
 		{check: check{name: "gofmt"}, exitCode: 0},
-		{check: check{name: "go vet"}, exitCode: 1, count: 2, top: []string{"a", "b"}, logPath: "/tmp/go-vet.log"},
+		{check: check{name: "go vet"}, exitCode: 1, count: 2, top: []string{"a", "b"}, logPath: logPath},
 		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true},
 		{check: check{name: "deadcode"}, exitCode: 0},
 	}
@@ -319,7 +333,7 @@ func TestRowEmission(t *testing.T) {
 			t.Errorf("line %d exit_code = %q, want %q", i, gotExit, wantExit)
 		}
 	}
-	wantSummary := renderSummary(2, []string{"a", "b"}, defaultTopN, "/tmp/go-vet.log")
+	wantSummary := renderSummary(2, []string{"a", "b"}, defaultTopN, logPath)
 	if got := rowPattern.FindStringSubmatch(lines[1])[3]; got != wantSummary {
 		t.Errorf("row 1 summary = %q, want real renderer output %q (not the exit=%%d placeholder)", got, wantSummary)
 	}
@@ -1164,5 +1178,74 @@ func TestRunCheckGoVetFindingsReachRow(t *testing.T) {
 	}
 	if !strings.HasPrefix(fields[2], "count=1; top:") {
 		t.Errorf("go vet row summary = %q, want prefix %q", fields[2], "count=1; top:")
+	}
+}
+
+// TestRunCheckWritesFindingsToLogFile is the RED test for the "full: <path>"
+// defect: logPathFor (D6) only composed a string, and nothing ever wrote it,
+// so a row's full: clause pointed at a file that never existed — worst
+// exactly when emitRows drops excerpts (payloadByteCap), leaving the
+// dangling path as the row's only pointer to the findings. renderSummary and
+// logPathFor were already unit-tested and green while this was broken —
+// proving nothing, since main_test.go is package main and each test's own
+// direct call supplied the reachability production code lacked. This
+// asserts at the level the claim is actually made: the emitted row's full:
+// path must exist and its content must be the real captured findings
+// stream, verified through assertRow (which os.Stat's it) and a direct read.
+func TestRunCheckWritesFindingsToLogFile(t *testing.T) {
+	t.Setenv("TMPDIR", t.TempDir())
+
+	c := check{
+		name:      "fake",
+		checkArgv: []string{"sh", "-c", "printf 'finding-line\\n'; exit 1"},
+		parse:     func(exit int, out []byte) (int, []string) { return 1, []string{"finding-line"} },
+	}
+	got := runCheck(c, []string{t.TempDir()})
+
+	if got.logPath == "" {
+		t.Fatal("runCheck logPath = \"\", want the check's stable full-log path (write must succeed here)")
+	}
+	content, err := os.ReadFile(got.logPath)
+	if err != nil {
+		t.Fatalf("read %s: %v (the row's full: clause names a file that must exist and be readable)", got.logPath, err)
+	}
+	if string(content) != "finding-line\n" {
+		t.Fatalf("log file content = %q, want the real captured findings stream %q", content, "finding-line\n")
+	}
+
+	var stdout bytes.Buffer
+	emitRows(&stdout, []result{got}, defaultTopN)
+	assertRow(t, 0, strings.TrimRight(stdout.String(), "\n"), "fake")
+}
+
+// TestRunCheckOmitsFullClauseWhenLogWriteFails is the omission-branch RED
+// test for the pre-decided failure policy: a failed log write must clear
+// result.logPath so renderSummary omits the full: clause while keeping the
+// row's count/excerpts intact — it must never become a runnerErr or
+// otherwise change selectOutcome, because a full /tmp must not hold
+// verification hostage. The write is forced to fail deterministically by
+// pointing TMPDIR at a directory where the expected log subdirectory name is
+// already taken by a regular file, so os.MkdirAll fails.
+func TestRunCheckOmitsFullClauseWhenLogWriteFails(t *testing.T) {
+	tmpDir := t.TempDir()
+	mustWriteFile(t, filepath.Join(tmpDir, defaultOutDirName), "blocking file, not a directory", 0o644)
+	t.Setenv("TMPDIR", tmpDir)
+
+	c := check{
+		name:      "fake",
+		checkArgv: []string{"sh", "-c", "printf 'finding-line\\n'; exit 1"},
+		parse:     func(exit int, out []byte) (int, []string) { return 1, []string{"finding-line"} },
+	}
+	got := runCheck(c, []string{t.TempDir()})
+
+	if got.logPath != "" {
+		t.Fatalf("runCheck logPath = %q, want \"\" (write must fail deterministically here)", got.logPath)
+	}
+	summary := renderSummary(got.count, got.top, defaultTopN, got.logPath)
+	if strings.Contains(summary, "full:") {
+		t.Errorf("summary %q contains a full: clause despite a failed write", summary)
+	}
+	if !strings.HasPrefix(summary, "count=1; top:") {
+		t.Errorf("summary %q lost its count/excerpts when the log write failed", summary)
 	}
 }

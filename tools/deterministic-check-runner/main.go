@@ -96,7 +96,10 @@ func runNormalize(modules []string) int {
 // finding count once by letting a Go toolchain-switch message land in the
 // parsed stream (obs #2712). c.stderrFindings picks which buffer reaches
 // c.parse — go vet writes its diagnostics to stderr, every other check to
-// stdout.
+// stdout. The same findings stream is also written to the check's stable
+// full-log path (D6) via writeLog; a failed write clears the returned
+// result's logPath rather than failing the check itself (a full /tmp must
+// never hold verification hostage).
 func runCheck(c check, modules []string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
@@ -129,7 +132,26 @@ func runCheck(c check, modules []string) result {
 	if c.stderrFindings {
 		findings = stderr.Bytes()
 	}
-	return buildResult(c, exitCode, findings)
+	r := buildResult(c, exitCode, findings)
+	if !writeLog(r.logPath, findings) {
+		r.logPath = ""
+	}
+	return r
+}
+
+// writeLog writes findings to path, creating its parent directory first, and
+// overwrites any existing file (D6: the default out-dir path is stable and
+// "overwritten"). It reports whether the write succeeded. The row that names
+// this path is the evidence capture-evidence receives (skills/sdd-verify/
+// SKILL.md:70), so a failed write must not be silently ignored — but it also
+// must never become a verification failure or a procedural error (runCheck
+// clears result.logPath on false, so renderSummary omits the full: clause
+// instead of pointing at a file that does not exist).
+func writeLog(path string, findings []byte) bool {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false
+	}
+	return os.WriteFile(path, findings, 0o644) == nil
 }
 
 // unavailableExitCode is the POSIX "command not found" convention: it is
@@ -488,12 +510,14 @@ func capExcerpt(s string) string {
 
 // renderSummary renders D6's bounded summary "count=N; top: e1; …; full:
 // <path>". Zero findings render the literal digit "0" — never a status
-// word (R-008): upstream rejects narrated evidence by regex. The trailing
-// guardAgainstBannedSummary call wires isBannedSummaryLiteral into the
-// render path (3I.0): renderSummary is the sole place a row's summary text
-// is constructed, so this is the one call site that catches a future edit
-// letting a bare banned literal through construction before it reaches
-// capture-evidence.
+// word (R-008): upstream rejects narrated evidence by regex. An empty
+// logPath (writeLog failed) omits the "; full: <path>" clause entirely
+// rather than naming a file that was never written; the count and excerpts
+// still render. The trailing guardAgainstBannedSummary call wires
+// isBannedSummaryLiteral into the render path (3I.0): renderSummary is the
+// sole place a row's summary text is constructed, so this is the one call
+// site that catches a future edit letting a bare banned literal through
+// construction before it reaches capture-evidence.
 func renderSummary(count int, top []string, topN int, logPath string) string {
 	if count == 0 {
 		return "0"
@@ -509,7 +533,10 @@ func renderSummary(count int, top []string, topN int, logPath string) string {
 	for i, e := range shown {
 		excerpts[i] = capExcerpt(e)
 	}
-	summary := fmt.Sprintf("count=%d; top: %s; full: %s", count, strings.Join(excerpts, "; "), logPath)
+	summary := fmt.Sprintf("count=%d; top: %s", count, strings.Join(excerpts, "; "))
+	if logPath != "" {
+		summary += fmt.Sprintf("; full: %s", logPath)
+	}
 	guardAgainstBannedSummary(summary)
 	return summary
 }
