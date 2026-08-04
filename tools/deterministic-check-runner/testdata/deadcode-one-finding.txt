@@ -1,0 +1,1 @@
+gadu/gadu.go:179:6: unreachable func: PersonaBody

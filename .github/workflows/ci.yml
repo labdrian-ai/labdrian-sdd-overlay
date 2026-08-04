@@ -111,6 +111,23 @@ jobs:
           fi
           test "$status" -eq 5
 
+  test-deterministic-check-runner:
+    name: Deterministic Check Runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/deterministic-check-runner/go.mod
+
+      - name: Test
+        working-directory: tools/deterministic-check-runner
+        run: go test ./... -cover
+
   test-tui:
     name: TUI Tests
     runs-on: ubuntu-latest
