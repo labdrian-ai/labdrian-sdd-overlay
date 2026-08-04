@@ -301,9 +301,9 @@ The audit confirms this is **one** wiring gap, not four: `unavailableIf` was alr
 
 **Third occurrence of one pattern** (after `isStaticcheckToolchainMismatch` in 3F and `isBannedSummaryLiteral` in 3H): a helper is built and unit-tested in one objective while the objective that would consume it wires around it. Unit tests over a helper prove the helper, never the wiring — which is why the assertion below must be at the outcome level.
 
-- [ ] 5B2.1 RED: assert at the **outcome level** that a dirty `gofmt` tree produces exit 1, not exit 0. A predicate-level test does not catch this and must not be substituted.
-- [ ] 5B2.2 GREEN: make `selectOutcome` consult `r.check.failed(r.exitCode, r.count)`. Keep `classify()` as the sole effective-blocking enforcement point and leave the unavailable and runner-error precedence unchanged.
-- [ ] 5B2.3 Confirm no regression in the other three checks' outcomes, and rerun the full suite.
+- [x] 5B2.1 RED: assert at the **outcome level** that a dirty `gofmt` tree produces exit 1, not exit 0. A predicate-level test does not catch this and must not be substituted.
+- [x] 5B2.2 GREEN: make `selectOutcome` consult `r.check.failed(r.exitCode, r.count)`. Keep `classify()` as the sole effective-blocking enforcement point and leave the unavailable and runner-error precedence unchanged.
+- [x] 5B2.3 Confirm no regression in the other three checks' outcomes, and rerun the full suite.
 
 - [ ] 5.5 RED: record failing smoke assertion — missing-tool and missing-`go` guards do not yet exit 3 with explicit stderr.
 - [ ] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
