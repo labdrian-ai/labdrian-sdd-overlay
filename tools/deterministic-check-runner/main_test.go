@@ -527,6 +527,62 @@ func TestRunFailsClosedWhenNoModulesDiscovered(t *testing.T) {
 	}
 }
 
+// TestRunNormalizeReportsFixerFailure is correction C2's RED test: a fixer
+// that ran but could not converge must never look like a clean normalize
+// run. Before the fix, runNormalize's ExitError branch was a silent no-op
+// (cmd.Stdout/cmd.Stderr were never set, so the fixer's own diagnostic was
+// discarded) and the loop always fell through to an unconditional
+// outcomePassed — so a module gofmt -w could not parse (gofmt writes a
+// parse error to stderr and exits non-zero, rewriting nothing) was
+// silently swallowed. Asserted through run() itself (the real dispatch
+// path), not runNormalize's own package-level reachability, per obs
+// #2735: the wiring is what must be proven, not just the helper.
+func TestRunNormalizeReportsFixerFailure(t *testing.T) {
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/normalizefailure\n\ngo 1.21\n", 0o644)
+	// Missing closing paren: gofmt cannot parse this file at all, so
+	// gofmt -w exits non-zero and rewrites nothing (the concrete trigger
+	// named in the correction: "one file gofmt cannot parse").
+	mustWriteFile(t, filepath.Join(fixture, "broken.go"), "package main\n\nfunc broken( {\n", 0o644)
+	chdir(t, fixture)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"normalize"}, &stdout, &stderr)
+
+	if got == outcomePassed {
+		t.Fatalf(`run(["normalize"]) against an unparseable module = outcomePassed, want a non-passed outcome (fixer did not converge)`)
+	}
+	if !strings.Contains(stderr.String(), "gofmt") || !strings.Contains(stderr.String(), fixture) {
+		t.Fatalf("run([\"normalize\"]) stderr = %q, want a diagnostic naming the fixer (gofmt) and the failing module (%s)", stderr.String(), fixture)
+	}
+}
+
+// TestRunNormalizeHappyPath confirms normalize still converges a cleanly
+// formattable module: outcomePassed, and gofmt -w actually reformats the
+// file. Guards against C2's fix regressing the one thing normalize exists
+// to do while it starts capturing and reporting the fixer's output.
+func TestRunNormalizeHappyPath(t *testing.T) {
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/normalizeclean\n\ngo 1.21\n", 0o644)
+	const unformatted = "package main\n\nfunc main( ) {\n\tprintln(  \"hi\"  )\n}\n"
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), unformatted, 0o644)
+	chdir(t, fixture)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"normalize"}, &stdout, &stderr)
+
+	if got != outcomePassed {
+		t.Fatalf("run([\"normalize\"]) against a formattable module = exit %d, want %d (outcomePassed); stderr=%q", got, outcomePassed, stderr.String())
+	}
+	after, err := os.ReadFile(filepath.Join(fixture, "main.go"))
+	if err != nil {
+		t.Fatalf("read reformatted file: %v", err)
+	}
+	if string(after) == unformatted {
+		t.Fatalf("run([\"normalize\"]) left main.go byte-identical to its unformatted input, want gofmt -w to have converged it")
+	}
+}
+
 // TestSubcommandUsage is 4.1's RED test (R-009): no subcommand exits
 // non-zero and usage names both normalize and check.
 func TestSubcommandUsage(t *testing.T) {

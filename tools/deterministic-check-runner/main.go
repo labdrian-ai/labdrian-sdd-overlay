@@ -45,7 +45,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "check":
 		return runCheckMode(modules, args[1:], root, stdout, stderr)
 	case "normalize":
-		return runNormalize(modules)
+		return runNormalize(modules, stdout, stderr)
 	default:
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
@@ -83,8 +83,36 @@ func runCheckMode(modules []string, args []string, root string, stdout, stderr i
 }
 
 // runNormalize runs each check's normalizeArgv fixer (nil = no fixer)
-// across every module. The only mutating subcommand; pre-freeze only (R-011).
-func runNormalize(modules []string) int {
+// across every module. The only mutating subcommand; pre-freeze only
+// (R-011). Every module/fixer pair is attempted regardless of an earlier
+// pair's outcome (correction B1's no-early-return rule, extended here):
+// stopping early would leave later modules unformatted for no benefit,
+// since normalize itself gates nothing — check, run afterward, is what
+// decides pass/fail. Each fixer's own stdout/stderr is captured (runCheck's
+// shape) and, on failure, surfaced on stderr behind a diagnostic naming the
+// failing fixer and module (correction C2): before this fix runNormalize
+// discarded the fixer's own text entirely, and its ExitError branch was a
+// silent no-op that fell through to an unconditional outcomePassed — so a
+// module gofmt -w could not parse (gofmt writes a parse error to stderr and
+// exits non-zero, rewriting nothing) was indistinguishable from one that
+// converged. normalize runs strictly pre-freeze
+// (skills/sdd-verify/SKILL.md:69), so a silent failure here is strictly
+// worse than a loud one: the cost lands on post-freeze check instead, where
+// it can no longer be fixed without burning the single correction attempt
+// (the obs #2668 dead end this change exists to avoid). A fixer that could
+// not run at all and one that ran but exited non-zero are both reported
+// this way and both fail the run: neither leaves the fixer's job actually
+// done, and normalize has no separate "verification failed" concept to
+// route a mere non-zero exit to instead.
+//
+// Zero discovered modules is deliberately NOT given C1's runCheckMode
+// treatment here: an operator who runs normalize against the wrong cwd
+// still runs check next per the documented ordering
+// (skills/sdd-verify/SKILL.md:69), and check's own C1 guard already fails
+// that run closed before freeze — duplicating the guard here would not
+// close any additional gap, only add surface.
+func runNormalize(modules []string, stdout, stderr io.Writer) int {
+	failed := false
 	for _, c := range registry {
 		if c.normalizeArgv == nil {
 			continue
@@ -92,13 +120,23 @@ func runNormalize(modules []string) int {
 		for _, module := range modules {
 			cmd := exec.Command(c.normalizeArgv[0], c.normalizeArgv[1:]...)
 			cmd.Dir = module
+			var out, errOut bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &errOut
 			if err := cmd.Run(); err != nil {
-				var exitErr *exec.ExitError
-				if !errors.As(err, &exitErr) {
-					return outcomeProceduralToolingFailed
+				failed = true
+				fmt.Fprintf(stderr, "normalize: %s failed in module %q: %v\n", c.name, module, err)
+				if out.Len() > 0 {
+					stdout.Write(out.Bytes())
+				}
+				if errOut.Len() > 0 {
+					stderr.Write(errOut.Bytes())
 				}
 			}
 		}
+	}
+	if failed {
+		return outcomeProceduralToolingFailed
 	}
 	return outcomePassed
 }
