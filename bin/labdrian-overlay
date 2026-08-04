@@ -161,7 +161,7 @@ Commands:
                                    exit codes 2-6 and does not modify installed skill roots.
   deterministic-checks             Run the hardcoded v1 check set (gofmt, go vet, staticcheck,
     <normalize|check> [--top-n N]  deadcode) via the overlay-owned runner. 'check' never mutates;
-                                   'normalize' applies fixers. Exit 0=passed, 1=verification_failed,
+    [--out-dir DIR]                'normalize' applies fixers. Exit 0=passed, 1=verification_failed,
                                    3=procedural_tooling_failed; propagated unchanged from the runner.
   gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
                                    (agents/GADU.md, opencode/agents/GADU.md,
@@ -1648,6 +1648,9 @@ cmd_deterministic_checks() {
 
   local status=0
   (cd "$CALLER_CWD" && "$runner_binary" "$@") || status=$?
+  if [[ "$status" -ne 0 && ! -d "$CALLER_CWD" ]]; then
+    status=3
+  fi
   rm -f "$runner_binary"
   return "$status"
 }

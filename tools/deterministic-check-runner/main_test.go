@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 )
 
@@ -276,9 +277,16 @@ func TestSelectOutcomePrecedence(t *testing.T) {
 	}
 }
 
+// fullLogPathPattern extracts the "full: <path>" clause's path from a
+// rendered row summary, when present.
+var fullLogPathPattern = regexp.MustCompile(`full: (\S+)$`)
+
 // assertRow validates one row against the "tool | exit_code | summary"
 // shape, the expected tool name, and the banned-literal guard; it returns
-// the exit_code field for caller-specific checks.
+// the exit_code field for caller-specific checks. When the summary carries a
+// "full: <path>" clause, it also os.Stat's that path: the row's claim is
+// only true evidence (skills/sdd-verify/SKILL.md:70) if the named file
+// genuinely exists, so a row must never advertise a path nothing wrote.
 func assertRow(t *testing.T, i int, line, wantTool string) string {
 	t.Helper()
 	m := rowPattern.FindStringSubmatch(line)
@@ -293,6 +301,11 @@ func assertRow(t *testing.T, i int, line, wantTool string) string {
 			t.Errorf("row %d summary %q is a banned literal", i, m[3])
 		}
 	}
+	if lp := fullLogPathPattern.FindStringSubmatch(m[3]); lp != nil {
+		if _, err := os.Stat(lp[1]); err != nil {
+			t.Errorf("row %d names full log path %q, but it does not exist/is not readable: %v", i, lp[1], err)
+		}
+	}
 	return m[2]
 }
 
@@ -300,9 +313,11 @@ func assertRow(t *testing.T, i int, line, wantTool string) string {
 // summaries come from the real 3E renderer, not the retired Phase-2
 // "exit=%d" placeholder.
 func TestRowEmission(t *testing.T) {
+	logPath := filepath.Join(t.TempDir(), "go-vet.log")
+	mustWriteFile(t, logPath, "a\nb\n", 0o644)
 	results := []result{
 		{check: check{name: "gofmt"}, exitCode: 0},
-		{check: check{name: "go vet"}, exitCode: 1, count: 2, top: []string{"a", "b"}, logPath: "/tmp/go-vet.log"},
+		{check: check{name: "go vet"}, exitCode: 1, count: 2, top: []string{"a", "b"}, logPath: logPath},
 		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true},
 		{check: check{name: "deadcode"}, exitCode: 0},
 	}
@@ -319,7 +334,7 @@ func TestRowEmission(t *testing.T) {
 			t.Errorf("line %d exit_code = %q, want %q", i, gotExit, wantExit)
 		}
 	}
-	wantSummary := renderSummary(2, []string{"a", "b"}, defaultTopN, "/tmp/go-vet.log")
+	wantSummary := renderSummary(2, []string{"a", "b"}, defaultTopN, logPath)
 	if got := rowPattern.FindStringSubmatch(lines[1])[3]; got != wantSummary {
 		t.Errorf("row 1 summary = %q, want real renderer output %q (not the exit=%%d placeholder)", got, wantSummary)
 	}
@@ -379,7 +394,8 @@ func TestRunCheckSeparatesStreamsAndPopulatesSummary(t *testing.T) {
 			return len(strings.Split(trimmed, "\n")), strings.Split(trimmed, "\n")
 		},
 	}
-	got := runCheck(c, []string{t.TempDir()})
+	outDir := t.TempDir()
+	got := runCheck(c, []string{t.TempDir()}, outDir)
 
 	if got.count != 1 {
 		t.Fatalf("runCheck count = %d, want 1 (stderr must not be merged into parsed stdout)", got.count)
@@ -387,7 +403,7 @@ func TestRunCheckSeparatesStreamsAndPopulatesSummary(t *testing.T) {
 	if len(got.top) != 1 || got.top[0] != "stdout-line" {
 		t.Fatalf("runCheck top = %v, want [\"stdout-line\"]", got.top)
 	}
-	if want := logPathFor("fake"); got.logPath != want {
+	if want := logPathFor("fake", outDir); got.logPath != want {
 		t.Errorf("runCheck logPath = %q, want %q", got.logPath, want)
 	}
 }
@@ -474,6 +490,100 @@ func TestRunEndToEnd(t *testing.T) {
 	}
 }
 
+// TestRunFailsClosedWhenNoModulesDiscovered is correction C1's RED test: an
+// empty module set must never look like a clean run. Before the fix, run()
+// entered runCheckMode with zero modules, every check's per-module loop ran
+// zero times, exitCode/count stayed 0, and the emitted block was
+// byte-identical to four checks that genuinely executed and found nothing —
+// procedural_tooling_failed silently collapsed into outcomePassed. Asserted
+// through run() itself (the real dispatch path), not discoverModules, so the
+// guard's wiring is what is proven, not just discoverModules' return value
+// (obs #2735's lesson: a helper-level test proves nothing here).
+func TestRunFailsClosedWhenNoModulesDiscovered(t *testing.T) {
+	emptyRoot := t.TempDir()
+	previousWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	if err := os.Chdir(emptyRoot); err != nil {
+		t.Fatalf("chdir into %s: %v", emptyRoot, err)
+	}
+	defer func() {
+		if err := os.Chdir(previousWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	}()
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check"}, &stdout, &stderr)
+
+	if got != outcomeProceduralToolingFailed {
+		t.Fatalf(`run(["check"]) under a root with no go.mod = exit %d, want %d (outcomeProceduralToolingFailed)`, got, outcomeProceduralToolingFailed)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("run() emitted a row block for zero discovered modules, want no rows at all: %q", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "no Go modules discovered") {
+		t.Fatalf("run() stderr = %q, want a diagnostic naming the zero-module condition", stderr.String())
+	}
+}
+
+// TestRunNormalizeReportsFixerFailure is correction C2's RED test: a fixer
+// that ran but could not converge must never look like a clean normalize
+// run. Before the fix, runNormalize's ExitError branch was a silent no-op
+// (cmd.Stdout/cmd.Stderr were never set, so the fixer's own diagnostic was
+// discarded) and the loop always fell through to an unconditional
+// outcomePassed — so a module gofmt -w could not parse (gofmt writes a
+// parse error to stderr and exits non-zero, rewriting nothing) was
+// silently swallowed. Asserted through run() itself (the real dispatch
+// path), not runNormalize's own package-level reachability, per obs
+// #2735: the wiring is what must be proven, not just the helper.
+func TestRunNormalizeReportsFixerFailure(t *testing.T) {
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/normalizefailure\n\ngo 1.21\n", 0o644)
+	// Missing closing paren: gofmt cannot parse this file at all, so
+	// gofmt -w exits non-zero and rewrites nothing (the concrete trigger
+	// named in the correction: "one file gofmt cannot parse").
+	mustWriteFile(t, filepath.Join(fixture, "broken.go"), "package main\n\nfunc broken( {\n", 0o644)
+	chdir(t, fixture)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"normalize"}, &stdout, &stderr)
+
+	if got == outcomePassed {
+		t.Fatalf(`run(["normalize"]) against an unparseable module = outcomePassed, want a non-passed outcome (fixer did not converge)`)
+	}
+	if !strings.Contains(stderr.String(), "gofmt") || !strings.Contains(stderr.String(), fixture) {
+		t.Fatalf("run([\"normalize\"]) stderr = %q, want a diagnostic naming the fixer (gofmt) and the failing module (%s)", stderr.String(), fixture)
+	}
+}
+
+// TestRunNormalizeHappyPath confirms normalize still converges a cleanly
+// formattable module: outcomePassed, and gofmt -w actually reformats the
+// file. Guards against C2's fix regressing the one thing normalize exists
+// to do while it starts capturing and reporting the fixer's output.
+func TestRunNormalizeHappyPath(t *testing.T) {
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/normalizeclean\n\ngo 1.21\n", 0o644)
+	const unformatted = "package main\n\nfunc main( ) {\n\tprintln(  \"hi\"  )\n}\n"
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), unformatted, 0o644)
+	chdir(t, fixture)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"normalize"}, &stdout, &stderr)
+
+	if got != outcomePassed {
+		t.Fatalf("run([\"normalize\"]) against a formattable module = exit %d, want %d (outcomePassed); stderr=%q", got, outcomePassed, stderr.String())
+	}
+	after, err := os.ReadFile(filepath.Join(fixture, "main.go"))
+	if err != nil {
+		t.Fatalf("read reformatted file: %v", err)
+	}
+	if string(after) == unformatted {
+		t.Fatalf("run([\"normalize\"]) left main.go byte-identical to its unformatted input, want gofmt -w to have converged it")
+	}
+}
+
 // TestSubcommandUsage is 4.1's RED test (R-009): no subcommand exits
 // non-zero and usage names both normalize and check.
 func TestSubcommandUsage(t *testing.T) {
@@ -535,28 +645,90 @@ func TestSummaryRendering(t *testing.T) {
 
 // TestLogPathForStable covers D6's stable (never timestamped) out-dir path.
 func TestLogPathForStable(t *testing.T) {
-	if a, b := logPathFor("go vet"), logPathFor("go vet"); a != b || strings.Contains(a, " ") {
+	outDir := t.TempDir()
+	if a, b := logPathFor("go vet", outDir), logPathFor("go vet", outDir); a != b || strings.Contains(a, " ") {
 		t.Errorf("logPathFor(go vet) = %q / %q, want stable and space-free", a, b)
 	}
 }
 
-// TestParseTopN covers the --top-n flag: default, explicit, malformed (R-007).
-func TestParseTopN(t *testing.T) {
+// TestParseCheckArgs covers the shared FlagSet's per-flag shapes (R-007),
+// including the combination that exposed D2: --out-dir alongside --top-n
+// from the same parse, proving the two flags can no longer diverge.
+func TestParseCheckArgs(t *testing.T) {
 	tests := []struct {
-		name string
-		args []string
-		want int
+		name       string
+		args       []string
+		wantTopN   int
+		wantOutDir string
+		wantErr    bool
 	}{
-		{"no flag uses the default", nil, defaultTopN},
-		{"explicit value", []string{"--top-n", "3"}, 3},
-		{"malformed value falls back to the default", []string{"--top-n", "not-a-number"}, defaultTopN},
+		{"no flag uses the default", nil, defaultTopN, "", false},
+		{"explicit top-n", []string{"--top-n", "3"}, 3, "", false},
+		{"malformed top-n value fails loud", []string{"--top-n", "not-a-number"}, 0, "", true},
+		{"out-dir combined with top-n", []string{"--out-dir", "/var/tmp/logs", "--top-n", "20"}, 20, "/var/tmp/logs", false},
+		{"unrecognized flag fails loud", []string{"--top-n", "20", "--bogus-flag", "x"}, 0, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseTopN(tt.args); got != tt.want {
-				t.Errorf("parseTopN(%v) = %d, want %d", tt.args, got, tt.want)
+			topN, outDir, err := parseCheckArgs(tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("parseCheckArgs(%v) error = %v, wantErr %v", tt.args, err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if topN != tt.wantTopN || outDir != tt.wantOutDir {
+				t.Errorf("parseCheckArgs(%v) = (%d, %q), want (%d, %q)", tt.args, topN, outDir, tt.wantTopN, tt.wantOutDir)
 			}
 		})
+	}
+}
+
+// TestCheckHonorsTopNWithOutDir is D2's production-path proof: it drives
+// run() (not parseCheckArgs in isolation) with --out-dir and --top-n
+// together. misformatted > defaultTopN so a still-broken cap at 5 is
+// observably distinct from the requested 20 honored in full.
+func TestCheckHonorsTopNWithOutDir(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/topnfixture\n\ngo 1.21\n", 0o644)
+	const misformatted = 7
+	for i := 0; i < misformatted; i++ {
+		mustWriteFile(t, filepath.Join(fixture, fmt.Sprintf("f%d.go", i)), fmt.Sprintf("package main\nfunc F%d(){\nreturn\n}\n", i), 0o644)
+	}
+	chdir(t, fixture)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check", "--out-dir", t.TempDir(), "--top-n", "20"}, &stdout, &stderr)
+	if got != outcomeVerificationFailed {
+		t.Fatalf("run(check --out-dir ... --top-n 20) = %d, want outcomeVerificationFailed (%d); stderr=%s", got, outcomeVerificationFailed, stderr.String())
+	}
+
+	lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
+	assertRow(t, 0, lines[0], "gofmt")
+	gofmtSummary := rowPattern.FindStringSubmatch(lines[0])[3]
+	topClause := regexp.MustCompile(`top: (.+); full:`).FindStringSubmatch(gofmtSummary)
+	if topClause == nil {
+		t.Fatalf("gofmt summary %q missing top/full clause", gofmtSummary)
+	}
+	if got := len(strings.Split(topClause[1], "; ")); got != misformatted {
+		t.Errorf("gofmt summary shows %d excerpts, want all %d (--top-n 20 > %d, so nothing should be capped at defaultTopN): %q", got, misformatted, misformatted, gofmtSummary)
+	}
+}
+
+// TestCheckUnknownFlagFailsLoud is D2's decision: an unrecognized flag now
+// fails loud via outcomeUsage instead of silently degrading to defaultTopN.
+func TestCheckUnknownFlagFailsLoud(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check", "--top-n", "20", "--bogus-flag", "x"}, &stdout, &stderr)
+	if got != outcomeUsage {
+		t.Fatalf("run(check --top-n 20 --bogus-flag x) = %d, want outcomeUsage (%d)", got, outcomeUsage)
+	}
+	if !strings.Contains(stderr.String(), "bogus-flag") {
+		t.Errorf("stderr %q does not name the unrecognized flag", stderr.String())
 	}
 }
 
@@ -564,7 +736,7 @@ func TestParseTopN(t *testing.T) {
 // finding's own text is a banned word: renderSummary must never collapse
 // into a bare literal. Checking only the zero case would miss that.
 func TestBannedLiterals(t *testing.T) {
-	logPath := logPathFor("gofmt")
+	logPath := logPathFor("gofmt", t.TempDir())
 	if s := renderSummary(0, nil, defaultTopN, logPath); s != "0" || isBannedSummaryLiteral(s) {
 		t.Errorf("renderSummary(0, ...) = %q, want literal 0, not a banned literal", s)
 	}
@@ -647,8 +819,9 @@ func TestPayloadBoundaryContract(t *testing.T) {
 			t.Fatal("registry is empty: a real run would emit zero bytes, violating capture-evidence's minLength 1 (R-013)")
 		}
 		results := make([]result, len(registry))
+		outDir := t.TempDir()
 		for i, c := range registry {
-			results[i] = buildResult(c, 0, nil) // clean run: every check exits 0, finds nothing
+			results[i] = buildResult(c, 0, nil, outDir) // clean run: every check exits 0, finds nothing
 		}
 		var buf bytes.Buffer
 		emitRows(&buf, results, defaultTopN)
@@ -837,8 +1010,9 @@ func TestParseStaticcheckToolchainMismatch(t *testing.T) {
 func TestBuildResultStaticcheckToolchainMismatchRoutesToProceduralToolingFailed(t *testing.T) {
 	staticcheck := findRegistryCheck(t, "staticcheck")
 	out := readTestdata(t, "staticcheck-toolchain-mismatch.txt")
+	outDir := t.TempDir()
 
-	r := buildResult(staticcheck, 1, out)
+	r := buildResult(staticcheck, 1, out, outDir)
 	if !r.unavailable {
 		t.Fatal("buildResult(staticcheck, 1, mismatch fixture).unavailable = false, want true")
 	}
@@ -851,7 +1025,7 @@ func TestBuildResultStaticcheckToolchainMismatchRoutesToProceduralToolingFailed(
 		t.Errorf("selectOutcome([]result{mismatch}) = %d, want %d (outcomeProceduralToolingFailed) — a mismatch must never route to outcomeVerificationFailed (%d)", got, outcomeProceduralToolingFailed, outcomeVerificationFailed)
 	}
 
-	clean := buildResult(staticcheck, 0, readTestdata(t, "staticcheck-clean.txt"))
+	clean := buildResult(staticcheck, 0, readTestdata(t, "staticcheck-clean.txt"), outDir)
 	if clean.unavailable {
 		t.Error("buildResult(staticcheck, 0, clean fixture).unavailable = true, want false")
 	}
@@ -913,8 +1087,8 @@ func goldenRowBlockResults() []result {
 			"main.go:58:9: nil pointer dereference",
 			"main.go:71:3: unreachable code",
 			"main.go:88:14: composite literal uses unkeyed fields",
-		}, logPath: logPathFor("go vet")},
-		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true, logPath: logPathFor("staticcheck")},
+		}, logPath: logPathFor("go vet", os.TempDir())},
+		{check: check{name: "staticcheck"}, exitCode: 127, unavailable: true, logPath: logPathFor("staticcheck", os.TempDir())},
 		{check: check{name: "deadcode"}, exitCode: 0, count: 0},
 	}
 }
@@ -953,6 +1127,49 @@ func TestGoldenRowBlock(t *testing.T) {
 	}
 }
 
+// TestUnavailableRowDiffersFromCleanRow is D3's RED test for the
+// readability-lens defect: a check that ran and found nothing (gofmt,
+// deadcode in goldenRowBlockResults) and a check that could not run at all
+// (staticcheck, unavailable via LookPath/toolchain-mismatch/deadline) both
+// rendered the bare literal "0" — the row bytes a human or capture-evidence
+// reads carried no trace of result.unavailable, even though it is what
+// drives selectOutcome's procedural_tooling_failed routing (D4/R-016).
+// Driven through emitRows (not renderSummary/renderRowSummary in
+// isolation), reusing goldenRowBlockResults so this proves the real
+// evidence bytes, not a helper return value, carry the distinction. A
+// revert of the rendering fix must fail this test, not just move the
+// golden fixture.
+func TestUnavailableRowDiffersFromCleanRow(t *testing.T) {
+	var buf bytes.Buffer
+	emitRows(&buf, goldenRowBlockResults(), defaultTopN)
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+
+	assertRow(t, 0, lines[0], "gofmt")
+	assertRow(t, 2, lines[2], "staticcheck")
+	assertRow(t, 3, lines[3], "deadcode")
+	gofmtText := rowPattern.FindStringSubmatch(lines[0])[3]
+	staticcheckText := rowPattern.FindStringSubmatch(lines[2])[3]
+	deadcodeText := rowPattern.FindStringSubmatch(lines[3])[3]
+
+	if gofmtText != "0" {
+		t.Fatalf("gofmt (ran, 0 findings) summary = %q, want literal %q (R-008)", gofmtText, "0")
+	}
+	if deadcodeText != "0" {
+		t.Fatalf("deadcode (ran, 0 findings) summary = %q, want literal %q (R-008)", deadcodeText, "0")
+	}
+	if staticcheckText == "0" {
+		t.Errorf("staticcheck (unavailable, could not run) summary = %q, indistinguishable from a clean 0-finding check", staticcheckText)
+	}
+	if staticcheckText == gofmtText {
+		t.Errorf("staticcheck (unavailable) summary %q must not equal gofmt (ran clean) summary %q", staticcheckText, gofmtText)
+	}
+	for _, word := range bannedLiterals {
+		if strings.EqualFold(strings.TrimSpace(staticcheckText), word) {
+			t.Errorf("staticcheck unavailable summary %q is itself a banned literal %q", staticcheckText, word)
+		}
+	}
+}
+
 // TestOutDirGuard is 4.7's RED test: --out-dir inside root is a usage error.
 func TestOutDirGuard(t *testing.T) {
 	root := repoRoot(t)
@@ -965,6 +1182,43 @@ func TestOutDirGuard(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "out-dir") {
 		t.Errorf("stderr %q does not mention out-dir", stderr.String())
+	}
+}
+
+// TestOutDirAcceptedWritesLogsThere is correction A3's RED test for the
+// accepted branch: TestOutDirGuard only proves an inside-root --out-dir is
+// rejected, never that an outside-root value does anything. Before this fix,
+// parseOutDir's return was discarded past the guard and logPathFor
+// hardcoded os.TempDir(), so an accepted --out-dir was silently inert. This
+// does not assert on any internal signature — it drives the real run()
+// entry point and checks the observable filesystem effect: a log lands
+// under the requested directory, and the default os.TempDir() log is left
+// exactly as it was before this call.
+func TestOutDirAcceptedWritesLogsThere(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/outdirfixture\n\ngo 1.21\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nfunc main() {}\n", 0o644)
+	chdir(t, fixture)
+
+	defaultLogPath := filepath.Join(os.TempDir(), defaultOutDirName, "gofmt.log")
+	beforeContent, _ := os.ReadFile(defaultLogPath)
+
+	outDir := t.TempDir()
+	var stdout, stderr bytes.Buffer
+	run([]string{"check", "--out-dir", outDir}, &stdout, &stderr)
+
+	wantLogPath := filepath.Join(outDir, defaultOutDirName, "gofmt.log")
+	if _, err := os.Stat(wantLogPath); err != nil {
+		t.Fatalf("stat %s: %v (want the log written under the requested --out-dir)", wantLogPath, err)
+	}
+
+	afterContent, _ := os.ReadFile(defaultLogPath)
+	if !bytes.Equal(beforeContent, afterContent) {
+		t.Errorf("default os.TempDir() log %s changed during a --out-dir run; want writes confined to the requested --out-dir", defaultLogPath)
 	}
 }
 
@@ -1097,7 +1351,7 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 		t.Setenv("PATH", t.TempDir()) // no gofmt anywhere on PATH
 		gofmt := findRegistryCheck(t, "gofmt")
 
-		got := runCheck(gofmt, []string{t.TempDir()})
+		got := runCheck(gofmt, []string{t.TempDir()}, t.TempDir())
 		if !got.unavailable {
 			t.Fatalf("runCheck(gofmt, stubbed PATH).unavailable = false, want true")
 		}
@@ -1112,7 +1366,7 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 		t.Setenv("PATH", stubDir)
 		deadcode := findRegistryCheck(t, "deadcode")
 
-		got := runCheck(deadcode, []string{t.TempDir()})
+		got := runCheck(deadcode, []string{t.TempDir()}, t.TempDir())
 		if !got.unavailable {
 			t.Fatalf("runCheck(deadcode, exit-127 stub).unavailable = false, want true (WARNING row, not silently clean)")
 		}
@@ -1126,4 +1380,288 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 			t.Errorf("selectOutcome(deadcode unavailable, rest green) = %d, want %d (outcomePassed) — an absent WARNING-only tool must not invalidate the run", outcome, outcomePassed)
 		}
 	})
+}
+
+// TestRunCheckEnforcesTimeout is correction D1's RED test: no subprocess had
+// a deadline, so a stalled tool (e.g. a cold-cache "go run <module>@version"
+// against a stalled proxy) could hang check indefinitely with zero partial
+// evidence, since emitRows only writes after every check completes. This
+// drives the assertion through runCheck itself (the real production entry
+// point every registry check goes through), not a disconnected helper, per
+// this change's own recurring "implemented, unit-tested, never consumed"
+// lesson. toolExecTimeout and toolWaitDelay are both shrunk to 20ms for the
+// duration of this test so the suite never waits out a real deadline; the
+// fake tool sleeps 5s, far longer than either shrunk value, so the assertion
+// only passes if the deadline actually kills the process. WaitDelay must be
+// shrunk too: "sh -c sleep 5" runs sleep as a grandchild that inherits the
+// stdout/stderr pipes, so killing sh alone leaves those pipes open and Wait
+// blocked until the orphaned sleep exits on its own — proven while writing
+// this test, where killing sh without a shrunk WaitDelay still took the
+// full 5s wall time despite ctx firing at 20ms. Genuine RED was established
+// by running this test against the pre-fix runCheck (plain exec.Command, no
+// context): it hung for the full 5s sleep and then failed both assertions
+// (unavailable stayed false, outcome stayed outcomePassed) — proving the
+// assertion is void without real enforcement, not merely a compile check.
+func TestRunCheckEnforcesTimeout(t *testing.T) {
+	originalTimeout, originalWaitDelay := toolExecTimeout, toolWaitDelay
+	toolExecTimeout = 20 * time.Millisecond
+	toolWaitDelay = 20 * time.Millisecond
+	t.Cleanup(func() {
+		toolExecTimeout = originalTimeout
+		toolWaitDelay = originalWaitDelay
+	})
+
+	c := check{
+		name:          "fake-slow",
+		deterministic: true,
+		blocking:      true,
+		checkArgv:     []string{"sh", "-c", "sleep 5"},
+		parse:         func(exit int, out []byte) (int, []string) { return 0, nil },
+		failed:        func(exit, count int) bool { return false },
+	}
+	got := runCheck(c, []string{t.TempDir()}, t.TempDir())
+
+	if !got.unavailable {
+		t.Fatalf("runCheck(sleep 5, %s deadline).unavailable = false, want true — a process killed by the deadline never analyzed the code, same class as exit 127", toolExecTimeout)
+	}
+	if outcome := selectOutcome([]result{got}); outcome != outcomeProceduralToolingFailed {
+		t.Errorf("selectOutcome([]result{timed-out check}) = %d, want %d (procedural_tooling_failed) — a timeout must never read as verification_failed or passed", outcome, outcomeProceduralToolingFailed)
+	}
+}
+
+// TestRunCheckGoVetFindingsReachRow is the row-level RED test for the
+// stderr-drop defect: go vet writes its diagnostics to stderr, and runCheck
+// used to pass only stdout to buildResult, so a real go vet failure rendered
+// as the row "go vet | 1 | 0" — the exact byte sequence capture-evidence
+// would have received. The fixture lives in t.TempDir(), never testdata/,
+// because discoverModules only skips .git and would otherwise pick up a
+// committed go.mod as a real module.
+func TestRunCheckGoVetFindingsReachRow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go toolchain not available")
+	}
+
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/vetfixture\n\ngo 1.21\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Printf(\"%d\\n\", \"not-a-number\")\n}\n", 0o644)
+
+	got := runCheck(findRegistryCheck(t, "go vet"), []string{fixture}, t.TempDir())
+
+	var stdout bytes.Buffer
+	emitRows(&stdout, []result{got}, 5)
+	row := strings.TrimRight(stdout.String(), "\n")
+	fields := strings.SplitN(row, " | ", 3)
+	if len(fields) != 3 {
+		t.Fatalf("emitted row %q does not have 3 fields", row)
+	}
+	if fields[0] != "go vet" || fields[1] != "1" {
+		t.Fatalf("emitted row = %q, want prefix \"go vet | 1 | ...\"", row)
+	}
+	if fields[2] == "0" {
+		t.Fatalf("go vet row summary = %q, want real finding evidence, not the zero-findings literal (stderr never reached the parser)", fields[2])
+	}
+	if !strings.HasPrefix(fields[2], "count=1; top:") {
+		t.Errorf("go vet row summary = %q, want prefix %q", fields[2], "count=1; top:")
+	}
+}
+
+// TestRunCheckWritesFindingsToLogFile is the RED test for the "full: <path>"
+// defect: logPathFor (D6) only composed a string, and nothing ever wrote it,
+// so a row's full: clause pointed at a file that never existed — worst
+// exactly when emitRows drops excerpts (payloadByteCap), leaving the
+// dangling path as the row's only pointer to the findings. renderSummary and
+// logPathFor were already unit-tested and green while this was broken —
+// proving nothing, since main_test.go is package main and each test's own
+// direct call supplied the reachability production code lacked. This
+// asserts at the level the claim is actually made: the emitted row's full:
+// path must exist and its content must be the real captured findings
+// stream, verified through assertRow (which os.Stat's it) and a direct read.
+func TestRunCheckWritesFindingsToLogFile(t *testing.T) {
+	outDir := t.TempDir()
+
+	c := check{
+		name:      "fake",
+		checkArgv: []string{"sh", "-c", "printf 'finding-line\\n'; exit 1"},
+		parse:     func(exit int, out []byte) (int, []string) { return 1, []string{"finding-line"} },
+	}
+	got := runCheck(c, []string{t.TempDir()}, outDir)
+
+	if got.logPath == "" {
+		t.Fatal("runCheck logPath = \"\", want the check's stable full-log path (write must succeed here)")
+	}
+	content, err := os.ReadFile(got.logPath)
+	if err != nil {
+		t.Fatalf("read %s: %v (the row's full: clause names a file that must exist and be readable)", got.logPath, err)
+	}
+	if string(content) != "finding-line\n" {
+		t.Fatalf("log file content = %q, want the real captured findings stream %q", content, "finding-line\n")
+	}
+
+	var stdout bytes.Buffer
+	emitRows(&stdout, []result{got}, defaultTopN)
+	assertRow(t, 0, strings.TrimRight(stdout.String(), "\n"), "fake")
+
+	// B2 full-coverage guard: this fixture's single module is fully usable
+	// (modulesAttempted == modulesUsable == 1), so the row must stay
+	// byte-identical to the pre-B2 shape — no "modules=" coverage note when
+	// there is nothing partial to report.
+	if strings.Contains(stdout.String(), "modules=") {
+		t.Errorf("row %q gained a modules= coverage note despite full module coverage (B2 must not add noise here)", stdout.String())
+	}
+}
+
+// TestRunCheckOmitsFullClauseWhenLogWriteFails is the omission-branch RED
+// test for the pre-decided failure policy: a failed log write must clear
+// result.logPath so renderSummary omits the full: clause while keeping the
+// row's count/excerpts intact — it must never become a runnerErr or
+// otherwise change selectOutcome, because a full /tmp must not hold
+// verification hostage. The write is forced to fail deterministically by
+// pointing outDir at a directory where the expected log subdirectory name is
+// already taken by a regular file, so os.MkdirAll fails.
+func TestRunCheckOmitsFullClauseWhenLogWriteFails(t *testing.T) {
+	outDir := t.TempDir()
+	mustWriteFile(t, filepath.Join(outDir, defaultOutDirName), "blocking file, not a directory", 0o644)
+
+	c := check{
+		name:      "fake",
+		checkArgv: []string{"sh", "-c", "printf 'finding-line\\n'; exit 1"},
+		parse:     func(exit int, out []byte) (int, []string) { return 1, []string{"finding-line"} },
+	}
+	got := runCheck(c, []string{t.TempDir()}, outDir)
+
+	if got.logPath != "" {
+		t.Fatalf("runCheck logPath = %q, want \"\" (write must fail deterministically here)", got.logPath)
+	}
+	summary := renderSummary(got.count, got.top, defaultTopN, got.logPath)
+	if strings.Contains(summary, "full:") {
+		t.Errorf("summary %q contains a full: clause despite a failed write", summary)
+	}
+	if !strings.HasPrefix(summary, "count=1; top:") {
+		t.Errorf("summary %q lost its count/excerpts when the log write failed", summary)
+	}
+}
+
+// TestRunCheckSurvivesExit127FromEarlierModule is B1's cross-module RED test
+// for the early-return symptom: runCheck used to return immediately on a 127
+// exit from ANY module, discarding every module already processed and
+// skipping every module still to come. Two real directories are passed in
+// discoverModules' sort order (a-unavailable before z-violating); the fake
+// tool exits 127 only in the first (a real, mundane way a single module can
+// be inapplicable — e.g. an unresolved "go run <module>@version" — without
+// the tool itself being globally missing) and prints a genuine, parseable
+// finding in the second. The later module's finding must survive, and the
+// check as a whole must not be marked unavailable just because one module
+// could not run it (unavailable is per module, not global).
+func TestRunCheckSurvivesExit127FromEarlierModule(t *testing.T) {
+	parent := t.TempDir()
+	unavailableModule := filepath.Join(parent, "a-unavailable")
+	violatingModule := filepath.Join(parent, "z-violating")
+	for _, dir := range []string{unavailableModule, violatingModule} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+
+	c := check{
+		name: "fake",
+		checkArgv: []string{"sh", "-c",
+			`if [ "$(basename "$PWD")" = "a-unavailable" ]; then exit 127; fi; printf 'finding-line\n'; exit 1`,
+		},
+		parse: func(exit int, out []byte) (int, []string) {
+			trimmed := strings.TrimSpace(string(out))
+			if trimmed == "" {
+				return 0, nil
+			}
+			lines := strings.Split(trimmed, "\n")
+			return len(lines), lines
+		},
+	}
+
+	got := runCheck(c, []string{unavailableModule, violatingModule}, t.TempDir())
+
+	if got.unavailable {
+		t.Fatal("runCheck([a-unavailable(127), z-violating]).unavailable = true, want false — one module's 127 must not erase a check that ran successfully elsewhere")
+	}
+	if got.count != 1 {
+		t.Fatalf("runCheck([a-unavailable(127), z-violating]).count = %d, want 1 — the later module's finding must survive an earlier module's 127 exit (no early return)", got.count)
+	}
+	if len(got.top) != 1 || got.top[0] != "finding-line" {
+		t.Fatalf("runCheck(...).top = %v, want [\"finding-line\"]", got.top)
+	}
+
+	// B2: the emitted row bytes must themselves say one of the two modules
+	// was excluded — the defect this correction fixes is that a row like
+	// "fake | 1 | count=1; ..." here is indistinguishable from a row where
+	// both modules ran cleanly. Driven through emitRows (not a helper), so
+	// this proves the wiring reaches the actual evidence bytes
+	// capture-evidence receives, not just runCheck's return value.
+	var stdout bytes.Buffer
+	emitRows(&stdout, []result{got}, defaultTopN)
+	line := strings.TrimRight(stdout.String(), "\n")
+	assertRow(t, 0, line, "fake")
+	if !strings.Contains(line, "modules=1/2") {
+		t.Errorf("row %q does not state that only 1 of 2 modules was usable — partial coverage is silently indistinguishable from full coverage", line)
+	}
+}
+
+// TestRunCheckToolchainMismatchInOneModuleDoesNotEraseFindingsInAnother is
+// B1's sharper RED test for the shared-buffer symptom: runCheck used to
+// concatenate every module's output into one buffer and call
+// c.unavailableIf/c.parse on that concatenation exactly once, so a single
+// module's toolchain-mismatch-shaped output made the ENTIRE check
+// unavailable and discarded genuine findings from every other module (via
+// parseStaticcheck's own defensive isStaticcheckToolchainMismatch check,
+// which fires against the whole concatenation). The two check-struct fields
+// under test (unavailableIf, parse) are the real staticcheck wiring; only
+// checkArgv is faked, for a hermetic, network-free reproduction of the
+// documented tui/go.mod (go 1.26.1) vs engine/go.mod (go 1.21) mismatch.
+func TestRunCheckToolchainMismatchInOneModuleDoesNotEraseFindingsInAnother(t *testing.T) {
+	fixtures := t.TempDir()
+	mismatchFile := filepath.Join(fixtures, "mismatch.out")
+	findingFile := filepath.Join(fixtures, "finding.out")
+	mustWriteFile(t, mismatchFile, "-: /path/tui/main.go:6:1: package requires newer Go version go1.26 (application built with go1.25) (compile)\nexit status 1\n", 0o644)
+	mustWriteFile(t, findingFile, "cmd/main_test.go:49:7: const passThrough is unused (U1000)\n", 0o644)
+	t.Setenv("FAKE_MISMATCH_FILE", mismatchFile)
+	t.Setenv("FAKE_FINDING_FILE", findingFile)
+
+	parent := t.TempDir()
+	mismatchModule := filepath.Join(parent, "a-mismatch")
+	findingModule := filepath.Join(parent, "z-finding")
+	for _, dir := range []string{mismatchModule, findingModule} {
+		if err := os.MkdirAll(dir, 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", dir, err)
+		}
+	}
+
+	c := check{
+		name:          "fake-staticcheck",
+		blocking:      true,
+		deterministic: true,
+		checkArgv: []string{"sh", "-c",
+			`if [ "$(basename "$PWD")" = "a-mismatch" ]; then cat "$FAKE_MISMATCH_FILE"; else cat "$FAKE_FINDING_FILE"; fi; exit 1`,
+		},
+		parse:         parseStaticcheck,
+		failed:        failedStaticcheck,
+		unavailableIf: isStaticcheckToolchainMismatch,
+	}
+
+	got := runCheck(c, []string{mismatchModule, findingModule}, t.TempDir())
+
+	if got.unavailable {
+		t.Fatal("runCheck([mismatch, finding]).unavailable = true, want false — a mismatch in one module must not erase a check that produced real findings in another")
+	}
+	if got.count != 1 {
+		t.Fatalf("runCheck([mismatch, finding]).count = %d, want 1 — the finding module's result must survive the other module's toolchain mismatch", got.count)
+	}
+	if len(got.top) != 1 || !strings.Contains(got.top[0], "U1000") {
+		t.Fatalf("runCheck(...).top = %v, want the finding module's line", got.top)
+	}
+
+	outcome := selectOutcome([]result{got})
+	if outcome != outcomeVerificationFailed {
+		t.Errorf("selectOutcome([]result{got}) = %d, want %d (outcomeVerificationFailed) — a real finding elsewhere must not be rewritten to outcomeProceduralToolingFailed (%d) by an unrelated module's mismatch", outcome, outcomeVerificationFailed, outcomeProceduralToolingFailed)
+	}
 }

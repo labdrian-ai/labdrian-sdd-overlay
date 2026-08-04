@@ -75,7 +75,12 @@ build_exit_code: 125
   |---|---|
   | `0` | `passed` |
   | `1` | `verification_failed` |
+  | `2` | `procedural_tooling_failed` |
   | `3` | `procedural_tooling_failed` |
+
+  Exit `2` is the runner's own usage error (bad subcommand or an invalid `--out-dir`): nothing was verified, so it can never be `verification_failed` and must never be treated as a pass.
+
+  Any exit code not listed above — including a forwarded shell/signal status such as `126` or `127` reaching the caller from an unusable temporary binary — is unmapped and fails closed to `--outcome procedural_tooling_failed`, never `passed`, never `verification_failed`. An unrecognized code means the runner did not complete a verification run, not that verification failed.
 
 - This mapping only relays the runner's own precedence decision, it never re-derives it: a BLOCKING-set tool being unavailable already resolves to exit `3` ahead of any failing check inside `selectOutcome`, and a missing WARNING-only tool (`deadcode`) never forces exit `3` on its own — both are proven at the runner level (Phase 2C/4/5B2 precedence tests), not re-tested here.
 

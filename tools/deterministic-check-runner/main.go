@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -21,7 +23,7 @@ func main() {
 
 // usageText names both permitted subcommands (R-009): normalize (mutating,
 // pre-freeze only) and check (read-only, sole permitted post-freeze step).
-const usageText = "usage: deterministic-check-runner <normalize|check> [--top-n N]\n"
+const usageText = "usage: deterministic-check-runner <normalize|check> [--top-n N] [--out-dir DIR]\n"
 
 // run dispatches to the normalize or check subcommand (Phase 4 mode split).
 func run(args []string, stdout, stderr io.Writer) int {
@@ -45,7 +47,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	case "check":
 		return runCheckMode(modules, args[1:], root, stdout, stderr)
 	case "normalize":
-		return runNormalize(modules)
+		return runNormalize(modules, stdout, stderr)
 	default:
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
@@ -53,78 +55,220 @@ func run(args []string, stdout, stderr io.Writer) int {
 }
 
 // runCheckMode wires the read-only check subcommand (R-009/R-010);
-// --out-dir inside root is a usage error (D5).
+// --out-dir inside root is a usage error (D5), checked against the raw flag
+// value before any resolution or write — a log written inside root would
+// mutate the candidate under review. Once past the guard, the flag value (or
+// os.TempDir() when unset) is resolved exactly once and threaded to every
+// check's log write, so the guard and the write always agree on the same
+// directory (correction A3: previously the guard read the flag but the
+// write always used os.TempDir() regardless).
 func runCheckMode(modules []string, args []string, root string, stdout, stderr io.Writer) int {
-	if outDir := parseOutDir(args); outDir != "" && pathInsideRoot(root, outDir) {
+	topN, outDir, err := parseCheckArgs(args)
+	if err != nil {
+		fmt.Fprintf(stderr, "check: %v\n", err)
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
+	if outDir != "" && pathInsideRoot(root, outDir) {
 		fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
 	}
+	if len(modules) == 0 {
+		fmt.Fprintf(stderr, "check: no Go modules discovered under %q; nothing to verify\n", root)
+		return outcomeProceduralToolingFailed
+	}
+	if outDir == "" {
+		outDir = os.TempDir()
+	}
 	results := make([]result, len(registry))
 	for i, c := range registry {
-		results[i] = runCheck(c, modules)
+		results[i] = runCheck(c, modules, outDir)
 	}
-	emitRows(stdout, results, parseTopN(args))
+	emitRows(stdout, results, topN)
 	return selectOutcome(results)
 }
 
 // runNormalize runs each check's normalizeArgv fixer (nil = no fixer)
-// across every module. The only mutating subcommand; pre-freeze only (R-011).
-func runNormalize(modules []string) int {
+// across every module. The only mutating subcommand; pre-freeze only
+// (R-011). Every module/fixer pair is attempted regardless of an earlier
+// pair's outcome (correction B1's no-early-return rule, extended here):
+// stopping early would leave later modules unformatted for no benefit,
+// since normalize itself gates nothing — check, run afterward, is what
+// decides pass/fail. Each fixer's own stdout/stderr is captured (runCheck's
+// shape) and, on failure, surfaced on stderr behind a diagnostic naming the
+// failing fixer and module (correction C2): before this fix runNormalize
+// discarded the fixer's own text entirely, and its ExitError branch was a
+// silent no-op that fell through to an unconditional outcomePassed — so a
+// module gofmt -w could not parse (gofmt writes a parse error to stderr and
+// exits non-zero, rewriting nothing) was indistinguishable from one that
+// converged. normalize runs strictly pre-freeze
+// (skills/sdd-verify/SKILL.md:69), so a silent failure here is strictly
+// worse than a loud one: the cost lands on post-freeze check instead, where
+// it can no longer be fixed without burning the single correction attempt
+// (the obs #2668 dead end this change exists to avoid). A fixer that could
+// not run at all and one that ran but exited non-zero are both reported
+// this way and both fail the run: neither leaves the fixer's job actually
+// done, and normalize has no separate "verification failed" concept to
+// route a mere non-zero exit to instead.
+//
+// Zero discovered modules is deliberately NOT given C1's runCheckMode
+// treatment here: an operator who runs normalize against the wrong cwd
+// still runs check next per the documented ordering
+// (skills/sdd-verify/SKILL.md:69), and check's own C1 guard already fails
+// that run closed before freeze — duplicating the guard here would not
+// close any additional gap, only add surface.
+func runNormalize(modules []string, stdout, stderr io.Writer) int {
+	failed := false
 	for _, c := range registry {
 		if c.normalizeArgv == nil {
 			continue
 		}
 		for _, module := range modules {
-			cmd := exec.Command(c.normalizeArgv[0], c.normalizeArgv[1:]...)
+			ctx, cancel := context.WithTimeout(context.Background(), toolExecTimeout)
+			cmd := exec.CommandContext(ctx, c.normalizeArgv[0], c.normalizeArgv[1:]...)
 			cmd.Dir = module
-			if err := cmd.Run(); err != nil {
-				var exitErr *exec.ExitError
-				if !errors.As(err, &exitErr) {
-					return outcomeProceduralToolingFailed
+			cmd.WaitDelay = toolWaitDelay
+			var out, errOut bytes.Buffer
+			cmd.Stdout = &out
+			cmd.Stderr = &errOut
+			err := cmd.Run()
+			timedOut := ctx.Err() == context.DeadlineExceeded
+			cancel()
+			if err != nil {
+				failed = true
+				if timedOut {
+					fmt.Fprintf(stderr, "normalize: %s timed out after %s in module %q\n", c.name, toolExecTimeout, module)
+				} else {
+					fmt.Fprintf(stderr, "normalize: %s failed in module %q: %v\n", c.name, module, err)
+				}
+				if out.Len() > 0 {
+					stdout.Write(out.Bytes())
+				}
+				if errOut.Len() > 0 {
+					stderr.Write(errOut.Bytes())
 				}
 			}
 		}
 	}
+	if failed {
+		return outcomeProceduralToolingFailed
+	}
 	return outcomePassed
 }
 
-// runCheck runs c.checkArgv in every module dir and aggregates to one
-// result: unavailable if the tool is missing from PATH, else the max exit
-// code observed across modules. stdout and stderr are captured into
-// distinct buffers, never merged: c.parse trusts stdout alone (per-parse-func
-// docs), and merging streams has already inflated a finding count once by
-// letting a Go toolchain-switch message land in the parsed stream (obs
-// #2712). stderr is captured but not yet consumed by any decision here.
-func runCheck(c check, modules []string) result {
+// runCheck runs c.checkArgv in every module dir and combines each module's
+// own result into one row. Every module gets its own stdout/stderr buffer,
+// analyzed independently via buildResult, never concatenated across modules
+// (correction B1): a shared buffer let one module's toolchain-mismatch text
+// or a bare 127 exit erase every other module's genuine findings (obs
+// #2712-class bug, one level up — module isolation, not stream isolation).
+// Combination rule, chosen to match what selectOutcome consumes:
+//   - findings SUM across modules and their excerpts concatenate in module
+//     order (discoverModules already sorts) — a module with 3 findings and
+//     one with 2 is 5, never either alone;
+//   - a module is excluded from the sum when the tool could not analyze it
+//     at all: exit 127, an unrunnable process, or c.unavailableIf matches
+//     its own output — that module contributed no genuine result, but the
+//     others still can;
+//   - the check as a whole is unavailable only when it could not run
+//     ANYWHERE, i.e. every attempted module was excluded that way. Zero
+//     discovered modules never reaches this loop: runCheckMode fails
+//     closed before calling runCheck (correction C1: zero-module false
+//     green);
+//   - the row's exit code is the max across the modules that DID
+//     contribute — the same max rule as before, now scoped to genuinely
+//     usable modules instead of a run a single bad module could poison.
+//
+// No early return: every discovered module is attempted regardless of an
+// earlier module's outcome. The combined, in-order findings stream is
+// written once to the check's stable full-log path (D6) via writeLog; a
+// failed write clears the returned result's logPath rather than failing the
+// check itself (a full /tmp must never hold verification hostage).
+func runCheck(c check, modules []string, outDir string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
 		return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 	}
 
-	exitCode := 0
-	var stdout, stderr bytes.Buffer
+	attempted, usable := 0, 0
+	exitCode, totalCount := 0, 0
+	var top []string
+	var combined bytes.Buffer
 	for _, module := range modules {
-		cmd := exec.Command(toolPath, c.checkArgv[1:]...)
+		attempted++
+		var stdout, stderr bytes.Buffer
+		ctx, cancel := context.WithTimeout(context.Background(), toolExecTimeout)
+		cmd := exec.CommandContext(ctx, toolPath, c.checkArgv[1:]...)
 		cmd.Dir = module
+		cmd.WaitDelay = toolWaitDelay
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
-		if runErr := cmd.Run(); runErr != nil {
-			var exitErr *exec.ExitError
-			if errors.As(runErr, &exitErr) {
-				code := exitErr.ExitCode()
-				if code == unavailableExitCode {
-					return result{check: c, exitCode: unavailableExitCode, unavailable: true}
-				}
-				if code > exitCode {
-					exitCode = code
-				}
-				continue
-			}
-			return result{check: c, exitCode: unavailableExitCode, unavailable: true}
+		runErr := cmd.Run()
+		timedOut := ctx.Err() == context.DeadlineExceeded
+		cancel()
+		if timedOut {
+			// The deadline killed the process before it could analyze this
+			// module; excluded exactly like an unrunnable process (D1), never
+			// a verification failure. This module's exclusion already makes
+			// modulesAttempted > modulesUsable, so renderRowSummary's
+			// "modules=usable/attempted" note (correction B2) surfaces it on
+			// the row instead of leaving it silent (same defect class C1/C2
+			// fixed).
+			continue
 		}
+		moduleExit := 0
+		if runErr != nil {
+			var exitErr *exec.ExitError
+			if !errors.As(runErr, &exitErr) {
+				continue // this module's process could not run at all; excluded, not fatal to the whole check
+			}
+			moduleExit = exitErr.ExitCode()
+		}
+		if moduleExit == unavailableExitCode {
+			continue // e.g. an unresolved "go run <module>@version"; this module only
+		}
+		findings := stdout.Bytes()
+		if c.stderrFindings {
+			findings = stderr.Bytes()
+		}
+		mr := buildResult(c, moduleExit, findings, outDir)
+		if mr.unavailable {
+			continue // e.g. a staticcheck toolchain mismatch; this module only
+		}
+		usable++
+		if moduleExit > exitCode {
+			exitCode = moduleExit
+		}
+		totalCount += mr.count
+		top = append(top, mr.top...)
+		combined.Write(findings)
 	}
-	return buildResult(c, exitCode, stdout.Bytes())
+
+	unavailable := attempted > 0 && usable == 0
+	if unavailable {
+		exitCode = unavailableExitCode
+	}
+	r := result{check: c, exitCode: exitCode, unavailable: unavailable, count: totalCount, top: top, logPath: logPathFor(c.name, outDir), modulesAttempted: attempted, modulesUsable: usable}
+	if !writeLog(r.logPath, combined.Bytes()) {
+		r.logPath = ""
+	}
+	return r
+}
+
+// writeLog writes findings to path, creating its parent directory first, and
+// overwrites any existing file (D6: the default out-dir path is stable and
+// "overwritten"). It reports whether the write succeeded. The row that names
+// this path is the evidence capture-evidence receives (skills/sdd-verify/
+// SKILL.md:70), so a failed write must not be silently ignored — but it also
+// must never become a verification failure or a procedural error (runCheck
+// clears result.logPath on false, so renderSummary omits the full: clause
+// instead of pointing at a file that does not exist).
+func writeLog(path string, findings []byte) bool {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return false
+	}
+	return os.WriteFile(path, findings, 0o644) == nil
 }
 
 // unavailableExitCode is the POSIX "command not found" convention: it is
@@ -134,6 +278,40 @@ func runCheck(c check, modules []string) result {
 // the LookPath sites for rather than duplicating (4.10, amended R-016).
 const unavailableExitCode = 127
 
+// toolExecTimeout bounds every tool subprocess run by check and normalize
+// (correction D1). The repo already solved this exact problem for its own
+// network fetch: bin/labdrian-overlay:823-828 wraps `git fetch` in `timeout
+// 10` specifically so a stalled network path cannot hang verification
+// indefinitely, and buffers no partial evidence until the fetch resolves.
+// This follows that shape, scoped per module rather than per whole check
+// (matching correction B1's per-module isolation, so one stuck module never
+// also consumes the budget every other module needs) and applied to each
+// exec.CommandContext call site in runCheck and runNormalize. The duration
+// itself cannot reuse the shell precedent's 10s: staticcheck and deadcode
+// are invoked as "go run <module>@<version> ./..." (registry above), which
+// on a cold module-proxy cache downloads and compiles the tool before it can
+// analyze anything, not a lightweight network probe. 5 minutes is chosen as
+// generous headroom above a plausible slow-but-legitimate cold run (module
+// download + compile), so the deadline bounds a genuine hang without making
+// the runner flaky on an ordinary slow network — flakiness from too short a
+// deadline would be worse than the hang this exists to bound. A var, not a
+// const, so tests can shrink it and prove real enforcement without waiting
+// out a multi-minute deadline (see TestRunCheckEnforcesTimeout).
+var toolExecTimeout = 5 * time.Minute
+
+// toolWaitDelay bounds Wait() itself once toolExecTimeout's context is done
+// (Go 1.20+ exec.Cmd.WaitDelay): killing a shell-invoked tool's direct
+// process does not kill an orphaned grandchild (e.g. a subprocess a shell
+// wrapper spawned) that still holds the stdout/stderr pipes open, so without
+// WaitDelay a "killed" process can still leave Run() blocked reading those
+// pipes until the orphan exits on its own — silently reintroducing the exact
+// hang toolExecTimeout exists to bound. Kept short and separate from
+// toolExecTimeout itself: once the deadline has already fired, this is only
+// cleanup time for an already-cancelled run, not more budget for legitimate
+// work. A var, alongside toolExecTimeout, so tests can shrink both and prove
+// enforcement without waiting out either delay.
+var toolWaitDelay = 5 * time.Second
+
 // buildResult constructs a check's result from its captured stdout: count
 // and top come from c.parse; unavailable is set when c.unavailableIf
 // detects the tool could not analyze the code at all (e.g. a staticcheck
@@ -141,10 +319,10 @@ const unavailableExitCode = 127
 // procedural_tooling_failed rather than verification_failed (D4/R-016).
 // Extracted from runCheck so this wiring is directly unit-testable without
 // shelling out to a real toolchain-mismatched module.
-func buildResult(c check, exitCode int, stdout []byte) result {
+func buildResult(c check, exitCode int, stdout []byte, outDir string) result {
 	count, top := c.parse(exitCode, stdout)
 	unavailable := c.unavailableIf != nil && c.unavailableIf(stdout)
-	return result{check: c, exitCode: exitCode, unavailable: unavailable, count: count, top: top, logPath: logPathFor(c.name)}
+	return result{check: c, exitCode: exitCode, unavailable: unavailable, count: count, top: top, logPath: logPathFor(c.name, outDir)}
 }
 
 // emitRows writes one "tool | exit_code | summary" row per result, in
@@ -169,10 +347,57 @@ func emitRows(w io.Writer, results []result, topN int) {
 func renderRowBlock(results []result, topN int) []byte {
 	var buf bytes.Buffer
 	for _, r := range results {
-		summary := renderSummary(r.count, r.top, topN, r.logPath)
+		summary := renderRowSummary(r, topN)
 		fmt.Fprintf(&buf, "%s | %d | %s\n", r.check.name, r.exitCode, summary)
 	}
 	return buf.Bytes()
+}
+
+// renderRowSummary extends renderSummary's rendered text with two
+// independent coverage notes, each prepended so the existing "full: <path>"
+// clause (parsed via a trailing-$ pattern in tests) stays the last thing in
+// the row:
+//   - "unavailable; " (D3, this correction) whenever r.unavailable is true.
+//     renderSummary alone cannot make this distinction: it renders the bare
+//     literal "0" both for a check that ran and found nothing and for a
+//     check that could not run at all (LookPath failure, a toolchain
+//     mismatch, or a killed-by-deadline module) — r.unavailable is what
+//     selectOutcome actually consults to route to procedural_tooling_failed
+//     (D4/R-016), yet it never reached the row bytes capture-evidence
+//     receives. "unavailable" is deliberately not one of bannedSummaryLiterals
+//     (R-008 bans narrated PASS/N/A-style words, not a factual runner state),
+//     and guardAgainstBannedSummary only ever sees renderSummary's own bare
+//     "0"/"count=N; ..." text, never this prefix, so the guard's invariant is
+//     unaffected.
+//   - "modules=usable/attempted" (correction B2) whenever runCheck excluded
+//     at least one discovered module (a 127 exit or an unavailableIf
+//     module). Without this, a row like "staticcheck | 1 | count=2; ..."
+//     cannot tell a reader that one of four modules was never analysed —
+//     partial coverage was indistinguishable from full coverage
+//     (skills/sdd-verify/SKILL.md:70 treats these row bytes as the evidence
+//     itself).
+//
+// Both notes can apply to the same row (a check unavailable across every
+// attempted module: modulesAttempted > 0, modulesUsable == 0) and compose in
+// a fixed order — "modules=0/N; unavailable; 0" — modules= first since it is
+// the coarser coverage fact, unavailable second since it explains why
+// coverage was zero. Full coverage and a check that ran (modulesUsable ==
+// modulesAttempted, r.unavailable == false, including every result built
+// outside runCheck's loop, which leaves both module fields at their zero
+// value) renders byte-identical to plain renderSummary, so existing clean
+// rows are unaffected — this is a report-only-when-applicable choice,
+// deliberately not new row columns, to keep the two-pipe
+// "tool | exit_code | summary" contract capture-evidence parses unchanged
+// (D6).
+func renderRowSummary(r result, topN int) string {
+	summary := renderSummary(r.count, r.top, topN, r.logPath)
+	if r.unavailable {
+		summary = "unavailable; " + summary
+	}
+	if r.modulesAttempted > r.modulesUsable {
+		summary = fmt.Sprintf("modules=%d/%d; %s", r.modulesUsable, r.modulesAttempted, summary)
+	}
+	return summary
 }
 
 // check describes one verification tool. deterministic and blocking are
@@ -185,15 +410,18 @@ func renderRowBlock(results []result, topN int) []byte {
 // (D4/R-016) — see buildResult. normalizeArgv is the mode-split fixer
 // invocation (Phase 4), nil when the tool has no fixer; checkArgv must never
 // contain a fixer flag (enforced by containsFixerFlag/init below).
+// stderrFindings is true only for go vet, whose diagnostics land on stderr
+// (runCheck picks the matching buffer before parse ever runs).
 type check struct {
-	name          string
-	deterministic bool
-	blocking      bool
-	checkArgv     []string
-	normalizeArgv []string
-	parse         func(exit int, out []byte) (count int, top []string)
-	failed        func(exit, count int) bool
-	unavailableIf func(out []byte) bool
+	name           string
+	deterministic  bool
+	blocking       bool
+	checkArgv      []string
+	normalizeArgv  []string
+	parse          func(exit int, out []byte) (count int, top []string)
+	failed         func(exit, count int) bool
+	unavailableIf  func(out []byte) bool
+	stderrFindings bool
 }
 
 // registry is the hardcoded v1 check set. It is not configurable: gofmt,
@@ -205,7 +433,7 @@ type check struct {
 // (TestCheckArgvPinnedToCIInvocation enforces this parity).
 var registry = []check{
 	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, normalizeArgv: []string{"gofmt", "-w", "."}, parse: parseGofmt, failed: failedGofmt},
-	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
+	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet, stderrFindings: true},
 	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck, unavailableIf: isStaticcheckToolchainMismatch},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}, parse: parseDeadcode, failed: failedDeadcode},
 }
@@ -403,14 +631,22 @@ const (
 // runnerErr marks a runner-internal fault. Rows keep the raw exit code.
 // count, top, and logPath are populated by runCheck from c.parse's stdout
 // parse and logPathFor; they stay zero-value when the tool never ran.
+// modulesAttempted and modulesUsable record runCheck's per-module coverage
+// (correction B2): modulesAttempted is every discovered module runCheck
+// tried, modulesUsable is how many of those actually contributed to count/
+// top (excludes a 127 exit or an unavailableIf module). Both stay zero-value
+// for the two early-return results (LookPath failure, usage/procedural
+// errors), which never entered runCheck's per-module loop.
 type result struct {
-	check       check
-	exitCode    int
-	unavailable bool
-	runnerErr   bool
-	count       int
-	top         []string
-	logPath     string
+	check            check
+	exitCode         int
+	unavailable      bool
+	runnerErr        bool
+	count            int
+	top              []string
+	logPath          string
+	modulesAttempted int
+	modulesUsable    int
 }
 
 // selectOutcome is the single place outcome precedence lives (amended
@@ -480,12 +716,14 @@ func capExcerpt(s string) string {
 
 // renderSummary renders D6's bounded summary "count=N; top: e1; …; full:
 // <path>". Zero findings render the literal digit "0" — never a status
-// word (R-008): upstream rejects narrated evidence by regex. The trailing
-// guardAgainstBannedSummary call wires isBannedSummaryLiteral into the
-// render path (3I.0): renderSummary is the sole place a row's summary text
-// is constructed, so this is the one call site that catches a future edit
-// letting a bare banned literal through construction before it reaches
-// capture-evidence.
+// word (R-008): upstream rejects narrated evidence by regex. An empty
+// logPath (writeLog failed) omits the "; full: <path>" clause entirely
+// rather than naming a file that was never written; the count and excerpts
+// still render. The trailing guardAgainstBannedSummary call wires
+// isBannedSummaryLiteral into the render path (3I.0): renderSummary is the
+// sole place a row's summary text is constructed, so this is the one call
+// site that catches a future edit letting a bare banned literal through
+// construction before it reaches capture-evidence.
 func renderSummary(count int, top []string, topN int, logPath string) string {
 	if count == 0 {
 		return "0"
@@ -501,7 +739,10 @@ func renderSummary(count int, top []string, topN int, logPath string) string {
 	for i, e := range shown {
 		excerpts[i] = capExcerpt(e)
 	}
-	summary := fmt.Sprintf("count=%d; top: %s; full: %s", count, strings.Join(excerpts, "; "), logPath)
+	summary := fmt.Sprintf("count=%d; top: %s", count, strings.Join(excerpts, "; "))
+	if logPath != "" {
+		summary += fmt.Sprintf("; full: %s", logPath)
+	}
 	guardAgainstBannedSummary(summary)
 	return summary
 }
@@ -521,33 +762,31 @@ func guardAgainstBannedSummary(summary string) {
 	}
 }
 
-// logPathFor returns the stable full-log path for tool (D6); spaces become "-".
-func logPathFor(tool string) string {
-	return filepath.Join(os.TempDir(), defaultOutDirName, strings.ReplaceAll(tool, " ", "-")+".log")
+// logPathFor returns the stable full-log path for tool under outDir (D6);
+// spaces become "-". Callers resolve outDir once (flag-or-default,
+// runCheckMode) and pass it in; this function never reads os.TempDir()
+// itself (correction A3).
+func logPathFor(tool, outDir string) string {
+	return filepath.Join(outDir, defaultOutDirName, strings.ReplaceAll(tool, " ", "-")+".log")
 }
 
-// parseTopN extracts --top-n from args (default defaultTopN); malformed
-// falls back to the default rather than aborting.
-func parseTopN(args []string) int {
-	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
+// parseCheckArgs parses every check-mode flag from one shared FlagSet, so
+// --top-n and --out-dir can never diverge on which flags they recognize
+// (correction D2: two separate FlagSets used to exist, and the --top-n one
+// never registered --out-dir, so "--out-dir D --top-n 20" silently returned
+// defaultTopN with no diagnostic). Any parse error — malformed value or
+// unrecognized flag — now fails loud (outcomeUsage) instead of guessing a
+// default, matching the existing usage-error precedent for a bad
+// subcommand and an out-dir-inside-root value.
+func parseCheckArgs(args []string) (int, string, error) {
+	fs := flag.NewFlagSet("deterministic-check-runner check", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	topN := fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
-	if err := fs.Parse(args); err != nil {
-		return defaultTopN
-	}
-	return *topN
-}
-
-// parseOutDir extracts --out-dir from check-mode args (empty = unset).
-func parseOutDir(args []string) string {
-	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
 	outDir := fs.String("out-dir", "", "directory for full check logs")
 	if err := fs.Parse(args); err != nil {
-		return ""
+		return 0, "", err
 	}
-	return *outDir
+	return *topN, *outDir, nil
 }
 
 // pathInsideRoot reports whether path is at or under root (R-010 guard).
