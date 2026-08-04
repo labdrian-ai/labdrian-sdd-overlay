@@ -67,6 +67,10 @@ func runCheckMode(modules []string, args []string, root string, stdout, stderr i
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
 	}
+	if len(modules) == 0 {
+		fmt.Fprintf(stderr, "check: no Go modules discovered under %q; nothing to verify\n", root)
+		return outcomeProceduralToolingFailed
+	}
 	if outDir == "" {
 		outDir = os.TempDir()
 	}
@@ -115,8 +119,9 @@ func runNormalize(modules []string) int {
 //     others still can;
 //   - the check as a whole is unavailable only when it could not run
 //     ANYWHERE, i.e. every attempted module was excluded that way. Zero
-//     discovered modules is unrelated and left as-is (out of scope:
-//     zero-module false green);
+//     discovered modules never reaches this loop: runCheckMode fails
+//     closed before calling runCheck (correction C1: zero-module false
+//     green);
 //   - the row's exit code is the max across the modules that DID
 //     contribute — the same max rule as before, now scoped to genuinely
 //     usable modules instead of a run a single bad module could poison.

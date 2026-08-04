@@ -489,6 +489,44 @@ func TestRunEndToEnd(t *testing.T) {
 	}
 }
 
+// TestRunFailsClosedWhenNoModulesDiscovered is correction C1's RED test: an
+// empty module set must never look like a clean run. Before the fix, run()
+// entered runCheckMode with zero modules, every check's per-module loop ran
+// zero times, exitCode/count stayed 0, and the emitted block was
+// byte-identical to four checks that genuinely executed and found nothing —
+// procedural_tooling_failed silently collapsed into outcomePassed. Asserted
+// through run() itself (the real dispatch path), not discoverModules, so the
+// guard's wiring is what is proven, not just discoverModules' return value
+// (obs #2735's lesson: a helper-level test proves nothing here).
+func TestRunFailsClosedWhenNoModulesDiscovered(t *testing.T) {
+	emptyRoot := t.TempDir()
+	previousWD, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
+	if err := os.Chdir(emptyRoot); err != nil {
+		t.Fatalf("chdir into %s: %v", emptyRoot, err)
+	}
+	defer func() {
+		if err := os.Chdir(previousWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
+	}()
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check"}, &stdout, &stderr)
+
+	if got != outcomeProceduralToolingFailed {
+		t.Fatalf(`run(["check"]) under a root with no go.mod = exit %d, want %d (outcomeProceduralToolingFailed)`, got, outcomeProceduralToolingFailed)
+	}
+	if stdout.Len() != 0 {
+		t.Fatalf("run() emitted a row block for zero discovered modules, want no rows at all: %q", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "no Go modules discovered") {
+		t.Fatalf("run() stderr = %q, want a diagnostic naming the zero-module condition", stderr.String())
+	}
+}
+
 // TestSubcommandUsage is 4.1's RED test (R-009): no subcommand exits
 // non-zero and usage names both normalize and check.
 func TestSubcommandUsage(t *testing.T) {
