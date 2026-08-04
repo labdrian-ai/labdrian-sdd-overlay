@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"time"
 )
 
 func main() {
@@ -118,14 +120,23 @@ func runNormalize(modules []string, stdout, stderr io.Writer) int {
 			continue
 		}
 		for _, module := range modules {
-			cmd := exec.Command(c.normalizeArgv[0], c.normalizeArgv[1:]...)
+			ctx, cancel := context.WithTimeout(context.Background(), toolExecTimeout)
+			cmd := exec.CommandContext(ctx, c.normalizeArgv[0], c.normalizeArgv[1:]...)
 			cmd.Dir = module
+			cmd.WaitDelay = toolWaitDelay
 			var out, errOut bytes.Buffer
 			cmd.Stdout = &out
 			cmd.Stderr = &errOut
-			if err := cmd.Run(); err != nil {
+			err := cmd.Run()
+			timedOut := ctx.Err() == context.DeadlineExceeded
+			cancel()
+			if err != nil {
 				failed = true
-				fmt.Fprintf(stderr, "normalize: %s failed in module %q: %v\n", c.name, module, err)
+				if timedOut {
+					fmt.Fprintf(stderr, "normalize: %s timed out after %s in module %q\n", c.name, toolExecTimeout, module)
+				} else {
+					fmt.Fprintf(stderr, "normalize: %s failed in module %q: %v\n", c.name, module, err)
+				}
 				if out.Len() > 0 {
 					stdout.Write(out.Bytes())
 				}
@@ -182,12 +193,27 @@ func runCheck(c check, modules []string, outDir string) result {
 	for _, module := range modules {
 		attempted++
 		var stdout, stderr bytes.Buffer
-		cmd := exec.Command(toolPath, c.checkArgv[1:]...)
+		ctx, cancel := context.WithTimeout(context.Background(), toolExecTimeout)
+		cmd := exec.CommandContext(ctx, toolPath, c.checkArgv[1:]...)
 		cmd.Dir = module
+		cmd.WaitDelay = toolWaitDelay
 		cmd.Stdout = &stdout
 		cmd.Stderr = &stderr
+		runErr := cmd.Run()
+		timedOut := ctx.Err() == context.DeadlineExceeded
+		cancel()
+		if timedOut {
+			// The deadline killed the process before it could analyze this
+			// module; excluded exactly like an unrunnable process (D1), never
+			// a verification failure. This module's exclusion already makes
+			// modulesAttempted > modulesUsable, so renderRowSummary's
+			// "modules=usable/attempted" note (correction B2) surfaces it on
+			// the row instead of leaving it silent (same defect class C1/C2
+			// fixed).
+			continue
+		}
 		moduleExit := 0
-		if runErr := cmd.Run(); runErr != nil {
+		if runErr != nil {
 			var exitErr *exec.ExitError
 			if !errors.As(runErr, &exitErr) {
 				continue // this module's process could not run at all; excluded, not fatal to the whole check
@@ -246,6 +272,40 @@ func writeLog(path string, findings []byte) bool {
 // module cannot be resolved) — a real subprocess exit this composes with
 // the LookPath sites for rather than duplicating (4.10, amended R-016).
 const unavailableExitCode = 127
+
+// toolExecTimeout bounds every tool subprocess run by check and normalize
+// (correction D1). The repo already solved this exact problem for its own
+// network fetch: bin/labdrian-overlay:823-828 wraps `git fetch` in `timeout
+// 10` specifically so a stalled network path cannot hang verification
+// indefinitely, and buffers no partial evidence until the fetch resolves.
+// This follows that shape, scoped per module rather than per whole check
+// (matching correction B1's per-module isolation, so one stuck module never
+// also consumes the budget every other module needs) and applied to each
+// exec.CommandContext call site in runCheck and runNormalize. The duration
+// itself cannot reuse the shell precedent's 10s: staticcheck and deadcode
+// are invoked as "go run <module>@<version> ./..." (registry above), which
+// on a cold module-proxy cache downloads and compiles the tool before it can
+// analyze anything, not a lightweight network probe. 5 minutes is chosen as
+// generous headroom above a plausible slow-but-legitimate cold run (module
+// download + compile), so the deadline bounds a genuine hang without making
+// the runner flaky on an ordinary slow network — flakiness from too short a
+// deadline would be worse than the hang this exists to bound. A var, not a
+// const, so tests can shrink it and prove real enforcement without waiting
+// out a multi-minute deadline (see TestRunCheckEnforcesTimeout).
+var toolExecTimeout = 5 * time.Minute
+
+// toolWaitDelay bounds Wait() itself once toolExecTimeout's context is done
+// (Go 1.20+ exec.Cmd.WaitDelay): killing a shell-invoked tool's direct
+// process does not kill an orphaned grandchild (e.g. a subprocess a shell
+// wrapper spawned) that still holds the stdout/stderr pipes open, so without
+// WaitDelay a "killed" process can still leave Run() blocked reading those
+// pipes until the orphan exits on its own — silently reintroducing the exact
+// hang toolExecTimeout exists to bound. Kept short and separate from
+// toolExecTimeout itself: once the deadline has already fired, this is only
+// cleanup time for an already-cancelled run, not more budget for legitimate
+// work. A var, alongside toolExecTimeout, so tests can shrink both and prove
+// enforcement without waiting out either delay.
+var toolWaitDelay = 5 * time.Second
 
 // buildResult constructs a check's result from its captured stdout: count
 // and top come from c.parse; unavailable is set when c.unavailableIf

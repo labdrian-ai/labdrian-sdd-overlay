@@ -15,6 +15,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 )
 
@@ -1275,6 +1276,53 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 			t.Errorf("selectOutcome(deadcode unavailable, rest green) = %d, want %d (outcomePassed) — an absent WARNING-only tool must not invalidate the run", outcome, outcomePassed)
 		}
 	})
+}
+
+// TestRunCheckEnforcesTimeout is correction D1's RED test: no subprocess had
+// a deadline, so a stalled tool (e.g. a cold-cache "go run <module>@version"
+// against a stalled proxy) could hang check indefinitely with zero partial
+// evidence, since emitRows only writes after every check completes. This
+// drives the assertion through runCheck itself (the real production entry
+// point every registry check goes through), not a disconnected helper, per
+// this change's own recurring "implemented, unit-tested, never consumed"
+// lesson. toolExecTimeout and toolWaitDelay are both shrunk to 20ms for the
+// duration of this test so the suite never waits out a real deadline; the
+// fake tool sleeps 5s, far longer than either shrunk value, so the assertion
+// only passes if the deadline actually kills the process. WaitDelay must be
+// shrunk too: "sh -c sleep 5" runs sleep as a grandchild that inherits the
+// stdout/stderr pipes, so killing sh alone leaves those pipes open and Wait
+// blocked until the orphaned sleep exits on its own — proven while writing
+// this test, where killing sh without a shrunk WaitDelay still took the
+// full 5s wall time despite ctx firing at 20ms. Genuine RED was established
+// by running this test against the pre-fix runCheck (plain exec.Command, no
+// context): it hung for the full 5s sleep and then failed both assertions
+// (unavailable stayed false, outcome stayed outcomePassed) — proving the
+// assertion is void without real enforcement, not merely a compile check.
+func TestRunCheckEnforcesTimeout(t *testing.T) {
+	originalTimeout, originalWaitDelay := toolExecTimeout, toolWaitDelay
+	toolExecTimeout = 20 * time.Millisecond
+	toolWaitDelay = 20 * time.Millisecond
+	t.Cleanup(func() {
+		toolExecTimeout = originalTimeout
+		toolWaitDelay = originalWaitDelay
+	})
+
+	c := check{
+		name:          "fake-slow",
+		deterministic: true,
+		blocking:      true,
+		checkArgv:     []string{"sh", "-c", "sleep 5"},
+		parse:         func(exit int, out []byte) (int, []string) { return 0, nil },
+		failed:        func(exit, count int) bool { return false },
+	}
+	got := runCheck(c, []string{t.TempDir()}, t.TempDir())
+
+	if !got.unavailable {
+		t.Fatalf("runCheck(sleep 5, %s deadline).unavailable = false, want true — a process killed by the deadline never analyzed the code, same class as exit 127", toolExecTimeout)
+	}
+	if outcome := selectOutcome([]result{got}); outcome != outcomeProceduralToolingFailed {
+		t.Errorf("selectOutcome([]result{timed-out check}) = %d, want %d (procedural_tooling_failed) — a timeout must never read as verification_failed or passed", outcome, outcomeProceduralToolingFailed)
+	}
 }
 
 // TestRunCheckGoVetFindingsReachRow is the row-level RED test for the
