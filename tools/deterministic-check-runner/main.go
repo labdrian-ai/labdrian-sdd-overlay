@@ -54,32 +54,29 @@ func run(args []string, stdout, stderr io.Writer) int {
 	}
 }
 
-// runCheckMode wires the read-only check subcommand (R-009/R-010);
-// --out-dir inside root is a usage error (D5), checked against the raw flag
-// value before any resolution or write — a log written inside root would
-// mutate the candidate under review. Once past the guard, the flag value (or
-// os.TempDir() when unset) is resolved exactly once and threaded to every
-// check's log write, so the guard and the write always agree on the same
-// directory (correction A3: previously the guard read the flag but the
-// write always used os.TempDir() regardless).
+// runCheckMode wires the read-only check subcommand (R-009/R-010). The
+// effective out-dir is resolved to its final value (flag, or os.TempDir()
+// when unset) BEFORE the guard runs, and the guard then runs exactly once
+// against that resolved value — see resolveOutDir. The previous order ran
+// the guard against the raw flag and substituted the default afterwards,
+// so exactly one of the two possible out-dirs was never checked at all.
+// A log written inside root would mutate the candidate under review, and
+// correction A3 (which made the write actually honor the flag) is what made
+// every hole in this guard reachable.
 func runCheckMode(modules []string, args []string, root string, stdout, stderr io.Writer) int {
-	topN, outDir, err := parseCheckArgs(args)
+	topN, outDirFlag, err := parseCheckArgs(args)
 	if err != nil {
 		fmt.Fprintf(stderr, "check: %v\n", err)
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
 	}
-	if outDir != "" && pathInsideRoot(root, outDir) {
-		fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
-		fmt.Fprint(stderr, usageText)
-		return outcomeUsage
+	outDir, rejection, ok := resolveOutDir(root, outDirFlag, stderr)
+	if !ok {
+		return rejection
 	}
 	if len(modules) == 0 {
 		fmt.Fprintf(stderr, "check: no Go modules discovered under %q; nothing to verify\n", root)
 		return outcomeProceduralToolingFailed
-	}
-	if outDir == "" {
-		outDir = os.TempDir()
 	}
 	results := make([]result, len(registry))
 	for i, c := range registry {
@@ -87,6 +84,61 @@ func runCheckMode(modules []string, args []string, root string, stdout, stderr i
 	}
 	emitRows(stdout, results, topN)
 	return selectOutcome(results)
+}
+
+// resolveOutDir resolves the effective out-dir (flag, or os.TempDir() when
+// the flag is unset) and validates that one final value. ok=false means a
+// diagnostic was already written to stderr and rejection is the exit code
+// to return.
+//
+// The two rejections deliberately do NOT share an exit code, because they
+// are not the same kind of problem and the operator's fix differs:
+//   - an operator-supplied --out-dir inside root is a bad invocation, so it
+//     stays outcomeUsage (2) and reprints the usage text;
+//   - a resolved DEFAULT inside root is an environment misconfiguration —
+//     the invocation named no directory at all — so it is
+//     outcomeProceduralToolingFailed (3) and the diagnostic names TMPDIR,
+//     the only thing an operator can actually change to fix it. Reporting
+//     that as a usage error would point at a flag that was never passed.
+//
+// skills/sdd-verify/SKILL.md maps runner exit 2 and 3 to the same
+// procedural_tooling_failed outcome, so this split costs the caller nothing
+// and buys the operator a diagnosis.
+//
+// The control-byte check lives here, at the boundary where the flag is
+// validated, rather than as an escape in renderSummary. --out-dir is the
+// only caller-controlled input that reaches the emitted row block unsplit
+// (it flows verbatim through logPathFor into result.logPath into
+// renderSummary's "; full: %s" clause), so a newline in it appends a line
+// that satisfies the same "tool | exit_code | summary" contract the capture
+// parser reads. Tool output cannot do this — parsers split on '\n' first.
+// Closing the single door is narrower and provable; escaping in the
+// renderer would put the burden on every future caller of a shared
+// formatting path and would still leave result.logPath itself poisoned.
+func resolveOutDir(root, outDirFlag string, stderr io.Writer) (string, int, bool) {
+	outDir, fromFlag := outDirFlag, true
+	if outDir == "" {
+		outDir, fromFlag = os.TempDir(), false
+	}
+	if b, bad := firstControlByte(outDir); bad {
+		if fromFlag {
+			fmt.Fprintf(stderr, "check: --out-dir %q contains control character %q; it would be copied verbatim into the emitted evidence rows\n", outDir, b)
+			fmt.Fprint(stderr, usageText)
+			return "", outcomeUsage, false
+		}
+		fmt.Fprintf(stderr, "check: the default out-dir %q (from TMPDIR) contains control character %q; set TMPDIR to a path without control characters\n", outDir, b)
+		return "", outcomeProceduralToolingFailed, false
+	}
+	if pathInsideRoot(root, outDir) {
+		if fromFlag {
+			fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
+			fmt.Fprint(stderr, usageText)
+			return "", outcomeUsage, false
+		}
+		fmt.Fprintf(stderr, "check: the default out-dir %q (from TMPDIR) is inside the repository root %q; set TMPDIR to a directory outside the repository\n", outDir, root)
+		return "", outcomeProceduralToolingFailed, false
+	}
+	return outDir, outcomePassed, true
 }
 
 // runNormalize runs each check's normalizeArgv fixer (nil = no fixer)
@@ -118,6 +170,13 @@ func runCheckMode(modules []string, args []string, root string, stdout, stderr i
 // (skills/sdd-verify/SKILL.md:69), and check's own C1 guard already fails
 // that run closed before freeze — duplicating the guard here would not
 // close any additional gap, only add surface.
+//
+// A fixer killed by toolExecTimeout is reported by reportNormalizeKill rather
+// than by the plain "failed" line above: unlike a fixer that exited on its own
+// terms, a SIGKILLed in-place rewriter can leave the module's source bytes
+// corrupted, and that has to be said out loud with the recovery artifacts
+// named. It is still one of the two failure shapes this function reports and
+// still returns outcomeProceduralToolingFailed.
 func runNormalize(modules []string, stdout, stderr io.Writer) int {
 	failed := false
 	for _, c := range registry {
@@ -132,13 +191,19 @@ func runNormalize(modules []string, stdout, stderr io.Writer) int {
 			var out, errOut bytes.Buffer
 			cmd.Stdout = &out
 			cmd.Stderr = &errOut
+			// Taken immediately before the fixer is launched, so every
+			// backup this fixer writes is necessarily newer. It is the
+			// provenance cutoff reportNormalizeKill uses to separate the
+			// artifacts THIS kill produced from ones an earlier interrupted
+			// run left behind (correction R4-01).
+			fixerStart := time.Now()
 			err := cmd.Run()
 			timedOut := ctx.Err() == context.DeadlineExceeded
 			cancel()
 			if err != nil {
 				failed = true
 				if timedOut {
-					fmt.Fprintf(stderr, "normalize: %s timed out after %s in module %q\n", c.name, toolExecTimeout, module)
+					reportNormalizeKill(stderr, c.name, module, fixerStart)
 				} else {
 					fmt.Fprintf(stderr, "normalize: %s failed in module %q: %v\n", c.name, module, err)
 				}
@@ -155,6 +220,138 @@ func runNormalize(modules []string, stdout, stderr io.Writer) int {
 		return outcomeProceduralToolingFailed
 	}
 	return outcomePassed
+}
+
+// reportNormalizeKill writes the timeout diagnostic for a fixer the deadline
+// killed. Correction D1 gave every tool subprocess a deadline without asking
+// what killing one MEANS per path, and the normalize path rewrites files in
+// place: exec.CommandContext's default cancel action is Process.Kill
+// (SIGKILL), and gofmt -w — the only registry normalizeArgv — does not write
+// atomically. Verified in GOROOT src/cmd/gofmt/gofmt.go:468-540 (Go 1.26.5):
+// writeFile backs the original bytes up via backupFile, then opens the source
+// O_WRONLY *without* O_TRUNC and writes the formatted bytes over it, calling
+// Truncate only afterwards and removing the backup only on full success. A
+// SIGKILL between the write and the truncate leaves a new head and a stale
+// tail — real byte corruption, not merely an unformatted module — and gofmt
+// processes files concurrently (fdSem), so several can be mid-write at once.
+// gofmt installs no signal handler, so switching the cancel action to
+// SIGTERM/SIGINT would buy nothing; the deadline stays and the diagnostic is
+// what has to change.
+//
+// The pre-fix diagnostic named only the check and the module, enumerated
+// nothing, and left recovery to the module happening to sit in a VCS working
+// tree — which is exactly the case with no other way back, since runNormalize
+// walks from the caller's arbitrary cwd and so covers modules outside any
+// repo, plus ignored and untracked files. The one thing that IS recoverable
+// without VCS is the backup the kill prevented gofmt from removing, so this
+// names every one it can find. Honesty is the constraint: it reports the shape
+// it scanned for, never claims artifacts it did not look for, and when the
+// scan itself fails it says so instead of implying the module is clean.
+//
+// Correction R4-01 adds the provenance the restore instruction always needed.
+// normalizeBackupPattern matches by shape alone, so a backup an EARLIER
+// interrupted run left behind looks exactly like one this kill just wrote; the
+// pre-fix diagnostic told the operator to restore both. Following it for the
+// earlier one silently reverts that file to its pre-fixer bytes, discarding
+// whatever repair happened since — this tool's own recovery guidance destroying
+// already-corrected data. fixerStart, taken in runNormalize just before the
+// subprocess starts, is the cutoff: only artifacts written at or after it can be
+// this kill's, and only those get the bare restore instruction. Anything older,
+// or whose mtime cannot be read at all, gets wording that says restoring it
+// would revert later changes and must be inspected first — unreadable provenance
+// fails toward not destroying data, never toward a confident instruction.
+func reportNormalizeKill(stderr io.Writer, name, module string, fixerStart time.Time) {
+	fmt.Fprintf(stderr, "normalize: %s timed out after %s in module %q and was killed (SIGKILL) mid-run; a fixer that rewrites sources in place rather than via an atomic rename — which is what gofmt -w does — leaves a new head and a stale tail behind when killed mid-write, so this module may now hold partially rewritten, byte-corrupted source files\n", name, toolExecTimeout, module)
+	artifacts, scanErr := scanNormalizeRecoveryArtifacts(module)
+	for _, artifact := range artifacts {
+		original := strings.TrimSuffix(artifact.path, filepath.Ext(artifact.path))
+		if artifact.modTimeErr == nil && !artifact.modTime.Before(fixerStart) {
+			fmt.Fprintf(stderr, "normalize: recovery artifact holding the pre-fixer bytes: %s (restore it over %s)\n", artifact.path, original)
+			continue
+		}
+		fmt.Fprintf(stderr, "normalize: recovery artifact %s cannot be attributed to this kill (%s), so it was most likely left by an earlier interrupted run; do NOT restore it blind over %s — that would revert every change made to that file since, including any repair already completed; inspect and diff the two first\n", artifact.path, artifact.provenance(fixerStart), original)
+	}
+	if scanErr != nil {
+		fmt.Fprintf(stderr, "normalize: the scan of %q for recovery artifacts did not complete: %v; the %d listed above are only what it reached, not necessarily all of them\n", module, scanErr, len(artifacts))
+		return
+	}
+	if len(artifacts) == 0 {
+		fmt.Fprintf(stderr, "normalize: scanned %q for recovery artifacts matching %q and found none; this is not evidence the module is intact — the fixer may have been killed before writing a backup, or after removing one — so verify this module's source bytes by other means before running check over them\n", module, normalizeBackupPattern)
+	}
+}
+
+// normalizeBackupPattern matches the sibling backup a killed in-place fixer
+// leaves behind. It is gofmt -w's own shape, read off GOROOT
+// src/cmd/gofmt/gofmt.go:545-568 (Go 1.26.5), where backupFile creates
+// filepath.Join(dir, base+"."+strconv.Itoa(rand.Int())) holding the ORIGINAL
+// bytes. ".go" before the digits is part of the shape, not an approximation:
+// gofmt only ever rewrites files isGoFilename accepts (gofmt.go:93), so base
+// always ends in ".go". gofmt is currently the only registry entry with a
+// normalizeArgv; a future fixer leaving a differently shaped artifact would
+// need this pattern extended, which is why reportNormalizeKill prints the
+// pattern it scanned for instead of asserting a bare "none found".
+var normalizeBackupPattern = regexp.MustCompile(`\.go\.\d+$`)
+
+// normalizeArtifact is one recovery artifact the scan found, carrying the
+// modification time reportNormalizeKill needs to decide whether this run's kill
+// produced it. modTimeErr non-nil means the provenance is unknown, which is
+// treated as "not this kill's" rather than guessed either way.
+type normalizeArtifact struct {
+	path       string
+	modTime    time.Time
+	modTimeErr error
+}
+
+// provenance renders why an artifact is not attributable to the kill being
+// reported, for the operator who has to decide whether restoring it is safe.
+func (a normalizeArtifact) provenance(fixerStart time.Time) string {
+	if a.modTimeErr != nil {
+		return fmt.Sprintf("its modification time could not be read: %v", a.modTimeErr)
+	}
+	return fmt.Sprintf("last modified %s, before this run's fixer started at %s", a.modTime.Format(time.RFC3339Nano), fixerStart.Format(time.RFC3339Nano))
+}
+
+// scanNormalizeRecoveryArtifacts walks module for normalizeBackupPattern
+// matches whose original file still exists, returning them sorted by path with
+// each one's modification time attached (correction R4-01: shape alone cannot
+// tell this run's artifacts from an earlier run's). It requires
+// the original sibling because that is what makes a match a recovery artifact
+// rather than a coincidentally named file: gofmt opens the source O_WRONLY
+// without O_TRUNC, so after a mid-write kill the file it was rewriting is
+// always still there (corrupted), never missing. Any walk error is returned
+// alongside whatever was found first, so the caller can report a partial scan
+// as partial (never as a clean module). .git is skipped for the same reason
+// discoverModules skips it: object files are not module sources.
+func scanNormalizeRecoveryArtifacts(module string) ([]normalizeArtifact, error) {
+	var artifacts []normalizeArtifact
+	walkErr := filepath.WalkDir(module, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		if !normalizeBackupPattern.MatchString(d.Name()) {
+			return nil
+		}
+		if _, statErr := os.Lstat(strings.TrimSuffix(path, filepath.Ext(path))); statErr != nil {
+			return nil
+		}
+		artifact := normalizeArtifact{path: path}
+		info, infoErr := d.Info()
+		if infoErr != nil {
+			artifact.modTimeErr = infoErr
+		} else {
+			artifact.modTime = info.ModTime()
+		}
+		artifacts = append(artifacts, artifact)
+		return nil
+	})
+	sort.Slice(artifacts, func(i, j int) bool { return artifacts[i].path < artifacts[j].path })
+	return artifacts, walkErr
 }
 
 // runCheck runs c.checkArgv in every module dir and combines each module's
@@ -297,6 +494,19 @@ const unavailableExitCode = 127
 // deadline would be worse than the hang this exists to bound. A var, not a
 // const, so tests can shrink it and prove real enforcement without waiting
 // out a multi-minute deadline (see TestRunCheckEnforcesTimeout).
+//
+// That cold-download-and-compile rationale describes staticcheck and deadcode,
+// which are check-only: neither has a normalizeArgv. The normalize path runs
+// gofmt, a GOROOT binary resolved from PATH with nothing to fetch or build, so
+// the rationale above does not justify 5 minutes there. The value is shared
+// anyway, deliberately, because on the mutating path the deadline's length is
+// not the safety lever — a shorter deadline still SIGKILLs gofmt mid-write
+// (see reportNormalizeKill), it only shortens the wait before the same
+// corruption. Tightening it would make that kill MORE likely on a large but
+// legitimately slow tree, i.e. buy a faster failure by causing more of the
+// damage this correction exists to disclose. Generous headroom on the path
+// that rewrites files in place is the safer end of that trade; what makes the
+// remaining risk survivable is the diagnostic, not the duration.
 var toolExecTimeout = 5 * time.Minute
 
 // toolWaitDelay bounds Wait() itself once toolExecTimeout's context is done
@@ -653,16 +863,38 @@ type result struct {
 // R-016): (1) an unexecutable blocking-set check or a runner error →
 // procedural_tooling_failed, outranking everything else; (2) otherwise a
 // blocking-set check that ran and failed → verification_failed; (3)
-// otherwise → passed. A WARNING-only check (e.g. deadcode) can never alone
-// reach gate 1, and never suppresses a real blocking failure or
-// unavailability elsewhere. Gate 2 consults each check's own failed(exit,
-// count) predicate (D3) rather than the raw exit code directly: gofmt -l
-// exits 0 while listing violations, so trusting exitCode alone here missed
-// that finding (obs #2735) — failed is defined for every registry entry, but
-// a nil check is kept as a defensive guard against a future entry omitting
-// it. classify() remains the sole effective-blocking enforcement point;
-// failed only decides whether a check that IS effectively blocking counts as
-// red.
+// otherwise a blocking-set check with partial module coverage →
+// procedural_tooling_failed; (4) otherwise → passed. A WARNING-only check
+// (e.g. deadcode) can never alone reach gate 1 or gate 3, and never
+// suppresses a real blocking failure or unavailability elsewhere. Gate 2
+// consults each check's own failed(exit, count) predicate (D3) rather than
+// the raw exit code directly: gofmt -l exits 0 while listing violations, so
+// trusting exitCode alone here missed that finding (obs #2735) — failed is
+// defined for every registry entry, but a nil check is kept as a defensive
+// guard against a future entry omitting it. classify() remains the sole
+// effective-blocking enforcement point; failed only decides whether a check
+// that IS effectively blocking counts as red.
+//
+// Gate 3 exists because correction B1 narrowed result.unavailable to "every
+// attempted module was excluded" without teaching this function about the
+// per-module coverage B1 introduced: a blocking check that could not analyze
+// SOME modules and found nothing in the ones it could analyze reached gate 4
+// and exited 0, which skills/sdd-verify/SKILL.md maps to `passed`. That is
+// the live tui/go.mod (go 1.26.1) vs staticcheck@v0.7.0 case — one module
+// never statically analyzed, gate still recording a clean verification.
+// Before B1 that same condition exited 3, so the correction had converted a
+// fail-closed into a pass. Exit 0 must mean "everything was verified and
+// clean"; partial coverage with nothing found is "we could not verify",
+// which is procedural_tooling_failed.
+//
+// Its placement is load-bearing in both directions. It sits AFTER gate 2
+// because a run with genuine blocking findings is already a failing run: the
+// operator fixes those and re-runs, and the coverage gap then surfaces as
+// exit 3 on the re-run, so rewriting a real verification_failed into a
+// tooling error here would only hide the findings the operator must act on
+// (pinned by TestRunCheckToolchainMismatchInOneModuleDoesNotEraseFindings-
+// InAnother). It sits BEFORE gate 4 because that is the only place a
+// silently partial run can still be caught.
 func selectOutcome(results []result) int {
 	for _, r := range results {
 		if r.runnerErr {
@@ -677,6 +909,11 @@ func selectOutcome(results []result) int {
 	for _, r := range results {
 		if !r.unavailable && !r.runnerErr && classify(r.check) && r.check.failed != nil && r.check.failed(r.exitCode, r.count) {
 			return outcomeVerificationFailed
+		}
+	}
+	for _, r := range results {
+		if classify(r.check) && r.modulesAttempted > r.modulesUsable {
+			return outcomeProceduralToolingFailed
 		}
 	}
 	return outcomePassed
@@ -790,13 +1027,88 @@ func parseCheckArgs(args []string) (int, string, error) {
 }
 
 // pathInsideRoot reports whether path is at or under root (R-010 guard).
+// Both sides are symlink-resolved first: the previous version compared
+// filepath.Abs results, and Abs only Cleans — it never resolves symlinks —
+// so a path outside root that is, or traverses, a symlink resolving inside
+// it passed the guard and the log write landed in the frozen candidate.
+// Only filepath.EvalSymlinks closes that, via resolveNearestExisting.
+//
+// Resolution failure for any reason other than the out-dir simply not
+// existing yet fails CLOSED (reports inside): an unverifiable path is not
+// a safe one, and the cost of a false rejection is a re-run with an
+// explicit --out-dir, while the cost of a false acceptance is a dirtied
+// candidate and an invalidated receipt.
 func pathInsideRoot(root, path string) bool {
-	absRoot, rootErr := filepath.Abs(root)
-	absPath, pathErr := filepath.Abs(path)
+	resolvedRoot, rootErr := resolveNearestExisting(root)
+	resolvedPath, pathErr := resolveNearestExisting(path)
 	if rootErr != nil || pathErr != nil {
-		return false
+		return true
 	}
-	return absPath == absRoot || strings.HasPrefix(absPath, absRoot+string(filepath.Separator))
+	return pathContainedIn(resolvedRoot, resolvedPath)
+}
+
+// resolveNearestExisting returns path made absolute with every symlink
+// resolved. filepath.EvalSymlinks fails outright on a path that does not
+// exist, and the out-dir legitimately may not exist yet (writeLog does the
+// MkdirAll), so this walks up to the nearest existing ancestor, resolves
+// that, and re-appends the unresolved remainder. Only a non-existence
+// error walks up; anything else (a permission failure, an ancestor that is
+// not a directory) is returned so the caller can fail closed.
+func resolveNearestExisting(path string) (string, error) {
+	current, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+	remainder := ""
+	for {
+		resolved, evalErr := filepath.EvalSymlinks(current)
+		if evalErr == nil {
+			return filepath.Join(resolved, remainder), nil
+		}
+		if !errors.Is(evalErr, fs.ErrNotExist) {
+			return "", evalErr
+		}
+		parent := filepath.Dir(current)
+		if parent == current {
+			return "", evalErr
+		}
+		remainder = filepath.Join(filepath.Base(current), remainder)
+		current = parent
+	}
+}
+
+// pathContainedIn reports whether the resolved path is at or under the
+// resolved root, matching byte-exactly OR case-insensitively. The
+// case-insensitive arm exists because strings.HasPrefix is byte-exact
+// while a case-insensitive filesystem is not: on macOS — a documented host
+// for this repository — a case-shifted path denotes the very directory a
+// byte-exact comparison just refused to match. Over-rejecting a path that
+// differs from root only by case on a case-sensitive filesystem is a
+// deliberate fail-closed trade: this is a guard, so a spurious rejection
+// costs one re-run with a different --out-dir, while a missed containment
+// costs the frozen candidate. Both arms require a full path segment (the
+// separator is part of the compared prefix), so a mere shared name prefix
+// such as "<root>Sibling" is never treated as inside.
+func pathContainedIn(root, path string) bool {
+	if path == root || strings.HasPrefix(path, root+string(filepath.Separator)) {
+		return true
+	}
+	lowerRoot, lowerPath := strings.ToLower(root), strings.ToLower(path)
+	return lowerPath == lowerRoot || strings.HasPrefix(lowerPath, lowerRoot+string(filepath.Separator))
+}
+
+// firstControlByte returns the first control byte in s (anything below
+// 0x20, plus DEL) and whether one was found. Byte-wise, not rune-wise:
+// the injection that matters is a raw 0x0A, and every byte in this range
+// is its own rune in valid UTF-8 anyway, so scanning bytes is both exact
+// and immune to invalid-UTF-8 input.
+func firstControlByte(s string) (byte, bool) {
+	for i := 0; i < len(s); i++ {
+		if s[i] < 0x20 || s[i] == 0x7f {
+			return s[i], true
+		}
+	}
+	return 0, false
 }
 
 // capPayload is the last-resort byte-level backstop for R-013 (correction
