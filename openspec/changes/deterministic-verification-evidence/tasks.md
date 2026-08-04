@@ -274,6 +274,37 @@ Two calibration notes shaped the cut:
 - [x] 5.2 GREEN: edit `SKILL.md` to declare the ordering (R-011). Rerun — pass.
 - [x] 5.3 RED: record failing dispatch-smoke assertion — `bin/labdrian-overlay` has no `deterministic-checks` subcommand.
 - [x] 5.4 GREEN: add `cmd_deterministic_checks()` mirroring `cmd_validate_entry_contract` (lines 1559-1615): two exit-3 guards (missing runner source / missing `go`), `CALLER_CWD` normalization, temp-binary build, exit propagation; add dispatch case (mirrors line 1651) and help entry (R-012). `bash -n` + `shellcheck` pass.
+### 5B2. outcome-consults-failed-predicate (R-003, R-015 correctness) — est. 30-50 lines — depends on 5B
+
+Found while implementing 5B, reproduced independently, and scoped by a full audit of every `check` field's production consumption:
+
+| Field | Consumed in production |
+|---|---|
+| `checkArgv` | 5x |
+| `parse` | 4x |
+| `normalizeArgv` | 2x |
+| `unavailableIf` | 2x |
+| **`failed`** | **0x** |
+
+`selectOutcome` (~line 435) tests `r.exitCode != 0` directly instead of consulting `r.check.failed(exit, count)`. The `parse` functions *do* run — reached through `c.parse(...)` in `buildResult` — so the runner **counts correctly and decides incorrectly**: it detects a finding, reports it in the row, then ignores its own predicate when choosing the outcome.
+
+Reproduced with an unformatted probe file under `engine/prespec/`:
+
+```
+gofmt | 0 | count=1; top: prespec/zz_probe.go; full: /tmp/labdrian-deterministic-checks/gofmt.log
+RUNNER EXIT: 0
+```
+
+Exit 0 is `passed`; it must be 1 (`verification_failed`). This is exactly the case `failedGofmt` was written for in 3B — `gofmt -l` exits 0 while listing violations — so the reasoning is correct and tested, merely disconnected from the decision.
+
+The audit confirms this is **one** wiring gap, not four: `unavailableIf` was already connected in 3G, and no other field is unconsumed. There is no fourth hidden instance.
+
+**Third occurrence of one pattern** (after `isStaticcheckToolchainMismatch` in 3F and `isBannedSummaryLiteral` in 3H): a helper is built and unit-tested in one objective while the objective that would consume it wires around it. Unit tests over a helper prove the helper, never the wiring — which is why the assertion below must be at the outcome level.
+
+- [ ] 5B2.1 RED: assert at the **outcome level** that a dirty `gofmt` tree produces exit 1, not exit 0. A predicate-level test does not catch this and must not be substituted.
+- [ ] 5B2.2 GREEN: make `selectOutcome` consult `r.check.failed(r.exitCode, r.count)`. Keep `classify()` as the sole effective-blocking enforcement point and leave the unavailable and runner-error precedence unchanged.
+- [ ] 5B2.3 Confirm no regression in the other three checks' outcomes, and rerun the full suite.
+
 - [ ] 5.5 RED: record failing smoke assertion — missing-tool and missing-`go` guards do not yet exit 3 with explicit stderr.
 - [ ] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
 - [x] 5.7 RED: add payload-size-boundary unit test on the evidence-piping contract — empty run still satisfies `minLength 1`; payload over 4194304 bytes truncates, never rejected (R-013).
