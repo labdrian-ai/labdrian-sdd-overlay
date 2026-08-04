@@ -1648,6 +1648,9 @@ cmd_deterministic_checks() {
 
   local status=0
   (cd "$CALLER_CWD" && "$runner_binary" "$@") || status=$?
+  if [[ "$status" -ne 0 && ! -d "$CALLER_CWD" ]]; then
+    status=3
+  fi
   rm -f "$runner_binary"
   return "$status"
 }
