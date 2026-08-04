@@ -19,29 +19,74 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-// run wires discoverModules x registry x exec x classify/selectOutcome x
-// emitRows into the working end-to-end command. Row summaries use the
-// Phase-3 bounded renderer (D6), driven by --top-n (parseTopN).
+// usageText names both permitted subcommands (R-009): normalize (mutating,
+// pre-freeze only) and check (read-only, sole permitted post-freeze step).
+const usageText = "usage: deterministic-check-runner <normalize|check> [--top-n N]\n"
+
+// run dispatches to the normalize or check subcommand (Phase 4 mode split).
 func run(args []string, stdout, stderr io.Writer) int {
+	if len(args) == 0 {
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
+
 	root, err := os.Getwd()
 	if err != nil {
 		fmt.Fprintf(stderr, "resolve working directory: %v\n", err)
 		return outcomeProceduralToolingFailed
 	}
-
 	modules, err := discoverModules(root)
 	if err != nil {
 		fmt.Fprintf(stderr, "discover modules: %v\n", err)
 		return outcomeProceduralToolingFailed
 	}
 
+	switch args[0] {
+	case "check":
+		return runCheckMode(modules, args[1:], root, stdout, stderr)
+	case "normalize":
+		return runNormalize(modules)
+	default:
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
+}
+
+// runCheckMode wires the read-only check subcommand (R-009/R-010);
+// --out-dir inside root is a usage error (D5).
+func runCheckMode(modules []string, args []string, root string, stdout, stderr io.Writer) int {
+	if outDir := parseOutDir(args); outDir != "" && pathInsideRoot(root, outDir) {
+		fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
 	results := make([]result, len(registry))
 	for i, c := range registry {
 		results[i] = runCheck(c, modules)
 	}
-
 	emitRows(stdout, results, parseTopN(args))
 	return selectOutcome(results)
+}
+
+// runNormalize runs each check's normalizeArgv fixer (nil = no fixer)
+// across every module. The only mutating subcommand; pre-freeze only (R-011).
+func runNormalize(modules []string) int {
+	for _, c := range registry {
+		if c.normalizeArgv == nil {
+			continue
+		}
+		for _, module := range modules {
+			cmd := exec.Command(c.normalizeArgv[0], c.normalizeArgv[1:]...)
+			cmd.Dir = module
+			if err := cmd.Run(); err != nil {
+				var exitErr *exec.ExitError
+				if !errors.As(err, &exitErr) {
+					return outcomeProceduralToolingFailed
+				}
+			}
+		}
+	}
+	return outcomePassed
 }
 
 // runCheck runs c.checkArgv in every module dir and aggregates to one
@@ -54,7 +99,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 func runCheck(c check, modules []string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
-		return result{check: c, exitCode: 127, unavailable: true}
+		return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 	}
 
 	exitCode := 0
@@ -67,16 +112,27 @@ func runCheck(c check, modules []string) result {
 		if runErr := cmd.Run(); runErr != nil {
 			var exitErr *exec.ExitError
 			if errors.As(runErr, &exitErr) {
-				if code := exitErr.ExitCode(); code > exitCode {
+				code := exitErr.ExitCode()
+				if code == unavailableExitCode {
+					return result{check: c, exitCode: unavailableExitCode, unavailable: true}
+				}
+				if code > exitCode {
 					exitCode = code
 				}
 				continue
 			}
-			return result{check: c, exitCode: 127, unavailable: true}
+			return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 		}
 	}
 	return buildResult(c, exitCode, stdout.Bytes())
 }
+
+// unavailableExitCode is the POSIX "command not found" convention: it is
+// synthesized when exec.LookPath fails, and also honored when the process
+// itself exits 127 (e.g. a "go run <module>@version" invocation whose
+// module cannot be resolved) — a real subprocess exit this composes with
+// the LookPath sites for rather than duplicating (4.10, amended R-016).
+const unavailableExitCode = 127
 
 // buildResult constructs a check's result from its captured stdout: count
 // and top come from c.parse; unavailable is set when c.unavailableIf
@@ -126,14 +182,15 @@ func renderRowBlock(results []result, topN int) []byte {
 // tool's own exit code is not always authoritative (gofmt -l exits 0 while
 // listing violations). unavailableIf is optional (nil for most checks): when
 // set, it detects that the tool ran but could not analyze the code at all
-// (D4/R-016) — see buildResult. All four registry entries now declare
-// parse/failed. normalizeArgv is deferred to runner-mode-separation and is
-// intentionally absent here to avoid rework.
+// (D4/R-016) — see buildResult. normalizeArgv is the mode-split fixer
+// invocation (Phase 4), nil when the tool has no fixer; checkArgv must never
+// contain a fixer flag (enforced by containsFixerFlag/init below).
 type check struct {
 	name          string
 	deterministic bool
 	blocking      bool
 	checkArgv     []string
+	normalizeArgv []string
 	parse         func(exit int, out []byte) (count int, top []string)
 	failed        func(exit, count int) bool
 	unavailableIf func(out []byte) bool
@@ -147,10 +204,36 @@ type check struct {
 // so both agree on tool availability and honor the same version pin
 // (TestCheckArgvPinnedToCIInvocation enforces this parity).
 var registry = []check{
-	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, parse: parseGofmt, failed: failedGofmt},
+	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, normalizeArgv: []string{"gofmt", "-w", "."}, parse: parseGofmt, failed: failedGofmt},
 	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
 	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck, unavailableIf: isStaticcheckToolchainMismatch},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}, parse: parseDeadcode, failed: failedDeadcode},
+}
+
+// fixerFlags are argv tokens indicating a tool would mutate files; no
+// checkArgv entry may contain one (R-009/R-010/D5).
+var fixerFlags = []string{"-w", "-fix"}
+
+// containsFixerFlag reports whether argv contains any known fixer flag.
+func containsFixerFlag(argv []string) bool {
+	for _, arg := range argv {
+		for _, fixer := range fixerFlags {
+			if arg == fixer {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// init enforces the checkArgv allowlist as a real registry check: a fixer
+// flag added to checkArgv fails loud at program start.
+func init() {
+	for _, c := range registry {
+		if containsFixerFlag(c.checkArgv) {
+			panic(fmt.Sprintf("registry invariant violated: check %q checkArgv %v contains fixer flag", c.name, c.checkArgv))
+		}
+	}
 }
 
 // goVetDiagnosticPattern matches go vet's diagnostic lines
@@ -306,10 +389,12 @@ func classify(c check) bool {
 	return c.blocking && c.deterministic
 }
 
-// Process exit codes returned by selectOutcome (D4).
+// Process exit codes returned by selectOutcome (D4). outcomeUsage (2) is
+// returned by run directly for a missing/unrecognized subcommand.
 const (
 	outcomePassed                  = 0
 	outcomeVerificationFailed      = 1
+	outcomeUsage                   = 2
 	outcomeProceduralToolingFailed = 3
 )
 
@@ -444,6 +529,28 @@ func parseTopN(args []string) int {
 		return defaultTopN
 	}
 	return *topN
+}
+
+// parseOutDir extracts --out-dir from check-mode args (empty = unset).
+func parseOutDir(args []string) string {
+	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
+	fs.SetOutput(io.Discard)
+	fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
+	outDir := fs.String("out-dir", "", "directory for full check logs")
+	if err := fs.Parse(args); err != nil {
+		return ""
+	}
+	return *outDir
+}
+
+// pathInsideRoot reports whether path is at or under root (R-010 guard).
+func pathInsideRoot(root, path string) bool {
+	absRoot, rootErr := filepath.Abs(root)
+	absPath, pathErr := filepath.Abs(path)
+	if rootErr != nil || pathErr != nil {
+		return false
+	}
+	return absPath == absRoot || strings.HasPrefix(absPath, absRoot+string(filepath.Separator))
 }
 
 // capPayload is the last-resort byte-level backstop for R-013 (correction

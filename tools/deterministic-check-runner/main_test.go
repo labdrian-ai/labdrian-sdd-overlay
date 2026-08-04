@@ -2,8 +2,13 @@ package main
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"errors"
 	"flag"
+	"fmt"
+	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"regexp"
@@ -437,9 +442,10 @@ func TestCheckArgvPinnedToCIInvocation(t *testing.T) {
 }
 
 // TestRunEndToEnd exercises discoverModules x registry x exec x
-// classify/selectOutcome x emitRows against this repo's own module set.
-// Per-tool exit codes are environment-dependent, so only row structure
-// (count, order, shape, banned-literal guard) is asserted.
+// classify/selectOutcome x emitRows against this repo's own module set via
+// the "check" subcommand. Per-tool exit codes are environment-dependent, so
+// only row structure (count, order, shape, banned-literal guard) is
+// asserted.
 func TestRunEndToEnd(t *testing.T) {
 	root := repoRoot(t)
 	previousWD, err := os.Getwd()
@@ -456,7 +462,7 @@ func TestRunEndToEnd(t *testing.T) {
 	}()
 
 	var stdout, stderr bytes.Buffer
-	run(nil, &stdout, &stderr)
+	run([]string{"check"}, &stdout, &stderr)
 
 	lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
 	if len(lines) != len(registry) {
@@ -464,6 +470,33 @@ func TestRunEndToEnd(t *testing.T) {
 	}
 	for i, line := range lines {
 		assertRow(t, i, line, registry[i].name)
+	}
+}
+
+// TestSubcommandUsage is 4.1's RED test (R-009): no subcommand exits
+// non-zero and usage names both normalize and check.
+func TestSubcommandUsage(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	got := run(nil, &stdout, &stderr)
+	if got == 0 {
+		t.Fatalf("run(nil) exit code = %d, want non-zero", got)
+	}
+	usage := stdout.String() + stderr.String()
+	if !strings.Contains(usage, "normalize") {
+		t.Errorf("usage text %q does not name normalize", usage)
+	}
+	if !strings.Contains(usage, "check") {
+		t.Errorf("usage text %q does not name check", usage)
+	}
+}
+
+// TestCheckNeverMutates is 4.3's RED test (R-009/R-010/D5): no registry
+// checkArgv may contain a known fixer flag (e.g. gofmt -w, staticcheck -fix).
+func TestCheckNeverMutates(t *testing.T) {
+	for _, c := range registry {
+		if containsFixerFlag(c.checkArgv) {
+			t.Errorf("check %q: checkArgv %v contains a fixer flag, want check mode incapable of mutating", c.name, c.checkArgv)
+		}
 	}
 }
 
@@ -863,4 +896,179 @@ func TestGoldenRowBlock(t *testing.T) {
 	if !bytes.Equal(got, rerun.Bytes()) {
 		t.Error("emitRows(goldenRowBlockResults()) is not deterministic across repeated calls")
 	}
+}
+
+// TestOutDirGuard is 4.7's RED test: --out-dir inside root is a usage error.
+func TestOutDirGuard(t *testing.T) {
+	root := repoRoot(t)
+	chdir(t, root)
+	inside := filepath.Join(root, "tmp-out-dir-guard-test")
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check", "--out-dir", inside}, &stdout, &stderr)
+	if got != outcomeUsage {
+		t.Fatalf("run(check --out-dir %s) = %d, want outcomeUsage (%d)", inside, got, outcomeUsage)
+	}
+	if !strings.Contains(stderr.String(), "out-dir") {
+		t.Errorf("stderr %q does not mention out-dir", stderr.String())
+	}
+}
+
+// chdir enters dir and restores the previous cwd via t.Cleanup.
+func chdir(t *testing.T, dir string) {
+	t.Helper()
+	previousWD, _ := os.Getwd()
+	if err := os.Chdir(dir); err != nil {
+		t.Fatalf("chdir into %s: %v", dir, err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(previousWD) })
+}
+
+// gitOutput runs a git subcommand in dir, returning its stdout.
+func gitOutput(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	if err := cmd.Run(); err != nil {
+		t.Fatalf("git %v: %v\n%s", args, err, stderr.String())
+	}
+	return stdout.String()
+}
+
+// fileState is a per-file (mode, size, sha256) fingerprint (D5).
+type fileState struct {
+	mode fs.FileMode
+	size int64
+	sha  string
+}
+
+// snapshotTree captures status plus per-file fileState, skipping .git (D5).
+func snapshotTree(t *testing.T, dir string) (status string, files map[string]fileState) {
+	t.Helper()
+	status = gitOutput(t, dir, "status", "--porcelain")
+	files = make(map[string]fileState)
+	walkErr := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if d.IsDir() {
+			if d.Name() == ".git" {
+				return filepath.SkipDir
+			}
+			return nil
+		}
+		info, statErr := d.Info()
+		content, readErr := os.ReadFile(path)
+		rel, relErr := filepath.Rel(dir, path)
+		if statErr != nil || readErr != nil || relErr != nil {
+			return errors.Join(statErr, readErr, relErr)
+		}
+		sum := sha256.Sum256(content)
+		files[rel] = fileState{mode: info.Mode(), size: info.Size(), sha: fmt.Sprintf("%x", sum)}
+		return nil
+	})
+	if walkErr != nil {
+		t.Fatalf("walk %s: %v", dir, walkErr)
+	}
+	return status, files
+}
+
+// TestCheckByteNeutral is 4.5's RED test (D5): check must leave a dirty
+// tree, including a 0755 file, byte- and mode-identical.
+func TestCheckByteNeutral(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	if _, err := exec.LookPath("git"); err != nil {
+		t.Skip("git not available")
+	}
+
+	fixture := t.TempDir()
+	gitOutput(t, fixture, "init", "-q")
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/fixture\n\ngo 1.21\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nfunc main() {}\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "script.sh"), "#!/bin/sh\necho hi\n", 0o755)
+	gitOutput(t, fixture, "add", "-A")
+	gitOutput(t, fixture, "-c", "user.email=fixture@example.com", "-c", "user.name=Fixture", "commit", "-q", "-m", "initial")
+
+	// dirty tree: an uncommitted edit plus an untracked file
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nfunc main() {}\n\n// dirty\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "untracked.txt"), "scratch\n", 0o644)
+
+	beforeStatus, beforeFiles := snapshotTree(t, fixture)
+	chdir(t, fixture)
+	var stdout, stderr bytes.Buffer
+	run([]string{"check"}, &stdout, &stderr)
+	afterStatus, afterFiles := snapshotTree(t, fixture)
+	if beforeStatus != afterStatus {
+		t.Errorf("git status --porcelain changed:\nbefore:\n%s\nafter:\n%s", beforeStatus, afterStatus)
+	}
+	if !reflect.DeepEqual(beforeFiles, afterFiles) {
+		t.Errorf("per-file (mode, size, sha256) changed:\nbefore: %+v\nafter: %+v", beforeFiles, afterFiles)
+	}
+}
+
+// mustWriteFile writes content to path and chmods it to mode.
+func mustWriteFile(t *testing.T, path, content string, mode fs.FileMode) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), mode); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+	if err := os.Chmod(path, mode); err != nil {
+		t.Fatalf("chmod %s: %v", path, err)
+	}
+}
+
+// writeExecutable writes an executable shell script named name in dir.
+func writeExecutable(t *testing.T, dir, name, script string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(dir, name), []byte(script), 0o755); err != nil {
+		t.Fatalf("write executable %s/%s: %v", filepath.Join(dir, name), name, err)
+	}
+}
+
+// TestMissingToolStubbedPATH is 4.9's RED test (amended R-016, obs #2700):
+// unavailability is severity-proportional. Scenario A confirms an
+// unavailable BLOCKING-set tool still forces procedural_tooling_failed.
+// Scenario B is load-bearing: deadcode's checkArgv[0] is "go", shared with
+// go vet/staticcheck, so it cannot be isolated by hiding "go" from PATH
+// without also breaking those two. It is isolated instead by making the
+// stubbed "go" itself exit 127 — the same convention exec.LookPath failure
+// already synthesizes — proving the real-process detection 4.10 adds
+// composes with the existing LookPath sites rather than duplicating them.
+func TestMissingToolStubbedPATH(t *testing.T) {
+	t.Run("blocking-set tool unavailable forces procedural_tooling_failed", func(t *testing.T) {
+		t.Setenv("PATH", t.TempDir()) // no gofmt anywhere on PATH
+		gofmt := findRegistryCheck(t, "gofmt")
+
+		got := runCheck(gofmt, []string{t.TempDir()})
+		if !got.unavailable {
+			t.Fatalf("runCheck(gofmt, stubbed PATH).unavailable = false, want true")
+		}
+		if outcome := selectOutcome([]result{got}); outcome != outcomeProceduralToolingFailed {
+			t.Errorf("selectOutcome([]result{gofmt unavailable}) = %d, want %d", outcome, outcomeProceduralToolingFailed)
+		}
+	})
+
+	t.Run("deadcode alone unavailable never forces procedural_tooling_failed", func(t *testing.T) {
+		stubDir := t.TempDir()
+		writeExecutable(t, stubDir, "go", "#!/bin/sh\nexit 127\n")
+		t.Setenv("PATH", stubDir)
+		deadcode := findRegistryCheck(t, "deadcode")
+
+		got := runCheck(deadcode, []string{t.TempDir()})
+		if !got.unavailable {
+			t.Fatalf("runCheck(deadcode, exit-127 stub).unavailable = false, want true (WARNING row, not silently clean)")
+		}
+		if classify(got.check) {
+			t.Fatalf("classify(deadcode) = true, want false (WARNING-only, never blocking)")
+		}
+
+		gofmt, goVet, staticcheck := findRegistryCheck(t, "gofmt"), findRegistryCheck(t, "go vet"), findRegistryCheck(t, "staticcheck")
+		outcome := selectOutcome([]result{{check: gofmt}, {check: goVet}, {check: staticcheck}, got})
+		if outcome != outcomePassed {
+			t.Errorf("selectOutcome(deadcode unavailable, rest green) = %d, want %d (outcomePassed) — an absent WARNING-only tool must not invalidate the run", outcome, outcomePassed)
+		}
+	})
 }
