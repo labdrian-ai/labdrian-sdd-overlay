@@ -36,6 +36,10 @@ jobs:
         with:
           go-version-file: engine/go.mod
 
+      - name: Gofmt
+        working-directory: engine
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
       - name: Vet
         working-directory: engine
         run: go vet ./...
@@ -47,7 +51,23 @@ jobs:
       - name: Deadcode (informational)
         working-directory: engine
         continue-on-error: true
-        run: go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...
+        run: |
+          out="$RUNNER_TEMP/deadcode-engine.txt"
+          go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./... > "$out" || true
+          count=$(wc -l < "$out" | tr -d ' ')
+          {
+            echo "### Dead code — engine (informational)"
+            echo
+            echo "\`$count\` unreachable functions reported."
+            if [ "$count" -gt 0 ]; then
+              echo
+              echo '```'
+              head -n 10 "$out"
+              [ "$count" -gt 10 ] && echo "... and $((count - 10)) more"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$out"
 
       - name: Test
         working-directory: engine
@@ -104,6 +124,10 @@ jobs:
         with:
           go-version-file: tui/go.mod
 
+      - name: Gofmt
+        working-directory: tui
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
       - name: Vet
         working-directory: tui
         run: go vet ./...
@@ -115,7 +139,23 @@ jobs:
       - name: Deadcode (informational)
         working-directory: tui
         continue-on-error: true
-        run: go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./...
+        run: |
+          out="$RUNNER_TEMP/deadcode-tui.txt"
+          go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./... > "$out" || true
+          count=$(wc -l < "$out" | tr -d ' ')
+          {
+            echo "### Dead code — tui (informational)"
+            echo
+            echo "\`$count\` unreachable functions reported."
+            if [ "$count" -gt 0 ]; then
+              echo
+              echo '```'
+              head -n 10 "$out"
+              [ "$count" -gt 10 ] && echo "... and $((count - 10)) more"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$out"
 
       - name: Test
         working-directory: tui

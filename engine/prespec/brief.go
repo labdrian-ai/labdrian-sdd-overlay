@@ -87,12 +87,12 @@ func NewID() string {
 
 // Section keys for the six discovery sections (in order).
 const (
-	SectionJobStatement          = 0
-	SectionCurrentGap            = 1
-	SectionWhyNow                = 2
-	SectionUsersStakeholders     = 3
+	SectionJobStatement            = 0
+	SectionCurrentGap              = 1
+	SectionWhyNow                  = 2
+	SectionUsersStakeholders       = 3
 	SectionConstraintsAlternatives = 4
-	SectionAssumptions           = 5
+	SectionAssumptions             = 5
 )
 
 // Brief is the structured discovery output produced after a completed interview.
