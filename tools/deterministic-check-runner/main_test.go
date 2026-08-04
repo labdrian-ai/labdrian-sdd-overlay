@@ -1127,3 +1127,42 @@ func TestMissingToolStubbedPATH(t *testing.T) {
 		}
 	})
 }
+
+// TestRunCheckGoVetFindingsReachRow is the row-level RED test for the
+// stderr-drop defect: go vet writes its diagnostics to stderr, and runCheck
+// used to pass only stdout to buildResult, so a real go vet failure rendered
+// as the row "go vet | 1 | 0" — the exact byte sequence capture-evidence
+// would have received. The fixture lives in t.TempDir(), never testdata/,
+// because discoverModules only skips .git and would otherwise pick up a
+// committed go.mod as a real module.
+func TestRunCheckGoVetFindingsReachRow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+	if _, err := exec.LookPath("go"); err != nil {
+		t.Skip("go toolchain not available")
+	}
+
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/vetfixture\n\ngo 1.21\n", 0o644)
+	mustWriteFile(t, filepath.Join(fixture, "main.go"), "package main\n\nimport \"fmt\"\n\nfunc main() {\n\tfmt.Printf(\"%d\\n\", \"not-a-number\")\n}\n", 0o644)
+
+	got := runCheck(findRegistryCheck(t, "go vet"), []string{fixture})
+
+	var stdout bytes.Buffer
+	emitRows(&stdout, []result{got}, 5)
+	row := strings.TrimRight(stdout.String(), "\n")
+	fields := strings.SplitN(row, " | ", 3)
+	if len(fields) != 3 {
+		t.Fatalf("emitted row %q does not have 3 fields", row)
+	}
+	if fields[0] != "go vet" || fields[1] != "1" {
+		t.Fatalf("emitted row = %q, want prefix \"go vet | 1 | ...\"", row)
+	}
+	if fields[2] == "0" {
+		t.Fatalf("go vet row summary = %q, want real finding evidence, not the zero-findings literal (stderr never reached the parser)", fields[2])
+	}
+	if !strings.HasPrefix(fields[2], "count=1; top:") {
+		t.Errorf("go vet row summary = %q, want prefix %q", fields[2], "count=1; top:")
+	}
+}

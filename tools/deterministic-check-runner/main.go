@@ -92,10 +92,11 @@ func runNormalize(modules []string) int {
 // runCheck runs c.checkArgv in every module dir and aggregates to one
 // result: unavailable if the tool is missing from PATH, else the max exit
 // code observed across modules. stdout and stderr are captured into
-// distinct buffers, never merged: c.parse trusts stdout alone (per-parse-func
-// docs), and merging streams has already inflated a finding count once by
-// letting a Go toolchain-switch message land in the parsed stream (obs
-// #2712). stderr is captured but not yet consumed by any decision here.
+// distinct buffers, never merged: merging streams has already inflated a
+// finding count once by letting a Go toolchain-switch message land in the
+// parsed stream (obs #2712). c.stderrFindings picks which buffer reaches
+// c.parse — go vet writes its diagnostics to stderr, every other check to
+// stdout.
 func runCheck(c check, modules []string) result {
 	toolPath, lookErr := exec.LookPath(c.checkArgv[0])
 	if lookErr != nil {
@@ -124,7 +125,11 @@ func runCheck(c check, modules []string) result {
 			return result{check: c, exitCode: unavailableExitCode, unavailable: true}
 		}
 	}
-	return buildResult(c, exitCode, stdout.Bytes())
+	findings := stdout.Bytes()
+	if c.stderrFindings {
+		findings = stderr.Bytes()
+	}
+	return buildResult(c, exitCode, findings)
 }
 
 // unavailableExitCode is the POSIX "command not found" convention: it is
@@ -185,15 +190,18 @@ func renderRowBlock(results []result, topN int) []byte {
 // (D4/R-016) — see buildResult. normalizeArgv is the mode-split fixer
 // invocation (Phase 4), nil when the tool has no fixer; checkArgv must never
 // contain a fixer flag (enforced by containsFixerFlag/init below).
+// stderrFindings is true only for go vet, whose diagnostics land on stderr
+// (runCheck picks the matching buffer before parse ever runs).
 type check struct {
-	name          string
-	deterministic bool
-	blocking      bool
-	checkArgv     []string
-	normalizeArgv []string
-	parse         func(exit int, out []byte) (count int, top []string)
-	failed        func(exit, count int) bool
-	unavailableIf func(out []byte) bool
+	name           string
+	deterministic  bool
+	blocking       bool
+	checkArgv      []string
+	normalizeArgv  []string
+	parse          func(exit int, out []byte) (count int, top []string)
+	failed         func(exit, count int) bool
+	unavailableIf  func(out []byte) bool
+	stderrFindings bool
 }
 
 // registry is the hardcoded v1 check set. It is not configurable: gofmt,
@@ -205,7 +213,7 @@ type check struct {
 // (TestCheckArgvPinnedToCIInvocation enforces this parity).
 var registry = []check{
 	{name: "gofmt", deterministic: true, blocking: true, checkArgv: []string{"gofmt", "-l", "."}, normalizeArgv: []string{"gofmt", "-w", "."}, parse: parseGofmt, failed: failedGofmt},
-	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet},
+	{name: "go vet", deterministic: true, blocking: true, checkArgv: []string{"go", "vet", "./..."}, parse: parseGoVet, failed: failedGoVet, stderrFindings: true},
 	{name: "staticcheck", deterministic: true, blocking: true, checkArgv: []string{"go", "run", "honnef.co/go/tools/cmd/staticcheck@v0.7.0", "./..."}, parse: parseStaticcheck, failed: failedStaticcheck, unavailableIf: isStaticcheckToolchainMismatch},
 	{name: "deadcode", deterministic: true, blocking: false, checkArgv: []string{"go", "run", "golang.org/x/tools/cmd/deadcode@v0.48.0", "./..."}, parse: parseDeadcode, failed: failedDeadcode},
 }
