@@ -64,6 +64,21 @@ test_exit_code: 125
 build_exit_code: 125
 ```
 
+## Deterministic Check Evidence (R-011, R-012, R-013)
+
+- `normalize` runs before `review start`; once the candidate freezes, `check` is the only `deterministic-check-runner` subcommand this skill may execute — any mutating step after freeze would invalidate the receipt (R-011).
+- `bin/labdrian-overlay deterministic-checks check` stdout pipes directly into `gentle-ai review capture-evidence --input -`; the runner's own row output is the captured evidence bytes, never a paraphrase.
+- Absent-CLI guard (D8): before invoking the runner, confirm `command -v labdrian-overlay >/dev/null 2>&1`. If it fails, the deployment has no `bin/labdrian-overlay` on the PATH — report `--outcome procedural_tooling_failed`. Never a silent pass, never `verification_failed`.
+- Exit-code to `--outcome` mapping is mechanical — read directly off the runner's own process exit code, never re-derived:
+
+  | Runner exit code | `--outcome` value |
+  |---|---|
+  | `0` | `passed` |
+  | `1` | `verification_failed` |
+  | `3` | `procedural_tooling_failed` |
+
+- This mapping only relays the runner's own precedence decision, it never re-derives it: a BLOCKING-set tool being unavailable already resolves to exit `3` ahead of any failing check inside `selectOutcome`, and a missing WARNING-only tool (`deadcode`) never forces exit `3` on its own — both are proven at the runner level (Phase 2C/4/5B2 precedence tests), not re-tested here.
+
 ## Decision Gates
 
 | Condition | Action |

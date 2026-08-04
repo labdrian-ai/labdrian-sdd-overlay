@@ -419,7 +419,14 @@ type result struct {
 // blocking-set check that ran and failed → verification_failed; (3)
 // otherwise → passed. A WARNING-only check (e.g. deadcode) can never alone
 // reach gate 1, and never suppresses a real blocking failure or
-// unavailability elsewhere.
+// unavailability elsewhere. Gate 2 consults each check's own failed(exit,
+// count) predicate (D3) rather than the raw exit code directly: gofmt -l
+// exits 0 while listing violations, so trusting exitCode alone here missed
+// that finding (obs #2735) — failed is defined for every registry entry, but
+// a nil check is kept as a defensive guard against a future entry omitting
+// it. classify() remains the sole effective-blocking enforcement point;
+// failed only decides whether a check that IS effectively blocking counts as
+// red.
 func selectOutcome(results []result) int {
 	for _, r := range results {
 		if r.runnerErr {
@@ -432,7 +439,7 @@ func selectOutcome(results []result) int {
 		}
 	}
 	for _, r := range results {
-		if !r.unavailable && !r.runnerErr && classify(r.check) && r.exitCode != 0 {
+		if !r.unavailable && !r.runnerErr && classify(r.check) && r.check.failed != nil && r.check.failed(r.exitCode, r.count) {
 			return outcomeVerificationFailed
 		}
 	}

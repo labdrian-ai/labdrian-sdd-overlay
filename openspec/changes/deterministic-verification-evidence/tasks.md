@@ -270,16 +270,47 @@ Two calibration notes shaped the cut:
 | `overlay-dispatch-smoke` | 5.5, 5.6 | Smoke test proving both guards fire with explicit stderr | 30-50 |
 | `outcome-mapping-and-closure` | 5.9-5.13 | Mechanical exit-code to `--outcome` mapping, the absent-CLI guard, and the closing R-019/R-001/regression verification | 60-100 |
 
-- [ ] 5.1 RED: record failing `rg` assertion — `skills/sdd-verify/SKILL.md` does not yet declare `normalize` pre-`review start` / `check` as sole post-freeze step.
-- [ ] 5.2 GREEN: edit `SKILL.md` to declare the ordering (R-011). Rerun — pass.
-- [ ] 5.3 RED: record failing dispatch-smoke assertion — `bin/labdrian-overlay` has no `deterministic-checks` subcommand.
-- [ ] 5.4 GREEN: add `cmd_deterministic_checks()` mirroring `cmd_validate_entry_contract` (lines 1559-1615): two exit-3 guards (missing runner source / missing `go`), `CALLER_CWD` normalization, temp-binary build, exit propagation; add dispatch case (mirrors line 1651) and help entry (R-012). `bash -n` + `shellcheck` pass.
-- [ ] 5.5 RED: record failing smoke assertion — missing-tool and missing-`go` guards do not yet exit 3 with explicit stderr.
-- [ ] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
-- [ ] 5.7 RED: add payload-size-boundary unit test on the evidence-piping contract — empty run still satisfies `minLength 1`; payload over 4194304 bytes truncates, never rejected (R-013).
-- [ ] 5.8 GREEN: document `gentle-ai review capture-evidence --input -` piping the runner's `check` stdout in `SKILL.md`; test passes.
-- [ ] 5.9 RED: add unit tests asserting exit-code→`--outcome` mapping is mechanical: 0→`passed`, 1→`verification_failed`, 3→`procedural_tooling_failed`, including both precedence scenarios (BLOCKING-set unavailable wins over a failing check; missing WARNING-only tool never masks/escalates).
-- [ ] 5.10 GREEN: implement/document the mapping; add `command -v labdrian-overlay` guard — absent CLI → `procedural_tooling_failed`, never silent pass, never `verification_failed` (D8). Tests pass.
-- [ ] 5.11 Verify R-019: confirm no new file under `skills/` (edits only touch `strict-tdd-verify.md`/`SKILL.md`, rows 22/41). If a new `skills/` file is ever added, add its `overlay.manifest` row and run `skills validate` — exit 0.
-- [ ] 5.12 Re-verify R-001: `git diff main -- bin/overlay` still empty.
-- [ ] 5.13 Run full regression: `cd engine && go test ./...`, `cd tui && go test ./...`, `cd tools/deterministic-check-runner && go test ./... -cover`; confirm green CI (staticcheck gate, deadcode visible+green, runner job).
+- [x] 5.1 RED: record failing `rg` assertion — `skills/sdd-verify/SKILL.md` does not yet declare `normalize` pre-`review start` / `check` as sole post-freeze step.
+- [x] 5.2 GREEN: edit `SKILL.md` to declare the ordering (R-011). Rerun — pass.
+- [x] 5.3 RED: record failing dispatch-smoke assertion — `bin/labdrian-overlay` has no `deterministic-checks` subcommand.
+- [x] 5.4 GREEN: add `cmd_deterministic_checks()` mirroring `cmd_validate_entry_contract` (lines 1559-1615): two exit-3 guards (missing runner source / missing `go`), `CALLER_CWD` normalization, temp-binary build, exit propagation; add dispatch case (mirrors line 1651) and help entry (R-012). `bash -n` + `shellcheck` pass.
+### 5B2. outcome-consults-failed-predicate (R-003, R-015 correctness) — est. 30-50 lines — depends on 5B
+
+Found while implementing 5B, reproduced independently, and scoped by a full audit of every `check` field's production consumption:
+
+| Field | Consumed in production |
+|---|---|
+| `checkArgv` | 5x |
+| `parse` | 4x |
+| `normalizeArgv` | 2x |
+| `unavailableIf` | 2x |
+| **`failed`** | **0x** |
+
+`selectOutcome` (~line 435) tests `r.exitCode != 0` directly instead of consulting `r.check.failed(exit, count)`. The `parse` functions *do* run — reached through `c.parse(...)` in `buildResult` — so the runner **counts correctly and decides incorrectly**: it detects a finding, reports it in the row, then ignores its own predicate when choosing the outcome.
+
+Reproduced with an unformatted probe file under `engine/prespec/`:
+
+```
+gofmt | 0 | count=1; top: prespec/zz_probe.go; full: /tmp/labdrian-deterministic-checks/gofmt.log
+RUNNER EXIT: 0
+```
+
+Exit 0 is `passed`; it must be 1 (`verification_failed`). This is exactly the case `failedGofmt` was written for in 3B — `gofmt -l` exits 0 while listing violations — so the reasoning is correct and tested, merely disconnected from the decision.
+
+The audit confirms this is **one** wiring gap, not four: `unavailableIf` was already connected in 3G, and no other field is unconsumed. There is no fourth hidden instance.
+
+**Third occurrence of one pattern** (after `isStaticcheckToolchainMismatch` in 3F and `isBannedSummaryLiteral` in 3H): a helper is built and unit-tested in one objective while the objective that would consume it wires around it. Unit tests over a helper prove the helper, never the wiring — which is why the assertion below must be at the outcome level.
+
+- [x] 5B2.1 RED: assert at the **outcome level** that a dirty `gofmt` tree produces exit 1, not exit 0. A predicate-level test does not catch this and must not be substituted.
+- [x] 5B2.2 GREEN: make `selectOutcome` consult `r.check.failed(r.exitCode, r.count)`. Keep `classify()` as the sole effective-blocking enforcement point and leave the unavailable and runner-error precedence unchanged.
+- [x] 5B2.3 Confirm no regression in the other three checks' outcomes, and rerun the full suite.
+
+- [x] 5.5 RED: record failing smoke assertion — missing-tool and missing-`go` guards do not yet exit 3 with explicit stderr.
+- [x] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
+- [x] 5.7 RED: add payload-size-boundary unit test on the evidence-piping contract — empty run still satisfies `minLength 1`; payload over 4194304 bytes truncates, never rejected (R-013).
+- [x] 5.8 GREEN: document `gentle-ai review capture-evidence --input -` piping the runner's `check` stdout in `SKILL.md`; test passes.
+- [x] 5.9 RED: add unit tests asserting exit-code→`--outcome` mapping is mechanical: 0→`passed`, 1→`verification_failed`, 3→`procedural_tooling_failed`, including both precedence scenarios (BLOCKING-set unavailable wins over a failing check; missing WARNING-only tool never masks/escalates).
+- [x] 5.10 GREEN: implement/document the mapping; add `command -v labdrian-overlay` guard — absent CLI → `procedural_tooling_failed`, never silent pass, never `verification_failed` (D8). Tests pass.
+- [x] 5.11 Verify R-019: confirm no new file under `skills/` (edits only touch `strict-tdd-verify.md`/`SKILL.md`, rows 22/41). If a new `skills/` file is ever added, add its `overlay.manifest` row and run `skills validate` — exit 0.
+- [x] 5.12 Re-verify R-001: `git diff main -- bin/overlay` still empty.
+- [x] 5.13 Run full regression: `cd engine && go test ./...`, `cd tui && go test ./...`, `cd tools/deterministic-check-runner && go test ./... -cover`; confirm green CI (staticcheck gate, deadcode visible+green, runner job).

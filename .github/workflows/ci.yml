@@ -23,6 +23,46 @@ jobs:
       - name: ShellCheck wrappers
         run: shellcheck bin/overlay bin/labdrian-overlay || true
 
+      - name: Deterministic-checks dispatch guard smoke test
+        run: |
+          set +e
+          missing_source_dir="$(mktemp -d)"
+          err="$(OVERLAY_DIR="$missing_source_dir" bin/labdrian-overlay deterministic-checks check 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          rm -rf "$missing_source_dir"
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 for missing runner source, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"deterministic-check-runner source is unavailable"*) ;;
+            *) echo "expected explicit stderr for missing runner source, got: $err" >&2; exit 1 ;;
+          esac
+
+          # Shadow PATH with only what runs before the go guard (bash itself,
+          # via the #!/usr/bin/env bash shebang, plus dirname/readlink used by
+          # the script's own path resolution), deliberately omitting go.
+          shadow_bin="$(mktemp -d)"
+          ln -s "$(command -v bash)" "$shadow_bin/bash"
+          ln -s "$(command -v dirname)" "$shadow_bin/dirname"
+          ln -s "$(command -v readlink)" "$shadow_bin/readlink"
+          set +e
+          err="$(PATH="$shadow_bin" bin/labdrian-overlay deterministic-checks check 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          rm -rf "$shadow_bin"
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 for missing go, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"go is required to build the deterministic-check-runner"*) ;;
+            *) echo "expected explicit stderr for missing go, got: $err" >&2; exit 1 ;;
+          esac
+
+          echo "both deterministic-checks guards fired correctly (exit 3, explicit stderr)"
+
   test-engine:
     name: Engine Tests
     runs-on: ubuntu-latest
