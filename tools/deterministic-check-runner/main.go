@@ -175,7 +175,7 @@ func runCheck(c check, modules []string, outDir string) result {
 	if unavailable {
 		exitCode = unavailableExitCode
 	}
-	r := result{check: c, exitCode: exitCode, unavailable: unavailable, count: totalCount, top: top, logPath: logPathFor(c.name, outDir)}
+	r := result{check: c, exitCode: exitCode, unavailable: unavailable, count: totalCount, top: top, logPath: logPathFor(c.name, outDir), modulesAttempted: attempted, modulesUsable: usable}
 	if !writeLog(r.logPath, combined.Bytes()) {
 		r.logPath = ""
 	}
@@ -239,10 +239,34 @@ func emitRows(w io.Writer, results []result, topN int) {
 func renderRowBlock(results []result, topN int) []byte {
 	var buf bytes.Buffer
 	for _, r := range results {
-		summary := renderSummary(r.count, r.top, topN, r.logPath)
+		summary := renderRowSummary(r, topN)
 		fmt.Fprintf(&buf, "%s | %d | %s\n", r.check.name, r.exitCode, summary)
 	}
 	return buf.Bytes()
+}
+
+// renderRowSummary extends renderSummary's rendered text with a
+// "modules=usable/attempted" coverage note (correction B2) whenever
+// runCheck excluded at least one discovered module (a 127 exit or an
+// unavailableIf module), prepended so the existing "full: <path>" clause
+// (parsed via a trailing-$ pattern in tests) stays the last thing in the
+// row. Without this, a row like "staticcheck | 1 | count=2; ..." cannot
+// tell a reader that one of four modules was never analysed — partial
+// coverage was indistinguishable from full coverage
+// (skills/sdd-verify/SKILL.md:70 treats these row bytes as the evidence
+// itself). Full coverage (modulesUsable == modulesAttempted, including
+// every result built outside runCheck's loop, which leaves both fields at
+// their zero value) renders byte-identical to plain renderSummary, so
+// existing rows and the golden fixture are unaffected — this is a
+// report-only-when-partial choice, deliberately not a fifth row column,
+// to keep the two-pipe "tool | exit_code | summary" contract
+// capture-evidence parses unchanged (D6).
+func renderRowSummary(r result, topN int) string {
+	summary := renderSummary(r.count, r.top, topN, r.logPath)
+	if r.modulesAttempted > r.modulesUsable {
+		summary = fmt.Sprintf("modules=%d/%d; %s", r.modulesUsable, r.modulesAttempted, summary)
+	}
+	return summary
 }
 
 // check describes one verification tool. deterministic and blocking are
@@ -476,14 +500,22 @@ const (
 // runnerErr marks a runner-internal fault. Rows keep the raw exit code.
 // count, top, and logPath are populated by runCheck from c.parse's stdout
 // parse and logPathFor; they stay zero-value when the tool never ran.
+// modulesAttempted and modulesUsable record runCheck's per-module coverage
+// (correction B2): modulesAttempted is every discovered module runCheck
+// tried, modulesUsable is how many of those actually contributed to count/
+// top (excludes a 127 exit or an unavailableIf module). Both stay zero-value
+// for the two early-return results (LookPath failure, usage/procedural
+// errors), which never entered runCheck's per-module loop.
 type result struct {
-	check       check
-	exitCode    int
-	unavailable bool
-	runnerErr   bool
-	count       int
-	top         []string
-	logPath     string
+	check            check
+	exitCode         int
+	unavailable      bool
+	runnerErr        bool
+	count            int
+	top              []string
+	logPath          string
+	modulesAttempted int
+	modulesUsable    int
 }
 
 // selectOutcome is the single place outcome precedence lives (amended

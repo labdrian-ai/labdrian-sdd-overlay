@@ -1257,6 +1257,14 @@ func TestRunCheckWritesFindingsToLogFile(t *testing.T) {
 	var stdout bytes.Buffer
 	emitRows(&stdout, []result{got}, defaultTopN)
 	assertRow(t, 0, strings.TrimRight(stdout.String(), "\n"), "fake")
+
+	// B2 full-coverage guard: this fixture's single module is fully usable
+	// (modulesAttempted == modulesUsable == 1), so the row must stay
+	// byte-identical to the pre-B2 shape — no "modules=" coverage note when
+	// there is nothing partial to report.
+	if strings.Contains(stdout.String(), "modules=") {
+		t.Errorf("row %q gained a modules= coverage note despite full module coverage (B2 must not add noise here)", stdout.String())
+	}
 }
 
 // TestRunCheckOmitsFullClauseWhenLogWriteFails is the omission-branch RED
@@ -1336,6 +1344,20 @@ func TestRunCheckSurvivesExit127FromEarlierModule(t *testing.T) {
 	}
 	if len(got.top) != 1 || got.top[0] != "finding-line" {
 		t.Fatalf("runCheck(...).top = %v, want [\"finding-line\"]", got.top)
+	}
+
+	// B2: the emitted row bytes must themselves say one of the two modules
+	// was excluded — the defect this correction fixes is that a row like
+	// "fake | 1 | count=1; ..." here is indistinguishable from a row where
+	// both modules ran cleanly. Driven through emitRows (not a helper), so
+	// this proves the wiring reaches the actual evidence bytes
+	// capture-evidence receives, not just runCheck's return value.
+	var stdout bytes.Buffer
+	emitRows(&stdout, []result{got}, defaultTopN)
+	line := strings.TrimRight(stdout.String(), "\n")
+	assertRow(t, 0, line, "fake")
+	if !strings.Contains(line, "modules=1/2") {
+		t.Errorf("row %q does not state that only 1 of 2 modules was usable — partial coverage is silently indistinguishable from full coverage", line)
 	}
 }
 
