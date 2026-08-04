@@ -45,9 +45,6 @@ activation_context: [oo-domain-design, domain-heavy-application-code, review]
 # OO Quality Contract
 `
 
-// passThrough is what the gate returns on a fail-safe no-op.
-const passThrough = "{}"
-
 // captureGateTask runs gateTaskCore and returns stdout, stderr contents.
 func captureGateTask(args []string, stdinContent string, content []byte, readErr error) (stdout, stderr string) {
 	var outBuf, errBuf bytes.Buffer

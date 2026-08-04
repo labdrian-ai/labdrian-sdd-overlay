@@ -29,6 +29,7 @@ package settings
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -59,7 +60,7 @@ const (
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
 func ValidateClaudeConfigRoot(root string) error {
 	if strings.TrimSpace(root) == "" {
-		return fmt.Errorf(claudeRuntimeRootRequiredMessage)
+		return errors.New(claudeRuntimeRootRequiredMessage)
 	}
 	if !filepath.IsAbs(root) {
 		return fmt.Errorf("Claude config root must be absolute, got %q", root)
