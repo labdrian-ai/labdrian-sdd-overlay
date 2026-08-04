@@ -305,8 +305,8 @@ The audit confirms this is **one** wiring gap, not four: `unavailableIf` was alr
 - [x] 5B2.2 GREEN: make `selectOutcome` consult `r.check.failed(r.exitCode, r.count)`. Keep `classify()` as the sole effective-blocking enforcement point and leave the unavailable and runner-error precedence unchanged.
 - [x] 5B2.3 Confirm no regression in the other three checks' outcomes, and rerun the full suite.
 
-- [ ] 5.5 RED: record failing smoke assertion — missing-tool and missing-`go` guards do not yet exit 3 with explicit stderr.
-- [ ] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
+- [x] 5.5 RED: record failing smoke assertion — missing-tool and missing-`go` guards do not yet exit 3 with explicit stderr.
+- [x] 5.6 GREEN: confirm both guards fire (built in 5.4); add the smoke-test script. Pass.
 - [x] 5.7 RED: add payload-size-boundary unit test on the evidence-piping contract — empty run still satisfies `minLength 1`; payload over 4194304 bytes truncates, never rejected (R-013).
 - [x] 5.8 GREEN: document `gentle-ai review capture-evidence --input -` piping the runner's `check` stdout in `SKILL.md`; test passes.
 - [ ] 5.9 RED: add unit tests asserting exit-code→`--outcome` mapping is mechanical: 0→`passed`, 1→`verification_failed`, 3→`procedural_tooling_failed`, including both precedence scenarios (BLOCKING-set unavailable wins over a failing check; missing WARNING-only tool never masks/escalates).
