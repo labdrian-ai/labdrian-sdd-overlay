@@ -353,24 +353,47 @@ func renderRowBlock(results []result, topN int) []byte {
 	return buf.Bytes()
 }
 
-// renderRowSummary extends renderSummary's rendered text with a
-// "modules=usable/attempted" coverage note (correction B2) whenever
-// runCheck excluded at least one discovered module (a 127 exit or an
-// unavailableIf module), prepended so the existing "full: <path>" clause
-// (parsed via a trailing-$ pattern in tests) stays the last thing in the
-// row. Without this, a row like "staticcheck | 1 | count=2; ..." cannot
-// tell a reader that one of four modules was never analysed — partial
-// coverage was indistinguishable from full coverage
-// (skills/sdd-verify/SKILL.md:70 treats these row bytes as the evidence
-// itself). Full coverage (modulesUsable == modulesAttempted, including
-// every result built outside runCheck's loop, which leaves both fields at
-// their zero value) renders byte-identical to plain renderSummary, so
-// existing rows and the golden fixture are unaffected — this is a
-// report-only-when-partial choice, deliberately not a fifth row column,
-// to keep the two-pipe "tool | exit_code | summary" contract
-// capture-evidence parses unchanged (D6).
+// renderRowSummary extends renderSummary's rendered text with two
+// independent coverage notes, each prepended so the existing "full: <path>"
+// clause (parsed via a trailing-$ pattern in tests) stays the last thing in
+// the row:
+//   - "unavailable; " (D3, this correction) whenever r.unavailable is true.
+//     renderSummary alone cannot make this distinction: it renders the bare
+//     literal "0" both for a check that ran and found nothing and for a
+//     check that could not run at all (LookPath failure, a toolchain
+//     mismatch, or a killed-by-deadline module) — r.unavailable is what
+//     selectOutcome actually consults to route to procedural_tooling_failed
+//     (D4/R-016), yet it never reached the row bytes capture-evidence
+//     receives. "unavailable" is deliberately not one of bannedSummaryLiterals
+//     (R-008 bans narrated PASS/N/A-style words, not a factual runner state),
+//     and guardAgainstBannedSummary only ever sees renderSummary's own bare
+//     "0"/"count=N; ..." text, never this prefix, so the guard's invariant is
+//     unaffected.
+//   - "modules=usable/attempted" (correction B2) whenever runCheck excluded
+//     at least one discovered module (a 127 exit or an unavailableIf
+//     module). Without this, a row like "staticcheck | 1 | count=2; ..."
+//     cannot tell a reader that one of four modules was never analysed —
+//     partial coverage was indistinguishable from full coverage
+//     (skills/sdd-verify/SKILL.md:70 treats these row bytes as the evidence
+//     itself).
+//
+// Both notes can apply to the same row (a check unavailable across every
+// attempted module: modulesAttempted > 0, modulesUsable == 0) and compose in
+// a fixed order — "modules=0/N; unavailable; 0" — modules= first since it is
+// the coarser coverage fact, unavailable second since it explains why
+// coverage was zero. Full coverage and a check that ran (modulesUsable ==
+// modulesAttempted, r.unavailable == false, including every result built
+// outside runCheck's loop, which leaves both module fields at their zero
+// value) renders byte-identical to plain renderSummary, so existing clean
+// rows are unaffected — this is a report-only-when-applicable choice,
+// deliberately not new row columns, to keep the two-pipe
+// "tool | exit_code | summary" contract capture-evidence parses unchanged
+// (D6).
 func renderRowSummary(r result, topN int) string {
 	summary := renderSummary(r.count, r.top, topN, r.logPath)
+	if r.unavailable {
+		summary = "unavailable; " + summary
+	}
 	if r.modulesAttempted > r.modulesUsable {
 		summary = fmt.Sprintf("modules=%d/%d; %s", r.modulesUsable, r.modulesAttempted, summary)
 	}

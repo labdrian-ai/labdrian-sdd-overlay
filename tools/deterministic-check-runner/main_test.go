@@ -1127,6 +1127,49 @@ func TestGoldenRowBlock(t *testing.T) {
 	}
 }
 
+// TestUnavailableRowDiffersFromCleanRow is D3's RED test for the
+// readability-lens defect: a check that ran and found nothing (gofmt,
+// deadcode in goldenRowBlockResults) and a check that could not run at all
+// (staticcheck, unavailable via LookPath/toolchain-mismatch/deadline) both
+// rendered the bare literal "0" — the row bytes a human or capture-evidence
+// reads carried no trace of result.unavailable, even though it is what
+// drives selectOutcome's procedural_tooling_failed routing (D4/R-016).
+// Driven through emitRows (not renderSummary/renderRowSummary in
+// isolation), reusing goldenRowBlockResults so this proves the real
+// evidence bytes, not a helper return value, carry the distinction. A
+// revert of the rendering fix must fail this test, not just move the
+// golden fixture.
+func TestUnavailableRowDiffersFromCleanRow(t *testing.T) {
+	var buf bytes.Buffer
+	emitRows(&buf, goldenRowBlockResults(), defaultTopN)
+	lines := strings.Split(strings.TrimRight(buf.String(), "\n"), "\n")
+
+	assertRow(t, 0, lines[0], "gofmt")
+	assertRow(t, 2, lines[2], "staticcheck")
+	assertRow(t, 3, lines[3], "deadcode")
+	gofmtText := rowPattern.FindStringSubmatch(lines[0])[3]
+	staticcheckText := rowPattern.FindStringSubmatch(lines[2])[3]
+	deadcodeText := rowPattern.FindStringSubmatch(lines[3])[3]
+
+	if gofmtText != "0" {
+		t.Fatalf("gofmt (ran, 0 findings) summary = %q, want literal %q (R-008)", gofmtText, "0")
+	}
+	if deadcodeText != "0" {
+		t.Fatalf("deadcode (ran, 0 findings) summary = %q, want literal %q (R-008)", deadcodeText, "0")
+	}
+	if staticcheckText == "0" {
+		t.Errorf("staticcheck (unavailable, could not run) summary = %q, indistinguishable from a clean 0-finding check", staticcheckText)
+	}
+	if staticcheckText == gofmtText {
+		t.Errorf("staticcheck (unavailable) summary %q must not equal gofmt (ran clean) summary %q", staticcheckText, gofmtText)
+	}
+	for _, word := range bannedLiterals {
+		if strings.EqualFold(strings.TrimSpace(staticcheckText), word) {
+			t.Errorf("staticcheck unavailable summary %q is itself a banned literal %q", staticcheckText, word)
+		}
+	}
+}
+
 // TestOutDirGuard is 4.7's RED test: --out-dir inside root is a usage error.
 func TestOutDirGuard(t *testing.T) {
 	root := repoRoot(t)
