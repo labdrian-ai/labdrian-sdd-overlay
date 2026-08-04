@@ -63,7 +63,12 @@ func run(args []string, stdout, stderr io.Writer) int {
 // directory (correction A3: previously the guard read the flag but the
 // write always used os.TempDir() regardless).
 func runCheckMode(modules []string, args []string, root string, stdout, stderr io.Writer) int {
-	outDir := parseOutDir(args)
+	topN, outDir, err := parseCheckArgs(args)
+	if err != nil {
+		fmt.Fprintf(stderr, "check: %v\n", err)
+		fmt.Fprint(stderr, usageText)
+		return outcomeUsage
+	}
 	if outDir != "" && pathInsideRoot(root, outDir) {
 		fmt.Fprintf(stderr, "check: --out-dir %q must be outside the repository root %q\n", outDir, root)
 		fmt.Fprint(stderr, usageText)
@@ -80,7 +85,7 @@ func runCheckMode(modules []string, args []string, root string, stdout, stderr i
 	for i, c := range registry {
 		results[i] = runCheck(c, modules, outDir)
 	}
-	emitRows(stdout, results, parseTopN(args))
+	emitRows(stdout, results, topN)
 	return selectOutcome(results)
 }
 
@@ -742,28 +747,23 @@ func logPathFor(tool, outDir string) string {
 	return filepath.Join(outDir, defaultOutDirName, strings.ReplaceAll(tool, " ", "-")+".log")
 }
 
-// parseTopN extracts --top-n from args (default defaultTopN); malformed
-// falls back to the default rather than aborting.
-func parseTopN(args []string) int {
-	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
+// parseCheckArgs parses every check-mode flag from one shared FlagSet, so
+// --top-n and --out-dir can never diverge on which flags they recognize
+// (correction D2: two separate FlagSets used to exist, and the --top-n one
+// never registered --out-dir, so "--out-dir D --top-n 20" silently returned
+// defaultTopN with no diagnostic). Any parse error — malformed value or
+// unrecognized flag — now fails loud (outcomeUsage) instead of guessing a
+// default, matching the existing usage-error precedent for a bad
+// subcommand and an out-dir-inside-root value.
+func parseCheckArgs(args []string) (int, string, error) {
+	fs := flag.NewFlagSet("deterministic-check-runner check", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	topN := fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
-	if err := fs.Parse(args); err != nil {
-		return defaultTopN
-	}
-	return *topN
-}
-
-// parseOutDir extracts --out-dir from check-mode args (empty = unset).
-func parseOutDir(args []string) string {
-	fs := flag.NewFlagSet("deterministic-check-runner", flag.ContinueOnError)
-	fs.SetOutput(io.Discard)
-	fs.Int("top-n", defaultTopN, "maximum finding excerpts per row")
 	outDir := fs.String("out-dir", "", "directory for full check logs")
 	if err := fs.Parse(args); err != nil {
-		return ""
+		return 0, "", err
 	}
-	return *outDir
+	return *topN, *outDir, nil
 }
 
 // pathInsideRoot reports whether path is at or under root (R-010 guard).

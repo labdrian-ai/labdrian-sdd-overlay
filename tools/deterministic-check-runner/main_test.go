@@ -651,23 +651,84 @@ func TestLogPathForStable(t *testing.T) {
 	}
 }
 
-// TestParseTopN covers the --top-n flag: default, explicit, malformed (R-007).
-func TestParseTopN(t *testing.T) {
+// TestParseCheckArgs covers the shared FlagSet's per-flag shapes (R-007),
+// including the combination that exposed D2: --out-dir alongside --top-n
+// from the same parse, proving the two flags can no longer diverge.
+func TestParseCheckArgs(t *testing.T) {
 	tests := []struct {
-		name string
-		args []string
-		want int
+		name       string
+		args       []string
+		wantTopN   int
+		wantOutDir string
+		wantErr    bool
 	}{
-		{"no flag uses the default", nil, defaultTopN},
-		{"explicit value", []string{"--top-n", "3"}, 3},
-		{"malformed value falls back to the default", []string{"--top-n", "not-a-number"}, defaultTopN},
+		{"no flag uses the default", nil, defaultTopN, "", false},
+		{"explicit top-n", []string{"--top-n", "3"}, 3, "", false},
+		{"malformed top-n value fails loud", []string{"--top-n", "not-a-number"}, 0, "", true},
+		{"out-dir combined with top-n", []string{"--out-dir", "/var/tmp/logs", "--top-n", "20"}, 20, "/var/tmp/logs", false},
+		{"unrecognized flag fails loud", []string{"--top-n", "20", "--bogus-flag", "x"}, 0, "", true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if got := parseTopN(tt.args); got != tt.want {
-				t.Errorf("parseTopN(%v) = %d, want %d", tt.args, got, tt.want)
+			topN, outDir, err := parseCheckArgs(tt.args)
+			if (err != nil) != tt.wantErr {
+				t.Fatalf("parseCheckArgs(%v) error = %v, wantErr %v", tt.args, err, tt.wantErr)
+			}
+			if err != nil {
+				return
+			}
+			if topN != tt.wantTopN || outDir != tt.wantOutDir {
+				t.Errorf("parseCheckArgs(%v) = (%d, %q), want (%d, %q)", tt.args, topN, outDir, tt.wantTopN, tt.wantOutDir)
 			}
 		})
+	}
+}
+
+// TestCheckHonorsTopNWithOutDir is D2's production-path proof: it drives
+// run() (not parseCheckArgs in isolation) with --out-dir and --top-n
+// together. misformatted > defaultTopN so a still-broken cap at 5 is
+// observably distinct from the requested 20 honored in full.
+func TestCheckHonorsTopNWithOutDir(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	fixture := t.TempDir()
+	mustWriteFile(t, filepath.Join(fixture, "go.mod"), "module example.com/topnfixture\n\ngo 1.21\n", 0o644)
+	const misformatted = 7
+	for i := 0; i < misformatted; i++ {
+		mustWriteFile(t, filepath.Join(fixture, fmt.Sprintf("f%d.go", i)), fmt.Sprintf("package main\nfunc F%d(){\nreturn\n}\n", i), 0o644)
+	}
+	chdir(t, fixture)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check", "--out-dir", t.TempDir(), "--top-n", "20"}, &stdout, &stderr)
+	if got != outcomeVerificationFailed {
+		t.Fatalf("run(check --out-dir ... --top-n 20) = %d, want outcomeVerificationFailed (%d); stderr=%s", got, outcomeVerificationFailed, stderr.String())
+	}
+
+	lines := strings.Split(strings.TrimRight(stdout.String(), "\n"), "\n")
+	assertRow(t, 0, lines[0], "gofmt")
+	gofmtSummary := rowPattern.FindStringSubmatch(lines[0])[3]
+	topClause := regexp.MustCompile(`top: (.+); full:`).FindStringSubmatch(gofmtSummary)
+	if topClause == nil {
+		t.Fatalf("gofmt summary %q missing top/full clause", gofmtSummary)
+	}
+	if got := len(strings.Split(topClause[1], "; ")); got != misformatted {
+		t.Errorf("gofmt summary shows %d excerpts, want all %d (--top-n 20 > %d, so nothing should be capped at defaultTopN): %q", got, misformatted, misformatted, gofmtSummary)
+	}
+}
+
+// TestCheckUnknownFlagFailsLoud is D2's decision: an unrecognized flag now
+// fails loud via outcomeUsage instead of silently degrading to defaultTopN.
+func TestCheckUnknownFlagFailsLoud(t *testing.T) {
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"check", "--top-n", "20", "--bogus-flag", "x"}, &stdout, &stderr)
+	if got != outcomeUsage {
+		t.Fatalf("run(check --top-n 20 --bogus-flag x) = %d, want outcomeUsage (%d)", got, outcomeUsage)
+	}
+	if !strings.Contains(stderr.String(), "bogus-flag") {
+		t.Errorf("stderr %q does not name the unrecognized flag", stderr.String())
 	}
 }
 
