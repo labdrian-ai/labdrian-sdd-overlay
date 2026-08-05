@@ -40,7 +40,8 @@
 //
 // skills: registry management commands for skills.registry.yaml and overlay.manifest.
 // list: print sorted registry entries. status: print count summary.
-// validate: cross-check registry vs overlay.manifest; exit 1 on divergence.
+// validate: cross-check registry vs overlay.manifest, and skills/ on disk vs
+// overlay.manifest via the required --source-root flag; exit 1 on divergence.
 // install: copy project-scoped skills into <cwd>/.claude/skills.
 // add: register a skill (custom or vendored). remove: unregister from registry + manifest.
 // sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
@@ -170,7 +171,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status        [--registry <path>]                                                      print count summary (total/core/custom)")
-	fmt.Fprintln(os.Stderr, "    validate      [--registry <path>] [--manifest <path>]                                  cross-check registry vs manifest; exit 1 on divergence")
+	fmt.Fprintln(os.Stderr, "    validate      [--registry <path>] [--manifest <path>] --source-root <path>              cross-check registry vs manifest and skills/ on disk; exit 1 on divergence")
 	fmt.Fprintln(os.Stderr, "    install       [--registry <path>] [--source-root <path>] [--project-id <id>]           copy project-scoped skills into <cwd>/.claude/skills/")
 	fmt.Fprintln(os.Stderr, "    add           <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill")
 	fmt.Fprintln(os.Stderr, "    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest")

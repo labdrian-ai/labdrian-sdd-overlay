@@ -155,7 +155,7 @@ jobs:
 
       - name: Validate skills registry
         working-directory: engine
-        run: go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest
+        run: go run ./cmd/ skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills
 
   test-entry-contract-validator:
     name: Entry Contract Validator

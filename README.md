@@ -91,7 +91,9 @@ The TUI wraps the CLI — everything below is also available as individual comma
 dashboard surfaces per-target drift for **agent files** (e.g. the GADU agent in
 `~/.claude/agents`) as a dedicated Agents sub-section alongside skills. Read-only skills
 registry actions (`skills validate`, `list`, `status`) are available directly from the
-action menu without leaving the dashboard.
+action menu without leaving the dashboard. `skills validate` also cross-checks the
+`skills/` directory itself against `overlay.manifest` and exits non-zero on any
+divergence.
 
 ### Action map
 
@@ -295,7 +297,7 @@ overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.
     list         [--registry <path>]                                               print sorted registry entries (id, source type, update strategy, targets)
     status       [--registry <path>]                                               print count summary (total / core / custom)
-    validate     [--registry <path>] [--manifest <path>]                           cross-check registry vs manifest; exit 1 on any divergence
+    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest; exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   copy project-scoped skills into <cwd>/.claude/skills/
     add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external)
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest

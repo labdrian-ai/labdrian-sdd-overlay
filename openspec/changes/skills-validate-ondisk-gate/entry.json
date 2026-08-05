@@ -1,0 +1,77 @@
+{
+  "contract_version": "2.0.0",
+  "change_name": "skills-validate-ondisk-gate",
+  "project": "labdrian-sdd-overlay",
+  "tier": 2,
+  "interaction_mode": "auto",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/skills-validate-ondisk-gate/entry",
+      "openspec_path": "openspec/changes/skills-validate-ondisk-gate/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/labdrian-sdd-overlay/requirements/skills-validate-ondisk-gate",
+      "openspec_path": "openspec/changes/skills-validate-ondisk-gate/requirements.md"
+    },
+    "manifest": {
+      "context": { "topic_key": "project/labdrian-sdd-overlay/manifest/context" },
+      "mission": { "topic_key": "project/labdrian-sdd-overlay/manifest/mission" },
+      "rules": { "topic_key": "project/labdrian-sdd-overlay/manifest/rules" }
+    },
+    "architecture": { "topic_key": "project/labdrian-sdd-overlay/architect/final" },
+    "roadmap": { "topic_key": "project/labdrian-sdd-overlay/roadmap" },
+    "estimate": { "topic_key": "sdd/skills-validate-ondisk-gate/estimate" },
+    "sdd_init": { "topic_key": "sdd-init/labdrian-sdd-overlay" },
+    "pipeline_state": { "topic_key": "sdd/skills-validate-ondisk-gate/pipeline-state" },
+    "delivery": { "topic_key": "delivery/skills-validate-ondisk-gate" }
+  },
+  "estimate": {
+    "planned_range_hours": { "low": 1.5, "high": 6.0 },
+    "complexity": "medium",
+    "confidence": "low",
+    "human_review_included": true
+  },
+  "requested_pr_strategy": "auto",
+  "delivery_strategy": "auto-chain",
+  "chaining_required": true,
+  "chain_strategy": "feature-branch-chain",
+  "review_budget": {
+    "max_changed_lines_per_slice": 800,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": { "state": "not-needed" }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "cd engine && go test ./skills/...",
+        "cd engine && go test ./cmd/..."
+      ],
+      "broad": [
+        "cd engine && go test ./...",
+        "cd tui && go test ./...",
+        "for m in tools/*/go.mod; do (cd \"$(dirname \"$m\")\" && go test ./...) || exit 1; done"
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "ondisk-gate-consumer-contract",
+      "title": "Enumerate every skills validate exit-code consumer, pin the infra-exclusion divergence, correct the invalid sync-manifest remediation, and align the documented exit contract",
+      "requirements": ["R-001", "R-004", "R-009", "R-010"],
+      "dependencies": [],
+      "estimated_changed_lines": { "low": 120, "high": 260 }
+    },
+    {
+      "order": 2,
+      "id": "ondisk-gate-wiring",
+      "title": "Resolve the skills-directory input and walk seam, wire DiffOnDisk into RenderValidateCore emitting UNREGISTERED_ON_DISK and MISSING_ON_DISK in full-scan form, and prove the overlay's own real tree still exits 0",
+      "requirements": ["R-002", "R-003", "R-005", "R-006", "R-007", "R-008", "R-011"],
+      "dependencies": ["ondisk-gate-consumer-contract"],
+      "estimated_changed_lines": { "low": 400, "high": 715 }
+    }
+  ],
+  "expected_native_next_recommendation": "propose"
+}

@@ -213,3 +213,104 @@ func skillsRepoRoot(t *testing.T) string {
 	}
 	return filepath.Join(wd, "..", "..")
 }
+
+// TestInfraExclusionRulesArePinnedIndependently pins R-004: the on-disk
+// check's deployable-path rule (DeployableManifestPaths) and manifest
+// loading's infra-exclusion rule (loadManifestViewReader / infraPrefixes)
+// look similar but MUST stay independent. `_shared/*` rows are deployable
+// for the on-disk check, even though manifest loading excludes `_shared` as
+// infra when collapsing rows to skill directories. Unifying either rule set
+// to match the other must fail one of the two subtests below.
+func TestInfraExclusionRulesArePinnedIndependently(t *testing.T) {
+	const fixture = `_shared/x.md managed
+_shared/pin/SKILL.md managed
+engine/y.go managed
+real-skill/SKILL.md managed
+`
+
+	t.Run("ondisk direction: _shared rows are deployable, engine rows are not", func(t *testing.T) {
+		got, err := DeployableManifestPaths(strings.NewReader(fixture))
+		if err != nil {
+			t.Fatalf("DeployableManifestPaths: unexpected error: %v", err)
+		}
+		for _, want := range []string{"_shared/x.md", "_shared/pin/SKILL.md"} {
+			if _, ok := got[want]; !ok {
+				t.Errorf("DeployableManifestPaths: missing deployable row %q — excluding _shared here would break the on-disk check", want)
+			}
+		}
+		if _, ok := got["engine/y.go"]; ok {
+			t.Error("DeployableManifestPaths: engine/y.go must stay excluded as infra")
+		}
+	})
+
+	t.Run("manifest direction: _shared is excluded as infra, real skills are not", func(t *testing.T) {
+		mv, err := loadManifestViewReader(strings.NewReader(fixture))
+		if err != nil {
+			t.Fatalf("loadManifestViewReader: unexpected error: %v", err)
+		}
+		if _, ok := mv["real-skill"]; !ok {
+			t.Error("LoadManifestView: missing real-skill directory")
+		}
+		if _, ok := mv["_shared"]; ok {
+			t.Error("LoadManifestView: _shared must stay excluded as infra — the explicit _shared/pin/SKILL.md row is what makes this direction meaningful")
+		}
+	})
+}
+
+// TestOnDiskDiagnosticsNameManifestRowEdit pins R-009: both on-disk
+// divergence classes must name the manifest-row edit that resolves them and
+// must never cite `sync-manifest`, which cannot clear an UNREGISTERED_ON_DISK
+// or MISSING_ON_DISK divergence for a reference or `_shared/*` file (isSkillRow
+// only regenerates `*/SKILL.md` rows).
+func TestOnDiskDiagnosticsNameManifestRowEdit(t *testing.T) {
+	tests := []struct {
+		name          string
+		disk          []string
+		manifest      map[string]struct{}
+		wantClass     DivergenceClass
+		wantPath      string
+		wantRemediate string
+	}{
+		{
+			name:          "unregistered file names the row to add",
+			disk:          []string{"orphan/SKILL.md"},
+			manifest:      map[string]struct{}{},
+			wantClass:     DivUnregisteredOnDisk,
+			wantPath:      "orphan/SKILL.md",
+			wantRemediate: "add a row for",
+		},
+		{
+			name:          "orphan row names the row to remove",
+			disk:          []string{},
+			manifest:      map[string]struct{}{"ghost/SKILL.md": {}},
+			wantClass:     DivMissingOnDisk,
+			wantPath:      "ghost/SKILL.md",
+			wantRemediate: "remove the",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			divs := DiffOnDisk(tt.disk, tt.manifest)
+			if len(divs) != 1 {
+				t.Fatalf("DiffOnDisk: got %d divergences %v, want 1", len(divs), divs)
+			}
+			d := divs[0]
+			if d.Class != tt.wantClass {
+				t.Errorf("DiffOnDisk: class = %q, want %q", d.Class, tt.wantClass)
+			}
+			if d.Path != tt.wantPath {
+				t.Errorf("DiffOnDisk: path = %q, want %q", d.Path, tt.wantPath)
+			}
+			if !strings.Contains(d.Detail, tt.wantRemediate) {
+				t.Errorf("DiffOnDisk: Detail %q must name the remediation %q", d.Detail, tt.wantRemediate)
+			}
+			if !strings.Contains(d.Detail, "overlay.manifest") {
+				t.Errorf("DiffOnDisk: Detail %q must name overlay.manifest", d.Detail)
+			}
+			if strings.Contains(d.Detail, "sync-manifest") {
+				t.Errorf("DiffOnDisk: Detail %q must not cite sync-manifest, which cannot clear this divergence", d.Detail)
+			}
+		})
+	}
+}

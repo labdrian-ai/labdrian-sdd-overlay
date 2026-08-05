@@ -145,8 +145,8 @@ func DiffOnDisk(diskPaths []string, manifestPaths map[string]struct{}) []Diverge
 				Class: DivUnregisteredOnDisk,
 				Path:  p,
 				Detail: fmt.Sprintf(
-					"skills/%s exists on disk but no overlay.manifest row deploys it, so it never reaches any target",
-					p,
+					"skills/%s exists on disk but no overlay.manifest row deploys it; add a row for %q to overlay.manifest to register it",
+					p, p,
 				),
 			})
 		}
@@ -164,8 +164,8 @@ func DiffOnDisk(diskPaths []string, manifestPaths map[string]struct{}) []Diverge
 			Class: DivMissingOnDisk,
 			Path:  p,
 			Detail: fmt.Sprintf(
-				"overlay.manifest deploys %q but skills/%s does not exist",
-				p, p,
+				"overlay.manifest deploys %q but skills/%s does not exist; remove the %q row from overlay.manifest, or restore the missing file",
+				p, p, p,
 			),
 		})
 	}

@@ -2,6 +2,7 @@ package skills
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -71,10 +72,14 @@ func TestSkillsCore(t *testing.T) {
 	})
 
 	t.Run("verb_validate", func(t *testing.T) {
-		// "validate" with aligned registry+manifest → exit 0, "aligned" or "OK" in stdout.
+		// "validate" with aligned registry+manifest+skills dir → exit 0, "aligned" or "OK" in stdout.
+		// The skills source root is a DEDICATED subdirectory, never the temp dir
+		// holding registry.yaml/overlay.manifest: ScanSkillFiles would otherwise
+		// pick those two files up as UNREGISTERED_ON_DISK too.
 		dir := t.TempDir()
 		regPath := filepath.Join(dir, "registry.yaml")
 		mfPath := filepath.Join(dir, "overlay.manifest")
+		skillsRoot := filepath.Join(dir, "skills")
 
 		const alignedReg = `version: "1"
 skills:
@@ -97,11 +102,17 @@ skills:
 		if err := os.WriteFile(mfPath, []byte("sdd-spec/SKILL.md managed\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
+		if err := os.MkdirAll(filepath.Join(skillsRoot, "sdd-spec"), 0755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(skillsRoot, "sdd-spec", "SKILL.md"), []byte("# sdd-spec\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
 
 		var out, errBuf bytes.Buffer
 		exitCode := 0
 		SkillsCore("validate",
-			[]string{"--registry", regPath, "--manifest", mfPath},
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot},
 			os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
@@ -174,6 +185,264 @@ skills:
 		}
 		if !strings.Contains(errBuf.String(), "install") {
 			t.Errorf("stderr %q should contain 'install' in supported verb list", errBuf.String())
+		}
+	})
+}
+
+// stubScan returns a scanSkills-shaped function that ignores the directory it
+// is given and always returns files, unconditionally. It lets on-disk gate
+// core tests exercise RenderValidateCore's logic without walking a real
+// skills tree (R-003).
+func stubScan(files []string) func(string) ([]string, error) {
+	return func(string) ([]string, error) { return files, nil }
+}
+
+// mustWriteValidateFixture writes a minimal registry + manifest pair to a
+// fresh temp dir and returns their paths.
+func mustWriteValidateFixture(t *testing.T, manifestContent string) (regPath, mfPath string) {
+	t.Helper()
+	const alignedReg = `version: "1"
+skills:
+  - id: sdd-spec
+    path: sdd-spec
+    source:
+      type: core
+      upstream:
+        owner: gentle-ai
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: vendor-merge
+`
+	dir := t.TempDir()
+	regPath = filepath.Join(dir, "registry.yaml")
+	mfPath = filepath.Join(dir, "overlay.manifest")
+	if err := os.WriteFile(regPath, []byte(alignedReg), 0644); err != nil {
+		t.Fatalf("write registry: %v", err)
+	}
+	if err := os.WriteFile(mfPath, []byte(manifestContent), 0644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	return regPath, mfPath
+}
+
+// TestRenderValidateCoreOnDiskGate covers the on-disk cross-check wired into
+// RenderValidateCore behind the required --source-root flag (R-002, R-005,
+// R-006, R-007). Every subtest but the cwd-independence one uses a stubbed
+// scanSkills so the core is exercised without ever walking a real tree
+// (R-003); registry/manifest fixtures are test-owned temp files, matching the
+// pre-existing verb_validate pattern.
+func TestRenderValidateCoreOnDiskGate(t *testing.T) {
+	t.Run("absent_source_root_fails_loud_naming_the_flag", func(t *testing.T) {
+		regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\n")
+		neverScan := func(string) ([]string, error) {
+			t.Fatal("scanSkills must not be called when --source-root is absent")
+			return nil, nil
+		}
+
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath},
+			os.ReadFile, neverScan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1", exitCode)
+		}
+		if !strings.Contains(errBuf.String(), "--source-root") {
+			t.Errorf("stderr %q must name the missing --source-root flag", errBuf.String())
+		}
+	})
+
+	t.Run("unregistered_file_fails_then_row_added_passes", func(t *testing.T) {
+		// A reference file, not a */SKILL.md row: LoadManifestView (registry
+		// check) ignores it either way, so this isolates the on-disk check.
+		regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\n")
+		scan := stubScan([]string{"sdd-spec/SKILL.md", "orphan/notes.md"})
+
+		var out, errBuf bytes.Buffer
+		exitCode := 0
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
+			os.ReadFile, scan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1; stderr=%q", exitCode, errBuf.String())
+		}
+		if !strings.Contains(errBuf.String(), "UNREGISTERED_ON_DISK") {
+			t.Errorf("stderr %q should contain UNREGISTERED_ON_DISK", errBuf.String())
+		}
+
+		// Add the deploying row: a rerun must now exit 0 (no exit(0) call is
+		// made on success — see RenderValidateCore convention — so exitCode
+		// must start at 0, matching the other success-path tests in this file).
+		if err := os.WriteFile(mfPath, []byte("sdd-spec/SKILL.md managed\norphan/notes.md custom\n"), 0644); err != nil {
+			t.Fatalf("rewrite manifest: %v", err)
+		}
+		out.Reset()
+		errBuf.Reset()
+		exitCode = 0
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
+			os.ReadFile, scan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 0 {
+			t.Errorf("exit code = %d, want 0 after adding the row; stderr=%q", exitCode, errBuf.String())
+		}
+	})
+
+	t.Run("orphan_row_fails_loud", func(t *testing.T) {
+		regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\nghost/SKILL.md custom\n")
+		scan := stubScan([]string{"sdd-spec/SKILL.md"})
+
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
+			os.ReadFile, scan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1; stderr=%q", exitCode, errBuf.String())
+		}
+		if !strings.Contains(errBuf.String(), "MISSING_ON_DISK") {
+			t.Errorf("stderr %q should contain MISSING_ON_DISK", errBuf.String())
+		}
+	})
+
+	t.Run("mixed_divergences_all_reported_in_one_run", func(t *testing.T) {
+		const regWithExtra = `version: "1"
+skills:
+  - id: sdd-spec
+    path: sdd-spec
+    source:
+      type: core
+      upstream:
+        owner: gentle-ai
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: extra-skill
+    path: extra-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+		dir := t.TempDir()
+		regPath := filepath.Join(dir, "registry.yaml")
+		mfPath := filepath.Join(dir, "overlay.manifest")
+		if err := os.WriteFile(regPath, []byte(regWithExtra), 0644); err != nil {
+			t.Fatalf("write registry: %v", err)
+		}
+		// sdd-spec is aligned; ghost is an orphan row (no disk file, no registry
+		// entry); extra-skill has no manifest row; unregistered/SKILL.md has no
+		// manifest row either. That is 3+ divergences across registry/manifest
+		// and on-disk classes in a single run.
+		if err := os.WriteFile(mfPath, []byte("sdd-spec/SKILL.md managed\nghost/SKILL.md custom\n"), 0644); err != nil {
+			t.Fatalf("write manifest: %v", err)
+		}
+		scan := stubScan([]string{"sdd-spec/SKILL.md", "unregistered/SKILL.md"})
+
+		var out, errBuf bytes.Buffer
+		exitCode := -1
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
+			os.ReadFile, scan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1; stderr=%q", exitCode, errBuf.String())
+		}
+		for _, class := range []string{"MISSING_IN_MANIFEST", "MISSING_ON_DISK", "UNREGISTERED_ON_DISK"} {
+			if !strings.Contains(errBuf.String(), class) {
+				t.Errorf("stderr %q should contain %q", errBuf.String(), class)
+			}
+		}
+		lines := strings.Count(strings.TrimRight(errBuf.String(), "\n"), "\n") + 1
+		if lines < 3 {
+			t.Errorf("stderr should report at least 3 distinct divergence lines, got %d: %q", lines, errBuf.String())
+		}
+	})
+
+	t.Run("cwd_independence_with_absolute_source_root", func(t *testing.T) {
+		regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\n")
+		absRegPath, err := filepath.Abs(regPath)
+		if err != nil {
+			t.Fatalf("abs registry path: %v", err)
+		}
+		absMfPath, err := filepath.Abs(mfPath)
+		if err != nil {
+			t.Fatalf("abs manifest path: %v", err)
+		}
+		scan := stubScan([]string{"sdd-spec/SKILL.md"})
+
+		oldWD, err := os.Getwd()
+		if err != nil {
+			t.Fatalf("getwd: %v", err)
+		}
+		t.Cleanup(func() { _ = os.Chdir(oldWD) })
+
+		// One of the three cwds is engine/ itself: a real 28-file Go package
+		// that must never be treated as an implicit skills directory (R-002).
+		engineDir := filepath.Join(oldWD, "..")
+		cwds := []string{t.TempDir(), engineDir, t.TempDir()}
+		for i, cwd := range cwds {
+			if err := os.Chdir(cwd); err != nil {
+				t.Fatalf("chdir %d to %s: %v", i, cwd, err)
+			}
+			var out, errBuf bytes.Buffer
+			exitCode := 0
+			RenderValidateCore(
+				[]string{"--registry", absRegPath, "--manifest", absMfPath, "--source-root", "/does-not-matter-because-stubbed"},
+				os.ReadFile, scan, &out, &errBuf,
+				func(c int) { exitCode = c },
+			)
+			if exitCode != 0 {
+				t.Errorf("cwd %d (%s): exit code = %d, want 0; stderr=%q", i, cwd, exitCode, errBuf.String())
+			}
+		}
+	})
+
+	t.Run("registry_divergence_survives_scan_failure", func(t *testing.T) {
+		// R4-001: registry divergences are computed by Validate before the three
+		// on-disk stages run. A later fatal error in any of those stages must not
+		// discard already-computed registry divergences (R-007 full-scan
+		// guarantee). Here ghost/SKILL.md has no registry entry, so Validate
+		// reports MISSING_IN_REGISTRY; scanSkills is then stubbed to fail
+		// outright. Both diagnostics must reach stderr in the same run.
+		regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\nghost/SKILL.md custom\n")
+		failScan := func(string) ([]string, error) {
+			return nil, errors.New("scan boom: source root unreadable")
+		}
+
+		var out, errBuf bytes.Buffer
+		exitCode := 0
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
+			os.ReadFile, failScan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1; stderr=%q", exitCode, errBuf.String())
+		}
+		if !strings.Contains(errBuf.String(), "MISSING_IN_REGISTRY") {
+			t.Errorf("stderr %q must contain the registry divergence despite the later scan failure", errBuf.String())
+		}
+		if !strings.Contains(errBuf.String(), "scan boom") {
+			t.Errorf("stderr %q must contain the scan error", errBuf.String())
 		}
 	})
 }
