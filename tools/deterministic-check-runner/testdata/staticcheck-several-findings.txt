@@ -1,0 +1,3 @@
+cmd/main_test.go:49:7: const passThrough is unused (U1000)
+runtime/codex.go:195:10: error strings should not be capitalized (ST1005)
+settings/settings.go:62:10: printf-style function with dynamic format string and no further arguments should use print-style function instead (SA1006)

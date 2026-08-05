@@ -97,6 +97,17 @@ func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 			// overlay deploys the standalone copy of this contract.
 			defaultPath: "skills/_shared/anti-generic-design.md",
 		}, true
+	case "review-projection-contract":
+		return embeddedContractSpec{
+			content:     assets.ReviewProjectionContract,
+			beginMarker: propagator.ReviewProjectionBeginMarker,
+			endMarker:   propagator.ReviewProjectionEndMarker,
+			rowLabel:    "review-projection-contract",
+			// defaultPath is the registry-row Path cell / bare injected line when
+			// the caller does not override --contract-path. It is where the
+			// overlay deploys the standalone copy of this contract.
+			defaultPath: "skills/_shared/review-projection-contract.md",
+		}, true
 	default:
 		return embeddedContractSpec{}, false
 	}
@@ -1435,8 +1446,9 @@ func checkRegistry(registryPath string, readFile readFileFn) checkResult {
 	hasMinimalism := containsSubstring(content, propagator.BeginMarker)
 	hasSafety := containsSubstring(content, propagator.DiscoverySafetyBeginMarker)
 	hasDesign := containsSubstring(content, propagator.AntiGenericDesignBeginMarker)
+	hasProjection := containsSubstring(content, propagator.ReviewProjectionBeginMarker)
 
-	if hasMinimalism && hasSafety && hasDesign {
+	if hasMinimalism && hasSafety && hasDesign && hasProjection {
 		return checkResult{label: label, ok: true, note: "scoped block present"}
 	}
 
@@ -1449,6 +1461,9 @@ func checkRegistry(registryPath string, readFile readFileFn) checkResult {
 	}
 	if !hasDesign {
 		missing = append(missing, "anti-generic-design-scope")
+	}
+	if !hasProjection {
+		missing = append(missing, "review-projection-contract-scope")
 	}
 	note := fmt.Sprintf(
 		"present but scoped block(s) missing: %s (run 'overlay install-hooks' or propagate)",

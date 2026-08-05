@@ -45,9 +45,6 @@ activation_context: [oo-domain-design, domain-heavy-application-code, review]
 # OO Quality Contract
 `
 
-// passThrough is what the gate returns on a fail-safe no-op.
-const passThrough = "{}"
-
 // captureGateTask runs gateTaskCore and returns stdout, stderr contents.
 func captureGateTask(args []string, stdinContent string, content []byte, readErr error) (stdout, stderr string) {
 	var outBuf, errBuf bytes.Buffer
@@ -684,13 +681,14 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		}
 		return n
 	}
-	// Three pairs install (minimalism + skill-discovery-safety + anti-generic-
-	// design) → 3 entries per key; merge-settings run twice stays at 3 (idempotent).
-	if n := countEntries("UserPromptSubmit"); n != 3 {
-		t.Errorf("UserPromptSubmit: expected 3 entries, got %d", n)
+	// Four pairs install (minimalism + skill-discovery-safety + anti-generic-
+	// design + review-projection-contract) → 4 entries per key; merge-settings
+	// run twice stays at 4 (idempotent).
+	if n := countEntries("UserPromptSubmit"); n != 4 {
+		t.Errorf("UserPromptSubmit: expected 4 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 3 {
-		t.Errorf("PreToolUse: expected 3 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 4 {
+		t.Errorf("PreToolUse: expected 4 entries, got %d", n)
 	}
 }
 
@@ -1313,7 +1311,7 @@ func TestRunPrespec_MalformedJSONExitsOne(t *testing.T) {
 	}
 }
 
-// TC-STATUS-9: registry present WITH all three scoped blocks → [OK  ] with note "scoped block present".
+// TC-STATUS-9: registry present WITH all four scoped blocks → [OK  ] with note "scoped block present".
 func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	homeDir, binaryPath := buildFakeHomeWithBinary(t)
 	buildFakeContract(t, homeDir)
@@ -1323,11 +1321,12 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	cwdDir := t.TempDir()
 	registryDir := filepath.Join(cwdDir, ".atl")
 	os.MkdirAll(registryDir, 0o755)
-	// Registry must contain ALL THREE managed contract blocks to report [OK].
+	// Registry must contain ALL FOUR managed contract blocks to report [OK].
 	registryContent := "# Registry\n" +
 		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
 		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n" +
-		propagator.AntiGenericDesignBeginMarker + "\n| anti-generic-design | c | d |\n" + propagator.AntiGenericDesignEndMarker + "\n"
+		propagator.AntiGenericDesignBeginMarker + "\n| anti-generic-design | c | d |\n" + propagator.AntiGenericDesignEndMarker + "\n" +
+		propagator.ReviewProjectionBeginMarker + "\n| review-projection-contract | e | f |\n" + propagator.ReviewProjectionEndMarker + "\n"
 	os.WriteFile(filepath.Join(registryDir, "skill-registry.md"), []byte(registryContent), 0o644)
 
 	deps := statusDeps{
@@ -1345,7 +1344,7 @@ func TestStatusCore_RegistryScopedBlockPresent(t *testing.T) {
 	out := outBuf.String()
 
 	if !result {
-		t.Errorf("statusCore: expected true when all three scoped blocks present; output:\n%s", out)
+		t.Errorf("statusCore: expected true when all four scoped blocks present; output:\n%s", out)
 	}
 	if !strings.Contains(out, "scoped block present") {
 		t.Errorf("statusCore: output should say 'scoped block present'; output:\n%s", out)
@@ -1820,20 +1819,22 @@ func TestGateTaskCore_EmbeddedDesignContract_Injects(t *testing.T) {
 }
 
 // TC-CHECKREG-DESIGN: checkRegistry recognizes the third
-// anti-generic-design-scope marker alongside the two pre-existing blocks.
-// All three present -> ok, not degraded. Only anti-generic-design-scope
-// missing -> ok, degraded, note names it.
-func TestCheckRegistry_ThreeBlockCombinations(t *testing.T) {
+// anti-generic-design-scope and fourth review-projection-contract-scope markers
+// alongside the two pre-existing blocks. All four present -> ok, not degraded.
+// Any one missing -> ok, degraded, note names the missing block.
+func TestCheckRegistry_FourBlockCombinations(t *testing.T) {
 	const registryPath = "/project/.atl/skill-registry.md"
 
-	allThree := "# Registry\n" +
-		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
-		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n" +
-		propagator.AntiGenericDesignBeginMarker + "\n| anti-generic-design | c | d |\n" + propagator.AntiGenericDesignEndMarker + "\n"
-
-	onlyMinimalismAndSafety := "# Registry\n" +
+	minimalismAndSafety := "# Registry\n" +
 		propagator.BeginMarker + "\n| minimalism-contract | x | y |\n" + propagator.EndMarker + "\n" +
 		propagator.DiscoverySafetyBeginMarker + "\n| skill-discovery-safety | a | b |\n" + propagator.DiscoverySafetyEndMarker + "\n"
+
+	designBlock := propagator.AntiGenericDesignBeginMarker + "\n| anti-generic-design | c | d |\n" + propagator.AntiGenericDesignEndMarker + "\n"
+	projectionBlock := propagator.ReviewProjectionBeginMarker + "\n| review-projection-contract | e | f |\n" + propagator.ReviewProjectionEndMarker + "\n"
+
+	allFour := minimalismAndSafety + designBlock + projectionBlock
+	onlyMinimalismAndSafety := minimalismAndSafety
+	missingProjection := minimalismAndSafety + designBlock
 
 	tests := []struct {
 		name         string
@@ -1843,8 +1844,8 @@ func TestCheckRegistry_ThreeBlockCombinations(t *testing.T) {
 		wantNoteHas  string
 	}{
 		{
-			name:         "all three blocks present",
-			content:      allThree,
+			name:         "all four blocks present",
+			content:      allFour,
 			wantOK:       true,
 			wantDegraded: false,
 			wantNoteHas:  "scoped block",
@@ -1855,6 +1856,13 @@ func TestCheckRegistry_ThreeBlockCombinations(t *testing.T) {
 			wantOK:       true,
 			wantDegraded: true,
 			wantNoteHas:  "anti-generic-design-scope",
+		},
+		{
+			name:         "only review-projection-contract-scope missing",
+			content:      missingProjection,
+			wantOK:       true,
+			wantDegraded: true,
+			wantNoteHas:  "review-projection-contract-scope",
 		},
 	}
 

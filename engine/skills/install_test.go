@@ -197,8 +197,8 @@ func TestPlanInstallTraversalGuard(t *testing.T) {
 	t.Run("path_dotdot_src_escapes_source_root", func(t *testing.T) {
 		// path="../../etc" → Src would escape sourceRoot → error.
 		reg := Registry{Version: "1", Skills: []Entry{{
-			ID:   "legit-id",
-			Path: "../../etc",
+			ID:     "legit-id",
+			Path:   "../../etc",
 			Source: Source{Type: "custom"},
 			Install: Install{
 				DefaultScope:    "project",

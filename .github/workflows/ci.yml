@@ -23,6 +23,86 @@ jobs:
       - name: ShellCheck wrappers
         run: shellcheck bin/overlay bin/labdrian-overlay || true
 
+      - name: Deterministic-checks dispatch guard smoke test
+        run: |
+          set +e
+          missing_source_dir="$(mktemp -d)"
+          err="$(OVERLAY_DIR="$missing_source_dir" bin/labdrian-overlay deterministic-checks check 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          rm -rf "$missing_source_dir"
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 for missing runner source, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"deterministic-check-runner source is unavailable"*) ;;
+            *) echo "expected explicit stderr for missing runner source, got: $err" >&2; exit 1 ;;
+          esac
+
+          # Shadow PATH with only what runs before the go guard (bash itself,
+          # via the #!/usr/bin/env bash shebang, plus dirname/readlink used by
+          # the script's own path resolution), deliberately omitting go.
+          shadow_bin="$(mktemp -d)"
+          ln -s "$(command -v bash)" "$shadow_bin/bash"
+          ln -s "$(command -v dirname)" "$shadow_bin/dirname"
+          ln -s "$(command -v readlink)" "$shadow_bin/readlink"
+          set +e
+          err="$(PATH="$shadow_bin" bin/labdrian-overlay deterministic-checks check 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          rm -rf "$shadow_bin"
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 for missing go, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"go is required to build the deterministic-check-runner"*) ;;
+            *) echo "expected explicit stderr for missing go, got: $err" >&2; exit 1 ;;
+          esac
+
+          echo "both deterministic-checks guards fired correctly (exit 3, explicit stderr)"
+
+      - name: Review-preflight dispatch guard smoke test
+        run: |
+          set +e
+          missing_source_dir="$(mktemp -d)"
+          err="$(OVERLAY_DIR="$missing_source_dir" bin/labdrian-overlay review-preflight 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          rm -rf "$missing_source_dir"
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 for missing guard source, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"review-preflight source is unavailable"*) ;;
+            *) echo "expected explicit stderr for missing guard source, got: $err" >&2; exit 1 ;;
+          esac
+
+          # Shadow PATH with only what runs before the go guard (bash itself,
+          # via the #!/usr/bin/env bash shebang, plus dirname/readlink used by
+          # the script's own path resolution), deliberately omitting go.
+          shadow_bin="$(mktemp -d)"
+          ln -s "$(command -v bash)" "$shadow_bin/bash"
+          ln -s "$(command -v dirname)" "$shadow_bin/dirname"
+          ln -s "$(command -v readlink)" "$shadow_bin/readlink"
+          set +e
+          err="$(PATH="$shadow_bin" bin/labdrian-overlay review-preflight 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          rm -rf "$shadow_bin"
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 for missing go, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"go is required to build the review-preflight guard"*) ;;
+            *) echo "expected explicit stderr for missing go, got: $err" >&2; exit 1 ;;
+          esac
+
+          echo "both review-preflight dispatch guards fired correctly (exit 3, explicit stderr)"
+
   test-engine:
     name: Engine Tests
     runs-on: ubuntu-latest
@@ -36,9 +116,38 @@ jobs:
         with:
           go-version-file: engine/go.mod
 
+      - name: Gofmt
+        working-directory: engine
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
       - name: Vet
         working-directory: engine
         run: go vet ./...
+
+      - name: Staticcheck
+        working-directory: engine
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+
+      - name: Deadcode (informational)
+        working-directory: engine
+        continue-on-error: true
+        run: |
+          out="$RUNNER_TEMP/deadcode-engine.txt"
+          go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./... > "$out" || true
+          count=$(wc -l < "$out" | tr -d ' ')
+          {
+            echo "### Dead code — engine (informational)"
+            echo
+            echo "\`$count\` unreachable functions reported."
+            if [ "$count" -gt 0 ]; then
+              echo
+              echo '```'
+              head -n 10 "$out"
+              [ "$count" -gt 10 ] && echo "... and $((count - 10)) more"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$out"
 
       - name: Test
         working-directory: engine
@@ -82,6 +191,76 @@ jobs:
           fi
           test "$status" -eq 5
 
+  test-deterministic-check-runner:
+    name: Deterministic Check Runner
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/deterministic-check-runner/go.mod
+
+      - name: Test
+        working-directory: tools/deterministic-check-runner
+        run: go test ./... -cover
+
+  test-review-preflight:
+    name: Review Preflight Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/review-preflight/go.mod
+
+      - name: Gofmt
+        working-directory: tools/review-preflight
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: tools/review-preflight
+        run: go vet ./...
+
+      - name: Test
+        working-directory: tools/review-preflight
+        run: go test ./... -cover
+
+      # This job, not lint-shell, owns the end-to-end assertion: reaching the
+      # guard itself requires building it, so it belongs where the toolchain is
+      # pinned by go-version-file rather than assumed present on the runner.
+      - name: Absent gentle-ai fails closed
+        run: |
+          if command -v gentle-ai >/dev/null 2>&1; then
+            echo "gentle-ai is installed on this runner; this assertion no longer proves the fail-closed path" >&2
+            exit 1
+          fi
+          set +e
+          err="$(bin/labdrian-overlay review-preflight 2>&1 1>/dev/null)"
+          status=$?
+          set -e
+          if [ "$status" -ne 3 ]; then
+            echo "expected exit 3 when gentle-ai is absent, got $status" >&2
+            exit 1
+          fi
+          case "$err" in
+            *"gentle-ai is not on PATH"*) ;;
+            *) echo "expected explicit stderr for absent gentle-ai, got: $err" >&2; exit 1 ;;
+          esac
+          case "$err" in
+            *"This guard fails closed"*) ;;
+            *) echo "expected the fail-closed note on stderr, got: $err" >&2; exit 1 ;;
+          esac
+
+          echo "review-preflight failed closed with exit 3 when gentle-ai was absent"
+
   test-tui:
     name: TUI Tests
     runs-on: ubuntu-latest
@@ -95,9 +274,38 @@ jobs:
         with:
           go-version-file: tui/go.mod
 
+      - name: Gofmt
+        working-directory: tui
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
       - name: Vet
         working-directory: tui
         run: go vet ./...
+
+      - name: Staticcheck
+        working-directory: tui
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+
+      - name: Deadcode (informational)
+        working-directory: tui
+        continue-on-error: true
+        run: |
+          out="$RUNNER_TEMP/deadcode-tui.txt"
+          go run golang.org/x/tools/cmd/deadcode@v0.48.0 ./... > "$out" || true
+          count=$(wc -l < "$out" | tr -d ' ')
+          {
+            echo "### Dead code — tui (informational)"
+            echo
+            echo "\`$count\` unreachable functions reported."
+            if [ "$count" -gt 0 ]; then
+              echo
+              echo '```'
+              head -n 10 "$out"
+              [ "$count" -gt 10 ] && echo "... and $((count - 10)) more"
+              echo '```'
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat "$out"
 
       - name: Test
         working-directory: tui

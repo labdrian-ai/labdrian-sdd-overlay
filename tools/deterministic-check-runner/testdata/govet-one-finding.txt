@@ -1,0 +1,1 @@
+main.go:6:14: fmt.Printf format %d has arg "not-a-number" of wrong type string

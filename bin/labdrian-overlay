@@ -159,6 +159,15 @@ Commands:
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator
                                    exit codes 2-6 and does not modify installed skill roots.
+  deterministic-checks             Run the hardcoded v1 check set (gofmt, go vet, staticcheck,
+    <normalize|check> [--top-n N]  deadcode) via the overlay-owned runner. 'check' never mutates;
+    [--out-dir DIR]                'normalize' applies fixers. Exit 0=passed, 1=verification_failed,
+                                   3=procedural_tooling_failed; propagated unchanged from the runner.
+  review-preflight                 Ask whether a review started in the caller's cwd would cover
+    [--base-ref REF]               anything, by reading the projection 'gentle-ai review status'
+                                   reports. Exit 0=candidate covers something, 1=EMPTY candidate
+                                   (a review here would approve nothing), 2=usage,
+                                   3=could not determine; propagated unchanged from the guard.
   gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
@@ -1173,8 +1182,9 @@ cmd_install_hooks() {
   echo "install-hooks complete."
   echo "  binary  : $ENGINE_BINARY"
   echo "  settings: $settings_path (backup at ${settings_path}.bak)"
-  echo "  hooks   : two hook pairs (minimalism-contract + skill-discovery-safety) wired"
-  echo "            into UserPromptSubmit and PreToolUse/Agent (four entries total)."
+  echo "  hooks   : four hook pairs (minimalism-contract + skill-discovery-safety"
+  echo "            + anti-generic-design + review-projection-contract) wired"
+  echo "            into UserPromptSubmit and PreToolUse/Agent (eight entries total)."
   echo ""
   echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
   echo ""
@@ -1257,7 +1267,8 @@ cmd_uninstall_hooks() {
 
   echo ""
   echo "uninstall-hooks complete."
-  echo "  Our four hook entries (two pairs: minimalism-contract + skill-discovery-safety)"
+  echo "  Our eight hook entries (four pairs: minimalism-contract + skill-discovery-safety"
+  echo "  + anti-generic-design + review-projection-contract)"
   echo "  have been removed from $settings_path"
   echo "  (backup at ${settings_path}.bak if the file was modified)"
   echo ""
@@ -1615,6 +1626,89 @@ cmd_validate_entry_contract() {
 }
 
 # ---------------------------------------------------------------------------
+# deterministic-checks
+# ---------------------------------------------------------------------------
+
+cmd_deterministic_checks() {
+  local runner_src="$OVERLAY_DIR/tools/deterministic-check-runner"
+  if [[ ! -f "$runner_src/go.mod" || ! -f "$runner_src/main.go" ]]; then
+    echo "error: deterministic-check-runner source is unavailable under $runner_src" >&2
+    return 3
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    echo "error: go is required to build the deterministic-check-runner" >&2
+    return 3
+  fi
+
+  local runner_binary
+  if ! runner_binary="$(mktemp "${TMPDIR:-/tmp}/deterministic-check-runner.XXXXXX")"; then
+    echo "error: could not allocate a temporary deterministic-check-runner binary" >&2
+    return 3
+  fi
+  rm -f "$runner_binary"
+
+  if ! (cd "$runner_src" && go build -o "$runner_binary" .); then
+    rm -f "$runner_binary"
+    echo "error: could not build the deterministic-check-runner" >&2
+    return 3
+  fi
+
+  local status=0
+  (cd "$CALLER_CWD" && "$runner_binary" "$@") || status=$?
+  if [[ "$status" -ne 0 && ! -d "$CALLER_CWD" ]]; then
+    status=3
+  fi
+  rm -f "$runner_binary"
+  return "$status"
+}
+
+# ---------------------------------------------------------------------------
+# review-preflight
+# ---------------------------------------------------------------------------
+
+# Same shape as cmd_deterministic_checks above, deliberately: every failure to
+# reach the guard is exit 3 ("could not determine"), never exit 0, so a missing
+# source tree or a missing toolchain can never be read as "a review here is
+# safe". The guard's own exit code is propagated verbatim - the wrapper never
+# re-derives it, exactly as skills/sdd-verify/SKILL.md requires of the sibling
+# runner.
+cmd_review_preflight() {
+  local guard_src="$OVERLAY_DIR/tools/review-preflight"
+  if [[ ! -f "$guard_src/go.mod" || ! -f "$guard_src/main.go" ]]; then
+    echo "error: review-preflight source is unavailable under $guard_src" >&2
+    return 3
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    echo "error: go is required to build the review-preflight guard" >&2
+    return 3
+  fi
+
+  local guard_binary
+  if ! guard_binary="$(mktemp "${TMPDIR:-/tmp}/review-preflight.XXXXXX")"; then
+    echo "error: could not allocate a temporary review-preflight binary" >&2
+    return 3
+  fi
+  rm -f "$guard_binary"
+
+  if ! (cd "$guard_src" && go build -o "$guard_binary" .); then
+    rm -f "$guard_binary"
+    echo "error: could not build the review-preflight guard" >&2
+    return 3
+  fi
+
+  local status=0
+  (cd "$CALLER_CWD" && "$guard_binary" "$@") || status=$?
+  # A CALLER_CWD that no longer exists makes the subshell's own `cd` fail with
+  # exit 1, which for this guard would read as "EMPTY candidate" - a verdict
+  # about a projection that was never observed. Remap that one case to 3.
+  if [[ "$status" -ne 0 && ! -d "$CALLER_CWD" ]]; then
+    status=3
+  fi
+  rm -f "$guard_binary"
+  return "$status"
+}
+
+# ---------------------------------------------------------------------------
 # gadu-generate
 # ---------------------------------------------------------------------------
 
@@ -1649,6 +1743,8 @@ case "$COMMAND" in
   prespec)         cmd_prespec "$@" ;;
   skills)          cmd_skills "$@" ;;
   validate-entry-contract) cmd_validate_entry_contract "$@" ;;
+  deterministic-checks) cmd_deterministic_checks "$@" ;;
+  review-preflight) cmd_review_preflight "$@" ;;
   gadu-generate)   cmd_gadu_generate "$@" ;;
   --help|-h)       usage; exit 0 ;;
   "")              usage >&2; exit 1 ;;

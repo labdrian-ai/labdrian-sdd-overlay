@@ -1,0 +1,3 @@
+gadu/gadu.go:179:6: unreachable func: PersonaBody
+prespec/grid.go:43:6: unreachable func: DefaultCells
+prespec/grid.go:64:6: unreachable func: New

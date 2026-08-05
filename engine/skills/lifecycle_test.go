@@ -170,8 +170,8 @@ func TestAddEntryDuplicate(t *testing.T) {
 		Version: "1",
 		Skills: []Entry{
 			{
-				ID:   "existing",
-				Path: "existing",
+				ID:     "existing",
+				Path:   "existing",
 				Source: Source{Type: "custom"},
 				Install: Install{
 					DefaultScope: "global",
@@ -193,8 +193,8 @@ func TestAddEntryDuplicate(t *testing.T) {
 func TestRemoveEntrySuccess(t *testing.T) {
 	makeEntry := func(id string) Entry {
 		return Entry{
-			ID:   id,
-			Path: id,
+			ID:     id,
+			Path:   id,
 			Source: Source{Type: "custom"},
 			Install: Install{
 				DefaultScope: "global",
@@ -271,7 +271,7 @@ func TestAddEntryRoundTrip(t *testing.T) {
 				ID:   "base",
 				Path: "base",
 				Source: Source{
-					Type: "core",
+					Type:     "core",
 					Upstream: &Upstream{Owner: "gentleman-programming"},
 				},
 				Install: Install{

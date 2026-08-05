@@ -66,6 +66,55 @@ func TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset(t *testing.T) {
 	}
 }
 
+// TestReviewProjectionContractFrontmatterParses asserts the embedded
+// review-projection-contract asset carries valid, parseable frontmatter scoping
+// it to exactly the sdd-apply and sdd-verify phases. A parse error here means
+// gate-task/propagate would fail loud (propagate exits 1; gate-task logs a
+// stderr warning and passes through) instead of injecting the contract — and
+// for this contract that silent non-injection is precisely the hazard, since
+// sdd-apply is not vendored in this repository and prompt injection is the only
+// path the rule has into that phase.
+func TestReviewProjectionContractFrontmatterParses(t *testing.T) {
+	phases, err := propagator.ParseFrontmatter(assets.ReviewProjectionContract)
+	if err != nil {
+		t.Fatalf("ParseFrontmatter(assets.ReviewProjectionContract): unexpected error: %v", err)
+	}
+
+	want := []string{"sdd-apply", "sdd-verify"}
+	if len(phases.AppliesTo) != len(want) {
+		t.Fatalf("AppliesTo = %v, want %v", phases.AppliesTo, want)
+	}
+	for i, phase := range want {
+		if phases.AppliesTo[i] != phase {
+			t.Errorf("AppliesTo[%d] = %q, want %q", i, phases.AppliesTo[i], phase)
+		}
+	}
+}
+
+// TestReviewProjectionContractStandaloneCopyMatchesEmbeddedAsset is the drift
+// guard for the two-copy design, mirroring
+// TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset: the deployed
+// standalone file skills/_shared/review-projection-contract.md MUST stay
+// byte-identical to the compiled-in engine/assets/review-projection-contract.md
+// asset. Any drift here means gate-task/propagate (embedded) and a reader of the
+// deployed _shared file would see DIFFERENT rules for when a review may start —
+// this guard fails loud instead of letting that happen silently.
+func TestReviewProjectionContractStandaloneCopyMatchesEmbeddedAsset(t *testing.T) {
+	standalonePath := filepath.Join(repoRoot(t), "skills", "_shared", "review-projection-contract.md")
+
+	standaloneBytes, err := os.ReadFile(standalonePath)
+	if err != nil {
+		t.Fatalf("read standalone copy %s: %v", standalonePath, err)
+	}
+
+	if string(standaloneBytes) != assets.ReviewProjectionContract {
+		t.Errorf(
+			"skills/_shared/review-projection-contract.md has drifted from the embedded engine/assets/review-projection-contract.md asset — they must be byte-identical.\nstandalone length=%d, embedded length=%d",
+			len(standaloneBytes), len(assets.ReviewProjectionContract),
+		)
+	}
+}
+
 // antiGenericDesignPaths are the three documents that restate the forbidden-pattern
 // guidance, each for a different consumer: the injected contract, the invokable
 // skill, and the reviewer checklist.

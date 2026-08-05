@@ -249,4 +249,3 @@ func marshalCells(cells []Cell) []map[string]interface{} {
 	}
 	return result
 }
-

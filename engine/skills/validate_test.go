@@ -40,7 +40,7 @@ func TestDiff(t *testing.T) {
 	t.Run("aligned_registry_and_manifest", func(t *testing.T) {
 		reg := makeReg([]Entry{coreEntry("sdd-spec"), customEntry("gadu-orchestrate")})
 		mv := ManifestView{
-			"sdd-spec":        {Dir: "sdd-spec", Tag: "managed"},
+			"sdd-spec":         {Dir: "sdd-spec", Tag: "managed"},
 			"gadu-orchestrate": {Dir: "gadu-orchestrate", Tag: "custom"},
 		}
 		divs := Diff(reg, mv)
