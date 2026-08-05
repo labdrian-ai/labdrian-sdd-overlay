@@ -481,6 +481,17 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 		return openCodePromptConfig{}, err
 	}
 	contracts = append(contracts, safety)
+	// The review-projection guard rides the embedded asset for the same reason
+	// the safety guard does: the empty-review-candidate hazard is runtime-
+	// agnostic, so an OpenCode user must get it too, and sourcing it from the
+	// binary keeps it independent of whether the deployed _shared file exists.
+	// It is appended before the OPTIONAL oo-quality contract so the
+	// unconditional contracts keep a stable order regardless of that file.
+	projection, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "review-projection-contract.md"), assets.ReviewProjectionContract)
+	if err != nil {
+		return openCodePromptConfig{}, err
+	}
+	contracts = append(contracts, projection)
 	ooPath := filepath.Join("skills", "_shared", "oo-quality-contract.md")
 	ooContent, err := os.ReadFile(filepath.Join(root, ooPath))
 	if err != nil {
