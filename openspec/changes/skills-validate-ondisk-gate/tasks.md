@@ -28,11 +28,11 @@ If slice 2 implementation crosses 800 lines, split at the pre-agreed seam withou
 
 ## Phase 1: Slice 1 — ondisk-gate-consumer-contract (R-001, R-004, R-009, R-010)
 
-- [ ] 1.1 R-004: add bidirectional pin test to `engine/skills/ondisk_test.go` (fixture rows `_shared/x.md`, `_shared/pin/SKILL.md`, `engine/y.go`, `real-skill/SKILL.md`): Subtest A asserts `DeployableManifestPaths` includes both `_shared` rows and excludes `engine/y.go`; Subtest B asserts `LoadManifestView` yields `real-skill` but not `_shared`. Confirm it fails if either exclusion rule is unified.
-- [ ] 1.2 R-009: rewrite the two `Detail` strings in `engine/skills/ondisk.go` (`DivUnregisteredOnDisk`/`DivMissingOnDisk`) to name the manifest-row edit, never `sync-manifest`; add table-driven assertions in `ondisk_test.go`.
-- [ ] 1.3 R-009: correct the invalid `sync-manifest` remediation claim in `openspec/changes/skill-manifest-gen/proposal.md:15,67` — scope it to `*/SKILL.md` rows only.
-- [ ] 1.4 R-010 (R-001 disposition, this is Decision 4 — the design table itself is the persisted enumeration, already saved): update five doc sites to describe the on-disk cross-check: `README.md:93,298` (add `--source-root` to the usage signature), `bin/labdrian-overlay:149`, `engine/cmd/main.go:41-43,173` (add `--source-root <path>` to the validate usage line).
-- [ ] 1.5 Run `cd engine && go test ./skills/...`; confirm no assertion edits to existing tests (R-008 baseline).
+- [x] 1.1 R-004: add bidirectional pin test to `engine/skills/ondisk_test.go` (fixture rows `_shared/x.md`, `_shared/pin/SKILL.md`, `engine/y.go`, `real-skill/SKILL.md`): Subtest A asserts `DeployableManifestPaths` includes both `_shared` rows and excludes `engine/y.go`; Subtest B asserts `LoadManifestView` yields `real-skill` but not `_shared`. Confirm it fails if either exclusion rule is unified.
+- [x] 1.2 R-009: rewrite the two `Detail` strings in `engine/skills/ondisk.go` (`DivUnregisteredOnDisk`/`DivMissingOnDisk`) to name the manifest-row edit, never `sync-manifest`; add table-driven assertions in `ondisk_test.go`.
+- [x] 1.3 R-009: correct the invalid `sync-manifest` remediation claim in `openspec/changes/skill-manifest-gen/proposal.md:15,67` — scope it to `*/SKILL.md` rows only.
+- [x] 1.4 R-010 (R-001 disposition, this is Decision 4 — the design table itself is the persisted enumeration, already saved): update five doc sites to describe the on-disk cross-check: `README.md:93,298` (add `--source-root` to the usage signature), `bin/labdrian-overlay:149`, `engine/cmd/main.go:41-43,173` (add `--source-root <path>` to the validate usage line).
+- [x] 1.5 Run `cd engine && go test ./skills/...`; confirm no assertion edits to existing tests (R-008 baseline).
 
 ## Phase 2: Slice 2 — ondisk-gate-wiring (R-002, R-003, R-005, R-006, R-007, R-008, R-011)
 

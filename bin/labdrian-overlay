@@ -146,7 +146,9 @@ Commands:
   skills <verb>                    Forward to the engine's skills registry core
                                    list      print sorted registry entries
                                    status    print count summary
-                                   validate  cross-check registry vs overlay.manifest
+                                   validate  cross-check registry vs overlay.manifest,
+                                             and skills/ on disk vs overlay.manifest
+                                             (requires --source-root)
                                    install   copy project-scoped skills into <cwd>/.claude/skills
                                    add <id> [--repo <url>] [--ref <sha>]
                                              register a skill: custom (no --repo) or

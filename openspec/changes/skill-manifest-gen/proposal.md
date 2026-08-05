@@ -12,7 +12,7 @@ Make `skills.registry.yaml` the source of truth for the SKILL.md rows of `overla
 - Idempotent (second run = no-op on aligned manifest); resolves TAG_MISMATCH/MIXED_TAG to registry tag; drops orphan SKILL.md rows (MISSING_IN_REGISTRY).
 - Atomic temp+rename, validate-before-write, failed op leaves `overlay.manifest` byte-unchanged.
 - Print a summary of rows added/dropped/retagged (not silent).
-- Post-condition: `skills validate` reports aligned.
+- Post-condition: `skills validate` reports the registry/manifest classes (`MISSING_IN_MANIFEST`, `MISSING_IN_REGISTRY`, `TAG_MISMATCH`, `MIXED_TAG`) aligned. `sync-manifest` regenerates only `*/SKILL.md` rows, so it cannot resolve an on-disk divergence (`UNREGISTERED_ON_DISK`/`MISSING_ON_DISK`) against a reference or `_shared/*` file.
 
 ### Out of Scope
 - External git sources, pinned-ref, vendoring.
@@ -64,7 +64,7 @@ Revert the PR. `sync.go`/`sync_test.go` are new files; the `skills.go` dispatch 
 
 ## Success Criteria
 
-- [ ] `skills sync-manifest` makes a drifted manifest pass `skills validate`.
+- [ ] `skills sync-manifest` makes a drifted manifest pass `skills validate`'s registry/manifest checks (it does not, and cannot, resolve on-disk divergences for reference or `_shared/*` files).
 - [ ] Running it twice is a byte-identical no-op.
 - [ ] Non-SKILL.md rows are preserved verbatim.
 - [ ] Failed op leaves `overlay.manifest` byte-unchanged.
