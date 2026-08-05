@@ -109,6 +109,17 @@ func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(stri
 	// Validate loads the manifest via os.Open(manifestPath) and runs Diff.
 	regDivs, regErr := Validate(reg, manifestPath)
 
+	// Print registry divergences now, immediately after Validate, and before
+	// the three on-disk stages below. Each of those stages can exit(1) on its
+	// own fatal error (bad manifest read, bad --source-root, scan failure);
+	// printing here first means such a stage failure can never discard
+	// already-computed registry divergences (R4-001, R-007).
+	if regErr != nil {
+		for _, d := range regDivs {
+			fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
+		}
+	}
+
 	manifestData, err := readFile(manifestPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: reading manifest %q: %v\n", manifestPath, err)
@@ -131,11 +142,6 @@ func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(stri
 
 	// Full-scan reporting (R-007): print every divergence from both checks in
 	// this one run, never stopping at the first error.
-	if regErr != nil {
-		for _, d := range regDivs {
-			fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
-		}
-	}
 	for _, d := range onDiskDivs {
 		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
 	}

@@ -2,6 +2,7 @@ package skills
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -412,6 +413,36 @@ skills:
 			if exitCode != 0 {
 				t.Errorf("cwd %d (%s): exit code = %d, want 0; stderr=%q", i, cwd, exitCode, errBuf.String())
 			}
+		}
+	})
+
+	t.Run("registry_divergence_survives_scan_failure", func(t *testing.T) {
+		// R4-001: registry divergences are computed by Validate before the three
+		// on-disk stages run. A later fatal error in any of those stages must not
+		// discard already-computed registry divergences (R-007 full-scan
+		// guarantee). Here ghost/SKILL.md has no registry entry, so Validate
+		// reports MISSING_IN_REGISTRY; scanSkills is then stubbed to fail
+		// outright. Both diagnostics must reach stderr in the same run.
+		regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\nghost/SKILL.md custom\n")
+		failScan := func(string) ([]string, error) {
+			return nil, errors.New("scan boom: source root unreadable")
+		}
+
+		var out, errBuf bytes.Buffer
+		exitCode := 0
+		RenderValidateCore(
+			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
+			os.ReadFile, failScan, &out, &errBuf,
+			func(c int) { exitCode = c },
+		)
+		if exitCode != 1 {
+			t.Errorf("exit code = %d, want 1; stderr=%q", exitCode, errBuf.String())
+		}
+		if !strings.Contains(errBuf.String(), "MISSING_IN_REGISTRY") {
+			t.Errorf("stderr %q must contain the registry divergence despite the later scan failure", errBuf.String())
+		}
+		if !strings.Contains(errBuf.String(), "scan boom") {
+			t.Errorf("stderr %q must contain the scan error", errBuf.String())
 		}
 	})
 }
