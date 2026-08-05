@@ -18,7 +18,7 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 	case "status":
 		RenderStatusCore(args, readFile, stdout, stderr, exit)
 	case "validate":
-		RenderValidateCore(args, readFile, stdout, stderr, exit)
+		RenderValidateCore(args, readFile, ScanSkillFiles, stdout, stderr, exit)
 	case "install":
 		RenderInstallCore(args, readFile, os.Getwd, stdout, stderr, exit)
 	case "add":
@@ -52,11 +52,21 @@ func stripVerb(args []string, verb string) []string {
 }
 
 // RenderValidateCore is the testable CLI core for `engine skills validate`.
-// Parses --registry and --manifest flags, loads both files, and runs Diff.
-// Exits 0 when aligned, 1 when any divergence is found (fail-loud per R-031/R-032).
-func RenderValidateCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
+// Parses --registry, --manifest, and --source-root flags, loads the registry
+// and manifest, and runs both the registry/manifest cross-check (Diff, via
+// Validate) and the on-disk cross-check (DiffOnDisk) in the same run.
+// Exits 0 only when both checks are clean, 1 when any divergence is found
+// (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006).
+//
+// --source-root has no default and no cwd-derived fallback (R-002): a caller
+// that omits it gets a usage error, never a silent scan of the working
+// directory. scanSkills is an injected seam (R-003) so the on-disk check is
+// unit-testable without walking a real tree; production callers pass
+// ScanSkillFiles.
+func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(string) ([]string, error), stdout, stderr io.Writer, exit func(int)) {
 	registryPath := "skills.registry.yaml"
 	manifestPath := "overlay.manifest"
+	sourceRoot := ""
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
 		case "--registry":
@@ -69,7 +79,18 @@ func RenderValidateCore(args []string, readFile readFileFn, stdout, stderr io.Wr
 				manifestPath = args[i+1]
 				i++
 			}
+		case "--source-root":
+			if i+1 < len(args) {
+				sourceRoot = args[i+1]
+				i++
+			}
 		}
+	}
+
+	if sourceRoot == "" {
+		fmt.Fprintln(stderr, "error: skills validate requires --source-root <skills-dir>")
+		exit(1)
+		return
 	}
 
 	data, err := readFile(registryPath)
@@ -86,13 +107,44 @@ func RenderValidateCore(args []string, readFile readFileFn, stdout, stderr io.Wr
 	}
 
 	// Validate loads the manifest via os.Open(manifestPath) and runs Diff.
-	divs, err := Validate(reg, manifestPath)
+	regDivs, regErr := Validate(reg, manifestPath)
+
+	manifestData, err := readFile(manifestPath)
 	if err != nil {
-		for _, d := range divs {
-			fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
-		}
+		fmt.Fprintf(stderr, "error: reading manifest %q: %v\n", manifestPath, err)
 		exit(1)
 		return
 	}
+	manifestPaths, err := DeployableManifestPaths(bytes.NewReader(manifestData))
+	if err != nil {
+		fmt.Fprintf(stderr, "error: parsing manifest for on-disk check: %v\n", err)
+		exit(1)
+		return
+	}
+	diskPaths, err := scanSkills(sourceRoot)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: scanning skills directory %q: %v\n", sourceRoot, err)
+		exit(1)
+		return
+	}
+	onDiskDivs := DiffOnDisk(diskPaths, manifestPaths)
+
+	// Full-scan reporting (R-007): print every divergence from both checks in
+	// this one run, never stopping at the first error.
+	if regErr != nil {
+		for _, d := range regDivs {
+			fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
+		}
+	}
+	for _, d := range onDiskDivs {
+		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
+	}
+
+	if regErr != nil || len(onDiskDivs) > 0 {
+		exit(1)
+		return
+	}
+
 	fmt.Fprintf(stdout, "registry and manifest aligned (%d skills)\n", len(reg.Skills))
+	fmt.Fprintf(stdout, "skills/ on disk matches overlay.manifest (%d files)\n", len(diskPaths))
 }

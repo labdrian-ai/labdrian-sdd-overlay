@@ -141,8 +141,8 @@ WHERE the change adds a new file under `skills/`, the change MUST add a matching
 
 #### Scenario: New skill file gets a manifest row
 
-- GIVEN a new file under `skills/`
-- WHEN `skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest` runs
+- GIVEN a new file under `skills/`, registered with a matching `overlay.manifest` row
+- WHEN `skills validate --registry ../skills.registry.yaml --manifest ../overlay.manifest --source-root ../skills` runs
 - THEN it exits zero
 
 #### Scenario: No new skill file, no regression
