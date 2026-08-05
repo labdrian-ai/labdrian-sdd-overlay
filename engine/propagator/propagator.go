@@ -46,6 +46,15 @@ const (
 	AntiGenericDesignEndMarker   = "<!-- END: anti-generic-design-scope -->"
 )
 
+// Markers wrapping the scoped review-projection-contract row. A DISTINCT marker
+// pair is mandatory for the same reason as the three pairs above: reusing any of
+// them would make Propagate overwrite that contract's block instead of the four
+// coexisting (see package doc).
+const (
+	ReviewProjectionBeginMarker = "<!-- BEGIN: review-projection-contract-scope (auto-generated) -->"
+	ReviewProjectionEndMarker   = "<!-- END: review-projection-contract-scope -->"
+)
+
 // defaultRowLabel is the leading table-cell label used when Config.RowLabel is
 // empty, preserving the original minimalism-contract behavior.
 const defaultRowLabel = "minimalism-contract"

@@ -67,6 +67,7 @@ build_exit_code: 125
 ## Deterministic Check Evidence (R-011, R-012, R-013)
 
 - `normalize` runs before `review start`; once the candidate freezes, `check` is the only `deterministic-check-runner` subcommand this skill may execute — any mutating step after freeze would invalidate the receipt (R-011).
+- `bin/labdrian-overlay review-preflight` also runs before `review start`, and only exit `0` permits starting: `gentle-ai review` projects the workspace by default, so once `sdd-apply` has committed its work units the candidate is empty and the review issues an APPROVED RECEIPT having inspected nothing. Exit `1` (EMPTY candidate) and exit `3` both mean do NOT start the review — exit `3` is the guard reaching no verdict at all, so it is the absence of proof and must never be read as safe. Exit `2` is the guard's own usage error: fix the invocation and re-run. Remedy an exit `1` by passing `--base-ref <remote>/<branch>` to both the guard and the review, or by starting the review before the work is committed. Never a silent pass, never `verification_failed`. See `../_shared/review-projection-contract.md`.
 - `bin/labdrian-overlay deterministic-checks check` stdout pipes directly into `gentle-ai review capture-evidence --input -`; the runner's own row output is the captured evidence bytes, never a paraphrase.
 - Absent-CLI guard (D8): before invoking the runner, confirm `command -v labdrian-overlay >/dev/null 2>&1`. If it fails, the deployment has no `bin/labdrian-overlay` on the PATH — report `--outcome procedural_tooling_failed`. Never a silent pass, never `verification_failed`.
 - Exit-code to `--outcome` mapping is mechanical — read directly off the runner's own process exit code, never re-derived:
@@ -92,6 +93,7 @@ build_exit_code: 125
 | Cached/config `strict_tdd: true` and runner exists | Strict TDD verify; load module. |
 | Strict TDD false or no runner | Standard verify; skip TDD checks. |
 | `actionContext.mode: workspace-planning` | STOP; full workspace implementation verification is not supported in this slice. |
+| `review-preflight` exits `1` (EMPTY candidate) or `3` (no verdict) | STOP; do not start the review. Exit `3` is unproven, never safe. |
 | Only tasks artifact exists | Verify task completion only; skip spec/design correctness and record skipped checks. |
 | Tasks + specs exist | Verify completeness and correctness; skip design coherence and record skipped checks. |
 | Proposal/specs/design/tasks exist | Verify all dimensions. |
