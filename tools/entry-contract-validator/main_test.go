@@ -135,6 +135,7 @@ func TestValidateFilesRejectsInvalidContracts(t *testing.T) {
 			mutate: func(contract map[string]any) {
 				contract["expected_native_next_recommendation"] = "sdd-propose"
 			},
+			wantDetail: "may be legitimate and newer than the overlay's mirror",
 		},
 		{
 			name: "bad estimate range",
@@ -236,6 +237,43 @@ func TestValidateFilesRejectsInvalidContracts(t *testing.T) {
 				t.Fatalf("error %q does not contain %q", err, tt.wantDetail)
 			}
 		})
+	}
+}
+
+// TestSelfDiagnosingMessageForUnknownDispatcherToken proves that a rejected
+// expected_native_next_recommendation token produces a message that blames
+// the likeliest real cause (a stale overlay mirror of the native
+// dispatcher's token domain) rather than a generic schema-validation
+// failure. The exit code must stay exitSchemaValidation: this is a message
+// change, not a contract change.
+func TestSelfDiagnosingMessageForUnknownDispatcherToken(t *testing.T) {
+	const rejectedToken = "sdd-propose"
+	err := validateMutation(t, func(contract map[string]any) {
+		contract["expected_native_next_recommendation"] = rejectedToken
+	})
+	if err == nil {
+		t.Fatal("invalid contract accepted")
+	}
+	classified, ok := err.(*contractError)
+	if !ok {
+		t.Fatalf("error %v is not a *contractError", err)
+	}
+	if classified.code != exitSchemaValidation {
+		t.Fatalf("exit code = %d, want %d (message-only change must keep the exit code)", classified.code, exitSchemaValidation)
+	}
+
+	message := err.Error()
+	for _, want := range []string{
+		rejectedToken,
+		"may be legitimate and newer than the overlay's mirror",
+		"skills/_shared/entry-contract.schema.json",
+		"skills/inception-pipeline/SKILL.md",
+		"gentle-ai sdd-status",
+		"nextRecommended",
+	} {
+		if !strings.Contains(message, want) {
+			t.Errorf("self-diagnosing message %q does not contain %q", message, want)
+		}
 	}
 }
 
