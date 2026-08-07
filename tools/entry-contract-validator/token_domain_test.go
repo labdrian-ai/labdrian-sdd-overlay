@@ -10,10 +10,6 @@ import (
 	"testing"
 )
 
-// nextRecommendationField mirrors the schema property name whose token
-// domain must stay in sync with the prose in skills/inception-pipeline/SKILL.md.
-const nextRecommendationFieldName = "expected_native_next_recommendation"
-
 var backtickTokenPattern = regexp.MustCompile("`([^`]+)`")
 
 // extractSchemaNextRecommendationEnum reads the single owner of the token
@@ -33,13 +29,13 @@ func extractSchemaNextRecommendationEnum(t *testing.T) []string {
 	if !ok {
 		t.Fatal("schema properties is not an object")
 	}
-	property, ok := properties[nextRecommendationFieldName].(map[string]any)
+	property, ok := properties[nextRecommendationField].(map[string]any)
 	if !ok {
-		t.Fatalf("schema is missing property %q", nextRecommendationFieldName)
+		t.Fatalf("schema is missing property %q", nextRecommendationField)
 	}
 	enumValues, ok := property["enum"].([]any)
 	if !ok {
-		t.Fatalf("schema property %q has no enum", nextRecommendationFieldName)
+		t.Fatalf("schema property %q has no enum", nextRecommendationField)
 	}
 	tokens := make([]string, 0, len(enumValues))
 	for _, value := range enumValues {
