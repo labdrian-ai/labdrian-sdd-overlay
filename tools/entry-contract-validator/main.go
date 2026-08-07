@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
+	"github.com/santhosh-tekuri/jsonschema/v6/kind"
 )
 
 const (
@@ -24,6 +25,12 @@ const (
 	exitSchemaValidation   = 5
 	exitSemanticValidation = 6
 )
+
+// nextRecommendationField is the schema property whose enum is the single
+// owner of the native dispatcher's token domain (see
+// skills/_shared/entry-contract.schema.json and
+// skills/inception-pipeline/SKILL.md, which mirrors it in prose).
+const nextRecommendationField = "expected_native_next_recommendation"
 
 const usageText = `Usage: entry-contract-validator --schema PATH --instance PATH
 
@@ -176,12 +183,63 @@ func validateFiles(schemaFile, instanceFile string) error {
 		return &contractError{code: exitInstance, err: fmt.Errorf("instance: %w", err)}
 	}
 	if err := compiled.Validate(instance); err != nil {
+		if diagnostic, ok := diagnoseNextRecommendationRejection(err); ok {
+			return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %s", diagnostic)}
+		}
 		return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %w", err)}
 	}
 	if err := validateSemantics(instance); err != nil {
 		return &contractError{code: exitSemanticValidation, err: fmt.Errorf("semantic validation: %w", err)}
 	}
 	return nil
+}
+
+// diagnoseNextRecommendationRejection inspects a JSON Schema validation
+// failure for the specific case of an unknown expected_native_next_recommendation
+// token. That failure is usually not a broken contract: the native
+// gentle-ai dispatcher owns the real token domain, and the overlay's two
+// mirrors (the schema enum and the inception-pipeline prose) can go stale
+// when it adds or renames a token. When this specific case is detected, it
+// returns a message that names the likely real cause instead of a generic
+// schema-validation failure. It returns ok=false for every other failure,
+// leaving the original error untouched.
+func diagnoseNextRecommendationRejection(err error) (message string, ok bool) {
+	var validationErr *jsonschema.ValidationError
+	if !errors.As(err, &validationErr) {
+		return "", false
+	}
+	token, found := findEnumRejection(validationErr, nextRecommendationField)
+	if !found {
+		return "", false
+	}
+	return fmt.Sprintf(
+		"%s %q is not in the schema enum. "+
+			"This token may be legitimate and newer than the overlay's mirror of the native dispatcher's token domain. "+
+			"Update both mirrors together: skills/_shared/entry-contract.schema.json (the enum) and "+
+			"skills/inception-pipeline/SKILL.md (the prose token list). "+
+			"Confirm the real domain by running `gentle-ai sdd-status <change> --cwd <repo> --json --instructions` "+
+			"and reading nextRecommended.",
+		nextRecommendationField, token,
+	), true
+}
+
+// findEnumRejection walks the jsonschema validation error tree looking for
+// an 'enum' keyword failure whose instance location is exactly the given
+// top-level field. It returns the rejected value when found.
+func findEnumRejection(validationErr *jsonschema.ValidationError, field string) (string, bool) {
+	if len(validationErr.InstanceLocation) == 1 && validationErr.InstanceLocation[0] == field {
+		if enumErr, ok := validationErr.ErrorKind.(*kind.Enum); ok {
+			if token, ok := enumErr.Got.(string); ok {
+				return token, true
+			}
+		}
+	}
+	for _, cause := range validationErr.Causes {
+		if token, found := findEnumRejection(cause, field); found {
+			return token, true
+		}
+	}
+	return "", false
 }
 
 func decodeJSONFile(filename string) (any, error) {
