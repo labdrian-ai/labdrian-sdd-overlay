@@ -184,7 +184,7 @@ func validateFiles(schemaFile, instanceFile string) error {
 	}
 	if err := compiled.Validate(instance); err != nil {
 		if diagnostic, ok := diagnoseNextRecommendationRejection(err); ok {
-			return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %s", diagnostic)}
+			return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %s: %w", diagnostic, err)}
 		}
 		return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %w", err)}
 	}

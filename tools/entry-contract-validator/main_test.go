@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
 const expectedContractVersion = "2.0.0"
@@ -274,6 +276,55 @@ func TestSelfDiagnosingMessageForUnknownDispatcherToken(t *testing.T) {
 		if !strings.Contains(message, want) {
 			t.Errorf("self-diagnosing message %q does not contain %q", message, want)
 		}
+	}
+}
+
+// TestSelfDiagnosingMessageSurfacesSiblingViolations proves that when an
+// instance carries the unknown-dispatcher-token violation AND an unrelated
+// violation at the same time (the root schema's additionalProperties: false
+// rejecting an unknown top-level property), the self-diagnosing message
+// still surfaces the second violation instead of silently discarding it.
+func TestSelfDiagnosingMessageSurfacesSiblingViolations(t *testing.T) {
+	const rejectedToken = "sdd-propose"
+	const unknownProperty = "unknown_property"
+	err := validateMutation(t, func(contract map[string]any) {
+		contract["expected_native_next_recommendation"] = rejectedToken
+		contract[unknownProperty] = true
+	})
+	if err == nil {
+		t.Fatal("invalid contract accepted")
+	}
+	classified, ok := err.(*contractError)
+	if !ok {
+		t.Fatalf("error %v is not a *contractError", err)
+	}
+	if classified.code != exitSchemaValidation {
+		t.Fatalf("exit code = %d, want %d", classified.code, exitSchemaValidation)
+	}
+
+	message := err.Error()
+	if !strings.Contains(message, "may be legitimate and newer than the overlay's mirror") {
+		t.Errorf("message %q does not contain the self-diagnosing sentence", message)
+	}
+	if !strings.Contains(message, unknownProperty) {
+		t.Errorf("message %q does not surface the sibling additionalProperties violation naming %q", message, unknownProperty)
+	}
+}
+
+// TestSelfDiagnosingMessageWrapsUnderlyingValidationError proves that the
+// self-diagnosing message still wraps the original *jsonschema.ValidationError
+// with %w rather than stringifying it away, so callers using errors.As can
+// still reach the full validation detail.
+func TestSelfDiagnosingMessageWrapsUnderlyingValidationError(t *testing.T) {
+	err := validateMutation(t, func(contract map[string]any) {
+		contract["expected_native_next_recommendation"] = "sdd-propose"
+	})
+	if err == nil {
+		t.Fatal("invalid contract accepted")
+	}
+	var validationErr *jsonschema.ValidationError
+	if !errors.As(err, &validationErr) {
+		t.Fatalf("errors.As could not reach *jsonschema.ValidationError from %v", err)
 	}
 }
 
