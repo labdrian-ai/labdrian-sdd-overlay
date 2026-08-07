@@ -197,6 +197,23 @@ func stubScan(files []string) func(string) ([]string, error) {
 	return func(string) ([]string, error) { return files, nil }
 }
 
+// newRecordingScan returns a scanSkills-shaped function that records every
+// directory it receives (in call order) into the returned slice, and a
+// files list to always return. Unlike stubScan, which discards its
+// directory argument and so cannot prove anything about which directory the
+// caller resolved, this lets tests assert on the exact source-root value
+// RenderValidateCore actually passed to scanSkills — the property R-002
+// requires: the scanned directory follows the --source-root flag, never the
+// process working directory.
+func newRecordingScan(files []string) (scan func(string) ([]string, error), recorded *[]string) {
+	recorded = &[]string{}
+	scan = func(dir string) ([]string, error) {
+		*recorded = append(*recorded, dir)
+		return files, nil
+	}
+	return scan, recorded
+}
+
 // mustWriteValidateFixture writes a minimal registry + manifest pair to a
 // fresh temp dir and returns their paths.
 func mustWriteValidateFixture(t *testing.T, manifestContent string) (regPath, mfPath string) {
@@ -387,7 +404,6 @@ skills:
 		if err != nil {
 			t.Fatalf("abs manifest path: %v", err)
 		}
-		scan := stubScan([]string{"sdd-spec/SKILL.md"})
 
 		oldWD, err := os.Getwd()
 		if err != nil {
@@ -395,24 +411,50 @@ skills:
 		}
 		t.Cleanup(func() { _ = os.Chdir(oldWD) })
 
-		// One of the three cwds is engine/ itself: a real 28-file Go package
-		// that must never be treated as an implicit skills directory (R-002).
+		// engineDir is engine/ itself: a real Go package that must never be
+		// mistaken for a skills directory (R-002).
 		engineDir := filepath.Join(oldWD, "..")
-		cwds := []string{t.TempDir(), engineDir, t.TempDir()}
-		for i, cwd := range cwds {
-			if err := os.Chdir(cwd); err != nil {
-				t.Fatalf("chdir %d to %s: %v", i, cwd, err)
-			}
-			var out, errBuf bytes.Buffer
-			exitCode := 0
-			RenderValidateCore(
-				[]string{"--registry", absRegPath, "--manifest", absMfPath, "--source-root", "/does-not-matter-because-stubbed"},
-				os.ReadFile, scan, &out, &errBuf,
-				func(c int) { exitCode = c },
-			)
-			if exitCode != 0 {
-				t.Errorf("cwd %d (%s): exit code = %d, want 0; stderr=%q", i, cwd, exitCode, errBuf.String())
-			}
+
+		const stubbedSourceRoot = "/does-not-matter-because-stubbed"
+		// ciRelativeSourceRoot matches the exact invocation
+		// .github/workflows/ci.yml runs from working-directory: engine:
+		// `--source-root ../skills`. No prior test covered a relative path.
+		const ciRelativeSourceRoot = "../skills"
+
+		tests := []struct {
+			name       string
+			cwd        string
+			sourceRoot string
+		}{
+			{"tempdir_1_absolute_source_root", t.TempDir(), stubbedSourceRoot},
+			{"engine_package_dir_absolute_source_root", engineDir, stubbedSourceRoot},
+			{"tempdir_2_absolute_source_root", t.TempDir(), stubbedSourceRoot},
+			{"engine_dir_relative_source_root_matches_ci", engineDir, ciRelativeSourceRoot},
+		}
+
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				scan, recorded := newRecordingScan([]string{"sdd-spec/SKILL.md"})
+				if err := os.Chdir(tt.cwd); err != nil {
+					t.Fatalf("chdir to %s: %v", tt.cwd, err)
+				}
+				var out, errBuf bytes.Buffer
+				exitCode := 0
+				RenderValidateCore(
+					[]string{"--registry", absRegPath, "--manifest", absMfPath, "--source-root", tt.sourceRoot},
+					os.ReadFile, scan, &out, &errBuf,
+					func(c int) { exitCode = c },
+				)
+				if exitCode != 0 {
+					t.Errorf("cwd %s: exit code = %d, want 0; stderr=%q", tt.cwd, exitCode, errBuf.String())
+				}
+				if len(*recorded) != 1 {
+					t.Fatalf("scanSkills called %d times, want 1; recorded=%v", len(*recorded), *recorded)
+				}
+				if (*recorded)[0] != tt.sourceRoot {
+					t.Errorf("scanned directory = %q, want %q (must follow --source-root, not cwd %q)", (*recorded)[0], tt.sourceRoot, tt.cwd)
+				}
+			})
 		}
 	})
 
