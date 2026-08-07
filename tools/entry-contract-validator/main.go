@@ -218,7 +218,7 @@ func diagnoseNextRecommendationRejection(err error) (message string, ok bool) {
 			"Update both mirrors together: skills/_shared/entry-contract.schema.json (the enum) and "+
 			"skills/inception-pipeline/SKILL.md (the prose token list). "+
 			"Confirm the real domain by running `gentle-ai sdd-status <change> --cwd <repo> --json --instructions` "+
-			"and reading nextRecommended.",
+			"and reading nextRecommended",
 		nextRecommendationField, token,
 	), true
 }
