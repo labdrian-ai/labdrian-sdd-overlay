@@ -261,6 +261,44 @@ jobs:
 
           echo "review-preflight failed closed with exit 3 when gentle-ai was absent"
 
+  test-archive-reconcile:
+    name: Archive Reconcile Guard
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/archive-reconcile/go.mod
+
+      - name: Gofmt
+        working-directory: tools/archive-reconcile
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: tools/archive-reconcile
+        run: go vet ./...
+
+      - name: Test
+        working-directory: tools/archive-reconcile
+        run: go test ./... -cover
+
+      # This job, not lint-shell, owns the end-to-end assertion: reaching the
+      # guard itself requires building it, so it belongs where the toolchain is
+      # pinned by go-version-file rather than assumed present on the runner.
+      #
+      # Unlike the module's own tests above, this step is a live gate on this
+      # checkout's actual openspec/changes/ state, not a fixture. It is
+      # expected to be RED whenever a stranded change is genuinely present —
+      # that is the exact condition this guard exists to surface, not a test
+      # bug. Do not add tolerance for a non-zero exit here to keep this job
+      # green; that would defeat the guard it exists to run.
+      - name: Archive reconcile guard against this repository
+        run: bin/labdrian-overlay archive-reconcile
+
   test-tui:
     name: TUI Tests
     runs-on: ubuntu-latest
