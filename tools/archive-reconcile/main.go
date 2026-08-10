@@ -210,13 +210,13 @@ func scanChanges(root string) ([]strandedChange, int, error) {
 	return findings, len(names), nil
 }
 
-// checkboxPattern matches a well-formed task checkbox line: a bullet dash
-// followed by "[ ]", "[x]", or "[X]". checkboxLikePattern matches anything
-// that looks like an attempt at one (a bullet dash followed by "["), so a
-// stray "- [oops]" or an unclosed "- [x" is caught as malformed rather than
-// silently ignored or silently miscounted.
-var checkboxPattern = regexp.MustCompile(`^\s*-\s*\[([ xX])\]`)
-var checkboxLikePattern = regexp.MustCompile(`^\s*-\s*\[`)
+// checkboxPattern matches a well-formed task checkbox line: a "-", "*", or
+// "+" bullet marker (the three CommonMark allows) followed by "[ ]", "[x]",
+// or "[X]". checkboxLikePattern matches anything that looks like an attempt
+// at one, so a stray "- [oops]" is caught as malformed rather than silently
+// ignored or miscounted.
+var checkboxPattern = regexp.MustCompile(`^\s*[-*+]\s*\[([ xX])\]`)
+var checkboxLikePattern = regexp.MustCompile(`^\s*[-*+]\s*\[`)
 
 // countTasks reads one tasks.md and returns the total number of task
 // checkboxes and how many are unchecked.
@@ -228,6 +228,11 @@ var checkboxLikePattern = regexp.MustCompile(`^\s*-\s*\[`)
 // likewise an error rather than a skipped line, for the same reason:
 // silently skipping it could turn a stranded change's last unchecked-looking
 // line into an invisible false "fully checked."
+//
+// Lines inside a fenced code block (``` or ~~~, with any info string) or an
+// HTML comment (<!-- ... -->, possibly spanning lines) are ignored entirely:
+// a checkbox-shaped example in either context must never contribute to
+// total or unchecked, nor trigger the malformed-checkbox error below.
 func countTasks(path string) (total int, unchecked int, err error) {
 	f, err := os.Open(path)
 	if err != nil {
@@ -236,11 +241,40 @@ func countTasks(path string) (total int, unchecked int, err error) {
 	defer f.Close()
 
 	lineNo := 0
+	inFence := false
+	inComment := false
+	var fenceChar byte
+	var fenceLen int
+
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		lineNo++
 		line := scanner.Text()
+
+		if inFence {
+			if isFenceClose(line, fenceChar, fenceLen) {
+				inFence = false
+			}
+			continue
+		}
+		if inComment {
+			if strings.Contains(line, "-->") {
+				inComment = false
+			}
+			continue
+		}
+		if ch, n, ok := fenceOpen(line); ok {
+			inFence, fenceChar, fenceLen = true, ch, n
+			continue
+		}
+		if openIdx := strings.Index(line, "<!--"); openIdx >= 0 {
+			if !strings.Contains(line[openIdx+len("<!--"):], "-->") {
+				inComment = true
+			}
+			continue
+		}
+
 		if m := checkboxPattern.FindStringSubmatch(line); m != nil {
 			total++
 			if m[1] == " " {
@@ -249,13 +283,51 @@ func countTasks(path string) (total int, unchecked int, err error) {
 			continue
 		}
 		if checkboxLikePattern.MatchString(line) {
-			return 0, 0, fmt.Errorf("%s:%d: malformed task checkbox %q — expected \"- [ ]\" or \"- [x]\"", path, lineNo, strings.TrimSpace(line))
+			return 0, 0, fmt.Errorf("%s:%d: malformed task checkbox %q — expected \"- [ ]\", \"* [ ]\", or \"+ [ ]\" (checked or unchecked)", path, lineNo, strings.TrimSpace(line))
 		}
 	}
 	if err := scanner.Err(); err != nil {
 		return 0, 0, fmt.Errorf("%s could not be parsed: %w", path, err)
 	}
 	return total, unchecked, nil
+}
+
+// fenceOpen reports whether line opens a fenced code block: three or more
+// identical backtick or tilde characters after leading whitespace, with an
+// optional info string (e.g. "bash"). It returns the fence character and how
+// many were used, so the matching close can require at least that many.
+func fenceOpen(line string) (ch byte, n int, ok bool) {
+	trimmed := strings.TrimLeft(line, " \t")
+	if trimmed == "" {
+		return 0, 0, false
+	}
+	first := trimmed[0]
+	if first != '`' && first != '~' {
+		return 0, 0, false
+	}
+	i := 0
+	for i < len(trimmed) && trimmed[i] == first {
+		i++
+	}
+	if i < 3 {
+		return 0, 0, false
+	}
+	return first, i, true
+}
+
+// isFenceClose reports whether line closes a fence that was opened with
+// fenceChar repeated fenceLen times: the trimmed line must consist of
+// nothing but fenceChar, repeated at least fenceLen times.
+func isFenceClose(line string, fenceChar byte, fenceLen int) bool {
+	trimmed := strings.TrimSpace(line)
+	if trimmed == "" {
+		return false
+	}
+	i := 0
+	for i < len(trimmed) && trimmed[i] == fenceChar {
+		i++
+	}
+	return i >= fenceLen && i == len(trimmed)
 }
 
 // capabilityStatuses lists the delta capabilities of one change (the
