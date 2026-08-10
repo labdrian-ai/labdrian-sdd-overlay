@@ -544,3 +544,53 @@ func TestRunTreatsDeeplyIndentedBackticksAsNotAFence(t *testing.T) {
 			got, outcomeStranded, out.String(), errOut.String())
 	}
 }
+
+// Four separate silent misses shipped in this tool before the policy changed
+// from "guess" to "refuse": unrastreado fences, unrecognised bullet markers, an
+// unterminated fence, and the three vectors below. A line-oriented reader cannot
+// resolve markdown block context, so every line it cannot classify must fail
+// closed rather than be counted or dropped.
+func TestRunRefusesToGuessOnAmbiguousLines(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		tasks string
+		why   string
+	}{
+		{
+			name:  "checkbox sharing a line with an inline HTML comment",
+			tasks: "- [x] 1.1 done <!-- verified -->\n",
+			why:   "silently counted as zero tasks, so a stranded change read as planning-only",
+		},
+		{
+			name:  "checkbox indented into a CommonMark indented code block",
+			tasks: "- [x] real one\n    - [ ] indented example\n",
+			why:   "silently counted as a real unchecked task, so a stranded change read as in progress",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			newChange(t, root, "c", tt.tasks)
+			var out, errOut bytes.Buffer
+			if got := run([]string{"--repo", root}, &out, &errOut); got != outcomeUndetermined {
+				t.Fatalf("exit %d, want %d (outcomeUndetermined) — before the refuse policy this %s; stderr=%q",
+					got, outcomeUndetermined, tt.why, errOut.String())
+			}
+			if !strings.Contains(errOut.String(), "refuses to guess") {
+				t.Fatalf("the diagnostic must say the guard refused rather than failed, so the operator knows to disambiguate the file; got %q", errOut.String())
+			}
+		})
+	}
+}
+
+// A bullet whose first token is a markdown link is ordinary prose. Failing the
+// scan on it would make the guard unusable on real task files, which is how a
+// fail-closed policy turns into a guard nobody can keep enabled.
+func TestRunAcceptsMarkdownLinkBullets(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "c", "- [see the design](design.md)\n- [x] 1.1 real task\n")
+	var out, errOut bytes.Buffer
+	if got := run([]string{"--repo", root}, &out, &errOut); got != outcomeStranded {
+		t.Fatalf("exit %d, want %d (outcomeStranded) — a markdown-link bullet must not be mistaken for a malformed checkbox; stdout=%q stderr=%q",
+			got, outcomeStranded, out.String(), errOut.String())
+	}
+}
