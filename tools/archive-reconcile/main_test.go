@@ -496,3 +496,51 @@ func TestRunAgainstLiveRepository(t *testing.T) {
 		}
 	}
 }
+
+// An unterminated fence or HTML comment means every line after it was skipped,
+// so the task counters describe only part of the file. Returning them would let
+// a genuinely stranded change hide behind an unclosed ``` and be reported clean
+// — the exact silent miss this guard exists to prevent, reintroduced through the
+// skipping machinery added to fix the fenced-example case. These pin the fix.
+func TestRunFailsClosedOnUnterminatedFenceOrComment(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		tasks string
+	}{
+		{
+			name:  "unterminated fence hides real completed tasks",
+			tasks: "```\n- [ ] example, fence never closes\n\n- [x] real one\n- [x] real two\n",
+		},
+		{
+			name:  "unterminated html comment hides a real pending task",
+			tasks: "<!--\n- [x] commented example\n\n- [ ] real pending\n",
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			root := t.TempDir()
+			newChange(t, root, "c", tt.tasks)
+			var out, errOut bytes.Buffer
+			if got := run([]string{"--repo", root}, &out, &errOut); got != outcomeUndetermined {
+				t.Fatalf("exit %d, want %d (outcomeUndetermined) — an unterminated fence or comment "+
+					"must fail closed, never report clean; stderr=%q", got, outcomeUndetermined, errOut.String())
+			}
+			if !strings.Contains(errOut.String(), "unterminated") {
+				t.Fatalf("diagnostic must name the unterminated block so the operator can find it; got %q", errOut.String())
+			}
+		})
+	}
+}
+
+// CommonMark allows at most three spaces before a fence; four or more is an
+// indented code block. Treating a deeply indented line as a fence opener would
+// let a coincidental open/close pair swallow the real tasks between them.
+func TestRunTreatsDeeplyIndentedBackticksAsNotAFence(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "c", "    ```\n- [x] real one\n    ```\n- [x] real two\n")
+	var out, errOut bytes.Buffer
+	if got := run([]string{"--repo", root}, &out, &errOut); got != outcomeStranded {
+		t.Fatalf("exit %d, want %d (outcomeStranded) — a 4-space-indented ``` is not a fence, "+
+			"so both real tasks must still be counted; stdout=%q stderr=%q",
+			got, outcomeStranded, out.String(), errOut.String())
+	}
+}

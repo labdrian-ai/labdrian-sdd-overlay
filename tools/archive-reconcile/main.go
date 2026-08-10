@@ -245,6 +245,8 @@ func countTasks(path string) (total int, unchecked int, err error) {
 	inComment := false
 	var fenceChar byte
 	var fenceLen int
+	fenceOpenLine := 0
+	commentOpenLine := 0
 
 	scanner := bufio.NewScanner(f)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
@@ -266,11 +268,13 @@ func countTasks(path string) (total int, unchecked int, err error) {
 		}
 		if ch, n, ok := fenceOpen(line); ok {
 			inFence, fenceChar, fenceLen = true, ch, n
+			fenceOpenLine = lineNo
 			continue
 		}
 		if openIdx := strings.Index(line, "<!--"); openIdx >= 0 {
 			if !strings.Contains(line[openIdx+len("<!--"):], "-->") {
 				inComment = true
+				commentOpenLine = lineNo
 			}
 			continue
 		}
@@ -289,6 +293,17 @@ func countTasks(path string) (total int, unchecked int, err error) {
 	if err := scanner.Err(); err != nil {
 		return 0, 0, fmt.Errorf("%s could not be parsed: %w", path, err)
 	}
+	// An unterminated fence or comment means every line after it was skipped,
+	// so the counters describe only part of the file. Returning them would let
+	// a genuinely stranded change hide behind an unclosed ``` and be reported
+	// clean — the exact silent miss this guard exists to prevent, reintroduced
+	// through the skipping machinery itself. Fail closed instead.
+	if inFence {
+		return 0, 0, fmt.Errorf("%s: unterminated fenced code block opened at line %d — every later line was skipped, so the task counts cannot be trusted", path, fenceOpenLine)
+	}
+	if inComment {
+		return 0, 0, fmt.Errorf("%s: unterminated HTML comment opened at line %d — every later line was skipped, so the task counts cannot be trusted", path, commentOpenLine)
+	}
 	return total, unchecked, nil
 }
 
@@ -297,6 +312,14 @@ func countTasks(path string) (total int, unchecked int, err error) {
 // optional info string (e.g. "bash"). It returns the fence character and how
 // many were used, so the matching close can require at least that many.
 func fenceOpen(line string) (ch byte, n int, ok bool) {
+	// CommonMark allows at most three spaces of indentation before a fence;
+	// four or more makes it an indented code block, not a fence opener.
+	// Treating a deeply indented line as a fence would let a coincidental
+	// open/close pair swallow real tasks between them.
+	indent := len(line) - len(strings.TrimLeft(line, " "))
+	if indent > 3 {
+		return 0, 0, false
+	}
 	trimmed := strings.TrimLeft(line, " \t")
 	if trimmed == "" {
 		return 0, 0, false
