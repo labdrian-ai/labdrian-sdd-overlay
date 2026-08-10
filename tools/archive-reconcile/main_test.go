@@ -350,6 +350,113 @@ func TestRunDefaultsToTheCallerWorkingDirectory(t *testing.T) {
 	}
 }
 
+// TestRunHandlesCheckboxesInsideFencesAndComments pins the R3-001/R4-001 fix:
+// a checkbox-shaped line inside a fenced code block or an HTML comment must
+// never count toward total or unchecked. Before the fix, an unchecked
+// fenced/hidden example kept unchecked > 0 and hid a stranded change, while
+// checked fenced examples inflated total and falsely flagged planning-only
+// changes as stranded.
+func TestRunHandlesCheckboxesInsideFencesAndComments(t *testing.T) {
+	cases := []struct {
+		name       string
+		changeName string
+		content    string
+		wantExit   int
+		wantNamed  bool
+	}{
+		{
+			name:       "unchecked example inside fence still reported stranded",
+			changeName: "fenced-example-change",
+			content:    "# Tasks\n\n- [x] 1.1 real task one\n- [x] 1.2 real task two\n\nExample usage:\n\n```bash\n- [ ] example placeholder, not a real task\n```\n",
+			wantExit:   outcomeStranded,
+			wantNamed:  true,
+		},
+		{
+			name:       "checked examples only inside fence stay planning-only",
+			changeName: "fenced-planning-only-change",
+			content:    "# Tasks\n\nPlanning notes; example checkbox format:\n\n```\n- [x] example done marker\n- [x] another example marker\n```\n\nNo real tasks have been broken down yet.\n",
+			wantExit:   outcomeClean,
+			wantNamed:  false,
+		},
+		{
+			name:       "hidden unchecked task inside HTML comment ignored",
+			changeName: "html-comment-change",
+			content:    "# Tasks\n\n- [x] 1.1 real task\n\n<!--\n- [ ] hidden example, ignore me\n-->\n",
+			wantExit:   outcomeStranded,
+			wantNamed:  true,
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			newChange(t, root, tc.changeName, tc.content)
+
+			var stdout, stderr bytes.Buffer
+			got := run([]string{"--repo", root}, &stdout, &stderr)
+
+			if got != tc.wantExit {
+				t.Fatalf("run() = exit %d, want %d; stderr=%q", got, tc.wantExit, stderr.String())
+			}
+			if named := strings.Contains(stderr.String(), tc.changeName); named != tc.wantNamed {
+				t.Errorf("stderr %q names %q = %v, want %v", stderr.String(), tc.changeName, named, tc.wantNamed)
+			}
+		})
+	}
+}
+
+// TestRunReportsStrandedChangeUsingAlternateBulletMarkers pins the R3-002
+// fix: CommonMark's "*" and "+" bullet markers must be accepted like "-".
+// Before the fix, checkboxPattern matched neither, so total stayed 0 and the
+// change was silently treated as planning-only forever.
+func TestRunReportsStrandedChangeUsingAlternateBulletMarkers(t *testing.T) {
+	cases := []struct {
+		name    string
+		content string
+	}{
+		{name: "asterisk bullets", content: "# Tasks\n\n* [x] 1.1 do the thing\n* [x] 1.2 do the other thing\n"},
+		{name: "plus bullets", content: "# Tasks\n\n+ [x] 1.1 do the thing\n+ [x] 1.2 do the other thing\n"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			root := t.TempDir()
+			newChange(t, root, "alt-bullet-change", tc.content)
+
+			var stdout, stderr bytes.Buffer
+			got := run([]string{"--repo", root}, &stdout, &stderr)
+
+			if got != outcomeStranded {
+				t.Fatalf("run() = exit %d, want %d (outcomeStranded); stderr=%q", got, outcomeStranded, stderr.String())
+			}
+			if !strings.Contains(stderr.String(), "alt-bullet-change") {
+				t.Errorf("stderr %q does not name the stranded change", stderr.String())
+			}
+		})
+	}
+}
+
+// TestRunFailsClosedOnMalformedCheckboxOutsideFence is a regression guard:
+// fence-awareness must not swallow a genuinely malformed checkbox outside
+// any fence, nor report the fenced distraction line instead of the real one.
+func TestRunFailsClosedOnMalformedCheckboxOutsideFence(t *testing.T) {
+	root := t.TempDir()
+	content := "# Tasks\n\nExample:\n\n```bash\n- [oops-in-example] ignore me\n```\n\n- [x] 1.1 done\n- [oops] 1.2 what is this\n"
+	newChange(t, root, "malformed-outside-fence-change", content)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with a malformed checkbox outside any fence = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	diagnostic := stderr.String()
+	if !strings.Contains(diagnostic, "what is this") {
+		t.Errorf("undetermined diagnostic %q does not report the real malformed line outside the fence", diagnostic)
+	}
+	if strings.Contains(diagnostic, "oops-in-example") {
+		t.Errorf("undetermined diagnostic %q reports a malformed checkbox found INSIDE a fenced code block, want it ignored", diagnostic)
+	}
+}
+
 // TestRunAgainstLiveRepository is the guard's own dogfood test: run against
 // this actual repository (via --repo, never by chdir-ing away from the module
 // under test) and assert it reports exactly the two known stranded changes
