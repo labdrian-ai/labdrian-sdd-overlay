@@ -218,6 +218,42 @@ func scanChanges(root string) ([]strandedChange, int, error) {
 var checkboxPattern = regexp.MustCompile(`^\s*[-*+]\s*\[([ xX])\]`)
 var checkboxLikePattern = regexp.MustCompile(`^\s*[-*+]\s*\[`)
 
+// markdownLinkBulletPattern matches an ordinary bullet whose first token is a
+// markdown link, e.g. "- [see the design](design.md)". Such a line trips
+// checkboxLikePattern without being an attempted checkbox, and failing the
+// whole scan on legitimate prose would make this guard unusable on real
+// task files.
+var markdownLinkBulletPattern = regexp.MustCompile(`^\s*[-*+]\s*\[[^\]]*\]\(`)
+
+// indentWidth counts leading spaces, expanding tabs to the four-column stop
+// CommonMark uses, so the indented-code-block boundary is measured the way
+// markdown measures it rather than by raw character count.
+func indentWidth(line string) int {
+	w := 0
+	for i := 0; i < len(line); i++ {
+		switch line[i] {
+		case ' ':
+			w++
+		case '\t':
+			w += 4 - (w % 4)
+		default:
+			return w
+		}
+	}
+	return w
+}
+
+// ambiguousLine is the one refusal this guard makes when a line could be a
+// real task or an example and it cannot prove which. Guessing either way has
+// already produced four separate silent misses in this tool's history: a
+// wrong "clean" hides a stranded change, a wrong "stranded" erodes trust in
+// the guard. Exit 3 says "I could not tell", which is the only honest answer
+// a line-oriented reader can give about markdown block context.
+func ambiguousLine(path string, lineNo int, line, why string) error {
+	return fmt.Errorf("%s:%d: cannot classify %q — %s; this guard refuses to guess, so resolve the ambiguity in the file (move the example into a fenced block, or put the comment on its own line) and re-run",
+		path, lineNo, strings.TrimSpace(line), why)
+}
+
 // countTasks reads one tasks.md and returns the total number of task
 // checkboxes and how many are unchecked.
 //
@@ -271,12 +307,31 @@ func countTasks(path string) (total int, unchecked int, err error) {
 			fenceOpenLine = lineNo
 			continue
 		}
+		// A comment delimiter sharing a line with anything checkbox-shaped is
+		// ambiguous to a line-oriented reader: "- [x] done <!-- note -->" has a
+		// real task, while "<!-- - [x] example -->" has none, and this scanner
+		// cannot tell which half of the line the delimiter governs. Skipping the
+		// whole line silently drops a real task; counting it silently invents
+		// one. Refuse instead.
 		if openIdx := strings.Index(line, "<!--"); openIdx >= 0 {
+			if checkboxLikePattern.MatchString(line) {
+				return 0, 0, ambiguousLine(path, lineNo, line,
+					"a task checkbox and an HTML comment delimiter share this line")
+			}
 			if !strings.Contains(line[openIdx+len("<!--"):], "-->") {
 				inComment = true
 				commentOpenLine = lineNo
 			}
 			continue
+		}
+
+		// CommonMark treats four or more leading spaces as an indented code
+		// block, so a checkbox that deep is an example, not a task — but this
+		// scanner models fences and comments, not indented blocks, and cannot
+		// prove which it is. Refuse rather than pick.
+		if indentWidth(line) >= 4 && checkboxLikePattern.MatchString(line) {
+			return 0, 0, ambiguousLine(path, lineNo, line,
+				"a checkbox indented four or more spaces is an indented code block in CommonMark, not a task")
 		}
 
 		if m := checkboxPattern.FindStringSubmatch(line); m != nil {
@@ -286,7 +341,14 @@ func countTasks(path string) (total int, unchecked int, err error) {
 			}
 			continue
 		}
+		// A bullet whose first token is a bracket is only a malformed checkbox
+		// when the bracket plausibly attempts one. A markdown link such as
+		// "- [see the design](design.md)" is ordinary prose and must not fail
+		// the scan; anything else bracketed is genuinely undecidable here.
 		if checkboxLikePattern.MatchString(line) {
+			if markdownLinkBulletPattern.MatchString(line) {
+				continue
+			}
 			return 0, 0, fmt.Errorf("%s:%d: malformed task checkbox %q — expected \"- [ ]\", \"* [ ]\", or \"+ [ ]\" (checked or unchecked)", path, lineNo, strings.TrimSpace(line))
 		}
 	}
