@@ -21,3 +21,10 @@ coverage.out
 coverage.html
 # Local AI runtime state
 .atl/
+
+# Compiled guard binaries: `go build ./...` inside a tools/ module writes the
+# binary next to its source, where `git add -A` will sweep it in.
+/tools/*/archive-reconcile
+/tools/*/review-preflight
+/tools/*/deterministic-check-runner
+/tools/*/entry-contract-validator
