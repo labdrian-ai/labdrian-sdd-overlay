@@ -149,3 +149,14 @@ table, consistent with tasks.md's own framing of Phase 6 as "Build, install, liv
 Phase 1 (5/5) + Phase 2 (6/6) + Phase 3 (4/4) + Phase 4 (5/5) + Phase 5 (5/5) + Phase 6 (3/3) =
 28/28 tasks complete. **All 4 PRs in the `anti-generic-design-runtime-wiring` chain are fully
 implemented.** The only follow-up is the `overlay.manifest` row added above, which is now in place.
+
+---
+
+**Archive note (added at archive time, 2026-08-11)**: this is the only surviving apply-progress
+record for this change. No apply-progress artifact survives for PR-1, PR-2, or PR-3 individually —
+each save to the `sdd/anti-generic-design-runtime-wiring/apply-progress` Engram topic key upserted
+the prior content, so only this final PR-4 record remains. The Engram copy of this topic (obs
+#2003) is additionally a stale, mid-PR-4 revision that predates the "Live actions executed" section
+above being written — it still frames Phase 6 as blocked pending go-ahead. This on-disk file is the
+authoritative, later revision, corroborated independently by `verify-report.md`'s live re-verification
+of Phase 6 state.
