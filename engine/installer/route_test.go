@@ -830,7 +830,18 @@ func TestStatus_ReportsAgentFile(t *testing.T) {
 
 // TestSyncCheck_DetectsMissingAgentFile pins the L511 fix: when an agent file IS
 // deployed, sync-check reports IN_SYNC (not OVERLAY_NOT_DEPLOYED). After removal
-// it reports OVERLAY_NOT_DEPLOYED. (R-007, AC-4, D2 L511 correctness-critical)
+// it reports OVERLAY_NOT_DEPLOYED, then a reapply restores the file and sync-check
+// reports IN_SYNC again. (R-007, AC-4, D2 L511 correctness-critical)
+//
+// The restoration half (below the "Remove agent file" section) is the AC-5
+// regression test referenced by docs/e1-durability-probe.md ("simulated sync →
+// reapply → both artifacts present + managed"): it proves cmd_apply restores a
+// drifted/missing agent artifact and cmd_sync_check reports it IN_SYNC afterward.
+// This is a CHARACTERIZATION test, not a RED→GREEN cycle: the restoration
+// behavior already exists (bin/labdrian-overlay copies unconditionally whenever
+// the destination is absent or differs from the source — see cmd_apply's deploy
+// loop — consulting no "already applied" ledger), so it is expected to, and did,
+// PASS on its first run.
 func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping integration test in -short mode")
@@ -867,6 +878,28 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 	outMissing, _ := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
 	if !strings.Contains(outMissing, "OVERLAY_NOT_DEPLOYED: ") {
 		t.Errorf("sync-check should report OVERLAY_NOT_DEPLOYED after agent file removed\noutput:\n%s", outMissing)
+	}
+
+	// Restoration half (AC-5): reapply must restore the missing agent file, and
+	// sync-check must report IN_SYNC again afterward.
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+		t.Fatalf("overlay apply (reapply after removal): %v", err)
+	}
+
+	agentDest := filepath.Join(home, ".claude", "agents", "GADU.md")
+	if _, err := os.Stat(agentDest); err != nil {
+		t.Errorf("agent file not restored at %s after reapply: %v", agentDest, err)
+	}
+
+	outRestored, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
+	if err != nil {
+		t.Fatalf("overlay sync-check (after reapply): %v\noutput:\n%s", err, outRestored)
+	}
+	if strings.Contains(outRestored, "OVERLAY_NOT_DEPLOYED: ") {
+		t.Errorf("agent file still reported OVERLAY_NOT_DEPLOYED after reapply\noutput:\n%s", outRestored)
+	}
+	if !strings.Contains(outRestored, "IN_SYNC") {
+		t.Errorf("expected IN_SYNC in sync-check output after reapply\noutput:\n%s", outRestored)
 	}
 }
 
