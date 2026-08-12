@@ -81,40 +81,50 @@ only the main manifest loop.
 
 ID: R-008
 
-(Resolves F1, Locked Decision 3) `agents/GADU.md` and `skills/gadu-operator/SKILL.md`
-SHALL be registered as overlay-managed and SHALL survive a `gentle-ai sync` / `gentle-ai
-upgrade` without being clobbered, re-deployable by the overlay after upgrade; the guard
-implementation SHALL be the minimum necessary to achieve re-deployability, sized after
-experiment E1 (see R-013) is run and its result is documented.
+(Resolves F1, Locked Decision 3) The GADU artifacts (`agents/GADU.md` and
+`skills/gadu-operator/SKILL.md`) SHALL be registered as overlay-managed and SHALL be
+re-deployable by the overlay after any `gentle-ai sync` or `gentle-ai upgrade`, with
+drift detected by `cmd_sync_check` and restored by `cmd_apply`; the guard implementation
+SHALL be the minimum necessary to achieve re-deployability, sized after experiment E1
+(see R-013) is run and its result is documented.
 
-#### Scenario: E1 confirms clobbering — overlay re-apply guard is exercised
+#### Scenario: Agent artifacts are deployed to their overlay-managed destinations
 
-- GIVEN experiment E1 is documented and confirms `gentle-ai upgrade` removes files from
-  `~/.claude/agents`
-- WHEN `cmd_apply` runs after such an upgrade
-- THEN `~/.claude/agents/GADU.md` is reinstalled from the overlay source
+- GIVEN the manifest registers `agents/GADU.md` and `skills/gadu-operator/SKILL.md` as
+  overlay-managed
+- WHEN `cmd_apply` runs
+- THEN `agents/GADU.md` is installed at `~/.claude/agents/GADU.md` and
+  `skills/gadu-operator/SKILL.md` is installed to all three skills destinations
 
-#### Scenario: E1 confirms no clobbering — standard overlay registration is sufficient
+#### Scenario: Sync-check detects drift in the deployed agent file
 
-- GIVEN experiment E1 is documented and confirms `gentle-ai upgrade` does NOT remove
-  files from `~/.claude/agents`
-- WHEN `cmd_sync_check` runs after a `gentle-ai upgrade`
-- THEN both GADU artifacts are reported as in-sync and no additional guard code beyond
-  standard overlay-managed registration is required
+- GIVEN `agents/GADU.md` was deployed by `cmd_apply` to `~/.claude/agents`
+- WHEN `cmd_sync_check --target claude` runs while the file is present, and again after
+  the file is removed from `~/.claude/agents`
+- THEN it reports `IN_SYNC` while the file is present and `OVERLAY_NOT_DEPLOYED` after
+  removal
 
 ### Requirement: No Auto-Spawn or Runtime Agent Definitions
 
 ID: R-009
 
-This change SHALL NOT wire GADU into the SDD orchestrator's auto-spawn flow and SHALL NOT
-emit native opencode/Codex agent-definition files (`.config/opencode/agents/*.md` or
-`~/.codex/agents/*.toml`).
+The overlay SHALL NOT wire GADU into the SDD orchestrator's auto-spawn flow and SHALL NOT
+emit native Codex agent-definition files (`~/.codex/agents/*.toml`).
 
-#### Scenario: No GADU files in opencode or Codex agent directories
+> Note: an OpenCode agent artifact (`opencode/agents/GADU.md`, deployed to
+> `~/.config/opencode/agents/GADU.md`) IS emitted deliberately. It was added after this
+> change merged by PRs #62/#64 (`feat/gadu-opencode-agent`, commits `9408f02` "feat(gadu):
+> add OpenCode agent artifact" and `fcdd84a` "config(gadu): use OpenAI model for OpenCode
+> agent", 2026-07-02), and is registered at `overlay.manifest:80`
+> (`opencode/agents/GADU.md custom opencode-agent`). This requirement originally forbade
+> both opencode and Codex agent-definition files; it is narrowed here to match the system
+> as it now stands.
+
+#### Scenario: No GADU files in Codex agent directory
 
 - GIVEN the generator has run and `cmd_apply` has executed
-- WHEN `.config/opencode/agents/` and `~/.codex/agents/` are inspected
-- THEN no GADU-related agent-definition files are present in those directories
+- WHEN `~/.codex/agents/` is inspected
+- THEN no GADU-related agent-definition files are present in that directory
 
 #### Scenario: SDD orchestrator has no GADU auto-spawn entry
 

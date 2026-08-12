@@ -98,3 +98,8 @@ loadable into a native subagent on demand in opencode and Codex.
 - GIVEN `skills/gadu-operator/SKILL.md` is installed in the Codex skills directory (`~/.codex/skills`)
 - WHEN a Codex native subagent loads the skill
 - THEN the GADU persona body is available in the subagent's context
+
+<!-- MANUAL acceptance criteria (not automatable in CI): the "Skill is loadable in
+     opencode" and "Skill is loadable in Codex" scenarios above each require a live
+     third-party runtime to load the skill file and confirm the persona body is
+     available in its context. -->
