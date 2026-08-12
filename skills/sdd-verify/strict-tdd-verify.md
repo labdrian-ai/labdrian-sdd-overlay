@@ -118,13 +118,13 @@ Read quality tools from cached capabilities:
 IF linter available:
 ├── Run linter on changed files only
 ├── Report: errors and warnings
-└── Flag: WARNING for errors, SUGGESTION for warnings
+└── Flag: CRITICAL for deterministic binary check failures (go vet, gofmt, staticcheck, or equivalent exiting non-zero); SUGGESTION for other lint warnings
 
 IF type checker available:
 ├── Run type checker (usually whole-project, not per-file)
 ├── Filter output to changed files
 ├── Report: type errors in changed files
-└── Flag: WARNING for type errors
+└── Flag: CRITICAL for deterministic binary check failures (type checker exiting non-zero)
 
 IF neither available:
 └── Report: "Quality metrics skipped — no tools detected"
@@ -263,7 +263,8 @@ If zero issues found, report: "**Assertion quality**: ✅ All assertions verify 
 - ALWAYS run the Assertion Quality Audit (Step 5f) — trivial tests are WORSE than missing tests
 - If apply-progress has no TDD evidence table, flag as CRITICAL — the protocol was not followed
 - If tautology assertions are found (expect(true).toBe(true)), flag as CRITICAL — these MUST be rewritten
-- Coverage and quality metrics are informational, NOT blocking — only flag as WARNING, never CRITICAL
+- Coverage and dead-code findings are informational, NOT blocking — only flag as WARNING, never CRITICAL
+- Deterministic binary check failures (go vet, gofmt, staticcheck exiting non-zero) are CRITICAL and blocking — see Step 5e; a check whose exit code is not reproducible on identical inputs MUST be excluded from the blocking set entirely
 - Test layer distribution is informational — SUGGESTION level only
 - DO NOT fix issues — only report. The orchestrator decides.
 - If coverage/quality tools are not available, say so cleanly and move on — never flag missing tools as failures
