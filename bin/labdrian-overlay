@@ -591,7 +591,9 @@ cmd_capture() {
 
   # Always return to the original branch, even if a later step fails under
   # 'set -euo pipefail' — prevents stranding the working tree on 'upstream'.
-  trap 'git checkout "$current_branch" >/dev/null 2>&1 || true' EXIT
+  # Expand the branch name NOW: an EXIT trap fires after the function's locals
+  # are gone, and referencing them there is an unbound variable under 'set -u'.
+  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
 
   git checkout upstream
 
@@ -665,7 +667,11 @@ cmd_capture() {
 
   # 'upstream' is a mechanical mirror of gentle-ai — push it immediately so a
   # sync never strands local-only commits (also flushes earlier unpushed runs).
-  if git rev-parse --verify -q origin/upstream >/dev/null; then
+  # A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
+  # push: skip loudly instead of failing the capture that already committed.
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    info "No 'origin' remote — skipping upstream push"
+  elif git rev-parse --verify -q origin/upstream >/dev/null; then
     if [[ -n "$(git rev-list origin/upstream..upstream)" ]]; then
       git push origin upstream
       info "Pushed upstream to origin"
@@ -716,7 +722,9 @@ cmd_apply() {
   # Always return to the original branch, even if a later step fails — apply
   # must never strand a session's checkout on 'main'. On merge conflicts git
   # refuses the checkout, so the trap degrades to staying on main to resolve.
-  trap 'git checkout "$current_branch" >/dev/null 2>&1 || true' EXIT
+  # Expand the branch name NOW: an EXIT trap fires after the function's locals
+  # are gone, and referencing them there is an unbound variable under 'set -u'.
+  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
 
   git checkout main
 
