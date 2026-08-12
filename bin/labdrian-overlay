@@ -787,21 +787,21 @@ cmd_apply() {
   trap - EXIT
   info "Returned to branch: $current_branch"
 
-  # main is never pushed silently: pushing main is deliberate delivery. Push
-  # only on --push; otherwise make any local-only divergence loud.
-  if git rev-parse --verify -q origin/main >/dev/null; then
+  # main is never pushed silently: pushing main is deliberate delivery. An
+  # explicit --push must push or fail loudly — never no-op — so it runs
+  # unconditionally ('set -euo pipefail' aborts if the remote is unreachable).
+  # Without --push, make any local-only divergence loud.
+  if [[ -n "$push_main" ]]; then
+    git push origin main
+    info "Pushed main to origin"
+  elif git rev-parse --verify -q origin/main >/dev/null; then
     local ahead
     ahead="$(git rev-list --count origin/main..main)"
     if [[ "$ahead" -gt 0 ]]; then
-      if [[ -n "$push_main" ]]; then
-        git push origin main
-        info "Pushed main to origin"
-      else
-        echo ""
-        echo "NOTICE: local main is $ahead commit(s) ahead of origin/main."
-        echo "  Push deliberately with: overlay apply --push"
-        echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
-      fi
+      echo ""
+      echo "NOTICE: local main is $ahead commit(s) ahead of origin/main."
+      echo "  Push deliberately with: overlay apply --push"
+      echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
     fi
   fi
 }
