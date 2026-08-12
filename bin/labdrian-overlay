@@ -96,9 +96,12 @@ Usage: overlay <command> [options]
 Commands:
   bootstrap                        Initialize overlay repo and branches
   capture [--target claude|opencode|codex] [--from-backup DIR]
-                                   Capture managed files from target (default: claude)
-  apply [--target claude|opencode|codex|all]
-                                   Merge upstream and deploy to target(s) (default: all)
+                                   Capture managed files from target (default: claude).
+                                   Pushes the 'upstream' mirror branch to origin.
+  apply [--target claude|opencode|codex|all] [--push]
+                                   Merge upstream and deploy to target(s) (default: all).
+                                   Never pushes main unless --push; without it, reports
+                                   how far local main is ahead of origin/main.
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
@@ -578,12 +581,19 @@ cmd_capture() {
 
   local target_dir="${TARGET_PATHS[$target_arg]}"
 
+  # Refuse to run over uncommitted tracked changes: capture switches branches
+  # and must never mix a dirty working tree into the sync commit.
+  [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
+    || die "Working tree has uncommitted tracked changes. Commit or stash them before capture."
+
   local current_branch
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
 
   # Always return to the original branch, even if a later step fails under
   # 'set -euo pipefail' — prevents stranding the working tree on 'upstream'.
-  trap 'git checkout "$current_branch" >/dev/null 2>&1 || true' EXIT
+  # Expand the branch name NOW: an EXIT trap fires after the function's locals
+  # are gone, and referencing them there is an unbound variable under 'set -u'.
+  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
 
   git checkout upstream
 
@@ -655,6 +665,22 @@ cmd_capture() {
     info "upstream updated"
   fi
 
+  # 'upstream' is a mechanical mirror of gentle-ai — push it immediately so a
+  # sync never strands local-only commits (also flushes earlier unpushed runs).
+  # A repo with no 'origin' remote (tests, detached mirrors) has nowhere to
+  # push: skip loudly instead of failing the capture that already committed.
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    info "No 'origin' remote — skipping upstream push"
+  elif git rev-parse --verify -q origin/upstream >/dev/null; then
+    if [[ -n "$(git rev-list origin/upstream..upstream)" ]]; then
+      git push origin upstream
+      info "Pushed upstream to origin"
+    fi
+  else
+    git push -u origin upstream
+    info "Pushed upstream to origin (new remote branch)"
+  fi
+
   git checkout "$current_branch"
   trap - EXIT
   info "Returned to branch: $current_branch"
@@ -668,6 +694,7 @@ cmd_apply() {
   cd "$OVERLAY_DIR"
 
   local target_arg="all"
+  local push_main=""
 
   while [[ $# -gt 0 ]]; do
     case "$1" in
@@ -676,10 +703,28 @@ cmd_apply() {
         target_arg="${1:-}"
         [[ -n "$target_arg" ]] || die "--target requires an argument"
         ;;
+      --push)
+        push_main=1
+        ;;
       *) die "Unknown option: $1" ;;
     esac
     shift || true
   done
+
+  # Refuse to run over uncommitted tracked changes: apply switches branches
+  # and merges, and must never entangle a session's work in progress.
+  [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
+    || die "Working tree has uncommitted tracked changes. Commit or stash them before apply."
+
+  local current_branch
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+
+  # Always return to the original branch, even if a later step fails — apply
+  # must never strand a session's checkout on 'main'. On merge conflicts git
+  # refuses the checkout, so the trap degrades to staying on main to resolve.
+  # Expand the branch name NOW: an EXIT trap fires after the function's locals
+  # are gone, and referencing them there is an unbound variable under 'set -u'.
+  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
 
   git checkout main
 
@@ -745,6 +790,28 @@ cmd_apply() {
 
   echo ""
   echo "Deploy complete."
+
+  git checkout "$current_branch"
+  trap - EXIT
+  info "Returned to branch: $current_branch"
+
+  # main is never pushed silently: pushing main is deliberate delivery. An
+  # explicit --push must push or fail loudly — never no-op — so it runs
+  # unconditionally ('set -euo pipefail' aborts if the remote is unreachable).
+  # Without --push, make any local-only divergence loud.
+  if [[ -n "$push_main" ]]; then
+    git push origin main
+    info "Pushed main to origin"
+  elif git rev-parse --verify -q origin/main >/dev/null; then
+    local ahead
+    ahead="$(git rev-list --count origin/main..main)"
+    if [[ "$ahead" -gt 0 ]]; then
+      echo ""
+      echo "NOTICE: local main is $ahead commit(s) ahead of origin/main."
+      echo "  Push deliberately with: overlay apply --push"
+      echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
+    fi
+  fi
 }
 
 # ---------------------------------------------------------------------------
