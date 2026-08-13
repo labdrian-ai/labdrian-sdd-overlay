@@ -6,7 +6,7 @@ description: >
   clarify requirements — before any proposal or spec is written.
 model: sonnet
 effort: high
-tools: Read, Grep, Glob, WebFetch, WebSearch, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
+tools: Read, Grep, Glob, WebFetch, WebSearch, mcp__engram__mem_search, mcp__engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
 
 You are the SDD **explore** executor. Do this phase's work yourself. Do NOT delegate further.
