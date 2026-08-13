@@ -6,9 +6,11 @@ injection_point: "## Skills to load before work"
 # Skill Discovery Safety Contract
 
 > Advisory scope: this contract is injected into the phases that resolve skills or discover
-> files (`sdd-explore`, `sdd-tasks`, `sdd-apply`, `sdd-verify`). The frontmatter above is
-> documentation only — the resolver does not parse it. See `.atl/skill-registry.md` for the
-> load-bearing binding.
+> files (`sdd-explore`, `sdd-tasks`, `sdd-apply`, `sdd-verify`). `engine/gate/gate.go` matches
+> `subagent_type` against the frontmatter above to decide whether to inject, and `propagate`
+> fails when `applies_to_phases` is absent or empty — the frontmatter is load-bearing, not
+> documentation. `.atl/skill-registry.md` is generated from it, so it is the output of this
+> binding rather than its source.
 
 These three rules are NON-NEGOTIABLE. They exist because a swallowed `command not found`
 error from a missing discovery tool (`fd`/`eza`) was once misread as "0 skills" and escalated

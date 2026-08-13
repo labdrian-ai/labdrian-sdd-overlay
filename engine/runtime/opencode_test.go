@@ -102,14 +102,18 @@ func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 		t.Fatal("config should include prompt_config_hash")
 	}
 	contracts := promptConfig["contracts"].([]any)
-	if len(contracts) < 3 {
-		t.Fatalf("prompt_config.contracts should include minimalism, skill-discovery-safety, and OO quality contracts; got %#v", contracts)
-	}
-	if !hasPromptContract(contracts, "skills/_shared/minimalism-contract.md") {
-		t.Fatalf("contracts missing minimalism contract: %#v", contracts)
-	}
-	if !hasPromptContract(contracts, "skills/_shared/skill-discovery-safety.md") {
-		t.Fatalf("contracts missing skill-discovery-safety contract: %#v", contracts)
+	// Assert every unconditional contract by name. A count-only bound cannot
+	// tell "all four are present" from "three are, plus the optional one",
+	// which is how anti-generic-design stayed unwired while this test passed.
+	for _, want := range []string{
+		"skills/_shared/minimalism-contract.md",
+		"skills/_shared/skill-discovery-safety.md",
+		"skills/_shared/review-projection-contract.md",
+		"skills/_shared/anti-generic-design.md",
+	} {
+		if !hasPromptContract(contracts, want) {
+			t.Fatalf("contracts missing %s: %#v", want, contracts)
+		}
 	}
 	if !hasPromptContract(contracts, "skills/_shared/oo-quality-contract.md") {
 		t.Fatalf("contracts missing OO quality contract: %#v", contracts)
