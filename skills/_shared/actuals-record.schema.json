@@ -8,10 +8,6 @@
   "required": [
     "change_name",
     "project",
-    "implementation_hours",
-    "review_gate_hours",
-    "total_wall_clock_hours",
-    "post_review_fix_hours",
     "approval_decision",
     "scope_drift_notes",
     "variance_vs_plan"
@@ -35,7 +31,7 @@
     },
     "total_wall_clock_hours": {
       "type": "number",
-      "description": "Total elapsed calendar-clock hours from the tiering go-ahead checkpoint to archive, including interruption gaps (e.g. provider rate/session limits). Measured independently of the agent-compute-time phase fields (implementation_hours, review_gate_hours, post_review_fix_hours) below and never blended into their sum."
+      "description": "Total elapsed calendar-clock hours from the tiering go-ahead checkpoint to merge, including interruption gaps (e.g. provider rate/session limits). Merge, not archive: post-merge archive-authorization lag is bookkeeping and MUST NOT count as development time. Measured independently of the agent-compute-time phase fields (implementation_hours, review_gate_hours, post_review_fix_hours) below and never blended into their sum. MUST NOT be in the schema's required list (R-021): omit rather than estimate when its anchors do not resolve."
     },
     "post_review_fix_hours": {
       "type": "number",
@@ -67,7 +63,7 @@
     },
     "checkpoint_count": {
       "type": "integer",
-      "description": "Optional. The total human-confirmation checkpoint count for the change, one unit per distinct human round-trip reply, counted uniformly regardless of how many decisions a single reply resolved. Shares the tiering-go-ahead-to-archive boundary with total_wall_clock_hours. Always includes the durable floor read from sdd/{change}/pipeline-state (tiering go-ahead, always 1; ambiguity clarifying question if fired, 0-1) — the only checkpoints inception-pipeline itself durably records. Also includes checkpoints inception-pipeline has no durable record of (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) when reconstructable from the closure narrative. This single field does not distinguish durable from reconstructed provenance; that split is disclosed in variance_vs_plan free text. This is the real calendar-time driver for agent-orchestrated delivery, tracked separately from compute-time hours. Omit if not available."
+      "description": "Optional. The total human-confirmation checkpoint count for the change, one unit per distinct human round-trip reply, counted uniformly regardless of how many decisions a single reply resolved. Shares the tiering-go-ahead-to-merge boundary with total_wall_clock_hours. Always includes the durable floor read from sdd/{change}/pipeline-state (tiering go-ahead, always 1; ambiguity clarifying question if fired, 0-1) — the only checkpoints inception-pipeline itself durably records. Also includes checkpoints inception-pipeline has no durable record of (mid-design product decisions, judgment-day rounds, chained-PR split confirmation, merge authorization) when reconstructable from the closure narrative. This single field does not distinguish durable from reconstructed provenance; that split is disclosed in variance_vs_plan free text. This is the real calendar-time driver for agent-orchestrated delivery, tracked separately from compute-time hours. Omit if not available."
     }
   }
 }
