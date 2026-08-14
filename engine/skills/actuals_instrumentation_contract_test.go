@@ -17,6 +17,14 @@ const (
 	inceptionPipelineSkillRelPath  = "skills/inception-pipeline/SKILL.md"
 	roadmapMakerSkillRelPath       = "skills/roadmap-maker/SKILL.md"
 	correctedActualsFixtureRelPath = "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+	// correctedActualsSkillsValidateOndiskGateFixtureRelPath mirrors Engram obs #2789
+	// (sdd/skills-validate-ondisk-gate/actuals, revision 3) so spec.md scenario 14
+	// ("Measured record re-based when both anchors resolve") is guarded by a committed
+	// artifact instead of a claim about live-only data. Scenario 13's sibling case
+	// (obs #2096) already sets this precedent via correctedActualsFixtureRelPath above —
+	// verify round 5's W-B finding is that the same mechanism was never applied here, not
+	// that it could not be (Engram obs #2890).
+	correctedActualsSkillsValidateOndiskGateFixtureRelPath = "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json"
 
 	// Section anchors for the marker pins below. A pinned marker only counts when it
 	// lives in the section that owns it, so relocating it into an unrelated section
@@ -410,6 +418,11 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			"= 12",
 			"Durable floor: 2 of 12",
 			"AMB-001",
+			// R-020: the boundary-provenance annotation task 5.1 added to this
+			// fixture. Previously unpinned entirely — scenario 13 ("Reconstructed
+			// record stays annotated, not re-based") was UNTESTED (verify round 3,
+			// W5).
+			"was NOT re-based to the merge-anchored boundary",
 		} {
 			if !strings.Contains(variance, want) {
 				t.Fatalf("fixture variance_vs_plan must contain %q", want)
@@ -417,6 +430,55 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		if strings.Contains(variance, "the only checkpoint inception-pipeline itself durably records") {
 			t.Fatal("fixture variance_vs_plan must not claim tiering go-ahead is the only durably recorded checkpoint")
+		}
+	})
+
+	t.Run("R020_skillsValidateOndiskGate_fixture_mirrors_measured_rebased_record", func(t *testing.T) {
+		// spec.md scenario 14 ("Measured record re-based when both anchors resolve, else
+		// annotated") was PARTIAL through verify round 5: its only evidence was live Engram
+		// data (obs #2789), and the exemption reason given — "live Engram data, not shipped
+		// repository content" — is falsified by scenario 13's own construction two subtests
+		// above, which is ALSO live Engram data (obs #2096) and IS guarded, through
+		// correctedActualsFixtureRelPath. This fixture is the same mechanism applied to
+		// #2789: a committed mirror of the live record, byte-checked against it at apply
+		// time (see apply-progress.md for the `cmp` proof), read here so a future drift
+		// between the mirror and either the shipped rule or the record's own claims fails
+		// the suite instead of silently going stale.
+		fixtureRaw := readRepoFile(t, repoRoot, correctedActualsSkillsValidateOndiskGateFixtureRelPath)
+		var fixture map[string]any
+		if err := json.Unmarshal([]byte(fixtureRaw), &fixture); err != nil {
+			t.Fatalf("fixture must be valid JSON: %v", err)
+		}
+
+		// The scenario is true only when the value itself carries the merge-anchored
+		// re-based number, not the retired pre-merge one (6.4) it superseded.
+		wallClock, ok := fixture["total_wall_clock_hours"].(float64)
+		if !ok || wallClock != 6.64 {
+			t.Fatalf("fixture total_wall_clock_hours = %v, want 6.64 (the merge-anchored re-based value, not the retired 6.4)", fixture["total_wall_clock_hours"])
+		}
+
+		variance, ok := fixture["variance_vs_plan"].(string)
+		if !ok {
+			t.Fatal("fixture variance_vs_plan must be a string")
+		}
+		for _, want := range []string{
+			// Names the re-basing itself: FROM the retired archive-anchored value (6.4)
+			// TO the merge-anchored one (6.64), through the merge boundary R-003/4/5
+			// introduced. Without this sentence, nothing distinguishes a re-based record
+			// from one that merely happens to hold the number 6.64.
+			"measured independently from the tiering go-ahead checkpoint through MERGE (re-based by sdd-cycle-timestamp-instrumentation; was 6.4 under the retired archive-anchored boundary)",
+			// Names t0's anchor: the typed pipeline-state observation, primary source
+			// (not the R-016/17/18 fallback) — one of the two anchors scenario 14
+			// requires to "both resolve".
+			"t0 = 2026-08-05 14:12:55 (obs #2772, sdd/skills-validate-ondisk-gate/pipeline-state, typed `created_at` field, primary source",
+			// Names t1's anchor: the landing commit, verified via its own tree, resolved
+			// through the archive-report's versioned prose (D2 revision 3) — the other
+			// of the two anchors scenario 14 requires.
+			"commit 79995ea1733fce362b86d3727184eb539f2c1832, committer timestamp 2026-08-05T17:51:17-03:00), resolution path: this change's own archive-report",
+		} {
+			if !strings.Contains(variance, want) {
+				t.Fatalf("fixture variance_vs_plan must contain %q", want)
+			}
 		}
 	})
 
@@ -526,6 +588,92 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		for _, req := range schema.Required {
 			if _, ok := fixture[req]; !ok {
 				t.Fatalf("schema required field %q missing from fixture", req)
+			}
+		}
+	})
+}
+
+// TestAbolishedVocabularySweptFromCurrentSections is the structural sweep guard Phase 9
+// (work unit 2) adds. Three consecutive verify rounds found the same defect class — abolished
+// path-scan/first-parent/receipt-bound vocabulary surviving in a CURRENT section — because each
+// remediation fixed only the exact line a report cited by number and never swept the rest of
+// the artifact (Engram obs #2888, "a file:line citation is a SAMPLE, never the extent"). This
+// test converts "somebody remembered to sweep" into "the suite fails if anyone doesn't": it
+// greps every shipped artifact this change's D2 revision 3 touches for that vocabulary, with
+// exactly one exception — design.md's own explicitly-marked
+// "### D2 (revision 2 — SUPERSEDED, retained for provenance)" section, which intentionally
+// preserves the abolished mechanism's description for historical record. Every other file, and
+// every other section of design.md, must have zero hits.
+func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
+	repoRoot := actualsInstrumentationRepoRoot(t)
+	const designRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md"
+	const proposalRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md"
+	const specRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md"
+	const supersededHeading = "### D2 (revision 2 — SUPERSEDED, retained for provenance)"
+	// The exact heading that terminates the SUPERSEDED carve-out. Pinned by exact text
+	// (including its "###" level) rather than inferred by level — see stripMarkdownSection's
+	// doc comment and verify round 4's W2 finding.
+	const supersededTerminatorHeading = "### D3 — Where anchors are written"
+
+	abolished := []string{
+		"path-scan",
+		"first-parent",
+		"receipt-bound",
+		"carrying that tree MUST be chosen",
+		"earliest commit on the default branch carrying",
+		// Phase 13: the abolished tautological `approved_tree` definition — see
+		// R016_R017_R018_closure_feedback_anchor_prose's FORBID list above for the
+		// full rationale. Swept across every shipped artifact, not only SKILL.md,
+		// per Engram obs #2888 ("a citation is a sample, never the extent").
+		"otherwise `landing_commit`'s own tree",
+	}
+
+	t.Run("design_md_current_sections", func(t *testing.T) {
+		doc := readRepoFile(t, repoRoot, designRelPath)
+		current, err := stripMarkdownSection(doc, supersededHeading, supersededTerminatorHeading)
+		if err != nil {
+			t.Fatalf("stripping design.md's SUPERSEDED block (heading %q, terminator %q): %v — the terminator heading may have been renamed, deleted, or demoted (verify round 4, W2)", supersededHeading, supersededTerminatorHeading, err)
+		}
+		if current == doc {
+			t.Fatal("stripMarkdownSection made no change — the SUPERSEDED heading text drifted, so this guard is not exercising the carve-out it claims to")
+		}
+		for _, word := range abolished {
+			if strings.Contains(current, word) {
+				t.Fatalf("design.md's CURRENT (non-SUPERSEDED) sections must not contain %q — a file:line citation is a SAMPLE, never the extent (Engram obs #2888)", word)
+			}
+		}
+	})
+
+	t.Run("design_md_superseded_block_still_carries_the_provenance", func(t *testing.T) {
+		// The inverse guard: the SUPERSEDED block is a deliberate carve-out, not a second
+		// place for the vocabulary to quietly vanish from. If a future edit deletes the
+		// whole block, this must fail loudly rather than let the check above pass vacuously
+		// only because there is nothing left to find anywhere.
+		doc := readRepoFile(t, repoRoot, designRelPath)
+		body, err := sliceMarkdownSection(doc, supersededHeading)
+		if err != nil {
+			t.Fatalf("design.md must still carry the heading %q: %v", supersededHeading, err)
+		}
+		if !strings.Contains(body, "receipt-bound") || !strings.Contains(body, "path-scan") {
+			t.Fatal("design.md's SUPERSEDED block must still document the abolished receipt-bound/path-scan mechanism it retains for provenance")
+		}
+	})
+
+	t.Run("other_shipped_artifacts_have_no_carve_out", func(t *testing.T) {
+		for _, path := range []string{
+			proposalRelPath,
+			specRelPath,
+			inceptionPipelineSkillRelPath,
+			timeEstimationSkillRelPath,
+			actualsSchemaRelPath,
+			correctedActualsFixtureRelPath,
+			correctedActualsSkillsValidateOndiskGateFixtureRelPath,
+		} {
+			body := readRepoFile(t, repoRoot, path)
+			for _, word := range abolished {
+				if strings.Contains(body, word) {
+					t.Fatalf("%s must not contain %q — this file has no SUPERSEDED carve-out", path, word)
+				}
 			}
 		}
 	})
@@ -811,6 +959,98 @@ func sliceMarkdownSection(doc, heading string) (string, error) {
 		}
 	}
 	return strings.Join(lines[start:], "\n"), nil
+}
+
+// stripMarkdownSection returns doc with the section introduced by the exact heading line
+// removed — the heading line itself and its body, up to (not including) the exact
+// terminatorHeading line. It is the complement of sliceMarkdownSection: where that function
+// extracts a section, this one extracts everything BUT that section, so a sweep can assert
+// "nowhere else" for content deliberately preserved in one marked carve-out (design.md's
+// "SUPERSEDED, retained for provenance" block — see TestAbolishedVocabularySweptFromCurrentSections).
+//
+// terminatorHeading is matched by its EXACT text, including its "#" level, not merely by
+// "the next heading whose level is <= heading's level" the way sliceMarkdownSection's own
+// section-body termination works. That distinction is load-bearing, not stylistic: a
+// level-based terminator cannot tell a demoted heading apart from a genuine nested subsection
+// of the carve-out. Demoting design.md's "### D3 — Where anchors are written" to "#### D3"
+// makes it look, to a level-based scan, exactly like a nested subsection of the preceding
+// "### D2 ... SUPERSEDED" block — so a level-based strip walks straight past it and keeps
+// swallowing content into the excluded span until it finds the NEXT surviving level-3+
+// heading, silently widening what the carve-out excuses. Verify round 4 (W2) proved this
+// concretely: injecting an abolished word into D3's body stayed GREEN once D3 was demoted.
+// Requiring the terminator's exact text pins its level: if the terminator is renamed, deleted,
+// or demoted, it is no longer found by exact match, and this returns
+// errMarkdownSectionNotFound instead of silently absorbing everything up to some other,
+// unrelated heading.
+//
+// The removed span is also bounded on BOTH ends, not merely "the heading plus whatever
+// text precedes the terminator" (verify round 5, W-A / probe P7). The exact-text
+// terminator above closes the DEMOTION vector — renaming or demoting the terminator is no
+// longer found — but a level-based terminator was never the only way to widen the
+// carve-out silently: inserting a brand-new heading of the SAME OR A SHALLOWER level than
+// `heading` somewhere before the real terminator also gets swallowed into the removed
+// span, because the scan below only ever checked for an exact terminator match and never
+// asked whether anything else looked like a section boundary in between. A heading nested
+// STRICTLY DEEPER than `heading` (e.g. a "####" subsection of a "###" carve-out) is a
+// genuine part of the carved-out section's own body and does not trip this guard.
+func stripMarkdownSection(doc, heading, terminatorHeading string) (string, error) {
+	headingLevel := markdownHeadingLevel(heading)
+	if headingLevel == 0 {
+		return "", errMarkdownHeadingAnchorInvalid
+	}
+	if markdownHeadingLevel(terminatorHeading) == 0 {
+		return "", errMarkdownHeadingAnchorInvalid
+	}
+
+	lines := strings.Split(normaliseLineEndings(doc), "\n")
+	headingLine := -1
+	inFence := false
+	for i, line := range lines {
+		if isMarkdownFence(line) {
+			inFence = !inFence
+			continue
+		}
+		if !inFence && markdownHeadingLineMatches(line, heading) {
+			headingLine = i
+			break
+		}
+	}
+	if headingLine < 0 {
+		return "", errMarkdownSectionNotFound
+	}
+
+	end := -1
+	inFence = false
+	for i := headingLine + 1; i < len(lines); i++ {
+		if isMarkdownFence(lines[i]) {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		if markdownHeadingLineMatches(lines[i], terminatorHeading) {
+			end = i
+			break
+		}
+		// Span integrity: a heading at or above the carve-out's own level, other than
+		// the terminator itself, marks a genuine section boundary the carve-out was
+		// never meant to cross. Treating it as ordinary body text (the pre-fix
+		// behaviour) let an inserted CURRENT section ride along into the removed
+		// span merely because it happened to sit before the terminator line.
+		// Reporting it as "not found" — the same sentinel a renamed/demoted
+		// terminator produces — is deliberate: from the caller's perspective, both
+		// mean the same thing, "this document no longer has the single contiguous
+		// carve-out this function assumes".
+		if level := markdownHeadingLevel(lines[i]); level > 0 && level <= headingLevel {
+			return "", fmt.Errorf("%w: encountered heading %q at or above the carve-out's own level before its terminator %q — a section may have been inserted, widening the removed span", errMarkdownSectionNotFound, strings.TrimSpace(lines[i]), terminatorHeading)
+		}
+	}
+	if end < 0 {
+		return "", errMarkdownSectionNotFound
+	}
+
+	return strings.Join(lines[:headingLine], "\n") + "\n" + strings.Join(lines[end:], "\n"), nil
 }
 
 // markdownSectionBody is the thin t-taking wrapper around sliceMarkdownSection. A missing
@@ -1266,6 +1506,117 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 				}
 				if got != tt.want {
 					t.Fatalf("sliceMarkdownSection() = %q, want %q", got, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("section_stripping", func(t *testing.T) {
+		// stripMarkdownSection requires its terminator by EXACT text, not by level — see its
+		// doc comment and verify round 4's W2 finding. These cases exercise that directly,
+		// including the specific demotion shape (a terminator heading gaining one extra "#")
+		// that a level-based strip would have silently swallowed instead of rejecting.
+		tests := []struct {
+			name              string
+			doc               string
+			heading           string
+			terminatorHeading string
+			want              string
+			wantErr           error
+		}{
+			{
+				name:              "strips the heading and body up to the exact terminator",
+				doc:               "# Doc\nintro\n### Old (SUPERSEDED)\nold body\nmore old body\n### Next\nnext body\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				want:              "# Doc\nintro\n### Next\nnext body\n",
+			},
+			{
+				name:              "a terminator demoted by one level is not found — the strip errors instead of swallowing past it",
+				doc:               "# Doc\nintro\n### Old (SUPERSEDED)\nold body\n#### Next\nnext body\n### Actually Next\nafter\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				name:              "missing terminator entirely is an error, not end-of-document",
+				doc:               "### Old (SUPERSEDED)\nold body\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				name:              "missing section heading is an error",
+				doc:               "### Next\nbody\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				name:              "invalid section heading anchor is rejected",
+				heading:           "Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownHeadingAnchorInvalid,
+			},
+			{
+				name:              "invalid terminator heading anchor is rejected",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "Next",
+				wantErr:           errMarkdownHeadingAnchorInvalid,
+			},
+			{
+				name:              "a fenced terminator-like line does not terminate the section",
+				doc:               "### Old (SUPERSEDED)\nold body\n```\n### Next\nfenced, not real\n```\n### Next\nreal next\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				want:              "\n### Next\nreal next\n",
+			},
+			{
+				// Verify round 5, W-A / probe P7: a new CURRENT section inserted
+				// between the SUPERSEDED heading and its terminator was silently
+				// swallowed into the removed span merely because it sits before the
+				// terminator line — the demotion vector (case above) is closed, but
+				// this insertion vector was not. The carve-out is a SPAN with both
+				// ends bounded, not "the heading plus whatever precedes the
+				// terminator": any same-or-higher-level heading in between other
+				// than the terminator itself means the assumed span was widened by
+				// an inserted section, and the strip must error instead of
+				// swallowing it.
+				name:              "an inserted section before the terminator widens the span — the strip errors instead of swallowing it",
+				doc:               "### Old (SUPERSEDED)\nold body\n### D2c — inserted current section\npath-scan is injected here.\n### Next\nreal next\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				// The complement of the case above: a heading nested DEEPER than the
+				// carve-out's own level (here "####", one level below "###") is a
+				// genuine subsection of the SUPERSEDED body, not an inserted current
+				// section, and must not trip the span guard.
+				name:              "a nested subsection deeper than the carve-out's own level does not trip the span guard",
+				doc:               "### Old (SUPERSEDED)\nold body\n#### Nested subsection of Old\nstill old\n### Next\nreal next\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				want:              "\n### Next\nreal next\n",
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := stripMarkdownSection(tt.doc, tt.heading, tt.terminatorHeading)
+				if tt.wantErr != nil {
+					if !errors.Is(err, tt.wantErr) {
+						t.Fatalf("stripMarkdownSection() error = %v, want %v", err, tt.wantErr)
+					}
+					if got != "" {
+						t.Fatalf("stripMarkdownSection() = %q on error, want empty", got)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("stripMarkdownSection() error = %v, want nil", err)
+				}
+				if got != tt.want {
+					t.Fatalf("stripMarkdownSection() = %q, want %q", got, tt.want)
 				}
 			})
 		}
