@@ -615,6 +615,14 @@ func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
 	const designRelPath = "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md"
 	const proposalRelPath = "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/proposal.md"
 	const specRelPath = "openspec/specs/actuals-instrumentation/spec.md"
+	// archiveReportRelPath closes the exact gap a review correction found (2026-08-19,
+	// lineage review-d2ddff54c94f83b4): the abolished "receipt-bound" resolution-path
+	// language reappeared in this change's own archive-report.md, a shipped artifact this
+	// sweep never checked. Scoped to this change's own report only, not every archived
+	// change's report — this vocabulary describes sdd-cycle-timestamp-instrumentation's own
+	// abolished D2 mechanism, and no other archive-report.md in the repo contains any of it
+	// (swept directly before adding this path).
+	const archiveReportRelPath = "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/archive-report.md"
 	const supersededHeading = "### D2 (revision 2 — SUPERSEDED, retained for provenance)"
 	// The exact heading that terminates the SUPERSEDED carve-out. Pinned by exact text
 	// (including its "###" level) rather than inferred by level — see stripMarkdownSection's
@@ -674,6 +682,7 @@ func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
 			actualsSchemaRelPath,
 			correctedActualsFixtureRelPath,
 			correctedActualsSkillsValidateOndiskGateFixtureRelPath,
+			archiveReportRelPath,
 		} {
 			body := readRepoFile(t, repoRoot, path)
 			for _, word := range abolished {
