@@ -73,6 +73,38 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 	})
 
+	t.Run("R021_required_drops_wall_clock", func(t *testing.T) {
+		schemaRaw := readRepoFile(t, repoRoot, actualsSchemaRelPath)
+		schema := decodeActualsSchema(t, schemaRaw)
+
+		if slices.Contains(schema.Required, "total_wall_clock_hours") {
+			t.Fatalf("schema required list must not contain %q (R-021), got %v", "total_wall_clock_hours", schema.Required)
+		}
+		// R-021 relaxes which fields are mandatory, not which fields exist: the property
+		// itself must still be declared, only demoted out of `required`.
+		if _, ok := schema.Properties["total_wall_clock_hours"]; !ok {
+			t.Fatal("schema must still declare property total_wall_clock_hours (R-021 removes it from required only, not from properties)")
+		}
+
+		// The schema relaxation alone does not prove closure-feedback actually WRITES the
+		// record when total_wall_clock_hours is unresolved (spec.md scenarios "A cycle
+		// missing t0 still produces a usable record" and "Neither anchor resolves": "every
+		// other resolved field is still written"). This shipped behavioral clause in
+		// SKILL.md's Validate step was entirely unpinned before this batch: deleting it, or
+		// inverting it to the all-or-nothing rule R-021 exists to abolish, left the whole
+		// suite green (verify round 4, W1). Pinned at its unique site — both substrings
+		// occur exactly once in the file.
+		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		for _, want := range []string{
+			"`total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021)",
+			"every other resolved field is still required",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("closure-feedback Validate step must contain %q (R-021 write-anyway clause)", want)
+			}
+		}
+	})
+
 	t.Run("R015_R006_R007_R008_checkpoint_count_description", func(t *testing.T) {
 		schema := readRepoFile(t, repoRoot, actualsSchemaRelPath)
 		if !strings.Contains(schema, "round-trip") {
@@ -169,6 +201,146 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		if strings.Contains(skill, "is a structural lower bound, not a complete count") {
 			t.Fatal("closure-feedback must drop the structural-lower-bound framing")
+		}
+	})
+
+	t.Run("R016_R017_R018_closure_feedback_anchor_prose", func(t *testing.T) {
+		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		for _, want := range []string{
+			// D4: boundary co-move, archive → merge.
+			"through merge",
+			// D2 REVISION 3: the anchor is recorded in a versioned artifact at
+			// delivery — landing_commit + approved_tree — and is verifiable
+			// rather than merely asserted.
+			"landing_commit",
+			"approved_tree",
+			"verifiable rather than merely asserted",
+			// D2 REVISION 3: a mis-recorded anchor is rejected, not trusted
+			// (R-017 scenario "A mis-recorded anchor is rejected, not trusted").
+			// Pinned as the operative rejection clause rather than a bare word,
+			// because a bare pin cannot distinguish the RULE from any sentence
+			// that merely names the outcome. Note the case-collision rationale
+			// this comment used to give was wrong: strings.Contains is
+			// case-sensitive, uppercase "REJECTED" occurs exactly once in the
+			// shipped prose, and the "verified, self-asserted, rejected, or
+			// absent" sentence spells it lowercase, so it could never have
+			// satisfied a bare uppercase pin. The operative-clause pin is still
+			// the right shape — it binds the rule's own wording, not the
+			// vocabulary — only the stated reason needed correcting.
+			"the anchor is REJECTED, t1 is omitted, and the mismatch is disclosed in `variance_vs_plan`",
+			// D2 REVISION 3: the exact verification command, previously unpinned
+			// entirely — the design's Threat Matrix claimed RED coverage for the
+			// shipped git command shape that did not exist (verify round 3, W3).
+			"`git show -s --format=%T <landing_commit>` MUST equal the recorded `approved_tree`",
+			// D2 REVISION 3: a tree verifies a commit, it never discovers one.
+			// Pin the operative clause, not the bare word "earliest": that word
+			// survives whether the rule is stated or negated, so pinning it alone
+			// is vacuous — it passed unchanged while the rule was inverted.
+			"**verify** a commit, never to **discover** one",
+			// A shared tree cannot identify a landing commit; it is omitted, not guessed.
+			"the anchor is ambiguous",
+			// Phase 13 (orchestrator finding, verify round 6 W2): `approved_tree`
+			// was previously synthesized from `landing_commit`'s own tree when no
+			// review ran, making the mandated check compare a value against
+			// itself — structurally unfailable, so reporting it as "verified" was
+			// a fabricated assurance. `approved_tree` is now recorded ONLY when
+			// an independent receipt exists. Pinned as the operative rule clause,
+			// not a bare word, so the pin cannot survive the tautology's return.
+			"`approved_tree` MUST NOT be recorded at all",
+			// Phase 13: a no-review anchor still measures — it is USED, just
+			// never independently checked — recorded as self-asserted, not
+			// verified. This is the third outcome state this batch adds.
+			"the anchor is recorded as **self-asserted**: used, but with no independent authority to check it against",
+			// Phase 13: the resolution-outcome vocabulary itself, so a reader can
+			// never mistake a self-asserted anchor for a verified one. Pinned as
+			// the full four-way enumeration, not the bare word "self-asserted",
+			// so a rewrite that drops one of the other three states also fails.
+			"verified, self-asserted, rejected, or absent",
+			// D3: the archive-report section both stores must carry. Pinned as the
+			// operative Execute-item clause, not the bare heading name: "Cycle
+			// Timestamps" alone occurs at two sites (this Execute item and the
+			// Gotchas carve-out reference), so deleting the Execute item in full
+			// left the bare pin green — mutation-proven non-covering.
+			"Append a `## Cycle Timestamps` section to the archived",
+			// D1: t0 is read from the typed field, never the rendered footer.
+			"typed `created_at` field",
+			// D1: engram export selected by topic_key, never a rendered footer parse.
+			"engram export",
+			// D1: a pipeline-state observation with no topic_key is unresolvable.
+			"no `topic_key`",
+			// D1b: t0 falls back to the earliest created_at among the change's own
+			// observations when no pipeline-state observation exists — a change
+			// entered directly at SDD never runs inception-pipeline, and this is the
+			// exact path this very change takes at its own closure. Previously
+			// unpinned entirely.
+			"t0 falls back to the earliest `created_at` among the change",
+			// D4: post-merge archive-authorization lag is excluded from
+			// checkpoint_count's boundary (R-003/4/5 scenario "Post-merge
+			// bookkeeping replies do not count"). Pinned as the operative
+			// checkpoint_count clause, not the bare word "bookkeeping": that word
+			// also appears on the unrelated total_wall_clock_hours sentence, so the
+			// bare pin survived deletion of this clause — mutation-proven
+			// non-covering.
+			"excluded from this count as post-boundary bookkeeping",
+			// D3: the append-only carve-out to closure-feedback's own "do not modify
+			// engine outputs" rule. Pinned as the operative Execute-item-3 clause,
+			// not the bare phrase "append-only carve-out": that phrase also
+			// appears in the unrelated Gotchas cross-reference sentence, so the
+			// bare pin survived deletion of the Execute item itself —
+			// mutation-proven non-covering (verify round 3, W2).
+			"a named, delimited, append-only carve-out to closure-feedback's own \"do NOT modify engine outputs\" rule",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("closure-feedback must contain %q", want)
+			}
+		}
+		for _, forbidden := range []string{
+			"through archive",
+			// D2 REVISION 3 removes the receipt-bound/path-scan two-rule
+			// resolution outright — neither name may survive anywhere in the
+			// prose, and "first-parent" scanning specifically must not
+			// reappear as a t1 resolution mechanism (design.md D2 revision 3,
+			// "No heuristic fallback").
+			"receipt-bound",
+			"path-scan",
+			"first-parent",
+			// C1 (round 2): the abolished positional/earliest-carrier resolution
+			// rule — "the earliest commit on the default branch carrying that
+			// tree MUST be chosen" — inverted the ratified "verify, never
+			// discover" rule. This is the structural guard work unit 4 adds so
+			// the rule cannot silently re-invert: nothing previously bound this
+			// FORBID list to positional-resolution language at all.
+			"carrying that tree MUST be chosen",
+			// Phase 13: the abolished tautological definition of `approved_tree`
+			// — "the receipt's final_candidate_tree when review ran... otherwise
+			// landing_commit's own tree" — made the mandated verification check
+			// compare a value against itself, so it could never fail. Pinned by
+			// its exact retired substring so this specific defect class cannot
+			// silently return under a differently-worded FORBID list.
+			"otherwise `landing_commit`'s own tree",
+		} {
+			if strings.Contains(skill, forbidden) {
+				t.Fatalf("closure-feedback must not retain the abolished D2 phrase %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("R019_compute_time_deferral_rationale", func(t *testing.T) {
+		// R-019: the three compute-time fields' deferral reason must be stated
+		// in shipped documentation, not only in this change's own proposal/spec
+		// (verify's C3 finding: the rationale existed nowhere else).
+		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		for _, want := range []string{
+			"implementation_hours",
+			"review_gate_hours",
+			"post_review_fix_hours",
+			"session-transient",
+			"no timestamp fields",
+			"no structured subagent durations",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("closure-feedback must state the R-019 compute-time deferral rationale, missing %q", want)
+			}
 		}
 	})
 
