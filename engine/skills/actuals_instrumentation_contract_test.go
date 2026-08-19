@@ -42,7 +42,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		// property must not satisfy this gate.
 		wallClock := actualsSchemaPropertyDescription(t, schema, "total_wall_clock_hours")
 		for _, want := range []string{
-			"from the tiering go-ahead checkpoint to archive",
+			"from the tiering go-ahead checkpoint to merge",
 			"including interruption gaps",
 		} {
 			if !strings.Contains(wallClock, want) {
@@ -50,12 +50,26 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			}
 		}
 
+		// checkpoint_count shares total_wall_clock_hours' boundary (R-003/R-004/R-005), so the
+		// merge anchor must move on both descriptions together, not only on the field whose
+		// name mentions "clock".
+		checkpointDesc := actualsSchemaPropertyDescription(t, schema, "checkpoint_count")
+		if !strings.Contains(checkpointDesc, "tiering-go-ahead-to-merge boundary") {
+			t.Fatalf("checkpoint_count description must contain %q, got %q", "tiering-go-ahead-to-merge boundary", checkpointDesc)
+		}
+
 		// The FORBID stays whole-file on purpose. For a negative assertion, whole-file
 		// scope is strictly stronger than description scope: the retired boundary phrase
 		// must not reappear anywhere, including on checkpoint_count, which now shares the
-		// tiering-go-ahead-to-archive boundary and could regress the same way.
-		if strings.Contains(schemaRaw, "from first apply to archive") {
-			t.Fatal("schema must not retain the old temporal boundary phrase")
+		// tiering-go-ahead-to-merge boundary and could regress the same way.
+		for _, forbidden := range []string{
+			"from first apply to archive",
+			"checkpoint to archive",
+			"tiering-go-ahead-to-archive boundary",
+		} {
+			if strings.Contains(schemaRaw, forbidden) {
+				t.Fatalf("schema must not retain the old temporal boundary phrase %q", forbidden)
+			}
 		}
 	})
 
@@ -71,19 +85,61 @@ func TestActualsInstrumentationContract(t *testing.T) {
 
 	t.Run("R009_calibration_excludes_calendar_time", func(t *testing.T) {
 		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
+		// The REQUIRE pins are scoped to the CALIBRATION list item itself, matching
+		// R019_calibration_absent_numerators_fallback below. A positive pin checked
+		// whole-file is satisfied by the same wording appearing anywhere in the
+		// document, so relocating a clause out of the CALIBRATION rule into an
+		// unrelated section would keep this gate green while the rule it guards no
+		// longer says it.
+		hardRules := markdownSectionBody(t, skill, timeEstimationHardRulesHeading)
+		rule := markdownListItemContaining(t, hardRules, timeEstimationHardRulesHeading, "CALIBRATION")
 		for _, want := range []string{
 			"NEVER an input to the agent-compute-time baseline",
 			"interruption-clean residual samples with positive `checkpoint_count`",
 			"`(total_wall_clock_hours − sum(phase hours)) / checkpoint_count`",
 			"Exclude any residual known or narrated to include a session, rate-limit, or provider interruption",
 			"never subtract a guessed interruption amount",
+			// D4: boundary co-move, archive → merge (task 4.1). Previously
+			// unpinned entirely — reverting "merge" to "archive" on this line
+			// left the whole suite green (verify round 3, W4).
+			"tiering-go-ahead to merge, including interruption gaps",
 		} {
-			if !strings.Contains(skill, want) {
-				t.Fatalf("CALIBRATION rule must contain %q", want)
+			if !strings.Contains(rule, want) {
+				t.Fatalf("%s CALIBRATION rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
 			}
 		}
-		if strings.Contains(skill, "and `total_wall_clock_hours`, build a per-phase agent-compute-time baseline") {
-			t.Fatal("CALIBRATION rule must not blend total_wall_clock_hours into the compute baseline")
+		// The FORBID stays whole-file on purpose, for the same reason the schema
+		// FORBID above does: for a negative assertion, whole-file scope is strictly
+		// stronger than list-item scope. The retired boundary phrase must not
+		// reappear ANYWHERE in the skill, not merely outside this one rule.
+		for _, forbidden := range []string{
+			"and `total_wall_clock_hours`, build a per-phase agent-compute-time baseline",
+			"tiering-go-ahead to archive",
+		} {
+			if strings.Contains(skill, forbidden) {
+				t.Fatalf("CALIBRATION rule must not retain %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("R019_calibration_absent_numerators_fallback", func(t *testing.T) {
+		// R-019 mandates implementation_hours/review_gate_hours/post_review_fix_hours stay
+		// unpopulated until a durable source exists, which starves this skill's own compute-time
+		// numerators — the CALIBRATION rule builds its baseline from exactly these three fields
+		// "ONLY" (R009 above). Scoped to the CALIBRATION list item itself, not the whole file, so
+		// a substring hit elsewhere in Hard Rules cannot satisfy this gate.
+		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
+		hardRules := markdownSectionBody(t, skill, timeEstimationHardRulesHeading)
+		rule := markdownListItemContaining(t, hardRules, timeEstimationHardRulesHeading, "CALIBRATION")
+		for _, want := range []string{
+			"WHEN one or more of these three fields is absent under R-019",
+			"the record supplies NO compute-time numerator for the affected phase",
+			"never substitute `total_wall_clock_hours` or any other elapsed-time figure in its place",
+			"the per-unit compute-time rate cannot be computed, so confidence falls back to the disclosed bootstrap defaults / qualitative scaling regardless of calibration `n`",
+		} {
+			if !strings.Contains(rule, want) {
+				t.Fatalf("%s CALIBRATION rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
+			}
 		}
 	})
 
@@ -113,6 +169,44 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		if strings.Contains(skill, "is a structural lower bound, not a complete count") {
 			t.Fatal("closure-feedback must drop the structural-lower-bound framing")
+		}
+	})
+
+	t.Run("R019_required_drops_compute_time_fields", func(t *testing.T) {
+		// Orchestrator finding (phase 12, human diff review after verify round 6 passed):
+		// R-019 says the three compute-time fields "MUST stay unpopulated until a durable
+		// source exists" and its own scenario opens "GIVEN a closed record with the three
+		// compute-time fields empty" — but all six verify rounds pinned only the rationale
+		// prose (R019_compute_time_deferral_rationale above), never that a record actually
+		// CONFORMING to R-019 validates against the shipped schema. Before this fix all three
+		// fields were still in the schema's `required` list, so an R-019-conforming record was
+		// REJECTED by the very schema this change ships, and the Validate rule's own "report
+		// and STOP" clause fired on the one thing exercising the instrument end to end (task
+		// 6.3, this change's own closure).
+		schemaRaw := readRepoFile(t, repoRoot, actualsSchemaRelPath)
+		schema := decodeActualsSchema(t, schemaRaw)
+
+		for _, field := range []string{"implementation_hours", "review_gate_hours", "post_review_fix_hours"} {
+			if slices.Contains(schema.Required, field) {
+				t.Fatalf("schema required list must not contain %q (R-019: no durable source exists yet), got %v", field, schema.Required)
+			}
+			// Same non-destructive treatment total_wall_clock_hours already received under
+			// R-021: `required` is a floor, not a prohibition. The property itself, and any
+			// historical record that DOES carry a narrative value (obs #2789, obs #2096, and
+			// their committed fixture mirrors), stay valid and untouched.
+			if _, ok := schema.Properties[field]; !ok {
+				t.Fatalf("schema must still declare property %q (R-019 removes it from required only, not from properties)", field)
+			}
+		}
+
+		// Binds the rule to the artifact: constructs the exact record R-019's own scenario
+		// describes and validates it against the SHIPPED schema read above, not a private
+		// copy — so a future re-add to `required` fails THIS assertion, not only the negative
+		// pins above (which would keep passing against a schema nobody re-validated a record
+		// with — that gap is exactly what six verify rounds missed).
+		record := r019ConformingRecordFixture()
+		if err := validateAgainstActualsSchema(schema, record); err != nil {
+			t.Fatalf("an R-019-conforming record (three compute-time fields absent) must validate against the shipped schema: %v", err)
 		}
 	})
 
@@ -228,6 +322,21 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			"changed_lines", "review_lens_count", "checkpoint_count",
 		}
 		assertStringList(t, actualsMapKeys(schema.Properties), wantProperties)
+
+		// Positive exact-list assertion on schema.Required, mirroring the assertStringList
+		// guard above for schema.Properties. Verify round 7 (CRITICAL-1) found this list was
+		// pinned only by NEGATIVE membership checks (R021_required_drops_wall_clock and
+		// R019_required_drops_compute_time_fields each assert one or three specific names are
+		// ABSENT); a negative pin cannot detect any OTHER name leaving the list, which is
+		// exactly how spec.md's R-021 scenario ("total_wall_clock_hours is the only name
+		// removed from required") went silently false when Phase 12 additionally dropped three
+		// more names for R-019's separate reason — the suite stayed green throughout. This
+		// exact-list assertion closes the class: any name entering OR leaving `required`, for
+		// any reason and named by any pin or none, now fails here independently.
+		wantRequired := []string{
+			"change_name", "project", "approval_decision", "scope_drift_notes", "variance_vs_plan",
+		}
+		assertStringList(t, schema.Required, wantRequired)
 
 		// The fixture is committed, so an unreadable path is a real failure — read it
 		// through readRepoFile, which fails loudly, instead of skipping the two
@@ -388,6 +497,43 @@ func decodeActualsSchema(t *testing.T, schemaRaw string) actualsSchemaDocument {
 		t.Fatalf("schema must be valid JSON: %v", err)
 	}
 	return schema
+}
+
+// validateAgainstActualsSchema is a minimal closed-schema validator over the decoded actuals
+// schema: every name in schema.Required MUST be present in record, and — because the schema
+// declares additionalProperties: false — every key in record MUST be declared in
+// schema.Properties. It exists so a test can prove a candidate record actually VALIDATES,
+// not merely that a name is absent from the required list; the two are not the same claim
+// (a record can omit a field the schema still requires and just never get tested against
+// it). Pure and t-free so it can be table-tested directly, in the same style as
+// classifyClosedRecordFlag above.
+func validateAgainstActualsSchema(schema actualsSchemaDocument, record map[string]any) error {
+	for _, required := range schema.Required {
+		if _, ok := record[required]; !ok {
+			return fmt.Errorf("required property %q is missing from record", required)
+		}
+	}
+	for key := range record {
+		if _, ok := schema.Properties[key]; !ok {
+			return fmt.Errorf("record property %q is not declared in schema (additionalProperties: false)", key)
+		}
+	}
+	return nil
+}
+
+// r019ConformingRecordFixture returns a record satisfying R-019's own scenario ("a closed
+// record with the three compute-time fields empty"): every field the schema still requires
+// after this fix is present, and implementation_hours/review_gate_hours/post_review_fix_hours
+// — the three fields R-019 says MUST stay unpopulated until a durable source exists — are
+// absent, exactly as the requirement mandates.
+func r019ConformingRecordFixture() map[string]any {
+	return map[string]any{
+		"change_name":       "example-change",
+		"project":           "example-project",
+		"approval_decision": "approved",
+		"scope_drift_notes": "none",
+		"variance_vs_plan":  "compute-time fields deferred per R-019: no durable source exists yet",
+	}
 }
 
 // actualsSchemaPropertyDescription returns one property's own description, so a
@@ -712,6 +858,53 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 				}
 				if flagErr.Classification != tt.want {
 					t.Fatalf("classifyClosedRecordFlag(%s) classification = %s, want %s", tt.raw, flagErr.Classification, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("validate_against_actuals_schema", func(t *testing.T) {
+		schema := actualsSchemaDocument{
+			Required: []string{"change_name", "approval_decision"},
+			Properties: map[string]json.RawMessage{
+				"change_name":          json.RawMessage(`{"type":"string"}`),
+				"approval_decision":    json.RawMessage(`{"type":"string"}`),
+				"implementation_hours": json.RawMessage(`{"type":"number"}`),
+			},
+		}
+
+		tests := []struct {
+			name    string
+			record  map[string]any
+			wantErr bool
+		}{
+			{
+				name:   "every required name present, no undeclared keys — valid",
+				record: map[string]any{"change_name": "x", "approval_decision": "approved"},
+			},
+			{
+				name:   "an optional property may be present without becoming required",
+				record: map[string]any{"change_name": "x", "approval_decision": "approved", "implementation_hours": 1.2},
+			},
+			{
+				name:    "a missing required name is rejected — this is the R-019/R-021 mutation this gate exists to catch",
+				record:  map[string]any{"change_name": "x"},
+				wantErr: true,
+			},
+			{
+				name:    "a key not declared in properties is rejected (additionalProperties: false)",
+				record:  map[string]any{"change_name": "x", "approval_decision": "approved", "undeclared_field": true},
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := validateAgainstActualsSchema(schema, tt.record)
+				if tt.wantErr && err == nil {
+					t.Fatalf("validateAgainstActualsSchema(%v) error = nil, want an error", tt.record)
+				}
+				if !tt.wantErr && err != nil {
+					t.Fatalf("validateAgainstActualsSchema(%v) error = %v, want nil", tt.record, err)
 				}
 			})
 		}
