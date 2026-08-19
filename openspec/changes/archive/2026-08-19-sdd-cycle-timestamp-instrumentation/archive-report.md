@@ -67,9 +67,9 @@ See Engram obs #2873 and filesystem twin `openspec/changes/archive/2026-08-19-sd
 
 | Anchor | Value | Resolved as | Authority |
 |--------|-------|---|---|
-| **t0** (cycle start) | Engram obs #2859 (explore), created 2026-08-13 13:37:34 | fallback (no `pipeline-state` obs for this change; entered at SDD directly, skipped inception-pipeline) | typed `created_at` from Engram export |
+| **t0** (cycle start) | Engram obs #2859, topic `sdd/sdd-cycle-timestamp-instrumentation/explore`, created 2026-08-13 13:37:34 | fallback (no `pipeline-state` obs for this change; entered at SDD directly, skipped inception-pipeline) | typed `created_at` from Engram export |
 | **t1** (cycle end / merge) | commit `a0374e3` (PR #146 merge), committer 2026-08-19T15:42:14-03:00 | **explicitly recorded** per D2 revision 3 (landing commit MUST be recorded, never discovered by tree matching) | review receipt `final_candidate_tree = 5ab14902aa0d0fd9…` (lineage `review-8afca11eac0d548b`) independently verified: `git show -s --format=%T a0374e3` = `5ab14902…` ✓ verified |
-| **Duration** | 5 days 23 hours 27 minutes ≈ 5.98 days ≈ 143.45 hours | computed as t1 − t0 | t0 fallback + t1 verified |
+| **Duration** | 6 days 2 hours 4 minutes ≈ 6.09 days ≈ 146.08 hours (t0 read in this host's -03:00 local zone, the same convention every committer timestamp in this record already uses; Engram's typed `created_at` export carries no explicit offset, so this is the file's own established convention, not an independently-confirmed source — disclosed rather than silently assumed) | computed as t1 − t0 | t0 fallback + t1 verified |
 | **Resolution path** | verified + fallback-t0 | t0 from earliest own obs; t1 from receipt-bound verified commit | per R-016/R-017/R-018 |
 
 **Why t1 explicit recording is mandatory here**: Commit `a0374e3` is the correct landing commit (slice 4, PR #146 merge). However, three commits on `main` reachable from HEAD carry its identical tree `5ab14902…`:
@@ -120,17 +120,22 @@ Tree-based discovery would be ambiguous and could silently select `04488df` (21 
 
 ## Spec Audit
 
-Per R-021 verification (schema `required` list):
+Per R-021/R-019 verification (schema `required` list). Re-verified directly from the shipped
+schema and `main`'s pre-change history, not restated from a prior draft — the property names
+below are the real 13-property list's members, never `subject_hash`/`created_at`, which are not
+properties of this schema at all:
 
-**Before**: `required: [subject_hash, created_at, change_name, checkpoint_count, total_wall_clock_hours, …]` (6 names)
+**Before** (base `main` @ `ef35927`): `required: [change_name, project, implementation_hours, review_gate_hours, total_wall_clock_hours, post_review_fix_hours, approval_decision, scope_drift_notes, variance_vs_plan]` (9 names)
 
-**After**: `required: [subject_hash, created_at, change_name, checkpoint_count, …]` (4 names)
+**After** (this change): `required: [change_name, project, approval_decision, scope_drift_notes, variance_vs_plan]` (5 names — matches the "required exactly 5 names" schema-hash check above)
 
 Removed from `required`:
   - `total_wall_clock_hours` (per R-021: unresolvable t0/t1 cost one field, not the record)
   - `implementation_hours`, `review_gate_hours`, `post_review_fix_hours` (per R-019: deferred; durable source lacking)
 
-Schema shape untouched; 13-property list, `additionalProperties: false` verified unchanged.
+Four removals, matching the spec's own R-021/R-019 requirement exactly. `checkpoint_count` was
+never in `required` on either side of this change — it is, and remains, one of the 8 always-optional
+properties. Schema shape untouched; 13-property list, `additionalProperties: false` verified unchanged.
 
 ## SDD Cycle Closed
 

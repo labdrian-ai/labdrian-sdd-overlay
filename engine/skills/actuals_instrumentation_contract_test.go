@@ -606,9 +606,15 @@ func TestActualsInstrumentationContract(t *testing.T) {
 // every other section of design.md, must have zero hits.
 func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
 	repoRoot := actualsInstrumentationRepoRoot(t)
-	const designRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md"
-	const proposalRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md"
-	const specRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md"
+	// sdd-cycle-timestamp-instrumentation was archived to
+	// openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/ — design.md and
+	// proposal.md moved with it, byte-identical, so this guard follows them there. The delta spec
+	// no longer exists as a standalone shipped artifact: it was merged into the canonical capability
+	// spec, which is what future readers and future changes actually consult, so specRelPath now
+	// points at the merged canonical file rather than the archived (historical) delta copy.
+	const designRelPath = "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/design.md"
+	const proposalRelPath = "openspec/changes/archive/2026-08-19-sdd-cycle-timestamp-instrumentation/proposal.md"
+	const specRelPath = "openspec/specs/actuals-instrumentation/spec.md"
 	const supersededHeading = "### D2 (revision 2 — SUPERSEDED, retained for provenance)"
 	// The exact heading that terminates the SUPERSEDED carve-out. Pinned by exact text
 	// (including its "###" level) rather than inferred by level — see stripMarkdownSection's
