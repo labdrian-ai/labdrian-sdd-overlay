@@ -6,10 +6,10 @@ blockers: 0
 critical_findings: 0
 requirements: 5/5
 scenarios: 15/15
-test_command: 'for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd "$m" && go test -count=1 ./...); done'
+test_command: 'for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd "$m" && go test -count=1 ./...) || exit 1; done'
 test_exit_code: 0
-test_output_hash: sha256:39e698fe6b171356fb1877d7a124ee72488eebf88ab398b616dab4dcce8c4205
-build_command: 'for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd "$m" && go build -o /tmp/claude-1000/-home-labdrian-labdrian-sdd-overlay/a659674b-3bed-47e7-b037-00865a4ac8ef/scratchpad/bin/ ./...); done'
+test_output_hash: sha256:45ada0f4a3e1c69cd0eb09c06ac81332247ac97649de15de88d8d8eedc680a9e
+build_command: 'out="$(mktemp -d)"; for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator tools/review-preflight; do (cd "$m" && go build -o "$out/" ./...) || exit 1; done'
 build_exit_code: 0
 build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
@@ -18,6 +18,43 @@ build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599
 
 **Change**: `sdd-cycle-timestamp-instrumentation` | **Phase**: verify (round 8) | **Store**: hybrid | **Mode**: Strict TDD
 **Date**: 2026-08-14 | **Branch**: `feat/sdd-cycle-timestamp-instrumentation` | **Base**: `ef35927` | **State**: all UNCOMMITTED
+
+> **SCOPE OF THIS CERTIFICATION — read before treating `verdict: pass` as covering the whole candidate.**
+> This report is round 8. It certifies the change **through Batch 9 (Phase 14)** and no further. Batch 10
+> (Phase 15) landed *after* it — Phase 15 opens by quoting this very PASS — and edited
+> `skills/sdd-time-estimation/SKILL.md`, a shipped agent-executed rule file, plus added one contract
+> subtest. On this change's own premise that agent-executed SKILL.md prose **is** the implementation
+> (tasks.md, Phase 7B), that edit changed shipped behaviour and is **not** covered by any verification
+> round recorded here. Every earlier remediation phase carried an explicit re-verify item (7D, 8E, 10D,
+> 11C, 12E, 13E, 14E); Phase 15 originally ended at 15C with none. Task **15D.1** now carries it and is
+> deliberately left unchecked. The `Archive-ready: YES` below is therefore scoped to what this round
+> actually inspected; whoever archives decides whether 15D.1 must run first. Stating that plainly is the
+> point — note that `6.3`, `8E.1` and `13E.1` are also unchecked and coexisted with this same verdict, so
+> an unchecked re-verify item has not by itself blocked this change before and is not claimed to here.
+
+### Provenance of the recorded commands (added by review correction, not by round 8)
+
+The `test_command`, `build_command`, `test_exit_code`, `build_exit_code` and `test_output_hash` in the
+envelope above were **re-derived** during the review correction for lineage `review-8afca11eac0d548b`;
+they are not round 8's originals. This section is deliberately prose in the report body, not extra
+envelope keys: `gentle-ai.verify-result/v1` has a closed field set, and adding keys to the envelope makes
+the whole report fail admission (`gentle-ai sdd-verify-validate` rejects unknown fields outright).
+
+- **Failure propagation.** Both commands now terminate the loop on the first failing module via
+  `|| exit 1`. The previously recorded form was a bare `for ... do (cd "$m" && ...); done`, whose status
+  is that of the LAST iteration only, so a failure in any of the first four modules was silently
+  discarded — a gate that could not fail, recorded as a pass. Demonstrated:
+  `( for m in FAIL OK; do ( [ "$m" = OK ] ); done ); echo $?` prints `0`, while
+  `( for m in FAIL OK; do ( [ "$m" = OK ] ) || exit 1; done ); echo $?` prints `1`.
+- **`test_output_hash` normalisation.** Raw `go test` stdout embeds per-package wall-clock times that
+  differ on every run, so the previous hash could not be re-derived by anyone. The recorded value is now
+  taken after stripping those suffixes — a trailing tab plus `<n>.<n>s`, and a trailing tab plus
+  `(cached)` — which makes it reproducible. Computed twice in a row, it is identical.
+- **`build_output_hash`** is the SHA-256 of the empty string. A silent successful build produces no
+  stdout, so the value is correct, but it carries no evidentiary weight beyond `build_exit_code`.
+- **`evidence_revision` is intentionally unchanged.** It binds round 8's own evidence set. The correction
+  re-derived the command/exit/hash triples but did not re-run round 8's verification, so re-stamping that
+  field would claim a re-verification that did not happen. Task 15D.1 is what covers that.
 
 ## Verdict
 

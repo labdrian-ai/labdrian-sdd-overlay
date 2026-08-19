@@ -663,11 +663,36 @@ Verify round 8 returned **PASS** (0 CRITICAL, 0 blockers) but carried two WARNIN
 
 ### 15C — Full suites, build, and scope check
 - [x] 15C.1 `for m in engine tui tools/deterministic-check-runner tools/entry-contract-validator
-  tools/review-preflight; do (cd "$m" && go test -count=1 ./...); done` — all green. `go build` all
-  5 modules — exit 0. `git status --untracked-files=all` — same tracked/untracked file set as
-  post-Phase-14, no stray files.
+  tools/review-preflight; do (cd "$m" && go test -count=1 ./...) || exit 1; done` — all green. `go build`
+  all 5 modules, same `|| exit 1` form — exit 0. `git status --untracked-files=all` — same
+  tracked/untracked file set as post-Phase-14, no stray files.
+  **Corrected during review of this candidate**: this line previously recorded the loop WITHOUT
+  `|| exit 1`. A bare `for` loop exits with the status of its last iteration only, so the recorded
+  exit 0 attested to `tools/review-preflight` alone and silently discarded a failure in any of the
+  other four modules — a gate that could not fail, reported as a pass. Both commands were re-executed
+  in the corrected form and the recorded exit codes and output hash in `verify-report.md` re-derived
+  from that run; see its "Provenance of the recorded commands" section for the two-line demonstration.
+  That provenance is prose in the report BODY, deliberately not extra envelope keys:
+  `gentle-ai.verify-result/v1` has a closed field set, so adding keys makes the whole report fail
+  admission under `gentle-ai sdd-verify-validate`.
 - Did NOT re-open R-019, R-021, the four-state anchor rule, the sweep guard, or anything else rounds
   7/8 confirmed clean.
 - Did NOT withdraw, re-base, or rewrite live Engram records #2789/#2096 or their fixture mirrors.
 - Did NOT touch the roadmap-maker FORBID list (round 8 rated it SUGGESTION, prospective-only).
 - Did NOT touch cumulative size / chained PRs, or task 6.3 (structurally deferred to archive).
+
+### 15D — Re-verify (the item Phase 15 was missing)
+- [ ] 15D.1 Re-run `sdd-verify`. **This is the gap review of this candidate found, not a formality.**
+  Phase 15 edited `skills/sdd-time-estimation/SKILL.md` — a shipped, agent-executed rule file — and
+  added the `R019_calibration_absent_numerators_fallback` subtest, both *after* round 8 returned PASS.
+  Phase 7B establishes this change's own premise that agent-executed SKILL.md prose **is** the
+  implementation, so that edit changed shipped behaviour with no verification round covering it. Every
+  other remediation phase carried this item (7D.1, 8E.1, 10D.1, 11C.1, 12E.1, 13E.1, 14E.1); Phase 15
+  ended at 15C without one, so the loop that caught real defects after rounds 6 and 7 was not scheduled
+  to run again. Full suites being green (15C.1) is NOT a substitute: rounds 6, 7 and 8 each found real
+  defects against a green suite. Re-running `sdd-verify` is a separate phase outside apply's scope.
+  `verify-report.md`'s `verdict: pass` certifies only through Batch 9 (Phase 14) — see the SCOPE
+  banner under its title. Whoever archives decides whether 15D.1 must run first; this item does not
+  claim to block on its own. Note `6.3`, `8E.1` and `13E.1` are also unchecked and coexisted with that
+  same `Archive-ready: YES`, so an unchecked re-verify item has demonstrably not blocked this change
+  before.
