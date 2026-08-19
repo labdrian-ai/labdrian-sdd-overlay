@@ -70,7 +70,7 @@ See Engram obs #2873 and filesystem twin `openspec/changes/archive/2026-08-19-sd
 | **t0** (cycle start) | Engram obs #2859, topic `sdd/sdd-cycle-timestamp-instrumentation/explore`, created 2026-08-13 13:37:34 | fallback (no `pipeline-state` obs for this change; entered at SDD directly, skipped inception-pipeline) | typed `created_at` from Engram export |
 | **t1** (cycle end / merge) | commit `a0374e3` (PR #146 merge), committer 2026-08-19T15:42:14-03:00 | **explicitly recorded** per D2 revision 3 (landing commit MUST be recorded, never discovered by tree matching) | review receipt `final_candidate_tree = 5ab14902aa0d0fd9…` (lineage `review-8afca11eac0d548b`) independently verified: `git show -s --format=%T a0374e3` = `5ab14902…` ✓ verified |
 | **Duration** | 6 days 2 hours 4 minutes ≈ 6.09 days ≈ 146.08 hours (t0 read in this host's -03:00 local zone, the same convention every committer timestamp in this record already uses; Engram's typed `created_at` export carries no explicit offset, so this is the file's own established convention, not an independently-confirmed source — disclosed rather than silently assumed) | computed as t1 − t0 | t0 fallback + t1 verified |
-| **Resolution path** | verified + fallback-t0 | t0 from earliest own obs; t1 from receipt-bound verified commit | per R-016/R-017/R-018 |
+| **Resolution path** | verified + fallback-t0 | t0 from earliest own obs; t1 explicitly recorded and independently verified against the review receipt's `final_candidate_tree`, never discovered | per R-016/R-017/R-018 |
 
 **Why t1 explicit recording is mandatory here**: Commit `a0374e3` is the correct landing commit (slice 4, PR #146 merge). However, three commits on `main` reachable from HEAD carry its identical tree `5ab14902…`:
   - `7343ff5` (slice 4 content commit, not a merge)
@@ -79,7 +79,7 @@ See Engram obs #2873 and filesystem twin `openspec/changes/archive/2026-08-19-sd
 
 Tree-based discovery would be ambiguous and could silently select `04488df` (21 minutes later, inflating t1 by 21 min), violating the spec's D2 rule. Explicit recording via `landing_commit = a0374e3` in the archive-report ensures the anchor cannot drift.
 
-**Variance vs. Plan**: t0 resolved via fallback (primary `pipeline-state` missing; no inception-pipeline for this change). t1 resolved via receipt-bound verified commit (content binding against `approved_tree`). Both anchors disclosed in `variance_vs_plan` per R-016/R-017/R-018. This change's own closure (n=3 for timestamp-instrumentation benefit) now completes the instrument's own calibration proof — a live, unambiguous anchor set that future cycles inherit.
+**Variance vs. Plan**: t0 resolved via fallback (primary `pipeline-state` missing; no inception-pipeline for this change). t1 explicitly recorded as `landing_commit = a0374e3`, independently verified against the review receipt's `final_candidate_tree` (content binding), never discovered by tree matching or position. Both anchors disclosed in `variance_vs_plan` per R-016/R-017/R-018. This change's own closure (n=3 for timestamp-instrumentation benefit) now completes the instrument's own calibration proof — a live, unambiguous anchor set that future cycles inherit.
 
 ## Implementation Summary
 
