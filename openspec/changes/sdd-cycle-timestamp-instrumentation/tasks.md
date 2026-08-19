@@ -682,7 +682,7 @@ Verify round 8 returned **PASS** (0 CRITICAL, 0 blockers) but carried two WARNIN
 - Did NOT touch cumulative size / chained PRs, or task 6.3 (structurally deferred to archive).
 
 ### 15D — Re-verify (the item Phase 15 was missing)
-- [ ] 15D.1 Re-run `sdd-verify`. **This is the gap review of this candidate found, not a formality.**
+- [x] 15D.1 Re-run `sdd-verify`. **This is the gap review of this candidate found, not a formality.**
   Phase 15 edited `skills/sdd-time-estimation/SKILL.md` — a shipped, agent-executed rule file — and
   added the `R019_calibration_absent_numerators_fallback` subtest, both *after* round 8 returned PASS.
   Phase 7B establishes this change's own premise that agent-executed SKILL.md prose **is** the
@@ -696,3 +696,33 @@ Verify round 8 returned **PASS** (0 CRITICAL, 0 blockers) but carried two WARNIN
   claim to block on its own. Note `6.3`, `8E.1` and `13E.1` are also unchecked and coexisted with that
   same `Archive-ready: YES`, so an unchecked re-verify item has demonstrably not blocked this change
   before.
+  **DONE — verify round 9 (2026-08-19), on merged `main` @ `04488df`.** `verify-report.md` rewritten to
+  round 9: `verdict: pass_with_warnings`, `blockers: 0`, `critical_findings: 0`, requirements 5/5,
+  scenarios 15/15, `evidence_revision: sha256:353287b03ecee4ca…`, admitted by
+  `gentle-ai sdd-verify-validate --requirements 5 --scenarios 15` (`"valid": true`). The Batch 10 delta
+  was verified substantively, not assumed: (a) the R-019 fallback sentence was read at its primary source
+  inside the CALIBRATION list item of the shipped `skills/sdd-time-estimation/SKILL.md`; (b) the new
+  `R019_calibration_absent_numerators_fallback` subtest was mutation-probed in THREE directions with a
+  harness that aborts unless the mutation changes the file hash — deletion RED, semantic inversion RED,
+  and **relocating the sentence verbatim into another Hard Rules list item RED** (a direction apply never
+  ran; it proves the list-item scoping is load-bearing rather than a whole-file substring hit), with
+  restore byte-identical to `sha256:2ed04f4e6499c0c0…` and post-restore GREEN; (c) the subtest was
+  confirmed to actually execute (`=== RUN` + `--- PASS`, not `[no tests to run]`); (d) an independent
+  consumer sweep re-derived 15A.3's enumeration and confirmed `sdd-time-estimation/SKILL.md` is the only
+  rate-computing consumer; (e) full suites and builds re-run in the corrected `|| exit 1` form (14/14
+  packages ok, exit 0; build exit 0), with `gofmt -l` clean and `go vet` exit 0 on all 5 modules.
+  Corroborations: the normalised `test_output_hash` re-derived to round 8's exact
+  `sha256:45ada0f4a3e1c69c…` on a fresh run, and the schema hashed byte-identical to round 8's
+  `0684faa369cf91e9…`, so nothing drifted during slicing and merge. Round 9 found **0 CRITICAL** and
+  5 WARNING / 5 SUGGESTION, all documentation or process-sequencing: round 8's W1 is fully CLOSED, but its
+  W2 is only HALF closed (15B.1 fixed the revert line; the `design.md` File Changes table still omits the
+  2 `Create` rows and its `sdd-time-estimation/SKILL.md` row is now stale, since it describes only the
+  boundary edit and not Phase 15's own R-019 addition). Task `6.3`'s structural blocker is GONE now that
+  the change is merged: t0 resolves via the R-016 FALLBACK (no `pipeline-state` observation exists;
+  earliest own observation is #2859 at 2026-08-13 13:37:34) and t1 resolves VERIFIED to `a0374e3`
+  (PR #146, last slice to land, committer 2026-08-19T15:42:14-03:00; its tree `5ab14902aa0d0fd9…` equals
+  slice 4 `7343ff5`'s approved candidate tree, lineage `review-8afca11eac0d548b`). Archive MUST record
+  `landing_commit = a0374e3` explicitly: three commits reachable from `main` carry that same tree
+  (`04488df`, `a0374e3`, `7343ff5`), so tree-based discovery is ambiguous by D2's own rule, and taking the
+  chronologically last merge (`04488df`, a branch-sync merge that is NOT a slice of this change) would
+  inflate t1 by 21 minutes. **Archive-ready: YES** — no batch of this change is uncertified any more.

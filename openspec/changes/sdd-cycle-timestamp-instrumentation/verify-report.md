@@ -1,7 +1,7 @@
 ```yaml
 schema: gentle-ai.verify-result/v1
-evidence_revision: sha256:281b84f8993950b7c57fafed87936d32a93147190d4dbbd2bc70990aca1686ec
-verdict: pass
+evidence_revision: sha256:353287b03ecee4ca1b63bd0974f61d43983745ed7ca08b3ff37d460cfae3522a
+verdict: pass_with_warnings
 blockers: 0
 critical_findings: 0
 requirements: 5/5
@@ -14,353 +14,348 @@ build_exit_code: 0
 build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
 
-# Verification Report — sdd-cycle-timestamp-instrumentation (round 8, targeted)
+# Verification Report — sdd-cycle-timestamp-instrumentation (round 9, post-merge, gap-closing)
 
-**Change**: `sdd-cycle-timestamp-instrumentation` | **Phase**: verify (round 8) | **Store**: hybrid | **Mode**: Strict TDD
-**Date**: 2026-08-14 | **Branch**: `feat/sdd-cycle-timestamp-instrumentation` | **Base**: `ef35927` | **State**: all UNCOMMITTED
+**Change**: `sdd-cycle-timestamp-instrumentation` | **Phase**: verify (round 9) | **Store**: hybrid | **Mode**: Strict TDD
+**Date**: 2026-08-19 | **Branch**: `main` | **HEAD**: `04488df` | **State**: fully merged, working tree clean
 
-> **SCOPE OF THIS CERTIFICATION — read before treating `verdict: pass` as covering the whole candidate.**
-> This report is round 8. It certifies the change **through Batch 9 (Phase 14)** and no further. Batch 10
-> (Phase 15) landed *after* it — Phase 15 opens by quoting this very PASS — and edited
-> `skills/sdd-time-estimation/SKILL.md`, a shipped agent-executed rule file, plus added one contract
-> subtest. On this change's own premise that agent-executed SKILL.md prose **is** the implementation
-> (tasks.md, Phase 7B), that edit changed shipped behaviour and is **not** covered by any verification
-> round recorded here. Every earlier remediation phase carried an explicit re-verify item (7D, 8E, 10D,
-> 11C, 12E, 13E, 14E); Phase 15 originally ended at 15C with none. Task **15D.1** now carries it and is
-> deliberately left unchecked. The `Archive-ready: YES` below is therefore scoped to what this round
-> actually inspected; whoever archives decides whether 15D.1 must run first. Stating that plainly is the
-> point — note that `6.3`, `8E.1` and `13E.1` are also unchecked and coexisted with this same verdict, so
-> an unchecked re-verify item has not by itself blocked this change before and is not claimed to here.
+## Scope of this certification — this round closes round 8's stated gap
 
-### Provenance of the recorded commands (added by review correction, not by round 8)
+Round 8 certified the change **only through Batch 9 (Phase 14)** and said so in a banner. Batch 10
+(Phase 15) landed after it and edited `skills/sdd-time-estimation/SKILL.md` — a shipped, agent-executed
+rule file, which under this change's own Phase 7B premise **is** implementation — plus added one contract
+subtest. Task `15D.1` exists to close exactly that gap.
 
-The `test_command`, `build_command`, `test_exit_code`, `build_exit_code` and `test_output_hash` in the
-envelope above were **re-derived** during the review correction for lineage `review-8afca11eac0d548b`;
-they are not round 8's originals. This section is deliberately prose in the report body, not extra
-envelope keys: `gentle-ai.verify-result/v1` has a closed field set, and adding keys to the envelope makes
-the whole report fail admission (`gentle-ai sdd-verify-validate` rejects unknown fields outright).
+**Round 9 covers the Batch 10 delta and re-confirms the whole candidate on merged `main`.** Unlike round 8,
+this round inspects committed, merged bytes rather than an uncommitted worktree: all four chained slices
+landed (`321f54a`, `3ede60e`, `8c552a1`, `7343ff5` via PRs #143/#147/#145/#146). There is no longer any
+uncertified batch. This report supersedes round 8's scope banner.
 
-- **Failure propagation.** Both commands now terminate the loop on the first failing module via
-  `|| exit 1`. The previously recorded form was a bare `for ... do (cd "$m" && ...); done`, whose status
-  is that of the LAST iteration only, so a failure in any of the first four modules was silently
-  discarded — a gate that could not fail, recorded as a pass. Demonstrated:
-  `( for m in FAIL OK; do ( [ "$m" = OK ] ); done ); echo $?` prints `0`, while
-  `( for m in FAIL OK; do ( [ "$m" = OK ] ) || exit 1; done ); echo $?` prints `1`.
-- **`test_output_hash` normalisation.** Raw `go test` stdout embeds per-package wall-clock times that
-  differ on every run, so the previous hash could not be re-derived by anyone. The recorded value is now
-  taken after stripping those suffixes — a trailing tab plus `<n>.<n>s`, and a trailing tab plus
-  `(cached)` — which makes it reproducible. Computed twice in a row, it is identical.
-- **`build_output_hash`** is the SHA-256 of the empty string. A silent successful build produces no
-  stdout, so the value is correct, but it carries no evidentiary weight beyond `build_exit_code`.
-- **`evidence_revision` is intentionally unchanged.** It binds round 8's own evidence set. The correction
-  re-derived the command/exit/hash triples but did not re-run round 8's verification, so re-stamping that
-  field would claim a re-verification that did not happen. Task 15D.1 is what covers that.
+### Verdict field changed from `pass` to `pass_with_warnings`
+
+Round 8's envelope said `verdict: pass` while its own prose verdict said "PASS WITH WARNINGS". Those
+contradicted each other. `pass_with_warnings` is an accepted value of `gentle-ai.verify-result/v1`, so
+round 9 uses the one that matches its prose. This is a truthfulness correction, not a downgrade:
+`blockers` and `critical_findings` are both still 0, which is what gates archive.
+
+### How `evidence_revision` was derived (re-derivable, unlike a bare assertion)
+
+`evidence_revision` is the SHA-256 of a manifest containing, in this order: `head <HEAD sha>`, then one
+`<sha256>  <path>` line for each of the eight inspected artifacts (schema, both shipped `SKILL.md`, both Go
+test files, both testdata fixtures, the delta spec), then `test_output_hash` and `build_output_hash`.
+Anyone can rebuild it. Round 8 deliberately did not re-stamp this field because its correction did not
+re-run verification; round 9 did re-run everything, so it carries a new revision.
+
+Corroboration worth stating: the schema hashes to `0684faa369cf91e9…`, **byte-identical to round 8's
+recorded baseline**, and the ondisk-gate fixture hashes to `31226587098f12ce…`, matching obs #2896. The
+instrument's contract surface did not drift while the change was being sliced and merged.
 
 ## Verdict
 
-**PASS WITH WARNINGS** — 0 CRITICAL, 4 WARNING, 4 SUGGESTION. **Archive-ready: YES.**
+**PASS WITH WARNINGS** — 0 CRITICAL, 5 WARNING, 5 SUGGESTION. **Archive-ready: YES.**
 
-Round 7's CRITICAL-1 is **closed at the primary source and structurally guarded**. I re-derived the schema
-diff myself, re-read both reconciled spec sites and D5, and mutation-probed the new guard in all four
-directions with `-count=1`. Nothing was weakened to make the reconciled claim true.
+**Task 15D.1 is honestly closeable.** The Batch 10 delta is real implementation, and it is now genuinely
+verified rather than assumed: I reproduced the shipped rule at its primary source, mutation-probed its new
+test in three directions (including one direction apply never ran), and re-ran the full suites and builds.
 
-I found **two new WARNING-level defects**, both real, neither archive-blocking, and I state plainly that
-neither is a manufactured justification for a ninth round. Both are one-paragraph documentation edits that
-can be folded into archive or a follow-up; **no code, test, schema, or requirement changes.**
+The two WARNINGs round 8 raised are **not both closed**. W1 is fully closed. W2 is **half closed** —
+Phase 15 fixed the revert instruction but not the File Changes table, which was the other half of round 8's
+own stated remedy. That is reported below as W1/W2 of this round, not absorbed.
 
 ---
 
-## 1. CRITICAL-1 closed — verified at the primary source, not from Phase 14's report
+## 1. Round 8 W1 — CLOSED, and now test-bound
 
-**Schema (`git diff -- skills/_shared/actuals-record.schema.json`), opened myself.** `required` drops
-exactly four names — `implementation_hours`, `review_gate_hours`, `total_wall_clock_hours`,
-`post_review_fix_hours` — leaving exactly five: `change_name`, `project`, `approval_decision`,
-`scope_drift_notes`, `variance_vs_plan`. The diff touches nothing else but two `description` strings.
+**The gap.** `sdd-time-estimation`'s CALIBRATION rule built its baseline from `implementation_hours`,
+`review_gate_hours`, `post_review_fix_hours` "ONLY", while R-019 (added by this very change) mandates those
+three stay unpopulated. The skill had no branch for its own numerators being absent, and its `n>=3` branch
+directed a reader to divide by a field that would no longer exist.
 
-| Site | Round 7 (false) | Round 8 (current) | Verdict |
+**The fix, read at the primary source** (`skills/sdd-time-estimation/SKILL.md:28`, inside the CALIBRATION
+list item, immediately after the "ONLY" sentence):
+
+> **WHEN one or more of these three fields is absent under R-019** (compute-time fields stay unpopulated
+> until a durable source exists), the record supplies NO compute-time numerator for the affected phase —
+> never substitute `total_wall_clock_hours` or any other elapsed-time figure in its place. State the
+> consequence explicitly rather than dividing over an absent value: with the numerators absent, the
+> per-unit compute-time rate cannot be computed, so confidence falls back to the disclosed bootstrap
+> defaults / qualitative scaling regardless of calibration `n`.
+
+Checked against round 8's stated remedy, clause by clause:
+
+| Round 8 asked for | Present? |
+|---|---|
+| the three fields are absent from records written after this change | ✅ "WHEN one or more of these three fields is absent under R-019" |
+| such records excluded from the per-phase baseline and rate denominators | ✅ "supplies NO compute-time numerator"; "the per-unit compute-time rate cannot be computed" |
+| the `n>=3` divide-by-missing-field trap is overridden | ✅ "regardless of calibration `n`" — this is the clause that neutralises the `n>=3` branch |
+| compute-time `n` stays at 2 until a durable source exists | ⚠️ expressed functionally ("falls back to bootstrap defaults / qualitative scaling") rather than as the literal number 2 |
+
+The last row is a **deliberate improvement, not a shortfall**: hardcoding "n stays at 2" would go stale the
+moment a third record lands, whereas the functional phrasing stays correct forever. I accept it as closed.
+
+**R009's pre-existing pin is byte-unchanged.** The "`total_wall_clock_hours` is NEVER an input to the
+agent-compute-time baseline" sentence still follows immediately, and
+`R009_calibration_excludes_calendar_time` still passes.
+
+### My own mutation probes — three directions, harness fails loudly on a non-landing mutation
+
+Round 8 recorded a self-inflicted vacuity (an `sd` edit silently no-oped and four probes reported GREEN over
+an unmutated file). I therefore used a Python harness with a hard `assert mutated_sha != ORIG_SHA` before
+every run, and re-asserted byte-identical restore after every run.
+
+| # | Direction | Result | Failure message |
 |---|---|---|---|
-| `spec.md:90` (R-021 body) | "**Every other required field is unchanged**" | "…are also absent from `required`, for the separate reason R-019 states; **aside from these four names**, every other required field is unchanged, and the property set itself is untouched **in all cases**" | ✅ true against the diff |
-| `spec.md:102` (acceptance scenario) | "`total_wall_clock_hours` is **the only name removed**" | "…removed under this requirement **and** `implementation_hours`, `review_gate_hours`, `post_review_fix_hours` **separately removed under R-019** — **no other name changes**, no property is added or removed, and `additionalProperties: false` is unchanged" | ✅ true against the diff |
-| `design.md` D5 (:104/:107/:110) | sanctioned one drop (singular); stale "the contract test does not pin the required list" | second independent decision paragraph sanctioning the R-019 drop, with "Two distinct reasons for two distinct groups of fields, never collapsed into one claim of exclusivity"; stale parenthetical **removed** and explicitly corrected at :110 | ✅ reconciled, W2 closed |
+| baseline | unmutated | **GREEN** | — |
+| P1 | delete the new sentence | **RED** | `CALIBRATION rule must contain "WHEN one or more of these three fields is absent under R-019"` |
+| P2 | invert it (substitute `total_wall_clock_hours` at full confidence) | **RED** | `must contain "the record supplies NO compute-time numerator for the affected phase"` |
+| **P3** | **relocate the sentence verbatim out of the CALIBRATION item into another Hard Rules item** | **RED** | `must contain "WHEN one or more of these three fields is absent under R-019"` |
+| restore | rewrite original bytes | **GREEN**, sha256 `2ed04f4e6499c0c0…` identical to baseline | — |
 
-### Nothing was weakened — checked clause by clause
+**P3 is my own addition and it is the decisive one.** Apply ran only delete and invert (15-P1/15-P2). P3
+tests the subtest's *own stated claim* — its comment says "Scoped to the CALIBRATION list item itself, not
+the whole file, so a substring hit elsewhere in Hard Rules cannot satisfy this gate." A whole-file substring
+pin would have stayed GREEN under P3. It went RED, so the scoping is load-bearing and the claim is true.
 
-This was the stated failure mode of "reconcile the text to match the code". It did not happen:
+I also confirmed the scoping helper is real rather than incidental: `sliceMarkdownListItem`
+(`actuals_instrumentation_contract_test.go:1078`) finds the marker line, walks **back** to the enclosing
+top-level list-item start and **forward** to the next list-item start or blank line, so the returned haystack
+genuinely excludes the rest of the section.
 
-| R-021 invariant | Before | After |
+**Non-vacuity of the subtest itself**: `go test -v` shows
+`=== RUN TestActualsInstrumentationContract/R019_calibration_absent_numerators_fallback` followed by
+`--- PASS`, not `[no tests to run]`. 16/16 contract subtests execute.
+
+**Coverage effect.** This subtest strengthens R-019's scenario ("Deferral is stated, not silent"). Its pin
+`never substitute total_wall_clock_hours or any other elapsed-time figure in its place` binds the scenario's
+"none of the three fields holds a wall-clock-derived substitute" clause **at the consumer**, which no test
+previously did.
+
+## 2. Round 8 W2 — only half closed
+
+**Closed half.** `design.md:165` now reads "Revert = delta spec + 5 file edits (…) + 2 file deletions
+(`engine/skills/actuals_instrumentation_d2_anchor_test.go`,
+`engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json`) — 7 files total", and states
+why deletion is mandatory (the anchor test reads shipped `SKILL.md` prose at runtime, so a literal revert
+would leave it pinning reverted prose and turn the suite RED). This is the half that carried the traced
+consequence, and it is correct — I confirmed both files exist, are tracked, and that the anchor test does
+read shipped prose at runtime.
+
+**Open half.** Round 8's remedy was explicitly two-part: "add the two Create rows to the File Changes table
+**and** restate the revert line". Only the revert line was done. See W1 and W2 below.
+
+## 3. Independent consumer-enumeration sweep — 15A.3's claim holds
+
+Round 8 caught Phase 14's sweep omitting a file, so I did not accept 15A.3's exhaustion claim. My own sweep
+for `implementation_hours|review_gate_hours|post_review_fix_hours` across the repo (excluding `archive/**`
+and this change's own folder) returns exactly seven files, and a separate sweep for *rate computation*
+(`/ changed_lines`, `/ requirement_count`, `/ review_lens_count`) returns exactly one shipped consumer:
+
+| File | Computes a rate? | Status |
 |---|---|---|
-| `total_wall_clock_hours` MUST NOT be in `required` | present | **present, unchanged** |
-| "no property is added or removed" | present | **present, unchanged** |
-| "`additionalProperties: false` is unchanged" | present | **present, unchanged** |
-| property set untouched | "untouched" | "untouched **in all cases**" (strengthened) |
-| exclusivity | "the only name" (false) | "no other name changes" (true, and now bound by a test) |
+| `skills/sdd-time-estimation/SKILL.md` | **YES** — the only one | ✅ fixed by 15A.1, bound by 15A.2 |
+| `skills/_shared/actuals-record.schema.json` | no | ✅ already updated |
+| `skills/inception-pipeline/SKILL.md` | no | ✅ already updated |
+| `engine/skills/actuals_instrumentation_contract_test.go` | no (comments only) | ✅ updated |
+| both `engine/skills/testdata/*.json` fixtures | no | ✅ historical records, correctly retain values |
+| `openspec/specs/actuals-instrumentation/spec.md` (live base spec) | no | ➖ out of scope by construction — OpenSpec merges the delta at archive |
 
-The exclusivity claim was **narrowed to the truth, not deleted**. The scenario still forbids any fifth name
-leaving `required`. Property count is still 13; `additionalProperties: false` is still present and still
-guarded. **No property added, none removed, no acceptance criterion loosened.**
+**15A.3's enumeration is exhaustive and its one out-of-scope call is correct.** I verified the live base spec
+is still in its pre-change state (it still describes the archive-anchored boundary and the old
+`checkpoint_count` of 12 for `sync-check`); that is the expected pre-archive condition, not a contradiction.
 
----
+## 4. Whole-candidate re-confirmation on merged `main`
 
-## 2. The exact-list guard is sound and non-vacuous — my own four-direction probes
-
-The guard is `assertStringList(t, schema.Required, wantRequired)` at
-`engine/skills/actuals_instrumentation_contract_test.go:535`, inside `D2_D5_closed_schema_invariant`.
-
-**First attempt was vacuous and I discarded it.** My initial probe run used `sd` for the JSON edits; all four
-probes reported GREEN. Before recording that as a result I hashed the file: `sd` had silently no-oped and the
-schema was byte-unchanged (`0684faa3…` throughout). **Four GREENs over an unmutated file is not evidence** —
-this is the obs #2903 family (a check reporting success without executing what it claims to check), reached by
-a different route than the test cache. I rewrote the probe harness in Python with a hard
-`assert mutated_sha != orig_sha` so a non-landing mutation aborts instead of reporting GREEN.
-
-Verified probes, every run `go test -count=1`, both halves:
-
-| # | Direction | Mutation | Result | Bound at |
-|---|---|---|---|---|
-| P1 | **Remove an expected name** | dropped `scope_drift_notes` | **RED** — `frontmatter list length = 4 ([approval_decision change_name project variance_vs_plan]), want 5` | `:535` only |
-| P2 | **Re-add a dropped name** | re-inserted `total_wall_clock_hours` | **RED** — triple-bound: `:89` (negative pin), `:351` (record validation), `:535` (exact list) | 3 independent sites |
-| P3 | **Add a brand-new name no pin names** | inserted `review_lens_count` | **RED** — `:535` `list length = 6 … want 5`, and independently `:351` | `:535` + `:351` |
-| P4 | **Reorder only, same set** | reversed all five names | **GREEN** (correct — see below) | — |
-| — | **Restore** | rewrote original bytes | **GREEN**, sha256 `0684faa369cf91e9…` **byte-identical to baseline** | — |
-
-**P3 is the decisive one**: `review_lens_count` is named by no negative pin, and it is precisely the shape that
-went undetected for seven rounds. It now fails. The class is closed, not just the instance.
-
-### `assertStringList` semantics — order-insensitive, which is correct here
-
-Defined in `engine/skills/oo_quality_contract_artifact_test.go`. It calls `sortedStrings` on **both** `got` and
-`want` before comparing length and elements, and `sortedStrings` copies via `append([]string(nil), …)` rather
-than sorting in place — so it neither mutates `schema.Required` (which is iterated again at `:550`) nor imposes
-an ordering. **Probe P4 confirms this empirically**: a full reversal of `required` stays GREEN.
-
-This is the right semantics. JSON Schema `required` is an unordered set, so an order-sensitive guard would
-produce false REDs on a harmless reformat. The concern is checked and cleared — it is a set assertion with
-exact multiplicity, which is exactly the invariant the scenario states.
-
-**One diagnostic nit (SUGGESTION S3)**: because the helper is shared with the frontmatter tests, its failure
-message reads `frontmatter list length = 6 …` when it fires for `schema.Required`. Misleading label, but the
-message prints both actual and expected lists, so diagnosis is immediate. Cosmetic.
-
----
-
-## 3. Phase 14's exhaustion claim — my own sweep, my own predicates
-
-Phase 14 (task 14A.5) claims it swept for `only` / `every other … unchanged` / `required list` exclusivity
-claims across five artifacts and found exactly the three sites round 7 cited.
-
-I ran an independent sweep with a **wider predicate set** — `the only`, `only name`, `every other`,
-`is/are/remains/stay unchanged`, `untouched`, `sole`, `solely`, `exclusively`, `no other`, `nothing else`,
-`aside from`, `apart from`, `except for`, `just one`, `singular`, `one and only` — across
-`spec.md`, `design.md`, `proposal.md`, both shipped `SKILL.md` files, and the schema.
-
-**Phase 14's three cited sites are genuinely fixed.** Every other hit I checked at its primary source:
-
-| Meta-claim | Source | Constrains | Verdict |
+| Invariant | Expected | Observed | Verdict |
 |---|---|---|---|
-| "13-property list untouched" | `proposal.md:68`, `design.md:101`, `design.md:134` | schema properties | ✅ 13 properties, none added/removed |
-| "`additionalProperties: false` … untouched" | `spec.md:7/26`, `design.md:101/107` | schema | ✅ present, unchanged, guarded |
-| "the only checkpoints inception-pipeline itself durably records" | `schema.json:66`, `SKILL.md:137` | pipeline-state contract | ✅ both sites agree verbatim |
-| "every other resolved field is still written/present/required" | `spec.md:86/96`, `SKILL.md:153` | closure-feedback | ✅ consistent across all three |
-| "the **only** shipped git command is `git show -s --format=%T <landing_commit>`" | `design.md:160` | shipped skills | ✅ `rg 'git [a-z]'` over both shipped SKILL.md files + schema returns **exactly one** git command, at `SKILL.md:147`, matching verbatim |
-| "You do FIVE things and nothing else" | `SKILL.md:12` | inception-pipeline scope | ✅ item 5 is "fire closure-feedback"; adding a third write **inside** closure-feedback does not change the five |
-| "D7 upserts are the only migration" | `design.md:165` | migration surface | ✅ consistent with the File Changes table's single Upsert row |
-| "append-only carve-out … engine bytes untouched" | `design.md:98`, `SKILL.md:160/178` | archive-report append | ✅ three sites agree |
-| "Revert = delta spec + **5 file edits**" | `design.md:165` | revert surface | ⚠️ **incomplete — WARNING W2 below** |
+| `required` list | exactly 5 names | `approval_decision, change_name, project, scope_drift_notes, variance_vs_plan` | ✅ |
+| property count | 13, none added/removed | 13 | ✅ |
+| `additionalProperties` | `false` | `false` | ✅ |
+| the four relaxed fields | present as properties, absent from `required` | all four confirmed both ways | ✅ |
+| `total_wall_clock_hours` description | merge-anchored | "from the tiering go-ahead checkpoint to merge, including interruption gaps" | ✅ |
+| schema bytes vs round 8 | unchanged | `0684faa369cf91e9…` identical | ✅ |
 
-**Where Phase 14's sweep was narrower than it claimed.** Its swept set names five artifacts and **omits
-`skills/sdd-time-estimation/SKILL.md`** — a file this change itself modifies and lists in its own File Changes
-table. That file carries an `ONLY` claim about the three R-019 fields. Checking it produced **WARNING W1
-below**. So Phase 14's exhaustion claim is accurate *for the predicates and files it names*, and its
-file set was one short of the artifacts this change edits.
+**The verification gate itself can actually fail — re-proven, not assumed.** Slice 4's review found that a
+bare `for` loop reports only its last iteration's status, so a failure in any of the first four modules was
+silently discarded. I re-demonstrated both forms against a genuinely failing first module:
 
----
+```text
+bare form:     for m in nonexistent-module engine; do (cd "$m" && go test ...); done          -> exit 0  (masks the failure)
+recorded form: for m in nonexistent-module engine; do (cd "$m" && go test ...) || exit 1; done -> exit 1  (propagates)
+```
 
-## 4. My own rule↔artifact cross-check, including meta-claims
+The `|| exit 1` form is intact in both recorded commands. **It was not regressed.**
 
-Method: extract every falsifiable claim — per-field **and** meta-claims about counts, exclusivity, extent and
-"unchanged" — then check each against the artifact it constrains, at the primary source. This class has now
-produced three defects, so I assumed a fourth rather than sampling.
+**`test_output_hash` is genuinely reproducible.** Normalising away per-package wall-clock durations (trailing
+tab + `<n>.<n>s`, and trailing tab + `(cached)`) reproduces
+`sha256:45ada0f4a3e1c69c…` — **the exact value round 8 recorded**, computed independently on a fresh run on a
+different branch state. That is strong evidence the normalisation recipe is correct and portable, not a
+one-off.
 
-| # | Rule (source) | Constrains | Verdict |
-|---|---|---|---|
-| 1 | `spec.md:7` — no new property anywhere; property set unchanged | schema | ✅ diff touches only descriptions + `required` |
-| 2 | `spec.md:7/26` — `additionalProperties: false` unchanged | schema | ✅ guarded by `assertClosedRecordFlag` |
-| 3 | `spec.md:7` — merge-anchored boundary | schema descriptions | ✅ both `total_wall_clock_hours` and `checkpoint_count` say "merge" |
-| 4 | `spec.md:36` — name which of the **three** outcomes | 4-state `d2AnchorOutcome` | ✅ coherent — three apply to a *recorded* anchor; `absent` is the no-anchor case, governed by `spec.md:40` |
-| 5 | `spec.md:36` — approved-tree MUST NOT be synthesized | `resolveD2T1` | ✅ removed outright; bound by `recorded_anchor_with_no_review_receipt_is_self_asserted_never_verified` |
-| 6 | `spec.md:40/42` — no folder scan; tree verifies, never discovers | `resolveD2T1`, SKILL.md | ✅ `no_recorded_anchor_yields_no_t1_and_attempts_no_folder_scan` passes; `shipped_skill_prose_matches_the_proven_ambiguity_rule` binds prose to proof |
-| 7 | `spec.md:44` — archive-report "Cycle timestamps" section | `design.md:144`, `SKILL.md:160` | ✅ shipped, all four outcome labels present |
-| 8 | **`spec.md:90`** — four names, two reasons | schema | ✅ **CLOSED** (was CRITICAL-1) |
-| 9 | **`spec.md:102`** — "no other name changes" | schema | ✅ **CLOSED**, now bound by `:535` |
-| 10 | **`design.md` D5** — sanctions both drops | schema | ✅ **CLOSED**, stale parenthetical corrected |
-| 11 | `spec.md:106` — three compute-time fields unpopulated, reason stated | schema + SKILL.md | ✅ reason at `SKILL.md:155` |
-| 12 | `spec.md:116` — `sync-check` NOT re-based, annotated | obs #2096 + fixture | ✅ fixture carries the R-020 provenance sentence |
-| 13 | `spec.md:116` — `ondisk-gate` re-based when both anchors resolve | obs #2789 + fixture | ✅ fixture `total_wall_clock_hours = 6.64`, `review_lens_count = 4` |
-| 14 | `design.md` D7 — Engram record byte-mirrored by committed fixture | both fixtures | ✅ both mirror and carry provenance markers |
-| 15 | `design.md:160` — only one shipped git command | shipped skills | ✅ verified by independent grep |
-| 16 | **`sdd-time-estimation:28`** — baseline from three fields **ONLY** | R-019 | ⚠️ **W1 — new** |
-| 17 | **`design.md:165` + File Changes table** — revert = 5 file edits | actual file set | ⚠️ **W2 — new** |
+## 5. Deterministic quality gates
 
-Rows 8/9/10 — round 7's single defect — are the only previously-open items, and all three are closed.
+**`gofmt -l`**: clean across all five modules (no output). **`go vet ./...`**: exit 0 across all five
+modules. Both are in the blocking set; neither fired, so no CRITICAL arises from them.
 
 ---
 
-## WARNING W1 (new) — R-019 starves the consumer this change also edits, undisclosed
+## WARNING W1 (new this round; round 8's W2, open half) — File Changes table still omits the two created files
 
-**Severity: WARNING. Not archive-blocking.** No delta requirement or scenario is falsified; the suite is green.
+`design.md`'s File Changes table (`:130-138`) lists 5 `Modify` rows, 1 `Create` row (the delta spec) and 1
+Engram `Upsert` row. It still does **not** list either file this change creates:
 
-**The rule.** `skills/sdd-time-estimation/SKILL.md:28` (a file this change modifies):
+- `engine/skills/actuals_instrumentation_d2_anchor_test.go` (432 lines, tracked, on `main`)
+- `engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json` (tracked, on `main`)
 
-> From each actuals record's `implementation_hours`, `review_gate_hours`, and `post_review_fix_hours`
-> **ONLY**, build a per-phase agent-compute-time baseline.
+**Why this is worth reporting rather than absorbing.** Round 8 noted the revert line "maps exactly onto
+design.md's own File Changes table", i.e. the two were consistent while both were wrong. Phase 15 fixed one
+and not the other, so `design.md` is now **internally contradictory**: `:165` says "7 files total" while the
+table two sections earlier accounts for 5 files plus the spec plus an Engram upsert, and names neither
+created file. A reader reconciling the two cannot tell which is authoritative.
 
-and, for `n>=3`, compute `implementation_hours / changed_lines`, `implementation_hours / requirement_count`,
-`review_gate_hours / review_lens_count`.
+**Severity: WARNING, not archive-blocking.** It falsifies an inventory note, not an acceptance criterion; no
+requirement or scenario depends on it; the suite is green.
 
-**The sibling rule this change ADDS.** R-019 (`spec.md:106`) — an ADDED requirement, new in this delta —
-says those same three fields "MUST stay unpopulated until a durable source exists and MUST NOT be filled with
-elapsed-calendar-time or any proxy."
+**Remedy (documentation only)**: add two `Create` rows to the File Changes table.
 
-**This is a real change of state, not pre-existing.** I checked both committed fixtures, which mirror the two
-live records: `sync-check` carries `implementation_hours 0.6 / review_gate_hours 0.61 / post_review_fix_hours
-0.15`; `ondisk-gate` carries `0.26 / 1.09 / 0.04`. All three fields were **populated historically and were
-mandatory** (they were in `required` until Phase 12). Going forward they will be **absent**.
+## WARNING W2 (new) — the File Changes row for the file Phase 15 edited is now stale
 
-**The gap.** `sdd-time-estimation` has exactly one missing-field branch, and it is about the wrong fields:
-"if `n>=3` but the **complexity-unit fields** are missing on older records, fall back to qualitative scaling."
-There is **no branch for the phase-hour numerators themselves being absent**. A future reader with n>=3 is
-directed to divide by `changed_lines` using an `implementation_hours` that no longer exists. The skill already
-demonstrates it knows this shape — it explicitly excludes `review_lens_count: 0` records because the division
-"would be undefined" — so the omission is an oversight, not a deliberate silence.
+The table's row for `skills/sdd-time-estimation/SKILL.md` reads:
 
-**Why it matters proportionally.** The proposal's stated motivation is that "calibration is stuck at n=2", and
-R-021's rationale names the calibration sample "stalling at n=2" as the defect being fixed. The change
-genuinely unsticks the **calendar-time** half (`total_wall_clock_hours` + `checkpoint_count` are now durably
-anchored). It simultaneously freezes the **compute-time** half at n=2 indefinitely — which is the honest
-choice under R-019's reasoning, and I am not disputing the choice. What is missing is the **one-line
-disclosure of that consequence to the consumer**, which is this project's own recorded convention
-(`consumer-impact-rule`: a change to what a value MEANS must enumerate its consumers and state the effect).
+> Line 28: "(tiering-go-ahead to archive, …)" → merge; R-009 pins unaffected
 
-**Remedy (documentation only)**: one sentence in `sdd-time-estimation/SKILL.md` stating that under R-019 the
-three phase-hour fields are absent from records written after this change, that such records are excluded from
-the per-phase baseline and the per-unit rate denominators, and that the compute-time `n` stays at 2 until a
-durable source exists. No code, no schema, no requirement change.
+That described the change accurately **before** Phase 15. Phase 15 then added an entire new R-019 fallback
+rule to that same line 28 — the edit round 8 called the important one, and the one 15D.1 exists to verify.
+The change's own inventory now under-describes its most consequential shipped prose edit.
 
-## WARNING W2 (new) — the revert instruction and File Changes table omit two files this change ships
+This is the same meta-claim class as round 7's CRITICAL-1 and round 8's W2: a claim about the change's own
+extent, contradicted by the artifact set. It is the smallest instance yet — one stale table cell.
 
-**Severity: WARNING. Not archive-blocking.**
+**Severity: WARNING, not archive-blocking.** **Remedy**: extend that row to mention the R-019 absent-numerator
+fallback sentence.
 
-`design.md:165` states: "Revert = delta spec + **5 file edits**." That maps exactly onto design.md's own File
-Changes table (1 Create + 5 Modify + 1 Engram Upsert), so it is internally consistent. But the table **omits
-two files this change actually creates**:
+## WARNING W3 (carried, with a material status change) — task 6.3 is no longer structurally blocked
 
-- `engine/skills/actuals_instrumentation_d2_anchor_test.go` (new, ~415 lines)
-- `engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json` (new fixture)
+Rounds 6-8 recorded 6.3 as "not closable within this candidate" because t1 is this change's own merge commit.
+**That blocker is now gone**: the change merged on 2026-08-19. 6.3 is now genuinely exercisable at
+archive/closure, and this change's own closure becomes the instrument's first live self-measurement (n=3).
 
-**Concrete consequence, traced.** The unlisted test file reads shipped prose at runtime —
-`skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)` (`:197`), pinning strings such as
-`"**verify** a commit, never to **discover** one"` and `"the anchor is ambiguous"`. Following the revert
-instruction literally would restore `inception-pipeline/SKILL.md` while leaving that 415-line test in place —
-**turning the suite RED after a "complete" revert.** The orphan fixture is harmless by comparison (the reverted
-contract test no longer references it), but it too would be left behind.
+I resolved both anchors to show it is actionable:
 
-This is the same meta-claim class as CRITICAL-1 — a count claim about the change's own extent, contradicted by
-the artifact set — which is why I am reporting it rather than absorbing it. It is materially smaller: it
-falsifies a rollback note, not an acceptance criterion.
+| Anchor | Resolution | Evidence |
+|---|---|---|
+| **t0** | **FALLBACK branch** — no `sdd/sdd-cycle-timestamp-instrumentation/pipeline-state` observation exists (searched; none found). Earliest own-change observation is **#2859** `sdd/…/explore`, `created_at` **2026-08-13 13:37:34** | R-016 requires the fallback be *named* in `variance_vs_plan` so it is never mistaken for a tiering-go-ahead anchor |
+| **t1** | **`a0374e33ffdf168e98ecb68b5170e46816803401`** (PR #146, last slice to land), committer **2026-08-19T15:42:14-03:00** | its tree `5ab14902aa0d0fd9…` equals slice 4's approved candidate `7343ff5`'s tree, lineage `review-8afca11eac0d548b` → outcome **verified**, not self-asserted |
 
-**Remedy (documentation only)**: add the two Create rows to the File Changes table and restate the revert line
-as "delta spec + 5 file edits + 2 file deletions".
+This change will therefore exercise the *fallback t0* + *verified t1* combination — a real branch of its own
+instrument, which is exactly the evidence 6.3 was written to collect.
 
-## WARNING W3 (carried) — task 6.3 structurally deferred
+## WARNING W4 (new) — nothing has recorded `landing_commit` yet, and the tree is a live 3-way collision
 
-`t1` is this change's own merge commit, so the instrument cannot be exercised end-to-end before the change
-merges. Not closable within this candidate. Unchanged from rounds 6 and 7.
+The shipped rule (`inception-pipeline/SKILL.md:147`) says the archive-report records `landing_commit` "at
+delivery — when the merge has just happened and the values are trivially known". **Delivery has already
+happened and no archive-report exists yet**, so nothing versioned records it. This is the designed sequence
+(the archive-report is created by archive), but it is time-sensitive, and this repository now contains the
+precise hazard the spec warns about:
 
-## WARNING W4 (carried, round 6) — sweep-guard heading recognition
+**Three commits reachable from `main` carry the identical tree `5ab14902aa0d0fd9…`:**
+
+| Commit | Committer time | What it actually is |
+|---|---|---|
+| `04488df` | 2026-08-19T19:03:38+00:00 | branch-sync merge of `origin/main` into a diverged local `main` — **not a slice of this change**, and the chronologically **last** merge |
+| `a0374e3` | 2026-08-19T15:42:14-03:00 (18:42:14Z) | **PR #146 — the last slice to land. This is the correct `landing_commit`.** |
+| `7343ff5` | — | slice 4 tip, the reviewed/approved candidate |
+
+Two concrete failure modes follow, both forbidden by the spec:
+
+1. **Resolving by position** — picking the chronologically last merge on `main` yields `04488df` and
+   inflates t1 by **21 minutes**. The spec says an ambiguous anchor is "never resolved by position".
+2. **Discovering by tree** — the tree has three carriers, so tree-based discovery is ambiguous by the spec's
+   own rule ("a tree hash MUST be used to **verify** a commit, never to **discover** one"). Under that rule
+   t1 would have to be omitted entirely.
+
+Both are avoided **only** by recording `landing_commit = a0374e3` explicitly, after which the tree becomes a
+successful cross-check rather than a search key. This is the spec working as designed — but it only works if
+the value is written down.
+
+**Severity: WARNING, not archive-blocking** (archive is precisely where it gets recorded). Flagged because a
+wrong t1 here would corrupt the first datapoint of the instrument this change exists to build.
+
+## WARNING W5 (carried, round 6) — sweep-guard heading recognition
 
 The abolished-vocabulary span guard recognises only unindented ATX headings. Pre-existing recognition limit,
-accepted, not a regression.
+accepted, not a regression. Unchanged.
 
 ---
 
 ## SUGGESTIONS
 
-- **S1 (carried)** — a substring pin cannot detect a semantic inversion that preserves the pinned bytes.
-  Accepted class limitation (Engram obs #2890).
-- **S2 — roadmap-maker FORBID list (carried adjacent finding, my own severity judgment: SUGGESTION).**
-  `R013_roadmap_maker_no_compute_time_source_invariant` (`:478-493`) hand-maintains five forbidden field names.
-  Phase 14 declined to convert it and rated it lower-severity. **I agree, and I rate it SUGGESTION, not
-  WARNING**, for three reasons I verified: (a) the risk is entirely **prospective** — it concerns a
-  hypothetical future actuals-only field, and this change adds **no** new property (`spec.md:7` forbids it,
-  confirmed against the diff); (b) the five listed names are complete for the schema as it exists today —
-  every compute-time and calendar-time field is covered; (c) the guard is documented in-code as
-  GREEN-by-construction regression protection, not RED coverage, so it is not claiming a strength it lacks.
-  Deriving it from the schema would need a rule distinguishing "actuals-only" from complexity-unit fields —
-  a design question genuinely outside this change's scope.
-- **S3 (new)** — `assertStringList`'s failure message says `frontmatter list length` when asserting
-  `schema.Required`. Cosmetic; both lists are printed, so diagnosis is unimpeded.
-- **S4 (carried from round 7)** — consider a generic guard asserting that every exclusivity/count claim in a
-  spec has a binding test. This class has now produced three CRITICALs and, this round, two further WARNINGs
-  (W1, W2). The class keeps recurring even as each instance is closed.
+- **S1 (carried)** — a substring pin cannot detect a semantic inversion that preserves the pinned bytes
+  (Engram obs #2890). Accepted class limitation. My P2 probe inverted the *meaning* and was caught only
+  because it also changed the bytes.
+- **S2 (carried)** — `R013_roadmap_maker_no_compute_time_source_invariant` hand-maintains five forbidden
+  field names. Still prospective-only; this change adds no property, so the list stays complete. Unchanged
+  at SUGGESTION.
+- **S3 (carried)** — `assertStringList`'s failure message says `frontmatter list length` even when asserting
+  `schema.Required`. Cosmetic; both lists are printed.
+- **S4 (carried, strengthened)** — a generic guard asserting that every exclusivity/count/extent claim has a
+  binding test. **This class has now produced 3 CRITICALs (rounds 1-3, 7) and 4 WARNINGs (round 8 W1/W2,
+  round 9 W1/W2).** Every individual instance keeps getting closed and the class keeps producing new ones,
+  now migrating from specs into design bookkeeping. Worth solving structurally rather than per-instance.
+- **S5 (new)** — `tasks.md` 15B.2 records the anchor test as "415 lines" with the runtime read "at line 197".
+  It is now **432 lines** with the read at **line 210** (slice 3 added the vocabulary sweep). The substantive
+  claim — that it reads shipped `SKILL.md` at runtime — is still true and I re-verified it. Stale line
+  bookkeeping only.
 
 ---
 
-## Spec compliance matrix — 5 requirements, 15 scenarios (re-derived from scratch)
+## Spec compliance matrix — 5 requirements, 15 scenarios
 
 Counted directly from `specs/actuals-instrumentation/spec.md`: 1 MODIFIED + 4 ADDED requirements;
-3 + 7 + 2 + 1 + 2 = 15 scenarios. Every covering test below was observed **PASS at runtime** in this run.
+3 + 7 + 2 + 1 + 2 = 15 scenarios. **Every covering test below was observed PASS at runtime in this run**
+(25 subtests across three test functions, `-count=1`, on merged `main`).
 
 | # | Requirement | Scenario | Covering test (runtime-verified) | Status |
 |---|---|---|---|---|
-| 1 | R-003/4/5 | Divergent calendar time, interruption included | `R014_amendedR007_fixture_pins`, `R004_R005_schema_temporal_boundary_and_interruption` | ✅ COMPLIANT |
+| 1 | R-003/4/5 | Divergent calendar time, interruption included | `R004_R005_schema_temporal_boundary_and_interruption`, `R014_amendedR007_fixture_pins` | ✅ COMPLIANT |
 | 2 | R-003/4/5 | Post-merge bookkeeping replies do not count | `R015_R006_R007_R008_checkpoint_count_description` | ✅ COMPLIANT |
-| 3 | R-003/4/5 | No schema shape change anywhere in the record | `D2_D5_closed_schema_invariant` (properties exact-list + closed flag) | ✅ COMPLIANT |
+| 3 | R-003/4/5 | No schema shape change anywhere in the record | `D2_D5_closed_schema_invariant` | ✅ COMPLIANT |
 | 4 | R-016/17/18 | Anchors resolve and are legible in both stores | `recorded_anchor_with_matching_tree_resolves_verified` | ✅ COMPLIANT |
 | 5 | R-016/17/18 | Anchor with no receipt is self-asserted, never verified | `recorded_anchor_with_no_review_receipt_is_self_asserted_never_verified` | ✅ COMPLIANT |
 | 6 | R-016/17/18 | Unrelated change touching the folder is not the anchor | `no_recorded_anchor_yields_no_t1_and_attempts_no_folder_scan` | ✅ COMPLIANT |
 | 7 | R-016/17/18 | A mis-recorded anchor is rejected, not trusted | `mismatched_tree_is_rejected_not_trusted` | ✅ COMPLIANT |
-| 8 | R-016/17/18 | A change predating the convention omits rather than guesses | `no_recorded_anchor_yields_no_t1_…` | ✅ COMPLIANT |
+| 8 | R-016/17/18 | A change predating the convention omits rather than guesses | `no_recorded_anchor_yields_no_t1_and_attempts_no_folder_scan` | ✅ COMPLIANT |
 | 9 | R-016/17/18 | A change that skipped inception-pipeline still measures | `R016_R017_R018_closure_feedback_anchor_prose` (t0-fallback pins) | ✅ COMPLIANT |
 | 10 | R-016/17/18 | Neither anchor resolves | `R021_required_drops_wall_clock` write-anyway clause | ✅ COMPLIANT |
-| 11 | R-021 | A cycle missing t0 still produces a usable record | `R021_required_drops_wall_clock` + `validate_against_actuals_schema` | ✅ COMPLIANT |
-| 12 | R-021 | **Loosening required does not loosen the shape** | **`D2_D5_closed_schema_invariant:535` exact-list — my probes P1/P2/P3** | ✅ **COMPLIANT (was FAILING)** |
-| 13 | R-019 | Deferral is stated, not silent | `R019_compute_time_deferral_rationale`, `R019_required_drops_compute_time_fields` | ✅ COMPLIANT |
-| 14 | R-020 | Reconstructed record stays annotated, not re-based | `R014_amendedR007_fixture_pins` + fixture provenance sentence | ✅ COMPLIANT |
-| 15 | R-020 | Measured record re-based when both anchors resolve | `R020_skillsValidateOndiskGate_fixture_mirrors_measured_rebased_record` | ✅ COMPLIANT |
+| 11 | R-021 | A cycle missing t0 still produces a usable record | `R021_required_drops_wall_clock` + schema validation | ✅ COMPLIANT |
+| 12 | R-021 | Loosening required does not loosen the shape | `D2_D5_closed_schema_invariant` exact-list guard | ✅ COMPLIANT |
+| 13 | R-019 | Deferral is stated, not silent | `R019_compute_time_deferral_rationale`, `R019_required_drops_compute_time_fields`, **`R019_calibration_absent_numerators_fallback` (new, Batch 10)** | ✅ COMPLIANT (strengthened) |
+| 14 | R-020 | Reconstructed record stays annotated, not re-based | `R014_amendedR007_fixture_pins` + fixture provenance sentence (`total_wall_clock_hours = 36`, explicitly not re-based) | ✅ COMPLIANT |
+| 15 | R-020 | Measured record re-based when both anchors resolve | `R020_skillsValidateOndiskGate_fixture_mirrors_measured_rebased_record` (`total_wall_clock_hours = 6.64`, verified anchor) | ✅ COMPLIANT |
 
 **Scenarios: 15/15 compliant. Requirements: 5/5.**
 
-Scenario 12 upgraded from ❌ FAILING to ✅ COMPLIANT. Every clause of its THEN is now separately bound:
-"removed under this requirement" → `:89`; "separately removed under R-019" → `:333`; **"no other name
-changes" → `:535`** (the clause that had no test in round 7); "no property added or removed" → `:520`;
-"`additionalProperties: false` unchanged" → `:512`.
+Scenario 13 is the one the Batch 10 delta touches, and it is **strictly better covered than in round 8**: its
+"none of the three fields holds a wall-clock-derived substitute" clause is now bound at the consumer skill,
+not only at the schema and the deferral rationale.
 
----
+## Correctness (static evidence)
 
-## Vacuous-pin trend
-
-| Round | 1 | 2 | 3 | 4 | 5 | 6 | 7 | **8** |
-|---|---|---|---|---|---|---|---|---|
-| Vacuous pins | 1 | 3 | 5 | 0 | 0 | 0 | 0 | **0** |
-
-Five consecutive clean rounds. Every pin I probed (P1–P4) had genuine mutation force. I additionally
-confirmed the target subtest is not a `-run` no-match vacuity (`go test -v` shows
-`=== RUN … /D2_D5_closed_schema_invariant` followed by `--- PASS`, not `[no tests to run]`).
-
-**The one vacuity I did hit was in my own harness, not the suite** — see section 2. Caught by hashing the
-file, not by reading the output.
-
-## Pin inventory (independently derived)
-
-| Metric | Count | Method |
+| Requirement | Status | Notes |
 |---|---|---|
-| Substring/membership pins | **112** | string literals in `range []string{…}` blocks + standalone `strings.Contains` + `slices.Contains` across both test files |
-| Positive exact-list guards | **2** | `assertStringList` on `schema.Properties` (13 names) and `schema.Required` (5 names) |
-| Negative-only lists remaining | 3 classes | temporal-boundary FORBID, D2 abolished-vocabulary FORBID, roadmap-maker FORBID — all guard retired prose, no enumerable positive complement (S2) |
+| R-003/4/5 merge boundary | ✅ Implemented | schema descriptions + both shipped SKILL.md say merge |
+| R-016/17/18 anchors | ✅ Implemented | 4-outcome rule shipped; verified/self-asserted/rejected/absent all present |
+| R-019 compute-time deferral | ✅ Implemented | reason stated; consumer now handles absence (Batch 10) |
+| R-020 historical annotations | ✅ Implemented | both fixtures carry correct provenance |
+| R-021 relaxed `required` | ✅ Implemented | 5 names remain; 13 properties; `additionalProperties: false` |
 
-Round 7 counted 116 by a slightly different rule; the delta is methodological, not a change in the suite. The
-material change since round 7 is **+1 positive exact-list guard on `schema.Required`**, which is exactly the
-structural gap round 7 identified.
+## Coherence (design)
+
+| Decision | Followed? | Notes |
+|---|---|---|
+| D2 rev 3 — tree verifies, never discovers | ✅ Yes | and now demonstrably necessary: a live 3-carrier tree collision exists on `main` (W4) |
+| D5 — `required` drop sanctioned, two reasons | ✅ Yes | reconciled in round 8, unchanged since |
+| D7 — Engram records byte-mirrored by fixtures | ✅ Yes | both fixtures mirror and carry provenance |
+| Migration / Rollout — revert surface | ⚠️ Partial | revert line fixed; File Changes table not (W1, W2) |
 
 ---
 
@@ -368,100 +363,102 @@ structural gap round 7 identified.
 
 | Check | Result | Details |
 |-------|--------|---------|
-| TDD Evidence reported | ✅ | apply-progress Batch 9 / Phase 14 rows |
-| All tasks have tests | ✅ | 14B.1 guard + 14B.2 four-direction probe record |
-| RED confirmed (test files exist) | ✅ | both test files present, compile, execute |
+| TDD Evidence reported | ✅ | apply-progress Batch 10 records 15-P1/15-P2/15-P3 with hashes |
+| All tasks have tests | ✅ | 15A.1 prose ↔ 15A.2 subtest; 15B is documentation-only, correctly unpinned |
+| RED confirmed (test files exist) | ✅ | both test files present on `main`, compile, execute |
 | GREEN confirmed (tests pass) | ✅ | 14/14 packages `ok`, exit 0, `-count=1` |
-| Triangulation adequate | ✅ | P1/P2/P3 isolate three distinct mutation directions; P4 pins the order-insensitivity boundary |
-| Safety Net for modified files | ✅ | full suite green before and after; schema restored byte-identical |
-| Apply's probe claims independently reproduced | ✅ | 14B.2(c) reproduced exactly — brand-new unpinned name RED at `:535` |
+| Triangulation adequate | ✅ | 4 distinct substrings pinned; 3 independent mutation directions RED |
+| Safety Net for modified files | ✅ | full suite green before and after every probe; restore byte-identical (`2ed04f4e…`) |
+| Apply's probe claims independently reproduced | ✅ | 15-P1 and 15-P2 reproduced exactly; **P3 added by me and also RED** |
 
 **TDD Compliance**: 7/7 checks passed.
 
-Phase 14's own probe record correctly used `-count=1` throughout and named `requirement_count` where I used
-`review_lens_count` for the same direction; both are names no negative pin mentions, and both go RED.
+Apply's claimed restore hash `sha256:2ed04f4e6499c0c0462e4d2611d47aeee8471f61398adeed264728dc50fdd4df`
+matches my own independently computed baseline **exactly**. Apply's probe record is truthful.
 
 ## Test Layer Distribution
 
-| Layer | Tests | Files | Tools |
-|-------|-------|-------|-------|
-| Unit (pure helpers, table-driven) | `classifyClosedRecordFlag`, `validateAgainstActualsSchema`, markdown slicers/strippers | 1 | `go test` |
-| Integration (real shipped artifacts + real git history) | contract pins, `TestD2AnchorIsVerifiableAndUnambiguous` (6 subtests), sweep guard | 2 | `go test`, read-only `git log`/`git show -s` |
+| Layer | What | Files | Tools |
+|---|---|---|---|
+| Unit | markdown slicers, schema classifiers, table-driven helpers | 1 | `go test` |
+| Integration | contract pins against real shipped artifacts; `TestD2AnchorIsVerifiableAndUnambiguous` against real git history; vocabulary sweep | 2 | `go test`, read-only `git log` / `git show -s` |
 | E2E | — | — | not applicable |
-| **Total packages** | **14 ok** | | |
+| **Total** | **14 packages ok / 25 relevant subtests** | | |
 
 ## Assertion Quality
 
-✅ **All assertions verify real behavior.** No tautologies, no orphan empty checks, no ghost loops, no
-type-only assertions standing alone, no smoke tests. The new `:535` assertion is the strongest kind — an exact
-set equality that fails on insertion, deletion, and substitution alike, proven in three directions.
+✅ **All assertions verify real behaviour.** The new `R019_calibration_absent_numerators_fallback` pins four
+distinct, semantically loaded substrings inside a *scoped* haystack; it has no tautology, no orphan empty
+check, no ghost loop, no type-only assertion, and it calls the production artifact (reads the shipped file)
+rather than a fixture copy. Its scoping is proven load-bearing by probe P3.
 
 **Assertion quality**: 0 CRITICAL, 0 WARNING.
 
 ## Quality Metrics
 
+**Linter (`gofmt -l`)**: ✅ clean, all 5 modules
+**Vet (`go vet ./...`)**: ✅ exit 0, all 5 modules
 **Build**: ✅ all 5 modules, exit 0, empty output
 **Tests**: ✅ 14/14 packages ok, exit 0, `-count=1`
-**Coverage**: ➖ not run — informational and non-blocking per the strict-TDD module.
+**Coverage**: ➖ not run — informational and non-blocking per the strict-TDD module
+
+## Vacuous-pin trend
+
+| Round | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | **9** |
+|---|---|---|---|---|---|---|---|---|---|
+| Vacuous pins | 1 | 3 | 5 | 0 | 0 | 0 | 0 | 0 | **0** |
+
+Six consecutive clean rounds. Every pin probed this round had genuine mutation force in every direction
+tried, including the scoping direction apply did not test.
 
 ---
 
 ## Task completion
 
-**84 total: 80 checked, 4 unchecked.** (Round 7: 75 total / 72 checked; Phase 14 added 9.)
+**91 total: 88 checked, 3 unchecked** (after this round marks 15D.1 complete).
 
 | Task | Status | Assessment |
 |---|---|---|
-| 6.3 — own-closure live exercise (n=3) | unchecked | **Structurally deferred** — t1 is this change's own merge commit. Carried. WARNING W3. |
-| 8E.1 / 13E.1 / 14E.1 — "full suites green; re-run `sdd-verify`" | unchecked | Self-referential verify handoffs. **Satisfied by this run**: suites green, exit 0. Informational. |
+| 15D.1 — re-run `sdd-verify` | **now `[x]`** | **Satisfied by this round.** The Batch 10 delta was inspected at its primary source, mutation-probed in 3 directions, and the full suites/builds re-run on merged `main`. This is the substantive gap review it asked for, not a formality. |
+| 6.3 — own-closure live exercise (n=3) | unchecked | Structurally deferred to archive/closure. **No longer blocked** (W3): both anchors now resolve. |
+| 8E.1 / 13E.1 — "full suites green; re-run `sdd-verify`" | unchecked | Self-referential verify handoffs from earlier remediation phases. Satisfied in substance by this run. Informational. |
 
-No unchecked task represents missing implementation. None is CRITICAL.
-
----
-
-## Delivery planning (carried finding — reported, not a failure)
-
-| Metric | Value |
-|---|---|
-| Tracked modified files | +708 / −21 = **729 lines** |
-| New untracked implementation/test | `actuals_instrumentation_d2_anchor_test.go` + `corrected-actuals-skills-validate-ondisk-gate.json` ≈ **430 lines** |
-| **Authored implementation + test total** | **≈ 1159 lines** |
-| OpenSpec planning artifacts | ~2600 lines (excluded from authored risk count) |
-| Review budget | 400 lines |
-| `delivery_strategy` | `auto-chain` |
-
-**Implication**: ≈ **2.9×** the 400-line budget (up ~15 lines from round 7's ≈1144 — the Phase 14 guard plus
-its comment). Under `auto-chain` this requires chained PR slices, each with clear start, finish, autonomous
-scope, verification and rollback. PR #1 targets the feature/tracker branch; later child PRs target the
-immediately previous slice branch. **This is a delivery-planning fact for the orchestrator, not a
-verification failure.**
+**No unchecked task represents missing implementation. None is CRITICAL.** The three that remain are one
+deferred closure exercise and two historical self-referential handoffs; blocking on a task whose content is
+"run the phase that is currently running" would be a deadlock, which is why they are reported rather than
+treated as incomplete work.
 
 ---
 
 ## What I did NOT find
 
-Stated explicitly, because eight rounds is a lot and a manufactured finding would be worse than none:
+Stated explicitly, because nine rounds is a lot and a manufactured finding would be worse than none:
 
-- **No weakening.** R-021 kept every invariant it had; the exclusivity clause was narrowed to the truth and
-  is now the only one of the three with a binding test.
-- **No new rule↔artifact contradiction at requirement level.** Rows 1–15 of my cross-check are clean except
-  the two WARNINGs, neither of which falsifies a requirement or scenario.
-- **No vacuous pin in the suite.** The only vacuity this round was in my own first probe harness.
-- **No regression from Phase 14.** The guard is additive; the schema is byte-identical to round 7's baseline.
-- **No reopening of settled findings.** R-019's side, the `approved_tree` four-state rule, obs #2789/#2096 —
-  all confirmed clean by round 7 and untouched here.
+- **No CRITICAL, no blocker, no regression.** The schema is byte-identical to round 8's baseline; the
+  `|| exit 1` failure propagation was not reverted; `test_output_hash` re-derives to round 8's exact value.
+- **No vacuous pin**, in the suite or in my own harness (which aborts on a non-landing mutation).
+- **No consumer left starved.** My independent sweep found exactly one rate-computing consumer and it is
+  fixed and test-bound.
+- **No weakening of any requirement or scenario** to make Batch 10 pass. The delta only *added* coverage.
+- **No new contradiction at requirement level.** Both new WARNINGs are design bookkeeping — a table with two
+  missing rows and one stale cell — and neither falsifies a requirement, a scenario, or shipped behaviour.
 
 ## Archive-ready?
 
-**YES.** Zero CRITICAL, zero blockers, suite green, build clean, 5/5 requirements, 15/15 scenarios.
+**YES.** Zero CRITICAL, zero blockers, 5/5 requirements, 15/15 scenarios, suites green, build clean, vet and
+gofmt clean, on merged `main`.
 
-The two new WARNINGs are documentation-only and do not gate archive under the phase contract (CRITICAL blocks;
-WARNING does not). They are genuine and should be fixed — ideally as a single small edit alongside archive —
-but neither changes code, tests, schema, or any requirement, and neither can regress the instrument.
+**The certification gap round 8 declared is now closed.** Round 8's `verdict: pass` covered the candidate
+only through Batch 9; this round covers Batch 10 and re-confirms everything else, so no batch of this change
+remains uncertified. Task 15D.1 can be marked complete honestly.
 
-**Convergence is genuine.** Round 6 called it clean and two real defects followed, so I did not assume
-cleanliness: I re-derived the schema diff, re-probed the guard in four directions with a harness that fails
-loudly on a non-landing mutation, and swept meta-claims with wider predicates than Phase 14 used. That sweep
-found two more issues — both an order of magnitude smaller than round 7's, both in prose, neither touching the
-shipped instrument's behavior. That is what convergence looks like: the findings are getting smaller and
-moving out of the contract and into its documentation.
+The five WARNINGs are all documentation or process-sequencing items. W1/W2 are two-line edits to a table.
+W3/W4 are instructions for whoever archives: record `landing_commit = a0374e3` in the archive-report and let
+closure-feedback resolve t0 through the documented fallback. W5 is a pre-existing accepted limit. None
+changes code, tests, schema, or any requirement, and none can regress the instrument.
+
+**On convergence.** Round 8 said findings were "getting smaller and moving out of the contract and into its
+documentation". Round 9 continues exactly that: the two new findings are a missing table row and a stale
+table cell — the smallest instances the recurring meta-claim class has produced. The one genuinely new risk
+(W4) is not a defect in the change at all; it is the change's own instrument correctly detecting an ambiguity
+in the repository it will have to measure, which is the instrument working.
