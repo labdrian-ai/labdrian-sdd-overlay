@@ -17,6 +17,14 @@ const (
 	inceptionPipelineSkillRelPath  = "skills/inception-pipeline/SKILL.md"
 	roadmapMakerSkillRelPath       = "skills/roadmap-maker/SKILL.md"
 	correctedActualsFixtureRelPath = "engine/skills/testdata/corrected-actuals-sync-check-repo-behind-origin.json"
+	// correctedActualsSkillsValidateOndiskGateFixtureRelPath mirrors Engram obs #2789
+	// (sdd/skills-validate-ondisk-gate/actuals, revision 3) so spec.md scenario 14
+	// ("Measured record re-based when both anchors resolve") is guarded by a committed
+	// artifact instead of a claim about live-only data. Scenario 13's sibling case
+	// (obs #2096) already sets this precedent via correctedActualsFixtureRelPath above —
+	// verify round 5's W-B finding is that the same mechanism was never applied here, not
+	// that it could not be (Engram obs #2890).
+	correctedActualsSkillsValidateOndiskGateFixtureRelPath = "engine/skills/testdata/corrected-actuals-skills-validate-ondisk-gate.json"
 
 	// Section anchors for the marker pins below. A pinned marker only counts when it
 	// lives in the section that owns it, so relocating it into an unrelated section
@@ -42,7 +50,7 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		// property must not satisfy this gate.
 		wallClock := actualsSchemaPropertyDescription(t, schema, "total_wall_clock_hours")
 		for _, want := range []string{
-			"from the tiering go-ahead checkpoint to archive",
+			"from the tiering go-ahead checkpoint to merge",
 			"including interruption gaps",
 		} {
 			if !strings.Contains(wallClock, want) {
@@ -50,12 +58,58 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			}
 		}
 
+		// checkpoint_count shares total_wall_clock_hours' boundary (R-003/R-004/R-005), so the
+		// merge anchor must move on both descriptions together, not only on the field whose
+		// name mentions "clock".
+		checkpointDesc := actualsSchemaPropertyDescription(t, schema, "checkpoint_count")
+		if !strings.Contains(checkpointDesc, "tiering-go-ahead-to-merge boundary") {
+			t.Fatalf("checkpoint_count description must contain %q, got %q", "tiering-go-ahead-to-merge boundary", checkpointDesc)
+		}
+
 		// The FORBID stays whole-file on purpose. For a negative assertion, whole-file
 		// scope is strictly stronger than description scope: the retired boundary phrase
 		// must not reappear anywhere, including on checkpoint_count, which now shares the
-		// tiering-go-ahead-to-archive boundary and could regress the same way.
-		if strings.Contains(schemaRaw, "from first apply to archive") {
-			t.Fatal("schema must not retain the old temporal boundary phrase")
+		// tiering-go-ahead-to-merge boundary and could regress the same way.
+		for _, forbidden := range []string{
+			"from first apply to archive",
+			"checkpoint to archive",
+			"tiering-go-ahead-to-archive boundary",
+		} {
+			if strings.Contains(schemaRaw, forbidden) {
+				t.Fatalf("schema must not retain the old temporal boundary phrase %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("R021_required_drops_wall_clock", func(t *testing.T) {
+		schemaRaw := readRepoFile(t, repoRoot, actualsSchemaRelPath)
+		schema := decodeActualsSchema(t, schemaRaw)
+
+		if slices.Contains(schema.Required, "total_wall_clock_hours") {
+			t.Fatalf("schema required list must not contain %q (R-021), got %v", "total_wall_clock_hours", schema.Required)
+		}
+		// R-021 relaxes which fields are mandatory, not which fields exist: the property
+		// itself must still be declared, only demoted out of `required`.
+		if _, ok := schema.Properties["total_wall_clock_hours"]; !ok {
+			t.Fatal("schema must still declare property total_wall_clock_hours (R-021 removes it from required only, not from properties)")
+		}
+
+		// The schema relaxation alone does not prove closure-feedback actually WRITES the
+		// record when total_wall_clock_hours is unresolved (spec.md scenarios "A cycle
+		// missing t0 still produces a usable record" and "Neither anchor resolves": "every
+		// other resolved field is still written"). This shipped behavioral clause in
+		// SKILL.md's Validate step was entirely unpinned before this batch: deleting it, or
+		// inverting it to the all-or-nothing rule R-021 exists to abolish, left the whole
+		// suite green (verify round 4, W1). Pinned at its unique site — both substrings
+		// occur exactly once in the file.
+		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		for _, want := range []string{
+			"`total_wall_clock_hours` is validly absent when its anchors do not resolve (R-021)",
+			"every other resolved field is still required",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("closure-feedback Validate step must contain %q (R-021 write-anyway clause)", want)
+			}
 		}
 	})
 
@@ -71,19 +125,61 @@ func TestActualsInstrumentationContract(t *testing.T) {
 
 	t.Run("R009_calibration_excludes_calendar_time", func(t *testing.T) {
 		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
+		// The REQUIRE pins are scoped to the CALIBRATION list item itself, matching
+		// R019_calibration_absent_numerators_fallback below. A positive pin checked
+		// whole-file is satisfied by the same wording appearing anywhere in the
+		// document, so relocating a clause out of the CALIBRATION rule into an
+		// unrelated section would keep this gate green while the rule it guards no
+		// longer says it.
+		hardRules := markdownSectionBody(t, skill, timeEstimationHardRulesHeading)
+		rule := markdownListItemContaining(t, hardRules, timeEstimationHardRulesHeading, "CALIBRATION")
 		for _, want := range []string{
 			"NEVER an input to the agent-compute-time baseline",
 			"interruption-clean residual samples with positive `checkpoint_count`",
 			"`(total_wall_clock_hours − sum(phase hours)) / checkpoint_count`",
 			"Exclude any residual known or narrated to include a session, rate-limit, or provider interruption",
 			"never subtract a guessed interruption amount",
+			// D4: boundary co-move, archive → merge (task 4.1). Previously
+			// unpinned entirely — reverting "merge" to "archive" on this line
+			// left the whole suite green (verify round 3, W4).
+			"tiering-go-ahead to merge, including interruption gaps",
 		} {
-			if !strings.Contains(skill, want) {
-				t.Fatalf("CALIBRATION rule must contain %q", want)
+			if !strings.Contains(rule, want) {
+				t.Fatalf("%s CALIBRATION rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
 			}
 		}
-		if strings.Contains(skill, "and `total_wall_clock_hours`, build a per-phase agent-compute-time baseline") {
-			t.Fatal("CALIBRATION rule must not blend total_wall_clock_hours into the compute baseline")
+		// The FORBID stays whole-file on purpose, for the same reason the schema
+		// FORBID above does: for a negative assertion, whole-file scope is strictly
+		// stronger than list-item scope. The retired boundary phrase must not
+		// reappear ANYWHERE in the skill, not merely outside this one rule.
+		for _, forbidden := range []string{
+			"and `total_wall_clock_hours`, build a per-phase agent-compute-time baseline",
+			"tiering-go-ahead to archive",
+		} {
+			if strings.Contains(skill, forbidden) {
+				t.Fatalf("CALIBRATION rule must not retain %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("R019_calibration_absent_numerators_fallback", func(t *testing.T) {
+		// R-019 mandates implementation_hours/review_gate_hours/post_review_fix_hours stay
+		// unpopulated until a durable source exists, which starves this skill's own compute-time
+		// numerators — the CALIBRATION rule builds its baseline from exactly these three fields
+		// "ONLY" (R009 above). Scoped to the CALIBRATION list item itself, not the whole file, so
+		// a substring hit elsewhere in Hard Rules cannot satisfy this gate.
+		skill := readRepoFile(t, repoRoot, timeEstimationSkillRelPath)
+		hardRules := markdownSectionBody(t, skill, timeEstimationHardRulesHeading)
+		rule := markdownListItemContaining(t, hardRules, timeEstimationHardRulesHeading, "CALIBRATION")
+		for _, want := range []string{
+			"WHEN one or more of these three fields is absent under R-019",
+			"the record supplies NO compute-time numerator for the affected phase",
+			"never substitute `total_wall_clock_hours` or any other elapsed-time figure in its place",
+			"the per-unit compute-time rate cannot be computed, so confidence falls back to the disclosed bootstrap defaults / qualitative scaling regardless of calibration `n`",
+		} {
+			if !strings.Contains(rule, want) {
+				t.Fatalf("%s CALIBRATION rule must contain %q, got %q", timeEstimationHardRulesHeading, want, rule)
+			}
 		}
 	})
 
@@ -116,6 +212,184 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 	})
 
+	t.Run("R016_R017_R018_closure_feedback_anchor_prose", func(t *testing.T) {
+		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		for _, want := range []string{
+			// D4: boundary co-move, archive → merge.
+			"through merge",
+			// D2 REVISION 3: the anchor is recorded in a versioned artifact at
+			// delivery — landing_commit + approved_tree — and is verifiable
+			// rather than merely asserted.
+			"landing_commit",
+			"approved_tree",
+			"verifiable rather than merely asserted",
+			// D2 REVISION 3: a mis-recorded anchor is rejected, not trusted
+			// (R-017 scenario "A mis-recorded anchor is rejected, not trusted").
+			// Pinned as the operative rejection clause rather than a bare word,
+			// because a bare pin cannot distinguish the RULE from any sentence
+			// that merely names the outcome. Note the case-collision rationale
+			// this comment used to give was wrong: strings.Contains is
+			// case-sensitive, uppercase "REJECTED" occurs exactly once in the
+			// shipped prose, and the "verified, self-asserted, rejected, or
+			// absent" sentence spells it lowercase, so it could never have
+			// satisfied a bare uppercase pin. The operative-clause pin is still
+			// the right shape — it binds the rule's own wording, not the
+			// vocabulary — only the stated reason needed correcting.
+			"the anchor is REJECTED, t1 is omitted, and the mismatch is disclosed in `variance_vs_plan`",
+			// D2 REVISION 3: the exact verification command, previously unpinned
+			// entirely — the design's Threat Matrix claimed RED coverage for the
+			// shipped git command shape that did not exist (verify round 3, W3).
+			"`git show -s --format=%T <landing_commit>` MUST equal the recorded `approved_tree`",
+			// D2 REVISION 3: a tree verifies a commit, it never discovers one.
+			// Pin the operative clause, not the bare word "earliest": that word
+			// survives whether the rule is stated or negated, so pinning it alone
+			// is vacuous — it passed unchanged while the rule was inverted.
+			"**verify** a commit, never to **discover** one",
+			// A shared tree cannot identify a landing commit; it is omitted, not guessed.
+			"the anchor is ambiguous",
+			// Phase 13 (orchestrator finding, verify round 6 W2): `approved_tree`
+			// was previously synthesized from `landing_commit`'s own tree when no
+			// review ran, making the mandated check compare a value against
+			// itself — structurally unfailable, so reporting it as "verified" was
+			// a fabricated assurance. `approved_tree` is now recorded ONLY when
+			// an independent receipt exists. Pinned as the operative rule clause,
+			// not a bare word, so the pin cannot survive the tautology's return.
+			"`approved_tree` MUST NOT be recorded at all",
+			// Phase 13: a no-review anchor still measures — it is USED, just
+			// never independently checked — recorded as self-asserted, not
+			// verified. This is the third outcome state this batch adds.
+			"the anchor is recorded as **self-asserted**: used, but with no independent authority to check it against",
+			// Phase 13: the resolution-outcome vocabulary itself, so a reader can
+			// never mistake a self-asserted anchor for a verified one. Pinned as
+			// the full four-way enumeration, not the bare word "self-asserted",
+			// so a rewrite that drops one of the other three states also fails.
+			"verified, self-asserted, rejected, or absent",
+			// D3: the archive-report section both stores must carry. Pinned as the
+			// operative Execute-item clause, not the bare heading name: "Cycle
+			// Timestamps" alone occurs at two sites (this Execute item and the
+			// Gotchas carve-out reference), so deleting the Execute item in full
+			// left the bare pin green — mutation-proven non-covering.
+			"Append a `## Cycle Timestamps` section to the archived",
+			// D1: t0 is read from the typed field, never the rendered footer.
+			"typed `created_at` field",
+			// D1: engram export selected by topic_key, never a rendered footer parse.
+			"engram export",
+			// D1: a pipeline-state observation with no topic_key is unresolvable.
+			"no `topic_key`",
+			// D1b: t0 falls back to the earliest created_at among the change's own
+			// observations when no pipeline-state observation exists — a change
+			// entered directly at SDD never runs inception-pipeline, and this is the
+			// exact path this very change takes at its own closure. Previously
+			// unpinned entirely.
+			"t0 falls back to the earliest `created_at` among the change",
+			// D4: post-merge archive-authorization lag is excluded from
+			// checkpoint_count's boundary (R-003/4/5 scenario "Post-merge
+			// bookkeeping replies do not count"). Pinned as the operative
+			// checkpoint_count clause, not the bare word "bookkeeping": that word
+			// also appears on the unrelated total_wall_clock_hours sentence, so the
+			// bare pin survived deletion of this clause — mutation-proven
+			// non-covering.
+			"excluded from this count as post-boundary bookkeeping",
+			// D3: the append-only carve-out to closure-feedback's own "do not modify
+			// engine outputs" rule. Pinned as the operative Execute-item-3 clause,
+			// not the bare phrase "append-only carve-out": that phrase also
+			// appears in the unrelated Gotchas cross-reference sentence, so the
+			// bare pin survived deletion of the Execute item itself —
+			// mutation-proven non-covering (verify round 3, W2).
+			"a named, delimited, append-only carve-out to closure-feedback's own \"do NOT modify engine outputs\" rule",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("closure-feedback must contain %q", want)
+			}
+		}
+		for _, forbidden := range []string{
+			"through archive",
+			// D2 REVISION 3 removes the receipt-bound/path-scan two-rule
+			// resolution outright — neither name may survive anywhere in the
+			// prose, and "first-parent" scanning specifically must not
+			// reappear as a t1 resolution mechanism (design.md D2 revision 3,
+			// "No heuristic fallback").
+			"receipt-bound",
+			"path-scan",
+			"first-parent",
+			// C1 (round 2): the abolished positional/earliest-carrier resolution
+			// rule — "the earliest commit on the default branch carrying that
+			// tree MUST be chosen" — inverted the ratified "verify, never
+			// discover" rule. This is the structural guard work unit 4 adds so
+			// the rule cannot silently re-invert: nothing previously bound this
+			// FORBID list to positional-resolution language at all.
+			"carrying that tree MUST be chosen",
+			// Phase 13: the abolished tautological definition of `approved_tree`
+			// — "the receipt's final_candidate_tree when review ran... otherwise
+			// landing_commit's own tree" — made the mandated verification check
+			// compare a value against itself, so it could never fail. Pinned by
+			// its exact retired substring so this specific defect class cannot
+			// silently return under a differently-worded FORBID list.
+			"otherwise `landing_commit`'s own tree",
+		} {
+			if strings.Contains(skill, forbidden) {
+				t.Fatalf("closure-feedback must not retain the abolished D2 phrase %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("R019_compute_time_deferral_rationale", func(t *testing.T) {
+		// R-019: the three compute-time fields' deferral reason must be stated
+		// in shipped documentation, not only in this change's own proposal/spec
+		// (verify's C3 finding: the rationale existed nowhere else).
+		skill := readRepoFile(t, repoRoot, inceptionPipelineSkillRelPath)
+		for _, want := range []string{
+			"implementation_hours",
+			"review_gate_hours",
+			"post_review_fix_hours",
+			"session-transient",
+			"no timestamp fields",
+			"no structured subagent durations",
+		} {
+			if !strings.Contains(skill, want) {
+				t.Fatalf("closure-feedback must state the R-019 compute-time deferral rationale, missing %q", want)
+			}
+		}
+	})
+
+	t.Run("R019_required_drops_compute_time_fields", func(t *testing.T) {
+		// Orchestrator finding (phase 12, human diff review after verify round 6 passed):
+		// R-019 says the three compute-time fields "MUST stay unpopulated until a durable
+		// source exists" and its own scenario opens "GIVEN a closed record with the three
+		// compute-time fields empty" — but all six verify rounds pinned only the rationale
+		// prose (R019_compute_time_deferral_rationale above), never that a record actually
+		// CONFORMING to R-019 validates against the shipped schema. Before this fix all three
+		// fields were still in the schema's `required` list, so an R-019-conforming record was
+		// REJECTED by the very schema this change ships, and the Validate rule's own "report
+		// and STOP" clause fired on the one thing exercising the instrument end to end (task
+		// 6.3, this change's own closure).
+		schemaRaw := readRepoFile(t, repoRoot, actualsSchemaRelPath)
+		schema := decodeActualsSchema(t, schemaRaw)
+
+		for _, field := range []string{"implementation_hours", "review_gate_hours", "post_review_fix_hours"} {
+			if slices.Contains(schema.Required, field) {
+				t.Fatalf("schema required list must not contain %q (R-019: no durable source exists yet), got %v", field, schema.Required)
+			}
+			// Same non-destructive treatment total_wall_clock_hours already received under
+			// R-021: `required` is a floor, not a prohibition. The property itself, and any
+			// historical record that DOES carry a narrative value (obs #2789, obs #2096, and
+			// their committed fixture mirrors), stay valid and untouched.
+			if _, ok := schema.Properties[field]; !ok {
+				t.Fatalf("schema must still declare property %q (R-019 removes it from required only, not from properties)", field)
+			}
+		}
+
+		// Binds the rule to the artifact: constructs the exact record R-019's own scenario
+		// describes and validates it against the SHIPPED schema read above, not a private
+		// copy — so a future re-add to `required` fails THIS assertion, not only the negative
+		// pins above (which would keep passing against a schema nobody re-validated a record
+		// with — that gap is exactly what six verify rounds missed).
+		record := r019ConformingRecordFixture()
+		if err := validateAgainstActualsSchema(schema, record); err != nil {
+			t.Fatalf("an R-019-conforming record (three compute-time fields absent) must validate against the shipped schema: %v", err)
+		}
+	})
+
 	t.Run("R014_amendedR007_fixture_pins", func(t *testing.T) {
 		fixtureRaw := readRepoFile(t, repoRoot, correctedActualsFixtureRelPath)
 		var fixture map[string]any
@@ -144,6 +418,11 @@ func TestActualsInstrumentationContract(t *testing.T) {
 			"= 12",
 			"Durable floor: 2 of 12",
 			"AMB-001",
+			// R-020: the boundary-provenance annotation task 5.1 added to this
+			// fixture. Previously unpinned entirely — scenario 13 ("Reconstructed
+			// record stays annotated, not re-based") was UNTESTED (verify round 3,
+			// W5).
+			"was NOT re-based to the merge-anchored boundary",
 		} {
 			if !strings.Contains(variance, want) {
 				t.Fatalf("fixture variance_vs_plan must contain %q", want)
@@ -151,6 +430,55 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		if strings.Contains(variance, "the only checkpoint inception-pipeline itself durably records") {
 			t.Fatal("fixture variance_vs_plan must not claim tiering go-ahead is the only durably recorded checkpoint")
+		}
+	})
+
+	t.Run("R020_skillsValidateOndiskGate_fixture_mirrors_measured_rebased_record", func(t *testing.T) {
+		// spec.md scenario 14 ("Measured record re-based when both anchors resolve, else
+		// annotated") was PARTIAL through verify round 5: its only evidence was live Engram
+		// data (obs #2789), and the exemption reason given — "live Engram data, not shipped
+		// repository content" — is falsified by scenario 13's own construction two subtests
+		// above, which is ALSO live Engram data (obs #2096) and IS guarded, through
+		// correctedActualsFixtureRelPath. This fixture is the same mechanism applied to
+		// #2789: a committed mirror of the live record, byte-checked against it at apply
+		// time (see apply-progress.md for the `cmp` proof), read here so a future drift
+		// between the mirror and either the shipped rule or the record's own claims fails
+		// the suite instead of silently going stale.
+		fixtureRaw := readRepoFile(t, repoRoot, correctedActualsSkillsValidateOndiskGateFixtureRelPath)
+		var fixture map[string]any
+		if err := json.Unmarshal([]byte(fixtureRaw), &fixture); err != nil {
+			t.Fatalf("fixture must be valid JSON: %v", err)
+		}
+
+		// The scenario is true only when the value itself carries the merge-anchored
+		// re-based number, not the retired pre-merge one (6.4) it superseded.
+		wallClock, ok := fixture["total_wall_clock_hours"].(float64)
+		if !ok || wallClock != 6.64 {
+			t.Fatalf("fixture total_wall_clock_hours = %v, want 6.64 (the merge-anchored re-based value, not the retired 6.4)", fixture["total_wall_clock_hours"])
+		}
+
+		variance, ok := fixture["variance_vs_plan"].(string)
+		if !ok {
+			t.Fatal("fixture variance_vs_plan must be a string")
+		}
+		for _, want := range []string{
+			// Names the re-basing itself: FROM the retired archive-anchored value (6.4)
+			// TO the merge-anchored one (6.64), through the merge boundary R-003/4/5
+			// introduced. Without this sentence, nothing distinguishes a re-based record
+			// from one that merely happens to hold the number 6.64.
+			"measured independently from the tiering go-ahead checkpoint through MERGE (re-based by sdd-cycle-timestamp-instrumentation; was 6.4 under the retired archive-anchored boundary)",
+			// Names t0's anchor: the typed pipeline-state observation, primary source
+			// (not the R-016/17/18 fallback) — one of the two anchors scenario 14
+			// requires to "both resolve".
+			"t0 = 2026-08-05 14:12:55 (obs #2772, sdd/skills-validate-ondisk-gate/pipeline-state, typed `created_at` field, primary source",
+			// Names t1's anchor: the landing commit, verified via its own tree, resolved
+			// through the archive-report's versioned prose (D2 revision 3) — the other
+			// of the two anchors scenario 14 requires.
+			"commit 79995ea1733fce362b86d3727184eb539f2c1832, committer timestamp 2026-08-05T17:51:17-03:00), resolution path: this change's own archive-report",
+		} {
+			if !strings.Contains(variance, want) {
+				t.Fatalf("fixture variance_vs_plan must contain %q", want)
+			}
 		}
 	})
 
@@ -229,6 +557,21 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		}
 		assertStringList(t, actualsMapKeys(schema.Properties), wantProperties)
 
+		// Positive exact-list assertion on schema.Required, mirroring the assertStringList
+		// guard above for schema.Properties. Verify round 7 (CRITICAL-1) found this list was
+		// pinned only by NEGATIVE membership checks (R021_required_drops_wall_clock and
+		// R019_required_drops_compute_time_fields each assert one or three specific names are
+		// ABSENT); a negative pin cannot detect any OTHER name leaving the list, which is
+		// exactly how spec.md's R-021 scenario ("total_wall_clock_hours is the only name
+		// removed from required") went silently false when Phase 12 additionally dropped three
+		// more names for R-019's separate reason — the suite stayed green throughout. This
+		// exact-list assertion closes the class: any name entering OR leaving `required`, for
+		// any reason and named by any pin or none, now fails here independently.
+		wantRequired := []string{
+			"change_name", "project", "approval_decision", "scope_drift_notes", "variance_vs_plan",
+		}
+		assertStringList(t, schema.Required, wantRequired)
+
 		// The fixture is committed, so an unreadable path is a real failure — read it
 		// through readRepoFile, which fails loudly, instead of skipping the two
 		// schema/fixture agreement checks below on any read error.
@@ -245,6 +588,92 @@ func TestActualsInstrumentationContract(t *testing.T) {
 		for _, req := range schema.Required {
 			if _, ok := fixture[req]; !ok {
 				t.Fatalf("schema required field %q missing from fixture", req)
+			}
+		}
+	})
+}
+
+// TestAbolishedVocabularySweptFromCurrentSections is the structural sweep guard Phase 9
+// (work unit 2) adds. Three consecutive verify rounds found the same defect class — abolished
+// path-scan/first-parent/receipt-bound vocabulary surviving in a CURRENT section — because each
+// remediation fixed only the exact line a report cited by number and never swept the rest of
+// the artifact (Engram obs #2888, "a file:line citation is a SAMPLE, never the extent"). This
+// test converts "somebody remembered to sweep" into "the suite fails if anyone doesn't": it
+// greps every shipped artifact this change's D2 revision 3 touches for that vocabulary, with
+// exactly one exception — design.md's own explicitly-marked
+// "### D2 (revision 2 — SUPERSEDED, retained for provenance)" section, which intentionally
+// preserves the abolished mechanism's description for historical record. Every other file, and
+// every other section of design.md, must have zero hits.
+func TestAbolishedVocabularySweptFromCurrentSections(t *testing.T) {
+	repoRoot := actualsInstrumentationRepoRoot(t)
+	const designRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/design.md"
+	const proposalRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/proposal.md"
+	const specRelPath = "openspec/changes/sdd-cycle-timestamp-instrumentation/specs/actuals-instrumentation/spec.md"
+	const supersededHeading = "### D2 (revision 2 — SUPERSEDED, retained for provenance)"
+	// The exact heading that terminates the SUPERSEDED carve-out. Pinned by exact text
+	// (including its "###" level) rather than inferred by level — see stripMarkdownSection's
+	// doc comment and verify round 4's W2 finding.
+	const supersededTerminatorHeading = "### D3 — Where anchors are written"
+
+	abolished := []string{
+		"path-scan",
+		"first-parent",
+		"receipt-bound",
+		"carrying that tree MUST be chosen",
+		"earliest commit on the default branch carrying",
+		// Phase 13: the abolished tautological `approved_tree` definition — see
+		// R016_R017_R018_closure_feedback_anchor_prose's FORBID list above for the
+		// full rationale. Swept across every shipped artifact, not only SKILL.md,
+		// per Engram obs #2888 ("a citation is a sample, never the extent").
+		"otherwise `landing_commit`'s own tree",
+	}
+
+	t.Run("design_md_current_sections", func(t *testing.T) {
+		doc := readRepoFile(t, repoRoot, designRelPath)
+		current, err := stripMarkdownSection(doc, supersededHeading, supersededTerminatorHeading)
+		if err != nil {
+			t.Fatalf("stripping design.md's SUPERSEDED block (heading %q, terminator %q): %v — the terminator heading may have been renamed, deleted, or demoted (verify round 4, W2)", supersededHeading, supersededTerminatorHeading, err)
+		}
+		if current == doc {
+			t.Fatal("stripMarkdownSection made no change — the SUPERSEDED heading text drifted, so this guard is not exercising the carve-out it claims to")
+		}
+		for _, word := range abolished {
+			if strings.Contains(current, word) {
+				t.Fatalf("design.md's CURRENT (non-SUPERSEDED) sections must not contain %q — a file:line citation is a SAMPLE, never the extent (Engram obs #2888)", word)
+			}
+		}
+	})
+
+	t.Run("design_md_superseded_block_still_carries_the_provenance", func(t *testing.T) {
+		// The inverse guard: the SUPERSEDED block is a deliberate carve-out, not a second
+		// place for the vocabulary to quietly vanish from. If a future edit deletes the
+		// whole block, this must fail loudly rather than let the check above pass vacuously
+		// only because there is nothing left to find anywhere.
+		doc := readRepoFile(t, repoRoot, designRelPath)
+		body, err := sliceMarkdownSection(doc, supersededHeading)
+		if err != nil {
+			t.Fatalf("design.md must still carry the heading %q: %v", supersededHeading, err)
+		}
+		if !strings.Contains(body, "receipt-bound") || !strings.Contains(body, "path-scan") {
+			t.Fatal("design.md's SUPERSEDED block must still document the abolished receipt-bound/path-scan mechanism it retains for provenance")
+		}
+	})
+
+	t.Run("other_shipped_artifacts_have_no_carve_out", func(t *testing.T) {
+		for _, path := range []string{
+			proposalRelPath,
+			specRelPath,
+			inceptionPipelineSkillRelPath,
+			timeEstimationSkillRelPath,
+			actualsSchemaRelPath,
+			correctedActualsFixtureRelPath,
+			correctedActualsSkillsValidateOndiskGateFixtureRelPath,
+		} {
+			body := readRepoFile(t, repoRoot, path)
+			for _, word := range abolished {
+				if strings.Contains(body, word) {
+					t.Fatalf("%s must not contain %q — this file has no SUPERSEDED carve-out", path, word)
+				}
 			}
 		}
 	})
@@ -390,6 +819,43 @@ func decodeActualsSchema(t *testing.T, schemaRaw string) actualsSchemaDocument {
 	return schema
 }
 
+// validateAgainstActualsSchema is a minimal closed-schema validator over the decoded actuals
+// schema: every name in schema.Required MUST be present in record, and — because the schema
+// declares additionalProperties: false — every key in record MUST be declared in
+// schema.Properties. It exists so a test can prove a candidate record actually VALIDATES,
+// not merely that a name is absent from the required list; the two are not the same claim
+// (a record can omit a field the schema still requires and just never get tested against
+// it). Pure and t-free so it can be table-tested directly, in the same style as
+// classifyClosedRecordFlag above.
+func validateAgainstActualsSchema(schema actualsSchemaDocument, record map[string]any) error {
+	for _, required := range schema.Required {
+		if _, ok := record[required]; !ok {
+			return fmt.Errorf("required property %q is missing from record", required)
+		}
+	}
+	for key := range record {
+		if _, ok := schema.Properties[key]; !ok {
+			return fmt.Errorf("record property %q is not declared in schema (additionalProperties: false)", key)
+		}
+	}
+	return nil
+}
+
+// r019ConformingRecordFixture returns a record satisfying R-019's own scenario ("a closed
+// record with the three compute-time fields empty"): every field the schema still requires
+// after this fix is present, and implementation_hours/review_gate_hours/post_review_fix_hours
+// — the three fields R-019 says MUST stay unpopulated until a durable source exists — are
+// absent, exactly as the requirement mandates.
+func r019ConformingRecordFixture() map[string]any {
+	return map[string]any{
+		"change_name":       "example-change",
+		"project":           "example-project",
+		"approval_decision": "approved",
+		"scope_drift_notes": "none",
+		"variance_vs_plan":  "compute-time fields deferred per R-019: no durable source exists yet",
+	}
+}
+
 // actualsSchemaPropertyDescription returns one property's own description, so a
 // description pin cannot be satisfied by text living on a different property.
 func actualsSchemaPropertyDescription(t *testing.T, schema actualsSchemaDocument, property string) string {
@@ -493,6 +959,98 @@ func sliceMarkdownSection(doc, heading string) (string, error) {
 		}
 	}
 	return strings.Join(lines[start:], "\n"), nil
+}
+
+// stripMarkdownSection returns doc with the section introduced by the exact heading line
+// removed — the heading line itself and its body, up to (not including) the exact
+// terminatorHeading line. It is the complement of sliceMarkdownSection: where that function
+// extracts a section, this one extracts everything BUT that section, so a sweep can assert
+// "nowhere else" for content deliberately preserved in one marked carve-out (design.md's
+// "SUPERSEDED, retained for provenance" block — see TestAbolishedVocabularySweptFromCurrentSections).
+//
+// terminatorHeading is matched by its EXACT text, including its "#" level, not merely by
+// "the next heading whose level is <= heading's level" the way sliceMarkdownSection's own
+// section-body termination works. That distinction is load-bearing, not stylistic: a
+// level-based terminator cannot tell a demoted heading apart from a genuine nested subsection
+// of the carve-out. Demoting design.md's "### D3 — Where anchors are written" to "#### D3"
+// makes it look, to a level-based scan, exactly like a nested subsection of the preceding
+// "### D2 ... SUPERSEDED" block — so a level-based strip walks straight past it and keeps
+// swallowing content into the excluded span until it finds the NEXT surviving level-3+
+// heading, silently widening what the carve-out excuses. Verify round 4 (W2) proved this
+// concretely: injecting an abolished word into D3's body stayed GREEN once D3 was demoted.
+// Requiring the terminator's exact text pins its level: if the terminator is renamed, deleted,
+// or demoted, it is no longer found by exact match, and this returns
+// errMarkdownSectionNotFound instead of silently absorbing everything up to some other,
+// unrelated heading.
+//
+// The removed span is also bounded on BOTH ends, not merely "the heading plus whatever
+// text precedes the terminator" (verify round 5, W-A / probe P7). The exact-text
+// terminator above closes the DEMOTION vector — renaming or demoting the terminator is no
+// longer found — but a level-based terminator was never the only way to widen the
+// carve-out silently: inserting a brand-new heading of the SAME OR A SHALLOWER level than
+// `heading` somewhere before the real terminator also gets swallowed into the removed
+// span, because the scan below only ever checked for an exact terminator match and never
+// asked whether anything else looked like a section boundary in between. A heading nested
+// STRICTLY DEEPER than `heading` (e.g. a "####" subsection of a "###" carve-out) is a
+// genuine part of the carved-out section's own body and does not trip this guard.
+func stripMarkdownSection(doc, heading, terminatorHeading string) (string, error) {
+	headingLevel := markdownHeadingLevel(heading)
+	if headingLevel == 0 {
+		return "", errMarkdownHeadingAnchorInvalid
+	}
+	if markdownHeadingLevel(terminatorHeading) == 0 {
+		return "", errMarkdownHeadingAnchorInvalid
+	}
+
+	lines := strings.Split(normaliseLineEndings(doc), "\n")
+	headingLine := -1
+	inFence := false
+	for i, line := range lines {
+		if isMarkdownFence(line) {
+			inFence = !inFence
+			continue
+		}
+		if !inFence && markdownHeadingLineMatches(line, heading) {
+			headingLine = i
+			break
+		}
+	}
+	if headingLine < 0 {
+		return "", errMarkdownSectionNotFound
+	}
+
+	end := -1
+	inFence = false
+	for i := headingLine + 1; i < len(lines); i++ {
+		if isMarkdownFence(lines[i]) {
+			inFence = !inFence
+			continue
+		}
+		if inFence {
+			continue
+		}
+		if markdownHeadingLineMatches(lines[i], terminatorHeading) {
+			end = i
+			break
+		}
+		// Span integrity: a heading at or above the carve-out's own level, other than
+		// the terminator itself, marks a genuine section boundary the carve-out was
+		// never meant to cross. Treating it as ordinary body text (the pre-fix
+		// behaviour) let an inserted CURRENT section ride along into the removed
+		// span merely because it happened to sit before the terminator line.
+		// Reporting it as "not found" — the same sentinel a renamed/demoted
+		// terminator produces — is deliberate: from the caller's perspective, both
+		// mean the same thing, "this document no longer has the single contiguous
+		// carve-out this function assumes".
+		if level := markdownHeadingLevel(lines[i]); level > 0 && level <= headingLevel {
+			return "", fmt.Errorf("%w: encountered heading %q at or above the carve-out's own level before its terminator %q — a section may have been inserted, widening the removed span", errMarkdownSectionNotFound, strings.TrimSpace(lines[i]), terminatorHeading)
+		}
+	}
+	if end < 0 {
+		return "", errMarkdownSectionNotFound
+	}
+
+	return strings.Join(lines[:headingLine], "\n") + "\n" + strings.Join(lines[end:], "\n"), nil
 }
 
 // markdownSectionBody is the thin t-taking wrapper around sliceMarkdownSection. A missing
@@ -717,6 +1275,53 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 		}
 	})
 
+	t.Run("validate_against_actuals_schema", func(t *testing.T) {
+		schema := actualsSchemaDocument{
+			Required: []string{"change_name", "approval_decision"},
+			Properties: map[string]json.RawMessage{
+				"change_name":          json.RawMessage(`{"type":"string"}`),
+				"approval_decision":    json.RawMessage(`{"type":"string"}`),
+				"implementation_hours": json.RawMessage(`{"type":"number"}`),
+			},
+		}
+
+		tests := []struct {
+			name    string
+			record  map[string]any
+			wantErr bool
+		}{
+			{
+				name:   "every required name present, no undeclared keys — valid",
+				record: map[string]any{"change_name": "x", "approval_decision": "approved"},
+			},
+			{
+				name:   "an optional property may be present without becoming required",
+				record: map[string]any{"change_name": "x", "approval_decision": "approved", "implementation_hours": 1.2},
+			},
+			{
+				name:    "a missing required name is rejected — this is the R-019/R-021 mutation this gate exists to catch",
+				record:  map[string]any{"change_name": "x"},
+				wantErr: true,
+			},
+			{
+				name:    "a key not declared in properties is rejected (additionalProperties: false)",
+				record:  map[string]any{"change_name": "x", "approval_decision": "approved", "undeclared_field": true},
+				wantErr: true,
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				err := validateAgainstActualsSchema(schema, tt.record)
+				if tt.wantErr && err == nil {
+					t.Fatalf("validateAgainstActualsSchema(%v) error = nil, want an error", tt.record)
+				}
+				if !tt.wantErr && err != nil {
+					t.Fatalf("validateAgainstActualsSchema(%v) error = %v, want nil", tt.record, err)
+				}
+			})
+		}
+	})
+
 	t.Run("line_ending_conventions_are_equivalent", func(t *testing.T) {
 		// The expectations are written out literally rather than derived from an LF run, so a
 		// break in the LF path cannot quietly redefine what the other encodings are compared to.
@@ -901,6 +1506,117 @@ func TestActualsInstrumentationGateHelpers(t *testing.T) {
 				}
 				if got != tt.want {
 					t.Fatalf("sliceMarkdownSection() = %q, want %q", got, tt.want)
+				}
+			})
+		}
+	})
+
+	t.Run("section_stripping", func(t *testing.T) {
+		// stripMarkdownSection requires its terminator by EXACT text, not by level — see its
+		// doc comment and verify round 4's W2 finding. These cases exercise that directly,
+		// including the specific demotion shape (a terminator heading gaining one extra "#")
+		// that a level-based strip would have silently swallowed instead of rejecting.
+		tests := []struct {
+			name              string
+			doc               string
+			heading           string
+			terminatorHeading string
+			want              string
+			wantErr           error
+		}{
+			{
+				name:              "strips the heading and body up to the exact terminator",
+				doc:               "# Doc\nintro\n### Old (SUPERSEDED)\nold body\nmore old body\n### Next\nnext body\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				want:              "# Doc\nintro\n### Next\nnext body\n",
+			},
+			{
+				name:              "a terminator demoted by one level is not found — the strip errors instead of swallowing past it",
+				doc:               "# Doc\nintro\n### Old (SUPERSEDED)\nold body\n#### Next\nnext body\n### Actually Next\nafter\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				name:              "missing terminator entirely is an error, not end-of-document",
+				doc:               "### Old (SUPERSEDED)\nold body\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				name:              "missing section heading is an error",
+				doc:               "### Next\nbody\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				name:              "invalid section heading anchor is rejected",
+				heading:           "Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownHeadingAnchorInvalid,
+			},
+			{
+				name:              "invalid terminator heading anchor is rejected",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "Next",
+				wantErr:           errMarkdownHeadingAnchorInvalid,
+			},
+			{
+				name:              "a fenced terminator-like line does not terminate the section",
+				doc:               "### Old (SUPERSEDED)\nold body\n```\n### Next\nfenced, not real\n```\n### Next\nreal next\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				want:              "\n### Next\nreal next\n",
+			},
+			{
+				// Verify round 5, W-A / probe P7: a new CURRENT section inserted
+				// between the SUPERSEDED heading and its terminator was silently
+				// swallowed into the removed span merely because it sits before the
+				// terminator line — the demotion vector (case above) is closed, but
+				// this insertion vector was not. The carve-out is a SPAN with both
+				// ends bounded, not "the heading plus whatever precedes the
+				// terminator": any same-or-higher-level heading in between other
+				// than the terminator itself means the assumed span was widened by
+				// an inserted section, and the strip must error instead of
+				// swallowing it.
+				name:              "an inserted section before the terminator widens the span — the strip errors instead of swallowing it",
+				doc:               "### Old (SUPERSEDED)\nold body\n### D2c — inserted current section\npath-scan is injected here.\n### Next\nreal next\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				wantErr:           errMarkdownSectionNotFound,
+			},
+			{
+				// The complement of the case above: a heading nested DEEPER than the
+				// carve-out's own level (here "####", one level below "###") is a
+				// genuine subsection of the SUPERSEDED body, not an inserted current
+				// section, and must not trip the span guard.
+				name:              "a nested subsection deeper than the carve-out's own level does not trip the span guard",
+				doc:               "### Old (SUPERSEDED)\nold body\n#### Nested subsection of Old\nstill old\n### Next\nreal next\n",
+				heading:           "### Old (SUPERSEDED)",
+				terminatorHeading: "### Next",
+				want:              "\n### Next\nreal next\n",
+			},
+		}
+		for _, tt := range tests {
+			t.Run(tt.name, func(t *testing.T) {
+				got, err := stripMarkdownSection(tt.doc, tt.heading, tt.terminatorHeading)
+				if tt.wantErr != nil {
+					if !errors.Is(err, tt.wantErr) {
+						t.Fatalf("stripMarkdownSection() error = %v, want %v", err, tt.wantErr)
+					}
+					if got != "" {
+						t.Fatalf("stripMarkdownSection() = %q on error, want empty", got)
+					}
+					return
+				}
+				if err != nil {
+					t.Fatalf("stripMarkdownSection() error = %v, want nil", err)
+				}
+				if got != tt.want {
+					t.Fatalf("stripMarkdownSection() = %q, want %q", got, tt.want)
 				}
 			})
 		}
