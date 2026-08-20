@@ -110,6 +110,15 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Full history, not the action's default shallow depth-1 clone.
+          # engine/skills' D2 anchor test resolves its inputs from real
+          # repository history (`git log ... origin/main`, `git show -s <sha>`).
+          # Depth and ref layout are independent failure modes: the test names
+          # origin/main so the ref resolves in a CI checkout, and this setting
+          # makes the historical objects reachable. Both are required; either
+          # one alone leaves the suite red.
+          fetch-depth: 0
 
       - name: Set up Go
         uses: actions/setup-go@v5
