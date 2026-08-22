@@ -102,6 +102,11 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Never pushes main unless --push; without it, reports
                                    how far local main is ahead of origin/main.
+  self-update                     Fast-forward ONLY local 'main' to 'origin/main' (never the
+                                   current branch), then return to the branch you were on.
+                                   Refuses (exit 1) on a dirty tracked tree, a local main
+                                   ahead of origin/main, or no 'origin' remote. Untracked
+                                   files never block it.
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
@@ -812,6 +817,78 @@ cmd_apply() {
       echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
     fi
   fi
+}
+
+# ---------------------------------------------------------------------------
+# self-update
+# ---------------------------------------------------------------------------
+
+# Fast-forwards ONLY the local 'main' branch to 'origin/main' and restores the
+# original branch afterward, via the same trap-based EXIT pattern used by
+# cmd_capture/cmd_apply. Every refusal (no origin, dirty tree, local-ahead
+# divergence) fires BEFORE any checkout, so a refusal never touches the
+# working tree or leaves the caller's branch stranded. Flagless: this signal
+# is repo-level, not target-scoped.
+cmd_self_update() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  # 1. No 'origin' remote -> nothing to converge against.
+  git remote get-url origin >/dev/null 2>&1 \
+    || die "self-update requires an 'origin' remote; none is configured."
+
+  # 2. Dirty tracked tree -> hard refusal, before any checkout. Untracked
+  #    files are ignored (capture/apply parity, see cmd_capture/cmd_apply).
+  [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
+    || die "Working tree has uncommitted tracked changes. Commit or stash them before self-update."
+
+  # 3. Bounded fetch of main only (idiom from compute_repo_behind_origin).
+  #    'timeout' is optional -- not on stock macOS -- so this degrades to an
+  #    unbounded (but still low-speed-guarded) fetch rather than a hard dep.
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+      || die "git fetch origin main failed."
+  else
+    git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+      || die "git fetch origin main failed."
+  fi
+
+  # 4. Local main ahead of origin/main -> hard refusal (R-006). Deliberately
+  #    stricter than cmd_apply's advisory-only ahead notice: self-update
+  #    converges main, it never silently diverges further from a local-only
+  #    commit that only exists on this clone.
+  local ahead
+  ahead="$(git rev-list --count origin/main..main)"
+  [[ "$ahead" -eq 0 ]] \
+    || die "Local main is $ahead commit(s) ahead of origin/main; self-update refuses to diverge further. Resolve manually (e.g. 'overlay apply --push')."
+
+  # 5. Already up to date -> exit 0, no branch switch at all.
+  local behind
+  behind="$(git rev-list --count main..origin/main)"
+  if [[ "$behind" -eq 0 ]]; then
+    info "main is already up to date with origin/main"
+    return
+  fi
+
+  # 6. Only now: converge main, always returning to the original branch.
+  #    Expand the branch name NOW: an EXIT trap fires after the function's
+  #    locals are gone, and referencing them there is an unbound variable
+  #    under 'set -u' (the c891c94 lesson).
+  local current_branch old_main new_main
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+  old_main="$(git rev-parse main)"
+
+  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
+
+  git checkout main
+  git merge --ff-only origin/main
+  new_main="$(git rev-parse main)"
+
+  git checkout "$current_branch"
+  trap - EXIT
+
+  info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward)"
 }
 
 # ---------------------------------------------------------------------------
@@ -1799,6 +1876,7 @@ case "$COMMAND" in
   bootstrap)       cmd_bootstrap "$@" ;;
   capture)         cmd_capture "$@" ;;
   apply)           cmd_apply "$@" ;;
+  self-update)     cmd_self_update "$@" ;;
   status)          cmd_status "$@" ;;
   sync-check)      cmd_sync_check "$@" ;;
   install-hooks)   cmd_install_hooks "$@" ;;
