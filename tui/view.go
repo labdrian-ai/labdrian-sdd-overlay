@@ -120,11 +120,19 @@ func (m model) View() string {
 }
 
 // repoLine surfaces the repo-locate error, if any, at the column's left edge
-// — no hardcoded indent. Silent (empty) when the repo root resolved fine;
-// the path itself isn't useful chrome to show on every screen.
+// — no hardcoded indent. Falls back to the dismissible behind-origin banner
+// (R-002, D6) when there's no repo error and the launch-time probe resolved
+// a positive REPO_BEHIND_ORIGIN count that the user hasn't dismissed yet.
+// Silent (empty) otherwise — no useful chrome to show on every screen.
 func (m model) repoLine() string {
 	if m.rootErr != nil {
 		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
+	}
+	if m.bannerVisible() {
+		return lipgloss.NewStyle().Foreground(colorAmber).Render(fmt.Sprintf(
+			"▲ Repo %d commit(s) detrás de origin/main · «Actualizar repositorio» pone al día solo main · x ocultar",
+			m.behindOrigin,
+		))
 	}
 	return ""
 }

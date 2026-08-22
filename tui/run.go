@@ -8,6 +8,8 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Target is one of the deployable overlay targets.
@@ -259,6 +261,39 @@ func ParseSyncCheck(output string) []TargetVerdict {
 		result = append(result, *byTarget[name])
 	}
 	return result
+}
+
+// probeBehind extracts the launch-time origin-behind count from cached-only
+// sync-check output. It reuses ParseSyncCheck (D4) instead of re-deriving
+// REPO_BEHIND_ORIGIN detection, which stays owned by sync-check-verdicts —
+// this capability only reads that published value. Any failure to determine
+// a concrete count — zero verdicts (e.g. every target dir missing skips the
+// VERDICT line), an explicit "NA", or unparseable/garbage output — degrades
+// to RepoBehindOriginNA rather than Go's zero value, which would collapse
+// into "confirmed 0 behind" (the exact R-006 bug class ParseSyncCheck
+// already guards against for its own callers).
+func probeBehind(output string) int {
+	verdicts := ParseSyncCheck(output)
+	if len(verdicts) == 0 {
+		return RepoBehindOriginNA
+	}
+	return verdicts[0].RepoBehindOrigin
+}
+
+// probeBehindOriginCmd returns a tea.Cmd that runs a cached-only sync-check
+// (no --fetch/--check-origin, per R-001) against root and delivers a
+// probeDoneMsg. bubbletea runs the returned func() tea.Msg off the UI
+// goroutine, so this never blocks Init()'s first render. CombinedOutput is
+// fed to probeBehind even when the process exits non-zero — the probe reads
+// a cached ref, it does not require a clean exit.
+func probeBehindOriginCmd(root string) tea.Cmd {
+	return func() tea.Msg {
+		bin := filepath.Join(root, "bin", "labdrian-overlay")
+		cmd := exec.Command(bin, "sync-check")
+		cmd.Dir = root
+		out, _ := cmd.CombinedOutput()
+		return probeDoneMsg{behind: probeBehind(string(out))}
+	}
 }
 
 // RepoRoot resolves the overlay repo root.
