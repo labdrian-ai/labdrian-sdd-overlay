@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -99,5 +100,47 @@ func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
 	}
 	if !strings.Contains(rendered, "detrás de origin: 3") {
 		t.Errorf("viewDashboard must keep the REPO_BEHIND_ORIGIN count visible (R-006), got:\n%s", rendered)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Phase 4: dismissible behind-origin banner in repoLine() (R-002, D6).
+// ---------------------------------------------------------------------------
+
+// TestRepoLine_BehindOriginBannerStates covers every state repoLine() must
+// resolve: shown for a positive, undismissed count; hidden for zero, NA, or
+// once dismissed; and rootErr always keeps precedence over the banner (a
+// repo-locate error is a more urgent signal than a stale-clone hint).
+func TestRepoLine_BehindOriginBannerStates(t *testing.T) {
+	cases := []struct {
+		name            string
+		behindOrigin    int
+		bannerDismissed bool
+		rootErr         error
+		wantBanner      bool
+	}{
+		{"positive count, not dismissed -> shown", 2, false, nil, true},
+		{"zero -> hidden", 0, false, nil, false},
+		{"NA -> hidden", RepoBehindOriginNA, false, nil, false},
+		{"positive but dismissed -> hidden", 2, true, nil, false},
+		{"rootErr takes precedence even when positive", 2, false, errors.New("boom"), false},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newModel()
+			m.behindOrigin = tc.behindOrigin
+			m.bannerDismissed = tc.bannerDismissed
+			m.rootErr = tc.rootErr
+
+			line := stripANSI(m.repoLine())
+			hasBanner := strings.Contains(line, "detrás de origin/main")
+			if hasBanner != tc.wantBanner {
+				t.Errorf("repoLine() banner presence = %v, want %v; rendered: %q", hasBanner, tc.wantBanner, line)
+			}
+			if tc.rootErr != nil && !strings.Contains(line, tc.rootErr.Error()) {
+				t.Errorf("repoLine() must still surface rootErr text, got: %q", line)
+			}
+		})
 	}
 }

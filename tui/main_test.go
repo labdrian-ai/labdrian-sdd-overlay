@@ -2,7 +2,10 @@ package main
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -116,6 +119,72 @@ func TestInitialRenderShowsTargets(t *testing.T) {
 
 	tm.Send(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("q")})
 	tm.WaitFinished(t, teatest.WithFinalTimeout(3*time.Second))
+}
+
+// ---------------------------------------------------------------------------
+// Phase 3: model wiring for the launch-time origin probe (R-001) and the
+// dismissible banner (R-002).
+// ---------------------------------------------------------------------------
+
+// TestInit_ReturnsNonNilCmd verifies Init() wires up the launch-time probe:
+// it must return a non-nil tea.Cmd (R-001 Scenario: probe is async — the
+// cmd is what bubbletea runs off the UI goroutine after the first render).
+func TestInit_ReturnsNonNilCmd(t *testing.T) {
+	m := newModel()
+	cmd := m.Init()
+	if cmd == nil {
+		t.Fatal("Init() must return a non-nil tea.Cmd so the launch-time origin probe runs")
+	}
+}
+
+// TestNewModel_BehindOriginDefaultsToNA locks in the D5 zero-value guard:
+// newModel must initialize behindOrigin to RepoBehindOriginNA, not Go's
+// zero value (which is 0 and would collapse into "confirmed 0 behind" —
+// the exact R-006 bug class this field's sentinel exists to prevent).
+func TestNewModel_BehindOriginDefaultsToNA(t *testing.T) {
+	m := newModel()
+	if m.behindOrigin != RepoBehindOriginNA {
+		t.Errorf("newModel().behindOrigin = %d, want RepoBehindOriginNA (%d) before any probe result arrives", m.behindOrigin, RepoBehindOriginNA)
+	}
+}
+
+// TestUpdate_ProbeDoneMsg_SetsBehindOrigin verifies the Update() branch for
+// probeDoneMsg actually assigns the delivered count onto the model —
+// exercised with a non-default value so the assertion cannot pass by
+// accident against the zero-value/NA default.
+func TestUpdate_ProbeDoneMsg_SetsBehindOrigin(t *testing.T) {
+	m := newModel()
+	updated, _ := m.Update(probeDoneMsg{behind: 5})
+	m = updated.(model)
+	if m.behindOrigin != 5 {
+		t.Errorf("behindOrigin after probeDoneMsg{behind: 5} = %d, want 5", m.behindOrigin)
+	}
+}
+
+// TestGlobalXKey_DismissesBannerOnlyWhenVisible verifies R-002's dismissal
+// scenario: "x" flips bannerDismissed to true only while the banner is
+// actually visible (behindOrigin>0, not yet dismissed); it is a no-op
+// otherwise (behindOrigin<=0/NA), so an accidental "x" press elsewhere in
+// the TUI causes no state change.
+func TestGlobalXKey_DismissesBannerOnlyWhenVisible(t *testing.T) {
+	t.Run("dismisses when visible", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+		m = updated.(model)
+		if !m.bannerDismissed {
+			t.Error("bannerDismissed must be true after 'x' while the banner is visible (behindOrigin>0)")
+		}
+	})
+
+	t.Run("no-op when not behind origin", func(t *testing.T) {
+		m := newModel() // behindOrigin defaults to RepoBehindOriginNA
+		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
+		m = updated.(model)
+		if m.bannerDismissed {
+			t.Error("bannerDismissed must stay false after 'x' when the banner was never visible (behindOrigin<=0/NA)")
+		}
+	})
 }
 
 // TestToggleSelection verifies space toggles the target under the cursor off.
@@ -1353,5 +1422,123 @@ func TestActionMenuShapeAndOrder(t *testing.T) {
 		if got[i] != w {
 			t.Errorf("action %d: Command = %q, want %q (full sequence: %v)", i, got[i], w, got)
 		}
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Phase 2: launch-time origin probe (R-001). probeBehind is the pure
+// extraction helper — it reuses ParseSyncCheck rather than re-deriving
+// REPO_BEHIND_ORIGIN detection (spec: "MUST NOT redefine or duplicate
+// sync-check-verdicts' detection logic").
+// ---------------------------------------------------------------------------
+
+// TestProbeBehind covers the table from design.md's Testing Strategy: a
+// concrete count, an explicit NA, zero verdicts (e.g. every target dir
+// missing so sync-check emits no VERDICT line), and garbage/unparseable
+// output. Every failure mode must degrade to RepoBehindOriginNA rather than
+// Go's zero value, which would collapse into "confirmed 0 behind" (the
+// R-006 bug class ParseSyncCheck already guards against).
+func TestProbeBehind(t *testing.T) {
+	cases := []struct {
+		name   string
+		output string
+		want   int
+	}{
+		{
+			name: "concrete count",
+			output: "\n=== sync-check: claude ===\n" +
+				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=4\n" +
+				"ACTION:claude: run 'git pull' to update your local clone\n",
+			want: 4,
+		},
+		{
+			name: "explicit NA",
+			output: "\n=== sync-check: claude ===\n" +
+				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=NA\n" +
+				"ACTION:claude: in sync with gentle-ai (healthy)\n",
+			want: RepoBehindOriginNA,
+		},
+		{
+			name:   "zero verdicts (e.g. every target dir missing)",
+			output: "\nSYNC_CHECK:claude: target dir not found -- skipping\n",
+			want:   RepoBehindOriginNA,
+		},
+		{
+			name:   "garbage output",
+			output: "not even close to a sync-check line\n\x00\xff binary noise",
+			want:   RepoBehindOriginNA,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := probeBehind(tc.output)
+			if got != tc.want {
+				t.Errorf("probeBehind(%q) = %d, want %d", tc.name, got, tc.want)
+			}
+		})
+	}
+}
+
+// writeStubBackend installs a fake bin/labdrian-overlay under root that
+// records its invocation (cwd + args) to recorderPath, prints stdout, and
+// exits with exitCode — used to prove probeBehindOriginCmd's contract
+// (no --fetch, cmd.Dir=root, output fed through even on nonzero exit)
+// without touching a real git repo or the real backend script.
+func writeStubBackend(t *testing.T, root, recorderPath, stdout string, exitCode int) {
+	t.Helper()
+	binDir := filepath.Join(root, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir bin: %v", err)
+	}
+	script := "#!/bin/sh\n" +
+		"printf '%s|%s\\n' \"$PWD\" \"$*\" >> " + strconv.Quote(recorderPath) + "\n" +
+		"cat <<'STUBEOF'\n" + stdout + "\nSTUBEOF\n" +
+		"exit " + strconv.Itoa(exitCode) + "\n"
+	if err := os.WriteFile(filepath.Join(binDir, "labdrian-overlay"), []byte(script), 0o755); err != nil {
+		t.Fatalf("write stub backend: %v", err)
+	}
+}
+
+// TestProbeBehindOriginCmd proves probeBehindOriginCmd's exec contract
+// (D4): no --fetch/--check-origin flag (cached-only probe), cmd.Dir=root,
+// and the output is fed to probeBehind even when the process exits
+// non-zero — the probe's job is reading a cached ref, not requiring a clean
+// exit.
+func TestProbeBehindOriginCmd(t *testing.T) {
+	root := t.TempDir()
+	recorder := filepath.Join(root, "invoked.log")
+	const sample = "\n=== sync-check: claude ===\n" +
+		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=7\n" +
+		"ACTION:claude: run 'git pull' to update your local clone\n"
+	writeStubBackend(t, root, recorder, sample, 1) // nonzero exit on purpose
+
+	cmd := probeBehindOriginCmd(root)
+	if cmd == nil {
+		t.Fatal("probeBehindOriginCmd must return a non-nil tea.Cmd")
+	}
+	msg := cmd()
+
+	pd, ok := msg.(probeDoneMsg)
+	if !ok {
+		t.Fatalf("expected probeDoneMsg, got %T", msg)
+	}
+	if pd.behind != 7 {
+		t.Errorf("behind = %d, want 7 (output must be parsed even though the stub exits nonzero)", pd.behind)
+	}
+
+	data, err := os.ReadFile(recorder)
+	if err != nil {
+		t.Fatalf("read recorder (backend was never invoked?): %v", err)
+	}
+	invoked := strings.TrimSpace(string(data))
+	if strings.Contains(invoked, "--fetch") || strings.Contains(invoked, "--check-origin") {
+		t.Errorf("probeBehindOriginCmd must not pass --fetch/--check-origin (cached-only probe per R-001), got invocation: %q", invoked)
+	}
+	pwdPart, _, _ := strings.Cut(invoked, "|")
+	gotDir, _ := filepath.EvalSymlinks(pwdPart)
+	wantDir, _ := filepath.EvalSymlinks(root)
+	if gotDir == "" || gotDir != wantDir {
+		t.Errorf("cmd.Dir mismatch: backend ran with cwd %q, want %q", pwdPart, root)
 	}
 }

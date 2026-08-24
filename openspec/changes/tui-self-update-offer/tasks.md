@@ -34,24 +34,24 @@ Chain strategy: feature-branch-chain
 
 ## Phase 2: Probe — `tui/run.go`
 
-- [ ] 2.1 RED: table test `probeBehind()` — count / `NA` / zero verdicts / garbage output.
-- [ ] 2.2 GREEN: implement `probeBehind()` (D4), default `RepoBehindOriginNA` on any failure.
-- [ ] 2.3 RED: test `probeBehindOriginCmd()` — no `--fetch`, `cmd.Dir=root`, feeds output to `probeBehind` even on nonzero exit.
-- [ ] 2.4 GREEN: implement `probeBehindOriginCmd()`.
+- [x] 2.1 RED: table test `probeBehind()` — count / `NA` / zero verdicts / garbage output.
+- [x] 2.2 GREEN: implement `probeBehind()` (D4), default `RepoBehindOriginNA` on any failure.
+- [x] 2.3 RED: test `probeBehindOriginCmd()` — no `--fetch`, `cmd.Dir=root`, feeds output to `probeBehind` even on nonzero exit.
+- [x] 2.4 GREEN: implement `probeBehindOriginCmd()`.
 
 ## Phase 3: Model wiring — `tui/model.go`
 
-- [ ] 3.1 RED: `Init()` returns a non-nil cmd batch including the probe.
-- [ ] 3.2 GREEN: wire `probeBehindOriginCmd()` into `Init()`.
-- [ ] 3.3 RED: `probeDoneMsg` sets `behindOrigin`; `newModel` inits it to `RepoBehindOriginNA` (guards R-006-class zero-value bug).
-- [ ] 3.4 GREEN: add `behindOrigin`/`bannerDismissed` fields + `case probeDoneMsg` (D5).
-- [ ] 3.5 RED: `x` dismisses the banner only when visible; no-op otherwise.
-- [ ] 3.6 GREEN: add global `x` intercept in `tea.KeyMsg` handling, guarded by banner-visible (D6).
+- [x] 3.1 RED: `Init()` returns a non-nil cmd batch including the probe.
+- [x] 3.2 GREEN: wire `probeBehindOriginCmd()` into `Init()`.
+- [x] 3.3 RED: `probeDoneMsg` sets `behindOrigin`; `newModel` inits it to `RepoBehindOriginNA` (guards R-006-class zero-value bug).
+- [x] 3.4 GREEN: add `behindOrigin`/`bannerDismissed` fields + `case probeDoneMsg` (D5).
+- [x] 3.5 RED: `x` dismisses the banner only when visible; no-op otherwise.
+- [x] 3.6 GREEN: add global `x` intercept in `tea.KeyMsg` handling, guarded by banner-visible (D6).
 
 ## Phase 4: Banner — `tui/view.go`
 
-- [ ] 4.1 RED: `repoLine()` states — `behindOrigin>0` shows (R-002); `0`/`NA` hide; dismissed hides; `rootErr` takes precedence.
-- [ ] 4.2 GREEN: add banner branch in `repoLine()` (`:125`), `colorAmber` copy per D6.
+- [x] 4.1 RED: `repoLine()` states — `behindOrigin>0` shows (R-002); `0`/`NA` hide; dismissed hides; `rootErr` takes precedence.
+- [x] 4.2 GREEN: add banner branch in `repoLine()` (`:125`), `colorAmber` copy per D6.
 
 ## Phase 5: Action entry + re-probe — `tui/run.go`, `tui/model.go`
 

@@ -42,6 +42,16 @@ type model struct {
 	spinner spinner.Model
 
 	quitting bool
+
+	// behindOrigin is the launch-time probe's REPO_BEHIND_ORIGIN reading
+	// (D4/D5). It is initialized to RepoBehindOriginNA in newModel, NOT left
+	// at Go's zero value — a bare `0` would collapse into "confirmed 0
+	// commits behind" before the probe ever resolves, reproducing the exact
+	// R-006 bug class ParseSyncCheck already guards against.
+	behindOrigin int
+	// bannerDismissed tracks whether the user dismissed the behind-origin
+	// banner this session (R-002); it never resets automatically.
+	bannerDismissed bool
 }
 
 // newModel builds the initial state with every target selected.
@@ -59,20 +69,29 @@ func newModel() model {
 	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
 
 	return model{
-		repoRoot: root,
-		rootErr:  err,
-		scr:      screenTargets,
-		targets:  targets,
-		selected: selected,
-		actions:  Actions(),
-		spinner:  sp,
+		repoRoot:     root,
+		rootErr:      err,
+		scr:          screenTargets,
+		targets:      targets,
+		selected:     selected,
+		actions:      Actions(),
+		spinner:      sp,
+		behindOrigin: RepoBehindOriginNA,
 	}
 }
 
-func (m model) Init() tea.Cmd { return nil }
+// Init returns the launch-time cached-only origin probe (R-001). It runs
+// async off the UI goroutine and never blocks the first render — the result
+// arrives later as a probeDoneMsg.
+func (m model) Init() tea.Cmd { return probeBehindOriginCmd(m.repoRoot) }
 
 // runDoneMsg is delivered when a backend invocation completes.
 type runDoneMsg struct{ result commandResult }
+
+// probeDoneMsg is delivered when the launch-time cached-only origin probe
+// (probeBehindOriginCmd, D4) completes. Its field is consumed by the
+// Update() branch wired in Phase 3.
+type probeDoneMsg struct{ behind int }
 
 // runActionCmd executes the backend off the UI goroutine.
 func (m model) runActionCmd(action Action) tea.Cmd {
@@ -115,6 +134,14 @@ func (m model) allSelected() bool {
 
 // contentWidth returns m.width with an 80-column fallback when no
 // WindowSizeMsg has been received yet (m.width == 0).
+// bannerVisible reports whether the behind-origin banner (R-002) is
+// currently shown: rootErr keeps precedence (mirrors repoLine()'s
+// rendering rule so both stay in lockstep), the probe must have resolved a
+// concrete positive count, and the user must not have dismissed it yet.
+func (m model) bannerVisible() bool {
+	return m.rootErr == nil && m.behindOrigin > 0 && !m.bannerDismissed
+}
+
 func (m model) contentWidth() int {
 	if m.width <= 0 {
 		return 80
@@ -156,6 +183,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.scr = screenResult
 		return m, nil
 
+	case probeDoneMsg:
+		m.behindOrigin = msg.behind
+		return m, nil
+
 	case spinner.TickMsg:
 		if m.scr != screenRunning {
 			// Drop ticks once we've left screenRunning — stops the self-perpetuating loop.
@@ -170,6 +201,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "ctrl+c" {
 			m.quitting = true
 			return m, tea.Quit
+		}
+		// Global banner dismissal (R-002): works on any screen, independent
+		// of navigation; session-scoped, never resets. No-op when the
+		// banner isn't visible.
+		if msg.String() == "x" && m.bannerVisible() {
+			m.bannerDismissed = true
+			return m, nil
 		}
 		switch m.scr {
 		case screenTargets:
