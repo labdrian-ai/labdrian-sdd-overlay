@@ -181,6 +181,13 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.result = msg.result
 		m.scroll = 0
 		m.scr = screenResult
+		// D5 tail: a successful self-update just fetched and fast-forwarded
+		// main, refreshing the cached origin/main ref the launch-time probe
+		// reads from. Re-fire it so the banner can self-correct without
+		// requiring a restart.
+		if msg.result.action.Command == "self-update" && msg.result.err == nil {
+			return m, probeBehindOriginCmd(m.repoRoot)
+		}
 		return m, nil
 
 	case probeDoneMsg:

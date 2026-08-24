@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -1409,11 +1410,11 @@ func TestAllArgSetsSkillsActionComposition(t *testing.T) {
 // Aplicar" flow copy (viewActions), with Capturar coming before Aplicar.
 func TestActionMenuShapeAndOrder(t *testing.T) {
 	actions := Actions()
-	if len(actions) != 7 {
-		t.Fatalf("expected 7 top-level actions, got %d: %v", len(actions), actions)
+	if len(actions) != 8 {
+		t.Fatalf("expected 8 top-level actions, got %d: %v", len(actions), actions)
 	}
 
-	want := []string{"status", "sync-check", "capture", "apply", "install-hooks", "uninstall-hooks", "skills"}
+	want := []string{"status", "sync-check", "capture", "apply", "self-update", "install-hooks", "uninstall-hooks", "skills"}
 	got := make([]string, len(actions))
 	for i, a := range actions {
 		got[i] = a.Command
@@ -1541,4 +1542,135 @@ func TestProbeBehindOriginCmd(t *testing.T) {
 	if gotDir == "" || gotDir != wantDir {
 		t.Errorf("cmd.Dir mismatch: backend ran with cwd %q, want %q", pwdPart, root)
 	}
+}
+
+// ---------------------------------------------------------------------------
+// Phase 5: action entry + re-probe (R-003, D7, D5 tail).
+// ---------------------------------------------------------------------------
+
+// TestSelfUpdateActionRegistered verifies Actions() registers the
+// "Actualizar repositorio" entry (R-003) with TargetAgnostic and Mutating
+// both true, positioned immediately after "apply" and immediately before
+// "install-hooks" per design.md D7's repo-maintenance grouping.
+func TestSelfUpdateActionRegistered(t *testing.T) {
+	actions := Actions()
+	idx := -1
+	for i, a := range actions {
+		if a.Command == "self-update" {
+			idx = i
+			break
+		}
+	}
+	if idx == -1 {
+		t.Fatal(`Actions() must contain an entry with Command "self-update"`)
+	}
+
+	a := actions[idx]
+	if a.Name != "Actualizar repositorio" {
+		t.Errorf("self-update Name = %q, want %q", a.Name, "Actualizar repositorio")
+	}
+	if !a.Mutating {
+		t.Error("self-update must have Mutating: true")
+	}
+	if !a.TargetAgnostic {
+		t.Error("self-update must have TargetAgnostic: true")
+	}
+
+	prev := ""
+	if idx > 0 {
+		prev = actions[idx-1].Command
+	}
+	if prev != "apply" {
+		t.Errorf("self-update must come immediately after apply, got previous entry %q", prev)
+	}
+
+	next := ""
+	if idx+1 < len(actions) {
+		next = actions[idx+1].Command
+	}
+	if next != "install-hooks" {
+		t.Errorf("self-update must come immediately before install-hooks, got next entry %q", next)
+	}
+}
+
+// TestSelfUpdateConfirmScreen proves, for the ACTUAL registered self-update
+// entry (sourced from Actions(), not a hand-built stand-in), that
+// screenConfirm hides the target list — the TargetAgnostic mechanism is
+// already covered generically by TestConfirmMessageSelection, but this test
+// pins it for THIS specific entry rather than trusting the general
+// mechanism — and that the confirm copy names "main" as the branch touched
+// (R-003 Scenario: "confirm text names main as the only branch updated").
+func TestSelfUpdateConfirmScreen(t *testing.T) {
+	var selfUpdate Action
+	found := false
+	for _, a := range Actions() {
+		if a.Command == "self-update" {
+			selfUpdate = a
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal(`Actions() must contain "self-update" before its confirm screen can be exercised`)
+	}
+
+	m := newModel()
+	m.scr = screenConfirm
+	m.pendingAction = selfUpdate
+	rendered := stripANSI(m.View())
+
+	if strings.Contains(rendered, "en: claude") {
+		t.Errorf("self-update confirm must NOT show a target list (TargetAgnostic), got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "main") {
+		t.Errorf("self-update confirm text must name 'main' as the branch updated, got:\n%s", rendered)
+	}
+}
+
+// TestUpdate_SelfUpdateSuccess_RefiresProbe verifies the D5 tail: a
+// successful self-update run (err == nil) re-fires the launch-time probe so
+// the banner can self-correct against the just-refreshed cached ref. A
+// failed self-update run, and a successful run of a DIFFERENT action, must
+// NOT re-fire the probe (triangulation — proves the branch is gated on both
+// the command AND the error, not just one of them).
+func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
+	t.Run("self-update success re-fires probe", func(t *testing.T) {
+		m := newModel()
+		msg := runDoneMsg{result: commandResult{
+			action: Action{Command: "self-update"},
+			err:    nil,
+		}}
+		updated, cmd := m.Update(msg)
+		m = updated.(model)
+		if m.scr != screenResult {
+			t.Fatalf("scr after runDoneMsg = %v, want screenResult", m.scr)
+		}
+		if cmd == nil {
+			t.Fatal("successful self-update runDoneMsg must return a non-nil re-probe cmd")
+		}
+	})
+
+	t.Run("self-update failure does not re-fire probe", func(t *testing.T) {
+		m := newModel()
+		msg := runDoneMsg{result: commandResult{
+			action: Action{Command: "self-update"},
+			err:    errors.New("boom"),
+		}}
+		_, cmd := m.Update(msg)
+		if cmd != nil {
+			t.Error("failed self-update runDoneMsg must NOT re-fire the probe")
+		}
+	})
+
+	t.Run("other action success does not re-fire probe", func(t *testing.T) {
+		m := newModel()
+		msg := runDoneMsg{result: commandResult{
+			action: Action{Command: "apply"},
+			err:    nil,
+		}}
+		_, cmd := m.Update(msg)
+		if cmd != nil {
+			t.Error("a non-self-update runDoneMsg must NOT re-fire the probe")
+		}
+	})
 }

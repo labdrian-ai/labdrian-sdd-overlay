@@ -43,10 +43,11 @@ type Action struct {
 }
 
 // Actions returns the action menu in display order: Estado, then sync-check,
-// then capture, then apply (the natural usage flow), then the hooks
-// lifecycle, then skills. Related read-only sub-actions (status-hooks;
-// skills validate/list) are folded into their primary entry via Also instead
-// of appearing as separate top-level menu rows.
+// then capture, then apply (the natural usage flow), then repo maintenance
+// (self-update), then the hooks lifecycle, then skills. Related read-only
+// sub-actions (status-hooks; skills validate/list) are folded into their
+// primary entry via Also instead of appearing as separate top-level menu
+// rows.
 func Actions() []Action {
 	return []Action{
 		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true,
@@ -60,6 +61,17 @@ func Actions() []Action {
 			Hint: "Trae cambios de upstream al overlay"},
 		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true,
 			Hint: "Despliega el overlay en los destinos"},
+		// Repo maintenance — TargetAgnostic: fast-forwards main only, via the
+		// backend's self-update subcommand (D1-D3). Placed right after the
+		// core apply flow and before the hooks block (D7).
+		{
+			Name:           "Actualizar repositorio",
+			Command:        "self-update",
+			Mutating:       true,
+			TargetAgnostic: true,
+			ConfirmMessage: "Actualiza SOLO la rama main a origin/main (fast-forward); tu rama actual no se toca y se vuelve a ella al terminar. Rechaza con árbol sucio o main local adelantado.",
+			Hint:           "Pone main al día con origin/main (ff-only)",
+		},
 		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
 		{
 			Name:           "Instalar hooks",

@@ -55,14 +55,14 @@ Chain strategy: feature-branch-chain
 
 ## Phase 5: Action entry + re-probe — `tui/run.go`, `tui/model.go`
 
-- [ ] 5.1 RED: `Actions()` includes "Actualizar repositorio", `TargetAgnostic`/`Mutating` true, positioned after "Aplicar cambios" and before the hooks block (R-003).
-- [ ] 5.2 GREEN: add the entry per D7's struct literal.
-- [ ] 5.3 RED: `screenConfirm` skips `screenTargets`; confirm text names `main` as sole updated branch.
-- [ ] 5.4 RED: successful `self-update` `runDoneMsg` re-fires the probe.
-- [ ] 5.5 GREEN: add re-probe branch (D5 tail) on `runDoneMsg` when `action.Command=="self-update" && err==nil`.
+- [x] 5.1 RED: `Actions()` includes "Actualizar repositorio", `TargetAgnostic`/`Mutating` true, positioned after "Aplicar cambios" and before the hooks block (R-003).
+- [x] 5.2 GREEN: add the entry per D7's struct literal.
+- [x] 5.3 RED: `screenConfirm` skips `screenTargets`; confirm text names `main` as sole updated branch.
+- [x] 5.4 RED: successful `self-update` `runDoneMsg` re-fires the probe.
+- [x] 5.5 GREEN: add re-probe branch (D5 tail) on `runDoneMsg` when `action.Command=="self-update" && err==nil`.
 
 ## Phase 6: Verification
 
-- [ ] 6.1 Run full `go test ./tui/...`; confirm all RED tasks are now GREEN.
-- [ ] 6.2 Manual E2E smoke: real clone behind `origin/main`, banner shows, run "Actualizar repositorio", banner clears/re-probes.
-- [ ] 6.3 Confirm every applicable threat-matrix row (repo selection, commit state, local-ahead, no origin, malformed probe, mid-op checkout failure, concurrent git op) has passing coverage.
+- [x] 6.1 Run full `go test ./tui/...`; confirm all RED tasks are now GREEN.
+- [x] 6.2 Manual E2E smoke: real clone behind `origin/main`, banner shows, run "Actualizar repositorio", banner clears/re-probes. (Automated substitute performed — see apply-progress; pty-driven real binary run against a real scratch clone confirmed the full loop, including live git fast-forward and banner clearing after re-probe.)
+- [x] 6.3 Confirm every applicable threat-matrix row (repo selection, commit state, local-ahead, no origin, malformed probe, mid-op checkout failure, concurrent git op) has passing coverage.
