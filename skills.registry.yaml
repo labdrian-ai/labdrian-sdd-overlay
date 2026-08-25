@@ -42,6 +42,20 @@ skills:
         - codex
     lifecycle:
       updateStrategy: vendor-merge
+  - id: branch-pr
+    path: branch-pr
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
   - id: gadu-orchestrate
     path: gadu-orchestrate
     source:
