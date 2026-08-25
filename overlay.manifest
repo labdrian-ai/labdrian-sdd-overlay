@@ -39,6 +39,7 @@ sdd-time-estimation/SKILL.md custom
 anti-generic-design/SKILL.md custom
 sdd-verify/references/report-format.md managed
 sdd-verify/strict-tdd-verify.md managed
+branch-pr/SKILL.md managed
 prespec-malandra/references/coverage-taxonomy.md custom
 genesis-design-system/references/component-composition.md custom
 genesis-design-system/references/dialogs.md custom
