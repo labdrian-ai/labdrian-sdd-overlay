@@ -115,6 +115,30 @@ func TestReviewProjectionContractStandaloneCopyMatchesEmbeddedAsset(t *testing.T
 	}
 }
 
+// TestSkillDiscoverySafetyStandaloneCopyMatchesEmbeddedAsset is the drift
+// guard for the two-copy design, mirroring
+// TestAntiGenericDesignStandaloneCopyMatchesEmbeddedAsset: the deployed
+// standalone file skills/_shared/skill-discovery-safety.md MUST stay
+// byte-identical to the compiled-in engine/assets/skill-discovery-safety.md
+// asset. Any drift here means gate-task/propagate (embedded) and a reader of
+// the deployed _shared file would see DIFFERENT skill/file discovery rules —
+// this guard fails loud instead of letting that happen silently.
+func TestSkillDiscoverySafetyStandaloneCopyMatchesEmbeddedAsset(t *testing.T) {
+	standalonePath := filepath.Join(repoRoot(t), "skills", "_shared", "skill-discovery-safety.md")
+
+	standaloneBytes, err := os.ReadFile(standalonePath)
+	if err != nil {
+		t.Fatalf("read standalone copy %s: %v", standalonePath, err)
+	}
+
+	if string(standaloneBytes) != assets.SkillDiscoverySafety {
+		t.Errorf(
+			"skills/_shared/skill-discovery-safety.md has drifted from the embedded engine/assets/skill-discovery-safety.md asset — they must be byte-identical.\nstandalone length=%d, embedded length=%d",
+			len(standaloneBytes), len(assets.SkillDiscoverySafety),
+		)
+	}
+}
+
 // antiGenericDesignPaths are the three documents that restate the forbidden-pattern
 // guidance, each for a different consumer: the injected contract, the invokable
 // skill, and the reviewer checklist.
