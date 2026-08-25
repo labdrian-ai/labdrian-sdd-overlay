@@ -602,6 +602,36 @@ cmd_capture() {
 
   git checkout upstream
 
+  # Reconcile with origin before capturing. 'upstream' is a mechanical
+  # mirror pushed immediately after every capture (see below), so it should
+  # normally already match origin/upstream — but if origin/upstream advanced
+  # independently since this clone's last fetch (another machine captured
+  # and pushed, or a manual reconcile merge landed there), a stale local ref
+  # makes the push below either get rejected non-fast-forward (crashing the
+  # whole capture under 'set -euo pipefail' despite the local capture
+  # already having succeeded) or, worse, silently skip the push entirely
+  # (the "anything to push?" check below reads the same stale cached
+  # origin/upstream). Fetch first so that check is accurate, then
+  # fast-forward when possible; when local ALSO carries unpushed commits,
+  # merge non-interactively rather than discarding them — capture's own
+  # comment below already promises a sync never strands local-only commits.
+  # A fetch failure (offline) degrades gracefully: capture's core job is the
+  # local commit, not the network round trip, so warn and proceed rather
+  # than dying (parity with the "no origin remote" skip a few lines down).
+  if git remote get-url origin >/dev/null 2>&1; then
+    if git fetch origin upstream >/dev/null 2>&1; then
+      if git rev-parse --verify -q origin/upstream >/dev/null; then
+        if ! git merge --ff-only origin/upstream >/dev/null 2>&1; then
+          git merge --no-edit origin/upstream \
+            || die "'upstream' diverged from origin/upstream and auto-merge conflicted; resolve manually on the 'upstream' branch, then retry capture."
+          info "Reconciled local 'upstream' with origin/upstream before capturing"
+        fi
+      fi
+    else
+      warn "git fetch origin upstream failed — proceeding without reconciling; push below may fail if origin has advanced"
+    fi
+  fi
+
   if [[ -n "$from_backup" ]]; then
     info "Capturing managed files from tarball: $from_backup"
     [[ -f "$from_backup" ]] || die "Tarball not found: $from_backup"
