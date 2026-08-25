@@ -42,3 +42,20 @@ _shared/sdd-orchestrator-workflow.md managed
 _shared/sdd-phase-common.md managed
 _shared/sdd-status-contract.md managed
 _shared/skill-resolver.md managed
+sdd-apply.md managed agent
+sdd-archive.md managed agent
+sdd-design.md managed agent
+sdd-init.md managed agent
+sdd-onboard.md managed agent
+sdd-propose.md managed agent
+sdd-spec.md managed agent
+sdd-tasks.md managed agent
+sdd-verify.md managed agent
+jd-fix-agent.md managed agent
+jd-judge-a.md managed agent
+jd-judge-b.md managed agent
+review-readability.md managed agent
+review-refuter.md managed agent
+review-reliability.md managed agent
+review-resilience.md managed agent
+review-risk.md managed agent
