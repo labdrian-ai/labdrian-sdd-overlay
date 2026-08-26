@@ -220,19 +220,19 @@ The Claude Code session model is controlled by Claude Code itself; Gentle AI doe
 
 | Phase | Default Model | Effort | Reason |
 |-------|---------------|--------|--------|
-| sdd-explore | sonnet | default | Reads code, structural - not architectural |
+| sdd-explore | sonnet | high | Reads code, structural - not architectural |
 | sdd-propose | fable | default | Architectural decisions |
-| sdd-spec | opus | xhigh | Structured writing |
+| sdd-spec | sonnet | high | Structured writing |
 | sdd-design | fable | default | Architecture decisions |
-| sdd-tasks | sonnet | default | Mechanical breakdown |
-| sdd-apply | sonnet | default | Implementation |
-| sdd-verify | fable | default | Validation against spec |
+| sdd-tasks | sonnet | high | Mechanical breakdown |
+| sdd-apply | sonnet | high | Implementation |
+| sdd-verify | opus | default | Validation against spec |
 | sdd-archive | haiku | default | Copy and close |
 | sdd-onboard | haiku | default | Guided walkthrough, pedagogical |
-| jd-judge-a | sonnet | high | Adversarial review — blind judge A |
-| jd-judge-b | opus | xhigh | Adversarial review — blind judge B |
-| jd-fix-agent | opus | xhigh | Surgical fixes from confirmed issues |
-| default | opus | default | SDD/JD phase fallback |
+| jd-judge-a | opus | default | Adversarial review — blind judge A |
+| jd-judge-b | opus | default | Adversarial review — blind judge B |
+| jd-fix-agent | opus | default | Surgical fixes from confirmed issues |
+| default | sonnet | max | SDD/JD phase fallback |
 
 <!-- /gentle-ai:sdd-model-assignments -->
 
