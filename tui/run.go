@@ -119,9 +119,11 @@ const (
 	SyncNeedsApply
 	// SyncNeedsCapture means upstream (gentle-ai) changed (capture + apply required).
 	SyncNeedsCapture
-	// SyncBehindOrigin means local HEAD is behind this repo's own origin/main
+	// SyncBehindOrigin means local main is behind this repo's own origin/main
 	// (informational drift; never overridden by, and never masks, the other
-	// two verdicts — see classify's precedence and R-006).
+	// two verdicts — see classify's precedence and R-006). Tracks main, not
+	// HEAD, because self-update (the source of truth this mirrors) only ever
+	// converges main, never the checked-out branch.
 	SyncBehindOrigin
 )
 
