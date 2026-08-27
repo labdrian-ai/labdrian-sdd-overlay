@@ -434,3 +434,34 @@ func TestSelfUpdateBackend_SyncCheckConvergesToZero(t *testing.T) {
 		t.Errorf("sync-check does not report REPO_BEHIND_ORIGIN=0 after a successful self-update:\n%s", syncOut)
 	}
 }
+
+// The TUI's "Actualizar repositorio" button (self-update) only ever converges
+// local main -- it deliberately never touches the current branch (D1-D3) --
+// so the observable-convergence guarantee must hold from ANY starting
+// branch, not only when the repo happens to already be on main. The sibling
+// test above sidesteps this entirely by forcing the scratch repo onto main
+// throughout (see its own comment); this test exercises the realistic case
+// self-update's actual caller hits in practice: a maintainer running the TUI
+// from a feature branch. Before the fix, REPO_BEHIND_ORIGIN was computed as
+// `HEAD..origin/main` (the checked-out branch), so it stayed nonzero here
+// even after self-update fast-forwarded main -- the banner never converged.
+func TestSelfUpdateBackend_SyncCheckConvergesToZeroFromNonMainBranch(t *testing.T) {
+	origin, clone := newScratchRepo(t) // stays on "feature-x", never main
+	pushUpstreamCommit(t, origin, "upstream.txt", "v2\n", "upstream advance")
+
+	out, code := runSelfUpdate(t, clone)
+	if code != 0 {
+		t.Fatalf("self-update exit=%d, want 0\noutput:\n%s", code, out)
+	}
+	if got := currentBranch(t, clone); got != "feature-x" {
+		t.Fatalf("self-update did not return to feature-x, got %q", got)
+	}
+
+	syncOut, syncCode := runBackendSubcommand(t, clone, "sync-check", "--target", "claude")
+	if syncCode != 0 {
+		t.Fatalf("sync-check exit=%d, want 0\noutput:\n%s", syncCode, syncOut)
+	}
+	if !strings.Contains(syncOut, "REPO_BEHIND_ORIGIN=0") {
+		t.Errorf("sync-check does not report REPO_BEHIND_ORIGIN=0 after a successful self-update run from a non-main branch:\n%s", syncOut)
+	}
+}

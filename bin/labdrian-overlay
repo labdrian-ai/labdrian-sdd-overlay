@@ -112,7 +112,7 @@ Commands:
   sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
                                    Validate gentle-ai sync state per target (default: all).
                                    Also reports REPO_BEHIND_ORIGIN=<count|NA> on each VERDICT
-                                   line: how many commits local HEAD is behind this repo's own
+                                   line: how many commits local main is behind this repo's own
                                    origin/main. Default is a cached-ref comparison (no network
                                    call); pass --check-origin (alias --fetch) to run
                                    'git fetch origin' first for a live count. NA means the
@@ -988,7 +988,7 @@ cmd_status() {
 # sync-check
 # ---------------------------------------------------------------------------
 
-# Computes how many commits local HEAD is behind this repo's own origin/main,
+# Computes how many commits local main is behind this repo's own origin/main,
 # repo-level (not target-scoped). Emits an integer count on stdout, or the
 # literal token "NA" when the comparison is unavailable (no origin remote, no
 # cached ref, or a requested live fetch failed).
@@ -1047,11 +1047,26 @@ compute_repo_behind_origin() {
     return
   fi
 
+  # Compared against local 'main', never the checked-out branch (HEAD). This
+  # must track the exact ref self-update converges: self-update fast-forwards
+  # ONLY main and always returns to whatever branch was current (D1-D3), so a
+  # HEAD-relative comparison stays nonzero forever when the current branch
+  # isn't main -- the TUI's "Actualizar repositorio" button would fast-forward
+  # main for real but its own banner would never report convergence. This is
+  # also the same ref cmd_sync_check's own per-file comparisons already use
+  # ("main:${rr_repo_rel}" below), so this makes the diagnostic agree with
+  # both its producer (self-update) and its sibling check (per-file drift).
+  if ! git rev-parse --verify -q refs/heads/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no local 'main' branch -- REPO_BEHIND_ORIGIN unavailable" >&2
+    echo "NA"
+    return
+  fi
+
   local count
-  if count="$(git rev-list HEAD..origin/main --count 2>/dev/null)"; then
+  if count="$(git rev-list main..origin/main --count 2>/dev/null)"; then
     echo "$count"
   else
-    echo "SYNC_CHECK:(repo): git rev-list HEAD..origin/main failed -- REPO_BEHIND_ORIGIN unavailable" >&2
+    echo "SYNC_CHECK:(repo): git rev-list main..origin/main failed -- REPO_BEHIND_ORIGIN unavailable" >&2
     echo "NA"
   fi
 }
