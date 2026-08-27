@@ -42,6 +42,27 @@ type Action struct {
 	Also           []Action // nested sub-actions merged into this menu entry (invisible in the menu)
 }
 
+// usesTargets reports whether running this action -- the primary invocation
+// plus every merged Also entry -- ever touches per-target state, so the
+// confirm screen knows whether to name which targets it will run against.
+// An action is target-agnostic only when EVERY invocation it produces is
+// itself TargetAgnostic; one target-using invocation (e.g. "apply" chained
+// onto "self-update" so a single button both fast-forwards main AND deploys
+// it) makes the combined action no longer target-agnostic from the user's
+// point of view, even though the primary invocation never receives
+// --target.
+func (a Action) usesTargets() bool {
+	if !a.TargetAgnostic {
+		return true
+	}
+	for _, sub := range a.Also {
+		if !sub.TargetAgnostic {
+			return true
+		}
+	}
+	return false
+}
+
 // Actions returns the action menu in display order: Estado, then sync-check,
 // then capture, then apply (the natural usage flow), then repo maintenance
 // (self-update), then the hooks lifecycle, then skills. Related read-only
@@ -63,14 +84,24 @@ func Actions() []Action {
 			Hint: "Despliega el overlay en los destinos"},
 		// Repo maintenance — TargetAgnostic: fast-forwards main only, via the
 		// backend's self-update subcommand (D1-D3). Placed right after the
-		// core apply flow and before the hooks block (D7).
+		// core apply flow and before the hooks block (D7). Chains "apply" via
+		// Also so one button press both catches main up AND deploys it —
+		// before this, a user had to remember to run "Aplicar cambios"
+		// separately afterward, or the fix would sit fast-forwarded in the
+		// repo but never reach ~/.claude/skills (the exact confusion this
+		// change exists to remove: main was fully in sync, the deployed
+		// skill was not, and the TUI gave no hint that a second step was
+		// needed).
 		{
 			Name:           "Actualizar repositorio",
 			Command:        "self-update",
 			Mutating:       true,
 			TargetAgnostic: true,
-			ConfirmMessage: "Actualiza SOLO la rama main a origin/main (fast-forward); tu rama actual no se toca y se vuelve a ella al terminar. Rechaza con árbol sucio o main local adelantado.",
-			Hint:           "Pone main al día con origin/main (ff-only)",
+			ConfirmMessage: "Actualiza main a origin/main (fast-forward) y despliega el resultado en los destinos seleccionados (equivalente a Aplicar cambios). Tu rama actual no se toca y se vuelve a ella al terminar. Rechaza con árbol sucio o main local adelantado.",
+			Hint:           "Pone main al día (ff-only) y lo despliega, en un solo paso",
+			Also: []Action{
+				{Command: "apply", SupportsAll: true},
+			},
 		},
 		// Hooks lifecycle — TargetAgnostic: operate on ~/.claude/settings.json globally.
 		{

@@ -188,6 +188,67 @@ func TestGlobalXKey_DismissesBannerOnlyWhenVisible(t *testing.T) {
 	})
 }
 
+// TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible verifies the
+// banner-shortcut change (menos-pasos follow-up): pressing "u" while the
+// behind-origin banner is visible jumps straight to the self-update confirm
+// screen, from ANY screen (global, like "x"), skipping the menu-navigation
+// step entirely for the most common recovery. It must stay a no-op when the
+// banner isn't visible, and must not hijack a command that is actively
+// running.
+func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
+	pressU := func(m model) model {
+		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")})
+		return updated.(model)
+	}
+
+	t.Run("jumps to self-update confirm when visible", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		m = pressU(m)
+		if m.scr != screenConfirm {
+			t.Fatalf("scr after 'u' while banner visible = %v, want screenConfirm", m.scr)
+		}
+		if m.pendingAction.Command != "self-update" {
+			t.Errorf("pendingAction after 'u' = %+v, want Command == %q", m.pendingAction, "self-update")
+		}
+	})
+
+	t.Run("works from any screen, not only the default one", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		m.scr = screenResult
+		m = pressU(m)
+		if m.scr != screenConfirm {
+			t.Errorf("scr after 'u' from screenResult = %v, want screenConfirm", m.scr)
+		}
+		if m.pendingAction.Command != "self-update" {
+			t.Errorf("pendingAction after 'u' from screenResult = %+v, want Command == %q", m.pendingAction, "self-update")
+		}
+	})
+
+	t.Run("no-op when not behind origin", func(t *testing.T) {
+		m := newModel() // behindOrigin defaults to RepoBehindOriginNA
+		before := m.scr
+		m = pressU(m)
+		if m.scr != before {
+			t.Errorf("scr changed to %v after 'u' with no banner visible, want unchanged %v", m.scr, before)
+		}
+		if m.pendingAction.Command != "" {
+			t.Errorf("pendingAction set to %+v after 'u' with no banner visible, want zero value", m.pendingAction)
+		}
+	})
+
+	t.Run("does not hijack a command that is actively running", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		m.scr = screenRunning
+		m = pressU(m)
+		if m.scr != screenRunning {
+			t.Errorf("scr after 'u' while screenRunning = %v, want unchanged screenRunning", m.scr)
+		}
+	})
+}
+
 // TestToggleSelection verifies space toggles the target under the cursor off.
 func TestToggleSelection(t *testing.T) {
 	m := newModel()
@@ -1595,11 +1656,11 @@ func TestSelfUpdateActionRegistered(t *testing.T) {
 
 // TestSelfUpdateConfirmScreen proves, for the ACTUAL registered self-update
 // entry (sourced from Actions(), not a hand-built stand-in), that
-// screenConfirm hides the target list — the TargetAgnostic mechanism is
-// already covered generically by TestConfirmMessageSelection, but this test
-// pins it for THIS specific entry rather than trusting the general
-// mechanism — and that the confirm copy names "main" as the branch touched
-// (R-003 Scenario: "confirm text names main as the only branch updated").
+// screenConfirm SHOWS the target list — self-update now chains "apply" via
+// Also (menos-pasos change), so it is no longer purely target-agnostic from
+// the user's point of view even though its own primary invocation still
+// receives no --target — and that the confirm copy names both "main" (the
+// branch fast-forwarded) and the fact that it also deploys.
 func TestSelfUpdateConfirmScreen(t *testing.T) {
 	var selfUpdate Action
 	found := false
@@ -1619,12 +1680,107 @@ func TestSelfUpdateConfirmScreen(t *testing.T) {
 	m.pendingAction = selfUpdate
 	rendered := stripANSI(m.View())
 
-	if strings.Contains(rendered, "en: claude") {
-		t.Errorf("self-update confirm must NOT show a target list (TargetAgnostic), got:\n%s", rendered)
+	if !strings.Contains(rendered, "en: claude") {
+		t.Errorf("self-update confirm must show the target list now that it also deploys (Also: apply), got:\n%s", rendered)
 	}
 	if !strings.Contains(rendered, "main") {
 		t.Errorf("self-update confirm text must name 'main' as the branch updated, got:\n%s", rendered)
 	}
+	if !strings.Contains(rendered, "despliega") {
+		t.Errorf("self-update confirm text must mention that it also deploys, got:\n%s", rendered)
+	}
+}
+
+// TestSelfUpdateActionChainsApply verifies the self-update entry merges
+// "apply" into it via Also (menos-pasos change): running "Actualizar
+// repositorio" once both fast-forwards main AND deploys it to the selected
+// targets, collapsing what used to be two separate manual steps (self-update,
+// then remembering to run apply) into one. Mirrors the existing skills/status
+// Also-composition pattern (TestSkillsActionsRegistered) rather than a
+// hand-rolled shape.
+func TestSelfUpdateActionChainsApply(t *testing.T) {
+	var selfUpdate Action
+	found := false
+	for _, a := range Actions() {
+		if a.Command == "self-update" {
+			selfUpdate = a
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal(`Actions() must contain a top-level self-update action`)
+	}
+
+	if len(selfUpdate.Also) != 1 {
+		t.Fatalf("self-update action must have exactly 1 Also entry (apply), got %d: %+v", len(selfUpdate.Also), selfUpdate.Also)
+	}
+	apply := selfUpdate.Also[0]
+	if apply.Command != "apply" {
+		t.Errorf("self-update's Also entry Command = %q, want %q", apply.Command, "apply")
+	}
+	if !apply.SupportsAll {
+		t.Error("chained apply must have SupportsAll: true, so every selected target deploys in one invocation")
+	}
+	if apply.TargetAgnostic {
+		t.Error("chained apply must NOT be TargetAgnostic -- it deploys to the selected targets")
+	}
+
+	if !selfUpdate.usesTargets() {
+		t.Error("self-update must report usesTargets() == true once apply is chained onto it via Also")
+	}
+}
+
+// TestAllArgSetsSelfUpdateActionComposition verifies allArgSets on the
+// actual registered self-update action: the primary self-update invocation
+// (no --target, TargetAgnostic) followed by the chained apply invocation for
+// the selected targets — the exact sequence the TUI now runs from a single
+// button press.
+func TestAllArgSetsSelfUpdateActionComposition(t *testing.T) {
+	var selfUpdate Action
+	for _, a := range Actions() {
+		if a.Command == "self-update" {
+			selfUpdate = a
+			break
+		}
+	}
+	if selfUpdate.Command == "" {
+		t.Fatal("Actions() must contain a top-level self-update action")
+	}
+
+	targets := []Target{{Name: "claude", Path: "/some/path"}, {Name: "opencode", Path: "/other/path"}}
+
+	t.Run("all targets selected -> apply --target all", func(t *testing.T) {
+		sets := allArgSets(selfUpdate, targets, true)
+		want := [][]string{
+			{"self-update"},
+			{"apply", "--target", "all"},
+		}
+		if len(sets) != len(want) {
+			t.Fatalf("expected %d arg sets, got %d: %v", len(want), len(sets), sets)
+		}
+		for i, w := range want {
+			if strings.Join(sets[i], " ") != strings.Join(w, " ") {
+				t.Errorf("arg set %d = %v, want %v", i, sets[i], w)
+			}
+		}
+	})
+
+	t.Run("one target selected -> apply --target <name>", func(t *testing.T) {
+		sets := allArgSets(selfUpdate, targets[:1], false)
+		want := [][]string{
+			{"self-update"},
+			{"apply", "--target", "claude"},
+		}
+		if len(sets) != len(want) {
+			t.Fatalf("expected %d arg sets, got %d: %v", len(want), len(sets), sets)
+		}
+		for i, w := range want {
+			if strings.Join(sets[i], " ") != strings.Join(w, " ") {
+				t.Errorf("arg set %d = %v, want %v", i, sets[i], w)
+			}
+		}
+	})
 }
 
 // TestUpdate_SelfUpdateSuccess_RefiresProbe verifies the D5 tail: a

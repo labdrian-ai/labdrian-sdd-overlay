@@ -102,6 +102,19 @@ func (m model) runActionCmd(action Action) tea.Cmd {
 	}
 }
 
+// selfUpdateAction returns the registered self-update Action from m.actions,
+// so the banner shortcut always confirms/runs the exact SAME entry Actions()
+// wires up (including its chained-apply Also) rather than a hand-built
+// stand-in that could drift from it.
+func (m model) selfUpdateAction() (Action, bool) {
+	for _, a := range m.actions {
+		if a.Command == "self-update" {
+			return a, true
+		}
+	}
+	return Action{}, false
+}
+
 // selectedTargets returns the chosen targets in canonical order.
 func (m model) selectedTargets() []Target {
 	out := []Target{}
@@ -215,6 +228,19 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "x" && m.bannerVisible() {
 			m.bannerDismissed = true
 			return m, nil
+		}
+		// Global banner shortcut (menos-pasos follow-up): jumps straight to
+		// the self-update confirm screen from wherever the user is, skipping
+		// the menu-navigation step for the single most common recovery. Like
+		// "x" above, works on any screen and is a no-op when the banner
+		// isn't visible. Excluded while a command is actively running
+		// (screenRunning) so it cannot hijack an in-flight invocation.
+		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning {
+			if a, ok := m.selfUpdateAction(); ok {
+				m.pendingAction = a
+				m.scr = screenConfirm
+				return m, nil
+			}
 		}
 		switch m.scr {
 		case screenTargets:
