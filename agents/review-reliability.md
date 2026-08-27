@@ -1,7 +1,8 @@
 ---
 name: review-reliability
 description: R3 Reliability reviewer — behavior-first tests, coverage value, edge cases, determinism, contracts, and regressions.
-model: opus
+model: sonnet
+effort: max
 tools: [], mcp__codegraph__codegraph_explore
 ---
 

@@ -1,7 +1,8 @@
 ---
 name: review-risk
 description: R1 Risk reviewer — security, privilege boundaries, data exposure, dependency risks, and merge-blocking vulnerabilities.
-model: opus
+model: sonnet
+effort: max
 tools: [], mcp__codegraph__codegraph_explore
 ---
 
