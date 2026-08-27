@@ -42,10 +42,10 @@ cmd_apply:728 · cmd_self_update:862 · compute_repo_behind_origin:1020 · cmd_s
 
 ## Slice 3a — overlay-release-backup-restore-doctor (R-007..010) — PR3a←PR2
 
-- [ ] 3a.1 RED→GREEN `tui/restore_backend_test.go` (new) + `backup_target()`/`prune_backups()` in `cmd_apply` — backup before overwrite, no-op→none, 4th prunes oldest (retain 3, D4).
-- [ ] 3a.2 RED→GREEN `cmd_restore()` (D4: most-recent, `--list`, `--backup <ts>`, refuses `all`) + usage/dispatch — matches latest, no-backup→exit≠0, zero git ops.
-- [ ] 3a.3 RED→GREEN per-target digest row in `cmd_doctor` (before :1588) — drifted→WARN exit 0, in-sync passes, checks unaffected.
-- [ ] 3a.4 Add `cmd_version()` + `--version` alias in dispatch; `bash -n bin/labdrian-overlay`; `cd tui && go test ./...`.
+- [x] 3a.1 RED→GREEN `tui/restore_backend_test.go` (new) + `backup_target()`/`prune_backups()` in `cmd_apply` — backup before overwrite, no-op→none, 4th prunes oldest (retain 3, D4).
+- [x] 3a.2 RED→GREEN `cmd_restore()` (D4: most-recent, `--list`, `--backup <ts>`, refuses `all`) + usage/dispatch — matches latest, no-backup→exit≠0, zero git ops.
+- [x] 3a.3 RED→GREEN per-target digest row in `cmd_doctor` (before :1588) — drifted→WARN exit 0, in-sync passes, checks unaffected.
+- [x] 3a.4 Add `cmd_version()` + `--version` alias in dispatch; `bash -n bin/labdrian-overlay`; `cd tui && go test ./...`.
 
 ## Slice 3b — overlay-release-tui-surfacing (R-011) — PR3b←PR3a
 

@@ -121,6 +121,18 @@ Commands:
                                    target's recorded version (up-to-date/behind/never deployed).
                                    Refreshes only cached tags/remote refs -- never a branch head,
                                    the working tree, target files, or state.
+  restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]
+                                   DESTRUCTIVE: rolls a single target back from one of its
+                                   retained backups (up to 3, auto-pruned; default: most
+                                   recent). Refuses --target all. --list shows retained
+                                   backups (timestamp, version) without changing anything.
+                                   --backup TIMESTAMP picks a specific one. Exits non-zero
+                                   without touching any file when the target has no backups.
+                                   Performs zero git operations.
+  version (also: --version)       Read-only: print this clone's current release version
+                                   (from local main) and each target's recorded deployed
+                                   version, naming any that are behind. Never-deployed
+                                   targets are reported honestly, never fabricated.
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
@@ -603,6 +615,137 @@ state_write_target() {
   mv "$tmp" "$STATE_FILE"
 }
 
+# backup_target <target>
+#
+# overlay-backup-restore R-001 (design decision D3/D4): creates a
+# timestamped backup of <target>'s CURRENTLY DEPLOYED managed files, but
+# only for rows that are about to actually change -- a managed row whose
+# live file does not yet exist (never deployed) or whose live file already
+# matches the repo-source file about to be deployed (true no-op) has
+# nothing meaningful to preserve, so it is excluded from both the
+# needs-backup decision and the copy. Prints the created backup's
+# timestamp directory name on stdout when a backup was made; prints
+# nothing when the apply for this target is a full no-op. Backups live
+# under $STATE_DIR/backups/<target>/<utc-ts>/ (D3), holding the full
+# managed live-file set for the target under its repo-relative paths, plus
+# a '.meta' file capturing the PRIOR state_read_target entry (read before
+# any file is copied) so restore can recover the version that backup
+# represents.
+backup_target() {
+  local target="$1"
+
+  local -a changed_rel_paths=()
+  local rel_path
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_src="${rr_rest%%$'\t'*}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    # Only an EXISTING live file that is about to be OVERWRITTEN needs
+    # preserving. A row whose repo source is missing is skipped by apply
+    # itself (never overwritten), and a target with no live file yet has
+    # nothing to preserve -- both degrade to "nothing to back up" here.
+    if [[ -f "$rr_dest" && -f "$rr_src" ]] && ! diff --brief "$rr_src" "$rr_dest" > /dev/null 2>&1; then
+      changed_rel_paths+=("$rel_path")
+    fi
+  done < <(managed_files)
+
+  # Explicit 'return 0' (not a bare 'return' after a failing [[ ]] test):
+  # under this script's 'set -e', a bare 'return' here would propagate the
+  # [[ ]] test's own nonzero status as this function's exit code, tripping
+  # errexit for any caller that assigns its stdout via command substitution
+  # (e.g. cmd_apply's `backup_ts="$(backup_target "$t")"`).
+  [[ "${#changed_rel_paths[@]}" -gt 0 ]] || return 0
+
+  local backups_dir="$STATE_DIR/backups/$target"
+  mkdir -p "$backups_dir"
+
+  local ts candidate suffix=0
+  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  candidate="$ts"
+  while [[ -e "$backups_dir/$candidate" ]]; do
+    suffix=$((suffix + 1))
+    candidate="${ts}-${suffix}"
+  done
+
+  local backup_dir="$backups_dir/$candidate"
+  mkdir -p "$backup_dir"
+
+  for rel_path in "${changed_rel_paths[@]}"; do
+    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel dest_path
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+    dest_path="$backup_dir/$rr_repo_rel"
+    mkdir -p "$(dirname "$dest_path")"
+    cp "$rr_dest" "$dest_path"
+  done
+
+  local prior
+  prior="$(state_read_target "$target" 2>/dev/null || true)"
+  echo "$prior" > "$backup_dir/.meta"
+
+  prune_backups "$target"
+
+  echo "$candidate"
+}
+
+# prune_backups <target>
+#
+# overlay-backup-restore R-002 (design decision D4): retains only the 3
+# most recent backups for a target, deleting older ones. Backup dir names
+# are UTC timestamps (YYYYMMDDTHHMMSSZ, optionally suffixed by
+# backup_target on a same-second collision, e.g. "<ts>-1"). Bash's own
+# pathname expansion sorts the *globbed paths*, trailing slash included --
+# that inverts a same-second collision, because ASCII '-' (0x2D) sorts
+# before '/' (0x2F), so "<ts>-1/" sorts before "<ts>/" even though "<ts>-1"
+# is the chronologically newer one. Re-sort the bare basenames explicitly
+# so a same-second collision can't prune the wrong (newer) backup.
+prune_backups() {
+  local target="$1"
+  local backups_dir="$STATE_DIR/backups/$target"
+
+  [[ -d "$backups_dir" ]] || return 0
+
+  local -a entries=()
+  local d
+  shopt -s nullglob
+  for d in "$backups_dir"/*/; do
+    entries+=("$(basename "$d")")
+  done
+  shopt -u nullglob
+
+  if [[ "${#entries[@]}" -gt 0 ]]; then
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | LC_ALL=C sort)
+  fi
+
+  local total="${#entries[@]}"
+  local keep=3
+  [[ "$total" -le "$keep" ]] && return 0
+
+  local excess=$((total - keep))
+  local i
+  for ((i = 0; i < excess; i++)); do
+    rm -rf "${backups_dir:?}/${entries[$i]}"
+  done
+}
+
 # route_tar_path resolves where a manifest row is stored inside a backup tarball.
 # The legacy backup layout is under ~/.claude. OpenCode-native agent rows must use
 # ~/.config/opencode instead.
@@ -995,6 +1138,16 @@ cmd_apply() {
       echo "  (created target directory: $tpath)"
     fi
 
+    # overlay-backup-restore R-001: snapshot this target's currently
+    # deployed managed files BEFORE any of them are overwritten below.
+    # backup_target itself no-ops (creates nothing, prints nothing) when
+    # nothing would actually change for this target.
+    local backup_ts
+    backup_ts="$(backup_target "$t")"
+    if [[ -n "$backup_ts" ]]; then
+      echo "  backup: $backup_ts"
+    fi
+
     local deployed=0
     local in_sync=0
 
@@ -1242,6 +1395,197 @@ cmd_update() {
       echo "  $t: up-to-date ($recorded_version)"
     else
       echo "  $t: behind ($release_version available, have $recorded_version)"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# restore
+# ---------------------------------------------------------------------------
+
+# cmd_restore --target <t> [--list] [--backup <ts>]
+#
+# overlay-backup-restore R-003, design decision D4: rolls a single target
+# back from one of its retained backups (default: most recent). Refuses
+# --target all (a single-target destructive rollback, never a blanket one).
+# --list prints the retained backups (newest last) without touching
+# anything. --backup <ts> selects a specific retained backup instead of the
+# most recent. Deliberately performs ZERO git operations (design.md threat
+# matrix) and never `cd`s into $OVERLAY_DIR: it only reads $MANIFEST (an
+# absolute path already) to map repo-relative backup entries back onto
+# their live destinations, and reads/writes files under
+# $STATE_DIR/backups/<target>/ and the target's live directory.
+cmd_restore() {
+  local target_arg=""
+  local list_mode=0
+  local backup_ts=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      --list)
+        list_mode=1
+        ;;
+      --backup)
+        shift
+        backup_ts="${1:-}"
+        [[ -n "$backup_ts" ]] || die "--backup requires a timestamp argument"
+        ;;
+      *) die "Unknown option: $1. Usage: overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]" ;;
+    esac
+    shift || true
+  done
+
+  [[ -n "$target_arg" ]] || die "restore requires --target claude|opencode|codex"
+  [[ "$target_arg" != "all" ]] \
+    || die "restore does not support --target all. Specify a single target: claude, opencode, codex"
+  [[ -v TARGET_PATHS["$target_arg"] ]] \
+    || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+
+  local backups_dir="$STATE_DIR/backups/$target_arg"
+
+  local -a entries=()
+  local d
+  shopt -s nullglob
+  for d in "$backups_dir"/*/; do
+    entries+=("$(basename "$d")")
+  done
+  shopt -u nullglob
+
+  # See prune_backups' comment: bash's glob sorts the paths *with* their
+  # trailing slash, which inverts a same-second collision suffix ("<ts>-1"
+  # sorting before "<ts>" instead of after it). Re-sort the bare basenames
+  # so both --list and the "most recent" default (below) are correct even
+  # when two backups for the same target were taken in the same second.
+  if [[ "${#entries[@]}" -gt 0 ]]; then
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | LC_ALL=C sort)
+  fi
+
+  if [[ "$list_mode" -eq 1 ]]; then
+    if [[ "${#entries[@]}" -eq 0 ]]; then
+      echo "No backups available for target '$target_arg'."
+      return
+    fi
+    echo "Backups for $target_arg (newest last):"
+    local e meta version
+    for e in "${entries[@]}"; do
+      version="unknown"
+      if [[ -f "$backups_dir/$e/.meta" ]]; then
+        meta="$(cat "$backups_dir/$e/.meta")"
+        if [[ "$meta" != "NEVER_DEPLOYED" && -n "$meta" ]]; then
+          version="$(echo "$meta" | awk -F'\t' '{ print $1 }')"
+        fi
+      fi
+      echo "  $e ($version)"
+    done
+    return
+  fi
+
+  if [[ "${#entries[@]}" -eq 0 ]]; then
+    die "No backups available for target '$target_arg'. Nothing to restore."
+  fi
+
+  local selected
+  if [[ -n "$backup_ts" ]]; then
+    local found=0
+    for e in "${entries[@]}"; do
+      [[ "$e" == "$backup_ts" ]] && found=1 && break
+    done
+    [[ "$found" -eq 1 ]] \
+      || die "Backup '$backup_ts' not found for target '$target_arg'. Run 'overlay restore --target $target_arg --list' to see available backups."
+    selected="$backup_ts"
+  else
+    # 'entries' was explicitly re-sorted above; the last element is the
+    # most recent backup (D4 default).
+    selected="${entries[-1]}"
+  fi
+
+  local backup_dir="$backups_dir/$selected"
+
+  info "Restoring $target_arg from backup $selected..."
+
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel src_path
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target_arg" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+    src_path="$backup_dir/$rr_repo_rel"
+
+    if [[ -f "$src_path" ]]; then
+      ensure_parent "$rr_dest"
+      cp "$src_path" "$rr_dest"
+    fi
+  done < <(managed_files)
+
+  local restored_digest
+  restored_digest="$(compute_target_digest "$target_arg" live)"
+
+  local restored_version="untagged"
+  if [[ -f "$backup_dir/.meta" ]]; then
+    local meta_content
+    meta_content="$(cat "$backup_dir/.meta")"
+    if [[ "$meta_content" != "NEVER_DEPLOYED" && -n "$meta_content" ]]; then
+      restored_version="$(echo "$meta_content" | awk -F'\t' '{ print $1 }')"
+    fi
+  fi
+
+  state_write_target "$target_arg" "$restored_version" "$restored_digest"
+
+  info "Restored $target_arg from backup $selected (version $restored_version)."
+}
+
+# ---------------------------------------------------------------------------
+# version
+# ---------------------------------------------------------------------------
+
+# cmd_version (overlay-release-surfacing R-002; also reachable via the
+# --version flag, see dispatch below): reports this clone's own current
+# release version (resolved from local 'main', matching what 'apply' would
+# deploy right now -- unlike 'update', which checks the newest PUBLISHED
+# release on origin) and, per target, its recorded deployed version. A
+# target with no recorded state is reported as "never deployed" rather than
+# a stale or fabricated version (R-002).
+cmd_version() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  local repo_version
+  repo_version="$(resolve_latest_release_tag main)"
+
+  if [[ "$repo_version" == "none" ]]; then
+    echo "Repository version: (no releases published yet)"
+  else
+    echo "Repository version: $repo_version"
+  fi
+
+  for t in $(resolve_targets all); do
+    local recorded recorded_version recorded_digest
+    recorded="$(state_read_target "$t")"
+
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  $t: never deployed"
+      continue
+    fi
+
+    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+
+    if [[ "$repo_version" != "none" && "$recorded_version" != "$repo_version" ]]; then
+      echo "  $t: $recorded_version (behind)"
+    else
+      echo "  $t: $recorded_version"
     fi
   done
 }
@@ -2038,6 +2382,25 @@ cmd_doctor() {
     fi
   fi
 
+  # (f) overlay-release-surfacing R-001: per-target deployed-version digest
+  # consistency. A target with no recorded state (never deployed) has
+  # nothing to compare yet -- silently skipped, not reported as a failure
+  # or warning. A digest mismatch is a WARN, never a FAIL: it never touches
+  # `fail`, preserving doctor's "exits non-zero only on a hard FAIL"
+  # contract (R-001's explicit requirement).
+  local dt drecorded drecorded_version drecorded_digest dtarget_digest
+  for dt in "${!TARGET_PATHS[@]}"; do
+    drecorded="$(state_read_target "$dt")"
+    [[ "$drecorded" == "NEVER_DEPLOYED" ]] && continue
+    IFS=$'\t' read -r drecorded_version drecorded_digest _ <<< "$drecorded"
+    dtarget_digest="$(compute_target_digest "$dt" live)"
+    if [[ "$dtarget_digest" == "$drecorded_digest" ]]; then
+      echo "PASS  $dt: deployed at $drecorded_version, digest matches"
+    else
+      echo "WARN  $dt: deployed at $drecorded_version, digest drift detected -- run 'overlay apply --target $dt'"
+    fi
+  done
+
   echo ""
   if [[ "$fail" -ne 0 ]]; then
     echo "doctor: FAIL — one or more required checks did not pass (see above)." >&2
@@ -2382,6 +2745,8 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     apply)           cmd_apply "$@" ;;
     self-update)     cmd_self_update "$@" ;;
     update)          cmd_update "$@" ;;
+    restore)         cmd_restore "$@" ;;
+    version|--version) cmd_version "$@" ;;
     status)          cmd_status "$@" ;;
     sync-check)      cmd_sync_check "$@" ;;
     install-hooks)   cmd_install_hooks "$@" ;;
