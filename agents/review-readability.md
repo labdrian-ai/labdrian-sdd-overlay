@@ -1,8 +1,7 @@
 ---
 name: review-readability
 description: R2 Readability reviewer — naming, complexity, intention, maintainability, review size, and context clarity.
-model: sonnet
-effort: max
+model: opus
 tools: [], mcp__codegraph__codegraph_explore
 ---
 
