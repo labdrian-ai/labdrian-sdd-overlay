@@ -127,13 +127,30 @@ func realBackendBin(t *testing.T) string {
 
 // runBackendSubcommand runs the real backend script with OVERLAY_DIR pointed
 // at the scratch clone, returning combined stdout+stderr and the exit code
-// (0 when the process exits cleanly).
+// (0 when the process exits cleanly). HOME is pointed at a fresh scratch
+// directory with .claude/skills pre-created, mirroring capture_backend_test.go's
+// runCapture -- TARGET_PATHS[claude] ("$HOME/.claude/skills") must never
+// resolve to whatever the machine running this test actually has. Unlike
+// runCapture's intentionally-absent scratch HOME (capture never needs the
+// directory to exist), sync-check's target-dir-missing guard skips its
+// per-target block -- and never emits the VERDICT line an assertion checks --
+// when the directory is absent, so it must be pre-created here (empty is
+// enough; VERDICT prints regardless of what, if anything, is deployed
+// there). Without this, a developer machine with real deployed skills masks
+// the bug entirely while a CI runner with no ~/.claude/skills at all hits it
+// every time: this exact test failed in CI (target dir not found) while
+// passing locally, reproduced here by rerunning with HOME pointed at an
+// empty directory before this fix existed.
 func runBackendSubcommand(t *testing.T, overlayDir string, args ...string) (string, int) {
 	t.Helper()
 	bin := realBackendBin(t)
+	fakeHome := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(fakeHome, ".claude", "skills"), 0o755); err != nil {
+		t.Fatalf("creating scratch HOME/.claude/skills: %v", err)
+	}
 	cmd := exec.Command(bin, args...)
 	cmd.Dir = overlayDir
-	cmd.Env = append(gitTestEnv(), "OVERLAY_DIR="+overlayDir)
+	cmd.Env = append(gitTestEnv(), "OVERLAY_DIR="+overlayDir, "HOME="+fakeHome)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
 		return string(out), 0
