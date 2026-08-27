@@ -35,10 +35,10 @@ cmd_apply:728 · cmd_self_update:862 · compute_repo_behind_origin:1020 · cmd_s
 
 ## Slice 2 — overlay-release-fixes-and-check (R-004..006) — PR2 (base PR1)
 
-- [ ] 2.1 RED→GREEN append release_backend_test.go + rewrite `cmd_self_update` (:862, R-004) onto `resolve_latest_release_tag` — tag not raw HEAD, at-tag no-op, D1 fallback, dirty-tree refusal holds.
-- [ ] 2.2 RED→GREEN `compute_repo_behind_release()` (D2, beside :1020) — 0 post-tag-update w/ untagged origin ahead, NA pre-tag; VERDICT (:1187) += `REPO_BEHIND_RELEASE=`/`RECORDED_VERSION=`/`DIGEST_MATCH=`; ACTION names version.
-- [ ] 2.3 RED→GREEN extend `cmd_status` (in-sync-at-version) + `cmd_update()` (D6) + usage/dispatch — zero-mutation twice, honest never-deployed, no fabricated version.
-- [ ] 2.4 `bash -n bin/labdrian-overlay`; `cd tui && go test ./... -run ReleaseBackend` (TUI untouched — additive fields).
+- [x] 2.1 RED→GREEN append release_backend_test.go + rewrite `cmd_self_update` (:862, R-004) onto `resolve_latest_release_tag` — tag not raw HEAD, at-tag no-op, D1 fallback, dirty-tree refusal holds.
+- [x] 2.2 RED→GREEN `compute_repo_behind_release()` (D2, beside :1020) — 0 post-tag-update w/ untagged origin ahead, NA pre-tag; VERDICT (:1187) += `REPO_BEHIND_RELEASE=`/`RECORDED_VERSION=`/`DIGEST_MATCH=`; ACTION names version.
+- [x] 2.3 RED→GREEN extend `cmd_status` (in-sync-at-version) + `cmd_update()` (D6) + usage/dispatch — zero-mutation twice, honest never-deployed, no fabricated version.
+- [x] 2.4 `bash -n bin/labdrian-overlay`; `cd tui && go test ./... -run ReleaseBackend` (TUI untouched — additive fields).
 
 ## Slice 3a — overlay-release-backup-restore-doctor (R-007..010) — PR3a←PR2
 
