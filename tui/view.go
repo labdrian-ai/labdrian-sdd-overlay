@@ -130,7 +130,7 @@ func (m model) repoLine() string {
 	}
 	if m.bannerVisible() {
 		return lipgloss.NewStyle().Foreground(colorAmber).Render(fmt.Sprintf(
-			"▲ Repo %d commit(s) detrás de origin/main · «Actualizar repositorio» pone al día solo main · x ocultar",
+			"▲ Repo %d commit(s) detrás de origin/main · «Actualizar repositorio» pone main al día y lo despliega · x ocultar",
 			m.behindOrigin,
 		))
 	}
