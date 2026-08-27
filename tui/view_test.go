@@ -144,3 +144,71 @@ func TestRepoLine_BehindOriginBannerStates(t *testing.T) {
 		})
 	}
 }
+
+// TestRepoLine_PersistentStatusLine verifies the menos-pasos follow-up: the
+// repo status line is no longer silent when there is no bad news. It always
+// names one of three states -- healthy, behind, or unresolvable -- instead
+// of only speaking up for the "behind" case and staying blank otherwise,
+// which left a viewer unable to tell "everything is fine" apart from "this
+// was never checked".
+func TestRepoLine_PersistentStatusLine(t *testing.T) {
+	cases := []struct {
+		name           string
+		behindOrigin   int
+		wantSubstr     string
+		wantNotSubstrs []string
+	}{
+		{
+			name:         "confirmed zero behind -> healthy state, not silent",
+			behindOrigin: 0,
+			wantSubstr:   "al día",
+			wantNotSubstrs: []string{
+				"detrás de origin/main",
+				"No se pudo verificar",
+			},
+		},
+		{
+			name:         "NA -> explicit unresolvable state, not silent",
+			behindOrigin: RepoBehindOriginNA,
+			wantSubstr:   "No se pudo verificar",
+			wantNotSubstrs: []string{
+				"detrás de origin/main",
+				"al día",
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			m := newModel()
+			m.behindOrigin = tc.behindOrigin
+
+			line := stripANSI(m.repoLine())
+			if line == "" {
+				t.Fatalf("repoLine() must never be silent for behindOrigin=%d, got empty string", tc.behindOrigin)
+			}
+			if !strings.Contains(line, tc.wantSubstr) {
+				t.Errorf("repoLine() = %q, want it to contain %q", line, tc.wantSubstr)
+			}
+			for _, notWant := range tc.wantNotSubstrs {
+				if strings.Contains(line, notWant) {
+					t.Errorf("repoLine() = %q, must NOT contain %q for behindOrigin=%d", line, notWant, tc.behindOrigin)
+				}
+			}
+		})
+	}
+
+	t.Run("rootErr still takes precedence over the healthy state", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 0
+		m.rootErr = errors.New("boom")
+
+		line := stripANSI(m.repoLine())
+		if !strings.Contains(line, "boom") {
+			t.Errorf("repoLine() = %q, rootErr must still take precedence", line)
+		}
+		if strings.Contains(line, "al día") {
+			t.Errorf("repoLine() = %q, must not also render the healthy state alongside rootErr", line)
+		}
+	})
+}

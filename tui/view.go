@@ -119,22 +119,39 @@ func (m model) View() string {
 	return lipgloss.NewStyle().MaxWidth(termW).Render(composed)
 }
 
-// repoLine surfaces the repo-locate error, if any, at the column's left edge
-// — no hardcoded indent. Falls back to the dismissible behind-origin banner
-// (R-002, D6) when there's no repo error and the launch-time probe resolved
-// a positive REPO_BEHIND_ORIGIN count that the user hasn't dismissed yet.
-// Silent (empty) otherwise — no useful chrome to show on every screen.
+// repoLine surfaces the repo status at the column's left edge — no hardcoded
+// indent. rootErr always takes precedence (a repo-locate error is a more
+// urgent signal than anything else here). Otherwise it always names one of
+// three states, never silent: the dismissible behind-origin banner (R-002,
+// D6) when the launch-time probe resolved a positive REPO_BEHIND_ORIGIN
+// count the user hasn't dismissed yet; a calm confirmed-healthy line when it
+// resolved exactly zero; or an explicit unresolvable line for RepoBehindOriginNA.
+// Dismissing (x) only ever suppresses the behind-origin banner, never the
+// healthy/unresolvable lines — those aren't warnings, so there's nothing to
+// dismiss. This line used to go blank whenever there was no bad news, which
+// left a viewer unable to tell "everything is fine" apart from "this was
+// never checked" — the exact confusion the menos-pasos follow-up fixes.
 func (m model) repoLine() string {
 	if m.rootErr != nil {
 		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
 	}
-	if m.bannerVisible() {
+	switch {
+	case m.bannerVisible():
 		return lipgloss.NewStyle().Foreground(colorAmber).Render(fmt.Sprintf(
 			"▲ Repo %d commit(s) detrás de origin/main · u actualizar y desplegar · x ocultar",
 			m.behindOrigin,
 		))
+	case m.behindOrigin > 0:
+		// Positive but dismissed: stays silent, matching the pre-existing
+		// dismiss contract (R-002) — the user already saw and acknowledged
+		// the warning.
+		return ""
+	case m.behindOrigin == 0:
+		return lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Repo al día con origin/main")
+	default: // RepoBehindOriginNA
+		return lipgloss.NewStyle().Foreground(colorGray).Render(
+			"? No se pudo verificar el estado del repo (sin red / sin fetch previo)")
 	}
-	return ""
 }
 
 // footerKeys returns the raw key-hint legend for the active screen. The width
