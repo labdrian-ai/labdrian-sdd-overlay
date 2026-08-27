@@ -1,0 +1,92 @@
+{
+  "contract_version": "2.0.0",
+  "change_name": "overlay-versioned-releases",
+  "project": "labdrian-sdd-overlay",
+  "tier": 2,
+  "interaction_mode": "interactive",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/overlay-versioned-releases/entry",
+      "openspec_path": "openspec/changes/overlay-versioned-releases/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/labdrian-sdd-overlay/requirements/overlay-versioned-releases"
+    },
+    "manifest": {
+      "context": { "topic_key": "project/labdrian-sdd-overlay/manifest/context" },
+      "mission": { "topic_key": "project/labdrian-sdd-overlay/manifest/mission" },
+      "rules": { "topic_key": "project/labdrian-sdd-overlay/manifest/rules" }
+    },
+    "architecture": { "topic_key": "project/labdrian-sdd-overlay/architect/final" },
+    "roadmap": { "topic_key": "project/labdrian-sdd-overlay/roadmap" },
+    "estimate": { "topic_key": "sdd/overlay-versioned-releases/estimate" },
+    "sdd_init": { "topic_key": "sdd-init/labdrian-sdd-overlay" },
+    "pipeline_state": { "topic_key": "sdd/overlay-versioned-releases/pipeline-state" },
+    "delivery": { "topic_key": "delivery/overlay-versioned-releases" }
+  },
+  "estimate": {
+    "planned_range_hours": { "low": 3.5, "high": 11.0 },
+    "complexity": "high",
+    "confidence": "low",
+    "human_review_included": true
+  },
+  "requested_pr_strategy": "auto",
+  "delivery_strategy": "auto-chain",
+  "chaining_required": true,
+  "chain_strategy": "feature-branch-chain",
+  "review_budget": {
+    "max_changed_lines_per_slice": 400,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": { "state": "not-needed" }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "cd tui && go test ./...",
+        "bash -n bin/labdrian-overlay"
+      ],
+      "broad": [
+        "cd engine && go test ./...",
+        "cd tui && go test ./...",
+        "bash -n bin/labdrian-overlay && bash -n bin/overlay"
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "overlay-release-identity",
+      "title": "Semver git-tag release identity, persisted per-target version+digest state, aggregate per-target content digest, and the release.yml CI job that cuts tags",
+      "requirements": ["R-001", "R-002", "R-003"],
+      "dependencies": [],
+      "estimated_changed_lines": { "low": 180, "high": 340 }
+    },
+    {
+      "order": 2,
+      "id": "overlay-release-fixes-and-check",
+      "title": "self-update converging to the latest release tag, the REPO_BEHIND_RELEASE VERDICT superset, and the read-only update check",
+      "requirements": ["R-004", "R-005", "R-006"],
+      "dependencies": ["overlay-release-identity"],
+      "estimated_changed_lines": { "low": 140, "high": 280 }
+    },
+    {
+      "order": 3,
+      "id": "overlay-release-backup-restore-doctor",
+      "title": "Automatic pre-apply backup with retention-3 pruning, the restore command, the doctor per-target digest row, and the version command",
+      "requirements": ["R-007", "R-008", "R-009", "R-010"],
+      "dependencies": ["overlay-release-fixes-and-check"],
+      "estimated_changed_lines": { "low": 220, "high": 380 }
+    },
+    {
+      "order": 4,
+      "id": "overlay-release-tui-surfacing",
+      "title": "TUI surfacing of recorded version, digest match, and release-behind status across run.go/model.go/view.go",
+      "requirements": ["R-011"],
+      "dependencies": ["overlay-release-backup-restore-doctor"],
+      "estimated_changed_lines": { "low": 150, "high": 290 }
+    }
+  ],
+  "expected_native_next_recommendation": "sdd-new"
+}
