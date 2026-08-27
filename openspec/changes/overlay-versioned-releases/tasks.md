@@ -49,6 +49,6 @@ cmd_apply:728 · cmd_self_update:862 · compute_repo_behind_origin:1020 · cmd_s
 
 ## Slice 3b — overlay-release-tui-surfacing (R-011) — PR3b←PR3a
 
-- [ ] 3b.1 RED→GREEN extend `tui/view_test.go` + `run.go` (:72,169,186,211) — TargetVerdict += RecordedVersion/DigestMatch/RepoBehindRelease, parse new keys, classify precedence, Actions()+="Restaurar respaldo".
-- [ ] 3b.2 GREEN `model.go` (:154 behindRelease+probe) + `view.go` (:134 repoLine/D2, :433 viewDashboard) — version+digest shown, restore needs backup, confirm names overwrite, banner keys on release-behind.
-- [ ] 3b.3 `cd tui && go test ./...`; `bash -n bin/labdrian-overlay && bash -n bin/overlay`.
+- [x] 3b.1 RED→GREEN extend `tui/view_test.go` + `run.go` (:72,169,186,211) — TargetVerdict += RecordedVersion/DigestMatch/RepoBehindRelease, parse new keys, classify precedence, Actions()+="Restaurar respaldo".
+- [x] 3b.2 GREEN `model.go` (:154 behindRelease+probe) + `view.go` (:134 repoLine/D2, :433 viewDashboard) — version+digest shown, restore needs backup, confirm names overwrite, banner keys on release-behind.
+- [x] 3b.3 `cd tui && go test ./...`; `bash -n bin/labdrian-overlay && bash -n bin/overlay`.
