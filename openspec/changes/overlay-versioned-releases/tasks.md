@@ -26,12 +26,12 @@ cmd_apply:728 · cmd_self_update:862 · compute_repo_behind_origin:1020 · cmd_s
 
 ## Slice 1 — overlay-release-identity (R-001..003) — PR1
 
-- [ ] 1.1 RED→GREEN `tui/release_backend_test.go` (new; `pushUpstreamTag` helper) + `resolve_latest_release_tag()` (:403, R-003) — zero-tag→`none`, semver order, explicit fetch first.
-- [ ] 1.2 RED→GREEN digest tests + `compute_target_digest()` via `route_resolve` (D5) — reorder→identical, mutation→differs, sorted `sha256` lines.
-- [ ] 1.3 RED→GREEN state tests + awk `state_read_target`/`state_write_target()` (D8, tmp+mv) — first apply creates `state.json`; corrupt→"never deployed"+WARN.
-- [ ] 1.4 Wire `cmd_apply` (:823) to `state_write_target` per target.
-- [ ] 1.5 Create `.github/workflows/release.yml`: skip-if-tagged, D7 bump, annotated tag+push, `contents:write`, `fetch-depth:0`.
-- [ ] 1.6 `bash -n bin/labdrian-overlay`; `cd tui && go test ./... -run ReleaseBackend`.
+- [x] 1.1 RED→GREEN `tui/release_backend_test.go` (new; `pushUpstreamTag` helper) + `resolve_latest_release_tag()` (:403, R-003) — zero-tag→`none`, semver order, explicit fetch first.
+- [x] 1.2 RED→GREEN digest tests + `compute_target_digest()` via `route_resolve` (D5) — reorder→identical, mutation→differs, sorted `sha256` lines.
+- [x] 1.3 RED→GREEN state tests + awk `state_read_target`/`state_write_target()` (D8, tmp+mv) — first apply creates `state.json`; corrupt→"never deployed"+WARN.
+- [x] 1.4 Wire `cmd_apply` (:823) to `state_write_target` per target.
+- [x] 1.5 Create `.github/workflows/release.yml`: skip-if-tagged, D7 bump, annotated tag+push, `contents:write`, `fetch-depth:0`.
+- [x] 1.6 `bash -n bin/labdrian-overlay`; `cd tui && go test ./... -run ReleaseBackend`.
 
 ## Slice 2 — overlay-release-fixes-and-check (R-004..006) — PR2 (base PR1)
 
