@@ -188,6 +188,67 @@ func TestGlobalXKey_DismissesBannerOnlyWhenVisible(t *testing.T) {
 	})
 }
 
+// TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible verifies the
+// banner-shortcut change (menos-pasos follow-up): pressing "u" while the
+// behind-origin banner is visible jumps straight to the self-update confirm
+// screen, from ANY screen (global, like "x"), skipping the menu-navigation
+// step entirely for the most common recovery. It must stay a no-op when the
+// banner isn't visible, and must not hijack a command that is actively
+// running.
+func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
+	pressU := func(m model) model {
+		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("u")})
+		return updated.(model)
+	}
+
+	t.Run("jumps to self-update confirm when visible", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		m = pressU(m)
+		if m.scr != screenConfirm {
+			t.Fatalf("scr after 'u' while banner visible = %v, want screenConfirm", m.scr)
+		}
+		if m.pendingAction.Command != "self-update" {
+			t.Errorf("pendingAction after 'u' = %+v, want Command == %q", m.pendingAction, "self-update")
+		}
+	})
+
+	t.Run("works from any screen, not only the default one", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		m.scr = screenResult
+		m = pressU(m)
+		if m.scr != screenConfirm {
+			t.Errorf("scr after 'u' from screenResult = %v, want screenConfirm", m.scr)
+		}
+		if m.pendingAction.Command != "self-update" {
+			t.Errorf("pendingAction after 'u' from screenResult = %+v, want Command == %q", m.pendingAction, "self-update")
+		}
+	})
+
+	t.Run("no-op when not behind origin", func(t *testing.T) {
+		m := newModel() // behindOrigin defaults to RepoBehindOriginNA
+		before := m.scr
+		m = pressU(m)
+		if m.scr != before {
+			t.Errorf("scr changed to %v after 'u' with no banner visible, want unchanged %v", m.scr, before)
+		}
+		if m.pendingAction.Command != "" {
+			t.Errorf("pendingAction set to %+v after 'u' with no banner visible, want zero value", m.pendingAction)
+		}
+	})
+
+	t.Run("does not hijack a command that is actively running", func(t *testing.T) {
+		m := newModel()
+		m.behindOrigin = 3
+		m.scr = screenRunning
+		m = pressU(m)
+		if m.scr != screenRunning {
+			t.Errorf("scr after 'u' while screenRunning = %v, want unchanged screenRunning", m.scr)
+		}
+	})
+}
+
 // TestToggleSelection verifies space toggles the target under the cursor off.
 func TestToggleSelection(t *testing.T) {
 	m := newModel()
