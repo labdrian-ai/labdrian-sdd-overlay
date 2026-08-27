@@ -351,7 +351,7 @@ func (m model) viewConfirm() string {
 	}
 
 	var msg string
-	if m.pendingAction.TargetAgnostic {
+	if !m.pendingAction.usesTargets() {
 		msg = fmt.Sprintf(
 			"Ejecutar %s\n\n%s %s",
 			lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
