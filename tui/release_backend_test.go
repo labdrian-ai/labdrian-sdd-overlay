@@ -712,6 +712,13 @@ func TestReleaseBackend_SyncCheck_NeverDeployedTargetNoFabricatedVersion(t *test
 // release tag, but apply hasn't re-deployed the target yet, so its recorded
 // digest (from an OLDER version) has gone stale -- the ACTION line must name
 // the new release version, not merely a raw commit-behind count.
+//
+// This exercises the "release version IS already known" half of R-007 --
+// e.g. right after a self-update, or with sync-check's own --check-origin --
+// so it explicitly passes --fetch (post CRITICAL-1 fix, sync-check's default
+// path is cached-only and would otherwise never learn about v1.5.0; the
+// "not known yet" half is TestReleaseBackend_SyncCheck_DefaultDoesNotFetchTags
+// below).
 func TestReleaseBackend_SyncCheck_DigestMismatchActionNamesReleaseVersion(t *testing.T) {
 	origin, clone := newScratchRepo(t)
 	pushUpstreamTag(t, origin, "v1.5.0", "release 1.5.0")
@@ -728,7 +735,7 @@ func TestReleaseBackend_SyncCheck_DigestMismatchActionNamesReleaseVersion(t *tes
 		t.Fatalf("state_write_target setup call failed")
 	}
 
-	out, code := runBackendSubcommandWithHome(t, clone, fakeHome, "sync-check", "--target", "claude")
+	out, code := runBackendSubcommandWithHome(t, clone, fakeHome, "sync-check", "--target", "claude", "--fetch")
 	if code != 0 {
 		t.Fatalf("sync-check exit=%d, want 0\noutput:\n%s", code, out)
 	}
@@ -741,6 +748,47 @@ func TestReleaseBackend_SyncCheck_DigestMismatchActionNamesReleaseVersion(t *tes
 	wantAction := "ACTION:claude: run 'overlay apply --target claude' (release v1.5.0 available)"
 	if !strings.Contains(out, wantAction) {
 		t.Errorf("ACTION does not name the available release version:\nwant substring: %s\ngot:\n%s", wantAction, out)
+	}
+}
+
+// Regression (sdd-verify CRITICAL-1): sync-check's default path (no
+// --check-origin/--fetch) must invoke NO `git fetch`, exactly like its
+// siblings compute_repo_behind_origin/compute_repo_behind_release --
+// sync-check-verdicts R-001 and tui-self-update R-001 (every TUI launch
+// runs a flagless sync-check via probeBehindOriginCmd) both require this.
+// resolve_latest_release_tag's unconditional fetch, called unconditionally
+// from cmd_sync_check's release_version line, violated it: this reproduces
+// the exact scenario the verify report proved by execution (a clone with
+// zero local tags, origin carrying a real annotated tag, plain sync-check)
+// and additionally asserts sync-check completes successfully with an
+// "untagged" fallback rather than silently depending on network access.
+func TestReleaseBackend_SyncCheck_DefaultDoesNotFetchTags(t *testing.T) {
+	origin, clone := newScratchRepo(t)
+	pushUpstreamTag(t, origin, "v1.2.3", "release 1.2.3")
+	writeFile(t, filepath.Join(clone, "overlay.manifest"), "hello/SKILL.md managed\n")
+
+	if tags := runGit(t, clone, "tag", "-l"); strings.TrimSpace(tags) != "" {
+		t.Fatalf("scratch clone already has local tags before sync-check runs: %q", tags)
+	}
+
+	fakeHome := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(fakeHome, ".claude", "skills"), 0o755); err != nil {
+		t.Fatalf("mkdir scratch HOME/.claude/skills: %v", err)
+	}
+
+	out, code := runBackendSubcommandWithHome(t, clone, fakeHome, "sync-check", "--target", "claude")
+	if code != 0 {
+		t.Fatalf("sync-check exit=%d, want 0\noutput:\n%s", code, out)
+	}
+
+	if tags := runGit(t, clone, "tag", "-l"); strings.TrimSpace(tags) != "" {
+		t.Errorf("default sync-check (no --check-origin/--fetch) invoked git fetch and populated local tags: %q", tags)
+	}
+	if !strings.Contains(out, "ACTION:claude: run 'overlay apply --target claude'") {
+		t.Errorf("ACTION did not fall back to the untagged case (no release version should be knowable without a fetch):\n%s", out)
+	}
+	if strings.Contains(out, "release v1.2.3") {
+		t.Errorf("ACTION named the release version despite never fetching it:\n%s", out)
 	}
 }
 

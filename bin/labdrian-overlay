@@ -432,21 +432,33 @@ route_repo_rel() {
 # release identity, digest, and state (R-001..R-003)
 # ---------------------------------------------------------------------------
 
-# resolve_latest_release_tag <ref>
+# resolve_latest_release_tag <ref> [do_fetch=true]
 #
-# R-003: explicitly fetches v*-matching tags from origin first (closing the
-# gap where a plain branch fetch does not guarantee tag visibility), THEN
-# resolves the highest semver-ordered ANNOTATED tag reachable from <ref>,
-# using git's version-aware refname sort rather than a plain lexical one
-# (v1.10.0 must outrank v1.9.0). Lightweight tags are skipped -- R-001
-# requires an annotated tag. Emits the literal token "none" when no
-# qualifying tag exists (design decision D1's pre-first-tag bootstrap case),
-# never an error -- callers decide how to degrade (D1: legacy convergence /
-# "untagged" / "no releases published yet").
+# R-003: by default (do_fetch=true, every caller except cmd_sync_check's
+# read-only default path) explicitly fetches v*-matching tags from origin
+# first (closing the gap where a plain branch fetch does not guarantee tag
+# visibility), THEN resolves the highest semver-ordered ANNOTATED tag
+# reachable from <ref>, using git's version-aware refname sort rather than a
+# plain lexical one (v1.10.0 must outrank v1.9.0). Lightweight tags are
+# skipped -- R-001 requires an annotated tag. Emits the literal token "none"
+# when no qualifying tag exists (design decision D1's pre-first-tag
+# bootstrap case), never an error -- callers decide how to degrade (D1:
+# legacy convergence / "untagged" / "no releases published yet").
+#
+# Passing do_fetch=false resolves from whatever tags are already cached
+# locally, without touching the network -- the same cached-only idiom
+# compute_repo_behind_origin/compute_repo_behind_release use for their own
+# default (non---check-origin) path. cmd_sync_check is the only caller that
+# needs this: sync-check-verdicts R-001 and tui-self-update R-001 both
+# require its default (no --check-origin/--fetch) path to invoke no
+# `git fetch` at all, and every OTHER caller (cmd_apply, cmd_self_update,
+# cmd_update, cmd_version) already requires or accepts a fresh fetch by its
+# own spec/design, so they are left on the do_fetch=true default untouched.
 resolve_latest_release_tag() {
   local ref="${1:-HEAD}"
+  local do_fetch="${2:-true}"
 
-  if git remote get-url origin >/dev/null 2>&1; then
+  if [[ "$do_fetch" == true ]] && git remote get-url origin >/dev/null 2>&1; then
     # Bounded like every other network call this file makes (compute_repo_behind_origin,
     # compute_repo_behind_release, cmd_self_update's main fetch): this function is now
     # called from cmd_self_update, cmd_update, and cmd_sync_check's release_version line
@@ -1858,8 +1870,12 @@ cmd_sync_check() {
 
   # overlay-update-check/overlay-release-identity: the release `apply` would
   # currently deploy, resolved from local main (D1 fallback: "untagged").
+  # Cached-only unless --check-origin/--fetch was passed (mirrors
+  # compute_repo_behind_origin/compute_repo_behind_release just above) --
+  # sync-check-verdicts R-001 and tui-self-update R-001 both require this
+  # default path to invoke no `git fetch`.
   local release_version
-  release_version="$(resolve_latest_release_tag main)"
+  release_version="$(resolve_latest_release_tag main "$check_origin")"
   [[ "$release_version" == "none" ]] && release_version="untagged"
 
   for t in $(resolve_targets "$target_arg"); do
