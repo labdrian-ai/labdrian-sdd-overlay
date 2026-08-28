@@ -8,6 +8,7 @@ A customization layer over `gentle-ai` (an SDD-driven, multi-agent dev runtime) 
 - Deploys your overlaid skills to **three agent runtimes**: Claude Code (`~/.claude/skills`), opencode (`~/.config/opencode/skills`), and codex (`~/.codex/skills`).
 - Deploys Claude Code **agent definitions** (e.g. GADU) to `~/.claude/agents/` — agents are Claude Code-only; opencode/codex receive the portable skill form instead.
 - Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject a minimalism contract **only** into the code-writing SDD phases (`sdd-tasks`/`sdd-apply`) and exclude it from all others. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
+- Cuts and tracks **named releases** (semver tags via CI) as an additional layer on top of the upstream/main model — versioning, per-target state, and rollback. See [Releases](#releases) below.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
 
@@ -93,19 +94,27 @@ dashboard surfaces per-target drift for **agent files** (e.g. the GADU agent in
 registry actions (`skills validate`, `list`, `status`) are available directly from the
 action menu without leaving the dashboard. `skills validate` also cross-checks the
 `skills/` directory itself against `overlay.manifest` and exits non-zero on any
-divergence.
+divergence. The dashboard also shows each target's recorded release version and
+digest-match status, and offers a confirmed "Restaurar respaldo" (restore) action —
+gated on a backup actually existing for the selected target(s) — routed through the
+same confirm→run→result pattern as apply/self-update.
 
 ### Action map
 
 | Command | Mode | What it does |
 |---------|------|--------------|
 | `status` | read-only | Per-file drift between repo and each live target |
-| `sync-check` | read-only | **The compass** — tells you exactly what to do (see verdicts below) |
-| `apply [--target claude\|opencode\|codex\|all]` | **modifies** | Merge upstream→main, then deploy overlay to target(s). Shows confirmation before mutating. |
+| `sync-check` | read-only | **The compass** — tells you exactly what to do (see verdicts below); VERDICT lines also carry release version and digest-match per target |
+| `apply [--target claude\|opencode\|codex\|all]` | **modifies** | Merge upstream→main, then deploy overlay to target(s). Shows confirmation before mutating. Backs up each target's currently-deployed managed files first. |
 | `capture [--target claude\|opencode\|codex]` | **modifies** | Pull a gentle-ai update into the `upstream` branch. Single target only. |
+| `self-update` | **modifies** | Fast-forward local `main` (never the current branch) to the latest published release tag — never past it, even if `origin/main` carries untagged commits beyond it. Falls back to raw `origin/main` HEAD convergence before any release tag exists. Refuses on a dirty tracked tree, local-ahead main, or no `origin` remote. |
+| `update` | read-only | Report the latest published release version and each target's recorded version (up-to-date / behind / never deployed). Never mutates anything. |
+| `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
+| `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
 | `uninstall-hooks` | **modifies** | Remove the two overlay hook entries from `~/.claude/settings.json`, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contract readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
+| `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
 
@@ -155,12 +164,26 @@ labdrian status-hooks                       # all green?
 | `OVERLAY_NOT_DEPLOYED` | your customization exists in the repo but isn't live | `apply` |
 | healthy (no flags) | everything in sync | nothing to do |
 
+Each VERDICT line also carries `REPO_BEHIND_ORIGIN`, `REPO_BEHIND_RELEASE`, `RECORDED_VERSION`, and `DIGEST_MATCH` — see [Releases](#releases) below.
+
 ```
-VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0
+VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.2.0 DIGEST_MATCH=no
 ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' then 'overlay apply'
 ```
 
 > **Convention:** commands that **read only** are always safe to run. Commands marked **modifies** show a confirmation first and, for hook operations, write a `.bak` backup before touching `~/.claude/settings.json`.
+
+## Releases
+
+The upstream/main model above is what makes your customizations survive a `gentle-ai` sync — that's unchanged. On top of it, the overlay repo itself now ships **named releases**: CI cuts an annotated semver tag (`vX.Y.Z`) on every push to `main` (conventional-commit bump — `feat:` → minor, `!`/`BREAKING CHANGE:` → major, else patch; skips if `HEAD` is already tagged; bootstraps `v1.0.0` on the very first tag), the same model `gentle-ai` itself uses for its own releases.
+
+| Command | What it tells you |
+|---------|--------------------|
+| `overlay version` (or `--version`) | This clone's release version — what `apply` would deploy right now — plus each target's recorded deployed version |
+| `overlay update` | Read-only: the latest **published** release vs. each target's recorded status (up-to-date / behind / never deployed) |
+| `overlay self-update` | Converges local `main` to the latest **published release tag** — not raw `origin/main` HEAD |
+
+Every `overlay apply` automatically backs up each target's currently-deployed managed files before overwriting them (retains the last 3 per target, auto-pruning older ones). `overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]` rolls that target back to one of them.
 
 ## Normal update cycle (per target)
 
@@ -191,12 +214,15 @@ That's it. If there are merge conflicts, `overlay apply` exits 1 and tells you e
 ```bash
 overlay sync-check                    # check all three targets
 overlay sync-check --target claude    # check only ~/.claude/skills
+overlay sync-check --check-origin     # also fetch origin for a live REPO_BEHIND_ORIGIN/REPO_BEHIND_RELEASE count
 ```
 
-Each target section ends with a `VERDICT` line and an `ACTION` recommendation:
+Each target section ends with a `VERDICT` line and an `ACTION` recommendation. The VERDICT line also
+reports `REPO_BEHIND_ORIGIN`, `REPO_BEHIND_RELEASE`, `RECORDED_VERSION`, and `DIGEST_MATCH` — see
+[Releases](#releases):
 
 ```
-VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0
+VERDICT:claude:UPSTREAM_CHANGED=5 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.2.0 DIGEST_MATCH=no
 ACTION:claude: gentle-ai sync detected: run 'overlay capture --target claude' then 'overlay apply'
 ```
 
@@ -252,13 +278,44 @@ overlay capture [--target claude|opencode|codex] [--from-backup <tarball>]
     --from-backup reads from a specific backup tarball instead of live files.
 
 overlay apply [--target claude|opencode|codex|all]
-    Merge upstream into main and deploy to target(s) (default: all).
+    Merge upstream into main and deploy to target(s) (default: all). Backs up each
+    target's currently-deployed managed files first (retains last 3, auto-pruned),
+    then records the deployed release version + content digest per target.
+
+overlay self-update
+    Fast-forward ONLY local main (never the current branch), then return to the
+    branch you were on. Converges to the latest published release tag (never past
+    it, even when origin/main carries untagged commits beyond that tag); before the
+    first release tag exists, falls back to legacy origin/main-HEAD convergence.
+    Refuses (exit 1) on a dirty tracked tree, a local main ahead of origin/main, or
+    no 'origin' remote. Untracked files never block it.
+
+overlay update
+    Read-only: report the latest published release and each target's recorded
+    version (up-to-date/behind/never deployed). Refreshes only cached tags/remote
+    refs -- never a branch head, the working tree, target files, or state.
+
+overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]
+    DESTRUCTIVE: rolls a single target back from one of its retained backups (up to
+    3, auto-pruned; default: most recent). Refuses --target all. --list shows
+    retained backups (timestamp, version) without changing anything. --backup
+    TIMESTAMP picks a specific one. Exits non-zero without touching any file when
+    the target has no backups. Performs zero git operations.
+
+overlay version (also: --version)
+    Read-only: print this clone's current release version (from local main) and
+    each target's recorded deployed version, naming any that are behind.
+    Never-deployed targets are reported honestly, never fabricated.
 
 overlay status [--target claude|opencode|codex|all]
     Show branch, diff stat upstream..main, and per-file drift per target (default: all).
 
-overlay sync-check [--target claude|opencode|codex|all]
-    Validate gentle-ai sync state: UPSTREAM_CHANGED and OVERLAY_NOT_DEPLOYED per target (default: all).
+overlay sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
+    Validate gentle-ai sync state: UPSTREAM_CHANGED and OVERLAY_NOT_DEPLOYED per
+    target (default: all). Also reports REPO_BEHIND_ORIGIN, REPO_BEHIND_RELEASE,
+    RECORDED_VERSION, and DIGEST_MATCH on each VERDICT line. Default is a
+    cached-ref comparison (no network call); --check-origin (alias --fetch) runs
+    'git fetch origin' first for a live count.
 
 overlay install-hooks
     Build the Go engine binary and wire the two deterministic-scoping hooks into
@@ -273,6 +330,15 @@ overlay status-hooks
     Check overlay installation health: binary present, hooks wired, contract readable.
     If the engine binary is missing, exits non-zero and directs users to run `overlay install-hooks`.
     Exits 0 if all OK, 1 if any check fails. Safe to run at any time.
+
+overlay doctor [--fix]
+    Read-only host-toolchain preflight: checks go (required), gentle-ai, bat/rg/fd/sd/eza,
+    the engine binary, a non-empty skill-registry, and a per-target release
+    version/digest consistency row. Prints PASS/WARN/FAIL per check; exits non-zero
+    only on a hard FAIL (the version/digest row is WARN-only, never fails the exit
+    code). --fix: after the checks, attempt to install any missing discovery tools
+    (bat rg fd sd eza) via Homebrew (best-effort, non-fatal), then re-check and
+    report the result.
 
 overlay tui
     Launch the Go/Bubbletea TUI front-end (target selection + gentle-ai sync dashboard).
