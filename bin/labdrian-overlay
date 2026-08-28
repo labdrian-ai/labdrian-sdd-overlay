@@ -17,6 +17,13 @@ OVERLAY_DIR="${OVERLAY_DIR:-"$(cd "$SCRIPT_DIR/.." && pwd)"}"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
+# Home-scoped per design decision D3: state describes deployments under
+# $HOME (TARGET_PATHS/AGENT_TARGET_PATHS are all $HOME-anchored), so a
+# repo-scoped file would let two clones of this repo hold divergent records
+# of the same live targets.
+STATE_DIR="${STATE_DIR:-"$HOME/.labdrian-overlay"}"
+STATE_FILE="$STATE_DIR/state.json"
+
 declare -A TARGET_PATHS=(
   [claude]="$HOME/.claude/skills"
   [opencode]="$HOME/.config/opencode/skills"
@@ -402,6 +409,183 @@ route_repo_rel() {
   esac
 }
 
+# ---------------------------------------------------------------------------
+# release identity, digest, and state (R-001..R-003)
+# ---------------------------------------------------------------------------
+
+# resolve_latest_release_tag <ref>
+#
+# R-003: explicitly fetches v*-matching tags from origin first (closing the
+# gap where a plain branch fetch does not guarantee tag visibility), THEN
+# resolves the highest semver-ordered ANNOTATED tag reachable from <ref>,
+# using git's version-aware refname sort rather than a plain lexical one
+# (v1.10.0 must outrank v1.9.0). Lightweight tags are skipped -- R-001
+# requires an annotated tag. Emits the literal token "none" when no
+# qualifying tag exists (design decision D1's pre-first-tag bootstrap case),
+# never an error -- callers decide how to degrade (D1: legacy convergence /
+# "untagged" / "no releases published yet").
+resolve_latest_release_tag() {
+  local ref="${1:-HEAD}"
+
+  if git remote get-url origin >/dev/null 2>&1; then
+    git fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+  fi
+
+  local tag objtype
+  while IFS=$'\t' read -r tag objtype; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$objtype" == "tag" ]]; then
+      echo "$tag"
+      return
+    fi
+  done < <(git for-each-ref --merged "$ref" --sort=-v:refname \
+             --format=$'%(refname:short)\t%(objecttype)' 'refs/tags/v*' 2>/dev/null)
+
+  echo "none"
+}
+
+# compute_target_digest <target> <live|ref>
+#
+# Design decision D5: one aggregate sha256 digest per deployment target,
+# over sorted "<repo_rel>:<filehash>" lines -- one line per MANAGED manifest
+# row that routes to <target> (custom rows are user-owned and excluded,
+# matching overlay-release-state R-002's "managed file" wording). Manifest
+# row order is not itself sorted, so lines are sorted with LC_ALL=C before
+# hashing: this is what makes the digest invariant to manifest reordering
+# while still sensitive to any single file's content.
+#
+# "live" reads each row's deployed destination file for <target> (what's
+# actually installed there right now); "ref" reads the repo-source file
+# instead (this checkout's current working tree content, independent of
+# whether -- or what -- has been deployed). A missing file degrades to the
+# literal "MISSING" token rather than aborting, so a never-deployed target
+# still yields a real (if divergent) digest instead of erroring.
+compute_target_digest() {
+  local target="$1"
+  local mode="$2"
+
+  local lines=()
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel path filehash
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_src="${rr_rest%%$'\t'*}"
+    rr_targets="${rr_rest#*$'\t'}"
+
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    if [[ "$mode" == "ref" ]]; then
+      path="$rr_src"
+    else
+      path="$rr_dest"
+    fi
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+
+    if [[ -f "$path" ]]; then
+      filehash="$(sha256sum "$path" | awk '{ print $1 }')"
+    else
+      filehash="MISSING"
+    fi
+
+    lines+=("${rr_repo_rel}:${filehash}")
+  done < <(managed_files)
+
+  printf '%s\n' "${lines[@]}" | LC_ALL=C sort | sha256sum | awk '{ print $1 }'
+}
+
+# state_read_target <target>
+#
+# Design decision D8: tolerant awk-based reader over the canonical JSON
+# state file. Emits "<version>\t<digest>\t<applied_at>" for a recorded
+# entry, or exactly the token "NEVER_DEPLOYED" when the state file is
+# absent, has no entry for <target>, or fails to parse -- an unparseable
+# file also prints a WARN rather than crashing (overlay-release-state
+# R-001's "never deployed" honesty requirement).
+state_read_target() {
+  local target="$1"
+
+  [[ -f "$STATE_FILE" ]] || { echo "NEVER_DEPLOYED"; return; }
+
+  local line
+  line="$(awk -v t="\"${target}\":" 'index($0, t) { print; exit }' "$STATE_FILE" 2>/dev/null || true)"
+
+  if [[ -z "$line" ]]; then
+    if [[ -s "$STATE_FILE" ]]; then
+      warn "state file $STATE_FILE has no parseable entry for target '$target' -- reporting never deployed"
+    fi
+    echo "NEVER_DEPLOYED"
+    return
+  fi
+
+  local version digest applied_at
+  version="$(echo "$line" | awk -F'"version"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+  digest="$(echo "$line" | awk -F'"digest"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+  applied_at="$(echo "$line" | awk -F'"applied_at"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+
+  if [[ -z "$version" || -z "$digest" ]]; then
+    warn "state file $STATE_FILE entry for target '$target' is malformed -- reporting never deployed"
+    echo "NEVER_DEPLOYED"
+    return
+  fi
+
+  printf '%s\t%s\t%s\n' "$version" "$digest" "$applied_at"
+}
+
+# state_write_target <target> <version> <digest>
+#
+# Design decision D8: atomic tmp+mv rewrite of the whole canonical state
+# file. Existing entries for OTHER targets are preserved by re-reading them
+# through state_read_target -- if the prior file was corrupt, every "other"
+# target degrades to never-deployed too (state_read_target's own
+# tolerant-degrade behavior), so a corrupt state file self-heals into a
+# clean one containing only what this call knows, rather than propagating
+# the corruption forever.
+state_write_target() {
+  local target="$1"
+  local version="$2"
+  local digest="$3"
+  local applied_at
+  applied_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  mkdir -p "$STATE_DIR"
+
+  local t existing v d a
+  local entries=()
+  for t in "${!TARGET_PATHS[@]}"; do
+    [[ "$t" == "$target" ]] && continue
+    existing="$(state_read_target "$t" 2>/dev/null || true)"
+    [[ "$existing" == "NEVER_DEPLOYED" || -z "$existing" ]] && continue
+    IFS=$'\t' read -r v d a <<< "$existing"
+    entries+=("    \"${t}\": {\"version\": \"${v}\", \"digest\": \"${d}\", \"applied_at\": \"${a}\"}")
+  done
+  entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+
+  local tmp
+  tmp="$(mktemp "${STATE_FILE}.XXXXXX")"
+  {
+    echo "{"
+    echo "  \"schema\": 1,"
+    echo "  \"targets\": {"
+    local i n="${#entries[@]}"
+    for ((i = 0; i < n; i++)); do
+      if [[ "$i" -lt $((n - 1)) ]]; then
+        echo "${entries[$i]},"
+      else
+        echo "${entries[$i]}"
+      fi
+    done
+    echo "  }"
+    echo "}"
+  } > "$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
 # route_tar_path resolves where a manifest row is stored inside a backup tarball.
 # The legacy backup layout is under ~/.claude. OpenCode-native agent rows must use
 # ~/.config/opencode instead.
@@ -776,6 +960,14 @@ cmd_apply() {
     exit 1
   fi
 
+  # Resolved once (repo-level, not target-scoped): the release version this
+  # apply is deploying. D1's pre-first-tag bootstrap records "untagged"
+  # rather than fabricating or failing when no release tag exists yet; the
+  # per-target digest recorded below is still real either way.
+  local release_version
+  release_version="$(resolve_latest_release_tag main)"
+  [[ "$release_version" == "none" ]] && release_version="untagged"
+
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
@@ -821,6 +1013,13 @@ cmd_apply() {
     done < <(all_tracked_files)
 
     echo "  $t: deployed=$deployed in-sync=$in_sync"
+
+    # overlay-release-state R-001: persist this target's deployed version
+    # and content digest so a target with no entry can be reported honestly
+    # as "never deployed" rather than staying silently unversioned forever.
+    local target_digest
+    target_digest="$(compute_target_digest "$t" live)"
+    state_write_target "$t" "$release_version" "$target_digest"
   done
 
   echo ""
@@ -1914,31 +2113,38 @@ cmd_gadu_generate() {
 # dispatch
 # ---------------------------------------------------------------------------
 
-COMMAND="${1:-}"
-shift || true
+# Guarded so this file can be `source`d (e.g. by tui/release_backend_test.go)
+# to call an internal function directly for unit-style testing, without also
+# running the CLI dispatch below. Normal execution (./bin/labdrian-overlay or
+# via the bin/overlay wrapper) is unaffected: BASH_SOURCE[0] and $0 are
+# identical for a top-level executed script.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  COMMAND="${1:-}"
+  shift || true
 
-case "$COMMAND" in
-  bootstrap)       cmd_bootstrap "$@" ;;
-  capture)         cmd_capture "$@" ;;
-  apply)           cmd_apply "$@" ;;
-  self-update)     cmd_self_update "$@" ;;
-  status)          cmd_status "$@" ;;
-  sync-check)      cmd_sync_check "$@" ;;
-  install-hooks)   cmd_install_hooks "$@" ;;
-  uninstall-hooks) cmd_uninstall_hooks "$@" ;;
-  status-hooks)    cmd_status_hooks "$@" ;;
-  doctor)          cmd_doctor "$@" ;;
-  repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
-  skill-registry)  cmd_skill_registry "$@" ;;
-  tui)             cmd_tui "$@" ;;
-  install-alias)   cmd_install_alias "$@" ;;
-  prespec)         cmd_prespec "$@" ;;
-  skills)          cmd_skills "$@" ;;
-  validate-entry-contract) cmd_validate_entry_contract "$@" ;;
-  deterministic-checks) cmd_deterministic_checks "$@" ;;
-  review-preflight) cmd_review_preflight "$@" ;;
-  gadu-generate)   cmd_gadu_generate "$@" ;;
-  --help|-h)       usage; exit 0 ;;
-  "")              usage >&2; exit 1 ;;
-  *)               die "Unknown command: $COMMAND" ;;
-esac
+  case "$COMMAND" in
+    bootstrap)       cmd_bootstrap "$@" ;;
+    capture)         cmd_capture "$@" ;;
+    apply)           cmd_apply "$@" ;;
+    self-update)     cmd_self_update "$@" ;;
+    status)          cmd_status "$@" ;;
+    sync-check)      cmd_sync_check "$@" ;;
+    install-hooks)   cmd_install_hooks "$@" ;;
+    uninstall-hooks) cmd_uninstall_hooks "$@" ;;
+    status-hooks)    cmd_status_hooks "$@" ;;
+    doctor)          cmd_doctor "$@" ;;
+    repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
+    skill-registry)  cmd_skill_registry "$@" ;;
+    tui)             cmd_tui "$@" ;;
+    install-alias)   cmd_install_alias "$@" ;;
+    prespec)         cmd_prespec "$@" ;;
+    skills)          cmd_skills "$@" ;;
+    validate-entry-contract) cmd_validate_entry_contract "$@" ;;
+    deterministic-checks) cmd_deterministic_checks "$@" ;;
+    review-preflight) cmd_review_preflight "$@" ;;
+    gadu-generate)   cmd_gadu_generate "$@" ;;
+    --help|-h)       usage; exit 0 ;;
+    "")              usage >&2; exit 1 ;;
+    *)               die "Unknown command: $COMMAND" ;;
+  esac
+fi
