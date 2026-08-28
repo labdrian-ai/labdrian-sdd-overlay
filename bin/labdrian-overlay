@@ -17,6 +17,13 @@ OVERLAY_DIR="${OVERLAY_DIR:-"$(cd "$SCRIPT_DIR/.." && pwd)"}"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
+# Home-scoped per design decision D3: state describes deployments under
+# $HOME (TARGET_PATHS/AGENT_TARGET_PATHS are all $HOME-anchored), so a
+# repo-scoped file would let two clones of this repo hold divergent records
+# of the same live targets.
+STATE_DIR="${STATE_DIR:-"$HOME/.labdrian-overlay"}"
+STATE_FILE="$STATE_DIR/state.json"
+
 declare -A TARGET_PATHS=(
   [claude]="$HOME/.claude/skills"
   [opencode]="$HOME/.config/opencode/skills"
@@ -102,11 +109,30 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Never pushes main unless --push; without it, reports
                                    how far local main is ahead of origin/main.
-  self-update                     Fast-forward ONLY local 'main' to 'origin/main' (never the
-                                   current branch), then return to the branch you were on.
-                                   Refuses (exit 1) on a dirty tracked tree, a local main
-                                   ahead of origin/main, or no 'origin' remote. Untracked
-                                   files never block it.
+  self-update                     Fast-forward ONLY local 'main' (never the current branch),
+                                   then return to the branch you were on. Converges to the
+                                   latest published release tag (never past it, even when
+                                   origin/main carries untagged commits beyond that tag); before
+                                   the first release tag exists, falls back to legacy
+                                   origin/main-HEAD convergence. Refuses (exit 1) on a dirty
+                                   tracked tree, a local main ahead of origin/main, or no
+                                   'origin' remote. Untracked files never block it.
+  update                           Read-only: report the latest published release and each
+                                   target's recorded version (up-to-date/behind/never deployed).
+                                   Refreshes only cached tags/remote refs -- never a branch head,
+                                   the working tree, target files, or state.
+  restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]
+                                   DESTRUCTIVE: rolls a single target back from one of its
+                                   retained backups (up to 3, auto-pruned; default: most
+                                   recent). Refuses --target all. --list shows retained
+                                   backups (timestamp, version) without changing anything.
+                                   --backup TIMESTAMP picks a specific one. Exits non-zero
+                                   without touching any file when the target has no backups.
+                                   Performs zero git operations.
+  version (also: --version)       Read-only: print this clone's current release version
+                                   (from local main) and each target's recorded deployed
+                                   version, naming any that are behind. Never-deployed
+                                   targets are reported honestly, never fabricated.
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
@@ -400,6 +426,336 @@ route_repo_rel() {
       printf '%s' "$manifest_path"
       ;;
   esac
+}
+
+# ---------------------------------------------------------------------------
+# release identity, digest, and state (R-001..R-003)
+# ---------------------------------------------------------------------------
+
+# resolve_latest_release_tag <ref> [do_fetch=true]
+#
+# R-003: by default (do_fetch=true, every caller except cmd_sync_check's
+# read-only default path) explicitly fetches v*-matching tags from origin
+# first (closing the gap where a plain branch fetch does not guarantee tag
+# visibility), THEN resolves the highest semver-ordered ANNOTATED tag
+# reachable from <ref>, using git's version-aware refname sort rather than a
+# plain lexical one (v1.10.0 must outrank v1.9.0). Lightweight tags are
+# skipped -- R-001 requires an annotated tag. Emits the literal token "none"
+# when no qualifying tag exists (design decision D1's pre-first-tag
+# bootstrap case), never an error -- callers decide how to degrade (D1:
+# legacy convergence / "untagged" / "no releases published yet").
+#
+# Passing do_fetch=false resolves from whatever tags are already cached
+# locally, without touching the network -- the same cached-only idiom
+# compute_repo_behind_origin/compute_repo_behind_release use for their own
+# default (non---check-origin) path. cmd_sync_check is the only caller that
+# needs this: sync-check-verdicts R-001 and tui-self-update R-001 both
+# require its default (no --check-origin/--fetch) path to invoke no
+# `git fetch` at all, and every OTHER caller (cmd_apply, cmd_self_update,
+# cmd_update, cmd_version) already requires or accepts a fresh fetch by its
+# own spec/design, so they are left on the do_fetch=true default untouched.
+resolve_latest_release_tag() {
+  local ref="${1:-HEAD}"
+  local do_fetch="${2:-true}"
+
+  if [[ "$do_fetch" == true ]] && git remote get-url origin >/dev/null 2>&1; then
+    # Bounded like every other network call this file makes (compute_repo_behind_origin,
+    # compute_repo_behind_release, cmd_self_update's main fetch): this function is now
+    # called from cmd_self_update, cmd_update, and cmd_sync_check's release_version line
+    # (Slice 2), so a stalled connection here can no longer be a silent, unbounded hang.
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    fi
+  fi
+
+  local tag objtype
+  while IFS=$'\t' read -r tag objtype; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$objtype" == "tag" ]]; then
+      echo "$tag"
+      return
+    fi
+  done < <(git for-each-ref --merged "$ref" --sort=-v:refname \
+             --format=$'%(refname:short)\t%(objecttype)' 'refs/tags/v*' 2>/dev/null)
+
+  echo "none"
+}
+
+# compute_target_digest <target> <live|ref>
+#
+# Design decision D5: one aggregate sha256 digest per deployment target,
+# over sorted "<repo_rel>:<filehash>" lines -- one line per MANAGED manifest
+# row that routes to <target> (custom rows are user-owned and excluded,
+# matching overlay-release-state R-002's "managed file" wording). Manifest
+# row order is not itself sorted, so lines are sorted with LC_ALL=C before
+# hashing: this is what makes the digest invariant to manifest reordering
+# while still sensitive to any single file's content.
+#
+# "live" reads each row's deployed destination file for <target> (what's
+# actually installed there right now); "ref" reads the repo-source file
+# instead (this checkout's current working tree content, independent of
+# whether -- or what -- has been deployed). A missing file degrades to the
+# literal "MISSING" token rather than aborting, so a never-deployed target
+# still yields a real (if divergent) digest instead of erroring.
+compute_target_digest() {
+  local target="$1"
+  local mode="$2"
+
+  local lines=()
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel path filehash
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_src="${rr_rest%%$'\t'*}"
+    rr_targets="${rr_rest#*$'\t'}"
+
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    if [[ "$mode" == "ref" ]]; then
+      path="$rr_src"
+    else
+      path="$rr_dest"
+    fi
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+
+    if [[ -f "$path" ]]; then
+      filehash="$(sha256sum "$path" | awk '{ print $1 }')"
+    else
+      filehash="MISSING"
+    fi
+
+    lines+=("${rr_repo_rel}:${filehash}")
+  done < <(managed_files)
+
+  printf '%s\n' "${lines[@]}" | LC_ALL=C sort | sha256sum | awk '{ print $1 }'
+}
+
+# state_read_target <target>
+#
+# Design decision D8: tolerant awk-based reader over the canonical JSON
+# state file. Emits "<version>\t<digest>\t<applied_at>" for a recorded
+# entry, or exactly the token "NEVER_DEPLOYED" when the state file is
+# absent, has no entry for <target>, or fails to parse -- an unparseable
+# file also prints a WARN rather than crashing (overlay-release-state
+# R-001's "never deployed" honesty requirement).
+state_read_target() {
+  local target="$1"
+
+  [[ -f "$STATE_FILE" ]] || { echo "NEVER_DEPLOYED"; return; }
+
+  local line
+  line="$(awk -v t="\"${target}\":" 'index($0, t) { print; exit }' "$STATE_FILE" 2>/dev/null || true)"
+
+  if [[ -z "$line" ]]; then
+    if [[ -s "$STATE_FILE" ]]; then
+      warn "state file $STATE_FILE has no parseable entry for target '$target' -- reporting never deployed"
+    fi
+    echo "NEVER_DEPLOYED"
+    return
+  fi
+
+  local version digest applied_at
+  version="$(echo "$line" | awk -F'"version"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+  digest="$(echo "$line" | awk -F'"digest"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+  applied_at="$(echo "$line" | awk -F'"applied_at"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+
+  if [[ -z "$version" || -z "$digest" ]]; then
+    warn "state file $STATE_FILE entry for target '$target' is malformed -- reporting never deployed"
+    echo "NEVER_DEPLOYED"
+    return
+  fi
+
+  printf '%s\t%s\t%s\n' "$version" "$digest" "$applied_at"
+}
+
+# state_write_target <target> <version> <digest>
+#
+# Design decision D8: atomic tmp+mv rewrite of the whole canonical state
+# file. Existing entries for OTHER targets are preserved by re-reading them
+# through state_read_target -- if the prior file was corrupt, every "other"
+# target degrades to never-deployed too (state_read_target's own
+# tolerant-degrade behavior), so a corrupt state file self-heals into a
+# clean one containing only what this call knows, rather than propagating
+# the corruption forever.
+state_write_target() {
+  local target="$1"
+  local version="$2"
+  local digest="$3"
+  local applied_at
+  applied_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  mkdir -p "$STATE_DIR"
+
+  local t existing v d a
+  local entries=()
+  for t in "${!TARGET_PATHS[@]}"; do
+    [[ "$t" == "$target" ]] && continue
+    existing="$(state_read_target "$t" 2>/dev/null || true)"
+    [[ "$existing" == "NEVER_DEPLOYED" || -z "$existing" ]] && continue
+    IFS=$'\t' read -r v d a <<< "$existing"
+    entries+=("    \"${t}\": {\"version\": \"${v}\", \"digest\": \"${d}\", \"applied_at\": \"${a}\"}")
+  done
+  entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+
+  local tmp
+  tmp="$(mktemp "${STATE_FILE}.XXXXXX")"
+  {
+    echo "{"
+    echo "  \"schema\": 1,"
+    echo "  \"targets\": {"
+    local i n="${#entries[@]}"
+    for ((i = 0; i < n; i++)); do
+      if [[ "$i" -lt $((n - 1)) ]]; then
+        echo "${entries[$i]},"
+      else
+        echo "${entries[$i]}"
+      fi
+    done
+    echo "  }"
+    echo "}"
+  } > "$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
+# backup_target <target>
+#
+# overlay-backup-restore R-001 (design decision D3/D4): creates a
+# timestamped backup of <target>'s CURRENTLY DEPLOYED managed files, but
+# only for rows that are about to actually change -- a managed row whose
+# live file does not yet exist (never deployed) or whose live file already
+# matches the repo-source file about to be deployed (true no-op) has
+# nothing meaningful to preserve, so it is excluded from both the
+# needs-backup decision and the copy. Prints the created backup's
+# timestamp directory name on stdout when a backup was made; prints
+# nothing when the apply for this target is a full no-op. Backups live
+# under $STATE_DIR/backups/<target>/<utc-ts>/ (D3), holding the full
+# managed live-file set for the target under its repo-relative paths, plus
+# a '.meta' file capturing the PRIOR state_read_target entry (read before
+# any file is copied) so restore can recover the version that backup
+# represents.
+backup_target() {
+  local target="$1"
+
+  local -a changed_rel_paths=()
+  local rel_path
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_src="${rr_rest%%$'\t'*}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    # Only an EXISTING live file that is about to be OVERWRITTEN needs
+    # preserving. A row whose repo source is missing is skipped by apply
+    # itself (never overwritten), and a target with no live file yet has
+    # nothing to preserve -- both degrade to "nothing to back up" here.
+    if [[ -f "$rr_dest" && -f "$rr_src" ]] && ! diff --brief "$rr_src" "$rr_dest" > /dev/null 2>&1; then
+      changed_rel_paths+=("$rel_path")
+    fi
+  done < <(managed_files)
+
+  # Explicit 'return 0' (not a bare 'return' after a failing [[ ]] test):
+  # under this script's 'set -e', a bare 'return' here would propagate the
+  # [[ ]] test's own nonzero status as this function's exit code, tripping
+  # errexit for any caller that assigns its stdout via command substitution
+  # (e.g. cmd_apply's `backup_ts="$(backup_target "$t")"`).
+  [[ "${#changed_rel_paths[@]}" -gt 0 ]] || return 0
+
+  local backups_dir="$STATE_DIR/backups/$target"
+  mkdir -p "$backups_dir"
+
+  local ts candidate suffix=0
+  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  candidate="$ts"
+  while [[ -e "$backups_dir/$candidate" ]]; do
+    suffix=$((suffix + 1))
+    candidate="${ts}-${suffix}"
+  done
+
+  local backup_dir="$backups_dir/$candidate"
+  mkdir -p "$backup_dir"
+
+  for rel_path in "${changed_rel_paths[@]}"; do
+    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel dest_path
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+    dest_path="$backup_dir/$rr_repo_rel"
+    mkdir -p "$(dirname "$dest_path")"
+    cp "$rr_dest" "$dest_path"
+  done
+
+  local prior
+  prior="$(state_read_target "$target" 2>/dev/null || true)"
+  echo "$prior" > "$backup_dir/.meta"
+
+  prune_backups "$target"
+
+  echo "$candidate"
+}
+
+# prune_backups <target>
+#
+# overlay-backup-restore R-002 (design decision D4): retains only the 3
+# most recent backups for a target, deleting older ones. Backup dir names
+# are UTC timestamps (YYYYMMDDTHHMMSSZ, optionally suffixed by
+# backup_target on a same-second collision, e.g. "<ts>-1"). Bash's own
+# pathname expansion sorts the *globbed paths*, trailing slash included --
+# that inverts a same-second collision, because ASCII '-' (0x2D) sorts
+# before '/' (0x2F), so "<ts>-1/" sorts before "<ts>/" even though "<ts>-1"
+# is the chronologically newer one. Re-sort the bare basenames explicitly
+# so a same-second collision can't prune the wrong (newer) backup.
+prune_backups() {
+  local target="$1"
+  local backups_dir="$STATE_DIR/backups/$target"
+
+  [[ -d "$backups_dir" ]] || return 0
+
+  local -a entries=()
+  local d
+  shopt -s nullglob
+  for d in "$backups_dir"/*/; do
+    entries+=("$(basename "$d")")
+  done
+  shopt -u nullglob
+
+  if [[ "${#entries[@]}" -gt 0 ]]; then
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | LC_ALL=C sort)
+  fi
+
+  local total="${#entries[@]}"
+  local keep=3
+  [[ "$total" -le "$keep" ]] && return 0
+
+  local excess=$((total - keep))
+  local i
+  for ((i = 0; i < excess; i++)); do
+    rm -rf "${backups_dir:?}/${entries[$i]}"
+  done
 }
 
 # route_tar_path resolves where a manifest row is stored inside a backup tarball.
@@ -776,6 +1132,14 @@ cmd_apply() {
     exit 1
   fi
 
+  # Resolved once (repo-level, not target-scoped): the release version this
+  # apply is deploying. D1's pre-first-tag bootstrap records "untagged"
+  # rather than fabricating or failing when no release tag exists yet; the
+  # per-target digest recorded below is still real either way.
+  local release_version
+  release_version="$(resolve_latest_release_tag main)"
+  [[ "$release_version" == "none" ]] && release_version="untagged"
+
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
@@ -784,6 +1148,16 @@ cmd_apply() {
     if [[ ! -d "$tpath" ]]; then
       mkdir -p "$tpath"
       echo "  (created target directory: $tpath)"
+    fi
+
+    # overlay-backup-restore R-001: snapshot this target's currently
+    # deployed managed files BEFORE any of them are overwritten below.
+    # backup_target itself no-ops (creates nothing, prints nothing) when
+    # nothing would actually change for this target.
+    local backup_ts
+    backup_ts="$(backup_target "$t")"
+    if [[ -n "$backup_ts" ]]; then
+      echo "  backup: $backup_ts"
     fi
 
     local deployed=0
@@ -821,6 +1195,13 @@ cmd_apply() {
     done < <(all_tracked_files)
 
     echo "  $t: deployed=$deployed in-sync=$in_sync"
+
+    # overlay-release-state R-001: persist this target's deployed version
+    # and content digest so a target with no entry can be reported honestly
+    # as "never deployed" rather than staying silently unversioned forever.
+    local target_digest
+    target_digest="$(compute_target_digest "$t" live)"
+    state_write_target "$t" "$release_version" "$target_digest"
   done
 
   echo ""
@@ -853,12 +1234,20 @@ cmd_apply() {
 # self-update
 # ---------------------------------------------------------------------------
 
-# Fast-forwards ONLY the local 'main' branch to 'origin/main' and restores the
-# original branch afterward, via the same trap-based EXIT pattern used by
+# Fast-forwards ONLY the local 'main' branch and restores the original
+# branch afterward, via the same trap-based EXIT pattern used by
 # cmd_capture/cmd_apply. Every refusal (no origin, dirty tree, local-ahead
 # divergence) fires BEFORE any checkout, so a refusal never touches the
 # working tree or leaves the caller's branch stranded. Flagless: this signal
 # is repo-level, not target-scoped.
+#
+# R-004 (MODIFIED): once at least one release tag exists anywhere, main
+# converges to the highest semver-ordered release tag reachable from
+# origin/main -- NEVER to origin/main's raw HEAD, which may carry untagged
+# commits beyond the latest tag. D1's pre-first-tag bootstrap keeps the
+# original origin/main-HEAD convergence verbatim (legacy path below) until
+# the very first release tag is cut, so every zero-tag caller keeps its
+# exact documented behavior.
 cmd_self_update() {
   cd "$OVERLAY_DIR"
 
@@ -868,14 +1257,16 @@ cmd_self_update() {
   git remote get-url origin >/dev/null 2>&1 \
     || die "self-update requires an 'origin' remote; none is configured."
 
-  # 2. Dirty tracked tree -> hard refusal, before any checkout. Untracked
-  #    files are ignored (capture/apply parity, see cmd_capture/cmd_apply).
+  # 2. Dirty tracked tree -> hard refusal, before any checkout, fetch, or tag
+  #    resolution. Untracked files are ignored (capture/apply parity).
   [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
     || die "Working tree has uncommitted tracked changes. Commit or stash them before self-update."
 
   # 3. Bounded fetch of main only (idiom from compute_repo_behind_origin).
   #    'timeout' is optional -- not on stock macOS -- so this degrades to an
   #    unbounded (but still low-speed-guarded) fetch rather than a hard dep.
+  #    Also refreshes the ref resolve_latest_release_tag below resolves
+  #    tags against.
   if command -v timeout >/dev/null 2>&1; then
     timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
       || die "git fetch origin main failed."
@@ -884,41 +1275,331 @@ cmd_self_update() {
       || die "git fetch origin main failed."
   fi
 
-  # 4. Local main ahead of origin/main -> hard refusal (R-006). Deliberately
-  #    stricter than cmd_apply's advisory-only ahead notice: self-update
-  #    converges main, it never silently diverges further from a local-only
-  #    commit that only exists on this clone.
+  # 4. Local main ahead of origin/main -> hard refusal (R-006), unaffected by
+  #    tag mode: self-update converges main, it never silently diverges
+  #    further from a local-only commit that only exists on this clone.
   local ahead
   ahead="$(git rev-list --count origin/main..main)"
   [[ "$ahead" -eq 0 ]] \
     || die "Local main is $ahead commit(s) ahead of origin/main; self-update refuses to diverge further. Resolve manually (e.g. 'overlay apply --push')."
 
-  # 5. Already up to date -> exit 0, no branch switch at all.
-  local behind
-  behind="$(git rev-list --count main..origin/main)"
-  if [[ "$behind" -eq 0 ]]; then
-    info "main is already up to date with origin/main"
+  # 5. R-003/D1: resolve the highest release tag reachable from origin/main.
+  #    "none" means no release tag exists anywhere yet -- fall back verbatim
+  #    to the original origin/main-HEAD convergence (D1 pre-first-tag
+  #    bootstrap).
+  local release_tag
+  release_tag="$(resolve_latest_release_tag origin/main)"
+
+  if [[ "$release_tag" == "none" ]]; then
+    info "no release tags yet -- legacy convergence"
+
+    local behind
+    behind="$(git rev-list --count main..origin/main)"
+    if [[ "$behind" -eq 0 ]]; then
+      info "main is already up to date with origin/main"
+      return
+    fi
+
+    # Expand the branch name NOW: an EXIT trap fires after the function's
+    # locals are gone, and referencing them there is an unbound variable
+    # under 'set -u' (the c891c94 lesson).
+    local current_branch old_main new_main
+    current_branch="$(git rev-parse --abbrev-ref HEAD)"
+    old_main="$(git rev-parse main)"
+
+    trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
+
+    git checkout main
+    git merge --ff-only origin/main
+    new_main="$(git rev-parse main)"
+
+    git checkout "$current_branch"
+    trap - EXIT
+
+    info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward)"
     return
   fi
 
-  # 6. Only now: converge main, always returning to the original branch.
-  #    Expand the branch name NOW: an EXIT trap fires after the function's
-  #    locals are gone, and referencing them there is an unbound variable
-  #    under 'set -u' (the c891c94 lesson).
+  # 6. Tag mode: converge main to the resolved tag's commit only -- NEVER
+  #    past it, even when origin/main's raw HEAD carries untagged commits
+  #    beyond this tag. merge-base --is-ancestor also covers "main is
+  #    already AHEAD of this tag" (e.g. a prior self-update already landed
+  #    it) as a no-op, not only exact equality.
+  local target_commit main_head
+  target_commit="$(git rev-parse "${release_tag}^{commit}")"
+  main_head="$(git rev-parse main)"
+
+  if git merge-base --is-ancestor "$target_commit" "$main_head"; then
+    info "main is already up to date with $release_tag"
+    return
+  fi
+
   local current_branch old_main new_main
   current_branch="$(git rev-parse --abbrev-ref HEAD)"
-  old_main="$(git rev-parse main)"
+  old_main="$main_head"
 
   trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
 
   git checkout main
-  git merge --ff-only origin/main
+  git merge --ff-only "$target_commit"
   new_main="$(git rev-parse main)"
 
   git checkout "$current_branch"
   trap - EXIT
 
-  info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward)"
+  info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward) -> $release_tag"
+}
+
+# ---------------------------------------------------------------------------
+# update
+# ---------------------------------------------------------------------------
+
+# Read-only update-availability check (overlay-update-check R-001, design
+# D6). Refreshes ONLY refs/tags/*/refs/remotes/* -- a bounded 'git fetch
+# origin main' plus resolve_latest_release_tag's own explicit tag fetch --
+# and NEVER touches a local branch head, the working tree, target files, or
+# the state file. A fetch is byte-idempotent absent a remote change, so
+# running this twice in a row leaves every git ref, target file, and
+# state-file byte identical (R-001's zero-mutation scenario).
+cmd_update() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  if git remote get-url origin >/dev/null 2>&1; then
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+        >/dev/null 2>&1 || warn "git fetch origin main failed -- reporting from cached refs"
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+        >/dev/null 2>&1 || warn "git fetch origin main failed -- reporting from cached refs"
+    fi
+  else
+    warn "no 'origin' remote configured -- reporting from cached refs only"
+  fi
+
+  local latest_ref="main"
+  git rev-parse --verify -q refs/remotes/origin/main >/dev/null 2>&1 && latest_ref="origin/main"
+
+  local release_version
+  release_version="$(resolve_latest_release_tag "$latest_ref")"
+
+  if [[ "$release_version" == "none" ]]; then
+    echo "Latest release: (no releases published yet)"
+  else
+    echo "Latest release: $release_version"
+  fi
+
+  for t in $(resolve_targets all); do
+    local recorded recorded_version recorded_digest
+    recorded="$(state_read_target "$t")"
+
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  $t: never deployed"
+      continue
+    fi
+
+    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+
+    if [[ "$release_version" == "none" ]]; then
+      echo "  $t: $recorded_version (no releases published yet)"
+    elif [[ "$recorded_version" == "$release_version" ]]; then
+      echo "  $t: up-to-date ($recorded_version)"
+    else
+      echo "  $t: behind ($release_version available, have $recorded_version)"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# restore
+# ---------------------------------------------------------------------------
+
+# cmd_restore --target <t> [--list] [--backup <ts>]
+#
+# overlay-backup-restore R-003, design decision D4: rolls a single target
+# back from one of its retained backups (default: most recent). Refuses
+# --target all (a single-target destructive rollback, never a blanket one).
+# --list prints the retained backups (newest last) without touching
+# anything. --backup <ts> selects a specific retained backup instead of the
+# most recent. Deliberately performs ZERO git operations (design.md threat
+# matrix) and never `cd`s into $OVERLAY_DIR: it only reads $MANIFEST (an
+# absolute path already) to map repo-relative backup entries back onto
+# their live destinations, and reads/writes files under
+# $STATE_DIR/backups/<target>/ and the target's live directory.
+cmd_restore() {
+  local target_arg=""
+  local list_mode=0
+  local backup_ts=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      --list)
+        list_mode=1
+        ;;
+      --backup)
+        shift
+        backup_ts="${1:-}"
+        [[ -n "$backup_ts" ]] || die "--backup requires a timestamp argument"
+        ;;
+      *) die "Unknown option: $1. Usage: overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]" ;;
+    esac
+    shift || true
+  done
+
+  [[ -n "$target_arg" ]] || die "restore requires --target claude|opencode|codex"
+  [[ "$target_arg" != "all" ]] \
+    || die "restore does not support --target all. Specify a single target: claude, opencode, codex"
+  [[ -v TARGET_PATHS["$target_arg"] ]] \
+    || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+
+  local backups_dir="$STATE_DIR/backups/$target_arg"
+
+  local -a entries=()
+  local d
+  shopt -s nullglob
+  for d in "$backups_dir"/*/; do
+    entries+=("$(basename "$d")")
+  done
+  shopt -u nullglob
+
+  # See prune_backups' comment: bash's glob sorts the paths *with* their
+  # trailing slash, which inverts a same-second collision suffix ("<ts>-1"
+  # sorting before "<ts>" instead of after it). Re-sort the bare basenames
+  # so both --list and the "most recent" default (below) are correct even
+  # when two backups for the same target were taken in the same second.
+  if [[ "${#entries[@]}" -gt 0 ]]; then
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | LC_ALL=C sort)
+  fi
+
+  if [[ "$list_mode" -eq 1 ]]; then
+    if [[ "${#entries[@]}" -eq 0 ]]; then
+      echo "No backups available for target '$target_arg'."
+      return
+    fi
+    echo "Backups for $target_arg (newest last):"
+    local e meta version
+    for e in "${entries[@]}"; do
+      version="unknown"
+      if [[ -f "$backups_dir/$e/.meta" ]]; then
+        meta="$(cat "$backups_dir/$e/.meta")"
+        if [[ "$meta" != "NEVER_DEPLOYED" && -n "$meta" ]]; then
+          version="$(echo "$meta" | awk -F'\t' '{ print $1 }')"
+        fi
+      fi
+      echo "  $e ($version)"
+    done
+    return
+  fi
+
+  if [[ "${#entries[@]}" -eq 0 ]]; then
+    die "No backups available for target '$target_arg'. Nothing to restore."
+  fi
+
+  local selected
+  if [[ -n "$backup_ts" ]]; then
+    local found=0
+    for e in "${entries[@]}"; do
+      [[ "$e" == "$backup_ts" ]] && found=1 && break
+    done
+    [[ "$found" -eq 1 ]] \
+      || die "Backup '$backup_ts' not found for target '$target_arg'. Run 'overlay restore --target $target_arg --list' to see available backups."
+    selected="$backup_ts"
+  else
+    # 'entries' was explicitly re-sorted above; the last element is the
+    # most recent backup (D4 default).
+    selected="${entries[-1]}"
+  fi
+
+  local backup_dir="$backups_dir/$selected"
+
+  info "Restoring $target_arg from backup $selected..."
+
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel src_path
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target_arg" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+    src_path="$backup_dir/$rr_repo_rel"
+
+    if [[ -f "$src_path" ]]; then
+      ensure_parent "$rr_dest"
+      cp "$src_path" "$rr_dest"
+    fi
+  done < <(managed_files)
+
+  local restored_digest
+  restored_digest="$(compute_target_digest "$target_arg" live)"
+
+  local restored_version="untagged"
+  if [[ -f "$backup_dir/.meta" ]]; then
+    local meta_content
+    meta_content="$(cat "$backup_dir/.meta")"
+    if [[ "$meta_content" != "NEVER_DEPLOYED" && -n "$meta_content" ]]; then
+      restored_version="$(echo "$meta_content" | awk -F'\t' '{ print $1 }')"
+    fi
+  fi
+
+  state_write_target "$target_arg" "$restored_version" "$restored_digest"
+
+  info "Restored $target_arg from backup $selected (version $restored_version)."
+}
+
+# ---------------------------------------------------------------------------
+# version
+# ---------------------------------------------------------------------------
+
+# cmd_version (overlay-release-surfacing R-002; also reachable via the
+# --version flag, see dispatch below): reports this clone's own current
+# release version (resolved from local 'main', matching what 'apply' would
+# deploy right now -- unlike 'update', which checks the newest PUBLISHED
+# release on origin) and, per target, its recorded deployed version. A
+# target with no recorded state is reported as "never deployed" rather than
+# a stale or fabricated version (R-002).
+cmd_version() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  local repo_version
+  repo_version="$(resolve_latest_release_tag main)"
+
+  if [[ "$repo_version" == "none" ]]; then
+    echo "Repository version: (no releases published yet)"
+  else
+    echo "Repository version: $repo_version"
+  fi
+
+  for t in $(resolve_targets all); do
+    local recorded recorded_version recorded_digest
+    recorded="$(state_read_target "$t")"
+
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  $t: never deployed"
+      continue
+    fi
+
+    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+
+    if [[ "$repo_version" != "none" && "$recorded_version" != "$repo_version" ]]; then
+      echo "  $t: $recorded_version (behind)"
+    else
+      echo "  $t: $recorded_version"
+    fi
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -981,6 +1662,23 @@ cmd_status() {
         fi
       fi
     done < <(all_tracked_files)
+
+    # overlay-release-state R-001/R-002, sync-check-verdicts R-008: report
+    # this target's recorded release version against its live aggregate
+    # digest, independent of the per-file drift lines above.
+    local target_digest recorded recorded_version recorded_digest
+    target_digest="$(compute_target_digest "$t" live)"
+    recorded="$(state_read_target "$t")"
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  version: never deployed"
+    else
+      IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+      if [[ "$target_digest" == "$recorded_digest" ]]; then
+        echo "  version: in sync at $recorded_version"
+      else
+        echo "  version: $recorded_version (drift detected -- run 'overlay apply --target $t')"
+      fi
+    fi
   done
 }
 
@@ -1071,6 +1769,78 @@ compute_repo_behind_origin() {
   fi
 }
 
+# compute_repo_behind_release <check_origin>
+#
+# Design decision D2: how many commits local main is behind the newest
+# LOCALLY-KNOWN annotated v*-tag reachable from this repo's cached
+# refs/remotes/origin/main -- cached-only by default, exactly like its
+# sibling compute_repo_behind_origin, so a plain 'sync-check'/'status' never
+# hits the network. Pass check_origin=true (mirrors sync-check's
+# --check-origin/--fetch flag) to explicitly refresh v*-tags from origin
+# first, still without moving any local branch head.
+#
+# Filtering candidate tags with --merged origin/main (rather than every known
+# tag) keeps this consistent with resolve_latest_release_tag's own
+# reachability rule and avoids a rogue/unrelated-branch tag producing a
+# nonsensical count. Emits the literal token "NA" whenever no cached
+# origin/main ref, no local main branch, or no qualifying tag exists yet
+# (D1's pre-first-tag bootstrap) -- never an error.
+compute_repo_behind_release() {
+  local check_origin="$1"
+
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  if [[ "$check_origin" == true ]]; then
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    fi
+  fi
+
+  if ! git rev-parse --verify -q refs/remotes/origin/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no cached refs/remotes/origin/main (never fetched) -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  if ! git rev-parse --verify -q refs/heads/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no local 'main' branch -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  local tag objtype latest_tag=""
+  while IFS=$'\t' read -r tag objtype; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$objtype" == "tag" ]]; then
+      latest_tag="$tag"
+      break
+    fi
+  done < <(git for-each-ref --merged origin/main --sort=-v:refname \
+             --format=$'%(refname:short)\t%(objecttype)' 'refs/tags/v*' 2>/dev/null)
+
+  if [[ -z "$latest_tag" ]]; then
+    echo "SYNC_CHECK:(repo): no release tag known yet -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  local count
+  if count="$(git rev-list --count "main..${latest_tag}" 2>/dev/null)"; then
+    echo "$count"
+  else
+    echo "SYNC_CHECK:(repo): git rev-list main..${latest_tag} failed -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+  fi
+}
+
 cmd_sync_check() {
   cd "$OVERLAY_DIR"
 
@@ -1094,6 +1864,19 @@ cmd_sync_check() {
 
   local repo_behind_origin
   repo_behind_origin="$(compute_repo_behind_origin "$check_origin")"
+
+  local repo_behind_release
+  repo_behind_release="$(compute_repo_behind_release "$check_origin")"
+
+  # overlay-update-check/overlay-release-identity: the release `apply` would
+  # currently deploy, resolved from local main (D1 fallback: "untagged").
+  # Cached-only unless --check-origin/--fetch was passed (mirrors
+  # compute_repo_behind_origin/compute_repo_behind_release just above) --
+  # sync-check-verdicts R-001 and tui-self-update R-001 both require this
+  # default path to invoke no `git fetch`.
+  local release_version
+  release_version="$(resolve_latest_release_tag main "$check_origin")"
+  [[ "$release_version" == "none" ]] && release_version="untagged"
 
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
@@ -1183,15 +1966,45 @@ cmd_sync_check() {
 
     done < <(parse_manifest)
 
+    # sync-check-verdicts R-007/R-008: aggregate per-target digest vs. the
+    # recorded deploy (from `apply`), independent of the per-file
+    # classification above.
+    local target_digest recorded recorded_version recorded_digest digest_match
+    target_digest="$(compute_target_digest "$t" live)"
+    recorded="$(state_read_target "$t")"
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      recorded_version="NA"
+      digest_match="NA"
+    else
+      IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+      if [[ "$target_digest" == "$recorded_digest" ]]; then
+        digest_match="yes"
+      else
+        digest_match="no"
+      fi
+    fi
+
     echo ""
-    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed REPO_BEHIND_ORIGIN=$repo_behind_origin"
+    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed REPO_BEHIND_ORIGIN=$repo_behind_origin REPO_BEHIND_RELEASE=$repo_behind_release RECORDED_VERSION=$recorded_version DIGEST_MATCH=$digest_match"
 
     if [[ "$upstream_changed" -gt 0 ]]; then
       echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"
     elif [[ "$overlay_not_deployed" -gt 0 ]]; then
-      echo "ACTION:$t: run 'overlay apply --target $t'"
+      # R-007: name the release `apply` would bring only when there IS a
+      # recorded version that has gone stale (digest_match=no) -- a
+      # genuinely never-deployed target (digest_match=NA) gets no
+      # fabricated version, and the pre-first-tag bootstrap (no real
+      # version to name yet) is never papered over either.
+      if [[ "$digest_match" == "no" && "$release_version" != "untagged" ]]; then
+        echo "ACTION:$t: run 'overlay apply --target $t' (release $release_version available)"
+      else
+        echo "ACTION:$t: run 'overlay apply --target $t'"
+      fi
     elif [[ "$repo_behind_origin" != "NA" && "$repo_behind_origin" -gt 0 ]]; then
       echo "ACTION:$t: run 'git pull' to update your local clone (behind origin/main by $repo_behind_origin commit(s))"
+    elif [[ "$digest_match" == "yes" ]]; then
+      # R-008: name the matching version when fully in sync.
+      echo "ACTION:$t: in sync with gentle-ai (healthy) at $recorded_version"
     else
       echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
@@ -1585,6 +2398,25 @@ cmd_doctor() {
     fi
   fi
 
+  # (f) overlay-release-surfacing R-001: per-target deployed-version digest
+  # consistency. A target with no recorded state (never deployed) has
+  # nothing to compare yet -- silently skipped, not reported as a failure
+  # or warning. A digest mismatch is a WARN, never a FAIL: it never touches
+  # `fail`, preserving doctor's "exits non-zero only on a hard FAIL"
+  # contract (R-001's explicit requirement).
+  local dt drecorded drecorded_version drecorded_digest dtarget_digest
+  for dt in "${!TARGET_PATHS[@]}"; do
+    drecorded="$(state_read_target "$dt")"
+    [[ "$drecorded" == "NEVER_DEPLOYED" ]] && continue
+    IFS=$'\t' read -r drecorded_version drecorded_digest _ <<< "$drecorded"
+    dtarget_digest="$(compute_target_digest "$dt" live)"
+    if [[ "$dtarget_digest" == "$drecorded_digest" ]]; then
+      echo "PASS  $dt: deployed at $drecorded_version, digest matches"
+    else
+      echo "WARN  $dt: deployed at $drecorded_version, digest drift detected -- run 'overlay apply --target $dt'"
+    fi
+  done
+
   echo ""
   if [[ "$fail" -ne 0 ]]; then
     echo "doctor: FAIL — one or more required checks did not pass (see above)." >&2
@@ -1914,31 +2746,41 @@ cmd_gadu_generate() {
 # dispatch
 # ---------------------------------------------------------------------------
 
-COMMAND="${1:-}"
-shift || true
+# Guarded so this file can be `source`d (e.g. by tui/release_backend_test.go)
+# to call an internal function directly for unit-style testing, without also
+# running the CLI dispatch below. Normal execution (./bin/labdrian-overlay or
+# via the bin/overlay wrapper) is unaffected: BASH_SOURCE[0] and $0 are
+# identical for a top-level executed script.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  COMMAND="${1:-}"
+  shift || true
 
-case "$COMMAND" in
-  bootstrap)       cmd_bootstrap "$@" ;;
-  capture)         cmd_capture "$@" ;;
-  apply)           cmd_apply "$@" ;;
-  self-update)     cmd_self_update "$@" ;;
-  status)          cmd_status "$@" ;;
-  sync-check)      cmd_sync_check "$@" ;;
-  install-hooks)   cmd_install_hooks "$@" ;;
-  uninstall-hooks) cmd_uninstall_hooks "$@" ;;
-  status-hooks)    cmd_status_hooks "$@" ;;
-  doctor)          cmd_doctor "$@" ;;
-  repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
-  skill-registry)  cmd_skill_registry "$@" ;;
-  tui)             cmd_tui "$@" ;;
-  install-alias)   cmd_install_alias "$@" ;;
-  prespec)         cmd_prespec "$@" ;;
-  skills)          cmd_skills "$@" ;;
-  validate-entry-contract) cmd_validate_entry_contract "$@" ;;
-  deterministic-checks) cmd_deterministic_checks "$@" ;;
-  review-preflight) cmd_review_preflight "$@" ;;
-  gadu-generate)   cmd_gadu_generate "$@" ;;
-  --help|-h)       usage; exit 0 ;;
-  "")              usage >&2; exit 1 ;;
-  *)               die "Unknown command: $COMMAND" ;;
-esac
+  case "$COMMAND" in
+    bootstrap)       cmd_bootstrap "$@" ;;
+    capture)         cmd_capture "$@" ;;
+    apply)           cmd_apply "$@" ;;
+    self-update)     cmd_self_update "$@" ;;
+    update)          cmd_update "$@" ;;
+    restore)         cmd_restore "$@" ;;
+    version|--version) cmd_version "$@" ;;
+    status)          cmd_status "$@" ;;
+    sync-check)      cmd_sync_check "$@" ;;
+    install-hooks)   cmd_install_hooks "$@" ;;
+    uninstall-hooks) cmd_uninstall_hooks "$@" ;;
+    status-hooks)    cmd_status_hooks "$@" ;;
+    doctor)          cmd_doctor "$@" ;;
+    repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
+    skill-registry)  cmd_skill_registry "$@" ;;
+    tui)             cmd_tui "$@" ;;
+    install-alias)   cmd_install_alias "$@" ;;
+    prespec)         cmd_prespec "$@" ;;
+    skills)          cmd_skills "$@" ;;
+    validate-entry-contract) cmd_validate_entry_contract "$@" ;;
+    deterministic-checks) cmd_deterministic_checks "$@" ;;
+    review-preflight) cmd_review_preflight "$@" ;;
+    gadu-generate)   cmd_gadu_generate "$@" ;;
+    --help|-h)       usage; exit 0 ;;
+    "")              usage >&2; exit 1 ;;
+    *)               die "Unknown command: $COMMAND" ;;
+  esac
+fi
