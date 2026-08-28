@@ -1,6 +1,9 @@
 package main
 
 import (
+	"fmt"
+	"strings"
+
 	"github.com/charmbracelet/bubbles/spinner"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
@@ -32,6 +35,18 @@ type model struct {
 	aCursor int
 
 	pendingAction Action // action awaiting confirmation / running
+	// pendingTargets is the EXACT target set runActionCmd will invoke the
+	// backend against for pendingAction. It is computed once (in
+	// updateActions, or the "u" banner shortcut) and reused verbatim by
+	// updateConfirm's "y" handler -- never recomputed from m.selectedTargets()
+	// at run time. This matters for restore (D4/R-003): its confirm text is
+	// filtered to only the selected targets that actually have a backup
+	// (restoreConfirmInfo), and the real invocation must target that SAME
+	// filtered subset, or a target with zero backups would be invoked anyway,
+	// fail, and make runBackend's worst-severity aggregation misreport the
+	// whole action as failed even though the backup-bearing target's
+	// destructive restore already succeeded.
+	pendingTargets []Target
 
 	result commandResult
 	scroll int // line offset into the output pane
@@ -49,6 +64,12 @@ type model struct {
 	// commits behind" before the probe ever resolves, reproducing the exact
 	// R-006 bug class ParseSyncCheck already guards against.
 	behindOrigin int
+	// behindRelease is the launch-time probe's REPO_BEHIND_RELEASE reading
+	// (D2). Initialized to RepoBehindOriginNA in newModel, same rationale as
+	// behindOrigin above — while no release tag exists yet (D1 pre-first-tag
+	// bootstrap), it stays NA and bannerVisible/repoLine fall back to the
+	// legacy origin-only behavior unchanged.
+	behindRelease int
 	// bannerDismissed tracks whether the user dismissed the behind-origin
 	// banner this session (R-002); it never resets automatically.
 	bannerDismissed bool
@@ -69,14 +90,15 @@ func newModel() model {
 	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
 
 	return model{
-		repoRoot:     root,
-		rootErr:      err,
-		scr:          screenTargets,
-		targets:      targets,
-		selected:     selected,
-		actions:      Actions(),
-		spinner:      sp,
-		behindOrigin: RepoBehindOriginNA,
+		repoRoot:      root,
+		rootErr:       err,
+		scr:           screenTargets,
+		targets:       targets,
+		selected:      selected,
+		actions:       Actions(),
+		spinner:       sp,
+		behindOrigin:  RepoBehindOriginNA,
+		behindRelease: RepoBehindOriginNA,
 	}
 }
 
@@ -89,16 +111,20 @@ func (m model) Init() tea.Cmd { return probeBehindOriginCmd(m.repoRoot) }
 type runDoneMsg struct{ result commandResult }
 
 // probeDoneMsg is delivered when the launch-time cached-only origin probe
-// (probeBehindOriginCmd, D4) completes. Its field is consumed by the
-// Update() branch wired in Phase 3.
-type probeDoneMsg struct{ behind int }
+// (probeBehindOriginCmd, D4) completes. Its fields are consumed by the
+// Update() branch wired in Phase 3 (behind) and D2 (behindRelease).
+type probeDoneMsg struct {
+	behind        int
+	behindRelease int
+}
 
-// runActionCmd executes the backend off the UI goroutine.
-func (m model) runActionCmd(action Action) tea.Cmd {
+// runActionCmd executes the backend off the UI goroutine against the exact
+// targets given -- never m.selectedTargets() internally, since a caller may
+// need to invoke a filtered subset of the current selection (restore/D4).
+func (m model) runActionCmd(action Action, targets []Target) tea.Cmd {
 	root := m.repoRoot
-	selected := m.selectedTargets()
 	return func() tea.Msg {
-		return runDoneMsg{result: runBackend(root, action, selected)}
+		return runDoneMsg{result: runBackend(root, action, targets)}
 	}
 }
 
@@ -147,12 +173,26 @@ func (m model) allSelected() bool {
 
 // contentWidth returns m.width with an 80-column fallback when no
 // WindowSizeMsg has been received yet (m.width == 0).
-// bannerVisible reports whether the behind-origin banner (R-002) is
-// currently shown: rootErr keeps precedence (mirrors repoLine()'s
-// rendering rule so both stay in lockstep), the probe must have resolved a
-// concrete positive count, and the user must not have dismissed it yet.
+// bannerVisible reports whether the actionable "you should self-update"
+// banner (R-002) is currently shown: rootErr keeps precedence (mirrors
+// repoLine()'s rendering rule so both stay in lockstep), and the user must
+// not have dismissed it yet.
+//
+// D2: once a release tag exists (behindRelease resolved to a concrete
+// value, not NA), REPO_BEHIND_RELEASE is the primary "up to date" signal —
+// raw REPO_BEHIND_ORIGIN drift alone no longer triggers this actionable
+// banner (it demotes to an informational line in repoLine()). While no
+// release tag exists anywhere yet (behindRelease == NA, D1 pre-first-tag
+// bootstrap), this falls back to the legacy origin-only behavior,
+// byte-identical to before D2.
 func (m model) bannerVisible() bool {
-	return m.rootErr == nil && m.behindOrigin > 0 && !m.bannerDismissed
+	if m.rootErr != nil || m.bannerDismissed {
+		return false
+	}
+	if m.behindRelease != RepoBehindOriginNA {
+		return m.behindRelease > 0
+	}
+	return m.behindOrigin > 0
 }
 
 func (m model) contentWidth() int {
@@ -205,6 +245,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case probeDoneMsg:
 		m.behindOrigin = msg.behind
+		m.behindRelease = msg.behindRelease
 		return m, nil
 
 	case spinner.TickMsg:
@@ -238,6 +279,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning {
 			if a, ok := m.selfUpdateAction(); ok {
 				m.pendingAction = a
+				m.pendingTargets = m.selectedTargets()
 				m.scr = screenConfirm
 				return m, nil
 			}
@@ -304,22 +346,69 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		action := m.actions[m.aCursor]
+		targets := m.selectedTargets()
+		if action.Command == "restore" {
+			// R-003: restore is never offered/selectable for a target with
+			// zero backups. Entering it with no available backup among the
+			// current selection is a no-op — stay on screenActions rather
+			// than opening a confirm screen for something that would just
+			// fail against every selected target. restoreConfirmInfo also
+			// narrows `targets` down to the backup-bearing subset -- the
+			// SAME subset both the confirm text and the real invocation use
+			// (see pendingTargets' doc comment).
+			info, restoreTargets, ok := m.restoreConfirmInfo(action)
+			if !ok {
+				return m, nil
+			}
+			action.ConfirmMessage = info
+			targets = restoreTargets
+		}
 		m.pendingAction = action
+		m.pendingTargets = targets
 		if action.Mutating {
 			m.scr = screenConfirm
 			return m, nil
 		}
 		m.scr = screenRunning
-		return m, tea.Batch(m.spinner.Tick, m.runActionCmd(action))
+		return m, tea.Batch(m.spinner.Tick, m.runActionCmd(action, targets))
 	}
 	return m, nil
+}
+
+// restoreConfirmInfo builds the restore action's per-invocation confirm
+// copy (D4): the base overwrite-warning text from Actions(), followed by
+// each selected target's most recent backup timestamp + version — read via
+// latestBackup, never a TUI-side timestamp picker (D4: the TUI always
+// targets the most recent backup only). The returned targets are the SAME
+// backup-bearing subset the confirm text names -- the caller must reuse it
+// for the actual invocation too, never recompute from m.selectedTargets()
+// (that recomputation is exactly the bug an adversarial review caught:
+// a target with zero backups would be invoked, fail, and make the whole
+// action misreport as failed even though the backup-bearing target's
+// destructive restore had already succeeded). ok is false when NONE of the
+// selected targets have an available backup, the signal updateActions uses
+// to refuse entering the confirm screen at all (R-003).
+func (m model) restoreConfirmInfo(action Action) (message string, targets []Target, ok bool) {
+	var lines []string
+	for _, t := range m.selectedTargets() {
+		ts, version, hasBackup := latestBackup(t.Name)
+		if !hasBackup {
+			continue
+		}
+		lines = append(lines, fmt.Sprintf("%s: %s (%s)", t.Name, ts, version))
+		targets = append(targets, t)
+	}
+	if len(lines) == 0 {
+		return "", nil, false
+	}
+	return action.ConfirmMessage + "\n\nRespaldo a restaurar:\n  " + strings.Join(lines, "\n  "), targets, true
 }
 
 func (m model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 	switch msg.String() {
 	case "y", "Y", "enter":
 		m.scr = screenRunning
-		return m, tea.Batch(m.spinner.Tick, m.runActionCmd(m.pendingAction))
+		return m, tea.Batch(m.spinner.Tick, m.runActionCmd(m.pendingAction, m.pendingTargets))
 	case "n", "N", "esc", "q":
 		m.scr = screenActions
 	}

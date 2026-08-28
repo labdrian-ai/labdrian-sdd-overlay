@@ -1126,20 +1126,32 @@ func TestBackwardsCompatZeroValues(t *testing.T) {
 	}
 }
 
-// TestClassifyPrecedence verifies UPSTREAM_CHANGED wins over OVERLAY_NOT_DEPLOYED,
-// which in turn wins over REPO_BEHIND_ORIGIN (R-006 additive precedence).
+// TestClassifyPrecedence verifies UPSTREAM_CHANGED wins over OVERLAY_NOT_DEPLOYED
+// (and digest mismatch, D2's addition to that same tier), which in turn wins
+// over REPO_BEHIND_RELEASE (D2), which wins over REPO_BEHIND_ORIGIN (R-006/D2
+// full precedence: capture > apply/digest-mismatch > behind-release >
+// behind-origin).
 func TestClassifyPrecedence(t *testing.T) {
-	if classify(2, 5, 0) != SyncNeedsCapture {
+	if classify(2, 5, 0, 0, false) != SyncNeedsCapture {
 		t.Fatal("upstream_changed>0 must classify as needs-capture (RED)")
 	}
-	if classify(0, 1, 0) != SyncNeedsApply {
+	if classify(0, 1, 0, 0, false) != SyncNeedsApply {
 		t.Fatal("overlay_not_deployed>0 must classify as needs-apply (YELLOW)")
 	}
-	if classify(0, 0, 3) != SyncBehindOrigin {
+	if classify(0, 0, 0, 0, true) != SyncNeedsApply {
+		t.Fatal("digest mismatch alone (D2) must classify as needs-apply (YELLOW), same tier as overlay_not_deployed>0")
+	}
+	if classify(0, 0, 0, 3, false) != SyncBehindRelease {
+		t.Fatal("repo_behind_release>0 alone (D2) must classify as SyncBehindRelease")
+	}
+	if classify(0, 0, 3, 2, false) != SyncBehindRelease {
+		t.Fatal("repo_behind_release>0 must outrank repo_behind_origin>0 (D2 precedence)")
+	}
+	if classify(0, 0, 3, 0, false) != SyncBehindOrigin {
 		t.Fatal("repo_behind_origin>0 alone must classify as SyncBehindOrigin (R-006: never silently healthy)")
 	}
-	if classify(0, 0, 0) != SyncHealthy {
-		t.Fatal("zero counts must classify as healthy (GREEN)")
+	if classify(0, 0, 0, 0, false) != SyncHealthy {
+		t.Fatal("zero counts and no digest mismatch must classify as healthy (GREEN)")
 	}
 }
 
@@ -1466,16 +1478,18 @@ func TestAllArgSetsSkillsActionComposition(t *testing.T) {
 	}
 }
 
-// TestActionMenuShapeAndOrder locks in the 11->7 simplification: exactly 7
-// top-level actions, in the order matching the "Verificar → Capturar →
-// Aplicar" flow copy (viewActions), with Capturar coming before Aplicar.
+// TestActionMenuShapeAndOrder locks in the 11->7 simplification (now 9 with
+// this slice's "restore" addition): top-level actions in the order matching
+// the "Verificar → Capturar → Aplicar → Restaurar" flow copy (viewActions),
+// with Capturar coming before Aplicar and restore immediately after apply
+// (R-011: a recovery action belongs next to the deploy action it undoes).
 func TestActionMenuShapeAndOrder(t *testing.T) {
 	actions := Actions()
-	if len(actions) != 8 {
-		t.Fatalf("expected 8 top-level actions, got %d: %v", len(actions), actions)
+	if len(actions) != 9 {
+		t.Fatalf("expected 9 top-level actions, got %d: %v", len(actions), actions)
 	}
 
-	want := []string{"status", "sync-check", "capture", "apply", "self-update", "install-hooks", "uninstall-hooks", "skills"}
+	want := []string{"status", "sync-check", "capture", "apply", "restore", "self-update", "install-hooks", "uninstall-hooks", "skills"}
 	got := make([]string, len(actions))
 	for i, a := range actions {
 		got[i] = a.Command
@@ -1611,7 +1625,8 @@ func TestProbeBehindOriginCmd(t *testing.T) {
 
 // TestSelfUpdateActionRegistered verifies Actions() registers the
 // "Actualizar repositorio" entry (R-003) with TargetAgnostic and Mutating
-// both true, positioned immediately after "apply" and immediately before
+// both true, positioned immediately after "restore" (this slice inserted
+// restore between apply and self-update, R-011) and immediately before
 // "install-hooks" per design.md D7's repo-maintenance grouping.
 func TestSelfUpdateActionRegistered(t *testing.T) {
 	actions := Actions()
@@ -1641,8 +1656,8 @@ func TestSelfUpdateActionRegistered(t *testing.T) {
 	if idx > 0 {
 		prev = actions[idx-1].Command
 	}
-	if prev != "apply" {
-		t.Errorf("self-update must come immediately after apply, got previous entry %q", prev)
+	if prev != "restore" {
+		t.Errorf("self-update must come immediately after restore, got previous entry %q", prev)
 	}
 
 	next := ""
@@ -1829,4 +1844,532 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 			t.Error("a non-self-update runDoneMsg must NOT re-fire the probe")
 		}
 	})
+}
+
+// ---------------------------------------------------------------------------
+// Slice 3b: overlay-release-tui-surfacing (R-011).
+//
+// TargetVerdict gains RecordedVersion/DigestMatch/RepoBehindRelease (D2),
+// classify's precedence extends to capture > apply/digest-mismatch >
+// behind-release > behind-origin, the launch-time probe delivers both
+// behind-origin and behind-release from one sync-check run, and Actions()
+// gains a per-target "Restaurar respaldo" entry gated on backup
+// availability (R-003, D4).
+// ---------------------------------------------------------------------------
+
+// TestParseSyncCheck_ReleaseFields verifies the three new VERDICT keys parse
+// onto TargetVerdict, including the REPO_BEHIND_RELEASE NA sentinel and the
+// resulting classify() precedence (digest mismatch -> needs-apply here,
+// since OVERLAY_NOT_DEPLOYED=0 but DIGEST_MATCH=no).
+func TestParseSyncCheck_ReleaseFields(t *testing.T) {
+	sample := `
+=== sync-check: claude ===
+VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=2 RECORDED_VERSION=v1.3.0 DIGEST_MATCH=no
+ACTION:claude: run 'overlay apply --target claude' (release v1.4.0 available)
+
+=== sync-check: opencode ===
+VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.4.0 DIGEST_MATCH=yes
+ACTION:opencode: in sync with gentle-ai at v1.4.0
+
+=== sync-check: codex ===
+VERDICT:codex:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=NA DIGEST_MATCH=NA
+ACTION:codex: run 'overlay apply --target codex'
+`
+	verdicts := ParseSyncCheck(sample)
+	if len(verdicts) != 3 {
+		t.Fatalf("expected 3 verdicts, got %d", len(verdicts))
+	}
+
+	claude := verdicts[0]
+	if claude.RecordedVersion != "v1.3.0" {
+		t.Errorf("claude.RecordedVersion = %q, want v1.3.0", claude.RecordedVersion)
+	}
+	if claude.DigestMatch != "no" {
+		t.Errorf("claude.DigestMatch = %q, want no", claude.DigestMatch)
+	}
+	if claude.RepoBehindRelease != 2 {
+		t.Errorf("claude.RepoBehindRelease = %d, want 2", claude.RepoBehindRelease)
+	}
+	if claude.Status != SyncNeedsApply {
+		t.Errorf("claude.Status = %d, want SyncNeedsApply (digest mismatch alone must classify as needs-apply, D2)", claude.Status)
+	}
+
+	opencode := verdicts[1]
+	if opencode.RepoBehindRelease != 0 {
+		t.Errorf("opencode.RepoBehindRelease = %d, want 0", opencode.RepoBehindRelease)
+	}
+	if opencode.Status != SyncHealthy {
+		t.Errorf("opencode.Status = %d, want SyncHealthy", opencode.Status)
+	}
+
+	codex := verdicts[2]
+	if codex.RepoBehindRelease != RepoBehindOriginNA {
+		t.Errorf("codex.RepoBehindRelease = %d, want RepoBehindOriginNA (NA parsing)", codex.RepoBehindRelease)
+	}
+	if codex.RecordedVersion != "NA" || codex.DigestMatch != "NA" {
+		t.Errorf("codex RecordedVersion/DigestMatch = %q/%q, want NA/NA (never deployed)", codex.RecordedVersion, codex.DigestMatch)
+	}
+}
+
+// TestParseSyncCheck_ReleaseFieldsAbsentDefaultsBackwardsCompatible verifies
+// a legacy VERDICT line without the new keys (pre-Slice-3b sync-check
+// output, or a hand-built verdict in an older test) leaves RepoBehindRelease
+// at the NA sentinel and RecordedVersion/DigestMatch empty, never a
+// fabricated zero/healthy value.
+func TestParseSyncCheck_ReleaseFieldsAbsentDefaultsBackwardsCompatible(t *testing.T) {
+	sample := "\n=== sync-check: claude ===\nVERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0\nACTION:claude: in sync with gentle-ai (healthy)\n"
+	verdicts := ParseSyncCheck(sample)
+	if len(verdicts) != 1 {
+		t.Fatalf("expected 1 verdict, got %d", len(verdicts))
+	}
+	v := verdicts[0]
+	if v.RepoBehindRelease != RepoBehindOriginNA {
+		t.Errorf("RepoBehindRelease = %d, want RepoBehindOriginNA when the key is absent", v.RepoBehindRelease)
+	}
+	if v.RecordedVersion != "" || v.DigestMatch != "" {
+		t.Errorf("RecordedVersion/DigestMatch = %q/%q, want empty when the keys are absent", v.RecordedVersion, v.DigestMatch)
+	}
+	if v.Status != SyncHealthy {
+		t.Errorf("Status = %d, want SyncHealthy for a legacy all-zero verdict", v.Status)
+	}
+}
+
+// TestProbeBehindRelease mirrors TestProbeBehind's table for the D2
+// counterpart: a concrete count, an explicit NA, zero verdicts, and
+// unparseable output all handled with the same degrade-to-NA contract.
+func TestProbeBehindRelease(t *testing.T) {
+	cases := []struct {
+		name   string
+		output string
+		want   int
+	}{
+		{
+			name: "concrete count",
+			output: "\n=== sync-check: claude ===\n" +
+				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_RELEASE=3\n" +
+				"ACTION:claude: run 'overlay self-update'\n",
+			want: 3,
+		},
+		{
+			name: "explicit NA",
+			output: "\n=== sync-check: claude ===\n" +
+				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_RELEASE=NA\n" +
+				"ACTION:claude: (no releases published yet)\n",
+			want: RepoBehindOriginNA,
+		},
+		{
+			name:   "zero verdicts",
+			output: "\nSYNC_CHECK:claude: target dir not found -- skipping\n",
+			want:   RepoBehindOriginNA,
+		},
+		{
+			name:   "garbage output",
+			output: "not even close to a sync-check line\n\x00\xff binary noise",
+			want:   RepoBehindOriginNA,
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := probeBehindRelease(tc.output)
+			if got != tc.want {
+				t.Errorf("probeBehindRelease(%q) = %d, want %d", tc.name, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestProbeBehindOriginCmd_AlsoDeliversBehindRelease proves the D2 wiring:
+// one sync-check invocation feeds both probeDoneMsg fields, so no second
+// exec is spent picking up the release-behind count.
+func TestProbeBehindOriginCmd_AlsoDeliversBehindRelease(t *testing.T) {
+	root := t.TempDir()
+	recorder := filepath.Join(root, "invoked.log")
+	const sample = "\n=== sync-check: claude ===\n" +
+		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=1 REPO_BEHIND_RELEASE=4\n" +
+		"ACTION:claude: run 'overlay self-update'\n"
+	writeStubBackend(t, root, recorder, sample, 0)
+
+	msg := probeBehindOriginCmd(root)()
+	pd, ok := msg.(probeDoneMsg)
+	if !ok {
+		t.Fatalf("expected probeDoneMsg, got %T", msg)
+	}
+	if pd.behind != 1 {
+		t.Errorf("behind = %d, want 1", pd.behind)
+	}
+	if pd.behindRelease != 4 {
+		t.Errorf("behindRelease = %d, want 4", pd.behindRelease)
+	}
+}
+
+// TestNewModel_BehindReleaseDefaultsToNA mirrors
+// TestNewModel_BehindOriginDefaultsToNA for the new field: newModel must
+// initialize behindRelease to RepoBehindOriginNA, not Go's zero value.
+func TestNewModel_BehindReleaseDefaultsToNA(t *testing.T) {
+	m := newModel()
+	if m.behindRelease != RepoBehindOriginNA {
+		t.Errorf("newModel().behindRelease = %d, want RepoBehindOriginNA (%d)", m.behindRelease, RepoBehindOriginNA)
+	}
+}
+
+// TestUpdate_ProbeDoneMsg_SetsBehindRelease mirrors
+// TestUpdate_ProbeDoneMsg_SetsBehindOrigin for the new field.
+func TestUpdate_ProbeDoneMsg_SetsBehindRelease(t *testing.T) {
+	m := newModel()
+	updated, _ := m.Update(probeDoneMsg{behind: 0, behindRelease: 7})
+	m = updated.(model)
+	if m.behindRelease != 7 {
+		t.Errorf("behindRelease after probeDoneMsg{behindRelease: 7} = %d, want 7", m.behindRelease)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Slice 3b: latestBackup (D3/D4) — pure filesystem read, no backend exec.
+// ---------------------------------------------------------------------------
+
+// writeBackupFixture creates a backup directory for target at the given
+// timestamp under home, with metaContent written to its .meta file (skipped
+// when metaContent is the sentinel noMeta).
+const noMeta = "\x00__no_meta__"
+
+func writeBackupFixture(t *testing.T, home, target, timestamp, metaContent string) {
+	t.Helper()
+	dir := filepath.Join(home, ".labdrian-overlay", "backups", target, timestamp)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir backup fixture: %v", err)
+	}
+	if metaContent != noMeta {
+		if err := os.WriteFile(filepath.Join(dir, ".meta"), []byte(metaContent), 0o644); err != nil {
+			t.Fatalf("write .meta fixture: %v", err)
+		}
+	}
+}
+
+// TestLatestBackup_NoBackupsReturnsNotOK verifies a target with zero
+// retained backups (or no backups directory at all) reports ok=false — the
+// exact signal restore-selectability gating depends on (R-003).
+func TestLatestBackup_NoBackupsReturnsNotOK(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	if _, _, ok := latestBackup("claude"); ok {
+		t.Error("latestBackup() for a target with no backups directory must return ok=false")
+	}
+}
+
+// TestLatestBackup_PicksLexicallyLastAsMostRecent verifies multiple backups
+// resolve to the chronologically newest one (D4: TUI always targets the
+// most recent backup only), and that its recorded version is read from
+// .meta (tab-separated: version, digest, applied_at).
+func TestLatestBackup_PicksLexicallyLastAsMostRecent(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeBackupFixture(t, home, "claude", "20260101T000000Z", "v1.2.0\tabc123\t2026-01-01T00:00:00Z")
+	writeBackupFixture(t, home, "claude", "20260215T120000Z", "v1.3.0\tdef456\t2026-02-15T12:00:00Z")
+
+	ts, version, ok := latestBackup("claude")
+	if !ok {
+		t.Fatal("latestBackup() must report ok=true when backups exist")
+	}
+	if ts != "20260215T120000Z" {
+		t.Errorf("timestamp = %q, want the lexically/chronologically last one", ts)
+	}
+	if version != "v1.3.0" {
+		t.Errorf("version = %q, want v1.3.0 (from the most recent backup's .meta)", version)
+	}
+}
+
+// TestLatestBackup_NeverDeployedMetaStillReportsOK verifies a backup whose
+// .meta is the literal "NEVER_DEPLOYED" sentinel (the backup was taken
+// while the target had no prior recorded version) still reports ok=true —
+// the backup itself is restorable, only the version label degrades to
+// "unknown".
+func TestLatestBackup_NeverDeployedMetaStillReportsOK(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeBackupFixture(t, home, "claude", "20260101T000000Z", "NEVER_DEPLOYED")
+
+	ts, version, ok := latestBackup("claude")
+	if !ok {
+		t.Fatal("latestBackup() must report ok=true even when .meta is NEVER_DEPLOYED")
+	}
+	if ts != "20260101T000000Z" {
+		t.Errorf("timestamp = %q, want 20260101T000000Z", ts)
+	}
+	if version == "v1.2.0" {
+		t.Errorf("version must not fabricate a real version from a NEVER_DEPLOYED meta, got %q", version)
+	}
+}
+
+// TestLatestBackup_MissingMetaStillReportsOK verifies a backup directory
+// with no .meta file at all (corrupt/partial write) still reports ok=true
+// with a degraded version label, mirroring cmd_restore --list's own
+// "unknown" fallback rather than erroring out.
+func TestLatestBackup_MissingMetaStillReportsOK(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeBackupFixture(t, home, "claude", "20260101T000000Z", noMeta)
+
+	_, _, ok := latestBackup("claude")
+	if !ok {
+		t.Fatal("latestBackup() must report ok=true even when .meta is missing")
+	}
+}
+
+// TestLatestBackup_TargetIsolation verifies one target's backups never leak
+// into another target's lookup.
+func TestLatestBackup_TargetIsolation(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeBackupFixture(t, home, "claude", "20260101T000000Z", "v1.0.0\tabc\t2026-01-01T00:00:00Z")
+
+	if _, _, ok := latestBackup("opencode"); ok {
+		t.Error("latestBackup(\"opencode\") must be ok=false when only \"claude\" has backups")
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Slice 3b: Actions() registration for restore and the folded-in version
+// command (R-011).
+// ---------------------------------------------------------------------------
+
+// TestRestoreActionRegistered verifies the "Restaurar respaldo" entry:
+// Mutating, per-target (never SupportsAll, mirroring capture's --target-all
+// refusal), and carrying a non-empty overwrite-warning ConfirmMessage.
+func TestRestoreActionRegistered(t *testing.T) {
+	var restore Action
+	found := false
+	for _, a := range Actions() {
+		if a.Command == "restore" {
+			restore = a
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal(`Actions() must contain a top-level "restore" action`)
+	}
+	if !restore.Mutating {
+		t.Error("restore must have Mutating: true")
+	}
+	if restore.SupportsAll {
+		t.Error("restore must have SupportsAll: false (the backend refuses --target all for restore)")
+	}
+	if restore.TargetAgnostic {
+		t.Error("restore must NOT be TargetAgnostic -- it always operates on a specific target")
+	}
+	if restore.ConfirmMessage == "" {
+		t.Error("restore must have a non-empty ConfirmMessage (R-003: must state that restore overwrites deployed files)")
+	}
+	if !strings.Contains(restore.ConfirmMessage, "sobrescribiendo") {
+		t.Errorf("restore ConfirmMessage must warn about overwriting deployed files, got %q", restore.ConfirmMessage)
+	}
+}
+
+// TestVersionFoldedIntoEstadoAlso verifies the "version" subcommand (R-002)
+// is merged into Estado's Also list, TargetAgnostic and read-only, rather
+// than appearing as a separate top-level menu entry.
+func TestVersionFoldedIntoEstadoAlso(t *testing.T) {
+	var estado Action
+	found := false
+	for _, a := range Actions() {
+		if a.Command == "status" {
+			estado = a
+			found = true
+			break
+		}
+		if a.Command == "version" {
+			t.Fatal(`"version" must NOT appear as a separate top-level action`)
+		}
+	}
+	if !found {
+		t.Fatal(`Actions() must contain the top-level "status" (Estado) action`)
+	}
+
+	var version Action
+	versionFound := false
+	for _, sub := range estado.Also {
+		if sub.Command == "version" {
+			version = sub
+			versionFound = true
+		}
+	}
+	if !versionFound {
+		t.Fatal(`Estado's Also must contain a "version" entry`)
+	}
+	if !version.TargetAgnostic {
+		t.Error(`version (Also) must have TargetAgnostic: true`)
+	}
+	if version.Mutating {
+		t.Error(`version (Also) must have Mutating: false (read-only)`)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// Slice 3b: restore selectability gating in updateActions (R-003).
+// ---------------------------------------------------------------------------
+
+// findAction returns the index of the action with the given Command in
+// m.actions, failing the test if not found.
+func findAction(t *testing.T, m model, command string) int {
+	t.Helper()
+	for i, a := range m.actions {
+		if a.Command == command {
+			return i
+		}
+	}
+	t.Fatalf("Actions() must contain a %q entry", command)
+	return -1
+}
+
+// TestUpdateActions_Restore_NoBackupIsNoOp verifies R-003's negative path:
+// entering "Restaurar respaldo" when the (only) selected target has zero
+// backups stays on screenActions -- restore is never offered/run for a
+// target with no backup to restore.
+func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // no backups anywhere
+	m := newModel()
+	m.scr = screenActions
+	m.aCursor = findAction(t, m, "restore")
+
+	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	if m.scr != screenActions {
+		t.Errorf("scr after entering restore with zero backups = %v, want unchanged screenActions", m.scr)
+	}
+	if m.pendingAction.Command == "restore" {
+		t.Error("pendingAction must not be set to restore when no selected target has a backup")
+	}
+}
+
+// TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion
+// verifies R-003's positive path, and D4's exact requirement: the confirm
+// screen names the specific backup timestamp + version that will be
+// restored, and states that restore overwrites deployed files, following
+// the EXACT existing confirm->run->result pattern (Mutating: true ->
+// screenConfirm -> y/enter -> screenRunning).
+func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
+
+	m := newModel()
+	// Only "claude" selected, to make the confirm text assertion unambiguous.
+	m.selected = map[int]bool{0: true, 1: false, 2: false}
+	m.scr = screenActions
+	m.aCursor = findAction(t, m, "restore")
+
+	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	if m.scr != screenConfirm {
+		t.Fatalf("scr after entering restore with an available backup = %v, want screenConfirm", m.scr)
+	}
+	if m.pendingAction.Command != "restore" {
+		t.Fatalf("pendingAction.Command = %q, want restore", m.pendingAction.Command)
+	}
+	if !m.pendingAction.Mutating {
+		t.Error("restore pendingAction must be Mutating: true")
+	}
+
+	rendered := stripANSI(m.View())
+	if !strings.Contains(rendered, "20260301T093000Z") {
+		t.Errorf("confirm screen must name the backup timestamp being restored, got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "v1.5.0") {
+		t.Errorf("confirm screen must name the backup version being restored, got:\n%s", rendered)
+	}
+	if !strings.Contains(rendered, "sobrescribiendo") {
+		t.Errorf("confirm screen must still state that restore overwrites deployed files, got:\n%s", rendered)
+	}
+
+	// y/enter must proceed through the SAME existing pattern into screenRunning.
+	updated, cmd := m.updateConfirm(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+	if m.scr != screenRunning {
+		t.Errorf("scr after confirming restore = %v, want screenRunning", m.scr)
+	}
+	if cmd == nil {
+		t.Error("confirming restore must return a non-nil run command")
+	}
+}
+
+// TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection verifies
+// that when MULTIPLE targets are selected and only SOME have a backup, the
+// confirm screen still proceeds (naming only the targets that do have one)
+// rather than refusing the whole action.
+func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
+	// "opencode" deliberately has no backup.
+
+	m := newModel()
+	m.selected = map[int]bool{0: true, 1: true, 2: false} // claude + opencode
+	m.scr = screenActions
+	m.aCursor = findAction(t, m, "restore")
+
+	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+
+	if m.scr != screenConfirm {
+		t.Fatalf("scr = %v, want screenConfirm when at least one selected target has a backup", m.scr)
+	}
+	rendered := stripANSI(m.View())
+	if !strings.Contains(rendered, "claude") {
+		t.Errorf("confirm screen must name claude's backup, got:\n%s", rendered)
+	}
+
+	// Regression (adversarial review, Slice 3b): the ACTUAL invocation must
+	// be narrowed to the same backup-bearing subset the confirm text names.
+	// Before the fix, pendingTargets didn't exist and runActionCmd recomputed
+	// m.selectedTargets() at run time -- i.e. it would have invoked restore
+	// against "opencode" too, which has zero backups and would fail, making
+	// runBackend's worst-severity aggregation misreport the whole action as
+	// failed even though "claude"'s destructive restore had already
+	// succeeded.
+	if len(m.pendingTargets) != 1 || m.pendingTargets[0].Name != "claude" {
+		t.Fatalf("pendingTargets = %+v, want exactly [claude] (the only selected target with a backup) -- restore must never be invoked against a target with zero backups", m.pendingTargets)
+	}
+
+	updated, cmd := m.updateConfirm(tea.KeyMsg{Type: tea.KeyEnter})
+	m = updated.(model)
+	if m.scr != screenRunning {
+		t.Errorf("scr after confirming partial-availability restore = %v, want screenRunning", m.scr)
+	}
+	if cmd == nil {
+		t.Fatal("confirming restore must return a non-nil run command")
+	}
+	// updateConfirm's cmd is tea.Batch(spinner.Tick, runActionCmd(...)) --
+	// executing it yields a tea.BatchMsg (the un-run sub-commands), so run
+	// each one to find runActionCmd's actual runDoneMsg.
+	batch, ok := cmd().(tea.BatchMsg)
+	if !ok {
+		t.Fatalf("cmd() = %T, want tea.BatchMsg", cmd())
+	}
+	var done runDoneMsg
+	var found bool
+	for _, sub := range batch {
+		if sub == nil {
+			continue
+		}
+		if d, ok := sub().(runDoneMsg); ok {
+			done, found = d, true
+		}
+	}
+	if !found {
+		t.Fatal("confirming restore's batched commands never produced a runDoneMsg")
+	}
+	// done.result.targets is runBackend's own record of exactly which targets
+	// it was invoked against (set before any subprocess runs) -- the direct
+	// proof that "opencode" (zero backups) was never actually invoked, not
+	// just omitted from the confirm text.
+	for _, tgt := range done.result.targets {
+		if tgt.Name == "opencode" {
+			t.Errorf("runBackend was invoked against opencode (zero backups); targets = %+v", done.result.targets)
+		}
+	}
+	if len(done.result.targets) != 1 || done.result.targets[0].Name != "claude" {
+		t.Errorf("runBackend invoked against targets = %+v, want exactly [claude]", done.result.targets)
+	}
 }
