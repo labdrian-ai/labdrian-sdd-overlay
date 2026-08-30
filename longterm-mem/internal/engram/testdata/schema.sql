@@ -59,3 +59,22 @@ CREATE TRIGGER observations_fts_au AFTER UPDATE ON observations BEGIN
     INSERT INTO observations_fts(observations_fts, rowid, title, content) VALUES ('delete', old.id, old.title, old.content);
     INSERT INTO observations_fts(rowid, title, content) VALUES (new.id, new.title, new.content);
 END;
+
+-- memory_relations: live schema #3129. source_id/target_id key on
+-- observations.sync_id (TEXT), not the integer id. Slice 4's
+-- Store.RelatedEdges (R-027) reads this table.
+CREATE TABLE memory_relations (
+    id                        INTEGER PRIMARY KEY AUTOINCREMENT,
+    sync_id                   TEXT    NOT NULL UNIQUE,
+    source_id                 TEXT,
+    target_id                 TEXT,
+    relation                  TEXT    NOT NULL DEFAULT 'pending',
+    judgment_status           TEXT    NOT NULL DEFAULT 'pending',
+    superseded_at             TEXT,
+    superseded_by_relation_id INTEGER REFERENCES memory_relations(id) ON DELETE SET NULL,
+    created_at                TEXT    NOT NULL DEFAULT (datetime('now')),
+    updated_at                TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE INDEX idx_rel_source ON memory_relations(source_id, judgment_status);
+CREATE INDEX idx_rel_target ON memory_relations(target_id, judgment_status);
