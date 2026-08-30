@@ -165,10 +165,10 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 2b — longterm-mem-scaffold-vault-2b-runner-retrieve (R-004, R-024) — PR2b (base: PR2a)
 
-- [ ] 2b.1 RED `longterm-mem/internal/vault/runner_test.go::TestRunner_RefusesOutsideVaultRoot` — `Runner{Root: tmpVault}` called with a script path outside the root (after `EvalSymlinks`); assert refusal, no subprocess spawned. (Threat matrix: subprocess execution — outside-root refusal.)
-- [ ] 2b.2 RED (same file) `TestRunner_ArgvOnly_NoShellMetacharacters` — fixture script echoing `"$@"`; a query argument containing `; rm -rf /` arrives as one literal argv element, never shell-interpreted. (Threat matrix: metacharacter spy.)
-- [ ] 2b.3 RED (same file) `TestRunner_TimeoutSurfacesExitAndStderr` — fixture script sleeping past a short `context.WithTimeout`; assert a synthetic non-zero exit and captured stderr.
-- [ ] 2b.4 GREEN `longterm-mem/internal/vault/runner.go` — the sole `os/exec` importer: `Runner{Root string}`, `Run(ctx, script string, args ...string) (stdout, stderr []byte, exitCode int, err error)`; cwd = vault root; env limited to `PATH, HOME, LANG`; per-call timeout.
+- [x] 2b.1 RED `longterm-mem/internal/vault/runner_test.go::TestRunner_RefusesOutsideVaultRoot` — `Runner{Root: tmpVault}` called with a script path outside the root (after `EvalSymlinks`); assert refusal, no subprocess spawned. (Threat matrix: subprocess execution — outside-root refusal.)
+- [x] 2b.2 RED (same file) `TestRunner_ArgvOnly_NoShellMetacharacters` — fixture script echoing `"$@"`; a query argument containing `; rm -rf /` arrives as one literal argv element, never shell-interpreted. (Threat matrix: metacharacter spy.)
+- [x] 2b.3 RED (same file) `TestRunner_TimeoutSurfacesExitAndStderr` — fixture script sleeping past a short `context.WithTimeout`; assert a synthetic non-zero exit and captured stderr.
+- [x] 2b.4 GREEN `longterm-mem/internal/vault/runner.go` — the sole `os/exec` importer: `Runner{Root string}`, `Run(ctx, script string, args ...string) (stdout, stderr []byte, exitCode int, err error)`; cwd = vault root; env limited to `PATH, HOME, LANG`; per-call timeout.
 - [ ] 2b.5 RED `longterm-mem/internal/vault/retrieve_test.go::TestRetrieve_DefaultTopNAndFullFieldParse` — fixture `retrieve.py` stdout with N rows; assert `Retrieve` invokes with the default top-N (5) and parses page address, absolute path, BM25 score, rerank score, and snippet for every row. Scenario: "Default top-N and full field parse" (R-004).
 - [ ] 2b.6 RED (same file) `TestRetrieve_ExplicitTopNOverride` — explicit top-N passed through as the `--top` argv value. Scenario: "Explicit top-N override" (R-004).
 - [ ] 2b.7 RED (same file) `TestRetrieve_NotProvisionedExitTenMapsToStatus` — fixture script exits 10; assert `Retrieve` returns `vault_status: not_provisioned` rather than a generic error. Scenario: "Never-indexed vault maps to not_provisioned, not a generic error" (R-024).
