@@ -192,14 +192,14 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 3b — longterm-mem-query-3b-merge (R-006, R-026) — PR3b (base: PR3a)
 
-- [ ] 3b.1 RED `longterm-mem/internal/query/query_test.go::TestQuery_GroupedBySourceInNativeRankOrder` — fake vault + Engram rows; assert output is vault rows (vault order) then Engram rows (Engram order), each tagged `source`. Scenario: "Results are grouped by source in native rank order" (R-006).
-- [ ] 3b.2 RED (same file) `TestQuery_LinkedPairEmittedOnce` — a vault row and an Engram row sharing a promotion link; assert one `source:"linked"` row carrying both references. Scenario: "Linked pair is emitted once" (R-006).
-- [ ] 3b.3 RED (same file) `TestQuery_MissingProjectRejected` — empty `Request.Project`; assert rejection (exit 2), no inferred project. Scenario: "Missing project argument is rejected" (R-006).
-- [ ] 3b.4 RED (same file) `TestQuery_NotProvisionedDegradesToEngramOnly` — vault retrieve reports `not_provisioned`; assert Engram-only results plus `vault_status: not_provisioned`, no error. Scenario: "Unprovisioned vault degrades instead of failing the whole call" (R-026).
+- [x] 3b.1 RED `longterm-mem/internal/query/query_test.go::TestQuery_GroupedBySourceInNativeRankOrder` — fake vault + Engram rows; assert output is vault rows (vault order) then Engram rows (Engram order), each tagged `source`. Scenario: "Results are grouped by source in native rank order" (R-006).
+- [x] 3b.2 RED (same file) `TestQuery_LinkedPairEmittedOnce` — a vault row and an Engram row sharing a promotion link; assert one `source:"linked"` row carrying both references. Scenario: "Linked pair is emitted once" (R-006).
+- [x] 3b.3 RED (same file) `TestQuery_MissingProjectRejected` — empty `Request.Project`; assert rejection (exit 2), no inferred project. Scenario: "Missing project argument is rejected" (R-006).
+- [x] 3b.4 RED (same file) `TestQuery_NotProvisionedDegradesToEngramOnly` — vault retrieve reports `not_provisioned`; assert Engram-only results plus `vault_status: not_provisioned`, no error. Scenario: "Unprovisioned vault degrades instead of failing the whole call" (R-026).
 - [x] 3b.5 GREEN `longterm-mem/internal/engram/search.go` — `Search(project, query string, limit int) ([]Row, error)` via `observations_fts MATCH` (tokens double-quoted, AND), `project=? AND deleted_at IS NULL`, `ORDER BY rank LIMIT top`.
-- [ ] 3b.6 GREEN `longterm-mem/internal/query/query.go` — `Run(ctx, Deps, Request{Project, Query, Top}) (Result, error)` implementing D8's merge/degrade/linked-pair rules.
+- [x] 3b.6 GREEN `longterm-mem/internal/query/query.go` — `Run(ctx, Deps, Request{Project, Query, Top}) (Result, error)` implementing D8's merge/degrade/linked-pair rules.
 - [ ] 3b.7 GREEN `longterm-mem/cmd/longterm-mem/cmd_query.go` — `query --project P "<text>" [--top N] [--vault DIR] [--json]` wiring.
-- [ ] 3b.8 REFACTOR — extract the linked-pair matcher (precedence-store `engram_id` lookup) for unchanged reuse by promote (slice 4+) and MCP `query` (slice 8b).
+- [x] 3b.8 REFACTOR — extract the linked-pair matcher (precedence-store `engram_id` lookup) for unchanged reuse by promote (slice 4+) and MCP `query` (slice 8b).
 - [ ] 3b.9 Slice verification (3a+3b) — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestQuery`
 
