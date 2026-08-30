@@ -1,7 +1,7 @@
 # Apply Progress: longterm-mem
 
-Branch: `feat/lm/longterm-mem-scaffold-vault-2b-runner-retrieve` (base: PR2a
-commit `0381568`; slices 1a/1b/2a history on this branch)
+Branch: `feat/lm/longterm-mem-query-3a-index` (base: PR2b-2 commit
+`1890612`; slices 1a–2b-2 history on this branch)
 Last updated: 2026-08-30
 
 ---
@@ -366,3 +366,140 @@ names no split point for 2b specifically (unlike slice 4's documented
 authorized split (2a/2b) — so no further split was invented; flagged as a
 risk for the orchestrator, consistent with how Slice 1's overage was
 handled.
+
+---
+
+## Slice 3a — longterm-mem-query-3a-index (R-005, R-025) (COMPLETE)
+
+All Slice 3a tasks (3a.1–3a.5) implemented and ticked in `tasks.md`. This is
+the first named split of design-notes #3133's Slice 3 (`3a index CLI, 3b
+query merge`); slice 3b (unified query fan-out/merge, R-006/R-026) is
+intentionally out of scope for this batch.
+
+### R-005 — Index Rebuild With First-Provision; R-025 — Subprocess Failure Handling
+
+- [x] 3a.1–3a.3 RED `longterm-mem/internal/vault/index_test.go` — three
+  scenarios written first against a package that did not yet expose
+  `Provisioned`/`Rebuild` (confirmed RED by execution:
+  `go test ./internal/vault/... -run TestIndex` failed to compile with
+  `undefined: Rebuild` / `undefined: Provisioned` before `index.go`
+  existed):
+  - `TestIndex_AlreadyProvisionedRefresh` (R-005): a fixture vault
+    pre-materialized with `.vault-meta/bm25/index.json` and a non-empty
+    `.vault-meta/chunks/` (an existing chunk file); asserts `Rebuild` runs
+    exactly the two refresh steps, in order — `contextual-prefix.py --all
+    --no-llm` then `bm25-index.py build` — captured via a shared
+    `call-log.txt` the fixture scripts append to, and that `setup-
+    retrieve.sh` never runs (log length exactly 2).
+  - `TestIndex_NeverIndexedIsProvisionedFirst` (R-005): a fixture vault
+    with no `.vault-meta/` at all; asserts `Provisioned` starts `false`,
+    `Rebuild` runs all three steps in order (`setup --no-llm` first, then
+    the two refresh steps — log length exactly 3), and `Provisioned`
+    returns `true` afterward because the fixture `setup-retrieve.sh`
+    itself materializes the two on-disk markers — a real behavioral
+    assertion, not an assumed side effect.
+  - `TestIndex_RebuildStepFailureReportsFailure` (R-025): a fixture
+    `bm25-index.py` that records its own invocation, writes to stderr,
+    then exits 7; asserts `Rebuild` returns a non-nil error naming the
+    forced exit code (`7`) and containing neither "rebuilt" nor "success"
+    (case-insensitive), so a failing step can never be read as a completed
+    rebuild.
+- [x] 3a.4 GREEN `longterm-mem/internal/vault/index.go` — `Provisioned
+  (vaultRoot string) bool` (D12: `.vault-meta/bm25/index.json` exists AND
+  `.vault-meta/chunks/` is non-empty — a pure filesystem check, no
+  subprocess); `Rebuild(ctx, runner *Runner) error` implementing
+  provision-then-refresh: when not `Provisioned`, runs `bin/setup-
+  retrieve.sh --no-llm` directly via `runner.Run` (real shebang + exec
+  bit, matching the 2b-2 review's `.sh`-via-`Run` convention) and stops
+  immediately on failure; then always runs `scripts/contextual-prefix.py
+  --all --no-llm` and `scripts/bm25-index.py build`, both via
+  `runner.RunInterpreted(ctx, "python3", …)` (no shebang/exec bit on the
+  fixtures, matching `retrieve.py`'s convention). A private `stepFailure`
+  helper reuses `statusForExitCode` (status.go, from 2b.9's REFACTOR)
+  rather than re-deriving a success boundary: only exit 0 (`StatusOK`)
+  counts as success, so any other code — including the unrelated
+  not-provisioned sentinel 10 — is correctly treated as a step failure,
+  never a false success (R-025).
+- [x] 3a.5 GREEN `longterm-mem/cmd/longterm-mem/cmd_index.go` — `index
+  --project P [--vault DIR] [--rebuild]` wiring `vaultreg.Resolve
+  (defaultVaultsPath(), project, vault)` → `vault.Rebuild`; missing
+  `--project` exits 2; a `vaultreg` resolution failure exits 3; a `Rebuild`
+  failure exits 5 (`vault_subprocess_failed`); success exits 0. No
+  dedicated RED test was written for this file — tasks.md scopes 3a.5 as
+  GREEN-only wiring (no paired RED item, unlike every other production
+  file in this slice/prior slices), matching the established pattern from
+  slice 1's `main.go` dispatcher: the underlying behavior (`Rebuild`) is
+  already covered end-to-end by 3a.1–3a.3, and CLI-layer wiring gets its
+  generic integration coverage later in slice 8b
+  (`TestCLI_NoResidualProcessAfterAnySubcommand`). Wired into `main.go`'s
+  dispatcher (`case "index": return cmdIndex(args[1:])`).
+
+### Design notes followed (Engram #3133 D12)
+
+`bin/setup-retrieve.sh` is a real shell entrypoint (shebang + exec bit) so
+`Rebuild` execs it directly via `Runner.Run`, never `RunInterpreted` — the
+opposite convention from `contextual-prefix.py`/`bm25-index.py`, which
+carry no shebang/exec bit and must run under `python3` via
+`Runner.RunInterpreted`, exactly like `retrieve.py` (2b-2 review lesson).
+The RED tests prove both conventions with two fixture shapes: an
+executable `0o755` shell fixture and non-executable `0o644` Python
+fixtures with no `#!` line — if `Rebuild` tried to exec the Python
+fixtures directly, they would fail to run at all (no shebang), so a
+passing `TestIndex_AlreadyProvisionedRefresh`/`TestIndex_
+NeverIndexedIsProvisionedFirst` is real evidence the interpreter choice is
+correct per script, not an assumption.
+
+### Verification
+
+`cd longterm-mem && go test ./... -run TestIndex -v` — 3/3 PASS.
+`cd longterm-mem && go test . -run TestOSExecImportAllowlist -v` — PASS
+(re-verified R-021: only `internal/vault/runner.go` imports `os/exec`;
+`index.go`/`cmd_index.go` import only `os`/`context`/`fmt`/`flag`/
+`path/filepath`).
+
+`cd longterm-mem && gofmt -l .` — clean. `go vet ./...` — clean.
+`go test ./... -cover -count=1` — `internal/vault` 86.8% (up from 86.2%;
+uncovered lines remain the same defensive I/O-failure branches from 2b,
+plus `index.go`'s `Rebuild` early-return path is now exercised);
+`internal/engram` 84.2%; `internal/vaultreg` 67.2%; `cmd/longterm-mem`
+0.0% (no CLI-layer test exists yet for `cmd_index.go`, consistent with the
+0.0% carried since Slice 1 — the wiring is exercised transitively by
+`go build ./...` and by `internal/vault`'s tests of the function it calls).
+
+`cd engine && go test ./...` — all 10 packages pass (zero-dep gate
+unaffected; this slice touches nothing under `engine/`).
+`bash -n bin/labdrian-overlay` — clean (this slice touches nothing under
+`bin/`).
+
+### Files created
+
+- `longterm-mem/internal/vault/index.go`, `index_test.go`
+- `longterm-mem/cmd/longterm-mem/cmd_index.go`
+
+### Files modified
+
+- `longterm-mem/cmd/longterm-mem/main.go` (new `case "index"` dispatch line)
+- `openspec/changes/longterm-mem/tasks.md` (Slice 3a items 3a.1–3a.5 ticked)
+
+### Authored line budget
+
+Plain line counts for the three new files, plus `git diff --numstat` for
+the two modified tracked files, excluding `go.sum` (no `go.sum` change —
+no new dependency was needed):
+
+| File | Lines |
+|---|---|
+| `longterm-mem/internal/vault/index.go` (new) | 87 |
+| `longterm-mem/internal/vault/index_test.go` (new) | 174 |
+| `longterm-mem/cmd/longterm-mem/cmd_index.go` (new) | 64 |
+| `longterm-mem/cmd/longterm-mem/main.go` (diff, +2/-0) | 2 |
+| `openspec/changes/longterm-mem/tasks.md` (diff, checkbox toggles, 5 items) | 10 |
+| **Total** | **337** |
+
+Comfortably within the 400-line budget (63 lines to spare) — unlike Slices
+1 and 2b, which exceeded the hard cap. Still above this slice's own
+170–200 forecast band (by 137 lines at the upper bound), for the same
+root cause noted in every prior slice: strict-TDD's no-trivial-assertion
+rule requires a dedicated fixture and a specific, distinct assertion per
+named scenario. No scope was added beyond the unchecked Slice 3a tasks; no
+split was needed.

@@ -181,11 +181,11 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 3a — longterm-mem-query-3a-index (R-005, R-025) — PR3a (base: PR2b)
 
-- [ ] 3a.1 RED `longterm-mem/internal/vault/index_test.go::TestIndex_AlreadyProvisionedRefresh` — fixture vault already provisioned (`.vault-meta/bm25/index.json` present, non-empty `.vault-meta/chunks/`), new/changed pages; assert `Rebuild` runs `contextual-prefix.py --all --no-llm` then `bm25-index.py build` and reports success. Scenario: "Already-provisioned vault refresh" (R-005).
-- [ ] 3a.2 RED (same file) `TestIndex_NeverIndexedIsProvisionedFirst` — no `.vault-meta/bm25/index.json`; assert `setup-retrieve.sh --no-llm` runs first, then the refresh, and the vault is queryable afterward. Scenario: "Never-indexed vault is provisioned first" (R-005).
-- [ ] 3a.3 RED (same file) `TestIndex_RebuildStepFailureReportsFailure` — fixture `bm25-index.py` forced to exit non-zero (`FAKE_RC`); assert an error is returned and no "rebuilt" wording appears (exit 5). Scenario: "Failing rebuild step reports failure, not false success" (R-025).
-- [ ] 3a.4 GREEN `longterm-mem/internal/vault/index.go` — `Provisioned(vaultRoot string) bool`; `Rebuild(ctx, runner) error` implementing provision-then-refresh, always `--no-llm` (D12), non-zero rc → wrapped error.
-- [ ] 3a.5 GREEN `longterm-mem/cmd/longterm-mem/cmd_index.go` — `index --project P [--vault DIR] [--rebuild]` wiring `vaultreg.Resolve` → `vault.Rebuild`; exit 5 on subprocess failure.
+- [x] 3a.1 RED `longterm-mem/internal/vault/index_test.go::TestIndex_AlreadyProvisionedRefresh` — fixture vault already provisioned (`.vault-meta/bm25/index.json` present, non-empty `.vault-meta/chunks/`), new/changed pages; assert `Rebuild` runs `contextual-prefix.py --all --no-llm` then `bm25-index.py build` and reports success. Scenario: "Already-provisioned vault refresh" (R-005).
+- [x] 3a.2 RED (same file) `TestIndex_NeverIndexedIsProvisionedFirst` — no `.vault-meta/bm25/index.json`; assert `setup-retrieve.sh --no-llm` runs first, then the refresh, and the vault is queryable afterward. Scenario: "Never-indexed vault is provisioned first" (R-005).
+- [x] 3a.3 RED (same file) `TestIndex_RebuildStepFailureReportsFailure` — fixture `bm25-index.py` forced to exit non-zero (`FAKE_RC`); assert an error is returned and no "rebuilt" wording appears (exit 5). Scenario: "Failing rebuild step reports failure, not false success" (R-025).
+- [x] 3a.4 GREEN `longterm-mem/internal/vault/index.go` — `Provisioned(vaultRoot string) bool`; `Rebuild(ctx, runner) error` implementing provision-then-refresh, always `--no-llm` (D12), non-zero rc → wrapped error.
+- [x] 3a.5 GREEN `longterm-mem/cmd/longterm-mem/cmd_index.go` — `index --project P [--vault DIR] [--rebuild]` wiring `vaultreg.Resolve` → `vault.Rebuild`; exit 5 on subprocess failure.
 - Command: `cd longterm-mem && go test ./... -run TestIndex`
 
 ---
