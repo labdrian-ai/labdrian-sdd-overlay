@@ -198,9 +198,9 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 - [x] 3b.4 RED (same file) `TestQuery_NotProvisionedDegradesToEngramOnly` — vault retrieve reports `not_provisioned`; assert Engram-only results plus `vault_status: not_provisioned`, no error. Scenario: "Unprovisioned vault degrades instead of failing the whole call" (R-026).
 - [x] 3b.5 GREEN `longterm-mem/internal/engram/search.go` — `Search(project, query string, limit int) ([]Row, error)` via `observations_fts MATCH` (tokens double-quoted, AND), `project=? AND deleted_at IS NULL`, `ORDER BY rank LIMIT top`.
 - [x] 3b.6 GREEN `longterm-mem/internal/query/query.go` — `Run(ctx, Deps, Request{Project, Query, Top}) (Result, error)` implementing D8's merge/degrade/linked-pair rules.
-- [ ] 3b.7 GREEN `longterm-mem/cmd/longterm-mem/cmd_query.go` — `query --project P "<text>" [--top N] [--vault DIR] [--json]` wiring.
+- [x] 3b.7 GREEN `longterm-mem/cmd/longterm-mem/cmd_query.go` — `query --project P "<text>" [--top N] [--vault DIR] [--json]` wiring.
 - [x] 3b.8 REFACTOR — extract the linked-pair matcher (precedence-store `engram_id` lookup) for unchanged reuse by promote (slice 4+) and MCP `query` (slice 8b).
-- [ ] 3b.9 Slice verification (3a+3b) — `cd longterm-mem && go test ./...`.
+- [x] 3b.9 Slice verification (3a+3b) — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestQuery`
 
 ---
