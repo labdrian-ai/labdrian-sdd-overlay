@@ -169,12 +169,12 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 - [x] 2b.2 RED (same file) `TestRunner_ArgvOnly_NoShellMetacharacters` — fixture script echoing `"$@"`; a query argument containing `; rm -rf /` arrives as one literal argv element, never shell-interpreted. (Threat matrix: metacharacter spy.)
 - [x] 2b.3 RED (same file) `TestRunner_TimeoutSurfacesExitAndStderr` — fixture script sleeping past a short `context.WithTimeout`; assert a synthetic non-zero exit and captured stderr.
 - [x] 2b.4 GREEN `longterm-mem/internal/vault/runner.go` — the sole `os/exec` importer: `Runner{Root string}`, `Run(ctx, script string, args ...string) (stdout, stderr []byte, exitCode int, err error)`; cwd = vault root; env limited to `PATH, HOME, LANG`; per-call timeout.
-- [ ] 2b.5 RED `longterm-mem/internal/vault/retrieve_test.go::TestRetrieve_DefaultTopNAndFullFieldParse` — fixture `retrieve.py` stdout with N rows; assert `Retrieve` invokes with the default top-N (5) and parses page address, absolute path, BM25 score, rerank score, and snippet for every row. Scenario: "Default top-N and full field parse" (R-004).
-- [ ] 2b.6 RED (same file) `TestRetrieve_ExplicitTopNOverride` — explicit top-N passed through as the `--top` argv value. Scenario: "Explicit top-N override" (R-004).
-- [ ] 2b.7 RED (same file) `TestRetrieve_NotProvisionedExitTenMapsToStatus` — fixture script exits 10; assert `Retrieve` returns `vault_status: not_provisioned` rather than a generic error. Scenario: "Never-indexed vault maps to not_provisioned, not a generic error" (R-024).
-- [ ] 2b.8 GREEN `longterm-mem/internal/vault/retrieve.go` — `Retrieve(ctx, runner, project, query string, top int) (Result, error)` invoking `python3 scripts/retrieve.py "<q>" --top N`, parsing the five fields, mapping exit 10 → `not_provisioned`.
-- [ ] 2b.9 REFACTOR — factor the exit-code-to-status mapping into a shared `vault` package function reused by the index path in slice 3a.
-- [ ] 2b.10 Slice verification (2a+2b) — `cd longterm-mem && go test ./...`; re-run `TestOSExecImportAllowlist` (1.4) to confirm only `runner.go` imports `os/exec` (R-021 re-verified).
+- [x] 2b.5 RED `longterm-mem/internal/vault/retrieve_test.go::TestRetrieve_DefaultTopNAndFullFieldParse` — fixture `retrieve.py` stdout with N rows; assert `Retrieve` invokes with the default top-N (5) and parses page address, absolute path, BM25 score, rerank score, and snippet for every row. Scenario: "Default top-N and full field parse" (R-004).
+- [x] 2b.6 RED (same file) `TestRetrieve_ExplicitTopNOverride` — explicit top-N passed through as the `--top` argv value. Scenario: "Explicit top-N override" (R-004).
+- [x] 2b.7 RED (same file) `TestRetrieve_NotProvisionedExitTenMapsToStatus` — fixture script exits 10; assert `Retrieve` returns `vault_status: not_provisioned` rather than a generic error. Scenario: "Never-indexed vault maps to not_provisioned, not a generic error" (R-024).
+- [x] 2b.8 GREEN `longterm-mem/internal/vault/retrieve.go` — `Retrieve(ctx, runner, project, query string, top int) (Result, error)` invoking `python3 scripts/retrieve.py "<q>" --top N`, parsing the five fields, mapping exit 10 → `not_provisioned`.
+- [x] 2b.9 REFACTOR — factor the exit-code-to-status mapping into a shared `vault` package function reused by the index path in slice 3a.
+- [x] 2b.10 Slice verification (2a+2b) — `cd longterm-mem && go test ./...`; re-run `TestOSExecImportAllowlist` (1.4) to confirm only `runner.go` imports `os/exec` (R-021 re-verified).
 - Command: `cd longterm-mem && go test ./... -run TestRunner|TestRetrieve`
 
 ---

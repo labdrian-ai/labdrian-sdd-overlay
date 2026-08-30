@@ -1,7 +1,7 @@
 # Apply Progress: longterm-mem
 
-Branch: `feat/lm/longterm-mem-scaffold-vault-2a-registry` (base: PR1 commit
-`abf69a2`, slices 1a/1b history on this branch)
+Branch: `feat/lm/longterm-mem-scaffold-vault-2b-runner-retrieve` (base: PR2a
+commit `0381568`; slices 1a/1b/2a history on this branch)
 Last updated: 2026-08-30
 
 ---
@@ -206,3 +206,163 @@ path per test, explicit `HOME`/`LONGTERM_MEM_VAULT` isolation via
 `t.Setenv`) and a specific, distinct expected-path assertion rather than a
 shared trivial check — still comfortably inside budget, so no split was
 needed for this slice.
+
+---
+
+## Slice 2b — longterm-mem-scaffold-vault-2b-runner-retrieve (R-004, R-024, R-021 guard) (COMPLETE)
+
+All Slice 2b tasks (2b.1–2b.10) implemented and ticked in `tasks.md`. This
+is the second named split of design-notes #3133's Slice 2
+(`2a registry, 2b runner+retrieve`).
+
+### R-021 guard — subprocess confinement (runner)
+
+- [x] 2b.1–2b.3 RED `longterm-mem/internal/vault/runner_test.go` — three
+  scenarios written first against a package that did not yet exist
+  (confirmed RED by execution: `undefined: Runner` before `runner.go`
+  existed):
+  - `TestRunner_RefusesOutsideVaultRoot`: a script resolving (after
+    `EvalSymlinks`) outside the vault root is refused; a marker file the
+    fixture script would have written is asserted absent, proving no
+    subprocess ran.
+  - `TestRunner_ArgvOnly_NoShellMetacharacters`: a fixture script
+    (`printf '%s' "$1"`) receives `"; rm -rf /"` as one literal argv
+    element; captured stdout equals the malicious string byte-for-byte,
+    proving `os/exec.CommandContext` never shell-interprets it.
+  - `TestRunner_TimeoutSurfacesExitAndStderr`: a fixture script that writes
+    to stderr then `sleep 5`, run under a 200 ms `context.WithTimeout`;
+    asserts a non-zero synthetic exit code, the pre-timeout stderr is still
+    captured, and `Run` returns well under 5 s.
+- [x] 2b.4 GREEN `longterm-mem/internal/vault/runner.go` — `Runner{Root
+  string}`, `Run(ctx, script string, args ...string) (stdout, stderr
+  []byte, exitCode int, err error)`: `EvalSymlinks` both the root and the
+  resolved script path, refuses anything outside root via `filepath.Rel`;
+  `cmd.Env` restricted to `PATH`/`HOME`/`LANG` only; `cmd.Dir` = vault root.
+
+**Real bug found and fixed during GREEN, not assumed away**: the first
+implementation used only `exec.CommandContext`'s default cancel behavior
+(kill the tracked child PID). `TestRunner_TimeoutSurfacesExitAndStderr`
+failed by taking the full 5 s instead of respecting the 200 ms deadline —
+the fixture's `sh` process forks `sleep` as a child rather than exec-
+replacing itself, so killing only the parent left the orphaned `sleep`
+running and still holding the stderr pipe's write end open, blocking
+`Cmd.Wait()`'s I/O-draining until `sleep` exited on its own. Fixed by
+running the subprocess as its own process-group leader
+(`SysProcAttr{Setpgid: true}`) and overriding `cmd.Cancel` to
+`syscall.Kill(-pid, SIGKILL)` (whole-group kill), plus a 2 s `cmd.WaitDelay`
+backstop. Re-run confirmed the timeout test passes in ~0.2 s. This also
+satisfies the apply-phase gate's explicit "kill on timeout" requirement
+(not just abandon-and-hope), and prevents an orphaned subprocess from
+lingering after `Run` returns.
+
+### R-004 — Vault Query Invoke and Parse; R-024 — Not-Provisioned Handling
+
+- [x] 2b.5–2b.7 RED `longterm-mem/internal/vault/retrieve_test.go` — three
+  scenarios against a fixture `<vault>/scripts/retrieve.py` (real CLI shape
+  per exploration #3121, confirmed RED before `retrieve.go`/`Result`/
+  `Candidate`/`StatusOK`/`StatusNotProvisioned` existed):
+  - `TestRetrieve_DefaultTopNAndFullFieldParse`: fixture script records its
+    received argv (one element per line) and prints canned JSON with 2
+    candidate rows (5-field-plus-noise shape matching the real script's
+    output); asserts the captured argv is exactly `[query, "--top", "5"]`
+    (default) and `result.Candidates` deep-equals the expected `[]Candidate`
+    parsed from `page_address`, `absolute_path`, `bm25_score`,
+    `rerank_score`, `snippet` only (extra fields like `chunk_id` ignored).
+  - `TestRetrieve_ExplicitTopNOverride`: same fixture, `top=12`; asserts
+    argv is `[query, "--top", "12"]` instead of the default.
+  - `TestRetrieve_NotProvisionedExitTenMapsToStatus`: fixture exits 10, no
+    output; asserts `Retrieve` returns `err == nil` and
+    `Status == StatusNotProvisioned` — never a generic error.
+- [x] 2b.8 GREEN `longterm-mem/internal/vault/retrieve.go` —
+  `Retrieve(ctx, runner *Runner, project, query string, top int) (Result,
+  error)`: `top <= 0` defaults to `DefaultTopN` (5); wraps `ctx` in a 30 s
+  `context.WithTimeout` (D8); invokes
+  `runner.Run(ctx, "scripts/retrieve.py", query, "--top", strconv.Itoa(top))`;
+  maps the exit code via `statusForExitCode`; on `StatusOK`, JSON-decodes
+  stdout into `{Candidates []Candidate}` (`Candidate` carries only the five
+  R-004 field tags, so unrecognized JSON keys are dropped automatically).
+- [x] 2b.9 REFACTOR — extracted `statusForExitCode(exitCode int) (status
+  string, mapped bool)` out of `retrieve.go` into its own
+  `internal/vault/status.go` (exit 0 → `StatusOK`, exit 10 →
+  `StatusNotProvisioned`, else unmapped), named and documented for direct
+  reuse by the index provisioning path in slice 3a (D12) without
+  re-deriving the mapping. Full suite re-run green after the extraction.
+- [x] 2b.10 Slice verification (2a+2b) — `cd longterm-mem && go test
+  ./...` all green; re-ran `TestOSExecImportAllowlist` standalone
+  (`go test ./... -run TestOSExecImportAllowlist`) — still passes, only
+  `internal/vault/runner.go` imports `os/exec` (R-021 re-verified after
+  adding `runner.go`, `retrieve.go`, `status.go`).
+
+### Line-budget discipline applied mid-slice
+
+The first GREEN pass (before any trimming) measured at ~499 authored
+lines against this slice's 220–260 forecast and the 400-line hard cap. Two
+compaction passes were applied without touching test rigor or the mandated
+kill-on-timeout behavior:
+1. `retrieve_test.go`: replaced five separate per-field assertions with one
+   `reflect.DeepEqual` against an expected `[]Candidate` literal, and
+   `equalStrings` with `reflect.DeepEqual` for argv comparison.
+2. Tightened multi-sentence doc comments in `runner.go`/`retrieve.go`/
+   `status.go` to single, denser sentences, keeping every R-ID/D-ID
+   traceability reference.
+
+This brought the total down to 432 lines of new files (see table below);
+no additional cut was made at the cost of a required test scenario, the
+explicit per-task test function names (needed for traceability), or the
+process-group kill fix (explicitly required by the apply-phase gate's
+"kill on timeout" instruction). See the risk note below.
+
+### Verification
+
+`cd longterm-mem && gofmt -l .` — clean. `go vet ./...` — clean.
+`go test ./... -cover -count=1` — `internal/vault` 86.2% (uncovered lines
+are defensive I/O-failure branches: `EvalSymlinks` failures, the
+`errors.As`-default `exec` failure path, and `json.Unmarshal` failure, none
+of which are named scenarios in tasks.md for this slice); `internal/engram`
+84.2%; `internal/vaultreg` 67.2% (unchanged from 2a); `cmd/longterm-mem`
+0.0% (still no subcommands wired).
+
+`cd engine && go test ./...` — all 10 packages pass (zero-dep gate
+unaffected; this slice touches nothing under `engine/`).
+`bash -n bin/labdrian-overlay` — clean (this slice touches nothing under
+`bin/`).
+
+### Files created
+
+- `longterm-mem/internal/vault/runner.go`, `runner_test.go`
+- `longterm-mem/internal/vault/retrieve.go`, `retrieve_test.go`
+- `longterm-mem/internal/vault/status.go`
+
+### Files modified
+
+- `openspec/changes/longterm-mem/tasks.md` (Slice 2b items 2b.1–2b.10
+  ticked)
+
+### Authored line budget
+
+Plain line counts for the five new files (no existing file's content
+changed besides the checkbox toggle), plus `git diff --numstat` for
+`tasks.md`:
+
+| File | Lines |
+|---|---|
+| `longterm-mem/internal/vault/runner.go` (new) | 119 |
+| `longterm-mem/internal/vault/runner_test.go` (new) | 86 |
+| `longterm-mem/internal/vault/retrieve.go` (new) | 84 |
+| `longterm-mem/internal/vault/retrieve_test.go` (new) | 113 |
+| `longterm-mem/internal/vault/status.go` (new) | 30 |
+| `openspec/changes/longterm-mem/tasks.md` (diff, checkbox toggles, 10 items) | 20 |
+| **Total** | **452** |
+
+**Risk: over both the 220–260 forecast and the 400-line hard cap by 52
+lines**, after two compaction passes (see above). Same root cause as
+Slice 1's overage: strict-TDD's no-trivial-assertion rule requires a
+dedicated fixture per named scenario plus a specific, distinct expected-
+value assertion, and this slice additionally required a genuine subprocess-
+safety fix (process-group timeout kill) mandated by the apply-phase gate
+itself. No scope beyond the unchecked Slice 2b tasks was added. Design
+names no split point for 2b specifically (unlike slice 4's documented
+`lint.go` contingency) — 2b is already the second half of Slice 2's one
+authorized split (2a/2b) — so no further split was invented; flagged as a
+risk for the orchestrator, consistent with how Slice 1's overage was
+handled.

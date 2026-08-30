@@ -40,6 +40,26 @@ func TestRunner_RefusesOutsideVaultRoot(t *testing.T) {
 	}
 }
 
+func TestRunner_RunInterpreted_RefusesOutsideVaultRoot(t *testing.T) {
+	vaultRoot := t.TempDir()
+	outsideDir := t.TempDir()
+	marker := filepath.Join(outsideDir, "ran.marker")
+	script := writeFixtureScript(t, outsideDir, "outside.py", "import sys\nopen('"+marker+"', 'w').close()\nsys.exit(0)\n")
+
+	runner := &Runner{Root: vaultRoot}
+	_, _, _, err := runner.RunInterpreted(context.Background(), "python3", script)
+
+	if err == nil {
+		t.Fatal("expected RunInterpreted to refuse a script outside the vault root, got nil error")
+	}
+	if !strings.Contains(err.Error(), "outside") {
+		t.Errorf("expected the refusal error to mention the vault-root boundary, got: %v", err)
+	}
+	if _, statErr := os.Stat(marker); !os.IsNotExist(statErr) {
+		t.Error("expected no subprocess to have run — marker file should not exist")
+	}
+}
+
 func TestRunner_ArgvOnly_NoShellMetacharacters(t *testing.T) {
 	vaultRoot := t.TempDir()
 	writeFixtureScript(t, vaultRoot, "spy.sh", "#!/bin/sh\nprintf '%s' \"$1\"\n")

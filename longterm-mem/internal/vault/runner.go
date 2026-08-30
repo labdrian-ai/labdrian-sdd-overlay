@@ -45,6 +45,16 @@ const waitDelay = 2 * time.Second
 // rather than blocking — timeout is one more exit-code case, not a
 // special path.
 func (r *Runner) Run(ctx context.Context, script string, args ...string) (stdout, stderr []byte, exitCode int, err error) {
+	return r.RunInterpreted(ctx, "", script, args...)
+}
+
+// RunInterpreted behaves like Run, except when interpreter is non-empty:
+// the resolved script is then passed as argv[0] to interpreter (resolved
+// via exec.LookPath, or used as-is when already absolute) instead of being
+// executed directly — e.g. running a Python entrypoint that carries no
+// shebang and no exec bit. An empty interpreter execs the script directly,
+// exactly as Run always has.
+func (r *Runner) RunInterpreted(ctx context.Context, interpreter, script string, args ...string) (stdout, stderr []byte, exitCode int, err error) {
 	resolvedRoot, err := filepath.EvalSymlinks(r.Root)
 	if err != nil {
 		return nil, nil, 0, fmt.Errorf("vault: resolve vault root %s: %w", r.Root, err)
@@ -63,7 +73,21 @@ func (r *Runner) Run(ctx context.Context, script string, args ...string) (stdout
 		return nil, nil, 0, fmt.Errorf("vault: refusing to run script %s: resolves outside vault root %s", script, r.Root)
 	}
 
-	cmd := exec.CommandContext(ctx, resolvedScript, args...)
+	name := resolvedScript
+	cmdArgs := args
+	if interpreter != "" {
+		resolvedInterpreter := interpreter
+		if !filepath.IsAbs(resolvedInterpreter) {
+			resolvedInterpreter, err = exec.LookPath(interpreter)
+			if err != nil {
+				return nil, nil, 0, fmt.Errorf("vault: resolve interpreter %s: %w", interpreter, err)
+			}
+		}
+		name = resolvedInterpreter
+		cmdArgs = append([]string{resolvedScript}, args...)
+	}
+
+	cmd := exec.CommandContext(ctx, name, cmdArgs...)
 	cmd.Dir = resolvedRoot
 	cmd.Env = restrictedEnv()
 	// Own process-group leader so a timeout kills the whole tree, not just
