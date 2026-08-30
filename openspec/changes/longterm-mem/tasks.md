@@ -135,18 +135,18 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ### R-002 — Read-Only Engram Connection
 
-- [ ] 1.6 RED `longterm-mem/internal/engram/store_test.go::TestOpen_DefaultIsReadOnly` + `TestOpen_OverridePathStaysReadOnly` — build `testdata/schema.sql` (Engram DDL, live schema #3129) into a `t.TempDir()` SQLite file via modernc; assert an `INSERT`/`UPDATE` on the opened handle fails and the no-override path resolves to `~/.engram/engram.db`. Scenarios: "Default connection is read-only", "Overridden connection stays read-only".
-- [ ] 1.7 GREEN `longterm-mem/internal/engram/store.go` — `Open(dbPath string) (*Store, error)` using the read-only DSN (D1); default path via `$HOME/.engram/engram.db`.
-- [ ] 1.8 REFACTOR — extract `readOnlyDSN(path string) string` helper for reuse by later fixture setups.
+- [x] 1.6 RED `longterm-mem/internal/engram/store_test.go::TestOpen_DefaultIsReadOnly` + `TestOpen_OverridePathStaysReadOnly` — build `testdata/schema.sql` (Engram DDL, live schema #3129) into a `t.TempDir()` SQLite file via modernc; assert an `INSERT`/`UPDATE` on the opened handle fails and the no-override path resolves to `~/.engram/engram.db`. Scenarios: "Default connection is read-only", "Overridden connection stays read-only".
+- [x] 1.7 GREEN `longterm-mem/internal/engram/store.go` — `Open(dbPath string) (*Store, error)` using the read-only DSN (D1); default path via `$HOME/.engram/engram.db`.
+- [x] 1.8 REFACTOR — extract `readOnlyDSN(path string) string` helper for reuse by later fixture setups.
 - Command: `cd longterm-mem && go test ./... -run TestOpen`
 
 ### R-020 — Mid-Term Query Scoping
 
-- [ ] 1.9 RED `longterm-mem/internal/engram/store_test.go::TestListObservations_ScopesProjectAndExcludesSoftDeleted` — fixture rows: active/P, soft-deleted/P, active/other-project; assert only active/P returned. Scenario: "Soft-deleted and other-project observations are excluded".
-- [ ] 1.10 GREEN `longterm-mem/internal/engram/store.go` — `ListObservations(project string) ([]Observation, error)` with `WHERE project = ? AND deleted_at IS NULL`.
+- [x] 1.9 RED `longterm-mem/internal/engram/store_test.go::TestListObservations_ScopesProjectAndExcludesSoftDeleted` — fixture rows: active/P, soft-deleted/P, active/other-project; assert only active/P returned. Scenario: "Soft-deleted and other-project observations are excluded".
+- [x] 1.10 GREEN `longterm-mem/internal/engram/store.go` — `ListObservations(project string) ([]Observation, error)` with `WHERE project = ? AND deleted_at IS NULL`.
 - Command: `cd longterm-mem && go test ./... -run TestListObservations`
 
-- [ ] 1.11 Slice verification — `cd longterm-mem && go test ./...`; `bash -n bin/labdrian-overlay` (strict-TDD focused commands; unaffected but must stay green).
+- [x] 1.11 Slice verification — `cd longterm-mem && go test ./...`; `bash -n bin/labdrian-overlay` (strict-TDD focused commands; unaffected but must stay green).
 
 ---
 
