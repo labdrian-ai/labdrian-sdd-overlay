@@ -40,3 +40,22 @@ CREATE INDEX idx_obs_sync_id ON observations(sync_id);
 CREATE INDEX idx_obs_topic ON observations(topic_key, project, scope, updated_at DESC);
 CREATE INDEX idx_obs_deleted ON observations(deleted_at);
 CREATE INDEX idx_obs_dedupe ON observations(normalized_hash, project, scope, type, title, created_at DESC);
+
+-- observations_fts: external-content FTS5 index (D8, R-006), kept in sync
+-- via triggers; Store.Search joins on observations.id = rowid.
+CREATE VIRTUAL TABLE observations_fts USING fts5(
+    title, content, content='observations', content_rowid='id'
+);
+
+CREATE TRIGGER observations_fts_ai AFTER INSERT ON observations BEGIN
+    INSERT INTO observations_fts(rowid, title, content) VALUES (new.id, new.title, new.content);
+END;
+
+CREATE TRIGGER observations_fts_ad AFTER DELETE ON observations BEGIN
+    INSERT INTO observations_fts(observations_fts, rowid, title, content) VALUES ('delete', old.id, old.title, old.content);
+END;
+
+CREATE TRIGGER observations_fts_au AFTER UPDATE ON observations BEGIN
+    INSERT INTO observations_fts(observations_fts, rowid, title, content) VALUES ('delete', old.id, old.title, old.content);
+    INSERT INTO observations_fts(rowid, title, content) VALUES (new.id, new.title, new.content);
+END;
