@@ -210,6 +210,65 @@ func TestOpen_FallsBackToImmutableWhenPrimaryReadOnlyOpenFails(t *testing.T) {
 	}
 }
 
+// insertObservationFull inserts one fixture row with caller-controlled
+// type/revision_count/pinned/sync_id, letting R-007 eligibility tests
+// (promote.Eligible) exercise real data instead of insertObservation's
+// fixed "discovery"/1/false/NULL defaults.
+func insertObservationFull(t *testing.T, dbPath, title, project, obsType string, revisionCount int, pinned bool, syncID string) int64 {
+	t.Helper()
+
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	defer setup.Close()
+
+	res, err := setup.Exec(
+		`INSERT INTO observations (session_id, sync_id, type, title, content, project, revision_count, pinned) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"sess-1", syncID, obsType, title, "fixture content", project, revisionCount, pinned,
+	)
+	if err != nil {
+		t.Fatalf("insert fixture observation %q: %v", title, err)
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		t.Fatalf("last insert id for observation %q: %v", title, err)
+	}
+	return id
+}
+
+// TestListObservations_IncludesEligibilityAndExtraFields proves
+// ListObservations' extended SELECT (R-007's Pinned/Type/RevisionCount and
+// R-027's SyncID extra) round-trips real column values, not just the four
+// fields Slice 1 read.
+func TestListObservations_IncludesEligibilityAndExtraFields(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	_ = insertObservationFull(t, dbPath, "pinned-decision", "labdrian-sdd-overlay", "decision", 5, true, "sync-abc")
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.ListObservations("labdrian-sdd-overlay")
+	if err != nil {
+		t.Fatalf("ListObservations: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len(got) = %d, want 1; got %+v", len(got), got)
+	}
+
+	want := Observation{
+		ID: got[0].ID, SyncID: "sync-abc", Type: "decision", Title: "pinned-decision",
+		Content: "fixture content", Project: "labdrian-sdd-overlay", RevisionCount: 5, Pinned: true,
+	}
+	if got[0] != want {
+		t.Fatalf("got[0] = %+v, want %+v", got[0], want)
+	}
+}
+
 func TestListObservations_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
 	dir := t.TempDir()
 	dbPath := newFixtureDB(t, dir)

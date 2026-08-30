@@ -20,12 +20,18 @@ type Store struct {
 	degradedCause string
 }
 
-// Observation is one mid-term Engram observation row.
+// Observation is one mid-term Engram observation row. SyncID, Type, Pinned,
+// and RevisionCount were added in slice 4 for R-007 eligibility and R-027
+// page emission's engram_sync_id/engram_type extras.
 type Observation struct {
-	ID      int64
-	Title   string
-	Content string
-	Project string
+	ID            int64
+	SyncID        string
+	Type          string
+	Title         string
+	Content       string
+	Project       string
+	RevisionCount int
+	Pinned        bool
 }
 
 // Open opens a read-only connection to the Engram database at dbPath. When
@@ -118,7 +124,7 @@ func (s *Store) Path() string {
 // non-null deleted_at are excluded.
 func (s *Store) ListObservations(project string) ([]Observation, error) {
 	rows, err := s.db.Query(
-		`SELECT id, title, content, project FROM observations WHERE project = ? AND deleted_at IS NULL`,
+		`SELECT id, sync_id, type, title, content, project, revision_count, pinned FROM observations WHERE project = ? AND deleted_at IS NULL`,
 		project,
 	)
 	if err != nil {
@@ -129,9 +135,11 @@ func (s *Store) ListObservations(project string) ([]Observation, error) {
 	var observations []Observation
 	for rows.Next() {
 		var o Observation
-		if err := rows.Scan(&o.ID, &o.Title, &o.Content, &o.Project); err != nil {
+		var syncID sql.NullString
+		if err := rows.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned); err != nil {
 			return nil, fmt.Errorf("engram: scan observation row: %w", err)
 		}
+		o.SyncID = syncID.String
 		observations = append(observations, o)
 	}
 	if err := rows.Err(); err != nil {

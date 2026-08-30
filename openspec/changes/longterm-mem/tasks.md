@@ -207,8 +207,8 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 4 — longterm-mem-promotion-writer (R-007, R-027) — PR4 (base: PR3b)
 
-- [ ] 4.1 RED `longterm-mem/internal/promote/eligibility_test.go::TestEligible` (table-driven) — pinned→eligible; type `discovery`/rev 4/unpinned→eligible; type `discovery`/rev 1/unpinned/not explicit→not eligible; explicit promote call overrides type/pin/revision. Scenarios: "Pinned observation is eligible", "High-revision, untyped, unpinned observation is eligible", "Low-revision, untyped, unpinned observation is not eligible", "Explicit promote call overrides the automatic criteria" (R-007).
-- [ ] 4.2 GREEN `longterm-mem/internal/promote/eligibility.go` — `Eligible(obs engram.Observation, explicit bool) bool`.
+- [x] 4.1 RED `longterm-mem/internal/promote/eligibility_test.go::TestEligible` (table-driven) — pinned→eligible; type `discovery`/rev 4/unpinned→eligible; type `discovery`/rev 1/unpinned/not explicit→not eligible; explicit promote call overrides type/pin/revision. Scenarios: "Pinned observation is eligible", "High-revision, untyped, unpinned observation is eligible", "Low-revision, untyped, unpinned observation is not eligible", "Explicit promote call overrides the automatic criteria" (R-007).
+- [x] 4.2 GREEN `longterm-mem/internal/promote/eligibility.go` — `Eligible(obs engram.Observation, explicit bool) bool`.
 - [ ] 4.3 RED `longterm-mem/internal/engram/relations_test.go::TestRelatedEdges_AcceptedOnly` — fixture edges; assert only `judgment_status='judged'`, `superseded_at IS NULL`, relation ∈ {related, compatible, scoped, supersedes, conflicts_with} are returned.
 - [ ] 4.4 GREEN `longterm-mem/internal/engram/relations.go` — `RelatedEdges(observationID int) ([]Edge, error)` (D7 filter).
 - [ ] 4.5 RED `longterm-mem/internal/promote/page_test.go::TestEmitPage_TypeMappedOntoVaultEnum` — eligible `decision`-typed observation; assert frontmatter `type` is inside the vault's own contract enum (`concept`), with `engram_type`, `engram_id`, `project` as flat extras. Scenario: "Type is mapped onto the vault's contract enum" (R-027).
