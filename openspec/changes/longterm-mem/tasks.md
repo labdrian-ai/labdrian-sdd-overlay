@@ -117,21 +117,21 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ### Bootstrap
 
-- [ ] 1.0.1 Create `longterm-mem/go.mod` (`module github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem`, `go 1.26.1`); `go get modernc.org/sqlite@v1.57.0 github.com/modelcontextprotocol/go-sdk@v1.7.0 github.com/pelletier/go-toml/v2@v2.4.3` to generate `go.sum` (pinned upfront so version drift cannot appear mid-chain).
-- [ ] 1.0.2 Add `.github/workflows/ci.yml` job `test-longterm-mem`, cloned from `test-tui` (:273): checkout, `actions/setup-go@v5` with `go-version-file: longterm-mem/go.mod`, gofmt (`test -z "$(gofmt -l .)"`), `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...`, `go test ./... -cover`, all `working-directory: longterm-mem`.
-- [ ] 1.0.3 Extend `openspec/config.yaml`: add a `longterm-mem` entry under `testing.layers` (`command: cd longterm-mem && go test ./...`, `vet: cd longterm-mem && go vet ./...`) and prepend `cd longterm-mem && go test ./... && ` to the `apply.tdd.test_command` and `verify.test_command`/`verify.build_command` chains.
-- [ ] 1.0.4 Create `longterm-mem/README.md` stub: per-project component description, fixed binary install path, module boundary note (R-001; full CLI/MCP refresh lands at 10b.8 per CHK-05).
+- [x] 1.0.1 Create `longterm-mem/go.mod` (`module github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem`, `go 1.26.1`); `go get modernc.org/sqlite@v1.57.0 github.com/modelcontextprotocol/go-sdk@v1.7.0 github.com/pelletier/go-toml/v2@v2.4.3` to generate `go.sum` (pinned upfront so version drift cannot appear mid-chain).
+- [x] 1.0.2 Add `.github/workflows/ci.yml` job `test-longterm-mem`, cloned from `test-tui` (:273): checkout, `actions/setup-go@v5` with `go-version-file: longterm-mem/go.mod`, gofmt (`test -z "$(gofmt -l .)"`), `go vet ./...`, `go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...`, `go test ./... -cover`, all `working-directory: longterm-mem`.
+- [x] 1.0.3 Extend `openspec/config.yaml`: add a `longterm-mem` entry under `testing.layers` (`command: cd longterm-mem && go test ./...`, `vet: cd longterm-mem && go vet ./...`) and prepend `cd longterm-mem && go test ./... && ` to the `apply.tdd.test_command` and `verify.test_command`/`verify.build_command` chains.
+- [x] 1.0.4 Create `longterm-mem/README.md` stub: per-project component description, fixed binary install path, module boundary note (R-001; full CLI/MCP refresh lands at 10b.8 per CHK-05).
 
 ### R-001 — Standalone Module Outside engine/
 
-- [ ] 1.1 RED `longterm-mem/cmd/longterm-mem/main_test.go::TestMain_BuildsIndependentModule` — asserts `go build ./...` succeeds from `longterm-mem/` as an independent module capable of declaring third-party deps. Scenario: "Component builds as an independent module".
-- [ ] 1.2 GREEN `longterm-mem/cmd/longterm-mem/main.go` — minimal subcommand dispatcher (usage text, exit 2 on unknown subcommand) so the build succeeds.
-- [ ] 1.3 RED→GREEN re-run `engine/skills/zero_fetch_test.go::TestZeroFetchImportAllowlist` unmodified after 1.0.1–1.2 land — asserts it still passes and `engine/go.mod` carries no third-party requirement despite `longterm-mem/go.mod` adding sqlite/mcp-sdk/go-toml. Scenario: "engine/'s zero-dependency gate stays green". Command: `cd engine && go test ./... -run TestZeroFetchImportAllowlist`.
+- [x] 1.1 RED `longterm-mem/cmd/longterm-mem/main_test.go::TestMain_BuildsIndependentModule` — asserts `go build ./...` succeeds from `longterm-mem/` as an independent module capable of declaring third-party deps. Scenario: "Component builds as an independent module".
+- [x] 1.2 GREEN `longterm-mem/cmd/longterm-mem/main.go` — minimal subcommand dispatcher (usage text, exit 2 on unknown subcommand) so the build succeeds.
+- [x] 1.3 RED→GREEN re-run `engine/skills/zero_fetch_test.go::TestZeroFetchImportAllowlist` unmodified after 1.0.1–1.2 land — asserts it still passes and `engine/go.mod` carries no third-party requirement despite `longterm-mem/go.mod` adding sqlite/mcp-sdk/go-toml. Scenario: "engine/'s zero-dependency gate stays green". Command: `cd engine && go test ./... -run TestZeroFetchImportAllowlist`.
 
 ### R-021 — No CLI Shelling to Engram (guard, enforced further in 2b)
 
-- [ ] 1.4 RED `longterm-mem/exec_allowlist_test.go::TestOSExecImportAllowlist` — statically parses (go/parser+ast) every non-test `.go` file under `longterm-mem/`, modeled on `engine/skills/zero_fetch_test.go`, and fails if any file other than `internal/vault/runner.go` imports `os/exec`. Scenario: "No subprocess call to Engram's CLI".
-- [ ] 1.5 GREEN — no production code required yet (only `main.go` exists); confirm the guard test passes vacuously. Command: `cd longterm-mem && go test ./... -run TestOSExecImportAllowlist`.
+- [x] 1.4 RED `longterm-mem/exec_allowlist_test.go::TestOSExecImportAllowlist` — statically parses (go/parser+ast) every non-test `.go` file under `longterm-mem/`, modeled on `engine/skills/zero_fetch_test.go`, and fails if any file other than `internal/vault/runner.go` imports `os/exec`. Scenario: "No subprocess call to Engram's CLI".
+- [x] 1.5 GREEN — no production code required yet (only `main.go` exists); confirm the guard test passes vacuously. Command: `cd longterm-mem && go test ./... -run TestOSExecImportAllowlist`.
 
 ### R-002 — Read-Only Engram Connection
 
