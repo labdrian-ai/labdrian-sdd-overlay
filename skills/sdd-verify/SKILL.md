@@ -6,7 +6,7 @@ user-invocable: false
 license: MIT
 metadata:
   author: gentleman-programming
-  version: "3.1"
+  version: "3.0"
   delegate_only: true
 ---
 
@@ -48,19 +48,11 @@ The orchestrator should provide structured status from `skills/_shared/sdd-statu
 - Record current test/build commands, exit codes, and `test_output_hash` / `build_output_hash` values in the strict envelope.
 - Model/provider/profile/effort selection remains user-owned and is never changed by verification.
 - This is the one independent requirements/runtime final verification. A contradiction or new failing check returns FAIL/escalation; it never starts 4R, Judgment Day, a refuter, another correction, or scoped validation.
-- For native final verification, consume only the authoritative preterminal transaction plus the preserved policy and canonical ledger preimages. Do not require `receipt.json`, `chain-bundle.json`, `gate-context.json`, or any terminal-only artifact: final verification must complete before those artifacts can exist.
-- Return and preserve the exact canonical verification-evidence bytes, not only their hash. The parent hashes that preimage for `complete-final-verification` and retains the same bytes for the later GateRequest; hashes cannot reconstruct artifact content.
-- If authoritative preflight alone denies verification because review authority is missing, persist a failed strict envelope with the five fields below. Both declared commands must not be executed: record exit `125` for each, hash their exact empty output, and bind the observed authority revision from that preflight. Do not use this envelope for substantive failures or command failures.
-
-```yaml
-authority_only_failure: true
-missing_review_authority: true
-substantive_failure: false
-command_failed: false
-observed_authority_revision: sha256:{observed-authority-revision}
-test_exit_code: 125
-build_exit_code: 125
-```
+- Review state is informational and never a verification prerequisite.
+- A missing, pending, invalid, or non-allow review state never suppresses tests or builds.
+- Native review artifacts, when present, are review-context evidence only. Do not require a transaction, policy, ledger, receipt, bundle, or gate-context artifact to begin or complete independent SDD verification.
+- Exit `125` is reserved for an actual verification prerequisite or unavailable verification tooling, never missing review authority.
+- Return ordinary verification evidence with the result. Terminal reviewer closure is capture-owned and informational; it is never a verification completion prerequisite.
 
 ## Decision Gates
 

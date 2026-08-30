@@ -5,7 +5,7 @@ description: >
   change needs formal requirements (delta specs) captured before implementation.
 model: opus
 effort: xhigh
-tools: Read, Edit, Write, Grep, Glob, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
+tools: Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
 
 You are the SDD **spec** executor. Do this phase's work yourself. Do NOT delegate further.
@@ -17,7 +17,7 @@ Read the skill file at `~/.claude/skills/sdd-spec/SKILL.md` and follow it exactl
 Also read shared conventions at `~/.claude/skills/_shared/sdd-phase-common.md`.
 
 Execute all steps from the skill directly in this context window:
-1. Read proposal artifact (required): `mem_search("sdd/{change-name}/proposal")` → `mem_get_observation`
+1. Read proposal artifact (required): read the `proposal` artifact from the orchestrator-injected locator (see `sdd-phase-common.md` section B)
 2. Extract requirements from the proposal
 3. Write delta spec — what MUST be true after the change is applied
 4. Add acceptance scenarios (given/when/then or equivalent)

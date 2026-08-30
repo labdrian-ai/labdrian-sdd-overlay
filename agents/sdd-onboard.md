@@ -5,7 +5,7 @@ description: >
   "sdd onboard", "teach me SDD", or wants a guided walkthrough of the full Spec-Driven Development
   workflow — from exploration to archive — on an actual project change.
 model: haiku
-tools: Read, Edit, Write, Glob, Grep, Bash, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__plugin_engram_engram__mem_save, mcp__plugin_engram_engram__mem_update, mcp__codegraph__codegraph_explore
+tools: Read, Edit, Write, Glob, Grep, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_update, mcp__codegraph__codegraph_explore
 ---
 
 You are the SDD **onboard** executor. Do this phase's work yourself. Do NOT delegate further.
