@@ -152,13 +152,13 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 2a — longterm-mem-scaffold-vault-2a-registry (R-003, R-022, R-023) — PR2a (base: PR1)
 
-- [ ] 2a.1 RED `longterm-mem/internal/vaultreg/registry_test.go::TestResolve_ConfiguredOverrideWins` — fixture `vaults.json` row for `some-other-project`; assert `Resolve` returns that configured path. Scenario: "Configured override is used" (R-003).
-- [ ] 2a.2 RED (same file) `TestResolve_DefaultSeedEntryForOverlayProject` — no override row for `labdrian-sdd-overlay`; assert resolution succeeds via the pre-seeded default row, itself an ordinary editable/deletable JSON row, not a code constant. Scenario: "Default resolves without a code-level constant" (R-022).
-- [ ] 2a.3 RED (same file) `TestResolve_UnconfiguredNonDefaultProjectRejected` — project `some-new-project`, no row, not `labdrian-sdd-overlay`; assert `ErrVaultNotConfigured` (exit 3 semantics) instead of a guessed path. Scenario: "Unconfigured, non-default project is rejected, not guessed" (R-023).
-- [ ] 2a.4 RED (same file) `TestPrecedence_FlagEnvFile` — `--vault` flag > `LONGTERM_MEM_VAULT` env > registry row (D5).
-- [ ] 2a.5 RED (same file) `TestSeed_OnlyWhenFileAbsent` — a `vaults.json` that exists but lacks the `labdrian-sdd-overlay` row is never auto-seeded (deleting the seed row must mean "not configured").
-- [ ] 2a.6 GREEN `longterm-mem/internal/vaultreg/registry.go` — `Registry{schema, vaults}` JSON model; `Load(path)`; `Seed(path)` (writes the seed row only when the file is absent); `Resolve(project, flagVault string) (string, error)` implementing flag>env>row precedence, `~` expansion, absolute-path validation, `ErrVaultNotConfigured`.
-- [ ] 2a.7 REFACTOR — extract the tmp+fsync+rename JSON write helper for reuse by later sidecar writers (D6).
+- [x] 2a.1 RED `longterm-mem/internal/vaultreg/registry_test.go::TestResolve_ConfiguredOverrideWins` — fixture `vaults.json` row for `some-other-project`; assert `Resolve` returns that configured path. Scenario: "Configured override is used" (R-003).
+- [x] 2a.2 RED (same file) `TestResolve_DefaultSeedEntryForOverlayProject` — no override row for `labdrian-sdd-overlay`; assert resolution succeeds via the pre-seeded default row, itself an ordinary editable/deletable JSON row, not a code constant. Scenario: "Default resolves without a code-level constant" (R-022).
+- [x] 2a.3 RED (same file) `TestResolve_UnconfiguredNonDefaultProjectRejected` — project `some-new-project`, no row, not `labdrian-sdd-overlay`; assert `ErrVaultNotConfigured` (exit 3 semantics) instead of a guessed path. Scenario: "Unconfigured, non-default project is rejected, not guessed" (R-023).
+- [x] 2a.4 RED (same file) `TestPrecedence_FlagEnvFile` — `--vault` flag > `LONGTERM_MEM_VAULT` env > registry row (D5).
+- [x] 2a.5 RED (same file) `TestSeed_OnlyWhenFileAbsent` — a `vaults.json` that exists but lacks the `labdrian-sdd-overlay` row is never auto-seeded (deleting the seed row must mean "not configured").
+- [x] 2a.6 GREEN `longterm-mem/internal/vaultreg/registry.go` — `Registry{schema, vaults}` JSON model; `Load(path)`; `Seed(path)` (writes the seed row only when the file is absent); `Resolve(project, flagVault string) (string, error)` implementing flag>env>row precedence, `~` expansion, absolute-path validation, `ErrVaultNotConfigured`.
+- [x] 2a.7 REFACTOR — extract the tmp+fsync+rename JSON write helper for reuse by later sidecar writers (D6).
 - Command: `cd longterm-mem && go test ./... -run TestResolve|TestSeed|TestPrecedence`
 
 ---

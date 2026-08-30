@@ -1,7 +1,8 @@
 # Apply Progress: longterm-mem
 
-Branch: `feat/lm/longterm-mem-scaffold-module` (base: tracker `feat/longterm-mem`)
-Last updated: 2026-08-29
+Branch: `feat/lm/longterm-mem-scaffold-vault-2a-registry` (base: PR1 commit
+`abf69a2`, slices 1a/1b history on this branch)
+Last updated: 2026-08-30
 
 ---
 
@@ -91,3 +92,117 @@ lines) matching the design's own instruction to mirror #3129 verbatim, and
 (c) tasks.md checkbox-toggle diff noise (30 lines for 15 ticked items — 1
 add+1 del per line). Flagged as a risk for the orchestrator; no further split
 was invented since none was authorized for this slice.
+
+---
+
+## Slice 2a — longterm-mem-scaffold-vault-2a-registry (R-003, R-022, R-023) (COMPLETE)
+
+All Slice 2a tasks (2a.1–2a.7) implemented and ticked in `tasks.md`. This
+slice is the first named split point of design-notes #3133's Slice 2
+(`2a registry, 2b runner+retrieve`); slice 2b (runner/retrieve, R-004/R-024)
+is intentionally out of scope for this batch.
+
+### R-003, R-022, R-023 — Vault Registry Resolution
+
+- [x] 2a.1–2a.5 RED `longterm-mem/internal/vaultreg/registry_test.go` — five
+  scenario tests written first against a package that did not yet exist
+  (`go test ./internal/vaultreg/...` failed with `undefined: Registry` /
+  `undefined: Resolve` / etc. before `registry.go` was created — confirmed
+  RED by execution, not by inspection):
+  - `TestResolve_ConfiguredOverrideWins` (R-003): a fixture row for
+    `some-other-project` is returned verbatim.
+  - `TestResolve_DefaultSeedEntryForOverlayProject` (R-022): with no
+    `vaults.json` on disk at all, resolving `labdrian-sdd-overlay` succeeds
+    via the pre-seeded row Resolve itself materializes; the test then
+    reloads the file and asserts the row is an ordinary
+    `{"path":"~/labdrian-brain","seeded":true}` entry, not a value
+    reproduced from a code constant on every call.
+  - `TestResolve_UnconfiguredNonDefaultProjectRejected` (R-023): project
+    `some-new-project` with no `vaults.json` on disk; Resolve seeds only
+    the `labdrian-sdd-overlay` default row, so `some-new-project` still has
+    no row and gets `ErrVaultNotConfigured`, never a guessed path.
+  - `TestPrecedence_FlagEnvFile` (D5): three subtests over one fixture row
+    prove flag > env > row precedence with three distinct expected paths.
+  - `TestSeed_OnlyWhenFileAbsent`: a `vaults.json` that already exists (with
+    an unrelated row, no `labdrian-sdd-overlay` row) is never auto-seeded —
+    Resolve still returns `ErrVaultNotConfigured` and a reload confirms no
+    row was added, proving "delete the seed row" means "not configured".
+- [x] 2a.6 GREEN `longterm-mem/internal/vaultreg/registry.go` —
+  `Registry{Schema, Vaults}` / `VaultEntry{Path, Seeded}` JSON model;
+  `Load(path)`; `Seed(path)` (writes the seed row via `os.Stat` +
+  `os.IsNotExist` — a no-op for any existing file, regardless of content);
+  `Resolve(vaultsPath, project, flagVault string) (string, error)`
+  implementing flag > `LONGTERM_MEM_VAULT` env > registry-row precedence,
+  `~`/`~/...` expansion via `os.UserHomeDir`, absolute-path validation
+  (`filepath.IsAbs` after expansion), and `ErrVaultNotConfigured` as a
+  wrapped sentinel (`errors.Is` works through the added detail). All five
+  RED tests pass unmodified against this implementation
+  (`go test ./internal/vaultreg/... -run 'TestResolve|TestSeed|TestPrecedence' -v`
+  — 5 tests + 3 subtests, all PASS).
+- [x] 2a.7 REFACTOR — the tmp+fsync+rename JSON write (`os.CreateTemp` in
+  the target directory, `Write`, `Sync`, `Close`, `os.Rename`) is factored
+  out of `Seed` into `writeJSONAtomic(path string, v any) error`, mirroring
+  the `bin/labdrian-overlay:590-628` `state_write_target` tmp+mv precedent
+  (adding an explicit `fsync` before rename, matching the design's stated
+  D5/D6 convention). Full suite re-run green after the refactor.
+
+### Design notes followed (Engram #3133 D5)
+
+`Resolve`'s only literal-default write path is `Seed`; the lookup path is
+uniform for every project (including `labdrian-sdd-overlay`) — there is no
+`if project == "labdrian-sdd-overlay"` special case anywhere in `Resolve`,
+which is what makes deleting the seeded row equivalent to any other missing
+row (R-022's "not a code constant" requirement, verified by
+`TestSeed_OnlyWhenFileAbsent`).
+
+### Verification
+
+`cd longterm-mem && go test ./... -run 'TestResolve|TestSeed|TestPrecedence'`
+— 3 packages with no matching tests report `[no tests to run]` (expected —
+the pattern only matches vaultreg); `internal/vaultreg` 5 tests + 3 subtests
+PASS.
+
+`cd longterm-mem && gofmt -l .` — clean. `go vet ./...` — clean.
+`go test ./... -cover -count=1` — `internal/vaultreg` 67.7% (uncovered
+lines are defensive I/O-failure branches in `Load`/`Seed`/`writeJSONAtomic`
+and the bare-`~`-only branch of `expandVaultPath`, none of which are named
+scenarios in tasks.md for this slice); `internal/engram` 84.2%;
+`cmd/longterm-mem` 0.0% (still no subcommands wired — unchanged from Slice
+1); root `guard` package has no statements to cover.
+
+`cd engine && go test ./...` — all 10 packages pass (zero-dep gate
+unaffected; this slice touches nothing under `engine/`).
+`bash -n bin/labdrian-overlay` — clean (this slice touches nothing under
+`bin/`).
+
+### Files created
+
+- `longterm-mem/internal/vaultreg/registry.go`
+- `longterm-mem/internal/vaultreg/registry_test.go`
+
+### Files modified
+
+- `openspec/changes/longterm-mem/tasks.md` (Slice 2a items 2a.1–2a.7 ticked)
+
+### Authored line budget
+
+Authored changed lines (plain line counts for the two new files, `git diff
+--numstat` for the tracked `tasks.md` checkbox toggle), excluding `go.sum`
+(no `go.sum` change — no new dependency was needed):
+
+| File | Lines |
+|---|---|
+| `longterm-mem/internal/vaultreg/registry.go` (new) | 179 |
+| `longterm-mem/internal/vaultreg/registry_test.go` (new) | 188 |
+| `openspec/changes/longterm-mem/tasks.md` (diff, checkbox toggles, 7 items) | 14 |
+| **Total** | **381** |
+
+Within the 400-line budget (forecast for this slice: 150–180; the design's
+own combined Slice 2 forecast was 380–430 with this file as the named first
+split point). The overage above the 150–180 per-slice forecast, same as
+Slice 1, comes from strict-TDD's no-trivial-assertion requirement: each of
+the five named scenarios needed its own fixture setup (a fresh `vaults.json`
+path per test, explicit `HOME`/`LONGTERM_MEM_VAULT` isolation via
+`t.Setenv`) and a specific, distinct expected-path assertion rather than a
+shared trivial check — still comfortably inside budget, so no split was
+needed for this slice.
