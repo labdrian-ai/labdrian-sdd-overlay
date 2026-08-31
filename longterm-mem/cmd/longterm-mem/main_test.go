@@ -423,3 +423,131 @@ func TestCmdPromote_InvalidIdExits7(t *testing.T) {
 		t.Fatalf("wiki/index.md exists after a rejected promote call (stat err = %v)", statErr)
 	}
 }
+
+// buildLongtermMemBinary compiles the real longterm-mem binary to a
+// scratch path, mirroring TestMain_BuildsIndependentModule's own build
+// invocation, so TestCLI_NoResidualProcessAfterAnySubcommand exercises the
+// real subprocess dispatch each subcommand goes through, not run() called
+// in-process.
+func buildLongtermMemBinary(t *testing.T) string {
+	t.Helper()
+	moduleRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatalf("resolve module root: %v", err)
+	}
+	binPath := filepath.Join(t.TempDir(), "longterm-mem")
+	cmd := exec.Command("go", "build", "-o", binPath, "./cmd/longterm-mem")
+	cmd.Dir = moduleRoot
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("go build ./cmd/longterm-mem failed: %v\n%s", err, out)
+	}
+	return binPath
+}
+
+// writeResidualFixtureVault installs every vault script Runner might
+// invoke across index/query/sync/promote (allocate-address.sh,
+// setup-retrieve.sh, contextual-prefix.py, bm25-index.py, retrieve.py),
+// all fast-exiting fixtures mirroring internal/vault's own fixture
+// conventions (index_test.go/retrieve_test.go), and pre-provisions the
+// vault so Rebuild's setupScript step is skipped -- only the two refresh
+// scripts and retrieve.py are exercised by the subcommands under test.
+func writeResidualFixtureVault(t *testing.T, vaultRoot string) {
+	t.Helper()
+
+	binDir := filepath.Join(vaultRoot, "bin")
+	if err := os.MkdirAll(binDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", binDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(binDir, "setup-retrieve.sh"), []byte("#!/bin/sh\nmkdir -p .vault-meta/bm25 .vault-meta/chunks\nprintf '{}' > .vault-meta/bm25/index.json\n: > .vault-meta/chunks/chunk-0.json\n"), 0o755); err != nil {
+		t.Fatalf("write setup-retrieve.sh fixture: %v", err)
+	}
+
+	scriptsDir := filepath.Join(vaultRoot, "scripts")
+	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", scriptsDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, "contextual-prefix.py"), []byte("import sys\nsys.exit(0)\n"), 0o644); err != nil {
+		t.Fatalf("write contextual-prefix.py fixture: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, "bm25-index.py"), []byte("import sys\nsys.exit(0)\n"), 0o644); err != nil {
+		t.Fatalf("write bm25-index.py fixture: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, "retrieve.py"), []byte("import json, sys\nprint(json.dumps({\"candidates\": []}))\nsys.exit(0)\n"), 0o644); err != nil {
+		t.Fatalf("write retrieve.py fixture: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, "allocate-address.sh"), []byte("#!/bin/sh\nprintf 'c-000902\\n'\n"), 0o755); err != nil {
+		t.Fatalf("write allocate-address.sh fixture: %v", err)
+	}
+
+	metaBM25 := filepath.Join(vaultRoot, ".vault-meta", "bm25")
+	metaChunks := filepath.Join(vaultRoot, ".vault-meta", "chunks")
+	if err := os.MkdirAll(metaBM25, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", metaBM25, err)
+	}
+	if err := os.MkdirAll(metaChunks, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", metaChunks, err)
+	}
+	if err := os.WriteFile(filepath.Join(metaBM25, "index.json"), []byte("{}"), 0o644); err != nil {
+		t.Fatalf("write pre-provisioned bm25 index: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(metaChunks, "chunk-0.json"), nil, 0o644); err != nil {
+		t.Fatalf("write pre-provisioned chunk marker: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(vaultRoot, ".vault-meta", ".longterm-mem-provisioned"), []byte("2026-08-01T00:00:00Z"), 0o644); err != nil {
+		t.Fatalf("write provisioned sentinel: %v", err)
+	}
+}
+
+// TestCLI_NoResidualProcessAfterAnySubcommand (task 8b.9, R-034
+// "No CLI subcommand leaves a residual process", -short-skippable
+// integration): every subcommand that can invoke a vault subprocess is
+// run, end to end, as the real built binary against a fixture project,
+// and after each one completes no process referencing the fixture vault's
+// own scratch path remains anywhere in the system process list --
+// checked via `pgrep -f <vaultRoot>` (a full-cmdline, system-wide match,
+// not a parent-scoped one) so a subprocess orphaned by a broken Runner
+// call would still be caught even after the kernel reparents it once its
+// immediate parent exits.
+func TestCLI_NoResidualProcessAfterAnySubcommand(t *testing.T) {
+	if testing.Short() {
+		t.Skip("builds the real binary and runs it against a full fixture vault; skipped under -short")
+	}
+	if _, err := exec.LookPath("pgrep"); err != nil {
+		t.Skip("pgrep not on PATH; cannot assert no residual process remains")
+	}
+	if _, err := exec.LookPath("python3"); err != nil {
+		t.Skip("python3 not on PATH; the fixture vault's Python entrypoints cannot run")
+	}
+
+	binPath := buildLongtermMemBinary(t)
+
+	vaultRoot := t.TempDir()
+	writeResidualFixtureVault(t, vaultRoot)
+	dbPath, id := promoteFixtureDB(t, "Residual Check Target", "cli-residual-project")
+
+	home := t.TempDir()
+	env := append(os.Environ(),
+		"HOME="+home,
+		"LONGTERM_MEM_VAULT="+vaultRoot,
+		"LONGTERM_MEM_ENGRAM_DB="+dbPath,
+	)
+
+	subcommands := [][]string{
+		{"status", "--project", "cli-residual-project"},
+		{"doctor", "--project", "cli-residual-project"},
+		{"index", "--project", "cli-residual-project"},
+		{"query", "--project", "cli-residual-project", "hello"},
+		{"promote", "--project", "cli-residual-project", "--id", strconv.FormatInt(id, 10)},
+		{"sync", "--project", "cli-residual-project"},
+	}
+
+	for _, args := range subcommands {
+		cmd := exec.Command(binPath, args...)
+		cmd.Env = env
+		out, _ := cmd.CombinedOutput() // some subcommands may legitimately exit non-zero; residual-process safety is checked regardless of exit code
+
+		if residual, pgErr := exec.Command("pgrep", "-f", vaultRoot).CombinedOutput(); pgErr == nil {
+			t.Fatalf("%v left a residual process referencing the fixture vault: %s\ncommand output:\n%s", args, residual, out)
+		}
+	}
+}
