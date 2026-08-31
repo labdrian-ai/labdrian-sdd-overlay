@@ -239,8 +239,8 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 6 — longterm-mem-promotion-mutability (R-008, R-030) — PR6 (base: PR5)
 
-- [ ] 6.1 RED `longterm-mem/internal/promote/store_test.go::TestPrecedenceStore_LoadSaveRoundTrip` — `.raw/.longterm-mem-manifest.json` keyed by `page_address`, storing `body_hash`+`frontmatter_hash` separately (D6), tmp+fsync+rename.
-- [ ] 6.2 GREEN `longterm-mem/internal/promote/store.go` — `PrecedenceStore` load/save, `Get(address)`, `Set(address, entry)`.
+- [x] 6.1 RED `longterm-mem/internal/promote/store_test.go::TestPrecedenceStore_LoadSaveRoundTrip` — `.raw/.longterm-mem-manifest.json` keyed by `page_address`, storing `body_hash`+`frontmatter_hash` separately (D6), tmp+fsync+rename.
+- [x] 6.2 GREEN `longterm-mem/internal/promote/store.go` — `PrecedenceStore` load/save, `Get(address)`, `Set(address, entry)`.
 - [ ] 6.3 RED `longterm-mem/internal/promote/update_test.go::TestUpdate_UnmodifiedPageUpdatesInPlace` — observation X previously promoted to page V, not locally modified; revision increases; assert V's content and updated timestamp refresh, no second page. Scenario: "Unmodified page updates in place on revision" (R-008).
 - [ ] 6.4 RED (same file) `TestUpdate_RetitleKeepsSameFile` — X's title changed, id unchanged; assert same on-disk page updated, no new file, no orphan. Scenario: "Retitle keeps the same file" (R-008).
 - [ ] 6.5 RED (same file) `TestUpdate_LocallyEditedPageSkippedWithDiagnostic` — on-disk content diverges from stored `body_hash`/`frontmatter_hash`; assert content update skipped, a diagnostic names the page. Scenario: "Locally edited page is skipped with a diagnostic" (R-030).
