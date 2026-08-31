@@ -2017,3 +2017,267 @@ at the mixed candidate — executable code plus a large passive-documentation
 diff in one frozen target — as what made causality inconclusive. Worth
 remembering as a candidate-shaping rule, not just an incident: keep
 executable changes and bulk documentation in separate candidates.
+
+## Slice 8b — longterm-mem-ops-8b-mcp-promote (R-012, R-032, R-034) (COMPLETE)
+
+All Slice 8b tasks (8b.1–8b.12) implemented and ticked in `tasks.md`,
+strict TDD RED → GREEN throughout, every RED captured by temporarily
+removing the not-yet-written production symbol and running the exact test
+to see the real compiler/runtime failure, and every test that happened to
+pass on its first run (production code written alongside its test rather
+than strictly before it) proven load-bearing by a deliberate mutation that
+reproduced the exact defect the test guards against, then reverted. New
+package `internal/mcpserver` (`Deps`, `New`, `QueryIn`/`QueryOut`,
+`PromoteIn`/`PromoteOut`), new `internal/promote/explicit.go`
+(`ExplicitPromote`, `ObservationLookup`, `ErrObservationNotFound`), new
+`engram.Store.ObservationByID`, new `promote.ActionKind.String()`, new CLI
+files `cmd_promote.go`/`cmd_mcp.go`/`rundeps.go`, and `main.go`'s dispatch
+extended with `promote`/`mcp`.
+
+### TDD Cycle Evidence
+
+| Task | Test File | RED (real failure excerpt) | GREEN |
+|---|---|---|---|
+| 8b.1–8b.2 | `mcpserver/server_test.go::TestServer_ToolListingListsQueryAndPromote`, `TestServer_QueryRoundTripsOverStdio` | `undefined: Deps` / `undefined: New` / `undefined: PromoteOut` (build failure, captured by moving `server.go` aside before the test file existed alongside it) | `go test ./internal/mcpserver/... -run "ToolListing\|QueryRoundTrips\|PromoteRoundTrips" -v` → 3/3 PASS on first run with `server.go` restored. Mutation checks: (1) removing the `promote` `AddTool` call reproduced `tool listing [query] does not include "promote"`; (2) forcing `Project: ""` in the query handler reproduced `handler received {Project: Query:dragonscale ...}, want the call's own project/query forwarded`; (3) renaming `actionLabel`'s `"created"` case to `"bogus"` reproduced `Action:bogus, want ... action=created`. All three reverted. |
+| 8b.3 | `mcpserver/server.go` | — | Same GREEN run above; both `query` and `promote` tools registered from this one file, `Deps.Query`/`Deps.Promote` function seams (matching `query.Deps`/`promote.Deps`'s convention) rather than concrete dependencies, so tests never touch a real Engram DB or vault subprocess. |
+| 8b.4–8b.5 | `promote/eligible_test.go::TestPromote_ExplicitCallOverridesAutomaticEligibility`, `TestPromote_InvalidObservationIdRejected` | `undefined: ExplicitPromote` / `undefined: ErrObservationNotFound` (build failure, `internal/promote/explicit.go` did not exist yet) | `go test ./internal/promote/... -run "TestPromote_Explicit\|TestPromote_InvalidObservationId" -v` → 2/2 PASS on first run. Mutation checks: (1) changing `w.Promote(obs, true)` to `w.Promote(obs, false)` inside `ExplicitPromote` reproduced a failure (the below-threshold observation's zero `Result` made the page-read step fail with "is a directory", proving the explicit-override branch is load-bearing); (2) replacing the not-found branch with `return Result{}, nil` reproduced `ExplicitPromote = nil error, want a rejection`. Both reverted. |
+| 8b.4–8b.5 infra | `engram/store_test.go::TestObservationByID_ReturnsTheMatchingRow`, `TestObservationByID_UnknownIDReportsNotFoundNotAnError` | `store.ObservationByID undefined` / `"errors" imported and not used` (build failure, captured by removing the new method and its `errors` import before the tests existed) | `go test ./internal/engram/... -run TestObservationByID -v` → 2/2 PASS on first run (restored). Mutation check: inverting the not-found branch to `return Observation{}, true, nil` reproduced `ok = true, want false`, reverted. Full `internal/engram` suite re-run after the `scanObservationRow` signature widening (`*sql.Rows` → the new `rowScanner` interface) to confirm `ListObservations`/`ObservationsIncludingDeleted` are still byte-identical — all pre-existing tests still PASS. |
+| 8b.6 | `cmd_promote.go` + `main_test.go::TestRun_DispatchesPromoteSubcommand`, `TestCmdPromote_PromotesObservationAndPrintsResult`, `TestCmdPromote_InvalidIdExits7` | `run([promote ...]) = 2, want 3` / `= 2, want 0` / `= 2, want 7` (real RED: `promote` fell through `main.go`'s `unknown subcommand` default case before the dispatch case existed) | `go test ./cmd/... -run "DispatchesPromoteSubcommand\|CmdPromote" -v` → 3/3 PASS after adding the `case "promote":` line. Mutation check: changing the exit-7 branch to `return 1` reproduced `= 1, want 7 (not_found)`, reverted. |
+| 8b.7 | (no dedicated RED task; realized through `Deps.Promote`) | — | `TestServer_PromoteRoundTripsOverStdio` (supplementary, see 8b.1–8b.2 row) proves the MCP promote tool renders a real `promote.Result`; production wiring to `runPromote` (the same function `cmd_promote.go` calls) lands with 8b.10/8b.11's `cmd_mcp.go`, verified end to end by `TestServer_ExitsWhenStdinCloses` and the full non-`-short` suite. |
+| 8b.8 | `mcpserver/server_test.go::TestServer_ExitsWhenStdinCloses` | `mcp subprocess exited with an error after stdin closed: exit status 2` (real RED: before `cmd_mcp.go`/`main.go`'s `mcp` case existed, the built binary's `mcp` subcommand fell through to `unknown subcommand`, exiting immediately instead of blocking on stdio) | `go test ./internal/mcpserver/... -run TestServer_ExitsWhenStdinCloses -v -count=1` → PASS once `cmd_mcp.go` + the `mcp` dispatch case existed (see 8b.10). |
+| 8b.9 | `main_test.go::TestCLI_NoResidualProcessAfterAnySubcommand` | Passed on first run (Runner's `cmd.Run()` was already fully synchronous before this slice; there was no defect to reproduce as a natural RED). Verified load-bearing by deliberate mutation instead: temporarily changed `internal/vault/runner.go`'s `cmd.Run()` to `cmd.Start()` (fire-and-forget, no `Wait`) and made the `retrieve.py` fixture sleep 2s — reproduced `[index --project cli-residual-project] left a residual process referencing the fixture vault: 2258951\n2258952`, the exact R-034 defect class this test guards against. Both mutations reverted; `go test ./internal/vault/... -short` re-run clean afterward. | `go test ./cmd/... -run TestCLI_NoResidualProcessAfterAnySubcommand -v -count=1` → PASS. |
+| 8b.10 | `cmd_mcp.go` | — | New file: `signal.NotifyContext(ctx, os.Interrupt, syscall.SIGTERM)`, `server.Run(ctx, &mcp.StdioTransport{})`, `context.Canceled` treated as a graceful shutdown (exit 0) rather than an error. Verified by 8b.8's `TestServer_ExitsWhenStdinCloses` end to end against the real built binary. |
+| 8b.11 | `cmd/longterm-mem/rundeps.go` (`runQuery`, `runPromote`) | approval refactor: pre-refactor tests captured as the behavior baseline, not a failing test (mirrors 8a.7's own precedent) | Extracted `cmd_query.go`'s inline `query.Deps` construction into `runQuery(ctx, store, vaultRoot, req)` and `cmd_promote.go`'s inline `Writer`+`ExplicitPromote` construction into `runPromote(store, vaultRoot, engramID)`; `cmd_mcp.go`'s `Deps.Query`/`Deps.Promote` closures call these same two functions after resolving each call's own project's vault. Full suite re-run after extraction (`go test ./... -count=1`, all packages, including the full `TestCLI_NoResidualProcessAfterAnySubcommand`/`TestServer_ExitsWhenStdinCloses` integration pair) — byte-identical pass, confirming the refactor is behavior-preserving. |
+| 8b.12 | slice verification | — | `cd longterm-mem && go test ./... -short -count=1` → all 9 packages pass; `go test ./... -count=1` (no `-short`, R-034 integration scenarios included) → all 9 packages pass; `gofmt -l .` and `go vet ./...` both clean. |
+
+### Design decisions
+
+- **`internal/mcpserver.Deps` holds two function seams (`Query`,
+  `Promote`), not a concrete `query.Deps`/`*promote.Writer` pair.** R-012's
+  contract carries `project` inside every tool call (`query{project,
+  query, top?}`, `promote{project,engram_id}`), so a single MCP session
+  can legitimately serve more than one project; each call must resolve its
+  own vault fresh rather than the server binding to one vault at startup.
+  Function seams (matching `query.Deps`/`promote.Deps`'s own established
+  convention in this module) let `server_test.go` prove the round-trip
+  wiring with zero real Engram DB or vault subprocess, and let production
+  wiring (`cmd_mcp.go`) resolve per-call without `internal/mcpserver`
+  itself importing `vaultreg`/`vault` at all.
+- **`ExplicitPromote` is a new, small function in `internal/promote`
+  (`explicit.go`), not a bypass of `Eligible`/`Writer.Promote`.**
+  design.md's own directive: "`Writer.Promote(obs, explicit bool)`
+  already exists and already forwards `explicit` to `Eligible` ... R-032's
+  ... should flow through that existing parameter, not a new bypass."
+  `ExplicitPromote(w *Writer, lookup ObservationLookup, id int64)` does
+  exactly one new thing — resolve an id to an `engram.Observation` via a
+  function seam — then calls `w.Promote(obs, true)`, the unmodified
+  existing entrypoint. Both 8b.4's test (a below-threshold observation
+  still lands under `wiki/memory/` and registers in `wiki/index.md`/
+  `wiki/log.md`) and 8b.5's test (an unknown id is rejected before
+  `Writer.Promote` is ever called) exercise this one function.
+- **`engram.Store.ObservationByID` reuses `scanObservationRow` via a new
+  `rowScanner` interface (`Scan(dest ...any) error`), rather than
+  duplicating the scan logic for a single-row `*sql.Row` lookup.**
+  `*sql.Row` and `*sql.Rows` both satisfy that interface, so
+  `ListObservations`/`ObservationsIncludingDeleted` (multi-row, via
+  `*sql.Rows`) and the new `ObservationByID` (single-row, via
+  `db.QueryRow`+`*sql.Row`) share one scan function and one
+  `observationColumns` source of truth instead of three. `ok=false` with
+  a nil error (via `errors.Is(err, sql.ErrNoRows)`) distinguishes "no such
+  row" from a genuine database error, letting `ExplicitPromote` turn only
+  the former into `ErrObservationNotFound`.
+- **`ActionKind.String()` lives in `internal/promote/update.go`
+  (task-8b.11-adjacent infrastructure, not itself a numbered task), the
+  one source of truth `cmd_promote.go`'s CLI output and
+  `mcpserver.PromoteOut.Action`'s JSON both render through.** Without it,
+  each of the two surfaces would separately map `ActionKind`'s int
+  encoding to the same three names — literally the drift 8b.11 exists to
+  prevent, just one abstraction layer lower than the call path itself.
+  Verified load-bearing by mutation (renaming the `ActionSkippedLocalEdit`
+  case to `"bogus"` reproduced the exact mismatch).
+- **`cmd_mcp.go` opens one Engram connection for the whole MCP session
+  (not per tool call), but resolves each call's vault root fresh.** A
+  read-only Engram connection has no reason to reopen on every call within
+  one session; a vault root, by contrast, is scoped to the call's own
+  `project` field and a session may serve more than one project, so it
+  cannot be resolved once at startup the way `cmd_query.go`/
+  `cmd_promote.go`'s one-shot CLI invocations naturally do.
+- **`server.Run`'s `context.Canceled` return (from
+  `signal.NotifyContext`'s SIGINT/SIGTERM cancellation) is treated as a
+  graceful shutdown, exit 0 — not an error.** R-034 requires the server to
+  exit cleanly with its session; a SIGTERM-driven shutdown is exactly that
+  session ending, not a failure the operator needs to see as a non-zero
+  exit.
+- **8b.11's REFACTOR was realized differently than a literal
+  duplicate-then-refactor of `cmd_mcp.go`.** The task list's chronological
+  order (8b.10 `cmd_mcp.go` before 8b.11's refactor) would suggest writing
+  `cmd_mcp.go` with its own inline `query.Deps`/`Writer` construction
+  first (a third copy alongside `cmd_query.go`/`cmd_promote.go`'s own
+  inline versions), then deleting all three inline copies in favor of
+  `runQuery`/`runPromote`. Since this apply ran as one continuous session
+  rather than across genuinely separate PR reviews, `cmd_mcp.go` was
+  written directly against `runQuery`/`runPromote` from its own creation
+  instead of authoring and then discarding a duplicate inline copy — the
+  extraction itself (of `cmd_query.go`'s and `cmd_promote.go`'s
+  already-existing inline logic into `rundeps.go`) is still a real,
+  separately-tested edit, verified behavior-preserving by a full
+  `go test ./... -count=1` re-run producing byte-identical results before
+  and after. This is a deviation in *how* the refactor was staged, not in
+  what it delivers: the end state is identical to a literal
+  duplicate-then-refactor (one shared `runQuery`/`runPromote` pair in
+  `rundeps.go`, called identically by `cmd_query.go`, `cmd_promote.go`,
+  and `cmd_mcp.go`) — it was simply never authored twice in this file's
+  own history.
+
+### PR-seam line accounting
+
+Per-file authored line counts (changed lines = insertions + deletions for
+a modified file, or full line count for a new file):
+
+| File | Kind | Lines |
+|---|---|---|
+| `internal/mcpserver/server.go` | new, production | 125 |
+| `internal/mcpserver/server_test.go` | new, test | 281 (lines 1–173 are 8b.1–8b.3 + the supplementary promote round-trip test; lines 174–281 are 8b.8's lifecycle fixture/test) |
+| `internal/promote/explicit.go` | new, production | 40 |
+| `internal/promote/eligible_test.go` | delta, test | +89 |
+| `internal/promote/update.go` (`ActionKind.String()`) | delta, production | +17 |
+| `internal/promote/update_test.go` | delta, test | +22 |
+| `internal/engram/store.go` (`rowScanner`, `ObservationByID`) | delta, production | +32/-2 (34) |
+| `internal/engram/store_test.go` | delta, test | +53 |
+| `cmd/longterm-mem/cmd_promote.go` | new, production | 63 |
+| `cmd/longterm-mem/cmd_mcp.go` | new, production | 78 |
+| `cmd/longterm-mem/rundeps.go` | new, production | 42 |
+| `cmd/longterm-mem/cmd_query.go` | delta, production | +1/-10 (11) |
+| `cmd/longterm-mem/main.go` | delta, production | +4 |
+| `cmd/longterm-mem/main_test.go` | delta, test | +262 (lines ~292–426 are 8b.6's promote-CLI dispatch/success/not-found tests, 135 lines; lines ~427–553 are 8b.9's residual-process fixture/test, 127 lines) |
+| `go.mod` | dependency bump (`go mod tidy`, not authored prose) | +11/-3 |
+| `go.sum` | lockfile (fully generated) | +16/-2 |
+
+**Production total: 414 changed lines. Test total: 707 changed lines.
+Combined authored total (excluding `go.mod`/`go.sum`): 1121 lines** — this
+was never one PR; the entry contract already named slice 8 a High-risk
+slice requiring a split, and the tasks artifact's own forecast (240–270
+lines) undercounted the real R-034 integration-test cost.
+
+Mapped onto the pre-planned parts, using the file-level line spans above
+(splitting `server_test.go` and `main_test.go` at their internal task
+boundaries rather than assigning a whole file to one part):
+
+| Part | Scope | Files | Lines |
+|---|---|---|---|
+| 8b-1 | 8b.1–8b.3 | `server.go` (125) + `server_test.go` lines 1–173 (173) | **298** |
+| 8b-2 | 8b.4–8b.6 | `eligible_test.go` (89) + `explicit.go` (40) + `store.go` (34) + `store_test.go` (53) + `update.go` (17) + `update_test.go` (22) + `cmd_promote.go` (63) + `main_test.go`'s promote-CLI group (135) | **453 — exceeds the 400-line budget** |
+| 8b-3 | 8b.7, 8b.11 (the `cmd_query.go`/`rundeps.go` half) | `rundeps.go` (42) + `cmd_query.go` delta (11) | **53** |
+| 8b-4 | 8b.8–8b.10, 8b.12 | `server_test.go` lines 174–281 (108) + `cmd_mcp.go` (78) + `main.go` delta (4) + `main_test.go`'s residual-process group (127) | **317** |
+| 8b-5 | artifacts only | `tasks.md` + this file | (not code) |
+
+**Part 8b-2 exceeds the 400-line budget (453 lines) and must be split
+further before it ships as one PR** — flagging this explicitly per this
+apply's own instructions rather than silently shipping it oversized. The
+natural split point is between infrastructure and CLI wiring:
+- **8b-2a** (infrastructure): `eligible_test.go` (89) + `explicit.go` (40)
+  + `store.go` (34) + `store_test.go` (53) + `update.go` (17) +
+  `update_test.go` (22) = **255 lines**.
+- **8b-2b** (CLI wiring, base: 8b-2a): `cmd_promote.go` (63) +
+  `main_test.go`'s promote-CLI group (135) = **198 lines**.
+
+`go.mod`/`go.sum`'s dependency bump (`modelcontextprotocol/go-sdk` moving
+from `// indirect` to a direct dependency, pulling in `google/jsonschema-go`,
+`github.com/golang-jwt/jwt/v5` (transitively, via `mcp`'s own `auth`/
+`oauthex` subpackages — `go mod why` confirms the chain), `google/go-cmp`,
+and their own transitive deps; `go mod tidy` also correctly dropped
+`github.com/pelletier/go-toml/v2` as a no-longer-referenced indirect
+dependency, since no code in this module imports it yet — that TOML writer
+is design.md's D9/slice 11's future work, not this slice's) belongs with
+8b-1, the first part that actually imports
+`github.com/modelcontextprotocol/go-sdk/mcp`.
+
+### Coverage
+
+`go test ./... -cover -count=1` (no `-short`): `internal/mcpserver` 77.8%,
+`internal/promote` 84.6% (up from the pre-slice baseline with
+`ExplicitPromote`/`ActionKind.String()` covered), `internal/engram` 83.0%
+(up with `ObservationByID` covered), `cmd/longterm-mem` 41.5% (whole-package
+figure across all seven subcommands, not promote/mcp alone), all 9
+packages pass. `go test ./... -short -count=1` also all 9 packages pass;
+only the two R-034 integration tests, `TestServer_ExitsWhenStdinCloses`
+and `TestCLI_NoResidualProcessAfterAnySubcommand`, correctly `SKIP` under
+`-short` — every other test, including `TestMain_BuildsIndependentModule`'s
+own build check, still runs and passes.
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd longterm-mem && go test ./internal/mcpserver/... ./internal/promote/... ./internal/engram/... ./cmd/... -run "TestServer\|TestPromote_Explicit\|TestPromote_Invalid\|TestObservationByID\|TestActionKind_String\|TestCmdPromote\|TestRun_DispatchesPromoteSubcommand\|TestCLI_NoResidual" -v -count=1` → 13/13 PASS across 4 packages |
+| Runtime harness command/scenario and exact result | `TestServer_ExitsWhenStdinCloses` (real built binary, real `mcp` subprocess, real stdin pipe, real `pgrep`) and `TestCLI_NoResidualProcessAfterAnySubcommand` (real built binary, six real subcommand subprocess invocations against a fixture vault with real Python/shell scripts) — both PASS under `go test ./... -count=1` (no `-short`) |
+| Rollback boundary | Every new file (`internal/mcpserver/*`, `internal/promote/explicit.go`, `cmd/longterm-mem/cmd_promote.go`, `cmd_mcp.go`, `rundeps.go`) can be deleted and its `main.go`/`update.go`/`store.go` touch points reverted without affecting slice 8a's `status`/`doctor` code, or slices 1–7's query/promote/sync code, all of which pass unchanged before and after this slice |
+
+### Deviations from tasks.md
+
+- **8b.4/8b.5's stated test file `internal/promote/eligibility_test.go`
+  does not exist in this codebase.** Task 4.1 (slice 4, already complete
+  before this slice began) named the same file `eligibility_test.go` in
+  its own task text but landed as `eligible.go`/`eligible_test.go` — a
+  pre-existing naming mismatch in the tasks document, not introduced by
+  this slice. 8b.4/8b.5's tests were added to the actual `eligible_test.go`,
+  which they genuinely extend (same package, reusing `writer_test.go`'s
+  `writeAllocateScript`/`fixedNow`/`allocateAddressFixture` helpers, which
+  Go test files in one package share automatically).
+- **`ObservationByID` (engram/store.go) and `ActionKind.String()`
+  (promote/update.go) are not named by any 8b.\* task**, added as
+  necessary infrastructure the same way 7.10 was added retroactively in
+  slice 7: `ExplicitPromote` needs a way to resolve an id to an
+  `Observation` (R-032 names an id, not a full observation), and both the
+  CLI and MCP surfaces need one shared rendering of `ActionKind` to avoid
+  reintroducing exactly the drift 8b.11 exists to close at the call-path
+  level. Both are covered by their own RED→GREEN tests (see the evidence
+  table).
+- **8b.11's refactor was staged differently than a literal
+  duplicate-then-delete of `cmd_mcp.go`'s construction logic** — see the
+  Design decisions entry above. The end state (one shared `runQuery`/
+  `runPromote` pair, called identically by all three surfaces) matches the
+  task's stated goal exactly; only the intermediate staging differs from
+  the task list's literal chronological reading.
+- **Part 8b-2 (453 lines) exceeds the 400-line PR budget** and needs a
+  further split (8b-2a/8b-2b) before delivery — see PR-seam line
+  accounting above. This was not caught by the tasks artifact's own
+  Review Workload Forecast (which estimated the whole slice at 240–270
+  lines); the R-034 integration tests alone (main_test.go's two new
+  groups, 262 lines) exceed that estimate on their own.
+
+### Slice 8b — delivery record
+
+Slice 8b shipped as five chained PRs (#208–#212), split at requirement
+seams rather than file boundaries: R-032's library path (#208), R-012's
+MCP surface (#209), R-032's CLI surface (#210), R-034's lifecycle proofs
+(#211), and these artifacts (#212). Four of the five code parts passed
+with zero corrections.
+
+**One correction, and it was an artifact of the split itself.**
+`TestServer_ExitsWhenStdinCloses` is an R-034 lifecycle test that happens
+to live in `internal/mcpserver`'s test file, so it shipped with the
+lifecycle part rather than the MCP-surface part. Trimming it out of #209
+left `fixtureEngramDB` behind as dead code whose own doc comment justified
+it by naming a test not present in that candidate — a maintainer reading
+it would have believed the stdio-exit behaviour was covered there, and Go
+compiles an unused test helper without complaint, so nothing else would
+have flagged the drift (`R2-dead-test-fixture`). The helper and its
+exclusive imports were removed from #209 and returned with the test in
+#211.
+
+**Worth recording: what makes the R-034 tests actually worth their
+weight.** Both lifecycle tests passed on their first run, because
+`internal/vault.Runner` was already fully synchronous — which is exactly
+when a test proves least. Each was therefore verified by deliberate
+mutation instead: changing `Runner`'s `cmd.Run()` to `cmd.Start()`
+(fire-and-forget) with a sleeping fixture script reproduced a genuine
+residual-process leak, precisely the defect class R-034 exists to prevent,
+before the mutation was reverted. The same discipline was applied to every
+other test in this slice that passed first time.
+
+**Dependency-surface change.** `modelcontextprotocol/go-sdk` became a
+direct dependency, bringing seven new indirect ones. `go mod tidy`
+correspondingly dropped `pelletier/go-toml/v2`, an unused indirect that no
+code in this module ever referenced; the TOML config writer is slice 12
+work and will re-add it as a real dependency when it exists.
