@@ -1194,3 +1194,205 @@ exactly the Part A/Part B boundary is available without any rework if the
 reviewer needs each diff under budget. No scope was added beyond the
 unchecked 5.1–5.7 tasks; no test was omitted or trimmed below strict-TDD's
 assertion-quality bar to chase the budget.
+
+---
+
+## Slice 6 — longterm-mem-promotion-mutability (R-008, R-030) (COMPLETE)
+
+All Slice 6 tasks (6.1–6.9) implemented and ticked in `tasks.md`, strict
+TDD RED → GREEN → REFACTOR throughout. Three files, each a natural seam:
+`store.go` (D6 precedence sidecar), `update.go` (R-008/R-030
+hash-divergence detection), `writer.go` (6.8's consolidated entrypoint).
+
+### TDD Cycle Evidence
+
+| Task | Test File | RED (failure excerpt) | GREEN | REFACTOR |
+|---|---|---|---|---|
+| 6.1 | `store_test.go::TestPrecedenceStore_LoadSaveRoundTrip` | `undefined: LoadPrecedenceStore` / `undefined: PrecedenceEntry` (build failure, executed) | — | — |
+| 6.2 | `store.go` | — | `go test -run TestPrecedenceStore_LoadSaveRoundTrip` → PASS | — |
+| 6.3 | `update_test.go::TestUpdate_UnmodifiedPageUpdatesInPlace` | `undefined: UpdateInPlace` / `undefined: ActionUpdated` / `undefined: hashText` (build failure, executed together with 6.4–6.6) | — | — |
+| 6.4 | `update_test.go::TestUpdate_RetitleKeepsSameFile` | same build failure (shared file with 6.3) | — | — |
+| 6.5 | `update_test.go::TestUpdate_LocallyEditedPageSkippedWithDiagnostic` | same build failure; also proves `undefined: ActionSkippedLocalEdit` | — | — |
+| 6.6 | `update_test.go::TestUpdate_UnmodifiedPageUpdatesNormally` | same build failure (shared file with 6.3–6.5) | — | — |
+| 6.7 | `update.go` | — | `go test -run TestUpdate_ -v` → 4/4 PASS | — |
+| 6.8 | `writer_test.go` (3 tests: create / update / skip-local-edit) | `undefined: Writer` (build failure, executed) written first, then `writer.go` added GREEN | `go test -run TestWriter_ -v` → 3/3 PASS | consolidated `EmitPage`+`UpdateInPlace` behind `Writer.Promote`; re-ran the full RED evidence for 6.1–6.7 afterward — all still green, `EmitPage`/`UpdateInPlace` behavior unchanged |
+| 6.9 | slice verification | — | `cd longterm-mem && go test ./...` → all 7 packages pass | — |
+
+Task 6.8 is scoped as a REFACTOR in `tasks.md`, but `Writer.Promote`
+introduces genuinely new branching logic (eligibility gate, address
+allocation, on-disk existence check to route create vs. update) beyond a
+mechanical extraction, so it was driven by its own RED tests
+(`writer_test.go`) rather than treated as risk-free restructuring —
+consistent with strict TDD's "write a failing test for new behavior, even
+inside a REFACTOR task" rule. `EmitPage` and `UpdateInPlace` themselves
+were not modified; `Writer.Promote` only calls them in sequence.
+
+### Design decisions
+
+- **`PrecedenceStore` is a named `map[string]PrecedenceEntry`, not a
+  struct wrapping a map.** D6 says the sidecar file is keyed directly by
+  `page_address`; a bare named map type serializes to exactly that shape
+  (`{"c-000042": {"body_hash": "...", "frontmatter_hash": "..."}}`) with
+  no extra wrapper key, and `Get`/`Set` are plain methods on the map
+  type — matching the task's literal signatures. Unlike
+  `.raw/.manifest.json` (wiki-ingest-owned, `address.go`'s open
+  `map[string]json.RawMessage` pattern), `.raw/.longterm-mem-manifest.json`
+  has exactly one writer (this package), so the closed
+  `PrecedenceEntry{BodyHash, FrontmatterHash}` struct is safe per the
+  orchestrator's explicit instruction — no open-key-set treatment needed
+  here.
+- **`UpdateInPlace`'s `Action` is a struct (`Kind` + `Diagnostic *Diagnostic`),
+  not just an enum**, so the task's exact `(action Action, err error)`
+  signature can still carry the R-030 diagnostic without a third return
+  value. `Diagnostic` is `lint.go`'s existing type (`Rule`, `Detail`) reused
+  as-is, not a new diagnostic type — one diagnostic shape per package.
+- **Local-edit detection compares the on-disk file's *current* content
+  hash against the store's *last-written* hash, not the incoming page's
+  new content hash.** A stored entry that matches means longterm-mem's
+  own last write is still untouched, so it is safe to overwrite with the
+  freshly rendered `page` (which is expected to differ — that is the
+  whole point of a revision bump or retitle). A **missing** store entry
+  (no prior tracking yet) is treated as "not locally edited" — there is no
+  baseline yet to diverge from — so the first `UpdateInPlace` call for an
+  older, pre-slice-6-promoted page establishes a baseline instead of
+  false-positively skipping it.
+- **`UpdateInPlace`/`Writer.Promote` mutate `store` in place but never
+  call `PrecedenceStore.Save` themselves.** Persisting is left to the
+  caller (a future `sync` run, slice 7, saves once after promoting every
+  eligible observation, not once per page) — the same
+  compute-then-caller-persists seam Slice 5's `apply-progress.md` already
+  established for `Allocate`/`RegisterIndex`/`RegisterLog`.
+- **`Writer.Promote(obs, explicit bool)` calls `Eligible(obs, explicit)`
+  itself** rather than assuming every caller pre-filters. Slice 7's
+  `Sync` will still pre-filter for efficiency across many observations,
+  but `Writer` needs to be self-contained for slice 8b's explicit-promote
+  surface, which calls `Promote` directly with no separate eligibility
+  gate of its own. An ineligible observation returns a zero `Result` with
+  a nil error (not an error) — ineligibility is an expected skip outcome
+  for a scanning caller, never a failure.
+- **`Writer.Promote` calls `EmitPage(obs, address, nil)` with no related
+  links.** Related-edge resolution ("judged unsuperseded edges to
+  promoted pages", D7) is not in this slice's scope — `propagate.go`
+  (slice 7, R-033) patches a page's `related:` field separately via a
+  frontmatter-only edit, after promotion, without rewriting the body. No
+  related-link plumbing was invented ahead of that slice.
+- **Hashing (`hashText`) is `sha256` hex-encoded**, applied separately to
+  the rendered frontmatter block and the rendered body — matching D6's
+  "`body_hash`+`frontmatter_hash` separately" instruction so a future
+  frontmatter-only patch (R-033) can update just `frontmatter_hash`
+  without touching `body_hash` or forcing a body rewrite.
+
+### Verification
+
+`cd longterm-mem && gofmt -l .` — clean.
+`go vet ./...` — clean.
+`go test ./... -cover -count=1` — all 7 packages pass:
+`internal/promote` **83.3%** (up slightly from Slice 5's 83.0% — the new
+files add mostly directly-exercised logic, no new large defensive branch
+surface); `internal/engram` 82.7%; `internal/query` 85.1%;
+`internal/vault` 83.8%; `internal/vaultreg` 67.2%; `cmd/longterm-mem` 0.0%
+(unchanged — no promotion CLI wiring is in scope until slice 8b); root
+module `[no statements]` (unchanged).
+`go test . -run TestOSExecImportAllowlist -v` — PASS (re-verified R-021:
+none of `store.go`, `update.go`, `writer.go` imports `os/exec`; only
+`internal/vault/runner.go` does).
+
+### Files created
+
+- `longterm-mem/internal/promote/store.go`, `store_test.go`
+- `longterm-mem/internal/promote/update.go`, `update_test.go`
+- `longterm-mem/internal/promote/writer.go`, `writer_test.go`
+
+### Files modified
+
+- `openspec/changes/longterm-mem/tasks.md` (Slice 6 items 6.1–6.9 ticked)
+
+### Authored line budget
+
+Plain line counts (`wc -l`) for the six new files, `git diff --numstat`
+for the one modified tracked file:
+
+| Part (proposed seam) | File | Lines |
+|---|---|---|
+| A — precedence store (D6) | `internal/promote/store.go` (new) | 69 |
+| A | `internal/promote/store_test.go` (new) | 49 |
+| **A subtotal** | | **118** |
+| B — update-in-place + local-edit precedence (R-008/R-030) | `internal/promote/update.go` (new) | 83 |
+| B | `internal/promote/update_test.go` (new) | 249 |
+| **B subtotal** | | **332** |
+| C — consolidated `Writer.Promote` entrypoint (6.8) | `internal/promote/writer.go` (new) | 76 |
+| C | `internal/promote/writer_test.go` (new) | 147 |
+| **C subtotal** | | **223** |
+| — | `tasks.md` (diff, checkbox toggles, 9 items) | 18 |
+| **Total (A+B+C+tasks.md)** | | **691** |
+
+**Risk: well over the 400-line hard cap and the 330–380 forecast**, the
+same root cause named in every prior slice's evidence: strict TDD's
+no-trivial-assertion/triangulation rule demands a dedicated fixture and a
+distinct assertion per named scenario, and this slice's tasks
+(6.3–6.6) explicitly name **four** R-008/R-030 scenarios in one shared
+test file (`update_test.go`), which alone is 249 lines.
+
+**Proposed PR seam split** (production dependency graph: `update.go`
+imports `store.go`'s `PrecedenceStore`/`PrecedenceEntry`; `writer.go`
+imports both `update.go`'s `UpdateInPlace`/`Action` and `store.go`'s
+types — dependencies flow strictly forward, A → B → C, so a stacked chain
+with each part based on the previous merged part has no part depending on
+anything not yet merged):
+
+- **Part A** (`store.go`+`store_test.go`, 118 lines) — PR6a, base PR5.
+  Self-contained; nothing in B or C is needed to review or merge it.
+- **Part B** (`update.go`+`update_test.go`, 332 lines) — PR6b, base PR6a.
+  **Still 82 lines over the 250 target** even alone — task 6.3–6.6 name
+  all four RED scenarios against the *same* `update_test.go` file, so
+  splitting that one file's four scenarios across two PRs would
+  contradict the task list's own "(same file)" instruction for 6.4–6.6.
+  Flagged for the orchestrator: either accept `size:exception` for Part B
+  specifically, or explicitly authorize splitting `update_test.go` into
+  two files (e.g. R-008 pair vs. R-030 pair) against the task list's
+  literal wording if strict 250-line compliance is required.
+- **Part C** (`writer.go`+`writer_test.go`, 223 lines) — PR6c, base PR6b.
+  Within the ≤250 target on its own.
+
+No scope was added beyond the unchecked 6.1–6.9 tasks; no test was
+omitted or trimmed below strict-TDD's assertion-quality bar to chase the
+budget.
+
+### Slice 6 — post-review corrections (delivery record)
+
+Part A (PR #192) passed its native review with zero corrections. Part B
+(PR #193) did not: the review ran at **high** risk across all four
+canonical lenses and opened one bounded correction on three CRITICAL,
+candidate-caused findings, all of them real defects in `UpdateInPlace`:
+
+1. `R3-missing-entry-overwrites` / `R4-fail-open-missing-precedence-entry`
+   — the local-edit guard was nested inside `if entry, ok :=
+   store.Get(address); ok`, so a page with **no** precedence entry fell
+   through to an unconditional write and destroyed on-disk content with
+   neither diagnostic nor error. Unknown provenance now fails closed.
+   RED: `TestUpdate_UnknownProvenancePageIsNotOverwritten` observed
+   `ActionUpdated` (the file had already been overwritten).
+2. `R4-write-store-persist-crash-window` — the page write and the store's
+   persistence being separate steps meant an interruption left the page
+   fingerprinted by the previous entry, so every later run misread it as
+   a local edit and skipped it forever. Content byte-identical to what
+   the call would write is now reconciled from disk. RED:
+   `TestUpdate_InterruptedPriorWriteReconciles` observed
+   `ActionSkippedLocalEdit`.
+
+The first correction attempt measured 173 changed lines against a frozen
+budget of 171 and was refused; trimming doc-comment verbosity (no
+behavior change) brought it inside. The targeted validator then refused
+admission with `compact review state has more than six admitted role
+values`, deterministically, on two consecutive relaunches of the same
+reoffered slot, so **PR #193 carries no receipt**; the maintainer chose
+to continue without filing a provider report, and the captured decline
+invocation returned `stale_target_identity` without mutating state.
+
+Part C (PR #194) closes the residual that finding 2 could only mitigate:
+`Writer.Promote` now persists the precedence sidecar as part of every
+promotion that wrote a page, so a page and the fingerprint proving
+longterm-mem wrote it always land together, and an interrupted run
+leaves N consistent pages instead of N pages of lost provenance. RED:
+`TestWriter_Promote_PersistsPrecedenceEntry` found no entry in a freshly
+loaded sidecar after `Promote`.

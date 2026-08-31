@@ -246,8 +246,8 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 - [x] 6.5 RED (same file) `TestUpdate_LocallyEditedPageSkippedWithDiagnostic` — on-disk content diverges from stored `body_hash`/`frontmatter_hash`; assert content update skipped, a diagnostic names the page. Scenario: "Locally edited page is skipped with a diagnostic" (R-030).
 - [x] 6.6 RED (same file) `TestUpdate_UnmodifiedPageUpdatesNormally` — page not locally modified since last write; assert normal update-in-place, no skip. Scenario: "Unmodified page updates normally" (R-030).
 - [x] 6.7 GREEN `longterm-mem/internal/promote/update.go` — `UpdateInPlace(store, page, existingPath) (action Action, err error)` implementing hash-divergence detection vs. update-in-place.
-- [ ] 6.8 REFACTOR — consolidate `EmitPage` (create) and `UpdateInPlace` (update) behind one `promote.Writer.Promote(obs, explicit bool) (Result, error)` entrypoint reused by `sync` (slice 7) and the explicit promote surface (slice 8b).
-- [ ] 6.9 Slice verification — `cd longterm-mem && go test ./...`.
+- [x] 6.8 REFACTOR — consolidate `EmitPage` (create) and `UpdateInPlace` (update) behind one `promote.Writer.Promote(obs, explicit bool) (Result, error)` entrypoint reused by `sync` (slice 7) and the explicit promote surface (slice 8b).
+- [x] 6.9 Slice verification — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestPrecedenceStore|TestUpdate`
 
 ---
