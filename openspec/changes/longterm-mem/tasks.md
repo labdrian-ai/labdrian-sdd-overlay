@@ -92,7 +92,7 @@ Ordering note: slice 9 has no prior dependency (`dependencies: []` in entry.json
 | R-026 | 3b | 3b.4, 3b.6 |
 | R-027 | 4 | 4.5–4.11 |
 | R-028 | 5 | 5.1–5.3 |
-| R-029 | 5 | 5.4–5.5 |
+| R-029 | 5, 7 | 5.4–5.5, 7.10 |
 | R-030 | 6 | 6.5–6.7 |
 | R-031 | 7 | 7.3–7.4 |
 | R-032 | 8b | 8b.4–8b.6 |
@@ -254,16 +254,17 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 7 — longterm-mem-promotion-sync (R-009, R-031, R-033) — PR7 (base: PR6)
 
-- [ ] 7.1 RED `longterm-mem/internal/promote/sync_test.go::TestSync` (table-driven, 3 cases) — never-promoted eligible observation is promoted; already-promoted-at-rev-2-now-rev-3 is re-promoted; already-promoted-at-current-revision is a no-op. Scenarios: "Never-promoted eligible observation is promoted", "Revised eligible observation is re-promoted", "Unchanged eligible observation is a no-op" (R-009).
-- [ ] 7.2 GREEN `longterm-mem/internal/promote/sync.go` — `Sync(ctx, Deps, project string) (SyncReport, error)` iterating eligible observations, calling `Writer.Promote` only for unpromoted-or-revised ones.
-- [ ] 7.3 RED (same file) `TestSync_IndexAndSyncStateReflectCompletion` — sync run promoting three observations; assert the vault index reflects the new pages and `.vault-meta/longterm-mem-sync-state.json` carries the completion timestamp. Scenario: "Index and sync-state both reflect the completed sync" (R-031).
-- [ ] 7.4 GREEN — wire `Sync` to call `vault.Rebuild` (3a.4) after promotion and write the sync-state record (tmp+fsync+rename).
-- [ ] 7.5 RED `longterm-mem/internal/promote/propagate_test.go::TestPropagate` (table-driven, 4 cases) — supersession → `status: superseded` + `related` to successor, body unchanged; soft-delete with no successor → `status: archived`; untouched observation keeps its status; a status patch on a locally edited page still lands, body not rewritten, and the precedence store's `frontmatter_hash` updates so a later sync does not misread the patch as a human edit. Scenarios: "Supersession updates status and related, body untouched", "Soft-delete with no successor archives the page", "Untouched observation keeps its status", "Status patch on a locally edited page still lands (canon wins)" (R-033).
-- [ ] 7.6 GREEN `longterm-mem/internal/promote/propagate.go` — `Propagate(ctx, Deps, project string) (PropagateReport, error)`: D11 successor rule (newer observation by `created_at` wins on a `supersedes` edge, independent of edge direction); soft-deleted with no accepted `supersedes` edge → `archived`; frontmatter-only patch of `status:`/`related:`/`superseded_by:`, body never rewritten, `frontmatter_hash` updated (`body_hash` untouched).
-- [ ] 7.7 GREEN `longterm-mem/cmd/longterm-mem/cmd_sync.go` — `sync --project P [--vault DIR]` wiring `Sync` → `Propagate` → index rebuild → sync-state write.
-- [ ] 7.8 REFACTOR — move the frontmatter-only line patcher from `propagate.go` into `frontmatter.go` (slice 4) so it is one shared editor.
-- [ ] 7.9 Slice verification — `cd longterm-mem && go test ./...`.
+- [x] 7.1 RED `longterm-mem/internal/promote/sync_test.go::TestSync` (table-driven, 3 cases) — never-promoted eligible observation is promoted; already-promoted-at-rev-2-now-rev-3 is re-promoted; already-promoted-at-current-revision is a no-op. Scenarios: "Never-promoted eligible observation is promoted", "Revised eligible observation is re-promoted", "Unchanged eligible observation is a no-op" (R-009).
+- [x] 7.2 GREEN `longterm-mem/internal/promote/sync.go` — `Sync(ctx, Deps, project string) (SyncReport, error)` iterating eligible observations, calling `Writer.Promote` only for unpromoted-or-revised ones.
+- [x] 7.3 RED (same file) `TestSync_IndexAndSyncStateReflectCompletion` — sync run promoting three observations; assert the vault index reflects the new pages and `.vault-meta/longterm-mem-sync-state.json` carries the completion timestamp. Scenario: "Index and sync-state both reflect the completed sync" (R-031).
+- [x] 7.4 GREEN — wire `Sync` to call `vault.Rebuild` (3a.4) after promotion and write the sync-state record (tmp+fsync+rename).
+- [x] 7.5 RED `longterm-mem/internal/promote/propagate_test.go::TestPropagate` (table-driven, 4 cases) — supersession → `status: superseded` + `related` to successor, body unchanged; soft-delete with no successor → `status: archived`; untouched observation keeps its status; a status patch on a locally edited page still lands, body not rewritten, and the precedence store's `frontmatter_hash` updates so a later sync does not misread the patch as a human edit. Scenarios: "Supersession updates status and related, body untouched", "Soft-delete with no successor archives the page", "Untouched observation keeps its status", "Status patch on a locally edited page still lands (canon wins)" (R-033).
+- [x] 7.6 GREEN `longterm-mem/internal/promote/propagate.go` — `Propagate(ctx, Deps, project string) (PropagateReport, error)`: D11 successor rule (newer observation by `created_at` wins on a `supersedes` edge, independent of edge direction); soft-deleted with no accepted `supersedes` edge → `archived`; frontmatter-only patch of `status:`/`related:`, body never rewritten, `frontmatter_hash` updated (`body_hash` untouched). Deviation: `superseded_by:` was not implemented — see apply-progress.md.
+- [x] 7.7 GREEN `longterm-mem/cmd/longterm-mem/cmd_sync.go` — `sync --project P [--vault DIR]` wiring `Sync` → `Propagate` → index rebuild → sync-state write.
+- [x] 7.8 REFACTOR — moved the frontmatter-only line patcher into `frontmatter.go` (slice 4) as `PatchStatusFields`, so it is one shared editor. Landed alongside 7.6 (propagate.go depends on it directly), not deferred after 7.7 as originally sequenced.
+- [x] 7.9 Slice verification — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestSync|TestPropagate`
+- [x] 7.10 RED/GREEN `longterm-mem/internal/promote/writer.go` + `writer_test.go` — wire `RegisterIndex`/`RegisterLog` (register.go, Slice 5) into `Writer.Promote` so R-029 ("register it in both the vault's master catalog and its append-only promotion log") is satisfied end to end: a promotion that actually writes a page (create or update) registers it; a skip (`ActionSkippedLocalEdit`) or an ineligible observation registers nothing. **This task did not exist in the original task list** — 7.1–7.9 never mention wiring `RegisterIndex`/`RegisterLog` in, and Slice 7's own apply-progress.md explicitly flagged the gap ("`RegisterIndex`/`RegisterLog` (Slice 5) remain unwired into `Writer.Promote`/`Sync`") without a task to close it. Added retroactively because R-029 is unmet without it. Scenario: "New page is discoverable and logged" (R-029).
 
 ---
 

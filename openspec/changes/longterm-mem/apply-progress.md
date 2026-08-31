@@ -1396,3 +1396,450 @@ longterm-mem wrote it always land together, and an interrupted run
 leaves N consistent pages instead of N pages of lost provenance. RED:
 `TestWriter_Promote_PersistsPrecedenceEntry` found no entry in a freshly
 loaded sidecar after `Promote`.
+
+---
+
+## Slice 7 — longterm-mem-promotion-sync (R-009, R-031, R-033) (COMPLETE)
+
+All Slice 7 tasks (7.1–7.9) implemented and ticked in `tasks.md`, strict
+TDD RED → GREEN throughout, plus two mandatory hardening follow-ups folded
+in as instructed: the `engram.ListObservations` NULL-scan fix (with a
+widened SELECT for D11) and marker-block writer hardening in `register.go`.
+
+### TDD Cycle Evidence
+
+| Task | Test File | RED (failure excerpt) | GREEN |
+|---|---|---|---|
+| 7.1 | `sync_test.go::TestSync` (3 cases) | `undefined: Sync` / `undefined: Deps` (build failure, executed together with 7.3) | — |
+| 7.2 | `sync.go` | — | `go test -run TestSync -v` → 3/3 subtests PASS on first implementation |
+| 7.3 | `sync_test.go::TestSync_IndexAndSyncStateReflectCompletion` (same file) | `undefined: syncStateRelPath` (build failure, executed together with 7.1) | — |
+| 7.4 | `sync.go` (extends `Deps`/`Sync` from 7.2) | — | `go test -run TestSync -v` → 4/4 PASS on first implementation |
+| 7.5 | `propagate_test.go::TestPropagate` (4 cases) | `undefined: Propagate` (build failure, executed) | — |
+| 7.6 | `propagate.go` + `frontmatter.go::PatchStatusFields` (7.8, landed together — see Deviations) | — | first pass: 3/4 subtests failed on a wrong test assumption (`status: "archived"` quoted; `Render()` never quotes `status:`, only `title:`/list items) — fixed the test's own assertions, not production code, then `go test -run TestPropagate -v` → 4/4 PASS |
+| 7.7 | `cmd_sync.go` + `main_test.go::TestRun_DispatchesSyncSubcommand` | no paired RED task in tasks.md for this file (matches `cmd_index.go`/`cmd_query.go` precedent, Slice 6 evidence: "no promotion CLI wiring is in scope"); test written and run against the already-wired dispatch, PASS on first run — documented as supplementary verification, not a formal RED/GREEN pair | `go test ./cmd/... -run TestRun_DispatchesSyncSubcommand -v` → PASS |
+| 7.9 | slice verification | — | `cd longterm-mem && gofmt -l . && go vet ./... && go test ./... -cover -count=1` → all 7 packages pass |
+
+**Mandatory follow-up 1 (engram NULL-scan fix)**: `TestListObservations_SurvivesLegacyNullSyncIDRow` and
+`TestObservationsIncludingDeleted_IncludesSoftDeletedRows` — RED:
+`unknown field CreatedAt in struct literal of type Observation` /
+`store.ObservationsIncludingDeleted undefined` (build failure, executed
+together with the updated `TestListObservations_IncludesEligibilityAndExtraFields`).
+GREEN: widened `Observation` (`CreatedAt`, `UpdatedAt`, `DeletedAt`) and
+`ListObservations`'s SELECT, added `ObservationsIncludingDeleted`, factored
+both through one `scanObservationRow` — `go test ./internal/engram/... -v` →
+all 12 tests PASS.
+
+**Mandatory follow-up 2 (marker-block hardening, register.go)**: four RED
+tests, one per named defect:
+
+| Defect | RED test | RED result | GREEN |
+|---|---|---|---|
+| `RegisterLog` ignores `at`, trusts call order | `TestRegisterLog_OutOfOrderCallsStaySortedByTimestamp` | FAIL — "Older Entry" landed above "Newer Entry" when registered second, despite being chronologically older | `insertLogEntry` now inserts before the first existing header whose own date is `<=` the new entry's date, scanning from the top, instead of always inserting at the top |
+| Malformed marker block (begin present, end missing) silently drops entries | `TestRegisterIndex_MalformedMarkerBlockRefusesToDropEntries` | FAIL — `RegisterIndex` returned `nil` error and would have overwritten the file | `parseIndexEntries` now returns `(nil, error)` for begin-without-end, and `RegisterIndex` propagates it before ever calling `writeIndexBlock` — file verified untouched |
+| No test proves hand-written content outside the block survives a rewrite | `TestRegisterIndex_PreservesHandWrittenContentOutsideBlock` | **PASS on first run** — existing `replaceOrAppendBlock` logic already preserved it correctly; this closes a coverage gap, not a behavior fix (documented honestly rather than claimed as a defect fix) | — |
+| Titles containing `\|` or `]]` break the wikilink entry round-trip | `TestRegisterIndex_TitleWithSpecialCharsRoundTrips` | FAIL — a title containing `]]` was silently truncated to the text before the first `]]` on the entry's next `RegisterIndex` re-parse, permanently losing the tail | new `indexEntryLineRegexp` (`^- \[\[(c-\d{6})\|(.*)\]\]$`, anchored per-line, greedy `.*` backs off to the LAST `]]` on the line) replaces the shared, more permissive `wikilinkPattern` for `parseIndexEntries` specifically; `lint.go`'s own use of `wikilinkPattern` (arbitrary-prose scanning) is untouched |
+
+`go test ./internal/promote/... -run TestRegister -v` → 7/7 PASS after the
+fix (3 genuine RED→GREEN, 1 coverage-closing pass-on-first-run, 3 pre-existing).
+
+### Design decisions
+
+- **`findPromotedAddress` (address.go) became `findPromotedPage`, returning
+  `(promotedPage{Address, Revision}, bool, error)`.** Sync's R-009
+  unpromoted-or-revised gate needs the last-promoted `engram_revision` to
+  decide re-promotion, and `Allocate`'s existing scan already walks every
+  `wiki/memory/*.md` page looking for an `engram_id`/`project` match — one
+  scan, two callers, rather than a second near-duplicate scan. `Allocate`
+  now reads `.Address` from the same call it already made. This is a
+  necessary support change inside 7a's stated scope (`sync.go`/
+  `sync_test.go` + the engram fix), not a new file, and its own tests
+  (`address_test.go`) all still pass unchanged.
+- **Sync's "unchanged is a no-op" gate lives in `Sync` itself, before
+  `Writer.Promote` is ever called — not inside `Writer.Promote` or
+  `UpdateInPlace`.** `EmitPage` stamps `updated:` from `nowFunc()` on every
+  call, so re-rendering an unchanged observation at a later wall-clock time
+  would produce different bytes from what is on disk even though nothing
+  about the observation changed; `UpdateInPlace`'s local-edit detection
+  compares against the *current on-disk* hash, not the *incoming* page's
+  hash, so it would not refuse this write, it would just perform it —
+  violating R-009's literal "is not re-promoted" no-op guarantee. Filtering
+  in `Sync` before the call is the only way to guarantee zero I/O for the
+  unchanged case, not just an idempotent overwrite.
+- **`Deps` is one struct shared by `Sync` and `Propagate`**, both needing
+  `Engram`/`Writer`; `RebuildIndex` is `Sync`-only but harmless as an
+  unused field when `Propagate` is called with the same `Deps` value —
+  matching `cmd_sync.go`'s actual usage (one `Deps` built once, passed to
+  both calls) rather than two near-identical dependency structs.
+- **`Propagate` reads observations via a NEW `ObservationsIncludingDeleted`
+  method, not `ListObservations`.** `ListObservations`'s R-020 scoping
+  deliberately excludes soft-deleted rows for every other caller (query,
+  eligibility); `Propagate` is the one caller that must see them, to tell
+  "soft-deleted, archive" from "active, nothing to do" — a dedicated method
+  keeps that exclusion intact everywhere else rather than adding an
+  include-deleted flag that every other call site would have to remember
+  to leave `false`.
+- **D11's successor resolution never trusts `memory_relations`' source/
+  target labeling.** `resolveStatus` looks up the OTHER endpoint of a
+  `supersedes` edge (by `sync_id`, via a project-scoped `bySyncID` map built
+  from the same `ObservationsIncludingDeleted` call, so no separate
+  by-sync_id lookup method was added to `engram`) and compares `created_at`
+  strings directly: whichever side is newer survives. `TestPropagate`'s
+  supersession case deliberately wires the edge with `source_id` on the
+  NEWER observation and `target_id` on the OLDER one — the reverse of what
+  a "source is superseded, target is the successor" assumption would
+  expect — specifically to prove direction-independence, not just direction
+  agreement with one arbitrary convention.
+- **`Propagate` never fails closed on unknown or diverged precedence, unlike
+  `UpdateInPlace`.** R-033's "canon wins" scenario requires a status patch
+  to land even on a locally edited page. `PatchStatusFields` is called
+  unconditionally once a page is found promoted and a status is resolved;
+  the precedence sidecar is updated AFTER the patch to reflect
+  ground truth (`frontmatter_hash` = the freshly patched block's hash,
+  `body_hash` = whatever body is actually on disk, patched or not) — the
+  entry heals to match reality rather than gating on it.
+- **Timestamps (`CreatedAt`/`UpdatedAt`/`DeletedAt` on `engram.Observation`)
+  are plain strings, never parsed into `time.Time`.** Every row in one
+  Engram database is written through the same `datetime('now')`/explicit-ISO
+  convention, so the raw TEXT SQLite already stores is lexicographically
+  comparable as-is; D11 only ever needs to compare two `CreatedAt` values
+  against each other, never format or arithmetic on them.
+- **Deviation — `superseded_by:` was not implemented.** Task 7.6's prose
+  names three patchable fields (`status:`/`related:`/`superseded_by:`), but
+  `superseded_by` appears nowhere in the D7 vault contract, `frontmatter.go`'s
+  `Render()`, `lint.go`'s field checks, or R-033's own spec scenarios (which
+  describe exactly two fields: status and related-links). Adding an unplanned
+  frontmatter field now would be a schema change affecting every previously
+  promoted and golden-tested page, unreviewed by spec or design. `Propagate`
+  patches only `status:` and `related:`, matching `spec.md` literally;
+  flagging this for the orchestrator/maintainer to confirm `superseded_by`
+  was a task-authoring artifact rather than an intentional field.
+- **7.8's REFACTOR (moving the frontmatter-only line patcher into
+  `frontmatter.go`) landed together with 7.6, not after 7.7 as the task
+  list's literal ordering implies.** `propagate.go`'s own GREEN cannot
+  compile without `PatchStatusFields` existing somewhere; the task list's
+  numbering (7.6 GREEN, 7.7 `cmd_sync.go`, 7.8 REFACTOR) reads as sequential
+  but the dependency is the other way around for this one function. The
+  PR-seam plan's "7d: cmd_sync.go (7.7), the 7.8 refactor" note is
+  correspondingly revised in the Authored Line Budget section below.
+
+### Verification
+
+`cd longterm-mem && gofmt -l .` — clean.
+`go vet ./...` — clean.
+`go test ./... -cover -count=1` — all 7 packages pass:
+`internal/promote` **83.6%**; `internal/engram` **81.8%**;
+`internal/query` 85.1% (unchanged); `internal/vault` 83.8% (unchanged);
+`internal/vaultreg` 67.2% (unchanged); `cmd/longterm-mem` **13.4%** (up
+from 0.0% — `cmd_sync.go`'s dispatch path is now covered by
+`TestRun_DispatchesSyncSubcommand`, though `cmdSync`'s success path past
+`vaultreg.Resolve` remains untested, matching `cmd_index.go`/
+`cmd_query.go`'s own established precedent of no dedicated success-path
+CLI tests); root module `[no statements]` (unchanged).
+`go test . -run TestOSExecImportAllowlist -v` — PASS (re-verified R-021:
+none of `sync.go`, `propagate.go`, `cmd_sync.go`, `register.go`,
+`frontmatter.go`, `address.go`, `store.go` imports `os/exec`; only
+`internal/vault/runner.go` does).
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd longterm-mem && go test ./internal/promote/... ./internal/engram/... ./cmd/... -v` — 100% PASS, 0 failures, 0 skips (engram: 12 tests; promote: `TestSync` 4, `TestPropagate` 4, `TestRegister*` 7, plus all Slice 1–6 tests unchanged; cmd: `TestMain_BuildsIndependentModule` + `TestRun_DispatchesSyncSubcommand`) |
+| Runtime harness command/scenario and exact result | `cmd_sync.go`'s dispatch path exercised end-to-end through `run(["sync", "--project", ...])` against a real temp `HOME`/vault-registry file (`TestRun_DispatchesSyncSubcommand`) — PASS, reaches `vaultreg.Resolve`'s real `vault_not_configured` exit code, proving the CLI wiring, not just the library functions in isolation |
+| Rollback boundary | Every file is additive-only or a mechanically isolated extension of an existing function (`findPromotedAddress`→`findPromotedPage`, `logHeaderRegexp`→`logHeaderDateRegexp`+`insertLogEntry`, `parseIndexEntries`'s new `error` return). Reverting `sync.go`+`sync_test.go`, or `propagate.go`+`propagate_test.go`+`frontmatter.go`'s `PatchStatusFields`+related helpers, or `register.go`'s four hardening changes+`register_test.go`'s four new tests, or `cmd_sync.go`+the two-line `main.go` dispatch case+the one `main_test.go` test, each independently compiles and leaves every earlier slice's tests green (verified incrementally at every RED/GREEN boundary above) |
+
+### Files created
+
+- `longterm-mem/internal/promote/sync.go`, `sync_test.go`
+- `longterm-mem/internal/promote/propagate.go`, `propagate_test.go`
+- `longterm-mem/cmd/longterm-mem/cmd_sync.go`
+
+### Files modified
+
+- `longterm-mem/internal/engram/store.go`, `store_test.go` (mandatory
+  NULL-scan fix + D11 timestamp widening)
+- `longterm-mem/internal/promote/address.go` (`findPromotedAddress` →
+  `findPromotedPage`, revision-aware)
+- `longterm-mem/internal/promote/frontmatter.go` (`PatchStatusFields`,
+  `setScalarField`, `setListField` — task 7.8)
+- `longterm-mem/internal/promote/register.go`, `register_test.go`
+  (mandatory marker-block hardening)
+- `longterm-mem/internal/promote/writer_test.go` (one stale comment,
+  `findPromotedAddress` → `findPromotedPage`)
+- `longterm-mem/cmd/longterm-mem/main.go` (`sync` dispatch case),
+  `main_test.go` (`TestRun_DispatchesSyncSubcommand`)
+- `openspec/changes/longterm-mem/tasks.md` (Slice 7 items 7.1–7.9 ticked)
+
+### Authored line budget
+
+`wc -l` for new files, `git diff --numstat` for modified tracked files
+(add+delete counted, matching every prior slice's convention):
+
+| Part (proposed seam) | File | Lines |
+|---|---|---|
+| 7a — `Sync` (R-009/R-031) + engram NULL-scan fix | `internal/promote/sync.go` (new) | 114 |
+| 7a | `internal/promote/sync_test.go` (new) | 248 |
+| 7a | `internal/promote/address.go` (`findPromotedPage` refactor, +39/-18) | 57 |
+| 7a | `internal/engram/store.go` (+70/-7) | 77 |
+| 7a | `internal/engram/store_test.go` (+88/-0) | 88 |
+| 7a | `internal/promote/writer_test.go` (comment fix, +1/-1) | 2 |
+| **7a subtotal** | | **586** |
+| 7c — `Propagate` (R-033) + `PatchStatusFields` (7.8, moved up — see Deviations) | `internal/promote/propagate.go` (new) | 122 |
+| 7c | `internal/promote/propagate_test.go` (new) | 198 |
+| 7c | `internal/promote/frontmatter.go` (+84/-0) | 84 |
+| **7c subtotal** | | **404** |
+| 7d — `cmd_sync.go` (7.7) + marker-block hardening | `cmd/longterm-mem/cmd_sync.go` (new) | 78 |
+| 7d | `cmd/longterm-mem/main.go` (+2/-0) | 2 |
+| 7d | `cmd/longterm-mem/main_test.go` (+17/-0) | 17 |
+| 7d | `internal/promote/register.go` (+60/-22) | 82 |
+| 7d | `internal/promote/register_test.go` (+130/-0) | 130 |
+| **7d subtotal** | | **309** |
+| — | `tasks.md` (diff, checkbox toggles + 2 annotation notes, 9 items) | 18 |
+| **Total (7a+7c+7d+tasks.md)** | | **1317** |
+
+**Risk: far over the 400-line hard cap and the 340–400 forecast, the
+largest overage of the chain so far.** Two compounding causes, both
+explicit instructions rather than scope creep:
+
+1. **Strict TDD's no-trivial-assertion/triangulation rule**, the same root
+   cause named in every prior slice's evidence — R-009's 3 scenarios and
+   R-033's 4 scenarios each need their own fixture and a distinct
+   assertion, and `sync_test.go`/`propagate_test.go` both needed a
+   from-scratch Engram SQLite fixture builder (`newFixtureEngramStore`,
+   shared between the two files since both are `package promote`) that no
+   prior slice needed at this depth (revision_count, sync_id, created_at,
+   deleted_at, and `memory_relations` rows all controllable per case).
+2. **The two mandatory follow-ups** (engram NULL-scan fix + marker-block
+   hardening) were explicitly instructed to be folded into this slice
+   rather than deferred, and both are real, separately-evidenced defects
+   with their own RED tests — `internal/engram/store_test.go`'s 88 added
+   lines and `internal/promote/register.go`+`register_test.go`'s 212
+   changed lines together account for **300 of the 1317 total**, none of
+   it traceable to R-009/R-031/R-033 themselves.
+
+**Proposed PR seam split** (production dependency graph: `sync.go` and
+`propagate.go` both depend on `address.go`'s `findPromotedPage` and
+`store.go`'s `PrecedenceStore`/`Writer` (already merged in Slice 6);
+`propagate.go` additionally depends on `frontmatter.go`'s
+`PatchStatusFields` (7.8, bundled into 7c out of necessity — see
+Deviations); `cmd_sync.go` depends on both `sync.go` and `propagate.go`.
+`register.go`'s hardening has no dependency on `sync.go`/`propagate.go` and
+no production code yet calls `RegisterIndex`/`RegisterLog` — see the note
+below — so it could split out independently, but is kept in 7d per the
+original seam plan since it is a small, self-contained, already-isolated
+diff):
+
+- **Part 7a** (`sync.go`+`sync_test.go`+`address.go`+`store.go`+
+  `store_test.go`+`writer_test.go`, 586 lines) — PR7a, base PR6c (Slice
+  6's Part C). Self-contained: `go build ./...` and every existing test
+  pass with only this part applied.
+- **Part 7c** (`propagate.go`+`propagate_test.go`+`frontmatter.go`,
+  404 lines) — PR7c, base PR7a. Revised from the pre-plan's "7c: propagate
+  only" because `PatchStatusFields` (originally slated for 7d) is a hard
+  compile-time dependency of `propagate.go`'s own GREEN.
+- **Part 7d** (`cmd_sync.go`+`main.go`+`main_test.go`+`register.go`+
+  `register_test.go`, 309 lines) — PR7d, base PR7c. Closest of the three to
+  the ≤250 target; still 59 over.
+
+Flagged for the orchestrator: all three parts exceed 250 lines and the
+combined total is more than 3× the 400-line cap, consistent with the
+`auto-chain`/`feature-branch-chain` delivery strategy already resolved in
+`entry.json` — no new decision is being requested, this is the evidence
+that strategy expects at apply time. No scope was added beyond the
+unchecked 7.1–7.9 tasks plus the two explicitly mandated follow-ups; no
+test was omitted or trimmed below strict-TDD's assertion-quality bar to
+chase the budget.
+
+**Observation (not a defect in this slice's scope): `RegisterIndex`/
+`RegisterLog` (Slice 5) remain unwired into `Writer.Promote`/`Sync` as of
+this slice.** Neither `Writer.Promote` nor the new `Sync` calls them; tasks
+7.1–7.9 do not mention wiring them in, and no prior slice's apply-progress
+records doing so either. Flagging for a later slice or an explicit
+decision — pages are promoted and patched correctly, but `wiki/index.md`
+and `wiki/log.md` are not currently kept in sync with them by any
+production code path.
+
+### Task 7.10 — R-029 wiring + Gap 2 coverage (closes the observation above)
+
+Two gaps closed under strict TDD, both in `internal/promote`. Task 7.10 was
+added to `tasks.md` at the end of the Slice 7 section (ticked) because
+7.1–7.9 never included it, even though R-029 requires it and this
+section's own "Observation" above had already flagged the gap.
+
+**Gap 1 — `Writer.Promote` never registered a page (R-029 unmet end to
+end).** `RegisterIndex`/`RegisterLog` (Slice 5) had zero production
+callers; confirmed via `rg -n "RegisterIndex|RegisterLog" --type go`,
+matches only in `register.go` and `register_test.go`.
+
+RED (all in `writer_test.go`, run together before the fix):
+
+| Test | Failure |
+|---|---|
+| `TestWriter_Promote_CreateRegistersIndexAndLog` | `read wiki/index.md: open .../wiki/index.md: no such file or directory` |
+| `TestWriter_Promote_UpdateRegistersIndexAndLog` | `read wiki/log.md: open .../wiki/log.md: no such file or directory` |
+| `TestWriter_Promote_SkipDoesNotRegister` | `read wiki/index.md (before): open .../wiki/index.md: no such file or directory` |
+| `TestWriter_Promote_IneligibleDoesNotRegister` | PASS on first run (the ineligible early-return already existed pre-7.10; this test proves that path stays untouched, not a new behavior) |
+
+GREEN: added `indexMdRelPath`/`logMdRelPath` constants (`register.go`) and
+a `Writer.register(addr, title string) error` helper (`writer.go`) calling
+`RegisterIndex` then `RegisterLog(..., nowFunc())`; called from the create
+branch (after `Store.Save` succeeds) and the update branch (only when
+`action.Kind != ActionSkippedLocalEdit`, after `Store.Save` succeeds). A
+registration failure is surfaced as an error but does NOT withdraw the
+page (unlike a failed `Store.Save`, which does): the page is still valid
+and its provenance is already durable in the precedence sidecar, so only
+the catalog/log entry is missing and a later sync/`doctor` run can repair
+it — documented directly in `Promote`'s doc comment.
+`go test ./internal/promote/... -run 'TestWriter|TestRegister' -v` →
+18/18 PASS after the fix; full `go test ./...` also green (no
+regressions in `sync_test.go`/`propagate_test.go`, which call
+`Writer.Promote` extensively).
+
+**Gap 2 — two slice-7-extracted helpers had no direct unit tests.**
+
+`findPromotedPage` (`address.go`, 7a REFACTOR)'s `Revision` field and its
+unparseable-`engram_revision` error branch were exercised by nothing in
+`address_test.go`. Three new tests were added there; all three PASSED
+immediately against the unmodified 7a implementation (expected — no
+behavior bug), so RED evidence was captured by mutation instead, then
+reverted before GREEN:
+
+| Test | Mutation | RED failure |
+|---|---|---|
+| `TestFindPromotedPage_RevisionRoundTrips` | return `Revision: 0` unconditionally | `Revision = 0, want 5 (the promoted page's own engram_revision)` |
+| `TestFindPromotedPage_MissingRevisionDefaultsToZero` | default `revision := -1` | `Revision = -1, want 0 for a page with no engram_revision field (not an error)` |
+| `TestFindPromotedPage_UnparseableRevisionErrors` | `revision, _ = strconv.Atoi(raw)` (swallow the error) | `findPromotedPage = nil error, want an error for an unparseable engram_revision` |
+
+`PatchStatusFields` (`frontmatter.go`, task 7.8) had no direct test, only
+indirect coverage via `propagate_test.go`. Four new tests were added in a
+new `frontmatter_test.go` (the one production file in the package with no
+paired `_test.go` before this — every other file already follows a 1:1
+naming convention). Running them as-written against the unmodified 7.8
+implementation surfaced a genuine, previously-undetected gap:
+
+| Test | Result as-written | Mutation (for the 3 that passed) | RED failure |
+|---|---|---|---|
+| `TestPatchStatusFields_ReplacesExistingFieldInPlace` | PASS | `setScalarField`'s prefix check changed to `key+"X: "` (never matches) | `status: developing` line survives the patch untouched while `related:` still updates |
+| `TestPatchStatusFields_AddsAbsentFieldIntoBlock` | **FAIL as-written** — `setListField` returned `block` unchanged when `key:` was entirely absent (no insertion), contradicting the required "patching an absent field adds it inside the frontmatter block" contract | — (already RED, no mutation needed) | `related: field was not added inside the frontmatter block` |
+| `TestPatchStatusFields_BodyNeverTouched` | PASS | `writeFileAtomic(path, []byte(newBlock+body+" "))` (stray trailing byte) | `body was rewritten by a status-only patch` |
+| `TestPatchStatusFields_PreservesContentOutsideBlockByteForByte` | PASS | same stray-byte mutation as above | `content outside the frontmatter block was not preserved byte-for-byte` |
+
+**Production code change for Gap 2**: yes, one — `setListField`
+(`frontmatter.go`) previously returned `block` unchanged when `key` had no
+existing line, silently leaving a field permanently absent. Added
+`insertBeforeClosingDelimiter`, called from `setListField`'s `start == -1`
+branch, which inserts the freshly rendered field section immediately
+before the block's closing `---` delimiter. `setScalarField` has the
+identical gap for an absent scalar field (e.g. a hand-authored page
+missing `status:` entirely) but was left unmodified: no test in this
+task's scope exercises it, and strict TDD forbids changing production
+code without a failing test driving it — flagging this as a residual,
+symmetric gap for a future task if a scalar-field-absent scenario ever
+becomes real (in practice `Render()` always emits `status:`, so
+`Propagate`'s only caller never hits it today).
+
+After the fix: `go test ./internal/promote/... -run
+'TestFindPromotedPage_|TestPatchStatusFields_' -v` → 7/7 PASS.
+
+### Verification (task 7.10)
+
+`cd longterm-mem && gofmt -l .` — clean.
+`go vet ./...` — clean.
+`go test ./... -cover -count=1` — all 7 packages pass; `internal/promote`
+**84.4%** (up from 83.6% pre-7.10).
+`go test . -run TestOSExecImportAllowlist -v` — PASS (re-verified: none of
+the touched files — `writer.go`, `register.go`, `frontmatter.go`,
+`address.go` — import `os/exec`).
+
+### Work Unit Evidence (task 7.10)
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd longterm-mem && go test ./internal/promote/... -run 'TestWriter|TestRegister|TestFindPromotedPage_|TestPatchStatusFields_' -v` — 25/25 PASS, 0 failures |
+| Runtime harness command/scenario and exact result | `go test ./...` (full module, all 7 packages) — PASS, no regression in `sync_test.go`/`propagate_test.go`, both of which drive `Writer.Promote` through real temp-vault/temp-DB fixtures end to end, now also asserting on `wiki/index.md`/`wiki/log.md` where directly touched |
+| Rollback boundary | `writer.go`'s `register` call sites and the new `Writer.register` method revert cleanly to the pre-7.10 create/update branches; `register.go`'s two new path constants and `frontmatter.go`'s `insertBeforeClosingDelimiter` + `setListField`'s one added branch are each independently revertible without touching any other function; the six new/changed test files (`writer_test.go`, `address_test.go`, `frontmatter_test.go` new) compile and pass standalone |
+
+### Files created (task 7.10)
+
+- `longterm-mem/internal/promote/frontmatter_test.go`
+
+### Files modified (task 7.10)
+
+- `longterm-mem/internal/promote/writer.go` (`register` method + two call
+  sites + expanded `Promote` doc comment)
+- `longterm-mem/internal/promote/register.go` (`indexMdRelPath`/
+  `logMdRelPath` constants)
+- `longterm-mem/internal/promote/frontmatter.go` (`setListField`'s
+  absent-field insertion + `insertBeforeClosingDelimiter`)
+- `longterm-mem/internal/promote/writer_test.go` (4 new tests)
+- `longterm-mem/internal/promote/address_test.go` (3 new tests)
+- `openspec/changes/longterm-mem/tasks.md` (task 7.10 added and ticked;
+  R-029 traceability row updated to `5, 7 | 5.4–5.5, 7.10`)
+
+### Authored line budget (task 7.10)
+
+`wc -l` before/after per touched file (production vs. test lines counted
+separately, matching the ledger's own convention):
+
+| File | Kind | Lines added |
+|---|---|---|
+| `internal/promote/writer.go` | production | +31 (102→133) |
+| `internal/promote/register.go` | production | +8 (176→184) |
+| `internal/promote/frontmatter.go` | production | +25 (166→191) |
+| **Production subtotal** | | **64** |
+| `internal/promote/writer_test.go` | test | +156 (304→460) |
+| `internal/promote/address_test.go` | test | +87 (168→255) |
+| `internal/promote/frontmatter_test.go` (new) | test | +184 |
+| **Test subtotal** | | **427** |
+| **Total** | | **491** |
+
+Well under the 400-line PR budget for production code (64 lines); the
+491-line total (including tests) is also within the single-PR budget this
+small a follow-up warrants, consistent with the strict-TDD
+triangulation pattern already established across every prior slice (one
+assertion per named scenario/defect, no trivial single-assertion tests).
+
+### Slice 7 — post-review corrections (delivery record)
+
+Slice 7 shipped as eight chained PRs (#195–#202), split at dependency
+seams because the slice's authored diff was ~1400 lines and because a
+high-risk candidate that also needs a correction sits close to the native
+review's six-admitted-role ceiling. Five parts passed with zero
+corrections; three findings were fixed, all of them real:
+
+1. **`R4-poison-pill-abort` (CRITICAL, part 7f).** A single failing
+   observation returned from inside `Sync`'s loop. Since
+   `ListObservations` returns the same set on every run, one persistently
+   unpromotable observation wedged the project's sync permanently: every
+   later observation never attempted, the index never rebuilt, the
+   sync-state record never written, and each retry failing identically.
+   Failures are now accumulated in `SyncReport.Failed`, the walk
+   continues, and a non-nil error still names the first failure so a
+   partial run cannot pass as clean. RED:
+   `TestSync_OneFailingObservationDoesNotWedgeTheRun`.
+
+2. **The same hazard in `Propagate`, fixed before review (part 7g).**
+   `Propagate` walks the identical per-observation shape and had four
+   in-loop returns. Left alone, one broken page would have permanently
+   blocked every other observation's archival or supersession from
+   landing. Fixed under the same contract, with one shared failure
+   summarizer. RED: `TestPropagate_OneBrokenPageDoesNotWedgeTheRun`.
+
+3. **`R3-precedence-blesses-local-edit` (CRITICAL, part 7g).** After a
+   status-only patch, `Propagate` rewrote the precedence entry's
+   `body_hash` to the body currently on disk. On a page a human had
+   edited, that stamped their edit as longterm-mem's own last write and
+   erased the divergence signal R-030 depends on, so the next `Sync`
+   would have overwritten the edit in silence. The pre-existing test
+   asserted that overwrite as desired behavior and nothing exercised a
+   follow-up sync. Only `frontmatter_hash` moves now, and the test proves
+   the property that matters: after a status patch on a hand-edited page,
+   a later `UpdateInPlace` still returns `ActionSkippedLocalEdit` and the
+   human's text survives.
+
+Two further defects were found and fixed while closing the slice's own
+gaps, outside any review finding: `setListField` and `setScalarField`
+both returned the frontmatter block unchanged when the field was entirely
+absent, so a patch reported success having written nothing (part 7c); and
+R-029's registration was never wired into the promotion writer at all
+(part 7e, task 7.10).
