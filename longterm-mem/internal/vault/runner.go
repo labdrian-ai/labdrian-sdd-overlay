@@ -23,6 +23,16 @@ type Runner struct {
 	Root string
 }
 
+// PrerequisitePresent reports whether name resolves on PATH via
+// exec.LookPath -- doctor's runtime-prerequisites check (R-011). It lives
+// here, not in internal/ops, because runner.go is the sole longterm-mem
+// file permitted to import "os/exec" (R-021); it needs no Runner instance
+// since exec.LookPath depends only on the caller's PATH, not a vault root.
+func PrerequisitePresent(name string) bool {
+	_, err := exec.LookPath(name)
+	return err == nil
+}
+
 // timeoutExitCode is the synthetic exit code Run reports when ctx's
 // deadline elapses before the subprocess exits on its own (shell
 // timeout(1) convention).

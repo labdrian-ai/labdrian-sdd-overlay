@@ -104,3 +104,16 @@ func TestRunner_TimeoutSurfacesExitAndStderr(t *testing.T) {
 		t.Fatalf("Run did not respect the context timeout — took %v", elapsed)
 	}
 }
+
+// TestPrerequisitePresent: doctor's runtime-prerequisites check (R-011)
+// resolves via exec.LookPath -- "go" (this very test binary's toolchain,
+// guaranteed present in any environment able to run `go test`) must
+// resolve, and a name no real PATH entry provides must not.
+func TestPrerequisitePresent(t *testing.T) {
+	if !PrerequisitePresent("go") {
+		t.Error(`PrerequisitePresent("go") = false, want true (the Go toolchain running this test must be on PATH)`)
+	}
+	if PrerequisitePresent("definitely-not-a-real-executable-longterm-mem-8a") {
+		t.Error(`PrerequisitePresent("definitely-not-a-real-executable-longterm-mem-8a") = true, want false`)
+	}
+}
