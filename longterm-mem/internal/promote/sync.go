@@ -111,21 +111,23 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 	if err := writeSyncState(deps.Writer.VaultRoot); err != nil {
 		return report, fmt.Errorf("promote: sync: %w", err)
 	}
-	return report, report.failureError()
+	return report, failureError("sync", report.Failed)
 }
 
-// failureError summarizes Failed as one error, naming the first failing
-// observation and its cause so a caller that only logs err still learns
-// which observation to look at. It is nil when nothing failed.
-func (r SyncReport) failureError() error {
-	if len(r.Failed) == 0 {
+// failureError summarizes op's per-observation failures as one error,
+// naming the first failing observation and its cause so a caller that
+// only logs err still learns which observation to look at. It is nil when
+// nothing failed. Shared by Sync and Propagate, which both step over a
+// broken observation rather than letting it wedge the whole run.
+func failureError(op string, failed []SyncFailure) error {
+	if len(failed) == 0 {
 		return nil
 	}
-	first := r.Failed[0]
-	if len(r.Failed) == 1 {
-		return fmt.Errorf("promote: sync: observation %d: %w", first.ObservationID, first.Err)
+	first := failed[0]
+	if len(failed) == 1 {
+		return fmt.Errorf("promote: %s: observation %d: %w", op, first.ObservationID, first.Err)
 	}
-	return fmt.Errorf("promote: sync: %d observations failed, first is %d: %w", len(r.Failed), first.ObservationID, first.Err)
+	return fmt.Errorf("promote: %s: %d observations failed, first is %d: %w", op, len(failed), first.ObservationID, first.Err)
 }
 
 // syncStateRecord is syncStateRelPath's decoded/encoded form.
