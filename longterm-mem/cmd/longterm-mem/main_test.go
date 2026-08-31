@@ -9,8 +9,36 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+
 	_ "modernc.org/sqlite"
 )
+
+// captureStdout redirects os.Stdout for the duration of fn and returns
+// everything written to it -- cmd_status.go/cmd_doctor.go print their
+// plain-text report to stdout, mirroring TestCmdSync_..."s own os.Stderr
+// capture convention below.
+func captureStdout(t *testing.T, fn func()) string {
+	t.Helper()
+	path := filepath.Join(t.TempDir(), "stdout.txt")
+	captured, err := os.Create(path)
+	if err != nil {
+		t.Fatalf("create stdout capture: %v", err)
+	}
+	real := os.Stdout
+	os.Stdout = captured
+	fn()
+	os.Stdout = real
+	if err := captured.Close(); err != nil {
+		t.Fatalf("close stdout capture: %v", err)
+	}
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read stdout capture: %v", err)
+	}
+	return string(data)
+}
 
 // TestMain_BuildsIndependentModule asserts that longterm-mem/ compiles as an
 // independent Go module — capable of declaring its own third-party
@@ -133,5 +161,131 @@ func TestCmdSync_BothPassesRunDespiteAFailingObservation(t *testing.T) {
 	// have prevented.
 	if !strings.Contains(string(stderr), "propagate") {
 		t.Fatalf("the second pass never ran: Sync's failure aborted the command instead of being reported alongside it; stderr:\n%s", stderr)
+	}
+}
+
+// TestRun_DispatchesStatusSubcommand proves "status" is registered in
+// run's switch (8a.3), matching TestRun_DispatchesSyncSubcommand's own
+// dispatch-proof convention.
+func TestRun_DispatchesStatusSubcommand(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("LONGTERM_MEM_VAULT", "")
+	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
+
+	got := run([]string{"status", "--project", "definitely-unconfigured-project"})
+	if got != 3 {
+		t.Fatalf("run([status --project ...]) = %d, want 3 (vault_not_configured), proving status dispatches into cmdStatus rather than the unknown-subcommand fallback", got)
+	}
+}
+
+// TestRun_DispatchesDoctorSubcommand proves "doctor" is registered in
+// run's switch (8a.6), matching TestRun_DispatchesSyncSubcommand's own
+// dispatch-proof convention.
+func TestRun_DispatchesDoctorSubcommand(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("LONGTERM_MEM_VAULT", "")
+	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
+
+	got := run([]string{"doctor", "--project", "definitely-unconfigured-project"})
+	if got != 3 {
+		t.Fatalf("run([doctor --project ...]) = %d, want 3 (vault_not_configured), proving doctor dispatches into cmdDoctor rather than the unknown-subcommand fallback", got)
+	}
+}
+
+// TestCmdDoctor_ReportsEveryCheckDespiteOneFailing: the same lesson
+// TestCmdSync_BothPassesRunDespiteAFailingObservation proves for sync
+// (R4-sync-error-aborts-propagate), applied to doctor (task 8a description):
+// a failing check must never stop the command from running and printing
+// the remaining checks. The vault here has one promoted page correctly
+// address-mapped but registered nowhere (wiki/index.md and wiki/log.md are
+// both absent), guaranteeing wiki-registration-consistency FAILs; the test
+// asserts all four check names still appear in the report and the command
+// exits non-zero, proving the command ran ops.Doctor to completion instead
+// of returning on the first FAIL.
+func TestCmdDoctor_ReportsEveryCheckDespiteOneFailing(t *testing.T) {
+	vaultRoot := t.TempDir()
+	const address = "c-000777"
+
+	obs := engram.Observation{ID: 1, Type: "decision", Title: "Unregistered Page", Content: "Body.", Project: "cmd-doctor-project", RevisionCount: 1}
+	page, err := promote.EmitPage(obs, address, nil)
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	full := filepath.Join(vaultRoot, page.Path)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(full), err)
+	}
+	if err := os.WriteFile(full, []byte(page.Frontmatter+page.Body), 0o644); err != nil {
+		t.Fatalf("write %s: %v", full, err)
+	}
+
+	rawDir := filepath.Join(vaultRoot, ".raw")
+	if err := os.MkdirAll(rawDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", rawDir, err)
+	}
+	manifest := `{"address_map":{"` + page.Path + `":"` + address + `"}}`
+	if err := os.WriteFile(filepath.Join(rawDir, ".manifest.json"), []byte(manifest), 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+	// wiki/index.md and wiki/log.md are intentionally never written: the
+	// page above is not registered in either.
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+
+	var exit int
+	stdout := captureStdout(t, func() {
+		exit = run([]string{"doctor", "--project", "cmd-doctor-project"})
+	})
+
+	if exit == 0 {
+		t.Fatal("run([doctor ...]) = 0, want non-zero: the unregistered page must fail wiki-registration-consistency")
+	}
+	for _, name := range []string{"vault-config-resolvable", "address-map-integrity", "wiki-registration-consistency", "runtime-prerequisites"} {
+		if !strings.Contains(stdout, name) {
+			t.Errorf("doctor output missing check %q; the command must report every check even though one failed:\n%s", name, stdout)
+		}
+	}
+	if !strings.Contains(stdout, "FAIL") {
+		t.Errorf("doctor output has no FAIL entry despite the unregistered page:\n%s", stdout)
+	}
+}
+
+// TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy: cmdStatus's
+// whole reporting contract sat behind the vault-resolution failure that
+// the only other status test triggers, so nothing ever executed the four
+// output lines or the documented "an unhealthy field is still exit 0"
+// behavior. Doctor got an end-to-end output test and status did not, so a
+// regression that swapped the reachable/provisioned booleans, dropped the
+// last-sync line, or turned an unhealthy field into a non-zero exit would
+// have passed the suite unchanged (review finding
+// R3-status-success-path-unproved).
+//
+// The vault here is deliberately unprovisioned and the project has never
+// synced -- both unhealthy, both reported, still exit 0.
+func TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy(t *testing.T) {
+	vaultRoot := t.TempDir()
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+	t.Setenv("LONGTERM_MEM_ENGRAM_DB", filepath.Join(t.TempDir(), "absent-engram.db"))
+
+	var exit int
+	stdout := captureStdout(t, func() {
+		exit = run([]string{"status", "--project", "cmd-status-project"})
+	})
+
+	if exit != 0 {
+		t.Fatalf("run([status ...]) = %d, want 0: an unhealthy field is a reported state, not a command failure", exit)
+	}
+	if !strings.Contains(stdout, "cmd-status-project") {
+		t.Errorf("status output does not name the project:\n%s", stdout)
+	}
+	for _, want := range []string{"engram: reachable=", "vault: provisioned=false", "last sync: never"} {
+		if !strings.Contains(stdout, want) {
+			t.Errorf("status output missing %q; every field must be reported:\n%s", want, stdout)
+		}
 	}
 }

@@ -27,6 +27,10 @@ func run(args []string) int {
 		return cmdQuery(args[1:])
 	case "sync":
 		return cmdSync(args[1:])
+	case "status":
+		return cmdStatus(args[1:])
+	case "doctor":
+		return cmdDoctor(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "longterm-mem: unknown subcommand %q\n", args[0])
 		usage()
