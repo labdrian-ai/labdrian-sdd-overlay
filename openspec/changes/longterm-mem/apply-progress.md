@@ -1,8 +1,16 @@
 # Apply Progress: longterm-mem
 
-Branch: `feat/lm/longterm-mem-query-3b-merge` (base: PR3a commit `deb973d`;
-slices 1a–3a history on this branch)
+Branch: `feat/lm/longterm-mem-promotion-writer` (base: PR3b-3's commit
+`805db11`; slices 1a–3b-3 history on this branch)
 Last updated: 2026-08-30
+
+**Engram split notice**: slices 1, 2a, 2b, and 3a's full detail moved to
+Engram `sdd/longterm-mem/apply-progress-part1` when this document neared
+the 50 000-byte practical limit for a single observation. This on-disk
+`openspec/changes/longterm-mem/tasks.md`-adjacent file keeps the complete
+history (no split needed for a plain repo file); only the Engram mirror of
+this document was split. Slice 3b onward stays in the main
+`sdd/longterm-mem/apply-progress` Engram observation, alongside this file.
 
 ---
 
@@ -707,3 +715,295 @@ below 400, since it is the one piece not required for `query.Run`/
 3b.7 is explicitly in scope for this slice and the CLI is already fully
 implemented, tested via manual exit-code smoke checks, and wired into
 `main.go`.
+
+---
+
+## Slice 4 — longterm-mem-promotion-writer (R-007, R-027) (COMPLETE)
+
+All Slice 4 tasks (4.1–4.13) implemented and ticked in `tasks.md`, in the
+three pre-planned parts (Part A eligibility, Part B page emission, Part C
+lint) kept in separate files so the orchestrator can split them into
+separate chained-PR commits without rework.
+
+### Part A — eligibility (R-007)
+
+- [x] 4.1–4.2 RED→GREEN `longterm-mem/internal/promote/eligible_test.go` /
+  `eligible.go` — `Eligible(obs engram.Observation, explicit bool) bool`:
+  pinned OR type ∈ {decision, architecture, pattern} OR
+  `revision_count >= 3` OR explicit override. RED confirmed by execution
+  (`undefined: Eligible`, plus `unknown field Type/Pinned/RevisionCount in
+  struct literal of type engram.Observation` — the extended `Observation`
+  fields did not exist yet either) before either file existed. A fifth
+  case beyond the four named R-007 scenarios
+  (`"eligible-type observation is eligible without pin or revision"`,
+  type=`architecture`) was added as real triangulation: the four named
+  scenarios alone never exercise the `eligibleTypes` map membership branch
+  (only its default-false path via `type: discovery`), so a broken/empty
+  map would still pass all four named tests — the fifth case makes that
+  branch a real GREEN, not a false one.
+- [x] `longterm-mem/internal/engram/store.go` — `Observation` extended
+  with `SyncID`, `Type`, `Pinned`, `RevisionCount` (per the orchestrator's
+  explicit instruction to extend `Observation`/`ListObservations`
+  backward-compatibly rather than build a parallel read helper);
+  `CreatedAt`/`UpdatedAt` were NOT added — no 4.x task or R-027 field needs
+  them (page `created`/`updated` are the *promotion* timestamp, from
+  `nowFunc()`, not the observation's own timestamps). `ListObservations`'
+  SELECT extended to `id, sync_id, type, title, content, project,
+  revision_count, pinned`; `sync_id` scanned via `sql.NullString` since the
+  live schema (`schema.sql`/#3129) leaves it nullable. Backward-compatible:
+  every prior test's `insertObservation` fixture still inserts through the
+  unchanged 6-column statement and relies on the schema's own
+  `revision_count DEFAULT 1`/`pinned DEFAULT 0`/`sync_id` NULL defaults —
+  re-ran unmodified, all still green (safety net).
+- [x] `longterm-mem/internal/engram/store_test.go` —
+  `TestListObservations_IncludesEligibilityAndExtraFields` (new fixture
+  helper `insertObservationFull`, full-column insert) proves the extended
+  SELECT round-trips real `sync_id`/`type`/`revision_count`/`pinned`
+  values via a struct-equality assertion (`got[0] != want`), not a
+  field-by-field spot check. `insertObservationFull` returns the inserted
+  row's `int64` id (`LastInsertId`) so slice 4's later relation fixtures
+  (Part B) can address a specific observation without a second query.
+
+### Part B — page emission (R-027 scenarios 1–3) + relation-edge primitive
+
+- [x] 4.3–4.4 RED→GREEN `longterm-mem/internal/engram/relations_test.go` /
+  `relations.go` — `Edge{Relation, SourceSyncID, TargetSyncID}`;
+  `(*Store) RelatedEdges(observationID int64) ([]Edge, error)` joining
+  `memory_relations` on `observations.sync_id` (the live schema keys
+  `source_id`/`target_id` on the TEXT sync_id, not the integer id — #3129),
+  filtered to `judgment_status='judged'`, `superseded_at IS NULL`, and
+  `relation IN (related, compatible, scoped, supersedes, conflicts_with)`.
+  RED confirmed (`store.RelatedEdges undefined`) before `relations.go`
+  existed. `TestRelatedEdges_AcceptedOnly` fixtures six relation rows
+  covering all four rejection reasons (pending judgment, superseded,
+  unaccepted kind `not_conflict`, edge not touching the subject) plus two
+  *accepted* edges in opposite source/target direction (`related` and
+  `supersedes`) to prove the `OR`-both-sides join and multi-kind `IN`
+  filter are both real, not just the single-direction/single-kind case.
+  `longterm-mem/internal/engram/testdata/schema.sql` extended additively
+  with the `memory_relations` table + two indexes (live DDL, #3129
+  trimmed to the columns this slice reads: `sync_id`, `source_id`,
+  `target_id`, `relation`, `judgment_status`, `superseded_at`).
+- [x] 4.5–4.7 RED `longterm-mem/internal/promote/page_test.go` — three
+  scenarios written first against a package exposing no `EmitPage`/`Page`/
+  `Link`/`nowFunc` yet (RED confirmed by execution: 10 `undefined:` build
+  errors before `page.go` existed):
+  - `TestEmitPage_TypeMappedOntoVaultEnum` (R-027 scenario 1): a `decision`
+    -typed, pinned observation; asserts `\ntype: concept\n` plus
+    `engram_type: decision\n`, `engram_id: 101\n`,
+    `project: labdrian-sdd-overlay\n` are all present in the rendered
+    frontmatter.
+  - `TestEmitPage_RelatedLinksResolve` (R-027 scenario 2): a fixture
+    `Link{Address: "c-000099", Title: "Other Page"}` passed to `EmitPage`,
+    with a real file pre-written at
+    `<vaultRoot>/wiki/memory/c-000099.md`; asserts the frontmatter contains
+    the exact wikilink `[[c-000099|Other Page]]` AND that the target file
+    genuinely exists on disk (`os.Stat`) — not just that the string was
+    emitted. Per the task's `EmitPage(obs, address string, related
+    []Link)` signature, `EmitPage` does not itself call `RelatedEdges` or
+    resolve which counterparts are promoted; it renders a caller-supplied,
+    already-resolved `[]Link`. Turning `RelatedEdges`' output into
+    `[]Link` (checking which counterpart addresses are already promoted)
+    is deferred to `sync`/`propagate` (slices 7), which is the first place
+    a precedence store recording promoted addresses exists — building that
+    wiring now would mean guessing its shape ahead of slice 6's
+    `PrecedenceStore`.
+  - `TestEmitPage_FilenameSurvivesRetitle` (R-027 scenario 3): calls
+    `EmitPage` twice with the same address and different `obs.Title`
+    values; asserts `Page.Path` is byte-identical both times and equals
+    `wiki/memory/c-000103.md` — proving the filename is a pure function of
+    `address`, never `obs.Title` (D7).
+  - `TestEmitPage_MatchesGolden` (beyond the three named scenarios, task
+    4.9's explicit golden-file instruction): full `Frontmatter+Body` byte
+    comparison against `testdata/pages/architecture.golden.md`, generated
+    via `go test ./internal/promote/... -run TestEmitPage_MatchesGolden
+    -update` then re-run without `-update` to confirm a clean, deterministic
+    match (go-testing skill pattern). This is the test that actually locks
+    down D7's *fixed field order* — the three scenario tests above only
+    assert substring presence, not order.
+- [x] 4.9 GREEN `longterm-mem/internal/promote/frontmatter.go` — flat-YAML
+  `frontmatter` struct + `Render()`, exact field order `type, title,
+  address, aliases, created, updated, tags, status, related, sources,
+  engram_id, engram_sync_id, engram_type, engram_revision, project`
+  (design-notes #3133's Interfaces/Contracts section, verbatim). No YAML
+  library added (none was in `go.mod`, and WIKI.md's own contract is "flat,
+  no nested objects" — a hand-written line-by-line emitter matches the
+  contract more directly than a generic marshaler would and avoids a new
+  dependency). Only `title` and list items are double-quoted (matching
+  WIKI.md's own `title: "Human-Readable Title"` vs. unquoted
+  `type`/`status`/`created` convention); an empty list renders as the
+  inline `key: []` form WIKI.md's own example uses for `sources`.
+- [x] 4.10 GREEN `longterm-mem/internal/promote/page.go` — `Link{Address,
+  Title}`; `Page{Address, Path, Frontmatter, Body}`; `EmitPage(obs
+  engram.Observation, address string, related []Link) (Page, error)`:
+  `Path = "wiki/memory/" + address + ".md"` (never derived from title);
+  `type` always maps to `concept` (D7 — the only enum value with no
+  type-specific fields to fabricate); `status` = `mature` if pinned else
+  `developing` (R-033's `superseded`/`archived` values are out of scope —
+  slice 7); body = `# Title` (omitted when content already opens with an
+  H1) + `obs.Content` + a footer line naming the Engram id/revision.
+  `nowFunc = func() time.Time { return time.Now().UTC() }` is a
+  package-level var swapped in tests (`fixedNow` helper) so
+  `created`/`updated` — and hence the golden comparison — are
+  deterministic; production always uses the real clock.
+  `wikilinkPattern = regexp.MustCompile(`\[\[(c-\d{6})\|([^\]]*)\]\]`)` and
+  the `wikilink(address, title string) string` formatter both live in
+  `page.go` (4.12 REFACTOR was written in from the start rather than
+  extracted after the fact, since `lint.go`'s resolvability check needed
+  the identical pattern from its own first RED test) — `lint.go` imports
+  neither a duplicate regex nor a duplicate format string, only
+  `wikilinkPattern` from the same package.
+- [x] 4.8 RED `longterm-mem/internal/promote/lint_test.go` (see Part C —
+  written together with `page_test.go`'s scenarios since `LintPage`'s
+  fixtures reuse `EmitPage`'s output, but implemented as Part C below).
+
+### Part C — lint (R-027 scenario 4)
+
+- [x] 4.8, 4.11 RED→GREEN `longterm-mem/internal/promote/lint_test.go` /
+  `lint.go` — `Diagnostic{Rule, Detail}`; `LintPage(page Page, vaultRoot
+  string) []Diagnostic`, exactly 6 rules per the design's line-budget
+  mitigation: required scalar fields (`type, title, address, created,
+  updated, status`), the `type`/`status` enum (`status` tolerates R-033's
+  `superseded`/`archived` per D7), `^c-\d{6}$` address format,
+  address-map consistency, wikilink resolvability, and an inbound
+  `wiki/index.md` link. `LintPage` takes `vaultRoot` (not just `page`,
+  which the task line names loosely as `LintPage(page)`) because three of
+  the six rules are inherently about on-disk state the design says
+  `doctor` (slice 8a) must reuse unchanged — a bare `Page` has nothing to
+  check the address-map/wikilink/inbound-link rules against.
+  **Real design decision found during GREEN, documented rather than
+  assumed**: address allocation and `index.md`/`log.md` registration are
+  slice 5, not built yet. The first draft of `checkAddressMap` treated "no
+  `.raw/.manifest.json` file at all" as a *failure* (unregistered);
+  `TestLintPage_FreshlyPromotedPagePasses` then could never pass for any
+  page emitted before slice 5 exists, which would make the R-027 scenario
+  4 test permanently un-satisfiable within this slice's own scope. Fixed
+  by making a **wholly absent** manifest pass ("nothing to be inconsistent
+  with yet" — address allocation hasn't run) while a **present-but-empty**
+  `address_map` (or one missing this specific address) still fails. The
+  triangulation test (`TestLintPage_UnregisteredPageIsFlagged`) was
+  adjusted to write an explicit empty `address_map` rather than omit the
+  manifest file entirely, to exercise the real failure path instead of the
+  "not yet built" pass path — confirmed by re-running: the first version
+  (no manifest at all) produced only the `inbound-index-link` diagnostic,
+  not `address-map`, exposing the gap before the fixture was corrected.
+  `TestLintPage_FreshlyPromotedPagePasses` builds a real scratch vault
+  (`.raw/.manifest.json` with a matching entry, `wiki/index.md` with an
+  inbound wikilink) simulating what slice 5's `register.go` will write, so
+  a genuinely complete page — not merely `EmitPage`'s bare output — is what
+  passes.
+
+### Design notes followed (Engram #3133 D7, live schema #3129)
+
+`memory_relations.source_id`/`target_id` are TEXT sync_ids, confirmed
+against the live schema dump (#3129) before writing `relations.go` — an
+earlier draft assumed `RelatedEdges(observationID int)` could query
+`memory_relations` directly on the integer id and was corrected before any
+code was written, once the schema fixture was re-checked against #3129's
+exact column list. `EmitPage` deliberately does not call `RelatedEdges` or
+allocate an address itself (both are the caller's responsibility per the
+task's own signature) — this keeps `promote.EmitPage` a pure, easily
+golden-tested function with no Engram/filesystem dependency of its own,
+consistent with `query.Run`'s function-seam pattern from slice 3b.
+
+### Verification
+
+`cd longterm-mem && gofmt -l .` — clean. `go vet ./...` — clean.
+`go test ./... -cover -count=1` — all 6 packages pass:
+`internal/promote` 86.2% (new package); `internal/engram` 81.6% (down
+slightly from 84.2% — `relations.go`'s scan-error/iterate-error branches
+are defensive, not named scenarios); `internal/query` 85.1%;
+`internal/vault` 83.8%; `internal/vaultreg` 67.2%; `cmd/longterm-mem` 0.0%
+(unchanged — no promote-related CLI wiring is in scope until slice 8b).
+`go test . -run TestOSExecImportAllowlist -v` — PASS (re-verified R-021:
+none of `eligible.go`/`relations.go`/`page.go`/`frontmatter.go`/`lint.go`
+import `os/exec`; only `internal/vault/runner.go` does).
+
+`cd engine && go test ./...` — all 10 packages pass (zero-dep gate
+unaffected; this slice touches nothing under `engine/`).
+`bash -n bin/labdrian-overlay` — clean (this slice touches nothing under
+`bin/`).
+
+### Files created
+
+- `longterm-mem/internal/promote/eligible.go`, `eligible_test.go` (Part A)
+- `longterm-mem/internal/engram/relations.go`, `relations_test.go` (Part B)
+- `longterm-mem/internal/promote/frontmatter.go`, `page.go`, `page_test.go` (Part B)
+- `longterm-mem/internal/promote/testdata/pages/architecture.golden.md` (Part B, generated)
+- `longterm-mem/internal/promote/lint.go`, `lint_test.go` (Part C)
+
+### Files modified
+
+- `longterm-mem/internal/engram/store.go` (Part A: `Observation` extended;
+  `ListObservations` SELECT extended)
+- `longterm-mem/internal/engram/store_test.go` (Part A: new fixture helper
+  + eligibility-fields test; `insertObservationFull` also reused by Part
+  B's `relations_test.go`)
+- `longterm-mem/internal/engram/testdata/schema.sql` (Part B: additive
+  `memory_relations` table + indexes)
+- `openspec/changes/longterm-mem/tasks.md` (Slice 4 items 4.1–4.13 ticked)
+
+### Authored line budget
+
+Plain line counts for new files, `git diff --numstat` for modified
+tracked files (no `go.sum` change — no new dependency was needed):
+
+| Part | File | Lines |
+|---|---|---|
+| A | `internal/promote/eligible.go` (new) | 28 |
+| A | `internal/promote/eligible_test.go` (new) | 55 |
+| A | `internal/engram/store.go` (diff, +15/-7) | 22 |
+| A | `internal/engram/store_test.go` (diff, +59/-0) | 59 |
+| **A subtotal** | | **164** |
+| B | `internal/engram/relations.go` (new) | 52 |
+| B | `internal/engram/relations_test.go` (new) | 66 |
+| B | `internal/engram/testdata/schema.sql` (diff, +19/-0) | 19 |
+| B | `internal/promote/frontmatter.go` (new) | 79 |
+| B | `internal/promote/page.go` (new) | 112 |
+| B | `internal/promote/page_test.go` (new) | 140 |
+| **B subtotal (excl. golden)** | | **468** |
+| B (golden, excluded from authored risk count) | `testdata/pages/architecture.golden.md` | 27 |
+| C | `internal/promote/lint.go` (new) | 146 |
+| C | `internal/promote/lint_test.go` (new) | 92 |
+| **C subtotal** | | **238** |
+| — | `tasks.md` (diff, checkbox toggles, 13 items) | 26 |
+| **Total (A+B+C+tasks.md, excl. golden and go.sum)** | | **896** |
+
+**Risk: substantially over the 400-line hard cap (by ~496 lines, ~2.2x) and
+well over the 360–410 forecast** — the largest single-slice overage on
+this branch to date (prior worst was slice 3b at +255). Every part
+individually exceeds its own pre-planned target too: A 164 vs. ≤150 (+14,
+minor — the extended-fields test and fixture helper needed a specific
+struct-equality assertion, not a spot check); B 468 vs. ≤250 (+218 — this
+part carries two genuinely separate concerns, `relations.go`'s new
+Engram primitive with its own schema-fixture extension AND
+`page.go`/`frontmatter.go`'s page emission, each independently
+strict-TDD-sized, plus a golden test the task explicitly calls for); C 238
+vs. ≤150 (+88 — `LintPage` taking `vaultRoot` to check three on-disk rules,
+as `doctor`'s future reuse requires, cannot be done in fewer rules or
+fewer lines without weakening a rule to a no-op). No scope was added
+beyond the unchecked 4.1–4.13 tasks; no test was omitted or trimmed below
+strict-TDD's assertion-quality bar to chase the budget. Consistent with
+every prior slice's root cause: strict-TDD's no-trivial-assertion rule
+demands a dedicated fixture and a specific, distinct assertion per named
+scenario, and this slice has 8 named R-007/R-027 scenarios (the most of
+any slice so far) plus the `RelatedEdges` primitive and its own schema
+fixture.
+
+**Flagged for the orchestrator's auto-chain delivery-strategy decision**:
+the task's own pre-planned fallback ("split `lint.go` + its goldens into a
+4b PR") is not sufficient alone — removing Part C's 238 lines still leaves
+Parts A+B at 632 lines (+26 tasks.md), still 258 over the 400 cap. The
+three parts are already staged in fully separate files with no
+cross-part production dependency inside this slice (Part B's `page.go`
+does depend on Part A's extended `engram.Observation`, but not on any Part
+C symbol; Part C's `lint.go` depends on Part B's `wikilinkPattern`/
+`vaultType`/`pagePathPrefix`, but not on Part A), so a 3-way split
+(4a=Part A, 4b=Part B, 4c=Part C) — rather than the originally-planned
+2-way split — is the change that keeps every resulting PR under budget
+without any rework: Part A alone (164) fits in one PR, Part B alone (468)
+would still need its own further split (e.g. 4b-1 `relations.go`
+Engram primitive at ~137 lines, 4b-2 `page.go`/`frontmatter.go` page
+emission at ~331 lines) to clear 400, and Part C alone (238) fits in one
+PR. This is reported as a risk, not resolved unprompted, per the
+strict-tdd instruction to report rather than compress tests.
