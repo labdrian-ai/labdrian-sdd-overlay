@@ -36,10 +36,10 @@ const manifestRelPath = ".raw/.manifest.json"
 // internal/vault.Runner) and recorded in .raw/.manifest.json's
 // address_map, keyed by the page's address-derived path.
 func Allocate(vaultRoot, project string, engramID int) (string, error) {
-	if existing, ok, err := findPromotedAddress(vaultRoot, project, engramID); err != nil {
+	if existing, ok, err := findPromotedPage(vaultRoot, project, engramID); err != nil {
 		return "", err
 	} else if ok {
-		return existing, nil
+		return existing.Address, nil
 	}
 
 	runner := &vault.Runner{Root: vaultRoot}
@@ -65,20 +65,33 @@ func Allocate(vaultRoot, project string, engramID int) (string, error) {
 	return address, nil
 }
 
-// findPromotedAddress scans wiki/memory/*.md for a page whose frontmatter
-// already carries this engram_id and project, returning its address
-// (R-028 re-promotion reuse). A missing wiki/memory/ directory means
-// nothing has been promoted yet. A matched page without a usable address
-// is corrupted promotion state and errors -- the same discipline as the
-// fresh path's "produced no address" guard -- never an empty-string reuse.
-func findPromotedAddress(vaultRoot, project string, engramID int) (string, bool, error) {
+// promotedPage is one already-promoted page's address and the Engram
+// revision it was last promoted at (7a REFACTOR): Allocate's re-promotion
+// address reuse (R-028) and Sync's unpromoted-or-revised gate (R-009)
+// share this one wiki/memory/ scan instead of each re-implementing it.
+type promotedPage struct {
+	Address  string
+	Revision int
+}
+
+// findPromotedPage scans wiki/memory/*.md for a page whose frontmatter
+// already carries this engram_id and project, returning its address and
+// the engram_revision it was last promoted at (R-028 re-promotion reuse;
+// R-009 Sync's unpromoted-or-revised gate). A missing wiki/memory/
+// directory means nothing has been promoted yet. A matched page without a
+// usable address is corrupted promotion state and errors -- the same
+// discipline as the fresh path's "produced no address" guard -- never an
+// empty-string reuse. A matched page whose engram_revision cannot be
+// parsed as an integer errors the same way, rather than silently treating
+// it as revision 0 and re-promoting content that may already be current.
+func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bool, error) {
 	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
 	entries, err := os.ReadDir(memoryDir)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return "", false, nil
+			return promotedPage{}, false, nil
 		}
-		return "", false, fmt.Errorf("promote: list %s: %w", memoryDir, err)
+		return promotedPage{}, false, fmt.Errorf("promote: list %s: %w", memoryDir, err)
 	}
 
 	wantID := strconv.Itoa(engramID)
@@ -88,22 +101,30 @@ func findPromotedAddress(vaultRoot, project string, engramID int) (string, bool,
 		}
 		data, err := os.ReadFile(filepath.Join(memoryDir, entry.Name()))
 		if err != nil {
-			return "", false, fmt.Errorf("promote: read %s: %w", entry.Name(), err)
+			return promotedPage{}, false, fmt.Errorf("promote: read %s: %w", entry.Name(), err)
 		}
 		block, ok := frontmatterBlock(string(data))
 		if !ok {
 			continue
 		}
 		fields := parseFrontmatterFields(block)
-		if fields["engram_id"] == wantID && fields["project"] == project {
-			address := strings.TrimSpace(fields["address"])
-			if address == "" {
-				return "", false, fmt.Errorf("promote: promoted page %s matches engram_id %s but carries no address", entry.Name(), wantID)
-			}
-			return address, true, nil
+		if fields["engram_id"] != wantID || fields["project"] != project {
+			continue
 		}
+		address := strings.TrimSpace(fields["address"])
+		if address == "" {
+			return promotedPage{}, false, fmt.Errorf("promote: promoted page %s matches engram_id %s but carries no address", entry.Name(), wantID)
+		}
+		revision := 0
+		if raw := strings.TrimSpace(fields["engram_revision"]); raw != "" {
+			revision, err = strconv.Atoi(raw)
+			if err != nil {
+				return promotedPage{}, false, fmt.Errorf("promote: promoted page %s carries an unparseable engram_revision %q: %w", entry.Name(), raw, err)
+			}
+		}
+		return promotedPage{Address: address, Revision: revision}, true, nil
 	}
-	return "", false, nil
+	return promotedPage{}, false, nil
 }
 
 // frontmatterBlock isolates the leading `---\n...\n---\n` frontmatter block

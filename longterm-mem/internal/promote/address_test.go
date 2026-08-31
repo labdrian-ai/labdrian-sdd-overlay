@@ -165,3 +165,91 @@ func TestAllocate_ReuseWithoutAddressFails(t *testing.T) {
 		t.Fatalf("error %q does not name the offending page c-000099.md", err)
 	}
 }
+
+// TestFindPromotedPage_RevisionRoundTrips: task 7.10 Gap 2 coverage. The
+// 7a REFACTOR widened findPromotedPage's return from a bare address to
+// promotedPage{Address, Revision}, but address_test.go was never touched
+// to exercise Revision directly -- Sync's own tests only ever see it
+// indirectly through re-promotion decisions.
+func TestFindPromotedPage_RevisionRoundTrips(t *testing.T) {
+	vaultRoot := t.TempDir()
+	obs := engram.Observation{ID: 201, Type: "decision", Title: "Revisioned", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 5}
+	page, err := EmitPage(obs, "c-000201", nil)
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	full := filepath.Join(vaultRoot, page.Path)
+	if err := os.MkdirAll(filepath.Dir(full), 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", filepath.Dir(full), err)
+	}
+	if err := os.WriteFile(full, []byte(page.Frontmatter+page.Body), 0o644); err != nil {
+		t.Fatalf("write page: %v", err)
+	}
+
+	promoted, ok, err := findPromotedPage(vaultRoot, "labdrian-sdd-overlay", 201)
+	if err != nil {
+		t.Fatalf("findPromotedPage: %v", err)
+	}
+	if !ok {
+		t.Fatalf("findPromotedPage ok = false, want true")
+	}
+	if promoted.Address != "c-000201" {
+		t.Fatalf("Address = %q, want c-000201", promoted.Address)
+	}
+	if promoted.Revision != 5 {
+		t.Fatalf("Revision = %d, want 5 (the promoted page's own engram_revision)", promoted.Revision)
+	}
+}
+
+// TestFindPromotedPage_MissingRevisionDefaultsToZero: task 7.10 Gap 2
+// coverage. A page with no engram_revision field at all (a page promoted
+// before D7's engram_revision field existed, or a hand-authored one)
+// must report Revision 0, not error -- distinguishing "never recorded" a
+// revision from "recorded an unparseable one".
+func TestFindPromotedPage_MissingRevisionDefaultsToZero(t *testing.T) {
+	vaultRoot := t.TempDir()
+	memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
+	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", memoryDir, err)
+	}
+	page := "---\nengram_id: 202\nproject: labdrian-sdd-overlay\naddress: c-000202\n---\n\nBody.\n"
+	if err := os.WriteFile(filepath.Join(memoryDir, "c-000202.md"), []byte(page), 0o644); err != nil {
+		t.Fatalf("write pre-promoted page: %v", err)
+	}
+
+	promoted, ok, err := findPromotedPage(vaultRoot, "labdrian-sdd-overlay", 202)
+	if err != nil {
+		t.Fatalf("findPromotedPage: %v", err)
+	}
+	if !ok {
+		t.Fatalf("findPromotedPage ok = false, want true")
+	}
+	if promoted.Revision != 0 {
+		t.Fatalf("Revision = %d, want 0 for a page with no engram_revision field (not an error)", promoted.Revision)
+	}
+}
+
+// TestFindPromotedPage_UnparseableRevisionErrors: task 7.10 Gap 2
+// coverage. A page whose engram_revision cannot be parsed as an integer
+// is corrupted promotion state and must error, naming the offending
+// page -- never silently treated as revision 0, which could make Sync
+// (R-009) skip re-promoting content that is not actually current.
+func TestFindPromotedPage_UnparseableRevisionErrors(t *testing.T) {
+	vaultRoot := t.TempDir()
+	memoryDir := filepath.Join(vaultRoot, "wiki", "memory")
+	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", memoryDir, err)
+	}
+	page := "---\nengram_id: 203\nproject: labdrian-sdd-overlay\naddress: c-000203\nengram_revision: not-a-number\n---\n\nBody.\n"
+	if err := os.WriteFile(filepath.Join(memoryDir, "c-000203.md"), []byte(page), 0o644); err != nil {
+		t.Fatalf("write pre-promoted page: %v", err)
+	}
+
+	_, _, err := findPromotedPage(vaultRoot, "labdrian-sdd-overlay", 203)
+	if err == nil {
+		t.Fatalf("findPromotedPage = nil error, want an error for an unparseable engram_revision")
+	}
+	if !strings.Contains(err.Error(), "c-000203.md") {
+		t.Fatalf("error %q does not name the offending page c-000203.md", err)
+	}
+}
