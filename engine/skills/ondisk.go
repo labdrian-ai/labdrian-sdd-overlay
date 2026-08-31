@@ -28,9 +28,13 @@ const (
 // nonSkillRoutes lists the third-column route values that send a manifest row
 // somewhere other than skills/. Mirrors route_resolve in bin/labdrian-overlay,
 // where any other third-column value falls through to the default skill route.
+// The full route domain is {skill, agent, opencode-agent, mcp} (D13); "skill"
+// is not listed here because it is the default route and IS the skills
+// destination, so it must stay out of this exclusion set.
 var nonSkillRoutes = map[string]bool{
 	"agent":          true,
 	"opencode-agent": true,
+	"mcp":            true,
 }
 
 // DeployableManifestPaths parses a manifest and returns the set of row paths that
@@ -40,8 +44,8 @@ var nonSkillRoutes = map[string]bool{
 // truth for row → routing:
 //   - Blank lines and lines starting with '#' are skipped.
 //   - A row needs at least two fields; the first is the path.
-//   - A third column of "agent" or "opencode-agent" routes outside skills/.
-//     Any other third-column value falls through to the skill route.
+//   - A third column of "agent", "opencode-agent", or "mcp" routes outside
+//     skills/. Any other third-column value falls through to the skill route.
 //   - On the skill route, a path with no '/' is a root-level bookkeeping row and
 //     a path whose first segment is "engine" is overlay infra. Both are tracked
 //     for diff purposes only and are never deployed.

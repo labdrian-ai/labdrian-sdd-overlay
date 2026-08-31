@@ -63,7 +63,9 @@ func callRouteResolve(t *testing.T, overlayPath, overlayDir, home, manifestConte
 
 	// minimal: forced — need to eval-extract route_resolve without running
 	// the full overlay script dispatch (which exits 1 for empty command).
-	// We define all globals route_resolve needs, then eval-load just the function.
+	// We define all globals route_resolve needs, then eval-load just the
+	// function. route_resolve also calls route_reject_unrouted_longterm_mem
+	// (defined immediately above it), so both ranges are extracted.
 	scriptFile := filepath.Join(t.TempDir(), "run_route_resolve.sh")
 	script := fmt.Sprintf(`#!/usr/bin/env bash
 set -euo pipefail
@@ -72,7 +74,7 @@ MANIFEST=%q
 HOME=%q
 declare -A TARGET_PATHS=( [claude]=%q [opencode]=%q [codex]=%q )
 declare -A AGENT_TARGET_PATHS=( [claude]=%q [opencode]=%q )
-eval "$(awk '/^route_resolve\(\)/,/^}$/' %q)"
+eval "$(awk '/^route_reject_unrouted_longterm_mem\(\)/,/^}$/ { print } /^route_resolve\(\)/,/^}$/ { print }' %q)"
 route_resolve %q
 `,
 		overlayDir,
@@ -221,6 +223,18 @@ gadu-operator/SKILL.md   custom
 GADU.md   custom   agent
 opencode/agents/GADU.md   custom   opencode-agent
 `
+
+// mcpFixtureManifest extends fixtureManifest with the longterm-mem mcp
+// sentinel row (D13).
+const mcpFixtureManifest = fixtureManifest + "longterm-mem/go.mod   custom   mcp\n"
+
+// unroutedLongtermMemFixture has a longterm-mem/** row with a missing third
+// column (route-domain guard, R-012 in overlay-agent-route).
+const unroutedLongtermMemFixture = fixtureManifest + "longterm-mem/internal/foo.go   custom\n"
+
+// unrecognizedRouteLongtermMemFixture has a longterm-mem/** row whose third
+// column is not in the recognized route domain.
+const unrecognizedRouteLongtermMemFixture = fixtureManifest + "longterm-mem/internal/bar.go   custom   bogus\n"
 
 // ---------------------------------------------------------------------------
 // Unit tests — fast, always run
@@ -421,6 +435,103 @@ skills.registry.yaml   custom
 					tc.manifestPath, len(got.Targets), tc.wantTargets, got.Targets)
 			}
 		})
+	}
+}
+
+// TestRouteResolve_McpRow verifies that a longterm-mem/** row routed "mcp"
+// resolves to route=mcp, the repo source path as written (no skills/ or
+// agents/ prefix rewriting), and zero copy targets — the longterm-mem
+// install path (build, copy, register) is dispatched separately, not via the
+// deploy loop. (overlay-agent-route R-006, traces longterm-mem R-013.)
+func TestRouteResolve_McpRow(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callRouteResolve(t, overlay, overlayDir, home, mcpFixtureManifest, "longterm-mem/go.mod")
+	if err != nil {
+		t.Fatalf("route_resolve: %v", err)
+	}
+
+	if got.Route != "mcp" {
+		t.Errorf("Route: got %q, want %q", got.Route, "mcp")
+	}
+	if !strings.HasSuffix(got.RepoSrc, "longterm-mem/go.mod") {
+		t.Errorf("RepoSrc %q: want suffix longterm-mem/go.mod", got.RepoSrc)
+	}
+	if len(got.Targets) != 0 {
+		t.Errorf("expected 0 copy targets for mcp route, got %d: %v", len(got.Targets), got.Targets)
+	}
+}
+
+// TestRouteResolve_OpencodeAgentUnaffected is the slice 9 regression guard:
+// an existing opencode-agent-routed row must resolve and deploy exactly as
+// before this change, with no regression from the mcp route addition.
+func TestRouteResolve_OpencodeAgentUnaffected(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	got, err := callRouteResolve(t, overlay, overlayDir, home, mcpFixtureManifest, "opencode/agents/GADU.md")
+	if err != nil {
+		t.Fatalf("route_resolve: %v", err)
+	}
+
+	if got.Route != "opencode-agent" {
+		t.Errorf("Route: got %q, want %q", got.Route, "opencode-agent")
+	}
+	if !strings.HasSuffix(got.RepoSrc, "opencode/agents/GADU.md") {
+		t.Errorf("RepoSrc %q: want suffix opencode/agents/GADU.md", got.RepoSrc)
+	}
+	if len(got.Targets) != 1 {
+		t.Errorf("expected exactly 1 target (opencode), got %d: %v", len(got.Targets), got.Targets)
+	}
+	dest, ok := got.Targets["opencode"]
+	if !ok {
+		t.Errorf("missing opencode target; got: %v", got.Targets)
+	} else if !strings.HasSuffix(dest, ".config/opencode/agents/GADU.md") {
+		t.Errorf("opencode dest %q: want suffix .config/opencode/agents/GADU.md", dest)
+	}
+}
+
+// TestRouteResolve_UnroutedLongtermMemRowRejected pins that a longterm-mem/**
+// row with a missing third column is rejected loudly (exit 1, explicit
+// stderr naming the row) instead of silently falling through to route=skill.
+// (overlay-agent-route R-012, traces longterm-mem R-035.)
+func TestRouteResolve_UnroutedLongtermMemRowRejected(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	_, err := callRouteResolve(t, overlay, overlayDir, home, unroutedLongtermMemFixture, "longterm-mem/internal/foo.go")
+	if err == nil {
+		t.Fatal("expected route_resolve to reject a longterm-mem row with a missing route column, got nil error")
+	}
+	if !strings.Contains(err.Error(), "exit 1") {
+		t.Errorf("expected exit 1, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/internal/foo.go") {
+		t.Errorf("expected error to name the rejected row, got: %v", err)
+	}
+}
+
+// TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected pins the same
+// guard for a longterm-mem/** row whose third column holds a value outside
+// {skill, agent, opencode-agent, mcp}.
+func TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected(t *testing.T) {
+	overlay := overlayScript(t)
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+
+	_, err := callRouteResolve(t, overlay, overlayDir, home, unrecognizedRouteLongtermMemFixture, "longterm-mem/internal/bar.go")
+	if err == nil {
+		t.Fatal("expected route_resolve to reject a longterm-mem row with an unrecognized route, got nil error")
+	}
+	if !strings.Contains(err.Error(), "exit 1") {
+		t.Errorf("expected exit 1, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/internal/bar.go") {
+		t.Errorf("expected error to name the rejected row, got: %v", err)
 	}
 }
 

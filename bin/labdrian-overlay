@@ -353,17 +353,60 @@ EOF
 #   repo_source = $OVERLAY_DIR/opencode/agents/<path>
 #   targets     = opencode:$HOME/.config/opencode/agents/<path>
 #
+# route=mcp (third column == "mcp"; D13):
+#   repo_source = $OVERLAY_DIR/<path>
+#   targets     = (none) — the longterm-mem install path (build, copy,
+#                 register) is dispatched separately, not via the deploy loop.
+#
 # Callers intersect the emitted target set with their --target selection:
 #   --target codex + agent row → zero applicable targets (no work, not an error).
+#
+# Route domain guard (R-012 in overlay-agent-route, traces longterm-mem R-035):
+# a row under longterm-mem/** whose third column is absent or not in the
+# recognized four-value domain {skill, agent, opencode-agent, mcp} is REJECTED
+# (exit 1, explicit stderr naming the row) rather than silently falling
+# through to the skill route — see route_reject_unrouted_longterm_mem below.
 #
 # Back-compat invariant: bare two-column skill rows emit BYTE-IDENTICAL results
 # to pre-route_resolve behavior (pinned by TestRouteResolve_LegacySkillRow).
 
+# route_reject_unrouted_longterm_mem <manifest_path> <route_raw>
+#
+# Enforces the longterm-mem/** route-domain guard described above. <route_raw>
+# is the UNDEFAULTED third column (empty when absent) — route_resolve must
+# pass the raw value, not the "skill"-defaulted one, or a missing column would
+# be indistinguishable from an explicit route=skill row. Exits 1 with an
+# explicit stderr message naming the row on rejection; returns 0 otherwise.
+# Hoisted into its own function so cmd_apply's manifest-load hook can reuse it
+# without re-deriving route_resolve's internals.
+route_reject_unrouted_longterm_mem() {
+  local manifest_path="$1"
+  local route_raw="$2"
+
+  case "$route_raw" in
+    skill|agent|opencode-agent|mcp)
+      return 0
+      ;;
+  esac
+
+  if [[ -z "$route_raw" ]]; then
+    echo "route_resolve: longterm-mem row '$manifest_path' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp" >&2
+  else
+    echo "route_resolve: longterm-mem row '$manifest_path' declares an unrecognized route '$route_raw'; must be one of: skill, agent, opencode-agent, mcp" >&2
+  fi
+  exit 1
+}
+
 route_resolve() {
   local manifest_path="$1"
-  local route
-  route="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
-  route="${route:-skill}"
+  local route_raw
+  route_raw="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
+
+  if [[ "$manifest_path" == longterm-mem/* ]]; then
+    route_reject_unrouted_longterm_mem "$manifest_path" "$route_raw"
+  fi
+
+  local route="${route_raw:-skill}"
 
   # Detect structurally non-deployable rows: paths that cannot map to a skill
   # or agent source directory. Overlay engine source files (engine/*) and
@@ -398,6 +441,10 @@ route_resolve() {
     fi
     repo_source="$OVERLAY_DIR/${manifest_path}"
     targets+=("opencode:${AGENT_TARGET_PATHS[opencode]}/${opencode_agent_rel}")
+  elif [[ "$route" == "mcp" ]]; then
+    repo_source="$OVERLAY_DIR/${manifest_path}"
+    # No copy targets: the longterm-mem install path (build, copy, register)
+    # is dispatched separately from the deploy loop (D13).
   else
     repo_source="$OVERLAY_DIR/skills/${manifest_path}"
     for tname in "${!TARGET_PATHS[@]}"; do
@@ -417,6 +464,9 @@ route_repo_rel() {
       printf 'agents/%s' "$manifest_path"
       ;;
     opencode-agent)
+      printf '%s' "$manifest_path"
+      ;;
+    mcp)
       printf '%s' "$manifest_path"
       ;;
     skill)
