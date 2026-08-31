@@ -229,10 +229,10 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 - [x] 5.1 RED `longterm-mem/internal/promote/address_test.go::TestAllocate_FirstPromotionAllocatesNewAddress` — newly promoted observation; assert a new address is allocated and referenced in `.raw/.manifest.json` `address_map`. Scenario: "First promotion allocates a new address" (R-028).
 - [x] 5.2 RED (same file) `TestAllocate_RePromotionReusesExistingAddress` — re-promotion of an already-addressed observation; assert no new allocation, existing reused. Scenario: "Re-promotion reuses the existing address" (R-028).
 - [x] 5.3 GREEN `longterm-mem/internal/promote/address.go` — `Allocate(vaultRoot, project string, engramID int) (address string, err error)` invoking `scripts/allocate-address.sh` (flock-safe, via `internal/vault.Runner`) plus `.raw/.manifest.json` `address_map[path]` mutation (decode → mutate → 2-space encode; `sources` untouched).
-- [ ] 5.4 RED `longterm-mem/internal/promote/register_test.go::TestRegister_NewPageDiscoverableAndLogged` — newly promoted page; assert the vault's master catalog lists it and the append-only log records the promotion event. Scenario: "New page is discoverable and logged" (R-029).
-- [ ] 5.5 GREEN `longterm-mem/internal/promote/register.go` — `RegisterIndex(indexMdPath, addr, title string) error` (idempotent marker-block append/replace, sorted by address); `RegisterLog(logMdPath, addr, title string, at time.Time) error` (newest-first insert before the first `^## \[` line).
-- [ ] 5.6 REFACTOR — extract the idempotent marker-block writer so `sync` (slice 7) invokes it once per run rather than per-page.
-- [ ] 5.7 Slice verification — `cd longterm-mem && go test ./...`.
+- [x] 5.4 RED `longterm-mem/internal/promote/register_test.go::TestRegister_NewPageDiscoverableAndLogged` — newly promoted page; assert the vault's master catalog lists it and the append-only log records the promotion event. Scenario: "New page is discoverable and logged" (R-029).
+- [x] 5.5 GREEN `longterm-mem/internal/promote/register.go` — `RegisterIndex(indexMdPath, addr, title string) error` (idempotent marker-block append/replace, sorted by address); `RegisterLog(logMdPath, addr, title string, at time.Time) error` (newest-first insert before the first `^## \[` line).
+- [x] 5.6 REFACTOR — extract the idempotent marker-block writer so `sync` (slice 7) invokes it once per run rather than per-page.
+- [x] 5.7 Slice verification — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestAllocate|TestRegister`
 
 ---

@@ -1,8 +1,8 @@
 # Apply Progress: longterm-mem
 
-Branch: `feat/lm/longterm-mem-promotion-writer` (base: PR3b-3's commit
-`805db11`; slices 1a–3b-3 history on this branch)
-Last updated: 2026-08-30
+Branch: `feat/lm/longterm-mem-promotion-registration` (base: PR4's commit
+`4552a6a`; slices 1a–4c history on this branch)
+Last updated: 2026-08-31
 
 **Engram split notice**: slices 1, 2a, 2b, and 3a's full detail moved to
 Engram `sdd/longterm-mem/apply-progress-part1` when this document neared
@@ -1007,3 +1007,190 @@ Engram primitive at ~137 lines, 4b-2 `page.go`/`frontmatter.go` page
 emission at ~331 lines) to clear 400, and Part C alone (238) fits in one
 PR. This is reported as a risk, not resolved unprompted, per the
 strict-tdd instruction to report rather than compress tests.
+
+---
+
+## Slice 5 — longterm-mem-promotion-registration (R-028, R-029) (COMPLETE)
+
+All Slice 5 tasks (5.1–5.7) implemented and ticked in `tasks.md`, in the
+two pre-planned parts (Part A addressing, Part B index/log registration)
+kept in separate files per the orchestrator's pre-planned seam.
+
+### Part A — address allocation and manifest registration (R-028)
+
+- [x] 5.1–5.2 RED `longterm-mem/internal/promote/address_test.go` — two
+  scenarios written first against a package exposing no `Allocate` yet
+  (RED confirmed by execution: `undefined: Allocate` before `address.go`
+  existed):
+  - `TestAllocate_FirstPromotionAllocatesNewAddress`: a fixture
+    `scripts/allocate-address.sh` (real shell entrypoint, shebang + exec
+    bit, matching `setup-retrieve.sh`'s convention from 3a.4) that always
+    prints `c-000042`; asserts `Allocate` returns that address and
+    `.raw/.manifest.json`'s `address_map["wiki/memory/c-000042.md"]`
+    equals `c-000042`.
+  - `TestAllocate_RePromotionReusesExistingAddress`: **no**
+    `scripts/allocate-address.sh` fixture is written at all — if `Allocate`
+    attempted to invoke it, `Runner` would fail to resolve the script and
+    the call would return an error, which is what proves reuse never
+    reaches the script. A pre-written page at `wiki/memory/c-000099.md`
+    (built via `EmitPage`, matching what a real prior promotion would have
+    written) carries `engram_id: 101` and `project: labdrian-sdd-overlay`
+    in its frontmatter; asserts `Allocate` returns `c-000099` with no
+    error.
+- [x] 5.3 GREEN `longterm-mem/internal/promote/address.go` —
+  `Allocate(vaultRoot, project string, engramID int) (string, error)`.
+  **Real design decision found during RED, documented rather than
+  assumed**: the task's own signature takes only `(vaultRoot, project,
+  engramID)` — no address/path hint — yet `.raw/.manifest.json`'s
+  `address_map` is keyed by **page path**, and a promoted page's path is
+  itself derived from its address (`wiki/memory/<address>.md`, D7). This
+  is circular for reuse detection: you cannot look up "the path for this
+  engram_id" via `address_map` without already knowing the address that
+  produces that path. Reading the real `~/labdrian-brain/.raw/.manifest.json`
+  confirmed its keys are genuine vault-relative file paths (e.g.
+  `"wiki/concepts/DragonScale Memory.md": "c-000001"`), owned by the
+  external wiki-ingest tool ("do not hand-edit") — inventing a synthetic
+  non-path key inside that file for longterm-mem's own reuse bookkeeping
+  risked breaking that tool's own contract. `findPromotedAddress` instead
+  scans `wiki/memory/*.md` for a page whose frontmatter already carries
+  this `engram_id` and `project` (both flat extras `EmitPage` already
+  writes, 4.10) and reuses its `address` field directly — stylistically
+  consistent with `allocate-address.sh --rebuild`'s own recovery
+  convention (scanning page frontmatter for `address: c-NNNNNN` when its
+  counter file is missing). `address_map` is written **only** on a fresh
+  allocation, keyed by the real `wiki/memory/<address>.md` path, matching
+  the wiki-ingest file's own real-world convention exactly.
+  `addressManifest` decodes/re-encodes `.raw/.manifest.json` at 2-space
+  indent; `Sources` is typed `json.RawMessage` so its own structure is
+  carried through byte-for-byte untouched, never reinterpreted, per the
+  task's explicit "sources untouched" instruction. `writeFileAtomic`
+  (tmp+fsync+rename, `MkdirAll` parent) copies `vaultreg.writeJSONAtomic`'s
+  pattern into `package promote` per the orchestrator's explicit
+  instruction, since `vaultreg`'s helper is unexported — noted here rather
+  than silently duplicated; it is also reused by Part B's `register.go`.
+
+### Part B — index and log registration (R-029)
+
+- [x] 5.4 RED `longterm-mem/internal/promote/register_test.go::TestRegister_NewPageDiscoverableAndLogged`
+  — written first against a package exposing no `RegisterIndex`/
+  `RegisterLog` yet (RED confirmed by execution). Two triangulation tests
+  beyond the one named R-029 scenario were added (strict-TDD's default
+  triangulation requirement, since D7's marker-block/newest-first
+  contracts each carry real branching logic a single scenario would not
+  exercise):
+  - `TestRegisterIndex_IdempotentAndSortedByAddress`: registers two
+    addresses out of order, then re-registers the first with a changed
+    title; asserts the final `index.md` lists both entries sorted by
+    address, the re-registered entry appears exactly once (not
+    duplicated), and carries the new title (not the stale one).
+  - `TestRegisterLog_NewestEntryInsertedBeforeExisting`: registers an
+    older then a newer log entry; asserts the newer entry's text appears
+    **before** the older one in `log.md` (D7's newest-first contract).
+- [x] 5.5 GREEN `longterm-mem/internal/promote/register.go` —
+  `RegisterIndex(indexMdPath, addr, title string) error`: parses the
+  existing `<!-- longterm-mem:begin -->…<!-- longterm-mem:end -->` marker
+  block (if any) into an `address -> title` map via the same
+  `wikilinkPattern` `page.go` already exports, merges in the new entry,
+  re-renders sorted by address, and replaces the block in place (or
+  appends a fresh one after a blank-line separator when absent).
+  `RegisterLog(logMdPath, addr, title string, at time.Time) error`:
+  renders a `## [YYYY-MM-DD] promote | Title` header — matching
+  design-notes #3133 D7's literal quoted format — followed by a
+  `[[addr|title]]` wikilink line, and inserts that entry immediately
+  before the first existing `^## \[` header line (regex, multiline mode),
+  or appends when the log has no entries yet, so the file stays
+  newest-first. The wikilink line is what makes the `addr` parameter
+  meaningfully load-bearing in the rendered log, beyond the header text.
+- [x] 5.6 REFACTOR — `writeIndexBlock(indexMdPath, content string, entries
+  map[string]string) error` is extracted as its own function (not inlined
+  in `RegisterIndex`), taking an already-read `content` string and a full
+  `entries` map. `RegisterIndex` calls it after merging one entry into the
+  parsed map; a future batch caller (`sync`, slice 7) can instead collect
+  the complete `address -> title` map across every promoted page in one
+  pass and call `writeIndexBlock` directly, writing the marker block once
+  per sync run rather than once per page (the task's explicit intent).
+- [x] 5.7 Slice verification — `cd longterm-mem && go test ./...` — all 7
+  packages pass.
+
+### Design notes followed (Engram #3133 D7)
+
+Beyond the `Allocate` reuse-detection decision documented in Part A above,
+`RegisterIndex`/`RegisterLog` both reuse `page.go`'s `wikilinkPattern` and
+`wikilink()` formatter unchanged (no duplicate regex or format string was
+introduced), consistent with 4.12's REFACTOR precedent of one shared
+wikilink implementation per package. Neither `RegisterIndex` nor
+`RegisterLog` calls `Allocate`, `EmitPage`, or writes the page `.md` file
+itself — both take an already-known `addr`/`title` pair, keeping them
+composable, narrowly-scoped primitives for the future `Writer.Promote`
+entrypoint (slice 6, task 6.8) to call in sequence, matching the
+function-seam pattern established in slices 3b/4.
+
+### Verification
+
+`cd longterm-mem && gofmt -l .` — clean. `go vet ./...` — clean.
+`go test ./... -cover -count=1` — all 7 packages pass: `internal/promote`
+83.0% (down slightly from 86.2% — `address.go`/`register.go` add several
+defensive I/O-error branches, none of which are named scenarios for this
+slice); `internal/engram` 82.7%; `internal/query` 85.1%; `internal/vault`
+83.8%; `internal/vaultreg` 67.2%; `cmd/longterm-mem` 0.0% (unchanged — no
+registration-related CLI wiring is in scope until slice 8b).
+`go test . -run TestOSExecImportAllowlist -v` — PASS (re-verified R-021:
+neither `address.go` nor `register.go` imports `os/exec`; only
+`internal/vault/runner.go` does — `address.go` reaches the vault only
+through `vault.Runner`).
+
+`cd engine && go test ./...` — all 10 packages pass (zero-dep gate
+unaffected; this slice touches nothing under `engine/`).
+`bash -n bin/labdrian-overlay` — clean (this slice touches nothing under
+`bin/`).
+
+### Files created
+
+- `longterm-mem/internal/promote/address.go`, `address_test.go` (Part A)
+- `longterm-mem/internal/promote/register.go`, `register_test.go` (Part B)
+
+### Files modified
+
+- `openspec/changes/longterm-mem/tasks.md` (Slice 5 items 5.1–5.7 ticked)
+
+### Authored line budget
+
+Plain line counts for the four new files, `git diff --numstat` for the
+one modified tracked file (no `go.sum` change — no new dependency was
+needed):
+
+| Part | File | Lines |
+|---|---|---|
+| A | `internal/promote/address.go` (new) | 186 |
+| A | `internal/promote/address_test.go` (new) | 93 |
+| **A subtotal** | | **279** |
+| B | `internal/promote/register.go` (new) | 137 |
+| B | `internal/promote/register_test.go` (new) | 110 |
+| **B subtotal** | | **247** |
+| — | `tasks.md` (diff, checkbox toggles, 7 items) | 14 |
+| **Total (A+B+tasks.md, excl. go.sum)** | | **540** |
+
+**Risk: over the 400-line hard cap by 140 lines and well over the
+280–330 forecast** — smaller than slice 4's overage (+496) but consistent
+with every prior slice's root cause: strict-TDD's no-trivial-assertion
+rule demands a dedicated fixture and a specific, distinct assertion per
+named scenario, and this slice added two real triangulation tests
+(`TestRegisterIndex_IdempotentAndSortedByAddress`,
+`TestRegisterLog_NewestEntryInsertedBeforeExisting`) beyond the two named
+R-028/R-029 scenarios to prove the marker-block idempotency/sort and
+newest-first contracts are real logic, not assumed. Part A alone (279)
+slightly exceeds its own ≤250 pre-planned target (+29, the reuse-detection
+scan and the `addressManifest` decode/mutate/re-encode round trip
+together needed more than the budgeted lines); Part B alone (247) stays
+within its own ≤250 target. Each part individually clears the 400-line
+cap on its own — **flagged for the orchestrator's auto-chain
+delivery-strategy decision**: since design.md names no split point for
+slice 5 specifically (unlike slice 4's), and the two parts are already
+staged in fully separate files with no cross-part production dependency
+(Part B's `register.go` does not import or call anything from Part A's
+`address.go`, only the same package-level `wikilinkPattern`/`wikilink`
+that Part A also merely reuses from `page.go`), a `5a`/`5b` split at
+exactly the Part A/Part B boundary is available without any rework if the
+reviewer needs each diff under budget. No scope was added beyond the
+unchecked 5.1–5.7 tasks; no test was omitted or trimmed below strict-TDD's
+assertion-quality bar to chase the budget.
