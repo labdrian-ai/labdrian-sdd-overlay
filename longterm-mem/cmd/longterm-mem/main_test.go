@@ -289,3 +289,137 @@ func TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy(t *testing.T) {
 		}
 	}
 }
+
+// TestRun_DispatchesPromoteSubcommand proves "promote" is registered in
+// run's switch (8b.6), matching TestRun_DispatchesSyncSubcommand's own
+// dispatch-proof convention.
+func TestRun_DispatchesPromoteSubcommand(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("LONGTERM_MEM_VAULT", "")
+	t.Setenv("LONGTERM_MEM_VAULTS_FILE", "")
+
+	got := run([]string{"promote", "--project", "definitely-unconfigured-project", "--id", "1"})
+	if got != 3 {
+		t.Fatalf("run([promote --project ... --id 1]) = %d, want 3 (vault_not_configured), proving promote dispatches into cmdPromote rather than the unknown-subcommand fallback", got)
+	}
+}
+
+// promoteFixtureDB writes a temp Engram DB from the shared schema fixture
+// with one observation row, returning its path and id -- the same
+// building block TestCmdSync_BothPassesRunDespiteAFailingObservation
+// establishes for this file.
+func promoteFixtureDB(t *testing.T, title, project string) (dbPath string, id int64) {
+	t.Helper()
+	schema, err := os.ReadFile(filepath.Join("..", "..", "internal", "engram", "testdata", "schema.sql"))
+	if err != nil {
+		t.Fatalf("read engram schema fixture: %v", err)
+	}
+	dbPath = filepath.Join(t.TempDir(), "engram.db")
+	db, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture db: %v", err)
+	}
+	if _, err := db.Exec(string(schema)); err != nil {
+		t.Fatalf("apply schema: %v", err)
+	}
+	res, err := db.Exec(`INSERT INTO observations (session_id, type, title, content, project, revision_count, pinned, created_at)
+		 VALUES ('sess-1', 'discovery', ?, 'Below-threshold body.', ?, 1, 0, '2026-08-01 00:00:00')`, title, project)
+	if err != nil {
+		t.Fatalf("insert observation: %v", err)
+	}
+	id, err = res.LastInsertId()
+	if err != nil {
+		t.Fatalf("last insert id: %v", err)
+	}
+	if err := db.Close(); err != nil {
+		t.Fatalf("close fixture db: %v", err)
+	}
+	return dbPath, id
+}
+
+// TestCmdPromote_PromotesObservationAndPrintsResult (8b.6 runtime-harness
+// evidence, R-032): an observation that would never qualify automatically
+// (type "discovery", revision 1, unpinned -- see TestEligible) is promoted
+// end to end through the built command, proving cmd_promote.go's own
+// wiring: the page lands on disk, is registered in the vault's catalog and
+// log (R-029, reused by the explicit path per design.md), and the command
+// prints the address and outcome.
+func TestCmdPromote_PromotesObservationAndPrintsResult(t *testing.T) {
+	vaultRoot := t.TempDir()
+	scriptsDir := filepath.Join(vaultRoot, "scripts")
+	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", scriptsDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, "allocate-address.sh"), []byte("#!/bin/sh\nprintf 'c-000901\\n'\n"), 0o755); err != nil {
+		t.Fatalf("write allocate fixture: %v", err)
+	}
+
+	dbPath, id := promoteFixtureDB(t, "Explicitly Promoted", "cmd-promote-project")
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+
+	var exit int
+	stdout := captureStdout(t, func() {
+		exit = run([]string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)})
+	})
+	if exit != 0 {
+		t.Fatalf("run([promote ...]) = %d, want 0; stdout:\n%s", exit, stdout)
+	}
+	if !strings.Contains(stdout, "c-000901") || !strings.Contains(stdout, "created") {
+		t.Fatalf("promote output = %q, want it to name the new address and the created action", stdout)
+	}
+
+	page := filepath.Join(vaultRoot, "wiki", "memory", "c-000901.md")
+	if _, err := os.Stat(page); err != nil {
+		t.Fatalf("promoted page %s does not exist: %v", page, err)
+	}
+	indexData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
+	if err != nil {
+		t.Fatalf("read wiki/index.md: %v", err)
+	}
+	if !strings.Contains(string(indexData), "c-000901") {
+		t.Fatalf("wiki/index.md does not register the promoted page; got:\n%s", indexData)
+	}
+}
+
+// TestCmdPromote_InvalidIdExits7 (8b.6, R-032's "Invalid observation id is
+// rejected" scenario): an id with no matching row must exit 7
+// (not_found), never a silent success, and must never write a page.
+func TestCmdPromote_InvalidIdExits7(t *testing.T) {
+	vaultRoot := t.TempDir()
+	dbPath, _ := promoteFixtureDB(t, "Unrelated", "cmd-promote-project")
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+
+	stderrPath := filepath.Join(t.TempDir(), "stderr.txt")
+	captured, err := os.Create(stderrPath)
+	if err != nil {
+		t.Fatalf("create stderr capture: %v", err)
+	}
+	realStderr := os.Stderr
+	os.Stderr = captured
+	exit := run([]string{"promote", "--project", "cmd-promote-project", "--id", "999999"})
+	os.Stderr = realStderr
+	if err := captured.Close(); err != nil {
+		t.Fatalf("close stderr capture: %v", err)
+	}
+
+	if exit != 7 {
+		t.Fatalf("run([promote --id 999999]) = %d, want 7 (not_found)", exit)
+	}
+	stderr, err := os.ReadFile(stderrPath)
+	if err != nil {
+		t.Fatalf("read stderr capture: %v", err)
+	}
+	if !strings.Contains(string(stderr), "not found") {
+		t.Fatalf("stderr = %q, want it to name the observation as not found", stderr)
+	}
+	if _, statErr := os.Stat(filepath.Join(vaultRoot, "wiki", "index.md")); !os.IsNotExist(statErr) {
+		t.Fatalf("wiki/index.md exists after a rejected promote call (stat err = %v)", statErr)
+	}
+}

@@ -10,7 +10,6 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
@@ -57,7 +56,6 @@ func cmdQuery(args []string) int {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
 		return 3
 	}
-	runner := &vault.Runner{Root: vaultRoot}
 
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
@@ -70,15 +68,8 @@ func cmdQuery(args []string) int {
 	if *top != unsetTopN {
 		requestedTop = *top
 	}
-	deps := query.Deps{
-		Engram: store,
-		RetrieveVault: func(ctx context.Context, project, q string, n int) (vault.Result, error) {
-			return vault.Retrieve(ctx, runner, project, q, n)
-		},
-		ResolveLink: query.NoLinkResolver,
-	}
 
-	result, err := query.Run(context.Background(), deps, query.Request{Project: *project, Query: rest[0], Top: requestedTop})
+	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{Project: *project, Query: rest[0], Top: requestedTop})
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
 		return 4
