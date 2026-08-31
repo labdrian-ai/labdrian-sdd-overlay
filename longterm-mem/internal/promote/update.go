@@ -32,6 +32,23 @@ type Action struct {
 	Diagnostic *Diagnostic
 }
 
+// String renders k as the plain string both cmd_promote.go's CLI output
+// and the MCP promote tool's PromoteOut.Action render over the wire
+// (task 8b.11): one source of truth instead of two callers separately
+// mapping ActionKind's int encoding to the same three names.
+func (k ActionKind) String() string {
+	switch k {
+	case ActionCreated:
+		return "created"
+	case ActionUpdated:
+		return "updated"
+	case ActionSkippedLocalEdit:
+		return "skipped_local_edit"
+	default:
+		return "unknown"
+	}
+}
+
 // UpdateInPlace re-promotes an already-promoted page (R-008): existingPath
 // is overwritten with page's freshly rendered content and store's entry
 // for page.Address is updated to match. The write is refused, with a

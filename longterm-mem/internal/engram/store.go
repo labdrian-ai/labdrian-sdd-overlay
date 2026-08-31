@@ -5,6 +5,7 @@ package engram
 
 import (
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -136,6 +137,15 @@ func (s *Store) Path() string {
 // function (scanObservationRow) stay the single source of truth for it.
 const observationColumns = `id, sync_id, type, title, content, project, revision_count, pinned, created_at, updated_at, deleted_at`
 
+// rowScanner is the Scan method *sql.Row and *sql.Rows both implement,
+// letting scanObservationRow serve ListObservations/
+// ObservationsIncludingDeleted's multi-row loop (via *sql.Rows) and
+// ObservationByID's single-row lookup (via *sql.Row, task 8b.6's explicit
+// promote surface) from one shared scan function instead of two.
+type rowScanner interface {
+	Scan(dest ...any) error
+}
+
 // scanObservationRow scans one observations row selected via
 // observationColumns. sync_id and deleted_at are the only two nullable
 // columns in the live schema (sync_id was added by a later migration with
@@ -143,10 +153,10 @@ const observationColumns = `id, sync_id, type, title, content, project, revision
 // through sql.NullString so a legacy or active row's NULL never fails the
 // scan, per the production incident this guards against: one row with a
 // NULL sync_id previously errored the entire list.
-func scanObservationRow(rows *sql.Rows) (Observation, error) {
+func scanObservationRow(row rowScanner) (Observation, error) {
 	var o Observation
 	var syncID, deletedAt sql.NullString
-	if err := rows.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &deletedAt); err != nil {
+	if err := row.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &deletedAt); err != nil {
 		return Observation{}, fmt.Errorf("engram: scan observation row: %w", err)
 	}
 	o.SyncID = syncID.String
@@ -210,4 +220,24 @@ func (s *Store) ObservationsIncludingDeleted(project string) ([]Observation, err
 	}
 
 	return observations, nil
+}
+
+// ObservationByID returns the observation identified by id, including a
+// soft-deleted row (mirroring ObservationsIncludingDeleted's scope, since
+// an explicit promote call (R-032, task 8b.6) names an id directly rather
+// than scanning a project-scoped list). ok is false, with a zero
+// Observation and a nil error, when no row with that id exists -- a
+// caller (promote.ExplicitPromote) turns that into R-032's "rejected with
+// a clear error" outcome; ObservationByID itself only reports a genuine
+// database error as err.
+func (s *Store) ObservationByID(id int64) (Observation, bool, error) {
+	row := s.db.QueryRow(`SELECT `+observationColumns+` FROM observations WHERE id = ?`, id)
+	o, err := scanObservationRow(row)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return Observation{}, false, nil
+		}
+		return Observation{}, false, fmt.Errorf("engram: look up observation %d: %w", id, err)
+	}
+	return o, true, nil
 }

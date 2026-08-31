@@ -350,3 +350,25 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 		t.Fatalf("entry = %+v, want the re-derived hashes of the on-disk content", entry)
 	}
 }
+
+// TestActionKind_String: task 8b.11 infrastructure. cmd_promote.go's CLI
+// output and the MCP promote tool's PromoteOut.Action both render an
+// ActionKind through this one method instead of separately mapping its
+// int encoding, so the two surfaces cannot render two different names for
+// the same outcome.
+func TestActionKind_String(t *testing.T) {
+	tests := []struct {
+		kind ActionKind
+		want string
+	}{
+		{ActionCreated, "created"},
+		{ActionUpdated, "updated"},
+		{ActionSkippedLocalEdit, "skipped_local_edit"},
+		{ActionKind(99), "unknown"},
+	}
+	for _, tt := range tests {
+		if got := tt.kind.String(); got != tt.want {
+			t.Errorf("ActionKind(%d).String() = %q, want %q", tt.kind, got, tt.want)
+		}
+	}
+}

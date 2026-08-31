@@ -386,3 +386,56 @@ func TestListObservations_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
 		t.Fatalf("got[0].Project = %q, want %q", got[0].Project, "labdrian-sdd-overlay")
 	}
 }
+
+// TestObservationByID_ReturnsTheMatchingRow (task 8b.6 infrastructure,
+// R-032's explicit promote surface): an explicit promote call names an id
+// directly, so this lookup needs no project scoping the way
+// ListObservations does -- a below-threshold, unpinned observation not of
+// an eligible type must still resolve, since R-032's whole point is that
+// an explicit call overrides those criteria downstream in Eligible.
+func TestObservationByID_ReturnsTheMatchingRow(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	id := insertObservationFull(t, dbPath, "explicit-target", "labdrian-sdd-overlay", "discovery", 1, false, "")
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, ok, err := store.ObservationByID(id)
+	if err != nil {
+		t.Fatalf("ObservationByID(%d): %v", id, err)
+	}
+	if !ok {
+		t.Fatalf("ObservationByID(%d) ok = false, want true", id)
+	}
+	if got.ID != id || got.Title != "explicit-target" || got.Project != "labdrian-sdd-overlay" {
+		t.Fatalf("ObservationByID(%d) = %+v, want the inserted row", id, got)
+	}
+}
+
+// TestObservationByID_UnknownIDReportsNotFoundNotAnError (R-032's "clear
+// error rather than silently doing nothing" starts here: ObservationByID
+// itself must distinguish "no such row" from a genuine database failure,
+// so a caller (promote.ExplicitPromote) can turn the former into its own
+// distinguishable error).
+func TestObservationByID_UnknownIDReportsNotFoundNotAnError(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, ok, err := store.ObservationByID(999999)
+	if err != nil {
+		t.Fatalf("ObservationByID(999999) returned an error, want ok=false and a nil error for a missing row: %v", err)
+	}
+	if ok {
+		t.Fatalf("ObservationByID(999999) ok = true, want false; got %+v", got)
+	}
+}
