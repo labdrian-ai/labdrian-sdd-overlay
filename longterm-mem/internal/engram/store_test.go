@@ -260,12 +260,100 @@ func TestListObservations_IncludesEligibilityAndExtraFields(t *testing.T) {
 		t.Fatalf("len(got) = %d, want 1; got %+v", len(got), got)
 	}
 
+	// CreatedAt/UpdatedAt are SQLite-generated (datetime('now')) and thus
+	// dynamic, exactly like ID -- copied in rather than asserted exactly,
+	// matching this test's own established pattern for ID. DeletedAt is
+	// asserted exactly: an active row's NULL deleted_at must read back as
+	// "", not fail the scan (7a's NULL-scan hardening).
 	want := Observation{
 		ID: got[0].ID, SyncID: "sync-abc", Type: "decision", Title: "pinned-decision",
 		Content: "fixture content", Project: "labdrian-sdd-overlay", RevisionCount: 5, Pinned: true,
+		CreatedAt: got[0].CreatedAt, UpdatedAt: got[0].UpdatedAt, DeletedAt: "",
 	}
 	if got[0] != want {
 		t.Fatalf("got[0] = %+v, want %+v", got[0], want)
+	}
+}
+
+// TestListObservations_SurvivesLegacyNullSyncIDRow is the RED test for the
+// mandatory NULL-scan hardening: a row inserted the way a pre-sync_id-column
+// Engram database would have it -- sync_id and tool_name both genuinely
+// NULL, not merely defaulted by a helper that happens to omit them -- must
+// not fail ListObservations' now-widened SELECT (created_at/updated_at
+// added for D11's successor rule, slice 7). A single such legacy row must
+// not error out the whole list.
+func TestListObservations_SurvivesLegacyNullSyncIDRow(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	defer setup.Close()
+	if _, err := setup.Exec(
+		`INSERT INTO observations (session_id, type, title, content, project, revision_count, pinned, created_at, updated_at)
+		 VALUES ('sess-legacy', 'discovery', 'legacy-row', 'pre-sync_id content', 'labdrian-sdd-overlay', 1, 0, '2025-01-01 00:00:00', '2025-01-01 00:00:00')`,
+	); err != nil {
+		t.Fatalf("insert legacy fixture row (NULL sync_id, NULL tool_name): %v", err)
+	}
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.ListObservations("labdrian-sdd-overlay")
+	if err != nil {
+		t.Fatalf("ListObservations with a legacy NULL sync_id row: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("len(got) = %d, want 1", len(got))
+	}
+	if got[0].SyncID != "" {
+		t.Fatalf("SyncID = %q, want empty string for a legacy NULL sync_id row", got[0].SyncID)
+	}
+	if got[0].CreatedAt != "2025-01-01 00:00:00" {
+		t.Fatalf("CreatedAt = %q, want the inserted value", got[0].CreatedAt)
+	}
+}
+
+// TestObservationsIncludingDeleted_IncludesSoftDeletedRows: Propagate
+// (R-033) needs a soft-deleted observation's own row -- ListObservations'
+// R-020 scoping deliberately excludes it for every other caller, so this
+// is a dedicated method, not a ListObservations flag.
+func TestObservationsIncludingDeleted_IncludesSoftDeletedRows(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	insertObservation(t, dbPath, "active-row", "labdrian-sdd-overlay", sql.NullString{})
+	insertObservation(t, dbPath, "soft-deleted-row", "labdrian-sdd-overlay", sql.NullString{String: "2026-08-01T00:00:00Z", Valid: true})
+	insertObservation(t, dbPath, "other-project-row", "some-other-project", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.ObservationsIncludingDeleted("labdrian-sdd-overlay")
+	if err != nil {
+		t.Fatalf("ObservationsIncludingDeleted: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len(got) = %d, want 2 (active + soft-deleted, still project-scoped); got %+v", len(got), got)
+	}
+
+	byTitle := map[string]Observation{}
+	for _, o := range got {
+		byTitle[o.Title] = o
+	}
+	if byTitle["active-row"].DeletedAt != "" {
+		t.Fatalf("active-row.DeletedAt = %q, want empty", byTitle["active-row"].DeletedAt)
+	}
+	if byTitle["soft-deleted-row"].DeletedAt != "2026-08-01T00:00:00Z" {
+		t.Fatalf("soft-deleted-row.DeletedAt = %q, want the soft-delete timestamp", byTitle["soft-deleted-row"].DeletedAt)
 	}
 }
 

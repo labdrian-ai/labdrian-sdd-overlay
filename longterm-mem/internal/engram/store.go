@@ -22,7 +22,15 @@ type Store struct {
 
 // Observation is one mid-term Engram observation row. SyncID, Type, Pinned,
 // and RevisionCount were added in slice 4 for R-007 eligibility and R-027
-// page emission's engram_sync_id/engram_type extras.
+// page emission's engram_sync_id/engram_type extras. CreatedAt, UpdatedAt,
+// and DeletedAt were added in slice 7: CreatedAt drives D11's
+// newer-by-created_at successor rule (propagate.go), and DeletedAt lets
+// Propagate (R-033) tell a soft-deleted observation from an active one.
+// Both timestamps are carried as the raw TEXT SQLite stores them in
+// (lexicographically sortable within one column, since every row in a
+// single Engram database is written through the same datetime('now')
+// convention) rather than parsed into time.Time -- there is no cross-row,
+// cross-format comparison this package needs to perform.
 type Observation struct {
 	ID            int64
 	SyncID        string
@@ -32,6 +40,9 @@ type Observation struct {
 	Project       string
 	RevisionCount int
 	Pinned        bool
+	CreatedAt     string
+	UpdatedAt     string
+	DeletedAt     string
 }
 
 // Open opens a read-only connection to the Engram database at dbPath. When
@@ -119,12 +130,36 @@ func (s *Store) Path() string {
 	return s.path
 }
 
+// observationColumns is the SELECT list ListObservations and
+// ObservationsIncludingDeleted share (7a REFACTOR): the only two callers of
+// the observations table's row shape, so one column list and one scan
+// function (scanObservationRow) stay the single source of truth for it.
+const observationColumns = `id, sync_id, type, title, content, project, revision_count, pinned, created_at, updated_at, deleted_at`
+
+// scanObservationRow scans one observations row selected via
+// observationColumns. sync_id and deleted_at are the only two nullable
+// columns in the live schema (sync_id was added by a later migration with
+// no backfill; deleted_at is null for every active row) -- both are scanned
+// through sql.NullString so a legacy or active row's NULL never fails the
+// scan, per the production incident this guards against: one row with a
+// NULL sync_id previously errored the entire list.
+func scanObservationRow(rows *sql.Rows) (Observation, error) {
+	var o Observation
+	var syncID, deletedAt sql.NullString
+	if err := rows.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &deletedAt); err != nil {
+		return Observation{}, fmt.Errorf("engram: scan observation row: %w", err)
+	}
+	o.SyncID = syncID.String
+	o.DeletedAt = deletedAt.String
+	return o, nil
+}
+
 // ListObservations returns every observation belonging to project that has
 // not been soft-deleted (R-020): rows from other projects and rows with a
 // non-null deleted_at are excluded.
 func (s *Store) ListObservations(project string) ([]Observation, error) {
 	rows, err := s.db.Query(
-		`SELECT id, sync_id, type, title, content, project, revision_count, pinned FROM observations WHERE project = ? AND deleted_at IS NULL`,
+		`SELECT `+observationColumns+` FROM observations WHERE project = ? AND deleted_at IS NULL`,
 		project,
 	)
 	if err != nil {
@@ -134,12 +169,40 @@ func (s *Store) ListObservations(project string) ([]Observation, error) {
 
 	var observations []Observation
 	for rows.Next() {
-		var o Observation
-		var syncID sql.NullString
-		if err := rows.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned); err != nil {
-			return nil, fmt.Errorf("engram: scan observation row: %w", err)
+		o, err := scanObservationRow(rows)
+		if err != nil {
+			return nil, err
 		}
-		o.SyncID = syncID.String
+		observations = append(observations, o)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("engram: iterate observation rows: %w", err)
+	}
+
+	return observations, nil
+}
+
+// ObservationsIncludingDeleted returns every observation belonging to
+// project, including soft-deleted rows (R-033): Propagate needs a
+// soft-deleted observation's own row to decide archived-vs-superseded,
+// which ListObservations' R-020 scoping deliberately excludes for every
+// other caller.
+func (s *Store) ObservationsIncludingDeleted(project string) ([]Observation, error) {
+	rows, err := s.db.Query(
+		`SELECT `+observationColumns+` FROM observations WHERE project = ?`,
+		project,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("engram: list observations (including deleted) for project %q: %w", project, err)
+	}
+	defer rows.Close()
+
+	var observations []Observation
+	for rows.Next() {
+		o, err := scanObservationRow(rows)
+		if err != nil {
+			return nil, err
+		}
 		observations = append(observations, o)
 	}
 	if err := rows.Err(); err != nil {
