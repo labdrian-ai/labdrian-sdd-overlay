@@ -17,10 +17,33 @@ const (
 	indexMarkerEnd   = "<!-- longterm-mem:end -->"
 )
 
-// logHeaderRegexp matches a log.md entry header line (D7): the newest
-// RegisterLog call inserts its own entry immediately before the first
-// match, keeping the file newest-first.
-var logHeaderRegexp = regexp.MustCompile(`(?m)^## \[`)
+// indexMdRelPath and logMdRelPath are the vault's master catalog and
+// append-only promotion log (R-029, D7), vault-relative -- the paths
+// Writer.Promote (task 7.10) joins onto VaultRoot before calling
+// RegisterIndex/RegisterLog.
+const (
+	indexMdRelPath = "wiki/index.md"
+	logMdRelPath   = "wiki/log.md"
+)
+
+// logHeaderDateRegexp matches a log.md entry header line and captures its
+// date (D7): RegisterLog inserts a new entry immediately before the first
+// existing header whose own date is on or before the new entry's date,
+// keeping the file sorted by timestamp regardless of call order (hardening:
+// the pre-fix version always inserted at the very top, trusting call order
+// instead of the at argument).
+var logHeaderDateRegexp = regexp.MustCompile(`(?m)^## \[(\d{4}-\d{2}-\d{2})\]`)
+
+// indexEntryLineRegexp matches one rendered index.md entry line and
+// captures its address/title (D7). Anchored to a full line (unlike the
+// shared, more permissive wikilinkPattern lint.go scans arbitrary prose
+// with), a greedy (.*) here correctly captures a title containing "]]":
+// it consumes the rest of the line first and backs off only as far as the
+// literal "]]$" suffix requires, landing on the LAST "]]" on the line
+// rather than the first (hardening: wikilinkPattern's [^\]]* character
+// class stopped at the first "]", silently truncating such a title on
+// re-parse).
+var indexEntryLineRegexp = regexp.MustCompile(`(?m)^- \[\[(c-\d{6})\|(.*)\]\]$`)
 
 // RegisterIndex registers addr/title in the vault's master catalog,
 // wiki/index.md (R-029): an idempotent marker block, sorted by address,
@@ -31,7 +54,10 @@ func RegisterIndex(indexMdPath, addr, title string) error {
 	if err != nil {
 		return err
 	}
-	entries := parseIndexEntries(content)
+	entries, err := parseIndexEntries(content)
+	if err != nil {
+		return err
+	}
 	entries[addr] = title
 	return writeIndexBlock(indexMdPath, content, entries)
 }
@@ -48,18 +74,26 @@ func writeIndexBlock(indexMdPath, content string, entries map[string]string) err
 }
 
 // parseIndexEntries extracts the existing marker block's address->title
-// pairs from content; a content with no block yet yields an empty map.
-func parseIndexEntries(content string) map[string]string {
+// pairs from content. Content with no block yet yields an empty map. A
+// malformed block -- a begin marker present with no matching end marker,
+// e.g. from a bad hand-edit or a partial prior write -- returns an error
+// instead of silently treating it as "no block yet": that used to make
+// writeIndexBlock append a fresh block containing only the new entry,
+// discarding every entry that lived under the orphaned begin marker.
+func parseIndexEntries(content string) (map[string]string, error) {
 	entries := map[string]string{}
 	begin := strings.Index(content, indexMarkerBegin)
 	end := strings.Index(content, indexMarkerEnd)
-	if begin == -1 || end == -1 || end <= begin {
-		return entries
+	if begin == -1 && end == -1 {
+		return entries, nil
 	}
-	for _, m := range wikilinkPattern.FindAllStringSubmatch(content[begin+len(indexMarkerBegin):end], -1) {
+	if begin == -1 || end == -1 || end <= begin {
+		return nil, fmt.Errorf("promote: index.md has a malformed longterm-mem marker block (begin present=%v, end present=%v): refusing to rewrite and risk dropping existing entries", begin != -1, end != -1)
+	}
+	for _, m := range indexEntryLineRegexp.FindAllStringSubmatch(content[begin+len(indexMarkerBegin):end], -1) {
 		entries[m[1]] = m[2]
 	}
-	return entries
+	return entries, nil
 }
 
 // renderIndexBlock renders entries as the marker block, one wikilink per
@@ -99,8 +133,12 @@ func replaceOrAppendBlock(content, block string) string {
 // RegisterLog records the promotion event for addr/title at the given
 // time in the vault's append-only promotion log, wiki/log.md (R-029): a
 // `## [YYYY-MM-DD] promote | Title` header (D7) followed by a wikilink to
-// the page, inserted before the first existing entry header so the file
-// stays newest-first.
+// the page, inserted so the file stays sorted newest-first BY TIMESTAMP --
+// not by call order. Hardening: the pre-fix version always inserted
+// before the very first existing header, which only produced a correctly
+// sorted file when every call happened to arrive in chronological order;
+// an out-of-order call (an older at registered after a newer one already
+// present) left the file unsorted.
 func RegisterLog(logMdPath, addr, title string, at time.Time) error {
 	content, err := readOptional(logMdPath)
 	if err != nil {
@@ -108,19 +146,28 @@ func RegisterLog(logMdPath, addr, title string, at time.Time) error {
 	}
 
 	entry := fmt.Sprintf("## [%s] promote | %s\n\n%s\n\n", at.Format("2006-01-02"), title, wikilink(addr, title))
-
-	loc := logHeaderRegexp.FindStringIndex(content)
-	var newContent string
-	if loc == nil {
-		trimmed := strings.TrimRight(content, "\n")
-		if trimmed != "" {
-			trimmed += "\n\n"
-		}
-		newContent = trimmed + entry
-	} else {
-		newContent = content[:loc[0]] + entry + content[loc[0]:]
-	}
+	newContent := insertLogEntry(content, entry, at)
 	return writeFileAtomic(logMdPath, []byte(newContent))
+}
+
+// insertLogEntry returns content with entry inserted at the position that
+// keeps log.md sorted newest-first by at: immediately before the first
+// existing header whose own date is on or before at's date. When every
+// existing header is strictly newer than at (or there are none), entry is
+// appended at the end (or, for empty content, becomes the whole file).
+func insertLogEntry(content, entry string, at time.Time) string {
+	atDate := at.Format("2006-01-02")
+	for _, loc := range logHeaderDateRegexp.FindAllStringSubmatchIndex(content, -1) {
+		headerStart, dateStart, dateEnd := loc[0], loc[2], loc[3]
+		if content[dateStart:dateEnd] <= atDate {
+			return content[:headerStart] + entry + content[headerStart:]
+		}
+	}
+	trimmed := strings.TrimRight(content, "\n")
+	if trimmed == "" {
+		return entry
+	}
+	return trimmed + "\n\n" + entry
 }
 
 // readOptional reads path's content, treating a missing file as empty
