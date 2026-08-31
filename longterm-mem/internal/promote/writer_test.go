@@ -64,7 +64,7 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	store := PrecedenceStore{}
 	seedPrecedence(store, first)
 
-	// findPromotedAddress (address.go) reuses the same page for the same
+	// findPromotedPage (address.go) reuses the same page for the same
 	// engram_id/project, so Allocate needs no allocator script fixture
 	// here -- reuse must never invoke the subprocess.
 	w := &Writer{VaultRoot: vaultRoot, Store: store}
@@ -299,5 +299,162 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 	orphan := filepath.Join(vaultRoot, pagePathPrefix, "c-000042.md")
 	if _, err := os.Stat(orphan); !os.IsNotExist(err) {
 		t.Fatalf("page %s survived a failed fingerprint write (stat err = %v); it must be rolled back so a retry converges", orphan, err)
+	}
+}
+
+// TestWriter_Promote_CreateRegistersIndexAndLog: R-029, task 7.10. A
+// promotion that actually writes a brand-new page must also register it
+// in the vault's master catalog (wiki/index.md) and record the promotion
+// event in the append-only log (wiki/log.md) -- RegisterIndex/RegisterLog
+// (register.go, Slice 5) had zero production callers until this task.
+func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
+	vaultRoot := t.TempDir()
+	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	obs := engram.Observation{ID: 501, Type: "decision", Title: "Catalog Me", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+
+	result, err := w.Promote(obs, false)
+	if err != nil {
+		t.Fatalf("Promote: %v", err)
+	}
+
+	indexData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
+	if err != nil {
+		t.Fatalf("read wiki/index.md: %v", err)
+	}
+	if !strings.Contains(string(indexData), "[["+result.Page.Address+"|Catalog Me]]") {
+		t.Fatalf("wiki/index.md does not list the promoted page; got:\n%s", indexData)
+	}
+
+	logData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "log.md"))
+	if err != nil {
+		t.Fatalf("read wiki/log.md: %v", err)
+	}
+	if !strings.Contains(string(logData), "## [2026-08-01] promote | Catalog Me") {
+		t.Fatalf("wiki/log.md does not record the promotion event; got:\n%s", logData)
+	}
+}
+
+// TestWriter_Promote_UpdateRegistersIndexAndLog: R-029, task 7.10. The
+// update branch (a re-promoted, not-locally-edited observation) must
+// register too -- a second, distinct log.md entry for the fresh
+// promotion event, and the SAME index.md entry updated in place rather
+// than duplicated (RegisterIndex's own idempotent-replace contract).
+func TestWriter_Promote_UpdateRegistersIndexAndLog(t *testing.T) {
+	vaultRoot := t.TempDir()
+	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	obs := engram.Observation{ID: 502, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	result := promoteTwice(t, w, obs)
+	if result.Action.Kind != ActionUpdated {
+		t.Fatalf("Action.Kind = %v, want ActionUpdated", result.Action.Kind)
+	}
+
+	logData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "log.md"))
+	if err != nil {
+		t.Fatalf("read wiki/log.md: %v", err)
+	}
+	content := string(logData)
+	if strings.Count(content, "## [") != 2 {
+		t.Fatalf("wiki/log.md must record both the create and the update as separate entries; got:\n%s", content)
+	}
+	if !strings.Contains(content, "## [2026-08-15] promote | Updated Twice") {
+		t.Fatalf("wiki/log.md missing the update's own entry; got:\n%s", content)
+	}
+
+	indexData, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
+	if err != nil {
+		t.Fatalf("read wiki/index.md: %v", err)
+	}
+	if strings.Count(string(indexData), result.Page.Address) != 1 {
+		t.Fatalf("wiki/index.md must register the reused address exactly once (idempotent replace, not a duplicate entry); got:\n%s", indexData)
+	}
+}
+
+// TestWriter_Promote_SkipDoesNotRegister: R-029, task 7.10. The branch
+// that writes nothing (ActionSkippedLocalEdit) must register nothing
+// either -- registering a page longterm-mem never actually wrote would
+// misrepresent the catalog/log as reflecting the skipped promotion.
+func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
+	vaultRoot := t.TempDir()
+	writeAllocateScript(t, vaultRoot, allocateAddressFixture)
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	obs := engram.Observation{ID: 503, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := w.Promote(obs, false)
+	if err != nil {
+		t.Fatalf("Promote (first): %v", err)
+	}
+
+	full := filepath.Join(vaultRoot, first.Page.Path)
+	locallyEdited := first.Page.Frontmatter + "Edited by a human, never by longterm-mem.\n"
+	if err := os.WriteFile(full, []byte(locallyEdited), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
+
+	indexBefore, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
+	if err != nil {
+		t.Fatalf("read wiki/index.md (before): %v", err)
+	}
+	logBefore, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "log.md"))
+	if err != nil {
+		t.Fatalf("read wiki/log.md (before): %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 2
+	obs.Content = "Revised content."
+	second, err := w.Promote(obs, false)
+	if err != nil {
+		t.Fatalf("Promote (second): %v", err)
+	}
+	if second.Action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("Action.Kind = %v, want ActionSkippedLocalEdit", second.Action.Kind)
+	}
+
+	indexAfter, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "index.md"))
+	if err != nil {
+		t.Fatalf("read wiki/index.md (after): %v", err)
+	}
+	if string(indexBefore) != string(indexAfter) {
+		t.Fatalf("wiki/index.md changed on a skip; before:\n%s\nafter:\n%s", indexBefore, indexAfter)
+	}
+
+	logAfter, err := os.ReadFile(filepath.Join(vaultRoot, "wiki", "log.md"))
+	if err != nil {
+		t.Fatalf("read wiki/log.md (after): %v", err)
+	}
+	if string(logBefore) != string(logAfter) {
+		t.Fatalf("wiki/log.md changed on a skip; before:\n%s\nafter:\n%s", logBefore, logAfter)
+	}
+}
+
+// TestWriter_Promote_IneligibleDoesNotRegister: R-029, task 7.10. An
+// ineligible observation writes nothing (R-007) and must register
+// nothing either -- proving the zero-Result early return never reaches
+// registration.
+func TestWriter_Promote_IneligibleDoesNotRegister(t *testing.T) {
+	vaultRoot := t.TempDir()
+	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	obs := engram.Observation{ID: 504, Type: "note", Title: "Not Eligible", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+
+	result, err := w.Promote(obs, false)
+	if err != nil {
+		t.Fatalf("Promote: %v", err)
+	}
+	if result.Page.Address != "" {
+		t.Fatalf("Page.Address = %q, want the zero Result R-007 promises for an ineligible observation", result.Page.Address)
+	}
+
+	if _, err := os.Stat(filepath.Join(vaultRoot, "wiki", "index.md")); !os.IsNotExist(err) {
+		t.Fatalf("wiki/index.md exists after an ineligible observation was promoted (stat err = %v)", err)
+	}
+	if _, err := os.Stat(filepath.Join(vaultRoot, "wiki", "log.md")); !os.IsNotExist(err) {
+		t.Fatalf("wiki/log.md exists after an ineligible observation was promoted (stat err = %v)", err)
 	}
 }
