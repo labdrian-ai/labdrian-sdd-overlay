@@ -1843,3 +1843,177 @@ both returned the frontmatter block unchanged when the field was entirely
 absent, so a patch reported success having written nothing (part 7c); and
 R-029's registration was never wired into the promotion writer at all
 (part 7e, task 7.10).
+
+## Slice 8a — longterm-mem-ops-status-doctor (R-010, R-011) (COMPLETE)
+
+All Slice 8a tasks (8a.1–8a.8) implemented and ticked in `tasks.md`,
+strict TDD RED → GREEN throughout. New package `internal/ops` (`Status`,
+`Doctor`), plus `vault.PrerequisitePresent` (runner.go, the sole
+`os/exec`-importing file) and CLI wiring (`cmd_status.go`, `cmd_doctor.go`).
+
+### TDD Cycle Evidence
+
+| Task | Test File | RED (failure excerpt) | GREEN |
+|---|---|---|---|
+| 8a.1 | `status_test.go::TestStatus` (3 cases) | `undefined: StatusDeps` / `undefined: Status` (build failure) | — |
+| 8a.2 | `status.go` | — | `go test -run TestStatus -v` → 3/3 subtests PASS on first implementation. Mutation check: forcing `report.VaultProvisioned = true` unconditionally flipped the "Never-provisioned vault" subtest to FAIL (`VaultProvisioned = true, want false`), confirmed the test is load-bearing, then reverted. |
+| 8a.3 | `cmd_status.go` + `main_test.go::TestRun_DispatchesStatusSubcommand` | no paired RED task in tasks.md for this file (matches `cmd_index.go`/`cmd_query.go`/`cmd_sync.go` precedent — CLI wiring has no dedicated RED task in the task list); test written and run against the already-wired dispatch, PASS on first run — documented as supplementary runtime-harness evidence, not a formal RED/GREEN pair | `go test ./cmd/... -run TestRun_DispatchesStatusSubcommand -v` → PASS |
+| 8a.4 | `doctor_test.go::TestDoctor` (4 named-check cases) | `undefined: Check` / `undefined: DoctorDeps` / `undefined: Doctor` / `undefined: CheckVaultConfigResolvable` (build failure, "too many errors") | — |
+| 8a.5 | `doctor.go` | — | `go test -run TestDoctor -v` → 4/4 subtests PASS on first implementation. Mutation checks: (1) disabling the `address-map` diagnostic filter (`if diag.Rule == "address-map"` → `if false`) flipped "Corrupted address-map entry is named" to FAIL (`address-map-integrity = ... Status:PASS, want FAILed`); (2) disabling the log.md-membership check made `logData`/`logErr` unused, a compile failure proving that branch is load-bearing for the "Unregistered promoted page" case. Both reverted. |
+| 8a.6 | `cmd_doctor.go` + `main_test.go::TestCmdDoctor_ReportsEveryCheckDespiteOneFailing` | no paired RED task in tasks.md for this file (same precedent as 8a.3); the runtime-harness test was written and run against the already-wired dispatch, PASS on first run, then verified genuinely load-bearing (see below) | `go test ./cmd/... -run TestCmdDoctor_ReportsEveryCheckDespiteOneFailing -v` → PASS |
+| 8a.7 | `internal/ops/testdata/fixture.go` (extracted from `status_test.go`/`doctor_test.go`'s inline helpers) | approval refactor: pre-refactor tests captured as the behavior baseline, not a failing test | `go test ./internal/ops/... -v` → all 7 subtests (3 `TestStatus` + 4 `TestDoctor`) still PASS after extraction, byte-identical assertions |
+| 8a.8 | slice verification | — | `cd longterm-mem && gofmt -l . && go vet ./... && go test ./... -cover -count=1` → all 8 packages pass |
+
+**Mandatory anti-pattern check (this slice's own stated lesson, not a
+review finding): "a per-item failure must never abort a whole run."**
+`TestCmdDoctor_ReportsEveryCheckDespiteOneFailing` builds a vault with one
+promoted page correctly address-mapped but registered in neither
+`wiki/index.md` nor `wiki/log.md` (guaranteeing `wiki-registration-
+consistency` FAILs) and asserts all four check names still appear in the
+CLI's stdout report. It passed on first run since `cmd_doctor.go` already
+prints every check unconditionally before deciding the exit code, so it
+was deliberately mutated to `break` its print loop on the first FAIL (the
+exact early-return defect the prompt named) — the mutation reproduced the
+defect exactly (`doctor output missing check "runtime-prerequisites"`),
+confirming the test actually guards against it, then reverted.
+`ops.Doctor` itself runs all four checks unconditionally in one literal
+slice (no loop with an early exit at all), so there is no equivalent
+mutation surface at that layer.
+
+### Design decisions
+
+- **`StatusDeps`/`StatusReport` and `DoctorDeps`/`DoctorReport` are four
+  distinct types, not one shared `Deps`/`Report` pair.** Tasks 8a.2/8a.5
+  both describe their signature generically as `(ctx, Deps, project
+  string) (Report, error)`, but package `ops` cannot declare two types
+  both literally named `Deps` and `Report`. A single shared pair was
+  considered and rejected: `Status` and `Doctor` need genuinely different
+  dependencies (`Status` needs `EngramReachable`/`VaultProvisioned`;
+  `Doctor` needs `PrerequisitePresent` and nothing Engram-related at all),
+  and a shared `Report` would force every JSON response to carry
+  zero-valued fields the called function never actually checked (e.g. a
+  `Doctor` response literally saying `"engram_reachable": false` despite
+  never touching Engram) — exactly the "reports success/state on
+  something it never checked" defect class this apply was warned against.
+  Distinct types follow the same specific-naming convention `promote`
+  already uses (`SyncReport`/`PropagateReport` under one shared `Deps`,
+  because `Sync`/`Propagate` there genuinely share one dependency set and
+  are always called together with the same value in `cmd_sync.go`) — here
+  the dependency sets differ, so the types do too.
+- **`vault.PrerequisitePresent(name string) bool` is a package-level
+  function in `runner.go`, not a `Runner` method.** `exec.LookPath`
+  resolves purely against `PATH`, needing no vault root, so a `Runner`
+  receiver would carry an unused `Root` field. It still lives in
+  `runner.go` specifically because that is the one file
+  `TestOSExecImportAllowlist` (R-021) permits to import `"os/exec"` at
+  all — `internal/ops` calls it through `DoctorDeps.PrerequisitePresent`
+  as a function seam, exactly like `StatusDeps.EngramReachable`/
+  `VaultProvisioned`, so `doctor_test.go` never depends on what is
+  actually installed on the host running the test.
+- **The address-map and catalog (`wiki/index.md`) halves of Doctor's
+  checks reuse `promote.LintPage`'s existing `address-map` and
+  `inbound-index-link` diagnostics (filtered by `Rule`) instead of
+  re-implementing either rule**, per the task description. `LintPage` has
+  no equivalent rule for `wiki/log.md`, so the log half of
+  `wiki-registration-consistency` is new, small, self-contained logic in
+  `doctor.go` (`strings.Contains` against the same `[[address` wikilink
+  shape `RegisterLog` writes) — not a duplicate of an existing rule,
+  since none exists to duplicate.
+- **`loadPromotedPages` treats a missing `wiki/memory` directory as "zero
+  promoted pages", not a failure**, mirroring `checkAddressMap`'s own
+  "nothing yet to be inconsistent with" handling of a missing
+  `.raw/.manifest.json`. This is why the "Unresolvable vault config"
+  `TestDoctor` case can assert the other three checks still PASS: under a
+  nonexistent `VaultRoot`, `address-map-integrity` and
+  `wiki-registration-consistency` both have nothing to scan and correctly
+  report PASS rather than propagating the broken root as their own
+  failure — proving the four checks are independent, not that a broken
+  root is silently ignored (`vault-config-resolvable` itself still FAILs
+  and names the path).
+- **`Status`/`Doctor` require every `Deps` function field to be
+  non-nil in production**; neither type defaults a nil seam to an
+  internal fallback. A nil-defaults-to-pass shortcut (e.g. nil
+  `PrerequisitePresent` silently reading as "present") would itself be a
+  silent-success defect of the same class named above. `cmd_status.go`/
+  `cmd_doctor.go` always wire every field; a nil field reaching `Status`/
+  `Doctor` in production is a wiring bug that should panic loudly, not
+  degrade quietly.
+- **`internal/ops/testdata` is an importable helper package, not a
+  fixture-data directory**, per the task's own literal path. Verified
+  empirically (a throwaway module in the scratchpad, outside this repo)
+  that `go build ./...`/`go vet ./...`/`go test ./...` all correctly
+  compile and use a package explicitly imported from a `testdata/`
+  directory — Go's tooling excludes `testdata/` only from `...` pattern
+  *expansion* (it is never a `go test ./...` target of its own, matching
+  `exec_allowlist_test.go`'s own `filepath.SkipDir` on `"testdata"`), not
+  from explicit `import` resolution.
+
+### Coverage
+
+`go test ./... -cover -count=1`: `internal/ops` 84.9%, `cmd/longterm-mem`
+35.0% (whole-package figure across all subcommands, not doctor/status
+alone), `internal/vault` 84.1% (up from the pre-slice baseline after
+adding `PrerequisitePresent`), all 8 packages pass.
+
+### Deviations from tasks.md
+
+None in scope or ordering. The only interpretive decision — resolving
+tasks 8a.2/8a.5's generic `Deps`/`Report` signature wording into four
+concretely-named types — is recorded above under Design decisions, not
+here, since it does not change what either task actually delivers.
+
+### Slice 8a — post-review corrections (delivery record)
+
+Slice 8a shipped as five chained PRs (#203–#207). Three of the five parts
+passed with zero corrections; two absorbed one finding each, both of them
+gaps in proof rather than wrong behavior — and one of them the same
+architectural shape this change has now paid for five times:
+
+1. **`R3-status-error-path-unproved` (CRITICAL, part 8a-1).** `Status`'s
+   only error path was exercised by nothing. The production code was
+   correct, but a regression that swallowed a malformed sync-state record
+   and returned `never` would have passed the entire suite — quietly
+   reporting a project as never-synced when its record was corrupt, which
+   is exactly what R-010's "never, not a fabricated timestamp" scenario
+   exists to prevent. Covered by
+   `TestStatus_MalformedSyncStateIsAnErrorNotAFabricatedTimestamp`, and
+   verified load-bearing by mutation: returning `neverSynced` from the
+   parse failure reproduced the bad report before being reverted.
+
+2. **`R3-page-read-error-aborts-two-checks` (CRITICAL, part 8a-3).** The
+   per-item-failure-aborts-the-run defect again, now inside `Doctor`. One
+   unreadable promoted page returned an error out of the page loader, so
+   both page-walking checks reported FAIL carrying only that single I/O
+   message and discarded every other page's result — a vault with one
+   broken symlink would hide a genuinely unregistered page behind it on
+   every run, contradicting this package's own doc comment. An unreadable
+   entry is now its own detail line and the scan continues; only a
+   directory that cannot be listed at all remains an error. RED:
+   `TestDoctor_UnreadablePageDoesNotHideEveryOtherPage`, which asserts the
+   unreadable page and an unregistered page both appear in the same
+   detail.
+
+Every test in this slice was verified load-bearing by deliberate mutation
+rather than by passing, including the ones that passed on first run.
+
+3. **`R3-status-success-path-unproved` (CRITICAL, part 8a-4).**
+   `cmdStatus`'s entire reporting contract sat behind the vault-resolution
+   failure its only test triggered, so nothing executed the four output
+   lines or the documented exit-0-when-unhealthy behavior. `doctor` had an
+   end-to-end output test; `status` did not. Covered end to end and
+   verified by mutation (deleting the last-sync line reproduced the
+   failure).
+
+**A review that could not decide.** The first candidate for part 8a-4
+bundled the two commands with this slice's own SDD artifact updates (448
+lines). Its review reached `escalated` / `native_stop_required`: all four
+lenses completed, but with severe findings whose causality the engine
+could not attribute, so it neither blocked nor approved and closed without
+a receipt, exposing no findings through the status surface. On the
+maintainer's decision the candidate was split into code (#206) and
+artifacts (#207). The code-only candidate then reviewed cleanly through a
+normal `correction_required` → approved → acknowledged cycle, which points
+at the mixed candidate — executable code plus a large passive-documentation
+diff in one frozen target — as what made causality inconclusive. Worth
+remembering as a candidate-shaping rule, not just an incident: keep
+executable changes and bulk documentation in separate candidates.

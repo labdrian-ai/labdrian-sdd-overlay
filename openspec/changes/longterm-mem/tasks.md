@@ -270,14 +270,14 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 ## Slice 8a — longterm-mem-ops-8a-status-doctor (R-010, R-011) — PR8a (base: PR7)
 
-- [ ] 8a.1 RED `longterm-mem/internal/ops/status_test.go::TestStatus` (table-driven, 3 cases) — Engram reachable + vault provisioned + prior sync recorded → all healthy plus timestamp; never-provisioned vault → reported, not an error; never-synced project → "never", not a fabricated timestamp. Scenarios: "Healthy status reports all three fields", "Never-provisioned vault is reported, not an error", "Never-synced project reports never, not a fabricated timestamp" (R-010).
-- [ ] 8a.2 GREEN `longterm-mem/internal/ops/status.go` — `Status(ctx, Deps, project string) (Report, error)` composing Engram reachability, `vault.Provisioned`, and the sync-state file's `last_sync_completed_at`.
-- [ ] 8a.3 GREEN `longterm-mem/cmd/longterm-mem/cmd_status.go` — `status --project P` wiring.
-- [ ] 8a.4 RED `longterm-mem/internal/ops/doctor_test.go::TestDoctor` (table-driven, 4 named checks) — unresolvable vault-registry path → vault-config-resolvable check names it; promoted page missing its address-map entry → address-map-integrity check names it; promoted page absent from catalog/log → wiki-registration-consistency check names it; missing runtime prerequisite → runtime-prerequisites check reports missing rather than a later generic failure. Scenarios: "Unresolvable vault config is named", "Corrupted address-map entry is named", "Unregistered promoted page is named", "Missing runtime prerequisite is named" (R-011).
-- [ ] 8a.5 GREEN `longterm-mem/internal/ops/doctor.go` — `Doctor(ctx, Deps, project string) (Report, error)` running the four read-only checks independently (address-map/registration checks reuse `promote.LintPage`'s rules, slice 4); exit 1 if any FAILs.
-- [ ] 8a.6 GREEN `longterm-mem/cmd/longterm-mem/cmd_doctor.go` — `doctor --project P` wiring.
-- [ ] 8a.7 REFACTOR — extract the shared registry/vault/precedence-store/catalog fixture builder into `internal/ops/testdata` helpers reused by both test files.
-- [ ] 8a.8 Slice verification — `cd longterm-mem && go test ./...`.
+- [x] 8a.1 RED `longterm-mem/internal/ops/status_test.go::TestStatus` (table-driven, 3 cases) — Engram reachable + vault provisioned + prior sync recorded → all healthy plus timestamp; never-provisioned vault → reported, not an error; never-synced project → "never", not a fabricated timestamp. Scenarios: "Healthy status reports all three fields", "Never-provisioned vault is reported, not an error", "Never-synced project reports never, not a fabricated timestamp" (R-010).
+- [x] 8a.2 GREEN `longterm-mem/internal/ops/status.go` — `Status(ctx, Deps, project string) (Report, error)` composing Engram reachability, `vault.Provisioned`, and the sync-state file's `last_sync_completed_at`. Implemented as `StatusDeps`/`StatusReport` (see apply-progress.md for why the generic `Deps`/`Report` wording resolved to distinct types).
+- [x] 8a.3 GREEN `longterm-mem/cmd/longterm-mem/cmd_status.go` — `status --project P` wiring.
+- [x] 8a.4 RED `longterm-mem/internal/ops/doctor_test.go::TestDoctor` (table-driven, 4 named checks) — unresolvable vault-registry path → vault-config-resolvable check names it; promoted page missing its address-map entry → address-map-integrity check names it; promoted page absent from catalog/log → wiki-registration-consistency check names it; missing runtime prerequisite → runtime-prerequisites check reports missing rather than a later generic failure. Scenarios: "Unresolvable vault config is named", "Corrupted address-map entry is named", "Unregistered promoted page is named", "Missing runtime prerequisite is named" (R-011).
+- [x] 8a.5 GREEN `longterm-mem/internal/ops/doctor.go` — `Doctor(ctx, Deps, project string) (Report, error)` running the four read-only checks independently (address-map/registration checks reuse `promote.LintPage`'s rules, slice 4); exit 1 if any FAILs. Implemented as `DoctorDeps`/`DoctorReport`; runtime-prerequisites check wired to new `vault.PrerequisitePresent` (runner.go, the sole `os/exec` importer, R-021).
+- [x] 8a.6 GREEN `longterm-mem/cmd/longterm-mem/cmd_doctor.go` — `doctor --project P` wiring.
+- [x] 8a.7 REFACTOR — extract the shared registry/vault/precedence-store/catalog fixture builder into `internal/ops/testdata` helpers reused by both test files.
+- [x] 8a.8 Slice verification — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestStatus|TestDoctor`
 
 ---
