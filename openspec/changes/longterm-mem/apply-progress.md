@@ -2281,3 +2281,155 @@ direct dependency, bringing seven new indirect ones. `go mod tidy`
 correspondingly dropped `pelletier/go-toml/v2`, an unused indirect that no
 code in this module ever referenced; the TOML config writer is slice 12
 work and will re-add it as a real dependency when it exists.
+
+---
+
+## Slice 9 — longterm-mem-overlay-route (R-013, R-035) — PR9 (base: PR8b)
+
+Implemented tasks 9.1–9.12, all ticked in `tasks.md`. This slice touches
+only `engine/` and `bin/labdrian-overlay`, not `longterm-mem/` — it adds the
+fourth route value `mcp` to the manifest route domain (D13) and a loud
+rejection guard for unrouted/unrecognized `longterm-mem/**` rows (R-012 in
+`overlay-agent-route`, traces R-035).
+
+### TDD Cycle Evidence
+
+| Task | Test | RED (real failure) | GREEN | REFACTOR |
+|---|---|---|---|---|
+| 9.1/9.2 | `engine/skills/ondisk_test.go::TestDeployableManifestPaths_ExcludesMcpRoute` | `ondisk_test.go:80: DeployableManifestPaths: mcp-routed row "longterm-mem/go.mod" must be excluded, but was included: map[longterm-mem/go.mod:{} sdd-spec/SKILL.md:{}]` | Added `"mcp": true` to `nonSkillRoutes` in `engine/skills/ondisk.go` + doc comment naming the four-value domain. `go test ./skills/... -run TestDeployableManifestPaths_ExcludesMcpRoute` → PASS. | Doc comment on `DeployableManifestPaths` updated to list `mcp` alongside `agent`/`opencode-agent`. |
+| 9.3 | `engine/installer/route_test.go::TestRouteResolve_McpRow` | `route_test.go:461: expected 0 copy targets for mcp route, got 3: map[claude:.../longterm-mem/go.mod codex:.../longterm-mem/go.mod opencode:.../longterm-mem/go.mod]` (fell through to the default skill route, which fans out to all 3 skills targets) | New `elif [[ "$route" == "mcp" ]]` branch in `route_resolve()` — repo source, zero targets. | — |
+| 9.4 | `engine/installer/route_test.go::TestRouteResolve_OpencodeAgentUnaffected` | **Passed on first run** (regression guard against pre-existing, unmodified behavior — no RED expected). Proved load-bearing by deliberate mutation: temporarily changed the `opencode-agent` branch's target line to `targets+=("opencode:/BROKEN-")`; re-run failed with `route_test.go:491: opencode dest "/BROKEN-": want suffix .config/opencode/agents/GADU.md`; reverted, re-confirmed PASS. | N/A (no production change needed — this task is a regression pin) | — |
+| 9.5 | `engine/installer/route_test.go::TestRouteResolve_UnroutedLongtermMemRowRejected` + `TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected` | Both: `expected route_resolve to reject a longterm-mem row with a missing/unrecognized route, got nil error` (silently fell through to route=skill, no rejection) | New `route_reject_unrouted_longterm_mem()` helper, called from `route_resolve()` for any `longterm-mem/*` path, checking the UNDEFAULTED third column against `{skill,agent,opencode-agent,mcp}` and `exit 1` with an explicit stderr message naming the row otherwise. Both tests → PASS. | Written directly as its own function from the start (see 9.11 note below — no separate hoist pass was needed). |
+| 9.6/9.7 | (same tests as 9.3/9.5) + `route_repo_rel()` mcp case | (as above) | `mcp)` case added to `route_repo_rel()` alongside `agent`/`opencode-agent`/`skill`. | — |
+| 9.8/9.9 | `engine/skills/ondisk_test.go::TestRouteDomain_MatchesBashAndGo` | **First run failed on a genuine test-harness bug, not the production domain**: the helper script omitted `OVERLAY_DIR`/`HOME`/`TARGET_PATHS`/`AGENT_TARGET_PATHS` that `route_resolve` unconditionally references under `set -u`, so every candidate route failed with `line 70: OVERLAY_DIR: unbound variable` regardless of route value. Fixed the harness to declare the same globals `callRouteResolve` in `route_test.go` already declares, then reran: **PASS on first true run** (both sides already correct from 9.2/9.6/9.7). Proved load-bearing by deliberate mutation: temporarily removed `"mcp": true` from `nonSkillRoutes`; re-run failed with `ondisk_test.go:297: Go route domain (nonSkillRoutes + implicit skill default) has 3 values, want 4: map[agent:true opencode-agent:true skill:true]`; reverted, re-confirmed PASS. | No further production code beyond 9.2/9.6/9.7 (task 9.9 is explicitly a no-op GREEN — the test only closes the parity assertion). | — |
+| 9.10 | (manifest data, no test) | N/A | Added `longterm-mem/go.mod custom mcp` to `overlay.manifest`. Reran the full `engine` suite (`-count=1`, no cache) afterward — `TestRepositorySkillsAreFullyRegistered` and every other manifest-reading test still pass with the new row present. | — |
+| 9.11 | (structural, no new test) | N/A — see 9.5's note | `route_reject_unrouted_longterm_mem()` was written as its own top-level function during 9.6's GREEN step, not as an inline guard later extracted. The task's literal "hoist from an inline guard" framing does not match the actual implementation order; the end state (a standalone, reusable helper `cmd_apply`'s manifest-load hook can call directly) matches the task's stated goal. | — |
+| 9.12 | Slice verification | See "Gates" below. | — | — |
+
+### Parity-test design note (9.8)
+
+Per the apply brief's guidance to avoid two hardcoded lists: the Go side of
+the domain assertion is derived from the REAL `nonSkillRoutes` map (`for
+route := range nonSkillRoutes`) plus the implicit `"skill"` default, not
+restated as a literal `{"skill","agent","opencode-agent","mcp"}` slice. The
+bash side is derived by actually invoking the real `route_resolve` +
+`route_reject_unrouted_longterm_mem` functions (extracted from
+`bin/labdrian-overlay` via the same `awk` range-extraction idiom
+`callRouteResolve` in `route_test.go` uses) against a `longterm-mem/**` row
+for each candidate route value (`skill`, `agent`, `opencode-agent`, `mcp`,
+plus a `bogus-route` negative control), and comparing accept/reject against
+the Go-derived domain. If either side's domain drifts, this test fails
+without anyone having to remember to update a second list.
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./... -run 'TestDeployableManifestPaths\|TestRouteResolve\|TestRouteDomain' -v -count=1` → all PASS (`TestDeployableManifestPaths`, `TestDeployableManifestPaths_ExcludesMcpRoute`, `TestRouteResolve_LegacySkillRow`, `TestRouteResolve_GADUSkillRow`, `TestRouteResolve_GADUAgentRow`, `TestRouteResolve_GADUOpenCodeAgentRow`, `TestRouteResolve_NonDeployableRows` (3 subtests), `TestRouteResolve_McpRow`, `TestRouteResolve_OpencodeAgentUnaffected`, `TestRouteResolve_UnroutedLongtermMemRowRejected`, `TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected`, `TestRouteResolve_TargetFlag_*` (4), `TestRouteDomain_MatchesBashAndGo`) |
+| Runtime harness command/scenario and exact result | `cd engine && go test ./... -count=1` (no `-short`; runs the real overlay-script integration tests in `engine/installer` — `TestApply_AgentsLandInNativeAgentDirs`, `TestStatus_ReportsAgentFile`, `TestSyncCheck_DetectsMissingAgentFile`, `TestUnrelatedSkillUnchanged`, `TestEntryContractBundlePropagatesAndReportsIntegrityDrift`, `TestGaduGenerate_ForwardsThroughWrapper`, `TestStatusHooks_IsReadOnlyAndFailLoudOnMissingBinary`, plus capture/bootstrap route-aware-path tests — all real `bash bin/labdrian-overlay` subprocess invocations against sandboxed git repos) → all 10 packages PASS, `engine/installer` at 9.6s (the real subprocess/git cost) |
+| Rollback boundary | `bin/labdrian-overlay`'s new `route_reject_unrouted_longterm_mem()` function, the `mcp` branches in `route_resolve()`/`route_repo_rel()`, `engine/skills/ondisk.go`'s `nonSkillRoutes["mcp"]` entry, the new tests in `ondisk_test.go`/`route_test.go`, and the single `overlay.manifest` sentinel row can all be reverted independently without touching any pre-existing route (`skill`/`agent`/`opencode-agent`) behavior — proven by 9.4's regression pin and the full unmodified `engine/installer` + `engine/skills` suites staying green throughout |
+
+### Gates
+
+- `bash -n bin/labdrian-overlay` → clean.
+- `shellcheck bin/labdrian-overlay` → 8 pre-existing findings (SC2094 ×2 at
+  lines 264–265, SC2016 ×2 at lines 297/301, SC2064 ×4 at lines 1007/1168/
+  1360/1391), **none inside this slice's edited region** (`route_resolve`,
+  `route_reject_unrouted_longterm_mem`, `route_repo_rel` — lines 382–479).
+  Nothing to fix.
+- `cd engine && go test ./... -count=1` → all 10 packages PASS (includes the
+  full, non-`-short` `engine/installer` integration suite).
+- `cd engine && go test ./skills/... -run TestZeroFetchImportAllowlist` →
+  PASS — the zero-dependency gate stays intact; this slice adds no imports
+  to `engine/`.
+- `cd longterm-mem && go test ./... -count=1` → all 9 packages PASS,
+  unaffected as required (this slice never touches `longterm-mem/`).
+
+### Deviations from tasks.md
+
+- **9.11's "hoist ... from 9.6" framing does not match implementation
+  order.** `route_reject_unrouted_longterm_mem()` was designed and written
+  as its own top-level function directly during 9.6's GREEN step (the
+  natural shape for something 10b's `cmd_apply` hook needs to call too),
+  not as an inline guard inside `route_resolve()` later extracted in a
+  separate REFACTOR diff. The end state — a standalone, reusable,
+  independently testable helper — matches 9.11's stated goal exactly; only
+  the chronological staging differs from the task list's literal reading.
+  Noted explicitly per the "if design is wrong or incomplete, note it, don't
+  silently deviate" rule, though this is a staging deviation, not a design
+  one.
+- **9.8's genuine RED was a test-harness bug, not a production defect.**
+  The first run of `TestRouteDomain_MatchesBashAndGo` failed for every
+  candidate route (`OVERLAY_DIR: unbound variable`) because the new bash
+  helper in `ondisk_test.go` initially omitted the global variable
+  declarations `route_resolve` requires under `set -u`. This was fixed in
+  the test harness itself; the underlying route-domain parity was already
+  correct from 9.2/9.6/9.7, confirmed by the mutation proof in the TDD
+  Cycle Evidence table above.
+
+### PR-seam line accounting
+
+| Part | Files | Authored lines (production/data + test) | Tasks |
+|---|---|---|---|
+| 9a | `engine/skills/ondisk.go` (+6/−2 = 8, production) + `engine/skills/ondisk_test.go` 9.1's block (19, test) | 27 | 9.1, 9.2 |
+| 9b | `bin/labdrian-overlay` (+53/−3 = 56, production) + `engine/installer/route_test.go` (+113/−2 = 115, test) | 171 | 9.3–9.7, 9.11 |
+| 9c | `overlay.manifest` (+1/−0 = 1, data) + `engine/skills/ondisk_test.go` 9.8's block (79, test) | 80 | 9.8–9.10 |
+| 9d | `tasks.md` + `apply-progress.md` (this section) | artifacts only | — |
+
+All three code parts are well under the 400-line PR review budget (largest
+is 9b at 171 lines); the pre-planned 4-part shape from the apply brief needs
+no further split. `engine/skills/ondisk_test.go`'s total diff (98 lines)
+splits cleanly across parts 9a (19) and 9c (79) because 9.1's and 9.8's test
+additions land in disjoint, non-overlapping regions of the file (9.1's block
+immediately after `TestDeployableManifestPaths`; 9.8's block after
+`skillsRepoRoot`, before `TestInfraExclusionRulesArePinnedIndependently`).
+
+### Files modified
+
+- `engine/skills/ondisk.go` — `nonSkillRoutes["mcp"] = true` + doc comments.
+- `engine/skills/ondisk_test.go` — `TestDeployableManifestPaths_ExcludesMcpRoute`,
+  `bashAcceptsLongtermMemRoute`/`shellQuote` helpers, `TestRouteDomain_MatchesBashAndGo`.
+- `bin/labdrian-overlay` — `route_reject_unrouted_longterm_mem()` (new),
+  `route_resolve()`'s `mcp` branch + guard call, `route_repo_rel()`'s `mcp` case.
+- `engine/installer/route_test.go` — `TestRouteResolve_McpRow`,
+  `TestRouteResolve_OpencodeAgentUnaffected`,
+  `TestRouteResolve_UnroutedLongtermMemRowRejected`,
+  `TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected`, plus the
+  `callRouteResolve` awk-extraction range widened to also pull in
+  `route_reject_unrouted_longterm_mem`.
+- `overlay.manifest` — new sentinel row `longterm-mem/go.mod custom mcp`.
+- `openspec/changes/longterm-mem/tasks.md` — Slice 9 items ticked.
+
+### Slice 9 — delivery record
+
+Slice 9 shipped as two chained PRs (#213 code, #214 artifacts). At 278
+authored lines the whole slice fit one coherent code candidate, so the
+four-part seam the apply phase pre-planned was collapsed: splitting the Go
+parser from the bash parser would have put the two halves of the parity
+assertion in different candidates, which is exactly the drift that
+assertion exists to catch. The SDD artifacts still ship separately, per
+the rule slices 8a and 8b paid for.
+
+Approved with zero corrections across all four canonical lenses.
+
+**First slice in this chain where shellcheck genuinely applies.** Every
+prior slice left that contributor-checklist item unticked because none of
+them modified a shell script. `shellcheck bin/labdrian-overlay` reports
+eight pre-existing findings (SC2094 ×2, SC2016 ×2, SC2064 ×4), none of
+them inside the lines this slice edited — recorded here so a later slice
+touching those regions knows they were already there and does not mistake
+them for its own.
+
+**Two things worth remembering from the TDD here:**
+
+1. *A first-run pass can hide a harness bug rather than confirm a
+   contract.* The bash/Go parity test's first real failure was
+   `OVERLAY_DIR: unbound variable` — the new helper omitted a required
+   global under `set -u`. That proves nothing about the route domain, so
+   correctness was established separately by deliberate mutation:
+   removing `"mcp": true` from `nonSkillRoutes` produced `Go route domain
+   ... has 3 values, want 4`.
+2. *The rejection guard must read the undefaulted column.* Rejecting on
+   the raw third column is what distinguishes "column absent" from
+   "explicitly route=skill"; defaulting first would make the two
+   indistinguishable and the guard structurally unable to fire.

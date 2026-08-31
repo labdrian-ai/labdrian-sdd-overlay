@@ -304,21 +304,21 @@ Route domain (`bin/labdrian-overlay` `route_resolve`, `engine/skills/ondisk.go` 
 
 Note: this slice touches only `engine/` and `bin/labdrian-overlay`, not `longterm-mem/`; its meaningful verification commands are the ones listed per item, not the module-focused command (which would pass vacuously).
 
-- [ ] 9.1 RED `engine/skills/ondisk_test.go::TestDeployableManifestPaths_ExcludesMcpRoute` — manifest row `longterm-mem/go.mod  custom  mcp`; assert `DeployableManifestPaths` excludes it. Scenarios: "mcp-routed row is not required to exist under the skills directory", "mcp-routed row does not falsely register as an unregistered skill file" (skills-ondisk-validation R-012, traces R-013).
-- [ ] 9.2 GREEN `engine/skills/ondisk.go` — add `"mcp": true` to `nonSkillRoutes`; update the doc comment to name the four-value domain.
+- [x] 9.1 RED `engine/skills/ondisk_test.go::TestDeployableManifestPaths_ExcludesMcpRoute` — manifest row `longterm-mem/go.mod  custom  mcp`; assert `DeployableManifestPaths` excludes it. Scenarios: "mcp-routed row is not required to exist under the skills directory", "mcp-routed row does not falsely register as an unregistered skill file" (skills-ondisk-validation R-012, traces R-013).
+- [x] 9.2 GREEN `engine/skills/ondisk.go` — add `"mcp": true` to `nonSkillRoutes`; update the doc comment to name the four-value domain.
 - Command: `cd engine && go test ./... -run TestDeployableManifestPaths`
-- [ ] 9.3 RED `engine/installer/route_test.go::TestRouteResolve_McpRow` — fixture manifest row with route `mcp`; assert bash `route_resolve` emits `route=mcp` with the longterm-mem repo source path and zero copy targets. Scenario: "Bash dispatch recognizes the mcp route" / "Go route handling recognizes the mcp route" (overlay-agent-route R-006, traces R-013).
-- [ ] 9.4 RED (same file) `TestRouteResolve_OpencodeAgentUnaffected` — regression: an existing `opencode-agent`-routed row still resolves/deploys exactly as before. Scenario: "opencode-agent route is unaffected".
-- [ ] 9.5 RED (same file) `TestRouteResolve_UnroutedLongtermMemRowRejected` + `TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected` — a `longterm-mem/**` row with a missing third column, and one with an unrecognized route value; assert `route_resolve` rejects both (exit 1, explicit stderr) instead of silently falling through to the skill route. Scenario: "Unrouted longterm-mem row is rejected by both parsers" (overlay-agent-route R-012, traces R-035).
-- [ ] 9.6 GREEN `bin/labdrian-overlay` — `route_resolve()`: new `mcp` branch (emits `route=mcp`, repo source, zero targets) alongside `agent`/`opencode-agent`; a guard ahead of the `skill` fallthrough that rejects any `longterm-mem/**` row whose third column is absent or not in `{skill,agent,opencode-agent,mcp}` (`exit 1`, explicit stderr naming the row).
-- [ ] 9.7 GREEN `bin/labdrian-overlay` — `route_repo_rel()`: add `mcp) printf '%s' "$manifest_path"` case.
+- [x] 9.3 RED `engine/installer/route_test.go::TestRouteResolve_McpRow` — fixture manifest row with route `mcp`; assert bash `route_resolve` emits `route=mcp` with the longterm-mem repo source path and zero copy targets. Scenario: "Bash dispatch recognizes the mcp route" / "Go route handling recognizes the mcp route" (overlay-agent-route R-006, traces R-013).
+- [x] 9.4 RED (same file) `TestRouteResolve_OpencodeAgentUnaffected` — regression: an existing `opencode-agent`-routed row still resolves/deploys exactly as before. Scenario: "opencode-agent route is unaffected".
+- [x] 9.5 RED (same file) `TestRouteResolve_UnroutedLongtermMemRowRejected` + `TestRouteResolve_UnrecognizedRouteLongtermMemRowRejected` — a `longterm-mem/**` row with a missing third column, and one with an unrecognized route value; assert `route_resolve` rejects both (exit 1, explicit stderr) instead of silently falling through to the skill route. Scenario: "Unrouted longterm-mem row is rejected by both parsers" (overlay-agent-route R-012, traces R-035).
+- [x] 9.6 GREEN `bin/labdrian-overlay` — `route_resolve()`: new `mcp` branch (emits `route=mcp`, repo source, zero targets) alongside `agent`/`opencode-agent`; a guard ahead of the `skill` fallthrough that rejects any `longterm-mem/**` row whose third column is absent or not in `{skill,agent,opencode-agent,mcp}` (`exit 1`, explicit stderr naming the row). Implemented directly as the `route_reject_unrouted_longterm_mem()` helper (9.11's target shape) rather than as an inline guard later hoisted out — see apply-progress.md.
+- [x] 9.7 GREEN `bin/labdrian-overlay` — `route_repo_rel()`: add `mcp) printf '%s' "$manifest_path"` case.
 - Command: `cd engine && go test ./... -run TestRouteResolve`
-- [ ] 9.8 RED `engine/skills/ondisk_test.go::TestRouteDomain_MatchesBashAndGo` — parity fixture asserting both bash `route_resolve` and Go `nonSkillRoutes` recognize the identical four-value set `{skill, agent, opencode-agent, mcp}`.
-- [ ] 9.9 GREEN — no further production code beyond 9.2/9.6/9.7; this closes the parity assertion.
+- [x] 9.8 RED `engine/skills/ondisk_test.go::TestRouteDomain_MatchesBashAndGo` — parity fixture asserting both bash `route_resolve` and Go `nonSkillRoutes` recognize the identical four-value set `{skill, agent, opencode-agent, mcp}`.
+- [x] 9.9 GREEN — no further production code beyond 9.2/9.6/9.7; this closes the parity assertion.
 - Command: `cd engine && go test ./... -run TestRouteDomain`
-- [ ] 9.10 Add the manifest sentinel row `longterm-mem/go.mod  custom  mcp` to `overlay.manifest` (D13).
-- [ ] 9.11 REFACTOR — hoist the `longterm-mem/**`-prefix rejection guard from 9.6 into a `route_reject_unrouted_longterm_mem()` helper so 10b's `cmd_apply` hook can reuse it.
-- [ ] 9.12 Slice verification — `bash -n bin/labdrian-overlay`; `cd engine && go test ./...`; `cd longterm-mem && go test ./...` (unaffected, must stay green).
+- [x] 9.10 Add the manifest sentinel row `longterm-mem/go.mod  custom  mcp` to `overlay.manifest` (D13).
+- [x] 9.11 REFACTOR — hoist the `longterm-mem/**`-prefix rejection guard from 9.6 into a `route_reject_unrouted_longterm_mem()` helper so 10b's `cmd_apply` hook can reuse it. Landed as part of 9.6's GREEN commit (the guard was written as its own function from the start); no separate refactor diff was needed — see apply-progress.md.
+- [x] 9.12 Slice verification — `bash -n bin/labdrian-overlay`; `cd engine && go test ./...`; `cd longterm-mem && go test ./...` (unaffected, must stay green).
 
 ---
 
