@@ -101,6 +101,94 @@ command = "/usr/bin/other"
 	}
 }
 
+// TestTOMLSplice_RemovesFirstMiddleLastTable proves TOMLRemove's blank-line
+// handling is genuinely position-dependent (12b.1, D9, R-019 "Removing a
+// span is harder than replacing one"): removing the FIRST table must drop
+// its trailing blank-line separator (nothing precedes it), removing the
+// LAST table must drop its leading separator (nothing follows it), and
+// removing a MIDDLE table must drop exactly one of the two adjacent
+// separators — never both (which would jam two sections together), never
+// neither (which would leave a double blank line). Each case asserts the
+// result stays valid TOML and is byte-identical to a document that never
+// had the removed table at all.
+func TestTOMLSplice_RemovesFirstMiddleLastTable(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		raw       string
+		wantAfter string
+	}{
+		{
+			name: "first table",
+			raw: "[mcp_servers.longterm-mem]\ncommand = \"/bin/longterm-mem\"\n\n" +
+				"[mcp_servers.other]\ncommand = \"/usr/bin/other\"\n",
+			wantAfter: "[mcp_servers.other]\ncommand = \"/usr/bin/other\"\n",
+		},
+		{
+			name: "middle table",
+			raw: "[mcp_servers.a]\ncommand = \"/usr/bin/a\"\n\n" +
+				"[mcp_servers.longterm-mem]\ncommand = \"/bin/longterm-mem\"\n\n" +
+				"[mcp_servers.b]\ncommand = \"/usr/bin/b\"\n",
+			wantAfter: "[mcp_servers.a]\ncommand = \"/usr/bin/a\"\n\n" +
+				"[mcp_servers.b]\ncommand = \"/usr/bin/b\"\n",
+		},
+		{
+			name: "last table",
+			raw: "theme = \"dark\"\n\n" +
+				"[mcp_servers.other]\ncommand = \"/usr/bin/other\"\n\n" +
+				"[mcp_servers.longterm-mem]\ncommand = \"/bin/longterm-mem\"\n",
+			wantAfter: "theme = \"dark\"\n\n[mcp_servers.other]\ncommand = \"/usr/bin/other\"\n",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := TOMLRemove([]byte(tc.raw), "mcp_servers", "longterm-mem")
+			if err != nil {
+				t.Fatalf("TOMLRemove returned error: %v", err)
+			}
+			var doc map[string]interface{}
+			if err := toml.Unmarshal(got, &doc); err != nil {
+				t.Fatalf("TOMLRemove result is not valid TOML: %v\n%s", err, got)
+			}
+			if string(got) != tc.wantAfter {
+				t.Fatalf("TOMLRemove(%s) =\n%s\nwant (byte-identical to a document that never had it) =\n%s", tc.name, got, tc.wantAfter)
+			}
+		})
+	}
+}
+
+// TestTOMLSplice_RemoveNotFoundReturnsError proves TOMLRemove refuses
+// (rather than silently no-op-ing) when no header matching
+// tableKey.memberKey exists — a defensive guard, since callers only reach
+// TOMLRemove after confirming the table is present.
+func TestTOMLSplice_RemoveNotFoundReturnsError(t *testing.T) {
+	raw := []byte("[mcp_servers.other]\ncommand = \"/usr/bin/other\"\n")
+
+	_, err := TOMLRemove(raw, "mcp_servers", "longterm-mem")
+	if err == nil {
+		t.Fatalf("TOMLRemove returned nil error for a table that does not exist")
+	}
+	if !strings.Contains(err.Error(), "register:") {
+		t.Fatalf("error %q is not prefixed with the package name", err.Error())
+	}
+}
+
+// TestTOMLSplice_RemoveRefusesWhenTheTableEndIsUnprovable proves TOMLRemove
+// shares TOMLSplice's own unprovable-span refusal (assertSpanIsWholeTable):
+// a located span the line-oriented scan cannot prove is a whole table must
+// never be removed, on the theory that "cannot prove where it ends" is
+// exactly as dangerous for deletion as for replacement — arguably more so,
+// since a bad delete cannot be undone by re-running install.
+func TestTOMLSplice_RemoveRefusesWhenTheTableEndIsUnprovable(t *testing.T) {
+	raw := []byte("[mcp_servers.longterm-mem]\ncommand = \"/old\"\nmatrix = [\n  [\"a\"]\n]\n\n[mcp_servers.other]\ncommand = \"/other\"\n")
+
+	got, err := TOMLRemove(raw, "mcp_servers", "longterm-mem")
+	if err == nil {
+		t.Fatalf("TOMLRemove returned nil error; it would have removed:\n%s", got)
+	}
+	if got != nil {
+		t.Fatalf("TOMLRemove returned %d bytes alongside its error; a refusal must yield nothing to write", len(got))
+	}
+}
+
 // TestTOMLSplice_RefusesWhenTheTableEndIsUnprovable proves TOMLSplice
 // never reports success on a span it could not delimit. The scan is
 // line-oriented by design (D9: it must never decode and re-encode the

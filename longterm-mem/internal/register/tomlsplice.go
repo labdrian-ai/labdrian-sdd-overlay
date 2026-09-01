@@ -144,6 +144,77 @@ func TOMLSplice(raw []byte, tableKey, memberKey string, newSection []byte) ([]by
 	return loc.apply(raw, newSection), nil
 }
 
+// TOMLRemove returns a copy of raw with the tableKey.memberKey table
+// removed entirely — header line, body, AND exactly the one blank-line
+// separator its removal makes dangling — and every other byte of raw
+// unchanged (D9; R-019 "Selective removal across all three runtimes").
+// This is TOMLSplice's insert-path blank-line rule (apply, above) run in
+// reverse: the separator AFTER the table is trimmed when a following
+// section exists (this table was not last), otherwise the separator
+// BEFORE it is trimmed (this table WAS last) — the same forward/backward
+// duality Remove (jsonsplice.go) uses for JSON's comma. It shares
+// assertSpanIsWholeTable's guard: a span the line-oriented scan cannot
+// prove is a whole table is refused rather than removed. It errors when no
+// header matching tableKey.memberKey is found — callers only ever reach
+// this after confirming the table is present.
+func TOMLRemove(raw []byte, tableKey, memberKey string) ([]byte, error) {
+	loc := locateTOMLSection(raw, tableKey, memberKey)
+	if !loc.found {
+		return nil, fmt.Errorf("register: table %s.%s not found, nothing to remove", tableKey, memberKey)
+	}
+	if err := assertSpanIsWholeTable(raw[loc.start:loc.end], tableKey, memberKey); err != nil {
+		return nil, err
+	}
+
+	start, end := loc.start, loc.end
+	if nextHeaderStart, ok := tomlFollowingHeaderStart(raw, end); ok {
+		end = nextHeaderStart
+	} else {
+		start = tomlTrimBackwardBlankLines(raw, start)
+	}
+
+	var buf bytes.Buffer
+	buf.Write(raw[:start])
+	buf.Write(raw[end:])
+	return buf.Bytes(), nil
+}
+
+// tomlFollowingHeaderStart scans forward from offset, skipping only blank
+// lines, and reports the byte offset of the next table header line when
+// one immediately follows — i.e. whether the table TOMLRemove just located
+// has a following section at all, mirroring locateTOMLSection's own "any
+// header ends the span" scan discipline.
+func tomlFollowingHeaderStart(raw []byte, offset int) (int, bool) {
+	for offset < len(raw) {
+		lineStart := offset
+		line, next := nextTOMLLine(raw, offset)
+		if len(bytes.TrimSpace(line)) == 0 {
+			offset = next
+			continue
+		}
+		return lineStart, tomlAnyHeaderPattern.Match(line)
+	}
+	return 0, false
+}
+
+// tomlTrimBackwardBlankLines walks backward from start one whole line at a
+// time, consuming every blank line immediately preceding it, and returns
+// the offset right after the nearest non-blank line — the mirror of
+// tomlFollowingHeaderStart's forward scan, used only when the table
+// TOMLRemove located has no following section.
+func tomlTrimBackwardBlankLines(raw []byte, start int) int {
+	pos := start
+	for pos > 0 {
+		lineEnd := pos - 1 // raw[lineEnd] is the previous line's trailing '\n'
+		lineStart := bytes.LastIndexByte(raw[:lineEnd], '\n') + 1
+		if len(bytes.TrimSpace(raw[lineStart:lineEnd])) != 0 {
+			return pos
+		}
+		pos = lineStart
+	}
+	return pos
+}
+
 // assertSpanIsWholeTable checks that the located span is a whole table and
 // not a truncated prefix of one.
 //
