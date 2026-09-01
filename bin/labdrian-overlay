@@ -3010,6 +3010,15 @@ cmd_longterm_mem() {
   else
     local t
     for t in $targets; do
+      # unregister is module-owned, real per-runtime selective removal
+      # (R-019, 12b.4/12b.5): it removes only $t's own ownership-tagged MCP
+      # entry from $t's own runtime config, byte-preserving everything
+      # else, and clears $t's own install-state.json record. It never
+      # touches another target's entry or record, which is exactly what
+      # makes the bash-level tracking removed below, and the binary guard
+      # after it, safe to key off "$remaining" alone.
+      "$LONGTERM_MEM_BINARY" unregister --target "$t" --state-dir "$STATE_DIR" \
+        || warn "longterm-mem unregister --target $t did not succeed (an untagged entry it does not own, or another failure); continuing"
       longtermmem_installed_targets_remove "$t"
     done
 
@@ -3027,17 +3036,19 @@ cmd_longterm_mem() {
     if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
       # Full uninstall: safe to wipe the engine-owned registration record
       # too. LongtermMemAdapter.Uninstall() removes the WHOLE record in one
-      # call regardless of --target (true per-target selective removal is
-      # module-owned and lands in slice 12b, R-019) — calling it only once
-      # every tracked target is gone (or --purge forces it) is what keeps
-      # this call from wiping another still-installed target's record.
+      # call regardless of --target -- the per-runtime config entries
+      # themselves were already removed selectively above, by unregister;
+      # this only clears engine/runtime's own separate doctor/status
+      # tracking (D4), and calling it only once every tracked target is
+      # gone (or --purge forces it) is what keeps this call from wiping
+      # another still-installed target's record.
       "$ENGINE_BINARY" runtime uninstall --component longterm-mem --state-dir "$STATE_DIR" \
         || warn "engine runtime uninstall --component longterm-mem reported a non-supported status"
       longtermmem_maybe_remove_binary "$purge"
     elif [[ -z "$tracking_known" ]]; then
       warn "longterm-mem: no install tracking found at $LONGTERM_MEM_INSTALLED_TARGETS; leaving the registration record and the shared binary untouched. Re-run with --purge to remove them anyway."
     else
-      echo "  longterm-mem: uninstalled tracking for the requested target(s); still installed for: $remaining (registration record left untouched — selective per-runtime removal lands in a later slice)"
+      echo "  longterm-mem: unregistered the requested target(s); still installed for: $remaining (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)"
     fi
   fi
 }
