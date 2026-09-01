@@ -66,36 +66,87 @@ func jsonInstall(target, configPath, stateDir, containerKey, memberKey string, e
 	case ActionRefuse:
 		return fmt.Errorf("register: %s: %w", target, ErrConflict)
 	case ActionInsert, ActionReplace:
-		// The config write and the install-state write are two separate
-		// effects, and the window between them is the one failure a
-		// re-run cannot recover from: a config carrying a longterm-mem
-		// entry install-state has no record of is exactly the shape
-		// ActionRefuse is for, so every later run would refuse over a
-		// member longterm-mem itself wrote. The config is therefore
-		// restored to the bytes it had, and the caller is told the entry
-		// was withdrawn.
-		before, err := os.ReadFile(configPath)
-		if err != nil {
-			return fmt.Errorf("register: %s: read %s: %w", target, configPath, err)
-		}
-		mode := os.FileMode(0o600)
-		if info, statErr := os.Stat(configPath); statErr == nil {
-			mode = info.Mode().Perm()
-		}
-		if err := WriteMember(configPath, containerKey, memberKey, entry); err != nil {
-			return fmt.Errorf("register: %s: %w", target, err)
-		}
-		state.Set(target, TargetRecord{Fingerprint: Fingerprint(entry)})
-		if err := saveInstallState(state, statePath); err != nil {
-			if rollbackErr := os.WriteFile(configPath, before, mode); rollbackErr != nil {
-				return fmt.Errorf("register: %s: %w (and restoring %s failed: %v — remove the %q entry by hand before re-running)", target, err, configPath, rollbackErr, memberKey)
-			}
-			return fmt.Errorf("register: %s: %w (the %q entry was withdrawn from %s)", target, err, memberKey, configPath)
-		}
-		return nil
+		return installWithRollback(target, configPath, memberKey, state, statePath, Fingerprint(entry), func() error {
+			return WriteMember(configPath, containerKey, memberKey, entry)
+		})
 	default:
 		return fmt.Errorf("register: %s: internal error: unreachable Decide outcome", target)
 	}
+}
+
+// tomlInstall is jsonInstall's TOML counterpart (12a): read
+// whether tableKey.memberKey already exists in the runtime's own
+// config.toml, decide the action via the shared D9 semantics table
+// (Decide), and act on it — insert or replace via WriteTOMLSection plus
+// recording the new fingerprint in install-state.json, refuse via
+// ErrConflict, or do nothing. It shares jsonInstall's own
+// installWithRollback helper rather than re-implementing the config-write/
+// install-state-write rollback window, so a TOML-specific writer can never
+// reopen the exact CRITICAL 11b-1 fixed for JSON (see installWithRollback's
+// doc comment).
+func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary string, newSection []byte) error {
+	statePath := filepath.Join(stateDir, installStateFileName)
+	state, err := LoadInstallState(statePath)
+	if err != nil {
+		return fmt.Errorf("register: %s: %w", target, err)
+	}
+	record, recordPresent := state.Get(target)
+
+	entryPresent, err := readTOMLPresence(configPath, tableKey, memberKey)
+	if err != nil {
+		return fmt.Errorf("register: %s: %w", target, err)
+	}
+
+	// See jsonInstall's identical comment: fingerprintMatches compares
+	// against the section this call is ABOUT TO WRITE, not the bytes
+	// currently on disk.
+	fingerprintMatches := entryPresent && recordPresent && record.Fingerprint == Fingerprint(newSection)
+
+	switch Decide(entryPresent, recordPresent, fingerprintMatches) {
+	case ActionNoop:
+		return nil
+	case ActionRefuse:
+		return fmt.Errorf("register: %s: %w", target, ErrConflict)
+	case ActionInsert, ActionReplace:
+		return installWithRollback(target, configPath, memberKey, state, statePath, Fingerprint(newSection), func() error {
+			return WriteTOMLSection(configPath, tableKey, memberKey, binary, newSection)
+		})
+	default:
+		return fmt.Errorf("register: %s: internal error: unreachable Decide outcome", target)
+	}
+}
+
+// installWithRollback performs the two-effect sequence every runtime
+// writer's install flow shares (D9), format-agnostic: call writeConfig to
+// make the runtime config edit permanent, then record fingerprint in
+// install-state.json under target. The config write and the install-state
+// write are two separate effects, and the window between them is the one
+// failure a re-run cannot recover from: a config carrying a longterm-mem
+// entry install-state has no record of is exactly the shape ActionRefuse
+// is for, so every later run would refuse over an entry longterm-mem
+// itself wrote (11b-1 CRITICAL). If saveInstallState fails, writeConfig's
+// effect is therefore rolled back to the bytes configPath had before it
+// ran, and the caller is told the entry was withdrawn.
+func installWithRollback(target, configPath, label string, state *InstallState, statePath, fingerprint string, writeConfig func() error) error {
+	before, err := os.ReadFile(configPath)
+	if err != nil {
+		return fmt.Errorf("register: %s: read %s: %w", target, configPath, err)
+	}
+	mode := os.FileMode(0o600)
+	if info, statErr := os.Stat(configPath); statErr == nil {
+		mode = info.Mode().Perm()
+	}
+	if err := writeConfig(); err != nil {
+		return fmt.Errorf("register: %s: %w", target, err)
+	}
+	state.Set(target, TargetRecord{Fingerprint: fingerprint})
+	if err := saveInstallState(state, statePath); err != nil {
+		if rollbackErr := os.WriteFile(configPath, before, mode); rollbackErr != nil {
+			return fmt.Errorf("register: %s: %w (and restoring %s failed: %v — remove the %q entry by hand before re-running)", target, err, configPath, rollbackErr, label)
+		}
+		return fmt.Errorf("register: %s: %w (the %q entry was withdrawn from %s)", target, err, label, configPath)
+	}
+	return nil
 }
 
 // readMember reads the current value at containerKey.memberKey inside the
@@ -128,4 +179,21 @@ func readMember(path, containerKey, memberKey string) (json.RawMessage, bool, er
 	}
 	val, ok := container[memberKey]
 	return val, ok, nil
+}
+
+// readTOMLPresence reports whether a table header matching
+// tableKey.memberKey is present in the TOML document at path — the TOML
+// analogue of readMember, used only to answer entryPresent for Decide; it
+// never needs the section's actual content, mirroring readMember's own
+// scope. A config file that does not exist yet is not an error — it just
+// means the entry is not present.
+func readTOMLPresence(path, tableKey, memberKey string) (bool, error) {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("read %s: %w", path, err)
+	}
+	return locateTOMLSection(raw, tableKey, memberKey).found, nil
 }

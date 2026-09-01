@@ -14,10 +14,12 @@ func opencodeGoldenCase() goldenWriterCase {
 		configFileName:   opencodeConfigFileName,
 		memberKey:        "longterm-mem",
 		testdataDir:      "testdata/opencode",
+		fixtureExt:       ".json",
 		register:         RegisterOpencode,
 		binary1:          "/opt/labdrian-overlay/bin/longterm-mem",
 		binary2:          "/opt/labdrian-overlay/bin/longterm-mem-v2",
 		unrelatedSnippet: `"other-tool"`,
+		duplicateNeedle:  `"longterm-mem":`,
 	}
 }
 

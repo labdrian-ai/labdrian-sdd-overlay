@@ -27,17 +27,25 @@ import (
 //	                      binary1.
 //	after-reinstall.json the expected config after a second install call
 //	                      with binary2, replacing the entry in place.
-//	untagged.json         a config that already has a same-named entry
+//	untagged.<ext>         a config that already has a same-named entry
 //	                      install-state does not own.
 //
 // after-uninstall.json is intentionally not part of this slice's fixture
 // set: R-019 (Unregister) is implemented in slice 12b, which reuses this
 // same naming convention once it exists (see apply-progress.md Slice 11b).
+//
+// codex (12a, R-018) drives this same harness with fixtureExt set to
+// ".toml" instead of ".json" — see fixtureExt's own doc comment for why a
+// field, rather than a second near-identical harness, is the honest fix:
+// every byte comparison and fixture-plumbing method below is format-
+// agnostic (it only ever moves raw bytes around), so the only thing that
+// was ever JSON-specific was the four hardcoded ".json" literals and the
+// JSON-syntax "not a duplicate" needle (duplicateNeedle generalizes that).
 type goldenWriterCase struct {
-	// target is install-state's target key ("claude", "opencode").
+	// target is install-state's target key ("claude", "opencode", "codex").
 	target string
 	// configFileName is the runtime config's file name inside configRoot
-	// (".claude.json", "opencode.json").
+	// (".claude.json", "opencode.json", "config.toml").
 	configFileName string
 	// memberKey is the entry's key inside its container object
 	// ("longterm-mem" for every runtime this slice writes).
@@ -45,20 +53,33 @@ type goldenWriterCase struct {
 	// testdataDir holds this runtime's golden fixtures, relative to the
 	// register package directory.
 	testdataDir string
+	// fixtureExt is the golden fixture file name suffix — ".json" for
+	// claude/opencode, ".toml" for codex. It is the ONLY thing that
+	// differs about which literal fixture file each scenario reads;
+	// nothing else in this harness decodes or otherwise assumes JSON.
+	fixtureExt string
 	// register drives the runtime's own Register* entry point.
 	register func(configRoot, stateDir, binary string) error
 	// binary1/binary2 are the fixed binary paths baked into
-	// after-install.json / after-reinstall.json respectively — binary2
+	// after-install.<ext> / after-reinstall.<ext> respectively — binary2
 	// simulates a reinstall picking up a different resolved binary path,
 	// which forces Decide's replace branch (not noop) so the reinstall
 	// scenario genuinely exercises an in-place rewrite.
 	binary1, binary2 string
 	// unrelatedSnippet is a literal byte sequence unique to one of
-	// before.json's pre-existing entries. It is asserted present, byte-
+	// before.<ext>'s pre-existing entries. It is asserted present, byte-
 	// for-byte, in every fixture this harness compares against — an extra,
 	// fixture-independent check that "unrelated entries are preserved"
 	// really means untouched bytes, not merely "the golden file matches".
 	unrelatedSnippet string
+	// duplicateNeedle is a literal byte sequence that must occur exactly
+	// once in the config after a reinstall — the format-specific spelling
+	// of "this is the memberKey entry/section, and there is only one of
+	// it": `"longterm-mem":` for JSON, `[mcp_servers.longterm-mem]` for
+	// TOML. Kept as an explicit field, not derived from memberKey, because
+	// deriving it would smuggle a JSON-syntax assumption back into the
+	// shared method below.
+	duplicateNeedle string
 }
 
 // Each of a runtime's three Test<Runtime>_* functions (claude_test.go,
@@ -70,6 +91,13 @@ type goldenWriterCase struct {
 
 func (c goldenWriterCase) fixturePath(name string) string {
 	return filepath.Join(c.testdataDir, name)
+}
+
+// fixtureName joins stem (e.g. "before", "after-install") with this case's
+// fixtureExt, so every call site below names a fixture by its role, not by
+// a hardcoded format-specific literal.
+func (c goldenWriterCase) fixtureName(stem string) string {
+	return stem + c.fixtureExt
 }
 
 func (c goldenWriterCase) readFixture(t *testing.T, name string) []byte {
@@ -102,17 +130,17 @@ func (c goldenWriterCase) assertUnrelatedSnippetPresent(t *testing.T, label stri
 	}
 }
 
-// testUnrelatedEntriesPreserved: GIVEN before.json already has unrelated
+// testUnrelatedEntriesPreserved: GIVEN before.<ext> already has unrelated
 // MCP entries, WHEN longterm-mem installs, THEN the resulting file matches
-// the pre-computed golden after-install.json exactly (which by
-// construction only differs from before.json inside the newly inserted
+// the pre-computed golden after-install.<ext> exactly (which by
+// construction only differs from before.<ext> inside the newly inserted
 // span), and the unrelated snippet survives byte-for-byte.
 func (c goldenWriterCase) testUnrelatedEntriesPreserved(t *testing.T) {
 	dir := t.TempDir()
 	stateDir := t.TempDir()
-	configPath := c.seedConfig(t, dir, "before.json")
-	before := c.readFixture(t, "before.json")
-	c.assertUnrelatedSnippetPresent(t, "before.json fixture", before)
+	configPath := c.seedConfig(t, dir, c.fixtureName("before"))
+	before := c.readFixture(t, c.fixtureName("before"))
+	c.assertUnrelatedSnippetPresent(t, c.fixtureName("before")+" fixture", before)
 
 	if err := c.register(dir, stateDir, c.binary1); err != nil {
 		t.Fatalf("%s: install returned error: %v", c.target, err)
@@ -122,7 +150,7 @@ func (c goldenWriterCase) testUnrelatedEntriesPreserved(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: failed to read result config: %v", c.target, err)
 	}
-	want := c.readFixture(t, "after-install.json")
+	want := c.readFixture(t, c.fixtureName("after-install"))
 	if string(got) != string(want) {
 		t.Fatalf("%s: config after install =\n%s\nwant (golden fixture) =\n%s", c.target, got, want)
 	}
@@ -132,12 +160,12 @@ func (c goldenWriterCase) testUnrelatedEntriesPreserved(t *testing.T) {
 // testReinstallIsIdempotent: GIVEN an ownership-tagged entry already
 // exists, WHEN longterm-mem re-installs (with a different resolved binary,
 // forcing Decide's replace branch), THEN it replaces that entry in place —
-// exactly one memberKey member exists afterward, its value is updated, and
-// unrelated entries are still untouched.
+// exactly one memberKey member/section exists afterward, its value is
+// updated, and unrelated entries are still untouched.
 func (c goldenWriterCase) testReinstallIsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	stateDir := t.TempDir()
-	configPath := c.seedConfig(t, dir, "before.json")
+	configPath := c.seedConfig(t, dir, c.fixtureName("before"))
 
 	if err := c.register(dir, stateDir, c.binary1); err != nil {
 		t.Fatalf("%s: first install returned error: %v", c.target, err)
@@ -150,16 +178,20 @@ func (c goldenWriterCase) testReinstallIsIdempotent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("%s: failed to read result config: %v", c.target, err)
 	}
-	want := c.readFixture(t, "after-reinstall.json")
+	want := c.readFixture(t, c.fixtureName("after-reinstall"))
 	if string(got) != string(want) {
 		t.Fatalf("%s: config after reinstall =\n%s\nwant (golden fixture) =\n%s", c.target, got, want)
 	}
 	c.assertUnrelatedSnippetPresent(t, "config after reinstall", got)
 
-	// The "not a duplicate" half of idempotency: exactly one member named
-	// memberKey, checked on the raw bytes (not a decode, which would
-	// silently hide a literal duplicate key by keeping only the last one).
-	needle := `"` + c.memberKey + `":`
+	// The "not a duplicate" half of idempotency: exactly one occurrence of
+	// duplicateNeedle, checked on the raw bytes (not a decode, which would
+	// silently hide a literal duplicate key/section by keeping only the
+	// last one).
+	if c.duplicateNeedle == "" {
+		t.Fatalf("%s: goldenWriterCase.duplicateNeedle is empty — every case must name a real not-a-duplicate needle to assert", c.target)
+	}
+	needle := c.duplicateNeedle
 	if count := strings.Count(string(got), needle); count != 1 {
 		t.Fatalf("%s: config after reinstall has %d occurrences of %q, want exactly 1 (a duplicate entry, not a replace-in-place):\n%s", c.target, count, needle, got)
 	}
@@ -174,7 +206,7 @@ func (c goldenWriterCase) testReinstallIsIdempotent(t *testing.T) {
 func (c goldenWriterCase) testUntaggedSameNamedEntryRefused(t *testing.T) {
 	dir := t.TempDir()
 	stateDir := t.TempDir()
-	configPath := c.seedConfig(t, dir, "untagged.json")
+	configPath := c.seedConfig(t, dir, c.fixtureName("untagged"))
 	before, err := os.ReadFile(configPath)
 	if err != nil {
 		t.Fatalf("%s: failed to read seeded config: %v", c.target, err)

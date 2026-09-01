@@ -11,10 +11,12 @@ func claudeGoldenCase() goldenWriterCase {
 		configFileName:   claudeConfigFileName,
 		memberKey:        "longterm-mem",
 		testdataDir:      "testdata/claude",
+		fixtureExt:       ".json",
 		register:         RegisterClaude,
 		binary1:          "/usr/local/bin/longterm-mem",
 		binary2:          "/usr/local/bin/longterm-mem-v2",
 		unrelatedSnippet: `"other-project-server"`,
+		duplicateNeedle:  `"longterm-mem":`,
 	}
 }
 
