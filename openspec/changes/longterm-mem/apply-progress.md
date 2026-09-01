@@ -3901,3 +3901,389 @@ Acquired before the apply agent launched, settled `passed` afterwards with
 evidence revision
 `sha256:c2162da50b1464cc81045aa4388830772887ee33bf03aa46d66006aabc91cd2a`
 (the sha256 of the captured `go test` output for both modules).
+
+---
+
+## Slice 12b — longterm-mem-mcp-registration-toml-uninstall-12b-uninstall (R-019) — final implementation slice
+
+Read `internal/register` first, as instructed: `Splice`/`WriteMember`,
+`TOMLSplice`/`WriteTOMLSection`, `InstallState`/`Fingerprint`/
+`TargetRecord`, `Decide`, `installWithRollback` + `saveInstallState`, and
+`goldenWriterCase` were all treated as settled, reviewed contracts — this
+slice extends them, it does not re-derive them.
+
+### 12b.1 — `Remove`/`TOMLRemove`: the pure span-removal editors
+
+**The hard part is comma/blank-line duality, not locating the span.**
+Locating the member/table to remove reuses `locate`/`locateTOMLSection`
+unchanged. What is new is that a removal must also take exactly one
+adjacent punctuation mark — the JSON member's leading OR trailing comma,
+the TOML table's leading OR trailing blank-line separator — and which one
+depends entirely on position:
+
+- **First member/table** (nothing precedes it): a trailing comma/blank-line
+  separator exists; remove it forward.
+- **Last member/table** (nothing follows it): no trailing comma/separator
+  exists; a LEADING one does; remove it backward.
+- **Middle member/table** (both neighbours exist): either direction works
+  syntactically, but only ONE may be removed — removing both jams the two
+  neighbours together with no separator at all; removing neither leaves two
+  commas/a double blank line.
+
+`removeSpan` (jsonsplice.go) and `TOMLRemove`'s forward/backward pair
+(`tomlFollowingHeaderStart`/`tomlTrimBackwardBlankLines`, tomlsplice.go)
+both resolve this the same way: try forward first (a following sibling
+means "was not last" → consume its comma/separator forward); only when
+forward found nothing (this member/table WAS last) does the backward branch
+run, consuming a leading comma/separator only then. Backward whitespace
+trim (the member/table's own leading indentation or newline) happens
+UNCONDITIONALLY on the JSON side — it is what folds the removed line's
+former position into whichever neighbour now spans across it, first/
+middle/last alike, without a stray blank line. Working through this by
+hand against the actual `claude/before.json` → `after-install.json` bytes
+(longterm-mem installed LAST) before writing a line of code is what
+produced the exact algorithm; see the doc comments on `removeSpan` and
+`TOMLRemove` for the worked rule.
+
+`TOMLRemove` additionally reuses `assertSpanIsWholeTable` (12a-1's own
+fail-closed guard against a line-oriented scan mis-locating a table's end)
+— removal is if anything MORE dangerous to get wrong than replacement,
+since a bad delete cannot be undone by re-running install.
+
+**RED evidence.** `TestJSONSplice_RemovesFirstMiddleLastMember` and
+`TestTOMLSplice_RemovesFirstMiddleLastTable` (table-driven, one subtest per
+position) both passed on their first run — implementation and test were
+derived together from the hand-worked algorithm above, the same disclosed
+ordering 12a.1/12a.3 used. Proved load-bearing by deliberate, reverted
+mutations:
+
+- `removeSpan`'s leading-comma exclusion (`if !hasTrailingComma && back > 0
+  && raw[back-1] == ',' { back-- }`) disabled (`if false && ...`) →
+  genuine failure on `last_member` only (first/middle unaffected, exactly
+  as the position-dependent design predicts):
+  ```
+  jsonsplice_test.go:217: Remove result is not valid JSON:
+  {
+    "mcpServers": {
+      "other": {"type":"stdio","command":"/usr/bin/other"},
+    }
+  }
+  ```
+- `tomlTrimBackwardBlankLines` call removed from the "no following
+  section" branch → genuine failure on `last table` only, a dangling
+  blank line before EOF:
+  ```
+  tomlsplice_test.go:152: TOMLRemove(last table) =
+  theme = "dark"
+
+  [mcp_servers.other]
+  command = "/usr/bin/other"
+
+  <-- stray trailing blank line -->
+  want ... (no trailing blank line)
+  ```
+- `TestTOMLSplice_RemoveRefusesWhenTheTableEndIsUnprovable`: `if false {
+  assertSpanIsWholeTable(...) }` → genuine failure, TOMLRemove reported
+  success while returning a half-removed, structurally corrupt document
+  (an array element literally left dangling after the "removed" span):
+  ```
+  tomlsplice_test.go:185: TOMLRemove returned nil error; it would have removed:
+    ["a"]
+  ]
+
+  [mcp_servers.other]
+  command = "/other"
+  ```
+
+`TestJSONSplice_RemoveNotFoundReturnsError` and
+`TestTOMLSplice_RemoveNotFoundReturnsError` (defensive not-found guards)
+also passed first-run; not separately mutation-proved since the guard they
+pin is a one-line `if !loc.found { return error }` immediately adjacent to
+an already-mutation-proved neighbour (`TestJSONSplice_ContainerKeyNotFound`
+already proves `locate`'s own not-found path is real).
+
+**Fixtures.** `after-uninstall.<ext>` created for claude/opencode/codex —
+diffing each runtime's `before.<ext>` against its `after-install.<ext>`
+confirmed longterm-mem is installed LAST in every existing fixture, so
+`after-uninstall.<ext>` is byte-identical to `before.<ext>` by construction
+(copied, not hand-written) — the fixture is the golden-file proof that
+`Remove`/`TOMLRemove` genuinely invert `Splice`/`TOMLSplice`'s insert path
+for the position those fixtures happen to exercise (last); the FIRST/
+MIDDLE positions the task explicitly asked to be proven are covered
+instead by `TestJSONSplice_RemovesFirstMiddleLastMember`/
+`TestTOMLSplice_RemovesFirstMiddleLastTable`'s inline literals above, since
+no existing fixture places longterm-mem first or in the middle.
+
+### 12b.2 — `RemoveMember`/`RemoveTOMLSection`: the atomic remove writers
+
+Mirror `WriteMember`/`WriteTOMLSection` exactly: validate the removal
+result BEFORE any filesystem mutation (`json.Valid` + a new
+`jsonMemberPresent` post-removal purity gate for JSON; `toml.Unmarshal` +
+reusing `tomlNestedString` to assert `command` is genuinely gone for TOML —
+the removal-side counterpart of `WriteTOMLSection`'s own `command ==
+binary` install-side gate), then `.bak` the original, then same-directory
+tmp+rename.
+
+**RED evidence.** `TestRemoveMember_AtomicRemoveWithBackup` and
+`TestRemoveTOMLSection_AtomicRemoveWithBackup` passed first-run; proved
+load-bearing by mutating `tmp.Write(removed)` → `tmp.Write(raw)`
+(writing the UNCHANGED original instead of the removal result) in both
+writers — genuine failures, e.g.:
+```
+target file = { ... "longterm-mem": {...} ... }
+, want (from Remove) { ... (no longterm-mem) ... }
+```
+`TestRemoveMember_NotPresentLeavesOriginalUntouched` and
+`TestRemoveTOMLSection_NotPresentLeavesOriginalUntouched` proved
+load-bearing by discarding `Remove`/`TOMLRemove`'s returned error
+(`removed, _ := Remove(...)`) — a milder mutation (only suppressing
+`err != nil` but leaving the `json.Valid`/`toml.Unmarshal` gates in place)
+was tried first and did NOT reproduce a failure, since `Remove`'s nil-error
+companion value on the not-found path is `nil` bytes, which `json.Valid`
+already rejects on its own — so the real load-bearing proof required also
+removing those downstream gates, confirmed genuine:
+```
+jsonwrite_test.go:192: RemoveMember returned nil error for a member that
+does not exist
+```
+(same shape for the TOML counterpart).
+
+### 12b.3/12b.4/12b.7 — `jsonUninstall`/`tomlUninstall`, `InstallState.Delete`, `Unregister`: sharing `Decide`
+
+**How `Decide`'s four outcomes reinterpret for uninstall (12b.7).**
+`jsonUninstall`/`tomlUninstall` (writer.go) call the exact same `Decide`
+function `jsonInstall`/`tomlInstall` already call — not a second decision
+table — with `fingerprintMatches` now comparing install-state's recorded
+fingerprint against the entry CURRENTLY ON DISK (there is nothing new to
+write on the uninstall path, unlike install's "about to write" comparison)
+plus the entry-presence flag the caller already computed:
+
+| `Decide` outcome | install meaning | uninstall meaning (this slice) |
+|---|---|---|
+| `ActionInsert` (`!entryPresent && !recordPresent`) | not installed yet, write it | already correctly absent — `UnregisterNoop` |
+| `ActionRefuse` (`entryPresent && !recordPresent`) | conflict, refuse | not ours — `UnregisterUnmanaged`, leave untouched |
+| `ActionReplace` (`!entryPresent && recordPresent`, or drifted) | (re)write | remove the config entry (when present) and clear the stale record — `UnregisterRemoved` |
+| `ActionNoop` (`entryPresent && recordPresent`, fingerprint matches) | nothing to do | ours, unmodified — remove it — `UnregisterRemoved` |
+
+`UnregisterOutcome`'s own doc comments (unregister.go) carry this table so
+it lives next to the type it describes, not only here.
+
+**No `installWithRollback`-style guard is needed for uninstall.** Unlike
+`jsonInstall`'s install-state-write failure (11b-1 CRITICAL, which risked a
+config entry install-state had no record of — indistinguishable from
+someone else's entry to every later run), a `saveInstallState` failure
+after a successful `RemoveMember`/`RemoveTOMLSection` leaves
+`entryPresent=false, recordPresent=true` for the next run — `Decide`'s
+`ActionReplace`, which `jsonUninstall`/`tomlUninstall` themselves simply
+retry (entryPresent is false, so no config write is attempted; clearing the
+stale record is retried). This state is never mistaken for someone else's
+entry (that requires `entryPresent=true`), so it can never regress into
+the 11b-1 failure mode. Documented as a deliberate design decision in
+`jsonUninstall`'s doc comment rather than added as an untested assumption;
+no rollback test was added for the same reason 12a chose not to duplicate
+`installWithRollback`'s own JSON-side rollback test for TOML — a second
+copy would prove the same absence of danger under a different name, not a
+different behaviour.
+
+**`readTOMLPresence` refactored, not duplicated.** `tomlUninstall` needs
+the located section's raw BYTES (to compute `fingerprintMatches`), not
+just presence — `readTOMLSection` (writer.go) is the more general read;
+`readTOMLPresence` (still used by `tomlInstall`, unchanged call site) now
+delegates to it and discards the bytes, rather than the two functions
+reading the file independently.
+
+**`InstallState.Delete`.** One `delete(s.Targets, target)` call, mirroring
+`Get`'s tolerant "not found is a no-op" contract. RED evidence
+(`TestInstallState_DeleteRemovesOnlyTheNamedTarget`) passed first-run;
+proved load-bearing by mutating `Delete` to `s.Targets =
+map[string]TargetRecord{}` (wipe everything instead of one key) — genuine
+failure:
+```
+installstate_test.go:98: claude record disturbed by deleting opencode:
+{Fingerprint:}, ok=false
+```
+
+**`Unregister`: one dispatcher, not three wrappers (12b.4).** Unlike
+`Register*`'s three separate per-runtime entry points (each needing its
+own entry SHAPE — `claudeEntry`, `opencodeEntry`, codex's section
+template), `Unregister(target, configRoot, stateDir string)
+(UnregisterOutcome, error)` has nothing runtime-specific to WRITE, only
+somewhere to look and a format to edit — so it dispatches by target name
+in one function (`internal/register/unregister.go`) rather than three thin
+wrappers plus a second switch at the cmd layer. This is a deliberate
+signature choice, not a shortcut: tasks.md's own 12b.4 line names exactly
+this single-function shape (`Unregister(target string, ...) error`).
+
+### 12b.1–12b.3 (scenario RED, R-019) — golden harness extension + `unregister_test.go`
+
+**Drove uninstall scenarios from the harness, per the explicit
+instruction, rather than a fourth hand-rolled fixture setup.**
+`goldenWriterCase` gained an `unregister func(configRoot, stateDir string)
+(UnregisterOutcome, error)` field and two methods:
+
+- `testUninstallRemovesOwnedEntry`: install for real (through the real
+  `Register*` writer, so install-state genuinely owns the target — a
+  hand-seeded `after-install.<ext>` on disk with nothing behind it in
+  install-state would be indistinguishable from the UNTAGGED scenario),
+  then unregister; assert the result is byte-identical to the golden
+  `after-uninstall.<ext>` fixture, plus the unrelated snippet survives.
+- `testUninstallUntaggedEntryPreservedAndReported`: reuses each runtime's
+  EXISTING `untagged.<ext>` fixture (no new fixture needed) — seed it (no
+  install call, so install-state has no record), unregister, assert
+  `UnregisterUnmanaged` AND the file is byte-identical to before the call.
+
+`claude_test.go`/`opencode_test.go`/`codex_test.go` each gained one
+`unregister` field wired to `Unregister(<target>, ...)`.
+
+**`TestUnregister_SelectiveRemovalAcrossAllThreeRuntimes` (12b.1).** All
+three runtimes installed for REAL against ONE SHARED `install-state.json`
+(mirroring a real machine's single state directory for all targets, not
+three independent ones) with their own `before.<ext>` fixtures (unrelated
+entries included); unregister ONLY `"opencode"`; assert opencode's file
+equals its golden `after-uninstall.json` AND claude's/codex's files are
+STILL byte-identical to their own `after-install.<ext>` (untouched).
+Passed first-run; proved load-bearing by swapping `opencodeContainerKey` →
+`claudeContainerKey` in `Unregister`'s opencode case (simulating a
+cross-target routing bug: opencode's file uses container key `"mcp"`, so
+looking for `"mcpServers"` makes `readMember` report `entryPresent=false`
+— `Decide` still returns `ActionReplace`, `Unregister` still reports
+`UnregisterRemoved`, but `RemoveMember` was never actually called) —
+genuine failure, the entry survives while the outcome falsely claims
+removal:
+```
+unregister_test.go:57: opencode config after unregister =
+{ ... "longterm-mem": {...} still present ... }
+want = { ... no longterm-mem ... }
+```
+This is the sharpest proof in the slice: a bug that reports success while
+leaving the entry behind, caught only because the test checks the ACTUAL
+bytes, not the returned outcome value.
+
+**`TestUnregister_UntaggedEntryPreservedAndReported` (12b.2).** Run across
+all three runtimes (`t.Run` subtests), the same reasoning 12a's own third
+scenario (`TestCodex_UntaggedSameNamedEntryRefused`) gave for install:
+codex shares `tomlUninstall`/`Decide` with claude/opencode's
+`jsonUninstall`/`Decide`, so the untagged conflict is real and reachable
+for all three, not just assumed from shared code. Passed first-run; proved
+load-bearing TWICE — once per format — by folding `ActionRefuse` into the
+removal case (`case ActionNoop, ActionReplace, ActionRefuse:`) in both
+`jsonUninstall` and `tomlUninstall` independently:
+```
+golden_writer_test.go:302: claude: unregister outcome = removed, want UnregisterUnmanaged
+golden_writer_test.go:302: opencode: unregister outcome = removed, want UnregisterUnmanaged
+...
+golden_writer_test.go:302: codex: unregister outcome = removed, want UnregisterUnmanaged
+```
+(claude/opencode mutated and reverted together since they share
+`jsonUninstall`; codex mutated and reverted separately since it is the
+only caller of `tomlUninstall`.)
+
+**`TestUnregister_PartialUninstallKeepsSharedBinary` (12b.3) — scope
+decision.** The shared LONGTERM_MEM binary itself is entirely
+`bin/labdrian-overlay`'s own concern
+(`longtermmem_maybe_remove_binary`/`LONGTERM_MEM_INSTALLED_TARGETS`, 10b/
+12b.6) — `internal/register` has no notion of a binary path to remove at
+all, and that bash-level tracking file is deliberately separate from this
+package's own `install-state.json` (a duplicate, bash-owned tracking
+layer, per the existing 10b design). What THIS package's test proves is
+the Go-level half of the guarantee the bash guard actually depends on:
+with all three targets recorded in ONE `install-state.json` (real installs
+for all three), unregistering `"claude"` alone leaves `"opencode"`'s and
+`"codex"`'s install-state records AND their config files fully intact —
+both `state.Get` presence and file-byte-identity against
+`after-install.<ext>` are asserted. Passed first-run; proved load-bearing
+by changing `jsonUninstall`'s `state.Delete(target)` (claude's own call
+site) to `state.Targets = map[string]TargetRecord{}` (wipe every target's
+record instead of just claude's) — genuine failure:
+```
+unregister_test.go:145: opencode's install-state record was removed by an
+unrelated claude-only unregister — the shared binary would be removed out
+from under a still-installed target
+```
+
+### 12b.5 — `cmd_unregister.go` + `main.go` wiring
+
+Mirrors `cmd_register.go`'s flag parsing, per-target dispatch via
+`registerExpandTarget` (unchanged, reused as-is — `--target` expands the
+same way for both directions), and exit-code precedence (a hard failure
+outranks a softer outcome). Two deliberate simplifications relative to
+`cmdRegister`, both explained in the file's own doc comment:
+
+1. **No `--binary` flag** — unregister writes nothing, so there is no
+   entry shape needing a binary path.
+2. **No `--target all` "skip a missing config" special case** (the one
+   12a.6 had to add to `cmdRegister` for codex). A runtime whose config
+   file does not exist is exactly `Unregister`'s own `UnregisterNoop`
+   outcome, never an error — `readMember`/`readTOMLSection` both already
+   tolerate a missing file as "not present, not an error" (unlike
+   `jsonInstall`'s insert path, which needs an existing document to splice
+   a member INTO via `WriteMember`'s own `os.ReadFile`). Proved directly by
+   `TestCmdUnregister_AllSkipsRuntimesThatAreNotInstalled` (exit 0 with
+   only claude present, no special-casing required) — genuinely reachable
+   without a guard, not merely asserted.
+
+An untagged entry (`register.UnregisterUnmanaged`) exits 6 —
+`registration_conflict`, the SAME code `cmdRegister`'s own `ErrConflict`
+refusal uses, since both name the identical underlying situation: an entry
+with this name that longterm-mem never wrote.
+
+**RED evidence.** All five new cmd-level tests
+(`TestRun_DispatchesUnregisterSubcommand`,
+`TestCmdUnregister_UnknownTargetExitsTwo`,
+`TestCmdUnregister_MissingTargetExitsTwo`,
+`TestCmdUnregister_RemovesInstalledEntry`,
+`TestCmdUnregister_UnmanagedExitsSix`,
+`TestCmdUnregister_AllSkipsRuntimesThatAreNotInstalled`) passed first-run.
+Proved load-bearing:
+- Exit-code precedence: `case unmanaged: return 6` → `return 0` — genuine
+  failure (`= 0, want 6`).
+- Outcome reporting: `fmt.Printf(...tgt, outcome)` → hardcoded `"...:
+  done\n"` — genuine failure (`want it to report claude: removed`).
+
+**Deviation from the task list.** Tests were landed in a new
+`cmd_unregister_test.go` rather than appended to the existing
+909-line `main_test.go` (where every prior `cmd_register.go` test lives).
+tasks.md names no specific test file for 12b.5; keeping the new file
+separate is a strictly additive, self-contained diff for review, matching
+this file's own 1:1 naming with `cmd_unregister.go`.
+
+### 12b.6 — `bin/labdrian-overlay` uninstall glue
+
+`cmd_longterm_mem`'s uninstall branch now calls `"$LONGTERM_MEM_BINARY"
+unregister --target "$t" --state-dir "$STATE_DIR"` for each target in the
+loop, BEFORE the existing `longtermmem_installed_targets_remove "$t"` bash
+tracking call — this is the real per-runtime selective removal (R-019)
+that the previous placeholder message ("registration record left untouched
+— selective per-runtime removal lands in a later slice") explicitly
+deferred to this slice. That stale message is replaced with one describing
+what actually now happens.
+
+**The full/`--purge` guard (`longtermmem_maybe_remove_binary`, 10b.5) is
+UNCHANGED** — it still keys off `LONGTERM_MEM_INSTALLED_TARGETS` (the
+bash-owned tracking file) being empty, or `--purge`, exactly as before;
+this slice does not touch when the binary is removed, only what happens to
+each target's own config entry before that decision is made. Read the
+guard before touching it, as instructed: it fails CLOSED when the tracking
+file is absent (a lost/reset `STATE_DIR` must never read as "nothing
+installed"), and this slice's addition sits entirely upstream of it,
+never weakening it.
+
+**Verification: the real end-to-end bash+Go integration tests.**
+`engine/installer/route_test.go`'s `TestStatusUninstall_SkipBuildStep` (a
+REAL `go build` of both modules, driving `bin/labdrian-overlay longterm-mem
+uninstall` as a subprocess) was re-run, not merely inspected — its four
+subtests place a DUMMY (non-functional shell-script) binary at
+`LONGTERM_MEM_BINARY` specifically to prove uninstall never rebuilds it;
+the new `unregister` call against that dummy binary just runs the dummy's
+`echo dummy` body harmlessly (exit 0) and the loop continues, exactly as
+`register`'s own equivalent call already did in the install branch. All
+four subtests, plus `TestInstall_BuildsCopiesThenReportsPerRuntimeStatus`,
+PASS unmodified — proving the new `unregister` call does not disturb the
+binary-removal guard's own dangerous negative case (uninstalling one
+target while another remains tracked must leave the binary in place).
+
+`bash -n bin/labdrian-overlay` and `bash -n bin/overlay`: clean.
+`shellcheck bin/labdrian-overlay`: only pre-existing warnings at unrelated
+lines (296, 297, 329, 333, 1039, 1200, 1433, 1464); zero new warnings in
+the edited region.
+
