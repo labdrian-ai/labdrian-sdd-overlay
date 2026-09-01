@@ -3215,3 +3215,280 @@ getting the edit wrong.
 and three tests beyond the two literally named in 11a.1/11a.2, each
 driven by a stated requirement — byte identity, validate-before-rename,
 and the container-not-found guard.
+
+## Slice 11b — longterm-mem-mcp-registration-json-11b-writers (R-016, R-017)
+
+Ledger token: sha256:96cdc7dda56d69e4d51603b6f1680dc2d1c3ef8f0a50b61c99d1ad9114d63123
+
+Consumes 11a's frozen contract as-is: `Splice`/`WriteMember` for the
+byte-preserving edit, `InstallState`/`Fingerprint` for the sidecar
+ownership record, `Decide` for the shared insert/replace/refuse/noop
+semantics. Nothing in `jsonsplice.go`, `jsonwrite.go`, `installstate.go`,
+or `decide.go` was modified.
+
+### Design decisions not fully pinned by the literal task text
+
+- **`RegisterClaude`/`RegisterOpencode` gained a third parameter,
+  `stateDir`, not present in the task text's `(configRoot, binary string)
+  error` signature.** `install-state.json` (the sidecar ownership record)
+  and a runtime's own config file live at genuinely independent roots in
+  production — `~/.claude.json` sits directly under `$HOME`, opencode's
+  config sits under `$XDG_CONFIG_HOME/opencode`, but `install-state.json`
+  always lives under `~/.labdrian-overlay/longterm-mem`, one shared
+  location across all three runtimes. `cmd_register.go`'s own flag surface
+  (11b.7's literal text) already names `--config-root` and `--state-dir`
+  as two separate flags, confirming these were always meant to vary
+  independently; a two-argument `RegisterClaude` could not thread a
+  caller-supplied `stateDir` through at all, which would also make every
+  test in this slice write into a fixed, non-temp-dir install-state path
+  — unacceptable for tests that must never touch a real machine's
+  `~/.labdrian-overlay`. Both writers now take `(configRoot, stateDir,
+  binary string) error`. Same precedent as 10b.5's documented
+  `LONGTERM_MEM_SRC`-cd deviation: required, documented, does not change
+  the observable per-scenario contract.
+- **`fingerprintMatches` compares install-state's recorded fingerprint
+  against the entry this call is about to write, not the bytes currently
+  on disk.** `decide.go`'s own doc comment says so explicitly
+  ("fingerprintMatches is whether that record's fingerprint matches the
+  entry longterm-mem is about to write"), but it was easy to misread
+  against the same comment's looser gloss ("stale or hand-edited entry we
+  own — rewrite it") as "compare against what's on disk instead" — which
+  is exactly the bug the first run of `TestClaude_ReinstallIsIdempotent`
+  caught (see TDD Cycle Evidence below). Comparing against the on-disk
+  entry made a same-record reinstall always look identical to itself
+  (since nothing external had touched the file), so a reinstall with a
+  genuinely different desired entry (a new resolved binary path) silently
+  no-opped instead of replacing. Fixed to compare against the entry
+  parameter; every writer test now forces a real `ActionReplace` on
+  reinstall (via `binary2`, a different path from `binary1`) so the
+  replace branch — not just the noop branch `TestDecide_...Exhaustive`
+  already covers at the pure-function level — is exercised end to end
+  through `jsonInstall`.
+- **A missing runtime config file is not bootstrapped.** `WriteMember`
+  requires the target file to already exist (its first step is
+  `os.ReadFile`), and `locate` requires the container key
+  (`mcpServers`/`mcp`) to already be present inside it — both are 11a's
+  documented assumption ("every real runtime config this package edits
+  already declares its MCP-server container object, even when empty").
+  `readMember` (this slice's read-only entry lookup, `writer.go`)
+  tolerates a missing file or missing container key as "entry absent",
+  but `ActionInsert`'s `WriteMember` call still fails against a
+  genuinely-absent file. This is out of scope for 11b — no task or
+  scenario asks for bootstrapping a runtime's config file from nothing —
+  and is exercised deliberately (not accidentally) by
+  `TestRun_DispatchesRegisterSubcommand`, which points `--target claude`
+  at a fresh `$HOME` with no `.claude.json` at all and asserts the
+  resulting exit code (1), proving dispatch without pretending the
+  missing-file case silently succeeds.
+- **`after-uninstall.json` is not part of this slice's fixture set.**
+  11b.8 names it as part of the harness's fixture-naming convention "for
+  reuse by codex in slice 12a", but R-019 (`Unregister`) is implemented in
+  slice 12b (`unregister_test.go`), not 12a, and no scenario in 11b or
+  12a exercises uninstall. `goldenWriterCase`'s doc comment records the
+  convention (the four fixture names, including `after-uninstall.json`)
+  so 12b can follow it without re-deriving the naming scheme, but the
+  file itself is created when a real uninstall scenario needs it, not
+  speculatively now.
+- **The golden-fixture harness (11b.8) was built before claude.go
+  (11b.4), not extracted afterward.** The task list's own suggested PR
+  shape for this slice bundles 11b.1–11b.4 and 11b.8 into one part, which
+  matches building the harness (`goldenWriterCase`,
+  `golden_writer_test.go`) as the foundation `claude_test.go` drives from
+  the start, rather than writing two near-duplicate test bodies for
+  claude and opencode and refactoring afterward. `opencode_test.go`
+  (11b.5) is the actual proof this generalizes correctly: it is 40 lines
+  — a `goldenWriterCase` literal plus three one-line test functions — with
+  zero new harness logic. 11b.8 is marked complete on that basis.
+- **`cmd_register.go`'s `--config-root DIR` flag is refused when
+  `--target all`.** The task text does not state this explicitly, but
+  `--config-root` is a single directory override and the three runtimes'
+  config roots are never the same directory in production (`$HOME` vs.
+  `$XDG_CONFIG_HOME/opencode` vs. `$CODEX_HOME`) — accepting
+  `--config-root` with `--target all` would silently point every runtime
+  at the same wrong path. Refused at parse time (exit 2) rather than
+  silently doing something surprising.
+- **`--target codex` is accepted by flag parsing today but reported as an
+  ordinary per-target failure** ("not yet supported (codex lands in a
+  later slice)"), not a usage error — `registerExpandTarget`'s domain
+  already includes `codex` since 12a.6 only needs to add one `case` to
+  `registerTarget`'s dispatch switch, not touch validation.
+
+### TDD Cycle Evidence
+
+| Task | Test | RED (real failure) | GREEN |
+|---|---|---|---|
+| 11b.1–11b.3 | `claude_test.go::TestClaude_UnrelatedEntriesPreserved` / `TestClaude_ReinstallIsIdempotent` / `TestClaude_UntaggedSameNamedEntryRefused` | One shared build failure (all three tests live in one compilation unit): `claude_test.go:11:21: undefined: claudeConfigFileName`, `claude_test.go:14:21: undefined: RegisterClaude`, `golden_writer_test.go:186:21: undefined: ErrConflict` | `claude.go` + `writer.go` (`jsonInstall`, `readMember`, `ErrConflict`) → all three PASS, but only after a real fix mid-cycle (below) — this was not a clean first-run GREEN. |
+| 11b.4 | (production) | — | `claude.go`: `RegisterClaude(configRoot, stateDir, binary string) error`, `claudeEntry` struct (`json.Marshal` field order matches `{"type":"stdio","command":...,"args":["mcp"]}` exactly). Golden fixtures `testdata/claude/{before,after-install,after-reinstall,untagged}.json` — `after-install.json`/`after-reinstall.json` generated by calling `Splice` directly in a throwaway `zz_gen*_test.go` (removed before commit), not hand-computed, since byte-exact insertion offsets/indentation are Splice's own tested contract, not something to re-derive by hand for a fixture. |
+| — | `TestClaude_ReinstallIsIdempotent` first run | **Failed on first run** (not a passed-first-run case): `golden_writer_test.go:154: claude: config after reinstall = ...longterm-mem-v2... want (golden fixture) = ...longterm-mem-v2...` — actual output still had `binary1`'s value; the second `register()` call no-opped instead of replacing. Root cause and fix: see "fingerprintMatches" deviation above (`writer.go`'s `fingerprintMatches` was comparing against the on-disk entry instead of the entry parameter). After the one-line fix, re-run: 3/3 PASS. |
+| 11b.5 | `opencode_test.go::TestOpencode_UnrelatedEntriesPreserved` / `TestOpencode_ReinstallIsIdempotent` / `TestOpencode_UntaggedSameNamedEntryRefused` | `opencode_test.go:14:21: undefined: opencodeConfigFileName`, `opencode_test.go:17:21: undefined: RegisterOpencode` | `opencode.go`: `RegisterOpencode`, `opencodeEntry` (single-argument-list `command` shape, `{binary, "mcp"}` as one array). All 3/3 PASS on first run — the writer-level bug was already fixed in `writer.go` before this test existed, so this is a genuine (not accidental) first-run pass; `opencode_test.go` itself needed zero further changes to be correct. |
+| 11b.6 | (production) | — | `opencode.go` + `testdata/opencode/{before,after-install,after-reinstall,untagged}.json`, generated the same way as claude's. |
+| 11b.7 | `main_test.go::TestRun_DispatchesRegisterSubcommand`, `TestCmdRegister_UnknownTargetExitsTwo`, `TestCmdRegister_InstallsSuccessfully`, `TestCmdRegister_ConflictExitsSix`, `TestCmdRegister_AllExpandsToClaudeAndOpencode` | No RED counterpart is named for `cmd_register.go` in the task list (unlike every other slice's cmd file, per this repo's own convention: no `cmd_*_test.go` exists — every cmd-layer test lives in `main_test.go`). Written after `cmd_register.go`, so all 5 **passed on first run**; each was proved load-bearing by a targeted mutation (see below), then reverted. | `cmd_register.go`: `register --target claude\|opencode\|codex\|all [--config-root DIR] [--state-dir DIR] [--binary PATH]`; `main.go` gains the `"register"` dispatch case. |
+| 11b.8 | (refactor, no new test) | — | Confirmed complete by construction — see "harness built before claude.go" deviation above. `opencode_test.go` being 40 lines with zero harness logic is the load-bearing evidence. |
+| 11b.9 | Slice verification | — | See "Gates" below. |
+
+**First-run-pass mutations for the five `cmd_register.go` tests** (each
+applied, confirmed a real failure, then reverted):
+
+| Test | Mutation | Resulting failure |
+|---|---|---|
+| `TestRun_DispatchesRegisterSubcommand` | Removed the `case "register":` line from `main.go`'s dispatch switch | `main_test.go:439: run([register --target claude ...]) = 2, want 1` (falls through to the unknown-subcommand fallback, always 2) |
+| `TestCmdRegister_UnknownTargetExitsTwo` | `registerExpandTarget`'s `default:` case changed to accept any string instead of erroring | `main_test.go:448: run([register --target bogus]) = 1, want 2` |
+| `TestCmdRegister_InstallsSuccessfully` | `claude.go`: `claudeEntry{Type: "stdio", ...}` → `Type: "sse"` | `main_test.go:482: result config does not contain the expected entry:\n{"mcpServers":{\n  "longterm-mem": {"type":"sse",...` |
+| `TestCmdRegister_ConflictExitsSix` | `cmd_register.go`'s `case conflict:` changed to `return 1` instead of `return 6` | `main_test.go:513: run(...) with an untagged conflict = 1, want 6` |
+| `TestCmdRegister_AllExpandsToClaudeAndOpencode` | `registerExpandTarget`'s `"all"` case changed to `[]string{"claude"}` (dropped opencode) | `main_test.go:571: opencode config missing longterm-mem entry:\n{"mcp":{}}` |
+
+### Gates
+
+- `cd longterm-mem && gofmt -l .` — clean, no output.
+- `cd longterm-mem && go vet ./...` — clean.
+- `cd longterm-mem && go test ./... -cover -count=1` — all packages PASS;
+  `internal/register` coverage 74.4% of statements.
+- `cd longterm-mem && go test ./... -run TestClaude|TestOpencode -v` — 6/6
+  PASS (the slice's own verification command).
+- `cd engine && go test ./...` — all packages PASS, unchanged (this slice
+  touches only `longterm-mem/`).
+- `TestOSExecImportAllowlist` — still passes; `internal/register` and
+  `cmd_register.go` import neither `os/exec` nor anything that does.
+
+
+### Two defects found during delivery, before review saw the candidate
+
+Both are the same shape this change keeps meeting: an unresolvable value
+degrading into a plausible-looking fallback that is then reported as
+success.
+
+- **`register` wrote an empty binary path into a user's config.** When
+  `--binary` is omitted and `$HOME` cannot be resolved,
+  `defaultRegisterBinaryPath()` returns `""`. For claude that is masked,
+  because the config root is `$HOME` too and the run fails on the root
+  first. For opencode with an absolute `$XDG_CONFIG_HOME` the root
+  resolves fine, so the run installed `{"type":"local","command":["",
+  "mcp"],"enabled":true}` and printed `opencode: ok`. RED:
+  `TestCmdRegister_UnresolvableBinaryPathIsRefused` failed with
+  `= 0, want non-zero` while the run reported success.
+- **`register` wrote `install-state.json` into the process working
+  directory.** Same cause on the `--state-dir` side. The consequence is
+  worse than a stray file: the *next* run resolves a different state dir,
+  finds no record, and refuses its own previous write as someone else's
+  entry. The mutation that proved the guard load-bearing left a real
+  `longterm-mem/cmd/longterm-mem/install-state.json` behind in the
+  working tree — the defect made visible.
+
+Both are refused before any target is touched, and the refusal is what
+makes `register_paths.go`'s "empty means unresolvable, never a relative
+fallback" contract meaningful rather than decorative.
+
+### Native review corrections
+
+Two bounded corrections across the six parts; both findings were real and
+neither was cosmetic.
+
+- **11b-1, `R3-partial-write-lockout` (CRITICAL, reliability).** The
+  config write and the install-state write are two effects in sequence.
+  If `Save` failed, the config carried a `longterm-mem` entry
+  install-state had no record of — **exactly the state `Decide`
+  classifies as `refuse`** — so every later `register` run would refuse
+  permanently over an entry longterm-mem itself wrote, with no way to
+  recover by re-running. Fixed by rolling the config write back to its
+  original bytes and mode, and reporting that the entry was withdrawn
+  (the same discipline slice 6c applied to `Writer.Promote`).
+
+  The test needed one indirection to be honest: `saveInstallState` is a
+  package-level variable in `writer.go`, the way `promote`'s `nowFunc`
+  is, **because every filesystem-level way to make the state directory
+  unwritable also breaks the `LoadInstallState` that runs before the
+  config write** — `jsonInstall` would return early and the test would
+  pass without ever entering the window it exists to prove. Proved
+  load-bearing by making the rollback write to a different path: the test
+  then fails displaying the config holding an unrecorded `longterm-mem`
+  entry, which is the lockout state itself.
+
+- **11b-5, `R2-exit-precedence-contradicts-doc` (CRITICAL,
+  readability).** With `--target all`, the exit switch tested `conflict`
+  before `failed`, so one runtime conflicting (6) hid another runtime
+  failing outright — while the function's own doc comment promised that
+  one target's failure never hides another's. A hard failure now outranks
+  a conflict: a conflict is expected and recoverable, a hard failure
+  means a target is not registered at all.
+  `TestCmdRegister_HardFailureOutranksConflict` seeds both in one run
+  (claude holding an untagged entry, opencode with no config file) and
+  failed with `= 6, want 1` before the fix.
+
+### PR seam shape actually landed
+
+The suggested 3-part shape was refined twice, both times by finding a
+seam inside a file rather than asking for a size exception — the
+technique that has now beaten an exception four times in this chain.
+
+First, `writer.go` (the shared `jsonInstall`/`readMember` flow both
+`claude.go` and `opencode.go` call) turned out to be genuinely separable
+infrastructure rather than claude-specific code.
+
+Second, `cmd_register.go` came in at **419 changed lines against a
+400-line budget**. Instead of an exception, the command was split along
+the seam it already had: `register_paths.go` holds the pure resolution
+rules (which targets a `--target` value names, and where each runtime's
+config, the install-state record and the binary live by default), and
+`cmd_register.go` keeps the effectful shell. That seam bought three tests
+an end-to-end test structurally cannot write — **every existing
+`register` test passes explicit `--config-root`/`--state-dir` paths so it
+never touches a developer's real config, which left the default paths,
+the code path every real user hits, with no coverage at all.**
+
+Those three tests pass on their first run (the split is an extraction,
+not new behaviour), so each was proved load-bearing by a deliberate,
+reverted mutation:
+
+| Test | Mutation | Resulting failure |
+|---|---|---|
+| `TestRegisterExpandTarget` | added `codex` to `"all"`'s expansion | `registerExpandTarget("all") = [claude opencode codex], want [claude opencode]` |
+| `TestDefaultRegisterConfigRoot` | dropped the `filepath.IsAbs` guard on `$XDG_CONFIG_HOME` | `defaultRegisterConfigRoot("opencode") = "relative/config/opencode"` — a config root resolved against the current directory |
+| `TestDefaultRegisterPathsAreEmptyWhenUnresolvable` | returned a relative fallback instead of `""` | `defaultRegisterStateDir() with no resolvable home = ".labdrian-overlay/longterm-mem", want ""` |
+
+The expansion table also pins a **scope boundary rather than a
+behaviour**: `codex` is an accepted single target but deliberately not
+part of `all` until 12a.6 wires its writer, so a future edit cannot
+quietly make `register --target all` start failing on a runtime nobody
+asked for.
+
+- **11b-1** — PR #228 — `golden_writer_test.go` (244) + `writer.go` (131)
+  = 375 lines after one bounded correction. The shared harness and shared
+  JSON-writer install flow, no runtime-specific code yet.
+- **11b-2** — PR #229 — `claude.go` (48) + `claude_test.go` (42) +
+  `testdata/claude/*.json` (58) = 148 lines.
+- **11b-3** — PR #230 — `opencode.go` (44) + `opencode_test.go` (40) +
+  `testdata/opencode/*.json` (47) = 131 lines.
+- **11b-4** — PR #231 — `register_paths.go` (99) + `main_test.go` diff
+  (+99) = 198 lines. Four-lens high-risk review, approved with zero
+  corrections.
+- **11b-5** — PR #232 — `cmd_register.go` (128) + `main.go` diff (+2) +
+  `main_test.go` diff (+246) = 376 lines after one bounded correction.
+  Four-lens high-risk review.
+- **11b-6** — artifacts: `tasks.md` (11b.1–11b.9 ticked) and this
+  section.
+
+Every part landed under the 400-line budget with no size exception
+requested.
+
+### Review receipts
+
+| Part | Lineage | Risk | Lenses | Outcome |
+|---|---|---|---|---|
+| 11b-1 | `review-3873e1be82a372f2` | medium | reliability | one bounded correction, approved, acknowledged |
+| 11b-2 | `review-894de36858c59f27` | medium | reliability | approved with zero corrections, acknowledged |
+| 11b-3 | `review-1eb43edceb07ad22` | medium | reliability | approved with zero corrections, acknowledged |
+| 11b-4 | `review-17a1f4984732c925` | high | risk, resilience, readability, reliability | approved with zero corrections, acknowledged |
+| 11b-5 | `review-b9025f6d7f67b7f2` | high | risk, resilience, readability, reliability | one bounded correction, approved, acknowledged |
+
+Two provider-side capture results came back malformed (`reviewer payload
+contains no complete JSON object` on 11b-1's validator, `unknown field
+"follow_ups"` on 11b-5's). In both cases the bound STATUS was re-queried,
+it reoffered the same slot, and the relaunch was admitted — no state was
+invented and no lineage was restarted.
+
+### Ledger
+
+Acquired before the apply agent launched, settled `passed` afterwards
+with evidence revision
+`sha256:d5302728b721414df2b27821157dc859f06e0adb68a5739728b909386d2332a2`
+(the sha256 of the captured `go test` output for both modules).
