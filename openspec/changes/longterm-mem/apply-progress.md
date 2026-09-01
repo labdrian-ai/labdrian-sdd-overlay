@@ -3492,3 +3492,306 @@ Acquired before the apply agent launched, settled `passed` afterwards
 with evidence revision
 `sha256:d5302728b721414df2b27821157dc859f06e0adb68a5739728b909386d2332a2`
 (the sha256 of the captured `go test` output for both modules).
+
+---
+
+## Slice 12a — longterm-mem-mcp-registration-toml-uninstall-12a-toml (R-018)
+
+Read slices 11a/11b first, as instructed: `internal/register/decide.go`
+(`Decide`), `writer.go` (`jsonInstall` and its rollback), `jsonsplice.go`/
+`jsonwrite.go` (locate/apply + atomic write), and
+`golden_writer_test.go`'s three-scenario harness were all treated as
+settled, reviewed contracts. Nothing in that reading changed; codex is a
+third consumer of the same shapes.
+
+### 12a.1/12a.2 — `tomlsplice.go` + `tomlwrite.go`
+
+**Split, not a single file.** The task lists both the pure locate/apply
+logic and the atomic write + validation under `tomlsplice.go`. Landed as
+two files instead — `tomlsplice.go` (pure `locateTOMLSection`/`apply`,
+exported `TOMLSplice`, no I/O) and `tomlwrite.go` (`WriteTOMLSection`:
+go-toml/v2 validation, `.bak`, tmp+rename) — mirroring the exact
+JSON-side split 11a.3 already made (`jsonsplice.go` + `jsonwrite.go`) for
+the same reason: a pure locate/apply function is directly testable
+without a filesystem, and the atomic-write purity seam (validate before
+any mutation) is easiest to prove in isolation.
+
+**RED evidence, `TestTOMLSplice_LocatesTableSpan`.** The implementation
+was drafted before the test was run (an ordering slip, disclosed here
+rather than hidden), but the very first run was a genuine, unplanned RED:
+
+```
+tomlsplice_test.go:59: bytes outside the spliced table span changed
+--- raw (table removed) ---
+...args = ["--foo"]
+
+
+[mcp_servers.third]
+--- got (table removed) ---
+...args = ["--foo"]
+
+[mcp_servers.third]
+```
+
+Root cause: `locateTOMLSection`'s span for an existing table ran all the
+way to the next header line's start, swallowing the blank-line separator
+between the located table and whatever came after it — a reinstall would
+have silently deleted that formatting. Fixed by tracking `contentEnd` (the
+offset right after the section's last non-blank line) instead of the next
+header's start, so a trailing blank-line separator is left outside the
+replaced span. Re-run: PASS. `TestTOMLSplice_AppendsAtEOFWhenAbsent`
+passed on its first run (the insert path was simpler and had no
+pre-existing content on either side to disturb).
+
+**`TestWriteTOMLSection_AtomicReplaceWithBackup` RED evidence** (genuine,
+first run):
+
+```
+tomlwrite_test.go:25: WriteTOMLSection returned error: register: splice of
+.../config.toml would produce invalid TOML, not written: toml: cannot
+decode TOML string into map[string]struct { Command string "toml:\"command\"" }
+```
+
+Root cause: decoding the spliced document into
+`map[string]map[string]struct{Command string}` fails the moment ANY
+top-level key is a plain value rather than a table (here, `theme =
+"dark"`) — go-toml/v2 has nowhere to put it. Fixed by decoding into
+`map[string]interface{}` and manually re-asserting each level
+(`tomlNestedString`), tolerating shapes that aren't the expected nested
+table rather than failing to decode the whole document. Re-run: PASS.
+
+**`TestWriteTOMLSection_InvalidTOMLLeavesOriginalUntouched` and
+`TestWriteTOMLSection_CommandMismatchLeavesOriginalUntouched` passed on
+their first run.** Both were proved load-bearing by a deliberate,
+reverted mutation, per the mandate that a first-pass-green test earns its
+place by breaking under a targeted change, not by inspection:
+
+| Test | Mutation | Resulting failure |
+|---|---|---|
+| `TestWriteTOMLSection_CommandMismatchLeavesOriginalUntouched` | replaced the `command == binary` assertion with `_ = command; _ = ok` (no-op) | `WriteTOMLSection returned nil error for a command mismatch (newSection command != binary argument)` |
+
+(`TestWriteTOMLSection_InvalidTOMLLeavesOriginalUntouched` already had its
+RED-then-GREEN history from the same debugging pass above — the go-toml/v2
+`Unmarshal` gate is the exact code path that failed and was fixed there,
+so no separate mutation was needed to prove it live.)
+
+The command-mismatch check is task 12a.2's named purity seam: "assert
+`mcp_servers.longterm-mem.command == binary`, before the rename." Without
+it, `WriteTOMLSection` would happily commit a spliced document whose
+`command` field does not match the `binary` argument — exactly the kind of
+splice bug (wrong table name, wrong interpolation) that should never reach
+a user's `config.toml` silently.
+
+`go-toml/v2` was added as a direct dependency (`go get
+github.com/pelletier/go-toml/v2@latest` → v2.4.3, then `go mod tidy`
+moved it from indirect to direct once `tomlwrite.go` imported it).
+
+### 12a.3/12a.4/12a.5 — `codex.go`, fixtures, harness generalisation
+
+**Harness decision: generalise `golden_writer_test.go`, do not fork it.**
+11b.8's own doc comment already named this file as "shared with the
+future codex/TOML and uninstall writers, 12a/12b" — forking it here would
+have reintroduced exactly the drift 11b.8 existed to prevent. The only
+things in that harness that were ever JSON-specific were: (1) four
+hardcoded `"before.json"`/`"after-install.json"`/`"after-reinstall.json"`/
+`"untagged.json"` literals, and (2) the "not a duplicate" needle
+`` `"` + c.memberKey + `":` `` — valid JSON-member syntax, meaningless for
+a TOML table header. Every byte-comparison, file-seeding, and assertion
+method is format-agnostic; it only ever moves raw bytes.
+
+Generalised by adding two fields to `goldenWriterCase`:
+- `fixtureExt string` (`.json` for claude/opencode, `.toml` for codex) —
+  replaces the four literals via a new `fixtureName(stem string) string`
+  helper (`stem + c.fixtureExt`).
+- `duplicateNeedle string` (`` `"longterm-mem":` `` for JSON,
+  `` `[mcp_servers.longterm-mem]` `` for TOML) — an explicit field rather
+  than deriving it from `memberKey`, so the JSON-syntax assumption cannot
+  silently leak back into the shared method.
+
+`claude_test.go` and `opencode_test.go` were updated to set both fields
+explicitly (`.json` / `` `"longterm-mem":` ``); their three tests were
+re-run and stayed green, proving the generalisation preserved existing
+behaviour exactly.
+
+**Fixture design (`testdata/codex/*.toml`).** `before.toml` carries one
+unrelated top-level key (`theme = "dark"`) BEFORE any table (a bare key
+after a table header would belong to that table, not the document root —
+so ordering here is deliberate, not arbitrary) and one unrelated section
+(`[mcp_servers.other-project-server]`). `after-install.toml` /
+`after-reinstall.toml` / `untagged.toml` follow the exact byte shape
+`TOMLSplice`'s insert/replace paths produce, verified by running the real
+scenarios rather than hand-computing the diff.
+
+**RED evidence, `codex_test.go`'s three scenarios.** All three passed on
+their first run against the already-written `codex.go` (the fixtures were
+authored to match the implementation directly, the same acknowledged
+ordering slip as 12a.1/12a.2). Proved load-bearing with one shared,
+deliberate, reverted mutation (`codexTableKey` changed from
+`"mcp_servers"` to `"mcp_server_MUTATED"`):
+
+```
+=== RUN   TestCodex_UnrelatedSectionsAndOrderingPreserved
+    golden_writer_test.go:146: codex: install returned error: register: codex:
+    register: splice of .../config.toml would not set mcp_server_MUTATED.longterm-mem.command
+    = "/usr/local/bin/longterm-mem", not written
+--- FAIL
+=== RUN   TestCodex_ReinstallIsIdempotent
+    golden_writer_test.go:171: codex: first install returned error: ...(same shape)...
+--- FAIL
+=== RUN   TestCodex_UntaggedSameNamedEntryRefused
+    golden_writer_test.go:220: codex: install error = register: codex: register: splice of
+    .../config.toml would produce invalid TOML, not written: toml: table longterm-mem already
+    exists, want errors.Is(err, ErrConflict)
+--- FAIL
+```
+
+All three failed genuinely; reverted, all three back to PASS. A second,
+more targeted mutation isolated `TestCodex_UntaggedSameNamedEntryRefused`
+specifically to the `Decide`/refuse path rather than the write-validation
+path above (`readTOMLPresence` forced to always return `false, nil`):
+
+```
+golden_writer_test.go:217: codex: install over an untagged same-named
+entry returned nil error, want ErrConflict
+```
+
+Reverted; PASS again.
+
+**Deviation from tasks.md: a third scenario.** 12a.3/12a.4 name only two
+R-018 scenarios ("Unrelated sections and ordering are preserved",
+"Reinstall is idempotent"). `TestCodex_UntaggedSameNamedEntryRefused` was
+added because codex shares `tomlInstall`/`Decide` with claude/opencode's
+`jsonInstall`/`Decide`, and the "an entry we don't own is refused, not
+overwritten" behavior is real and reachable for codex too — deserving its
+own proof rather than an inference from the JSON-side tests.
+
+**Shared install flow, not a duplicated rollback.** `codex.go`'s
+`RegisterCodex` calls a new `tomlInstall` (in `writer.go`, next to
+`jsonInstall`), which itself calls a newly-extracted `installWithRollback`
+helper — the exact config-write/install-state-write rollback sequence
+`jsonInstall` used inline, now shared verbatim by both formats. This
+directly follows the instruction to route codex through the shared flow
+rather than duplicating (or worse, subtly re-deriving) the 11b-1 CRITICAL
+fix. `jsonInstall` was refactored to call the same helper; its own
+pre-existing test, `TestJSONInstall_UnsavableInstallStateWithdrawsTheConfigWrite`,
+was re-run after the refactor and stayed green — proving the extraction
+changed nothing observable for JSON. A parallel TOML-specific rollback
+test was deliberately NOT added: since both formats now run through the
+one `installWithRollback` function, the JSON-side test already covers the
+function every caller (JSON and TOML) shares; a second copy would test
+the same code path twice under a different name, not a different
+behaviour.
+
+### 12a.6 — cmd wiring
+
+`cmd_register.go`'s `registerTarget` gained a `case "codex":` branch
+calling `register.RegisterCodex`; the previous "not yet supported" stub
+error was removed (codex is now real, not a placeholder). Its stale doc
+comment ("codex is wired in 12a.6") was updated to state R-018 as landed.
+
+`register_paths.go`'s `registerExpandTarget("all")` now returns
+`[]string{"claude", "opencode", "codex"}`. `TestRegisterExpandTarget`'s
+`"all"` row was updated from `[claude opencode]` to
+`[claude opencode codex]`, with its own doc comment rewritten to record
+that this is 12a.6's own deliberate scope-boundary move (widening the
+row), not a regression of 11b.7's boundary (which existed only because
+codex's writer did not exist yet).
+
+`TestCmdRegister_AllExpandsToClaudeAndOpencode` (cmd/longterm-mem/main_test.go)
+seeded only claude/opencode fixtures and asserted exit 0 for
+`--target all`; with codex now part of the expansion it started failing
+(exit 1, codex's `config.toml` did not exist in the seeded HOME). Updated
+— renamed to `TestCmdRegister_AllExpandsToClaudeAndOpencodeAndCodex`,
+seeds a minimal `$CODEX_HOME/config.toml`, and asserts all three configs
+carry their `longterm-mem` entry/section after the run. Re-run: PASS.
+
+`TestCmdRegister_HardFailureOutranksConflict` was re-run unmodified (it
+does not seed a codex config, so codex now ALSO fails outright there,
+alongside opencode's existing hard failure) — it only asserts the final
+exit code is 1, so the exit-precedence rule (a hard failure outranks a
+conflict) stayed intact with an extra hard failure folded in. PASS.
+
+### 12a.7 — package doc
+
+The existing `jsonsplice.go` package doc already anticipated codex
+("...and (12a) codex's TOML config (D9)"), written ahead of the fact in
+11a. Since it was never actually JSON-specific, it was moved out of
+`jsonsplice.go` into a new `doc.go`, and extended with the explicit
+three-boolean → `Action` → meaning table (entryPresent, recordPresent,
+fingerprintMatches) and one sentence stating that engine/runtime's
+`doctor`/`status` reporting (`LongtermMemAdapter`, a separate Go module
+per D4) re-derives the same three states read-only and must mean the same
+thing by them — satisfying "one place... for doctor/status reuse" without
+restating the table in claude.go/opencode.go/codex.go. `jsonsplice.go`
+now carries a two-line file-scoped comment pointing at `doc.go` instead.
+
+### 12a.8 — slice verification
+
+- `cd longterm-mem && gofmt -l .` — clean, no output.
+- `cd longterm-mem && go vet ./...` — clean, no output.
+- `cd longterm-mem && go test ./... -cover -count=1` — all packages pass;
+  `internal/register` coverage: **76.9%** (up from its 11b baseline; the
+  new `doc.go` has no statements and does not affect the denominator).
+- `cd engine && go test ./...` — all packages pass, unmodified (no file
+  under `engine/` was touched this slice).
+- `go test . -run TestOSExecImportAllowlist` (module root) — PASS; no
+  `os/exec` import was added anywhere in this slice.
+
+### Real line counts (current file totals, not diff-only)
+
+| File | Lines | Kind |
+|---|---|---|
+| `internal/register/tomlsplice.go` | 171 | production (after the 12a-1 correction: +`assertSpanIsWholeTable`) |
+| `internal/register/tomlsplice_test.go` | 140 | test (after the 12a-1 correction: +the two unprovable-span refusals) |
+| `internal/register/tomlwrite.go` | 96 | production |
+| `internal/register/tomlwrite_test.go` | 134 | test |
+| `internal/register/codex.go` | 39 | production |
+| `internal/register/codex_test.go` | 51 | test |
+| `internal/register/doc.go` | 38 | production (doc-only) |
+| `internal/register/testdata/codex/before.toml` | 5 | fixture |
+| `internal/register/testdata/codex/after-install.toml` | 9 | fixture |
+| `internal/register/testdata/codex/after-reinstall.toml` | 9 | fixture |
+| `internal/register/testdata/codex/untagged.toml` | 8 | fixture |
+| `internal/register/writer.go` | 199 | production (was 132; +`tomlInstall`, +`installWithRollback` extraction, +`readTOMLPresence`) |
+| `internal/register/jsonsplice.go` | 214 | production (package doc moved out, net roughly unchanged in logic) |
+| `internal/register/golden_writer_test.go` | 276 | test (harness, +`fixtureExt`/`duplicateNeedle`/`fixtureName`) |
+| `internal/register/claude_test.go` | 44 | test (+2 fields) |
+| `internal/register/opencode_test.go` | 42 | test (+2 fields) |
+| `cmd/longterm-mem/cmd_register.go` | 126 | production (codex dispatch, doc comment) |
+| `cmd/longterm-mem/register_paths.go` | 102 | production ("all" expansion) |
+| `cmd/longterm-mem/main_test.go` | 909 | test (module-wide; `TestRegisterExpandTarget` + `TestCmdRegister_AllExpandsToClaudeAndOpencodeAndCodex` touched) |
+| `go.mod` | 28 | dependency (`go-toml/v2` promoted to direct) |
+| `go.sum` | 70 | dependency |
+
+### Deviations from the task list, with reasons
+
+1. **12a.2 split into two files** (`tomlsplice.go` + `tomlwrite.go`)
+   instead of one, mirroring 11a.3's own precedent for JSON.
+2. **A third codex scenario** (`TestCodex_UntaggedSameNamedEntryRefused`)
+   added beyond 12a.3/12a.4's two named scenarios, for direct coverage
+   parity with claude/opencode rather than an inference from shared code.
+3. **`writer.go` refactored** (not listed as its own task) to extract
+   `installWithRollback` and add `tomlInstall`/`readTOMLPresence`, per the
+   slice brief's explicit instruction to route codex through
+   `jsonInstall`'s shared flow rather than duplicating its rollback.
+4. **`golden_writer_test.go` generalised** (`fixtureExt`,
+   `duplicateNeedle` fields) rather than forked, per 11b.8's own stated
+   intent and the slice brief's explicit instruction to justify whichever
+   choice was made.
+5. **`jsonsplice.go`'s package doc extracted into a new `doc.go`** as
+   12a.7's REFACTOR, since it was package-wide documentation that had
+   never actually belonged to the JSON-specific file.
+6. **`TestCmdRegister_AllExpandsToClaudeAndOpencode` renamed and extended**
+   to seed and assert codex, since codex joining `"all"`'s expansion made
+   its previous claude/opencode-only assertion no longer represent the
+   command's real behaviour.
+7. **`TOMLSplice` returns `([]byte, error)`**, not just bytes. Added
+   during delivery as the 12a-1 review correction — a span the
+   line-oriented scan cannot prove is refused rather than half-written.
+   `WriteTOMLSection` and both existing splice tests were updated with
+   it.
+8. **`--target all` skips a runtime whose configuration file is absent.**
+   Added during delivery as the 12a-4 review correction; a named target
+   still fails. See the delivery record appended by this slice's final part.
+
+Ledger token: `sha256:1b3eae41d1ba349d616d829c9acbaf44ca476e37babfb2a77a676aa70dba0721`
