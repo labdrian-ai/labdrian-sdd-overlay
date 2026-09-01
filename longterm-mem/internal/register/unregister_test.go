@@ -116,3 +116,179 @@ func TestUnregister_OutcomeAndOnDiskEffect(t *testing.T) {
 		}
 	}
 }
+
+// TestUnregister_SelectiveRemovalAcrossAllThreeRuntimes (12b.1, R-019
+// scenario "Selective removal across all three runtimes"): claude,
+// opencode and codex are each installed for real (through the real
+// Register* writers, sharing ONE install-state.json the way a real
+// machine's three targets do) with their own unrelated entries plus a
+// longterm-mem entry. Unregistering ONE runtime (opencode) removes only
+// that runtime's entry — the OTHER two runtimes' files, and every
+// unrelated entry in the unregistered runtime's own file, are
+// byte-identical to what Register* itself produced.
+func TestUnregister_SelectiveRemovalAcrossAllThreeRuntimes(t *testing.T) {
+	claude, opencode, codex := claudeGoldenCase(), opencodeGoldenCase(), codexGoldenCase()
+	stateDir := t.TempDir() // shared install-state.json, mirroring a real machine's one file for all targets
+
+	claudeDir, opencodeDir, codexDir := t.TempDir(), t.TempDir(), t.TempDir()
+	claudePath := claude.seedConfig(t, claudeDir, claude.fixtureName("before"))
+	opencodePath := opencode.seedConfig(t, opencodeDir, opencode.fixtureName("before"))
+	codexPath := codex.seedConfig(t, codexDir, codex.fixtureName("before"))
+
+	for _, tc := range []struct {
+		dir string
+		gc  goldenWriterCase
+	}{
+		{claudeDir, claude},
+		{opencodeDir, opencode},
+		{codexDir, codex},
+	} {
+		if err := tc.gc.register(tc.dir, stateDir, tc.gc.binary1); err != nil {
+			t.Fatalf("%s: install returned error: %v", tc.gc.target, err)
+		}
+	}
+
+	outcome, err := Unregister("opencode", opencodeDir, stateDir)
+	if err != nil {
+		t.Fatalf("Unregister(opencode) returned error: %v", err)
+	}
+	if outcome != UnregisterRemoved {
+		t.Fatalf("Unregister(opencode) outcome = %v, want UnregisterRemoved", outcome)
+	}
+
+	// The unregistered runtime: back to its own before-install bytes,
+	// unrelated entries included, proven byte-for-byte against the golden
+	// after-uninstall fixture.
+	opencodeGot, err := os.ReadFile(opencodePath)
+	if err != nil {
+		t.Fatalf("read opencode config: %v", err)
+	}
+	opencodeWant := opencode.readFixture(t, opencode.fixtureName("after-uninstall"))
+	if string(opencodeGot) != string(opencodeWant) {
+		t.Fatalf("opencode config after unregister =\n%s\nwant =\n%s", opencodeGot, opencodeWant)
+	}
+
+	// The OTHER two runtimes: untouched by an opencode-only unregister,
+	// still carrying their own installed entry and their own unrelated
+	// entries — proven byte-for-byte against the golden after-install
+	// fixture each already had to satisfy for Register* itself.
+	claudeGot, err := os.ReadFile(claudePath)
+	if err != nil {
+		t.Fatalf("read claude config: %v", err)
+	}
+	claudeWant := claude.readFixture(t, claude.fixtureName("after-install"))
+	if string(claudeGot) != string(claudeWant) {
+		t.Fatalf("claude config changed by an opencode-only unregister:\ngot =\n%s\nwant =\n%s", claudeGot, claudeWant)
+	}
+	codexGot, err := os.ReadFile(codexPath)
+	if err != nil {
+		t.Fatalf("read codex config: %v", err)
+	}
+	codexWant := codex.readFixture(t, codex.fixtureName("after-install"))
+	if string(codexGot) != string(codexWant) {
+		t.Fatalf("codex config changed by an opencode-only unregister:\ngot =\n%s\nwant =\n%s", codexGot, codexWant)
+	}
+}
+
+// TestUnregister_UntaggedEntryPreservedAndReported (12b.2, R-019 scenario
+// "Untagged entry is preserved and reported, not removed"): run for all
+// three runtimes, since the untagged conflict is real and reachable for
+// every one of them (the exact same reasoning 12a's own third scenario,
+// TestCodex_UntaggedSameNamedEntryRefused, gave for the install side).
+func TestUnregister_UntaggedEntryPreservedAndReported(t *testing.T) {
+	t.Run("claude", func(t *testing.T) { claudeGoldenCase().testUninstallUntaggedEntryPreservedAndReported(t) })
+	t.Run("opencode", func(t *testing.T) { opencodeGoldenCase().testUninstallUntaggedEntryPreservedAndReported(t) })
+	t.Run("codex", func(t *testing.T) { codexGoldenCase().testUninstallUntaggedEntryPreservedAndReported(t) })
+}
+
+// TestUnregister_PartialUninstallKeepsSharedBinary (12b.3, R-019 scenario
+// "Partial uninstall does not remove the shared binary"): the longterm-mem
+// binary itself is bin/labdrian-overlay's own concern
+// (longtermmem_maybe_remove_binary, 10b/12b.6) — this package has no
+// notion of a binary path to remove at all. What THIS layer owns, and what
+// that bash-level guard depends on being correct, is that unregistering
+// one target never disturbs another target's install-state record: with
+// all three targets recorded in ONE install-state.json (mirroring a real
+// machine), unregistering "claude" alone must leave "opencode" and "codex"
+// fully intact — both their config entries AND their install-state
+// records — proving the Go-level half of "a still-installed target keeps
+// claiming the binary" (LoadInstallState's Targets map is the very
+// question a future doctor/status/uninstall-all run would ask).
+func TestUnregister_PartialUninstallKeepsSharedBinary(t *testing.T) {
+	claude, opencode, codex := claudeGoldenCase(), opencodeGoldenCase(), codexGoldenCase()
+	stateDir := t.TempDir()
+
+	claudeDir, opencodeDir, codexDir := t.TempDir(), t.TempDir(), t.TempDir()
+	claude.seedConfig(t, claudeDir, claude.fixtureName("before"))
+	opencodePath := opencode.seedConfig(t, opencodeDir, opencode.fixtureName("before"))
+	codexPath := codex.seedConfig(t, codexDir, codex.fixtureName("before"))
+
+	for _, tc := range []struct {
+		dir string
+		gc  goldenWriterCase
+	}{
+		{claudeDir, claude},
+		{opencodeDir, opencode},
+		{codexDir, codex},
+	} {
+		if err := tc.gc.register(tc.dir, stateDir, tc.gc.binary1); err != nil {
+			t.Fatalf("%s: install returned error: %v", tc.gc.target, err)
+		}
+	}
+
+	outcome, err := Unregister("claude", claudeDir, stateDir)
+	if err != nil {
+		t.Fatalf("Unregister(claude) returned error: %v", err)
+	}
+	if outcome != UnregisterRemoved {
+		t.Fatalf("Unregister(claude) outcome = %v, want UnregisterRemoved", outcome)
+	}
+
+	statePath := filepath.Join(stateDir, installStateFileName)
+	state, err := LoadInstallState(statePath)
+	if err != nil {
+		t.Fatalf("LoadInstallState after partial unregister: %v", err)
+	}
+	if _, ok := state.Get("claude"); ok {
+		t.Fatalf("claude's install-state record still present after Unregister(claude)")
+	}
+	if _, ok := state.Get("opencode"); !ok {
+		t.Fatalf("opencode's install-state record was removed by an unrelated claude-only unregister — the shared binary would be removed out from under a still-installed target")
+	}
+	if _, ok := state.Get("codex"); !ok {
+		t.Fatalf("codex's install-state record was removed by an unrelated claude-only unregister — the shared binary would be removed out from under a still-installed target")
+	}
+
+	// The config-file half of the same guarantee: opencode's and codex's
+	// own files still carry their installed entry, untouched by an
+	// unrelated target's unregister.
+	opencodeGot, err := os.ReadFile(opencodePath)
+	if err != nil {
+		t.Fatalf("read opencode config: %v", err)
+	}
+	opencodeWant := opencode.readFixture(t, opencode.fixtureName("after-install"))
+	if string(opencodeGot) != string(opencodeWant) {
+		t.Fatalf("opencode config changed by a claude-only unregister:\ngot =\n%s\nwant =\n%s", opencodeGot, opencodeWant)
+	}
+	codexGot, err := os.ReadFile(codexPath)
+	if err != nil {
+		t.Fatalf("read codex config: %v", err)
+	}
+	codexWant := codex.readFixture(t, codex.fixtureName("after-install"))
+	if string(codexGot) != string(codexWant) {
+		t.Fatalf("codex config changed by a claude-only unregister:\ngot =\n%s\nwant =\n%s", codexGot, codexWant)
+	}
+}
+
+// TestUnregister_RemovalIsTheInverseOfInstall wires the harness's
+// install-then-uninstall round trip for ALL THREE runtimes. Without this
+// fan-out the scenario is an unexported method Go never rejects and
+// `go test` never runs, and two of the three after-uninstall fixtures are
+// files nothing reads — so R-019's "Remove/TOMLRemove are genuine
+// inverses of the insert path" would be asserted for opencode alone, and
+// not at all for the whole TOML removal path.
+func TestUnregister_RemovalIsTheInverseOfInstall(t *testing.T) {
+	t.Run("claude", func(t *testing.T) { claudeGoldenCase().testUninstallRemovesOwnedEntry(t) })
+	t.Run("opencode", func(t *testing.T) { opencodeGoldenCase().testUninstallRemovesOwnedEntry(t) })
+	t.Run("codex", func(t *testing.T) { codexGoldenCase().testUninstallRemovesOwnedEntry(t) })
+}

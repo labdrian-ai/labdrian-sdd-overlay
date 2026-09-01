@@ -10,12 +10,15 @@ import "testing"
 // and fixtures, not copying claude_test.go's test bodies.
 func opencodeGoldenCase() goldenWriterCase {
 	return goldenWriterCase{
-		target:           "opencode",
-		configFileName:   opencodeConfigFileName,
-		memberKey:        "longterm-mem",
-		testdataDir:      "testdata/opencode",
-		fixtureExt:       ".json",
-		register:         RegisterOpencode,
+		target:         "opencode",
+		configFileName: opencodeConfigFileName,
+		memberKey:      "longterm-mem",
+		testdataDir:    "testdata/opencode",
+		fixtureExt:     ".json",
+		register:       RegisterOpencode,
+		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
+			return Unregister(opencodeTarget, configRoot, stateDir)
+		},
 		binary1:          "/opt/labdrian-overlay/bin/longterm-mem",
 		binary2:          "/opt/labdrian-overlay/bin/longterm-mem-v2",
 		unrelatedSnippet: `"other-tool"`,

@@ -10,12 +10,15 @@ import "testing"
 // updated doc comment for why that is a field, not a second harness.
 func codexGoldenCase() goldenWriterCase {
 	return goldenWriterCase{
-		target:           "codex",
-		configFileName:   codexConfigFileName,
-		memberKey:        "longterm-mem",
-		testdataDir:      "testdata/codex",
-		fixtureExt:       ".toml",
-		register:         RegisterCodex,
+		target:         "codex",
+		configFileName: codexConfigFileName,
+		memberKey:      "longterm-mem",
+		testdataDir:    "testdata/codex",
+		fixtureExt:     ".toml",
+		register:       RegisterCodex,
+		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
+			return Unregister(codexTarget, configRoot, stateDir)
+		},
 		binary1:          "/usr/local/bin/longterm-mem",
 		binary2:          "/usr/local/bin/longterm-mem-v2",
 		unrelatedSnippet: `other-project-server`,

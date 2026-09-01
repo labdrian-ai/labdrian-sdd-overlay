@@ -29,10 +29,11 @@ import (
 //	                      with binary2, replacing the entry in place.
 //	untagged.<ext>         a config that already has a same-named entry
 //	                      install-state does not own.
-//
-// after-uninstall.json is intentionally not part of this slice's fixture
-// set: R-019 (Unregister) is implemented in slice 12b, which reuses this
-// same naming convention once it exists (see apply-progress.md Slice 11b).
+//	after-uninstall.<ext> the expected config after Unregister removes the
+//	                      entry Register* installed against before.<ext> --
+//	                      the fixture slice 12b (R-019) creates, per this
+//	                      comment's own earlier promise (see
+//	                      apply-progress.md Slice 11b).
 //
 // codex (12a, R-018) drives this same harness with fixtureExt set to
 // ".toml" instead of ".json" — see fixtureExt's own doc comment for why a
@@ -60,6 +61,12 @@ type goldenWriterCase struct {
 	fixtureExt string
 	// register drives the runtime's own Register* entry point.
 	register func(configRoot, stateDir, binary string) error
+	// unregister drives Unregister for this runtime's own target name
+	// (12b, R-019) -- a thin closure rather than a fourth field naming the
+	// target string again, since Unregister already takes target as a
+	// plain argument and every goldenWriterCase value already knows its
+	// own target.
+	unregister func(configRoot, stateDir string) (UnregisterOutcome, error)
 	// binary1/binary2 are the fixed binary paths baked into
 	// after-install.<ext> / after-reinstall.<ext> respectively — binary2
 	// simulates a reinstall picking up a different resolved binary path,
@@ -230,6 +237,76 @@ func (c goldenWriterCase) testUntaggedSameNamedEntryRefused(t *testing.T) {
 
 	if _, statErr := os.Stat(configPath + ".bak"); !os.IsNotExist(statErr) {
 		t.Fatalf("%s: .bak was created despite refusal (stat err: %v) — nothing must be written on refuse", c.target, statErr)
+	}
+}
+
+// testUninstallRemovesOwnedEntry (12b, R-019 "Removing a span is harder
+// than replacing one"): GIVEN before.<ext> installed for real (so
+// install-state genuinely owns this target, not merely a golden fixture on
+// disk with nothing behind it), WHEN Unregister runs, THEN the result is
+// byte-identical to the golden after-uninstall.<ext> fixture — for every
+// runtime this slice covers, that fixture is byte-identical to before.<ext>
+// itself, proving Remove/TOMLRemove are genuine inverses of Splice/
+// TOMLSplice's own insert path, not merely "produces something valid" —
+// and the unrelated snippet survives byte-for-byte throughout.
+func (c goldenWriterCase) testUninstallRemovesOwnedEntry(t *testing.T) {
+	dir := t.TempDir()
+	stateDir := t.TempDir()
+	configPath := c.seedConfig(t, dir, c.fixtureName("before"))
+
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("%s: install returned error: %v", c.target, err)
+	}
+
+	outcome, err := c.unregister(dir, stateDir)
+	if err != nil {
+		t.Fatalf("%s: unregister returned error: %v", c.target, err)
+	}
+	if outcome != UnregisterRemoved {
+		t.Fatalf("%s: unregister outcome = %v, want UnregisterRemoved", c.target, outcome)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read result config: %v", c.target, err)
+	}
+	want := c.readFixture(t, c.fixtureName("after-uninstall"))
+	if string(got) != string(want) {
+		t.Fatalf("%s: config after uninstall =\n%s\nwant (golden fixture) =\n%s", c.target, got, want)
+	}
+	c.assertUnrelatedSnippetPresent(t, "config after uninstall", got)
+}
+
+// testUninstallUntaggedEntryPreservedAndReported (12b.2, R-019 "Untagged
+// entry is preserved and reported, not removed"): GIVEN an untagged
+// memberKey-named entry install-state does not own, WHEN Unregister runs,
+// THEN it reports UnregisterUnmanaged and — the load-bearing assertion,
+// mirroring testUntaggedSameNamedEntryRefused's own — the config file is
+// byte-identical to before the call. A silent no-op that merely returned
+// nil without reporting anything would pass a weaker test than this one.
+func (c goldenWriterCase) testUninstallUntaggedEntryPreservedAndReported(t *testing.T) {
+	dir := t.TempDir()
+	stateDir := t.TempDir()
+	configPath := c.seedConfig(t, dir, c.fixtureName("untagged"))
+	before, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read seeded config: %v", c.target, err)
+	}
+
+	outcome, err := c.unregister(dir, stateDir)
+	if err != nil {
+		t.Fatalf("%s: unregister returned error: %v", c.target, err)
+	}
+	if outcome != UnregisterUnmanaged {
+		t.Fatalf("%s: unregister outcome = %v, want UnregisterUnmanaged", c.target, outcome)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read config after unregister: %v", c.target, err)
+	}
+	if string(got) != string(before) {
+		t.Fatalf("%s: config file was modified despite being unmanaged:\nbefore =\n%s\nafter =\n%s", c.target, before, got)
 	}
 }
 

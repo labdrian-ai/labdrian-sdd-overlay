@@ -7,12 +7,15 @@ import "testing"
 // for the shared three-scenario harness this drives.
 func claudeGoldenCase() goldenWriterCase {
 	return goldenWriterCase{
-		target:           "claude",
-		configFileName:   claudeConfigFileName,
-		memberKey:        "longterm-mem",
-		testdataDir:      "testdata/claude",
-		fixtureExt:       ".json",
-		register:         RegisterClaude,
+		target:         "claude",
+		configFileName: claudeConfigFileName,
+		memberKey:      "longterm-mem",
+		testdataDir:    "testdata/claude",
+		fixtureExt:     ".json",
+		register:       RegisterClaude,
+		unregister: func(configRoot, stateDir string) (UnregisterOutcome, error) {
+			return Unregister(claudeTarget, configRoot, stateDir)
+		},
 		binary1:          "/usr/local/bin/longterm-mem",
 		binary2:          "/usr/local/bin/longterm-mem-v2",
 		unrelatedSnippet: `"other-project-server"`,
