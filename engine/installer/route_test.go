@@ -1530,3 +1530,94 @@ func TestStatusUninstall_SkipBuildStep(t *testing.T) {
 		}
 	})
 }
+
+// TestInstall_BinaryPersistsAfterProcessExits proves R-015's first scenario:
+// after the installing process (runOverlay's subprocess) has fully exited,
+// the binary still exists at the documented fixed path and is invocable
+// from a DIFFERENT process than the one that installed it.
+func TestInstall_BinaryPersistsAfterProcessExits(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "all")
+	if err != nil {
+		t.Fatalf("install failed: %v\noutput:\n%s", err, out)
+	}
+
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	if _, statErr := os.Stat(binPath); statErr != nil {
+		t.Fatalf("binary missing after the installing process exited: %v", statErr)
+	}
+
+	invokeOut, invokeErr := exec.Command(binPath).CombinedOutput()
+	var exitErr *exec.ExitError
+	if !errors.As(invokeErr, &exitErr) {
+		t.Fatalf("expected the binary to be invocable (real exit via its own usage path), got: %v\noutput:\n%s", invokeErr, invokeOut)
+	}
+	if exitErr.ExitCode() != 2 {
+		t.Fatalf("expected exit code 2 (usage) invoking the binary with no args, got %d\noutput:\n%s", exitErr.ExitCode(), invokeOut)
+	}
+	if !strings.Contains(string(invokeOut), "usage: longterm-mem") {
+		t.Fatalf("expected usage output invoking the binary, got: %s", invokeOut)
+	}
+}
+
+// TestInstall_BinaryPathStableAcrossInspections proves R-015's second
+// scenario: with no install/uninstall in progress, inspecting the binary at
+// two points in time (across an intervening read-only 'status' call) shows
+// the same file identity and the same mtime — the path never moves.
+func TestInstall_BinaryPathStableAcrossInspections(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "all")
+	if err != nil {
+		t.Fatalf("install failed: %v\noutput:\n%s", err, out)
+	}
+
+	wantPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	first, statErr := os.Stat(wantPath)
+	if statErr != nil {
+		t.Fatalf("stat after install: %v", statErr)
+	}
+
+	statusOut, statusErr := runOverlay(t, overlay, env, "longterm-mem", "status")
+	if statusErr != nil {
+		t.Fatalf("status failed: %v\noutput:\n%s", statusErr, statusOut)
+	}
+
+	second, statErr := os.Stat(wantPath)
+	if statErr != nil {
+		t.Fatalf("stat after status: %v", statErr)
+	}
+	if !os.SameFile(first, second) {
+		t.Fatalf("binary identity changed across inspections (path must be stable)")
+	}
+	if !second.ModTime().Equal(first.ModTime()) {
+		t.Fatalf("binary mtime changed across inspections at %s: before=%v after=%v", wantPath, first.ModTime(), second.ModTime())
+	}
+}
