@@ -2711,3 +2711,290 @@ and codex's TOML handling were deliberately left alone: forcing three
 genuinely different config formats behind one abstraction would be a false
 abstraction, and worse than a little duplication. The task said "where the
 schema overlaps", and this is where it does not.
+
+## Slice 10b — longterm-mem-overlay-dispatch-10b-shell (R-014 shell half, R-015) — PR10b (base: PR10a)
+
+Implemented tasks 10b.1–10b.9, all ticked in `tasks.md`. This slice lives
+almost entirely in `bin/labdrian-overlay`: `cmd_longterm_mem()` (D4) —
+install/status/uninstall dispatch, the binary-removal guard, and the
+`cmd_apply` mcp-route install hook (D13) — plus its integration tests in
+`engine/installer/route_test.go`, plus the `longterm-mem/README.md` refresh
+(CHK-05). Ledger token: `sha256:3f9b3c233a2ac9cb07b5c0a322df29eca0592a8f2e0592ce220a63f510d27142`.
+
+### Design decisions not fully pinned by the task text (recorded here per
+### "if design/tasks are incomplete, note it, don't silently deviate")
+
+- **`go build ./longterm-mem/cmd/longterm-mem` cannot literally run from
+  `$OVERLAY_DIR`, and neither can `go build ./engine/cmd/` from that same
+  root** — both `longterm-mem/` and `engine/` are SEPARATE Go modules (each
+  with its own `go.mod`); `$OVERLAY_DIR` itself has no `go.mod` at all, so
+  `go build` from there fails immediately with "go.mod file not found in
+  current directory or any parent directory" for either path, confirmed by
+  hand before writing any test. The existing `ENGINE_SRC="$OVERLAY_DIR/engine"`
+  + `(cd "$ENGINE_SRC" && go build ... ./cmd/)` pattern already in this file
+  (`cmd_install_hooks`/`cmd_uninstall_hooks`) exists for exactly this reason.
+  `cmd_longterm_mem` follows the identical shape: a new `LONGTERM_MEM_SRC="$OVERLAY_DIR/longterm-mem"`
+  constant, `(cd "$LONGTERM_MEM_SRC" && go build -o "$build_tmp" ./cmd/longterm-mem)`.
+  The observable contract (`go build ./longterm-mem/cmd/longterm-mem`,
+  read as "build the longterm-mem/cmd/longterm-mem package") is unchanged;
+  only the literal invocation shape needed correcting to actually run.
+- **`vaults seed` and `longterm-mem register --target t` do not exist yet.**
+  Confirmed by reading `longterm-mem/cmd/longterm-mem/main.go`'s dispatch
+  table before writing any code: it recognizes exactly `index`, `query`,
+  `sync`, `status`, `doctor`, `promote`, `mcp` — no `register`, `unregister`,
+  or `vaults`. Those land in slices 11b.7/12a.6 (register/unregister) and are
+  not tracked as an explicit task anywhere for `vaults` at all. Given `set
+  -euo pipefail`, an unguarded call to either would abort the entire install
+  the instant it hit the "unknown subcommand" exit 2 — before the binary
+  build/copy even had a chance to be verified, and before
+  `engine runtime install --component longterm-mem` (which already exists,
+  10a) ever ran to report the per-runtime status R-014's own scenario asks
+  for. `cmd_longterm_mem install` therefore calls both, but tolerates their
+  current refusal with a `warn` (non-fatal) rather than a `die`: this keeps
+  R-014's actual scenario ("a binary exists ... and a per-runtime status ...
+  is reported") satisfiable TODAY, and needs ZERO changes to
+  `cmd_longterm_mem` once 11b.7/12a.6 land those subcommands for real — the
+  calls simply start succeeding.
+- **"Install-state targets" (the binary-removal guard's own vocabulary,
+  10b.5) has no existing source of truth to read in this slice.**
+  `install-state.json` (module-owned, would be the natural per-target
+  install-state record) is task 11a.5, not yet landed. Engine's own
+  `registration.json` (10a, `LongtermMemAdapter`) DOES track per-runtime
+  state, but its `Uninstall()` removes the WHOLE record in one call
+  regardless of `--target` — true per-target selective un-registration is
+  R-019/12b.4, also not yet landed. Reading `Uninstall()`'s actual source
+  (`engine/runtime/longtermmem.go:194-206`) before writing any shell code
+  confirmed this: calling `engine runtime uninstall --component longterm-mem`
+  unconditionally for every `cmd_longterm_mem uninstall` invocation — including
+  a single-target one — would wipe out an UNRELATED, still-installed
+  target's record purely as a side effect of uninstalling a different one.
+  That is precisely the dangerous bug the apply brief called out. The fix:
+  `cmd_longterm_mem` owns a small, self-contained tracking file
+  (`LONGTERM_MEM_INSTALLED_TARGETS`, one target per line, added by `install`
+  and removed by `uninstall`) as the guard's own source of truth, and only
+  calls the engine's monolithic `uninstall` action (safe to do unconditionally
+  ONLY once nothing remains tracked, or `--purge` forces it) once that file
+  says zero targets remain. This is forward-compatible: once 11a.5/12b.4 land
+  a real per-target `install-state.json`/`unregister`, a future slice can
+  swap this file for reading that one without changing the guard's shape.
+
+### TDD Cycle Evidence
+
+Every listed test below failed for real on its first run (genuine RED —
+`cmd_longterm_mem`/the `longterm-mem` top-level dispatch case did not exist
+yet) before any production code in this slice was written; none needed a
+mutation-proof (no test passed on its first run).
+
+| Task | Test | RED (real failure) | GREEN |
+|---|---|---|---|
+| 10b.1 | `engine/installer/route_test.go::TestInstall_BuildsCopiesThenReportsPerRuntimeStatus` | `route_test.go:1358: longterm-mem install --target all failed: exit status 1` — output: `ERROR: Unknown command: longterm-mem` (the top-level dispatcher had no `longterm-mem` case yet) | `cmd_longterm_mem()` + the `longterm-mem)` dispatch case + `install`'s build→copy→`vaults seed`→per-target(`register`+`engine runtime install`) chain → PASS: binary exists and is executable at `$STATE_DIR/bin/longterm-mem`; output contains `claude:`, `opencode:`, `codex:` per-runtime status lines. |
+| 10b.2 | `TestStatusUninstall_SkipBuildStep` (3 subtests: `StatusNeverBuilds`, `UninstallSingleTargetSkipsBuildAndLeavesBinaryInPlace`, `UninstallLastTargetRemovesBinary`) | Same `Unknown command: longterm-mem` failure for all 3 subtests | Positive proof, not just exit 0: a dummy binary is pre-placed with known content; `status`/single-target `uninstall` leave its mtime+size+byte content UNCHANGED (a silent rebuild would have failed this even on exit 0). The dangerous negative case is asserted explicitly: uninstalling `claude` while `opencode`/`codex` remain tracked installed (seeded directly into `LONGTERM_MEM_INSTALLED_TARGETS`) leaves the binary untouched AND leaves `opencode`/`codex` still tracked. The positive removal case closes the loop: uninstalling the LAST tracked target (`codex` alone) does remove the binary. All 3 subtests → PASS. |
+| 10b.3 | `TestInstall_BinaryPersistsAfterProcessExits` | Same `Unknown command: longterm-mem` failure | After `runOverlay`'s subprocess (the installing process) has fully exited and been reaped, a SEPARATE `exec.Command(binPath)` invocation from the test process itself succeeds: exit code 2, stderr `usage: longterm-mem ...` — a real, independently-invocable binary, not a build artifact that only worked inside the installing process. → PASS. |
+| 10b.4 | `TestInstall_BinaryPathStableAcrossInspections` | Same `Unknown command: longterm-mem` failure | `os.Stat` immediately after install, then again after an intervening read-only `status` call; `os.SameFile` (identity) and `ModTime()` (no rebuild) both assert equal across the two inspections. → PASS. |
+| 10b.7 (not separately enumerated as a RED task, added per the apply brief's explicit instruction to prove the real success path) | `TestApply_InvokesLongtermMemInstallOnceForMcpRow` | `route_test.go:1676: apply failed: exit status 127` — output shows the deploy loop for all 3 targets completing normally, THEN `bin/labdrian-overlay: line 1311: cmd_longterm_mem: command not found` (the hook fired at the right point in the script, proving the flag/placement logic was already correct from writing the hook before `cmd_longterm_mem` itself — but the callee did not exist yet) | `cmd_apply`'s `saw_mcp_row` flag (set inside the per-row loop when `route_resolve` reports `mcp`) + the post-deploy-loop `cmd_longterm_mem install --target "$target_arg"` call, now that `cmd_longterm_mem` exists → PASS: binary built, per-runtime status lines present in `apply`'s own output, and the hook's own marker line (`running install once`) appears exactly 1 time across a 3-target `apply --target all` run (not 3, which a wrongly-placed inside-the-deploy-loop hook would have produced). |
+| 10b.5/10b.6 | (production, covered by every test above) | — | `cmd_longterm_mem()`, its four helper functions (`ensure_engine_binary`, the three `longtermmem_installed_targets_*` functions, `longtermmem_maybe_remove_binary`), the `LONGTERM_MEM_BINARY`/`LONGTERM_MEM_SRC`/`LONGTERM_MEM_INSTALLED_TARGETS` constants, usage text, and the top-level dispatch case. |
+| 10b.8 | (docs, no test) | N/A | `longterm-mem/README.md` refreshed — see "README accuracy" below. |
+| 10b.9 | Slice verification | See "Gates" below. | — |
+
+### README accuracy (10b.8)
+
+Per the brief's explicit instruction ("make it accurate to what actually
+shipped ... do not describe intent"), the refreshed README states plainly
+that `install`'s per-target `vaults seed`/`register` calls are tolerated
+refusals today (the subcommands don't exist in the binary's dispatch table
+yet — confirmed by reading `main.go` before writing the README, not
+assumed), lists the CLI surface as it actually dispatches TODAY (`query`,
+`index`, `sync`, `status`, `doctor`, `promote`, `mcp` — 7 subcommands, no
+`register`/`unregister`/`vaults`), and separates "what install/status/
+uninstall do end-to-end today" (shell↔engine build/copy/record/report) from
+"what still needs a later slice" (the module-owned config-file writers).
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./installer/... -run 'TestInstall_BuildsCopiesThenReportsPerRuntimeStatus\|TestStatusUninstall_SkipBuildStep\|TestInstall_BinaryPersistsAfterProcessExits\|TestInstall_BinaryPathStableAcrossInspections\|TestApply_InvokesLongtermMemInstallOnceForMcpRow' -v -count=1` → all 5 tests (8 sub-tests total) PASS, 3.145s |
+| Runtime harness command/scenario and exact result | `cd engine && go test ./... -count=1` (no `-short`; runs the REAL `bash bin/labdrian-overlay` subprocess against the actual checked-out `longterm-mem/`+`engine/` Go modules — genuine `go build` of both, not a fake/stub binary, for every `TestInstall_*` test) → all 10 packages PASS, `engine/installer` at 12.6s (real go-build + subprocess cost, up from 9's 9.6s because this slice's tests build two real binaries per test rather than only running bash logic) |
+| Rollback boundary | `bin/labdrian-overlay`'s new `cmd_longterm_mem()` + its 5 helper functions + 3 new constants + usage text + 1 dispatch-case line, the `cmd_apply` hook's 3 diff hunks (flag declaration, mcp-detection line, post-loop call), the 5 new test functions (plus 3 new test helpers: `realOverlayDir`, `goToolchainEnv`, `copyTree`) in `route_test.go`, and the `longterm-mem/README.md` rewrite can each be reverted independently — the hook's 3 hunks revert cleanly on their own (the `saw_mcp_row` flag is unused elsewhere), and no pre-existing command's behavior changed (proven by the full unmodified `engine`/`tui`/`longterm-mem` suites staying green throughout, see Gates below) |
+
+### Gates
+
+- `bash -n bin/labdrian-overlay` → clean.
+- `bash -n bin/overlay` → clean.
+- `shellcheck bin/labdrian-overlay` → 8 pre-existing findings (SC2094 ×2,
+  SC2016 ×2, SC2064 ×4 — same findings recorded in Slice 9's apply-progress,
+  now at shifted line numbers 296/297/329/333/1039/1200/1417/1448 because
+  this slice's ~52 lines of new constants/usage text land earlier in the
+  file), **zero new findings** — none inside this slice's edited regions
+  (`cmd_longterm_mem` and helpers, the `cmd_apply` hook, the new constants).
+- `cd engine && go test ./... -count=1` → all 10 packages PASS (includes the
+  full, non-`-short` `engine/installer` integration suite, 12.6s).
+- `cd engine && go test ./... -short -count=1` → all 10 packages PASS
+  (`engine/installer` drops to 0.105s — every new integration test correctly
+  skips under `-short`).
+- `cd tui && go test ./... -count=1` → PASS (5.2s), unaffected.
+- `cd tui && go test ./... -short -count=1` → PASS (5.18s), unaffected.
+- `cd longterm-mem && go test ./... -count=1` → all 9 packages PASS,
+  unaffected as required (this slice never touches `longterm-mem/` source,
+  only its `README.md`).
+- `cd longterm-mem && go test ./... -short -count=1` → all 9 packages PASS.
+
+### Deviations from tasks.md
+
+- **10b.5's literal `go build ./longterm-mem/cmd/longterm-mem` invocation
+  shape needed correcting to actually run** — see "Design decisions not
+  fully pinned" above. The observable contract (which package gets built,
+  where the result is copied) is unchanged.
+- **`vaults seed`/`register --target t` are called but their non-zero exit
+  is tolerated (`warn`, not `die`)** because neither subcommand exists yet
+  in the `longterm-mem` binary's dispatch table (confirmed by reading
+  `main.go` before writing any code) — see "Design decisions not fully
+  pinned" above. This is the only way R-014's own scenario (binary exists,
+  per-runtime status reported) is satisfiable in this slice; once
+  11b.7/12a.6 land those subcommands for real, `cmd_longterm_mem` needs zero
+  changes.
+- **The binary-removal guard's "install-state targets" is this slice's own
+  tracking file (`LONGTERM_MEM_INSTALLED_TARGETS`), not `install-state.json`
+  or a target-scoped engine `Uninstall()` call** — neither of the latter two
+  exists yet (11a.5, 12b.4). See "Design decisions not fully pinned" above
+  for why calling the engine's existing monolithic `Uninstall()`
+  unconditionally per target would have reproduced the exact dangerous bug
+  the apply brief warned about.
+- **10b.7 added one integration test not separately enumerated in the task
+  list** (`TestApply_InvokesLongtermMemInstallOnceForMcpRow`). The task list's
+  own "Command" line for this slice only names `TestInstall|TestStatusUninstall`
+  patterns, but the apply brief explicitly called out the exact failure mode
+  this closes: 10a's own postmortem is quoted directly in the brief —
+  "a refusal test proves a refusal; it says nothing about what happens when
+  the command is allowed to run." Without this test, `cmd_apply`'s mcp hook
+  (10b.7) would have shipped with the flag/placement logic exercised only by
+  hand-reading, not by any test proving it fires (once, not per deploy
+  target) or that the real success path runs.
+
+### PR-seam line accounting
+
+| Part | Files | Authored lines (production / test) | Tasks |
+|---|---|---|---|
+| 10b-1 | `bin/labdrian-overlay`: constants (23) + usage text (9) + `cmd_longterm_mem`+helpers+dispatch case (168) = 200 production. `engine/installer/route_test.go`: `realOverlayDir`+`goToolchainEnv` helpers (59) + `TestInstall_BuildsCopiesThenReportsPerRuntimeStatus` (45) + `TestStatusUninstall_SkipBuildStep` (132) = 236 test | 200 production / 236 test = **436 total** | 10b.1, 10b.2, 10b.5, 10b.6 |
+| 10b-1b | `engine/installer/route_test.go`: `TestInstall_BinaryPersistsAfterProcessExits` (43) + `TestInstall_BinaryPathStableAcrossInspections` (49) — test-only, reuses 10b-1's dispatcher, zero new production lines | 0 production / 92 test = **92 total** | 10b.3, 10b.4 |
+| 10b-2 | `bin/labdrian-overlay`: `cmd_apply` hook, 3 hunks (25, production). `engine/installer/route_test.go`: `copyTree` helper (36) + `TestApply_InvokesLongtermMemInstallOnceForMcpRow` (89) = 125 test | 25 production / 125 test = **150 total** | 10b.7 |
+| 10b-3 | `longterm-mem/README.md` (docs only) | docs only | 10b.8 |
+| 10b-4 | `tasks.md` + `apply-progress.md` (this section) | artifacts only | — |
+
+10b-1b, 10b-2, and 10b-3 all comfortably fit the ~350-line guidance.
+**10b-1 does not** — at 436 total authored lines it is roughly 25% over.
+This is the further requirement-seam split the brief asks for in preference
+to a blanket exception: 10b-1b (R-015's two "same-dispatcher, different
+property" tests) was already carved out as its own zero-production-diff
+part rather than folded into 10b-1, precisely because it needed no new
+production code and would otherwise have inflated 10b-1's own total by 92
+more lines (528 instead of 436). What is left inside 10b-1 — the
+`cmd_longterm_mem` dispatcher itself, plus the SMALLEST test pair that
+proves both halves of R-014's own two scenarios (a real build+copy+report
+success path, AND the build-skip/removal-guard property including its
+dangerous negative case) — cannot be split further without either
+(a) shipping the dispatcher with only ONE of its two scenarios proven, which
+is the exact "unproved code path" failure mode 10a's postmortem exists to
+prevent, or (b) fragmenting `TestStatusUninstall_SkipBuildStep`'s 3 subtests
+(132 lines) across artificially separate files/PRs, which would scatter one
+coherent behavioral guard (build-skip + the negative/positive removal cases
+together) across review units — the same causality-attribution problem the
+size budget exists to prevent in the other direction (per slice 9's own
+noted precedent for this same tradeoff). If this were being cut as real
+PRs, 10b-1 would ship as a documented `size:exception` (precedent: 10a's PR
+#216 at 775 lines, maintainer-approved for the identical reason — production
+and its minimum proof are not separable into independently-compiling,
+independently-meaningful candidates).
+
+Total this slice: 678 authored lines (225 production + 453 test) across
+`bin/labdrian-overlay` and `engine/installer/route_test.go`, plus a
+docs-only `README.md` rewrite. This is well above the slice map's original
+180–210 estimate (design.md's "Slice Map" table) — the overage is entirely
+in test scaffolding (`realOverlayDir`, `goToolchainEnv`, `copyTree`, and the
+rigorous positive/negative assertions the apply brief explicitly asked for)
+rather than production code, which at 225 lines is close to the original
+estimate's likely production-only intent.
+
+### Files modified
+
+- `bin/labdrian-overlay` — `LONGTERM_MEM_BINARY`/`LONGTERM_MEM_SRC`/
+  `LONGTERM_MEM_INSTALLED_TARGETS` constants; usage text entry;
+  `ensure_engine_binary`, `longtermmem_installed_targets_read/add/remove`,
+  `longtermmem_maybe_remove_binary`, `cmd_longterm_mem` (new); top-level
+  `longterm-mem)` dispatch case; `cmd_apply`'s `saw_mcp_row` flag + mcp-route
+  detection + post-deploy-loop install-hook call (3 new hunks inside the
+  existing function).
+- `engine/installer/route_test.go` — `realOverlayDir`, `goToolchainEnv`,
+  `copyTree` helpers; `TestInstall_BuildsCopiesThenReportsPerRuntimeStatus`,
+  `TestStatusUninstall_SkipBuildStep` (3 subtests),
+  `TestInstall_BinaryPersistsAfterProcessExits`,
+  `TestInstall_BinaryPathStableAcrossInspections`,
+  `TestApply_InvokesLongtermMemInstallOnceForMcpRow`.
+- `longterm-mem/README.md` — refreshed: install/status/uninstall usage, the
+  fixed install path, the real (not aspirational) CLI surface, and an
+  explicit "not yet implemented" list for `register`/`unregister`/`vaults`.
+- `openspec/changes/longterm-mem/tasks.md` — Slice 10b items ticked.
+
+### Slice 10b — delivery record
+
+Slice 10b shipped as four chained PRs (#219–#222), split at requirement
+seams: R-014's dispatcher (#219), R-015's persistence proofs (#220), D13's
+apply hook (#221), and the documentation (#222).
+
+**Three CRITICAL findings, all real, all fixed.** Two of them share a
+shape worth naming, because it is the same shape the whole change has been
+bitten by: *a guard that is only proved in the direction it was written*.
+
+1. **`R3-uninstall-guard-fails-open` (#219).** The binary-removal guard
+   read its own tracking file and treated an **empty read as "nothing else
+   is installed"**, then ran an uninstall documented as wiping the whole
+   registration record and deleted the shared binary. But that file is
+   empty in exactly the cases where this entrypoint does not *know*: an
+   install by another code path, a lost or rotated file, a reset
+   `STATE_DIR`, a first-ever uninstall on a machine registered otherwise.
+   In each, `uninstall --target claude` would have destroyed opencode's and
+   codex's install — the very failure the guard exists to prevent. It now
+   fails **closed**, with `--purge` as the explicit override. Proved by
+   mutation: restoring the old condition reproduced the deletion verbatim.
+
+2. **`R3-negative-case-unproved` (#221).** The apply hook was tested only
+   with a manifest *containing* an mcp row. A regression setting the flag
+   unconditionally would still have satisfied "fires exactly once". The
+   zero-invocations direction is now asserted too.
+
+3. **`R4-install-hook-unchecked-after-state-commit` (#221).** The hook ran
+   after per-target state was already committed, with its exit status
+   never inspected — so a real failure either aborted apply while state
+   claimed success, or was swallowed and reported `Deploy complete.` with
+   no MCP server. And it was **sticky**: unchanged digests meant a later
+   apply found nothing to do and never retried. The status is now
+   inspected, the failure named with its exact recovery command and the
+   fact that re-running apply will not retry it, and `cmd_apply` exits
+   non-zero.
+
+**Two provider-side jams, no receipts on #219 and #221.** #219's lineage
+reached a terminal `corrupted_or_unverifiable_authority` stop with repair
+reported `unsupported`; #221 hit the six-admitted-role ceiling already
+seen on #193. Both were delivered under ordinary repository policy with
+the situation stated in the PR and the commit. The findings above were
+found *by* the review and fixed before delivery — what is missing is the
+receipt, not the scrutiny.
+
+**Ledger.** This slice's settle was blocked at 1017 changed lines against
+the 1000-line objective set after slice 4. The maintainer reset the
+objective to 1500, recording that slices 8b (1121), 10a (1078) and 10b
+(1017) all share that profile. The 400-line per-PR review budget is
+unchanged — it governs candidate size, which is a different question.
+
+**Three deviations, none silent.** The literal `go build
+./longterm-mem/cmd/longterm-mem` was corrected to cd into the module root,
+since `longterm-mem/` and `engine/` are separate modules and `$OVERLAY_DIR`
+has no `go.mod`. The `vaults seed` and `register --target` calls tolerate
+non-zero exit, because neither subcommand exists yet (they land in 11b.7
+and 12a.6) and under `set -e` an unguarded call would abort install before
+`engine runtime install` ever reported per-runtime status. And the removal
+guard uses this slice's own tracking file rather than `install-state.json`
+or a target-scoped engine `Uninstall()`, because neither exists yet — and
+because reading the adapter first revealed its `Uninstall()` deletes the
+whole record regardless of `--target`, which is precisely the landmine the
+guard had to be designed around.
