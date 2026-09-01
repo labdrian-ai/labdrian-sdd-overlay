@@ -1,11 +1,6 @@
-// Package register implements ownership-tagged, byte-preserving edits to
-// the MCP configuration files longterm-mem itself does not own — Claude
-// Code's and opencode's JSON configs, and (12a) codex's TOML config (D9).
-// Every writer here edits only the exact byte span of the member/section it
-// owns, rather than decoding and re-encoding the whole document: a
-// decode-re-encode round trip would silently reorder keys, reformat
-// whitespace, and drop anything the parser doesn't model (e.g. comments),
-// rewriting a file a human maintains out from under them.
+// This file holds the JSON-specific byte-splice locate/apply logic (D9);
+// see doc.go for the package's own documentation and the D9 semantics
+// table every runtime writer shares.
 package register
 
 import (

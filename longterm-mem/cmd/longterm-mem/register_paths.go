@@ -20,14 +20,14 @@ import (
 // registerExpandTarget expands --target's value into the ordered list of
 // concrete targets to register, mirroring the runtime-parity --target
 // convention: claude|opencode|codex select one, all expands to every
-// currently-wired target. codex will join "all"'s expansion once 12a.6
-// wires its writer.
+// currently-wired target — codex joined "all"'s expansion in 12a.6, once
+// its writer (register.RegisterCodex) existed to receive it.
 func registerExpandTarget(target string) ([]string, error) {
 	switch target {
 	case "claude", "opencode", "codex":
 		return []string{target}, nil
 	case "all":
-		return []string{"claude", "opencode"}, nil
+		return []string{"claude", "opencode", "codex"}, nil
 	default:
 		return nil, fmt.Errorf("unknown --target %q (want claude|opencode|codex|all)", target)
 	}

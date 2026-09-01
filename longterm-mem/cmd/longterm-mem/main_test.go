@@ -424,13 +424,14 @@ func TestCmdPromote_InvalidIdExits7(t *testing.T) {
 	}
 }
 
-// TestRegisterExpandTarget (11b.7, R-016/R-017) pins --target's accepted
-// domain and, in the "all" row, a scope boundary rather than a behaviour:
-// codex is an accepted single target but is deliberately NOT part of
-// "all", because its writer does not exist until 12a.6. Adding it to the
-// expansion early would make `register --target all` start failing on a
-// runtime nobody asked for, so the boundary is asserted rather than left
-// to a reader's memory.
+// TestRegisterExpandTarget (11b.7, 12a.6, R-016/R-017/R-018) pins
+// --target's accepted domain, including the "all" row's scope: as of 12a.6
+// every currently-wired runtime target (claude, opencode, codex) is part
+// of "all"'s expansion, now that register.RegisterCodex exists to receive
+// it (11b.7 asserted a narrower "all" — [claude opencode] — as a
+// deliberate boundary while codex's writer did not exist yet; updating
+// this row is this slice's own scope-boundary move, not a regression of
+// that guard).
 func TestRegisterExpandTarget(t *testing.T) {
 	for _, tc := range []struct {
 		target  string
@@ -440,7 +441,7 @@ func TestRegisterExpandTarget(t *testing.T) {
 		{target: "claude", want: []string{"claude"}},
 		{target: "opencode", want: []string{"opencode"}},
 		{target: "codex", want: []string{"codex"}},
-		{target: "all", want: []string{"claude", "opencode"}},
+		{target: "all", want: []string{"claude", "opencode", "codex"}},
 		{target: "", wantErr: true},
 		{target: "bogus", wantErr: true},
 		{target: "Claude", wantErr: true},
@@ -625,16 +626,19 @@ func TestCmdRegister_ConflictExitsSix(t *testing.T) {
 	}
 }
 
-// TestCmdRegister_AllExpandsToClaudeAndOpencode (11b.7): --target all
-// registers every currently-wired runtime, each resolving its own default
-// config root from HOME/XDG_CONFIG_HOME rather than a single shared
+// TestCmdRegister_AllExpandsToClaudeAndOpencodeAndCodex (11b.7, 12a.6):
+// --target all registers every currently-wired runtime (claude, opencode,
+// codex as of 12a.6), each resolving its own default config root from
+// HOME/XDG_CONFIG_HOME/CODEX_HOME rather than a single shared
 // --config-root (which --target all refuses to accept, per the usage
 // guard above).
-func TestCmdRegister_AllExpandsToClaudeAndOpencode(t *testing.T) {
+func TestCmdRegister_AllExpandsToClaudeAndOpencodeAndCodex(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
 	xdgConfig := t.TempDir()
 	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+	codexHome := t.TempDir()
+	t.Setenv("CODEX_HOME", codexHome)
 
 	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
 		t.Fatalf("seed .claude.json: %v", err)
@@ -645,6 +649,9 @@ func TestCmdRegister_AllExpandsToClaudeAndOpencode(t *testing.T) {
 	}
 	if err := os.WriteFile(filepath.Join(opencodeDir, "opencode.json"), []byte(`{"mcp":{}}`), 0o600); err != nil {
 		t.Fatalf("seed opencode.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(codexHome, "config.toml"), []byte("theme = \"dark\"\n"), 0o600); err != nil {
+		t.Fatalf("seed config.toml: %v", err)
 	}
 
 	exit := run([]string{"register", "--target", "all", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
@@ -665,6 +672,13 @@ func TestCmdRegister_AllExpandsToClaudeAndOpencode(t *testing.T) {
 	}
 	if !strings.Contains(string(opencodeGot), `"longterm-mem":`) {
 		t.Fatalf("opencode config missing longterm-mem entry:\n%s", opencodeGot)
+	}
+	codexGot, err := os.ReadFile(filepath.Join(codexHome, "config.toml"))
+	if err != nil {
+		t.Fatalf("read codex config: %v", err)
+	}
+	if !strings.Contains(string(codexGot), `[mcp_servers.longterm-mem]`) {
+		t.Fatalf("codex config missing longterm-mem section:\n%s", codexGot)
 	}
 }
 
@@ -758,11 +772,86 @@ func TestCmdRegister_HardFailureOutranksConflict(t *testing.T) {
 	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{"longterm-mem":{"type":"stdio","command":"/someone/elses/binary"}}}`), 0o600); err != nil {
 		t.Fatalf("seed .claude.json: %v", err)
 	}
-	// opencode: no config file at all, so this target fails outright.
+	// opencode: a config file that exists but cannot be parsed, so this
+	// target fails outright. A *missing* file would no longer do: since
+	// codex joined "all"'s expansion (12a.6) an absent config means the
+	// runtime is not installed and is skipped, which is a different
+	// outcome from a runtime that is installed and broken.
+	opencodeDir := filepath.Join(xdgConfig, "opencode")
+	if err := os.MkdirAll(opencodeDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(opencodeDir, "opencode.json"), []byte(`{"mcp":`), 0o600); err != nil {
+		t.Fatalf("seed unparseable opencode.json: %v", err)
+	}
 
 	exit := run([]string{"register", "--target", "all", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
 	if exit != 1 {
 		t.Fatalf("run([register --target all]) with one conflict and one hard failure = %d, want 1 — the hard failure must not be hidden behind the conflict's exit 6", exit)
+	}
+}
+
+// TestCmdRegister_AllSkipsRuntimesThatAreNotInstalled (12a.6): --target
+// all means "every runtime this machine has", not "every runtime that
+// exists". Most machines do not have all three. Before codex joined the
+// expansion, a missing config could only mean the user asked for that
+// runtime by name and was wrong; now it routinely means the runtime is
+// simply not installed, and failing the whole run over it would report
+// exit 1 for a run in which claude and opencode were registered
+// correctly.
+func TestCmdRegister_AllSkipsRuntimesThatAreNotInstalled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+	t.Setenv("CODEX_HOME", "")
+
+	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	opencodeDir := filepath.Join(xdgConfig, "opencode")
+	if err := os.MkdirAll(opencodeDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(opencodeDir, "opencode.json"), []byte(`{"mcp":{}}`), 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+	// No ~/.codex/config.toml at all: codex is not installed here.
+
+	var exit int
+	stdout := captureStdout(t, func() {
+		exit = run([]string{"register", "--target", "all", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
+	})
+	if exit != 0 {
+		t.Fatalf("run([register --target all]) with codex absent = %d, want 0; stdout:\n%s", exit, stdout)
+	}
+	if !strings.Contains(stdout, "codex") || !strings.Contains(stdout, "skipped") {
+		t.Fatalf("stdout does not report codex as skipped:\n%s", stdout)
+	}
+
+	claudeGot, err := os.ReadFile(filepath.Join(home, ".claude.json"))
+	if err != nil {
+		t.Fatalf("read claude config: %v", err)
+	}
+	if !strings.Contains(string(claudeGot), `"longterm-mem":`) {
+		t.Fatalf("claude was not registered even though it is installed:\n%s", claudeGot)
+	}
+	if _, statErr := os.Stat(filepath.Join(home, ".codex", "config.toml")); !os.IsNotExist(statErr) {
+		t.Fatalf("a codex config was created for a runtime that is not installed (stat err: %v)", statErr)
+	}
+}
+
+// TestCmdRegister_NamedTargetWithoutAConfigStillFails (12a.6): the skip
+// above is scoped to the "all" expansion. Asking for one runtime by name
+// is a statement that it should be there, so a missing config is a real
+// failure and must not be silently reported as success.
+func TestCmdRegister_NamedTargetWithoutAConfigStillFails(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("CODEX_HOME", "")
+
+	if exit := run([]string{"register", "--target", "codex", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"}); exit != 1 {
+		t.Fatalf("run([register --target codex]) with no codex config = %d, want 1", exit)
 	}
 }
 

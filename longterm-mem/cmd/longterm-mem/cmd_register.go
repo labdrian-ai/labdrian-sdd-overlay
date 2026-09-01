@@ -4,6 +4,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	iofs "io/fs" // aliased: fs is the FlagSet variable below
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/register"
@@ -11,15 +12,16 @@ import (
 
 // cmdRegister implements `longterm-mem register --target
 // claude|opencode|codex|all [--config-root DIR] [--state-dir DIR]
-// [--binary PATH]` (R-016, R-017; codex is wired in 12a.6). It drives
-// internal/register's per-runtime writers, which own the actual D9
-// decision (insert/replace/refuse/noop) and byte-preserving edit, and it
-// resolves targets and default paths through register_paths.go; what is
-// left here is the effectful shell -- flag parsing, per-target dispatch,
-// and mapping each writer's outcome to a process exit code. An untagged
-// same-named
+// [--binary PATH]` (R-016, R-017, R-018). It drives internal/register's
+// per-runtime writers, which own the actual D9 decision
+// (insert/replace/refuse/noop) and byte-preserving edit, and it resolves
+// targets and default paths through register_paths.go; what is left here
+// is the effectful shell -- flag parsing, per-target dispatch, and mapping
+// each writer's outcome to a process exit code. An untagged same-named
 // conflict (register.ErrConflict) exits 6, any other per-target failure
-// exits 1, success exits 0. Like cmdDoctor, every target in the expanded
+// exits 1, success exits 0 -- except that a --target all expansion skips a
+// runtime whose configuration file is absent, since that is how a runtime
+// nobody installed looks from here. Like cmdDoctor, every target in the expanded
 // list is attempted before the exit code is decided, so one target's
 // failure never hides another target's success or failure.
 func cmdRegister(args []string) int {
@@ -71,6 +73,10 @@ func cmdRegister(args []string) int {
 		return 1
 	}
 
+	// expandedAll distinguishes "register everything this machine has"
+	// from "register this one runtime, which I am telling you is there".
+	// Only the first may skip a runtime whose config is absent.
+	expandedAll := len(targets) > 1
 	conflict, failed := false, false
 	for _, tgt := range targets {
 		root := *configRoot
@@ -84,13 +90,25 @@ func cmdRegister(args []string) int {
 		}
 
 		regErr := registerTarget(tgt, root, resolvedStateDir, resolvedBinary)
-		if regErr != nil {
+		switch {
+		case regErr == nil:
+		case errors.Is(regErr, register.ErrConflict):
 			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: %v\n", tgt, regErr)
-			if errors.Is(regErr, register.ErrConflict) {
-				conflict = true
-			} else {
-				failed = true
-			}
+			conflict = true
+			continue
+		case expandedAll && errors.Is(regErr, iofs.ErrNotExist):
+			// --target all means "every runtime this machine has", not
+			// "every runtime that exists" -- few machines have all three.
+			// A missing config is how a runtime that is not installed
+			// looks from here, and failing the whole run over it would
+			// report a failure for a run in which the runtimes that ARE
+			// installed were registered correctly. Asking for one runtime
+			// by name is a different statement, and still fails below.
+			fmt.Printf("longterm-mem: register: %s: skipped (no configuration found at %s)\n", tgt, root)
+			continue
+		default:
+			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: %v\n", tgt, regErr)
+			failed = true
 			continue
 		}
 		fmt.Printf("longterm-mem: register: %s: ok\n", tgt)
@@ -112,17 +130,16 @@ func cmdRegister(args []string) int {
 	}
 }
 
-// registerTarget dispatches to the one runtime writer target names. codex
-// is not yet wired (12a.6 adds it); requesting it today is reported as an
-// ordinary per-target failure, not a usage error, since --target codex is
-// already part of this command's accepted domain going forward.
+// registerTarget dispatches to the one runtime writer target names.
 func registerTarget(target, configRoot, stateDir, binary string) error {
 	switch target {
 	case "claude":
 		return register.RegisterClaude(configRoot, stateDir, binary)
 	case "opencode":
 		return register.RegisterOpencode(configRoot, stateDir, binary)
+	case "codex":
+		return register.RegisterCodex(configRoot, stateDir, binary)
 	default:
-		return fmt.Errorf("register: %s: not yet supported (codex lands in a later slice)", target)
+		return fmt.Errorf("register: %s: unknown target", target)
 	}
 }
