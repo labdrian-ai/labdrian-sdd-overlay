@@ -424,6 +424,102 @@ func TestCmdPromote_InvalidIdExits7(t *testing.T) {
 	}
 }
 
+// TestRegisterExpandTarget (11b.7, R-016/R-017) pins --target's accepted
+// domain and, in the "all" row, a scope boundary rather than a behaviour:
+// codex is an accepted single target but is deliberately NOT part of
+// "all", because its writer does not exist until 12a.6. Adding it to the
+// expansion early would make `register --target all` start failing on a
+// runtime nobody asked for, so the boundary is asserted rather than left
+// to a reader's memory.
+func TestRegisterExpandTarget(t *testing.T) {
+	for _, tc := range []struct {
+		target  string
+		want    []string
+		wantErr bool
+	}{
+		{target: "claude", want: []string{"claude"}},
+		{target: "opencode", want: []string{"opencode"}},
+		{target: "codex", want: []string{"codex"}},
+		{target: "all", want: []string{"claude", "opencode"}},
+		{target: "", wantErr: true},
+		{target: "bogus", wantErr: true},
+		{target: "Claude", wantErr: true},
+	} {
+		got, err := registerExpandTarget(tc.target)
+		if tc.wantErr {
+			if err == nil {
+				t.Errorf("registerExpandTarget(%q) = %v, nil; want an error", tc.target, got)
+			}
+			continue
+		}
+		if err != nil {
+			t.Errorf("registerExpandTarget(%q) returned error: %v", tc.target, err)
+			continue
+		}
+		if strings.Join(got, ",") != strings.Join(tc.want, ",") {
+			t.Errorf("registerExpandTarget(%q) = %v, want %v", tc.target, got, tc.want)
+		}
+	}
+}
+
+// TestDefaultRegisterConfigRoot (11b.7) pins where each runtime's config
+// is looked for when --config-root is not given. The two rows that matter
+// most are the ones an end-to-end test cannot see: a relative
+// $XDG_CONFIG_HOME or $CODEX_HOME is ignored rather than joined against
+// the current directory, because a config root that depends on where the
+// command was invoked from would write into whatever directory the user
+// happened to be standing in.
+func TestDefaultRegisterConfigRoot(t *testing.T) {
+	home := t.TempDir()
+	xdg := t.TempDir()
+	codexHome := t.TempDir()
+
+	for _, tc := range []struct {
+		name      string
+		target    string
+		xdgConfig string
+		codexHome string
+		want      string
+	}{
+		{name: "claude is $HOME itself", target: "claude", want: home},
+		{name: "opencode honours an absolute XDG_CONFIG_HOME", target: "opencode", xdgConfig: xdg, want: filepath.Join(xdg, "opencode")},
+		{name: "opencode ignores a relative XDG_CONFIG_HOME", target: "opencode", xdgConfig: "relative/config", want: filepath.Join(home, ".config", "opencode")},
+		{name: "opencode falls back to ~/.config", target: "opencode", want: filepath.Join(home, ".config", "opencode")},
+		{name: "codex honours an absolute CODEX_HOME", target: "codex", codexHome: codexHome, want: codexHome},
+		{name: "codex ignores a relative CODEX_HOME", target: "codex", codexHome: "relative/codex", want: filepath.Join(home, ".codex")},
+		{name: "codex falls back to ~/.codex", target: "codex", want: filepath.Join(home, ".codex")},
+		{name: "an unknown target resolves to nothing", target: "bogus", want: ""},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Setenv("HOME", home)
+			t.Setenv("XDG_CONFIG_HOME", tc.xdgConfig)
+			t.Setenv("CODEX_HOME", tc.codexHome)
+			if got := defaultRegisterConfigRoot(tc.target); got != tc.want {
+				t.Errorf("defaultRegisterConfigRoot(%q) = %q, want %q", tc.target, got, tc.want)
+			}
+		})
+	}
+}
+
+// TestDefaultRegisterPathsAreEmptyWhenUnresolvable (11b.7) pins the
+// fail-closed half of the contract cmd_register.go depends on: when the
+// home directory cannot be resolved these return the empty string, which
+// the command refuses on. The alternative -- returning a relative path --
+// would write install-state.json into the process working directory and
+// install a binary path that starts nothing, both reported as success.
+func TestDefaultRegisterPathsAreEmptyWhenUnresolvable(t *testing.T) {
+	t.Setenv("HOME", "")
+	if got := defaultRegisterStateDir(); got != "" {
+		t.Errorf("defaultRegisterStateDir() with no resolvable home = %q, want \"\"", got)
+	}
+	if got := defaultRegisterBinaryPath(); got != "" {
+		t.Errorf("defaultRegisterBinaryPath() with no resolvable home = %q, want \"\"", got)
+	}
+	if got := defaultRegisterConfigRoot("claude"); got != "" {
+		t.Errorf("defaultRegisterConfigRoot(\"claude\") with no resolvable home = %q, want \"\"", got)
+	}
+}
+
 // buildLongtermMemBinary compiles the real longterm-mem binary to a
 // scratch path, mirroring TestMain_BuildsIndependentModule's own build
 // invocation, so TestCLI_NoResidualProcessAfterAnySubcommand exercises the
