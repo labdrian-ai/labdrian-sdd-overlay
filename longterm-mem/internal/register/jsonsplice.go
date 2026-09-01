@@ -212,3 +212,71 @@ func Splice(raw []byte, containerKey, memberKey string, newValue json.RawMessage
 	}
 	return loc.apply(raw, memberKey, newValue), nil
 }
+
+// Remove returns a copy of raw with the member at containerKey.memberKey
+// removed entirely: its key, its value, AND exactly the one comma its
+// removal makes dangling — the trailing comma when a following member
+// exists, the leading comma otherwise — so the result never carries a
+// stray trailing comma before the container's closing brace, nor two
+// commas in a row (D9; R-019 "Selective removal across all three
+// runtimes"). Every other byte of raw, including the member's own leading
+// indentation/newline, is folded into whichever neighbour now spans across
+// that position — removeSpan runs locate/apply's own insertion rule in
+// reverse. It errors when memberKey is not present in containerKey;
+// callers (jsonUninstall, writer.go) only ever reach this after confirming
+// entryPresent themselves, so this is a defensive guard, not the normal
+// "nothing to do" path.
+func Remove(raw []byte, containerKey, memberKey string) ([]byte, error) {
+	loc, err := locate(raw, containerKey, memberKey)
+	if err != nil {
+		return nil, err
+	}
+	if !loc.found {
+		return nil, fmt.Errorf("register: member %q not found in %q, nothing to remove", memberKey, containerKey)
+	}
+	return removeSpan(raw, loc.replaceStart, loc.replaceEnd), nil
+}
+
+// removeSpan implements Remove's comma/whitespace rule for the byte span
+// [start,end): a located member's key-through-value bytes.
+//
+//   - Forward: skip insignificant whitespace after end; if the next byte is
+//     ',', a following member exists (this member was NOT last) — extend
+//     end past that comma.
+//   - Backward: skip insignificant whitespace before start — this always
+//     folds the member's own leading indentation/newline into whichever
+//     neighbour ends up adjacent to it, first or middle or last. Only when
+//     no trailing comma was found (this member WAS last) and a comma now
+//     immediately precedes the trimmed start, also exclude that leading
+//     comma — the one every JSON object's last member never has a trailing
+//     one for.
+func removeSpan(raw []byte, start, end int) []byte {
+	fwd := end
+	for fwd < len(raw) && isJSONLineSpace(raw[fwd]) {
+		fwd++
+	}
+	hasTrailingComma := fwd < len(raw) && raw[fwd] == ','
+	if hasTrailingComma {
+		end = fwd + 1
+	}
+
+	back := start
+	for back > 0 && isJSONLineSpace(raw[back-1]) {
+		back--
+	}
+	if !hasTrailingComma && back > 0 && raw[back-1] == ',' {
+		back--
+	}
+	start = back
+
+	var buf bytes.Buffer
+	buf.Write(raw[:start])
+	buf.Write(raw[end:])
+	return buf.Bytes()
+}
+
+// isJSONLineSpace reports whether b is one of the four bytes encoding/json
+// itself treats as insignificant whitespace between tokens.
+func isJSONLineSpace(b byte) bool {
+	return b == ' ' || b == '\t' || b == '\n' || b == '\r'
+}

@@ -136,6 +136,117 @@ func TestJSONSplice_InsertsWhenAbsent(t *testing.T) {
 	}
 }
 
+// TestJSONSplice_RemovesFirstMiddleLastMember proves Remove's comma
+// handling is genuinely position-dependent (12b.1, D9, R-019 "Removing a
+// span is harder than replacing one"): removing the FIRST member of a
+// container must drop its trailing comma (nothing precedes it), removing
+// the LAST member must drop its leading comma (nothing follows it), and
+// removing a MIDDLE member must drop exactly one of the two adjacent
+// commas — never both, never neither. Each case asserts the result is
+// valid JSON, the removed member is gone, and — the load-bearing half —
+// every surviving member's bytes are byte-identical to a document that
+// never had the removed member at all, proving no stray comma or blank
+// line remains and no neighbour's formatting was disturbed.
+func TestJSONSplice_RemovesFirstMiddleLastMember(t *testing.T) {
+	for _, tc := range []struct {
+		name          string
+		raw           string
+		removeKey     string
+		wantAfterJSON string
+	}{
+		{
+			name: "first member",
+			raw: `{
+  "mcpServers": {
+    "longterm-mem": {"type":"stdio","command":"/bin/longterm-mem"},
+    "other": {"type":"stdio","command":"/usr/bin/other"}
+  }
+}
+`,
+			removeKey: "longterm-mem",
+			wantAfterJSON: `{
+  "mcpServers": {
+    "other": {"type":"stdio","command":"/usr/bin/other"}
+  }
+}
+`,
+		},
+		{
+			name: "middle member",
+			raw: `{
+  "mcpServers": {
+    "a": {"type":"stdio","command":"/usr/bin/a"},
+    "longterm-mem": {"type":"stdio","command":"/bin/longterm-mem"},
+    "b": {"type":"stdio","command":"/usr/bin/b"}
+  }
+}
+`,
+			removeKey: "longterm-mem",
+			wantAfterJSON: `{
+  "mcpServers": {
+    "a": {"type":"stdio","command":"/usr/bin/a"},
+    "b": {"type":"stdio","command":"/usr/bin/b"}
+  }
+}
+`,
+		},
+		{
+			name: "last member",
+			raw: `{
+  "mcpServers": {
+    "other": {"type":"stdio","command":"/usr/bin/other"},
+    "longterm-mem": {"type":"stdio","command":"/bin/longterm-mem"}
+  }
+}
+`,
+			removeKey: "longterm-mem",
+			wantAfterJSON: `{
+  "mcpServers": {
+    "other": {"type":"stdio","command":"/usr/bin/other"}
+  }
+}
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Remove([]byte(tc.raw), "mcpServers", tc.removeKey)
+			if err != nil {
+				t.Fatalf("Remove returned error: %v", err)
+			}
+			if !json.Valid(got) {
+				t.Fatalf("Remove result is not valid JSON:\n%s", got)
+			}
+			if string(got) != tc.wantAfterJSON {
+				t.Fatalf("Remove(%s) =\n%s\nwant (byte-identical to a document that never had it) =\n%s", tc.name, got, tc.wantAfterJSON)
+			}
+
+			var doc map[string]map[string]json.RawMessage
+			if err := json.Unmarshal(got, &doc); err != nil {
+				t.Fatalf("failed to decode result: %v", err)
+			}
+			if _, present := doc["mcpServers"][tc.removeKey]; present {
+				t.Fatalf("%q is still present in mcpServers after Remove: %s", tc.removeKey, got)
+			}
+		})
+	}
+}
+
+// TestJSONSplice_RemoveNotFoundReturnsError proves Remove refuses (rather
+// than silently no-op-ing) when memberKey does not exist in containerKey —
+// a defensive guard, since callers only reach Remove after confirming the
+// member is present.
+func TestJSONSplice_RemoveNotFoundReturnsError(t *testing.T) {
+	raw := []byte(`{"mcpServers": {"other": {"type":"stdio"}}}`)
+
+	_, err := Remove(raw, "mcpServers", "longterm-mem")
+	if err == nil {
+		t.Fatalf("Remove returned nil error for a member that does not exist")
+	}
+	if !strings.Contains(err.Error(), "register:") {
+		t.Fatalf("error %q is not prefixed with the package name", err.Error())
+	}
+}
+
 // TestJSONSplice_ContainerKeyNotFound proves locate's error path for a
 // document whose root has no member named containerKey at all — a
 // deliberately out-of-scope case for 11a (see apply-progress.md), asserted
