@@ -116,3 +116,93 @@ func TestWriteMember_InvalidResultLeavesOriginalUntouched(t *testing.T) {
 		}
 	}
 }
+
+// TestRemoveMember_AtomicRemoveWithBackup proves the file-level removal
+// wrapper (12b.2, R-019): a .bak of the ORIGINAL bytes (with the member
+// still present) is written, the target file ends up exactly what Remove
+// would have produced in memory, and no stray tmp file is left behind.
+func TestRemoveMember_AtomicRemoveWithBackup(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "claude.json")
+	original := []byte(`{
+  "mcpServers": {
+    "other": {
+      "type": "stdio",
+      "command": "/usr/bin/other"
+    },
+    "longterm-mem": {"type":"stdio","command":"/bin/longterm-mem","args":["mcp"]}
+  }
+}
+`)
+	if err := os.WriteFile(path, original, 0o600); err != nil {
+		t.Fatalf("failed to seed fixture file: %v", err)
+	}
+
+	if err := RemoveMember(path, "mcpServers", "longterm-mem"); err != nil {
+		t.Fatalf("RemoveMember returned error: %v", err)
+	}
+
+	gotFile, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read result file: %v", err)
+	}
+	wantFile, err := Remove(original, "mcpServers", "longterm-mem")
+	if err != nil {
+		t.Fatalf("Remove (for comparison) returned error: %v", err)
+	}
+	if string(gotFile) != string(wantFile) {
+		t.Fatalf("target file = %s, want (from Remove) %s", gotFile, wantFile)
+	}
+	if strings.Contains(string(gotFile), "longterm-mem") {
+		t.Fatalf("target file still mentions longterm-mem after RemoveMember: %s", gotFile)
+	}
+
+	bak, err := os.ReadFile(path + ".bak")
+	if err != nil {
+		t.Fatalf("failed to read .bak file: %v", err)
+	}
+	if string(bak) != string(original) {
+		t.Fatalf(".bak = %s, want original untouched bytes %s", bak, original)
+	}
+
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("failed to list dir: %v", err)
+	}
+	for _, e := range entries {
+		if strings.Contains(e.Name(), ".tmp-") {
+			t.Fatalf("stray temp file left behind: %s", e.Name())
+		}
+	}
+}
+
+// TestRemoveMember_NotPresentLeavesOriginalUntouched proves RemoveMember's
+// guard fires BEFORE any filesystem mutation when memberKey does not exist:
+// the target file is unchanged and no .bak is created.
+func TestRemoveMember_NotPresentLeavesOriginalUntouched(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "claude.json")
+	original := []byte(`{"mcpServers":{"other":{"type":"stdio"}}}`)
+	if err := os.WriteFile(path, original, 0o600); err != nil {
+		t.Fatalf("failed to seed fixture file: %v", err)
+	}
+
+	err := RemoveMember(path, "mcpServers", "longterm-mem")
+	if err == nil {
+		t.Fatalf("RemoveMember returned nil error for a member that does not exist")
+	}
+	if !strings.Contains(err.Error(), "register:") {
+		t.Fatalf("error %q is not prefixed with the package name", err.Error())
+	}
+
+	gotFile, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("failed to read target file: %v", err)
+	}
+	if string(gotFile) != string(original) {
+		t.Fatalf("target file was modified despite the member not existing:\n%s", gotFile)
+	}
+	if _, statErr := os.Stat(path + ".bak"); !os.IsNotExist(statErr) {
+		t.Fatalf(".bak was created even though nothing was removed (stat err: %v)", statErr)
+	}
+}

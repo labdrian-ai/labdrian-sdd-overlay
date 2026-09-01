@@ -76,6 +76,68 @@ func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byt
 	return nil
 }
 
+// RemoveTOMLSection reads the TOML document at path, removes
+// tableKey.memberKey entirely (TOMLRemove), and atomically replaces the
+// file (R-019), mirroring WriteTOMLSection's own discipline exactly:
+//
+//  1. validate the result parses as TOML, AND that tableKey.memberKey is
+//     genuinely gone afterward (the removal-side counterpart of
+//     WriteTOMLSection's command == binary gate — a splice bug that left
+//     the table half-removed, or removed the wrong one, is caught here
+//     rather than committed), BEFORE touching the filesystem at all;
+//  2. only then, back up the original bytes to path+".bak";
+//  3. write the new content to a tmp file in the same directory, fsync it,
+//     close it, then rename it into place.
+func RemoveTOMLSection(path, tableKey, memberKey string) error {
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("register: read %s: %w", path, err)
+	}
+
+	removed, err := TOMLRemove(raw, tableKey, memberKey)
+	if err != nil {
+		return err
+	}
+
+	var doc map[string]interface{}
+	if err := toml.Unmarshal(removed, &doc); err != nil {
+		return fmt.Errorf("register: removal of %s.%s from %s would produce invalid TOML, not written: %w", tableKey, memberKey, path, err)
+	}
+	if _, stillPresent := tomlNestedString(doc, tableKey, memberKey, "command"); stillPresent {
+		return fmt.Errorf("register: removal of %s.%s from %s did not actually remove it, not written", tableKey, memberKey, path)
+	}
+
+	dir := filepath.Dir(path)
+	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
+	if err != nil {
+		return fmt.Errorf("register: create temp file for %s: %w", path, err)
+	}
+	tmpName := tmp.Name()
+	defer os.Remove(tmpName) // no-op once the rename below succeeds
+
+	if _, err := tmp.Write(removed); err != nil {
+		tmp.Close()
+		return fmt.Errorf("register: write temp file for %s: %w", path, err)
+	}
+	if err := tmp.Sync(); err != nil {
+		tmp.Close()
+		return fmt.Errorf("register: fsync temp file for %s: %w", path, err)
+	}
+	if err := tmp.Close(); err != nil {
+		return fmt.Errorf("register: close temp file for %s: %w", path, err)
+	}
+
+	bakPath := path + ".bak"
+	if err := os.WriteFile(bakPath, raw, 0o600); err != nil {
+		return fmt.Errorf("register: write backup %s: %w", bakPath, err)
+	}
+
+	if err := os.Rename(tmpName, path); err != nil {
+		return fmt.Errorf("register: rename temp file into %s: %w", path, err)
+	}
+	return nil
+}
+
 // tomlNestedString reads doc[tableKey][memberKey][field] as a string,
 // tolerating any of the three levels being absent or the wrong shape
 // (e.g. a top-level key that is a plain string, not a table) by returning
