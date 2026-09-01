@@ -355,13 +355,13 @@ Note: this slice touches only `engine/` and `bin/labdrian-overlay`, not `longter
 
 ## Slice 11a — longterm-mem-mcp-registration-json-11a-splice-install-state (R-016 shared, R-017 shared) — PR11a (base: PR10b)
 
-- [ ] 11a.1 RED `longterm-mem/internal/register/jsonsplice_test.go::TestJSONSplice_LocatesAndReplacesMemberSpan` — fixture JSON with an existing `mcpServers.longterm-mem`-shaped member among unrelated members; assert the splice locates the exact byte span via `json.Decoder.InputOffset()` and replaces only it, every other byte identical.
-- [ ] 11a.2 RED (same file) `TestJSONSplice_InsertsWhenAbsent` — no existing member; assert insertion, `json.Valid` afterward.
-- [ ] 11a.3 GREEN `longterm-mem/internal/register/jsonsplice.go` — JSON member byte-splice editor (D9): locate/insert/replace span, `.bak` write, tmp+rename in the same dir, `json.Valid` post-write validation before rename.
-- [ ] 11a.4 RED `longterm-mem/internal/register/installstate_test.go::TestInstallState_FingerprintRoundTrip` — write `fingerprint = sha256(entry bytes)` for a target, reload, assert match; assert the tag never appears as an unknown key inside the runtime's own config schema.
-- [ ] 11a.5 GREEN `longterm-mem/internal/register/installstate.go` — `install-state.json` schema, load/save (tmp+fsync+rename), `Get(target)`/`Set(target, record)`.
-- [ ] 11a.6 REFACTOR — extract `register.Decide(entryPresent, recordPresent, fingerprintMatches bool) Action{insert|replace|refuse|noop}` (D9 semantics table) as a pure function shared by every runtime writer in 11b/12a.
-- [ ] 11a.7 Slice verification — `cd longterm-mem && go test ./...`.
+- [x] 11a.1 RED `longterm-mem/internal/register/jsonsplice_test.go::TestJSONSplice_LocatesAndReplacesMemberSpan` — fixture JSON with an existing `mcpServers.longterm-mem`-shaped member among unrelated members; assert the splice locates the exact byte span via `json.Decoder.InputOffset()` and replaces only it, every other byte identical.
+- [x] 11a.2 RED (same file) `TestJSONSplice_InsertsWhenAbsent` — no existing member; assert insertion, `json.Valid` afterward.
+- [x] 11a.3 GREEN `longterm-mem/internal/register/jsonsplice.go` — JSON member byte-splice editor (D9): locate/insert/replace span, `.bak` write, tmp+rename in the same dir, `json.Valid` post-write validation before rename. Landed as two files (`jsonsplice.go` pure locate/replace/insert + `jsonwrite.go` the atomic file wrapper) — see apply-progress.md for the purity-seam rationale.
+- [x] 11a.4 RED `longterm-mem/internal/register/installstate_test.go::TestInstallState_FingerprintRoundTrip` — write `fingerprint = sha256(entry bytes)` for a target, reload, assert match; assert the tag never appears as an unknown key inside the runtime's own config schema.
+- [x] 11a.5 GREEN `longterm-mem/internal/register/installstate.go` — `install-state.json` schema, load/save (tmp+fsync+rename), `Get(target)`/`Set(target, record)`.
+- [x] 11a.6 REFACTOR — extract `register.Decide(entryPresent, recordPresent, fingerprintMatches bool) Action{insert|replace|refuse|noop}` (D9 semantics table) as a pure function shared by every runtime writer in 11b/12a.
+- [x] 11a.7 Slice verification — `cd longterm-mem && go test ./...`.
 - Command: `cd longterm-mem && go test ./... -run TestJSONSplice|TestInstallState`
 
 ---
