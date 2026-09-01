@@ -1,0 +1,10 @@
+{
+  "mcp": {
+    "other-tool": {
+      "type": "local",
+      "command": ["/usr/local/bin/other-tool", "serve"],
+      "enabled": true
+    }
+  },
+  "theme": "dark"
+}

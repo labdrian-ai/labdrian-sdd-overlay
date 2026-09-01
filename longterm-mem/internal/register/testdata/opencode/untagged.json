@@ -1,0 +1,15 @@
+{
+  "mcp": {
+    "longterm-mem": {
+      "type": "local",
+      "command": ["/some/hand/written/path"],
+      "enabled": false
+    },
+    "other-tool": {
+      "type": "local",
+      "command": ["/usr/local/bin/other-tool", "serve"],
+      "enabled": true
+    }
+  },
+  "theme": "dark"
+}
