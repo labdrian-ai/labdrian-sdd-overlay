@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -82,17 +81,17 @@ func (a ClaudeAdapter) status() LifecycleResult {
 		return a.result(ActionStatus, CapabilityUnsupported, err.Error())
 	}
 
-	data, err := os.ReadFile(settingsPath)
+	// readJSONObjectOrNil (10a.9) is the same "read file, tolerate absence,
+	// decode to a generic object" shape LongtermMemAdapter needs for its own
+	// claude/opencode config inspection — genuinely shared, unlike
+	// OpenCodeAdapter's own strongly-typed readConfig, which validates a
+	// bespoke plugin schema this component has nothing to do with.
+	root, err := readJSONObjectOrNil(settingsPath)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return a.result(ActionStatus, CapabilityUnsupported, "Claude settings file not found at "+settingsPath)
-		}
 		return a.result(ActionStatus, CapabilityUnsupported, "read settings file "+settingsPath+": "+err.Error())
 	}
-
-	var root map[string]interface{}
-	if err := json.Unmarshal(data, &root); err != nil {
-		return a.result(ActionStatus, CapabilityUnsupported, "decode settings JSON: "+err.Error())
+	if root == nil {
+		return a.result(ActionStatus, CapabilityUnsupported, "Claude settings file not found at "+settingsPath)
 	}
 
 	hookPath := settingsPath
