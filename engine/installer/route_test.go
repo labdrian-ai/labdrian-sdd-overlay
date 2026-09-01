@@ -1621,3 +1621,122 @@ func TestInstall_BinaryPathStableAcrossInspections(t *testing.T) {
 		t.Fatalf("binary mtime changed across inspections at %s: before=%v after=%v", wantPath, first.ModTime(), second.ModTime())
 	}
 }
+
+// TestApply_InvokesLongtermMemInstallOnceForMcpRow proves cmd_apply's D13
+// hook (10b.7): a manifest row routed "mcp" makes 'apply' invoke the
+// longterm-mem install path exactly once — never once per deploy target —
+// and exercises its REAL success path (binary built, per-runtime status
+// reported), not merely a refusal branch.
+func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	repoRoot := realOverlayDir(t)
+	home := t.TempDir()
+	overlayDir := t.TempDir()
+
+	const manifest = "test-skill/SKILL.md   managed\n" +
+		"longterm-mem/go.mod   custom   mcp\n"
+
+	files := map[string]string{
+		"overlay.manifest":           manifest,
+		"skills/test-skill/SKILL.md": "# overlay skill\n",
+	}
+	for rel, content := range files {
+		p := filepath.Join(overlayDir, rel)
+		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+			t.Fatalf("mkdir %s: %v", filepath.Dir(p), err)
+		}
+		if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+			t.Fatalf("write %s: %v", rel, err)
+		}
+	}
+
+	copyTree(t, filepath.Join(repoRoot, "engine"), filepath.Join(overlayDir, "engine"))
+	copyTree(t, filepath.Join(repoRoot, "longterm-mem"), filepath.Join(overlayDir, "longterm-mem"))
+
+	runGit := func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", args...)
+		cmd.Dir = dir
+		cmd.Env = append(os.Environ(),
+			"GIT_AUTHOR_NAME=test",
+			"GIT_AUTHOR_EMAIL=test@test.com",
+			"GIT_COMMITTER_NAME=test",
+			"GIT_COMMITTER_EMAIL=test@test.com",
+			"HOME="+home,
+		)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	runGit(overlayDir, "init")
+	runGit(overlayDir, "config", "user.email", "test@test.com")
+	runGit(overlayDir, "config", "user.name", "test")
+	runGit(overlayDir, "checkout", "-b", "upstream")
+	runGit(overlayDir, "add", "overlay.manifest", "skills/")
+	runGit(overlayDir, "commit", "-m", "upstream: baseline")
+	runGit(overlayDir, "checkout", "-b", "main")
+
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"GIT_AUTHOR_NAME=test",
+		"GIT_AUTHOR_EMAIL=test@test.com",
+		"GIT_COMMITTER_NAME=test",
+		"GIT_COMMITTER_EMAIL=test@test.com",
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	overlay := overlayScript(t)
+	out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
+	if err != nil {
+		t.Fatalf("apply failed: %v\noutput:\n%s", err, out)
+	}
+
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	if _, statErr := os.Stat(binPath); statErr != nil {
+		t.Fatalf("expected longterm-mem binary built by apply's mcp hook: %v\noutput:\n%s", statErr, out)
+	}
+	for _, want := range []string{"claude:", "opencode:", "codex:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected a per-runtime status line for %q in apply output, got:\n%s", want, out)
+		}
+	}
+
+	// The hook's own marker line must appear exactly once per apply
+	// invocation, regardless of how many deploy targets --target all
+	// expands to in the OUTER per-target deploy loop (three, here) — a
+	// wrongly-placed hook (inside that loop) would print it three times.
+	count := strings.Count(out, "running install once")
+	if count != 1 {
+		t.Fatalf("expected the longterm-mem install hook to fire exactly once, got %d\noutput:\n%s", count, out)
+	}
+
+	// The guard's other direction, on the same fixture: with the mcp row
+	// removed the hook must fire ZERO times. Without this, a regression
+	// setting the flag unconditionally would still satisfy the "exactly
+	// once" assertion above while paying for a Go build on every apply
+	// (review finding R3-negative-case-unproved).
+	t.Run("NoMcpRowSkipsTheInstallHook", func(t *testing.T) {
+		manifestPath := filepath.Join(overlayDir, "overlay.manifest")
+		if err := os.WriteFile(manifestPath, []byte("test-skill/SKILL.md   managed\n"), 0o644); err != nil {
+			t.Fatalf("rewrite manifest without the mcp row: %v", err)
+		}
+		runGit(overlayDir, "checkout", "upstream")
+		runGit(overlayDir, "add", "overlay.manifest")
+		runGit(overlayDir, "commit", "-m", "upstream: drop the mcp row")
+		runGit(overlayDir, "checkout", "main")
+
+		out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
+		if err != nil {
+			t.Fatalf("apply failed: %v\noutput:\n%s", err, out)
+		}
+		if n := strings.Count(out, "running install once"); n != 0 {
+			t.Fatalf("the install hook fired %d time(s) for a manifest with no mcp row\noutput:\n%s", n, out)
+		}
+	})
+}

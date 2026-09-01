@@ -1222,6 +1222,12 @@ cmd_apply() {
   release_version="$(resolve_latest_release_tag main)"
   [[ "$release_version" == "none" ]] && release_version="untagged"
 
+  # D13: set when any manifest row processed below resolves to route=mcp.
+  # cmd_longterm_mem install is invoked once, after the ENTIRE deploy loop
+  # below (all targets), not once per target inside it — see the flag check
+  # after the loop.
+  local saw_mcp_row=""
+
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
@@ -1252,6 +1258,16 @@ cmd_apply() {
       rr_rest="${rr_line#*$'\t'}"
       rr_src="${rr_rest%%$'\t'*}"
       rr_targets="${rr_rest#*$'\t'}"
+      # D13: mcp-routed rows emit zero copy targets and would otherwise be
+      # silently skipped by the "[[ -z "$rr_dest" ]] && continue" guard
+      # below with no trace of ever having been seen — record the sighting
+      # here, before that guard, so the install hook after the deploy loop
+      # knows whether to fire (reusing route_resolve's own already-applied
+      # route_reject_unrouted_longterm_mem guard for the same-pass rejection
+      # of any unrouted/unrecognized longterm-mem/** row, task 9.11).
+      if [[ "$rr_route" == "mcp" ]]; then
+        saw_mcp_row=1
+      fi
       # Find dest for the current target ($t); skip if not in applicable set
       rr_dest=""
       for rr_pair in $rr_targets; do
@@ -1286,6 +1302,27 @@ cmd_apply() {
     state_write_target "$t" "$release_version" "$target_digest"
   done
 
+  # D13: run the longterm-mem install path exactly once for this whole
+  # apply invocation — never once per deploy target — passing through
+  # apply's own --target selection unchanged.
+  #
+  # Its exit status is inspected, because this runs AFTER the loop above has
+  # already committed each target's state row. An unchecked failure would
+  # leave apply reporting success with no MCP server installed, and — since
+  # the digests it just wrote are unchanged — a later apply would see
+  # nothing to do and never retry. That degraded state would be sticky
+  # rather than self-healing, so the failure is named loudly, the exact
+  # recovery command is printed, and apply itself exits non-zero.
+  local mcp_install_failed=""
+  if [[ -n "$saw_mcp_row" ]]; then
+    echo ""
+    info "longterm-mem: mcp-routed row detected — running install once (D13)"
+    if ! cmd_longterm_mem install --target "$target_arg"; then
+      mcp_install_failed=1
+      warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian-overlay longterm-mem install --target $target_arg' directly."
+    fi
+  fi
+
   echo ""
   echo "Deploy complete."
 
@@ -1310,6 +1347,10 @@ cmd_apply() {
       echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
     fi
   fi
+
+  # Deploy itself succeeded, but a failed mcp install must not exit 0.
+  [[ -n "$mcp_install_failed" ]] && return 1
+  return 0
 }
 
 # ---------------------------------------------------------------------------
