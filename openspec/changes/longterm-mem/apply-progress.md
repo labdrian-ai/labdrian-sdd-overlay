@@ -4287,3 +4287,195 @@ target while another remains tracked must leave the binary in place).
 lines (296, 297, 329, 333, 1039, 1200, 1433, 1464); zero new warnings in
 the edited region.
 
+### 12b.8 — slice verification (12a+12b, full change)
+
+- `cd longterm-mem && gofmt -l .` — clean, no output.
+- `cd longterm-mem && go vet ./...` — clean, no output.
+- `cd longterm-mem && go test ./... -cover -count=1` — all packages pass;
+  `internal/register` coverage: **75.8%**.
+- `cd engine && go test ./...` (`-count=1`) — all packages pass, including
+  the two real-build integration tests above
+  (`engine/installer`: 12.8s wall).
+- `cd tui && go test ./...` — all packages pass.
+- `bash -n bin/labdrian-overlay && bash -n bin/overlay` — clean.
+- `go test . -run TestOSExecImportAllowlist` (module root) — PASS; no
+  `os/exec` import was added anywhere in this slice.
+- `engine/` remains zero-dependency; no file under `engine/` was modified
+  this slice (only `engine/installer/route_test.go`'s EXISTING tests were
+  re-run for verification, not edited).
+
+### Real line counts (diff-added/changed lines against base, this slice)
+
+| File | Lines (+/-) | Kind |
+|---|---|---|
+| `internal/register/jsonsplice.go` | +68 | production (`Remove`, `removeSpan`, `isJSONLineSpace`) |
+| `internal/register/jsonsplice_test.go` | +111 | test (first/middle/last + not-found) |
+| `internal/register/tomlsplice.go` | +71 | production (`TOMLRemove`, `tomlFollowingHeaderStart`, `tomlTrimBackwardBlankLines`) |
+| `internal/register/tomlsplice_test.go` | +88 | test (first/middle/last + not-found + unprovable-span) |
+| `internal/register/testdata/claude/after-uninstall.json` | +13 | fixture (new) |
+| `internal/register/testdata/opencode/after-uninstall.json` | +10 | fixture (new) |
+| `internal/register/testdata/codex/after-uninstall.toml` | +5 | fixture (new) |
+| `internal/register/jsonwrite.go` | +81 | production (`RemoveMember`, `jsonMemberPresent`) |
+| `internal/register/jsonwrite_test.go` | +90 | test |
+| `internal/register/tomlwrite.go` | +62 | production (`RemoveTOMLSection`) |
+| `internal/register/tomlwrite_test.go` | +64 | test |
+| `internal/register/writer.go` | +118/-7 | production (`jsonUninstall`, `tomlUninstall`, `readTOMLSection`, `readTOMLPresence` refactor) |
+| `internal/register/installstate.go` | +13 | production (`Delete`) |
+| `internal/register/installstate_test.go` | +32 | test |
+| `internal/register/unregister.go` | +82 | production (new: `UnregisterOutcome`, `Unregister`) |
+| `internal/register/golden_writer_test.go` | +81/-4 | test (harness: `unregister` field, 2 new methods, doc comment update) |
+| `internal/register/claude_test.go` | +9/-6 | test (+`unregister` field) |
+| `internal/register/opencode_test.go` | +9/-6 | test (+`unregister` field) |
+| `internal/register/codex_test.go` | +9/-6 | test (+`unregister` field) |
+| `internal/register/unregister_test.go` | +170 | test (new: 3 scenario tests) |
+| `cmd/longterm-mem/cmd_unregister.go` | +108 | production (new) |
+| `cmd/longterm-mem/cmd_unregister_test.go` | +147 | test (new) |
+| `cmd/longterm-mem/main.go` | +2 | production (dispatch case) |
+| `bin/labdrian-overlay` | +16/-5 | shell (uninstall glue) |
+
+### Deviations from the task list, with reasons
+
+1. **`Unregister`'s exact signature** is
+   `Unregister(target, configRoot, stateDir string) (UnregisterOutcome,
+   error)`, not the bare `error` tasks.md's 12b.4 line sketches — an
+   outcome value is required to distinguish `noop`/`removed`/`unmanaged`
+   for both the scenario tests (12b.1–12b.3 all assert on it) and
+   `cmd_unregister.go`'s own exit-code/reporting logic (12b.5). The task
+   line itself is written as `Unregister(target string, ...) error` with
+   an explicit ellipsis, read as intentionally underspecified rather than
+   a literal contract to match byte-for-byte.
+2. **`readTOMLPresence` refactored** to delegate to a new, more general
+   `readTOMLSection` (writer.go) rather than duplicating the file-read/
+   locate logic a second time for `tomlUninstall`'s fingerprint-comparison
+   need — not a task line of its own, but the same "share, don't
+   duplicate" instinct 12a.6's `installWithRollback` extraction already
+   established for this file.
+3. **`cmd_unregister_test.go` landed as a new file**, not appended to the
+   existing `main_test.go` where every `cmd_register.go` test lives — see
+   12b.5's own note above.
+4. **A third codex-equivalent scenario mutation** (folding `ActionRefuse`
+   into removal) was proved TWICE, once for `jsonUninstall` and once for
+   `tomlUninstall` independently, rather than assuming the JSON-side proof
+   also covers the TOML-side call site — mirroring 12a's own choice to add
+   `TestCodex_UntaggedSameNamedEntryRefused` as real coverage rather than
+   an inference from shared code.
+5. **7 PR parts instead of the suggested 5**, per the pre-planning
+   section's own "prefer a seam over an exception" instruction — see PR
+   seam shape below.
+
+
+### Native review corrections
+
+Two bounded corrections across the eight parts, and both were the same
+failure of *seam planning* rather than of code: a proof separated from the
+thing it proves.
+
+- **12b-4, `R3-uninstall-writers-unproved` (CRITICAL, reliability).**
+  `jsonUninstall`/`tomlUninstall` are the only destructive code in the
+  entire change, and the first cut of that part shipped them with their
+  tests parked in a later part — so every mapping from `Decide`'s Action
+  to an `UnregisterOutcome`, and the guarded skip before
+  `RemoveMember`/`RemoveTOMLSection`, was asserted by doc comment alone.
+
+  **Fixing this changed the frozen scope**, because it meant adding a test
+  file to the candidate, and the contract correctly refused to absorb that
+  silently: it asked for a maintainer recovery authorization. Rather than
+  authorize a scope change caused by my own mis-planning, the part was
+  rebuilt with its proof included from the start (370 changed lines, still
+  inside the budget) and reviewed fresh. The abandoned lineage
+  (`review-1983fd106120cda3`) produced no receipt and no delivery
+  authority, which is correct — it is not the candidate that shipped.
+
+  `TestUnregister_OutcomeAndOnDiskEffect` pins outcome and on-disk effect
+  **together**, because that pairing is the property: reporting
+  `unmanaged` while having deleted the entry, or `removed` while leaving
+  the ownership record behind, each passes a test that checks one half.
+  Two mutations prove it — `ActionRefuse` falling through to the removal
+  branch (`outcome = removed, want unmanaged`, the mutation that deletes
+  someone else's entry) and `state.Delete` turned into a read
+  (`install-state still records this target after removal`).
+
+- **12b-5, `R3-uninstall-scenario-never-invoked` (CRITICAL,
+  reliability).** The sharpest kind of dead code — the kind that looks
+  like coverage. `testUninstallRemovesOwnedEntry`, the only assertion of
+  the install→uninstall round trip against the `after-uninstall` golden
+  fixture, **had no call site**. It is an unexported method, Go does not
+  reject unused methods, and `go test` silently never ran it; two of the
+  three fixtures were files nothing read. R-019's inverse-of-install claim
+  was therefore proved for opencode alone, through an incidental fixture
+  read in a different test, and **not at all for the TOML path**.
+
+  `TestUnregister_RemovalIsTheInverseOfInstall` fans it out to all three
+  runtimes. Proved load-bearing by removing `TOMLRemove`'s backward
+  blank-line trim: codex then fails showing the doubled blank line the
+  removal left in the user's file — byte-level damage nothing in the
+  candidate would previously have noticed.
+
+**The lesson both findings share** is one this change has now been taught
+three times (8b-2, 10b-1, and here twice): when a PR seam separates code
+from the tests that prove it, the reviewer is right to call the code
+unproved, because in that candidate it *is*. Plan the seam around what
+proves what, not around what is convenient to move.
+
+### PR seam shape actually landed
+
+Eight parts, not the suggested five. The apply agent's own suggested
+`12b-2` bundle came to roughly 550 lines against a hard 400-line budget;
+splitting it along the purity seams that already existed — pure span
+removal, atomic removal writers, the uninstall flow, the golden proof —
+kept every part legible and each part's RED/GREEN narrative intact. That
+is now the seventh time in this chain a seam has beaten a size exception.
+
+- **12b-1** — PR #240 — `Remove` and its four comma positions (179).
+- **12b-2** — PR #241 — `TOMLRemove` and its separator duality (159).
+- **12b-3** — PR #242 — `RemoveMember`/`RemoveTOMLSection`, the atomic
+  removal writers (297).
+- **12b-4** — PR #243 — `Unregister`, `jsonUninstall`/`tomlUninstall`,
+  `InstallState.Delete`, with their outcome/on-disk-effect proof (370,
+  after the rebuild).
+- **12b-5** — PR #244 — the golden-fixture proof of R-019's three
+  scenarios and the `after-uninstall` fixtures (321).
+- **12b-6** — PR #245 — `cmd_unregister.go`, the `main.go` wiring and the
+  `bin/labdrian-overlay` uninstall glue (278).
+- **12b-7** — PR #246 — the per-task apply evidence (386).
+- **12b-8** — this record, plus `tasks.md`.
+
+The artifacts split into two parts for the same reason they did in slice
+12a: the apply evidence alone was 386 lines, and the boundary between
+"what the apply agent could observe" and "what came out of delivery" is a
+real one.
+
+### Review receipts
+
+| Part | Lineage | Risk | Lenses | Outcome |
+|---|---|---|---|---|
+| 12b-1 | `review-c70f9dfe005b920d` | medium | reliability | approved with zero corrections, acknowledged |
+| 12b-2 | `review-f6b4d0004f88c7ed` | medium | reliability | approved with zero corrections, acknowledged |
+| 12b-3 | `review-675dc77e619bc8e7` | medium | reliability | approved with zero corrections, acknowledged |
+| 12b-4 | `review-d6bb3d6b3fdeb906` | medium | reliability | approved with zero corrections, acknowledged (rebuilt after `review-1983fd106120cda3` found the part's proof missing) |
+| 12b-5 | `review-c6eab25a932d819f` | medium | reliability | one bounded correction, approved, acknowledged |
+| 12b-6 | `review-de84f15a124b0148` | medium | reliability | approved with zero corrections, acknowledged |
+| 12b-7 | `review-fd2c365390fede5e` | medium | reliability | approved with zero corrections, acknowledged |
+
+Three provider-side capture results came back malformed across this slice
+(`unknown field "passed_note_unused"`, and `reviewer payload contains no
+complete JSON object` twice). In every case the bound STATUS was
+re-queried, it reoffered the same slot, and the relaunch was admitted — no
+state was invented and no lineage was restarted.
+
+### Ledger
+
+Acquired before the apply agent launched, settled `passed` afterwards with
+evidence revision
+`sha256:535f9b708054d01e8c78b18b13f4a46c78bc569755d9cc801cd15e42457d3529`
+(the sha256 of the captured `go test` output for `longterm-mem`, `engine`
+and `tui`, plus the `bash -n` result for both shell entrypoints).
+
+### Change status
+
+All 168 tasks in `tasks.md` are now complete. `longterm-mem` is
+implemented end to end: the module and its MCP server, the vault and
+Engram readers, the query merge, promotion with mutability and sync, ops
+(`status`/`doctor`), the overlay route and dispatch, and registration and
+unregistration for all three runtimes. Next: `sdd-verify`, then
+`sdd-archive`.
