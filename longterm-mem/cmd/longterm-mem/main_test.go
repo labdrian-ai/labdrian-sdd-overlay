@@ -520,6 +520,252 @@ func TestDefaultRegisterPathsAreEmptyWhenUnresolvable(t *testing.T) {
 	}
 }
 
+// TestRun_DispatchesRegisterSubcommand proves "register" is registered in
+// run's switch, not falling through to the unknown-subcommand default (2):
+// pointing HOME at a fresh temp dir with no ~/.claude.json yet makes
+// cmdRegister's own RegisterClaude call fail (nothing to splice into), a
+// distinct exit code (1) only reachable from inside cmdRegister, never from
+// the top-level fallback.
+func TestRun_DispatchesRegisterSubcommand(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	got := run([]string{"register", "--target", "claude", "--state-dir", t.TempDir(), "--binary", "/bin/longterm-mem"})
+	if got != 1 {
+		t.Fatalf("run([register --target claude ...]) = %d, want 1, proving register dispatches into cmdRegister rather than the unknown-subcommand fallback", got)
+	}
+}
+
+// TestCmdRegister_UnknownTargetExitsTwo (usage error, R-016/R-017): an
+// unrecognized --target value is rejected before any file I/O, exit 2.
+func TestCmdRegister_UnknownTargetExitsTwo(t *testing.T) {
+	got := run([]string{"register", "--target", "bogus"})
+	if got != 2 {
+		t.Fatalf("run([register --target bogus]) = %d, want 2", got)
+	}
+}
+
+// TestCmdRegister_InstallsSuccessfully (11b.7, R-016): a real end-to-end
+// install through the built command -- config-root/state-dir both point at
+// fresh temp dirs, an existing ~/.claude.json fixture already declares an
+// empty mcpServers object (the same "every real config already declares
+// its container object" assumption jsonsplice.go documents) -- succeeds
+// with exit 0 and leaves the expected entry spliced in.
+func TestCmdRegister_InstallsSuccessfully(t *testing.T) {
+	configRoot := t.TempDir()
+	if err := os.WriteFile(filepath.Join(configRoot, ".claude.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	stateDir := t.TempDir()
+
+	var stdout string
+	var exit int
+	stdout = captureStdout(t, func() {
+		exit = run([]string{"register", "--target", "claude", "--config-root", configRoot, "--state-dir", stateDir, "--binary", "/opt/bin/longterm-mem"})
+	})
+	if exit != 0 {
+		t.Fatalf("run([register --target claude ...]) = %d, want 0; stdout:\n%s", exit, stdout)
+	}
+	if !strings.Contains(stdout, "claude: ok") {
+		t.Fatalf("register stdout = %q, want it to report claude: ok", stdout)
+	}
+
+	got, err := os.ReadFile(filepath.Join(configRoot, ".claude.json"))
+	if err != nil {
+		t.Fatalf("read result config: %v", err)
+	}
+	if !strings.Contains(string(got), `"longterm-mem": {"type":"stdio","command":"/opt/bin/longterm-mem","args":["mcp"]}`) {
+		t.Fatalf("result config does not contain the expected entry:\n%s", got)
+	}
+}
+
+// TestCmdRegister_ConflictExitsSix (11b.7, R-016 "Untagged same-named entry
+// is refused, not overwritten"): install-state has no record for claude,
+// but ~/.claude.json already has an untagged longterm-mem entry -- register
+// must refuse (exit 6) and leave the config file byte-identical.
+func TestCmdRegister_ConflictExitsSix(t *testing.T) {
+	configRoot := t.TempDir()
+	original := []byte(`{"mcpServers":{"longterm-mem":{"type":"stdio","command":"/someone/elses/binary"}}}`)
+	configPath := filepath.Join(configRoot, ".claude.json")
+	if err := os.WriteFile(configPath, original, 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	stateDir := t.TempDir()
+
+	stderrPath := filepath.Join(t.TempDir(), "stderr.txt")
+	captured, err := os.Create(stderrPath)
+	if err != nil {
+		t.Fatalf("create stderr capture: %v", err)
+	}
+	realStderr := os.Stderr
+	os.Stderr = captured
+	exit := run([]string{"register", "--target", "claude", "--config-root", configRoot, "--state-dir", stateDir, "--binary", "/opt/bin/longterm-mem"})
+	os.Stderr = realStderr
+	if err := captured.Close(); err != nil {
+		t.Fatalf("close stderr capture: %v", err)
+	}
+
+	if exit != 6 {
+		t.Fatalf("run([register --target claude ...]) with an untagged conflict = %d, want 6", exit)
+	}
+	stderr, err := os.ReadFile(stderrPath)
+	if err != nil {
+		t.Fatalf("read stderr capture: %v", err)
+	}
+	if !strings.Contains(string(stderr), "claude") {
+		t.Fatalf("stderr = %q, want it to name the conflicting target", stderr)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read result config: %v", err)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("config file was modified despite the refusal:\nbefore = %s\nafter = %s", original, got)
+	}
+}
+
+// TestCmdRegister_AllExpandsToClaudeAndOpencode (11b.7): --target all
+// registers every currently-wired runtime, each resolving its own default
+// config root from HOME/XDG_CONFIG_HOME rather than a single shared
+// --config-root (which --target all refuses to accept, per the usage
+// guard above).
+func TestCmdRegister_AllExpandsToClaudeAndOpencode(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+
+	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	opencodeDir := filepath.Join(xdgConfig, "opencode")
+	if err := os.MkdirAll(opencodeDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(opencodeDir, "opencode.json"), []byte(`{"mcp":{}}`), 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	exit := run([]string{"register", "--target", "all", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
+	if exit != 0 {
+		t.Fatalf("run([register --target all]) = %d, want 0", exit)
+	}
+
+	claudeGot, err := os.ReadFile(filepath.Join(home, ".claude.json"))
+	if err != nil {
+		t.Fatalf("read claude config: %v", err)
+	}
+	if !strings.Contains(string(claudeGot), `"longterm-mem":`) {
+		t.Fatalf("claude config missing longterm-mem entry:\n%s", claudeGot)
+	}
+	opencodeGot, err := os.ReadFile(filepath.Join(opencodeDir, "opencode.json"))
+	if err != nil {
+		t.Fatalf("read opencode config: %v", err)
+	}
+	if !strings.Contains(string(opencodeGot), `"longterm-mem":`) {
+		t.Fatalf("opencode config missing longterm-mem entry:\n%s", opencodeGot)
+	}
+}
+
+// TestCmdRegister_UnresolvableBinaryPathIsRefused (11b.7, R-016/R-017):
+// when --binary is omitted and the default path cannot be resolved
+// (HOME unset), register must refuse rather than write an entry whose
+// command is the empty string. XDG_CONFIG_HOME still resolves opencode's
+// config root, so the config root guard does not cover this case: without
+// its own check, the writer would happily install a structurally valid
+// entry that can never start a server, and register would report success.
+func TestCmdRegister_UnresolvableBinaryPathIsRefused(t *testing.T) {
+	t.Setenv("HOME", "")
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+
+	opencodeDir := filepath.Join(xdgConfig, "opencode")
+	if err := os.MkdirAll(opencodeDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	configPath := filepath.Join(opencodeDir, "opencode.json")
+	original := []byte(`{"mcp":{}}`)
+	if err := os.WriteFile(configPath, original, 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	exit := run([]string{"register", "--target", "opencode", "--state-dir", t.TempDir()})
+	if exit == 0 {
+		t.Fatalf("run([register --target opencode]) with an unresolvable binary path = 0, want non-zero")
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read opencode config: %v", err)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("config was modified despite an unresolvable binary path:\nbefore = %s\nafter = %s", original, got)
+	}
+}
+
+// TestCmdRegister_UnresolvableStateDirIsRefused (11b.7, R-017): the same
+// refusal in the other direction. --binary is supplied, so only the
+// install-state directory is unresolvable; without its own check the
+// writer would create install-state.json in the process working
+// directory, and the next run -- resolving a different state dir --
+// would find no record and refuse its own previous write as a conflict.
+func TestCmdRegister_UnresolvableStateDirIsRefused(t *testing.T) {
+	t.Setenv("HOME", "")
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+
+	opencodeDir := filepath.Join(xdgConfig, "opencode")
+	if err := os.MkdirAll(opencodeDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	configPath := filepath.Join(opencodeDir, "opencode.json")
+	original := []byte(`{"mcp":{}}`)
+	if err := os.WriteFile(configPath, original, 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	exit := run([]string{"register", "--target", "opencode", "--binary", "/opt/bin/longterm-mem"})
+	if exit == 0 {
+		t.Fatalf("run([register --target opencode --binary ...]) with an unresolvable state dir = 0, want non-zero")
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read opencode config: %v", err)
+	}
+	if string(got) != string(original) {
+		t.Fatalf("config was modified despite an unresolvable state dir:\nbefore = %s\nafter = %s", original, got)
+	}
+}
+
+// TestCmdRegister_HardFailureOutranksConflict (11b.7): with --target all,
+// one runtime refusing an untagged entry (exit 6) and another failing
+// outright must not resolve to 6. A conflict is a recoverable, expected
+// outcome a caller is meant to resolve by hand; a hard failure means a
+// target was not registered at all. Reporting the softer of the two
+// silently hides the harder one, which is exactly what cmdRegister's own
+// doc comment promises never happens.
+func TestCmdRegister_HardFailureOutranksConflict(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+
+	// claude: an untagged same-named entry install-state does not own, so
+	// this target conflicts.
+	claudeConfig := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{"longterm-mem":{"type":"stdio","command":"/someone/elses/binary"}}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	// opencode: no config file at all, so this target fails outright.
+
+	exit := run([]string{"register", "--target", "all", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
+	if exit != 1 {
+		t.Fatalf("run([register --target all]) with one conflict and one hard failure = %d, want 1 — the hard failure must not be hidden behind the conflict's exit 6", exit)
+	}
+}
+
 // buildLongtermMemBinary compiles the real longterm-mem binary to a
 // scratch path, mirroring TestMain_BuildsIndependentModule's own build
 // invocation, so TestCLI_NoResidualProcessAfterAnySubcommand exercises the

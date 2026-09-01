@@ -35,6 +35,8 @@ func run(args []string) int {
 		return cmdPromote(args[1:])
 	case "mcp":
 		return cmdMCP(args[1:])
+	case "register":
+		return cmdRegister(args[1:])
 	default:
 		fmt.Fprintf(os.Stderr, "longterm-mem: unknown subcommand %q\n", args[0])
 		usage()
