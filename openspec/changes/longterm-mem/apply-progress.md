@@ -3795,3 +3795,109 @@ now carries a two-line file-scoped comment pointing at `doc.go` instead.
    still fails. See the delivery record appended by this slice's final part.
 
 Ledger token: `sha256:1b3eae41d1ba349d616d829c9acbaf44ca476e37babfb2a77a676aa70dba0721`
+
+### Native review corrections
+
+Two bounded corrections across the five parts. Both findings were real,
+and both are the kind that only a third runtime could have surfaced.
+
+- **12a-1, `R3-any-header-truncates-span` (CRITICAL, reliability).** The
+  span terminator was the bare prefix match `^\s*\[`, which ends the
+  located table at *any* line whose first non-space byte is `[` — an
+  array element written on its own line, or a header-looking line inside
+  a multi-line string. The replace then wrote over a truncated prefix and
+  left the rest of the value stranded after the new section, **reported
+  as success**. RED evidence:
+
+  ```
+  TOMLSplice reported success but produced invalid TOML:
+  toml: invalid character at start of key: U+005D ']'
+  [mcp_servers.longterm-mem]
+  command = "/new"
+  args = ["mcp"]
+    ["a"]
+  ]
+  ```
+
+  **The fix is deliberately not half a TOML lexer.** A line-oriented scan
+  exists precisely so the document is never decoded and re-encoded (D9);
+  a partial lexer would be a new class of bug rather than a fix. Instead
+  the located span is checked for the one property a whole table always
+  has and a truncated one never does: it parses as TOML on its own. That
+  reads bytes already located rather than decoding the document, so byte
+  preservation is untouched. `TOMLSplice` returns `([]byte, error)` and a
+  span it cannot prove yields an error and **no bytes at all** — the same
+  fail-closed discipline as the uninstall guard (10b) and the
+  unresolvable-path refusals (11b).
+
+- **12a-4, `R3-all-missing-codex-config-unproved` (CRITICAL,
+  reliability).** Adding `codex` to `--target all` silently changed what
+  that flag means for every existing user. Before, `all` was claude and
+  opencode and a missing config could only mean "you named a runtime that
+  is not there"; after, it routinely means "codex is simply not installed
+  on this machine" — and the pre-existing exit contract turned that into
+  **exit 1 for a run in which claude and opencode registered perfectly**.
+
+  `--target all` now skips a runtime whose configuration file is absent
+  and reports the skip on stdout. A **named** target still fails, because
+  asking for one runtime by name is an assertion that it should be there.
+  Both directions have their own test; the named-target one was proved
+  load-bearing by dropping the `expandedAll` guard, after which the run
+  reported success having registered nothing.
+
+  **One existing test had to move with it.**
+  `TestCmdRegister_HardFailureOutranksConflict` (slice 11b-5) built its
+  "hard failure" out of a *missing* opencode config, which is now a skip.
+  It now uses a config that exists but cannot be parsed. A runtime that
+  is not installed and a runtime that is installed and broken are
+  genuinely different outcomes, and the test guarding exit-code
+  precedence has to stand on the second one.
+
+### PR seam shape actually landed
+
+The apply agent's suggested first part bundled `tomlsplice.go`,
+`tomlwrite.go` and both test files at **453 authored lines** against a
+hard 400-line review budget. Rather than request a size exception, the
+pure/write seam that already existed between those two files was used as
+the PR seam as well — the fifth time in this chain a seam inside the work
+has beaten an exception. Splitting them also kept each part's RED/GREEN
+narrative intact: the blank-line-separator bug surfaced inside
+`TestTOMLSplice_LocatesTableSpan` before `tomlwrite.go` existed, and the
+`command == binary` gate's mutation proof belongs with the writer.
+
+- **12a-1** — PR #234 — `tomlsplice.go` (171) + `tomlsplice_test.go`
+  (140) + `go.mod`/`go.sum`; 232 changed lines at review, one bounded
+  correction.
+- **12a-2** — PR #235 — `tomlwrite.go` (96) + `tomlwrite_test.go` (134);
+  230 changed lines, approved with zero corrections.
+- **12a-3** — PR #236 — `writer.go`'s `installWithRollback` extraction and
+  `tomlInstall`, plus `golden_writer_test.go`'s generalisation and the two
+  runtime cases' new fields; 198 changed lines, approved with zero
+  corrections.
+- **12a-4** — PR #237 — `codex.go`, `codex_test.go`, the codex fixtures,
+  `doc.go`, and the CLI wiring; 236 changed lines, four-lens high-risk
+  review, one bounded correction.
+- **12a-5** — PR #238 — the apply-evidence section and `tasks.md`.
+- **12a-6** — this delivery record, split from the apply evidence because
+  the combined candidate came to 421 lines against the 400-line budget,
+  and because the two were written by different actors at different
+  times: the apply agent could not know what review would find.
+
+Every part landed under the 400-line budget with no size exception
+requested.
+
+### Review receipts
+
+| Part | Lineage | Risk | Lenses | Outcome |
+|---|---|---|---|---|
+| 12a-1 | `review-fcbe47950634f5ec` | medium (`go.mod` config change) | reliability | one bounded correction, approved, acknowledged |
+| 12a-2 | `review-78c2b7862a7a645e` | medium | reliability | approved with zero corrections, acknowledged |
+| 12a-3 | `review-53b292e21545ecf7` | medium | reliability | approved with zero corrections, acknowledged |
+| 12a-4 | `review-ca71aa2f066259eb` | high (process boundary) | risk, resilience, readability, reliability | one bounded correction, approved, acknowledged |
+
+### Ledger
+
+Acquired before the apply agent launched, settled `passed` afterwards with
+evidence revision
+`sha256:c2162da50b1464cc81045aa4388830772887ee33bf03aa46d66006aabc91cd2a`
+(the sha256 of the captured `go test` output for both modules).
