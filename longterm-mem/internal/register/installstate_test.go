@@ -76,3 +76,35 @@ func TestInstallState_FingerprintRoundTrip(t *testing.T) {
 		t.Fatalf("install-state.json does not contain the saved fingerprint %q:\n%s", fp, raw)
 	}
 }
+
+// TestInstallState_DeleteRemovesOnlyTheNamedTarget (12b.4, R-019 "Partial
+// uninstall does not remove the shared binary"): with three targets
+// recorded, deleting one leaves the other two exactly as they were —
+// proving unregistering one runtime never touches another runtime's
+// ownership record.
+func TestInstallState_DeleteRemovesOnlyTheNamedTarget(t *testing.T) {
+	st := &InstallState{Targets: map[string]TargetRecord{}}
+	st.Set("claude", TargetRecord{Fingerprint: "fp-claude"})
+	st.Set("opencode", TargetRecord{Fingerprint: "fp-opencode"})
+	st.Set("codex", TargetRecord{Fingerprint: "fp-codex"})
+
+	st.Delete("opencode")
+
+	if _, ok := st.Get("opencode"); ok {
+		t.Fatalf("Get(%q) after Delete: record still present", "opencode")
+	}
+	claudeRec, ok := st.Get("claude")
+	if !ok || claudeRec.Fingerprint != "fp-claude" {
+		t.Fatalf("claude record disturbed by deleting opencode: %+v, ok=%v", claudeRec, ok)
+	}
+	codexRec, ok := st.Get("codex")
+	if !ok || codexRec.Fingerprint != "fp-codex" {
+		t.Fatalf("codex record disturbed by deleting opencode: %+v, ok=%v", codexRec, ok)
+	}
+
+	// Deleting a target with no record is a no-op, not a panic or error.
+	st.Delete("does-not-exist")
+	if _, ok := st.Get("claude"); !ok {
+		t.Fatalf("Delete of an unrecorded target disturbed an existing one")
+	}
+}

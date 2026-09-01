@@ -116,6 +116,101 @@ func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary strin
 	}
 }
 
+// jsonUninstall is jsonInstall's inverse (12b.4, R-019): decide via the
+// SAME shared D9 semantics table (Decide, 12b.7), then act on it in the
+// opposite direction — remove the config entry (when present) and clear
+// install-state's record, leave an unmanaged entry untouched and reported,
+// or do nothing. See UnregisterOutcome's own doc comments for exactly how
+// each Action maps.
+//
+// Unlike jsonInstall's fingerprintMatches (which compares against the
+// entry the caller is ABOUT TO WRITE), uninstall has nothing new to write
+// — there is only ever one candidate to compare install-state's recorded
+// fingerprint against: the entry CURRENTLY on disk.
+//
+// No installWithRollback-style guard is needed here the way jsonInstall's
+// install-state-write failure needed one (11b-1 CRITICAL): if the config
+// removal succeeds but saveInstallState then fails, the next run sees
+// entryPresent=false, recordPresent=true — Decide's ActionReplace, which
+// jsonUninstall (like jsonInstall) simply retries: entryPresent is false,
+// so no config write is attempted, and clearing the stale record is
+// retried. A stale record with no matching config entry is already a
+// state Decide's table understands on both sides; it is never mistaken for
+// someone else's entry (that requires entryPresent=true), so it can never
+// regress into the 11b-1 failure mode.
+func jsonUninstall(target, configPath, stateDir, containerKey, memberKey string) (UnregisterOutcome, error) {
+	statePath := filepath.Join(stateDir, installStateFileName)
+	state, err := LoadInstallState(statePath)
+	if err != nil {
+		return 0, fmt.Errorf("register: %s: %w", target, err)
+	}
+	record, recordPresent := state.Get(target)
+
+	current, entryPresent, err := readMember(configPath, containerKey, memberKey)
+	if err != nil {
+		return 0, fmt.Errorf("register: %s: %w", target, err)
+	}
+	fingerprintMatches := entryPresent && recordPresent && current != nil && record.Fingerprint == Fingerprint(current)
+
+	switch Decide(entryPresent, recordPresent, fingerprintMatches) {
+	case ActionInsert:
+		return UnregisterNoop, nil
+	case ActionRefuse:
+		return UnregisterUnmanaged, nil
+	case ActionNoop, ActionReplace:
+		if entryPresent {
+			if err := RemoveMember(configPath, containerKey, memberKey); err != nil {
+				return 0, fmt.Errorf("register: %s: %w", target, err)
+			}
+		}
+		state.Delete(target)
+		if err := saveInstallState(state, statePath); err != nil {
+			return 0, fmt.Errorf("register: %s: %w", target, err)
+		}
+		return UnregisterRemoved, nil
+	default:
+		return 0, fmt.Errorf("register: %s: internal error: unreachable Decide outcome", target)
+	}
+}
+
+// tomlUninstall is jsonUninstall's TOML counterpart, exactly as tomlInstall
+// is jsonInstall's — see jsonUninstall's own doc comment for the shared
+// Decide-reinterpretation rule and why no rollback guard is needed.
+func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (UnregisterOutcome, error) {
+	statePath := filepath.Join(stateDir, installStateFileName)
+	state, err := LoadInstallState(statePath)
+	if err != nil {
+		return 0, fmt.Errorf("register: %s: %w", target, err)
+	}
+	record, recordPresent := state.Get(target)
+
+	current, entryPresent, err := readTOMLSection(configPath, tableKey, memberKey)
+	if err != nil {
+		return 0, fmt.Errorf("register: %s: %w", target, err)
+	}
+	fingerprintMatches := entryPresent && recordPresent && current != nil && record.Fingerprint == Fingerprint(current)
+
+	switch Decide(entryPresent, recordPresent, fingerprintMatches) {
+	case ActionInsert:
+		return UnregisterNoop, nil
+	case ActionRefuse:
+		return UnregisterUnmanaged, nil
+	case ActionNoop, ActionReplace:
+		if entryPresent {
+			if err := RemoveTOMLSection(configPath, tableKey, memberKey); err != nil {
+				return 0, fmt.Errorf("register: %s: %w", target, err)
+			}
+		}
+		state.Delete(target)
+		if err := saveInstallState(state, statePath); err != nil {
+			return 0, fmt.Errorf("register: %s: %w", target, err)
+		}
+		return UnregisterRemoved, nil
+	default:
+		return 0, fmt.Errorf("register: %s: internal error: unreachable Decide outcome", target)
+	}
+}
+
 // installWithRollback performs the two-effect sequence every runtime
 // writer's install flow shares (D9), format-agnostic: call writeConfig to
 // make the runtime config edit permanent, then record fingerprint in
@@ -183,17 +278,33 @@ func readMember(path, containerKey, memberKey string) (json.RawMessage, bool, er
 
 // readTOMLPresence reports whether a table header matching
 // tableKey.memberKey is present in the TOML document at path — the TOML
-// analogue of readMember, used only to answer entryPresent for Decide; it
-// never needs the section's actual content, mirroring readMember's own
-// scope. A config file that does not exist yet is not an error — it just
-// means the entry is not present.
+// analogue of readMember, used by tomlInstall only to answer entryPresent
+// for Decide (it never needs the section's actual content, unlike
+// tomlUninstall's fingerprint comparison, which is why readTOMLSection
+// below exists as the more general read).
 func readTOMLPresence(path, tableKey, memberKey string) (bool, error) {
+	_, found, err := readTOMLSection(path, tableKey, memberKey)
+	return found, err
+}
+
+// readTOMLSection reads the raw bytes of the table located at
+// tableKey.memberKey inside the TOML document at path — the TOML analogue
+// of readMember's read-only scope, and tomlUninstall's own source for the
+// "bytes currently on disk" fingerprint comparison jsonUninstall's
+// readMember call already gives it for free. A config file that does not
+// exist yet, or that has no matching table, is not an error — it just
+// means the section is not present.
+func readTOMLSection(path, tableKey, memberKey string) ([]byte, bool, error) {
 	raw, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return false, nil
+			return nil, false, nil
 		}
-		return false, fmt.Errorf("read %s: %w", path, err)
+		return nil, false, fmt.Errorf("read %s: %w", path, err)
 	}
-	return locateTOMLSection(raw, tableKey, memberKey).found, nil
+	loc := locateTOMLSection(raw, tableKey, memberKey)
+	if !loc.found {
+		return nil, false, nil
+	}
+	return raw[loc.start:loc.end], true, nil
 }

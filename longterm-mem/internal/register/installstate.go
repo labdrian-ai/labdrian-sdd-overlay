@@ -76,6 +76,19 @@ func (s *InstallState) Set(target string, rec TargetRecord) {
 	s.Targets[target] = rec
 }
 
+// Delete removes target's ownership record, if any (12b.4, R-019). A
+// target with no record is a no-op, mirroring Get's own tolerant
+// "not found" contract -- unregistering a target install-state never owned
+// in the first place is exactly Decide's ActionRefuse/unmanaged path
+// (writer.go, jsonUninstall/tomlUninstall), which never reaches Delete at
+// all.
+func (s *InstallState) Delete(target string) {
+	if s.Targets == nil {
+		return
+	}
+	delete(s.Targets, target)
+}
+
 // Save writes s to path atomically: tmp file in the same directory,
 // fsync, close, then rename — mirroring vaultreg's writeJSONAtomic
 // convention (D6).
