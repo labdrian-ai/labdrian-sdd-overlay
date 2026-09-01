@@ -1242,3 +1242,291 @@ func TestOverlay_HelpContainsGaduGenerateAndStatusHooksGuidance(t *testing.T) {
 		t.Fatalf("expected read-only status-hooks guidance in help output, got: %s", output)
 	}
 }
+
+// ---------------------------------------------------------------------------
+// longterm-mem install/status/uninstall — Slice 10b (R-014 shell half, R-015)
+// ---------------------------------------------------------------------------
+
+// realOverlayDir returns the actual repository root (two levels up from
+// engine/installer, same resolution overlayScript already uses). Unlike the
+// synthetic sandboxes used elsewhere in this file, longterm-mem install must
+// perform a REAL `go build` of the REAL longterm-mem and engine modules
+// (R-014/R-015) — those only exist in the checked-out repo itself. Only
+// HOME/STATE_DIR are sandboxed via t.TempDir(); these tests never call any
+// git-mutating cmd_apply/cmd_capture branch against this directory, so its
+// real git state is never touched.
+func realOverlayDir(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("getwd: %v", err)
+	}
+	p, err := filepath.Abs(filepath.Join(wd, "..", ".."))
+	if err != nil {
+		t.Fatalf("abs: %v", err)
+	}
+	if _, err := os.Stat(filepath.Join(p, "longterm-mem", "go.mod")); err != nil {
+		t.Fatalf("longterm-mem module not found under %s: %v", p, err)
+	}
+	return p
+}
+
+// goToolchainEnv forwards this host's resolved GOCACHE/GOMODCACHE/GOPATH so
+// a sandboxed subprocess's real `go build` calls reuse the warm build and
+// module cache instead of a cold, network-dependent rebuild under a fresh
+// sandboxed HOME (longterm-mem has real third-party dependencies; a cold,
+// unforwarded module cache could otherwise require network access).
+func goToolchainEnv(t *testing.T) []string {
+	t.Helper()
+	out, err := exec.Command("go", "env", "GOCACHE", "GOMODCACHE", "GOPATH").Output()
+	if err != nil {
+		t.Fatalf("go env: %v", err)
+	}
+	lines := strings.Split(strings.TrimRight(string(out), "\n"), "\n")
+	if len(lines) != 3 {
+		t.Fatalf("expected 3 go env lines, got %d: %q", len(lines), out)
+	}
+	return []string{
+		"GOCACHE=" + lines[0],
+		"GOMODCACHE=" + lines[1],
+		"GOPATH=" + lines[2],
+	}
+}
+
+// copyTree copies the directory tree rooted at src into dst (created if
+// needed), preserving each file's permission bits. Used to seed the real
+// longterm-mem/engine module sources into a synthetic git sandbox so
+// cmd_apply's mcp-install hook (10b.7) can perform a REAL build the same way
+// it would in production — exercising the whole success path, not just a
+// refusal branch (the exact gap 10a's review flagged: "a refusal test
+// proves a refusal; it says nothing about what happens when the command is
+// allowed to run").
+func copyTree(t *testing.T, src, dst string) {
+	t.Helper()
+	err := filepath.WalkDir(src, func(path string, d os.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		rel, relErr := filepath.Rel(src, path)
+		if relErr != nil {
+			return relErr
+		}
+		target := filepath.Join(dst, rel)
+		if d.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		info, infoErr := d.Info()
+		if infoErr != nil {
+			return infoErr
+		}
+		return os.WriteFile(target, data, info.Mode().Perm())
+	})
+	if err != nil {
+		t.Fatalf("copy tree %s -> %s: %v", src, dst, err)
+	}
+}
+
+// TestInstall_BuildsCopiesThenReportsPerRuntimeStatus proves R-014's first
+// scenario: 'longterm-mem install --target all' builds and copies the
+// binary to the fixed path, then reports a per-runtime status for claude,
+// opencode, and codex — the real success path, not merely exit 0 (10a's
+// review flagged exactly this gap for the sibling --component surface: "the
+// only test reaching it returned at [a] refusal ... the result line on
+// stdout ... shipped with zero externally observable assertions").
+func TestInstall_BuildsCopiesThenReportsPerRuntimeStatus(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "all")
+	if err != nil {
+		t.Fatalf("longterm-mem install --target all failed: %v\noutput:\n%s", err, out)
+	}
+
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	info, statErr := os.Stat(binPath)
+	if statErr != nil {
+		t.Fatalf("expected binary at %s after install, got: %v\noutput:\n%s", binPath, statErr, out)
+	}
+	if info.Mode()&0o111 == 0 {
+		t.Fatalf("binary at %s is not executable: mode=%v", binPath, info.Mode())
+	}
+
+	for _, want := range []string{"claude:", "opencode:", "codex:"} {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected a per-runtime status line for %q, got:\n%s", want, out)
+		}
+	}
+}
+
+// TestStatusUninstall_SkipBuildStep proves R-014's second scenario
+// positively: status and uninstall never invoke the longterm-mem build step
+// (a status command that silently rebuilt would still exit 0 and pass a
+// weaker "command succeeded" test, so this asserts byte-for-byte content
+// and mtime invariance of a pre-placed binary instead). It also covers the
+// binary-removal guard (10b.5, D4) end to end, including its dangerous
+// negative case explicitly: uninstalling one target while another remains
+// installed must leave the binary in place.
+func TestStatusUninstall_SkipBuildStep(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	goEnv := goToolchainEnv(t)
+
+	newEnv := func(stateDir string) []string {
+		return append([]string{
+			"HOME=" + home,
+			"OVERLAY_DIR=" + overlayDir,
+			"STATE_DIR=" + stateDir,
+			"PATH=" + os.Getenv("PATH"),
+		}, goEnv...)
+	}
+
+	const dummyContent = "#!/bin/sh\necho dummy\n"
+
+	placeDummyBinary := func(t *testing.T, stateDir string) (string, os.FileInfo) {
+		t.Helper()
+		binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+		if err := os.MkdirAll(filepath.Dir(binPath), 0o755); err != nil {
+			t.Fatalf("mkdir bin dir: %v", err)
+		}
+		if err := os.WriteFile(binPath, []byte(dummyContent), 0o755); err != nil {
+			t.Fatalf("write dummy binary: %v", err)
+		}
+		info, err := os.Stat(binPath)
+		if err != nil {
+			t.Fatalf("stat dummy binary: %v", err)
+		}
+		return binPath, info
+	}
+
+	seedInstalledTargets := func(t *testing.T, stateDir, content string) string {
+		t.Helper()
+		trackFile := filepath.Join(stateDir, "longterm-mem", "installed-targets")
+		if err := os.MkdirAll(filepath.Dir(trackFile), 0o755); err != nil {
+			t.Fatalf("mkdir track dir: %v", err)
+		}
+		if err := os.WriteFile(trackFile, []byte(content), 0o644); err != nil {
+			t.Fatalf("seed track file: %v", err)
+		}
+		return trackFile
+	}
+
+	assertUnchanged := func(t *testing.T, binPath string, before os.FileInfo) {
+		t.Helper()
+		after, statErr := os.Stat(binPath)
+		if statErr != nil {
+			t.Fatalf("binary vanished: %v", statErr)
+		}
+		if !after.ModTime().Equal(before.ModTime()) || after.Size() != before.Size() {
+			t.Fatalf("binary was rebuilt: mtime/size changed (before=%v/%d after=%v/%d)", before.ModTime(), before.Size(), after.ModTime(), after.Size())
+		}
+		content, err := os.ReadFile(binPath)
+		if err != nil {
+			t.Fatalf("read binary: %v", err)
+		}
+		if string(content) != dummyContent {
+			t.Fatalf("binary content changed — it was rebuilt")
+		}
+	}
+
+	t.Run("StatusNeverBuilds", func(t *testing.T) {
+		stateDir := t.TempDir()
+		binPath, before := placeDummyBinary(t, stateDir)
+
+		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "status")
+		if err != nil {
+			t.Fatalf("longterm-mem status failed: %v\noutput:\n%s", err, out)
+		}
+
+		assertUnchanged(t, binPath, before)
+	})
+
+	t.Run("UninstallSingleTargetSkipsBuildAndLeavesBinaryInPlace", func(t *testing.T) {
+		stateDir := t.TempDir()
+		binPath, before := placeDummyBinary(t, stateDir)
+		// This is the dangerous case: opencode and codex are still tracked
+		// installed. Uninstalling only claude must never remove a binary
+		// those still-installed targets depend on.
+		trackFile := seedInstalledTargets(t, stateDir, "claude\nopencode\ncodex\n")
+
+		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "uninstall", "--target", "claude")
+		if err != nil {
+			t.Fatalf("longterm-mem uninstall --target claude failed: %v\noutput:\n%s", err, out)
+		}
+
+		assertUnchanged(t, binPath, before)
+
+		remaining, err := os.ReadFile(trackFile)
+		if err != nil {
+			t.Fatalf("read track file after uninstall: %v", err)
+		}
+		if strings.Contains(string(remaining), "claude") {
+			t.Errorf("expected 'claude' removed from tracked installed targets, got: %q", remaining)
+		}
+		for _, want := range []string{"opencode", "codex"} {
+			if !strings.Contains(string(remaining), want) {
+				t.Errorf("expected %q to remain tracked installed, got: %q", want, remaining)
+			}
+		}
+	})
+
+	t.Run("UninstallLastTargetRemovesBinary", func(t *testing.T) {
+		stateDir := t.TempDir()
+		binPath, _ := placeDummyBinary(t, stateDir)
+		// Only codex remains tracked — uninstalling it leaves ZERO
+		// install-state targets, which must remove the binary (D4/10b.5).
+		seedInstalledTargets(t, stateDir, "codex\n")
+
+		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "uninstall", "--target", "codex")
+		if err != nil {
+			t.Fatalf("longterm-mem uninstall --target codex failed: %v\noutput:\n%s", err, out)
+		}
+
+		if _, statErr := os.Stat(binPath); statErr == nil {
+			t.Fatalf("expected binary removed once the last install-state target is gone, but it is still present\noutput:\n%s", out)
+		} else if !os.IsNotExist(statErr) {
+			t.Fatalf("unexpected stat error: %v", statErr)
+		}
+	})
+
+	// An absent tracking file must FAIL CLOSED: it means "this entrypoint
+	// does not know what is installed", never "nothing is installed", and
+	// treating empty as safe-to-wipe destroys exactly what the guard
+	// protects (review finding R3-uninstall-guard-fails-open).
+	t.Run("UninstallWithNoTrackingFileLeavesBinaryInPlace", func(t *testing.T) {
+		stateDir := t.TempDir()
+		binPath, _ := placeDummyBinary(t, stateDir)
+		// Deliberately no seedInstalledTargets: the file does not exist.
+		out, err := runOverlay(t, overlay, newEnv(stateDir), "longterm-mem", "uninstall", "--target", "claude")
+		if err != nil {
+			t.Fatalf("longterm-mem uninstall --target claude failed: %v\noutput:\n%s", err, out)
+		}
+
+		if _, statErr := os.Stat(binPath); statErr != nil {
+			t.Fatalf("the shared binary was removed although no tracking file existed to prove nothing else depends on it (stat err=%v)\noutput:\n%s", statErr, out)
+		}
+		if !strings.Contains(out, "--purge") {
+			t.Errorf("the refusal should tell the operator that --purge is the explicit way to force removal; got:\n%s", out)
+		}
+	})
+}

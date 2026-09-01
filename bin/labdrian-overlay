@@ -49,6 +49,29 @@ declare -A AGENT_TARGET_PATHS=(
 ENGINE_BINARY="$HOME/.claude/bin/gentle-ai-overlay"
 ENGINE_SRC="$OVERLAY_DIR/engine"
 
+# LONGTERM_MEM_BINARY is the fixed, documented, persistent install path for
+# the longterm-mem binary (R-015): it never moves between an install and a
+# later inspection. STATE_DIR-scoped (not $HOME/.claude/-scoped like
+# ENGINE_BINARY) because longterm-mem is a cross-runtime component, not a
+# Claude-specific one (D4).
+LONGTERM_MEM_BINARY="$STATE_DIR/bin/longterm-mem"
+LONGTERM_MEM_SRC="$OVERLAY_DIR/longterm-mem"
+
+# LONGTERM_MEM_INSTALLED_TARGETS tracks, one target name per line, which of
+# claude/opencode/codex this overlay entrypoint has installed longterm-mem
+# for. It is this slice's own bookkeeping for the binary-removal guard
+# (D4/10b.5: "binary removed only when --target all leaves zero install-state
+# targets, or --purge"). True per-runtime selective un-registration in each
+# runtime's own config file is module-owned and lands in slice 12b (R-019);
+# until then this file is the only accurate source of truth for "does any
+# target still count as installed" that this shell entrypoint has of its
+# own — engine's registration.json (10a, LongtermMemAdapter) records
+# per-runtime state but its Uninstall() removes the WHOLE record in one
+# call regardless of --target, so it cannot answer this question on its own
+# without risking exactly the bug this file exists to prevent: wiping out a
+# still-installed target's record because a DIFFERENT target was uninstalled.
+LONGTERM_MEM_INSTALLED_TARGETS="$STATE_DIR/longterm-mem/installed-targets"
+
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
@@ -208,6 +231,15 @@ Commands:
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
                                    Optional --check verifies freshness without writing.
+  longterm-mem install|status|uninstall
+    [--target claude|opencode|codex|all] [--purge]
+                                   Build (install only), copy to the fixed path
+                                   $STATE_DIR/bin/longterm-mem, and report/record
+                                   per-runtime (claude, opencode, codex) MCP
+                                   registration via the engine runtime lifecycle
+                                   surface (D4, R-014/R-015). status/uninstall never
+                                   build. The binary is removed only when --target
+                                   all leaves zero install-state targets, or --purge.
   --help                           Show this help
 
 Targets:
@@ -2793,6 +2825,183 @@ cmd_gadu_generate() {
 }
 
 # ---------------------------------------------------------------------------
+# longterm-mem (D4, D13, R-014/R-015)
+# ---------------------------------------------------------------------------
+
+# ensure_engine_binary builds $ENGINE_BINARY on demand if it is missing,
+# mirroring the existing cmd_uninstall_hooks fallback above — cmd_longterm_mem
+# needs the same binary to invoke 'engine runtime --component longterm-mem'.
+ensure_engine_binary() {
+  if [[ -x "$ENGINE_BINARY" ]]; then
+    return 0
+  fi
+  command -v go >/dev/null 2>&1 || die "engine binary not found at $ENGINE_BINARY and go is not installed; cannot continue"
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+  info "Engine binary not found; building..."
+  mkdir -p "$(dirname "$ENGINE_BINARY")"
+  (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+    || die "go build failed for the engine binary"
+}
+
+# longtermmem_installed_targets_read prints the currently tracked installed
+# targets (see LONGTERM_MEM_INSTALLED_TARGETS above), one per line; empty
+# output when none are tracked or the file does not exist yet.
+longtermmem_installed_targets_read() {
+  if [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
+    cat "$LONGTERM_MEM_INSTALLED_TARGETS"
+  fi
+}
+
+# longtermmem_installed_targets_add <target> records <target> as installed
+# (idempotent, sorted, deduped).
+longtermmem_installed_targets_add() {
+  local target="$1"
+  mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+  { longtermmem_installed_targets_read; echo "$target"; } | sort -u > "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp"
+  mv "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp" "$LONGTERM_MEM_INSTALLED_TARGETS"
+}
+
+# longtermmem_installed_targets_remove <target> un-records <target>.
+longtermmem_installed_targets_remove() {
+  local target="$1"
+  [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
+  mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+  grep -v -x -F "$target" "$LONGTERM_MEM_INSTALLED_TARGETS" > "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp" || true
+  mv "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp" "$LONGTERM_MEM_INSTALLED_TARGETS"
+}
+
+# longtermmem_maybe_remove_binary implements the R-014/D4 binary-removal
+# guard (10b.5): the binary is removed ONLY when no install-state target
+# remains tracked (i.e. a "--target all" uninstall, or the last remaining
+# single-target uninstall, emptied the tracking file), or when --purge was
+# passed. This is the dangerous half of the guard: getting it backwards
+# would delete a binary a still-installed target depends on — proven by the
+# negative test TestStatusUninstall_SkipBuildStep/UninstallSingleTarget...
+# (uninstalling one target while another remains installed leaves the
+# binary in place).
+longtermmem_maybe_remove_binary() {
+  local purge="$1"
+  local remaining
+  remaining="$(longtermmem_installed_targets_read)"
+
+  if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
+    rm -f "$LONGTERM_MEM_BINARY"
+    rm -f "$LONGTERM_MEM_INSTALLED_TARGETS"
+    info "longterm-mem binary removed: $LONGTERM_MEM_BINARY"
+  fi
+}
+
+# cmd_longterm_mem implements 'longterm-mem install|status|uninstall
+# [--target claude|opencode|codex|all] [--purge]' (D4, D13).
+#
+# install: go build the longterm-mem binary, copy it to the fixed path
+# (LONGTERM_MEM_BINARY, R-015), then per target: 'longterm-mem vaults seed'
+# / 'longterm-mem register --target t' (module-owned CLI subcommands that
+# land in slices 11b/12a and do not exist in this binary's dispatch YET —
+# tolerated as a non-fatal warning today; once those slices land these
+# calls start succeeding with zero changes here), then
+# 'engine runtime install --component longterm-mem --target t' to record
+# and report per-runtime status.
+#
+# status/uninstall skip the build step entirely (R-014 scenario 2) and only
+# ever talk to the engine runtime lifecycle surface.
+cmd_longterm_mem() {
+  local subcmd="${1:-}"
+  shift || true
+  case "$subcmd" in
+    install|status|uninstall) ;;
+    *) die "Unknown longterm-mem subcommand: ${subcmd:-<none>}. Valid: install, status, uninstall" ;;
+  esac
+
+  local target_arg="all"
+  local purge=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      --purge)
+        [[ "$subcmd" == "uninstall" ]] || die "--purge is only valid with 'uninstall'"
+        purge=1
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  local targets
+  targets="$(resolve_targets "$target_arg")"
+
+  ensure_engine_binary
+
+  if [[ "$subcmd" == "install" ]]; then
+    command -v go >/dev/null 2>&1 || die "go is not installed; required to build longterm-mem"
+    [[ -d "$LONGTERM_MEM_SRC" ]] || die "longterm-mem module not found at $LONGTERM_MEM_SRC"
+
+    info "Building longterm-mem binary..."
+    mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
+    local build_tmp
+    build_tmp="$(mktemp "$(dirname "$LONGTERM_MEM_BINARY")/.longterm-mem.build.XXXXXX")"
+    if ! (cd "$LONGTERM_MEM_SRC" && go build -o "$build_tmp" ./cmd/longterm-mem); then
+      rm -f "$build_tmp"
+      die "go build failed for longterm-mem; binary not deployed"
+    fi
+    chmod +x "$build_tmp"
+    mv "$build_tmp" "$LONGTERM_MEM_BINARY"
+    info "longterm-mem binary deployed to: $LONGTERM_MEM_BINARY"
+
+    "$LONGTERM_MEM_BINARY" vaults seed \
+      || warn "longterm-mem vaults seed did not succeed (subcommand lands in a later slice); continuing"
+
+    local t
+    for t in $targets; do
+      "$LONGTERM_MEM_BINARY" register --target "$t" \
+        || warn "longterm-mem register --target $t did not succeed (subcommand lands in a later slice); continuing"
+      "$ENGINE_BINARY" runtime install --component longterm-mem --target "$t" --state-dir "$STATE_DIR" \
+        || warn "engine runtime install --component longterm-mem --target $t reported a non-supported status"
+      longtermmem_installed_targets_add "$t"
+    done
+  elif [[ "$subcmd" == "status" ]]; then
+    "$ENGINE_BINARY" runtime status --component longterm-mem --state-dir "$STATE_DIR" \
+      || warn "engine runtime status --component longterm-mem reported a non-supported status"
+  else
+    local t
+    for t in $targets; do
+      longtermmem_installed_targets_remove "$t"
+    done
+
+    # An absent tracking file means "this entrypoint does not know what is
+    # installed", never "nothing is installed": another code path, a lost
+    # file or a reset STATE_DIR all read empty while other runtimes may
+    # still depend on the shared binary. So it fails CLOSED -- --purge is
+    # the one explicit way to force removal.
+    local tracking_known=""
+    [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] && tracking_known=1
+
+    local remaining
+    remaining="$(longtermmem_installed_targets_read)"
+
+    if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
+      # Full uninstall: safe to wipe the engine-owned registration record
+      # too. LongtermMemAdapter.Uninstall() removes the WHOLE record in one
+      # call regardless of --target (true per-target selective removal is
+      # module-owned and lands in slice 12b, R-019) — calling it only once
+      # every tracked target is gone (or --purge forces it) is what keeps
+      # this call from wiping another still-installed target's record.
+      "$ENGINE_BINARY" runtime uninstall --component longterm-mem --state-dir "$STATE_DIR" \
+        || warn "engine runtime uninstall --component longterm-mem reported a non-supported status"
+      longtermmem_maybe_remove_binary "$purge"
+    elif [[ -z "$tracking_known" ]]; then
+      warn "longterm-mem: no install tracking found at $LONGTERM_MEM_INSTALLED_TARGETS; leaving the registration record and the shared binary untouched. Re-run with --purge to remove them anyway."
+    else
+      echo "  longterm-mem: uninstalled tracking for the requested target(s); still installed for: $remaining (registration record left untouched — selective per-runtime removal lands in a later slice)"
+    fi
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
 
@@ -2829,6 +3038,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     deterministic-checks) cmd_deterministic_checks "$@" ;;
     review-preflight) cmd_review_preflight "$@" ;;
     gadu-generate)   cmd_gadu_generate "$@" ;;
+    longterm-mem)    cmd_longterm_mem "$@" ;;
     --help|-h)       usage; exit 0 ;;
     "")              usage >&2; exit 1 ;;
     *)               die "Unknown command: $COMMAND" ;;
