@@ -38,7 +38,13 @@
   "review_budget": {
     "max_changed_lines_per_slice": 400,
     "counting_method": "authored-additions-and-deletions",
-    "size_exception": { "state": "not-needed" }
+    "size_exception": {
+      "state": "granted",
+      "scope": "openspec/changes/longterm-mem/verify-report.md",
+      "changed_lines": 547,
+      "authorized_by": "maintainer",
+      "reason": "The verification report is a single indivisible artifact: gentle-ai sdd-verify-validate admitted it as exact bytes (sha256:f1795079b5f6146cd3b0c013750c3355c5bb38742365cf97cb94cbbf119b7b8c), so splitting it across two commits would leave no commit containing the artifact as validated. Every other part of every slice in this change landed inside the 400-line budget."
+    }
   },
   "strict_tdd": {
     "enabled": true,
