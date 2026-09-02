@@ -1,0 +1,8 @@
+theme = "dark"
+
+[mcp_servers.other-project-server]
+command = "/usr/local/bin/other-tool"
+args = ["--flag"]
+
+[mcp_servers.longterm-mem]
+command = "/some/hand/written/path"

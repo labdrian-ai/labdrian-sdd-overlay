@@ -319,3 +319,32 @@ jobs:
       - name: Test
         working-directory: tui
         run: go test ./... -cover
+
+  test-longterm-mem:
+    name: Longterm-Mem Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: longterm-mem/go.mod
+
+      - name: Gofmt
+        working-directory: longterm-mem
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: longterm-mem
+        run: go vet ./...
+
+      - name: Staticcheck
+        working-directory: longterm-mem
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+
+      - name: Test
+        working-directory: longterm-mem
+        run: go test ./... -cover

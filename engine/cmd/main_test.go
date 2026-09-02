@@ -3230,3 +3230,146 @@ func TestRunPropagateVerified_EmptyRegistryExhaustsAfterEarlierWriteClobberedPre
 		t.Errorf("expected maxPropagateWriteAttempts+1 (%d) registry reads (one extra for attempt 1's post-write verify), got %d", maxPropagateWriteAttempts+1, registryReads)
 	}
 }
+
+// TestComponentFlag_LongtermMemRefusesUpdateRollback is 10a.6 / design.md
+// D4's parse-time refusal: `--component longterm-mem update` must exit 1
+// BEFORE any adapter call, not merely report a failing status after
+// running one. We assert the ordering, not just the exit code, by pointing
+// --state-dir at a fresh temp directory and proving nothing was ever
+// written there — a registration.json write is the only side effect any
+// LongtermMemAdapter call could have produced, so its total absence is
+// direct proof the adapter was never invoked.
+func TestComponentFlag_LongtermMemRefusesUpdateRollback(t *testing.T) {
+	stateDir := t.TempDir() + "/state"
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	runRuntimeCore(
+		[]string{"update", "--component", "longterm-mem", "--state-dir", stateDir},
+		&outBuf,
+		&errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("--component longterm-mem update should exit 1, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "update") {
+		t.Fatalf("refusal should mention 'update'; got stderr=%q", errBuf.String())
+	}
+	if outBuf.Len() != 0 {
+		t.Fatalf("a parse-time refusal must not print any lifecycle result on stdout; got %q", outBuf.String())
+	}
+	if _, err := os.Stat(stateDir); !os.IsNotExist(err) {
+		t.Fatalf("--state-dir must not have been created — that would prove an adapter call happened before the refusal (stat err=%v)", err)
+	}
+
+	// "rollback" is not a recognized runtime action at all (design.md D4:
+	// "rollback already absent, main.go:356") — this is a regression guard
+	// that the pre-existing action-name validation still rejects it,
+	// independent of --component, before any adapter call.
+	t.Run("rollback action does not exist at all", func(t *testing.T) {
+		var out2, err2 bytes.Buffer
+		exit2 := -1
+		runRuntimeCore(
+			[]string{"rollback", "--component", "longterm-mem", "--state-dir", stateDir},
+			&out2, &err2, func(code int) { exit2 = code },
+		)
+		if exit2 != 1 {
+			t.Fatalf("rollback should exit 1 (unknown action), got %d\nstdout=%q\nstderr=%q", exit2, out2.String(), err2.String())
+		}
+		if _, err := os.Stat(stateDir); !os.IsNotExist(err) {
+			t.Fatalf("--state-dir must not have been created for the rejected 'rollback' action either (stat err=%v)", err)
+		}
+	})
+}
+
+// TestComponentFlag_LongtermMemLifecycleExitCodes covers the branch's whole
+// success path, which the refusal test above returns before ever reaching:
+// adapter construction, the result line on stdout, and the two DISTINCT
+// exit-code mappings — status exits 1 unless fully supported, while a
+// mutating action exits 1 only on unsupported/partial (review finding
+// R3-longterm-mem-lifecycle-unproved).
+//
+// Nothing is installed in this fixture, so every action lands on a
+// not-fully-supported result; that is enough to pin both mappings and to
+// prove the adapter really ran, which the refusal path cannot show.
+func TestComponentFlag_LongtermMemLifecycleExitCodes(t *testing.T) {
+	for _, action := range []string{"status", "install", "uninstall"} {
+		t.Run(action, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			stateDir := filepath.Join(t.TempDir(), "state")
+
+			var outBuf, errBuf bytes.Buffer
+			exitCode := -1
+			runRuntimeCore(
+				[]string{action, "--component", "longterm-mem", "--state-dir", stateDir},
+				&outBuf, &errBuf, func(code int) { exitCode = code },
+			)
+
+			if exitCode != 1 {
+				t.Fatalf("%s on an uninstalled component should exit 1, got %d\nstdout=%q\nstderr=%q", action, exitCode, outBuf.String(), errBuf.String())
+			}
+			// The adapter ran and its result reached stdout -- the refusal
+			// path prints nothing there, so this distinguishes the two.
+			if !strings.Contains(outBuf.String(), "longterm-mem") {
+				t.Fatalf("%s printed no longterm-mem lifecycle result on stdout; got %q", action, outBuf.String())
+			}
+		})
+	}
+}
+
+// TestComponentFlag_LongtermMemDefaultsStateDir: --state-dir is optional and
+// the usage text promises a home-directory default, so an omitted flag must
+// resolve to that default rather than handing an empty path to the adapter.
+func TestComponentFlag_LongtermMemDefaultsStateDir(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runRuntimeCore(
+		[]string{"status", "--component", "longterm-mem"},
+		&outBuf, &errBuf, func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("status without --state-dir should still run and exit 1 for an uninstalled component, got %d\nstderr=%q", exitCode, errBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "longterm-mem") {
+		t.Fatalf("status without --state-dir produced no lifecycle result; the empty path was not defaulted. stdout=%q stderr=%q", outBuf.String(), errBuf.String())
+	}
+}
+
+// TestComponentFlag_DefaultIsRuntimeParity is 10a.7's regression guard: with
+// no --component flag, behaviour must be exactly what it was before this
+// slice — the same args used by the pre-existing
+// TestRunRuntimeCore_ReportsNonOpenCodeTargetAsLifecycleResult must still
+// produce the identical exit code and stdout.
+func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+	configRoot := t.TempDir()
+	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+
+	runRuntimeCore(
+		[]string{"status", "--target", "claude", "--config-root", configRoot},
+		&outBuf,
+		&errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("runtime status with unsupported target should exit 1, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("runtime status with unsupported target should not print argument errors, got %q", errBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "[claude] status: unsupported") {
+		t.Fatalf("runtime status should report unsupported Claude lifecycle exactly as before this slice, got %q", outBuf.String())
+	}
+}

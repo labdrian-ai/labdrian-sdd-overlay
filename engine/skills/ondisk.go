@@ -28,9 +28,28 @@ const (
 // nonSkillRoutes lists the third-column route values that send a manifest row
 // somewhere other than skills/. Mirrors route_resolve in bin/labdrian-overlay,
 // where any other third-column value falls through to the default skill route.
+// The full route domain is {skill, agent, opencode-agent, mcp} (D13); "skill"
+// is not listed here because it is the default route and IS the skills
+// destination, so it must stay out of this exclusion set.
 var nonSkillRoutes = map[string]bool{
 	"agent":          true,
 	"opencode-agent": true,
+	"mcp":            true,
+}
+
+// validLongtermMemRoutes is the full four-value route domain (D13), used only
+// to validate rows under longterm-mem/**. Unlike nonSkillRoutes, "skill" is
+// included here: a longterm-mem/** row explicitly routed "skill" is not
+// itself invalid (R-012 forbids a MISSING or UNRECOGNIZED route, not the
+// skill route specifically), so this set intentionally is NOT nonSkillRoutes
+// plus one entry — it validates a different question (is this route
+// recognized at all?) than nonSkillRoutes answers (does this route leave
+// skills/?).
+var validLongtermMemRoutes = map[string]bool{
+	"skill":          true,
+	"agent":          true,
+	"opencode-agent": true,
+	"mcp":            true,
 }
 
 // DeployableManifestPaths parses a manifest and returns the set of row paths that
@@ -40,11 +59,18 @@ var nonSkillRoutes = map[string]bool{
 // truth for row → routing:
 //   - Blank lines and lines starting with '#' are skipped.
 //   - A row needs at least two fields; the first is the path.
-//   - A third column of "agent" or "opencode-agent" routes outside skills/.
-//     Any other third-column value falls through to the skill route.
+//   - A third column of "agent", "opencode-agent", or "mcp" routes outside
+//     skills/. Any other third-column value falls through to the skill route.
 //   - On the skill route, a path with no '/' is a root-level bookkeeping row and
 //     a path whose first segment is "engine" is overlay infra. Both are tracked
 //     for diff purposes only and are never deployed.
+//
+// One case is REJECTED rather than falling through: a row whose path is under
+// longterm-mem/** with a missing or unrecognized third column (R-012 in
+// overlay-agent-route, traces longterm-mem R-035). Mirrors
+// route_reject_unrouted_longterm_mem in bin/labdrian-overlay — that guard is
+// the single source of truth this one is kept in sync with (see
+// TestRouteDomain_MatchesBashAndGo).
 func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 	paths := make(map[string]struct{})
 	scanner := bufio.NewScanner(r)
@@ -59,7 +85,19 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 		}
 		rowPath := fields[0]
 
-		if len(fields) >= 3 && nonSkillRoutes[fields[2]] {
+		routeRaw := ""
+		if len(fields) >= 3 {
+			routeRaw = fields[2]
+		}
+
+		if strings.HasPrefix(rowPath, "longterm-mem/") && !validLongtermMemRoutes[routeRaw] {
+			if routeRaw == "" {
+				return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp", rowPath)
+			}
+			return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares an unrecognized route %q; must be one of: skill, agent, opencode-agent, mcp", rowPath, routeRaw)
+		}
+
+		if nonSkillRoutes[routeRaw] {
 			continue
 		}
 

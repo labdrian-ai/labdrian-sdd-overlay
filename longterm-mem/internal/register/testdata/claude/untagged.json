@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "/usr/local/bin/codegraph-mcp"
+    },
+    "longterm-mem": {
+      "type": "stdio",
+      "command": "/some/hand/written/path"
+    },
+    "other-project-server": {
+      "type": "sse",
+      "url": "https://example.com/mcp"
+    }
+  },
+  "theme": "dark"
+}

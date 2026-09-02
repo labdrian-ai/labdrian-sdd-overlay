@@ -1,0 +1,211 @@
+{
+  "contract_version": "2.0.0",
+  "change_name": "longterm-mem",
+  "project": "labdrian-sdd-overlay",
+  "tier": 2,
+  "interaction_mode": "interactive",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/longterm-mem/entry",
+      "openspec_path": "openspec/changes/longterm-mem/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/labdrian-sdd-overlay/requirements/longterm-mem"
+    },
+    "manifest": {
+      "context": { "topic_key": "project/labdrian-sdd-overlay/manifest/context" },
+      "mission": { "topic_key": "project/labdrian-sdd-overlay/manifest/mission" },
+      "rules": { "topic_key": "project/labdrian-sdd-overlay/manifest/rules" }
+    },
+    "architecture": { "topic_key": "project/labdrian-sdd-overlay/architect/final" },
+    "roadmap": { "topic_key": "project/labdrian-sdd-overlay/roadmap" },
+    "estimate": { "topic_key": "sdd/longterm-mem/estimate" },
+    "sdd_init": { "topic_key": "sdd-init/labdrian-sdd-overlay" },
+    "pipeline_state": { "topic_key": "sdd/longterm-mem/pipeline-state" },
+    "delivery": { "topic_key": "delivery/longterm-mem" }
+  },
+  "estimate": {
+    "planned_range_hours": { "low": 12.0, "high": 32.0 },
+    "complexity": "critical",
+    "confidence": "low",
+    "human_review_included": true
+  },
+  "requested_pr_strategy": "force-chained",
+  "delivery_strategy": "auto-chain",
+  "chaining_required": true,
+  "chain_strategy": "feature-branch-chain",
+  "review_budget": {
+    "max_changed_lines_per_slice": 400,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": {
+      "state": "granted",
+      "scope": "openspec/changes/longterm-mem/verify-report.md",
+      "changed_lines": 547,
+      "authorized_by": "maintainer",
+      "reason": "The verification report is a single indivisible artifact: gentle-ai sdd-verify-validate admitted it as exact bytes (sha256:f1795079b5f6146cd3b0c013750c3355c5bb38742365cf97cb94cbbf119b7b8c), so splitting it across two commits would leave no commit containing the artifact as validated. Every other part of every slice in this change landed inside the 400-line budget."
+    }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "cd longterm-mem && go test ./...",
+        "bash -n bin/labdrian-overlay"
+      ],
+      "broad": [
+        "cd longterm-mem && go test ./...",
+        "cd engine && go test ./...",
+        "cd tui && go test ./...",
+        "bash -n bin/labdrian-overlay && bash -n bin/overlay"
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "longterm-mem-scaffold-module",
+      "title": "Standalone Go 1.26.1 module scaffold outside engine/, no-CLI-shelling import guard, read-only Engram SQLite connection (modernc, _query_only) with default path, and project/deleted_at query scoping",
+      "requirements": ["R-001", "R-021", "R-002", "R-020"],
+      "dependencies": [],
+      "estimated_changed_lines": { "low": 330, "high": 370 }
+    },
+    {
+      "order": 2,
+      "id": "longterm-mem-scaffold-vault-2a-registry",
+      "title": "Per-project vault registry (~/.labdrian-overlay/vaults.json): override, pre-seeded labdrian-brain default, and not-configured rejection",
+      "requirements": ["R-003", "R-022", "R-023"],
+      "dependencies": ["longterm-mem-scaffold-module"],
+      "estimated_changed_lines": { "low": 150, "high": 180 }
+    },
+    {
+      "order": 3,
+      "id": "longterm-mem-scaffold-vault-2b-runner-retrieve",
+      "title": "Subprocess runner confined to one package, retrieve.py invoke and parse, and not-provisioned exit-10 mapping",
+      "requirements": ["R-004", "R-024"],
+      "dependencies": ["longterm-mem-scaffold-vault-2a-registry"],
+      "estimated_changed_lines": { "low": 220, "high": 260 }
+    },
+    {
+      "order": 4,
+      "id": "longterm-mem-query-3a-index",
+      "title": "Index lifecycle CLI (contextual-prefix, bm25-index, setup-retrieve first-provision) with subprocess failure handling",
+      "requirements": ["R-005", "R-025"],
+      "dependencies": ["longterm-mem-scaffold-vault-2b-runner-retrieve"],
+      "estimated_changed_lines": { "low": 170, "high": 200 }
+    },
+    {
+      "order": 5,
+      "id": "longterm-mem-query-3b-merge",
+      "title": "Unified library-level query fan-out, source-grouped merge with linked pairs, required project argument, and the not-provisioned degrade path",
+      "requirements": ["R-006", "R-026"],
+      "dependencies": ["longterm-mem-query-3a-index"],
+      "estimated_changed_lines": { "low": 210, "high": 250 }
+    },
+    {
+      "order": 6,
+      "id": "longterm-mem-promotion-writer",
+      "title": "Promotion eligibility predicate (pinned, decision/architecture/pattern, revision_count >= 3, explicit) and wiki-contract-conformant page emission with frontmatter mapping, wikilinks, address-first filenames, and LintPage",
+      "requirements": ["R-007", "R-027"],
+      "dependencies": ["longterm-mem-query-3b-merge"],
+      "estimated_changed_lines": { "low": 360, "high": 400 }
+    },
+    {
+      "order": 7,
+      "id": "longterm-mem-promotion-registration",
+      "title": "Address allocation and .raw/.manifest.json registration for emitted pages, plus index.md marker block and newest-first log.md registration",
+      "requirements": ["R-028", "R-029"],
+      "dependencies": ["longterm-mem-promotion-writer"],
+      "estimated_changed_lines": { "low": 280, "high": 330 }
+    },
+    {
+      "order": 8,
+      "id": "longterm-mem-promotion-mutability",
+      "title": "Update-in-place promotion on revision and local-edit precedence via the two-hash sidecar store with skip-and-diagnose",
+      "requirements": ["R-008", "R-030"],
+      "dependencies": ["longterm-mem-promotion-registration"],
+      "estimated_changed_lines": { "low": 330, "high": 380 }
+    },
+    {
+      "order": 9,
+      "id": "longterm-mem-promotion-sync",
+      "title": "sync command promoting unpromoted-or-revised observations, index rebuild with persisted sync-state, and status-only soft-delete/supersession propagation from memory_relations",
+      "requirements": ["R-009", "R-031", "R-033"],
+      "dependencies": ["longterm-mem-promotion-mutability"],
+      "estimated_changed_lines": { "low": 340, "high": 400 }
+    },
+    {
+      "order": 10,
+      "id": "longterm-mem-ops-8a-status-doctor",
+      "title": "status reporting (Engram reachability, vault provisioning, last sync) and doctor with four named read-only checks",
+      "requirements": ["R-010", "R-011"],
+      "dependencies": ["longterm-mem-promotion-sync"],
+      "estimated_changed_lines": { "low": 190, "high": 220 }
+    },
+    {
+      "order": 11,
+      "id": "longterm-mem-ops-8b-mcp-promote",
+      "title": "MCP stdio server (official Go SDK) exposing query and promote, explicit promote surface (CLI and MCP), and no-daemon process lifecycle",
+      "requirements": ["R-012", "R-032", "R-034"],
+      "dependencies": ["longterm-mem-ops-8a-status-doctor"],
+      "estimated_changed_lines": { "low": 240, "high": 270 }
+    },
+    {
+      "order": 12,
+      "id": "longterm-mem-overlay-route",
+      "title": "overlay.manifest mcp route added to the four-value domain in bin/labdrian-overlay route_resolve and engine/skills/ondisk.go nonSkillRoutes, engine/installer/route_test.go contract updated, unrouted longterm-mem rows rejected by both parsers, sentinel manifest row",
+      "requirements": ["R-013", "R-035"],
+      "dependencies": [],
+      "estimated_changed_lines": { "low": 180, "high": 230 }
+    },
+    {
+      "order": 13,
+      "id": "longterm-mem-overlay-dispatch-10a-engine",
+      "title": "engine runtime --component longterm-mem adapter recording registration.json and reporting honest per-runtime status without shelling out; update/rollback refused",
+      "requirements": ["R-014"],
+      "dependencies": ["longterm-mem-ops-8b-mcp-promote", "longterm-mem-overlay-route"],
+      "estimated_changed_lines": { "low": 300, "high": 330 }
+    },
+    {
+      "order": 14,
+      "id": "longterm-mem-overlay-dispatch-10b-shell",
+      "title": "bin/labdrian-overlay longterm-mem install|status|uninstall dispatch: build, copy to the persistent ~/.labdrian-overlay/bin path, and delegate to engine runtime",
+      "requirements": ["R-014", "R-015"],
+      "dependencies": ["longterm-mem-overlay-dispatch-10a-engine"],
+      "estimated_changed_lines": { "low": 180, "high": 210 }
+    },
+    {
+      "order": 15,
+      "id": "longterm-mem-mcp-registration-json-11a-splice-install-state",
+      "title": "Byte-splice JSON member editor with atomic backed-up writes and the ownership-tagged install-state sidecar shared by all runtime writers",
+      "requirements": ["R-016", "R-017"],
+      "dependencies": ["longterm-mem-overlay-dispatch-10b-shell"],
+      "estimated_changed_lines": { "low": 170, "high": 200 }
+    },
+    {
+      "order": 16,
+      "id": "longterm-mem-mcp-registration-json-11b-writers",
+      "title": "Claude Code (~/.claude.json mcpServers) and opencode (opencode.json argv array) registration writers with idempotent reinstall and untagged-conflict refusal",
+      "requirements": ["R-016", "R-017"],
+      "dependencies": ["longterm-mem-mcp-registration-json-11a-splice-install-state"],
+      "estimated_changed_lines": { "low": 260, "high": 300 }
+    },
+    {
+      "order": 17,
+      "id": "longterm-mem-mcp-registration-toml-uninstall-12a-toml",
+      "title": "Section-preserving codex config.toml [mcp_servers.longterm-mem] byte-splice writer with go-toml post-write validation, idempotent reinstall",
+      "requirements": ["R-018"],
+      "dependencies": ["longterm-mem-mcp-registration-json-11b-writers"],
+      "estimated_changed_lines": { "low": 200, "high": 230 }
+    },
+    {
+      "order": 18,
+      "id": "longterm-mem-mcp-registration-toml-uninstall-12b-uninstall",
+      "title": "Ownership-tagged uninstall across the three runtimes with untagged-entry preservation and partial-uninstall binary retention (--purge)",
+      "requirements": ["R-019"],
+      "dependencies": ["longterm-mem-mcp-registration-toml-uninstall-12a-toml"],
+      "estimated_changed_lines": { "low": 180, "high": 210 }
+    }
+  ],
+  "expected_native_next_recommendation": "propose"
+}

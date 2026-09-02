@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "codegraph": {
+      "type": "stdio",
+      "command": "/usr/local/bin/codegraph-mcp"
+    },
+    "other-project-server": {
+      "type": "sse",
+      "url": "https://example.com/mcp"
+    }
+  },
+  "theme": "dark"
+}

@@ -169,3 +169,4 @@ review-refuter.md managed agent
 review-reliability.md managed agent
 review-resilience.md managed agent
 review-risk.md managed agent
+longterm-mem/go.mod custom mcp

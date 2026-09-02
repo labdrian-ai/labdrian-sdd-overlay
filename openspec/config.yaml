@@ -24,12 +24,12 @@ rules:
       - Follow existing patterns and conventions
     tdd: true
     test_command: |
-      cd engine && go test ./... && cd ../tui && go test ./... && cd .. && for m in tools/*/go.mod; do (cd "$(dirname "$m")" && go test ./...) || exit 1; done
+      cd longterm-mem && go test ./... && cd .. && cd engine && go test ./... && cd ../tui && go test ./... && cd .. && for m in tools/*/go.mod; do (cd "$(dirname "$m")" && go test ./...) || exit 1; done
   verify:
     test_command: |
-      cd engine && go test ./... && cd ../tui && go test ./... && cd .. && for m in tools/*/go.mod; do (cd "$(dirname "$m")" && go test ./...) || exit 1; done
+      cd longterm-mem && go test ./... && cd .. && cd engine && go test ./... && cd ../tui && go test ./... && cd .. && for m in tools/*/go.mod; do (cd "$(dirname "$m")" && go test ./...) || exit 1; done
     build_command: |
-      cd engine && go test ./... && cd ../tui && go test ./...
+      cd longterm-mem && go test ./... && cd .. && cd engine && go test ./... && cd ../tui && go test ./...
     coverage_threshold: 0
   archive:
     - Warn before merging destructive deltas
@@ -37,6 +37,10 @@ rules:
 testing:
   strict_tdd: true
   layers:
+    - name: longterm-mem
+      framework: go test
+      command: cd longterm-mem && go test ./...
+      vet: cd longterm-mem && go vet ./...
     - name: engine
       framework: go test
       command: cd engine && go test ./...
