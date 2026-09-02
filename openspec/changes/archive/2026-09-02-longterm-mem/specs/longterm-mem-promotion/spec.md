@@ -1,0 +1,293 @@
+# Longterm-Mem Promotion Specification
+
+## Purpose
+
+Defines the promotion writer: which Engram observations are eligible, how an
+eligible observation is emitted as a contract-conformant vault page, how it
+is addressed and registered, how it stays mutable and current without
+clobbering a local edit, how `sync` and an explicit `promote` call trigger
+it, and how retraction (soft-delete or supersession) propagates without ever
+rewriting a page's body.
+
+## Requirements
+
+### Requirement: Promotion Eligibility Predicate
+
+ID: R-007
+Traces to: longterm-mem R-007
+
+WHILE promotion runs for project P, the longterm-mem promotion writer SHALL
+treat an Engram observation as eligible only if it is pinned, OR is of type
+`decision`, `architecture`, or `pattern`, OR has a revision count of at
+least 3, OR is explicitly targeted by a promote call.
+
+#### Scenario: Pinned observation is eligible
+
+- GIVEN an observation that is pinned
+- WHEN eligibility is evaluated
+- THEN it is eligible
+
+#### Scenario: High-revision, untyped, unpinned observation is eligible
+
+- GIVEN an observation of type `discovery` with a revision count of 4 and
+  not pinned
+- WHEN eligibility is evaluated
+- THEN it is eligible
+
+#### Scenario: Low-revision, untyped, unpinned observation is not eligible
+
+- GIVEN an observation of type `discovery` with a revision count of 1, not
+  pinned, not explicitly targeted
+- WHEN eligibility is evaluated
+- THEN it is not eligible
+
+#### Scenario: Explicit promote call overrides the automatic criteria
+
+- GIVEN an observation named by an explicit promote call
+- WHEN eligibility is evaluated for that call
+- THEN it is eligible regardless of type, pin state, or revision count
+
+### Requirement: Contract-Conformant Page Emission
+
+ID: R-027
+Traces to: longterm-mem R-027
+
+WHEN an eligible observation is promoted, the promotion writer SHALL emit a
+vault page with universal frontmatter plus flat extras identifying the
+Engram source (its id, its type mapped onto the vault's own type contract,
+and its project), with the page's related-links field populated from
+Engram's relation graph and any already-promoted counterpart such that every
+wikilink resolves, using an address-first filename that survives a later
+retitle.
+
+#### Scenario: Type is mapped onto the vault's contract enum
+
+- GIVEN an eligible `decision`-typed observation
+- WHEN it is promoted
+- THEN the emitted page's frontmatter type value is a value inside the
+  vault's own contract enum, with the raw Engram type, Engram id, and
+  project present as flat extras
+
+#### Scenario: Related links resolve
+
+- GIVEN the observation has one relation edge to another already-promoted
+  observation
+- WHEN it is promoted
+- THEN the related-links field includes a link to that other page, and that
+  link resolves to an existing file
+
+#### Scenario: Filename survives a retitle
+
+- GIVEN the observation's filename is derived from its allocated address
+  rather than its title
+- WHEN the observation is later retitled in Engram
+- THEN the promoted page's filename is unchanged
+
+#### Scenario: Freshly promoted page passes the vault's own lint
+
+- GIVEN a freshly promoted page
+- WHEN the vault's own lint check runs over it
+- THEN it passes
+
+### Requirement: Address Allocation and Manifest Registration
+
+ID: R-028
+Traces to: longterm-mem R-028
+
+WHEN a page is emitted for an eligible observation, the promotion writer
+SHALL allocate a vault address for it and record that address in the
+vault's own address and source manifest.
+
+#### Scenario: First promotion allocates a new address
+
+- GIVEN a newly promoted observation
+- WHEN its page is emitted
+- THEN a new address is allocated and the vault's own address and source
+  manifest references it
+
+#### Scenario: Re-promotion reuses the existing address
+
+- GIVEN a re-promotion of an already-addressed observation
+- WHEN it runs
+- THEN no new address is allocated and the existing one is reused
+
+### Requirement: Index and Log Registration
+
+ID: R-029
+Traces to: longterm-mem R-029
+
+WHEN a page is emitted for an eligible observation, the promotion writer
+SHALL register it in both the vault's master catalog and its append-only
+promotion log.
+
+#### Scenario: New page is discoverable and logged
+
+- GIVEN a newly promoted page
+- WHEN promotion completes
+- THEN the vault's master catalog lists it and its append-only log records
+  the promotion event
+
+### Requirement: Update-in-Place on Revision
+
+ID: R-008
+Traces to: longterm-mem R-008
+
+WHEN a previously promoted Engram observation is revised or re-promoted, the
+longterm-mem promotion writer SHALL update the existing vault page in place,
+subject to the local-edit precedence rule, rather than creating a duplicate
+page.
+
+#### Scenario: Unmodified page updates in place on revision
+
+- GIVEN observation X was previously promoted to vault page V and has not
+  been locally modified since
+- WHEN X's revision count increases and promotion runs again
+- THEN V's content and its updated timestamp are refreshed, and no second
+  page for X is created
+
+#### Scenario: Retitle keeps the same file
+
+- GIVEN observation X's Engram title changed since its last promotion but
+  its Engram id is unchanged
+- WHEN promotion runs again
+- THEN the same on-disk page is updated with the new title, no new file is
+  created, and no old file is orphaned
+
+### Requirement: Local-Edit Precedence
+
+ID: R-030
+Traces to: longterm-mem R-030
+
+IF a promoted vault page's on-disk content diverges from what longterm-mem
+itself last wrote for that page, THEN the promotion writer SHALL skip that
+page's content update and emit a diagnostic instead, tracked through a
+sidecar precedence store keyed by the page's address.
+
+#### Scenario: Locally edited page is skipped with a diagnostic
+
+- GIVEN a promoted page a human or agent edited directly in the vault after
+  longterm-mem last wrote it
+- WHEN sync would otherwise re-promote it
+- THEN the page's content is left unmodified and a diagnostic names the
+  skipped page
+
+#### Scenario: Unmodified page updates normally
+
+- GIVEN a promoted page that has not been locally modified since
+  longterm-mem last wrote it
+- WHEN sync re-promotes it
+- THEN the normal update-in-place behavior applies with no skip
+
+### Requirement: Sync Promotes Unpromoted-or-Revised Observations
+
+ID: R-009
+Traces to: longterm-mem R-009
+
+WHEN `sync` runs for project P, the longterm-mem component SHALL promote
+every eligible observation for P that is either unpromoted or whose current
+revision count exceeds the revision last promoted.
+
+#### Scenario: Never-promoted eligible observation is promoted
+
+- GIVEN an eligible, never-promoted observation for project P
+- WHEN sync runs for P
+- THEN it is promoted
+
+#### Scenario: Revised eligible observation is re-promoted
+
+- GIVEN an eligible observation already promoted at revision 2, now at
+  revision 3
+- WHEN sync runs
+- THEN it is re-promoted
+
+#### Scenario: Unchanged eligible observation is a no-op
+
+- GIVEN an eligible observation already promoted at its current revision
+  (unchanged)
+- WHEN sync runs
+- THEN it is not re-promoted
+
+### Requirement: Sync Rebuilds the Index and Records Sync State
+
+ID: R-031
+Traces to: longterm-mem R-031
+
+WHEN sync completes promoting eligible observations for project P, the
+longterm-mem component SHALL rebuild P's vault index and record the sync
+completion timestamp in that vault's own sync-state record.
+
+#### Scenario: Index and sync-state both reflect the completed sync
+
+- GIVEN a sync run that promoted three observations
+- WHEN it completes
+- THEN P's vault index reflects the new pages and the vault's sync-state
+  record carries the completion timestamp
+
+### Requirement: Soft-Delete and Supersession Propagate to the Vault
+
+ID: R-033
+Traces to: longterm-mem R-033
+
+WHEN a promoted observation is soft-deleted or superseded in Engram, the
+next sync SHALL patch that observation's vault page status field (to
+`superseded`, or `archived` for a soft-delete with no successor) and its
+related-links field to reference the successor's page — updating only those
+frontmatter fields, never the page body, even on a locally edited page —
+with the patch itself recorded in the precedence store so a later sync does
+not misread it as a human edit.
+
+#### Scenario: Supersession updates status and related, body untouched
+
+- GIVEN a promoted observation later superseded by another already-promoted
+  observation
+- WHEN the next sync runs
+- THEN its vault page's status becomes `superseded` and its related-links
+  field points to the successor's page, with the page body unchanged
+
+#### Scenario: Soft-delete with no successor archives the page
+
+- GIVEN a promoted observation later soft-deleted with no successor relation
+- WHEN the next sync runs
+- THEN its vault page's status becomes `archived`
+
+#### Scenario: Untouched observation keeps its status
+
+- GIVEN a promoted observation with neither a soft-delete nor a supersession
+  relation
+- WHEN sync runs
+- THEN its status remains unchanged
+
+#### Scenario: Status patch on a locally edited page still lands (canon wins)
+
+- GIVEN a promoted page a human or agent has edited locally, and its
+  observation is now superseded in Engram
+- WHEN the next sync runs
+- THEN the status and related-links fields are patched despite the local
+  edit, the page body is not rewritten, and the precedence store's recorded
+  content is updated so a later sync does not treat this patch itself as a
+  further human edit
+
+### Requirement: Explicit Promote Surface
+
+ID: R-032
+Traces to: longterm-mem R-032
+
+WHEN a user or agent explicitly names an Engram observation id for
+promotion, the longterm-mem component SHALL promote that observation
+through the same page-emission, addressing, and registration path used by
+any other eligible observation, regardless of its automatic eligibility.
+
+#### Scenario: Below-threshold observation is promoted via explicit call
+
+- GIVEN an observation that is not pinned, not of an eligible type, and
+  below the revision-count threshold
+- WHEN an explicit promote call names it
+- THEN it is promoted through the same page-emission, addressing, and
+  registration path as any other eligible observation
+
+#### Scenario: Invalid observation id is rejected
+
+- GIVEN an invalid or nonexistent observation id
+- WHEN an explicit promote call is made with it
+- THEN the call is rejected with a clear error rather than silently doing
+  nothing
