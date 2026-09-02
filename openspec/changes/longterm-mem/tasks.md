@@ -104,7 +104,7 @@ Ordering note: slice 9 has no prior dependency (`dependencies: []` in entry.json
 
 Module: `github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem`, `go 1.26.1` (matches `tui/go.mod`). Deps: `modernc.org/sqlite v1.57.0`, `github.com/modelcontextprotocol/go-sdk v1.7.0`, `github.com/pelletier/go-toml/v2 v2.4.3` (validator-only, no deps).
 Binary: `~/.labdrian-overlay/bin/longterm-mem` (`$STATE_DIR/bin`).
-Read-only Engram DSN: `file:<db>?mode=ro&_txlock=deferred&_pragma=query_only(1)&_pragma=busy_timeout(2000)` (default `~/.engram/engram.db`).
+Read-only Engram DSN: `file:<db>?mode=ro&_txlock=deferred&_pragma=busy_timeout(2000)&_query_only=true` (default `~/.engram/engram.db`).
 CLI: `longterm-mem query|index|sync|promote|status|doctor|mcp|vaults|register|unregister`, global flags `--project --vault --state-dir --engram-db --json`. Env: `LONGTERM_MEM_STATE_DIR`, `LONGTERM_MEM_VAULTS_FILE`, `LONGTERM_MEM_VAULT`, `LONGTERM_MEM_ENGRAM_DB` (flag > env > file).
 Exit codes: `0` ok · `1` internal · `2` usage · `3` vault_not_configured · `4` engram_unavailable · `5` vault_subprocess_failed · `6` registration_conflict · `7` not_found.
 Package layout: `internal/{engram,vaultreg,vault,query,promote,ops,mcpserver,register}`, `cmd/longterm-mem/` one file per subcommand. Sole `os/exec` importer: `internal/vault/runner.go` (R-021).

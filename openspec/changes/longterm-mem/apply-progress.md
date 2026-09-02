@@ -38,7 +38,7 @@ All Slice 1 tasks (Bootstrap 1.0.1–1.0.4, R-001 1.1–1.3, R-021 1.4–1.5, R-
 
 ### R-002 — Read-Only Engram Connection
 
-- [x] 1.6–1.8 `longterm-mem/internal/engram/store.go` — `Open(dbPath string) (*Store, error)` opens `modernc.org/sqlite` with DSN `file:<path>?mode=ro&_txlock=deferred&_pragma=query_only(1)&_pragma=busy_timeout(2000)` (D1; verified against the modernc.org/sqlite v1.57.0 driver source — `mode=ro` is SQLite's own URI open-mode parameter, `_pragma`/`_txlock` are the Go driver's DSN shorthand keys). Default path resolves to `$HOME/.engram/engram.db` when `dbPath` is empty. `TestOpen_DefaultIsReadOnly` and `TestOpen_OverridePathStaysReadOnly` both build their fixture under `t.TempDir()` (the default-path case overrides `$HOME` via `t.Setenv`, never touching the real `~/.engram/engram.db`) and assert both a successful read and a failing `INSERT`/`UPDATE`. REFACTOR extracted `readOnlyDSN(path string) string`.
+- [x] 1.6–1.8 `longterm-mem/internal/engram/store.go` — `Open(dbPath string) (*Store, error)` opens `modernc.org/sqlite` with DSN `file:<path>?mode=ro&_txlock=deferred&_pragma=busy_timeout(2000)&_query_only=true` (D1; verified against the modernc.org/sqlite v1.57.0 driver source — `mode=ro` is SQLite's own URI open-mode parameter, `_pragma`/`_txlock` are the Go driver's DSN shorthand keys). Default path resolves to `$HOME/.engram/engram.db` when `dbPath` is empty. `TestOpen_DefaultIsReadOnly` and `TestOpen_OverridePathStaysReadOnly` both build their fixture under `t.TempDir()` (the default-path case overrides `$HOME` via `t.Setenv`, never touching the real `~/.engram/engram.db`) and assert both a successful read and a failing `INSERT`/`UPDATE`. REFACTOR extracted `readOnlyDSN(path string) string`.
 - [x] `internal/engram/testdata/schema.sql` — the live `observations` table DDL (dumped read-only from `~/.engram/engram.db`, matching Engram design-notes #3133/#3129) minus the unused `sessions` foreign key.
 
 ### R-020 — Mid-Term Query Scoping
@@ -4565,8 +4565,8 @@ main_test.go:370: engram line does not surface the degraded fallback (Store.Degr
 |---|---|---|---|
 | `engine/skills/ondisk.go` | Modified | `DeployableManifestPaths` rejects a missing/unrecognized route on a `longterm-mem/**` row (CRITICAL-2) | +35/-1 |
 | `engine/skills/ondisk_test.go` | Modified | 3 new tests (2 RED for the guard, 1 triangulation for the valid-route domain) | +55/-0 |
-| `bin/labdrian-overlay` | Modified | Removed the mismatched `--state-dir` on `unregister`, added exit-status branching (0/6 clear tracking, anything else keeps it and fails the run), removed the nonexistent `vaults seed` call and its stale comment (CRITICAL-1, WARNING-1) | +68/-15 |
-| `engine/installer/route_test.go` | Modified | 2 new real-binary integration tests proving the round trip and the exit-status branching | +146/-0 |
+| `bin/labdrian-overlay` | Modified | Removed the mismatched `--state-dir` on `unregister`, added the `unregister_usable` pre-check and exit-status branching (0, 6 and 2 converge and clear tracking; only exit 1 keeps it and fails the run), removed the nonexistent `vaults seed` call and its stale comment (CRITICAL-1, WARNING-1) | +98/-15 |
+| `engine/installer/route_test.go` | Modified | 4 new real-binary integration tests: the round trip, the exit-1 guard, and both halves of the convergence rule | +273/-0 |
 | `longterm-mem/cmd/longterm-mem/cmd_status.go` | Modified | `EngramReachable` seam now reads `Store.Degraded()` and reports the stale-fallback detail | +9/-0 |
 | `longterm-mem/cmd/longterm-mem/main_test.go` | Modified | 1 new integration test forcing the real `immutable=1` fallback and asserting it is surfaced | +81/-0 |
 | `longterm-mem/internal/engram/store.go` | Modified | Deleted `Store.Path()` and the now-unused `path` field | +2/-8 |
@@ -4639,7 +4639,7 @@ go run golang.org/x/tools/cmd/deadcode@latest ./cmd/longterm-mem    exit 0, zero
 
 ### Change status
 
-All 168 tasks in `tasks.md` are complete, and Slice 13 closes both
+All 182 tasks in `tasks.md` are complete, and Slice 13 closes both
 CRITICAL findings from `sdd-verify`'s FAIL plus the reachability audit's
 three unreachable functions (one wired into production, two deleted with
 their tests). `WARNING-1` (`vaults seed`) is also resolved as part of the
@@ -4769,3 +4769,33 @@ family: a record and a reality that disagree (a ticked task claiming more
 than shipped, shipped code exceeding the record, and now a half-corrected
 record). Archive folds this file into the spec baseline, so the disagreement
 would have been permanent.
+
+### Correction after the fourth verify run
+
+The fourth run confirmed the third's record correction genuinely landed —
+all four lines, checked as a block rather than one at a time — and then
+found **a fourth instance of the same family** by reading the whole
+section instead of only the lines it had been pointed at:
+
+- the `bin/labdrian-overlay` row still stated the rule *"anything else
+  keeps it and fails the run"*, which the script contradicts: exits 0, 6
+  **and 2** all converge, and the `unregister_usable` pre-check converges
+  before the `case` is reached. **That one was not a stale count — it
+  documented behaviour that is not the behaviour.** Corrected, along with
+  its `+68/-15` figure (actual `+98/-15`);
+- the `engine/installer/route_test.go` row said "2 new tests, `+146/-0`";
+  four shipped, `+273/-0`;
+- `### Change status` still said 168 tasks; there are 182.
+
+Also corrected: the read-only Engram DSN appeared as
+`_pragma=query_only(1)` in `tasks.md` and in slice 1's own entry, while
+`readOnlyDSN` builds `_query_only=true`. `design.md` and the later entry
+already had it right.
+
+**Four instances now, of one shape: a record and a reality that
+disagree.** A ticked task claiming more than shipped; shipped code
+exceeding the record; a half-corrected record; and a record stating a rule
+the code contradicts. Each was found by a different verification run, and
+none by reading the code — they are only visible when the record is
+checked *against* the tree. Archive folds this file into the spec
+baseline, which is why every one of them was worth a commit.
