@@ -2936,13 +2936,16 @@ longtermmem_maybe_remove_binary() {
 # [--target claude|opencode|codex|all] [--purge]' (D4, D13).
 #
 # install: go build the longterm-mem binary, copy it to the fixed path
-# (LONGTERM_MEM_BINARY, R-015), then per target: 'longterm-mem vaults seed'
-# / 'longterm-mem register --target t' (module-owned CLI subcommands that
-# land in slices 11b/12a and do not exist in this binary's dispatch YET —
-# tolerated as a non-fatal warning today; once those slices land these
-# calls start succeeding with zero changes here), then
-# 'engine runtime install --component longterm-mem --target t' to record
-# and report per-runtime status.
+# (LONGTERM_MEM_BINARY, R-015), then per target: 'longterm-mem register
+# --target t' (module-owned, writes the ownership-tagged MCP entry and its
+# install-state.json record at the binary's own default state dir, D9 —
+# deliberately no --state-dir/--binary override here so this call and
+# uninstall's 'longterm-mem unregister --target t' below always resolve
+# the SAME install-state.json; see the unregister call's own comment for
+# why that agreement is load-bearing), then 'engine runtime install
+# --component longterm-mem --target t' to record and report per-runtime
+# status. The 'longterm-mem vaults seed' call that still precedes the loop
+# is dealt with separately.
 #
 # status/uninstall skip the build step entirely (R-014 scenario 2) and only
 # ever talk to the engine runtime lifecycle surface.
@@ -2998,8 +3001,13 @@ cmd_longterm_mem() {
 
     local t
     for t in $targets; do
+      # No --state-dir here: this must resolve to the exact same
+      # install-state.json the uninstall path below reads (see that call's
+      # comment) — the module's own default (defaultRegisterStateDir(),
+      # ~/.labdrian-overlay/longterm-mem, D9) is that single source of
+      # truth, not $STATE_DIR.
       "$LONGTERM_MEM_BINARY" register --target "$t" \
-        || warn "longterm-mem register --target $t did not succeed (subcommand lands in a later slice); continuing"
+        || warn "longterm-mem register --target $t did not succeed (an untagged entry it does not own, or another failure); continuing"
       "$ENGINE_BINARY" runtime install --component longterm-mem --target "$t" --state-dir "$STATE_DIR" \
         || warn "engine runtime install --component longterm-mem --target $t reported a non-supported status"
       longtermmem_installed_targets_add "$t"
@@ -3009,7 +3017,32 @@ cmd_longterm_mem() {
       || warn "engine runtime status --component longterm-mem reported a non-supported status"
   else
     local t
+    # uninstall_failed tracks whether any target's unregister call returned
+    # a status other than 0 (removed) or 6 (unmanaged) -- see the case
+    # statement below. It is the guard that keeps a real failure (state dir
+    # unreadable, a corrupted install-state.json, ...) from silently
+    # clearing this run's tracking and letting the binary-removal branch
+    # below fire for a target whose entry may still be sitting in its
+    # runtime config.
+    local uninstall_failed=""
+
+    # Selective removal needs a usable binary. When it is absent or not
+    # executable there is nothing for the operator to retry: every re-run
+    # reproduces the same state, so treating it as a recoverable failure
+    # would strand the engine record and the shared binary forever, with
+    # --purge -- the one action that orphans the entries -- as the only
+    # escape. Say plainly what could not be done, then converge.
+    local unregister_usable=1
+    if [[ ! -x "$LONGTERM_MEM_BINARY" ]]; then
+      unregister_usable=""
+      warn "longterm-mem: $LONGTERM_MEM_BINARY is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall."
+    fi
+
     for t in $targets; do
+      if [[ -z "$unregister_usable" ]]; then
+        longtermmem_installed_targets_remove "$t"
+        continue
+      fi
       # unregister is module-owned, real per-runtime selective removal
       # (R-019, 12b.4/12b.5): it removes only $t's own ownership-tagged MCP
       # entry from $t's own runtime config, byte-preserving everything
@@ -3017,9 +3050,49 @@ cmd_longterm_mem() {
       # touches another target's entry or record, which is exactly what
       # makes the bash-level tracking removed below, and the binary guard
       # after it, safe to key off "$remaining" alone.
-      "$LONGTERM_MEM_BINARY" unregister --target "$t" --state-dir "$STATE_DIR" \
-        || warn "longterm-mem unregister --target $t did not succeed (an untagged entry it does not own, or another failure); continuing"
-      longtermmem_installed_targets_remove "$t"
+      #
+      # No --state-dir here either: it MUST resolve to the exact same
+      # install-state.json the install path above wrote to (register's own
+      # default, D9) -- passing $STATE_DIR here was the CRITICAL-1 defect
+      # (install and uninstall disagreeing on where install-state.json
+      # lives, so uninstall could never find a record install actually
+      # wrote, and reported every entry as unmanaged/exit 6 instead of
+      # removing it).
+      #
+      # cmd_unregister.go's exit codes (0 removed, 1 hard failure, 2 usage,
+      # 6 unmanaged, 1 outranking 6) are inspected, not swallowed: 0 and 6
+      # both mean "$t has nothing of ours left in its runtime config" (an
+      # unmanaged entry was never ours to begin with), so both clear this
+      # target's tracking below. Any other status means $t's entry (and
+      # possibly its install-state record) may still be present, so
+      # tracking for $t is KEPT and the whole run is marked failed.
+      local unregister_exit=0
+      "$LONGTERM_MEM_BINARY" unregister --target "$t" || unregister_exit=$?
+      case "$unregister_exit" in
+        0)
+          longtermmem_installed_targets_remove "$t"
+          ;;
+        6)
+          warn "longterm-mem unregister --target $t: unmanaged (an entry exists that longterm-mem does not own; left untouched)"
+          longtermmem_installed_targets_remove "$t"
+          ;;
+        2)
+          # Usage error: this binary does not accept the invocation
+          # (version skew, a subcommand it does not know). Like a missing
+          # binary, retrying reproduces it exactly, so it must converge
+          # rather than wedge the run.
+          warn "longterm-mem unregister --target $t: this binary does not accept the invocation (exit 2, version skew), so $t's entry stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall. Not retried; every re-run reproduces this."
+          longtermmem_installed_targets_remove "$t"
+          ;;
+        *)
+          # A real, operator-fixable failure (unreadable config, corrupted
+          # install-state.json, permissions): keep $t tracked so the guard
+          # below refuses to remove the shared binary while $t's entry may
+          # still be present, and re-running after the fix can succeed.
+          warn "longterm-mem unregister --target $t failed (exit $unregister_exit); keeping it tracked as installed"
+          uninstall_failed=1
+          ;;
+      esac
     done
 
     # An absent tracking file means "this entrypoint does not know what is
@@ -3033,7 +3106,12 @@ cmd_longterm_mem() {
     local remaining
     remaining="$(longtermmem_installed_targets_read)"
 
-    if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
+    if [[ -n "$uninstall_failed" ]] && [[ -z "$purge" ]]; then
+      # A real failure outranks every branch below: neither the shared
+      # engine registration record nor the shared binary is safe to remove
+      # while a target's own runtime config may still hold its entry.
+      warn "longterm-mem: at least one target failed to unregister; leaving the registration record and the shared binary untouched (re-run uninstall for the failed target(s) once resolved, or pass --purge to force removal)"
+    elif [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
       # Full uninstall: safe to wipe the engine-owned registration record
       # too. LongtermMemAdapter.Uninstall() removes the WHOLE record in one
       # call regardless of --target -- the per-runtime config entries
@@ -3049,6 +3127,13 @@ cmd_longterm_mem() {
       warn "longterm-mem: no install tracking found at $LONGTERM_MEM_INSTALLED_TARGETS; leaving the registration record and the shared binary untouched. Re-run with --purge to remove them anyway."
     else
       echo "  longterm-mem: unregistered the requested target(s); still installed for: $remaining (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)"
+    fi
+
+    # Surface the failure on the process exit code even when --purge forced
+    # cleanup to proceed anyway -- the caller still asked for every target
+    # and at least one did not actually get unregistered cleanly.
+    if [[ -n "$uninstall_failed" ]]; then
+      return 1
     fi
   fi
 }

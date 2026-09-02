@@ -1622,6 +1622,152 @@ func TestInstall_BinaryPathStableAcrossInspections(t *testing.T) {
 	}
 }
 
+// TestInstall_UninstallRoundTripRemovesTheMcpEntry proves CRITICAL-1's fix
+// end to end using the REAL longterm-mem binary, not the two-line dummy
+// stub TestStatusUninstall_SkipBuildStep substitutes (that stub exits 0 for
+// every invocation, which is exactly why a state-dir mismatch between the
+// shell's register and unregister call sites was invisible to the suite).
+// Install writes an ownership-tagged MCP entry into Claude Code's own
+// configuration; uninstall — invoked through the exact bin/labdrian-overlay
+// call site CRITICAL-1 found broken — must actually remove it, leaving the
+// unrelated pre-existing entry untouched throughout.
+func TestInstall_UninstallRoundTripRemovesTheMcpEntry(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	// STATE_DIR is deliberately a directory OUTSIDE $HOME/.labdrian-overlay
+	// — the exact condition that exposed CRITICAL-1: install and uninstall
+	// must agree on where install-state.json lives (the module's own
+	// default, ~/.labdrian-overlay/longterm-mem, D9) regardless of where
+	// STATE_DIR (the shared binary's own location) happens to point.
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	claudeConfig := filepath.Join(home, ".claude.json")
+	const seedContent = `{"mcpServers":{"unrelated":{"type":"stdio","command":"/bin/true","args":[]}}}`
+	if err := os.WriteFile(claudeConfig, []byte(seedContent), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+
+	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	if err != nil {
+		t.Fatalf("longterm-mem install --target claude failed: %v\noutput:\n%s", err, installOut)
+	}
+
+	afterInstall, err := os.ReadFile(claudeConfig)
+	if err != nil {
+		t.Fatalf("read .claude.json after install: %v", err)
+	}
+	if !strings.Contains(string(afterInstall), `"longterm-mem"`) {
+		t.Fatalf("expected an ownership-tagged longterm-mem MCP entry after install, got:\n%s", afterInstall)
+	}
+	if !strings.Contains(string(afterInstall), `"unrelated"`) {
+		t.Fatalf("install must not disturb the unrelated pre-existing entry, got:\n%s", afterInstall)
+	}
+
+	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	if err != nil {
+		t.Fatalf("longterm-mem uninstall --target claude failed: %v\noutput:\n%s", err, uninstallOut)
+	}
+
+	afterUninstall, err := os.ReadFile(claudeConfig)
+	if err != nil {
+		t.Fatalf("read .claude.json after uninstall: %v", err)
+	}
+	if strings.Contains(string(afterUninstall), `"longterm-mem"`) {
+		t.Fatalf("CRITICAL-1 regression: the longterm-mem MCP entry is still present after uninstall (register/unregister disagreed on install-state.json's location), got:\n%s", afterUninstall)
+	}
+	if !strings.Contains(string(afterUninstall), `"unrelated"`) {
+		t.Fatalf("uninstall must not remove the unrelated pre-existing entry, got:\n%s", afterUninstall)
+	}
+}
+
+// TestUninstall_HardFailureKeepsTrackingAndSharedBinary proves the other
+// half of CRITICAL-1's fix: bin/labdrian-overlay inspects unregister's real
+// exit code rather than swallowing it with `|| warn ... continuing`. Only
+// exit 0 (removed) and exit 6 (unmanaged — an entry longterm-mem does not
+// own) may clear this target's bash-level tracking; any other exit status
+// must keep the target tracked and leave the shared binary in place, so the
+// binary-removal guard can never fire for a target whose entry may still be
+// present in its runtime config.
+func TestUninstall_HardFailureKeepsTrackingAndSharedBinary(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	claudeConfig := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+
+	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	if err != nil {
+		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
+	}
+
+	// install-state.json lives at the module's own default state dir
+	// (~/.labdrian-overlay/longterm-mem, D9), independent of $STATE_DIR.
+	// Corrupt it so the next unregister call hits a REAL hard failure
+	// (LoadInstallState's JSON parse error, exit 1), not merely "no
+	// record" (exit 6, which is the recoverable, tracking-clearing case
+	// this test must NOT trigger).
+	installStatePath := filepath.Join(home, ".labdrian-overlay", "longterm-mem", "install-state.json")
+	if _, statErr := os.Stat(installStatePath); statErr != nil {
+		t.Fatalf("expected install-state.json at %s after install: %v", installStatePath, statErr)
+	}
+	if err := os.WriteFile(installStatePath, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("corrupt install-state.json: %v", err)
+	}
+
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	binBefore, statErr := os.Stat(binPath)
+	if statErr != nil {
+		t.Fatalf("expected binary at %s after install: %v", binPath, statErr)
+	}
+
+	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	if err == nil {
+		t.Fatalf("expected uninstall to report failure (corrupted install-state.json forces unregister exit 1), got success\noutput:\n%s", uninstallOut)
+	}
+
+	binAfter, statErr := os.Stat(binPath)
+	if statErr != nil {
+		t.Fatalf("shared binary removed after a failed uninstall: %v", statErr)
+	}
+	if !binAfter.ModTime().Equal(binBefore.ModTime()) {
+		t.Errorf("shared binary was rebuilt/replaced after a failed uninstall")
+	}
+
+	trackFile := filepath.Join(stateDir, "longterm-mem", "installed-targets")
+	tracked, err := os.ReadFile(trackFile)
+	if err != nil {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	if !strings.Contains(string(tracked), "claude") {
+		t.Errorf("expected claude to remain tracked as installed after a failed uninstall, got: %q", tracked)
+	}
+}
+
 // TestApply_InvokesLongtermMemInstallOnceForMcpRow proves cmd_apply's D13
 // hook (10b.7): a manifest row routed "mcp" makes 'apply' invoke the
 // longterm-mem install path exactly once — never once per deploy target —
@@ -1739,4 +1885,61 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 			t.Fatalf("the install hook fired %d time(s) for a manifest with no mcp row\noutput:\n%s", n, out)
 		}
 	})
+}
+
+// TestUninstall_MissingBinaryStillConverges: an uninstall that cannot run
+// the binary at all must still finish. Keeping the target tracked would
+// wedge the run permanently -- every retry reproduces the same state, and
+// the only escape (--purge) is the one that destroys the shared binary
+// while leaving the entries it could have removed. A state no operator
+// action can resolve must not be treated as a recoverable failure.
+func TestUninstall_MissingBinaryStillConverges(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	claudeConfig := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+
+	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	if err != nil {
+		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
+	}
+
+	// The binary is gone by the time uninstall runs -- a wiped bin
+	// directory, a partially restored backup, an interrupted upgrade.
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	if err := os.Remove(binPath); err != nil {
+		t.Fatalf("remove binary: %v", err)
+	}
+
+	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	if err != nil {
+		t.Fatalf("uninstall did not converge with the binary missing: %v\noutput:\n%s", err, uninstallOut)
+	}
+	if !strings.Contains(uninstallOut, "by hand") {
+		t.Errorf("uninstall did not tell the operator the MCP entries were left behind:\n%s", uninstallOut)
+	}
+
+	trackFile := filepath.Join(stateDir, "longterm-mem", "installed-targets")
+	tracked, err := os.ReadFile(trackFile)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	if strings.Contains(string(tracked), "claude") {
+		t.Errorf("claude stayed tracked after a converging uninstall, so the run can never finish; got: %q", tracked)
+	}
 }
