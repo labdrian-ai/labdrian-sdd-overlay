@@ -85,6 +85,61 @@ sdd-spec/SKILL.md managed
 	}
 }
 
+// TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow pins CRITICAL-2's
+// remediation: a row under longterm-mem/** with a missing third column must
+// be rejected with an explicit error, not silently resolved to a
+// skills-destination path (overlay-agent-route R-012, traces longterm-mem
+// R-035). The bash half of this guard (route_reject_unrouted_longterm_mem)
+// already existed; this pins the Go half that was missing.
+func TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow(t *testing.T) {
+	const manifest = `longterm-mem/internal/foo.go managed
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err == nil {
+		t.Fatalf("DeployableManifestPaths: expected an error for an unrouted longterm-mem/** row, got nil (paths=%v)", got)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/internal/foo.go") {
+		t.Errorf("DeployableManifestPaths: error must name the rejected row, got: %v", err)
+	}
+	if _, ok := got["longterm-mem/internal/foo.go"]; ok {
+		t.Errorf("DeployableManifestPaths: an unrouted longterm-mem row must never resolve to a skills-destination path, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow pins the
+// same guard for a longterm-mem/** row whose third column holds a value
+// outside {skill, agent, opencode-agent, mcp}.
+func TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow(t *testing.T) {
+	const manifest = `longterm-mem/internal/bar.go custom bogus-route
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err == nil {
+		t.Fatalf("DeployableManifestPaths: expected an error for an unrecognized-route longterm-mem/** row, got nil (paths=%v)", got)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/internal/bar.go") {
+		t.Errorf("DeployableManifestPaths: error must name the rejected row, got: %v", err)
+	}
+	if _, ok := got["longterm-mem/internal/bar.go"]; ok {
+		t.Errorf("DeployableManifestPaths: an unrecognized-route longterm-mem row must never resolve to a skills-destination path, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute
+// proves the guard is scoped exactly to the four-value route domain: every
+// recognized route on a longterm-mem/** row parses without error (a
+// skill-routed longterm-mem row is unusual but not itself invalid — R-012
+// only forbids MISSING or UNRECOGNIZED routes).
+func TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute(t *testing.T) {
+	for _, route := range []string{"skill", "agent", "opencode-agent", "mcp"} {
+		manifest := "longterm-mem/valid.go custom " + route + "\n"
+		if _, err := DeployableManifestPaths(strings.NewReader(manifest)); err != nil {
+			t.Errorf("DeployableManifestPaths: route %q on a longterm-mem/** row must be accepted, got error: %v", route, err)
+		}
+	}
+}
+
 func TestScanSkillFiles(t *testing.T) {
 	root := t.TempDir()
 	files := []string{

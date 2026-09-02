@@ -37,6 +37,21 @@ var nonSkillRoutes = map[string]bool{
 	"mcp":            true,
 }
 
+// validLongtermMemRoutes is the full four-value route domain (D13), used only
+// to validate rows under longterm-mem/**. Unlike nonSkillRoutes, "skill" is
+// included here: a longterm-mem/** row explicitly routed "skill" is not
+// itself invalid (R-012 forbids a MISSING or UNRECOGNIZED route, not the
+// skill route specifically), so this set intentionally is NOT nonSkillRoutes
+// plus one entry — it validates a different question (is this route
+// recognized at all?) than nonSkillRoutes answers (does this route leave
+// skills/?).
+var validLongtermMemRoutes = map[string]bool{
+	"skill":          true,
+	"agent":          true,
+	"opencode-agent": true,
+	"mcp":            true,
+}
+
 // DeployableManifestPaths parses a manifest and returns the set of row paths that
 // route to skills/, keyed by the row path exactly as written.
 //
@@ -49,6 +64,13 @@ var nonSkillRoutes = map[string]bool{
 //   - On the skill route, a path with no '/' is a root-level bookkeeping row and
 //     a path whose first segment is "engine" is overlay infra. Both are tracked
 //     for diff purposes only and are never deployed.
+//
+// One case is REJECTED rather than falling through: a row whose path is under
+// longterm-mem/** with a missing or unrecognized third column (R-012 in
+// overlay-agent-route, traces longterm-mem R-035). Mirrors
+// route_reject_unrouted_longterm_mem in bin/labdrian-overlay — that guard is
+// the single source of truth this one is kept in sync with (see
+// TestRouteDomain_MatchesBashAndGo).
 func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 	paths := make(map[string]struct{})
 	scanner := bufio.NewScanner(r)
@@ -63,7 +85,19 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 		}
 		rowPath := fields[0]
 
-		if len(fields) >= 3 && nonSkillRoutes[fields[2]] {
+		routeRaw := ""
+		if len(fields) >= 3 {
+			routeRaw = fields[2]
+		}
+
+		if strings.HasPrefix(rowPath, "longterm-mem/") && !validLongtermMemRoutes[routeRaw] {
+			if routeRaw == "" {
+				return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp", rowPath)
+			}
+			return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares an unrecognized route %q; must be one of: skill, agent, opencode-agent, mcp", rowPath, routeRaw)
+		}
+
+		if nonSkillRoutes[routeRaw] {
 			continue
 		}
 
