@@ -26,23 +26,6 @@ const (
 	ActionNoop
 )
 
-// String renders a as the name used throughout D9's documentation and
-// writer error/status messages (e.g. reporting an ActionRefuse conflict).
-func (a Action) String() string {
-	switch a {
-	case ActionInsert:
-		return "insert"
-	case ActionReplace:
-		return "replace"
-	case ActionRefuse:
-		return "refuse"
-	case ActionNoop:
-		return "noop"
-	default:
-		return "unknown"
-	}
-}
-
 // Decide is the D9 semantics table as one pure function, shared by every
 // runtime writer (claude.go, opencode.go, codex.go in 11b/12a) for both
 // install and uninstall call sites (12b.7).

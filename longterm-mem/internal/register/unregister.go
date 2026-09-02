@@ -33,9 +33,8 @@ const (
 	UnregisterUnmanaged
 )
 
-// String renders o the same way Action.String() renders Decide's outcomes
-// — the word cmd_unregister.go (12b.5) prints for --target all's per-target
-// report line.
+// String renders o as the word cmd_unregister.go (12b.5) prints for
+// --target all's per-target report line.
 func (o UnregisterOutcome) String() string {
 	switch o {
 	case UnregisterNoop:

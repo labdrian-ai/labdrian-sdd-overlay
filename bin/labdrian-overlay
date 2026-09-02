@@ -2944,8 +2944,9 @@ longtermmem_maybe_remove_binary() {
 # the SAME install-state.json; see the unregister call's own comment for
 # why that agreement is load-bearing), then 'engine runtime install
 # --component longterm-mem --target t' to record and report per-runtime
-# status. The 'longterm-mem vaults seed' call that still precedes the loop
-# is dealt with separately.
+# status. R-022's vault seeding is lazy (vaultreg.Resolve) and needs no
+# separate call here -- the 'longterm-mem vaults seed' invocation this
+# replaced named a subcommand that never existed and never will.
 #
 # status/uninstall skip the build step entirely (R-014 scenario 2) and only
 # ever talk to the engine runtime lifecycle surface.
@@ -2995,9 +2996,6 @@ cmd_longterm_mem() {
     chmod +x "$build_tmp"
     mv "$build_tmp" "$LONGTERM_MEM_BINARY"
     info "longterm-mem binary deployed to: $LONGTERM_MEM_BINARY"
-
-    "$LONGTERM_MEM_BINARY" vaults seed \
-      || warn "longterm-mem vaults seed did not succeed (subcommand lands in a later slice); continuing"
 
     local t
     for t in $targets; do

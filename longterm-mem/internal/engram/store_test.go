@@ -79,11 +79,6 @@ func TestOpen_DefaultIsReadOnly(t *testing.T) {
 	}
 	defer store.Close()
 
-	wantPath := filepath.Join(home, ".engram", "engram.db")
-	if store.Path() != wantPath {
-		t.Fatalf("Path() = %q, want %q", store.Path(), wantPath)
-	}
-
 	var count int
 	if err := store.db.QueryRow("SELECT count(*) FROM observations").Scan(&count); err != nil {
 		t.Fatalf("read via default connection: %v", err)
@@ -106,10 +101,6 @@ func TestOpen_OverridePathStaysReadOnly(t *testing.T) {
 		t.Fatalf("Open(%q): %v", dbPath, err)
 	}
 	defer store.Close()
-
-	if store.Path() != dbPath {
-		t.Fatalf("Path() = %q, want %q", store.Path(), dbPath)
-	}
 
 	// (a) A WAL fixture whose writer connection (newFixtureDB's setup conn)
 	// has already been closed cleanly must open fine on the primary

@@ -48,6 +48,15 @@ func cmdStatus(args []string) int {
 				return false, err.Error()
 			}
 			defer store.Close()
+			// Open can succeed via its immutable=1 fallback (see Open's
+			// own doc comment) when the primary read-only connection
+			// cannot be established -- stale but never unsafe. Without
+			// reading Store.Degraded here, a reachable-but-degraded
+			// connection was indistinguishable from a healthy one in
+			// every status report.
+			if degraded, cause := store.Degraded(); degraded {
+				return true, fmt.Sprintf("degraded: primary read-only connection unavailable, using stale fallback: %s", cause)
+			}
 			return true, ""
 		},
 	}

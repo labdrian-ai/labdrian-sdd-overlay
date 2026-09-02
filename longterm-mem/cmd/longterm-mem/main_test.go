@@ -290,6 +290,87 @@ func TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy(t *testing.T) {
 	}
 }
 
+// TestCmdStatus_ReportsDegradedEngramConnection wires internal/engram's
+// Store.Degraded into the status report's production caller (WARNING-2 /
+// the "Also worth closing while you are here" remediation): Open's real
+// immutable=1 fallback path exists because the primary read-only connection
+// can fail (e.g. Engram's writer is offline and the directory is not
+// writable, so the WAL shared-memory index cannot be created), and until
+// this test the resulting Store's own Degraded() value was read by tests
+// only -- cmdStatus's EngramReachable seam always reported true with an
+// empty detail regardless of which connection actually served the read, so
+// an operator staring at "engram: reachable=true" had no way to tell a
+// healthy connection from a stale, possibly-missing-recent-writes one.
+func TestCmdStatus_ReportsDegradedEngramConnection(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root ignores directory permissions; the degraded fallback cannot be forced")
+	}
+
+	engramDir := t.TempDir()
+	schema, err := os.ReadFile(filepath.Join("..", "..", "internal", "engram", "testdata", "schema.sql"))
+	if err != nil {
+		t.Fatalf("read engram schema fixture: %v", err)
+	}
+	dbPath := filepath.Join(engramDir, "engram.db")
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	if _, err := setup.Exec("PRAGMA journal_mode=WAL"); err != nil {
+		t.Fatalf("set fixture journal_mode=WAL: %v", err)
+	}
+	if _, err := setup.Exec(string(schema)); err != nil {
+		t.Fatalf("apply schema fixture: %v", err)
+	}
+	if err := setup.Close(); err != nil {
+		t.Fatalf("close fixture setup connection: %v", err)
+	}
+
+	// Mirrors internal/engram's own
+	// TestOpen_FallsBackToImmutableWhenPrimaryReadOnlyOpenFails fixture: no
+	// -wal/-shm on disk plus an unwritable directory forces the primary
+	// mode=ro connection to fail, so Open falls back to immutable=1 and
+	// returns a degraded Store.
+	for _, suffix := range []string{"-wal", "-shm"} {
+		_ = os.Remove(dbPath + suffix)
+	}
+	if err := os.Chmod(engramDir, 0o555); err != nil {
+		t.Fatalf("chmod %s 0o555: %v", engramDir, err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(engramDir, 0o755) })
+
+	vaultRoot := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+
+	var exit int
+	stdout := captureStdout(t, func() {
+		exit = run([]string{"status", "--project", "cmd-status-project"})
+	})
+
+	if exit != 0 {
+		t.Fatalf("run([status ...]) = %d, want 0: a degraded connection is a reported state, not a command failure", exit)
+	}
+
+	var engramLine string
+	for _, line := range strings.Split(stdout, "\n") {
+		if strings.Contains(line, "engram:") {
+			engramLine = line
+			break
+		}
+	}
+	if engramLine == "" {
+		t.Fatalf("status output has no 'engram:' line:\n%s", stdout)
+	}
+	if !strings.Contains(engramLine, "reachable=true") {
+		t.Fatalf("engram line does not report reachable=true for a degraded-but-usable connection: %q", engramLine)
+	}
+	if !strings.Contains(engramLine, "degraded") {
+		t.Fatalf("engram line does not surface the degraded fallback (Store.Degraded is never read in production without this wiring): %q", engramLine)
+	}
+}
+
 // TestRun_DispatchesPromoteSubcommand proves "promote" is registered in
 // run's switch (8b.6), matching TestRun_DispatchesSyncSubcommand's own
 // dispatch-proof convention.

@@ -16,7 +16,6 @@ import (
 // Store is a read-only connection to Engram's SQLite database.
 type Store struct {
 	db            *sql.DB
-	path          string
 	degraded      bool
 	degradedCause string
 }
@@ -67,7 +66,7 @@ func Open(dbPath string) (*Store, error) {
 
 	db, primaryErr := openAndPing(readOnlyDSN(path))
 	if primaryErr == nil {
-		return &Store{db: db, path: path}, nil
+		return &Store{db: db}, nil
 	}
 
 	fallbackDB, fallbackErr := openAndPing(readOnlyImmutableDSN(path))
@@ -75,7 +74,7 @@ func Open(dbPath string) (*Store, error) {
 		return nil, fmt.Errorf("engram: connect %s: primary open failed (%v), fallback open failed: %w", path, primaryErr, fallbackErr)
 	}
 
-	return &Store{db: fallbackDB, path: path, degraded: true, degradedCause: primaryErr.Error()}, nil
+	return &Store{db: fallbackDB, degraded: true, degradedCause: primaryErr.Error()}, nil
 }
 
 // openAndPing opens dsn and pings it, closing the connection on any failure
@@ -124,11 +123,6 @@ func readOnlyDSN(path string) string {
 // read-only as the primary one.
 func readOnlyImmutableDSN(path string) string {
 	return readOnlyDSN(path) + "&immutable=1"
-}
-
-// Path returns the resolved database path this Store connected to.
-func (s *Store) Path() string {
-	return s.path
 }
 
 // observationColumns is the SELECT list ListObservations and
