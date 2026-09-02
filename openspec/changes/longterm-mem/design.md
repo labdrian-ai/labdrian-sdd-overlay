@@ -10,7 +10,7 @@ One Go module `longterm-mem/` builds one binary (`~/.labdrian-overlay/bin/longte
 
 | # | Option | Tradeoff | Decision |
 |---|---|---|---|
-| D1 SQLite | modernc/mattn(CGO)/zombiezen | CI lacks C toolchain | `modernc.org/sqlite` v1.57.0; DSN `mode=ro&_query_only=true&_busy_timeout=2000` (`_query_only` key, `sqlite.go:351`); no `immutable=1` |
+| D1 SQLite | modernc/mattn(CGO)/zombiezen | CI lacks C toolchain | `modernc.org/sqlite` v1.57.0; DSN `mode=ro&_query_only=true&_busy_timeout=2000` (`_query_only` key, `sqlite.go:351`). **Amended during apply**: `immutable=1` is not the primary DSN, but `Open` does retry with it when the primary read-only connection cannot be established — stale, never unsafe, always still `mode=ro&_query_only=true`. `Store.Degraded()` reports that state and `status` surfaces it, so a stale fallback is never mistaken for a healthy connection (verify run 2, WARNING-6) |
 | D2 Toolchain | 1.21/1.25.0/1.26.1 | deps need ≥1.25.0 | `go 1.26.1` (as `tui`); CI job `test-longterm-mem` mirrors `test-tui` |
 | D3 MCP | official/hand-rolled/mark3labs | hand-rolled drifts; mark3labs pre-1.0 | `modelcontextprotocol/go-sdk` v1.7.0: `AddTool[In,Out]`, `StdioTransport`, exits on stdin close (R-034) |
 | D4 Seam | engine-writes/split-by-owner | engine bans TOML libs; one writer per file | `longterm-mem install\|status\|uninstall [--target] [--purge]` (shell): build → `register` → `engine runtime install --component longterm-mem`; engine gains `--component`, `--state-dir`, `LongtermMemAdapter`; `update` refused per component (`rollback` already absent, `main.go:356`); binary removed only on full uninstall/`--purge` |

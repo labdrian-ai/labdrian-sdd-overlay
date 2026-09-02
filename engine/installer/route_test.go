@@ -1943,3 +1943,73 @@ func TestUninstall_MissingBinaryStillConverges(t *testing.T) {
 		t.Errorf("claude stayed tracked after a converging uninstall, so the run can never finish; got: %q", tracked)
 	}
 }
+
+// TestUninstall_VersionSkewStillConverges pins the other half of the
+// convergence rule the resilience lens asked for. A binary that runs but
+// rejects the invocation (exit 2 — a subcommand or flag it does not know,
+// i.e. version skew) is in the same class as a missing one: every re-run
+// reproduces it exactly, so blocking on it would leave the shared binary
+// and the engine record stranded with --purge, the action that orphans
+// the entries, as the only escape. It must converge, and it must say what
+// was left behind.
+//
+// Only the missing-binary half had an automated test; this is the branch
+// that was proved by hand.
+func TestUninstall_VersionSkewStillConverges(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	claudeConfig := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+
+	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	if err != nil {
+		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
+	}
+
+	// Replace the installed binary with one that runs and refuses the
+	// invocation, the way a genuinely older build would.
+	// Unlink first: the just-executed binary is still mapped, so writing
+	// over it in place fails with ETXTBSY.
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	if err := os.Remove(binPath); err != nil {
+		t.Fatalf("remove installed binary: %v", err)
+	}
+	if err := os.WriteFile(binPath, []byte("#!/bin/sh\necho 'unknown subcommand: unregister' >&2\nexit 2\n"), 0o755); err != nil {
+		t.Fatalf("install version-skewed binary: %v", err)
+	}
+
+	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude")
+	if err != nil {
+		t.Fatalf("uninstall did not converge against a version-skewed binary: %v\noutput:\n%s", err, uninstallOut)
+	}
+	if !strings.Contains(uninstallOut, "version skew") {
+		t.Errorf("uninstall did not name the version skew it hit:\n%s", uninstallOut)
+	}
+	if !strings.Contains(uninstallOut, "by hand") {
+		t.Errorf("uninstall did not tell the operator the entry was left behind:\n%s", uninstallOut)
+	}
+
+	trackFile := filepath.Join(stateDir, "longterm-mem", "installed-targets")
+	tracked, err := os.ReadFile(trackFile)
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatalf("read tracking file: %v", err)
+	}
+	if strings.Contains(string(tracked), "claude") {
+		t.Errorf("claude stayed tracked, so the run can never finish; got: %q", tracked)
+	}
+}

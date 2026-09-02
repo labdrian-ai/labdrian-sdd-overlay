@@ -4508,7 +4508,7 @@ failure, not an accidental green.
 
 ### Test Summary
 
-- **Total tests written**: 6 new (`TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow`, `TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow`, `TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute`, `TestInstall_UninstallRoundTripRemovesTheMcpEntry`, `TestUninstall_HardFailureKeepsTrackingAndSharedBinary`, `TestCmdStatus_ReportsDegradedEngramConnection`)
+- **Total tests written**: 8 new (`TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow`, `TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow`, `TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute`, `TestInstall_UninstallRoundTripRemovesTheMcpEntry`, `TestUninstall_HardFailureKeepsTrackingAndSharedBinary`, `TestCmdStatus_ReportsDegradedEngramConnection`, `TestUninstall_MissingBinaryStillConverges`, `TestUninstall_VersionSkewStillConverges`)
 - **Total tests passing**: all 6 new, plus every pre-existing test in `longterm-mem`, `engine`, `tui` (see full-gate output below)
 - **Layers used**: Unit (3), Integration (3 — two drive the real compiled `longterm-mem` binary through the real `bin/labdrian-overlay`, one forces the real SQLite `immutable=1` fallback)
 - **Approval tests**: None — no refactoring-of-existing-behavior tasks in this slice; 13.9/13.10 are pure deletions with no behavior change to approve
@@ -4712,3 +4712,40 @@ installed`.
 Acquired before the apply agent launched, settled `passed` afterwards with
 evidence revision
 `sha256:6bee5ce509fcfac4976eca8af4139719f99ef39a92f9425f579c3f598e839ed7`.
+
+### Reconciliation after the second verify run
+
+The second `sdd-verify` run returned **PASS WITH WARNINGS** — 35/35
+requirements, 82/82 scenarios, zero CRITICAL — and both CRITICALs were
+confirmed closed by execution, not by re-running their own tests: a real
+`bin/labdrian-overlay` round trip across all three runtimes, and an
+independent probe linked against the shipped `engine/skills` package.
+
+Three of its findings are closed here, because **archive folds this record
+into the spec baseline**, so a record that understates what shipped bakes
+the inaccuracy in:
+
+- **WARNING-2 (record understates what shipped).** 13-2's bounded
+  correction added the `unregister_usable` pre-check, the exit-2 branch
+  and `TestUninstall_MissingBinaryStillConverges`, but no task covered
+  them and the evidence table still said "6 new tests" while seven had
+  shipped. Tasks 13.12–13.14 now cover them and the count reads eight.
+  This is the first run's CRITICAL-2 inverted: there a ticked task claimed
+  more than shipped; here shipped code exceeded the record.
+- **WARNING-3 (exit-2 branch had only manual proof).**
+  `TestUninstall_VersionSkewStillConverges` automates it. Proved
+  load-bearing by routing exit 2 into the blocking branch, which fails
+  with `uninstall did not converge against a version-skewed binary: exit
+  status 1`.
+- **WARNING-6 (design.md contradicted the code).** D1 read "no
+  `immutable=1`" while `Open` ships a retry with it. D1 is amended in
+  place rather than silently left wrong: the fallback is stale but never
+  unsafe, still `mode=ro&_query_only=true`, and — since slice 13-3 — no
+  longer invisible, because `status` reports it.
+
+Left open deliberately, as the report itself rates them: the `os/exec`
+allowlist's `testdata` blind spot (nothing under it imports `os/exec`, so
+R-021 holds), the documented-vs-shipped state-file path drift, the
+one-column `longterm-mem/**` row that bash rejects and Go skips via its
+pre-existing two-field rule (outside R-035's row grammar, and fails safe),
+and the two `--purge` suggestions.
