@@ -4471,11 +4471,244 @@ evidence revision
 (the sha256 of the captured `go test` output for `longterm-mem`, `engine`
 and `tui`, plus the `bash -n` result for both shell entrypoints).
 
+### Change status (superseded by Slice 13 below)
+
+All 168 tasks in `tasks.md` were complete, but `sdd-verify`
+(`verify-report.md`, evidence revision
+`sha256:c40a52783514fcd2c24ad987e88ae593c927252392fa89233f21a5215ed95928`)
+returned **FAIL**: 2 CRITICAL findings against R-019 and R-035, both
+proved by execution with a passing control, plus a reachability audit
+naming three unreachable production functions. Slice 13 remediates
+exactly those findings.
+
+---
+
+## Slice 13 — verify remediation (CRITICAL-1, CRITICAL-2, dead-code closure)
+
+**Ledger token (input, not produced by this pass)**:
+`sha256:06f5d86b2c07a34bdb94a0b2eea756f1fd58ab114d4cbc3ee501843e9f48ba4d`
+
+Mode: Strict TDD. Both CRITICAL findings and the "genuinely missing
+behavior" dead-code case (`Store.Degraded`) got a RED test with real
+captured failure output before any production fix, per the apply brief's
+explicit instruction. No test passed on first run without a preceding RED
+in this slice, so there is no "prove it load-bearing by a deliberate
+reverted mutation" case to report — every RED below is a real pre-fix
+failure, not an accidental green.
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 13.1–13.3 | `engine/skills/ondisk_test.go` | Unit | ✅ full `engine` suite green before edit | ✅ Written, real failure captured | ✅ Passed | ✅ 3rd test: every valid route on a longterm-mem row still parses | ➖ None needed |
+| 13.4–13.6 | `engine/installer/route_test.go` | Integration (real binary, real `bin/labdrian-overlay`, real `~/.claude.json`) | ✅ full `engine` suite green before edit | ✅ Written, real failure captured (two tests) | ✅ Passed | ➖ Single scenario per test (R-019's own scenario 1 + the exit-branching contract) | ➖ None needed |
+| 13.7–13.8 | `longterm-mem/cmd/longterm-mem/main_test.go` | Integration (real fixture DB forcing the real `immutable=1` fallback) | ✅ full `longterm-mem` suite green before edit | ✅ Written, real failure captured | ✅ Passed | ➖ Single scenario (the one missing-behavior case the report names) | ➖ None needed |
+| 13.9 | `longterm-mem/internal/engram/store_test.go` | Unit | ✅ full `internal/engram` suite green before edit | N/A — deletion, not new behavior | ✅ Package still compiles/passes with `Path()` and its two assertions removed | N/A | ✅ `Store.path` field removed with it (nothing left to hold) |
+| 13.10 | `longterm-mem/internal/register/decide.go` | Unit | ✅ full `internal/register` suite green before edit | N/A — deletion, not new behavior | ✅ Package still compiles/passes with `Action.String()` removed | N/A | ✅ `UnregisterOutcome.String()`'s doc comment corrected to stop citing the deleted method |
+
+### Test Summary
+
+- **Total tests written**: 6 new (`TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow`, `TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow`, `TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute`, `TestInstall_UninstallRoundTripRemovesTheMcpEntry`, `TestUninstall_HardFailureKeepsTrackingAndSharedBinary`, `TestCmdStatus_ReportsDegradedEngramConnection`)
+- **Total tests passing**: all 6 new, plus every pre-existing test in `longterm-mem`, `engine`, `tui` (see full-gate output below)
+- **Layers used**: Unit (3), Integration (3 — two drive the real compiled `longterm-mem` binary through the real `bin/labdrian-overlay`, one forces the real SQLite `immutable=1` fallback)
+- **Approval tests**: None — no refactoring-of-existing-behavior tasks in this slice; 13.9/13.10 are pure deletions with no behavior change to approve
+- **Pure functions created**: 0 (the CRITICAL-2 fix extends an existing pure parser; the CRITICAL-1 fix is shell control flow; 13.8 extends an existing effectful seam)
+
+### RED evidence (verbatim, captured before each fix)
+
+**CRITICAL-2** (`engine/skills/ondisk_test.go`, before the `ondisk.go` guard):
+```
+DeployableManifestPaths: expected an error for an unrouted longterm-mem/** row, got nil (paths=map[longterm-mem/internal/foo.go:{} sdd-spec/SKILL.md:{}])
+DeployableManifestPaths: expected an error for an unrecognized-route longterm-mem/** row, got nil (paths=map[longterm-mem/internal/bar.go:{} sdd-spec/SKILL.md:{}])
+```
+
+**CRITICAL-1, entry survives uninstall** (`engine/installer/route_test.go`, before the `bin/labdrian-overlay` fix):
+```
+route_test.go:1687: CRITICAL-1 regression: the longterm-mem MCP entry is still present after uninstall
+(register/unregister disagreed on install-state.json's location), got:
+{"mcpServers":{"unrelated":{"type":"stdio","command":"/bin/true","args":[]},
+"longterm-mem": {"type":"stdio","command":".../.labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}
+```
+
+**CRITICAL-1, exit-code swallowed / blast radius reproduced** (same file, before the fix):
+```
+route_test.go:1750: expected uninstall to report failure (corrupted install-state.json forces unregister exit 1), got success
+output:
+longterm-mem: unregister: claude: unmanaged (an entry exists that longterm-mem does not own; left untouched)
+WARN: longterm-mem unregister --target claude did not succeed (an untagged entry it does not own, or another failure); continuing
+[longterm-mem] uninstall: partial — longterm-mem per-runtime status — reasons: claude: partial — missing binary; opencode: partial — missing binary; codex: partial — missing binary
+WARN: engine runtime uninstall --component longterm-mem reported a non-supported status
+==> longterm-mem binary removed: /tmp/.../002/bin/longterm-mem
+```
+This is the exact blast radius `verify-report.md` describes: the old
+`--state-dir "$STATE_DIR"` argument meant `unregister` never even reached
+the corrupted `install-state.json` at the module's real default location —
+it read an empty/absent state dir, reported "unmanaged" (exit 6), the
+exit code was swallowed by `|| warn ... continuing`, bash-level tracking
+was cleared anyway, and — because tracking then read empty — the
+binary-removal guard fired and deleted the shared binary. Fixing only the
+`--state-dir` argument (13.6a) without the exit-status branching (13.6b)
+would still leave this failure mode reachable through any OTHER real
+`unregister` failure (a genuinely corrupted `install-state.json`, an
+unresolvable config root under `--target all`, ...); both halves of the
+fix were required and both are proved by this one test.
+
+**Missing-behavior dead code** (`longterm-mem/cmd/longterm-mem/main_test.go`, before wiring `Store.Degraded` into `cmd_status.go`):
+```
+main_test.go:370: engram line does not surface the degraded fallback (Store.Degraded is never read in production without this wiring): "  engram: reachable=true"
+```
+
+### Files Changed
+
+| File | Action | What Was Done | Lines (+/-) |
+|---|---|---|---|
+| `engine/skills/ondisk.go` | Modified | `DeployableManifestPaths` rejects a missing/unrecognized route on a `longterm-mem/**` row (CRITICAL-2) | +35/-1 |
+| `engine/skills/ondisk_test.go` | Modified | 3 new tests (2 RED for the guard, 1 triangulation for the valid-route domain) | +55/-0 |
+| `bin/labdrian-overlay` | Modified | Removed the mismatched `--state-dir` on `unregister`, added exit-status branching (0/6 clear tracking, anything else keeps it and fails the run), removed the nonexistent `vaults seed` call and its stale comment (CRITICAL-1, WARNING-1) | +68/-15 |
+| `engine/installer/route_test.go` | Modified | 2 new real-binary integration tests proving the round trip and the exit-status branching | +146/-0 |
+| `longterm-mem/cmd/longterm-mem/cmd_status.go` | Modified | `EngramReachable` seam now reads `Store.Degraded()` and reports the stale-fallback detail | +9/-0 |
+| `longterm-mem/cmd/longterm-mem/main_test.go` | Modified | 1 new integration test forcing the real `immutable=1` fallback and asserting it is surfaced | +81/-0 |
+| `longterm-mem/internal/engram/store.go` | Modified | Deleted `Store.Path()` and the now-unused `path` field | +2/-8 |
+| `longterm-mem/internal/engram/store_test.go` | Modified | Removed the two `Path()` assertions (the two R-002 test functions themselves are unchanged and still pass) | +0/-9 |
+| `longterm-mem/internal/register/decide.go` | Modified | Deleted `Action.String()` (no caller, no test, inaccurate doc comment) | +0/-17 |
+| `longterm-mem/internal/register/unregister.go` | Modified | Corrected `UnregisterOutcome.String()`'s doc comment to stop citing the deleted `Action.String()` | +2/-3 |
+
+### Deviations from the apply brief, with reasons
+
+1. **Exit-status branching also returns `1` from `cmd_longterm_mem` at the
+   very end of the `uninstall` branch**, even when `--purge` was passed
+   and forced cleanup to proceed anyway. The brief only required that
+   `--purge` still be allowed to force removal; making the overall run
+   report failure on the process exit code even in that case was judged
+   necessary so a caller scripting `uninstall --purge` still sees a
+   nonzero exit for a target that did not actually unregister cleanly —
+   `--purge` overrides the safety guard, not the truth of what happened.
+2. **`Store.Path()` was deleted, not wired in.** The report explicitly
+   distinguishes `Store.Degraded` ("the more interesting one" — a
+   genuinely missing production caller) from `Store.Path`, which it does
+   not claim any missing behavior for. No genuinely useful production call
+   site exists today (doctor/status report the DB path from the env var
+   directly, not from an opened `Store`), and inventing one to avoid
+   deletion would be exactly the "caller that does nothing" the brief
+   explicitly forbids.
+3. **`UnregisterOutcome.String()` was left alone.** It IS a live,
+   reachable function — `cmd_unregister.go` prints it through `%s` for
+   `--target all`'s per-target report line — so it was out of scope for
+   the dead-code closure; only its doc comment (which referenced the
+   now-deleted `Action.String()`) needed correcting.
+
+### Full-gate verification (all commands, exact outcomes)
+
+```text
+cd longterm-mem && gofmt -l .                                       exit 0, no output
+cd longterm-mem && go vet ./...                                     exit 0, no diagnostics
+cd longterm-mem && go test ./... -cover -count=1                    exit 0, all 10 packages ok
+  longterm-mem                    ok  [no statements]
+  cmd/longterm-mem                ok  coverage: 55.6%
+  internal/engram                 ok  coverage: 82.9%
+  internal/mcpserver              ok  coverage: 77.8%
+  internal/ops                    ok  coverage: 89.0%
+  internal/promote                ok  coverage: 84.6%
+  internal/query                  ok  coverage: 85.1%
+  internal/register                ok  coverage: 78.2%
+  internal/vault                  ok  coverage: 84.1%
+  internal/vaultreg               ok  coverage: 67.2%
+
+cd engine && go test ./...                                          exit 0, all 10 packages ok
+  (installer package re-run uncached, -count=1 equivalent: 33/33 subtests PASS,
+   including both new TestInstall_UninstallRoundTripRemovesTheMcpEntry and
+   TestUninstall_HardFailureKeepsTrackingAndSharedBinary)
+
+cd tui && go test ./...                                             exit 0, ok (cached)
+
+bash -n bin/labdrian-overlay                                        exit 0
+bash -n bin/overlay                                                 exit 0
+
+shellcheck bin/labdrian-overlay                                     exit 1 (pre-existing only)
+  Byte-identical output confirmed against the pre-change baseline via a
+  temporary git stash of only bin/labdrian-overlay: same 4 SC2094/SC2016
+  info findings and 4 SC2064 warnings, all at line numbers this slice
+  never touched. Zero new findings.
+
+cd longterm-mem && go test ./... -run TestOSExecImportAllowlist -v  PASS (only internal/vault/runner.go imports os/exec)
+cd engine && go test ./skills/... -run TestZeroFetchImportAllowlist -v  PASS (engine/go.mod still has no require block)
+
+go run golang.org/x/tools/cmd/deadcode@latest ./cmd/longterm-mem    exit 0, zero findings (was 3: Store.Degraded, Store.Path, Action.String)
+```
+
 ### Change status
 
-All 168 tasks in `tasks.md` are now complete. `longterm-mem` is
-implemented end to end: the module and its MCP server, the vault and
-Engram readers, the query merge, promotion with mutability and sync, ops
-(`status`/`doctor`), the overlay route and dispatch, and registration and
-unregistration for all three runtimes. Next: `sdd-verify`, then
-`sdd-archive`.
+All 168 tasks in `tasks.md` are complete, and Slice 13 closes both
+CRITICAL findings from `sdd-verify`'s FAIL plus the reachability audit's
+three unreachable functions (one wired into production, two deleted with
+their tests). `WARNING-1` (`vaults seed`) is also resolved as part of the
+CRITICAL-1 fix. `WARNING-3` and `WARNING-4` (the `testdata` package
+`os/exec` blind spot, and the documented-vs-shipped state-file path names)
+were left untouched — both are pre-existing, non-blocking, out of the two
+CRITICAL findings' scope, and the report itself rates neither as a spec
+violation. Next: `sdd-verify`.
+
+### Delivery record
+
+Five parts, not the four planned — and the shape changed twice during
+delivery, both times because a review said something true.
+
+**13-2 escalated first, and the fix was to shrink the candidate.** The
+first attempt bundled three distinct shell changes (the `--state-dir`
+agreement, the exit-status branching, and the `vaults seed` removal) with
+a Go integration test. Native review returned `escalated` /
+`native_stop_required`: inconclusive severe findings, none exposed,
+`repair: unsupported`, zero eligible candidates — the same opaque shape
+slice 8a-4 hit. Rather than deliver without a receipt, the `vaults seed`
+removal was moved to 13-3, leaving a candidate that is only about
+CRITICAL-1. The re-review then produced a real, named finding instead of
+an opaque stop. **A candidate that mixes unrelated concerns can defeat a
+reviewer the same way it defeats a human one.**
+
+**13-2's correction: the first fix traded one failure mode for another.**
+`R4-uninstall-never-converges` (CRITICAL, resilience) observed that
+treating *every* non-`0`/`6` unregister status as a run-wide failure made
+uninstall non-convergent. A missing binary yields `127`; a version-skewed
+one yields `2`. Neither is anything an operator can act on, yet each
+retry reproduced the state, kept the target tracked, and left the engine
+record and shared binary in place **forever** — with `--purge`, the one
+action that orphans the entries, as the only escape. The line this
+replaced warned and continued, so cleanup always finished.
+
+The distinction that resolves it is **"can the operator do something
+about this?"** — a missing or unusable binary and a usage error converge
+with an explicit message about the entries left behind; exit `1`
+(unreadable config, corrupt install-state, permissions) keeps tracking
+and blocks cleanup, because re-running after the fix can genuinely
+succeed. RED: `uninstall did not converge with the binary missing: exit
+status 1`, with `WARN: … failed (exit 127); keeping it tracked as
+installed`.
+
+- **13-1** — PR #248 — `engine/skills/ondisk.go` guard + its Go test
+  (CRITICAL-2), 91 lines. Four-lens high-risk review, zero corrections.
+- **13-2** — PR #249 — the `--state-dir` agreement, exit-status
+  branching and the real-binary tests (CRITICAL-1), 226 lines at review.
+  Four-lens high-risk, one bounded correction after one escalation.
+- **13-3** — PR #250 — the three dead-function resolutions plus the
+  `vaults seed` removal moved here, 139 lines. Four-lens high-risk, zero
+  corrections.
+- **13-4** — `tasks.md` and this section.
+- **13-5** — `verify-report.md` itself, 547 lines, under a **maintainer-
+  authorised size exception**: the report was admitted by
+  `gentle-ai sdd-verify-validate` as exact bytes (sha256 `f1795079…`), so
+  splitting it would leave no commit containing the validated artifact.
+  Recorded in `entry.json`'s `review_budget.size_exception`.
+
+### Review receipts
+
+| Part | Lineage | Risk | Lenses | Outcome |
+|---|---|---|---|---|
+| 13-1 | `review-d849420e8fc1c0d2` | high | risk, resilience, readability, reliability | approved with zero corrections, acknowledged |
+| 13-2 | `review-1b2adb52622980ee` | high | all four | one bounded correction, approved, acknowledged (after `review-ade38555948572d3` escalated on the larger candidate) |
+| 13-3 | `review-f6274c0328459cc4` | high | all four | approved with zero corrections, acknowledged |
+
+### Ledger
+
+Acquired before the apply agent launched, settled `passed` afterwards with
+evidence revision
+`sha256:6bee5ce509fcfac4976eca8af4139719f99ef39a92f9425f579c3f598e839ed7`.
