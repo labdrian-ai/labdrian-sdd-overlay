@@ -4505,12 +4505,13 @@ failure, not an accidental green.
 | 13.7–13.8 | `longterm-mem/cmd/longterm-mem/main_test.go` | Integration (real fixture DB forcing the real `immutable=1` fallback) | ✅ full `longterm-mem` suite green before edit | ✅ Written, real failure captured | ✅ Passed | ➖ Single scenario (the one missing-behavior case the report names) | ➖ None needed |
 | 13.9 | `longterm-mem/internal/engram/store_test.go` | Unit | ✅ full `internal/engram` suite green before edit | N/A — deletion, not new behavior | ✅ Package still compiles/passes with `Path()` and its two assertions removed | N/A | ✅ `Store.path` field removed with it (nothing left to hold) |
 | 13.10 | `longterm-mem/internal/register/decide.go` | Unit | ✅ full `internal/register` suite green before edit | N/A — deletion, not new behavior | ✅ Package still compiles/passes with `Action.String()` removed | N/A | ✅ `UnregisterOutcome.String()`'s doc comment corrected to stop citing the deleted method |
+| 13.12–13.14 | `engine/installer/route_test.go` | Integration (real `bin/labdrian-overlay`; a deleted binary, then one that runs and exits 2) | ✅ full `engine` suite green before edit | ✅ Written, real failure captured for both (`uninstall did not converge with the binary missing: exit status 1`, and the same against a version-skewed binary) | ✅ Passed, alongside the exit-1 guard test — the convergence fix did not weaken it | ✅ The two tests are the two halves of one rule: a state no retry resolves must converge, a fixable one must block | ➖ None needed |
 
 ### Test Summary
 
 - **Total tests written**: 8 new (`TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow`, `TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow`, `TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute`, `TestInstall_UninstallRoundTripRemovesTheMcpEntry`, `TestUninstall_HardFailureKeepsTrackingAndSharedBinary`, `TestCmdStatus_ReportsDegradedEngramConnection`, `TestUninstall_MissingBinaryStillConverges`, `TestUninstall_VersionSkewStillConverges`)
-- **Total tests passing**: all 6 new, plus every pre-existing test in `longterm-mem`, `engine`, `tui` (see full-gate output below)
-- **Layers used**: Unit (3), Integration (3 — two drive the real compiled `longterm-mem` binary through the real `bin/labdrian-overlay`, one forces the real SQLite `immutable=1` fallback)
+- **Total tests passing**: all 8 new, plus every pre-existing test in `longterm-mem`, `engine`, `tui` (see full-gate output below)
+- **Layers used**: Unit (3), Integration (5 — four drive the real compiled `longterm-mem` binary through the real `bin/labdrian-overlay`, one forces the real SQLite `immutable=1` fallback)
 - **Approval tests**: None — no refactoring-of-existing-behavior tasks in this slice; 13.9/13.10 are pure deletions with no behavior change to approve
 - **Pure functions created**: 0 (the CRITICAL-2 fix extends an existing pure parser; the CRITICAL-1 fix is shell control flow; 13.8 extends an existing effectful seam)
 
@@ -4749,3 +4750,22 @@ R-021 holds), the documented-vs-shipped state-file path drift, the
 one-column `longterm-mem/**` row that bash rejects and Go skips via its
 pre-existing two-field rule (outside R-035's row grammar, and fails safe),
 and the two `--purge` suggestions.
+
+### Correction after the third verify run
+
+The third run confirmed WARNING-3 and WARNING-6 closed, and caught the
+WARNING-2 fix as **partial**: of three adjacent count lines, only the
+first had been corrected, so the record read "8 written, 6 passed" — a
+tree that has never existed — and the TDD evidence table still had no row
+for tasks 13.12–13.14, which is precisely what WARNING-2 named. Both are
+fixed above: the passing count and the layer split (Unit 3, Integration
+5) now agree with the eight tests the first line already listed, and the
+evidence row exists.
+
+**A partially applied fix is worse than none**, because it looks like the
+finding was addressed. This one survived a whole verify cycle for exactly
+that reason, and it is the third instance in this change of the same
+family: a record and a reality that disagree (a ticked task claiming more
+than shipped, shipped code exceeding the record, and now a half-corrected
+record). Archive folds this file into the spec baseline, so the disagreement
+would have been permanent.
