@@ -209,6 +209,31 @@ the precedence store, refresh it, and repair its catalog and log registration,
 rather than refusing it as unknown provenance. Any other divergence, in the
 body or in any other frontmatter field, remains a refusal.
 
+An interrupted UPDATE leaves the mirror-image state: the page holds a render
+the precedence store never caught up with, so the entry still fingerprints
+the previous one. Whenever the retry renders the same revision, the rule
+above settles it. Whenever Engram has been revised in between, no comparison
+against the incoming bytes can settle it at all — the two renders are of
+different revisions and are supposed to differ — and the page is otherwise a
+permanent refusal, because a refusal also suppresses the store write that
+would have repaired it.
+
+The precedence store SHALL therefore record, alongside each page's content
+fingerprint, the Engram revision that fingerprinted render carried. IF a
+promoted page's content no longer matches its entry, but the page's own
+engram_revision stands above the revision that entry records and no higher
+than the revision now being promoted, and the page's body still closes with
+the promotion footer naming that observation at exactly the revision the page
+claims, THEN the promotion writer SHALL treat it as its own unrecorded
+update: republish the page at the current revision and record the entry the
+interrupted run never wrote.
+
+A page whose engram_revision is level with the revision its entry records has
+been changed by someone other than the promotion writer — only the writer's
+own renders advance that field — and remains a refusal, as does a page whose
+entry records no revision at all, which is no evidence rather than revision
+zero.
+
 #### Scenario: An interrupted create is finished by the next run
 
 - GIVEN a create that persisted the page's precedence entry and was killed
@@ -230,6 +255,33 @@ body or in any other frontmatter field, remains a refusal.
 
 - GIVEN a promoted page with no precedence entry whose content differs from
   what promotion would emit by more than the created and updated stamps
+- WHEN promotion runs again for that observation
+- THEN the page is left byte-unchanged and the promotion is refused
+
+#### Scenario: An interrupted update retried on a later day is reconciled
+
+- GIVEN an update that published its page and was killed before its
+  precedence entry was persisted, so the entry still fingerprints the
+  previous render
+- WHEN promotion runs again for that unchanged observation on a later day,
+  so its retry differs from the page on disk in the created and updated
+  stamps
+- THEN the page is refreshed, its entry is recorded, and the promotion is not
+  refused
+
+#### Scenario: An interrupted update is reconciled after a further revision
+
+- GIVEN that same interrupted update, and an observation Engram has since
+  revised again, so the retry renders content the page never held
+- WHEN promotion runs again for that observation
+- THEN the page is republished at the current revision, its entry records
+  that revision, and the promotion is not refused
+
+#### Scenario: A page edited inside the update crash window is still refused
+
+- GIVEN that same interrupted update, and a page a human has since edited so
+  that its body no longer closes with the promotion footer for the revision
+  it claims
 - WHEN promotion runs again for that observation
 - THEN the page is left byte-unchanged and the promotion is refused
 

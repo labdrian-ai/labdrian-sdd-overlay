@@ -295,6 +295,18 @@ and codex — without offering `update` or `rollback` for that component.
   actions on that component
 - THEN no `update` or `rollback` action is offered for it
 
+#### Scenario: The binary path follows the state directory it was given
+
+- GIVEN the overlay entrypoint is run with an overridden state directory
+- AND it has deployed the longterm-mem binary under that state directory,
+  and registered MCP entries naming that same deployed path
+- WHEN the runtime lifecycle status or install action runs for the
+  `longterm-mem` component with that state directory
+- THEN it resolves the binary under the state directory it was given, not
+  under the default one
+- AND the deployed binary is reported as present, and an entry naming it is
+  recognised as one this overlay owns
+
 ### Requirement: longterm-mem Status Reports Observed State, Not Assumed Intent
 
 Traces to: longterm-mem R-014

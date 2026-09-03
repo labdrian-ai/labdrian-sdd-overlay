@@ -60,7 +60,18 @@ type Result struct {
 // in that category: the page itself is still valid and its provenance is
 // already durable in the precedence sidecar, so only its catalog/log
 // entry is missing. Promote surfaces the error without withdrawing the
-// page; a later sync or `doctor` run can repair the missing entry.
+// page.
+//
+// That repair is not automatic, and this comment used to claim otherwise.
+// `doctor` REPORTS the page as unregistered (its wiki-registration-
+// consistency check) and writes nothing, by design. Sync does not reach it
+// either: an observation already promoted at its current revision is
+// skipped before Writer.Promote is ever called (R-009's true-no-op gate),
+// and a page whose registration failed is exactly that observation. The
+// one path that does repair it is an explicit promote of that observation
+// (ExplicitPromote), which re-enters here, takes the update branch, and
+// registers on every write it does not skip. So: doctor names it, and an
+// explicit promote fixes it.
 func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) {
 	if !Eligible(obs, explicit) {
 		return Result{}, nil
@@ -117,10 +128,7 @@ func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) 
 	// error; a killed process returns nothing for any compensating removal
 	// to react to, which is exactly why the ordering has to carry the
 	// guarantee rather than the cleanup.
-	w.Store.Set(address, PrecedenceEntry{
-		BodyHash:        hashText(page.Body),
-		FrontmatterHash: hashText(page.Frontmatter),
-	})
+	w.Store.Set(address, entryFor(page))
 	if err := w.Store.Save(w.VaultRoot); err != nil {
 		// Nothing has been published yet, so there is no page to withdraw:
 		// drop the in-memory entry and report the failure.
@@ -132,6 +140,19 @@ func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) 
 		// converge regardless (the create branch is chosen by the page's
 		// own absence), but an entry claiming provenance over a file that
 		// does not exist is still a lie the sidecar should not tell.
+		//
+		// Allocate's own two writes are deliberately NOT withdrawn with
+		// it. The address number allocate-address.sh advanced belongs to a
+		// vault script this package can only call forward, so it is burned
+		// whatever happens here; and the .raw/.manifest.json address_map
+		// row Allocate wrote is left alone because a row without a page is
+		// inert -- doctor's address-map rule walks PAGES looking for their
+		// rows, never rows looking for their pages -- while rewriting that
+		// wiki-ingest-owned file to delete it is a real write that can
+		// itself fail. The residue of a failed create is therefore one
+		// skipped address number and one dangling manifest row pointing at
+		// a path no later run reuses (the retry allocates a fresh
+		// address), and neither wedges anything.
 		delete(w.Store, address)
 		if saveErr := w.Store.Save(w.VaultRoot); saveErr != nil {
 			return Result{}, fmt.Errorf("promote: write page %s: %w (and withdrawing its precedence entry failed: %v)", existingPath, err, saveErr)

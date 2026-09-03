@@ -17,6 +17,26 @@ import (
 // --config-root, and an unresolvable one is only observable here as an
 // empty string.
 
+// exitPathUnresolvable is `register`/`unregister`'s exit code for a
+// precondition that could not be resolved from the environment at all: no
+// resolvable HOME, so no install-state directory, no default binary path,
+// or no config root for the named runtime.
+//
+// It is deliberately NOT exit 1. Exit 1 is "a target was attempted and
+// failed" — a config that would not parse, a file that could not be
+// written. This is the opposite: nothing was attempted and nothing was
+// touched, and the fix is the caller's environment (set HOME, or pass
+// --state-dir/--binary/--config-root) rather than the runtime's
+// configuration. Sharing one code left a script unable to tell "you forgot
+// a flag" from "your ~/.claude.json is broken", which are not the same
+// event and do not have the same remedy.
+//
+// 8 continues the module's documented exit-code contract (design.md D9's
+// summary line: 0 ok, 1 internal, 2 usage, 3 vault_not_configured, 4
+// engram_unavailable, 5 vault_subprocess_failed, 6 registration_conflict,
+// 7 not_found) at the first free number.
+const exitPathUnresolvable = 8
+
 // registerExpandTarget expands --target's value into the ordered list of
 // concrete targets to register, mirroring the runtime-parity --target
 // convention: claude|opencode|codex select one, all expands to every

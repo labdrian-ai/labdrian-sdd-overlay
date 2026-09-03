@@ -16,7 +16,7 @@
 // deliberately traded away, and why.
 //
 // All three runtimes share one ownership model, decided by Decide from
-// exactly three booleans:
+// exactly four booleans:
 //
 //   - entryPresent: does the runtime's own config already have a
 //     same-named entry/section?
@@ -24,16 +24,26 @@
 //   - recordPresent: does install-state.json have an ownership record for
 //     this target?
 //
+//   - entryOwned: are the bytes currently on disk byte-identical to the
+//     entry this call is about to write? Only longterm-mem produces that
+//     exact entry, so this re-derives ownership when the record is gone.
+//
 //   - fingerprintMatches: does that record's fingerprint match the entry
 //     this call is about to write (not necessarily the bytes on disk —
 //     see Decide's own doc comment)?
 //
-//     entryPresent  recordPresent  fingerprintMatches  →  Action   meaning
-//     false         false          —                      insert   not installed yet
-//     false         true           —                      replace  entry missing (record stale)
-//     true          false          —                      refuse   conflict: an entry we did not write
-//     true          true           false                  replace  stale (hand-edited or old binary path)
-//     true          true           true                   noop     installed, up to date
+//     entryPresent  recordPresent  entryOwned  fingerprintMatches  →  Action   meaning
+//     false         false          —           —                      insert   not installed yet
+//     false         true           —           —                      replace  entry missing (record stale)
+//     true          false          false       —                      refuse   conflict: an entry we did not write
+//     true          false          true        —                      adopt    our own entry, record lost
+//     true          true           —           false                  replace  stale (hand-edited or old binary path)
+//     true          true           —           true                   noop     installed, up to date
+//
+// The adopt row is what keeps a lost install-state.json recoverable: see
+// Decide's own doc comment for why re-deriving ownership from the entry's
+// bytes is safe, and writer.go's uninstallCannotDeriveOwnership for the
+// one direction that deliberately does not do it.
 //
 // This is the single source of truth for what "installed"/"stale"/
 // "conflict" mean everywhere those words are used across this package's

@@ -26,38 +26,47 @@ func cmdSync(args []string) int {
 	project := fs.String("project", "", "project name (required)")
 	vaultDir := fs.String("vault", "", "vault path override")
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *project == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: sync: --project is required")
-		return 2
+		return exitUsage
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return 3
+		return vaultExitCode(err)
 	}
 
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return 4
+		return exitEngramUnavailable
 	}
 	defer store.Close()
 
 	precedence, err := promote.LoadPrecedenceStore(vaultRoot)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return 1
+		return exitInternal
 	}
 
 	runner := &vault.Runner{Root: vaultRoot}
+	// rebuildErr is captured from this command's own RebuildIndex closure
+	// rather than dug back out of the joined error below. Sync reports the
+	// index rebuild's failure and its per-observation failures through one
+	// error value, and only the first of the two is a vault subprocess
+	// failure: an operator who reads exit 5 goes and looks at the vault's
+	// Python tooling, which is the wrong place to look for an observation
+	// longterm-mem could not write.
+	var rebuildErr error
 	deps := promote.Deps{
 		Engram: store,
 		Writer: &promote.Writer{VaultRoot: vaultRoot, Store: precedence},
 		RebuildIndex: func(ctx context.Context) error {
-			return vault.Rebuild(ctx, runner, false)
+			rebuildErr = vault.Rebuild(ctx, runner, false)
+			return rebuildErr
 		},
 	}
 
@@ -78,7 +87,35 @@ func cmdSync(args []string) int {
 
 	if err := errors.Join(syncErr, propagateErr); err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return 5
+		return syncExitCode(store, *project, rebuildErr)
 	}
-	return 0
+	return exitOK
+}
+
+// syncExitCode classifies a failed sync run.
+//
+// Sync used to answer 5 (vault_subprocess_failed) for everything it could
+// not complete, which made the code meaningless: a corrupt Engram database
+// and a Python script that crashed and a single unwritable page all read
+// as "the vault's tooling failed". Only one of the three is:
+//
+//   - the index rebuild failed -> exitVaultSubprocessFailed, the one step
+//     that actually runs a vault script;
+//   - Engram can no longer be listed -> exitEngramUnavailable, and no vault
+//     subprocess had to fail for that to happen;
+//   - anything else (a per-observation page write, the sync-state record,
+//     the precedence store) -> exitInternal.
+//
+// The Engram question is answered by asking the database rather than by
+// matching on error text, so the code stays bound to the condition it
+// names instead of to a message string.
+func syncExitCode(store *engram.Store, project string, rebuildErr error) int {
+	switch {
+	case rebuildErr != nil:
+		return exitVaultSubprocessFailed
+	case !engramReadable(store, project):
+		return exitEngramUnavailable
+	default:
+		return exitInternal
+	}
 }

@@ -31,7 +31,7 @@ func cmdMCP(args []string) int {
 	fs := flag.NewFlagSet("mcp", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -40,7 +40,7 @@ func cmdMCP(args []string) int {
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return 4
+		return exitEngramUnavailable
 	}
 	defer store.Close()
 
@@ -72,7 +72,7 @@ func cmdMCP(args []string) int {
 	// error is reported and turns into a non-zero exit.
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return 1
+		return exitInternal
 	}
-	return 0
+	return exitOK
 }

@@ -35,32 +35,32 @@ func cmdQuery(args []string) int {
 	top := fs.Int("top", unsetTopN, "results per source, 1-50 (default 5)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *project == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: query: --project is required")
-		return 2
+		return exitUsage
 	}
 	if *top != unsetTopN && (*top <= 0 || *top > maxTopN) {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: --top must be between 1 and %d\n", maxTopN)
-		return 2
+		return exitUsage
 	}
 	rest := fs.Args()
 	if len(rest) != 1 || strings.TrimSpace(rest[0]) == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: query: a single query text argument is required")
-		return 2
+		return exitUsage
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
-		return 3
+		return vaultExitCode(err)
 	}
 
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
-		return 4
+		return exitEngramUnavailable
 	}
 	defer store.Close()
 
@@ -71,8 +71,11 @@ func cmdQuery(args []string) int {
 
 	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{Project: *project, Query: rest[0], Top: requestedTop})
 	if err != nil {
+		// query.Run degrades a failing vault to a diagnostic and only
+		// ever errors on the Engram side (a missing project is rejected
+		// before this call), so its failure is engram_unavailable.
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
-		return 4
+		return exitEngramUnavailable
 	}
 
 	if *asJSON {
@@ -80,9 +83,9 @@ func cmdQuery(args []string) int {
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(result); err != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: query: encode result: %v\n", err)
-			return 1
+			return exitInternal
 		}
-		return 0
+		return exitOK
 	}
 
 	fmt.Printf("longterm-mem: query %q (vault_status=%s)\n", result.Query, result.VaultStatus)
@@ -96,5 +99,5 @@ func cmdQuery(args []string) int {
 	for _, d := range result.Diagnostics {
 		fmt.Fprintf(os.Stderr, "WARN %s: %s\n", d.Code, d.Detail)
 	}
-	return 0
+	return exitOK
 }

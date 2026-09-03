@@ -3,7 +3,7 @@
 ## Purpose
 
 Defines the operability surface of `longterm-mem`: a health-check `status`,
-a diagnostic `doctor` with four named checks, the MCP stdio server exposing
+a diagnostic `doctor` with five named checks, the MCP stdio server exposing
 `query` and `promote`, and the no-persistent-process constraint that governs
 both the server and every CLI subcommand.
 
@@ -94,6 +94,16 @@ SHALL serve the `query` and `promote` tools over MCP stdio.
 - GIVEN a connected client
 - WHEN it calls `query` with a valid project and query string
 - THEN it receives the grouped result list over the same stdio connection
+
+#### Scenario: A frozen Engram snapshot is declared, not passed off as live
+
+- GIVEN the server's Engram connection was established through the
+  read-only immutable fallback, so it answers from a point-in-time snapshot
+  taken when the session opened rather than from the live database
+- WHEN a client calls `query`
+- THEN the result carries a diagnostic naming the degraded snapshot and its
+  cause, so the client can tell a live corpus from a session-long frozen
+  one rather than reading an incomplete result as a complete one
 
 ### Requirement: No Persistent Daemon
 

@@ -25,14 +25,13 @@ func writePromotedPage(t *testing.T, vaultRoot string, page Page) string {
 	return full
 }
 
-// seedPrecedence records page's own content hashes in store, simulating
-// that longterm-mem itself was the last writer of page (the baseline
-// UpdateInPlace's local-edit detection compares against).
+// seedPrecedence records page as longterm-mem's own last write in store,
+// simulating the baseline UpdateInPlace's local-edit detection compares
+// against. It goes through the same entryFor production uses, so a fixture
+// can never seed an entry shape Writer.Promote itself would not have
+// persisted.
 func seedPrecedence(store PrecedenceStore, page Page) {
-	store.Set(page.Address, PrecedenceEntry{
-		BodyHash:        hashText(page.Body),
-		FrontmatterHash: hashText(page.Frontmatter),
-	})
+	store.Set(page.Address, entryFor(page))
 }
 
 // TestUpdate_UnmodifiedPageUpdatesInPlace: R-008 scenario 1 (task 6.3).
@@ -480,5 +479,219 @@ func TestActionKind_String(t *testing.T) {
 		if got := tt.kind.String(); got != tt.want {
 			t.Errorf("ActionKind(%d).String() = %q, want %q", tt.kind, got, tt.want)
 		}
+	}
+}
+
+// TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles: the update
+// path's crash window, retried on a different UTC day. The interrupted run
+// published revision 2 and died before its caller persisted the sidecar, so
+// the entry still fingerprints revision 1. The retry re-renders the SAME
+// observation, but EmitPage stamps created:/updated: from the wall clock, so
+// the retry's bytes are not the bytes on disk -- and a byte-equality
+// reconciliation therefore cannot settle it. Nothing about the page is a
+// local edit, so it must not be refused: the same wall-clock normalization
+// the create path's adoption already uses settles it here too.
+func TestUpdate_InterruptedUpdateRetriedOnALaterDayReconciles(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 309, Type: "decision", Title: "Interrupted Across Days", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := EmitPage(obs, "c-000309", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v1): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, first)
+
+	store := PrecedenceStore{}
+	seedPrecedence(store, first)
+
+	// The interrupted run: revision 2 lands on disk, the sidecar Save never
+	// does, so the entry above still fingerprints revision 1.
+	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 2
+	obs.Content = "V2 body."
+	interrupted, err := EmitPage(obs, "c-000309", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (interrupted v2): %v", err)
+	}
+	if err := os.WriteFile(existingPath, []byte(interrupted.Frontmatter+interrupted.Body), 0o644); err != nil {
+		t.Fatalf("simulate interrupted write: %v", err)
+	}
+
+	// The retry, a later day: same observation, so the only divergence from
+	// disk is the two wall-clock stamps.
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	retry, err := EmitPage(obs, "c-000309", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (retry): %v", err)
+	}
+	if retry.Frontmatter+retry.Body == interrupted.Frontmatter+interrupted.Body {
+		t.Fatalf("fixture is not exercising the timestamp hazard: the two renders are byte-identical")
+	}
+
+	action, err := UpdateInPlace(store, retry, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionUpdated {
+		t.Fatalf("action.Kind = %v, want ActionUpdated: a retry of an interrupted update on a later day is still our own write, not a local edit", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != retry.Frontmatter+retry.Body {
+		t.Fatalf("page was not refreshed to the retry's render; got:\n%s", got)
+	}
+	entry, ok := store.Get(retry.Address)
+	if !ok {
+		t.Fatalf("store has no entry for %s after reconciliation", retry.Address)
+	}
+	if entry.BodyHash != hashText(retry.Body) || entry.FrontmatterHash != hashText(retry.Frontmatter) {
+		t.Fatalf("entry = %+v, want the re-derived hashes of the refreshed page", entry)
+	}
+}
+
+// TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles: the same
+// crash window, but Engram moved on before the retry. The interrupted run
+// published revision 2 and never persisted the sidecar, and by the time
+// promotion runs again the observation is at revision 3, so the retry
+// renders content that never existed on disk. Byte equality against the
+// incoming render -- with or without the wall-clock stamps normalized away
+// -- cannot settle this by construction: the two renders are of different
+// revisions and are SUPPOSED to differ.
+//
+// What still separates it from a local edit is the page's own
+// engram_revision: it stands AHEAD of the revision the sidecar records as
+// last promoted, and only longterm-mem's own writes advance that field. A
+// human editing a page leaves it exactly where the sidecar left it.
+func TestUpdate_InterruptedUpdateFollowedByANewRevisionReconciles(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 310, Type: "decision", Title: "Interrupted Then Revised", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := EmitPage(obs, "c-000310", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v1): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, first)
+
+	store := PrecedenceStore{}
+	seedPrecedence(store, first)
+
+	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 2
+	obs.Content = "V2 body."
+	interrupted, err := EmitPage(obs, "c-000310", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (interrupted v2): %v", err)
+	}
+	if err := os.WriteFile(existingPath, []byte(interrupted.Frontmatter+interrupted.Body), 0o644); err != nil {
+		t.Fatalf("simulate interrupted write: %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 3
+	obs.Content = "V3 body."
+	incoming, err := EmitPage(obs, "c-000310", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v3): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionUpdated {
+		t.Fatalf("action.Kind = %v, want ActionUpdated: a page whose engram_revision is ahead of the sidecar is our own unrecorded write, not a local edit", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != incoming.Frontmatter+incoming.Body {
+		t.Fatalf("page was not refreshed to revision 3; got:\n%s", got)
+	}
+	entry, ok := store.Get(incoming.Address)
+	if !ok {
+		t.Fatalf("store has no entry for %s after reconciliation", incoming.Address)
+	}
+	if entry.BodyHash != hashText(incoming.Body) || entry.FrontmatterHash != hashText(incoming.Frontmatter) {
+		t.Fatalf("entry = %+v, want the re-derived hashes of the refreshed page", entry)
+	}
+	if entry.PromotedRevision != 3 {
+		t.Fatalf("entry.PromotedRevision = %d, want 3: the entry must record the revision it just published, or the next run repeats this reconciliation", entry.PromotedRevision)
+	}
+}
+
+// TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped pins the
+// scope of the reconciliation above. "engram_revision is ahead of the
+// sidecar" makes a page ADOPTABLE, never automatically ours: a human who
+// edits a page inside the crash window -- after our write landed, before
+// the sidecar caught up -- leaves that same advanced revision behind, and
+// their edit must still be preserved, which is the entire point of the
+// branch this sits in.
+//
+// The corroborating evidence is the body's own tail: every body promotion
+// renders closes with the promotion footer naming the observation and the
+// revision that page carries. A body that does not end there is not the
+// render we would have left, so the page is refused. This does not make
+// adoption airtight -- an edit buried mid-body leaves the footer intact and
+// is indistinguishable from our own render, because the one fingerprint
+// that could have told them apart is precisely what the interruption lost
+// -- but it costs nothing and catches the common shapes: an appended note,
+// a truncation, a replaced body.
+func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 311, Type: "decision", Title: "Edited During The Window", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := EmitPage(obs, "c-000311", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v1): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, first)
+
+	store := PrecedenceStore{}
+	seedPrecedence(store, first)
+
+	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 2
+	obs.Content = "V2 body."
+	interrupted, err := EmitPage(obs, "c-000311", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (interrupted v2): %v", err)
+	}
+	// The interrupted write landed, the sidecar Save did not, and then a
+	// human appended their own note to the published page.
+	edited := interrupted.Frontmatter + interrupted.Body + "\nA human's note, appended after the footer.\n"
+	if err := os.WriteFile(existingPath, []byte(edited), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 3
+	obs.Content = "V3 body."
+	incoming, err := EmitPage(obs, "c-000311", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v3): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: an advanced engram_revision makes a page adoptable, not automatically ours", action.Kind)
+	}
+	if action.Diagnostic == nil || !strings.Contains(action.Diagnostic.Detail, "c-000311") {
+		t.Fatalf("action.Diagnostic = %+v, want a diagnostic naming c-000311", action.Diagnostic)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != edited {
+		t.Fatalf("the human's edit was overwritten; got:\n%s\nwant (unchanged):\n%s", got, edited)
 	}
 }

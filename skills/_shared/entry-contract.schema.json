@@ -112,6 +112,11 @@
         "human_review_included": {
           "const": true,
           "description": "The planned range includes human review and gate effort."
+        },
+        "expected_checkpoints": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional. Planned count of human-confirmation checkpoints, one unit per distinct human round-trip reply, over the same tiering-go-ahead-to-merge boundary the actuals record's checkpoint_count uses. This is the PLAN side of the only checkpoint pair that has both sides recorded: the actual side is checkpoint_count in sdd/{change}/actuals. sdd-time-estimation already persists it into sdd/{change}/estimate and calls it the real calendar-time driver for agent-orchestrated delivery, so omitting it here left a producer that carried the field failing the closed estimate object outright. Optional, not required: contracts written before this property existed stay valid, which is why adding it is a backwards-compatible extension of the 2.1.0 vocabulary rather than a version bump. The schema constrains the SHAPE (a non-negative integer); the deterministic validator enforces the floor of 1, which shape cannot express."
         }
       }
     },

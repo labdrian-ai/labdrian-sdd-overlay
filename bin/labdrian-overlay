@@ -1313,13 +1313,16 @@ cmd_apply() {
   # nothing to do and never retry. That degraded state would be sticky
   # rather than self-healing, so the failure is named loudly, the exact
   # recovery command is printed, and apply itself exits non-zero.
+  #
+  # The step goes through longtermmem_install_step rather than calling
+  # cmd_longterm_mem here: see that function for why a bare call in this
+  # condition context could not observe the failures it most needed to.
   local mcp_install_failed=""
   if [[ -n "$saw_mcp_row" ]]; then
     echo ""
     info "longterm-mem: mcp-routed row detected — running install once (D13)"
-    if ! cmd_longterm_mem install --target "$target_arg"; then
+    if ! longtermmem_install_step "$target_arg"; then
       mcp_install_failed=1
-      warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian-overlay longterm-mem install --target $target_arg' directly."
     fi
   fi
 
@@ -2884,31 +2887,120 @@ ensure_engine_binary() {
     || die "go build failed for the engine binary"
 }
 
+# longtermmem_installed_targets_known <line> answers whether <line> names a
+# target this entrypoint can actually install longterm-mem for.
+#
+# It exists because the tracking file is read as EVIDENCE, not as text: a
+# non-empty read is what keeps longtermmem_maybe_remove_binary from deleting
+# a binary another runtime still depends on. Anything that is not a known
+# target name — a partial write, a hand edit, a stray file from some other
+# tool — is not install state, and reading it as "something is still
+# installed" wedges that guard permanently, with no way for the operator to
+# clear it short of deleting the file by hand.
+longtermmem_installed_targets_known() {
+  local candidate="${1:-}" known
+  for known in "${!TARGET_PATHS[@]}"; do
+    if [[ "$candidate" == "$known" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
 # longtermmem_installed_targets_read prints the currently tracked installed
-# targets (see LONGTERM_MEM_INSTALLED_TARGETS above), one per line; empty
-# output when none are tracked or the file does not exist yet.
+# targets (see LONGTERM_MEM_INSTALLED_TARGETS above), one per line, sorted
+# and deduplicated; empty output when none are tracked or the file does not
+# exist yet. Lines that do not name a known target are dropped (see above).
+#
+# Deduplication happens HERE rather than on write, which is what lets the
+# write side be a single atomic append instead of a read-modify-write.
 longtermmem_installed_targets_read() {
-  if [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
-    cat "$LONGTERM_MEM_INSTALLED_TARGETS"
-  fi
+  [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
+  local line
+  while IFS= read -r line || [[ -n "$line" ]]; do
+    if longtermmem_installed_targets_known "$line"; then
+      printf '%s\n' "$line"
+    fi
+  done < "$LONGTERM_MEM_INSTALLED_TARGETS" | sort -u
+  return 0
 }
 
 # longtermmem_installed_targets_add <target> records <target> as installed
-# (idempotent, sorted, deduped).
+# (idempotent).
+#
+# The record is appended, never rewritten. A read-modify-write through a
+# single FIXED shared temporary path — which is what this used to do — is
+# the worst of both worlds under two concurrent overlay runs: both truncate
+# the same staging file, so one run's `mv` can publish the other run's
+# half-written content, or fail outright because the other already renamed
+# it away. A short O_APPEND write is atomic, so two runs recording DIFFERENT
+# targets at the same time both land, with no lock and no staging file at
+# all.
+#
+# The "already recorded" check is what keeps the file from growing by one
+# line per apply run; a duplicate can still appear if two runs append the
+# same target at once, and longtermmem_installed_targets_read collapses it.
 longtermmem_installed_targets_add() {
   local target="$1"
-  mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-  { longtermmem_installed_targets_read; echo "$target"; } | sort -u > "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp"
-  mv "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp" "$LONGTERM_MEM_INSTALLED_TARGETS"
+  longtermmem_installed_targets_known "$target" \
+    || die "longterm-mem: refusing to record an unknown install target: $target"
+
+  local dir
+  dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+  mkdir -p "$dir" || die "longterm-mem: could not create $dir"
+
+  local tracked
+  tracked="$(longtermmem_installed_targets_read)"
+  if [[ $'\n'"$tracked"$'\n' == *$'\n'"$target"$'\n'* ]]; then
+    return 0
+  fi
+
+  printf '%s\n' "$target" >> "$LONGTERM_MEM_INSTALLED_TARGETS" \
+    || die "longterm-mem: could not record $target in $LONGTERM_MEM_INSTALLED_TARGETS"
 }
 
 # longtermmem_installed_targets_remove <target> un-records <target>.
+#
+# Removal cannot be an append, so this one does stage and rename — through a
+# PER-PROCESS mktemp in the SAME directory (the pattern the binary deploy
+# below already uses), so the rename stays an atomic same-filesystem
+# operation and two concurrent runs can no longer truncate each other's
+# staging file.
+#
+# It rewrites from longtermmem_installed_targets_read, so a file that had
+# picked up garbage is also compacted back to valid install state here.
+#
+# KNOWN LIMIT: this is still a read-modify-write. It cannot lose a torn
+# write any more, but a concurrent `add` that lands between the read and the
+# rename is still dropped. Closing that needs an actual lock, which needs an
+# answer to a question this script cannot answer for itself: is concurrent
+# overlay invocation a supported thing to do?
 longtermmem_installed_targets_remove() {
   local target="$1"
   [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
-  mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
-  grep -v -x -F "$target" "$LONGTERM_MEM_INSTALLED_TARGETS" > "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp" || true
-  mv "${LONGTERM_MEM_INSTALLED_TARGETS}.tmp" "$LONGTERM_MEM_INSTALLED_TARGETS"
+
+  local dir
+  dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+  mkdir -p "$dir" || die "longterm-mem: could not create $dir"
+
+  local tmp
+  tmp="$(mktemp "$dir/.installed-targets.XXXXXX")" \
+    || die "longterm-mem: could not create a temporary file in $dir"
+
+  local kept filter_exit=0
+  kept="$(longtermmem_installed_targets_read)"
+  printf '%s' "$kept" | grep -v -x -F -e "$target" > "$tmp" || filter_exit=$?
+  # grep exits 1 when it selects nothing, which is the ordinary "that was
+  # the last tracked target" case; anything above 1 is a real error.
+  if [[ "$filter_exit" -gt 1 ]]; then
+    rm -f "$tmp"
+    die "longterm-mem: could not rewrite $LONGTERM_MEM_INSTALLED_TARGETS"
+  fi
+
+  mv "$tmp" "$LONGTERM_MEM_INSTALLED_TARGETS" || {
+    rm -f "$tmp"
+    die "longterm-mem: could not update $LONGTERM_MEM_INSTALLED_TARGETS"
+  }
 }
 
 # longtermmem_maybe_remove_binary implements the R-014/D4 binary-removal
@@ -2934,6 +3026,38 @@ longtermmem_maybe_remove_binary() {
     fi
     rm -f "$LONGTERM_MEM_INSTALLED_TARGETS"
   fi
+}
+
+# longtermmem_install_step runs cmd_apply's D13 "install once per apply
+# invocation" step and reports whether it succeeded, printing the recovery
+# line itself when it did not.
+#
+# The call is wrapped in a SUBSHELL deliberately. cmd_longterm_mem and the
+# helpers it reaches report unrecoverable problems through `die` — the
+# script-wide convention, used in dozens of places — and `die` exits the
+# PROCESS. Invoked directly as `if ! cmd_longterm_mem install`, that took
+# the entire apply run down with it, so the recovery line below, which
+# exists precisely to explain a failed install, was unreachable for the
+# likeliest failures: no go toolchain, no longterm-mem module, a failed
+# build, an unresolvable --target, a missing engine binary.
+#
+# A subshell turns die's exit into an observable status at exactly this one
+# call site, and it does so without rewriting `die` into a dual-mode
+# "return when I am a callee" that every one of its call sites would then
+# have to honour correctly. Nothing is lost to the subshell: every effect of
+# this step lands on the filesystem, never in shell state the caller reads.
+#
+# Note that the subshell does NOT restore errexit inside the callee — bash
+# suppresses it for the whole condition context either way — which is why
+# the install path checks each of its own deploy steps explicitly.
+longtermmem_install_step() {
+  local target_arg="$1"
+  local status=0
+  ( cmd_longterm_mem install --target "$target_arg" ) || status=$?
+  if [[ "$status" -ne 0 ]]; then
+    warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian-overlay longterm-mem install --target $target_arg' directly."
+  fi
+  return "$status"
 }
 
 # cmd_longterm_mem implements 'longterm-mem install|status|uninstall
@@ -2990,16 +3114,52 @@ cmd_longterm_mem() {
     [[ -d "$LONGTERM_MEM_SRC" ]] || die "longterm-mem module not found at $LONGTERM_MEM_SRC"
 
     info "Building longterm-mem binary..."
-    mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
+    # Every step of the deploy below is checked EXPLICITLY rather than left
+    # to 'set -e'. cmd_longterm_mem is reached from a condition context in
+    # cmd_apply, and bash suppresses errexit for the whole of a function
+    # called that way — an unchecked mkdir, mktemp, chmod or mv there
+    # deploys nothing and still prints "binary deployed to".
+    local binary_dir
+    binary_dir="$(dirname "$LONGTERM_MEM_BINARY")"
+    mkdir -p "$binary_dir" || die "could not create $binary_dir for the longterm-mem binary"
     local build_tmp
-    build_tmp="$(mktemp "$(dirname "$LONGTERM_MEM_BINARY")/.longterm-mem.build.XXXXXX")"
+    build_tmp="$(mktemp "$binary_dir/.longterm-mem.build.XXXXXX")" \
+      || die "could not create a temporary build file in $binary_dir"
     if ! (cd "$LONGTERM_MEM_SRC" && go build -o "$build_tmp" ./cmd/longterm-mem); then
       rm -f "$build_tmp"
       die "go build failed for longterm-mem; binary not deployed"
     fi
-    chmod +x "$build_tmp"
-    mv "$build_tmp" "$LONGTERM_MEM_BINARY"
+    chmod +x "$build_tmp" || {
+      rm -f "$build_tmp"
+      die "could not make $build_tmp executable; longterm-mem binary not deployed"
+    }
+    mv "$build_tmp" "$LONGTERM_MEM_BINARY" || {
+      rm -f "$build_tmp"
+      die "could not install the longterm-mem binary at $LONGTERM_MEM_BINARY; not deployed"
+    }
     info "longterm-mem binary deployed to: $LONGTERM_MEM_BINARY"
+
+    # install_failed marks a register outcome that neither registered $t nor
+    # converged, so the caller (cmd_apply's recovery line) hears about it on
+    # the exit code. A refusal and a version skew are NOT that: both are
+    # states every re-run reproduces identically, so both converge.
+    local install_failed=""
+
+    # expanded_all mirrors cmd_register.go's OWN distinction, and it has to,
+    # because this loop takes that distinction away from it: register's
+    # "--target all" means "every runtime this machine has" and SKIPS a
+    # runtime whose configuration file is absent, while a target named
+    # explicitly is a different statement and fails. Expanding "all" here
+    # and calling register once per target — which the per-target tracking
+    # below needs — turns every runtime the machine does not have into a
+    # named-target hard failure. Escalating those would fail the run on any
+    # machine that does not run all three runtimes.
+    #
+    # So a hard failure is escalated only for a target the operator named,
+    # which is exactly the case register itself escalates. Under "all" it is
+    # still warned about, and $t is still not recorded as installed.
+    local expanded_all=""
+    [[ "$target_arg" == "all" ]] && expanded_all=1
 
     local t
     for t in $targets; do
@@ -3008,12 +3168,58 @@ cmd_longterm_mem() {
       # comment) — the module's own default (defaultRegisterStateDir(),
       # ~/.labdrian-overlay/longterm-mem, D9) is that single source of
       # truth, not $STATE_DIR.
-      "$LONGTERM_MEM_BINARY" register --target "$t" \
-        || warn "longterm-mem register --target $t did not succeed (an untagged entry it does not own, or another failure); continuing"
+      #
+      # --binary IS passed, and must be: it is the path written INTO each
+      # runtime's MCP entry, and $LONGTERM_MEM_BINARY (derived from
+      # $STATE_DIR) is where the binary was just deployed. register's own
+      # default resolves from $HOME instead, so under a $STATE_DIR override
+      # it wrote entries naming a path nothing was ever deployed to. Under
+      # the default $STATE_DIR the two values are identical, so this changes
+      # no byte of an ordinary install.
+      #
+      # register's exit status is INSPECTED, not discarded (cmd_register.go:
+      # 0 registered, 1 hard failure, 2 usage/version skew, 6 an untagged
+      # same-named entry it refuses to touch). Only 0 means this entrypoint
+      # actually registered $t, and only 0 records $t as installed —
+      # recording a target register refused would make the binary-removal
+      # guard hold the shared binary hostage on behalf of a runtime that
+      # never had an entry of ours.
+      local register_exit=0
+      "$LONGTERM_MEM_BINARY" register --target "$t" --binary "$LONGTERM_MEM_BINARY" \
+        || register_exit=$?
+
+      # The engine record is rebuilt from OBSERVED state on every call and
+      # never records an entry it cannot prove it wrote, so it runs for
+      # every outcome above: after a refusal it is what reports $t's entry
+      # as the unmanaged entry it is, and skipping it would leave a stale
+      # record behind instead.
       "$ENGINE_BINARY" runtime install --component longterm-mem --target "$t" --state-dir "$STATE_DIR" \
         || warn "engine runtime install --component longterm-mem --target $t reported a non-supported status"
-      longtermmem_installed_targets_add "$t"
+
+      case "$register_exit" in
+        0)
+          longtermmem_installed_targets_add "$t"
+          ;;
+        6)
+          warn "longterm-mem register --target $t: refused — an entry exists that longterm-mem does not own, and it was left untouched. $t is NOT recorded as installed; remove that entry by hand and re-run install to register $t."
+          ;;
+        2)
+          warn "longterm-mem register --target $t: this binary does not accept the invocation (exit 2, version skew), so $t was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this."
+          ;;
+        *)
+          if [[ -n "$expanded_all" ]]; then
+            warn "longterm-mem register --target $t failed (exit $register_exit); $t was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here."
+          else
+            warn "longterm-mem register --target $t failed (exit $register_exit); $t was not registered and is NOT recorded as installed"
+            install_failed=1
+          fi
+          ;;
+      esac
     done
+
+    if [[ -n "$install_failed" ]]; then
+      return 1
+    fi
   elif [[ "$subcmd" == "status" ]]; then
     "$ENGINE_BINARY" runtime status --component longterm-mem --state-dir "$STATE_DIR" \
       || warn "engine runtime status --component longterm-mem reported a non-supported status"

@@ -1,6 +1,7 @@
 package register
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"os"
@@ -310,6 +311,198 @@ func (c goldenWriterCase) testUninstallUntaggedEntryPreservedAndReported(t *test
 	}
 }
 
+// testMissingContainerIsSynthesized (A4) is JSON-only: GIVEN a runtime
+// config that exists but declares no MCP container object at all — a fresh
+// opencode install has no "mcp" key, which makes this the ordinary case on
+// a new machine, not an exotic one — WHEN longterm-mem installs, THEN it
+// synthesizes the container at the document root, exactly as the TOML
+// writer already appends a missing table at EOF, and every unrelated byte
+// survives.
+//
+// codex does not drive this scenario: TOML has no container object to
+// synthesize (tomlsplice.go's apply appends at EOF), so its equivalent has
+// always worked and is covered by testUnrelatedEntriesPreserved.
+func (c goldenWriterCase) testMissingContainerIsSynthesized(t *testing.T) {
+	dir := t.TempDir()
+	stateDir := t.TempDir()
+	configPath := c.seedConfig(t, dir, c.fixtureName("before-no-container"))
+	before := c.readFixture(t, c.fixtureName("before-no-container"))
+
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("%s: install into a config with no MCP container returned error: %v", c.target, err)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read result config: %v", c.target, err)
+	}
+	want := c.readFixture(t, c.fixtureName("after-install-no-container"))
+	if string(got) != string(want) {
+		t.Fatalf("%s: config after install =\n%s\nwant (golden fixture) =\n%s", c.target, got, want)
+	}
+	// Stronger, and fixture-independent, than naming one unrelated snippet:
+	// EVERY byte of the original document must still be there, in order,
+	// split into a prefix and a suffix by the one inserted span (D9).
+	if !isPureInsertion(before, got) {
+		t.Fatalf("%s: synthesizing the container rewrote bytes outside the inserted span:\nbefore =\n%s\nafter =\n%s", c.target, before, got)
+	}
+
+	// The synthesis is a write like any other, so the backup safety net the
+	// decision to synthesize rests on must have fired first.
+	bak, err := os.ReadFile(configPath + ".bak")
+	if err != nil {
+		t.Fatalf("%s: no .bak beside a config whose container was synthesized: %v", c.target, err)
+	}
+	if string(bak) != string(before) {
+		t.Fatalf("%s: .bak does not hold the pre-edit bytes:\ngot =\n%s\nwant =\n%s", c.target, bak, before)
+	}
+}
+
+// isPureInsertion reports whether after differs from before by exactly one
+// contiguous insertion: every byte of before survives, in order, as a
+// prefix and a suffix of after. It is the byte-identity contract D9 states
+// for unrelated content, checked without naming any particular fixture
+// content.
+func isPureInsertion(before, after []byte) bool {
+	if len(after) < len(before) {
+		return false
+	}
+	prefix := 0
+	for prefix < len(before) && before[prefix] == after[prefix] {
+		prefix++
+	}
+	suffix := 0
+	for suffix < len(before)-prefix && before[len(before)-1-suffix] == after[len(after)-1-suffix] {
+		suffix++
+	}
+	return prefix+suffix == len(before)
+}
+
+// installStatePath is where this case's ownership record lives inside
+// stateDir — the one file the two scenarios below delete on purpose.
+func (c goldenWriterCase) installStatePath(stateDir string) string {
+	return filepath.Join(stateDir, installStateFileName)
+}
+
+// testLostInstallStateIsAdopted (D9, the "install-state lockout" defect):
+// GIVEN a runtime registered for real and install-state.json then lost
+// (restored from a backup that predates it, a wiped state directory, a
+// --state-dir typo), WHEN longterm-mem registers again with the same
+// binary, THEN it re-derives ownership from the entry itself — the entry
+// on disk is byte-identical to the one this call would write, so it can
+// only be one longterm-mem wrote — restores the record, and leaves the
+// runtime's own config byte-identical.
+//
+// Without that re-derivation, losing one small file in longterm-mem's own
+// state directory locks the user out of every runtime at once: each entry
+// reads as someone else's, register refuses (exit 6), unregister reports
+// unmanaged, and the only recovery is hand-editing all three runtime
+// configs.
+func (c goldenWriterCase) testLostInstallStateIsAdopted(t *testing.T) {
+	dir := t.TempDir()
+	stateDir := t.TempDir()
+	configPath := c.seedConfig(t, dir, c.fixtureName("before"))
+
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("%s: first install returned error: %v", c.target, err)
+	}
+	installed, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read config after the first install: %v", c.target, err)
+	}
+
+	if err := os.Remove(c.installStatePath(stateDir)); err != nil {
+		t.Fatalf("%s: failed to remove install-state.json: %v", c.target, err)
+	}
+
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("%s: re-install after losing install-state.json returned error: %v — a lost ownership record must not lock the user out of their own entry", c.target, err)
+	}
+
+	state, err := LoadInstallState(c.installStatePath(stateDir))
+	if err != nil {
+		t.Fatalf("%s: failed to load the restored install-state: %v", c.target, err)
+	}
+	record, present := state.Get(c.target)
+	if !present {
+		t.Fatalf("%s: install-state has no record after re-install — the ownership record was not restored", c.target)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read config after the re-install: %v", c.target, err)
+	}
+	if string(got) != string(installed) {
+		t.Fatalf("%s: config changed while adopting an entry identical to the one it would write:\nbefore =\n%s\nafter =\n%s", c.target, installed, got)
+	}
+
+	// The restored record must be the fingerprint of the entry actually on
+	// disk, not merely any non-empty string: a record that does not match
+	// what is installed would send the very next run down the "stale, rewrite
+	// it" branch forever.
+	if record.Fingerprint == "" {
+		t.Fatalf("%s: restored record has an empty fingerprint: %+v", c.target, record)
+	}
+	outcome, err := c.unregister(dir, stateDir)
+	if err != nil {
+		t.Fatalf("%s: unregister after adoption returned error: %v", c.target, err)
+	}
+	if outcome != UnregisterRemoved {
+		t.Fatalf("%s: unregister after adoption = %v, want UnregisterRemoved — the restored record must be the fingerprint of the entry actually on disk", c.target, outcome)
+	}
+}
+
+// testLostInstallStateWithAForeignEntryIsStillRefused is the other half of
+// the adoption rule, and the reason it is safe: adoption keys on the
+// entry's exact bytes, never on its name. GIVEN install-state has no
+// record and the same-named entry on disk is NOT the one longterm-mem
+// would write, WHEN longterm-mem installs, THEN it still refuses with
+// ErrConflict and still leaves the file byte-identical.
+//
+// The untagged.<ext> fixture proves this for an entry longterm-mem never
+// touched; this proves it for the harder case — an entry longterm-mem DID
+// write and a human then edited, which is the closest a foreign entry can
+// get to ours without being ours.
+func (c goldenWriterCase) testLostInstallStateWithAForeignEntryIsStillRefused(t *testing.T) {
+	dir := t.TempDir()
+	stateDir := t.TempDir()
+	configPath := c.seedConfig(t, dir, c.fixtureName("before"))
+
+	if err := c.register(dir, stateDir, c.binary1); err != nil {
+		t.Fatalf("%s: first install returned error: %v", c.target, err)
+	}
+	if err := os.Remove(c.installStatePath(stateDir)); err != nil {
+		t.Fatalf("%s: failed to remove install-state.json: %v", c.target, err)
+	}
+
+	// Hand-edit the installed entry so it is no longer byte-identical to
+	// what register would write, without changing its name.
+	installed, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read config after the first install: %v", c.target, err)
+	}
+	edited := bytes.Replace(installed, []byte(c.binary1), []byte("/edited/by/hand"), 1)
+	if bytes.Equal(edited, installed) {
+		t.Fatalf("%s: hand-edit changed nothing — the fixture no longer contains %q", c.target, c.binary1)
+	}
+	if err := os.WriteFile(configPath, edited, 0o600); err != nil {
+		t.Fatalf("%s: failed to write the hand-edited config: %v", c.target, err)
+	}
+
+	err = c.register(dir, stateDir, c.binary1)
+	if !errors.Is(err, ErrConflict) {
+		t.Fatalf("%s: install over a hand-edited same-named entry with no record = %v, want errors.Is(err, ErrConflict)", c.target, err)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("%s: failed to read config after the refusal: %v", c.target, err)
+	}
+	if string(got) != string(edited) {
+		t.Fatalf("%s: config file was modified despite refusal:\nbefore =\n%s\nafter =\n%s", c.target, edited, got)
+	}
+}
+
 // TestJSONInstall_UnsavableInstallStateWithdrawsTheConfigWrite belongs
 // with the harness rather than with a runtime's own scenarios because it
 // pins jsonInstall's own contract, identically for every runtime: the
@@ -349,5 +542,59 @@ func TestJSONInstall_UnsavableInstallStateWithdrawsTheConfigWrite(t *testing.T) 
 	}
 	if string(got) != string(original) {
 		t.Fatalf("the config kept a longterm-mem entry install-state has no record of — every later run would refuse it as someone else's:\nbefore =\n%s\nafter =\n%s", original, got)
+	}
+}
+
+// TestRegisterOpencode_ConfigWithNoMCPKeyIsInstalledInto (A4) is the
+// end-to-end half of TestJSONSplice_SynthesizesAMissingContainer: it drives
+// a real RegisterOpencode call (and so the whole jsonInstall flow —
+// Decide, WriteMember's json.Valid gate, the .bak, install-state) against
+// the config a fresh opencode install actually writes, which has no "mcp"
+// key at all. Before A4 this exited 1 with "container key not found",
+// making the commonest config on a new machine the one register could not
+// handle.
+func TestRegisterOpencode_ConfigWithNoMCPKeyIsInstalledInto(t *testing.T) {
+	configRoot := t.TempDir()
+	configPath := filepath.Join(configRoot, opencodeConfigFileName)
+	original := []byte(`{"theme":"system"}`)
+	if err := os.WriteFile(configPath, original, 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+	stateDir := t.TempDir()
+
+	if err := RegisterOpencode(configRoot, stateDir, "/opt/bin/longterm-mem"); err != nil {
+		t.Fatalf("RegisterOpencode into a config with no %q key returned error: %v", opencodeContainerKey, err)
+	}
+
+	got, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("read result config: %v", err)
+	}
+	if !bytes.Contains(got, []byte(`"theme":"system"`)) {
+		t.Fatalf("the unrelated theme key did not survive verbatim:\n%s", got)
+	}
+	if !isPureInsertion(original, got) {
+		t.Fatalf("synthesizing %q rewrote bytes outside the inserted span:\nbefore =\n%s\nafter =\n%s", opencodeContainerKey, original, got)
+	}
+
+	entry, present, err := readMember(configPath, opencodeContainerKey, "longterm-mem")
+	if err != nil {
+		t.Fatalf("read back the installed entry: %v", err)
+	}
+	if !present {
+		t.Fatalf("%s.longterm-mem is not present after install:\n%s", opencodeContainerKey, got)
+	}
+	if !bytes.Contains(entry, []byte("/opt/bin/longterm-mem")) {
+		t.Fatalf("installed entry does not name the binary: %s", entry)
+	}
+
+	// The backup is the safety net the decision to synthesize rests on, so
+	// it must hold the pre-edit bytes.
+	bak, err := os.ReadFile(configPath + ".bak")
+	if err != nil {
+		t.Fatalf("no .bak beside a config whose container was synthesized: %v", err)
+	}
+	if string(bak) != string(original) {
+		t.Fatalf(".bak does not hold the pre-edit bytes:\ngot = %s\nwant = %s", bak, original)
 	}
 }

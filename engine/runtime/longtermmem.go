@@ -84,14 +84,36 @@ func DefaultLongtermMemStateDir() string {
 	return filepath.Join(home, ".labdrian-overlay")
 }
 
-// DefaultLongtermMemBinaryPath returns the fixed, documented persistent
-// install path from the longterm-mem-install spec.
-func DefaultLongtermMemBinaryPath() string {
-	home := resolveHome()
-	if home == "" {
+// LongtermMemBinaryPathForStateDir returns the binary path a given state
+// dir implies: <stateDir>/bin/longterm-mem.
+//
+// The coupling is not a convenience — it is the contract. The overlay
+// entrypoint derives LONGTERM_MEM_BINARY from its own $STATE_DIR
+// ("$STATE_DIR/bin/longterm-mem"), deploys the binary there, and passes the
+// same path to `longterm-mem register --binary`, so the MCP entry written
+// into each runtime's config names it too. This adapter re-derives
+// ownership by rebuilding that entry from its own BinaryPath, so a
+// BinaryPath resolved from HOME while the state dir was overridden made
+// three separate things disagree at once: the binary was reported missing,
+// the entry naming the real binary stopped looking owned, and no record was
+// written for a runtime that was correctly installed.
+//
+// An empty stateDir returns empty rather than "bin/longterm-mem" relative
+// to whatever directory the process happens to be in; NewLongtermMemAdapter
+// substitutes the real default for it.
+func LongtermMemBinaryPathForStateDir(stateDir string) string {
+	if stateDir == "" {
 		return ""
 	}
-	return filepath.Join(home, ".labdrian-overlay", "bin", "longterm-mem")
+	return filepath.Join(stateDir, "bin", "longterm-mem")
+}
+
+// DefaultLongtermMemBinaryPath returns the fixed, documented persistent
+// install path from the longterm-mem-install spec — the state-dir-derived
+// path above for the DEFAULT state dir, so the default and the overridden
+// case cannot drift apart.
+func DefaultLongtermMemBinaryPath() string {
+	return LongtermMemBinaryPathForStateDir(DefaultLongtermMemStateDir())
 }
 
 // DefaultClaudeMCPConfigPath returns ~/.claude.json — the Claude Code MCP

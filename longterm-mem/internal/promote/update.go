@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 )
 
@@ -63,17 +64,24 @@ func (k ActionKind) String() string {
 // and the store's persistence are separate durable steps, so an
 // interruption between them leaves the page ahead of the store.
 //
-//   - An interrupted UPDATE leaves new content fingerprinted by the
-//     previous entry. When the on-disk bytes are byte-identical to what
-//     this call would write, that prior write merely completed unrecorded
-//     -- the entry is re-derived from disk instead of misreading our own
-//     content as a local edit and skipping it forever.
 //   - An interrupted CREATE leaves a page with no entry at all, so the
-//     reconciliation above is not even reachable. isOwnUnrecordedWrite
-//     settles that case from the bytes instead, normalizing away only the
-//     two wall-clock stamps EmitPage takes from nowFunc -- without which
-//     the comparison would succeed on a same-day retry and fail every day
-//     after, which is worse than not reconciling at all.
+//     tracked branch's comparisons are not even reachable.
+//     isOwnUnrecordedWrite settles it from the bytes, normalizing away only
+//     the two wall-clock stamps EmitPage takes from nowFunc -- without
+//     which the comparison would succeed on a same-day retry and fail every
+//     day after, which is worse than not reconciling at all.
+//   - An interrupted UPDATE leaves new content fingerprinted by the
+//     PREVIOUS entry. When the retry renders the same revision, the same
+//     stamp-normalized comparison settles it. When Engram has moved on, no
+//     comparison against the incoming bytes can: the retry renders a
+//     different revision than the one on disk, so the two are supposed to
+//     differ. isOwnUnrecordedUpdate settles that case from the page's own
+//     engram_revision standing ahead of the revision the entry records --
+//     a field only our own writes advance.
+//
+// Neither reconciliation ever adopts a page level with its entry's recorded
+// revision and diverged in content: that is a human's edit, and preserving
+// it is what R-030 is for.
 //
 // Writer's create path no longer opens the second window (it persists the
 // fingerprint before publishing the page), but a vault already wedged by
@@ -107,26 +115,54 @@ func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Actio
 		// to the normal update below, which republishes it and records the
 		// provenance the interrupted run never got to.
 	case entry.BodyHash != hashText(body) || entry.FrontmatterHash != hashText(fmBlock):
-		if string(current) != rendered {
+		if !isOwnUnrecordedWrite(fmBlock, body, page) && !isOwnUnrecordedUpdate(entry, fmBlock, body, page) {
 			return skippedAction(existingPath, page.Address, "was edited locally since longterm-mem last wrote it"), nil
 		}
-		// Already holds exactly this content: an own write whose store
-		// update never landed. Re-derive the entry instead of skipping.
-		store.Set(page.Address, PrecedenceEntry{
-			BodyHash:        hashText(page.Body),
-			FrontmatterHash: hashText(page.Frontmatter),
-		})
-		return Action{Kind: ActionUpdated}, nil
+		// Reconciled: the page is an own write the store never caught up
+		// with, so fall through to the normal update below, which
+		// republishes it and records the provenance the interrupted run
+		// never got to.
 	}
 
 	if err := writeFileAtomic(existingPath, []byte(rendered)); err != nil {
 		return Action{}, err
 	}
-	store.Set(page.Address, PrecedenceEntry{
+	store.Set(page.Address, entryFor(page))
+	return Action{Kind: ActionUpdated}, nil
+}
+
+// entryFor builds the precedence entry that records page as longterm-mem's
+// own last write: the two content hashes R-030 compares against, plus the
+// revision that render carried, read back out of the rendered frontmatter
+// rather than passed in separately so the recorded revision is by
+// construction the one the page on disk actually shows.
+func entryFor(page Page) PrecedenceEntry {
+	entry := PrecedenceEntry{
 		BodyHash:        hashText(page.Body),
 		FrontmatterHash: hashText(page.Frontmatter),
-	})
-	return Action{Kind: ActionUpdated}, nil
+	}
+	if revision, ok := frontmatterRevision(page.Frontmatter); ok {
+		entry.PromotedRevision = revision
+	}
+	return entry
+}
+
+// frontmatterRevision reads a frontmatter block's engram_revision as an
+// integer. A block missing the field, or carrying something that is not an
+// integer, reports false rather than a zero revision: every caller treats
+// "no readable revision" as no evidence and fails closed, which a silent 0
+// would quietly turn into "revision 0", the smallest possible revision and
+// therefore the most permissive answer.
+func frontmatterRevision(fmBlock string) (int, bool) {
+	raw, ok := parseFrontmatterFields(fmBlock)[engramRevisionField]
+	if !ok {
+		return 0, false
+	}
+	revision, err := strconv.Atoi(strings.TrimSpace(raw))
+	if err != nil {
+		return 0, false
+	}
+	return revision, true
 }
 
 // volatileFrontmatterFields are the only two frontmatter values EmitPage
@@ -159,6 +195,76 @@ var volatileFrontmatterFields = [...]string{"created", "updated"}
 func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
 	return body == page.Body &&
 		withoutVolatileStamps(fmBlock) == withoutVolatileStamps(page.Frontmatter)
+}
+
+// isOwnUnrecordedUpdate settles the case isOwnUnrecordedWrite cannot: a
+// TRACKED page whose on-disk bytes no longer match its entry because an
+// earlier update published a render the sidecar never caught up with, and
+// Engram has since moved on. The retry then renders a DIFFERENT revision
+// than the one on disk, so no comparison against the incoming bytes --
+// byte-for-byte, or with the wall-clock stamps normalized away -- can ever
+// settle it: the two renders are of different revisions and are supposed
+// to differ. Left unsettled, that page is a permanent skipped_local_edit,
+// because a skip suppresses the very Save that would repair the entry.
+//
+// The page's own engram_revision is the evidence the sidecar lost. Only
+// longterm-mem's own writes advance that field; a human editing a page
+// leaves it exactly where the last promotion put it. So a page standing
+// AHEAD of the revision its entry records is a page our own write moved,
+// and one standing level with it is a page someone else changed -- which
+// stays a refusal, since preserving that edit is the entire purpose of the
+// branch this sits in.
+//
+// Three conditions, all required, and each fails closed:
+//
+//   - The entry records a revision at all. A zero is an entry written
+//     before the field existed (or a status-only patch that inherited
+//     one), which is no evidence, not "revision 0".
+//   - The page's revision is above the entry's and no higher than the
+//     incoming render's. A page claiming a revision Engram itself has not
+//     reached is not a render we could have produced.
+//   - The body ends in the promotion footer for the observation and the
+//     exact revision the page claims. Corroboration, not proof: it costs
+//     nothing and catches an appended note, a truncation or a replaced
+//     body, but an edit buried mid-body still leaves the footer intact.
+//     The fingerprint that could have separated those two is precisely
+//     what the interruption destroyed, so the residual ambiguity is
+//     irreducible -- narrowing it is the most that is available.
+func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Page) bool {
+	if entry.PromotedRevision <= 0 {
+		return false
+	}
+	onDisk, ok := frontmatterRevision(fmBlock)
+	if !ok {
+		return false
+	}
+	incoming, ok := frontmatterRevision(page.Frontmatter)
+	if !ok {
+		return false
+	}
+	if onDisk <= entry.PromotedRevision || onDisk > incoming {
+		return false
+	}
+	obsID, ok := frontmatterEngramID(page.Frontmatter)
+	if !ok {
+		return false
+	}
+	return strings.HasSuffix(body, promotionFooter(obsID, onDisk))
+}
+
+// frontmatterEngramID reads a frontmatter block's engram_id, failing the
+// same closed way frontmatterRevision does: an absent or unparseable value
+// reports false rather than observation 0.
+func frontmatterEngramID(fmBlock string) (int64, bool) {
+	raw, ok := parseFrontmatterFields(fmBlock)[engramIDField]
+	if !ok {
+		return 0, false
+	}
+	obsID, err := strconv.ParseInt(strings.TrimSpace(raw), 10, 64)
+	if err != nil {
+		return 0, false
+	}
+	return obsID, true
 }
 
 // withoutVolatileStamps blanks the value of each volatileFrontmatterFields

@@ -101,6 +101,8 @@ Hard gate rules:
 
 Reading the JSON, checking that the fields look present, or accepting a claim that inception validated it is NOT validation. If no exit-0 result is available for the persisted bytes, re-run the validator against them before using the contract as preflight evidence. Schema shape alone is also not enough: the validator enforces the ordering, path, range, and delivery invariants the schema cannot express.
 
+**`--exists-root` belongs to inception, not to preflight.** `inception-pipeline` passes `--exists-root openspec/changes/{change}` when it validates the candidate, while the change directory is still live, so a contract naming a path that was never written fails at the one moment the check can succeed. Do NOT add the flag when re-running the validator here: archiving consumes the change directory, so an archived contract's declared paths are legitimately gone, and re-checking them later would invalidate a contract that was truthful when written.
+
 When all three hold, map the contract to the preflight block instead of asking:
 
 | Preflight choice     | Entry contract field                       | Canonical value                                    |
@@ -217,16 +219,19 @@ Four separate vocabularies describe delivery and chaining across this system. Th
 
 Two consequences follow: a `delivery_strategy` arriving from a validated entry contract can never be `ask-on-risk`, and `ask-on-risk` can only ever be a live session choice that must resolve to one of the other three before `sdd-apply` runs.
 
-**Chaining — one concept, four spellings.**
+**Chaining — one concept, five spellings.**
 
 | Surface                                                    | Domain                                                                 | How to read it                                                                                                |
 | ---------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
 | `chain_strategy` in `entry-contract.schema.json`            | `none` \| `feature-branch-chain` \| `stacked-to-main`                    | Authoritative stored value. `none` is correct and required when `chaining_required: false`.                     |
 | `chain_strategy` in this workflow (Chain Strategy, below)   | `stacked-to-main` \| `feature-branch-chain`                              | The two topologies offered to the user. Never asked when chaining is not required — that case is schema `none`. |
-| `Chain strategy:` literal in the `sdd-tasks` forecast       | `stacked-to-main` \| `feature-branch-chain` \| `size-exception` \| `pending` | Only the first two are topologies. See the reconciliation rule in Chain Strategy before routing on this line.    |
+| `Chain strategy:` literal in the `sdd-tasks` forecast       | `none` \| `stacked-to-main` \| `feature-branch-chain`                    | Emitter. Now byte-for-byte the schema enum; the retired `size-exception` and `pending` tokens are handled by the transitional read below, for artifacts written before that correction. |
+| `Chain strategy` in `sdd-apply` Step 2a prose               | `stacked-to-main` \| `feature-branch-chain`                              | **The only consumer that branches on the value.** It carries its own unknown-value guard, because the guard in THIS file cannot fire on a token minted inside the phase agent. |
 | `chained-pr` reference prose (`references/chaining-details.md`) | narrative only, no machine tokens                                      | Human guidance. Never parse it and never route from it.                                                          |
 
-`stacked-to-main` is the single token both machine vocabularies share, and it is the only reason this map has never produced a routing failure in practice: all three real contracts to date chose it. That is luck, not a guard.
+`stacked-to-main` is the single token every machine vocabulary above shares, and it is the only reason this map has never produced a routing failure in practice: all three real contracts to date chose it. That is luck, not a guard. The guard is `TestSddTasksChainStrategyEmitDomainMatchesSchema` /
+`TestSddApplyChainStrategyConsumerDomainMatchesSchema` /
+`TestChainingSpellingsTableCountsEverySurface` in `tools/entry-contract-validator/pipeline_vocabulary_pins_test.go`, which derive every domain above from the schema enum and fail when a surface drifts — including when this table's own headline count stops matching its row count.
 
 ### Chain Strategy
 
@@ -239,12 +244,12 @@ A third value exists but is never asked: `none`, which the entry contract stores
 
 **Unknown-value guard (MANDATORY).** Any `chain_strategy` value outside `stacked-to-main`, `feature-branch-chain`, and `none` is invalid. Do NOT pick the nearest branch, do NOT default to `stacked-to-main` because it is the common case, and do NOT proceed: STOP, report the unrecognised value and where it came from (entry contract, tasks forecast, or session cache), and re-collect the chain strategy before launching `sdd-apply`. This mirrors the identical rule for `delivery_strategy` in the Review Workload Guard, which this section previously lacked. The exposure is real and only latent: `sdd-apply` branches on `stacked-to-main` and `feature-branch-chain` and nothing else, so any other value reaches implementation with no branch to take.
 
-**Reconciling the `sdd-tasks` forecast literal.** The `Chain strategy:` line `sdd-tasks` emits admits two extra tokens that are not chain topologies:
+**Reconciling the `sdd-tasks` forecast literal (transitional, for artifacts written before the emitter was corrected).** `sdd-tasks` no longer emits either token — its template and guard-contract line now advertise the schema enum exactly — but tasks artifacts written earlier still carry them, so the read below stays until those artifacts are gone. The two retired tokens are not chain topologies:
 
 - `size-exception` is a **delivery** fact, not a topology. It means the change ships as one PR with an approved budget overrun — already fully expressed by `delivery_strategy: exception-ok`, `chaining_required: false`, `chain_strategy: none`, and `review_budget.size_exception.state: approved`. Carrying it in the chain field duplicates a delivery decision in a topology slot and makes the field unmappable to the schema.
 - `pending` is a **null state**, not a value. It means the decision has not been made, which is what an absent field already means.
 
-`sdd-tasks` SHOULD stop emitting either token in that field: the chain field's job is to answer "which branch does each PR target", and neither token answers it. Until that emission is fixed, apply this transitional read so today's artifacts still route — and treat every application of it as a defect to remove, not as a supported mapping:
+`sdd-tasks` HAS stopped emitting either token in that field: the chain field's job is to answer "which branch does each PR target", and neither token answers it. Apply this transitional read only to artifacts written before that correction — and treat every application of it as a defect to remove, not as a supported mapping:
 
 | Forecast literal  | Read as                                                                         | Action                                                                            |
 | ------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |

@@ -13,11 +13,12 @@ func main() {
 }
 
 // run dispatches the requested subcommand and returns the process exit code.
-// Exit codes follow the contract in design.md: 0 ok, 2 usage.
+// Exit codes follow the contract in design.md, named in exit_codes.go; run
+// itself only ever produces exitUsage.
 func run(args []string) int {
 	if len(args) == 0 {
 		usage()
-		return 2
+		return exitUsage
 	}
 
 	switch args[0] {
@@ -42,7 +43,7 @@ func run(args []string) int {
 	default:
 		fmt.Fprintf(os.Stderr, "longterm-mem: unknown subcommand %q\n", args[0])
 		usage()
-		return 2
+		return exitUsage
 	}
 }
 

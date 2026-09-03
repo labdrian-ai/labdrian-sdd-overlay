@@ -124,6 +124,16 @@ func insertBeforeClosingDelimiter(lines, newLines []string) string {
 // required fields (author, url, ...) promotion would otherwise fabricate.
 const vaultType = "concept"
 
+// engramIDField and engramRevisionField are the two frontmatter keys that
+// identify WHICH observation, at WHICH revision, a page on disk was
+// rendered from. Named here, next to the Render call that emits them, so
+// the reader (frontmatterRevision, update.go) and the writer cannot drift
+// apart into two spellings of the same key.
+const (
+	engramIDField       = "engram_id"
+	engramRevisionField = "engram_revision"
+)
+
 // frontmatter is the flat-YAML page header EmitPage renders.
 type frontmatter struct {
 	Title          string
@@ -158,10 +168,10 @@ func (fm frontmatter) Render() string {
 	writeField(&b, "status", fm.Status)
 	writeListField(&b, "related", fm.Related)
 	writeListField(&b, "sources", nil)
-	writeField(&b, "engram_id", strconv.FormatInt(fm.EngramID, 10))
+	writeField(&b, engramIDField, strconv.FormatInt(fm.EngramID, 10))
 	writeField(&b, "engram_sync_id", fm.EngramSyncID)
 	writeField(&b, "engram_type", fm.EngramType)
-	writeField(&b, "engram_revision", strconv.Itoa(fm.EngramRevision))
+	writeField(&b, engramRevisionField, strconv.Itoa(fm.EngramRevision))
 	writeField(&b, "project", fm.Project)
 	b.WriteString("---\n")
 	return b.String()

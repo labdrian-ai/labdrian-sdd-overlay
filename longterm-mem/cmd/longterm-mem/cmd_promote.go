@@ -27,27 +27,27 @@ func cmdPromote(args []string) int {
 	id := fs.Int64("id", 0, "Engram observation id (required)")
 	vaultDir := fs.String("vault", "", "vault path override")
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *project == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: promote: --project is required")
-		return 2
+		return exitUsage
 	}
 	if *id <= 0 {
 		fmt.Fprintln(os.Stderr, "longterm-mem: promote: --id is required")
-		return 2
+		return exitUsage
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %v\n", err)
-		return 3
+		return vaultExitCode(err)
 	}
 
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %v\n", err)
-		return 4
+		return exitEngramUnavailable
 	}
 	defer store.Close()
 
@@ -55,9 +55,9 @@ func cmdPromote(args []string) int {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %v\n", err)
 		if errors.Is(err, promote.ErrObservationNotFound) {
-			return 7
+			return exitNotFound
 		}
-		return 1
+		return exitInternal
 	}
 
 	// A skip wrote nothing: it is a refusal, not a promotion, and must not
@@ -74,9 +74,9 @@ func cmdPromote(args []string) int {
 		if result.Action.Diagnostic != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: promote: %s\n", result.Action.Diagnostic.Detail)
 		}
-		return 6
+		return exitRegistrationConflict
 	}
 
 	fmt.Printf("longterm-mem: promoted %s (%s)\n", result.Page.Address, result.Action.Kind)
-	return 0
+	return exitOK
 }

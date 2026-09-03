@@ -90,6 +90,84 @@ via a section-preserving edit that leaves unrelated sections untouched.
 - WHEN longterm-mem re-installs
 - THEN it replaces that section in place
 
+### Requirement: A Configuration With No MCP Container Is Installed Into, Not Refused
+
+Traces to: longterm-mem R-016, R-017, R-018
+
+No change-level `ID:` is claimed here, for the same reason the multi-target rule
+below claims none: this rule was discovered during delivery rather than
+specified up front, so it has no R-NNN of its own, and `Traces to:` is the key
+that resolves a requirement.
+
+WHEN a runtime's configuration file exists but declares no MCP container at all
+— no `mcpServers` key for Claude Code, no `mcp` key for opencode, no
+`mcp_servers` table for codex — the overlay SHALL create that container as part
+of the same byte-preserving edit that writes the longterm-mem entry, rather than
+failing the registration. Every pre-existing byte of the document SHALL survive
+unchanged, and the pre-edit backup SHALL be written before the edit lands, as it
+is for any other registration write.
+
+This is the config a brand-new machine has, not an exotic one: a fresh opencode
+install writes an `opencode.json` with no `mcp` key, and Claude Code's
+`~/.claude.json` carries no `mcpServers` key until something adds one. The three
+writers SHALL agree about it — one writer treating a missing container as fatal
+while another appends its own is a defect, not a scope boundary.
+
+#### Scenario: A configuration with no MCP container is installed into
+
+- GIVEN a runtime's configuration file exists, is valid, and declares no MCP
+  container at all, with unrelated settings of its own
+- WHEN longterm-mem installs
+- THEN the container is created holding only the ownership-tagged longterm-mem
+  entry, every unrelated setting remains byte-identical, and the registration
+  succeeds
+
+#### Scenario: An empty configuration document is installed into
+
+- GIVEN a runtime's configuration file exists and is an empty document
+- WHEN longterm-mem installs
+- THEN the container and the ownership-tagged longterm-mem entry are created and
+  the registration succeeds, rather than failing for want of a container to
+  write into
+
+### Requirement: A Lost Ownership Record Is Recovered, Not Fatal
+
+Traces to: longterm-mem R-016, R-017, R-018
+
+No change-level `ID:` is claimed here, for the same reason as the two rules
+around it.
+
+WHEN the sidecar ownership record for a target is missing but the runtime's own
+configuration holds an entry byte-identical to the one longterm-mem would write,
+registration SHALL re-derive ownership from that entry, restore the ownership
+record, and leave the configuration file untouched. Registration SHALL NOT
+report a conflict in that case.
+
+An entry that differs from the one longterm-mem would write SHALL still be
+refused and left untouched, whatever its name: ownership is re-derived from the
+entry's exact content, never from the fact that something with that name exists.
+
+The ownership record is one small file in the overlay's own state directory.
+Without this rule, losing it — a restored backup predating the install, a wiped
+state directory, a mistyped state-directory override — makes every runtime's
+entry read as a third party's at once, and the only recovery is hand-editing
+every runtime configuration the overlay itself wrote.
+
+#### Scenario: Registration recovers from a lost ownership record
+
+- GIVEN a runtime was registered and the ownership record was then lost, while
+  the entry longterm-mem wrote is still in the runtime's configuration
+- WHEN longterm-mem registers again for the same binary
+- THEN it succeeds, the ownership record is restored, and the runtime's
+  configuration file is byte-identical to what it was before the run
+
+#### Scenario: An entry that is not ours is still refused after a lost record
+
+- GIVEN the ownership record is missing and the same-named entry in the
+  runtime's configuration differs from the one longterm-mem would write
+- WHEN longterm-mem registers
+- THEN it refuses, reports the conflict, and leaves that entry byte-identical
+
 ### Requirement: Multi-Target Expansion Skips Runtimes That Are Not Installed
 
 Traces to: longterm-mem R-016, R-017, R-018

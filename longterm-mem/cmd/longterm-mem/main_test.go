@@ -149,8 +149,14 @@ func TestCmdSync_BothPassesRunDespiteAFailingObservation(t *testing.T) {
 		t.Fatalf("close stderr capture: %v", err)
 	}
 
-	if exit == 0 {
-		t.Fatal("run([sync ...]) = 0, want a non-zero exit: the failing observation must be reported")
+	// The exact code, not merely "non-zero": a bare non-zero assertion
+	// cannot tell a correct code from a wrong one, which is how sync
+	// answered 5 for every failure it met for as long as it did. This
+	// fixture vault carries no bin/setup-retrieve.sh, so its index rebuild
+	// genuinely fails -- 5 (vault_subprocess_failed) is the right code
+	// here, and exit_codes_test.go covers the two failures that are not.
+	if exit != 5 {
+		t.Fatalf("run([sync ...]) = %d, want 5 (vault_subprocess_failed): the failing observation must be reported, and this fixture's index rebuild is what failed", exit)
 	}
 	stderr, err := os.ReadFile(stderrPath)
 	if err != nil {
@@ -240,8 +246,12 @@ func TestCmdDoctor_ReportsEveryCheckDespiteOneFailing(t *testing.T) {
 		exit = run([]string{"doctor", "--project", "cmd-doctor-project"})
 	})
 
-	if exit == 0 {
-		t.Fatal("run([doctor ...]) = 0, want non-zero: the unregistered page must fail wiki-registration-consistency")
+	// The exact code, not merely "non-zero", so a regression that answers
+	// some other non-zero code is caught. exitDoctorChecksFailed is the
+	// one constant this path returns; see cmd_doctor.go for why it still
+	// aliases exitInternal and what deciding otherwise would take.
+	if exit != exitDoctorChecksFailed {
+		t.Fatalf("run([doctor ...]) = %d, want %d: the unregistered page must fail wiki-registration-consistency", exit, exitDoctorChecksFailed)
 	}
 	for _, name := range []string{"vault-config-resolvable", "address-map-integrity", "wiki-registration-consistency", "precedence-sidecar-consistency", "runtime-prerequisites"} {
 		if !strings.Contains(stdout, name) {

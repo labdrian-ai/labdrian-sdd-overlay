@@ -20,6 +20,26 @@ const precedenceManifestRelPath = ".raw/.longterm-mem-manifest.json"
 type PrecedenceEntry struct {
 	BodyHash        string `json:"body_hash"`
 	FrontmatterHash string `json:"frontmatter_hash"`
+	// PromotedRevision is the engram_revision the fingerprinted render
+	// carried. The two hashes above answer WHETHER the page still holds
+	// our last write; this answers WHICH of our writes that was, and that
+	// is the only evidence separating "the page is ahead of this sidecar
+	// because our own write landed and the sidecar's did not" from "a
+	// human edited the page" once the hashes have already diverged (see
+	// isOwnUnrecordedUpdate).
+	//
+	// Zero means no revision was recorded -- an entry written before this
+	// field existed, or one a status-only patch inherited from such an
+	// entry -- and every reader treats that as no evidence and fails
+	// closed. Conflating "absent" with revision 0 is safe here in the one
+	// direction that matters: Engram's revision_count is NOT NULL DEFAULT
+	// 1, so no promoted page legitimately carries revision 0, and reading
+	// a page that somehow does as unrecorded only ever refuses a write it
+	// might have adopted -- never the reverse. Kept a plain int rather
+	// than a *int so a PrecedenceEntry stays comparable with ==, which is
+	// how callers ask "did this entry change?"; a pointer would make two
+	// decodes of the same sidecar compare unequal.
+	PromotedRevision int `json:"promoted_revision,omitempty"`
 }
 
 // PrecedenceStore is the sidecar precedence file's decoded form, keyed by

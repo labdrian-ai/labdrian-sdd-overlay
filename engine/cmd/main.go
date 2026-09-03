@@ -288,7 +288,16 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 			exit(1)
 			return
 		}
-		adapter := runtimepkg.NewLongtermMemAdapter(stateDir, "")
+		// The binary path is DERIVED from --state-dir, never resolved
+		// independently from HOME: the overlay entrypoint deploys the
+		// binary at "$STATE_DIR/bin/longterm-mem" and registers MCP
+		// entries naming that exact path, so an adapter that resolved it
+		// from HOME under an overridden state dir reported a deployed
+		// binary as missing and a genuinely owned entry as unmanaged. An
+		// empty stateDir yields an empty binary path here, which
+		// NewLongtermMemAdapter fills in with the same default it fills
+		// stateDir with — so the un-overridden case is unchanged.
+		adapter := runtimepkg.NewLongtermMemAdapter(stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		if action == "status" {

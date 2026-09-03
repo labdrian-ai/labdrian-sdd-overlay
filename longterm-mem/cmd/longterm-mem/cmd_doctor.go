@@ -12,6 +12,22 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
+// exitDoctorChecksFailed is what doctor returns when it ran every check to
+// completion and at least one of them FAILED -- a verdict about the
+// vault, not about longterm-mem.
+//
+// It currently aliases exitInternal because that is the code slice 8a
+// specified for this path ("exit 1 if any FAILs"), but exit 1 is named
+// "internal" in the published contract, so today a caller cannot tell
+// "doctor works and your vault is broken" (a finding to act on) from
+// "doctor itself broke" (a bug to report) -- both come back as 1. Naming
+// the two paths separately here is as far as this file can honestly go:
+// splitting them for real means adding a code to a published contract
+// that callers already script against, and choosing that number is the
+// maintainer's decision, not this file's. When it is made, only this one
+// constant changes.
+const exitDoctorChecksFailed = exitInternal
+
 // cmdDoctor implements `longterm-mem doctor --project P [--vault DIR]
 // [--json]` (R-011): run the four read-only diagnostic checks and report
 // each one individually. ops.Doctor always runs and reports all four
@@ -27,17 +43,17 @@ func cmdDoctor(args []string) int {
 	vaultDir := fs.String("vault", "", "vault path override")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *project == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: doctor: --project is required")
-		return 2
+		return exitUsage
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: doctor: %v\n", err)
-		return 3
+		return vaultExitCode(err)
 	}
 
 	deps := ops.DoctorDeps{
@@ -48,7 +64,7 @@ func cmdDoctor(args []string) int {
 	report, err := ops.Doctor(context.Background(), deps, *project)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: doctor: %v\n", err)
-		return 1
+		return exitInternal
 	}
 
 	if *asJSON {
@@ -56,7 +72,7 @@ func cmdDoctor(args []string) int {
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(report); err != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: doctor: encode result: %v\n", err)
-			return 1
+			return exitInternal
 		}
 	} else {
 		fmt.Printf("longterm-mem: doctor for %s\n", report.Project)
@@ -67,8 +83,8 @@ func cmdDoctor(args []string) int {
 
 	for _, check := range report.Checks {
 		if check.Status == ops.CheckFailed {
-			return 1
+			return exitDoctorChecksFailed
 		}
 	}
-	return 0
+	return exitOK
 }

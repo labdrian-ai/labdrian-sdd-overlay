@@ -150,6 +150,11 @@ type entryContract struct {
 	ArtifactRefs      artifactRefs `json:"artifact_refs"`
 	Estimate          struct {
 		PlannedRangeHours numberRange `json:"planned_range_hours"`
+		// Pointer, so "omitted" stays distinguishable from "predicted zero".
+		// The two mean opposite things: omitted is a cache that does not carry
+		// the plan side, zero is a positive prediction that no human
+		// round-trip will occur.
+		ExpectedCheckpoints *int `json:"expected_checkpoints"`
 	} `json:"estimate"`
 	RequestedPRStrategy string `json:"requested_pr_strategy"`
 	DeliveryStrategy    string `json:"delivery_strategy"`
@@ -415,6 +420,15 @@ func validateSemantics(instance any, options validationOptions) error {
 	}
 	if contract.Estimate.PlannedRangeHours.Low > contract.Estimate.PlannedRangeHours.High {
 		return fmt.Errorf("estimate.planned_range_hours.low must not exceed high")
+	}
+	// The schema constrains expected_checkpoints to a non-negative integer;
+	// the floor of 1 is a cross-field fact the shape cannot carry. The tiering
+	// go-ahead checkpoint fires on every change — interaction_mode auto
+	// suppresses SDD product questions, not authorizations — so a plan of zero
+	// human round-trips predicts that a checkpoint which always happens will
+	// not. Omitting the field is legal; predicting zero is not.
+	if checkpoints := contract.Estimate.ExpectedCheckpoints; checkpoints != nil && *checkpoints < 1 {
+		return fmt.Errorf("estimate.expected_checkpoints is %d: the tiering go-ahead checkpoint is a durable floor that fires on every change, so the planned count is at least 1 — omit the field if no checkpoint plan was made, but do not predict zero", *checkpoints)
 	}
 
 	if contract.RequestedPRStrategy == "force-chained" &&

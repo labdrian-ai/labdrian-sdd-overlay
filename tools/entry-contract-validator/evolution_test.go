@@ -479,12 +479,31 @@ func TestExistsRootRejectsMissingArtifactPath(t *testing.T) {
 	}
 }
 
-// TestOverlayCLIResolvesExistsRootFromCaller proves the overlay wrapper
-// normalizes --exists-root the same way it normalizes --schema and --instance.
-// The validator does not run in the caller's working directory, so a relative
-// root that is passed through unnormalized would silently resolve against the
-// overlay root and stat the wrong tree.
-func TestOverlayCLIResolvesExistsRootFromCaller(t *testing.T) {
+// TestOverlayCLIAcceptsARelativeExistsRootFromCaller proves that a relative
+// --exists-root works when the overlay wrapper is invoked from the caller's
+// directory.
+//
+// The name and comment this test carried before were false, and worth recording
+// rather than quietly deleting: they claimed it "proves the overlay wrapper
+// normalizes --exists-root the same way it normalizes --schema and --instance".
+// It never proved that, and could not have. cmd_validate_entry_contract in
+// bin/labdrian-overlay normalizes exactly two flags — --schema and --instance —
+// against CALLER_CWD, and passes every other argument through untouched. This
+// test passes anyway because that function never changes directory before
+// exec'ing the validator (its only `cd` is inside a build subshell), so the
+// process inherits the caller's cwd and a relative path resolves correctly by
+// inheritance rather than by normalization. A test whose stated mechanism is not
+// the mechanism that makes it pass is worse than no test: it certifies a
+// behaviour nobody implemented, and it keeps certifying it after someone adds a
+// `cd` that breaks it.
+//
+// What it actually pins, and what the name now says, is the OBSERVABLE
+// behaviour: a relative --exists-root resolves against the caller's directory.
+// That property is worth holding whichever mechanism provides it — adding the
+// missing normalization to the wrapper would keep this test green, and adding a
+// `cd` without it would turn this test red, which is exactly the coverage the
+// old comment falsely claimed.
+func TestOverlayCLIAcceptsARelativeExistsRootFromCaller(t *testing.T) {
 	root := repoRoot(t)
 	callerDir := t.TempDir()
 	contract := loadValidContract(t)
