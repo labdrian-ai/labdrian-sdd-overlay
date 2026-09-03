@@ -2013,3 +2013,189 @@ func TestUninstall_VersionSkewStillConverges(t *testing.T) {
 		t.Errorf("claude stayed tracked, so the run can never finish; got: %q", tracked)
 	}
 }
+
+// TestUninstall_PurgeForcesRemovalWithAnotherTargetStillTracked pins
+// SUGGESTION-4's first half: --purge is the documented rollback procedure
+// (design.md:60) and the one path that can orphan an MCP entry. Uninstalling
+// only claude with --purge must still force removal of the shared binary
+// and the engine-owned registration record even though opencode remains
+// installed and tracked — exactly the state in which --purge orphans an
+// entry on purpose. opencode's own MCP entry is left untouched (its target
+// was never named, so unregister never ran for it), but its bash-level
+// tracking is wiped along with claude's by the same rm -f, so a later
+// `uninstall --target opencode` would find nothing to do even though
+// opencode's runtime config still carries the entry.
+func TestUninstall_PurgeForcesRemovalWithAnotherTargetStillTracked(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	claudeConfig := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	opencodeConfigDir := filepath.Join(home, ".config", "opencode")
+	if err := os.MkdirAll(opencodeConfigDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	opencodeConfig := filepath.Join(opencodeConfigDir, "opencode.json")
+	if err := os.WriteFile(opencodeConfig, []byte(`{"mcp":{}}`), 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+
+	// Two real installs, both real registrations: register cannot create a
+	// runtime's config file from nothing (it only edits an existing one),
+	// so opencode.json above must exist before this call for opencode to
+	// end up with a real, ownership-tagged entry.
+	for _, target := range []string{"claude", "opencode"} {
+		out, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", target)
+		if err != nil {
+			t.Fatalf("install --target %s failed: %v\noutput:\n%s", target, err, out)
+		}
+	}
+
+	opencodeBefore, err := os.ReadFile(opencodeConfig)
+	if err != nil {
+		t.Fatalf("read opencode.json after install: %v", err)
+	}
+	if !strings.Contains(string(opencodeBefore), `"longterm-mem"`) {
+		t.Fatalf("expected opencode.json to carry the longterm-mem entry after install, got: %q", opencodeBefore)
+	}
+
+	trackFile := filepath.Join(stateDir, "longterm-mem", "installed-targets")
+	trackedBefore, err := os.ReadFile(trackFile)
+	if err != nil {
+		t.Fatalf("read tracking file after install: %v", err)
+	}
+	for _, want := range []string{"claude", "opencode"} {
+		if !strings.Contains(string(trackedBefore), want) {
+			t.Fatalf("expected %q tracked as installed before uninstall, got: %q", want, trackedBefore)
+		}
+	}
+
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	regPath := filepath.Join(stateDir, "longterm-mem-registration.json")
+	if _, statErr := os.Stat(regPath); statErr != nil {
+		t.Fatalf("expected engine registration record at %s after install: %v", regPath, statErr)
+	}
+
+	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude", "--purge")
+	if err != nil {
+		t.Fatalf("uninstall --target claude --purge failed: %v\noutput:\n%s", err, uninstallOut)
+	}
+
+	if _, statErr := os.Stat(binPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected --purge to remove the shared binary even though opencode remains installed; stat err=%v", statErr)
+	}
+	if _, statErr := os.Stat(regPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected --purge to remove the engine registration record even though opencode remains installed; stat err=%v", statErr)
+	}
+	if _, statErr := os.Stat(trackFile); !os.IsNotExist(statErr) {
+		t.Errorf("expected --purge to clear the bash-level tracking file entirely (rm -f), orphaning opencode's tracking too; stat err=%v", statErr)
+	}
+
+	opencodeAfter, err := os.ReadFile(opencodeConfig)
+	if err != nil {
+		t.Fatalf("read opencode.json after purge: %v", err)
+	}
+	if !strings.Contains(string(opencodeAfter), `"longterm-mem"`) {
+		t.Errorf("expected opencode's own MCP entry to be left behind (orphaned) by --target claude --purge, got: %q", opencodeAfter)
+	}
+
+	claudeAfter, err := os.ReadFile(claudeConfig)
+	if err != nil {
+		t.Fatalf("read .claude.json after purge: %v", err)
+	}
+	if strings.Contains(string(claudeAfter), `"longterm-mem"`) {
+		t.Errorf("expected claude's own entry actually unregistered by --target claude --purge, got: %q", claudeAfter)
+	}
+}
+
+// TestUninstall_PurgeForcesRemovalThroughHardUnregisterFailure pins
+// SUGGESTION-4's second half, the one that matters most: without --purge, a
+// hard unregister failure (exit 1) keeps the target tracked and leaves the
+// shared binary and engine registration record untouched
+// (TestUninstall_HardFailureKeepsTrackingAndSharedBinary). --purge forces
+// cleanup through that exact failure — the state in which it orphans
+// entries on purpose — and still surfaces the failure on the process exit
+// code, so an operator reaching for it is told cleanup happened AND that
+// something was not cleanly unregistered.
+func TestUninstall_PurgeForcesRemovalThroughHardUnregisterFailure(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping integration test in -short mode")
+	}
+
+	overlay := overlayScript(t)
+	overlayDir := realOverlayDir(t)
+	home := t.TempDir()
+	stateDir := t.TempDir()
+	env := append([]string{
+		"HOME=" + home,
+		"OVERLAY_DIR=" + overlayDir,
+		"STATE_DIR=" + stateDir,
+		"PATH=" + os.Getenv("PATH"),
+	}, goToolchainEnv(t)...)
+
+	claudeConfig := filepath.Join(home, ".claude.json")
+	if err := os.WriteFile(claudeConfig, []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+
+	installOut, err := runOverlay(t, overlay, env, "longterm-mem", "install", "--target", "claude")
+	if err != nil {
+		t.Fatalf("install failed: %v\noutput:\n%s", err, installOut)
+	}
+
+	// Corrupt install-state.json so the next unregister call hits a REAL
+	// hard failure (LoadInstallState's JSON parse error, exit 1) — the same
+	// technique TestUninstall_HardFailureKeepsTrackingAndSharedBinary uses.
+	installStatePath := filepath.Join(home, ".labdrian-overlay", "longterm-mem", "install-state.json")
+	if _, statErr := os.Stat(installStatePath); statErr != nil {
+		t.Fatalf("expected install-state.json at %s after install: %v", installStatePath, statErr)
+	}
+	if err := os.WriteFile(installStatePath, []byte("{not valid json"), 0o600); err != nil {
+		t.Fatalf("corrupt install-state.json: %v", err)
+	}
+
+	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
+	regPath := filepath.Join(stateDir, "longterm-mem-registration.json")
+	if _, statErr := os.Stat(regPath); statErr != nil {
+		t.Fatalf("expected engine registration record at %s after install: %v", regPath, statErr)
+	}
+
+	uninstallOut, err := runOverlay(t, overlay, env, "longterm-mem", "uninstall", "--target", "claude", "--purge")
+	if err == nil {
+		t.Fatalf("expected uninstall --purge to still surface the hard unregister failure on the exit code, got success\noutput:\n%s", uninstallOut)
+	}
+
+	if _, statErr := os.Stat(binPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected --purge to force-remove the shared binary despite the hard unregister failure; stat err=%v", statErr)
+	}
+	if _, statErr := os.Stat(regPath); !os.IsNotExist(statErr) {
+		t.Errorf("expected --purge to force-remove the engine registration record despite the hard unregister failure; stat err=%v", statErr)
+	}
+
+	trackFile := filepath.Join(stateDir, "longterm-mem", "installed-targets")
+	if _, statErr := os.Stat(trackFile); !os.IsNotExist(statErr) {
+		t.Errorf("expected --purge to clear the bash-level tracking file despite the hard unregister failure; stat err=%v", statErr)
+	}
+
+	claudeAfter, err := os.ReadFile(claudeConfig)
+	if err != nil {
+		t.Fatalf("read .claude.json after purge: %v", err)
+	}
+	if !strings.Contains(string(claudeAfter), `"longterm-mem"`) {
+		t.Errorf("expected claude's own entry to remain (unregister genuinely failed, --purge only forces the shared cleanup), got: %q", claudeAfter)
+	}
+}
