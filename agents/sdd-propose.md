@@ -3,7 +3,7 @@ name: sdd-propose
 description: >
   Create a change proposal with intent, scope, and approach. Use when exploration is complete
   and the idea is ready to be formalized into a proposal document.
-model: opus
+model: fable
 tools: Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
 
