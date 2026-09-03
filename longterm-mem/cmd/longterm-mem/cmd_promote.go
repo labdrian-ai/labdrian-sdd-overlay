@@ -17,7 +17,9 @@ import (
 // other eligible observation uses (promote.ExplicitPromote ->
 // Writer.Promote's explicit=true override, R-007), regardless of its
 // automatic eligibility. An invalid or nonexistent id is rejected with
-// exit 7 (not_found), never a silent no-op.
+// exit 7 (not_found), never a silent no-op, and a promotion the local-edit
+// precedence rule refuses (R-030) exits 6 (registration_conflict) rather
+// than reporting a page it deliberately did not write as promoted.
 func cmdPromote(args []string) int {
 	fs := flag.NewFlagSet("promote", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -56,6 +58,23 @@ func cmdPromote(args []string) int {
 			return 7
 		}
 		return 1
+	}
+
+	// A skip wrote nothing: it is a refusal, not a promotion, and must not
+	// wear either the word or the exit code of one. Exit 6
+	// (registration_conflict) is this binary's existing code for exactly
+	// this shape -- an artifact already occupies the target location,
+	// longterm-mem cannot prove it owns it, so it refuses and leaves the
+	// file byte-identical (cmd_register.go/cmd_unregister.go's own
+	// untagged-entry refusal). The diagnostic goes to stderr, where a
+	// caller reading stdout for the promoted address finds nothing to
+	// mistake for one.
+	if result.Action.Kind == promote.ActionSkippedLocalEdit {
+		fmt.Printf("longterm-mem: refused %s (%s)\n", result.Page.Address, result.Action.Kind)
+		if result.Action.Diagnostic != nil {
+			fmt.Fprintf(os.Stderr, "longterm-mem: promote: %s\n", result.Action.Diagnostic.Detail)
+		}
+		return 6
 	}
 
 	fmt.Printf("longterm-mem: promoted %s (%s)\n", result.Page.Address, result.Action.Kind)

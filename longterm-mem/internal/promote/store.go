@@ -46,8 +46,8 @@ func LoadPrecedenceStore(vaultRoot string) (PrecedenceStore, error) {
 	return store, nil
 }
 
-// Save writes s to vaultRoot's sidecar precedence file via tmp+fsync+rename
-// (D6, address.go's writeFileAtomic).
+// Save writes s to vaultRoot's sidecar precedence file through
+// address.go's writeFileAtomic (D6), which durably replaces it.
 func (s PrecedenceStore) Save(vaultRoot string) error {
 	full := filepath.Join(vaultRoot, precedenceManifestRelPath)
 	data, err := json.MarshalIndent(s, "", "  ")

@@ -8,6 +8,13 @@
 // anything the parser doesn't model (e.g. comments), rewriting a file a
 // human maintains out from under them.
 //
+// "Does not own" binds the file's identity as well as its bytes. Every
+// write here goes through internal/durable.WriteFile, so a config keeps its
+// permission bits and a config reached through a symlink (a dotfiles
+// layout) has its real target edited rather than its link replaced. See
+// that package's doc comment for the one identity property — hardlinks —
+// deliberately traded away, and why.
+//
 // All three runtimes share one ownership model, decided by Decide from
 // exactly three booleans:
 //

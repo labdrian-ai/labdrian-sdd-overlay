@@ -2926,9 +2926,13 @@ longtermmem_maybe_remove_binary() {
   remaining="$(longtermmem_installed_targets_read)"
 
   if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
-    rm -f "$LONGTERM_MEM_BINARY"
+    if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
+      rm -f "$LONGTERM_MEM_BINARY"
+      info "longterm-mem binary removed: $LONGTERM_MEM_BINARY"
+    else
+      info "longterm-mem binary already absent: $LONGTERM_MEM_BINARY"
+    fi
     rm -f "$LONGTERM_MEM_INSTALLED_TARGETS"
-    info "longterm-mem binary removed: $LONGTERM_MEM_BINARY"
   fi
 }
 

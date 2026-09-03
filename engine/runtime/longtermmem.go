@@ -153,9 +153,31 @@ func (a LongtermMemAdapter) Install() LifecycleResult {
 		Targets:   map[string]longtermMemTargetRecord{},
 	}
 	for name, obs := range targets {
+		// A record is written ONLY for a target whose entry was actually
+		// observed AND is provably one this overlay wrote. Two defects live
+		// in the alternative:
+		//
+		//   - Recording every target from observed state gave an absent
+		//     runtime {Fingerprint:"", EntryPresent:false}, which the very
+		//     next status read back as "record without entry" — a defect
+		//     manufactured out of a runtime that simply is not installed.
+		//
+		//   - Recording an entry we did not write claimed a third party's
+		//     MCP server as this overlay's own: the component reported
+		//     `supported`, and reported "fingerprint drift" when that third
+		//     party edited their own entry (A2). `longterm-mem register`
+		//     refuses such an entry outright; the engine record must not
+		//     quietly disagree with it.
+		//
+		// Skipping it here is what lets the matrix tell the truth: an
+		// unowned entry has no record, so it reports as the unmanaged entry
+		// it is, and an absent runtime has nothing to report at all.
+		if !obs.entryPresent || !obs.entryOwned {
+			continue
+		}
 		reg.Targets[name] = longtermMemTargetRecord{
 			Fingerprint:  obs.entryFingerprint,
-			EntryPresent: obs.entryPresent,
+			EntryPresent: true,
 		}
 	}
 	if err := a.writeRegistration(reg); err != nil {
@@ -191,18 +213,72 @@ func (a LongtermMemAdapter) SyncCheck() LifecycleResult {
 // the module-owned "unregister" step, R-019) — matching the hard
 // constraint that nothing in this slice writes to a user's runtime config
 // outside the registration record it owns.
+//
+// It returns its OWN verdict rather than running the install-health matrix
+// over a post-uninstall observation, which is a category error: uninstall's
+// success question is "did I remove what I own?", while the matrix's
+// `supported` row describes a LIVE installation (record present, entry
+// present, fingerprints agreeing). Running it here made a flawless
+// uninstall structurally incapable of reporting success — every path went
+// through recordPresent=false and reported `partial`. Update() and
+// Rollback() already return explicit verdicts for the same reason.
+//
+// Success is the requested END STATE holding: the record was removed, or
+// was already absent. Only an unresolvable state dir or a removal that
+// genuinely failed is unsupported.
+//
+// This says nothing about what a SUBSEQUENT status reports; that is the
+// separate constraint runtime-lifecycle's "Claude uninstall removes owned
+// lifecycle state" scenario places on status, not on uninstall's own result.
 func (a LongtermMemAdapter) Uninstall() LifecycleResult {
 	path := a.registrationPath()
 	if path == "" {
-		return a.aggregateResult(ActionUninstall, nil, LongtermMemReasonConfigRootUnresolvable+": state dir could not be resolved; set HOME")
-	}
-	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
-		return a.aggregateResult(ActionUninstall, nil, fmt.Sprintf("registration could not be removed: %v", err))
+		return NewLifecycleResult(TargetLongtermMem, ActionUninstall, CapabilityUnsupported,
+			LongtermMemReasonConfigRootUnresolvable+": state dir could not be resolved; set HOME", nil)
 	}
 
+	removed := true
+	if err := os.Remove(path); err != nil {
+		if !os.IsNotExist(err) {
+			return NewLifecycleResult(TargetLongtermMem, ActionUninstall, CapabilityUnsupported,
+				fmt.Sprintf("registration could not be removed: %v", err), nil)
+		}
+		removed = false
+	}
+
+	message := "longterm-mem registration removed"
+	if !removed {
+		message = "longterm-mem registration was already absent"
+	}
+	return NewLifecycleResult(TargetLongtermMem, ActionUninstall, CapabilitySupported,
+		message, a.remainingObservationLines())
+}
+
+// remainingObservationLines describes what each runtime's own config still
+// holds after the engine record is gone. These are INFORMATION, not a
+// verdict: removing an MCP entry from a runtime's own config is the
+// module-owned `longterm-mem unregister` step's job, never this adapter's,
+// so an entry that is still there is a fact to report — not a complaint
+// about an uninstall that did exactly what it owns.
+func (a LongtermMemAdapter) remainingObservationLines() []string {
 	targets := a.observeAllTargets()
-	results := a.evaluateAll(targets, nil)
-	return a.aggregateResult(ActionUninstall, results, "")
+	lines := make([]string, 0, 3)
+	for _, name := range []Target{TargetClaude, TargetOpenCode, TargetCodex} {
+		obs := targets[string(name)]
+		lines = append(lines, string(name)+": "+remainingObservation(obs))
+	}
+	return lines
+}
+
+func remainingObservation(obs longtermMemObservation) string {
+	switch {
+	case !obs.runtimePresent:
+		return "runtime not installed on this machine; nothing to report"
+	case obs.entryPresent:
+		return "MCP entry still present in the runtime's own config; removing it is `longterm-mem unregister`'s job"
+	default:
+		return "no longterm-mem MCP entry in the runtime's own config"
+	}
 }
 
 // Update refuses explicitly rather than performing a silent no-op: the
@@ -238,6 +314,7 @@ func (a LongtermMemAdapter) evaluateAll(targets map[string]longtermMemObservatio
 		status, reason := EvaluateLongtermMemComponentStatus(LongtermMemComponentState{
 			RootResolvable:   obs.rootResolvable,
 			BinaryPresent:    obs.binaryPresent,
+			RuntimePresent:   obs.runtimePresent,
 			RecordPresent:    recordPresent,
 			EntryPresent:     obs.entryPresent,
 			FingerprintMatch: fingerprintMatch,

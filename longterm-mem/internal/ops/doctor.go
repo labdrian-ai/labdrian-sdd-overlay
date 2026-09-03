@@ -16,12 +16,13 @@ const (
 	CheckFailed = "FAIL"
 )
 
-// Check names -- the four diagnostics R-011 requires.
+// Check names -- the five diagnostics R-011 requires.
 const (
-	CheckVaultConfigResolvable       = "vault-config-resolvable"
-	CheckAddressMapIntegrity         = "address-map-integrity"
-	CheckWikiRegistrationConsistency = "wiki-registration-consistency"
-	CheckRuntimePrerequisites        = "runtime-prerequisites"
+	CheckVaultConfigResolvable        = "vault-config-resolvable"
+	CheckAddressMapIntegrity          = "address-map-integrity"
+	CheckWikiRegistrationConsistency  = "wiki-registration-consistency"
+	CheckPrecedenceSidecarConsistency = "precedence-sidecar-consistency"
+	CheckRuntimePrerequisites         = "runtime-prerequisites"
 )
 
 // requiredPrerequisite is the one external runtime dependency the vault's
@@ -43,6 +44,13 @@ const promotedPagesDir = "wiki/memory"
 // rule, which already knows that path.
 const logRelPath = "wiki/log.md"
 
+// precedenceSidecarRelPath mirrors promote's own (unexported)
+// precedenceManifestRelPath constant (store.go): longterm-mem's
+// last-written-by-us fingerprint file, named in this check's details so an
+// operator reading a FAIL knows which file to look at. The file itself is
+// read through promote.LoadPrecedenceStore, never parsed here.
+const precedenceSidecarRelPath = ".raw/.longterm-mem-manifest.json"
+
 // Check is one named diagnostic's result.
 type Check struct {
 	Name   string `json:"name"`
@@ -63,14 +71,14 @@ type DoctorDeps struct {
 	PrerequisitePresent func(name string) bool
 }
 
-// DoctorReport is Doctor's R-011 output: each of the four named checks'
+// DoctorReport is Doctor's R-011 output: each of the five named checks'
 // individual result.
 type DoctorReport struct {
 	Project string  `json:"project"`
 	Checks  []Check `json:"checks"`
 }
 
-// Doctor runs R-011's four read-only diagnostic checks independently: one
+// Doctor runs R-011's five read-only diagnostic checks independently: one
 // check's own failure -- an unresolvable path, a missing directory, a
 // corrupted manifest -- must never prevent the other three from running or
 // reporting (slice 7's review finding: a per-item failure must never abort
@@ -86,6 +94,7 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 			checkVaultConfigResolvable(deps.VaultRoot),
 			checkAddressMapIntegrity(deps.VaultRoot),
 			checkWikiRegistrationConsistency(deps.VaultRoot),
+			checkPrecedenceSidecarConsistency(deps.VaultRoot),
 			checkRuntimePrerequisites(deps),
 		},
 	}, nil
@@ -166,6 +175,47 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 		return Check{Name: CheckWikiRegistrationConsistency, Status: CheckFailed, Detail: strings.Join(details, "; ")}
 	}
 	return Check{Name: CheckWikiRegistrationConsistency, Status: CheckPassed}
+}
+
+// checkPrecedenceSidecarConsistency reports every promoted page the
+// precedence sidecar (.raw/.longterm-mem-manifest.json) has no entry for at
+// all -- a page longterm-mem published without recording that it did.
+//
+// This is the other half of the failure wiki-registration-consistency
+// already half-diagnosed. A promotion writes the page, the sidecar entry,
+// the catalog and the log as separate durable steps, and a run killed
+// between them used to leave a page nothing recorded -- which every later
+// promotion then refused as unknown provenance, suppressing the very Save
+// and registration that would have repaired it. Nothing else in doctor
+// reads this file, so a vault whose catalog and log had been repaired by
+// hand reported entirely healthy while still being permanently wedged.
+//
+// It reports only a MISSING entry, never a stale one. An entry that no
+// longer matches the page's bytes is a local edit, which R-030 makes a
+// supported and separately reported state, not a vault defect -- flagging
+// it here would report every page a human has ever touched as broken.
+func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
+	pages, unreadable, err := loadPromotedPages(vaultRoot)
+	if err != nil {
+		return Check{Name: CheckPrecedenceSidecarConsistency, Status: CheckFailed, Detail: err.Error()}
+	}
+
+	store, storeErr := promote.LoadPrecedenceStore(vaultRoot)
+
+	details := append([]string(nil), unreadable...)
+	for _, page := range pages {
+		if storeErr != nil {
+			details = append(details, fmt.Sprintf("%s could not be read, so %s has no provable provenance: %v", precedenceSidecarRelPath, page.Address, storeErr))
+			continue
+		}
+		if _, tracked := store.Get(page.Address); !tracked {
+			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", precedenceSidecarRelPath, page.Address))
+		}
+	}
+	if len(details) > 0 {
+		return Check{Name: CheckPrecedenceSidecarConsistency, Status: CheckFailed, Detail: strings.Join(details, "; ")}
+	}
+	return Check{Name: CheckPrecedenceSidecarConsistency, Status: CheckPassed}
 }
 
 // checkRuntimePrerequisites reports whether requiredPrerequisite (python3,

@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
 
 // installStateSchemaVersion is the current install-state.json schema
@@ -89,9 +91,21 @@ func (s *InstallState) Delete(target string) {
 	delete(s.Targets, target)
 }
 
-// Save writes s to path atomically: tmp file in the same directory,
-// fsync, close, then rename — mirroring vaultreg's writeJSONAtomic
-// convention (D6).
+// Save writes s to path through durable.WriteFile — the same single
+// replacement primitive the runtime-config writers use (D6).
+//
+// Unlike those, install-state.json is longterm-mem's own sidecar in
+// longterm-mem's own state directory, so durable.WriteFile's mode- and
+// symlink-preservation buy nothing here: nobody else creates or edits this
+// file. What it does buy is the reason to route through it anyway. This
+// file IS the ownership record, and the whole point of installWithRollback
+// is that a config edit with no matching record here makes every later run
+// refuse (11b-1); a rename whose directory entry never reached the disk is
+// exactly that state after a power loss, and durable.WriteFile fsyncs the
+// directory where three hand-rolled copies of this sequence did not. The
+// second reason is that there were three hand-rolled copies: a subtle
+// sequence duplicated per package is how this module ended up carrying two
+// different, and both incomplete, write disciplines at once.
 func (s *InstallState) Save(path string) error {
 	if s.Schema == 0 {
 		s.Schema = installStateSchemaVersion
@@ -102,30 +116,11 @@ func (s *InstallState) Save(path string) error {
 	}
 	data = append(data, '\n')
 
-	dir := filepath.Dir(path)
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("register: create directory for %s: %w", path, err)
 	}
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("register: create temp file for %s: %w", path, err)
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename below succeeds
-
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return fmt.Errorf("register: write temp file for %s: %w", path, err)
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return fmt.Errorf("register: fsync temp file for %s: %w", path, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("register: close temp file for %s: %w", path, err)
-	}
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("register: rename temp file into %s: %w", path, err)
+	if err := durable.WriteFile(path, data, configCreatePerm); err != nil {
+		return fmt.Errorf("register: %w", err)
 	}
 	return nil
 }

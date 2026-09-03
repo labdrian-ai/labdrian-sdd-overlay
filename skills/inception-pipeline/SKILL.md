@@ -4,7 +4,7 @@ description: "THIS IS THE FIRST SKILL TO USE when starting any unit of work — 
 license: Apache-2.0
 metadata:
   author: gentleman-programming
-  version: "2.0.0"
+  version: "2.1.0"
 ---
 
 ## Purpose
@@ -64,7 +64,7 @@ Every flow finishes with the identical tail: **assemble a temporary entry candid
 
 ## Entry Contract Assembly & Validation (v2; fail closed)
 
-Read `../_shared/pre-sdd-contracts.md` and `../_shared/entry-contract.schema.json` before assembly. The skill metadata, shared authority, entry schema, actuals schema, and validator MUST all declare contract bundle `2.0.0`. If an asset is missing or mismatched, **STOP**. Do not reconstruct a schema from memory or fall back to prose validation.
+Read `../_shared/pre-sdd-contracts.md` and `../_shared/entry-contract.schema.json` before assembly. The skill metadata, shared authority, entry schema, actuals schema, and validator MUST all declare contract bundle `2.1.0`, and a new contract MUST declare that version. If an asset is missing or mismatched, **STOP**. Do not reconstruct a schema from memory or fall back to prose validation.
 
 Assemble one candidate JSON object in a temporary file. It MUST contain every required v2 group:
 

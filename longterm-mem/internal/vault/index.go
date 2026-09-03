@@ -6,6 +6,8 @@ import (
 	"os"
 	"path/filepath"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
 
 const (
@@ -97,20 +99,27 @@ func Rebuild(ctx context.Context, runner *Runner, force bool) error {
 	return nil
 }
 
-// writeProvisionedSentinel atomically marks vaultRoot as fully provisioned:
-// it creates the sentinel's parent dir, writes an ISO-8601 timestamp to a
-// temp file, then renames it into place, so a process killed mid-write
-// never leaves a half-written sentinel that would falsely read as complete.
+// writeProvisionedSentinel durably marks vaultRoot as fully provisioned: it
+// creates the sentinel's parent dir, then writes an ISO-8601 timestamp
+// through durable.WriteFile, so a process killed mid-write never leaves a
+// half-written sentinel that would falsely read as complete.
+//
+// It used to hand-roll that sequence with a FIXED "<sentinel>.tmp" name and
+// no fsync — the two things that make the difference between a sentinel
+// that survives a crash and one that only looks like it does. The fixed
+// name is the sharper problem: anything left at that exact path by an
+// earlier interrupted run (and an interrupted run is precisely what this
+// sentinel exists to detect) blocks every future provision permanently,
+// since os.WriteFile cannot overwrite, say, a directory. Without the fsync,
+// a sentinel written and renamed just before a power loss can come back
+// empty on the next boot while still reading as present — the exact false
+// "provisioned" the sentinel was added to prevent.
 func writeProvisionedSentinel(vaultRoot string) error {
 	path := filepath.Join(vaultRoot, provisionedSentinel)
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
-	tmp := path + ".tmp"
-	if err := os.WriteFile(tmp, []byte(time.Now().UTC().Format(time.RFC3339)), 0o644); err != nil {
-		return err
-	}
-	return os.Rename(tmp, path)
+	return durable.WriteFile(path, []byte(time.Now().UTC().Format(time.RFC3339)), 0o644)
 }
 
 // stepFailure turns a Runner-level error or a non-success exit code into

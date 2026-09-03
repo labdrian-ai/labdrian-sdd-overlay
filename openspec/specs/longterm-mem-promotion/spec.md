@@ -178,6 +178,82 @@ sidecar precedence store keyed by the page's address.
 - WHEN sync re-promotes it
 - THEN the normal update-in-place behavior applies with no skip
 
+### Requirement: An Interrupted Promotion Leaves a Recoverable Vault
+
+Traces to: longterm-mem R-029, R-030
+
+No change-level `ID:` is claimed here on purpose. This rule was discovered
+during delivery rather than specified up front, so it has no R-NNN of its
+own; the longterm-mem space is otherwise contiguous and claiming a number
+inside it would assert a provenance this requirement does not have.
+`Traces to:` is the key that resolves a requirement, not `ID:`.
+
+A promotion writes the page, its precedence-store entry, the master catalog
+and the promotion log as separate durable steps, and no journal spans them.
+A process killed between any two of them therefore always leaves one of them
+ahead of the others, and the requirement is that whichever state that is, the
+next run finishes the job instead of refusing it.
+
+WHEN promotion writes a brand-new page, the promotion writer SHALL persist
+that page's precedence-store entry BEFORE publishing the page, so that the
+only ordering an interruption can leave is a recorded fingerprint with no
+page — which the ordinary create path completes on the next run — and never a
+published page with no recorded provenance, which the local-edit precedence
+rule refuses.
+
+IF a promoted page carries no precedence-store entry at all but its on-disk
+content is byte-identical to what promotion would emit for that observation,
+ignoring only the created and updated stamps taken from the wall clock, THEN
+the promotion writer SHALL treat it as its own unrecorded write: adopt it into
+the precedence store, refresh it, and repair its catalog and log registration,
+rather than refusing it as unknown provenance. Any other divergence, in the
+body or in any other frontmatter field, remains a refusal.
+
+#### Scenario: An interrupted create is finished by the next run
+
+- GIVEN a create that persisted the page's precedence entry and was killed
+  before the page itself was written
+- WHEN promotion runs again for that observation
+- THEN the page is written, registered in the catalog and the log, and the
+  promotion reports a create
+
+#### Scenario: A page left unrecorded by an older interrupted create is adopted
+
+- GIVEN a promoted page whose precedence entry, catalog registration and log
+  entry were all lost to an interruption, and whose content is what promotion
+  would emit for its observation apart from the created and updated stamps
+- WHEN promotion runs again for that observation
+- THEN the page is adopted into the precedence store, its registration is
+  repaired, and the promotion is not refused
+
+#### Scenario: A genuinely edited untracked page is still refused
+
+- GIVEN a promoted page with no precedence entry whose content differs from
+  what promotion would emit by more than the created and updated stamps
+- WHEN promotion runs again for that observation
+- THEN the page is left byte-unchanged and the promotion is refused
+
+### Requirement: A Refused Promotion Is Reported as a Refusal
+
+Traces to: longterm-mem R-030, R-032
+
+No change-level `ID:` is claimed here, for the reason given above.
+
+WHEN an explicit promote call is refused by the local-edit precedence rule,
+the longterm-mem component SHALL report it as a refusal and SHALL exit with
+the registration-conflict code, never with the success code and never with
+wording that describes the observation as promoted — a page that was
+deliberately not written is not a promotion, and a caller that cannot tell
+the two apart cannot notice a vault that refuses the same page on every run.
+
+#### Scenario: A refused promote is distinguishable from a successful one
+
+- GIVEN a promoted page a human has edited directly in the vault
+- WHEN an explicit promote call names its observation
+- THEN the page is left byte-unchanged, the outcome is reported as a refusal
+  naming the page, and the call exits with the registration-conflict code
+  rather than the success code
+
 ### Requirement: Sync Promotes Unpromoted-or-Revised Observations
 
 ID: R-009

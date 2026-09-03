@@ -44,9 +44,10 @@ ID: R-011
 Traces to: longterm-mem R-011
 
 WHEN doctor is requested for project P, the longterm-mem component SHALL run
-four read-only diagnostic checks — vault-config resolvability, address-map
-integrity, wiki-registration consistency, and runtime-prerequisite presence
-— and report each check's pass/fail state individually.
+five read-only diagnostic checks — vault-config resolvability, address-map
+integrity, wiki-registration consistency, precedence-sidecar consistency, and
+runtime-prerequisite presence — and report each check's pass/fail state
+individually.
 
 #### Scenario: Unresolvable vault config is named
 

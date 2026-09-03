@@ -21,11 +21,13 @@ type Writer struct {
 	// (R-030). UpdateInPlace leaves persistence to its caller, and
 	// Writer is that caller: it saves the sidecar as part of every
 	// promotion that wrote a page, and of none that did not. A create
-	// whose fingerprint cannot be persisted withdraws its page, so that
-	// branch is all-or-nothing; an update narrows the gap to the two
-	// renames, which UpdateInPlace's content-identity reconciliation
-	// then closes on the next run. An interrupted run therefore leaves
-	// N consistent pages rather than N pages of lost provenance.
+	// persists the fingerprint before publishing the page, so the only
+	// state an interruption can leave is an entry with no page -- which
+	// the create branch itself finishes on the next run; an update
+	// narrows the gap to the two renames, which UpdateInPlace's
+	// content-identity reconciliation then closes on the next run. An
+	// interrupted run therefore leaves N consistent pages rather than N
+	// pages of lost provenance.
 	Store PrecedenceStore
 }
 
@@ -43,9 +45,10 @@ type Result struct {
 // untouched and reports a zero Result with no error, since ineligibility
 // is a normal skip a scanning caller (sync) must not treat as a failure.
 // Every promotion that actually wrote a page persists the precedence
-// sidecar before returning; a create that cannot persist withdraws its
-// page and reports the failure, since a published page with no recorded
-// provenance is one UpdateInPlace would refuse from then on.
+// sidecar; a create persists it BEFORE publishing the page, since a
+// published page with no recorded provenance is one UpdateInPlace would
+// refuse from then on, while a recorded fingerprint with no page is simply
+// a create the next run finishes.
 //
 // Every promotion that actually wrote a page also registers it in the
 // vault's master catalog and append-only promotion log (R-029, task
@@ -95,24 +98,45 @@ func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) 
 		return Result{}, fmt.Errorf("promote: stat %s: %w", existingPath, err)
 	}
 
-	if err := writeFileAtomic(existingPath, []byte(page.Frontmatter+page.Body)); err != nil {
-		return Result{}, err
-	}
+	// Fingerprint first, page second. The two writes cannot be made atomic
+	// with respect to each other, so the only real choice is which of the
+	// two orphan states a killed process may leave behind -- and the two
+	// are not equally recoverable:
+	//
+	//   page without entry (the old order) is unrecoverable. Allocate
+	//   reuses the page's own address, os.Stat finds it, and UpdateInPlace
+	//   refuses it as unknown provenance -- which, being a skip, also
+	//   suppresses the Save and the registration that would have repaired
+	//   it. Every later run repeats that exact skip: a fixed point.
+	//
+	//   entry without page (this order) is self-healing. os.Stat finds no
+	//   page, so the next run takes this same create branch and finishes
+	//   the job, catalog and log included.
+	//
+	// The Save-failure rollback below only covers a Save that RETURNS an
+	// error; a killed process returns nothing for any compensating removal
+	// to react to, which is exactly why the ordering has to carry the
+	// guarantee rather than the cleanup.
 	w.Store.Set(address, PrecedenceEntry{
 		BodyHash:        hashText(page.Body),
 		FrontmatterHash: hashText(page.Frontmatter),
 	})
 	if err := w.Store.Save(w.VaultRoot); err != nil {
-		// The page is published but nothing records that longterm-mem
-		// wrote it, and UpdateInPlace refuses pages of unknown
-		// provenance -- so leaving it would strand this observation
-		// until an operator repaired the sidecar by hand. Withdraw the
-		// page instead: nothing was promoted, and a retry starts clean.
+		// Nothing has been published yet, so there is no page to withdraw:
+		// drop the in-memory entry and report the failure.
 		delete(w.Store, address)
-		if rmErr := os.Remove(existingPath); rmErr != nil {
-			return Result{}, fmt.Errorf("promote: persist precedence for %s: %w (and rolling back %s failed: %v)", address, err, existingPath, rmErr)
+		return Result{}, fmt.Errorf("promote: persist precedence for %s: %w (no page published)", address, err)
+	}
+	if err := writeFileAtomic(existingPath, []byte(page.Frontmatter+page.Body)); err != nil {
+		// The fingerprint is durable but no page carries it. A retry would
+		// converge regardless (the create branch is chosen by the page's
+		// own absence), but an entry claiming provenance over a file that
+		// does not exist is still a lie the sidecar should not tell.
+		delete(w.Store, address)
+		if saveErr := w.Store.Save(w.VaultRoot); saveErr != nil {
+			return Result{}, fmt.Errorf("promote: write page %s: %w (and withdrawing its precedence entry failed: %v)", existingPath, err, saveErr)
 		}
-		return Result{}, fmt.Errorf("promote: persist precedence for %s: %w (page withdrawn)", address, err)
+		return Result{}, err
 	}
 	if err := w.register(address, obs.Title); err != nil {
 		return Result{}, err

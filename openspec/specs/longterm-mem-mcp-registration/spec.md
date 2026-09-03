@@ -90,6 +90,40 @@ via a section-preserving edit that leaves unrelated sections untouched.
 - WHEN longterm-mem re-installs
 - THEN it replaces that section in place
 
+### Requirement: Multi-Target Expansion Skips Runtimes That Are Not Installed
+
+Traces to: longterm-mem R-016, R-017, R-018
+
+No change-level `ID:` is claimed here on purpose. This rule was discovered
+during delivery rather than specified up front, so it has no R-NNN of its own,
+and every free number in that space belongs to an unrelated requirement —
+`R-020` is the mid-term query scoping rule. Capability-local IDs already
+collide across delta spec files, which is why `Traces to:` is the key that
+resolves a requirement, not `ID:`.
+
+The `--target all` expansion SHALL skip a runtime whose configuration file is
+absent, reporting the skip, and SHALL NOT fail the run on its account. A
+runtime named explicitly SHALL NOT be skipped: naming it asserts it should be
+there, so an absent configuration file is a failure.
+
+This rule belongs to the command layer that drives every per-runtime writer,
+not to any one runtime.
+
+#### Scenario: An expansion skips a runtime that is not installed
+
+- GIVEN `--target all` is used and one of the three runtimes has no
+  configuration file on disk, while the others do
+- WHEN registration runs
+- THEN that runtime is skipped and the skip is reported, and the run still
+  succeeds for the runtimes that are installed
+
+#### Scenario: A runtime named explicitly still fails without a configuration file
+
+- GIVEN a single runtime is named explicitly and it has no configuration file
+  on disk
+- WHEN registration runs
+- THEN it fails, rather than being skipped the way an expansion would skip it
+
 ### Requirement: Ownership-Tagged Safe Uninstall
 
 ID: R-019

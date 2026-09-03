@@ -13,7 +13,14 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 )
 
-const expectedContractVersion = "2.0.0"
+// expectedContractVersion is the version the current bundle produces. Contracts
+// written by an earlier supported bundle stay valid; see
+// expectedSupersededContractVersions.
+const expectedContractVersion = "2.1.0"
+
+// expectedSupersededContractVersions are the earlier bundle versions this
+// bundle still accepts. The schema's accepted-version set is the union.
+var expectedSupersededContractVersions = []string{"2.0.0"}
 
 func repoRoot(t *testing.T) string {
 	t.Helper()
@@ -61,7 +68,7 @@ func validateMutation(t *testing.T, mutate func(map[string]any)) error {
 	if err := os.WriteFile(instancePath, data, 0o644); err != nil {
 		t.Fatalf("write mutated contract: %v", err)
 	}
-	return validateFiles(schemaPath(t), instancePath)
+	return validateFiles(schemaPath(t), instancePath, validationOptions{})
 }
 
 func artifactReferenceMap(t *testing.T, contract map[string]any, name string) map[string]any {
@@ -75,7 +82,7 @@ func reviewSlices(contract map[string]any) []any {
 }
 
 func TestValidateFilesAcceptsV2Fixture(t *testing.T) {
-	if err := validateFiles(schemaPath(t), fixturePath(t, "valid-entry-contract.json")); err != nil {
+	if err := validateFiles(schemaPath(t), fixturePath(t, "valid-entry-contract.json"), validationOptions{}); err != nil {
 		t.Fatalf("valid fixture rejected: %v", err)
 	}
 }
@@ -456,9 +463,25 @@ func TestBundleAssetsAreTrackedAndVersionMatched(t *testing.T) {
 		t.Fatal(err)
 	}
 	properties := schema["properties"].(map[string]any)
-	version := properties["contract_version"].(map[string]any)["const"]
-	if version != expectedContractVersion {
-		t.Errorf("schema contract version = %v, want %s", version, expectedContractVersion)
+	versionProperty := properties["contract_version"].(map[string]any)
+	if _, locked := versionProperty["const"]; locked {
+		t.Error("schema contract_version must be an enum of supported versions, not a const: a const cannot express a backwards-compatible extension")
+	}
+	acceptedVersions, ok := versionProperty["enum"].([]any)
+	if !ok {
+		t.Fatalf("schema contract_version has no enum: %v", versionProperty)
+	}
+	accepted := make(map[string]struct{}, len(acceptedVersions))
+	for _, value := range acceptedVersions {
+		accepted[value.(string)] = struct{}{}
+	}
+	for _, want := range append([]string{expectedContractVersion}, expectedSupersededContractVersions...) {
+		if _, ok := accepted[want]; !ok {
+			t.Errorf("schema accepted-version set %v does not contain %s", acceptedVersions, want)
+		}
+	}
+	if id, _ := schema["$id"].(string); !strings.HasSuffix(id, "/"+expectedContractVersion) {
+		t.Errorf("schema $id = %q, want a %s path", id, expectedContractVersion)
 	}
 
 	engineMod, err := os.ReadFile(filepath.Join(root, "engine", "go.mod"))

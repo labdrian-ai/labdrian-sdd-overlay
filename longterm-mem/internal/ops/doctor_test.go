@@ -39,8 +39,9 @@ func TestDoctor(t *testing.T) {
 	newHealthyDeps := func(t *testing.T) (DoctorDeps, string) {
 		t.Helper()
 		vaultRoot := t.TempDir()
-		testdata.WritePromotedPage(t, vaultRoot, address, title)
+		page := testdata.WritePromotedPage(t, vaultRoot, address, title)
 		testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
+		testdata.WritePrecedenceEntry(t, vaultRoot, page)
 		testdata.RegisterPage(t, vaultRoot, address, title)
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
@@ -57,8 +58,8 @@ func TestDoctor(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Doctor: %v", err)
 		}
-		if len(report.Checks) != 4 {
-			t.Fatalf("Checks = %+v, want exactly 4 (all checks must run and report)", report.Checks)
+		if len(report.Checks) != 5 {
+			t.Fatalf("Checks = %+v, want exactly 5 (all checks must run and report)", report.Checks)
 		}
 
 		got := checkStatus(t, report.Checks, CheckVaultConfigResolvable)
@@ -129,6 +130,64 @@ func TestDoctor(t *testing.T) {
 
 		if got := checkStatus(t, report.Checks, CheckAddressMapIntegrity); got.Status != CheckPassed {
 			t.Errorf("address-map-integrity = %+v, want PASSed (one broken check must not abort the others)", got)
+		}
+	})
+
+	t.Run("Promoted page with no precedence-sidecar entry is named", func(t *testing.T) {
+		deps, vaultRoot := newHealthyDeps(t)
+		// The create path's crash window, as it survives in the field: the
+		// page, its address-map entry and its registration all landed, and
+		// the precedence sidecar never did. Nothing else in doctor reads
+		// that file, so before this check the missing half of the failure
+		// was invisible -- doctor reported a healthy vault whenever the
+		// catalog and log happened to have been repaired by hand.
+		if err := os.Remove(filepath.Join(vaultRoot, ".raw", ".longterm-mem-manifest.json")); err != nil {
+			t.Fatalf("remove precedence sidecar: %v", err)
+		}
+
+		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+
+		got := checkStatus(t, report.Checks, CheckPrecedenceSidecarConsistency)
+		if got.Status != CheckFailed {
+			t.Fatalf("precedence-sidecar-consistency = %+v, want FAILed", got)
+		}
+		if !strings.Contains(got.Detail, address) {
+			t.Fatalf("precedence-sidecar-consistency detail = %q, want it to name %q", got.Detail, address)
+		}
+
+		if got := checkStatus(t, report.Checks, CheckWikiRegistrationConsistency); got.Status != CheckPassed {
+			t.Errorf("wiki-registration-consistency = %+v, want PASSed (one broken check must not abort the others)", got)
+		}
+		if got := checkStatus(t, report.Checks, CheckAddressMapIntegrity); got.Status != CheckPassed {
+			t.Errorf("address-map-integrity = %+v, want PASSed (one broken check must not abort the others)", got)
+		}
+	})
+
+	t.Run("Locally edited page is not a precedence-sidecar failure", func(t *testing.T) {
+		deps, vaultRoot := newHealthyDeps(t)
+		// R-030 makes a hand-edited promoted page a supported, reported
+		// state, not a broken vault: its sidecar entry exists and simply no
+		// longer matches the bytes. The check must look for a MISSING
+		// entry, never a stale one, or doctor would report every page a
+		// human has ever touched as a defect.
+		pagePath := filepath.Join(vaultRoot, "wiki", "memory", address+".md")
+		data, err := os.ReadFile(pagePath)
+		if err != nil {
+			t.Fatalf("read %s: %v", pagePath, err)
+		}
+		if err := os.WriteFile(pagePath, append(data, []byte("\nEdited by a human.\n")...), 0o644); err != nil {
+			t.Fatalf("write local edit: %v", err)
+		}
+
+		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+		if got := checkStatus(t, report.Checks, CheckPrecedenceSidecarConsistency); got.Status != CheckPassed {
+			t.Fatalf("precedence-sidecar-consistency = %+v, want PASSed: a local edit is a supported state (R-030), not a vault defect", got)
 		}
 	})
 

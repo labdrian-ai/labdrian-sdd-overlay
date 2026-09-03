@@ -3,13 +3,12 @@ package register
 import (
 	"fmt"
 	"os"
-	"path/filepath"
 
 	"github.com/pelletier/go-toml/v2"
 )
 
 // WriteTOMLSection reads the TOML document at path, splices in
-// tableKey.memberKey = newSection (TOMLSplice), and atomically replaces
+// tableKey.memberKey = newSection (TOMLSplice), and durably replaces
 // the file:
 //
 //  1. validate the spliced result BEFORE touching the filesystem at all —
@@ -21,10 +20,8 @@ import (
 //     silently produced a table with the wrong command, or no table at
 //     all, is caught here, not by a human noticing later that codex is
 //     talking to the wrong binary;
-//  2. only then, back up the original bytes to path+".bak";
-//  3. write the new content to a tmp file in the same directory, fsync it,
-//     close it, then rename it into place — the same same-directory
-//     tmp+rename atomicity WriteMember uses (D9).
+//  2. only then, back up and replace through replaceConfig — the same
+//     backup-then-durable-replace sequence WriteMember uses (D9).
 func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byte) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -45,39 +42,11 @@ func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byt
 		return fmt.Errorf("register: splice of %s would not set %s.%s.command = %q, not written", path, tableKey, memberKey, binary)
 	}
 
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("register: create temp file for %s: %w", path, err)
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename below succeeds
-
-	if _, err := tmp.Write(spliced); err != nil {
-		tmp.Close()
-		return fmt.Errorf("register: write temp file for %s: %w", path, err)
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return fmt.Errorf("register: fsync temp file for %s: %w", path, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("register: close temp file for %s: %w", path, err)
-	}
-
-	bakPath := path + ".bak"
-	if err := os.WriteFile(bakPath, raw, 0o600); err != nil {
-		return fmt.Errorf("register: write backup %s: %w", bakPath, err)
-	}
-
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("register: rename temp file into %s: %w", path, err)
-	}
-	return nil
+	return replaceConfig(path, raw, spliced)
 }
 
 // RemoveTOMLSection reads the TOML document at path, removes
-// tableKey.memberKey entirely (TOMLRemove), and atomically replaces the
+// tableKey.memberKey entirely (TOMLRemove), and durably replaces the
 // file (R-019), mirroring WriteTOMLSection's own discipline exactly:
 //
 //  1. validate the result parses as TOML, AND that tableKey.memberKey is
@@ -85,9 +54,7 @@ func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byt
 //     WriteTOMLSection's command == binary gate — a splice bug that left
 //     the table half-removed, or removed the wrong one, is caught here
 //     rather than committed), BEFORE touching the filesystem at all;
-//  2. only then, back up the original bytes to path+".bak";
-//  3. write the new content to a tmp file in the same directory, fsync it,
-//     close it, then rename it into place.
+//  2. only then, back up and replace through replaceConfig.
 func RemoveTOMLSection(path, tableKey, memberKey string) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
@@ -107,35 +74,7 @@ func RemoveTOMLSection(path, tableKey, memberKey string) error {
 		return fmt.Errorf("register: removal of %s.%s from %s did not actually remove it, not written", tableKey, memberKey, path)
 	}
 
-	dir := filepath.Dir(path)
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("register: create temp file for %s: %w", path, err)
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename below succeeds
-
-	if _, err := tmp.Write(removed); err != nil {
-		tmp.Close()
-		return fmt.Errorf("register: write temp file for %s: %w", path, err)
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return fmt.Errorf("register: fsync temp file for %s: %w", path, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("register: close temp file for %s: %w", path, err)
-	}
-
-	bakPath := path + ".bak"
-	if err := os.WriteFile(bakPath, raw, 0o600); err != nil {
-		return fmt.Errorf("register: write backup %s: %w", bakPath, err)
-	}
-
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("register: rename temp file into %s: %w", path, err)
-	}
-	return nil
+	return replaceConfig(path, raw, removed)
 }
 
 // tomlNestedString reads doc[tableKey][memberKey][field] as a string,

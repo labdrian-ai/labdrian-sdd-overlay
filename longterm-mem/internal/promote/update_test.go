@@ -351,6 +351,116 @@ func TestUpdate_InterruptedPriorWriteReconciles(t *testing.T) {
 	}
 }
 
+// TestUpdate_UnrecordedOwnWriteIsAdopted: the create path's own crash
+// window (the page landed, the sidecar Save never did) leaves a page with
+// NO store entry at all, so the !tracked branch refused it before the
+// content-identity reconciliation below could ever look at it -- a
+// permanent fixed point, because a skip also suppresses the sidecar Save
+// and the catalog/log repair that would have healed it.
+//
+// The page's own bytes settle it: when they are what this promotion would
+// itself write, the page is our interrupted write and is adopted rather
+// than refused forever. The comparison must ignore created:/updated:,
+// which EmitPage stamps from the wall clock -- otherwise adoption would
+// work on a same-day retry and stop working the next day, which is worse
+// than not adopting at all.
+func TestUpdate_UnrecordedOwnWriteIsAdopted(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 307, Type: "decision", Title: "Unrecorded Own Write", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	onDisk, err := EmitPage(obs, "c-000307", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (interrupted create): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, onDisk)
+
+	// Deliberately NOT seeded: the create's sidecar Save never ran.
+	store := PrecedenceStore{}
+
+	// A later day, so the re-render differs from disk in exactly the two
+	// wall-clock stamps and nothing else.
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	incoming, err := EmitPage(obs, "c-000307", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (retry): %v", err)
+	}
+	if incoming.Frontmatter+incoming.Body == onDisk.Frontmatter+onDisk.Body {
+		t.Fatalf("fixture is not exercising the timestamp hazard: the two renders are byte-identical")
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionUpdated {
+		t.Fatalf("action.Kind = %v, want ActionUpdated: an untracked page whose content is our own render (ignoring created:/updated:) is an interrupted write, not a page of unknown provenance", action.Kind)
+	}
+	entry, ok := store.Get(incoming.Address)
+	if !ok {
+		t.Fatalf("store has no entry for %s after adoption", incoming.Address)
+	}
+	if entry.BodyHash != hashText(incoming.Body) || entry.FrontmatterHash != hashText(incoming.Frontmatter) {
+		t.Fatalf("entry = %+v, want the adopted page's own hashes", entry)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != incoming.Frontmatter+incoming.Body {
+		t.Fatalf("adopted page was not refreshed to the freshly rendered content; got:\n%s", got)
+	}
+}
+
+// TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted:
+// adoption normalizes created: and updated: away, and NOTHING else. A page
+// a human changed in any other frontmatter field -- here status:, the field
+// R-033's own patcher writes -- is still a page of content longterm-mem
+// cannot prove it wrote, and must still be refused. This pins the
+// normalization's scope: widening it to "some frontmatter differences are
+// fine" would silently reopen the hole
+// TestUpdate_UnknownProvenancePageIsNotOverwritten guards.
+func TestUpdate_UntrackedPageDifferingOnlyInANonVolatileFieldIsNotAdopted(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 308, Type: "decision", Title: "Hand Edited Status", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	page, err := EmitPage(obs, "c-000308", nil)
+	if err != nil {
+		t.Fatalf("EmitPage: %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, page)
+
+	edited := strings.Replace(page.Frontmatter, "status: developing", "status: mature", 1)
+	if edited == page.Frontmatter {
+		t.Fatalf("fixture did not change status:; frontmatter was:\n%s", page.Frontmatter)
+	}
+	if err := os.WriteFile(existingPath, []byte(edited+page.Body), 0o644); err != nil {
+		t.Fatalf("write hand edit: %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	incoming, err := EmitPage(obs, "c-000308", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (retry): %v", err)
+	}
+
+	action, err := UpdateInPlace(PrecedenceStore{}, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: only created:/updated: are volatile, every other divergence is still unknown provenance", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != edited+page.Body {
+		t.Fatalf("hand-edited page was overwritten; got:\n%s", got)
+	}
+}
+
 // TestActionKind_String: task 8b.11 infrastructure. cmd_promote.go's CLI
 // output and the MCP promote tool's PromoteOut.Action both render an
 // ActionKind through this one method instead of separately mapping its

@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
 
 // installStateFileName is install-state.json's file name inside a target's
@@ -22,11 +24,28 @@ const installStateFileName = "install-state.json"
 var ErrConflict = errors.New("register: an entry with this name already exists and is not owned by longterm-mem")
 
 // saveInstallState is InstallState.Save, indirected the way promote's
-// nowFunc is, so a test can provoke the one failure the filesystem cannot
-// provoke on its own: every way to make the state directory unwritable
-// also breaks the LoadInstallState that precedes the config write, so
-// jsonInstall would return before writing and the rollback below would
-// never run.
+// nowFunc is, so a test can put a failure exactly in the window
+// installWithRollback exists for, without depending on how the filesystem
+// happens to fail.
+//
+// This comment used to claim the rollback below could never run outside a
+// test, on the reasoning that anything making the state directory
+// unwritable would first break LoadInstallState. That was false, and it is
+// worth naming the exact counter-example rather than just deleting the
+// claim: LoadInstallState treats a MISSING install-state.json as an empty
+// state and no error (installstate.go), so a state directory at mode 0o500
+// — readable and searchable, not writable — loads perfectly and only fails
+// later at Save's os.CreateTemp. Every fresh install against a directory
+// the user (or a restrictive umask, or a partially restored backup) left
+// unwritable takes exactly that path. TestJSONInstall_
+// RollbackIsReachableWithoutStubbingTheSave pins it with no stub at all.
+//
+// The comment is worth this much space because of what it cost: an error
+// path documented as unreachable is a path nobody writes a test for, and
+// this one went on to spend its whole life as the only non-atomic write to
+// a user's own config file, with a mode-preservation argument that never
+// did anything. A false claim of unreachability is not a harmless comment;
+// it is a standing instruction not to look.
 var saveInstallState = func(s *InstallState, path string) error { return s.Save(path) }
 
 // jsonInstall is the shared JSON-writer install flow every JSON-backed
@@ -222,21 +241,28 @@ func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (Un
 // itself wrote (11b-1 CRITICAL). If saveInstallState fails, writeConfig's
 // effect is therefore rolled back to the bytes configPath had before it
 // ran, and the caller is told the entry was withdrawn.
+//
+// The rollback goes through durable.WriteFile, exactly like the forward
+// write it undoes. It used to be a plain os.WriteFile — truncate the user's
+// config, then write the old bytes back — which made the undo strictly less
+// safe than the do: a crash or a full disk during the restore left
+// ~/.claude.json truncated, with no entry, no valid JSON, and a broken
+// editor. It also carried a captured file mode into os.WriteFile's perm
+// argument, which does nothing: that argument applies only when the call
+// CREATES the file, and by this point writeConfig's own rename has always
+// just created it. Restoring bytes while silently re-permissioning the file
+// to 0o600 is not a restore.
 func installWithRollback(target, configPath, label string, state *InstallState, statePath, fingerprint string, writeConfig func() error) error {
 	before, err := os.ReadFile(configPath)
 	if err != nil {
 		return fmt.Errorf("register: %s: read %s: %w", target, configPath, err)
-	}
-	mode := os.FileMode(0o600)
-	if info, statErr := os.Stat(configPath); statErr == nil {
-		mode = info.Mode().Perm()
 	}
 	if err := writeConfig(); err != nil {
 		return fmt.Errorf("register: %s: %w", target, err)
 	}
 	state.Set(target, TargetRecord{Fingerprint: fingerprint})
 	if err := saveInstallState(state, statePath); err != nil {
-		if rollbackErr := os.WriteFile(configPath, before, mode); rollbackErr != nil {
+		if rollbackErr := durable.WriteFile(configPath, before, configCreatePerm); rollbackErr != nil {
 			return fmt.Errorf("register: %s: %w (and restoring %s failed: %v — remove the %q entry by hand before re-running)", target, err, configPath, rollbackErr, label)
 		}
 		return fmt.Errorf("register: %s: %w (the %q entry was withdrawn from %s)", target, err, label, configPath)

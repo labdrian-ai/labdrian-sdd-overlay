@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"os"
+	"strings"
 )
 
 // ActionKind reports what UpdateInPlace (or, after 6.8, Writer.Promote)
@@ -58,12 +59,27 @@ func (k ActionKind) String() string {
 // before tracking existed, a human's own file) and fails closed, and an
 // entry disagreeing with the on-disk hashes is a local edit.
 //
-// One divergence is neither: the page write and the store's persistence
-// are separate durable steps, so an interruption between them leaves new
-// content fingerprinted by the previous entry. When the on-disk bytes are
-// byte-identical to what this call would write, that prior write merely
-// completed unrecorded -- the entry is re-derived from disk instead of
-// misreading our own content as a local edit and skipping it forever.
+// Two divergences are neither, and both have the same cause: the page write
+// and the store's persistence are separate durable steps, so an
+// interruption between them leaves the page ahead of the store.
+//
+//   - An interrupted UPDATE leaves new content fingerprinted by the
+//     previous entry. When the on-disk bytes are byte-identical to what
+//     this call would write, that prior write merely completed unrecorded
+//     -- the entry is re-derived from disk instead of misreading our own
+//     content as a local edit and skipping it forever.
+//   - An interrupted CREATE leaves a page with no entry at all, so the
+//     reconciliation above is not even reachable. isOwnUnrecordedWrite
+//     settles that case from the bytes instead, normalizing away only the
+//     two wall-clock stamps EmitPage takes from nowFunc -- without which
+//     the comparison would succeed on a same-day retry and fail every day
+//     after, which is worse than not reconciling at all.
+//
+// Writer's create path no longer opens the second window (it persists the
+// fingerprint before publishing the page), but a vault already wedged by
+// the old order stays wedged forever without this: the refusal is a skip,
+// and a skip also suppresses the sidecar Save and the catalog/log repair
+// that would have healed it.
 //
 // store is mutated in place; persisting it (PrecedenceStore.Save) is the
 // caller's job, keeping this a narrow primitive alongside Allocate/
@@ -84,7 +100,12 @@ func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Actio
 	entry, tracked := store.Get(page.Address)
 	switch {
 	case !tracked:
-		return skippedAction(existingPath, page.Address, "was not recorded as written by longterm-mem, so its provenance is unknown"), nil
+		if !isOwnUnrecordedWrite(fmBlock, body, page) {
+			return skippedAction(existingPath, page.Address, "was not recorded as written by longterm-mem, so its provenance is unknown"), nil
+		}
+		// Adopted: the page is our own interrupted write, so fall through
+		// to the normal update below, which republishes it and records the
+		// provenance the interrupted run never got to.
 	case entry.BodyHash != hashText(body) || entry.FrontmatterHash != hashText(fmBlock):
 		if string(current) != rendered {
 			return skippedAction(existingPath, page.Address, "was edited locally since longterm-mem last wrote it"), nil
@@ -106,6 +127,55 @@ func UpdateInPlace(store PrecedenceStore, page Page, existingPath string) (Actio
 		FrontmatterHash: hashText(page.Frontmatter),
 	})
 	return Action{Kind: ActionUpdated}, nil
+}
+
+// volatileFrontmatterFields are the only two frontmatter values EmitPage
+// takes from the wall clock (page.go's nowFunc) rather than from the
+// observation, so they are the only two that can differ between two renders
+// of identical Engram content. isOwnUnrecordedWrite normalizes exactly
+// these away and nothing else: every other field, and the whole body, still
+// has to match byte for byte.
+var volatileFrontmatterFields = [...]string{"created", "updated"}
+
+// isOwnUnrecordedWrite reports whether the page currently on disk (its
+// frontmatter block and body, already split) is what this very promotion
+// would write, ignoring the two wall-clock stamps above.
+//
+// It settles the one case the store cannot: a page with no entry at all.
+// The create path publishes the page and the sidecar as two separate
+// durable steps, so an interruption between them leaves a page nothing
+// records -- and refusing that page as "unknown provenance" is permanent,
+// because the refusal also suppresses the Save and the registration that
+// would have repaired it. The bytes are the evidence the store lost.
+//
+// This never weakens the unknown-provenance guard it sits in front of. A
+// page whose content is byte-identical to our own render carries nothing a
+// human wrote that our render does not already reproduce, so adopting it
+// destroys no edit; the only thing an adoption can discard is a
+// hand-authored created:/updated: value, which the ordinary update path
+// (which rewrites the whole page from EmitPage's own render) already
+// discards on every run. Any other divergence -- one body character, one
+// changed status: -- is still a refusal.
+func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
+	return body == page.Body &&
+		withoutVolatileStamps(fmBlock) == withoutVolatileStamps(page.Frontmatter)
+}
+
+// withoutVolatileStamps blanks the value of each volatileFrontmatterFields
+// line in a frontmatter block, leaving the key (so a page that dropped the
+// field entirely still differs from one that carries it) and every other
+// line untouched. It is only ever applied to a frontmatter block, never to
+// a body, so body prose opening with "created: " cannot be normalized away.
+func withoutVolatileStamps(fmBlock string) string {
+	lines := strings.Split(fmBlock, "\n")
+	for i, line := range lines {
+		for _, key := range volatileFrontmatterFields {
+			if strings.HasPrefix(line, key+": ") {
+				lines[i] = key + ":"
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
 }
 
 // skippedAction builds the R-030 refusal: reason states why the page's
