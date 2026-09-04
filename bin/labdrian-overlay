@@ -17,6 +17,93 @@ OVERLAY_DIR="${OVERLAY_DIR:-"$(cd "$SCRIPT_DIR/.." && pwd)"}"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
+# path_clean <path> prints <path> lexically normalized: duplicate separators
+# collapsed, "." elements removed, ".." elements resolved against the element
+# before them, and any trailing separator dropped. "" becomes ".", and ".."
+# above the root of a rooted path is the root.
+#
+# It reproduces Go's filepath.Clean on purpose, byte for byte, because that
+# is the OTHER half of a contract this script cannot see. The engine derives
+# the longterm-mem binary path with filepath.Join (which cleans), rebuilds
+# each runtime's MCP entry from it, and decides ownership by comparing that
+# rebuilt entry against the live one as an EXACT STRING fingerprint. This
+# script builds the same path by concatenation (which does not clean) and
+# hands that literal to `longterm-mem register --binary`, which is what
+# actually gets written into the config. The two therefore agreed only while
+# $STATE_DIR happened to be lexically clean already: one trailing slash and
+# the overlay wrote "<dir>//bin/longterm-mem" while the engine looked for
+# "<dir>/bin/longterm-mem" and reported the overlay's own freshly-written
+# entry as unmanaged.
+#
+# Purely lexical, deliberately: it never touches the filesystem and never
+# resolves a symlink, because the Go half it must agree with does not
+# either. `realpath` would be the wrong tool here even where it exists —
+# resolving symlinks would produce a path the engine never derives.
+#
+# Defined here, above the derived paths below, because those are assigned at
+# source time and a function must exist before it is called.
+path_clean() {
+  local path="${1:-}"
+  local rooted="" out="" elem rest
+
+  [[ "$path" == /* ]] && rooted=1
+  rest="$path"
+
+  while [[ -n "$rest" ]]; do
+    elem="${rest%%/*}"
+    if [[ "$rest" == */* ]]; then
+      rest="${rest#*/}"
+    else
+      rest=""
+    fi
+
+    case "$elem" in
+      '' | '.')
+        # A duplicate separator or a "." element names nothing.
+        ;;
+      '..')
+        if [[ -n "$rooted" || ( -n "$out" && "$out" != ".." && "$out" != *"/.." ) ]]; then
+          # Pop the previous element. A rooted path with nothing left to
+          # pop stays at the root: "/.." is "/".
+          if [[ "$out" == */* ]]; then
+            out="${out%/*}"
+          else
+            out=""
+          fi
+        else
+          # A RELATIVE path can lead with ".." elements that nothing
+          # cancels; those are part of the answer, not noise.
+          out="${out:+$out/}.."
+        fi
+        ;;
+      *)
+        out="${out:+$out/}$elem"
+        ;;
+    esac
+  done
+
+  if [[ -n "$rooted" ]]; then
+    printf '%s\n' "/$out"
+  elif [[ -n "$out" ]]; then
+    printf '%s\n' "$out"
+  else
+    printf '%s\n' "."
+  fi
+}
+
+# Home-scoped per design decision D3: state describes deployments under
+# $HOME (TARGET_PATHS/AGENT_TARGET_PATHS are all $HOME-anchored), so a
+# repo-scoped file would let two clones of this repo hold divergent records
+# of the same live targets.
+#
+# Normalized ONCE, here, so every path derived from it below and every
+# `--state-dir "$STATE_DIR"` handed to the engine already looks the way the
+# engine's own filepath.Join will make it look. Doing it at the point of use
+# instead would mean remembering it at each of them, which is exactly the
+# kind of agreement that decays.
+STATE_DIR="$(path_clean "${STATE_DIR:-"$HOME/.labdrian-overlay"}")"
+STATE_FILE="$STATE_DIR/state.json"
+
 declare -A TARGET_PATHS=(
   [claude]="$HOME/.claude/skills"
   [opencode]="$HOME/.config/opencode/skills"
@@ -42,13 +129,204 @@ declare -A AGENT_TARGET_PATHS=(
 ENGINE_BINARY="$HOME/.claude/bin/gentle-ai-overlay"
 ENGINE_SRC="$OVERLAY_DIR/engine"
 
+# LONGTERM_MEM_BINARY is the fixed, documented, persistent install path for
+# the longterm-mem binary (R-015): it never moves between an install and a
+# later inspection. STATE_DIR-scoped (not $HOME/.claude/-scoped like
+# ENGINE_BINARY) because longterm-mem is a cross-runtime component, not a
+# Claude-specific one (D4).
+#
+# Routed through path_clean even though $STATE_DIR is already clean: this
+# exact string is what `register --binary` writes into every runtime's MCP
+# entry, and what the engine re-derives with filepath.Join to decide whether
+# that entry is ours. path_clean here is what makes the two halves agree for
+# EVERY $STATE_DIR rather than only the already-clean ones — including the
+# one case normalizing $STATE_DIR alone does not cover, a state dir of "/",
+# where plain concatenation still yields "//bin/longterm-mem".
+LONGTERM_MEM_BINARY="$(path_clean "$STATE_DIR/bin/longterm-mem")"
+LONGTERM_MEM_SRC="$OVERLAY_DIR/longterm-mem"
+
+# LONGTERM_MEM_INSTALLED_TARGETS tracks, one target name per line, which of
+# claude/opencode/codex this overlay entrypoint has installed longterm-mem
+# for. It is this slice's own bookkeeping for the binary-removal guard
+# (D4/10b.5: "binary removed only when --target all leaves zero install-state
+# targets, or --purge"). True per-runtime selective un-registration in each
+# runtime's own config file is module-owned and lands in slice 12b (R-019);
+# until then this file is the only accurate source of truth for "does any
+# target still count as installed" that this shell entrypoint has of its
+# own — engine's registration.json (10a, LongtermMemAdapter) records
+# per-runtime state but its Uninstall() removes the WHOLE record in one
+# call regardless of --target, so it cannot answer this question on its own
+# without risking exactly the bug this file exists to prevent: wiping out a
+# still-installed target's record because a DIFFERENT target was uninstalled.
+LONGTERM_MEM_INSTALLED_TARGETS="$STATE_DIR/longterm-mem/installed-targets"
+
+# LONGTERM_MEM_TARGETS_LOCK serializes the whole read-modify-write cycle over
+# the tracking file above (see longtermmem_targets_lock_acquire).
+#
+# Deliberately OUTSIDE the longterm-mem/ directory the tracking file lives in:
+# a writer that has to report "I could not stage a rewrite in that directory"
+# must still be able to take, and then release, the lock — a lock that can
+# only be created in the directory that just proved unwritable would fail
+# exactly when the failure path needs it.
+LONGTERM_MEM_TARGETS_LOCK="$STATE_DIR/.installed-targets.lock"
+
+# Minutes after which a lock directory is treated as abandoned. See the
+# staleness escape in longtermmem_targets_lock_acquire.
+LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES=5
+
+# Set while THIS shell holds the lock, so release is idempotent and a nested
+# `die` cannot rmdir a lock some other invocation owns.
+LONGTERM_MEM_TARGETS_LOCK_HELD=""
+
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
 
-die() { echo "ERROR: $*" >&2; exit 1; }
+# die releases the install-tracking lock before exiting. `die` exits the
+# PROCESS, so a RETURN trap inside the critical section never runs on this
+# path — and this is the path every unrecoverable problem in the tracking
+# writers takes. Without this, the single most likely way to leave a lock
+# behind would be the ordinary error path.
+die() { longtermmem_targets_lock_release; echo "ERROR: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 warn() { echo "WARN: $*" >&2; }
+
+# ---------------------------------------------------------------------------
+# installed-targets lock (mkdir-based, deliberately NOT flock)
+# ---------------------------------------------------------------------------
+#
+# The tracking file is read, modified and written back. Writing through a
+# per-process temporary made that write atomic, which fixed TORN files but
+# not LOST UPDATES: two overlay invocations can still each read before the
+# other's rename, and the second rename then publishes state that never saw
+# the first one's change. That file is what the binary-removal guard
+# consults, so a dropped target means the SHARED BINARY can be deleted while
+# a runtime is still registered against it.
+#
+# mkdir, not flock(1). mkdir is atomic on every platform this overlay runs
+# on. flock(1) ships with util-linux and is ABSENT on macOS, so a
+# flock-based guard would silently not run there — worse than no guard,
+# because the code reads as protected everywhere while protecting only
+# Linux.
+#
+# WHAT THE LOCK DOES NOT COVER: it serializes each tracking-file
+# read-modify-write, not an overlay COMMAND. Every writer re-reads inside its
+# own critical section -- longtermmem_maybe_remove_binary re-reads "remaining"
+# there rather than trusting its caller's unlocked read -- so no decision is
+# made on stale state. But an `add` that lands the instant after the removal
+# guard releases still records a target whose shared binary was rm -f'ed a
+# moment earlier: a runtime registered against a missing binary. Per-writer
+# locking cannot close that; only a command-scoped lock could. Install and
+# uninstall running concurrently are NOT safe end to end.
+#
+# longtermmem_targets_lock_acquire blocks for a bounded number of tries and
+# then FAILS THE RUN rather than proceeding unlocked. Proceeding unlocked is
+# defensible in general, but not here: the thing the lock protects is the
+# only record of which runtimes still depend on a shared binary, and losing
+# an entry from it is silent and destructive, while a failed run is loud,
+# changes nothing, and is retryable. So the choice is explicit — refuse.
+#
+# A refusal that cannot clear would be its own bug (a lock directory left by
+# a SIGKILLed run would wedge every later invocation forever), so there IS a
+# staleness escape: a lock older than LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES
+# is treated as abandoned and broken into, with a warning. It is bounded on
+# both sides on purpose — long enough that no ordinary critical section here
+# (a few file reads, a rename) can be mistaken for abandoned, short enough
+# that an operator never has to know this directory exists. The age test
+# goes through `find -mmin`, which behaves the same on GNU and BSD/macOS,
+# rather than `stat`, whose format flags do not.
+# longtermmem_targets_lock_is_stale reports whether the lock directory is
+# older than the abandonment window. It is a function because the break-in
+# below has to ask TWICE -- once to decide to break in at all, and once more
+# under the break lock, against whatever the lock directory has become in
+# between.
+#
+# The age test goes through `find -mmin`, which behaves the same on GNU and
+# BSD/macOS, rather than `stat`, whose format flags do not.
+longtermmem_targets_lock_is_stale() {
+  [[ -n "$(find "$LONGTERM_MEM_TARGETS_LOCK" -maxdepth 0 \
+             -mmin "+$LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES" 2>/dev/null)" ]]
+}
+
+longtermmem_targets_lock_acquire() {
+  mkdir -p "$STATE_DIR" || die "longterm-mem: could not create $STATE_DIR"
+
+  local i
+  for i in 1 2 3 4 5; do
+    if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+      LONGTERM_MEM_TARGETS_LOCK_HELD=1
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  # THE BREAK-IN IS ITSELF A CRITICAL SECTION. Classifying the lock as stale
+  # and then acting on that classification is a read-modify-write over the
+  # lock directory, and the unconditional "rmdir then mkdir" this used to be
+  # ran it unserialized: two invocations that both classify the same lock as
+  # abandoned each break in independently, and an interleaving where the
+  # loser's rmdir lands AFTER the winner's mkdir deletes the WINNER'S LIVE
+  # LOCK and admits both to the critical section -- the exact lost update the
+  # lock exists to prevent, reached through the lock's own recovery path.
+  #
+  # So the break-in is serialized by a second mkdir, and the staleness test is
+  # RE-RUN under it. The re-run is the half that matters: the break lock alone
+  # only orders the two breakers, and the loser, arriving a moment later,
+  # would still be acting on a classification made before the winner replaced
+  # the lock. Re-classifying under the break lock makes the loser see the
+  # winner's FRESH lock, decline to remove it, and fail the run loudly.
+  #
+  # That exclusion covers breaker against breaker, and NOT breaker against an
+  # ordinary acquirer: between the re-test above and the rmdir below, a plain
+  # invocation can release the stale lock and take it normally, and the
+  # breaker then removes that live lock. In production the gap is one stderr
+  # write, so the window is microseconds and it still needs an already
+  # abnormal lock older than the staleness bound -- and the rename this could
+  # be rewritten around carries the same check-then-act on its source path, so
+  # the residue looks irreducible in portable shell. It is named here rather
+  # than left implied, because a reader who takes "serialized" to mean
+  # exclusive against everything would build on a guarantee this does not make.
+  #
+  # The break lock is held for the duration of one age test and one mkdir, and
+  # is released on every path out. A run SIGKILLed inside that window leaks it
+  # and disables the staleness escape -- the message below names the lock
+  # directory, and the break directory sits beside it under the same name.
+  if longtermmem_targets_lock_is_stale; then
+    if mkdir "$LONGTERM_MEM_TARGETS_LOCK.break" 2>/dev/null; then
+      if longtermmem_targets_lock_is_stale; then
+        warn "longterm-mem: the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK is older than $LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES minutes; treating it as abandoned by a killed run and taking it over"
+        rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
+        if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+          LONGTERM_MEM_TARGETS_LOCK_HELD=1
+          rmdir "$LONGTERM_MEM_TARGETS_LOCK.break" 2>/dev/null || true
+          return 0
+        fi
+      fi
+      rmdir "$LONGTERM_MEM_TARGETS_LOCK.break" 2>/dev/null || true
+    fi
+  fi
+
+  # One last attempt before refusing. The retry budget above is a fixed number
+  # of fixed sleeps, so a holder that releases just after the final mkdir --
+  # 0.9s in, against a last attempt at 0.8s -- leaves the lock FREE while the
+  # staleness test correctly answers "not stale", and the run would fail with
+  # the lock sitting there available. One more mkdir costs a syscall and
+  # removes that whole class of spurious refusals.
+  if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+    LONGTERM_MEM_TARGETS_LOCK_HELD=1
+    return 0
+  fi
+
+  die "longterm-mem: could not acquire the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running."
+}
+
+# longtermmem_targets_lock_release drops the lock if THIS shell holds it.
+# Safe to call unconditionally (die does), and safe to call twice.
+longtermmem_targets_lock_release() {
+  [[ -n "${LONGTERM_MEM_TARGETS_LOCK_HELD:-}" ]] || return 0
+  LONGTERM_MEM_TARGETS_LOCK_HELD=""
+  rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
+}
 
 # Read manifest: emit "path tag" lines, skipping blank lines and comments
 parse_manifest() {
@@ -102,12 +380,36 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Never pushes main unless --push; without it, reports
                                    how far local main is ahead of origin/main.
+  self-update                     Fast-forward ONLY local 'main' (never the current branch),
+                                   then return to the branch you were on. Converges to the
+                                   latest published release tag (never past it, even when
+                                   origin/main carries untagged commits beyond that tag); before
+                                   the first release tag exists, falls back to legacy
+                                   origin/main-HEAD convergence. Refuses (exit 1) on a dirty
+                                   tracked tree, a local main ahead of origin/main, or no
+                                   'origin' remote. Untracked files never block it.
+  update                           Read-only: report the latest published release and each
+                                   target's recorded version (up-to-date/behind/never deployed).
+                                   Refreshes only cached tags/remote refs -- never a branch head,
+                                   the working tree, target files, or state.
+  restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]
+                                   DESTRUCTIVE: rolls a single target back from one of its
+                                   retained backups (up to 3, auto-pruned; default: most
+                                   recent). Refuses --target all. --list shows retained
+                                   backups (timestamp, version) without changing anything.
+                                   --backup TIMESTAMP picks a specific one. Exits non-zero
+                                   without touching any file when the target has no backups.
+                                   Performs zero git operations.
+  version (also: --version)       Read-only: print this clone's current release version
+                                   (from local main) and each target's recorded deployed
+                                   version, naming any that are behind. Never-deployed
+                                   targets are reported honestly, never fabricated.
   status [--target claude|opencode|codex|all]
                                    Show drift between repo and target(s) (default: all)
   sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
                                    Validate gentle-ai sync state per target (default: all).
                                    Also reports REPO_BEHIND_ORIGIN=<count|NA> on each VERDICT
-                                   line: how many commits local HEAD is behind this repo's own
+                                   line: how many commits local main is behind this repo's own
                                    origin/main. Default is a cached-ref comparison (no network
                                    call); pass --check-origin (alias --fetch) to run
                                    'git fetch origin' first for a live count. NA means the
@@ -177,6 +479,15 @@ Commands:
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
                                    Optional --check verifies freshness without writing.
+  longterm-mem install|status|uninstall
+    [--target claude|opencode|codex|all] [--purge]
+                                   Build (install only), copy to the fixed path
+                                   $STATE_DIR/bin/longterm-mem, and report/record
+                                   per-runtime (claude, opencode, codex) MCP
+                                   registration via the engine runtime lifecycle
+                                   surface (D4, R-014/R-015). status/uninstall never
+                                   build. The binary is removed only when --target
+                                   all leaves zero install-state targets, or --purge.
   --help                           Show this help
 
 Targets:
@@ -322,17 +633,60 @@ EOF
 #   repo_source = $OVERLAY_DIR/opencode/agents/<path>
 #   targets     = opencode:$HOME/.config/opencode/agents/<path>
 #
+# route=mcp (third column == "mcp"; D13):
+#   repo_source = $OVERLAY_DIR/<path>
+#   targets     = (none) — the longterm-mem install path (build, copy,
+#                 register) is dispatched separately, not via the deploy loop.
+#
 # Callers intersect the emitted target set with their --target selection:
 #   --target codex + agent row → zero applicable targets (no work, not an error).
+#
+# Route domain guard (R-012 in overlay-agent-route, traces longterm-mem R-035):
+# a row under longterm-mem/** whose third column is absent or not in the
+# recognized four-value domain {skill, agent, opencode-agent, mcp} is REJECTED
+# (exit 1, explicit stderr naming the row) rather than silently falling
+# through to the skill route — see route_reject_unrouted_longterm_mem below.
 #
 # Back-compat invariant: bare two-column skill rows emit BYTE-IDENTICAL results
 # to pre-route_resolve behavior (pinned by TestRouteResolve_LegacySkillRow).
 
+# route_reject_unrouted_longterm_mem <manifest_path> <route_raw>
+#
+# Enforces the longterm-mem/** route-domain guard described above. <route_raw>
+# is the UNDEFAULTED third column (empty when absent) — route_resolve must
+# pass the raw value, not the "skill"-defaulted one, or a missing column would
+# be indistinguishable from an explicit route=skill row. Exits 1 with an
+# explicit stderr message naming the row on rejection; returns 0 otherwise.
+# Hoisted into its own function so cmd_apply's manifest-load hook can reuse it
+# without re-deriving route_resolve's internals.
+route_reject_unrouted_longterm_mem() {
+  local manifest_path="$1"
+  local route_raw="$2"
+
+  case "$route_raw" in
+    skill|agent|opencode-agent|mcp)
+      return 0
+      ;;
+  esac
+
+  if [[ -z "$route_raw" ]]; then
+    echo "route_resolve: longterm-mem row '$manifest_path' declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp" >&2
+  else
+    echo "route_resolve: longterm-mem row '$manifest_path' declares an unrecognized route '$route_raw'; must be one of: skill, agent, opencode-agent, mcp" >&2
+  fi
+  exit 1
+}
+
 route_resolve() {
   local manifest_path="$1"
-  local route
-  route="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
-  route="${route:-skill}"
+  local route_raw
+  route_raw="$(awk -v p="$manifest_path" '$1 == p { print $3; exit }' "$MANIFEST")"
+
+  if [[ "$manifest_path" == longterm-mem/* ]]; then
+    route_reject_unrouted_longterm_mem "$manifest_path" "$route_raw"
+  fi
+
+  local route="${route_raw:-skill}"
 
   # Detect structurally non-deployable rows: paths that cannot map to a skill
   # or agent source directory. Overlay engine source files (engine/*) and
@@ -367,6 +721,10 @@ route_resolve() {
     fi
     repo_source="$OVERLAY_DIR/${manifest_path}"
     targets+=("opencode:${AGENT_TARGET_PATHS[opencode]}/${opencode_agent_rel}")
+  elif [[ "$route" == "mcp" ]]; then
+    repo_source="$OVERLAY_DIR/${manifest_path}"
+    # No copy targets: the longterm-mem install path (build, copy, register)
+    # is dispatched separately from the deploy loop (D13).
   else
     repo_source="$OVERLAY_DIR/skills/${manifest_path}"
     for tname in "${!TARGET_PATHS[@]}"; do
@@ -388,6 +746,9 @@ route_repo_rel() {
     opencode-agent)
       printf '%s' "$manifest_path"
       ;;
+    mcp)
+      printf '%s' "$manifest_path"
+      ;;
     skill)
       printf 'skills/%s' "$manifest_path"
       ;;
@@ -395,6 +756,336 @@ route_repo_rel() {
       printf '%s' "$manifest_path"
       ;;
   esac
+}
+
+# ---------------------------------------------------------------------------
+# release identity, digest, and state (R-001..R-003)
+# ---------------------------------------------------------------------------
+
+# resolve_latest_release_tag <ref> [do_fetch=true]
+#
+# R-003: by default (do_fetch=true, every caller except cmd_sync_check's
+# read-only default path) explicitly fetches v*-matching tags from origin
+# first (closing the gap where a plain branch fetch does not guarantee tag
+# visibility), THEN resolves the highest semver-ordered ANNOTATED tag
+# reachable from <ref>, using git's version-aware refname sort rather than a
+# plain lexical one (v1.10.0 must outrank v1.9.0). Lightweight tags are
+# skipped -- R-001 requires an annotated tag. Emits the literal token "none"
+# when no qualifying tag exists (design decision D1's pre-first-tag
+# bootstrap case), never an error -- callers decide how to degrade (D1:
+# legacy convergence / "untagged" / "no releases published yet").
+#
+# Passing do_fetch=false resolves from whatever tags are already cached
+# locally, without touching the network -- the same cached-only idiom
+# compute_repo_behind_origin/compute_repo_behind_release use for their own
+# default (non---check-origin) path. cmd_sync_check is the only caller that
+# needs this: sync-check-verdicts R-001 and tui-self-update R-001 both
+# require its default (no --check-origin/--fetch) path to invoke no
+# `git fetch` at all, and every OTHER caller (cmd_apply, cmd_self_update,
+# cmd_update, cmd_version) already requires or accepts a fresh fetch by its
+# own spec/design, so they are left on the do_fetch=true default untouched.
+resolve_latest_release_tag() {
+  local ref="${1:-HEAD}"
+  local do_fetch="${2:-true}"
+
+  if [[ "$do_fetch" == true ]] && git remote get-url origin >/dev/null 2>&1; then
+    # Bounded like every other network call this file makes (compute_repo_behind_origin,
+    # compute_repo_behind_release, cmd_self_update's main fetch): this function is now
+    # called from cmd_self_update, cmd_update, and cmd_sync_check's release_version line
+    # (Slice 2), so a stalled connection here can no longer be a silent, unbounded hang.
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    fi
+  fi
+
+  local tag objtype
+  while IFS=$'\t' read -r tag objtype; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$objtype" == "tag" ]]; then
+      echo "$tag"
+      return
+    fi
+  done < <(git for-each-ref --merged "$ref" --sort=-v:refname \
+             --format=$'%(refname:short)\t%(objecttype)' 'refs/tags/v*' 2>/dev/null)
+
+  echo "none"
+}
+
+# compute_target_digest <target> <live|ref>
+#
+# Design decision D5: one aggregate sha256 digest per deployment target,
+# over sorted "<repo_rel>:<filehash>" lines -- one line per MANAGED manifest
+# row that routes to <target> (custom rows are user-owned and excluded,
+# matching overlay-release-state R-002's "managed file" wording). Manifest
+# row order is not itself sorted, so lines are sorted with LC_ALL=C before
+# hashing: this is what makes the digest invariant to manifest reordering
+# while still sensitive to any single file's content.
+#
+# "live" reads each row's deployed destination file for <target> (what's
+# actually installed there right now); "ref" reads the repo-source file
+# instead (this checkout's current working tree content, independent of
+# whether -- or what -- has been deployed). A missing file degrades to the
+# literal "MISSING" token rather than aborting, so a never-deployed target
+# still yields a real (if divergent) digest instead of erroring.
+compute_target_digest() {
+  local target="$1"
+  local mode="$2"
+
+  local lines=()
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair rr_repo_rel path filehash
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_src="${rr_rest%%$'\t'*}"
+    rr_targets="${rr_rest#*$'\t'}"
+
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    if [[ "$mode" == "ref" ]]; then
+      path="$rr_src"
+    else
+      path="$rr_dest"
+    fi
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+
+    if [[ -f "$path" ]]; then
+      filehash="$(sha256sum "$path" | awk '{ print $1 }')"
+    else
+      filehash="MISSING"
+    fi
+
+    lines+=("${rr_repo_rel}:${filehash}")
+  done < <(managed_files)
+
+  printf '%s\n' "${lines[@]}" | LC_ALL=C sort | sha256sum | awk '{ print $1 }'
+}
+
+# state_read_target <target>
+#
+# Design decision D8: tolerant awk-based reader over the canonical JSON
+# state file. Emits "<version>\t<digest>\t<applied_at>" for a recorded
+# entry, or exactly the token "NEVER_DEPLOYED" when the state file is
+# absent, has no entry for <target>, or fails to parse -- an unparseable
+# file also prints a WARN rather than crashing (overlay-release-state
+# R-001's "never deployed" honesty requirement).
+state_read_target() {
+  local target="$1"
+
+  [[ -f "$STATE_FILE" ]] || { echo "NEVER_DEPLOYED"; return; }
+
+  local line
+  line="$(awk -v t="\"${target}\":" 'index($0, t) { print; exit }' "$STATE_FILE" 2>/dev/null || true)"
+
+  if [[ -z "$line" ]]; then
+    if [[ -s "$STATE_FILE" ]]; then
+      warn "state file $STATE_FILE has no parseable entry for target '$target' -- reporting never deployed"
+    fi
+    echo "NEVER_DEPLOYED"
+    return
+  fi
+
+  local version digest applied_at
+  version="$(echo "$line" | awk -F'"version"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+  digest="$(echo "$line" | awk -F'"digest"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+  applied_at="$(echo "$line" | awk -F'"applied_at"[[:space:]]*:[[:space:]]*"' '{ print $2 }' | awk -F'"' '{ print $1 }')"
+
+  if [[ -z "$version" || -z "$digest" ]]; then
+    warn "state file $STATE_FILE entry for target '$target' is malformed -- reporting never deployed"
+    echo "NEVER_DEPLOYED"
+    return
+  fi
+
+  printf '%s\t%s\t%s\n' "$version" "$digest" "$applied_at"
+}
+
+# state_write_target <target> <version> <digest>
+#
+# Design decision D8: atomic tmp+mv rewrite of the whole canonical state
+# file. Existing entries for OTHER targets are preserved by re-reading them
+# through state_read_target -- if the prior file was corrupt, every "other"
+# target degrades to never-deployed too (state_read_target's own
+# tolerant-degrade behavior), so a corrupt state file self-heals into a
+# clean one containing only what this call knows, rather than propagating
+# the corruption forever.
+state_write_target() {
+  local target="$1"
+  local version="$2"
+  local digest="$3"
+  local applied_at
+  applied_at="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+
+  mkdir -p "$STATE_DIR"
+
+  local t existing v d a
+  local entries=()
+  for t in "${!TARGET_PATHS[@]}"; do
+    [[ "$t" == "$target" ]] && continue
+    existing="$(state_read_target "$t" 2>/dev/null || true)"
+    [[ "$existing" == "NEVER_DEPLOYED" || -z "$existing" ]] && continue
+    IFS=$'\t' read -r v d a <<< "$existing"
+    entries+=("    \"${t}\": {\"version\": \"${v}\", \"digest\": \"${d}\", \"applied_at\": \"${a}\"}")
+  done
+  entries+=("    \"${target}\": {\"version\": \"${version}\", \"digest\": \"${digest}\", \"applied_at\": \"${applied_at}\"}")
+
+  local tmp
+  tmp="$(mktemp "${STATE_FILE}.XXXXXX")"
+  {
+    echo "{"
+    echo "  \"schema\": 1,"
+    echo "  \"targets\": {"
+    local i n="${#entries[@]}"
+    for ((i = 0; i < n; i++)); do
+      if [[ "$i" -lt $((n - 1)) ]]; then
+        echo "${entries[$i]},"
+      else
+        echo "${entries[$i]}"
+      fi
+    done
+    echo "  }"
+    echo "}"
+  } > "$tmp"
+  mv "$tmp" "$STATE_FILE"
+}
+
+# backup_target <target>
+#
+# overlay-backup-restore R-001 (design decision D3/D4): creates a
+# timestamped backup of <target>'s CURRENTLY DEPLOYED managed files, but
+# only for rows that are about to actually change -- a managed row whose
+# live file does not yet exist (never deployed) or whose live file already
+# matches the repo-source file about to be deployed (true no-op) has
+# nothing meaningful to preserve, so it is excluded from both the
+# needs-backup decision and the copy. Prints the created backup's
+# timestamp directory name on stdout when a backup was made; prints
+# nothing when the apply for this target is a full no-op. Backups live
+# under $STATE_DIR/backups/<target>/<utc-ts>/ (D3), holding the full
+# managed live-file set for the target under its repo-relative paths, plus
+# a '.meta' file capturing the PRIOR state_read_target entry (read before
+# any file is copied) so restore can recover the version that backup
+# represents.
+backup_target() {
+  local target="$1"
+
+  local -a changed_rel_paths=()
+  local rel_path
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_src rr_rest rr_targets rr_dest rr_pair
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_src="${rr_rest%%$'\t'*}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    # Only an EXISTING live file that is about to be OVERWRITTEN needs
+    # preserving. A row whose repo source is missing is skipped by apply
+    # itself (never overwritten), and a target with no live file yet has
+    # nothing to preserve -- both degrade to "nothing to back up" here.
+    if [[ -f "$rr_dest" && -f "$rr_src" ]] && ! diff --brief "$rr_src" "$rr_dest" > /dev/null 2>&1; then
+      changed_rel_paths+=("$rel_path")
+    fi
+  done < <(managed_files)
+
+  # Explicit 'return 0' (not a bare 'return' after a failing [[ ]] test):
+  # under this script's 'set -e', a bare 'return' here would propagate the
+  # [[ ]] test's own nonzero status as this function's exit code, tripping
+  # errexit for any caller that assigns its stdout via command substitution
+  # (e.g. cmd_apply's `backup_ts="$(backup_target "$t")"`).
+  [[ "${#changed_rel_paths[@]}" -gt 0 ]] || return 0
+
+  local backups_dir="$STATE_DIR/backups/$target"
+  mkdir -p "$backups_dir"
+
+  local ts candidate suffix=0
+  ts="$(date -u +%Y%m%dT%H%M%SZ)"
+  candidate="$ts"
+  while [[ -e "$backups_dir/$candidate" ]]; do
+    suffix=$((suffix + 1))
+    candidate="${ts}-${suffix}"
+  done
+
+  local backup_dir="$backups_dir/$candidate"
+  mkdir -p "$backup_dir"
+
+  for rel_path in "${changed_rel_paths[@]}"; do
+    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel dest_path
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+    dest_path="$backup_dir/$rr_repo_rel"
+    mkdir -p "$(dirname "$dest_path")"
+    cp "$rr_dest" "$dest_path"
+  done
+
+  local prior
+  prior="$(state_read_target "$target" 2>/dev/null || true)"
+  echo "$prior" > "$backup_dir/.meta"
+
+  prune_backups "$target"
+
+  echo "$candidate"
+}
+
+# prune_backups <target>
+#
+# overlay-backup-restore R-002 (design decision D4): retains only the 3
+# most recent backups for a target, deleting older ones. Backup dir names
+# are UTC timestamps (YYYYMMDDTHHMMSSZ, optionally suffixed by
+# backup_target on a same-second collision, e.g. "<ts>-1"). Bash's own
+# pathname expansion sorts the *globbed paths*, trailing slash included --
+# that inverts a same-second collision, because ASCII '-' (0x2D) sorts
+# before '/' (0x2F), so "<ts>-1/" sorts before "<ts>/" even though "<ts>-1"
+# is the chronologically newer one. Re-sort the bare basenames explicitly
+# so a same-second collision can't prune the wrong (newer) backup.
+prune_backups() {
+  local target="$1"
+  local backups_dir="$STATE_DIR/backups/$target"
+
+  [[ -d "$backups_dir" ]] || return 0
+
+  local -a entries=()
+  local d
+  shopt -s nullglob
+  for d in "$backups_dir"/*/; do
+    entries+=("$(basename "$d")")
+  done
+  shopt -u nullglob
+
+  if [[ "${#entries[@]}" -gt 0 ]]; then
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | LC_ALL=C sort)
+  fi
+
+  local total="${#entries[@]}"
+  local keep=3
+  [[ "$total" -le "$keep" ]] && return 0
+
+  local excess=$((total - keep))
+  local i
+  for ((i = 0; i < excess; i++)); do
+    rm -rf "${backups_dir:?}/${entries[$i]}"
+  done
 }
 
 # route_tar_path resolves where a manifest row is stored inside a backup tarball.
@@ -597,6 +1288,36 @@ cmd_capture() {
 
   git checkout upstream
 
+  # Reconcile with origin before capturing. 'upstream' is a mechanical
+  # mirror pushed immediately after every capture (see below), so it should
+  # normally already match origin/upstream — but if origin/upstream advanced
+  # independently since this clone's last fetch (another machine captured
+  # and pushed, or a manual reconcile merge landed there), a stale local ref
+  # makes the push below either get rejected non-fast-forward (crashing the
+  # whole capture under 'set -euo pipefail' despite the local capture
+  # already having succeeded) or, worse, silently skip the push entirely
+  # (the "anything to push?" check below reads the same stale cached
+  # origin/upstream). Fetch first so that check is accurate, then
+  # fast-forward when possible; when local ALSO carries unpushed commits,
+  # merge non-interactively rather than discarding them — capture's own
+  # comment below already promises a sync never strands local-only commits.
+  # A fetch failure (offline) degrades gracefully: capture's core job is the
+  # local commit, not the network round trip, so warn and proceed rather
+  # than dying (parity with the "no origin remote" skip a few lines down).
+  if git remote get-url origin >/dev/null 2>&1; then
+    if git fetch origin upstream >/dev/null 2>&1; then
+      if git rev-parse --verify -q origin/upstream >/dev/null; then
+        if ! git merge --ff-only origin/upstream >/dev/null 2>&1; then
+          git merge --no-edit origin/upstream \
+            || die "'upstream' diverged from origin/upstream and auto-merge conflicted; resolve manually on the 'upstream' branch, then retry capture."
+          info "Reconciled local 'upstream' with origin/upstream before capturing"
+        fi
+      fi
+    else
+      warn "git fetch origin upstream failed — proceeding without reconciling; push below may fail if origin has advanced"
+    fi
+  fi
+
   if [[ -n "$from_backup" ]]; then
     info "Capturing managed files from tarball: $from_backup"
     [[ -f "$from_backup" ]] || die "Tarball not found: $from_backup"
@@ -741,6 +1462,20 @@ cmd_apply() {
     exit 1
   fi
 
+  # Resolved once (repo-level, not target-scoped): the release version this
+  # apply is deploying. D1's pre-first-tag bootstrap records "untagged"
+  # rather than fabricating or failing when no release tag exists yet; the
+  # per-target digest recorded below is still real either way.
+  local release_version
+  release_version="$(resolve_latest_release_tag main)"
+  [[ "$release_version" == "none" ]] && release_version="untagged"
+
+  # D13: set when any manifest row processed below resolves to route=mcp.
+  # cmd_longterm_mem install is invoked once, after the ENTIRE deploy loop
+  # below (all targets), not once per target inside it — see the flag check
+  # after the loop.
+  local saw_mcp_row=""
+
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
@@ -749,6 +1484,16 @@ cmd_apply() {
     if [[ ! -d "$tpath" ]]; then
       mkdir -p "$tpath"
       echo "  (created target directory: $tpath)"
+    fi
+
+    # overlay-backup-restore R-001: snapshot this target's currently
+    # deployed managed files BEFORE any of them are overwritten below.
+    # backup_target itself no-ops (creates nothing, prints nothing) when
+    # nothing would actually change for this target.
+    local backup_ts
+    backup_ts="$(backup_target "$t")"
+    if [[ -n "$backup_ts" ]]; then
+      echo "  backup: $backup_ts"
     fi
 
     local deployed=0
@@ -761,6 +1506,16 @@ cmd_apply() {
       rr_rest="${rr_line#*$'\t'}"
       rr_src="${rr_rest%%$'\t'*}"
       rr_targets="${rr_rest#*$'\t'}"
+      # D13: mcp-routed rows emit zero copy targets and would otherwise be
+      # silently skipped by the "[[ -z "$rr_dest" ]] && continue" guard
+      # below with no trace of ever having been seen — record the sighting
+      # here, before that guard, so the install hook after the deploy loop
+      # knows whether to fire (reusing route_resolve's own already-applied
+      # route_reject_unrouted_longterm_mem guard for the same-pass rejection
+      # of any unrouted/unrecognized longterm-mem/** row, task 9.11).
+      if [[ "$rr_route" == "mcp" ]]; then
+        saw_mcp_row=1
+      fi
       # Find dest for the current target ($t); skip if not in applicable set
       rr_dest=""
       for rr_pair in $rr_targets; do
@@ -786,7 +1541,38 @@ cmd_apply() {
     done < <(all_tracked_files)
 
     echo "  $t: deployed=$deployed in-sync=$in_sync"
+
+    # overlay-release-state R-001: persist this target's deployed version
+    # and content digest so a target with no entry can be reported honestly
+    # as "never deployed" rather than staying silently unversioned forever.
+    local target_digest
+    target_digest="$(compute_target_digest "$t" live)"
+    state_write_target "$t" "$release_version" "$target_digest"
   done
+
+  # D13: run the longterm-mem install path exactly once for this whole
+  # apply invocation — never once per deploy target — passing through
+  # apply's own --target selection unchanged.
+  #
+  # Its exit status is inspected, because this runs AFTER the loop above has
+  # already committed each target's state row. An unchecked failure would
+  # leave apply reporting success with no MCP server installed, and — since
+  # the digests it just wrote are unchanged — a later apply would see
+  # nothing to do and never retry. That degraded state would be sticky
+  # rather than self-healing, so the failure is named loudly, the exact
+  # recovery command is printed, and apply itself exits non-zero.
+  #
+  # The step goes through longtermmem_install_step rather than calling
+  # cmd_longterm_mem here: see that function for why a bare call in this
+  # condition context could not observe the failures it most needed to.
+  local mcp_install_failed=""
+  if [[ -n "$saw_mcp_row" ]]; then
+    echo ""
+    info "longterm-mem: mcp-routed row detected — running install once (D13)"
+    if ! longtermmem_install_step "$target_arg"; then
+      mcp_install_failed=1
+    fi
+  fi
 
   echo ""
   echo "Deploy complete."
@@ -812,6 +1598,382 @@ cmd_apply() {
       echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
     fi
   fi
+
+  # Deploy itself succeeded, but a failed mcp install must not exit 0.
+  [[ -n "$mcp_install_failed" ]] && return 1
+  return 0
+}
+
+# ---------------------------------------------------------------------------
+# self-update
+# ---------------------------------------------------------------------------
+
+# Fast-forwards ONLY the local 'main' branch and restores the original
+# branch afterward, via the same trap-based EXIT pattern used by
+# cmd_capture/cmd_apply. Every refusal (no origin, dirty tree, local-ahead
+# divergence) fires BEFORE any checkout, so a refusal never touches the
+# working tree or leaves the caller's branch stranded. Flagless: this signal
+# is repo-level, not target-scoped.
+#
+# R-004 (MODIFIED): once at least one release tag exists anywhere, main
+# converges to the highest semver-ordered release tag reachable from
+# origin/main -- NEVER to origin/main's raw HEAD, which may carry untagged
+# commits beyond the latest tag. D1's pre-first-tag bootstrap keeps the
+# original origin/main-HEAD convergence verbatim (legacy path below) until
+# the very first release tag is cut, so every zero-tag caller keeps its
+# exact documented behavior.
+cmd_self_update() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  # 1. No 'origin' remote -> nothing to converge against.
+  git remote get-url origin >/dev/null 2>&1 \
+    || die "self-update requires an 'origin' remote; none is configured."
+
+  # 2. Dirty tracked tree -> hard refusal, before any checkout, fetch, or tag
+  #    resolution. Untracked files are ignored (capture/apply parity).
+  [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
+    || die "Working tree has uncommitted tracked changes. Commit or stash them before self-update."
+
+  # 3. Bounded fetch of main only (idiom from compute_repo_behind_origin).
+  #    'timeout' is optional -- not on stock macOS -- so this degrades to an
+  #    unbounded (but still low-speed-guarded) fetch rather than a hard dep.
+  #    Also refreshes the ref resolve_latest_release_tag below resolves
+  #    tags against.
+  if command -v timeout >/dev/null 2>&1; then
+    timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+      || die "git fetch origin main failed."
+  else
+    git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+      || die "git fetch origin main failed."
+  fi
+
+  # 4. Local main ahead of origin/main -> hard refusal (R-006), unaffected by
+  #    tag mode: self-update converges main, it never silently diverges
+  #    further from a local-only commit that only exists on this clone.
+  local ahead
+  ahead="$(git rev-list --count origin/main..main)"
+  [[ "$ahead" -eq 0 ]] \
+    || die "Local main is $ahead commit(s) ahead of origin/main; self-update refuses to diverge further. Resolve manually (e.g. 'overlay apply --push')."
+
+  # 5. R-003/D1: resolve the highest release tag reachable from origin/main.
+  #    "none" means no release tag exists anywhere yet -- fall back verbatim
+  #    to the original origin/main-HEAD convergence (D1 pre-first-tag
+  #    bootstrap).
+  local release_tag
+  release_tag="$(resolve_latest_release_tag origin/main)"
+
+  if [[ "$release_tag" == "none" ]]; then
+    info "no release tags yet -- legacy convergence"
+
+    local behind
+    behind="$(git rev-list --count main..origin/main)"
+    if [[ "$behind" -eq 0 ]]; then
+      info "main is already up to date with origin/main"
+      return
+    fi
+
+    # Expand the branch name NOW: an EXIT trap fires after the function's
+    # locals are gone, and referencing them there is an unbound variable
+    # under 'set -u' (the c891c94 lesson).
+    local current_branch old_main new_main
+    current_branch="$(git rev-parse --abbrev-ref HEAD)"
+    old_main="$(git rev-parse main)"
+
+    trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
+
+    git checkout main
+    git merge --ff-only origin/main
+    new_main="$(git rev-parse main)"
+
+    git checkout "$current_branch"
+    trap - EXIT
+
+    info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward)"
+    return
+  fi
+
+  # 6. Tag mode: converge main to the resolved tag's commit only -- NEVER
+  #    past it, even when origin/main's raw HEAD carries untagged commits
+  #    beyond this tag. merge-base --is-ancestor also covers "main is
+  #    already AHEAD of this tag" (e.g. a prior self-update already landed
+  #    it) as a no-op, not only exact equality.
+  local target_commit main_head
+  target_commit="$(git rev-parse "${release_tag}^{commit}")"
+  main_head="$(git rev-parse main)"
+
+  if git merge-base --is-ancestor "$target_commit" "$main_head"; then
+    info "main is already up to date with $release_tag"
+    return
+  fi
+
+  local current_branch old_main new_main
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+  old_main="$main_head"
+
+  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
+
+  git checkout main
+  git merge --ff-only "$target_commit"
+  new_main="$(git rev-parse main)"
+
+  git checkout "$current_branch"
+  trap - EXIT
+
+  info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward) -> $release_tag"
+}
+
+# ---------------------------------------------------------------------------
+# update
+# ---------------------------------------------------------------------------
+
+# Read-only update-availability check (overlay-update-check R-001, design
+# D6). Refreshes ONLY refs/tags/*/refs/remotes/* -- a bounded 'git fetch
+# origin main' plus resolve_latest_release_tag's own explicit tag fetch --
+# and NEVER touches a local branch head, the working tree, target files, or
+# the state file. A fetch is byte-idempotent absent a remote change, so
+# running this twice in a row leaves every git ref, target file, and
+# state-file byte identical (R-001's zero-mutation scenario).
+cmd_update() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  if git remote get-url origin >/dev/null 2>&1; then
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+        >/dev/null 2>&1 || warn "git fetch origin main failed -- reporting from cached refs"
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 fetch origin main \
+        >/dev/null 2>&1 || warn "git fetch origin main failed -- reporting from cached refs"
+    fi
+  else
+    warn "no 'origin' remote configured -- reporting from cached refs only"
+  fi
+
+  local latest_ref="main"
+  git rev-parse --verify -q refs/remotes/origin/main >/dev/null 2>&1 && latest_ref="origin/main"
+
+  local release_version
+  release_version="$(resolve_latest_release_tag "$latest_ref")"
+
+  if [[ "$release_version" == "none" ]]; then
+    echo "Latest release: (no releases published yet)"
+  else
+    echo "Latest release: $release_version"
+  fi
+
+  for t in $(resolve_targets all); do
+    local recorded recorded_version recorded_digest
+    recorded="$(state_read_target "$t")"
+
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  $t: never deployed"
+      continue
+    fi
+
+    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+
+    if [[ "$release_version" == "none" ]]; then
+      echo "  $t: $recorded_version (no releases published yet)"
+    elif [[ "$recorded_version" == "$release_version" ]]; then
+      echo "  $t: up-to-date ($recorded_version)"
+    else
+      echo "  $t: behind ($release_version available, have $recorded_version)"
+    fi
+  done
+}
+
+# ---------------------------------------------------------------------------
+# restore
+# ---------------------------------------------------------------------------
+
+# cmd_restore --target <t> [--list] [--backup <ts>]
+#
+# overlay-backup-restore R-003, design decision D4: rolls a single target
+# back from one of its retained backups (default: most recent). Refuses
+# --target all (a single-target destructive rollback, never a blanket one).
+# --list prints the retained backups (newest last) without touching
+# anything. --backup <ts> selects a specific retained backup instead of the
+# most recent. Deliberately performs ZERO git operations (design.md threat
+# matrix) and never `cd`s into $OVERLAY_DIR: it only reads $MANIFEST (an
+# absolute path already) to map repo-relative backup entries back onto
+# their live destinations, and reads/writes files under
+# $STATE_DIR/backups/<target>/ and the target's live directory.
+cmd_restore() {
+  local target_arg=""
+  local list_mode=0
+  local backup_ts=""
+
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      --list)
+        list_mode=1
+        ;;
+      --backup)
+        shift
+        backup_ts="${1:-}"
+        [[ -n "$backup_ts" ]] || die "--backup requires a timestamp argument"
+        ;;
+      *) die "Unknown option: $1. Usage: overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]" ;;
+    esac
+    shift || true
+  done
+
+  [[ -n "$target_arg" ]] || die "restore requires --target claude|opencode|codex"
+  [[ "$target_arg" != "all" ]] \
+    || die "restore does not support --target all. Specify a single target: claude, opencode, codex"
+  [[ -v TARGET_PATHS["$target_arg"] ]] \
+    || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+
+  local backups_dir="$STATE_DIR/backups/$target_arg"
+
+  local -a entries=()
+  local d
+  shopt -s nullglob
+  for d in "$backups_dir"/*/; do
+    entries+=("$(basename "$d")")
+  done
+  shopt -u nullglob
+
+  # See prune_backups' comment: bash's glob sorts the paths *with* their
+  # trailing slash, which inverts a same-second collision suffix ("<ts>-1"
+  # sorting before "<ts>" instead of after it). Re-sort the bare basenames
+  # so both --list and the "most recent" default (below) are correct even
+  # when two backups for the same target were taken in the same second.
+  if [[ "${#entries[@]}" -gt 0 ]]; then
+    mapfile -t entries < <(printf '%s\n' "${entries[@]}" | LC_ALL=C sort)
+  fi
+
+  if [[ "$list_mode" -eq 1 ]]; then
+    if [[ "${#entries[@]}" -eq 0 ]]; then
+      echo "No backups available for target '$target_arg'."
+      return
+    fi
+    echo "Backups for $target_arg (newest last):"
+    local e meta version
+    for e in "${entries[@]}"; do
+      version="unknown"
+      if [[ -f "$backups_dir/$e/.meta" ]]; then
+        meta="$(cat "$backups_dir/$e/.meta")"
+        if [[ "$meta" != "NEVER_DEPLOYED" && -n "$meta" ]]; then
+          version="$(echo "$meta" | awk -F'\t' '{ print $1 }')"
+        fi
+      fi
+      echo "  $e ($version)"
+    done
+    return
+  fi
+
+  if [[ "${#entries[@]}" -eq 0 ]]; then
+    die "No backups available for target '$target_arg'. Nothing to restore."
+  fi
+
+  local selected
+  if [[ -n "$backup_ts" ]]; then
+    local found=0
+    for e in "${entries[@]}"; do
+      [[ "$e" == "$backup_ts" ]] && found=1 && break
+    done
+    [[ "$found" -eq 1 ]] \
+      || die "Backup '$backup_ts' not found for target '$target_arg'. Run 'overlay restore --target $target_arg --list' to see available backups."
+    selected="$backup_ts"
+  else
+    # 'entries' was explicitly re-sorted above; the last element is the
+    # most recent backup (D4 default).
+    selected="${entries[-1]}"
+  fi
+
+  local backup_dir="$backups_dir/$selected"
+
+  info "Restoring $target_arg from backup $selected..."
+
+  while IFS= read -r rel_path; do
+    local rr_line rr_route rr_rest rr_targets rr_dest rr_pair rr_repo_rel src_path
+    rr_line="$(route_resolve "$rel_path")"
+    rr_route="${rr_line%%$'\t'*}"
+    rr_rest="${rr_line#*$'\t'}"
+    rr_targets="${rr_rest#*$'\t'}"
+    rr_dest=""
+    for rr_pair in $rr_targets; do
+      [[ "${rr_pair%%:*}" == "$target_arg" ]] && rr_dest="${rr_pair#*:}" && break
+    done
+    [[ -z "$rr_dest" ]] && continue
+
+    rr_repo_rel="$(route_repo_rel "$rr_route" "$rel_path")"
+    src_path="$backup_dir/$rr_repo_rel"
+
+    if [[ -f "$src_path" ]]; then
+      ensure_parent "$rr_dest"
+      cp "$src_path" "$rr_dest"
+    fi
+  done < <(managed_files)
+
+  local restored_digest
+  restored_digest="$(compute_target_digest "$target_arg" live)"
+
+  local restored_version="untagged"
+  if [[ -f "$backup_dir/.meta" ]]; then
+    local meta_content
+    meta_content="$(cat "$backup_dir/.meta")"
+    if [[ "$meta_content" != "NEVER_DEPLOYED" && -n "$meta_content" ]]; then
+      restored_version="$(echo "$meta_content" | awk -F'\t' '{ print $1 }')"
+    fi
+  fi
+
+  state_write_target "$target_arg" "$restored_version" "$restored_digest"
+
+  info "Restored $target_arg from backup $selected (version $restored_version)."
+}
+
+# ---------------------------------------------------------------------------
+# version
+# ---------------------------------------------------------------------------
+
+# cmd_version (overlay-release-surfacing R-002; also reachable via the
+# --version flag, see dispatch below): reports this clone's own current
+# release version (resolved from local 'main', matching what 'apply' would
+# deploy right now -- unlike 'update', which checks the newest PUBLISHED
+# release on origin) and, per target, its recorded deployed version. A
+# target with no recorded state is reported as "never deployed" rather than
+# a stale or fabricated version (R-002).
+cmd_version() {
+  cd "$OVERLAY_DIR"
+
+  [[ $# -eq 0 ]] || die "Unknown option: $1"
+
+  local repo_version
+  repo_version="$(resolve_latest_release_tag main)"
+
+  if [[ "$repo_version" == "none" ]]; then
+    echo "Repository version: (no releases published yet)"
+  else
+    echo "Repository version: $repo_version"
+  fi
+
+  for t in $(resolve_targets all); do
+    local recorded recorded_version recorded_digest
+    recorded="$(state_read_target "$t")"
+
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  $t: never deployed"
+      continue
+    fi
+
+    IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+
+    if [[ "$repo_version" != "none" && "$recorded_version" != "$repo_version" ]]; then
+      echo "  $t: $recorded_version (behind)"
+    else
+      echo "  $t: $recorded_version"
+    fi
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -874,6 +2036,23 @@ cmd_status() {
         fi
       fi
     done < <(all_tracked_files)
+
+    # overlay-release-state R-001/R-002, sync-check-verdicts R-008: report
+    # this target's recorded release version against its live aggregate
+    # digest, independent of the per-file drift lines above.
+    local target_digest recorded recorded_version recorded_digest
+    target_digest="$(compute_target_digest "$t" live)"
+    recorded="$(state_read_target "$t")"
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      echo "  version: never deployed"
+    else
+      IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+      if [[ "$target_digest" == "$recorded_digest" ]]; then
+        echo "  version: in sync at $recorded_version"
+      else
+        echo "  version: $recorded_version (drift detected -- run 'overlay apply --target $t')"
+      fi
+    fi
   done
 }
 
@@ -881,7 +2060,7 @@ cmd_status() {
 # sync-check
 # ---------------------------------------------------------------------------
 
-# Computes how many commits local HEAD is behind this repo's own origin/main,
+# Computes how many commits local main is behind this repo's own origin/main,
 # repo-level (not target-scoped). Emits an integer count on stdout, or the
 # literal token "NA" when the comparison is unavailable (no origin remote, no
 # cached ref, or a requested live fetch failed).
@@ -940,11 +2119,98 @@ compute_repo_behind_origin() {
     return
   fi
 
+  # Compared against local 'main', never the checked-out branch (HEAD). This
+  # must track the exact ref self-update converges: self-update fast-forwards
+  # ONLY main and always returns to whatever branch was current (D1-D3), so a
+  # HEAD-relative comparison stays nonzero forever when the current branch
+  # isn't main -- the TUI's "Actualizar repositorio" button would fast-forward
+  # main for real but its own banner would never report convergence. This is
+  # also the same ref cmd_sync_check's own per-file comparisons already use
+  # ("main:${rr_repo_rel}" below), so this makes the diagnostic agree with
+  # both its producer (self-update) and its sibling check (per-file drift).
+  if ! git rev-parse --verify -q refs/heads/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no local 'main' branch -- REPO_BEHIND_ORIGIN unavailable" >&2
+    echo "NA"
+    return
+  fi
+
   local count
-  if count="$(git rev-list HEAD..origin/main --count 2>/dev/null)"; then
+  if count="$(git rev-list main..origin/main --count 2>/dev/null)"; then
     echo "$count"
   else
-    echo "SYNC_CHECK:(repo): git rev-list HEAD..origin/main failed -- REPO_BEHIND_ORIGIN unavailable" >&2
+    echo "SYNC_CHECK:(repo): git rev-list main..origin/main failed -- REPO_BEHIND_ORIGIN unavailable" >&2
+    echo "NA"
+  fi
+}
+
+# compute_repo_behind_release <check_origin>
+#
+# Design decision D2: how many commits local main is behind the newest
+# LOCALLY-KNOWN annotated v*-tag reachable from this repo's cached
+# refs/remotes/origin/main -- cached-only by default, exactly like its
+# sibling compute_repo_behind_origin, so a plain 'sync-check'/'status' never
+# hits the network. Pass check_origin=true (mirrors sync-check's
+# --check-origin/--fetch flag) to explicitly refresh v*-tags from origin
+# first, still without moving any local branch head.
+#
+# Filtering candidate tags with --merged origin/main (rather than every known
+# tag) keeps this consistent with resolve_latest_release_tag's own
+# reachability rule and avoids a rogue/unrelated-branch tag producing a
+# nonsensical count. Emits the literal token "NA" whenever no cached
+# origin/main ref, no local main branch, or no qualifying tag exists yet
+# (D1's pre-first-tag bootstrap) -- never an error.
+compute_repo_behind_release() {
+  local check_origin="$1"
+
+  if ! git remote get-url origin >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no 'origin' remote configured -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  if [[ "$check_origin" == true ]]; then
+    if command -v timeout >/dev/null 2>&1; then
+      timeout 10 git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    else
+      git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=10 \
+        fetch origin '+refs/tags/v*:refs/tags/v*' >/dev/null 2>&1 || true
+    fi
+  fi
+
+  if ! git rev-parse --verify -q refs/remotes/origin/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no cached refs/remotes/origin/main (never fetched) -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  if ! git rev-parse --verify -q refs/heads/main >/dev/null 2>&1; then
+    echo "SYNC_CHECK:(repo): no local 'main' branch -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  local tag objtype latest_tag=""
+  while IFS=$'\t' read -r tag objtype; do
+    [[ -z "$tag" ]] && continue
+    if [[ "$objtype" == "tag" ]]; then
+      latest_tag="$tag"
+      break
+    fi
+  done < <(git for-each-ref --merged origin/main --sort=-v:refname \
+             --format=$'%(refname:short)\t%(objecttype)' 'refs/tags/v*' 2>/dev/null)
+
+  if [[ -z "$latest_tag" ]]; then
+    echo "SYNC_CHECK:(repo): no release tag known yet -- REPO_BEHIND_RELEASE unavailable" >&2
+    echo "NA"
+    return
+  fi
+
+  local count
+  if count="$(git rev-list --count "main..${latest_tag}" 2>/dev/null)"; then
+    echo "$count"
+  else
+    echo "SYNC_CHECK:(repo): git rev-list main..${latest_tag} failed -- REPO_BEHIND_RELEASE unavailable" >&2
     echo "NA"
   fi
 }
@@ -972,6 +2238,19 @@ cmd_sync_check() {
 
   local repo_behind_origin
   repo_behind_origin="$(compute_repo_behind_origin "$check_origin")"
+
+  local repo_behind_release
+  repo_behind_release="$(compute_repo_behind_release "$check_origin")"
+
+  # overlay-update-check/overlay-release-identity: the release `apply` would
+  # currently deploy, resolved from local main (D1 fallback: "untagged").
+  # Cached-only unless --check-origin/--fetch was passed (mirrors
+  # compute_repo_behind_origin/compute_repo_behind_release just above) --
+  # sync-check-verdicts R-001 and tui-self-update R-001 both require this
+  # default path to invoke no `git fetch`.
+  local release_version
+  release_version="$(resolve_latest_release_tag main "$check_origin")"
+  [[ "$release_version" == "none" ]] && release_version="untagged"
 
   for t in $(resolve_targets "$target_arg"); do
     local tpath="${TARGET_PATHS[$t]}"
@@ -1061,15 +2340,45 @@ cmd_sync_check() {
 
     done < <(parse_manifest)
 
+    # sync-check-verdicts R-007/R-008: aggregate per-target digest vs. the
+    # recorded deploy (from `apply`), independent of the per-file
+    # classification above.
+    local target_digest recorded recorded_version recorded_digest digest_match
+    target_digest="$(compute_target_digest "$t" live)"
+    recorded="$(state_read_target "$t")"
+    if [[ "$recorded" == "NEVER_DEPLOYED" ]]; then
+      recorded_version="NA"
+      digest_match="NA"
+    else
+      IFS=$'\t' read -r recorded_version recorded_digest _ <<< "$recorded"
+      if [[ "$target_digest" == "$recorded_digest" ]]; then
+        digest_match="yes"
+      else
+        digest_match="no"
+      fi
+    fi
+
     echo ""
-    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed REPO_BEHIND_ORIGIN=$repo_behind_origin"
+    echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed REPO_BEHIND_ORIGIN=$repo_behind_origin REPO_BEHIND_RELEASE=$repo_behind_release RECORDED_VERSION=$recorded_version DIGEST_MATCH=$digest_match"
 
     if [[ "$upstream_changed" -gt 0 ]]; then
       echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"
     elif [[ "$overlay_not_deployed" -gt 0 ]]; then
-      echo "ACTION:$t: run 'overlay apply --target $t'"
+      # R-007: name the release `apply` would bring only when there IS a
+      # recorded version that has gone stale (digest_match=no) -- a
+      # genuinely never-deployed target (digest_match=NA) gets no
+      # fabricated version, and the pre-first-tag bootstrap (no real
+      # version to name yet) is never papered over either.
+      if [[ "$digest_match" == "no" && "$release_version" != "untagged" ]]; then
+        echo "ACTION:$t: run 'overlay apply --target $t' (release $release_version available)"
+      else
+        echo "ACTION:$t: run 'overlay apply --target $t'"
+      fi
     elif [[ "$repo_behind_origin" != "NA" && "$repo_behind_origin" -gt 0 ]]; then
       echo "ACTION:$t: run 'git pull' to update your local clone (behind origin/main by $repo_behind_origin commit(s))"
+    elif [[ "$digest_match" == "yes" ]]; then
+      # R-008: name the matching version when fully in sync.
+      echo "ACTION:$t: in sync with gentle-ai (healthy) at $recorded_version"
     else
       echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
@@ -1463,6 +2772,25 @@ cmd_doctor() {
     fi
   fi
 
+  # (f) overlay-release-surfacing R-001: per-target deployed-version digest
+  # consistency. A target with no recorded state (never deployed) has
+  # nothing to compare yet -- silently skipped, not reported as a failure
+  # or warning. A digest mismatch is a WARN, never a FAIL: it never touches
+  # `fail`, preserving doctor's "exits non-zero only on a hard FAIL"
+  # contract (R-001's explicit requirement).
+  local dt drecorded drecorded_version drecorded_digest dtarget_digest
+  for dt in "${!TARGET_PATHS[@]}"; do
+    drecorded="$(state_read_target "$dt")"
+    [[ "$drecorded" == "NEVER_DEPLOYED" ]] && continue
+    IFS=$'\t' read -r drecorded_version drecorded_digest _ <<< "$drecorded"
+    dtarget_digest="$(compute_target_digest "$dt" live)"
+    if [[ "$dtarget_digest" == "$drecorded_digest" ]]; then
+      echo "PASS  $dt: deployed at $drecorded_version, digest matches"
+    else
+      echo "WARN  $dt: deployed at $drecorded_version, digest drift detected -- run 'overlay apply --target $dt'"
+    fi
+  done
+
   echo ""
   if [[ "$fail" -ne 0 ]]; then
     echo "doctor: FAIL — one or more required checks did not pass (see above)." >&2
@@ -1789,33 +3117,747 @@ cmd_gadu_generate() {
 }
 
 # ---------------------------------------------------------------------------
+# longterm-mem (D4, D13, R-014/R-015)
+# ---------------------------------------------------------------------------
+
+# ensure_engine_binary builds $ENGINE_BINARY on demand if it is missing,
+# mirroring the existing cmd_uninstall_hooks fallback above — cmd_longterm_mem
+# needs the same binary to invoke 'engine runtime --component longterm-mem'.
+ensure_engine_binary() {
+  if [[ -x "$ENGINE_BINARY" ]]; then
+    return 0
+  fi
+  command -v go >/dev/null 2>&1 || die "engine binary not found at $ENGINE_BINARY and go is not installed; cannot continue"
+  [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
+  info "Engine binary not found; building..."
+  mkdir -p "$(dirname "$ENGINE_BINARY")"
+  (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/) \
+    || die "go build failed for the engine binary"
+}
+
+# longtermmem_installed_targets_known <line> answers whether <line> names a
+# target THIS BUILD can actually install longterm-mem for. It gates the
+# WRITE side only (longtermmem_installed_targets_add): this entrypoint
+# refuses to record a target it cannot install for.
+#
+# It is deliberately NOT the read-side filter. See
+# longtermmem_target_name_is_wellformed below for why those are two
+# different questions.
+longtermmem_installed_targets_known() {
+  local candidate="${1:-}" known
+  for known in "${!TARGET_PATHS[@]}"; do
+    if [[ "$candidate" == "$known" ]]; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+# longtermmem_target_name_is_wellformed <line> answers whether <line> is a
+# plausible target NAME — a short bare word — regardless of whether this
+# build knows that name.
+#
+# This is the read-side filter, and the distinction it draws is the whole
+# safety property of the tracking file. The file is read as EVIDENCE, not as
+# text: a non-empty read is what keeps longtermmem_maybe_remove_binary from
+# deleting a binary a still-installed runtime depends on. So the reader has
+# to sort its input into two piles that are NOT the same pile:
+#
+#   GARBAGE — a NUL byte, an unterminated partial line, a token that is not
+#   a bare word. None of these can have been written by this script (every
+#   write here is one newline-terminated bare word), so none is install
+#   state. Dropping them is what keeps a hand edit or a torn write from
+#   wedging the guard permanently, with no way to clear it short of deleting
+#   the file by hand.
+#
+#   A WELL-FORMED NAME THIS BUILD DOES NOT KNOW — "zed", say. This looks
+#   exactly like something this script wrote, because the likeliest way it
+#   got there is that a NEWER build wrote it: one that installs for a
+#   runtime this build has never heard of. That runtime is running the
+#   SHARED binary right now. Dropping it reads "nothing is installed" and
+#   deletes the binary out from under a live runtime — the exact failure the
+#   guard exists to prevent, arrived at through the mechanism meant to
+#   prevent it.
+#
+# So garbage is droppable and an unknown name is not. Only the first pile is
+# provably not install state; the second is install state this build cannot
+# interpret, and the safe reading of "I do not understand this" is to leave
+# the shared binary alone.
+#
+# The 64-byte cap is part of "bare word": a target name is a short
+# identifier, and without a bound a long run of alphanumerics inside a
+# binary file would read as a name and hold the guard closed forever.
+longtermmem_target_name_is_wellformed() {
+  local candidate="${1:-}"
+  [[ "$candidate" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]]
+}
+
+# longtermmem_installed_targets_read prints the currently tracked installed
+# targets (see LONGTERM_MEM_INSTALLED_TARGETS above), one per line, sorted
+# and deduplicated; empty output when none are tracked or the file does not
+# exist yet.
+#
+# It emits every WELL-FORMED name, known to this build or not, and drops
+# only garbage — see longtermmem_target_name_is_wellformed for why those are
+# different answers. Callers use the result as "is anything still
+# installed", never as "here is a target to act on"; the one place a name is
+# acted on (add) validates it against TARGET_PATHS itself.
+#
+# Two details are load-bearing and neither is obvious:
+#
+#   NUL bytes are translated to \001 before the loop rather than left to
+#   bash. A bash variable CANNOT hold a NUL, so `read` silently drops it —
+#   which would turn "\0zed", provably a torn write, into "zed", a name that
+#   holds the guard closed forever. \001 cannot appear in a bare word, so
+#   the name check rejects the line for the right reason.
+#
+#   An unterminated final line is DROPPED, not kept. Every write here is
+#   newline-terminated, so trailing bytes with no newline are a partial
+#   write — a name still being written, not a name. The previous loop's
+#   `|| [[ -n "$line" ]]` kept it.
+#
+# Deduplication happens HERE rather than on write, which is what lets the
+# write side be a single atomic append instead of a read-modify-write.
+longtermmem_installed_targets_read() {
+  [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
+
+  # A file that EXISTS but cannot be READ is the third pile, and it belongs
+  # with the unknown name, not with the garbage: it may well list every
+  # runtime still depending on the shared binary, and a permission error
+  # says nothing either way. So it reports FAILURE rather than emptiness —
+  # every caller below distinguishes the two, because "I could not look" and
+  # "I looked and there is nothing" lead to opposite actions on a shared
+  # binary. (The read goes through a process substitution, whose failure a
+  # redirect's would not: without this the loop just sees EOF.)
+  if [[ ! -r "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
+    warn "longterm-mem: $LONGTERM_MEM_INSTALLED_TARGETS exists but cannot be read; refusing to read it as empty install state"
+    return 1
+  fi
+
+  local line read_status
+  while true; do
+    read_status=0
+    IFS= read -r line || read_status=$?
+    if [[ "$read_status" -ne 0 ]]; then
+      # EOF. Anything `read` left in $line arrived without a terminating
+      # newline: a partial write, never install state.
+      break
+    fi
+    if longtermmem_target_name_is_wellformed "$line"; then
+      printf '%s\n' "$line"
+    fi
+  done < <(LC_ALL=C tr '\000' '\001' < "$LONGTERM_MEM_INSTALLED_TARGETS") | sort -u
+  return 0
+}
+
+# longtermmem_installed_targets_add <target> records <target> as installed
+# (idempotent).
+#
+# The record is appended, never rewritten. A read-modify-write through a
+# single FIXED shared temporary path — which is what this used to do — is
+# the worst of both worlds under two concurrent overlay runs: both truncate
+# the same staging file, so one run's `mv` can publish the other run's
+# half-written content, or fail outright because the other already renamed
+# it away. A short O_APPEND write is atomic, so two runs recording DIFFERENT
+# targets at the same time both land, with no lock and no staging file at
+# all.
+#
+# The "already recorded" check is what keeps the file from growing by one
+# line per apply run; a duplicate can still appear if two runs append the
+# same target at once, and longtermmem_installed_targets_read collapses it.
+longtermmem_installed_targets_add() {
+  local target="$1"
+  longtermmem_installed_targets_known "$target" \
+    || die "longterm-mem: refusing to record an unknown install target: $target"
+
+  local dir
+  dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+  mkdir -p "$dir" || die "longterm-mem: could not create $dir"
+
+  # The lock covers the READ as well as the write. An append is atomic on its
+  # own, but the "already recorded" check below is not: it reads, decides, and
+  # only then appends, and a concurrent REWRITE (remove, or the guard's
+  # cleanup) landing in that window publishes state that never saw this
+  # append. Locking only the append would reproduce the exact lost update it
+  # is meant to fix.
+  longtermmem_targets_lock_acquire
+  trap 'longtermmem_targets_lock_release' RETURN
+
+  # An unreadable tracking file makes the "already recorded" check below
+  # meaningless: it would answer "not recorded" and append a duplicate to a
+  # file it cannot see. Say so instead of appending blind.
+  local tracked
+  tracked="$(longtermmem_installed_targets_read)" \
+    || die "longterm-mem: could not read $LONGTERM_MEM_INSTALLED_TARGETS; refusing to record $target against install state that cannot be inspected"
+  if [[ $'\n'"$tracked"$'\n' == *$'\n'"$target"$'\n'* ]]; then
+    return 0
+  fi
+
+  printf '%s\n' "$target" >> "$LONGTERM_MEM_INSTALLED_TARGETS" \
+    || die "longterm-mem: could not record $target in $LONGTERM_MEM_INSTALLED_TARGETS"
+}
+
+# longtermmem_installed_targets_remove <target> un-records <target>.
+#
+# Removal cannot be an append, so this one does stage and rename — through a
+# PER-PROCESS mktemp in the SAME directory (the pattern the binary deploy
+# below already uses), so the rename stays an atomic same-filesystem
+# operation and two concurrent runs can no longer truncate each other's
+# staging file.
+#
+# It rewrites from longtermmem_installed_targets_read, so a file that had
+# picked up garbage is also compacted back to valid install state here.
+#
+# The read and the rename are ONE critical section, held under the
+# installed-targets lock: this is a real read-modify-write, so a concurrent
+# `add` landing between them used to be dropped outright. Concurrent overlay
+# invocation is now answered rather than avoided — it is serialized.
+longtermmem_installed_targets_remove() {
+  local target="$1"
+  [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
+
+  local dir
+  dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+  mkdir -p "$dir" || die "longterm-mem: could not create $dir"
+
+  longtermmem_targets_lock_acquire
+  trap 'longtermmem_targets_lock_release' RETURN
+
+  # Read BEFORE staging anything. This function rewrites the file from what
+  # the reader returns, so a reader that answered "empty" for a file it could
+  # not read would not merely misreport it — it would TRUNCATE it, destroying
+  # the very state that keeps the binary-removal guard closed.
+  local kept
+  kept="$(longtermmem_installed_targets_read)" \
+    || die "longterm-mem: could not read $LONGTERM_MEM_INSTALLED_TARGETS; refusing to rewrite it from a file that could not be inspected"
+
+  local tmp
+  tmp="$(mktemp "$dir/.installed-targets.XXXXXX")" \
+    || die "longterm-mem: could not create a temporary file in $dir"
+
+  local filter_exit=0
+  printf '%s' "$kept" | grep -v -x -F -e "$target" > "$tmp" || filter_exit=$?
+  # grep exits 1 when it selects nothing, which is the ordinary "that was
+  # the last tracked target" case; anything above 1 is a real error.
+  if [[ "$filter_exit" -gt 1 ]]; then
+    rm -f "$tmp"
+    die "longterm-mem: could not rewrite $LONGTERM_MEM_INSTALLED_TARGETS"
+  fi
+
+  mv "$tmp" "$LONGTERM_MEM_INSTALLED_TARGETS" || {
+    rm -f "$tmp"
+    die "longterm-mem: could not update $LONGTERM_MEM_INSTALLED_TARGETS"
+  }
+}
+
+# longtermmem_maybe_remove_binary implements the R-014/D4 binary-removal
+# guard (10b.5): the binary is removed ONLY when no install-state target
+# remains tracked (i.e. a "--target all" uninstall, or the last remaining
+# single-target uninstall, emptied the tracking file), or when --purge was
+# passed. This is the dangerous half of the guard: getting it backwards
+# would delete a binary a still-installed target depends on — proven by the
+# negative test TestStatusUninstall_SkipBuildStep/UninstallSingleTarget...
+# (uninstalling one target while another remains installed leaves the
+# binary in place).
+#
+# Every way of NOT KNOWING what is installed leaves the binary alone, and
+# there are three of them, only one of which is about the file's contents:
+# no tracking file at all ($tracking_known, set by the caller), a tracking
+# file that could not be read (below), and a line inside it that this build
+# cannot interpret (longtermmem_target_name_is_wellformed). --purge is the
+# single explicit override for all three.
+longtermmem_maybe_remove_binary() {
+  local purge="$1"
+
+  # The third writer of the tracking file, and the easiest one to miss: it
+  # reads the file and then DELETES it, which is a read-modify-write like any
+  # other. Unserialized, a concurrent `add` landing between the two would be
+  # erased along with the file, leaving a runtime registered against a binary
+  # this call just removed.
+  longtermmem_targets_lock_acquire
+  trap 'longtermmem_targets_lock_release' RETURN
+
+  local remaining readable=1
+  remaining="$(longtermmem_installed_targets_read)" || readable=""
+
+  if [[ -z "$readable" ]] && [[ -z "$purge" ]]; then
+    warn "longterm-mem: the install tracking file could not be read, so whether any runtime still depends on the shared binary is unknown; leaving $LONGTERM_MEM_BINARY in place. Fix its permissions and re-run uninstall, or pass --purge to remove it anyway."
+    return 0
+  fi
+
+  if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
+    if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
+      rm -f "$LONGTERM_MEM_BINARY"
+      info "longterm-mem binary removed: $LONGTERM_MEM_BINARY"
+    else
+      info "longterm-mem binary already absent: $LONGTERM_MEM_BINARY"
+    fi
+    rm -f "$LONGTERM_MEM_INSTALLED_TARGETS"
+  fi
+}
+
+# longtermmem_install_step runs cmd_apply's D13 "install once per apply
+# invocation" step and reports whether it succeeded, printing the recovery
+# line itself when it did not.
+#
+# The call is wrapped in a SUBSHELL deliberately. cmd_longterm_mem and the
+# helpers it reaches report unrecoverable problems through `die` — the
+# script-wide convention, used in dozens of places — and `die` exits the
+# PROCESS. Invoked directly as `if ! cmd_longterm_mem install`, that took
+# the entire apply run down with it, so the recovery line below, which
+# exists precisely to explain a failed install, was unreachable for the
+# likeliest failures: no go toolchain, no longterm-mem module, a failed
+# build, an unresolvable --target, a missing engine binary.
+#
+# A subshell turns die's exit into an observable status at exactly this one
+# call site, and it does so without rewriting `die` into a dual-mode
+# "return when I am a callee" that every one of its call sites would then
+# have to honour correctly. Nothing is lost to the subshell: every effect of
+# this step lands on the filesystem, never in shell state the caller reads.
+#
+# Note that the subshell does NOT restore errexit inside the callee — bash
+# suppresses it for the whole condition context either way — which is why
+# the install path checks each of its own deploy steps explicitly.
+longtermmem_install_step() {
+  local target_arg="$1"
+  local status=0
+  ( cmd_longterm_mem install --target "$target_arg" ) || status=$?
+  if [[ "$status" -ne 0 ]]; then
+    warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian-overlay longterm-mem install --target $target_arg' directly."
+  fi
+  return "$status"
+}
+
+# cmd_longterm_mem implements 'longterm-mem install|status|uninstall
+# [--target claude|opencode|codex|all] [--purge]' (D4, D13).
+#
+# install: go build the longterm-mem binary, copy it to the fixed path
+# (LONGTERM_MEM_BINARY, R-015), then per target: 'longterm-mem register
+# --target t --binary "$LONGTERM_MEM_BINARY"' (module-owned, writes the
+# ownership-tagged MCP entry and its install-state.json record at the
+# binary's own default state dir, D9), then 'engine runtime install
+# --component longterm-mem --target t' to record and report per-runtime
+# status. R-022's vault seeding is lazy (vaultreg.Resolve) and needs no
+# separate call here -- the 'longterm-mem vaults seed' invocation this
+# replaced named a subcommand that never existed and never will.
+#
+# The two overrides are NOT symmetrical, and conflating them is how this
+# comment previously ended up justifying a flag with the other flag's
+# reason:
+#
+#   --state-dir is deliberately NOT passed, here or on the unregister call
+#   below, so that both resolve the SAME install-state.json — the module's
+#   own default. --state-dir is what sets that file's location, so passing
+#   it on one call and not the other is exactly how install and uninstall
+#   come to disagree about where the ownership record lives (see the
+#   unregister call's own comment for why that agreement is load-bearing).
+#
+#   --binary IS passed. It does not move install-state.json and so cannot
+#   break that agreement; it sets the path written INTO each runtime's MCP
+#   entry, which must be where the binary was actually just deployed. See
+#   the call site for the full reason.
+#
+# status/uninstall skip the build step entirely (R-014 scenario 2) and only
+# ever talk to the engine runtime lifecycle surface.
+cmd_longterm_mem() {
+  local subcmd="${1:-}"
+  shift || true
+  case "$subcmd" in
+    install|status|uninstall) ;;
+    *) die "Unknown longterm-mem subcommand: ${subcmd:-<none>}. Valid: install, status, uninstall" ;;
+  esac
+
+  local target_arg="all"
+  local purge=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --target)
+        shift
+        target_arg="${1:-}"
+        [[ -n "$target_arg" ]] || die "--target requires an argument"
+        ;;
+      --purge)
+        [[ "$subcmd" == "uninstall" ]] || die "--purge is only valid with 'uninstall'"
+        purge=1
+        ;;
+      *) die "Unknown option: $1" ;;
+    esac
+    shift || true
+  done
+
+  local targets
+  targets="$(resolve_targets "$target_arg")"
+
+  ensure_engine_binary
+
+  if [[ "$subcmd" == "install" ]]; then
+    command -v go >/dev/null 2>&1 || die "go is not installed; required to build longterm-mem"
+    [[ -d "$LONGTERM_MEM_SRC" ]] || die "longterm-mem module not found at $LONGTERM_MEM_SRC"
+
+    info "Building longterm-mem binary..."
+    # Every step of the deploy below is checked EXPLICITLY rather than left
+    # to 'set -e'. cmd_longterm_mem is reached from a condition context in
+    # cmd_apply, and bash suppresses errexit for the whole of a function
+    # called that way — an unchecked mkdir, mktemp, chmod or mv there
+    # deploys nothing and still prints "binary deployed to".
+    local binary_dir
+    binary_dir="$(dirname "$LONGTERM_MEM_BINARY")"
+    mkdir -p "$binary_dir" || die "could not create $binary_dir for the longterm-mem binary"
+    local build_tmp
+    build_tmp="$(mktemp "$binary_dir/.longterm-mem.build.XXXXXX")" \
+      || die "could not create a temporary build file in $binary_dir"
+    if ! (cd "$LONGTERM_MEM_SRC" && go build -o "$build_tmp" ./cmd/longterm-mem); then
+      rm -f "$build_tmp"
+      die "go build failed for longterm-mem; binary not deployed"
+    fi
+    chmod +x "$build_tmp" || {
+      rm -f "$build_tmp"
+      die "could not make $build_tmp executable; longterm-mem binary not deployed"
+    }
+    mv "$build_tmp" "$LONGTERM_MEM_BINARY" || {
+      rm -f "$build_tmp"
+      die "could not install the longterm-mem binary at $LONGTERM_MEM_BINARY; not deployed"
+    }
+    info "longterm-mem binary deployed to: $LONGTERM_MEM_BINARY"
+
+    # install_failed marks a register outcome that neither registered $t nor
+    # converged, so the caller (cmd_apply's recovery line) hears about it on
+    # the exit code. A refusal and a version skew are NOT that: both are
+    # states every re-run reproduces identically, so both converge.
+    local install_failed=""
+
+    # expanded_all mirrors cmd_register.go's OWN distinction, and it has to,
+    # because this loop takes that distinction away from it: register's
+    # "--target all" means "every runtime this machine has" and SKIPS a
+    # runtime whose configuration file is absent, while a target named
+    # explicitly is a different statement and fails. Expanding "all" here
+    # and calling register once per target — which the per-target tracking
+    # below needs — turns every runtime the machine does not have into a
+    # named-target hard failure. Escalating those would fail the run on any
+    # machine that does not run all three runtimes.
+    #
+    # So a hard failure is escalated only for a target the operator named,
+    # which is exactly the case register itself escalates. Under "all" it is
+    # still warned about, and $t is still not recorded as installed.
+    local expanded_all=""
+    [[ "$target_arg" == "all" ]] && expanded_all=1
+
+    local t
+    for t in $targets; do
+      # No --state-dir here: this must resolve to the exact same
+      # install-state.json the uninstall path below reads (see that call's
+      # comment) — the module's own default (defaultRegisterStateDir(),
+      # ~/.labdrian-overlay/longterm-mem, D9) is that single source of
+      # truth, not $STATE_DIR.
+      #
+      # --binary IS passed, and must be: it is the path written INTO each
+      # runtime's MCP entry, and $LONGTERM_MEM_BINARY (derived from
+      # $STATE_DIR) is where the binary was just deployed. register's own
+      # default resolves from $HOME instead, so under a $STATE_DIR override
+      # it wrote entries naming a path nothing was ever deployed to. Under
+      # the default $STATE_DIR the two values are identical, so this changes
+      # no byte of an ordinary install.
+      #
+      # register's exit status is INSPECTED, not discarded (cmd_register.go:
+      # 0 registered, 1 hard failure, 2 usage/version skew, 6 an untagged
+      # same-named entry it refuses to touch, 8 a path it could not resolve
+      # from the environment at all). 9 is the module's ninth published code
+      # and is deliberately absent from that list: it is `doctor`'s verdict
+      # ("the checks ran and a VAULT check FAILED", exitDoctorChecksFailed),
+      # not a register outcome, and register never raises it. It is named
+      # here so the next reader does not read this list as the module's whole
+      # contract -- and so that if this entrypoint ever calls `doctor`, 9 gets
+      # its own arm there rather than falling into a catch-all that would
+      # report a failed vault check as a generic failure.
+      #
+      # Only 0 means this entrypoint actually
+      # registered $t, and only 0 records $t as installed — recording a
+      # target register refused would make the binary-removal guard hold the
+      # shared binary hostage on behalf of a runtime that never had an entry
+      # of ours.
+      #
+      # Every code the module names has its own arm below, because the
+      # catch-all arm carries a story ("a runtime this machine does not
+      # have") that is only true for exit 1. A code that falls through to it
+      # is not merely reported vaguely — it is reported WRONG.
+      local register_exit=0
+      "$LONGTERM_MEM_BINARY" register --target "$t" --binary "$LONGTERM_MEM_BINARY" \
+        || register_exit=$?
+
+      # The engine record is rebuilt from OBSERVED state on every call and
+      # never records an entry it cannot prove it wrote, so it runs for
+      # every outcome above: after a refusal it is what reports $t's entry
+      # as the unmanaged entry it is, and skipping it would leave a stale
+      # record behind instead.
+      "$ENGINE_BINARY" runtime install --component longterm-mem --target "$t" --state-dir "$STATE_DIR" \
+        || warn "engine runtime install --component longterm-mem --target $t reported a non-supported status"
+
+      case "$register_exit" in
+        0)
+          longtermmem_installed_targets_add "$t"
+          ;;
+        6)
+          warn "longterm-mem register --target $t: refused — an entry exists that longterm-mem does not own, and it was left untouched. $t is NOT recorded as installed; remove that entry by hand and re-run install to register $t."
+          ;;
+        2)
+          # Exit 2 fails the run for the exact reason exit 8 does, one arm
+          # below: it is environment-independent, it reproduces identically
+          # on every target (so --target all softens nothing here either),
+          # and converging on it at exit 0 would report a component that
+          # registered NOTHING as a clean install. The two codes differ only
+          # in whose fault they name -- 8 the caller's environment, 2 this
+          # binary's own vintage -- and neither difference is visible to a
+          # script reading $?.
+          #
+          # Exit 6 above is deliberately NOT in this bucket: it is not a
+          # failure to register but a machine state (a same-named entry this
+          # overlay never wrote), the install did everything it is allowed to
+          # do, and re-running changes nothing until a human removes that
+          # entry. Failing the run there would make every install on such a
+          # machine non-zero forever.
+          warn "longterm-mem register --target $t: this binary does not accept the invocation (exit 2, version skew), so $t was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay."
+          install_failed=1
+          ;;
+        8)
+          # register_paths.go separates 8 from 1 precisely so a caller can
+          # tell "you forgot a flag / your environment is broken" from "your
+          # ~/.claude.json is broken": nothing was attempted and nothing was
+          # touched. It is therefore NOT softened under --target all the way
+          # exit 1 is. Exit 1 under "all" is genuinely ambiguous with "this
+          # machine does not run that runtime"; exit 8 is not ambiguous at
+          # all — it is one environment fault that every target reproduces
+          # identically, and converging on it at exit 0 would report a
+          # completely uninstalled component as a clean run.
+          warn "longterm-mem register --target $t: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and $t is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install."
+          install_failed=1
+          ;;
+        *)
+          if [[ -n "$expanded_all" ]]; then
+            warn "longterm-mem register --target $t failed (exit $register_exit); $t was not registered and is NOT recorded as installed. Not failing the run: --target all asks for the runtimes this machine has, and a runtime it does not have looks exactly like this from here."
+          else
+            warn "longterm-mem register --target $t failed (exit $register_exit); $t was not registered and is NOT recorded as installed"
+            install_failed=1
+          fi
+          ;;
+      esac
+    done
+
+    if [[ -n "$install_failed" ]]; then
+      return 1
+    fi
+  elif [[ "$subcmd" == "status" ]]; then
+    "$ENGINE_BINARY" runtime status --component longterm-mem --state-dir "$STATE_DIR" \
+      || warn "engine runtime status --component longterm-mem reported a non-supported status"
+  else
+    local t
+    # uninstall_failed tracks whether any target's unregister call returned
+    # a status other than 0 (removed) or 6 (unmanaged) -- see the case
+    # statement below. It is the guard that keeps a real failure (state dir
+    # unreadable, a corrupted install-state.json, ...) from silently
+    # clearing this run's tracking and letting the binary-removal branch
+    # below fire for a target whose entry may still be sitting in its
+    # runtime config.
+    local uninstall_failed=""
+
+    # Selective removal needs a usable binary. When it is absent or not
+    # executable there is nothing for the operator to retry: every re-run
+    # reproduces the same state, so treating it as a recoverable failure
+    # would strand the engine record and the shared binary forever, with
+    # --purge -- the one action that orphans the entries -- as the only
+    # escape. Say plainly what could not be done, then converge.
+    local unregister_usable=1
+    if [[ ! -x "$LONGTERM_MEM_BINARY" ]]; then
+      unregister_usable=""
+      warn "longterm-mem: $LONGTERM_MEM_BINARY is missing or not executable, so the per-runtime MCP entries cannot be removed. Any entry longterm-mem installed stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall."
+    fi
+
+    for t in $targets; do
+      if [[ -z "$unregister_usable" ]]; then
+        longtermmem_installed_targets_remove "$t"
+        continue
+      fi
+      # unregister is module-owned, real per-runtime selective removal
+      # (R-019, 12b.4/12b.5): it removes only $t's own ownership-tagged MCP
+      # entry from $t's own runtime config, byte-preserving everything
+      # else, and clears $t's own install-state.json record. It never
+      # touches another target's entry or record, which is exactly what
+      # makes the bash-level tracking removed below, and the binary guard
+      # after it, safe to key off "$remaining" alone.
+      #
+      # No --state-dir here either: it MUST resolve to the exact same
+      # install-state.json the install path above wrote to (register's own
+      # default, D9) -- passing $STATE_DIR here was the CRITICAL-1 defect
+      # (install and uninstall disagreeing on where install-state.json
+      # lives, so uninstall could never find a record install actually
+      # wrote, and reported every entry as unmanaged/exit 6 instead of
+      # removing it).
+      #
+      # cmd_unregister.go's exit codes (0 removed, 1 hard failure, 2 usage,
+      # 6 unmanaged, 8 a path it could not resolve from the environment at
+      # all, 1 outranking 6) are inspected, not swallowed. 9 is not in that
+      # set: it is `doctor`'s "a vault check FAILED" verdict and unregister
+      # never raises it (see the register call's comment above). ONLY exit 0 means
+      # "$t has nothing of ours left in its runtime config", and only exit 0
+      # clears this target's tracking below.
+      #
+      # 6 used to clear it too, on the reasoning that "an unmanaged entry was
+      # never ours to begin with". That reasoning describes the entry, not
+      # the run: exit 6 says only that unregister DID NOT REMOVE the entry it
+      # found, and unregister cannot tell "someone else's server that happens
+      # to share our name" from "our own entry, after install-state.json was
+      # lost or restored from a backup that predates the install". Clearing
+      # tracking on the second shape frees the guard below to delete the
+      # SHARED BINARY while our MCP entries still sit in every runtime config
+      # -- orphaned entries pointing at a binary that no longer exists, which
+      # is the single state this tracking file exists to prevent. So 6 keeps
+      # $t tracked; --purge stays the explicit way out.
+      #
+      # 2 is the same shape and the same hazard, and is nonetheless treated
+      # the other way, for the reason its own arm gives: exit 6 leaves a
+      # recovery open (fix the entry by hand, or let `register` adopt it
+      # back) while exit 2 leaves none, because the tool that would perform
+      # the recovery is the thing that is broken.
+      #
+      # 8 gets its own arm for the same reason it does on the install side:
+      # it lands in the same bucket as the catch-all, but the catch-all's
+      # message ("failed") names no remedy, and 8's remedy is the one the
+      # operator can actually act on.
+      local unregister_exit=0
+      "$LONGTERM_MEM_BINARY" unregister --target "$t" || unregister_exit=$?
+      case "$unregister_exit" in
+        0)
+          longtermmem_installed_targets_remove "$t"
+          ;;
+        6)
+          warn "longterm-mem unregister --target $t: unmanaged (an entry exists that longterm-mem does not own; left untouched). $t stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect $t's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless."
+          ;;
+        2)
+          # Usage error: this binary does not accept the invocation
+          # (version skew, a subcommand it does not know). It is the same
+          # "the entry was not removed" shape as exit 6 above, and the same
+          # orphan hazard, with ONE difference that decides it the other
+          # way: the tool itself is unusable, so no re-run of `uninstall`
+          # can ever remove the entry or clear the tracking, and keeping $t
+          # tracked would leave --purge -- the action that orphans the
+          # entries outright -- as the only way to finish. Exit 6 has a
+          # real recovery (fix the entry, or let `register` adopt it back);
+          # this has none until the binary is replaced. So it converges and
+          # clears tracking, and says what was left behind.
+          #
+          # engine/installer's TestUninstall_VersionSkewStillConverges pins
+          # this branch, alongside the missing-binary branch it mirrors.
+          warn "longterm-mem unregister --target $t: this binary does not accept the invocation (exit 2, version skew), so $t's entry stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall. Not retried; every re-run reproduces this."
+          longtermmem_installed_targets_remove "$t"
+          ;;
+        8)
+          # Unlike exit 2, this one IS operator-fixable and a re-run after
+          # the fix succeeds, so it keeps $t tracked and fails the run --
+          # the same treatment the catch-all gives, with the remedy named.
+          warn "longterm-mem unregister --target $t: exit 8 — unregister could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and $t's entry may still be in its runtime config. Keeping $t tracked as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run uninstall."
+          uninstall_failed=1
+          ;;
+        *)
+          # A real, operator-fixable failure (unreadable config, corrupted
+          # install-state.json, permissions): keep $t tracked so the guard
+          # below refuses to remove the shared binary while $t's entry may
+          # still be present, and re-running after the fix can succeed.
+          warn "longterm-mem unregister --target $t failed (exit $unregister_exit); keeping it tracked as installed"
+          uninstall_failed=1
+          ;;
+      esac
+    done
+
+    # An absent tracking file means "this entrypoint does not know what is
+    # installed", never "nothing is installed": another code path, a lost
+    # file or a reset STATE_DIR all read empty while other runtimes may
+    # still depend on the shared binary. So it fails CLOSED -- --purge is
+    # the one explicit way to force removal.
+    local tracking_known=""
+    [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] && tracking_known=1
+
+    # A tracking file that exists but cannot be READ is the same class of
+    # not-knowing as one that does not exist at all, and fails closed the
+    # same way. It is captured separately from $remaining because an empty
+    # $remaining is what AUTHORIZES removal below -- an unreadable file
+    # produces exactly that empty string, so without this the strongest
+    # signal to stop would read as the go-ahead.
+    local remaining tracking_readable=1
+    remaining="$(longtermmem_installed_targets_read)" || tracking_readable=""
+
+    if [[ -n "$uninstall_failed" ]] && [[ -z "$purge" ]]; then
+      # A real failure outranks every branch below: neither the shared
+      # engine registration record nor the shared binary is safe to remove
+      # while a target's own runtime config may still hold its entry.
+      warn "longterm-mem: at least one target failed to unregister; leaving the registration record and the shared binary untouched (re-run uninstall for the failed target(s) once resolved, or pass --purge to force removal)"
+    elif [[ -z "$tracking_readable" ]] && [[ -z "$purge" ]]; then
+      warn "longterm-mem: the install tracking file at $LONGTERM_MEM_INSTALLED_TARGETS exists but could not be read, so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Fix its permissions and re-run uninstall, or pass --purge to remove them anyway."
+    elif [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
+      # Full uninstall: safe to wipe the engine-owned registration record
+      # too. LongtermMemAdapter.Uninstall() removes the WHOLE record in one
+      # call regardless of --target -- the per-runtime config entries
+      # themselves were already removed selectively above, by unregister;
+      # this only clears engine/runtime's own separate doctor/status
+      # tracking (D4), and calling it only once every tracked target is
+      # gone (or --purge forces it) is what keeps this call from wiping
+      # another still-installed target's record.
+      "$ENGINE_BINARY" runtime uninstall --component longterm-mem --state-dir "$STATE_DIR" \
+        || warn "engine runtime uninstall --component longterm-mem reported a non-supported status"
+      longtermmem_maybe_remove_binary "$purge"
+    elif [[ -z "$tracking_known" ]]; then
+      warn "longterm-mem: no install tracking found at $LONGTERM_MEM_INSTALLED_TARGETS; leaving the registration record and the shared binary untouched. Re-run with --purge to remove them anyway."
+    else
+      echo "  longterm-mem: unregistered the requested target(s); still installed for: $remaining (shared binary and engine-owned tracking left untouched -- re-run uninstall for the remaining target(s), or pass --purge, to remove them)"
+    fi
+
+    # Surface the failure on the process exit code even when --purge forced
+    # cleanup to proceed anyway -- the caller still asked for every target
+    # and at least one did not actually get unregistered cleanly.
+    if [[ -n "$uninstall_failed" ]]; then
+      return 1
+    fi
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # dispatch
 # ---------------------------------------------------------------------------
 
-COMMAND="${1:-}"
-shift || true
+# Guarded so this file can be `source`d (e.g. by tui/release_backend_test.go)
+# to call an internal function directly for unit-style testing, without also
+# running the CLI dispatch below. Normal execution (./bin/labdrian-overlay or
+# via the bin/overlay wrapper) is unaffected: BASH_SOURCE[0] and $0 are
+# identical for a top-level executed script.
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  COMMAND="${1:-}"
+  shift || true
 
-case "$COMMAND" in
-  bootstrap)       cmd_bootstrap "$@" ;;
-  capture)         cmd_capture "$@" ;;
-  apply)           cmd_apply "$@" ;;
-  status)          cmd_status "$@" ;;
-  sync-check)      cmd_sync_check "$@" ;;
-  install-hooks)   cmd_install_hooks "$@" ;;
-  uninstall-hooks) cmd_uninstall_hooks "$@" ;;
-  status-hooks)    cmd_status_hooks "$@" ;;
-  doctor)          cmd_doctor "$@" ;;
-  repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
-  skill-registry)  cmd_skill_registry "$@" ;;
-  tui)             cmd_tui "$@" ;;
-  install-alias)   cmd_install_alias "$@" ;;
-  prespec)         cmd_prespec "$@" ;;
-  skills)          cmd_skills "$@" ;;
-  validate-entry-contract) cmd_validate_entry_contract "$@" ;;
-  deterministic-checks) cmd_deterministic_checks "$@" ;;
-  review-preflight) cmd_review_preflight "$@" ;;
-  gadu-generate)   cmd_gadu_generate "$@" ;;
-  --help|-h)       usage; exit 0 ;;
-  "")              usage >&2; exit 1 ;;
-  *)               die "Unknown command: $COMMAND" ;;
-esac
+  case "$COMMAND" in
+    bootstrap)       cmd_bootstrap "$@" ;;
+    capture)         cmd_capture "$@" ;;
+    apply)           cmd_apply "$@" ;;
+    self-update)     cmd_self_update "$@" ;;
+    update)          cmd_update "$@" ;;
+    restore)         cmd_restore "$@" ;;
+    version|--version) cmd_version "$@" ;;
+    status)          cmd_status "$@" ;;
+    sync-check)      cmd_sync_check "$@" ;;
+    install-hooks)   cmd_install_hooks "$@" ;;
+    uninstall-hooks) cmd_uninstall_hooks "$@" ;;
+    status-hooks)    cmd_status_hooks "$@" ;;
+    doctor)          cmd_doctor "$@" ;;
+    repair-sdd-registry) cmd_repair_sdd_registry "$@" ;;
+    skill-registry)  cmd_skill_registry "$@" ;;
+    tui)             cmd_tui "$@" ;;
+    install-alias)   cmd_install_alias "$@" ;;
+    prespec)         cmd_prespec "$@" ;;
+    skills)          cmd_skills "$@" ;;
+    validate-entry-contract) cmd_validate_entry_contract "$@" ;;
+    deterministic-checks) cmd_deterministic_checks "$@" ;;
+    review-preflight) cmd_review_preflight "$@" ;;
+    gadu-generate)   cmd_gadu_generate "$@" ;;
+    longterm-mem)    cmd_longterm_mem "$@" ;;
+    --help|-h)       usage; exit 0 ;;
+    "")              usage >&2; exit 1 ;;
+    *)               die "Unknown command: $COMMAND" ;;
+  esac
+fi

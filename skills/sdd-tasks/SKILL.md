@@ -41,7 +41,9 @@ From the orchestrator:
 
 > Follow **Section B** (retrieval) and **Section C** (persistence) from `skills/_shared/sdd-phase-common.md`.
 
-- **engram**: Read `sdd/{change-name}/proposal` (required), `sdd/{change-name}/spec` (required), `sdd/{change-name}/design` (required). Save as `sdd/{change-name}/tasks`.
+- **engram**: Read `sdd/{change-name}/proposal` (required), `sdd/{change-name}/spec` (required), `sdd/{change-name}/design` (required), and `sdd/{change-name}/entry` (optional, read-only). Save as `sdd/{change-name}/tasks`.
+
+**Reading `sdd/{change-name}/entry`.** The entry contract is written by `inception-pipeline` and read — never created, edited, or re-validated — by this phase. When it is available, take `review_slices` (its length is the planned slice count your Suggested Work Units should match), `chain_strategy`, and `delivery_strategy` from it instead of inferring them, and reconcile any disagreement with the prompt by reporting it rather than choosing. Treat the contract as absent unless the orchestrator states it satisfies the validation conditions in `skills/_shared/sdd-orchestrator-workflow.md`; absent is legal and never blocks the forecast.
 - **openspec**: Read and follow `skills/_shared/openspec-convention.md`.
 - **hybrid**: Follow BOTH conventions — persist to Engram AND write `tasks.md` to filesystem. Retrieve dependencies from Engram (primary) with filesystem fallback.
 - **none**: Return result only. Never create or modify project files.
@@ -87,11 +89,11 @@ openspec/changes/{change-name}/
 | Chained PRs recommended | Yes / No |
 | Suggested split | <single PR or PR 1 → PR 2 → PR 3> |
 | Delivery strategy | <ask-on-risk / auto-chain / single-pr / exception-ok> |
-| Chain strategy | <stacked-to-main / feature-branch-chain / size-exception / pending> |
+| Chain strategy | <none / stacked-to-main / feature-branch-chain> |
 
 Decision needed before apply: <Yes|No>
 Chained PRs recommended: <Yes|No>
-Chain strategy: <stacked-to-main|feature-branch-chain|size-exception|pending>
+Chain strategy: <none|stacked-to-main|feature-branch-chain>
 400-line budget risk: <Low|Medium|High>
 
 ### Suggested Work Units
@@ -150,10 +152,10 @@ If the estimate is **High** or likely above 400 lines:
 1. Mark `Chained PRs recommended` as `Yes`.
 2. Split tasks into **work units** that can become chained or stacked PRs.
 3. Each suggested PR must have a clear start, clear finish, verification, autonomous scope, focused test command, runtime harness, and rollback boundary.
-4. **Ask the user which chain strategy to use** (this is a team decision):
-   - **Stacked PRs to main** — each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
-   - **Feature Branch Chain** — the feature/tracker branch accumulates the final integration; PR #1 targets the tracker branch, later PRs target the immediate previous PR branch so each child diff stays focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
-   - **size:exception** — keep it as a single PR with maintainer approval. Best for generated code, migrations, or vendor diffs.
+4. **Ask the user which chain strategy to use** (this is a team decision). The chain field answers exactly one question — which branch does each PR target — so only the two topologies below are answers to it:
+   - `stacked-to-main` — each PR merges to main in order. Fast iteration, fix on the go. Best for speed-first teams and independent slices.
+   - `feature-branch-chain` — the feature/tracker branch accumulates the final integration; PR #1 targets the tracker branch, later PRs target the immediate previous PR branch so each child diff stays focused. Only the tracker merges to main. Best for rollback control and coordinated releases.
+   - Keeping it as ONE PR with maintainer approval is a legitimate outcome, but it is a **delivery** answer, not a topology: record it as `Delivery strategy: exception-ok` with a maintainer-recorded `size:exception`, and emit `Chain strategy: none`. Best for generated code, migrations, or vendor diffs.
 5. Cache the user's choice and set `Decision needed before apply` from delivery strategy:
    - `ask-on-risk`: `Yes` — orchestrator asks before apply.
    - `auto-chain`: `No` — orchestrator proceeds with the first slice using the chosen chain strategy.
@@ -167,7 +169,7 @@ The forecast MUST include these exact plain-text lines so downstream guards can 
 ```text
 Decision needed before apply: Yes|No
 Chained PRs recommended: Yes|No
-Chain strategy: stacked-to-main|feature-branch-chain|size-exception|pending
+Chain strategy: none|stacked-to-main|feature-branch-chain
 400-line budget risk: Low|Medium|High
 ```
 
@@ -252,5 +254,6 @@ Return to the orchestrator:
 - If the project uses TDD, integrate test-first tasks: RED task (write failing test) → GREEN task (make it pass) → REFACTOR task (clean up)
 - **Size budget**: Tasks artifact MUST be under 530 words. Each task: 1-2 lines max. Use checklist format, not paragraphs.
 - **Review workload guard**: ALWAYS include the Review Workload Forecast. If likely above 400 changed lines, recommend chained PRs and honor the received delivery strategy for whether a decision/exception is needed before apply.
+- **Chain-strategy field hygiene (closed domain)**: keep the `Chain strategy:` line byte-identical to the template — downstream guards match it literally — and emit ONLY a value from `entry-contract.schema.json`'s `chain_strategy` enum: `none`, `stacked-to-main`, or `feature-branch-chain`. `none` is the correct emission whenever `Chained PRs recommended: No`. The two tokens this field used to admit are **removed, not merely discouraged**: `size-exception` was a delivery fact (`Delivery strategy: exception-ok`, no chaining, plus a recorded `size:exception`) and `pending` was a null state, and neither answers "which branch does this PR target". Neither is accepted by `entry-contract.schema.json`, so neither can reach an entry contract, and the one consumer that branches on this value (`sdd-apply` Step 2a) STOPs on both. If the decision has genuinely not been made, do not invent a token: report `Decision needed before apply: Yes` and leave the topology to the orchestrator's Chain Strategy question. See "Delivery and Chain Vocabulary Map" in `skills/_shared/sdd-orchestrator-workflow.md`.
 - **Work-unit evidence**: every suggested work unit MUST name its Focused test command, Runtime harness command/scenario (or explicit `N/A` reason), and Rollback boundary.
 - Return envelope per **Section D** from `skills/_shared/sdd-phase-common.md`.

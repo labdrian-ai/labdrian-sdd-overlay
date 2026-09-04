@@ -119,14 +119,69 @@ func (m model) View() string {
 	return lipgloss.NewStyle().MaxWidth(termW).Render(composed)
 }
 
-// repoLine surfaces the repo-locate error, if any, at the column's left edge
-// — no hardcoded indent. Silent (empty) when the repo root resolved fine;
-// the path itself isn't useful chrome to show on every screen.
+// repoLine surfaces the repo status at the column's left edge — no hardcoded
+// indent. rootErr always takes precedence (a repo-locate error is a more
+// urgent signal than anything else here). Otherwise it always names one of
+// three states, never silent: the dismissible behind-origin banner (R-002,
+// D6) when the launch-time probe resolved a positive REPO_BEHIND_ORIGIN
+// count the user hasn't dismissed yet; a calm confirmed-healthy line when it
+// resolved exactly zero; or an explicit unresolvable line for RepoBehindOriginNA.
+// Dismissing (x) only ever suppresses the behind-origin banner, never the
+// healthy/unresolvable lines — those aren't warnings, so there's nothing to
+// dismiss. This line used to go blank whenever there was no bad news, which
+// left a viewer unable to tell "everything is fine" apart from "this was
+// never checked" — the exact confusion the menos-pasos follow-up fixes.
 func (m model) repoLine() string {
 	if m.rootErr != nil {
 		return errStyle.Render("Error al localizar el repositorio: " + m.rootErr.Error())
 	}
-	return ""
+
+	// D2: while no release tag exists anywhere yet (behindRelease == NA, D1
+	// pre-first-tag bootstrap), this branch is byte-identical to the
+	// pre-D2 origin-only rendering — the tui-self-update MODIFIED R-007
+	// scenario "pre-first-tag legacy convergence keeps the old claim"
+	// applies to the TUI's own rendering too, not only the backend.
+	if m.behindRelease == RepoBehindOriginNA {
+		switch {
+		case m.bannerVisible():
+			return lipgloss.NewStyle().Foreground(colorAmber).Render(fmt.Sprintf(
+				"▲ Repo %d commit(s) detrás de origin/main · u actualizar y desplegar · x ocultar",
+				m.behindOrigin,
+			))
+		case m.behindOrigin > 0:
+			// Positive but dismissed: stays silent, matching the pre-existing
+			// dismiss contract (R-002) — the user already saw and
+			// acknowledged the warning.
+			return ""
+		case m.behindOrigin == 0:
+			return lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Repo al día con origin/main")
+		default: // RepoBehindOriginNA
+			return lipgloss.NewStyle().Foreground(colorGray).Render(
+				"? No se pudo verificar el estado del repo (sin red / sin fetch previo)")
+		}
+	}
+
+	// D2: a known release-behind count is now the primary "up to date"
+	// signal. Raw origin/main drift demotes to a dim informational line —
+	// never the actionable banner, and not dismissible on its own (it isn't
+	// a warning that needs acknowledging).
+	switch {
+	case m.bannerVisible():
+		return lipgloss.NewStyle().Foreground(colorAmber).Render(fmt.Sprintf(
+			"▲ Repo %d release(s) detrás del último tag · u actualizar y desplegar · x ocultar",
+			m.behindRelease,
+		))
+	case m.behindRelease > 0:
+		// Positive but dismissed: same silent contract as the legacy path.
+		return ""
+	case m.behindOrigin > 0:
+		return lipgloss.NewStyle().Foreground(colorGray).Render(fmt.Sprintf(
+			"· Repo al día con el último release · %d commit(s) sin tag detrás de origin/main (informativo)",
+			m.behindOrigin,
+		))
+	default: // behindRelease == 0 and behindOrigin <= 0
+		return lipgloss.NewStyle().Foreground(colorGreen).Render("✓ Repo al día con el último release")
+	}
 }
 
 // footerKeys returns the raw key-hint legend for the active screen. The width
@@ -343,7 +398,7 @@ func (m model) viewConfirm() string {
 	}
 
 	var msg string
-	if m.pendingAction.TargetAgnostic {
+	if !m.pendingAction.usesTargets() {
 		msg = fmt.Sprintf(
 			"Ejecutar %s\n\n%s %s",
 			lipgloss.NewStyle().Bold(true).Foreground(colorYellow).Render(m.pendingAction.Name),
@@ -404,6 +459,26 @@ func (m model) viewResult() string {
 	return b.String()
 }
 
+// versionLine renders the recorded-version + digest-match line for one
+// target (R-003: TUI surfaces version and digest-match, matching `overlay
+// version`'s output). Empty RecordedVersion (a sync-check run predating
+// this field, or a verdict built without it) renders nothing — backwards
+// compatible with every existing verdict-construction call site.
+func versionLine(v TargetVerdict) string {
+	switch v.RecordedVersion {
+	case "":
+		return ""
+	case "NA":
+		return "  versión: nunca desplegado"
+	default:
+		line := "  versión: " + v.RecordedVersion
+		if v.DigestMatch == "no" {
+			line += " (digest desactualizado)"
+		}
+		return line
+	}
+}
+
 // viewDashboard renders the headline per-target colored sync status.
 func (m model) viewDashboard() string {
 	w := m.contentWidth()
@@ -420,6 +495,8 @@ func (m model) viewDashboard() string {
 			color, icon, label = colorYellow, "!", "Pendiente de aplicación"
 		case SyncNeedsCapture:
 			color, icon, label = colorRed, "✗", "Requiere capture + apply"
+		case SyncBehindRelease:
+			color, icon, label = colorAmber, "~", "Detrás del release"
 		case SyncBehindOrigin:
 			color, icon, label = colorAmber, "~", "Detrás de origin"
 		default:
@@ -433,6 +510,9 @@ func (m model) viewDashboard() string {
 		head := fmt.Sprintf("%s %s  %s", badge, targetName, statusLabel)
 		countsText := fmt.Sprintf("  cambios upstream: %d  overlay sin desplegar: %d",
 			v.UpstreamChanged, v.OverlayNotDeployed)
+		if v.RepoBehindRelease > 0 {
+			countsText += fmt.Sprintf("  detrás del release: %d", v.RepoBehindRelease)
+		}
 		if v.RepoBehindOrigin > 0 {
 			countsText += fmt.Sprintf("  detrás de origin: %d", v.RepoBehindOrigin)
 		}
@@ -440,6 +520,9 @@ func (m model) viewDashboard() string {
 		action := dimStyle.Render("  → " + v.Action)
 
 		b.WriteString(head + "\n" + counts + "\n")
+		if line := versionLine(v); line != "" {
+			b.WriteString(mutingStyle.Render(line) + "\n")
+		}
 		if v.Action != "" {
 			b.WriteString(action + "\n")
 		}

@@ -1,8 +1,0 @@
-[
-  {"query": "diseñá la arquitectura técnica de mi app de ecommerce", "should_trigger": true},
-  {"query": "qué stack uso para este proyecto, necesito una propuesta de arquitectura", "should_trigger": true},
-  {"query": "technical architecture design for my SaaS platform", "should_trigger": true},
-  {"query": "generá el manifest del proyecto, definí el contexto estratégico", "should_trigger": false},
-  {"query": "hacé el roadmap y secuenciá los SDDs del proyecto", "should_trigger": false},
-  {"query": "quiero el inception completo del proyecto desde cero", "should_trigger": false}
-]

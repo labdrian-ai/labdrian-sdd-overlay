@@ -2,6 +2,7 @@ package skills
 
 import (
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -61,6 +62,126 @@ func TestDeployableManifestPaths(t *testing.T) {
 
 	if len(got) != len(want) {
 		t.Errorf("DeployableManifestPaths: got %d rows, want %d: %v", len(got), len(want), got)
+	}
+}
+
+// TestDeployableManifestPaths_ExcludesMcpRoute pins that an mcp-routed row
+// (D13: longterm-mem's install path, dispatched to build+copy+register rather
+// than to any skills destination) is excluded from the on-disk deployable set,
+// the same way agent/opencode-agent rows already are.
+func TestDeployableManifestPaths_ExcludesMcpRoute(t *testing.T) {
+	const manifest = `longterm-mem/go.mod  custom  mcp
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err != nil {
+		t.Fatalf("DeployableManifestPaths: unexpected error: %v", err)
+	}
+	if _, ok := got["longterm-mem/go.mod"]; ok {
+		t.Errorf("DeployableManifestPaths: mcp-routed row %q must be excluded, but was included: %v", "longterm-mem/go.mod", got)
+	}
+	if _, ok := got["sdd-spec/SKILL.md"]; !ok {
+		t.Errorf("DeployableManifestPaths: skill row must remain deployable: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow pins CRITICAL-2's
+// remediation: a row under longterm-mem/** with a missing third column must
+// be rejected with an explicit error, not silently resolved to a
+// skills-destination path (overlay-agent-route R-012, traces longterm-mem
+// R-035). The bash half of this guard (route_reject_unrouted_longterm_mem)
+// already existed; this pins the Go half that was missing.
+func TestDeployableManifestPaths_RejectsUnroutedLongtermMemRow(t *testing.T) {
+	const manifest = `longterm-mem/internal/foo.go managed
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err == nil {
+		t.Fatalf("DeployableManifestPaths: expected an error for an unrouted longterm-mem/** row, got nil (paths=%v)", got)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/internal/foo.go") {
+		t.Errorf("DeployableManifestPaths: error must name the rejected row, got: %v", err)
+	}
+	if _, ok := got["longterm-mem/internal/foo.go"]; ok {
+		t.Errorf("DeployableManifestPaths: an unrouted longterm-mem row must never resolve to a skills-destination path, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow pins the
+// same guard for a longterm-mem/** row whose third column holds a value
+// outside {skill, agent, opencode-agent, mcp}.
+func TestDeployableManifestPaths_RejectsUnrecognizedRouteLongtermMemRow(t *testing.T) {
+	const manifest = `longterm-mem/internal/bar.go custom bogus-route
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err == nil {
+		t.Fatalf("DeployableManifestPaths: expected an error for an unrecognized-route longterm-mem/** row, got nil (paths=%v)", got)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/internal/bar.go") {
+		t.Errorf("DeployableManifestPaths: error must name the rejected row, got: %v", err)
+	}
+	if _, ok := got["longterm-mem/internal/bar.go"]; ok {
+		t.Errorf("DeployableManifestPaths: an unrecognized-route longterm-mem row must never resolve to a skills-destination path, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_RejectsOneColumnLongtermMemRow pins WARNING-2
+// from the verify report: a longterm-mem/** row with only a path and no
+// other field (no tag, no route) must be rejected the same way bash's
+// route_reject_unrouted_longterm_mem rejects it, not silently skipped by the
+// generic "fewer than two fields" rule that applies to every other path
+// prefix. Bash's all_tracked_files (awk '{print $1}') still emits such a row,
+// and route_resolve's awk lookup still resolves an empty (undefaulted) third
+// column for it, so route_reject_unrouted_longterm_mem still fires and exits
+// 1 naming the row — Go must reach the same outcome.
+func TestDeployableManifestPaths_RejectsOneColumnLongtermMemRow(t *testing.T) {
+	const manifest = `longterm-mem/only-one-field
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err == nil {
+		t.Fatalf("DeployableManifestPaths: expected an error for a one-column longterm-mem/** row, got nil (paths=%v)", got)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/only-one-field") {
+		t.Errorf("DeployableManifestPaths: error must name the rejected row, got: %v", err)
+	}
+	if _, ok := got["longterm-mem/only-one-field"]; ok {
+		t.Errorf("DeployableManifestPaths: a one-column longterm-mem row must never resolve to a skills-destination path, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_OneColumnRowStillSkippedForOtherPrefixes proves
+// the fix above is scoped to longterm-mem/** only: a one-column row under any
+// other path prefix is still silently skipped by the pre-existing
+// whole-manifest "fewer than two fields" rule, exactly as before.
+func TestDeployableManifestPaths_OneColumnRowStillSkippedForOtherPrefixes(t *testing.T) {
+	const manifest = `sdd-spec/only-one-field
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err != nil {
+		t.Fatalf("DeployableManifestPaths: unexpected error: %v", err)
+	}
+	if _, ok := got["sdd-spec/only-one-field"]; ok {
+		t.Errorf("DeployableManifestPaths: a one-column row outside longterm-mem/** must still be silently skipped, got: %v", got)
+	}
+	if _, ok := got["sdd-spec/SKILL.md"]; !ok {
+		t.Errorf("DeployableManifestPaths: the following well-formed row must still parse, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute
+// proves the guard is scoped exactly to the four-value route domain: every
+// recognized route on a longterm-mem/** row parses without error (a
+// skill-routed longterm-mem row is unusual but not itself invalid — R-012
+// only forbids MISSING or UNRECOGNIZED routes).
+func TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute(t *testing.T) {
+	for _, route := range []string{"skill", "agent", "opencode-agent", "mcp"} {
+		manifest := "longterm-mem/valid.go custom " + route + "\n"
+		if _, err := DeployableManifestPaths(strings.NewReader(manifest)); err != nil {
+			t.Errorf("DeployableManifestPaths: route %q on a longterm-mem/** row must be accepted, got error: %v", route, err)
+		}
 	}
 }
 
@@ -212,6 +333,83 @@ func skillsRepoRoot(t *testing.T) string {
 		t.Fatalf("getwd: %v", err)
 	}
 	return filepath.Join(wd, "..", "..")
+}
+
+// bashAcceptsLongtermMemRoute runs the real bin/labdrian-overlay
+// route_resolve (plus its route_reject_unrouted_longterm_mem guard) against a
+// longterm-mem/** row whose third column is set to route, and reports whether
+// bash accepted the row (exit 0) or rejected it (exit 1, per R-012 in
+// overlay-agent-route). This drives the parity check from the real script
+// rather than a second hardcoded list.
+func bashAcceptsLongtermMemRoute(t *testing.T, overlayPath, route string) bool {
+	t.Helper()
+
+	overlayDir := t.TempDir()
+	home := t.TempDir()
+	rowPath := "longterm-mem/parity-fixture.txt"
+	manifest := rowPath + "   custom   " + route + "\n"
+	manifestFile := filepath.Join(overlayDir, "overlay.manifest")
+	if err := os.WriteFile(manifestFile, []byte(manifest), 0o644); err != nil {
+		t.Fatalf("write manifest: %v", err)
+	}
+
+	scriptFile := filepath.Join(t.TempDir(), "run_route_resolve.sh")
+	script := "#!/usr/bin/env bash\n" +
+		"set -euo pipefail\n" +
+		"OVERLAY_DIR=" + shellQuote(overlayDir) + "\n" +
+		"MANIFEST=" + shellQuote(manifestFile) + "\n" +
+		"HOME=" + shellQuote(home) + "\n" +
+		"declare -A TARGET_PATHS=( [claude]=" + shellQuote(filepath.Join(home, ".claude", "skills")) +
+		" [opencode]=" + shellQuote(filepath.Join(home, ".config", "opencode", "skills")) +
+		" [codex]=" + shellQuote(filepath.Join(home, ".codex", "skills")) + " )\n" +
+		"declare -A AGENT_TARGET_PATHS=( [claude]=" + shellQuote(filepath.Join(home, ".claude", "agents")) +
+		" [opencode]=" + shellQuote(filepath.Join(home, ".config", "opencode", "agents")) + " )\n" +
+		`eval "$(awk '/^route_reject_unrouted_longterm_mem\(\)/,/^}$/ { print } /^route_resolve\(\)/,/^}$/ { print }' ` + shellQuote(overlayPath) + `)"` + "\n" +
+		"route_resolve " + shellQuote(rowPath) + " >/dev/null\n"
+	if err := os.WriteFile(scriptFile, []byte(script), 0o755); err != nil {
+		t.Fatalf("write runner script: %v", err)
+	}
+
+	cmd := exec.Command("bash", scriptFile)
+	err := cmd.Run()
+	return err == nil
+}
+
+// shellQuote wraps s in single quotes for embedding into a generated bash
+// script, escaping any embedded single quote.
+func shellQuote(s string) string {
+	return "'" + strings.ReplaceAll(s, "'", `'\''`) + "'"
+}
+
+// TestRouteDomain_MatchesBashAndGo pins that the bash route_resolve dispatch
+// (bin/labdrian-overlay) and the Go nonSkillRoutes exclusion set recognize
+// the identical four-value route domain {skill, agent, opencode-agent, mcp}
+// (overlay-agent-route R-006). The Go side of the domain is derived from the
+// real nonSkillRoutes map (plus the implicit "skill" default) rather than
+// restated as a second hardcoded list, so the two parsers cannot silently
+// drift without failing this test.
+func TestRouteDomain_MatchesBashAndGo(t *testing.T) {
+	goDomain := map[string]bool{"skill": true}
+	for route := range nonSkillRoutes {
+		goDomain[route] = true
+	}
+	if len(goDomain) != 4 {
+		t.Fatalf("Go route domain (nonSkillRoutes + implicit skill default) has %d values, want 4: %v", len(goDomain), goDomain)
+	}
+
+	overlay := filepath.Join(skillsRepoRoot(t), "bin", "labdrian-overlay")
+	if _, err := os.Stat(overlay); err != nil {
+		t.Fatalf("overlay script not found at %s: %v", overlay, err)
+	}
+
+	candidates := []string{"skill", "agent", "opencode-agent", "mcp", "bogus-route"}
+	for _, route := range candidates {
+		bashAccepts := bashAcceptsLongtermMemRoute(t, overlay, route)
+		goAccepts := goDomain[route]
+		if bashAccepts != goAccepts {
+			t.Errorf("route %q: bash accepted=%v, Go nonSkillRoutes-derived domain accepted=%v — parsers have drifted", route, bashAccepts, goAccepts)
+		}
+	}
 }
 
 // TestInfraExclusionRulesArePinnedIndependently pins R-004: the on-disk

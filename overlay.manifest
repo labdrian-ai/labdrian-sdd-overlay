@@ -9,7 +9,6 @@ engine/settings/settings.go managed
 engine/settings/settings_test.go managed
 engine/skills/types.go managed
 engine/skills/parse.go managed
-engine/skills/load.go managed
 engine/skills/manifest.go managed
 engine/skills/validate.go managed
 engine/skills/list.go managed
@@ -17,6 +16,55 @@ engine/skills/status.go managed
 engine/skills/skills.go managed
 engine/skills/sync.go managed
 engine/skills/sync_test.go managed
+engine/gate/gate_e2e_test.go managed
+engine/cmd/runtime_test.go managed
+engine/installer/route_test.go managed
+engine/installer/sync_check_test.go managed
+engine/skills/install.go managed
+engine/skills/install_test.go managed
+engine/skills/lifecycle.go managed
+engine/skills/lifecycle_test.go managed
+engine/skills/ondisk.go managed
+engine/skills/ondisk_test.go managed
+engine/skills/serialize.go managed
+engine/skills/serialize_test.go managed
+engine/skills/actuals_instrumentation_contract_test.go managed
+engine/skills/actuals_instrumentation_d2_anchor_test.go managed
+engine/skills/list_test.go managed
+engine/skills/manifest_test.go managed
+engine/skills/oo_quality_contract_artifact_test.go managed
+engine/skills/parse_test.go managed
+engine/skills/skills_test.go managed
+engine/skills/status_test.go managed
+engine/skills/validate_test.go managed
+engine/skills/zero_fetch_test.go managed
+engine/runtime/runtime.go managed
+engine/runtime/runtime_test.go managed
+engine/runtime/claude.go managed
+engine/runtime/claude_test.go managed
+engine/runtime/codex.go managed
+engine/runtime/codex_test.go managed
+engine/runtime/opencode.go managed
+engine/runtime/opencode_test.go managed
+engine/runtime/labdrian-runtime-parity-plugin.mjs managed
+engine/assets/assets.go managed
+engine/assets/assets_test.go managed
+engine/assets/anti-generic-design.md managed
+engine/assets/review-projection-contract.md managed
+engine/assets/skill-discovery-safety.md managed
+engine/gadu/gadu.go managed
+engine/gadu/gadu_test.go managed
+engine/gadu/persona/body.md managed
+engine/prespec/brief.go managed
+engine/prespec/brief_test.go managed
+engine/prespec/grid.go managed
+engine/prespec/grid_test.go managed
+engine/prespec/lint.go managed
+engine/prespec/lint_test.go managed
+engine/prespec/prespec.go managed
+engine/prespec/prespec_test.go managed
+engine/prespec/readiness.go managed
+engine/prespec/readiness_test.go managed
 sdd-spec/SKILL.md managed
 sdd-tasks/SKILL.md managed
 sdd-verify/SKILL.md managed
@@ -24,11 +72,6 @@ gadu-orchestrate/SKILL.md custom
 gadu-operator/SKILL.md custom
 requirements-from-transcripts/SKILL.md custom
 prespec-malandra/SKILL.md custom
-kadia-content-guard/SKILL.md custom
-kadia-ui-fix/SKILL.md custom
-kadia-visual-qa/SKILL.md custom
-genesis-delivery-workflow/SKILL.md custom
-genesis-design-system/SKILL.md custom
 chat-thread-analyzer/SKILL.md custom
 project-inception/SKILL.md custom
 inception-pipeline/SKILL.md custom
@@ -39,14 +82,45 @@ sdd-time-estimation/SKILL.md custom
 anti-generic-design/SKILL.md custom
 sdd-verify/references/report-format.md managed
 sdd-verify/strict-tdd-verify.md managed
+branch-pr/SKILL.md managed
+chained-pr/SKILL.md managed
+chained-pr/references/chaining-details.md managed
+comment-writer/SKILL.md managed
+issue-creation/SKILL.md managed
+systemic-issue-triage/SKILL.md managed
+work-unit-commits/SKILL.md managed
+cognitive-doc-design/SKILL.md managed
+gentle-ai-bench/SKILL.md managed
+go-testing/SKILL.md managed
+go-testing/references/examples.md managed
+judgment-day/SKILL.md managed
+judgment-day/references/prompts-and-formats.md managed
+rdd-defect-workflow/SKILL.md managed
+sdd-apply/SKILL.md managed
+sdd-apply/strict-tdd.md managed
+sdd-archive/SKILL.md managed
+sdd-design/SKILL.md managed
+sdd-design/references/threat-matrix.md managed
+sdd-explore/SKILL.md managed
+sdd-init/SKILL.md managed
+sdd-init/references/init-details.md managed
+sdd-onboard/SKILL.md managed
+sdd-propose/SKILL.md managed
+skill-creator/SKILL.md managed
+skill-creator/references/skill-style-guide.md managed
+skill-improver/SKILL.md managed
+skill-improver/references/skill-style-guide.md managed
+skill-registry/SKILL.md managed
+_shared/SKILL.md managed
+_shared/engram-convention.md managed
+_shared/openspec-convention.md managed
+_shared/persistence-contract.md managed
+_shared/review-ledger-contract.md managed
+_shared/sdd-orchestrator-workflow.md managed
+_shared/sdd-phase-common.md managed
+_shared/sdd-status-contract.md managed
+_shared/skill-resolver.md managed
 prespec-malandra/references/coverage-taxonomy.md custom
-genesis-design-system/references/component-composition.md custom
-genesis-design-system/references/dialogs.md custom
-genesis-design-system/references/forms.md custom
-genesis-design-system/references/migration-notes.md custom
-genesis-design-system/references/page-list-recipes.md custom
-genesis-design-system/references/status-colors.md custom
-genesis-design-system/references/streamdown.md custom
 roadmap-maker/assets/roadmap-template.md custom
 sdd-time-estimation/references/local-docs.md custom
 anti-generic-design/references/critique-template.md custom
@@ -67,14 +141,25 @@ project-architect/references/blocked-response.md custom
 requirements-from-transcripts/references/output-template.md custom
 requirements-from-transcripts/references/patterns-catalog.md custom
 inception-pipeline/references/tier-selection.md custom
-project-inception/evals/evals.json custom
-requirements-from-transcripts/evals/evals.json custom
-sdd-time-estimation/evals/evals.json custom
-project-manifest/evals/evals.json custom
-project-architect/evals/evals.json custom
-roadmap-maker/evals/evals.json custom
-inception-pipeline/evals/evals.json custom
 skills.registry.yaml custom
 GADU.md                  custom   agent
 sdd-explore.md           managed  agent
 opencode/agents/GADU.md custom   opencode-agent
+sdd-apply.md managed agent
+sdd-archive.md managed agent
+sdd-design.md managed agent
+sdd-init.md managed agent
+sdd-onboard.md managed agent
+sdd-propose.md managed agent
+sdd-spec.md managed agent
+sdd-tasks.md managed agent
+sdd-verify.md managed agent
+jd-fix-agent.md managed agent
+jd-judge-a.md managed agent
+jd-judge-b.md managed agent
+review-readability.md managed agent
+review-refuter.md managed agent
+review-reliability.md managed agent
+review-resilience.md managed agent
+review-risk.md managed agent
+longterm-mem/go.mod custom mcp

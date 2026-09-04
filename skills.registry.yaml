@@ -42,6 +42,300 @@ skills:
         - codex
     lifecycle:
       updateStrategy: vendor-merge
+  - id: branch-pr
+    path: branch-pr
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: chained-pr
+    path: chained-pr
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: comment-writer
+    path: comment-writer
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: issue-creation
+    path: issue-creation
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: systemic-issue-triage
+    path: systemic-issue-triage
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: work-unit-commits
+    path: work-unit-commits
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: cognitive-doc-design
+    path: cognitive-doc-design
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: gentle-ai-bench
+    path: gentle-ai-bench
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: go-testing
+    path: go-testing
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: judgment-day
+    path: judgment-day
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: rdd-defect-workflow
+    path: rdd-defect-workflow
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-apply
+    path: sdd-apply
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-archive
+    path: sdd-archive
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-design
+    path: sdd-design
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-explore
+    path: sdd-explore
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-init
+    path: sdd-init
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-onboard
+    path: sdd-onboard
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: sdd-propose
+    path: sdd-propose
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: skill-creator
+    path: skill-creator
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: skill-improver
+    path: skill-improver
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: skill-registry
+    path: skill-registry
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
   - id: gadu-orchestrate
     path: gadu-orchestrate
     source:
@@ -80,66 +374,6 @@ skills:
       updateStrategy: overlay-only
   - id: prespec-malandra
     path: prespec-malandra
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: kadia-content-guard
-    path: kadia-content-guard
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: kadia-ui-fix
-    path: kadia-ui-fix
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: kadia-visual-qa
-    path: kadia-visual-qa
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: genesis-delivery-workflow
-    path: genesis-delivery-workflow
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: genesis-design-system
-    path: genesis-design-system
     source:
       type: custom
     install:

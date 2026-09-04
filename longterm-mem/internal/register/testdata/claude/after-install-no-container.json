@@ -1,0 +1,7 @@
+{
+  "theme": "dark",
+  "editorMode": "vim",
+  "mcpServers": {
+    "longterm-mem": {"type":"stdio","command":"/usr/local/bin/longterm-mem","args":["mcp"]}
+  }
+}

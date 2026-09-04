@@ -262,3 +262,202 @@ Adding context-aware OO contract support MUST preserve existing minimalism, skil
 - GIVEN Claude or OpenCode runtime lifecycle commands are invoked
 - WHEN context-aware OO contract support is present
 - THEN existing install, update, uninstall, and status behavior remains compatible
+
+### Requirement: longterm-mem Component Registration
+
+Traces to: longterm-mem R-014
+
+The runtime lifecycle command surface MUST support a `longterm-mem`
+component for `install`, `status`, and `uninstall` — recording its
+registration and reporting an honest per-runtime status (`supported`,
+`partial`, `unsupported`, or `restart_required`) for Claude Code, opencode,
+and codex — without offering `update` or `rollback` for that component.
+
+#### Scenario: Install records registration and reports per-runtime status
+
+- GIVEN the overlay entrypoint has built and copied the longterm-mem binary
+- WHEN it invokes the runtime lifecycle install action for the
+  `longterm-mem` component
+- THEN the registration is recorded and a per-runtime status is reported for
+  Claude Code, opencode, and codex
+
+#### Scenario: Status and uninstall report without requiring a build
+
+- GIVEN the `longterm-mem` component is already registered
+- WHEN the runtime lifecycle status or uninstall action runs for it
+- THEN it reports or removes the registration directly, without any build
+  step
+
+#### Scenario: No update or rollback surface is offered
+
+- GIVEN the `longterm-mem` component is registered
+- WHEN the runtime lifecycle command surface is inspected for available
+  actions on that component
+- THEN no `update` or `rollback` action is offered for it
+
+#### Scenario: The binary path follows the state directory it was given
+
+- GIVEN the overlay entrypoint is run with an overridden state directory
+- AND it has deployed the longterm-mem binary under that state directory,
+  and registered MCP entries naming that same deployed path
+- WHEN the runtime lifecycle status or install action runs for the
+  `longterm-mem` component with that state directory
+- THEN it resolves the binary under the state directory it was given, not
+  under the default one
+- AND the deployed binary is reported as present, and an entry naming it is
+  recognised as one this overlay owns
+
+#### Scenario: A state directory that is not already normalized still agrees
+
+- GIVEN the overlay entrypoint is run with an overridden state directory whose
+  path is not lexically normalized — a trailing separator, a duplicated
+  separator, a `.` element, or a `..` segment
+- AND it has deployed the longterm-mem binary under that state directory,
+  and registered MCP entries naming that same deployed path
+- WHEN the runtime lifecycle status or install action runs for the
+  `longterm-mem` component with that state directory
+- THEN the path written into each MCP entry and the path the component
+  derives from the state directory are the SAME string, because ownership is
+  decided by comparing entries byte for byte
+- AND the entry the overlay itself just wrote is recognised as owned, not
+  reported as an entry without a record
+
+### Requirement: longterm-mem Status Reports Observed State, Not Assumed Intent
+
+Traces to: longterm-mem R-014
+
+No change-level `ID:` is claimed here on purpose. This rule was discovered
+during delivery — the component's own "honest per-runtime status" clause above
+turned out to be violated by the status matrix it was implemented with — so it
+has no R-NNN of its own. `Traces to:` is the key that resolves it, as it is for
+`Multi-Target Expansion Skips Runtimes That Are Not Installed` in
+`longterm-mem-mcp-registration`.
+
+A runtime that is not installed on the machine, and a runtime that is installed
+but was never registered with `longterm-mem`, are both OBSERVED states with no
+defect in them. The component MUST NOT report either as `partial`, and MUST NOT
+let either drag the aggregate status below `supported`. It MUST still name the
+two apart in its per-runtime reporting, since "the runtime is not here" and
+"the runtime is here and unregistered" are different facts about the machine.
+
+Which runtimes the operator actually asked for is the caller's knowledge, not
+the engine's; the component MUST NOT infer intent from the absence of a
+registration. This is the engine-side counterpart of
+`longterm-mem-mcp-registration`'s rule that a `--target all` expansion skips an
+absent runtime without failing the run on its account.
+
+Whether a runtime is installed MUST be decided by that runtime's own
+configuration file existing on disk. It MUST NOT be inferred from whether the
+component could resolve a configuration root, which is a machine-wide fact
+shared by all three runtimes, and a configuration file that exists but cannot
+be read or parsed MUST NOT be reported as an absent runtime.
+
+#### Scenario: An absent runtime does not fail the component's status
+
+- GIVEN the `longterm-mem` component is installed and registered for the only
+  runtime present on the machine
+- AND the other two runtimes have no configuration file on disk
+- WHEN the runtime lifecycle status action runs for the `longterm-mem`
+  component
+- THEN the aggregate status is healthy `supported`
+- AND each absent runtime is reported as not installed rather than as a defect
+
+#### Scenario: An installed but unregistered runtime is reported apart from an absent one
+
+- GIVEN a runtime's configuration file exists on disk and carries no
+  `longterm-mem` entry
+- WHEN the runtime lifecycle status action runs for the `longterm-mem`
+  component
+- THEN that runtime is reported as not registered
+- AND its reported reason differs from the one used for a runtime that is not
+  installed at all
+
+#### Scenario: An unreadable configuration file is not reported as an absent runtime
+
+- GIVEN a runtime's configuration file exists on disk but cannot be parsed
+- WHEN the runtime lifecycle status action runs for the `longterm-mem`
+  component
+- THEN that runtime MUST NOT be reported as not installed
+
+### Requirement: longterm-mem Records Only MCP Entries It Owns
+
+Traces to: longterm-mem R-014, R-016, R-017, R-018
+
+No change-level `ID:` is claimed here either, for the reason given above.
+
+The `longterm-mem` component's registration record MUST only ever record a
+runtime whose MCP entry was actually observed AND is one this overlay wrote. It
+MUST NOT record a runtime whose entry is absent, and it MUST NOT record an
+entry it cannot prove it wrote.
+
+An entry the component does not own MUST still be observed as PRESENT and
+reported as an unmanaged entry. Reporting it as though nothing were registered
+would hide a third party's configuration behind a healthy status.
+
+This keeps the engine record from contradicting the module-owned `register`
+step, which refuses to write over a same-named entry it does not own. It also
+preserves drift detection in the other direction: a record written from a
+genuinely observed entry MUST still report a defect once that entry later
+disappears.
+
+#### Scenario: An MCP entry the component does not own is never recorded
+
+- GIVEN a runtime's configuration file carries a `longterm-mem` MCP entry this
+  overlay did not write
+- WHEN the runtime lifecycle install action runs for the `longterm-mem`
+  component
+- THEN no registration record is written for that runtime
+- AND that runtime is reported as carrying an unmanaged entry, not as
+  unregistered and not as healthy `supported`
+
+#### Scenario: A recorded entry that later disappears is still reported as a defect
+
+- GIVEN the `longterm-mem` component recorded a runtime from an entry it owned
+- AND that entry is later removed from the runtime's own configuration
+- WHEN the runtime lifecycle status action runs for the `longterm-mem`
+  component
+- THEN that runtime is reported as `partial` with a record but no entry
+
+### Requirement: longterm-mem Uninstall Reports Its Own Verdict
+
+Traces to: longterm-mem R-014
+
+No change-level `ID:` is claimed here either, for the reason given above.
+
+The `longterm-mem` component's uninstall action MUST report success when the
+registration record it owns was removed, or was already absent — both mean the
+requested end state holds. It MUST report failure only when the state directory
+cannot be resolved or the removal itself failed.
+
+Uninstall MUST NOT derive its result from the install-health status matrix. That
+matrix answers "is this component installed and healthy", whose healthy outcome
+describes a live installation, so deriving uninstall's result from it makes a
+flawless uninstall structurally incapable of reporting success.
+
+Uninstall MAY report per-runtime observations of what each runtime's own
+configuration still holds. Those observations are information about the machine,
+not part of the verdict: removing an MCP entry from a runtime's own
+configuration belongs to the module-owned `unregister` step, never to this
+component.
+
+This constrains only uninstall's own result. What a SUBSEQUENT status reports
+remains governed by the status requirements above.
+
+#### Scenario: Uninstall reports success when it removed what it owns
+
+- GIVEN the `longterm-mem` component has a registration record
+- WHEN the runtime lifecycle uninstall action runs for it
+- THEN the registration record is removed
+- AND the action reports healthy `supported`
+
+#### Scenario: Uninstall reports success when there was nothing to remove
+
+- GIVEN the `longterm-mem` component has no registration record
+- WHEN the runtime lifecycle uninstall action runs for it
+- THEN the action reports healthy `supported`
+
+#### Scenario: Uninstall reports failure when the removal could not be performed
+
+- GIVEN the `longterm-mem` component's state directory cannot be resolved
+- WHEN the runtime lifecycle uninstall action runs for it
+- THEN the action reports `unsupported`

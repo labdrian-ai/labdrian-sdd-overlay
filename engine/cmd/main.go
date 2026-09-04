@@ -165,8 +165,12 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
 	fmt.Fprintln(os.Stderr, "  engine runtime <action> [--target claude|opencode|codex|all] [--config-root <path>]")
+	fmt.Fprintln(os.Stderr, "                          [--component runtime-parity|longterm-mem] [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    action: status | install | update | uninstall")
-	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, or all")
+	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, or all (--component runtime-parity only)")
+	fmt.Fprintln(os.Stderr, "    --component: runtime-parity (default, the --target adapters above), or longterm-mem")
+	fmt.Fprintln(os.Stderr, "      (a single component spanning claude+opencode+codex; no update/rollback action)")
+	fmt.Fprintln(os.Stderr, "    --state-dir: registration.json directory for --component longterm-mem (default ~/.labdrian-overlay)")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
 	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
@@ -254,15 +258,64 @@ func runRuntime(args []string) {
 	runRuntimeCore(args, os.Stdout, os.Stderr, os.Exit)
 }
 
+// componentRuntimeParity and componentLongtermMem are the two values
+// --component accepts (D4). componentRuntimeParity is the default and
+// preserves every pre-existing --target-based behavior unchanged (10a.7).
+const (
+	componentRuntimeParity = "runtime-parity"
+	componentLongtermMem   = "longterm-mem"
+)
+
 // runRuntimeCore is the testable core for the 'runtime' subcommand.
 func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
-	action, target, configRoot, err := parseRuntimeArgs(args)
+	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
 		usage()
 		exit(1)
 		return
 	}
+
+	if component == componentLongtermMem {
+		// D4 parse-time refusal: update is rejected here, BEFORE any
+		// LongtermMemAdapter is even constructed — never after running one
+		// and reporting a failing status. "rollback" needs no separate
+		// guard: it is not a recognized action at all (see the action-name
+		// validation in parseRuntimeArgs below), so it is already rejected
+		// at the exact same point, before any adapter call.
+		if action == "update" {
+			fmt.Fprintln(stderr, "error: longterm-mem does not support the 'update' action; reinstall instead (--component longterm-mem install)")
+			exit(1)
+			return
+		}
+		// The binary path is DERIVED from --state-dir, never resolved
+		// independently from HOME: the overlay entrypoint deploys the
+		// binary at "$STATE_DIR/bin/longterm-mem" and registers MCP
+		// entries naming that exact path, so an adapter that resolved it
+		// from HOME under an overridden state dir reported a deployed
+		// binary as missing and a genuinely owned entry as unmanaged. An
+		// empty stateDir yields an empty binary path here, which
+		// NewLongtermMemAdapter fills in with the same default it fills
+		// stateDir with — so the un-overridden case is unchanged.
+		adapter := runtimepkg.NewLongtermMemAdapter(stateDir, runtimepkg.LongtermMemBinaryPathForStateDir(stateDir))
+		result := runtimeLifecycleResult(adapter, action)
+		fmt.Fprintln(stdout, result.String())
+		if action == "status" {
+			if result.Status != runtimepkg.CapabilitySupported {
+				exit(1)
+				return
+			}
+			exit(0)
+			return
+		}
+		if result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial {
+			exit(1)
+			return
+		}
+		exit(0)
+		return
+	}
+
 	targets := runtimepkg.ExpandTarget(target)
 
 	failed := false
@@ -317,47 +370,65 @@ func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtim
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.
-func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, configRoot string, err error) {
+func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, configRoot, component, stateDir string, err error) {
 	if len(args) == 0 {
-		return "", "", "", fmt.Errorf("error: runtime requires an action")
+		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action")
 	}
 	action = args[0]
 	if strings.HasPrefix(action, "-") {
-		return "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall")
+		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall")
 	}
 
 	target = runtimepkg.TargetOpenCode
+	component = componentRuntimeParity
 	for i := 1; i < len(args); i++ {
 		a := args[i]
 		switch a {
 		case "--target":
 			i++
 			if i >= len(args) {
-				return "", "", "", fmt.Errorf("error: --target requires a value")
+				return "", "", "", "", "", fmt.Errorf("error: --target requires a value")
 			}
 			target, err = runtimepkg.ParseTarget(args[i])
 			if err != nil {
-				return "", "", "", err
+				return "", "", "", "", "", err
 			}
 		case "--config-root":
 			i++
 			if i >= len(args) {
-				return "", "", "", fmt.Errorf("error: --config-root requires a value")
+				return "", "", "", "", "", fmt.Errorf("error: --config-root requires a value")
 			}
 			configRoot = args[i]
+		case "--component":
+			i++
+			if i >= len(args) {
+				return "", "", "", "", "", fmt.Errorf("error: --component requires a value")
+			}
+			switch args[i] {
+			case componentRuntimeParity, componentLongtermMem:
+				component = args[i]
+			default:
+				return "", "", "", "", "", fmt.Errorf("error: unknown --component %q (expected %q or %q)", args[i], componentRuntimeParity, componentLongtermMem)
+			}
+		case "--state-dir":
+			i++
+			if i >= len(args) {
+				return "", "", "", "", "", fmt.Errorf("error: --state-dir requires a value")
+			}
+			stateDir = args[i]
 		default:
 			if strings.HasPrefix(a, "--") {
-				return "", "", "", fmt.Errorf("error: unknown flag %q", a)
+				return "", "", "", "", "", fmt.Errorf("error: unknown flag %q", a)
 			}
-			return "", "", "", fmt.Errorf("error: unexpected runtime argument %q", a)
+			return "", "", "", "", "", fmt.Errorf("error: unexpected runtime argument %q", a)
 		}
 	}
 
 	if action != "status" && action != "install" && action != "update" && action != "uninstall" {
-		return "", "", "", fmt.Errorf("error: unknown runtime action %q", action)
+		return "", "", "", "", "", fmt.Errorf("error: unknown runtime action %q", action)
 	}
 
-	return action, target, configRoot, nil
+	return action, target, configRoot, component, stateDir, nil
 }
 
 func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {
