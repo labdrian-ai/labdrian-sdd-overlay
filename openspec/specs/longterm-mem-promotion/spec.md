@@ -460,7 +460,15 @@ address format before reading anything, and SHALL refuse an address that does
 not match it. The address is operator-supplied and names both a file to read
 and the key an entry is written under, so an unvalidated one reads a file
 outside the promoted-pages directory and writes a sidecar key no promotion
-ever looks up, which nothing removes. The operation SHALL further verify that
+ever looks up, which nothing removes. That validation constrains the address
+STRING — a conforming address contains no path separator and no dot segment,
+so the path named can only be the promoted page's own — and it is not a
+containment claim about the RESOLVED path: the operation does not resolve
+symlinks, and a symlink at a promoted page's path is followed exactly as the
+ordinary promotion path follows it, because a vault reached through a symlink
+is an ordinary setup and refusing it would decline working vaults for no gain.
+The identity verification below still applies to whatever the path resolves
+to. The operation SHALL further verify that
 the file found at that address is that page: its own frontmatter address must
 be the address named, and its project, when the page carries one, must be the
 project named. A page that predates the project field SHALL NOT be refused for
@@ -477,7 +485,13 @@ its page, and an adopted entry fingerprints the bytes on disk, so the next
 promotion of that page takes the ordinary update path. A page whose own
 revision cannot be read as an integer, or reads as a negative one, SHALL be
 refused: that is not a value the writer's own renders produce, so there is no
-revision to record.
+revision to record. That refusal, and the refusal of a file at a promoted
+page's path with no parseable frontmatter at all, SHALL carry the
+registration-conflict code rather than the internal-failure code: nothing on
+the component's own side went wrong, an unusable artifact occupies the target
+path and was left byte-identical, and the diagnostic already names such a page
+by address — reporting the component's own residue would send the operator to
+report a defect instead of repairing the page.
 
 Two states are not that residue, and SHALL NOT be adopted. An entry that
 already fingerprints its page is a NO-OP reported as success, not an error:
@@ -521,15 +535,33 @@ as a generic internal failure and never as a silent success.
 - GIVEN an address that does not match the promoted-page address format, such
   as one containing a path separator or a parent-directory segment
 - WHEN reconcile is invoked with it
-- THEN the invocation is refused before any file is read, and the precedence
-  store is left unwritten
+- THEN the invocation is refused with the usage code before any file is read,
+  and the precedence store is left unwritten
+
+#### Scenario: A traversal address is refused even when a file agrees with it
+
+- GIVEN a page-shaped file outside the promoted-pages directory whose own
+  frontmatter address IS the traversal string, so the identity verification
+  would agree with it
+- WHEN reconcile is invoked with that traversal address
+- THEN the address-format refusal is what stops it, the file is not read, and
+  the precedence store is left unwritten
+
+#### Scenario: A page whose own revision cannot be read is refused
+
+- GIVEN a file at the named address whose engram_revision is missing,
+  non-numeric or negative
+- WHEN an operator reconciles that address by name
+- THEN the adoption is refused with the registration-conflict code, not the
+  internal-failure code, and the precedence store is left unchanged
 
 #### Scenario: A file that is not that page is refused
 
 - GIVEN a file at the named address whose own frontmatter carries a different
   address, or a different project
 - WHEN an operator reconciles that address by name
-- THEN the adoption is refused and the precedence store is left unchanged
+- THEN the adoption is refused with the registration-conflict code and the
+  precedence store is left unchanged
 
 #### Scenario: A page with no entry at all is adopted
 

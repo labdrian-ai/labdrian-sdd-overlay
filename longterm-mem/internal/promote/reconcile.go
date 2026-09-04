@@ -44,6 +44,20 @@ var ErrInvalidAddress = errors.New("promote: not a promoted-page address")
 // would fingerprint content under a key that does not describe it.
 var ErrNotThatPage = errors.New("promote: the file at that address is not that promoted page")
 
+// ErrUnusablePage is Reconcile's refusal for a file that occupies a
+// promoted page's path but cannot be read as one: no parseable frontmatter
+// block, or an engram_revision that is missing, non-numeric or negative.
+// There is no revision to record, so nothing can be adopted.
+//
+// It exists because the refusal used to be a bare fmt.Errorf, which left
+// the command surface's default branch answering exit 1 (internal) -- the
+// code for longterm-mem's OWN side going wrong. This is the opposite: the
+// binary worked exactly as designed and the VAULT holds a page it cannot
+// use, and `doctor` names such a page by address, so the operator sent to
+// repair it was told to report a bug instead. The sentinel exists so the
+// command can say which of the two it is (cmd_promote.go).
+var ErrUnusablePage = errors.New("promote: the file at that address cannot be read as a promoted page")
+
 // ReconcileOutcome reports what Reconcile did for one address.
 type ReconcileOutcome struct {
 	// Address and Path name the page reconcile looked at.
@@ -106,8 +120,22 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 	// touches the filesystem, because it is used twice: as a path segment
 	// and as the sidecar key. addressPattern (lint.go) is the same
 	// ^c-\d{6}$ every promoted page is linted against, and it admits no
-	// separator, no dot and no `..`, so a resolved path can only land
-	// directly inside wiki/memory.
+	// separator, no dot and no `..`.
+	//
+	// That is a claim about the address STRING, and only about the string:
+	// the join below can name nothing but wiki/memory/<address>.md. It is
+	// NOT a containment claim about the resolved path, and saying it was
+	// would be untrue -- nothing here calls filepath.EvalSymlinks or
+	// prefix-checks the result, so a symlink AT wiki/memory/<address>.md is
+	// followed and its target read. That is deliberate rather than
+	// overlooked: a vault behind a symlink is an ordinary setup, the
+	// ordinary promotion path follows the same link, and resolving here
+	// would refuse those vaults for no gain. What the shape check buys is
+	// the pair of defects a raw string bought: a path the operator can
+	// steer out of the pages directory by typing, and a sidecar key no
+	// promotion will ever look up. A symlinked target still has to pass the
+	// frontmatter-identity check below, so the key stays one that describes
+	// its own content.
 	if !addressPattern.MatchString(address) {
 		return ReconcileOutcome{}, fmt.Errorf("%w: %q does not match %s, so it names neither a page under %s nor a key any promotion looks up", ErrInvalidAddress, address, addressPattern, pagePathPrefix)
 	}
@@ -124,7 +152,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 
 	fmBlock, ok := frontmatterBlock(string(raw))
 	if !ok {
-		return ReconcileOutcome{}, fmt.Errorf("promote: %s has no parseable frontmatter block", full)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %s has no parseable frontmatter block", ErrUnusablePage, full)
 	}
 	// The filename says which page this is supposed to be; the page's own
 	// frontmatter says which page it IS. They can disagree -- a copied or
@@ -178,7 +206,7 @@ func Reconcile(vaultRoot, project, address string) (ReconcileOutcome, error) {
 	// revision to record. So is a negative one.
 	revision, ok := frontmatterRevision(fmBlock)
 	if !ok || revision < 0 {
-		return ReconcileOutcome{}, fmt.Errorf("promote: %s carries no readable engram_revision, so there is no revision to record for it; a page promoted at revision 0 is adopted, but a missing or non-numeric one is corruption", full)
+		return ReconcileOutcome{}, fmt.Errorf("%w: %s carries no readable engram_revision, so there is no revision to record for it; a page promoted at revision 0 is adopted, but a missing or non-numeric one is corruption", ErrUnusablePage, full)
 	}
 
 	store.Set(address, PrecedenceEntry{

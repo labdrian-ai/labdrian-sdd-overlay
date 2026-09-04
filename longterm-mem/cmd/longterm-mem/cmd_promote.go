@@ -166,6 +166,26 @@ func cmdPromoteReconcile(args []string) int {
 			// page, and longterm-mem changed nothing -- the same shape the
 			// promote path answers with when an artifact holds its target.
 			return exitRegistrationConflict
+		case errors.Is(err, promote.ErrUnusablePage):
+			// Exit 6, not exit 1, and the choice is deliberate. Exit 1 is
+			// this binary's residue for "longterm-mem's own side went
+			// wrong" (exit_codes.go), and nothing went wrong on our side:
+			// the command ran exactly as designed and found a file at the
+			// target path it cannot read as a promoted page. That is the
+			// shape exit 6 names -- an artifact occupies the target
+			// location, longterm-mem cannot prove it owns it, so it
+			// refuses and leaves the file byte-identical -- and it is the
+			// code the neighbouring ErrNotThatPage refusal already
+			// answers with for the same condition one field over.
+			//
+			// The alternatives were considered and rejected: exit 7
+			// (not_found) is false, because the page IS there; exit 2
+			// (usage) blames an invocation that was correct; exit 9 is
+			// doctor's verdict code and belongs to doctor. The
+			// distinction that matters to the operator is "your vault
+			// holds an unusable page, which doctor already named" versus
+			// "report a bug", and exit 1 said the second.
+			return exitRegistrationConflict
 		case errors.Is(err, promote.ErrLocalEditPreserved):
 			// The same code the explicit promote path answers with when it
 			// refuses a page it cannot prove it wrote: an artifact occupies

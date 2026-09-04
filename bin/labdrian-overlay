@@ -276,6 +276,17 @@ longtermmem_targets_lock_acquire() {
   # the lock. Re-classifying under the break lock makes the loser see the
   # winner's FRESH lock, decline to remove it, and fail the run loudly.
   #
+  # That exclusion covers breaker against breaker, and NOT breaker against an
+  # ordinary acquirer: between the re-test above and the rmdir below, a plain
+  # invocation can release the stale lock and take it normally, and the
+  # breaker then removes that live lock. In production the gap is one stderr
+  # write, so the window is microseconds and it still needs an already
+  # abnormal lock older than the staleness bound -- and the rename this could
+  # be rewritten around carries the same check-then-act on its source path, so
+  # the residue looks irreducible in portable shell. It is named here rather
+  # than left implied, because a reader who takes "serialized" to mean
+  # exclusive against everything would build on a guarantee this does not make.
+  #
   # The break lock is held for the duration of one age test and one mkdir, and
   # is released on every path out. A run SIGKILLed inside that window leaks it
   # and disables the staleness escape -- the message below names the lock
