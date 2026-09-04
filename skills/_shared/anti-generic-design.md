@@ -6,8 +6,10 @@ injection_point: "## Skills to load before work"
 # Anti-Generic Design Contract
 
 > Advisory scope: this contract is injected into the phases that generate or refine UI/design
-> output (`sdd-tasks`, `sdd-apply`). The frontmatter above is documentation only — the resolver
-> does not parse it. See `.atl/skill-registry.md` for the load-bearing binding.
+> output (`sdd-tasks`, `sdd-apply`). `engine/gate/gate.go` matches `subagent_type` against the
+> frontmatter above to decide whether to inject, and `propagate` fails when `applies_to_phases`
+> is absent or empty — the frontmatter is load-bearing, not documentation. `.atl/skill-registry.md`
+> is generated from it, so it is the output of this binding rather than its source.
 
 This contract is **complementary to, not a replacement for**, `anthropics/skills/frontend-design`.
 As of this writing, `anthropics/skills/frontend-design` (not vendored in this repo) is documented

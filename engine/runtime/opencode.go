@@ -492,6 +492,16 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 		return openCodePromptConfig{}, err
 	}
 	contracts = append(contracts, projection)
+	// The anti-generic-design guard rides the embedded asset for the same
+	// reason the two above do: the generic-AI-look hazard is runtime-agnostic,
+	// so an OpenCode user generating UI must get it too. Without this append
+	// the contract deployed to disk on OpenCode was never read by anything —
+	// present, aligned, IN_SYNC, and inert.
+	design, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "anti-generic-design.md"), assets.AntiGenericDesign)
+	if err != nil {
+		return openCodePromptConfig{}, err
+	}
+	contracts = append(contracts, design)
 	ooPath := filepath.Join("skills", "_shared", "oo-quality-contract.md")
 	ooContent, err := os.ReadFile(filepath.Join(root, ooPath))
 	if err != nil {
