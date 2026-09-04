@@ -455,10 +455,29 @@ keystroke covering pages nobody inspected. The refusal SHALL be an explicit
 error stating that exactly one address is expected, and SHALL leave the
 precedence store unwritten.
 
-The revision recorded SHALL be read from the page itself, and a page whose
-own revision cannot be read as a positive integer SHALL be refused: adopting
-it would record another entry with no usable revision, recreating the very
-state the operation exists to end while reporting success.
+The operation SHALL validate the supplied address against the promoted-page
+address format before reading anything, and SHALL refuse an address that does
+not match it. The address is operator-supplied and names both a file to read
+and the key an entry is written under, so an unvalidated one reads a file
+outside the promoted-pages directory and writes a sidecar key no promotion
+ever looks up, which nothing removes. The operation SHALL further verify that
+the file found at that address is that page: its own frontmatter address must
+be the address named, and its project, when the page carries one, must be the
+project named. A page that predates the project field SHALL NOT be refused for
+lacking it.
+
+The revision recorded SHALL be read from the page itself. A revision of ZERO
+SHALL be adopted. Eligibility promotes a pinned or eligible-typed observation
+whose revision count is zero, so zero is an ordinary promoted state reached by
+the ordinary path, and it is exactly the state the precedence-sidecar
+diagnostic names once such a page diverges — refusing it would leave the only
+advertised repair declining the population it exists for. Adopting it does not
+recreate the wedge: the wedged condition is an entry that no longer MATCHES
+its page, and an adopted entry fingerprints the bytes on disk, so the next
+promotion of that page takes the ordinary update path. A page whose own
+revision cannot be read as an integer, or reads as a negative one, SHALL be
+refused: that is not a value the writer's own renders produce, so there is no
+revision to record.
 
 Two states are not that residue, and SHALL NOT be adopted. An entry that
 already fingerprints its page is a NO-OP reported as success, not an error:
@@ -467,8 +486,10 @@ an ordinary promotion must not fail a command whose work is already done,
 and an idempotent command can be re-run and scripted. An entry recording a
 POSITIVE revision whose page has diverged is an ordinary local edit, and
 SHALL be refused with the registration-conflict code: that page is not
-wedged, the precedence rule is holding a human's edit, promotion says so on
-every run, and adopting it would overwrite that edit on the next promotion
+wedged, the precedence rule is holding a human's edit, and promotion either
+adopts the page on its own (when the page's own revision stands strictly above
+the recorded one, which is the writer's own interrupted update) or names it on
+every run. Adopting it here would overwrite that edit on the next promotion
 while reporting an ordinary update. Being asked for it by name does not
 change what would be destroyed.
 
@@ -484,6 +505,31 @@ as a generic internal failure and never as a silent success.
 - AND a LATER revision of its observation is then promoted
 - THEN that promotion is an ordinary update rather than a refusal, and the
   page is refreshed to the later revision
+
+#### Scenario: A page promoted at revision zero leaves the wedged state
+
+- GIVEN a promoted page whose observation has never been revised, so the page
+  itself carries revision zero, and whose precedence entry has diverged from
+  it — the state the precedence-sidecar diagnostic names
+- WHEN an operator reconciles that address by name
+- THEN the page is adopted at revision zero, the diagnostic no longer names
+  it, and a LATER revision of its observation is promoted as an ordinary
+  update rather than a refusal
+
+#### Scenario: An address that is not a promoted-page address is refused
+
+- GIVEN an address that does not match the promoted-page address format, such
+  as one containing a path separator or a parent-directory segment
+- WHEN reconcile is invoked with it
+- THEN the invocation is refused before any file is read, and the precedence
+  store is left unwritten
+
+#### Scenario: A file that is not that page is refused
+
+- GIVEN a file at the named address whose own frontmatter carries a different
+  address, or a different project
+- WHEN an operator reconciles that address by name
+- THEN the adoption is refused and the precedence store is left unchanged
 
 #### Scenario: A page with no entry at all is adopted
 

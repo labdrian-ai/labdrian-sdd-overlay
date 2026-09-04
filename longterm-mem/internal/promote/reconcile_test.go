@@ -94,7 +94,7 @@ func TestReconcile_AdoptsAWedgedLegacyPageAndLeavesTheWedgedState(t *testing.T) 
 		t.Fatalf("fixture is not wedged: UpdateInPlace answered %v before reconcile, want ActionSkippedLocalEdit", action.Kind)
 	}
 
-	outcome, err := Reconcile(vaultRoot, address)
+	outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address)
 	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -143,7 +143,7 @@ func TestReconcile_AdoptsAPageWithNoEntryAtAll(t *testing.T) {
 	}
 	writePromotedPage(t, vaultRoot, page)
 
-	outcome, err := Reconcile(vaultRoot, address)
+	outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address)
 	if err != nil {
 		t.Fatalf("Reconcile: %v", err)
 	}
@@ -185,7 +185,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 			t.Fatalf("seed sidecar: %v", err)
 		}
 
-		outcome, err := Reconcile(vaultRoot, address)
+		outcome, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address)
 		if err != nil {
 			t.Fatalf("Reconcile on a healthy page: %v -- re-running reconcile after the vault is repaired must not fail", err)
 		}
@@ -218,7 +218,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 			t.Fatalf("simulate a local edit: %v", err)
 		}
 
-		if _, err := Reconcile(vaultRoot, address); !errors.Is(err, ErrLocalEditPreserved) {
+		if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address); !errors.Is(err, ErrLocalEditPreserved) {
 			t.Fatalf("Reconcile on a locally edited page returned %v, want ErrLocalEditPreserved", err)
 		}
 	})
@@ -229,7 +229,7 @@ func TestReconcile_RefusesAPageThatIsNotWedged(t *testing.T) {
 // failure rather than an adoption of nothing.
 func TestReconcile_UnknownAddressFailsCleanly(t *testing.T) {
 	vaultRoot := t.TempDir()
-	if _, err := Reconcile(vaultRoot, "c-999999"); !errors.Is(err, ErrPageNotFound) {
+	if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", "c-999999"); !errors.Is(err, ErrPageNotFound) {
 		t.Fatalf("Reconcile on an unknown address returned %v, want ErrPageNotFound", err)
 	}
 }
@@ -254,7 +254,7 @@ func TestReconcile_RefusesAPageWithNoUsableRevision(t *testing.T) {
 		t.Fatalf("strip engram_revision: %v", err)
 	}
 
-	if _, err := Reconcile(vaultRoot, address); err == nil {
+	if _, err := Reconcile(vaultRoot, "labdrian-sdd-overlay", address); err == nil {
 		t.Fatalf("Reconcile adopted a page whose engram_revision cannot be read, recreating the wedge it exists to end")
 	}
 }

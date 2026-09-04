@@ -209,6 +209,16 @@ warn() { echo "WARN: $*" >&2; }
 # because the code reads as protected everywhere while protecting only
 # Linux.
 #
+# WHAT THE LOCK DOES NOT COVER: it serializes each tracking-file
+# read-modify-write, not an overlay COMMAND. Every writer re-reads inside its
+# own critical section -- longtermmem_maybe_remove_binary re-reads "remaining"
+# there rather than trusting its caller's unlocked read -- so no decision is
+# made on stale state. But an `add` that lands the instant after the removal
+# guard releases still records a target whose shared binary was rm -f'ed a
+# moment earlier: a runtime registered against a missing binary. Per-writer
+# locking cannot close that; only a command-scoped lock could. Install and
+# uninstall running concurrently are NOT safe end to end.
+#
 # longtermmem_targets_lock_acquire blocks for a bounded number of tries and
 # then FAILS THE RUN rather than proceeding unlocked. Proceeding unlocked is
 # defensible in general, but not here: the thing the lock protects is the
@@ -225,6 +235,19 @@ warn() { echo "WARN: $*" >&2; }
 # that an operator never has to know this directory exists. The age test
 # goes through `find -mmin`, which behaves the same on GNU and BSD/macOS,
 # rather than `stat`, whose format flags do not.
+# longtermmem_targets_lock_is_stale reports whether the lock directory is
+# older than the abandonment window. It is a function because the break-in
+# below has to ask TWICE -- once to decide to break in at all, and once more
+# under the break lock, against whatever the lock directory has become in
+# between.
+#
+# The age test goes through `find -mmin`, which behaves the same on GNU and
+# BSD/macOS, rather than `stat`, whose format flags do not.
+longtermmem_targets_lock_is_stale() {
+  [[ -n "$(find "$LONGTERM_MEM_TARGETS_LOCK" -maxdepth 0 \
+             -mmin "+$LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES" 2>/dev/null)" ]]
+}
+
 longtermmem_targets_lock_acquire() {
   mkdir -p "$STATE_DIR" || die "longterm-mem: could not create $STATE_DIR"
 
@@ -237,14 +260,50 @@ longtermmem_targets_lock_acquire() {
     sleep 0.2
   done
 
-  if [[ -n "$(find "$LONGTERM_MEM_TARGETS_LOCK" -maxdepth 0 \
-                -mmin "+$LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES" 2>/dev/null)" ]]; then
-    warn "longterm-mem: the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK is older than $LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES minutes; treating it as abandoned by a killed run and taking it over"
-    rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
-    if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
-      LONGTERM_MEM_TARGETS_LOCK_HELD=1
-      return 0
+  # THE BREAK-IN IS ITSELF A CRITICAL SECTION. Classifying the lock as stale
+  # and then acting on that classification is a read-modify-write over the
+  # lock directory, and the unconditional "rmdir then mkdir" this used to be
+  # ran it unserialized: two invocations that both classify the same lock as
+  # abandoned each break in independently, and an interleaving where the
+  # loser's rmdir lands AFTER the winner's mkdir deletes the WINNER'S LIVE
+  # LOCK and admits both to the critical section -- the exact lost update the
+  # lock exists to prevent, reached through the lock's own recovery path.
+  #
+  # So the break-in is serialized by a second mkdir, and the staleness test is
+  # RE-RUN under it. The re-run is the half that matters: the break lock alone
+  # only orders the two breakers, and the loser, arriving a moment later,
+  # would still be acting on a classification made before the winner replaced
+  # the lock. Re-classifying under the break lock makes the loser see the
+  # winner's FRESH lock, decline to remove it, and fail the run loudly.
+  #
+  # The break lock is held for the duration of one age test and one mkdir, and
+  # is released on every path out. A run SIGKILLed inside that window leaks it
+  # and disables the staleness escape -- the message below names the lock
+  # directory, and the break directory sits beside it under the same name.
+  if longtermmem_targets_lock_is_stale; then
+    if mkdir "$LONGTERM_MEM_TARGETS_LOCK.break" 2>/dev/null; then
+      if longtermmem_targets_lock_is_stale; then
+        warn "longterm-mem: the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK is older than $LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES minutes; treating it as abandoned by a killed run and taking it over"
+        rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
+        if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+          LONGTERM_MEM_TARGETS_LOCK_HELD=1
+          rmdir "$LONGTERM_MEM_TARGETS_LOCK.break" 2>/dev/null || true
+          return 0
+        fi
+      fi
+      rmdir "$LONGTERM_MEM_TARGETS_LOCK.break" 2>/dev/null || true
     fi
+  fi
+
+  # One last attempt before refusing. The retry budget above is a fixed number
+  # of fixed sleeps, so a holder that releases just after the final mkdir --
+  # 0.9s in, against a last attempt at 0.8s -- leaves the lock FREE while the
+  # staleness test correctly answers "not stale", and the run would fail with
+  # the lock sitting there available. One more mkdir costs a syscall and
+  # removes that whole class of spurious refusals.
+  if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+    LONGTERM_MEM_TARGETS_LOCK_HELD=1
+    return 0
   fi
 
   die "longterm-mem: could not acquire the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running."
@@ -3491,7 +3550,16 @@ cmd_longterm_mem() {
       # register's exit status is INSPECTED, not discarded (cmd_register.go:
       # 0 registered, 1 hard failure, 2 usage/version skew, 6 an untagged
       # same-named entry it refuses to touch, 8 a path it could not resolve
-      # from the environment at all). Only 0 means this entrypoint actually
+      # from the environment at all). 9 is the module's ninth published code
+      # and is deliberately absent from that list: it is `doctor`'s verdict
+      # ("the checks ran and a VAULT check FAILED", exitDoctorChecksFailed),
+      # not a register outcome, and register never raises it. It is named
+      # here so the next reader does not read this list as the module's whole
+      # contract -- and so that if this entrypoint ever calls `doctor`, 9 gets
+      # its own arm there rather than falling into a catch-all that would
+      # report a failed vault check as a generic failure.
+      #
+      # Only 0 means this entrypoint actually
       # registered $t, and only 0 records $t as installed — recording a
       # target register refused would make the binary-removal guard hold the
       # shared binary hostage on behalf of a runtime that never had an entry
@@ -3615,7 +3683,9 @@ cmd_longterm_mem() {
       #
       # cmd_unregister.go's exit codes (0 removed, 1 hard failure, 2 usage,
       # 6 unmanaged, 8 a path it could not resolve from the environment at
-      # all, 1 outranking 6) are inspected, not swallowed. ONLY exit 0 means
+      # all, 1 outranking 6) are inspected, not swallowed. 9 is not in that
+      # set: it is `doctor`'s "a vault check FAILED" verdict and unregister
+      # never raises it (see the register call's comment above). ONLY exit 0 means
       # "$t has nothing of ours left in its runtime config", and only exit 0
       # clears this target's tracking below.
       #

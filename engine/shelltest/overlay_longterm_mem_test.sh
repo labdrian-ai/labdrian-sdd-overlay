@@ -261,6 +261,129 @@ case_add_racing_a_remove_is_not_lost() {
   pass "an add racing a remove loses neither"
 }
 
+# The binary-removal guard is the THIRD writer of the tracking file, and the
+# one with the worst blast radius: it reads the file, and on an empty read it
+# deletes BOTH the shared binary and the tracking file. The two concurrency
+# cases above pin `add` and `remove` only, so this site's lock could be
+# deleted outright and the whole suite still passed -- the exact failure
+# shape this file exists to catch, reproduced at the test level.
+#
+# The add is started first and the guard a beat later, so the stale read is
+# deterministic: unserialized, the guard reads the file while the add is
+# still inside its own read-modify-write, sees no remaining target, and
+# removes the binary the add is registering a runtime against -- deleting the
+# add's record along with it. Serialized, the guard waits, reads "opencode",
+# and leaves both alone.
+case_binary_removal_racing_an_add_is_serialized() {
+  local dir status out
+  dir="$(new_case_dir remove-binary-racing-add)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
+      : > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      printf "not-a-real-binary\n" > "$LONGTERM_MEM_BINARY"
+      '"$(slow_the_tracking_read)"'
+      # The guard consults its callers $tracking_known: a tracking file that
+      # exists at all is "known".
+      tracking_known=1
+      longtermmem_installed_targets_add opencode &
+      sleep 0.1
+      longtermmem_maybe_remove_binary "" &
+      wait
+      if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
+        echo "BINARY-PRESENT"
+      else
+        echo "BINARY-GONE"
+      fi
+      echo "AFTER=[$(longtermmem_installed_targets_read_real | tr "\n" " ")]"
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "binary removal racing an add: the run itself failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -F -e BINARY-PRESENT <<<"$out"; then
+    fail "binary removal racing an add: the shared binary was deleted while a concurrent add was registering a runtime against it" "$out"
+    return
+  fi
+  if ! grep -q -F -e "opencode" <<<"$out"; then
+    fail "binary removal racing an add: the concurrent add was erased with the tracking file" "$out"
+    return
+  fi
+  pass "the binary-removal guard is serialized against a concurrent add"
+}
+
+# The staleness escape must itself be mutually exclusive. Two invocations
+# that both classify the SAME lock as abandoned each act on that
+# classification independently, and an interleaving where the loser breaks in
+# AFTER the winner has already taken the lock deletes the winner's LIVE lock
+# and puts both inside the critical section -- exactly the lost update the
+# lock exists to prevent, reached through the lock's own recovery path.
+#
+# The window is microseconds wide in production, so it is widened here the
+# same way the tracking-file races are: a wrapper that makes the age test
+# slow makes the classify-then-act gap deterministic rather than a coin flip.
+# Both racers reach the stale branch; only one may end up holding.
+case_simultaneous_stale_breakins_admit_only_one() {
+  local dir status out entered refused
+  dir="$(new_case_dir stale-break-in)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$STATE_DIR"
+      mkdir "$LONGTERM_MEM_TARGETS_LOCK"
+      touch -d "-10 minutes" "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null \
+        || touch -A -001000 "$LONGTERM_MEM_TARGETS_LOCK"
+
+      # Widen the gap between classifying the lock as stale and acting on
+      # that classification. The age test goes through find, so wrapping find
+      # delays every classification by a fixed half second.
+      find() { command find "$@"; sleep 0.5; }
+
+      # A refusal arrives through die, which exits the PROCESS, so the
+      # critical section runs in its own subshell and the refusal is
+      # observed from outside it -- the same seam case_failed_critical_
+      # section_releases_the_lock uses.
+      breaker() {
+        (
+          longtermmem_targets_lock_acquire 2>/dev/null
+          echo "ENTERED-$1"
+          sleep 0.4
+          longtermmem_targets_lock_release
+        ) || echo "REFUSED-$1"
+      }
+
+      breaker A &
+      sleep 0.3
+      breaker B &
+      wait
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "simultaneous stale break-ins: the run itself failed (exit $status)" "$out"
+    return
+  fi
+  entered="$(grep -c -E "^ENTERED-" <<<"$out")"
+  refused="$(grep -c -E "^REFUSED-" <<<"$out")"
+  if [[ "$entered" -ne 1 ]]; then
+    fail "simultaneous stale break-ins: $entered invocation(s) entered the critical section, expected exactly 1" "$out"
+    return
+  fi
+  if [[ "$refused" -ne 1 ]]; then
+    fail "simultaneous stale break-ins: $refused invocation(s) were refused, expected exactly 1" "$out"
+    return
+  fi
+  pass "two simultaneous stale break-ins admit only one"
+}
+
 # A lock a failed critical section keeps forever is worse than no lock: it
 # wedges every later invocation of this entrypoint. The failure is forced
 # through the exact path this file uses to report unrecoverable problems --
@@ -1265,6 +1388,8 @@ case_add_does_not_use_a_shared_temp_path
 case_remove_does_not_use_a_shared_temp_path
 case_parallel_removes_keep_every_other_target
 case_add_racing_a_remove_is_not_lost
+case_binary_removal_racing_an_add_is_serialized
+case_simultaneous_stale_breakins_admit_only_one
 case_failed_critical_section_releases_the_lock
 case_corrupt_tracking_file_does_not_wedge_cleanup
 case_unknown_wellformed_target_keeps_the_guard_closed

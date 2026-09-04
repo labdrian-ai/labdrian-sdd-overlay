@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
@@ -121,8 +122,21 @@ func cmdPromoteReconcile(args []string) int {
 		fmt.Fprintln(os.Stderr, "longterm-mem: promote reconcile: --all is refused: reconcile adopts exactly one address, named explicitly, because that naming is the consent the automatic promotion path lacks; adopting in bulk would overwrite pages nobody looked at")
 		return exitUsage
 	}
-	if len(fs.Args()) != 1 {
-		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: expected exactly one address, got %d: reconcile adopts one page at a time on purpose\n", len(fs.Args()))
+	if rest := fs.Args(); len(rest) != 1 {
+		// Go's flag package stops parsing at the first positional, so
+		// `reconcile c-000701 --project P` leaves three positionals and
+		// looks exactly like an attempted bulk adoption. Diagnosing it as
+		// one tells the operator the invocation was refused on purpose and
+		// never mentions the thing actually wrong, so the same command gets
+		// retyped. The two mistakes are distinguishable: only the ordering
+		// one leaves a flag-looking token among the positionals.
+		for _, arg := range rest {
+			if strings.HasPrefix(arg, "-") {
+				fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %s was read as an address, not a flag: flag parsing stops at the first positional, so every flag must come before the address (promote reconcile --project P <address>)\n", arg)
+				return exitUsage
+			}
+		}
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: expected exactly one address, got %d: reconcile adopts one page at a time on purpose\n", len(rest))
 		return exitUsage
 	}
 	if *project == "" {
@@ -137,12 +151,21 @@ func cmdPromoteReconcile(args []string) int {
 		return vaultExitCode(err)
 	}
 
-	outcome, err := promote.Reconcile(vaultRoot, address)
+	outcome, err := promote.Reconcile(vaultRoot, *project, address)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
 		switch {
 		case errors.Is(err, promote.ErrPageNotFound):
 			return exitNotFound
+		case errors.Is(err, promote.ErrInvalidAddress):
+			// A malformed address is a mistyped invocation, not a broken
+			// vault: the operator has to fix what they typed.
+			return exitUsage
+		case errors.Is(err, promote.ErrNotThatPage):
+			// Something occupies wiki/memory/<address>.md that is not that
+			// page, and longterm-mem changed nothing -- the same shape the
+			// promote path answers with when an artifact holds its target.
+			return exitRegistrationConflict
 		case errors.Is(err, promote.ErrLocalEditPreserved):
 			// The same code the explicit promote path answers with when it
 			// refuses a page it cannot prove it wrote: an artifact occupies
