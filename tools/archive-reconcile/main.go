@@ -74,19 +74,42 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return outcomeUndetermined
 	}
 
-	findings, scanned, err := scanChanges(root)
+	findings, undetermined, scanned, err := scanChanges(root)
 	if err != nil {
 		fmt.Fprintf(stderr, "archive-reconcile: %v\n", err)
 		fmt.Fprint(stderr, undeterminedNote)
 		return outcomeUndetermined
 	}
 
-	if len(findings) == 0 {
-		fmt.Fprintf(stdout, "archive-reconcile: clean — %d active change(s) checked under %s, none stranded.\n", scanned, changesRelDir)
+	if len(findings) == 0 && len(undetermined) == 0 {
+		// Only reachable when every active change was classified, so this
+		// summary claims no more than the scan actually established.
+		fmt.Fprintf(stdout, "archive-reconcile: clean — %d active change(s) checked under %s, all classified, none stranded.\n", scanned, changesRelDir)
 		return outcomeClean
 	}
 
-	reportStranded(stderr, findings)
+	// Both lists are printed whenever either is non-empty. Suppressing the
+	// stranded list because something was undetermined would hide work the
+	// scan did establish, and suppressing the undetermined list would hide
+	// the fact that the stranded list is partial.
+	if len(findings) > 0 {
+		reportStranded(stderr, findings)
+	}
+	if len(undetermined) > 0 {
+		reportUndetermined(stderr, undetermined, len(findings))
+	}
+
+	// EXIT PRECEDENCE: undetermined outranks stranded. Exit 1 means "here are
+	// the stranded changes", which asserts that the scan classified every
+	// active change and these are the complete-but-unarchived ones. When even
+	// one change could not be classified, that stranded list is knowingly
+	// incomplete, and returning 1 would assert a completeness this guard does
+	// not have — the same overclaim its countTasks and ambiguousLine comments
+	// already refuse at the file and line levels. Exit 3 says "I could not
+	// tell", which is the only honest code for a partial answer.
+	if len(undetermined) > 0 {
+		return outcomeUndetermined
+	}
 	return outcomeStranded
 }
 
@@ -155,20 +178,34 @@ type capabilityStatus struct {
 	Promoted bool
 }
 
+// undeterminedChange is one openspec/changes/ entry whose tasks.md contained
+// no bullet checkbox at all, so this guard has no completion signal to read
+// and cannot say whether the change is stranded or still in progress.
+type undeterminedChange struct {
+	Name     string
+	Observed string
+}
+
 // scanChanges walks every non-archive entry under openspec/changes/ and
-// returns the stranded ones, plus the total number of active entries scanned
-// (used only for the clean-case stdout summary).
+// returns the stranded ones, the ones it could not classify, and the total
+// number of active entries scanned (used only for the clean-case stdout
+// summary).
 //
 // Every error here is returned rather than skipped or defaulted, per the same
 // reasoning as review-preflight's parseProjection: a tasks.md this guard
 // cannot read or parse is a fact it never observed, and reporting the change
 // it belongs to as "not stranded" would silently reproduce the exact blind
 // spot this guard exists to close.
-func scanChanges(root string) ([]strandedChange, int, error) {
+//
+// Unclassifiable changes are collected rather than returned as the first
+// error: four live changes in this repository are in that state at once, and
+// a guard that names all of them is worth more to an operator than one that
+// dies on the first and hides the rest.
+func scanChanges(root string) ([]strandedChange, []undeterminedChange, int, error) {
 	changesDir := filepath.Join(root, filepath.FromSlash(changesRelDir))
 	entries, err := os.ReadDir(changesDir)
 	if err != nil {
-		return nil, 0, fmt.Errorf("could not read %s: %w", changesDir, err)
+		return nil, nil, 0, fmt.Errorf("could not read %s: %w", changesDir, err)
 	}
 
 	var names []string
@@ -184,30 +221,41 @@ func scanChanges(root string) ([]strandedChange, int, error) {
 	sort.Strings(names)
 
 	var findings []strandedChange
+	var undetermined []undeterminedChange
 	for _, name := range names {
 		changeDir := filepath.Join(changesDir, name)
 		tasksPath := filepath.Join(changeDir, tasksFileName)
 
-		total, unchecked, err := countTasks(tasksPath)
+		counts, err := countTasks(tasksPath)
 		if err != nil {
-			return nil, 0, fmt.Errorf("change %q: %w", name, err)
+			return nil, nil, 0, fmt.Errorf("change %q: %w", name, err)
 		}
-		if total == 0 {
-			// Planning-only: no task breakdown yet, definitely not stranded.
+		if counts.Total == 0 {
+			// total == 0 does NOT mean "planning-only". It means no bullet
+			// checkbox was found, which is equally consistent with a complete
+			// task breakdown written in a shape this parser does not read —
+			// four live changes in this repository are exactly that, with
+			// "**Status**: [x] done" markers or bare "### T-01" headings. This
+			// guard cannot tell those apart, and picking either reading is the
+			// same guess countTasks and ambiguousLine already refuse to make
+			// one and two levels down. Record it as undetermined instead, with
+			// the shape actually observed so the operator knows which kind of
+			// unreadable it is.
+			undetermined = append(undetermined, undeterminedChange{Name: name, Observed: counts.observation()})
 			continue
 		}
-		if unchecked > 0 {
+		if counts.Unchecked > 0 {
 			// Still in progress.
 			continue
 		}
 
 		caps, err := capabilityStatuses(root, changeDir)
 		if err != nil {
-			return nil, 0, fmt.Errorf("change %q: %w", name, err)
+			return nil, nil, 0, fmt.Errorf("change %q: %w", name, err)
 		}
-		findings = append(findings, strandedChange{Name: name, TotalTasks: total, Capabilities: caps})
+		findings = append(findings, strandedChange{Name: name, TotalTasks: counts.Total, Capabilities: caps})
 	}
-	return findings, len(names), nil
+	return findings, undetermined, len(names), nil
 }
 
 // checkboxPattern matches a well-formed task checkbox line: a "-", "*", or
@@ -254,8 +302,37 @@ func ambiguousLine(path string, lineNo int, line, why string) error {
 		path, lineNo, strings.TrimSpace(line), why)
 }
 
+// taskCounts is what one tasks.md yielded: how many bullet task checkboxes it
+// carries, how many of those are unchecked, and how many checkbox-SHAPED
+// markers appeared outside a bullet ("**Status**: [x] done", a table cell).
+// OtherMarkers is never a completion signal — this guard deliberately does not
+// try to interpret those shapes — it exists only so a zero-total report can
+// tell the operator which kind of unreadable file they are looking at.
+type taskCounts struct {
+	Total        int
+	Unchecked    int
+	OtherMarkers int
+}
+
+// observation describes, for a file with zero bullet checkboxes, what was
+// actually seen. The two shapes call for different operator responses: other
+// markers present means a completion convention this parser does not read,
+// while nothing at all means no parseable completion marker exists.
+func (c taskCounts) observation() string {
+	if c.OtherMarkers > 0 {
+		return fmt.Sprintf("0 bullet checkboxes; %d other [x]-shaped marker(s) present — the completion signal is in a shape this guard does not read", c.OtherMarkers)
+	}
+	return "0 checkboxes of any shape — this file carries no completion marker this guard can read"
+}
+
+// checkboxShapedPattern matches a bare "[x]", "[X]", or "[ ]" anywhere in a
+// line. It is used only to characterise a file that produced zero bullet
+// checkboxes; it never feeds Total or Unchecked.
+var checkboxShapedPattern = regexp.MustCompile(`\[[ xX]\]`)
+
 // countTasks reads one tasks.md and returns the total number of task
-// checkboxes and how many are unchecked.
+// checkboxes, how many are unchecked, and how many checkbox-shaped markers
+// appeared outside a bullet checkbox.
 //
 // A missing or unreadable tasks.md is an error, not zero tasks: this guard
 // has no way to distinguish "genuinely no tasks" from "the file could not be
@@ -269,10 +346,10 @@ func ambiguousLine(path string, lineNo int, line, why string) error {
 // HTML comment (<!-- ... -->, possibly spanning lines) are ignored entirely:
 // a checkbox-shaped example in either context must never contribute to
 // total or unchecked, nor trigger the malformed-checkbox error below.
-func countTasks(path string) (total int, unchecked int, err error) {
+func countTasks(path string) (counts taskCounts, err error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return 0, 0, fmt.Errorf("%s could not be read: %w", path, err)
+		return taskCounts{}, fmt.Errorf("%s could not be read: %w", path, err)
 	}
 	defer f.Close()
 
@@ -315,7 +392,7 @@ func countTasks(path string) (total int, unchecked int, err error) {
 		// one. Refuse instead.
 		if openIdx := strings.Index(line, "<!--"); openIdx >= 0 {
 			if checkboxLikePattern.MatchString(line) {
-				return 0, 0, ambiguousLine(path, lineNo, line,
+				return taskCounts{}, ambiguousLine(path, lineNo, line,
 					"a task checkbox and an HTML comment delimiter share this line")
 			}
 			if !strings.Contains(line[openIdx+len("<!--"):], "-->") {
@@ -330,17 +407,20 @@ func countTasks(path string) (total int, unchecked int, err error) {
 		// scanner models fences and comments, not indented blocks, and cannot
 		// prove which it is. Refuse rather than pick.
 		if indentWidth(line) >= 4 && checkboxLikePattern.MatchString(line) {
-			return 0, 0, ambiguousLine(path, lineNo, line,
+			return taskCounts{}, ambiguousLine(path, lineNo, line,
 				"a checkbox indented four or more spaces is an indented code block in CommonMark, not a task")
 		}
 
 		if m := checkboxPattern.FindStringSubmatch(line); m != nil {
-			total++
+			counts.Total++
 			if m[1] == " " {
-				unchecked++
+				counts.Unchecked++
 			}
 			continue
 		}
+		// Not a bullet checkbox. Record any checkbox-shaped marker it does
+		// carry, purely so a zero-total file can be described accurately later.
+		counts.OtherMarkers += len(checkboxShapedPattern.FindAllString(line, -1))
 		// A bullet whose first token is a bracket is only a malformed checkbox
 		// when the bracket plausibly attempts one. A markdown link such as
 		// "- [see the design](design.md)" is ordinary prose and must not fail
@@ -349,11 +429,11 @@ func countTasks(path string) (total int, unchecked int, err error) {
 			if markdownLinkBulletPattern.MatchString(line) {
 				continue
 			}
-			return 0, 0, fmt.Errorf("%s:%d: malformed task checkbox %q — expected \"- [ ]\", \"* [ ]\", or \"+ [ ]\" (checked or unchecked)", path, lineNo, strings.TrimSpace(line))
+			return taskCounts{}, fmt.Errorf("%s:%d: malformed task checkbox %q — expected \"- [ ]\", \"* [ ]\", or \"+ [ ]\" (checked or unchecked)", path, lineNo, strings.TrimSpace(line))
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return 0, 0, fmt.Errorf("%s could not be parsed: %w", path, err)
+		return taskCounts{}, fmt.Errorf("%s could not be parsed: %w", path, err)
 	}
 	// An unterminated fence or comment means every line after it was skipped,
 	// so the counters describe only part of the file. Returning them would let
@@ -361,12 +441,12 @@ func countTasks(path string) (total int, unchecked int, err error) {
 	// clean — the exact silent miss this guard exists to prevent, reintroduced
 	// through the skipping machinery itself. Fail closed instead.
 	if inFence {
-		return 0, 0, fmt.Errorf("%s: unterminated fenced code block opened at line %d — every later line was skipped, so the task counts cannot be trusted", path, fenceOpenLine)
+		return taskCounts{}, fmt.Errorf("%s: unterminated fenced code block opened at line %d — every later line was skipped, so the task counts cannot be trusted", path, fenceOpenLine)
 	}
 	if inComment {
-		return 0, 0, fmt.Errorf("%s: unterminated HTML comment opened at line %d — every later line was skipped, so the task counts cannot be trusted", path, commentOpenLine)
+		return taskCounts{}, fmt.Errorf("%s: unterminated HTML comment opened at line %d — every later line was skipped, so the task counts cannot be trusted", path, commentOpenLine)
 	}
-	return total, unchecked, nil
+	return counts, nil
 }
 
 // fenceOpen reports whether line opens a fenced code block: three or more
@@ -494,6 +574,39 @@ func reportStranded(stderr io.Writer, findings []strandedChange) {
 
 	fmt.Fprint(stderr, strandedConsequence)
 }
+
+// reportUndetermined writes one diagnostic per change this guard could not
+// classify, naming the shape actually observed so the operator can tell a
+// change with an unreadable completion convention from one with no completion
+// marker at all — different files, different fixes.
+//
+// strandedCount is passed only so the closing note can state plainly that the
+// stranded list printed above it is incomplete. That sentence is the whole
+// justification for exit 3 outranking exit 1, and an operator reading the
+// output should not have to infer it.
+func reportUndetermined(stderr io.Writer, undetermined []undeterminedChange, strandedCount int) {
+	fmt.Fprintf(stderr, "\narchive-reconcile: UNDETERMINED change(s) — %d change(s) under %s have a tasks.md this guard could not read a completion signal from.\n", len(undetermined), changesRelDir)
+
+	for _, u := range undetermined {
+		fmt.Fprintf(stderr, "\n  %s — %s.\n", u.Name, u.Observed)
+		fmt.Fprint(stderr, "    fix: either express this change's tasks as bullet checkboxes (\"- [ ]\" / \"- [x]\"), or confirm by hand whether it is complete and archive it.\n")
+	}
+
+	fmt.Fprint(stderr, undeterminedListNote)
+	if strandedCount > 0 {
+		fmt.Fprintf(stderr, "The %d stranded change(s) listed above are therefore an incomplete answer, not the\nwhole one, which is why this run exits 3 rather than 1.\n", strandedCount)
+	}
+}
+
+// undeterminedListNote states the consequence of an unclassified change: the
+// scan's stranded list is partial, so "no other stranded changes" is a claim
+// this run cannot make.
+const undeterminedListNote = `
+An undetermined change is not a clean one: this guard reads completion only
+from bullet checkboxes, so a change whose task breakdown lives in another
+shape is invisible to it and could be stranded right now without any tool
+noticing.
+`
 
 // strandedConsequence closes the report with the reason this is worth
 // blocking on: a merged, complete change that stays active forever is not a

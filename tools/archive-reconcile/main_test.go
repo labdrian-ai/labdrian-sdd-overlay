@@ -72,24 +72,27 @@ func TestRunSkipsChangeWithUncheckedTasks(t *testing.T) {
 	}
 }
 
-// TestRunSkipsPlanningOnlyChangeWithZeroCheckboxes pins the distinction this
-// guard exists to get right: zero checkboxes means the change has not started
-// task breakdown at all, which is a completely different fact from "complete
-// but not archived." Four real changes in this repository
-// (skill-lifecycle, skill-manifest-gen, skill-package-manager,
-// skill-project-scope) are in exactly this state and must never be reported.
-func TestRunSkipsPlanningOnlyChangeWithZeroCheckboxes(t *testing.T) {
+// TestRunReportsZeroCheckboxChangeAsUndeterminedNotStranded pins the
+// distinction this guard exists to get right. Zero checkboxes is NOT the same
+// fact as "planning-only": it only says no bullet checkbox was found, which is
+// also true of a fully complete breakdown written in another shape. So such a
+// change is neither reported as stranded (that would be a guess) nor passed
+// over as clean (that was the old guess) — it is reported as undetermined.
+func TestRunReportsZeroCheckboxChangeAsUndeterminedNotStranded(t *testing.T) {
 	root := t.TempDir()
-	newChange(t, root, "planning-only-change", zeroCheckboxes)
+	newChange(t, root, "zero-checkbox-change", zeroCheckboxes)
 
 	var stdout, stderr bytes.Buffer
 	got := run([]string{"--repo", root}, &stdout, &stderr)
 
-	if got != outcomeClean {
-		t.Fatalf("run() with a zero-checkbox change = exit %d, want %d (outcomeClean); stderr=%q", got, outcomeClean, stderr.String())
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with a zero-checkbox change = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
 	}
-	if strings.Contains(stderr.String(), "planning-only-change") {
-		t.Errorf("stderr %q names the planning-only change, want it not reported", stderr.String())
+	if strings.Contains(stderr.String(), "STRANDED") {
+		t.Errorf("stderr %q reports the change as stranded; the guard has no completion signal here and must not assert one", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "zero-checkbox-change") {
+		t.Errorf("stderr %q does not name the change it could not classify", stderr.String())
 	}
 }
 
@@ -270,13 +273,15 @@ func TestRunFailsClosedWhenRepoRootDoesNotExist(t *testing.T) {
 	}
 }
 
-// TestRunCleanFixtureExitsZero covers a repository with a healthy mix: an
-// in-progress change and a planning-only change, neither of which is
-// stranded.
+// TestRunCleanFixtureExitsZero covers a repository whose active changes are
+// all readable and all still in progress. A zero-checkbox change used to be
+// part of this fixture, on the assumption it was "planning-only"; it now
+// belongs to the undetermined tests instead, because the guard cannot in fact
+// tell a planning-only file from an unreadable breakdown.
 func TestRunCleanFixtureExitsZero(t *testing.T) {
 	root := t.TempDir()
 	newChange(t, root, "in-progress", someUnchecked)
-	newChange(t, root, "planning-only", zeroCheckboxes)
+	newChange(t, root, "also-in-progress", someUnchecked)
 
 	var stdout, stderr bytes.Buffer
 	got := run([]string{"--repo", root}, &stdout, &stderr)
@@ -363,6 +368,14 @@ func TestRunHandlesCheckboxesInsideFencesAndComments(t *testing.T) {
 		content    string
 		wantExit   int
 		wantNamed  bool
+		// wantDiagnostic, when set, must appear in the report. It exists for
+		// the fenced case: asserting only "exit 3, change named" cannot tell
+		// "no completion marker of any shape" from "a marker in a shape I do
+		// not read", so moving the other-marker accumulator above the fence
+		// skip would count a fenced EXAMPLE as a real completion marker and
+		// the suite would stay green while the diagnostic told the operator
+		// the opposite of the truth.
+		wantDiagnostic string
 	}{
 		{
 			name:       "unchecked example inside fence still reported stranded",
@@ -372,11 +385,20 @@ func TestRunHandlesCheckboxesInsideFencesAndComments(t *testing.T) {
 			wantNamed:  true,
 		},
 		{
-			name:       "checked examples only inside fence stay planning-only",
-			changeName: "fenced-planning-only-change",
+			// Fenced examples must not be counted as tasks, which leaves this
+			// file with zero real checkboxes — undetermined, not clean. The
+			// assertion that matters here is still the fence rule: the
+			// examples never inflate total and never make it look stranded.
+			name:       "checked examples only inside fence never count as tasks",
+			changeName: "fenced-no-real-tasks-change",
 			content:    "# Tasks\n\nPlanning notes; example checkbox format:\n\n```\n- [x] example done marker\n- [x] another example marker\n```\n\nNo real tasks have been broken down yet.\n",
-			wantExit:   outcomeClean,
-			wantNamed:  false,
+			wantExit:   outcomeUndetermined,
+			wantNamed:  true,
+			// Two checked markers sit in this file, both fenced. The report
+			// must say the file carries no marker of ANY shape: a fenced
+			// example is not a completion signal in an unread shape, it is
+			// not a completion signal at all.
+			wantDiagnostic: "any shape",
 		},
 		{
 			name:       "hidden unchecked task inside HTML comment ignored",
@@ -399,6 +421,9 @@ func TestRunHandlesCheckboxesInsideFencesAndComments(t *testing.T) {
 			}
 			if named := strings.Contains(stderr.String(), tc.changeName); named != tc.wantNamed {
 				t.Errorf("stderr %q names %q = %v, want %v", stderr.String(), tc.changeName, named, tc.wantNamed)
+			}
+			if tc.wantDiagnostic != "" && !strings.Contains(stderr.String(), tc.wantDiagnostic) {
+				t.Errorf("stderr %q does not contain %q -- a fenced example must not be reported as a completion marker in an unread shape", stderr.String(), tc.wantDiagnostic)
 			}
 		})
 	}
@@ -459,15 +484,20 @@ func TestRunFailsClosedOnMalformedCheckboxOutsideFence(t *testing.T) {
 
 // TestRunAgainstLiveRepository is the guard's own dogfood test: run against
 // this actual repository (via --repo, never by chdir-ing away from the module
-// under test) and assert it reports exactly the two known stranded changes
-// documented at the time this guard was built, and none of the four
-// zero-checkbox planning-only changes.
+// under test) and assert only what stays true as the repository evolves.
 //
-// NOTE for future maintainers: this test WILL start failing the moment either
-// anti-generic-design-runtime-wiring or gadu-portable-operator is archived and
-// its capabilities promoted — that is progress, not a regression. When that
-// happens, update the "wantStranded" list below (removing the archived
-// change) rather than treating a failure here as a bug in the guard itself.
+// It used to pin the live scan by change NAME — it asserted that
+// anti-generic-design-runtime-wiring and gadu-portable-operator were reported
+// stranded. Both have since been archived, which is exactly the outcome this
+// guard exists to produce, and the test failed for it. That form was removed
+// rather than re-pointed at today's names: a test that breaks every time the
+// repository improves teaches its next reader to edit the expectation instead
+// of reading the failure, and the previous version's own failure message
+// invited precisely that ("update wantStranded above"). Names live in the
+// fixture tests above, where a name means something because the test created
+// it. What is left here is the part that does not rot: the guard runs to
+// completion against a real corpus, emits a verdict a human can parse, and its
+// exit code agrees with the lists it printed.
 func TestRunAgainstLiveRepository(t *testing.T) {
 	root := repoRoot(t)
 	if _, err := os.Stat(filepath.Join(root, "openspec", "changes")); err != nil {
@@ -477,23 +507,42 @@ func TestRunAgainstLiveRepository(t *testing.T) {
 	var stdout, stderr bytes.Buffer
 	got := run([]string{"--repo", root}, &stdout, &stderr)
 
-	wantStranded := []string{"anti-generic-design-runtime-wiring", "gadu-portable-operator"}
-	notStranded := []string{"skill-lifecycle", "skill-manifest-gen", "skill-package-manager", "skill-project-scope"}
+	switch got {
+	case outcomeClean, outcomeStranded, outcomeUndetermined:
+	default:
+		t.Fatalf("run() against the live repository = exit %d, which is not a scan verdict at all (want 0, 1, or 3); stdout=%q stderr=%q", got, stdout.String(), stderr.String())
+	}
 
-	if got != outcomeStranded {
-		t.Fatalf("run() against the live repository = exit %d, want %d (outcomeStranded); this test's expectations are stale if %v have already been archived — update wantStranded above rather than assuming a guard bug; stderr=%q",
-			got, outcomeStranded, wantStranded, stderr.String())
-	}
 	diagnostic := stderr.String()
-	for _, name := range wantStranded {
-		if !strings.Contains(diagnostic, name) {
-			t.Errorf("live-repository diagnostic %q does not mention %q; if this change was archived since this test was written, remove it from wantStranded above instead of treating this as a guard bug", diagnostic, name)
+	namedStranded := strings.Contains(diagnostic, "STRANDED change(s)")
+	namedUndetermined := strings.Contains(diagnostic, "UNDETERMINED change(s)")
+
+	// The verdict must be legible: every non-clean run says which kind of
+	// finding it made, and a clean run says clean on stdout and nothing on
+	// stderr.
+	if got == outcomeClean {
+		if diagnostic != "" {
+			t.Errorf("live run exited %d (outcomeClean) but wrote %q to stderr; a clean verdict must not carry findings", outcomeClean, diagnostic)
 		}
+		if !strings.Contains(stdout.String(), "clean") {
+			t.Errorf("live clean stdout %q does not say clean", stdout.String())
+		}
+		return
 	}
-	for _, name := range notStranded {
-		if strings.Contains(diagnostic, name) {
-			t.Errorf("live-repository diagnostic %q mentions planning-only change %q, want it never reported; if %q has since gained checked tasks this expectation is stale and must be updated, not silenced", diagnostic, name, name)
-		}
+	if !namedStranded && !namedUndetermined {
+		t.Fatalf("live run exited %d but its diagnostic %q names neither a stranded nor an undetermined list; the verdict is not parseable", got, diagnostic)
+	}
+
+	// The exit code must agree with what was printed. These are the two
+	// directions that would let the guard lie about its own completeness.
+	if namedUndetermined && got != outcomeUndetermined {
+		t.Errorf("live run printed an undetermined list but exited %d, want %d (outcomeUndetermined): naming a change it could not classify while exiting under any other code claims a completeness it does not have; stderr=%q", got, outcomeUndetermined, diagnostic)
+	}
+	if namedStranded && got == outcomeClean {
+		t.Errorf("live run printed a stranded list but exited %d (outcomeClean); stderr=%q", got, diagnostic)
+	}
+	if got == outcomeStranded && namedUndetermined {
+		t.Errorf("live run exited %d (outcomeStranded) with undetermined changes named; stranded must never outrank undetermined; stderr=%q", got, diagnostic)
 	}
 }
 
@@ -592,5 +641,199 @@ func TestRunAcceptsMarkdownLinkBullets(t *testing.T) {
 	if got := run([]string{"--repo", root}, &out, &errOut); got != outcomeStranded {
 		t.Fatalf("exit %d, want %d (outcomeStranded) — a markdown-link bullet must not be mistaken for a malformed checkbox; stdout=%q stderr=%q",
 			got, outcomeStranded, out.String(), errOut.String())
+	}
+}
+
+// zeroBulletsOtherMarkers is the shape four live changes in this repository
+// actually use: a real, complete task breakdown whose completion markers are
+// not bullet checkboxes at all. skill-lifecycle carries ten
+// "**Status**: [x] done" lines and zero bullet checkboxes.
+const zeroBulletsOtherMarkers = "# Tasks\n\n## T-01 first task\n**Status**: [x] done\n\n## T-02 second task\n**Status**: [x] done\n"
+
+// zeroCheckboxesOfAnyShape is the other unreadable shape: a full task
+// breakdown expressed as headings, with no checkbox-shaped marker anywhere.
+const zeroCheckboxesOfAnyShape = "# Tasks\n\n### T-01 first task\nDepends on: none.\n\n### T-02 second task\nDepends on: T-01.\n"
+
+// TestRunReportsZeroBulletCheckboxesWithOtherMarkersAsUndetermined pins the
+// core correction: total == 0 does not mean "planning-only", it means "no
+// bullet checkbox was found", and this guard cannot tell those apart. It must
+// report the change as undetermined and name the shape it actually observed
+// so the operator knows which kind of unreadable it is.
+func TestRunReportsZeroBulletCheckboxesWithOtherMarkersAsUndetermined(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "other-shape-change", zeroBulletsOtherMarkers)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with a zero-bullet change carrying other [x] markers = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	diagnostic := stderr.String()
+	if !strings.Contains(diagnostic, "other-shape-change") {
+		t.Errorf("undetermined diagnostic %q does not name the change", diagnostic)
+	}
+	if !strings.Contains(diagnostic, "2 other") {
+		t.Errorf("undetermined diagnostic %q does not report the 2 other [x]-shaped markers it observed", diagnostic)
+	}
+}
+
+// TestRunReportsNoCheckboxOfAnyShapeAsUndetermined pins the second observed
+// shape: a tasks.md with a real breakdown and no checkbox-shaped marker at
+// all is still unreadable to this parser, and still undetermined.
+func TestRunReportsNoCheckboxOfAnyShapeAsUndetermined(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "no-shape-change", zeroCheckboxesOfAnyShape)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with a change carrying no checkbox of any shape = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	diagnostic := stderr.String()
+	if !strings.Contains(diagnostic, "no-shape-change") {
+		t.Errorf("undetermined diagnostic %q does not name the change", diagnostic)
+	}
+	if !strings.Contains(diagnostic, "any shape") {
+		t.Errorf("undetermined diagnostic %q does not distinguish this from the other-marker shape", diagnostic)
+	}
+}
+
+// TestRunReportsEveryUndeterminedChangeNotJustTheFirst pins that the guard
+// collects undetermined changes instead of dying on the first: a guard that
+// names all of them is worth more than one that reports one and stops.
+func TestRunReportsEveryUndeterminedChangeNotJustTheFirst(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "undetermined-a", zeroBulletsOtherMarkers)
+	newChange(t, root, "undetermined-b", zeroCheckboxesOfAnyShape)
+	newChange(t, root, "undetermined-c", zeroCheckboxes)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with three undetermined changes = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	for _, name := range []string{"undetermined-a", "undetermined-b", "undetermined-c"} {
+		if !strings.Contains(stderr.String(), name) {
+			t.Errorf("undetermined diagnostic %q does not name %q; the guard stopped at the first instead of reporting all", stderr.String(), name)
+		}
+	}
+}
+
+// TestRunPrintsBothListsWhenUndeterminedAndStrandedCoexist pins that neither
+// list is suppressed by the other: the operator needs the stranded changes it
+// did find AND the ones it could not classify, in one run.
+func TestRunPrintsBothListsWhenUndeterminedAndStrandedCoexist(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "stranded-change", allChecked)
+	newChange(t, root, "undetermined-change", zeroBulletsOtherMarkers)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with one stranded and one undetermined = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	diagnostic := stderr.String()
+	if !strings.Contains(diagnostic, "stranded-change") {
+		t.Errorf("diagnostic %q drops the stranded list when something was undetermined", diagnostic)
+	}
+	if !strings.Contains(diagnostic, "undetermined-change") {
+		t.Errorf("diagnostic %q drops the undetermined list", diagnostic)
+	}
+	if !strings.Contains(diagnostic, "incomplete") {
+		t.Errorf("diagnostic %q does not say the stranded list is incomplete, which is the whole reason exit 3 outranks exit 1", diagnostic)
+	}
+}
+
+// TestRunUndeterminedOutranksStranded is the revert-proof assertion for the
+// exit precedence itself. It is deliberately separate from the both-lists
+// test above so that a later editor who "simplifies" the precedence back to
+// stranded-wins cannot make the suite pass by adjusting a message: the only
+// thing asserted here is that a scan carrying an undetermined change never
+// exits 1, because exit 1 means "here are the stranded ones" and that claims
+// a completeness an unclassified change denies.
+func TestRunUndeterminedOutranksStranded(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "stranded-change", allChecked)
+	newChange(t, root, "undetermined-change", zeroCheckboxesOfAnyShape)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got == outcomeStranded {
+		t.Fatalf("run() exited %d (outcomeStranded) with an undetermined change present; the stranded list is incomplete, so exit %d (outcomeUndetermined) is the only honest code", got, outcomeUndetermined)
+	}
+	if got != outcomeUndetermined {
+		t.Fatalf("run() = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+}
+
+// TestUnreadableTasksFileStaysAHardErrorNotAnUndeterminedEntry is the twin
+// check for the undetermined collection above. Both a missing tasks.md and an
+// unclassifiable one now exit 3, so it would be easy to quietly fold the first
+// into the second — and that would lose a real distinction. A missing file is
+// a broken change directory the operator must repair; a zero-checkbox file is
+// an intact change written in a shape this guard cannot read. They get
+// different messages and different remediations, and the missing-file case
+// still aborts the scan rather than joining a list.
+func TestUnreadableTasksFileStaysAHardErrorNotAnUndeterminedEntry(t *testing.T) {
+	root := t.TempDir()
+	mustMkdirAll(t, filepath.Join(root, "openspec", "changes", "broken-change"))
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with a missing tasks.md = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	diagnostic := stderr.String()
+	if !strings.Contains(diagnostic, "could not be read") {
+		t.Errorf("diagnostic %q lost the read error; a missing tasks.md must still report that the file could not be read, not be listed as an unreadable-shape change", diagnostic)
+	}
+	if strings.Contains(diagnostic, "UNDETERMINED change(s)") {
+		t.Errorf("diagnostic %q folded a missing tasks.md into the undetermined-shape list; it is a broken change directory, which is a different fact with a different fix", diagnostic)
+	}
+}
+
+// TestEmptyTasksFileIsUndetermined pins the other half of the twin: a
+// tasks.md that exists and is empty is readable, so it is not the hard error
+// above — but it carries no completion marker either, so it is undetermined
+// like any other zero-checkbox file rather than being waved through as clean.
+func TestEmptyTasksFileIsUndetermined(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "empty-tasks-change", "")
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with an empty tasks.md = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "any shape") {
+		t.Errorf("diagnostic %q does not report that no checkbox of any shape was found", stderr.String())
+	}
+}
+
+// TestRunCleanScanSaysSoWithoutOverclaiming pins the honest clean case: every
+// active change was classifiable and none was stranded, so exit 0 and say so.
+func TestRunCleanScanSaysSoWithoutOverclaiming(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "in-progress-one", someUnchecked)
+	newChange(t, root, "in-progress-two", someUnchecked)
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root}, &stdout, &stderr)
+
+	if got != outcomeClean {
+		t.Fatalf("run() with a fully classifiable, unstranded fixture = exit %d, want %d (outcomeClean); stderr=%q", got, outcomeClean, stderr.String())
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("clean run wrote %q to stderr, want nothing", stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "clean") {
+		t.Errorf("clean stdout %q does not say clean", stdout.String())
 	}
 }
