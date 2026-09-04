@@ -4,7 +4,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	iofs "io/fs"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -23,37 +23,47 @@ import (
 func exitCodeConstantsBySourceFile(t *testing.T) map[string][]string {
 	t.Helper()
 
-	fset := token.NewFileSet()
-	pkgs, err := parser.ParseDir(fset, ".", func(fi iofs.FileInfo) bool {
-		return !strings.HasSuffix(fi.Name(), "_test.go")
-	}, 0)
+	// The directory is walked and each file parsed on its own rather than
+	// through parser.ParseDir, which staticcheck rejects (SA1019): it has
+	// been deprecated since Go 1.25 for not honouring build tags. The
+	// alternative it names, golang.org/x/tools/go/packages, would add a
+	// dependency to this module to answer a question that needs no type
+	// information at all -- which files declare which constants.
+	entries, err := os.ReadDir(".")
 	if err != nil {
-		t.Fatalf("parse package sources: %v", err)
+		t.Fatalf("read package directory: %v", err)
 	}
 
+	fset := token.NewFileSet()
 	found := map[string][]string{}
-	for _, pkg := range pkgs {
-		for path, file := range pkg.Files {
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.CONST {
+	for _, entry := range entries {
+		path := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", path, err)
+		}
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.CONST {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, ok := spec.(*ast.ValueSpec)
+				if !ok {
 					continue
 				}
-				for _, spec := range gen.Specs {
-					value, ok := spec.(*ast.ValueSpec)
-					if !ok {
+				for i, name := range value.Names {
+					if !strings.HasPrefix(name.Name, "exit") || i >= len(value.Values) {
 						continue
 					}
-					for i, name := range value.Names {
-						if !strings.HasPrefix(name.Name, "exit") || i >= len(value.Values) {
-							continue
-						}
-						lit, ok := value.Values[i].(*ast.BasicLit)
-						if !ok || lit.Kind != token.INT {
-							continue
-						}
-						found[path] = append(found[path], name.Name+" = "+lit.Value)
+					lit, ok := value.Values[i].(*ast.BasicLit)
+					if !ok || lit.Kind != token.INT {
+						continue
 					}
+					found[path] = append(found[path], name.Name+" = "+lit.Value)
 				}
 			}
 		}
