@@ -4,9 +4,13 @@
 
 The parent orchestrator coordinates one native transaction; reviewers, refuters, correction actors, and validators receive only their provider-issued role input. Prompt prose never creates authority or decides delivery.
 
+## Entry rule
+
+Enter this lifecycle once per candidate, after an authorized source-mutating implementation is complete and normalized and before reporting it complete, whenever the user-owned review switch is enabled (`gentle-ai review mode status` reads it without changing it). Run the selectorless STATUS in step 1 and route only from its returned `next_transition`; the START consent envelope lets the human decide this candidate, so never skip the preflight because the user did not ask for a review. Skip it only for a trivial passive documentation-only edit, when the user explicitly left this candidate unreviewed, or while a transaction is already bound to it. A runtime that runs this preflight itself hands the agent the exact returned START tokens and never runs START.
+
 ## Atomic lifecycle
 
-1. **Preflight only.** Selectorless STATUS only preflights the current worktree candidate and returns one exact START invocation. It never discovers, resumes, recovers, or evaluates ambient authority from another lineage or worktree: `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent codex --next-transition`.
+1. **Preflight only.** Selectorless STATUS only preflights the current worktree candidate and returns one exact START invocation. It never discovers, resumes, recovers, or evaluates ambient authority from another lineage or worktree: `gentle-ai review status --cwd <repo> --contract gentle-ai.review-integration/v2 --agent claude-code --next-transition`.
 
 2. **Freeze once.** Invoke only the returned START operation and its ordered tokens unchanged. START freezes one compact atomic transaction with an explicit lineage, worktree, and target binding. It ignores every other lineage and worktree. Capture the returned lineage, revision, and target tokens. An exact replay of an active START may return `replayed`; a genuinely new START is independent.
 

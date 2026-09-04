@@ -4,7 +4,7 @@ description: >
   Initialize Spec-Driven Development context in a project. Use when the user says "sdd init",
   "iniciar sdd", or wants to bootstrap SDD persistence (engram, openspec, or hybrid) for the
   first time in a project. Detects tech stack and writes the skill registry.
-model: opus
+model: sonnet
 tools: Read, Edit, Write, Glob, Grep, Bash, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__engram__mem_update, mcp__plugin_engram_engram__mem_update, mcp__codegraph__codegraph_explore
 ---
 
