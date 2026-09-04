@@ -126,6 +126,51 @@ sdd-spec/SKILL.md managed
 	}
 }
 
+// TestDeployableManifestPaths_RejectsOneColumnLongtermMemRow pins WARNING-2
+// from the verify report: a longterm-mem/** row with only a path and no
+// other field (no tag, no route) must be rejected the same way bash's
+// route_reject_unrouted_longterm_mem rejects it, not silently skipped by the
+// generic "fewer than two fields" rule that applies to every other path
+// prefix. Bash's all_tracked_files (awk '{print $1}') still emits such a row,
+// and route_resolve's awk lookup still resolves an empty (undefaulted) third
+// column for it, so route_reject_unrouted_longterm_mem still fires and exits
+// 1 naming the row — Go must reach the same outcome.
+func TestDeployableManifestPaths_RejectsOneColumnLongtermMemRow(t *testing.T) {
+	const manifest = `longterm-mem/only-one-field
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err == nil {
+		t.Fatalf("DeployableManifestPaths: expected an error for a one-column longterm-mem/** row, got nil (paths=%v)", got)
+	}
+	if !strings.Contains(err.Error(), "longterm-mem/only-one-field") {
+		t.Errorf("DeployableManifestPaths: error must name the rejected row, got: %v", err)
+	}
+	if _, ok := got["longterm-mem/only-one-field"]; ok {
+		t.Errorf("DeployableManifestPaths: a one-column longterm-mem row must never resolve to a skills-destination path, got: %v", got)
+	}
+}
+
+// TestDeployableManifestPaths_OneColumnRowStillSkippedForOtherPrefixes proves
+// the fix above is scoped to longterm-mem/** only: a one-column row under any
+// other path prefix is still silently skipped by the pre-existing
+// whole-manifest "fewer than two fields" rule, exactly as before.
+func TestDeployableManifestPaths_OneColumnRowStillSkippedForOtherPrefixes(t *testing.T) {
+	const manifest = `sdd-spec/only-one-field
+sdd-spec/SKILL.md managed
+`
+	got, err := DeployableManifestPaths(strings.NewReader(manifest))
+	if err != nil {
+		t.Fatalf("DeployableManifestPaths: unexpected error: %v", err)
+	}
+	if _, ok := got["sdd-spec/only-one-field"]; ok {
+		t.Errorf("DeployableManifestPaths: a one-column row outside longterm-mem/** must still be silently skipped, got: %v", got)
+	}
+	if _, ok := got["sdd-spec/SKILL.md"]; !ok {
+		t.Errorf("DeployableManifestPaths: the following well-formed row must still parse, got: %v", got)
+	}
+}
+
 // TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute
 // proves the guard is scoped exactly to the four-value route domain: every
 // recognized route on a longterm-mem/** row parses without error (a

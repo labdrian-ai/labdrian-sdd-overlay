@@ -58,18 +58,21 @@ var validLongtermMemRoutes = map[string]bool{
 // It mirrors route_resolve in bin/labdrian-overlay, which is the single source of
 // truth for row → routing:
 //   - Blank lines and lines starting with '#' are skipped.
-//   - A row needs at least two fields; the first is the path.
+//   - A row needs at least two fields; the first is the path. This applies to
+//     every path prefix except longterm-mem/** — see below.
 //   - A third column of "agent", "opencode-agent", or "mcp" routes outside
 //     skills/. Any other third-column value falls through to the skill route.
 //   - On the skill route, a path with no '/' is a root-level bookkeeping row and
 //     a path whose first segment is "engine" is overlay infra. Both are tracked
 //     for diff purposes only and are never deployed.
 //
-// One case is REJECTED rather than falling through: a row whose path is under
-// longterm-mem/** with a missing or unrecognized third column (R-012 in
-// overlay-agent-route, traces longterm-mem R-035). Mirrors
-// route_reject_unrouted_longterm_mem in bin/labdrian-overlay — that guard is
-// the single source of truth this one is kept in sync with (see
+// One case is REJECTED rather than falling through, and is checked BEFORE the
+// "at least two fields" rule above so it also catches a one-column row (path
+// only, no tag): a row whose path is under longterm-mem/** with a missing or
+// unrecognized third column (R-012 in overlay-agent-route, traces
+// longterm-mem R-035). Mirrors route_reject_unrouted_longterm_mem in
+// bin/labdrian-overlay — that guard is the single source of truth this one is
+// kept in sync with (see
 // TestRouteDomain_MatchesBashAndGo).
 func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 	paths := make(map[string]struct{})
@@ -80,7 +83,7 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 			continue
 		}
 		fields := strings.Fields(line)
-		if len(fields) < 2 {
+		if len(fields) == 0 {
 			continue
 		}
 		rowPath := fields[0]
@@ -90,11 +93,24 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 			routeRaw = fields[2]
 		}
 
+		// The longterm-mem/** route-domain guard must see every row with this
+		// prefix, including a one-column row (path only, no tag). Mirrors
+		// bash: all_tracked_files (awk '{print $1}') still emits such a row,
+		// and route_resolve's awk lookup for the third field still resolves
+		// to an empty (undefaulted) string for it, so
+		// route_reject_unrouted_longterm_mem still fires. This check must
+		// therefore run BEFORE the generic "fewer than two fields" skip
+		// below, which otherwise applies identically to every path prefix
+		// and must not change for anything other than longterm-mem/**.
 		if strings.HasPrefix(rowPath, "longterm-mem/") && !validLongtermMemRoutes[routeRaw] {
 			if routeRaw == "" {
 				return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares no route (missing third column); must be one of: skill, agent, opencode-agent, mcp", rowPath)
 			}
 			return nil, fmt.Errorf("ondisk: manifest row %q under longterm-mem/** declares an unrecognized route %q; must be one of: skill, agent, opencode-agent, mcp", rowPath, routeRaw)
+		}
+
+		if len(fields) < 2 {
+			continue
 		}
 
 		if nonSkillRoutes[routeRaw] {
