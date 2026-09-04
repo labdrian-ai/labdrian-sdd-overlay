@@ -65,11 +65,17 @@ func (a Action) usesTargets() bool {
 }
 
 // Actions returns the action menu in display order: Estado, then sync-check,
-// then capture, then apply (the natural usage flow), then repo maintenance
-// (self-update), then the hooks lifecycle, then skills. Related read-only
-// sub-actions (status-hooks; skills validate/list) are folded into their
-// primary entry via Also instead of appearing as separate top-level menu
+// then capture, then apply (the natural usage flow), then restore, then repo
+// maintenance (self-update), then the hooks lifecycle, then skills, then the
+// longterm-mem lifecycle (status, install, uninstall). Related read-only
+// sub-actions (status-hooks, version; skills validate/list) are folded into
+// their primary entry via Also instead of appearing as separate top-level menu
 // rows.
+//
+// This comment enumerates the menu order, so it is part of the menu: adding,
+// removing or moving a row without amending it here leaves a record that no
+// longer describes what it records. TestActionMenuShapeAndOrder pins the same
+// sequence as Command+Args.
 func Actions() []Action {
 	return []Action{
 		{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true,
@@ -146,6 +152,40 @@ func Actions() []Action {
 				{Command: "skills", Args: []string{"validate"}, TargetAgnostic: true},
 				{Command: "skills", Args: []string{"list"}, TargetAgnostic: true},
 			}},
+		// longterm-mem lifecycle — the MCP server that writes an
+		// ownership-tagged entry into each runtime's OWN configuration file
+		// and manages the Obsidian vault. It installs today as a side effect
+		// of `apply` (overlay.manifest routes it through the mcp step), so
+		// without these rows the operator gets the writes and no way to see
+		// them. All three are target-using: cmd_longterm_mem validates the
+		// positional subcommand first, then resolves --target for every one of
+		// them (defaulting to "all") -- hence TargetAgnostic false and
+		// SupportsAll true on all three. Setting either the other way makes
+		// the TUI hand the backend an invocation it rejects.
+		//
+		// --purge is deliberately NOT exposed here, on any row. It deletes the
+		// SHARED binary that runtimes still registered against it depend on,
+		// the TUI has no second-level destructive confirmation to put in front
+		// of that, and a one-keystroke path to it from a menu is not
+		// proportionate to what it does. It stays a deliberate CLI act.
+		// TestNoActionPassesPurge keeps this omission deliberate.
+		{Name: "Memoria: estado", Command: "longterm-mem", Args: []string{"status"},
+			Mutating: false, SupportsAll: true,
+			Hint: "Registro MCP de longterm-mem por runtime"},
+		{Name: "Memoria: instalar", Command: "longterm-mem", Args: []string{"install"},
+			Mutating: true, SupportsAll: true,
+			ConfirmMessage: "Compila el binario de longterm-mem, lo despliega en el directorio de estado del overlay\n" +
+				"y escribe una entrada MCP con marca de propiedad en la configuración propia de cada\n" +
+				"runtime seleccionado (Claude Code, opencode, codex). Antes de modificar cualquier\n" +
+				"configuración se escribe un respaldo .bak junto al archivo.",
+			Hint: "Compila, despliega y registra el MCP en cada runtime"},
+		{Name: "Memoria: desinstalar", Command: "longterm-mem", Args: []string{"uninstall"},
+			Mutating: true, SupportsAll: true,
+			ConfirmMessage: "Elimina únicamente la entrada MCP con marca de propiedad de cada runtime seleccionado.\n" +
+				"Una entrada que longterm-mem no posee se deja intacta y se reporta como no gestionada.\n" +
+				"El binario compartido sobrevive a una desinstalación parcial: solo se elimina al\n" +
+				"desinstalar todos los runtimes, o con --purge desde la CLI (no disponible aquí).",
+			Hint: "Quita la entrada MCP propia de cada runtime"},
 	}
 }
 
@@ -465,7 +505,31 @@ type commandResult struct {
 	exitCode int
 }
 
+// prefix returns the invariant head of every invocation this action produces:
+// its subcommand followed by its positional Args.
+//
+// It allocates a new slice per call, which is what makes appending --target
+// to the result safe -- but note that this is a property of the CALL SITE,
+// not of the exact capacity requested: buildArgSets calls prefix inside its
+// per-target loop, so each target already gets its own array whatever
+// capacity is asked for. An earlier version of this comment claimed the
+// zero-spare-capacity sizing was itself load-bearing against one target
+// overwriting another's flag. It is not, nothing observes capacity, and no
+// test could have caught the claim being wrong -- which is exactly the kind
+// of confident-but-unverifiable record this repository has spent an audit
+// removing. Reuse prefix per target; do not hoist the call out of the loop.
+func prefix(action Action) []string {
+	out := make([]string, 0, len(action.Args)+1)
+	out = append(out, action.Command)
+	return append(out, action.Args...)
+}
+
 // buildArgSets constructs the argument sets to pass to the backend binary.
+//
+// Positional Args survive every route, not just the TargetAgnostic one: a
+// subcommand like `longterm-mem status` is positional and is validated by the
+// backend BEFORE it parses --target, so dropping it on the target-using routes
+// would send the backend a bare `longterm-mem --target all` that it refuses.
 //
 // Routing priority:
 //  1. TargetAgnostic: single invocation with NO --target. The three hooks
@@ -481,13 +545,13 @@ type commandResult struct {
 func buildArgSets(action Action, selected []Target, allSelected bool) [][]string {
 	switch {
 	case action.TargetAgnostic:
-		return [][]string{append([]string{action.Command}, action.Args...)}
+		return [][]string{prefix(action)}
 	case action.SupportsAll && allSelected:
-		return [][]string{{action.Command, "--target", "all"}}
+		return [][]string{append(prefix(action), "--target", "all")}
 	default:
 		var sets [][]string
 		for _, t := range selected {
-			sets = append(sets, []string{action.Command, "--target", t.Name})
+			sets = append(sets, append(prefix(action), "--target", t.Name))
 		}
 		return sets
 	}

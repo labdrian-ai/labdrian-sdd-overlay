@@ -1478,25 +1478,35 @@ func TestAllArgSetsSkillsActionComposition(t *testing.T) {
 	}
 }
 
-// TestActionMenuShapeAndOrder locks in the 11->7 simplification (now 9 with
-// this slice's "restore" addition): top-level actions in the order matching
+// TestActionMenuShapeAndOrder locks in the 11->7 simplification (now 12: 9
+// plus the three longterm-mem rows): top-level actions in the order matching
 // the "Verificar → Capturar → Aplicar → Restaurar" flow copy (viewActions),
 // with Capturar coming before Aplicar and restore immediately after apply
-// (R-011: a recovery action belongs next to the deploy action it undoes).
+// (R-011: a recovery action belongs next to the deploy action it undoes), and
+// the longterm-mem block last, after skills.
+//
+// The sequence is compared as Command+Args, not Command alone: the three
+// longterm-mem entries share one Command and are distinguished only by their
+// positional subcommand, so a Command-keyed comparison would accept them in
+// any order — including status after uninstall.
 func TestActionMenuShapeAndOrder(t *testing.T) {
 	actions := Actions()
-	if len(actions) != 9 {
-		t.Fatalf("expected 9 top-level actions, got %d: %v", len(actions), actions)
+	if len(actions) != 12 {
+		t.Fatalf("expected 12 top-level actions, got %d: %v", len(actions), actions)
 	}
 
-	want := []string{"status", "sync-check", "capture", "apply", "restore", "self-update", "install-hooks", "uninstall-hooks", "skills"}
+	want := []string{
+		"status", "sync-check", "capture", "apply", "restore", "self-update",
+		"install-hooks", "uninstall-hooks", "skills status",
+		"longterm-mem status", "longterm-mem install", "longterm-mem uninstall",
+	}
 	got := make([]string, len(actions))
 	for i, a := range actions {
-		got[i] = a.Command
+		got[i] = strings.Join(append([]string{a.Command}, a.Args...), " ")
 	}
 	for i, w := range want {
 		if got[i] != w {
-			t.Errorf("action %d: Command = %q, want %q (full sequence: %v)", i, got[i], w, got)
+			t.Errorf("action %d: Command+Args = %q, want %q (full sequence: %v)", i, got[i], w, got)
 		}
 	}
 }
@@ -2371,5 +2381,228 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 	}
 	if len(done.result.targets) != 1 || done.result.targets[0].Name != "claude" {
 		t.Errorf("runBackend invoked against targets = %+v, want exactly [claude]", done.result.targets)
+	}
+}
+
+// ---------------------------------------------------------------------------
+// longterm-mem menu surface: status / install / uninstall.
+//
+// These three entries share one Command and differ only in Args, so every
+// helper below keys by Command+Args. A byCmd-style map keyed on Command alone
+// would silently assert against whichever of the three landed last.
+// ---------------------------------------------------------------------------
+
+// findActionByCommandArgs returns the top-level action whose Command and Args
+// both match, failing the test when no such entry exists.
+func findActionByCommandArgs(t *testing.T, command string, args ...string) Action {
+	t.Helper()
+	want := strings.Join(append([]string{command}, args...), " ")
+	for _, a := range Actions() {
+		if strings.Join(append([]string{a.Command}, a.Args...), " ") == want {
+			return a
+		}
+	}
+	t.Fatalf("Actions() must contain an entry %q", want)
+	return Action{}
+}
+
+// TestLongtermMemActionsRegistered pins the three longterm-mem entries and,
+// above all, the two fields the backend actually validates: cmd_longterm_mem
+// resolves --target for all three subcommands (so none of them is
+// TargetAgnostic) and defaults it to "all" (so all three accept --target all).
+func TestLongtermMemActionsRegistered(t *testing.T) {
+	cases := []struct {
+		verb     string
+		mutating bool
+		confirm  bool
+	}{
+		{verb: "status", mutating: false, confirm: false},
+		{verb: "install", mutating: true, confirm: true},
+		{verb: "uninstall", mutating: true, confirm: true},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.verb, func(t *testing.T) {
+			a := findActionByCommandArgs(t, "longterm-mem", tc.verb)
+			if a.TargetAgnostic {
+				t.Errorf("longterm-mem %s must have TargetAgnostic: false (the backend resolves --target for it)", tc.verb)
+			}
+			if !a.SupportsAll {
+				t.Errorf("longterm-mem %s must have SupportsAll: true (the backend defaults --target to all)", tc.verb)
+			}
+			if a.Mutating != tc.mutating {
+				t.Errorf("longterm-mem %s Mutating = %v, want %v", tc.verb, a.Mutating, tc.mutating)
+			}
+			if tc.confirm && a.ConfirmMessage == "" {
+				t.Errorf("longterm-mem %s must carry a non-empty ConfirmMessage", tc.verb)
+			}
+			if a.Name == "" {
+				t.Errorf("longterm-mem %s must have a non-empty Name", tc.verb)
+			}
+			if a.Hint == "" {
+				t.Errorf("longterm-mem %s must have a non-empty Hint", tc.verb)
+			}
+		})
+	}
+}
+
+// TestLongtermMemStatusHintNamesRegistration keeps the read-only entry's hint
+// from degenerating into a bare "estado": the whole point of this row is that
+// the operator learns the per-runtime MCP registration state.
+func TestLongtermMemStatusHintNamesRegistration(t *testing.T) {
+	a := findActionByCommandArgs(t, "longterm-mem", "status")
+	hint := strings.ToLower(a.Hint)
+	for _, want := range []string{"mcp", "runtime"} {
+		if !strings.Contains(hint, want) {
+			t.Errorf("longterm-mem status Hint must mention %q, got %q", want, a.Hint)
+		}
+	}
+}
+
+// TestLongtermMemConfirmMessagesNameConsequences asserts on substance, not on
+// prose: a confirm screen that says nothing specific is the same as no confirm
+// screen. install must name that each runtime's own configuration is written
+// and that a backup precedes it; uninstall must name that the shared binary
+// survives a partial uninstall, and the one flag that does remove it.
+// The first version of this test required only the WORDS "binario" and
+// "--purge" on the uninstall message. An adversarial re-verification proved
+// that admits a message asserting the OPPOSITE: "Elimina el binario
+// compartido y todas las entradas. Ver --purge." contains both keywords and
+// passed. That is the dangerous direction of the error -- the operator would
+// be told the shared binary is deleted when it survives -- so the guard was
+// certifying vocabulary while claiming to certify consequences.
+//
+// These assertions pin CLAIMS instead: a phrase an inverted message cannot
+// carry while meaning its opposite, plus an explicit rejection of the
+// inversion's own wording. A keyword list can be satisfied by prose that
+// means anything; a claim cannot.
+func TestLongtermMemConfirmMessagesNameConsequences(t *testing.T) {
+	t.Run("install", func(t *testing.T) {
+		msg := strings.ToLower(findActionByCommandArgs(t, "longterm-mem", "install").ConfirmMessage)
+		// The consequence is WHOSE files change and that they are backed up
+		// first -- not that the word "configuración" appears somewhere.
+		for _, want := range []string{
+			"configuración propia de cada",
+			"respaldo .bak",
+		} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("install ConfirmMessage must claim %q, got:\n%s", want, msg)
+			}
+		}
+	})
+
+	t.Run("uninstall", func(t *testing.T) {
+		msg := strings.ToLower(findActionByCommandArgs(t, "longterm-mem", "uninstall").ConfirmMessage)
+		// The whole point of this screen is the non-obvious semantics: only
+		// the owned entry goes, and the shared binary stays.
+		for _, want := range []string{
+			"únicamente la entrada",
+			"binario compartido sobrevive",
+			"--purge",
+		} {
+			if !strings.Contains(msg, want) {
+				t.Errorf("uninstall ConfirmMessage must claim %q, got:\n%s", want, msg)
+			}
+		}
+		// And it must not say the opposite. This is the assertion the
+		// keyword-only version lacked: it is what makes the inverted message
+		// the re-verifier wrote fail instead of pass.
+		for _, forbidden := range []string{
+			"elimina el binario",
+			"borra el binario",
+			"no sobrevive",
+		} {
+			if strings.Contains(msg, forbidden) {
+				t.Errorf("uninstall ConfirmMessage must not claim %q -- the shared binary survives a partial uninstall, and telling the operator otherwise is the more dangerous error; got:\n%s", forbidden, msg)
+			}
+		}
+	})
+}
+
+// TestLongtermMemActionsRenderUnderTheirOwnHeader pins the one record the
+// operator actually reads.
+//
+// viewActions emits a section header only at i==0, at the first
+// TargetAgnostic row, and at the first "skills" row. The longterm-mem rows
+// match none of those, so before this guard they rendered UNDER "── Skills ──"
+// — an MCP server that edits three runtime configuration files, filed by the
+// menu as a skill, while Actions()' doc comment and the code comment beside
+// the group both called it a separate lifecycle. Two records said one thing
+// and the screen said another; only the screen is read.
+func TestLongtermMemActionsRenderUnderTheirOwnHeader(t *testing.T) {
+	m := model{actions: Actions(), width: 100, height: 40}
+	out := m.viewActions()
+
+	memHeader := strings.Index(out, "── Memoria ──")
+	if memHeader < 0 {
+		t.Fatalf("action menu has no ── Memoria ── header, so the longterm-mem rows inherit whichever section precedes them:\n%s", out)
+	}
+	firstRow := strings.Index(out, "Memoria: estado")
+	if firstRow < 0 {
+		t.Fatalf("action menu does not render the longterm-mem status row:\n%s", out)
+	}
+	if memHeader > firstRow {
+		t.Errorf("── Memoria ── renders AFTER the first longterm-mem row, so the rows still inherit the previous section:\n%s", out)
+	}
+	// The header must sit between the skills section and the memory rows —
+	// otherwise it exists but the grouping it claims does not.
+	if skills := strings.Index(out, "── Skills ──"); skills >= 0 && skills > memHeader {
+		t.Errorf("── Skills ── renders after ── Memoria ──; the group order does not match Actions():\n%s", out)
+	}
+}
+
+// TestNoActionPassesPurge keeps the deliberate omission deliberate: --purge
+// deletes the shared binary other runtimes may still be registered against,
+// and the TUI has no second-level destructive confirmation. It stays a CLI
+// act, and no later editor gets to "complete" the menu with it.
+func TestNoActionPassesPurge(t *testing.T) {
+	check := func(a Action, where string) {
+		for _, arg := range a.Args {
+			if arg == "--purge" {
+				t.Errorf("%s must not pass --purge (Args = %v)", where, a.Args)
+			}
+		}
+	}
+	for _, a := range Actions() {
+		check(a, fmt.Sprintf("top-level action %q", a.Name))
+		for _, sub := range a.Also {
+			check(sub, fmt.Sprintf("Also entry under %q", a.Name))
+		}
+	}
+}
+
+// TestAllArgSetsLongtermMemComposition pins the actual argv the TUI would run:
+// the positional subcommand must survive target routing (cmd_longterm_mem
+// validates it before parsing any flag), --target must be passed, and
+// --target all must be used when every target is selected.
+func TestAllArgSetsLongtermMemComposition(t *testing.T) {
+	targets := []Target{{Name: "claude", Path: "/a"}, {Name: "opencode", Path: "/b"}}
+
+	for _, verb := range []string{"status", "install", "uninstall"} {
+		a := findActionByCommandArgs(t, "longterm-mem", verb)
+
+		t.Run(verb+"/all targets", func(t *testing.T) {
+			sets := allArgSets(a, AllTargets(), true)
+			want := [][]string{{"longterm-mem", verb, "--target", "all"}}
+			if len(sets) != len(want) || strings.Join(sets[0], " ") != strings.Join(want[0], " ") {
+				t.Fatalf("allArgSets = %v, want %v", sets, want)
+			}
+		})
+
+		t.Run(verb+"/subset", func(t *testing.T) {
+			sets := allArgSets(a, targets, false)
+			want := [][]string{
+				{"longterm-mem", verb, "--target", "claude"},
+				{"longterm-mem", verb, "--target", "opencode"},
+			}
+			if len(sets) != len(want) {
+				t.Fatalf("allArgSets = %v, want %v", sets, want)
+			}
+			for i := range want {
+				if strings.Join(sets[i], " ") != strings.Join(want[i], " ") {
+					t.Errorf("arg set %d = %v, want %v", i, sets[i], want[i])
+				}
+			}
+		})
 	}
 }

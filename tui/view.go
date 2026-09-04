@@ -369,6 +369,20 @@ func (m model) viewActions() string {
 		if a.Command == "skills" && (i == 0 || m.actions[i-1].Command != "skills") {
 			b.WriteString("\n" + sectionStyle.Render("── Skills ──") + "\n")
 		}
+		// Memory group header before the first longterm-mem action.
+		//
+		// Without this clause the longterm-mem rows inherit the Skills
+		// section: viewActions emits a header only at i==0, at the first
+		// TargetAgnostic row, and at the first "skills" row, and these rows
+		// match none of the three. The menu would then label an MCP server
+		// that edits three runtime configuration files as "Skills" -- while
+		// Actions()' own doc comment and the code comment beside the group
+		// both call it a separate lifecycle. Of those three records only
+		// this one is read by the operator, so it is the one that has to be
+		// true.
+		if a.Command == "longterm-mem" && (i == 0 || m.actions[i-1].Command != "longterm-mem") {
+			b.WriteString("\n" + sectionStyle.Render("── Memoria ──") + "\n")
+		}
 
 		cursor := "  "
 		if i == m.aCursor {
