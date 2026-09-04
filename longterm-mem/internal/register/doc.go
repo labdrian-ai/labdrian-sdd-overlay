@@ -24,9 +24,13 @@
 //   - recordPresent: does install-state.json have an ownership record for
 //     this target?
 //
-//   - entryOwned: are the bytes currently on disk byte-identical to the
-//     entry this call is about to write? Only longterm-mem produces that
-//     exact entry, so this re-derives ownership when the record is gone.
+//   - entryOwned: is the entry currently on disk the one this call is
+//     about to write, compared through the canonical ownership
+//     fingerprint (ownership.go: key order and insignificant whitespace
+//     dropped for JSON, trailing newlines trimmed for TOML)? Only
+//     longterm-mem produces that entry, so this re-derives ownership when
+//     the record is gone — and it answers exactly as engine/runtime's
+//     read-only adapter does about the same file, which is the point.
 //
 //   - fingerprintMatches: does that record's fingerprint match the entry
 //     this call is about to write (not necessarily the bytes on disk —
@@ -42,8 +46,9 @@
 //
 // The adopt row is what keeps a lost install-state.json recoverable: see
 // Decide's own doc comment for why re-deriving ownership from the entry's
-// bytes is safe, and writer.go's uninstallCannotDeriveOwnership for the
-// one direction that deliberately does not do it.
+// canonical content is safe, and writer.go's
+// uninstallCannotDeriveOwnership for the one direction that deliberately
+// does not do it.
 //
 // This is the single source of truth for what "installed"/"stale"/
 // "conflict" mean everywhere those words are used across this package's

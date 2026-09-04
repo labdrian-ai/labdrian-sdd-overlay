@@ -77,7 +77,9 @@ func (k ActionKind) String() string {
 //     different revision than the one on disk, so the two are supposed to
 //     differ. isOwnUnrecordedUpdate settles that case from the page's own
 //     engram_revision standing ahead of the revision the entry records --
-//     a field only our own writes advance.
+//     a field only our own writes advance -- corroborated by the body's
+//     promotion footer and by the frontmatter around the handful of lines
+//     two of our own renders may legitimately disagree on.
 //
 // Neither reconciliation ever adopts a page level with its entry's recorded
 // revision and diverged in content: that is a human's edit, and preserving
@@ -215,25 +217,29 @@ func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
 // stays a refusal, since preserving that edit is the entire purpose of the
 // branch this sits in.
 //
-// Three conditions, all required, and each fails closed:
+// Every one of these is required, and each fails closed:
 //
-//   - The entry records a revision at all. A zero is an entry written
-//     before the field existed (or a status-only patch that inherited
-//     one), which is no evidence, not "revision 0".
-//   - The page's revision is above the entry's and no higher than the
-//     incoming render's. A page claiming a revision Engram itself has not
-//     reached is not a render we could have produced.
+//   - Both renders name a revision, and revisionsAllowAdoption accepts the
+//     pair against the entry (see there: the recorded and legacy entries
+//     have different evidence available and are judged separately).
 //   - The body ends in the promotion footer for the observation and the
-//     exact revision the page claims. Corroboration, not proof: it costs
-//     nothing and catches an appended note, a truncation or a replaced
-//     body, but an edit buried mid-body still leaves the footer intact.
-//     The fingerprint that could have separated those two is precisely
-//     what the interruption destroyed, so the residual ambiguity is
-//     irreducible -- narrowing it is the most that is available.
+//     exact revision the page claims. That catches an appended note, a
+//     truncation or a replaced body.
+//   - The frontmatter, normalized by corroboratingFrontmatter, is the block
+//     this very promotion would render. That catches every key a human
+//     added, changed or deleted outside the handful of lines that
+//     legitimately differ between two of our own renders -- which is what
+//     the footer check alone does NOT catch, and the reason a
+//     frontmatter-only edit inside this window used to be adopted and
+//     overwritten while the run reported action=updated.
+//
+// What remains uncorroborated is an edit buried MID-BODY (the footer
+// survives it, and the body has no second witness) and an edit confined to
+// the created/updated/status/related lines corroboratingFrontmatter has to
+// blank. The fingerprint that would have separated those from our own write
+// is precisely what the interruption destroyed, so that residual is real --
+// but it is a residual, not the whole frontmatter.
 func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Page) bool {
-	if entry.PromotedRevision <= 0 {
-		return false
-	}
 	onDisk, ok := frontmatterRevision(fmBlock)
 	if !ok {
 		return false
@@ -242,14 +248,59 @@ func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Pag
 	if !ok {
 		return false
 	}
-	if onDisk <= entry.PromotedRevision || onDisk > incoming {
+	if !revisionsAllowAdoption(entry, fmBlock, onDisk, incoming) {
 		return false
 	}
 	obsID, ok := frontmatterEngramID(page.Frontmatter)
 	if !ok {
 		return false
 	}
-	return strings.HasSuffix(body, promotionFooter(obsID, onDisk))
+	if !strings.HasSuffix(body, promotionFooter(obsID, onDisk)) {
+		return false
+	}
+	return corroboratingFrontmatter(fmBlock) == corroboratingFrontmatter(page.Frontmatter)
+}
+
+// revisionsAllowAdoption reports whether the revision the page on disk
+// claims can be attributed to one of OUR interrupted writes rather than to
+// a human, given what the entry records. The two entry shapes carry
+// different evidence, so they are judged separately.
+//
+// A RECORDED entry names the revision it fingerprinted, which is the strong
+// case: the page has to stand strictly above it (only our own renders
+// advance engram_revision, so a page level with the entry was changed by
+// someone else) and no higher than the render coming in (a page claiming a
+// revision Engram itself has not reached is not a render we could have
+// produced).
+//
+// A LEGACY entry -- hashes only, no revision -- is the population the rule
+// above cannot reach at all, and reaching it matters because the state is
+// otherwise permanent: an entry with no revision refuses its page, the
+// refusal is a skip, and a skip suppresses the very Save through which
+// entryFor would have given the entry a revision. Engram then moves on and
+// every later run repeats the same refusal -- a fixed point nothing in the
+// promotion path itself can leave, however many revisions go by.
+//
+// The evidence such an entry still has is its FRONTMATTER hash. Every
+// render puts engram_revision in the frontmatter, so an update of ours
+// always moves that hash; an entry whose frontmatter hash still matches the
+// page therefore has a divergence confined to the body, and only a human
+// puts one there. Adoption additionally requires the page to stand STRICTLY
+// behind the incoming render: at the same revision our own write would have
+// been the incoming bytes modulo the wall-clock stamps, so
+// isOwnUnrecordedWrite would already have adopted it, and a divergence that
+// survives that comparison is the human's.
+//
+// The legacy path is deliberately the more conservative of the two. It
+// refuses one state the recorded path adopts: an interrupted update that
+// Propagate has since status-patched, because Propagate re-records the
+// frontmatter hash of the block it just wrote. That is a false refusal, and
+// it is reported rather than silent.
+func revisionsAllowAdoption(entry PrecedenceEntry, fmBlock string, onDisk, incoming int) bool {
+	if entry.PromotedRevision > 0 {
+		return onDisk > entry.PromotedRevision && onDisk <= incoming
+	}
+	return onDisk < incoming && entry.FrontmatterHash != hashText(fmBlock)
 }
 
 // frontmatterEngramID reads a frontmatter block's engram_id, failing the
@@ -273,15 +324,90 @@ func frontmatterEngramID(fmBlock string) (int64, bool) {
 // line untouched. It is only ever applied to a frontmatter block, never to
 // a body, so body prose opening with "created: " cannot be normalized away.
 func withoutVolatileStamps(fmBlock string) string {
+	return blankFrontmatterValues(fmBlock, volatileFrontmatterFields[:]...)
+}
+
+// corroboratingFrontmatter reduces a frontmatter block to the part two of
+// our OWN renders, of two DIFFERENT revisions of the same observation, must
+// still agree on -- so that comparing the page on disk against the incoming
+// render is a real test of "did this block come out of Render()" rather
+// than a comparison guaranteed to fail.
+//
+// Exactly four kinds of line are blanked, and nothing else is:
+//
+//   - created and updated, the two stamps EmitPage takes from the wall
+//     clock (withoutVolatileStamps).
+//   - engram_revision, which differs by construction: the whole premise of
+//     this reconciliation is that the page holds an older revision than the
+//     one now being rendered.
+//   - status and related, the two lines Propagate (R-033) rewrites in place
+//     on a page it never re-bodies, recording only the patched block's
+//     hash. A page can therefore legitimately carry a status/related the
+//     incoming render does not.
+//
+// Every other key keeps its value, and a key present in one block and
+// absent from the other still differs -- which is what makes a human's
+// added, changed or deleted frontmatter key visible here.
+func corroboratingFrontmatter(fmBlock string) string {
+	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock), engramRevisionField, statusField)
+	return blankFrontmatterListSection(normalized, relatedField)
+}
+
+// blankFrontmatterValues blanks the value of every `key: ...` line in a
+// frontmatter block whose key is one of keys, leaving the key itself (so a
+// page that dropped the field entirely still differs from one that carries
+// it) and every other line untouched. It is only ever applied to a
+// frontmatter block, never to a body, so body prose opening with
+// "created: " cannot be normalized away.
+func blankFrontmatterValues(fmBlock string, keys ...string) string {
 	lines := strings.Split(fmBlock, "\n")
 	for i, line := range lines {
-		for _, key := range volatileFrontmatterFields {
+		for _, key := range keys {
 			if strings.HasPrefix(line, key+": ") {
 				lines[i] = key + ":"
 			}
 		}
 	}
 	return strings.Join(lines, "\n")
+}
+
+// blankFrontmatterListSection replaces a frontmatter block's key: list
+// section -- either the inline `key: []` form or a `key:` header followed
+// by its `  - ` item lines, the two shapes writeListField emits -- with the
+// bare key, so both forms normalize to the same thing.
+//
+// A block with no such section is returned untouched rather than having one
+// inserted: a page whose key a human deleted must keep differing from one
+// that still carries it, exactly as blankFrontmatterValues leaves a dropped
+// scalar visible. (This is the one behavioral difference from
+// frontmatter.go's setListField, which inserts, because a patch that
+// reports success having written nothing is wrong for a WRITER and right
+// for a COMPARATOR.)
+func blankFrontmatterListSection(fmBlock, key string) string {
+	lines := strings.Split(fmBlock, "\n")
+	start := -1
+	for i, line := range lines {
+		if strings.HasPrefix(line, key+":") {
+			start = i
+			break
+		}
+	}
+	if start == -1 {
+		return fmBlock
+	}
+
+	end := start + 1
+	if lines[start] != key+": []" {
+		for end < len(lines) && strings.HasPrefix(lines[end], "  - ") {
+			end++
+		}
+	}
+
+	blanked := make([]string, 0, len(lines)-(end-start)+1)
+	blanked = append(blanked, lines[:start]...)
+	blanked = append(blanked, key+":")
+	blanked = append(blanked, lines[end:]...)
+	return strings.Join(blanked, "\n")
 }
 
 // skippedAction builds the R-030 refusal: reason states why the page's

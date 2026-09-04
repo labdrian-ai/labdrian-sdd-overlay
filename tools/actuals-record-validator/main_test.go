@@ -206,6 +206,56 @@ func TestCheckpointCountRequiresDurableProvenanceDisclosure(t *testing.T) {
 	}
 }
 
+// TestCheckpointDisclosureAcceptsTheDocumentedWording runs the rule against the
+// words the writer instruction actually prescribes.
+//
+// skills/inception-pipeline/SKILL.md tells closure-feedback to "itemize in
+// variance_vs_plan free text which checkpoints were durably observed (via
+// pipeline-state) versus reconstructed from the closure narrative". The rule
+// required the exact substring "durable", and "durably" does not contain it —
+// so following the documented instruction to the letter produced a record the
+// validator REJECTED, and the fail-closed rule turns that into a hard stop that
+// blocks the write. A rule and the instruction it enforces cannot disagree
+// about which words satisfy it.
+func TestCheckpointDisclosureAcceptsTheDocumentedWording(t *testing.T) {
+	spellings := map[string]string{
+		"durably_observed": "checkpoint_count is 7. Exactly 1 was durably observed via sdd/{change}/pipeline-state: the tiering go-ahead. The remaining 6 were reconstructed from the closure narrative.",
+		"durable_floor":    "checkpoint_count is 7. The durable floor read from pipeline-state is 1; the other 6 were reconstructed from the closure narrative.",
+		"documented_zero":  "checkpoint_count is 1: the tiering go-ahead, durably observed via pipeline-state; zero further checkpoints were reconstructed from the narrative.",
+		"reconstruction":   "checkpoint_count is 7: 1 durably observed via pipeline-state, 6 by reconstruction from the closure narrative.",
+	}
+	for name, variance := range spellings {
+		t.Run(name, func(t *testing.T) {
+			record := validRecord()
+			record["checkpoint_count"] = 7
+			record["variance_vs_plan"] = variance
+			if code, output := validateRecord(t, record); code != exitOK {
+				t.Fatalf("exit code = %d, want %d for the documented wording; output=%q", code, exitOK, output)
+			}
+		})
+	}
+}
+
+// TestCheckpointDisclosureStillRejectsAHalfDisclosure is the guard against
+// fixing the wording by loosening the rule: naming one side of the split and
+// not the other still records a number a reader cannot weigh.
+func TestCheckpointDisclosureStillRejectsAHalfDisclosure(t *testing.T) {
+	halves := map[string]string{
+		"durable_only":       "checkpoint_count is 7, and 1 of those was durably observed via pipeline-state.",
+		"reconstructed_only": "checkpoint_count is 7, all of them reconstructed from the closure narrative.",
+	}
+	for name, variance := range halves {
+		t.Run(name, func(t *testing.T) {
+			record := validRecord()
+			record["checkpoint_count"] = 7
+			record["variance_vs_plan"] = variance
+			if code, output := validateRecord(t, record); code != exitSemanticValidation {
+				t.Fatalf("exit code = %d, want %d for a half disclosure; output=%q", code, exitSemanticValidation, output)
+			}
+		})
+	}
+}
+
 // TestTotalWallClockHoursRequiresMeasurementProvenance mirrors R-014's
 // mandatory disclaimer: a reconstructed figure presented as if measured is the
 // defect class this whole instrument exists to remove.

@@ -17,11 +17,91 @@ OVERLAY_DIR="${OVERLAY_DIR:-"$(cd "$SCRIPT_DIR/.." && pwd)"}"
 TARBALL="$HOME/.gentle-ai/backups/upgrade-20260615T175529Z/snapshot.tar.gz"
 MANIFEST="${MANIFEST:-"$OVERLAY_DIR/overlay.manifest"}"
 
+# path_clean <path> prints <path> lexically normalized: duplicate separators
+# collapsed, "." elements removed, ".." elements resolved against the element
+# before them, and any trailing separator dropped. "" becomes ".", and ".."
+# above the root of a rooted path is the root.
+#
+# It reproduces Go's filepath.Clean on purpose, byte for byte, because that
+# is the OTHER half of a contract this script cannot see. The engine derives
+# the longterm-mem binary path with filepath.Join (which cleans), rebuilds
+# each runtime's MCP entry from it, and decides ownership by comparing that
+# rebuilt entry against the live one as an EXACT STRING fingerprint. This
+# script builds the same path by concatenation (which does not clean) and
+# hands that literal to `longterm-mem register --binary`, which is what
+# actually gets written into the config. The two therefore agreed only while
+# $STATE_DIR happened to be lexically clean already: one trailing slash and
+# the overlay wrote "<dir>//bin/longterm-mem" while the engine looked for
+# "<dir>/bin/longterm-mem" and reported the overlay's own freshly-written
+# entry as unmanaged.
+#
+# Purely lexical, deliberately: it never touches the filesystem and never
+# resolves a symlink, because the Go half it must agree with does not
+# either. `realpath` would be the wrong tool here even where it exists —
+# resolving symlinks would produce a path the engine never derives.
+#
+# Defined here, above the derived paths below, because those are assigned at
+# source time and a function must exist before it is called.
+path_clean() {
+  local path="${1:-}"
+  local rooted="" out="" elem rest
+
+  [[ "$path" == /* ]] && rooted=1
+  rest="$path"
+
+  while [[ -n "$rest" ]]; do
+    elem="${rest%%/*}"
+    if [[ "$rest" == */* ]]; then
+      rest="${rest#*/}"
+    else
+      rest=""
+    fi
+
+    case "$elem" in
+      '' | '.')
+        # A duplicate separator or a "." element names nothing.
+        ;;
+      '..')
+        if [[ -n "$rooted" || ( -n "$out" && "$out" != ".." && "$out" != *"/.." ) ]]; then
+          # Pop the previous element. A rooted path with nothing left to
+          # pop stays at the root: "/.." is "/".
+          if [[ "$out" == */* ]]; then
+            out="${out%/*}"
+          else
+            out=""
+          fi
+        else
+          # A RELATIVE path can lead with ".." elements that nothing
+          # cancels; those are part of the answer, not noise.
+          out="${out:+$out/}.."
+        fi
+        ;;
+      *)
+        out="${out:+$out/}$elem"
+        ;;
+    esac
+  done
+
+  if [[ -n "$rooted" ]]; then
+    printf '%s\n' "/$out"
+  elif [[ -n "$out" ]]; then
+    printf '%s\n' "$out"
+  else
+    printf '%s\n' "."
+  fi
+}
+
 # Home-scoped per design decision D3: state describes deployments under
 # $HOME (TARGET_PATHS/AGENT_TARGET_PATHS are all $HOME-anchored), so a
 # repo-scoped file would let two clones of this repo hold divergent records
 # of the same live targets.
-STATE_DIR="${STATE_DIR:-"$HOME/.labdrian-overlay"}"
+#
+# Normalized ONCE, here, so every path derived from it below and every
+# `--state-dir "$STATE_DIR"` handed to the engine already looks the way the
+# engine's own filepath.Join will make it look. Doing it at the point of use
+# instead would mean remembering it at each of them, which is exactly the
+# kind of agreement that decays.
+STATE_DIR="$(path_clean "${STATE_DIR:-"$HOME/.labdrian-overlay"}")"
 STATE_FILE="$STATE_DIR/state.json"
 
 declare -A TARGET_PATHS=(
@@ -54,7 +134,15 @@ ENGINE_SRC="$OVERLAY_DIR/engine"
 # later inspection. STATE_DIR-scoped (not $HOME/.claude/-scoped like
 # ENGINE_BINARY) because longterm-mem is a cross-runtime component, not a
 # Claude-specific one (D4).
-LONGTERM_MEM_BINARY="$STATE_DIR/bin/longterm-mem"
+#
+# Routed through path_clean even though $STATE_DIR is already clean: this
+# exact string is what `register --binary` writes into every runtime's MCP
+# entry, and what the engine re-derives with filepath.Join to decide whether
+# that entry is ours. path_clean here is what makes the two halves agree for
+# EVERY $STATE_DIR rather than only the already-clean ones — including the
+# one case normalizing $STATE_DIR alone does not cover, a state dir of "/",
+# where plain concatenation still yields "//bin/longterm-mem".
+LONGTERM_MEM_BINARY="$(path_clean "$STATE_DIR/bin/longterm-mem")"
 LONGTERM_MEM_SRC="$OVERLAY_DIR/longterm-mem"
 
 # LONGTERM_MEM_INSTALLED_TARGETS tracks, one target name per line, which of
@@ -2888,15 +2976,13 @@ ensure_engine_binary() {
 }
 
 # longtermmem_installed_targets_known <line> answers whether <line> names a
-# target this entrypoint can actually install longterm-mem for.
+# target THIS BUILD can actually install longterm-mem for. It gates the
+# WRITE side only (longtermmem_installed_targets_add): this entrypoint
+# refuses to record a target it cannot install for.
 #
-# It exists because the tracking file is read as EVIDENCE, not as text: a
-# non-empty read is what keeps longtermmem_maybe_remove_binary from deleting
-# a binary another runtime still depends on. Anything that is not a known
-# target name — a partial write, a hand edit, a stray file from some other
-# tool — is not install state, and reading it as "something is still
-# installed" wedges that guard permanently, with no way for the operator to
-# clear it short of deleting the file by hand.
+# It is deliberately NOT the read-side filter. See
+# longtermmem_target_name_is_wellformed below for why those are two
+# different questions.
 longtermmem_installed_targets_known() {
   local candidate="${1:-}" known
   for known in "${!TARGET_PATHS[@]}"; do
@@ -2907,21 +2993,100 @@ longtermmem_installed_targets_known() {
   return 1
 }
 
+# longtermmem_target_name_is_wellformed <line> answers whether <line> is a
+# plausible target NAME — a short bare word — regardless of whether this
+# build knows that name.
+#
+# This is the read-side filter, and the distinction it draws is the whole
+# safety property of the tracking file. The file is read as EVIDENCE, not as
+# text: a non-empty read is what keeps longtermmem_maybe_remove_binary from
+# deleting a binary a still-installed runtime depends on. So the reader has
+# to sort its input into two piles that are NOT the same pile:
+#
+#   GARBAGE — a NUL byte, an unterminated partial line, a token that is not
+#   a bare word. None of these can have been written by this script (every
+#   write here is one newline-terminated bare word), so none is install
+#   state. Dropping them is what keeps a hand edit or a torn write from
+#   wedging the guard permanently, with no way to clear it short of deleting
+#   the file by hand.
+#
+#   A WELL-FORMED NAME THIS BUILD DOES NOT KNOW — "zed", say. This looks
+#   exactly like something this script wrote, because the likeliest way it
+#   got there is that a NEWER build wrote it: one that installs for a
+#   runtime this build has never heard of. That runtime is running the
+#   SHARED binary right now. Dropping it reads "nothing is installed" and
+#   deletes the binary out from under a live runtime — the exact failure the
+#   guard exists to prevent, arrived at through the mechanism meant to
+#   prevent it.
+#
+# So garbage is droppable and an unknown name is not. Only the first pile is
+# provably not install state; the second is install state this build cannot
+# interpret, and the safe reading of "I do not understand this" is to leave
+# the shared binary alone.
+#
+# The 64-byte cap is part of "bare word": a target name is a short
+# identifier, and without a bound a long run of alphanumerics inside a
+# binary file would read as a name and hold the guard closed forever.
+longtermmem_target_name_is_wellformed() {
+  local candidate="${1:-}"
+  [[ "$candidate" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$ ]]
+}
+
 # longtermmem_installed_targets_read prints the currently tracked installed
 # targets (see LONGTERM_MEM_INSTALLED_TARGETS above), one per line, sorted
 # and deduplicated; empty output when none are tracked or the file does not
-# exist yet. Lines that do not name a known target are dropped (see above).
+# exist yet.
+#
+# It emits every WELL-FORMED name, known to this build or not, and drops
+# only garbage — see longtermmem_target_name_is_wellformed for why those are
+# different answers. Callers use the result as "is anything still
+# installed", never as "here is a target to act on"; the one place a name is
+# acted on (add) validates it against TARGET_PATHS itself.
+#
+# Two details are load-bearing and neither is obvious:
+#
+#   NUL bytes are translated to \001 before the loop rather than left to
+#   bash. A bash variable CANNOT hold a NUL, so `read` silently drops it —
+#   which would turn "\0zed", provably a torn write, into "zed", a name that
+#   holds the guard closed forever. \001 cannot appear in a bare word, so
+#   the name check rejects the line for the right reason.
+#
+#   An unterminated final line is DROPPED, not kept. Every write here is
+#   newline-terminated, so trailing bytes with no newline are a partial
+#   write — a name still being written, not a name. The previous loop's
+#   `|| [[ -n "$line" ]]` kept it.
 #
 # Deduplication happens HERE rather than on write, which is what lets the
 # write side be a single atomic append instead of a read-modify-write.
 longtermmem_installed_targets_read() {
   [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
-  local line
-  while IFS= read -r line || [[ -n "$line" ]]; do
-    if longtermmem_installed_targets_known "$line"; then
+
+  # A file that EXISTS but cannot be READ is the third pile, and it belongs
+  # with the unknown name, not with the garbage: it may well list every
+  # runtime still depending on the shared binary, and a permission error
+  # says nothing either way. So it reports FAILURE rather than emptiness —
+  # every caller below distinguishes the two, because "I could not look" and
+  # "I looked and there is nothing" lead to opposite actions on a shared
+  # binary. (The read goes through a process substitution, whose failure a
+  # redirect's would not: without this the loop just sees EOF.)
+  if [[ ! -r "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
+    warn "longterm-mem: $LONGTERM_MEM_INSTALLED_TARGETS exists but cannot be read; refusing to read it as empty install state"
+    return 1
+  fi
+
+  local line read_status
+  while true; do
+    read_status=0
+    IFS= read -r line || read_status=$?
+    if [[ "$read_status" -ne 0 ]]; then
+      # EOF. Anything `read` left in $line arrived without a terminating
+      # newline: a partial write, never install state.
+      break
+    fi
+    if longtermmem_target_name_is_wellformed "$line"; then
       printf '%s\n' "$line"
     fi
-  done < "$LONGTERM_MEM_INSTALLED_TARGETS" | sort -u
+  done < <(LC_ALL=C tr '\000' '\001' < "$LONGTERM_MEM_INSTALLED_TARGETS") | sort -u
   return 0
 }
 
@@ -2949,8 +3114,12 @@ longtermmem_installed_targets_add() {
   dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
   mkdir -p "$dir" || die "longterm-mem: could not create $dir"
 
+  # An unreadable tracking file makes the "already recorded" check below
+  # meaningless: it would answer "not recorded" and append a duplicate to a
+  # file it cannot see. Say so instead of appending blind.
   local tracked
-  tracked="$(longtermmem_installed_targets_read)"
+  tracked="$(longtermmem_installed_targets_read)" \
+    || die "longterm-mem: could not read $LONGTERM_MEM_INSTALLED_TARGETS; refusing to record $target against install state that cannot be inspected"
   if [[ $'\n'"$tracked"$'\n' == *$'\n'"$target"$'\n'* ]]; then
     return 0
   fi
@@ -2983,12 +3152,19 @@ longtermmem_installed_targets_remove() {
   dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
   mkdir -p "$dir" || die "longterm-mem: could not create $dir"
 
+  # Read BEFORE staging anything. This function rewrites the file from what
+  # the reader returns, so a reader that answered "empty" for a file it could
+  # not read would not merely misreport it — it would TRUNCATE it, destroying
+  # the very state that keeps the binary-removal guard closed.
+  local kept
+  kept="$(longtermmem_installed_targets_read)" \
+    || die "longterm-mem: could not read $LONGTERM_MEM_INSTALLED_TARGETS; refusing to rewrite it from a file that could not be inspected"
+
   local tmp
   tmp="$(mktemp "$dir/.installed-targets.XXXXXX")" \
     || die "longterm-mem: could not create a temporary file in $dir"
 
-  local kept filter_exit=0
-  kept="$(longtermmem_installed_targets_read)"
+  local filter_exit=0
   printf '%s' "$kept" | grep -v -x -F -e "$target" > "$tmp" || filter_exit=$?
   # grep exits 1 when it selects nothing, which is the ordinary "that was
   # the last tracked target" case; anything above 1 is a real error.
@@ -3012,10 +3188,22 @@ longtermmem_installed_targets_remove() {
 # negative test TestStatusUninstall_SkipBuildStep/UninstallSingleTarget...
 # (uninstalling one target while another remains installed leaves the
 # binary in place).
+#
+# Every way of NOT KNOWING what is installed leaves the binary alone, and
+# there are three of them, only one of which is about the file's contents:
+# no tracking file at all ($tracking_known, set by the caller), a tracking
+# file that could not be read (below), and a line inside it that this build
+# cannot interpret (longtermmem_target_name_is_wellformed). --purge is the
+# single explicit override for all three.
 longtermmem_maybe_remove_binary() {
   local purge="$1"
-  local remaining
-  remaining="$(longtermmem_installed_targets_read)"
+  local remaining readable=1
+  remaining="$(longtermmem_installed_targets_read)" || readable=""
+
+  if [[ -z "$readable" ]] && [[ -z "$purge" ]]; then
+    warn "longterm-mem: the install tracking file could not be read, so whether any runtime still depends on the shared binary is unknown; leaving $LONGTERM_MEM_BINARY in place. Fix its permissions and re-run uninstall, or pass --purge to remove it anyway."
+    return 0
+  fi
 
   if [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
     if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
@@ -3065,16 +3253,29 @@ longtermmem_install_step() {
 #
 # install: go build the longterm-mem binary, copy it to the fixed path
 # (LONGTERM_MEM_BINARY, R-015), then per target: 'longterm-mem register
-# --target t' (module-owned, writes the ownership-tagged MCP entry and its
-# install-state.json record at the binary's own default state dir, D9 —
-# deliberately no --state-dir/--binary override here so this call and
-# uninstall's 'longterm-mem unregister --target t' below always resolve
-# the SAME install-state.json; see the unregister call's own comment for
-# why that agreement is load-bearing), then 'engine runtime install
+# --target t --binary "$LONGTERM_MEM_BINARY"' (module-owned, writes the
+# ownership-tagged MCP entry and its install-state.json record at the
+# binary's own default state dir, D9), then 'engine runtime install
 # --component longterm-mem --target t' to record and report per-runtime
 # status. R-022's vault seeding is lazy (vaultreg.Resolve) and needs no
 # separate call here -- the 'longterm-mem vaults seed' invocation this
 # replaced named a subcommand that never existed and never will.
+#
+# The two overrides are NOT symmetrical, and conflating them is how this
+# comment previously ended up justifying a flag with the other flag's
+# reason:
+#
+#   --state-dir is deliberately NOT passed, here or on the unregister call
+#   below, so that both resolve the SAME install-state.json — the module's
+#   own default. --state-dir is what sets that file's location, so passing
+#   it on one call and not the other is exactly how install and uninstall
+#   come to disagree about where the ownership record lives (see the
+#   unregister call's own comment for why that agreement is load-bearing).
+#
+#   --binary IS passed. It does not move install-state.json and so cannot
+#   break that agreement; it sets the path written INTO each runtime's MCP
+#   entry, which must be where the binary was actually just deployed. See
+#   the call site for the full reason.
 #
 # status/uninstall skip the build step entirely (R-014 scenario 2) and only
 # ever talk to the engine runtime lifecycle surface.
@@ -3179,11 +3380,17 @@ cmd_longterm_mem() {
       #
       # register's exit status is INSPECTED, not discarded (cmd_register.go:
       # 0 registered, 1 hard failure, 2 usage/version skew, 6 an untagged
-      # same-named entry it refuses to touch). Only 0 means this entrypoint
-      # actually registered $t, and only 0 records $t as installed —
-      # recording a target register refused would make the binary-removal
-      # guard hold the shared binary hostage on behalf of a runtime that
-      # never had an entry of ours.
+      # same-named entry it refuses to touch, 8 a path it could not resolve
+      # from the environment at all). Only 0 means this entrypoint actually
+      # registered $t, and only 0 records $t as installed — recording a
+      # target register refused would make the binary-removal guard hold the
+      # shared binary hostage on behalf of a runtime that never had an entry
+      # of ours.
+      #
+      # Every code the module names has its own arm below, because the
+      # catch-all arm carries a story ("a runtime this machine does not
+      # have") that is only true for exit 1. A code that falls through to it
+      # is not merely reported vaguely — it is reported WRONG.
       local register_exit=0
       "$LONGTERM_MEM_BINARY" register --target "$t" --binary "$LONGTERM_MEM_BINARY" \
         || register_exit=$?
@@ -3205,6 +3412,19 @@ cmd_longterm_mem() {
           ;;
         2)
           warn "longterm-mem register --target $t: this binary does not accept the invocation (exit 2, version skew), so $t was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this."
+          ;;
+        8)
+          # register_paths.go separates 8 from 1 precisely so a caller can
+          # tell "you forgot a flag / your environment is broken" from "your
+          # ~/.claude.json is broken": nothing was attempted and nothing was
+          # touched. It is therefore NOT softened under --target all the way
+          # exit 1 is. Exit 1 under "all" is genuinely ambiguous with "this
+          # machine does not run that runtime"; exit 8 is not ambiguous at
+          # all — it is one environment fault that every target reproduces
+          # identically, and converging on it at exit 0 would report a
+          # completely uninstalled component as a clean run.
+          warn "longterm-mem register --target $t: exit 8 — register could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and $t is NOT recorded as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run install."
+          install_failed=1
           ;;
         *)
           if [[ -n "$expanded_all" ]]; then
@@ -3268,12 +3488,18 @@ cmd_longterm_mem() {
       # removing it).
       #
       # cmd_unregister.go's exit codes (0 removed, 1 hard failure, 2 usage,
-      # 6 unmanaged, 1 outranking 6) are inspected, not swallowed: 0 and 6
-      # both mean "$t has nothing of ours left in its runtime config" (an
-      # unmanaged entry was never ours to begin with), so both clear this
-      # target's tracking below. Any other status means $t's entry (and
-      # possibly its install-state record) may still be present, so
-      # tracking for $t is KEPT and the whole run is marked failed.
+      # 6 unmanaged, 8 a path it could not resolve from the environment at
+      # all, 1 outranking 6) are inspected, not swallowed: 0 and 6 both mean
+      # "$t has nothing of ours left in its runtime config" (an unmanaged
+      # entry was never ours to begin with), so both clear this target's
+      # tracking below. Any other status means $t's entry (and possibly its
+      # install-state record) may still be present, so tracking for $t is
+      # KEPT and the whole run is marked failed.
+      #
+      # 8 gets its own arm for the same reason it does on the install side:
+      # it lands in the same bucket as the catch-all, but the catch-all's
+      # message ("failed") names no remedy, and 8's remedy is the one the
+      # operator can actually act on.
       local unregister_exit=0
       "$LONGTERM_MEM_BINARY" unregister --target "$t" || unregister_exit=$?
       case "$unregister_exit" in
@@ -3291,6 +3517,13 @@ cmd_longterm_mem() {
           # rather than wedge the run.
           warn "longterm-mem unregister --target $t: this binary does not accept the invocation (exit 2, version skew), so $t's entry stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall. Not retried; every re-run reproduces this."
           longtermmem_installed_targets_remove "$t"
+          ;;
+        8)
+          # Unlike exit 2, this one IS operator-fixable and a re-run after
+          # the fix succeeds, so it keeps $t tracked and fails the run --
+          # the same treatment the catch-all gives, with the remedy named.
+          warn "longterm-mem unregister --target $t: exit 8 — unregister could not resolve a path from the environment at all (no usable HOME means no runtime config root and no install-state.json directory), so nothing was attempted and $t's entry may still be in its runtime config. Keeping $t tracked as installed. The fix is the environment, not the runtime: set HOME to a writable home directory and re-run uninstall."
+          uninstall_failed=1
           ;;
         *)
           # A real, operator-fixable failure (unreadable config, corrupted
@@ -3311,14 +3544,22 @@ cmd_longterm_mem() {
     local tracking_known=""
     [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] && tracking_known=1
 
-    local remaining
-    remaining="$(longtermmem_installed_targets_read)"
+    # A tracking file that exists but cannot be READ is the same class of
+    # not-knowing as one that does not exist at all, and fails closed the
+    # same way. It is captured separately from $remaining because an empty
+    # $remaining is what AUTHORIZES removal below -- an unreadable file
+    # produces exactly that empty string, so without this the strongest
+    # signal to stop would read as the go-ahead.
+    local remaining tracking_readable=1
+    remaining="$(longtermmem_installed_targets_read)" || tracking_readable=""
 
     if [[ -n "$uninstall_failed" ]] && [[ -z "$purge" ]]; then
       # A real failure outranks every branch below: neither the shared
       # engine registration record nor the shared binary is safe to remove
       # while a target's own runtime config may still hold its entry.
       warn "longterm-mem: at least one target failed to unregister; leaving the registration record and the shared binary untouched (re-run uninstall for the failed target(s) once resolved, or pass --purge to force removal)"
+    elif [[ -z "$tracking_readable" ]] && [[ -z "$purge" ]]; then
+      warn "longterm-mem: the install tracking file at $LONGTERM_MEM_INSTALLED_TARGETS exists but could not be read, so whether any runtime still depends on the shared binary is unknown; leaving the registration record and the shared binary untouched. Fix its permissions and re-run uninstall, or pass --purge to remove them anyway."
     elif [[ -n "$purge" ]] || { [[ -n "$tracking_known" ]] && [[ -z "$remaining" ]]; }; then
       # Full uninstall: safe to wipe the engine-owned registration record
       # too. LongtermMemAdapter.Uninstall() removes the WHOLE record in one

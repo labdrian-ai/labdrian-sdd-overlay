@@ -89,10 +89,12 @@ Run the repository wrapper so caller-relative paths work and validator exit code
 labdrian validate-entry-contract \
   --schema skills/_shared/entry-contract.schema.json \
   --instance /absolute/path/to/entry-candidate.json \
-  --exists-root openspec/changes/{change}
+  --exists-root {project-root}
 ```
 
 **`--exists-root` is REQUIRED here, and inception time is the only place it can be passed.** It resolves every `artifact_refs` `openspec_path` against that root and fails when one is missing, which is the difference between a contract that references artifacts and a contract that merely names strings shaped like paths. It is off by default for a reason that is not a hedge: archiving CONSUMES the live change directory, so an archived contract points at paths that no longer exist, and enabling the check against history would invalidate every archived contract permanently. Pass it while the change directory is still live — here — and nowhere else.
+
+**The root is the PROJECT ROOT, never the change directory.** Every `openspec_path` is repository-root-relative and already begins `openspec/changes/{change}/…`; the validator joins it under whatever root you pass. Pointing the flag at the change directory therefore looks for `openspec/changes/{change}/openspec/changes/{change}/entry.json`, so every declared artifact is reported missing and the check becomes a hard stop no contract can ever pass. Pass the project root and the same declaration resolves exactly once.
 
 Any non-zero result is a hard stop. Do not persist a partially validated object. On success, persist the exact candidate bytes to `sdd/{change}/entry` with `capture_prompt: false` and, only when a real OpenSpec entry path was declared, atomically write the same object there. Then delete the temporary candidate.
 

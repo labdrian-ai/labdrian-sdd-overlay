@@ -25,7 +25,7 @@ import (
 func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byte) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("register: read %s: %w", path, err)
+		return fmt.Errorf("read %s: %w", path, err)
 	}
 
 	spliced, err := TOMLSplice(raw, tableKey, memberKey, newSection)
@@ -35,11 +35,11 @@ func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byt
 
 	var doc map[string]interface{}
 	if err := toml.Unmarshal(spliced, &doc); err != nil {
-		return fmt.Errorf("register: splice of %s would produce invalid TOML, not written: %w", path, err)
+		return fmt.Errorf("splice of %s would produce invalid TOML, not written: %w", path, err)
 	}
 	command, ok := tomlNestedString(doc, tableKey, memberKey, "command")
 	if !ok || command != binary {
-		return fmt.Errorf("register: splice of %s would not set %s.%s.command = %q, not written", path, tableKey, memberKey, binary)
+		return fmt.Errorf("splice of %s would not set %s.%s.command = %q, not written", path, tableKey, memberKey, binary)
 	}
 
 	return replaceConfig(path, raw, spliced)
@@ -58,7 +58,7 @@ func WriteTOMLSection(path, tableKey, memberKey, binary string, newSection []byt
 func RemoveTOMLSection(path, tableKey, memberKey string) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("register: read %s: %w", path, err)
+		return fmt.Errorf("read %s: %w", path, err)
 	}
 
 	removed, err := TOMLRemove(raw, tableKey, memberKey)
@@ -68,10 +68,10 @@ func RemoveTOMLSection(path, tableKey, memberKey string) error {
 
 	var doc map[string]interface{}
 	if err := toml.Unmarshal(removed, &doc); err != nil {
-		return fmt.Errorf("register: removal of %s.%s from %s would produce invalid TOML, not written: %w", tableKey, memberKey, path, err)
+		return fmt.Errorf("removal of %s.%s from %s would produce invalid TOML, not written: %w", tableKey, memberKey, path, err)
 	}
 	if _, stillPresent := tomlNestedString(doc, tableKey, memberKey, "command"); stillPresent {
-		return fmt.Errorf("register: removal of %s.%s from %s did not actually remove it, not written", tableKey, memberKey, path)
+		return fmt.Errorf("removal of %s.%s from %s did not actually remove it, not written", tableKey, memberKey, path)
 	}
 
 	return replaceConfig(path, raw, removed)

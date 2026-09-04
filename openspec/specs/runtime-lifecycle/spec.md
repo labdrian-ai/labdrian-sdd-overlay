@@ -307,6 +307,21 @@ and codex — without offering `update` or `rollback` for that component.
 - AND the deployed binary is reported as present, and an entry naming it is
   recognised as one this overlay owns
 
+#### Scenario: A state directory that is not already normalized still agrees
+
+- GIVEN the overlay entrypoint is run with an overridden state directory whose
+  path is not lexically normalized — a trailing separator, a duplicated
+  separator, a `.` element, or a `..` segment
+- AND it has deployed the longterm-mem binary under that state directory,
+  and registered MCP entries naming that same deployed path
+- WHEN the runtime lifecycle status or install action runs for the
+  `longterm-mem` component with that state directory
+- THEN the path written into each MCP entry and the path the component
+  derives from the state directory are the SAME string, because ownership is
+  decided by comparing entries byte for byte
+- AND the entry the overlay itself just wrote is recognised as owned, not
+  reported as an entry without a record
+
 ### Requirement: longterm-mem Status Reports Observed State, Not Assumed Intent
 
 Traces to: longterm-mem R-014

@@ -281,17 +281,74 @@ func TestSddTasksChainStrategyEmitDomainMatchesSchema(t *testing.T) {
 	}
 }
 
+// applyChainRoutingTableHeader is the header of sdd-apply's chain-routing
+// table: the machine-readable statement of what the consumer does with every
+// value in the schema's closed domain.
+var applyChainRoutingTableHeader = []string{"`chain_strategy`", "How apply routes it"}
+
 // TestSddApplyChainStrategyConsumerDomainMatchesSchema pins the ONE consumer
 // that actually branches on the value. The orchestrator's unknown-value guard
 // lives in skills/_shared/sdd-orchestrator-workflow.md and therefore cannot
 // fire on a token minted inside the phase agent, so sdd-apply must carry the
 // closed domain itself.
+//
+// It reads a ROUTING TABLE rather than prose, and that is the whole point. The
+// prose version of this rule contradicted itself inside one paragraph — first
+// "Any other value — including `none` ... do NOT proceed: STOP ... return
+// `blocked`", then "A `none` value means chaining is not required at all: route
+// by `delivery_strategy` alone" — and an agent obeying the first half blocked
+// apply on EVERY single-PR change, which is what `sdd-tasks` emits whenever its
+// forecast says `Chained PRs recommended: No`. The earlier assertions could not
+// see it: they only checked that the two topologies were named, that the two
+// deprecated tokens were absent, and that the word STOP appeared somewhere —
+// all three of which the contradictory paragraph satisfied. A table gives every
+// value in the domain exactly one row and exactly one route, so "routes" and
+// "blocks" can no longer both be true of the same value.
 func TestSddApplyChainStrategyConsumerDomainMatchesSchema(t *testing.T) {
 	doc := readRepoDoc(t, sddApplySkillRelPath)
 	body := markdownSection(t, doc, applyStep2aHeading)
-	topologies := chainTopologies(t)
 
-	for _, topology := range topologies {
+	// 1. The routed domain is exactly the schema's domain — `none` included.
+	// A missing row means a legal value with no documented route; an extra row
+	// means a route for a value the schema cannot store.
+	stored := append([]string(nil), schemaEnum(t, chainStrategyField)...)
+	sort.Strings(stored)
+	var routed []string
+	routes := map[string]string{}
+	for _, row := range markdownTableWithHeader(t, body, applyChainRoutingTableHeader) {
+		if len(row) < 2 {
+			t.Fatalf("chain-routing row %v carries no route", row)
+		}
+		token := strings.Trim(row[0], "`")
+		routed = append(routed, token)
+		routes[token] = row[1]
+	}
+	sort.Strings(routed)
+	if !equalCells(routed, stored) {
+		t.Errorf("%s %s routes the domain %v, but the schema chain_strategy enum is %v",
+			sddApplySkillRelPath, applyStep2aHeading, routed, stored)
+	}
+
+	// 2. Every value IN the domain routes. A row that tells the agent to stop
+	// or return blocked is the defect this test exists to catch: it turns a
+	// legal value into an unknown one.
+	for token, route := range routes {
+		if strings.Contains(route, "STOP") || strings.Contains(route, "blocked") {
+			t.Errorf("%s %s routes the legal %s value %q to a STOP/blocked outcome: %q — the unknown-value guard fires on values OUTSIDE the domain, never on a member of it",
+				sddApplySkillRelPath, applyStep2aHeading, chainStrategyField, token, route)
+		}
+	}
+
+	// 3. The sentinel is routed by delivery_strategy, because it names no
+	// branch to target and there is nothing to look up.
+	if route, ok := routes[chainStrategyNoneToken]; ok && !strings.Contains(route, "delivery_strategy") {
+		t.Errorf("%s %s routes %q as %q without naming `delivery_strategy` — `none` means chaining is not required, so delivery_strategy alone decides",
+			sddApplySkillRelPath, applyStep2aHeading, chainStrategyNoneToken, route)
+	}
+
+	// 4. The topologies are still named, the deprecated tokens are still gone,
+	// and the guard still exists for values outside the domain.
+	for _, topology := range chainTopologies(t) {
 		if !strings.Contains(body, topology) {
 			t.Errorf("%s %s must name the chain topology %q it branches on", sddApplySkillRelPath, applyStep2aHeading, topology)
 		}

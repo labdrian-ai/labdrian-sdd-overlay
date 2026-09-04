@@ -242,9 +242,7 @@ func TestJSONSplice_RemoveNotFoundReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Remove returned nil error for a member that does not exist")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, "longterm-mem", "mcpServers")
 }
 
 // TestJSONSplice_SynthesizesAMissingContainer (A4) pins the behaviour that
@@ -341,7 +339,5 @@ func TestJSONSplice_ContainerIsNotAnObject(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Splice returned nil error for a document whose %q is not an object", "mcpServers")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, "mcpServers")
 }

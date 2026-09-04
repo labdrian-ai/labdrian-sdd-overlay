@@ -51,12 +51,12 @@ func LoadInstallState(path string) (*InstallState, error) {
 		if os.IsNotExist(err) {
 			return &InstallState{Schema: installStateSchemaVersion, Targets: map[string]TargetRecord{}}, nil
 		}
-		return nil, fmt.Errorf("register: read %s: %w", path, err)
+		return nil, fmt.Errorf("read %s: %w", path, err)
 	}
 
 	var st InstallState
 	if err := json.Unmarshal(data, &st); err != nil {
-		return nil, fmt.Errorf("register: parse %s: %w", path, err)
+		return nil, fmt.Errorf("parse %s: %w", path, err)
 	}
 	if st.Targets == nil {
 		st.Targets = map[string]TargetRecord{}
@@ -112,15 +112,15 @@ func (s *InstallState) Save(path string) error {
 	}
 	data, err := json.MarshalIndent(s, "", "  ")
 	if err != nil {
-		return fmt.Errorf("register: marshal %s: %w", path, err)
+		return fmt.Errorf("marshal %s: %w", path, err)
 	}
 	data = append(data, '\n')
 
 	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
-		return fmt.Errorf("register: create directory for %s: %w", path, err)
+		return fmt.Errorf("create directory for %s: %w", path, err)
 	}
 	if err := durable.WriteFile(path, data, configCreatePerm); err != nil {
-		return fmt.Errorf("register: %w", err)
+		return err
 	}
 	return nil
 }

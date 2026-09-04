@@ -89,12 +89,17 @@ Then you MUST confirm the orchestrator/user provided a resolved delivery path:
 2. **`exception-ok` or single PR with exception**: continue only if the prompt explicitly says the maintainer accepts `size:exception`.
 3. **`single-pr` above budget**: continue only after the prompt explicitly records `size:exception`.
 
-Also check for `Chain strategy` in the tasks artifact or the prompt. **You branch on exactly two values, and this is the closed domain:**
+Also check for `Chain strategy` in the tasks artifact or the prompt. **This is the closed domain, and every value in it ROUTES — one row per `chain_strategy` value in `skills/_shared/entry-contract.schema.json`, and this table is the branch:**
 
-- `stacked-to-main`: each PR targets the previous PR's branch (or `main` after the previous merges).
-- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly.
+| `chain_strategy` | How apply routes it |
+| --- | --- |
+| `stacked-to-main` | Each PR targets the previous PR's branch (or `main` after the previous merges). Implement only the assigned work-unit slice and report the intended PR boundary. |
+| `feature-branch-chain` | PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly. |
+| `none` | Not a topology and not an unknown value. It is what the entry contract stores when `chaining_required` is `false`, and what `sdd-tasks` emits on every change whose forecast says `Chained PRs recommended: No`. There is no chain, so there is no branch to look up: route by `delivery_strategy` alone and proceed. |
 
-**Unknown-value guard (MANDATORY, and it must fire HERE).** Any other value — including `none`, which names no branch to target — has no branch in this skill. Do NOT pick the nearest topology, do NOT default to `stacked-to-main` because it is the common case, and do NOT proceed: STOP before writing code and return `blocked`, naming the unrecognised value and where it came from (tasks artifact, prompt, or entry contract). The orchestrator carries the same guard, but it cannot fire on a value minted inside this phase agent, so the check has to exist on both sides of the handoff. A `none` value means chaining is not required at all: route by `delivery_strategy` alone and do not treat it as a topology.
+**Unknown-value guard (MANDATORY, and it must fire HERE).** A value that is not a row in the table above has no route in this skill. Do NOT pick the nearest topology, do NOT default to `stacked-to-main` because it is the common case, and do NOT proceed: STOP before writing code and return `blocked`, naming the unrecognised value and where it came from (tasks artifact, prompt, or entry contract). The orchestrator carries the same guard, but it cannot fire on a value minted inside this phase agent, so the check has to exist on both sides of the handoff.
+
+**The guard fires on values outside the table, never on a member of it.** The `none` row is the one that has to be said out loud, because this guard used to name `none` as a value with "no branch in this skill" and then, one sentence later, tell you to route it by `delivery_strategy` — a contradiction that read as an instruction to block. Blocking on `none` would block apply on every single-PR change, which is the majority of them.
 
 If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main or feature-branch-chain). Shipping as one PR is not a chain strategy — it is delivery_strategy exception-ok with a recorded size:exception and chain_strategy none.`
 

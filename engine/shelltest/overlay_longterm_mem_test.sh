@@ -189,6 +189,255 @@ case_corrupt_tracking_file_does_not_wedge_cleanup() {
   pass "a corrupt tracking file does not wedge binary cleanup"
 }
 
+# run_guard_case <case-dir-name> <printf-format-for-the-tracking-file> prints
+# BINARY-STILL-PRESENT or BINARY-REMOVED for a tracking file with exactly
+# that content, driving the same guard the uninstall path drives.
+run_guard_case() {
+  local dir="$1" content="$2"
+  STATE_DIR="$dir/state" bash -c '
+    source "$1"
+    mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+    printf "$2" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+    mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
+    printf "#!/bin/sh\n" > "$LONGTERM_MEM_BINARY"
+    chmod +x "$LONGTERM_MEM_BINARY"
+    tracking_known=1
+    longtermmem_maybe_remove_binary ""
+    if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
+      echo "BINARY-STILL-PRESENT"
+    else
+      echo "BINARY-REMOVED"
+    fi
+  ' _ "$OVERLAY" "$content" 2>&1
+}
+
+# Dropping a line the tracking file cannot vouch for is only safe for
+# GARBAGE. A line that is a perfectly well-formed target name this build
+# simply does not know is the opposite case: the likeliest way it got there
+# is a NEWER build that installs for a runtime this one has never heard of,
+# and the shared binary is exactly what that runtime is still running. So an
+# unknown-but-well-formed name has to keep the guard CLOSED — reading it as
+# "nothing is installed" deletes a binary out from under a live runtime.
+case_unknown_wellformed_target_keeps_the_guard_closed() {
+  local dir status out
+  dir="$(new_case_dir unknown-wellformed)"
+
+  out="$(run_guard_case "$dir" 'zed\n')"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "unknown well-formed target: run failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -F -e BINARY-STILL-PRESENT <<<"$out"; then
+    fail "an unknown but well-formed target name let the binary be removed" "$out"
+    return
+  fi
+  pass "an unknown but well-formed target name keeps the binary-removal guard closed"
+}
+
+# The twin of the case above, in the other direction: the SAME word, made
+# unreadable by a NUL byte, is a torn or binary write and must stay
+# droppable. Bash cannot hold a NUL in a variable at all, so a reader that
+# forgets this sees the NUL silently vanish and reads "zed" — turning the
+# one class of content that is provably garbage into the one class that
+# wedges the guard forever.
+case_nul_byte_makes_a_wellformed_name_garbage() {
+  local dir status out
+  dir="$(new_case_dir nul-wellformed)"
+
+  out="$(run_guard_case "$dir" '\x00zed\n')"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "NUL-byte tracking line: run failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -F -e BINARY-REMOVED <<<"$out"; then
+    fail "a NUL-byte line was read as a live install and wedged the guard" "$out"
+    return
+  fi
+  pass "a NUL byte makes an otherwise well-formed name garbage"
+}
+
+# The other garbage twin: a final line with no terminating newline. Every
+# write this script makes is newline-terminated, so unterminated trailing
+# bytes are a partial write — a name that was still being written, not a
+# name. "clau" is a well-formed bare word and would otherwise pass the
+# name check.
+case_partial_final_line_is_garbage() {
+  local dir status out
+  dir="$(new_case_dir partial-line)"
+
+  out="$(run_guard_case "$dir" 'clau')"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "partial final line: run failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -F -e BINARY-REMOVED <<<"$out"; then
+    fail "an unterminated partial line was read as a live install" "$out"
+    return
+  fi
+  pass "an unterminated final line is garbage, not install state"
+}
+
+# A partial line must not take the VALID lines above it down with it, and a
+# valid line must still hold the guard when a partial one follows.
+case_partial_line_does_not_discard_valid_lines() {
+  local dir status out
+  dir="$(new_case_dir partial-line-mixed)"
+
+  out="$(run_guard_case "$dir" 'claude\nopenc')"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "partial line after a valid one: run failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -F -e BINARY-STILL-PRESENT <<<"$out"; then
+    fail "a trailing partial line discarded the valid target above it" "$out"
+    return
+  fi
+  pass "a trailing partial line does not discard the valid lines above it"
+}
+
+# The twin of the guard case at the WRITE side. Removal rewrites the file
+# from what the reader returns, so a reader that drops unknown names makes
+# an OLDER build silently erase a NEWER build's record: uninstall one target
+# it does know, and the unknown one is gone from the file. The very next
+# call then reads empty and deletes the shared binary — the same defect, one
+# invocation later.
+case_removal_preserves_an_unknown_wellformed_target() {
+  local dir status out
+  dir="$(new_case_dir remove-preserves-unknown)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      printf "claude\nzed\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      longtermmem_installed_targets_remove claude
+      echo "FILE=[$(tr "\n" " " < "$LONGTERM_MEM_INSTALLED_TARGETS")]"
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "removal with an unknown target present: run failed (exit $status)" "$out"
+    return
+  fi
+  if grep -q -F -e "claude" <<<"$out"; then
+    fail "removal did not remove the target it was asked to remove" "$out"
+    return
+  fi
+  if ! grep -q -F -e "zed" <<<"$out"; then
+    fail "removal erased an unknown but well-formed target from the tracking file" "$out"
+    return
+  fi
+  pass "removal preserves an unknown but well-formed target"
+}
+
+# A tracking file that EXISTS but cannot be read is the third pile, and it
+# belongs with "unknown", not with "garbage": the file may well list every
+# runtime still depending on the shared binary, and nothing about a
+# permission error says otherwise. Reading it as empty is the same fail-open
+# as dropping an unknown name, arrived at from the other direction.
+#
+# chmod 000 does not stop root, so the two cases below verify the fixture
+# before trusting it rather than passing vacuously in a root CI container.
+case_unreadable_tracking_file_keeps_the_guard_closed() {
+  local dir status out
+  dir="$(new_case_dir unreadable-tracking)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      chmod 000 "$LONGTERM_MEM_INSTALLED_TARGETS"
+      if [[ -r "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
+        echo "FIXTURE-UNUSABLE"
+        exit 0
+      fi
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")"
+      printf "#!/bin/sh\n" > "$LONGTERM_MEM_BINARY"
+      chmod +x "$LONGTERM_MEM_BINARY"
+      tracking_known=1
+      longtermmem_maybe_remove_binary ""
+      if [[ -e "$LONGTERM_MEM_BINARY" ]]; then
+        echo "BINARY-STILL-PRESENT"
+      else
+        echo "BINARY-REMOVED"
+      fi
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+  chmod -R u+rwX "$dir" 2>/dev/null
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "unreadable tracking file: run failed (exit $status)" "$out"
+    return
+  fi
+  if grep -q -F -e FIXTURE-UNUSABLE <<<"$out"; then
+    pass "unreadable tracking file: skipped (this user can read a 000 file)"
+    return
+  fi
+  if ! grep -q -F -e BINARY-STILL-PRESENT <<<"$out"; then
+    fail "an unreadable tracking file was read as empty and the binary was removed" "$out"
+    return
+  fi
+  pass "an unreadable tracking file keeps the binary-removal guard closed"
+}
+
+# The write-side twin. Removal rewrites the file from what the reader
+# returns, so a reader that answers "empty" for an unreadable file does not
+# just misreport it — it TRUNCATES it, destroying the very state that would
+# have kept the guard closed on the next call.
+case_unreadable_tracking_file_is_not_truncated() {
+  local dir status out
+  dir="$(new_case_dir unreadable-tracking-write)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      set +e
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      printf "claude\nopencode\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      chmod 000 "$LONGTERM_MEM_INSTALLED_TARGETS"
+      if [[ -r "$LONGTERM_MEM_INSTALLED_TARGETS" ]]; then
+        echo "FIXTURE-UNUSABLE"
+        exit 0
+      fi
+      ( longtermmem_installed_targets_remove claude )
+      echo "REMOVE-STATUS=$?"
+      chmod 600 "$LONGTERM_MEM_INSTALLED_TARGETS"
+      echo "FILE=[$(tr "\n" " " < "$LONGTERM_MEM_INSTALLED_TARGETS")]"
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+  chmod -R u+rwX "$dir" 2>/dev/null
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "unreadable tracking file (write side): run failed (exit $status)" "$out"
+    return
+  fi
+  if grep -q -F -e FIXTURE-UNUSABLE <<<"$out"; then
+    pass "unreadable tracking file (write side): skipped (this user can read a 000 file)"
+    return
+  fi
+  if grep -q -F -e "REMOVE-STATUS=0" <<<"$out"; then
+    fail "removal on an unreadable tracking file reported success" "$out"
+    return
+  fi
+  if ! grep -q -F -e "FILE=[claude opencode ]" <<<"$out"; then
+    fail "removal truncated a tracking file it could not read" "$out"
+    return
+  fi
+  pass "removal refuses to rewrite a tracking file it could not read"
+}
+
 # ---------------------------------------------------------------------------
 # hazard (b): a failed install must be observable by its caller
 # ---------------------------------------------------------------------------
@@ -283,6 +532,11 @@ if [[ "\${1:-}" == "register" ]]; then
   printf '%s\n' "\$*" >> "\${FAKE_REGISTER_ARGV:-/dev/null}"
   echo "longterm-mem: register: refused" >&2
   exit $register_exit
+fi
+# FAKE_UNREGISTER_EXIT drives the uninstall-side cases; it defaults to 0 so
+# every case that does not set it sees the old always-succeeds behaviour.
+if [[ "\${1:-}" == "unregister" ]]; then
+  exit "\${FAKE_UNREGISTER_EXIT:-0}"
 fi
 exit 0
 FAKEBIN
@@ -462,6 +716,149 @@ case_register_is_told_the_deployed_binary_path() {
   pass "register is told the deployed binary path"
 }
 
+# ---------------------------------------------------------------------------
+# register/unregister exit 8: a path that could not be resolved at all
+# ---------------------------------------------------------------------------
+
+# register separates exit 8 from exit 1 ON PURPOSE (register_paths.go:
+# "nothing was attempted and nothing was touched, and the fix is the
+# caller's environment"). Folding it into the catch-all arm threw that
+# distinction away and, under --target all, actively misreported it as "a
+# runtime it does not have" — telling the operator their machine simply
+# lacks the runtime when what it actually lacks is a resolvable HOME.
+case_register_path_unresolvable_is_named() {
+  local dir status out
+  dir="$(new_case_dir register-unresolvable)"
+  write_fake_toolchain "$dir" 8
+
+  out="$(
+    STATE_DIR="$dir/state" \
+    FAKE_LONGTERM_MEM="$dir/fake-longterm-mem" \
+    PATH="$dir/bin:$PATH" \
+    bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      LONGTERM_MEM_SRC="$3/src"
+      cmd_longterm_mem install --target claude
+      echo "INSTALL-STATUS=$?"
+      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "register exit 8: harness exited $status" "$out"
+    return
+  fi
+  if ! grep -q -F -e "TRACKED=[]" <<<"$out"; then
+    fail "register exit 8 still marked the target installed" "$out"
+    return
+  fi
+  if grep -q -F -e "INSTALL-STATUS=0" <<<"$out"; then
+    fail "register exit 8 was reported as a successful install" "$out"
+    return
+  fi
+  if ! grep -q -F -e "set HOME" <<<"$out"; then
+    fail "register exit 8 did not name the remedy (set HOME)" "$out"
+    return
+  fi
+  pass "register exit 8 is named with its remedy and does not record the target"
+}
+
+# The twin: under --target all the catch-all arm prints the "a runtime it
+# does not have" line, which is exactly the wrong story for exit 8. Exit 8
+# is not per-runtime at all — it is one environment fault that every target
+# reproduces — so it must neither wear that line nor converge at 0.
+case_register_path_unresolvable_under_target_all_is_named() {
+  local dir status out
+  dir="$(new_case_dir register-unresolvable-all)"
+  write_fake_toolchain "$dir" 8
+
+  out="$(
+    STATE_DIR="$dir/state" \
+    FAKE_LONGTERM_MEM="$dir/fake-longterm-mem" \
+    PATH="$dir/bin:$PATH" \
+    bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      LONGTERM_MEM_SRC="$3/src"
+      cmd_longterm_mem install --target all
+      echo "INSTALL-STATUS=$?"
+      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "register exit 8 under --target all: harness exited $status" "$out"
+    return
+  fi
+  if grep -q -F -e "a runtime it does not have" <<<"$out"; then
+    fail "register exit 8 under --target all was misreported as a missing runtime" "$out"
+    return
+  fi
+  if ! grep -q -F -e "set HOME" <<<"$out"; then
+    fail "register exit 8 under --target all did not name the remedy (set HOME)" "$out"
+    return
+  fi
+  if grep -q -F -e "INSTALL-STATUS=0" <<<"$out"; then
+    fail "register exit 8 under --target all converged as if nothing were wrong" "$out"
+    return
+  fi
+  pass "register exit 8 under --target all is named with its remedy and fails the run"
+}
+
+# unregister carries the same exit 8 for the same reason, and the uninstall
+# branch folded it into the same catch-all. It has to keep the target
+# tracked (its entry may still be in the runtime config) AND say what to do.
+case_unregister_path_unresolvable_is_named() {
+  local dir status out
+  dir="$(new_case_dir unregister-unresolvable)"
+  write_fake_toolchain "$dir" 0
+
+  out="$(
+    STATE_DIR="$dir/state" \
+    FAKE_UNREGISTER_EXIT=8 \
+    bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      cp "$3" "$LONGTERM_MEM_BINARY"
+      chmod +x "$LONGTERM_MEM_BINARY"
+      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      cmd_longterm_mem uninstall --target claude
+      echo "UNINSTALL-STATUS=$?"
+      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" "$dir/engine-stub" "$dir/fake-longterm-mem" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "unregister exit 8: harness exited $status" "$out"
+    return
+  fi
+  if ! grep -q -F -e "TRACKED=[claude ]" <<<"$out"; then
+    fail "unregister exit 8 dropped the target's tracking" "$out"
+    return
+  fi
+  if grep -q -F -e "UNINSTALL-STATUS=0" <<<"$out"; then
+    fail "unregister exit 8 was reported as a clean uninstall" "$out"
+    return
+  fi
+  if ! grep -q -F -e "set HOME" <<<"$out"; then
+    fail "unregister exit 8 did not name the remedy (set HOME)" "$out"
+    return
+  fi
+  if [[ ! -e "$dir/state/bin/longterm-mem" ]]; then
+    fail "unregister exit 8 removed the shared binary anyway" "$out"
+    return
+  fi
+  pass "unregister exit 8 is named with its remedy and keeps the target tracked"
+}
+
 # Every case above runs with errexit off, because it needs to observe an
 # exit status. The CLI dispatch does NOT: `labdrian-overlay longterm-mem
 # install` runs the same code under the `set -euo pipefail` at the top of
@@ -562,11 +959,21 @@ case_parallel_adds_keep_every_target
 case_add_does_not_use_a_shared_temp_path
 case_remove_does_not_use_a_shared_temp_path
 case_corrupt_tracking_file_does_not_wedge_cleanup
+case_unknown_wellformed_target_keeps_the_guard_closed
+case_nul_byte_makes_a_wellformed_name_garbage
+case_partial_final_line_is_garbage
+case_partial_line_does_not_discard_valid_lines
+case_removal_preserves_an_unknown_wellformed_target
+case_unreadable_tracking_file_keeps_the_guard_closed
+case_unreadable_tracking_file_is_not_truncated
 case_install_failure_is_reported_with_recovery_text
 case_register_refusal_does_not_mark_target_installed
 case_register_hard_failure_fails_the_run
 case_register_failure_under_target_all_converges
 case_register_is_told_the_deployed_binary_path
+case_register_path_unresolvable_is_named
+case_register_path_unresolvable_under_target_all_is_named
+case_unregister_path_unresolvable_is_named
 case_install_succeeds_under_errexit
 case_undeployable_binary_is_not_reported_as_deployed
 

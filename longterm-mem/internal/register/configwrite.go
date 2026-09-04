@@ -36,10 +36,10 @@ func backupPath(path string) string { return path + ".bak" }
 func replaceConfig(path string, original, replacement []byte) error {
 	bak := backupPath(path)
 	if err := durable.WriteFile(bak, original, configCreatePerm); err != nil {
-		return fmt.Errorf("register: write backup %s: %w", bak, err)
+		return fmt.Errorf("write backup %s: %w", bak, err)
 	}
 	if err := durable.WriteFile(path, replacement, configCreatePerm); err != nil {
-		return fmt.Errorf("register: %w", err)
+		return err
 	}
 	return nil
 }

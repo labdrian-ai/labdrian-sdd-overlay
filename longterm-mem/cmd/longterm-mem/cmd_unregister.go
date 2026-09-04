@@ -33,11 +33,14 @@ import (
 //
 // One asymmetry with cmdRegister is deliberate and documented at
 // register.uninstallCannotDeriveOwnership: register can re-derive
-// ownership from an entry's own bytes when install-state.json is lost, and
-// unregister cannot, because it never resolves a binary path and so has no
-// entry to compare against. With the record lost, `unregister` therefore
-// still reports the entry unmanaged; running `register` first restores the
-// record, after which `unregister` removes it normally.
+// ownership from an entry's own content when install-state.json is lost,
+// and unregister cannot, because it never resolves a binary path and so
+// has no entry to compare against. With the record lost, `unregister`
+// therefore still reports the entry unmanaged; running `register` first
+// restores the record, after which `unregister` removes it normally. See
+// that constant's own comment for what the packaged overlay uninstall
+// currently does with the exit 6 that reports it, and why this command's
+// recovery story does not survive that caller unchanged.
 func cmdUnregister(args []string) int {
 	fs := flag.NewFlagSet("unregister", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -90,9 +93,14 @@ func cmdUnregister(args []string) int {
 			continue
 		}
 
-		// See cmdRegister's identical comment: register.Unregister's own
-		// errors already name the package and the target, so re-stating
-		// both here is what produced a stacked prefix on the register side.
+		// register.Unregister's own errors already name this command and
+		// the target it was working on ("unregister: claude: ..."), so
+		// this prints the error alone rather than re-stating either.
+		// Re-stating them is what produced the stacked prefix on the
+		// register side; printing the error alone while the writers still
+		// said "register:" is what made unregister report its failures
+		// under the other subcommand's name. Exactly one layer names the
+		// command, and it is the writer's per-target wrap (writer.go).
 		outcome, unregErr := register.Unregister(tgt, root, resolvedStateDir)
 		if unregErr != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", unregErr)

@@ -160,7 +160,7 @@ func TOMLSplice(raw []byte, tableKey, memberKey string, newSection []byte) ([]by
 func TOMLRemove(raw []byte, tableKey, memberKey string) ([]byte, error) {
 	loc := locateTOMLSection(raw, tableKey, memberKey)
 	if !loc.found {
-		return nil, fmt.Errorf("register: table %s.%s not found, nothing to remove", tableKey, memberKey)
+		return nil, fmt.Errorf("table %s.%s not found, nothing to remove", tableKey, memberKey)
 	}
 	if err := assertSpanIsWholeTable(raw[loc.start:loc.end], tableKey, memberKey); err != nil {
 		return nil, err
@@ -236,7 +236,7 @@ func tomlTrimBackwardBlankLines(raw []byte, start int) int {
 func assertSpanIsWholeTable(span []byte, tableKey, memberKey string) error {
 	var probe map[string]interface{}
 	if err := toml.Unmarshal(span, &probe); err != nil {
-		return fmt.Errorf("register: cannot determine where the %s.%s table ends (a line beginning with %q inside it is indistinguishable from the next table header); edit it by hand or put its values on one line each: %w", tableKey, memberKey, "[", err)
+		return fmt.Errorf("cannot determine where the %s.%s table ends (a line beginning with %q inside it is indistinguishable from the next table header); edit it by hand or put its values on one line each: %w", tableKey, memberKey, "[", err)
 	}
 	return nil
 }

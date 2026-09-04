@@ -29,13 +29,21 @@ import (
 const exitDoctorChecksFailed = exitInternal
 
 // cmdDoctor implements `longterm-mem doctor --project P [--vault DIR]
-// [--json]` (R-011): run the four read-only diagnostic checks and report
-// each one individually. ops.Doctor always runs and reports all four
+// [--json]` (R-011): run the five read-only diagnostic checks and report
+// each one individually. ops.Doctor always runs and reports all five
 // checks regardless of any single one's own result (slice 7's review
 // finding: a per-item failure must never abort a whole run) -- this
 // command mirrors that at its own layer: it never returns on the first
 // FAIL, it always lets Doctor finish and prints every check's result
 // before deciding the exit code.
+//
+// It prints whatever Doctor returns rather than a list of its own, so the
+// count above is documentation, not behaviour -- which is exactly how it
+// went on claiming a count one short of the truth once a fifth diagnostic
+// was added, through a repair round that reported the contradiction
+// resolved after correcting only the spec file. That is why
+// TestCmdDoctor_DocumentedCheckCountMatchesOpsDoctor reads the number out
+// of a real ops.Doctor run instead of trusting any file's prose.
 func cmdDoctor(args []string) int {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)

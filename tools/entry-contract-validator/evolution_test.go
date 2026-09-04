@@ -3,9 +3,12 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -547,6 +550,117 @@ func TestExistsRootDefaultsOff(t *testing.T) {
 			code, output := runValidator(t, "--schema", schemaPath(t), "--instance", instance)
 			if code != exitOK {
 				t.Fatalf("exit code = %d, want %d without --exists-root; output=%q", code, exitOK, output)
+			}
+		})
+	}
+}
+
+// documentedExistsRootPattern extracts the ROOT a skill document tells an agent
+// to pass. A value stops at whitespace or a closing backtick, so it reads both
+// the fenced invocation in inception-pipeline and the inline code span in the
+// orchestrator workflow. An occurrence with no value after it — prose naming
+// the flag, as in "`--exists-root` is REQUIRED here" — is not an invocation and
+// does not match.
+var documentedExistsRootPattern = regexp.MustCompile("--exists-root[ \t]+([^\\s`]+)")
+
+// documentedExistsRoot is one place a skill document tells an agent what to
+// pass to --exists-root.
+type documentedExistsRoot struct {
+	relPath string
+	line    int
+	value   string
+}
+
+// collectDocumentedExistsRoots reads every --exists-root value documented under
+// skills/.
+func collectDocumentedExistsRoots(t *testing.T) []documentedExistsRoot {
+	t.Helper()
+	skillsRoot := filepath.Join(repoRoot(t), "skills")
+	var found []documentedExistsRoot
+	err := filepath.WalkDir(skillsRoot, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".md") {
+			return nil
+		}
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			return readErr
+		}
+		relPath, relErr := filepath.Rel(repoRoot(t), path)
+		if relErr != nil {
+			return relErr
+		}
+		for i, line := range strings.Split(string(data), "\n") {
+			for _, match := range documentedExistsRootPattern.FindAllStringSubmatch(line, -1) {
+				found = append(found, documentedExistsRoot{filepath.ToSlash(relPath), i + 1, match[1]})
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walk skills/: %v", err)
+	}
+	return found
+}
+
+// TestDocumentedExistsRootInvocationActuallyValidates RUNS what the skills tell
+// an agent to run.
+//
+// Nothing pinned the documented invocation, so the prose and the tool drifted
+// apart while the suite stayed green: inception-pipeline documented
+// `--exists-root openspec/changes/{change}` and called the flag REQUIRED, but
+// every `artifact_refs` `openspec_path` is REPOSITORY-ROOT-relative and the
+// validator joins it under the given root (see the filepath.Join in
+// validateArtifactRefs). Against the change directory each declared path
+// resolved to `<change-dir>/openspec/changes/<change>/...`, so every artifact
+// was reported missing and the one validation step that can only run at
+// inception time became a hard stop no contract could ever pass. The same wrong
+// value was mirrored in the orchestrator workflow.
+//
+// This test substitutes the documented placeholders against a hermetic
+// repository root, materialises exactly the paths the fixture declares, and
+// requires exit 0. A documented root that is not the repository root cannot
+// survive it.
+func TestDocumentedExistsRootInvocationActuallyValidates(t *testing.T) {
+	documented := collectDocumentedExistsRoots(t)
+	if len(documented) == 0 {
+		t.Fatal("no skill document names an --exists-root value; the inception-time check is undocumented and this pin would prove nothing")
+	}
+
+	for _, occurrence := range documented {
+		t.Run(fmt.Sprintf("%s:%d", occurrence.relPath, occurrence.line), func(t *testing.T) {
+			projectRoot := t.TempDir()
+			contract := loadValidContract(t)
+			changeName, ok := contract["change_name"].(string)
+			if !ok || changeName == "" {
+				t.Fatal("fixture declares no change_name")
+			}
+			materializeDeclaredPaths(t, projectRoot, contract)
+			instance := writeJSONTemp(t, t.TempDir(), "entry.json", contract)
+
+			// Only these placeholders are recognised. An unrecognised one is a
+			// documented invocation nobody can run, which is the same defect in
+			// a different costume.
+			resolved := occurrence.value
+			resolved = strings.ReplaceAll(resolved, "{project-root}", projectRoot)
+			resolved = strings.ReplaceAll(resolved, "{change}", changeName)
+			if strings.ContainsAny(resolved, "{}") {
+				t.Fatalf("%s:%d documents --exists-root %q, which carries a placeholder this pin cannot resolve — use {project-root} (and {change} where a change name genuinely belongs)",
+					occurrence.relPath, occurrence.line, occurrence.value)
+			}
+			if !filepath.IsAbs(resolved) {
+				// A relative root resolves against the caller's directory, and
+				// the documented caller runs from the project root.
+				resolved = filepath.Join(projectRoot, filepath.FromSlash(resolved))
+			}
+
+			code, output := runValidator(t, "--schema", schemaPath(t), "--instance", instance, "--exists-root", resolved)
+			if code != exitOK {
+				t.Fatalf("%s:%d documents --exists-root %q, and running it exits %d instead of %d.\n"+
+					"openspec_path values are repository-root-relative, so the documented root must BE the repository root.\noutput=%q",
+					occurrence.relPath, occurrence.line, occurrence.value, code, exitOK, output)
 			}
 		})
 	}

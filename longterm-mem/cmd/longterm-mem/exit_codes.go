@@ -16,9 +16,22 @@ import (
 const (
 	// exitOK: the command did what it was asked to do.
 	exitOK = 0
-	// exitInternal: longterm-mem itself failed -- an unreadable state
-	// file, an encode failure, an observation it could not process. Not
-	// something the operator can fix by changing configuration.
+	// exitInternal: longterm-mem itself could not complete the work --
+	// an unreadable or unparseable state file, an encode failure, an
+	// observation it could not process.
+	//
+	// It is the code for "something on longterm-mem's own side went
+	// wrong", NOT for "nothing you can do about it". This comment used to
+	// say the operator could not fix it by changing configuration, which
+	// contradicted the very next function in this file: vaultExitCode
+	// deliberately routes a corrupt ~/.labdrian-overlay/vaults.json here,
+	// and says so, and that file is configuration the operator owns and
+	// repairs by hand. What actually distinguishes exit 1 is that it is
+	// the residue: every failure that is not one of the individually
+	// named, individually actionable conditions below (usage, no vault
+	// configured, Engram unavailable, a vault script that failed, a
+	// registration conflict, a missing observation, an unresolvable path)
+	// lands here, and the operator has to read stderr to learn which.
 	exitInternal = 1
 	// exitUsage: the invocation is wrong (bad flag, missing --project).
 	exitUsage = 2
@@ -36,6 +49,29 @@ const (
 	exitRegistrationConflict = 6
 	// exitNotFound: the named observation does not exist.
 	exitNotFound = 7
+	// exitPathUnresolvable: `register`/`unregister` could not resolve a
+	// precondition from the environment at all -- no resolvable HOME, so
+	// no install-state directory, no default binary path, or no config
+	// root for the named runtime.
+	//
+	// It is deliberately NOT exitInternal. Exit 1 is "a target was
+	// attempted and failed" -- a config that would not parse, a file that
+	// could not be written. This is the opposite: nothing was attempted
+	// and nothing was touched, and the fix is the caller's environment
+	// (set HOME, or pass --state-dir/--binary/--config-root) rather than
+	// the runtime's configuration. Sharing one code left a script unable
+	// to tell "you forgot a flag" from "your ~/.claude.json is broken",
+	// which are not the same event and do not have the same remedy.
+	//
+	// It lived in register_paths.go until this round, next to the rules
+	// that raise it, with a doc comment that re-derived the whole contract
+	// above from scratch to justify picking 8. That is precisely the
+	// arrangement this file's own opening paragraph rules out: a reader
+	// choosing the next code scans THIS list, and a code the list does not
+	// show is a collision waiting to be written. Proximity to the raising
+	// code is not worth a contract that is only complete in one file and
+	// only true in another (exit_codes_source_test.go).
+	exitPathUnresolvable = 8
 )
 
 // vaultExitCode maps a vaultreg.Resolve failure onto that contract.

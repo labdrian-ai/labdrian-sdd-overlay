@@ -109,7 +109,7 @@ func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bo
 			continue
 		}
 		fields := parseFrontmatterFields(block)
-		if fields["engram_id"] != wantID || fields["project"] != project {
+		if fields[engramIDField] != wantID || fields["project"] != project {
 			continue
 		}
 		address := strings.TrimSpace(fields["address"])
@@ -117,7 +117,7 @@ func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bo
 			return promotedPage{}, false, fmt.Errorf("promote: promoted page %s matches engram_id %s but carries no address", entry.Name(), wantID)
 		}
 		revision := 0
-		if raw := strings.TrimSpace(fields["engram_revision"]); raw != "" {
+		if raw := strings.TrimSpace(fields[engramRevisionField]); raw != "" {
 			revision, err = strconv.Atoi(raw)
 			if err != nil {
 				return promotedPage{}, false, fmt.Errorf("promote: promoted page %s carries an unparseable engram_revision %q: %w", entry.Name(), raw, err)

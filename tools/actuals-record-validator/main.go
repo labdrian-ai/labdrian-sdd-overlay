@@ -98,6 +98,16 @@ const minNarrativeRunes = 40
 
 var kebabCase = regexp.MustCompile(`^[a-z0-9]+(?:-[a-z0-9]+)*$`)
 
+// durableStem and reconstructedStem are the STEMS the provenance rules match,
+// not whole words. The writer instruction prescribes "durably observed ...
+// versus reconstructed from the closure narrative", and an exact-substring
+// check for "durable" rejects "durably": a rule that refuses the wording its
+// own instruction mandates fails the record, not the writer.
+const (
+	durableStem       = "durabl"
+	reconstructedStem = "reconstruct"
+)
+
 const usageText = `Usage: actuals-record-validator --schema PATH --instance PATH
 
 Validates a closure actuals record with the Draft 2020-12 actuals-record schema,
@@ -344,8 +354,16 @@ func validateSemantics(instance any) error {
 		// provenance split in prose, because no structured field distinguishes a
 		// durably-observed checkpoint from one reconstructed after the fact. A
 		// total with no split is a number a reader cannot weigh.
-		if !strings.Contains(variance, "durable") ||
-			!(strings.Contains(variance, "reconstructed") || strings.Contains(variance, "reconstruction")) {
+		//
+		// Both halves are matched on their STEM, because a rule may not reject
+		// the wording the writer instruction prescribes. skills/inception-
+		// pipeline/SKILL.md tells closure-feedback to say which checkpoints were
+		// "durably observed (via pipeline-state) versus reconstructed from the
+		// closure narrative" — and "durably" does not contain "durable", so the
+		// exact-substring form rejected records written to the letter of the
+		// instruction it exists to enforce. `durabl` covers durable/durably and
+		// `reconstruct` covers reconstructed/reconstruction/reconstructing.
+		if !strings.Contains(variance, durableStem) || !strings.Contains(variance, reconstructedStem) {
 			return errors.New("checkpoint_count is recorded but variance_vs_plan does not disclose the durable-vs-reconstructed split (R-006/R-007): state which units were durably observed via pipeline-state and which were reconstructed from the closure narrative, explicitly stating zero when none were reconstructed")
 		}
 	}
@@ -353,9 +371,7 @@ func validateSemantics(instance any) error {
 		// R-014: a reconstructed elapsed-time figure presented as if measured is
 		// the exact fabrication this instrument exists to remove from its own
 		// numbers, so the record must say which it is.
-		if !strings.Contains(variance, "measured") &&
-			!strings.Contains(variance, "reconstructed") &&
-			!strings.Contains(variance, "reconstruction") {
+		if !strings.Contains(variance, "measured") && !strings.Contains(variance, reconstructedStem) {
 			return errors.New("total_wall_clock_hours is recorded but variance_vs_plan does not state whether it was measured or reconstructed (R-014): an unlabelled elapsed-time figure reads as measured even when it is a best-estimate reconstruction")
 		}
 	}

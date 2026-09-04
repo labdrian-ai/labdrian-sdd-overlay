@@ -21,10 +21,12 @@ const (
 	// same-named entry is refused, not overwritten").
 	ActionRefuse
 	// ActionAdopt: the runtime config already has an entry with this name
-	// and install-state has no record for it — but the entry is byte-
-	// identical to the one this call is about to write, which no other
-	// program produces. The ownership record was lost, not the ownership:
-	// re-record the fingerprint and leave the config alone.
+	// and install-state has no record for it — but the entry is the one
+	// this call is about to write, which no other program produces
+	// (compared through the canonical ownership fingerprint, ownership.go,
+	// so a re-serialization of our own entry still counts as ours). The
+	// ownership record was lost, not the ownership: re-record the
+	// fingerprint and leave the config alone.
 	ActionAdopt
 	// ActionNoop: install-state owns this target, the runtime config
 	// entry is present, and its fingerprint matches what install-state
@@ -40,10 +42,12 @@ const (
 // entry. recordPresent is whether install-state.json has an ownership
 // record for this target.
 //
-// entryOwned is whether the entry CURRENTLY ON DISK is byte-identical to
-// the one longterm-mem is about to write. It is consulted only when there
-// is no record to settle ownership, and it is the whole of the difference
-// between refuse and adopt.
+// entryOwned is whether the entry CURRENTLY ON DISK is the one
+// longterm-mem is about to write, judged by the canonical ownership
+// fingerprint (ownership.go): identical content, whatever the key order
+// or the insignificant whitespace it happens to be serialized with. It is
+// consulted only when there is no record to settle ownership, and it is
+// the whole of the difference between refuse and adopt.
 //
 // fingerprintMatches is whether the record's fingerprint matches the entry
 // longterm-mem is about to write; it is a don't-care unless both
@@ -65,11 +69,22 @@ const (
 // else's: register refused all three with exit 6, unregister reported all
 // three unmanaged, and the only way out was hand-editing three config
 // files longterm-mem itself had written. Re-deriving ownership from the
-// entry's own bytes — exactly what engine/runtime's read-only adapter
-// already does to answer the same question (LongtermMemAdapter's
-// ownedClaudeFingerprint and friends) — makes that state self-healing,
-// while conceding nothing: an entry that differs from ours by a single
-// byte is still refused, so a third party's server can never be adopted.
+// entry's own content — through the SAME canonical fingerprint
+// engine/runtime's read-only adapter uses to answer this question about
+// this very file (LongtermMemAdapter's ownedClaudeFingerprint and
+// friends; ownership.go reproduces that canonicalization, and
+// ownership_test.go pins it) — makes that state self-healing, while
+// conceding nothing: an entry whose content differs from ours at all is
+// still refused, so a third party's server can never be adopted.
+//
+// "Content", not "bytes", is the operative word, and the difference is
+// not cosmetic. Hashing the raw bytes here left the lockout standing for
+// every entry longterm-mem wrote that something then re-serialized — a
+// runtime's settings UI, a formatter, `jq . > config`, a hand tidy-up —
+// because the read-only adapter called those entries ours and this
+// comparison did not. Two derivations of one fact that disagree do not
+// have a stricter side and a looser side; they have a side that is wrong
+// about a real file on a real machine.
 func Decide(entryPresent, recordPresent, entryOwned, fingerprintMatches bool) Action {
 	switch {
 	case !entryPresent && !recordPresent:

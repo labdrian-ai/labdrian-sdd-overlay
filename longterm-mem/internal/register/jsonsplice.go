@@ -74,10 +74,10 @@ func locate(raw []byte, containerKey, memberKey string) (location, error) {
 
 	root, err := dec.Token()
 	if err != nil {
-		return location{}, fmt.Errorf("register: parse document: %w", err)
+		return location{}, fmt.Errorf("parse document: %w", err)
 	}
 	if d, ok := root.(json.Delim); !ok || d != '{' {
-		return location{}, fmt.Errorf("register: document root is not a JSON object")
+		return location{}, fmt.Errorf("document root is not a JSON object")
 	}
 	rootOpenEnd := dec.InputOffset()
 	rootBrace := bytes.IndexByte(raw, '{')
@@ -87,7 +87,7 @@ func locate(raw []byte, containerKey, memberKey string) (location, error) {
 		keyStart := dec.InputOffset()
 		tok, err := dec.Token()
 		if err != nil {
-			return location{}, fmt.Errorf("register: parse document: %w", err)
+			return location{}, fmt.Errorf("parse document: %w", err)
 		}
 		if d, ok := tok.(json.Delim); ok && d == '}' {
 			indent := indentAt(raw, rootBrace) + "  "
@@ -103,22 +103,22 @@ func locate(raw []byte, containerKey, memberKey string) (location, error) {
 		}
 		key, ok := tok.(string)
 		if !ok {
-			return location{}, fmt.Errorf("register: unexpected non-string key in document")
+			return location{}, fmt.Errorf("unexpected non-string key in document")
 		}
 		if key != containerKey {
 			lastRootKeyQuote = int(keyStart) + bytes.IndexByte(raw[keyStart:], '"')
 			if _, err := skipValue(dec); err != nil {
-				return location{}, fmt.Errorf("register: parse document: %w", err)
+				return location{}, fmt.Errorf("parse document: %w", err)
 			}
 			continue
 		}
 
 		open, err := dec.Token()
 		if err != nil {
-			return location{}, fmt.Errorf("register: parse document: %w", err)
+			return location{}, fmt.Errorf("parse document: %w", err)
 		}
 		if d, ok := open.(json.Delim); !ok || d != '{' {
-			return location{}, fmt.Errorf("register: %q is not a JSON object", containerKey)
+			return location{}, fmt.Errorf("%q is not a JSON object", containerKey)
 		}
 		containerOpenEnd := dec.InputOffset()
 
@@ -130,7 +130,7 @@ func locate(raw []byte, containerKey, memberKey string) (location, error) {
 			innerStart := dec.InputOffset()
 			itok, err := dec.Token()
 			if err != nil {
-				return location{}, fmt.Errorf("register: parse document: %w", err)
+				return location{}, fmt.Errorf("parse document: %w", err)
 			}
 			if d, ok := itok.(json.Delim); ok && d == '}' {
 				indent := fallbackIndent
@@ -146,14 +146,14 @@ func locate(raw []byte, containerKey, memberKey string) (location, error) {
 			}
 			mkey, ok := itok.(string)
 			if !ok {
-				return location{}, fmt.Errorf("register: unexpected non-string key in %q", containerKey)
+				return location{}, fmt.Errorf("unexpected non-string key in %q", containerKey)
 			}
 			keyQuote := int(innerStart) + bytes.IndexByte(raw[innerStart:], '"')
 			lastMemberKeyQuote = keyQuote
 
 			valueEnd, err := skipValue(dec)
 			if err != nil {
-				return location{}, fmt.Errorf("register: parse document: %w", err)
+				return location{}, fmt.Errorf("parse document: %w", err)
 			}
 			if mkey == memberKey {
 				return location{
@@ -284,7 +284,7 @@ func Remove(raw []byte, containerKey, memberKey string) ([]byte, error) {
 		return nil, err
 	}
 	if !loc.found {
-		return nil, fmt.Errorf("register: member %q not found in %q, nothing to remove", memberKey, containerKey)
+		return nil, fmt.Errorf("member %q not found in %q, nothing to remove", memberKey, containerKey)
 	}
 	return removeSpan(raw, loc.replaceStart, loc.replaceEnd), nil
 }

@@ -16,8 +16,9 @@ const installStateFileName = "install-state.json"
 
 // ErrConflict is Decide's ActionRefuse outcome (D9): a same-named entry
 // already exists in the runtime's own config, install-state has no record
-// for this target, and the entry is not byte-identical to the one we would
-// write — it is not ours, and writing over it would destroy someone else's
+// for this target, and the entry's canonical ownership fingerprint
+// (ownership.go) is not the one we would write — it is not ours, whatever
+// it is named, and writing over it would destroy someone else's
 // configuration (R-016/R-017 "Untagged same-named entry is refused, not
 // overwritten"). cmd_register.go maps this to exit code 6. Every
 // jsonInstall caller returns this wrapped with errors.Is still resolving
@@ -30,6 +31,17 @@ const installStateFileName = "install-state.json"
 // prefix per layer) and a dead end: it named the situation and no action.
 // Its wrapper names the config file, so between them the message says
 // which file, what is wrong, and what to do about it.
+//
+// The de-duplication rule that produced that wrapper is now stated once,
+// for the whole package: exactly ONE layer names the command, and it is
+// the per-target wrap in jsonInstall/tomlInstall ("register: <target>: ")
+// or jsonUninstall/tomlUninstall ("unregister: <target>: "), because only
+// those know which direction is running. Every helper underneath them
+// names the file and the failure and no command at all -- naming one
+// there is how `unregister` came to report its own failures as
+// "longterm-mem: register: claude: register: read ...", a command that
+// was never run, twice (errormessage_test.go pins the convention,
+// cmd/longterm-mem/register_messages_test.go pins the resulting lines).
 var ErrConflict = errors.New("an entry with this name already exists and is not owned by longterm-mem; to hand it to longterm-mem, remove that entry by hand and run register again")
 
 // saveInstallState is InstallState.Save, indirected the way promote's
@@ -61,20 +73,42 @@ var saveInstallState = func(s *InstallState, path string) error { return s.Save(
 // and tomlUninstall pass to Decide, named rather than spelled `false` at
 // the call site because the reason is not obvious and matters.
 //
-// Deriving ownership from an entry's bytes (Decide's adopt row) requires
+// Deriving ownership from an entry's content (Decide's adopt row) requires
 // knowing the entry longterm-mem WOULD write, which requires the resolved
 // binary path. Install has it — it is about to write that entry. Uninstall
 // has nothing to write and is never told a binary path (Unregister takes
 // target, configRoot, stateDir), so it cannot rebuild the comparison and
 // must not guess at one.
 //
-// The consequence is bounded and recoverable: with install-state.json
-// lost, `unregister` still reports the entry unmanaged and leaves it
-// alone, which is the safe direction. Running `register` first adopts the
-// entry and restores the record, after which `unregister` removes it
-// normally. Making uninstall self-heal on its own would mean threading a
-// binary path through Unregister's signature and cmd_unregister's flags —
-// a public API change, not a bug fix.
+// At THIS layer the consequence is bounded and recoverable: with
+// install-state.json lost, `unregister` reports the entry unmanaged
+// (exit 6) and leaves it alone, which is the safe direction, and running
+// `register` first adopts the entry and restores the record, after which
+// `unregister` removes it normally.
+//
+// That recovery is NOT what the packaged uninstall does with exit 6, and
+// this comment used to stop before saying so. bin/labdrian-overlay's
+// `longterm-mem uninstall` treats 6 the same as 0 — "this target has
+// nothing of ours left" — clears the target from its own tracking file,
+// and, once the last tracked target is cleared, deletes the shared binary
+// at ~/.labdrian-overlay/bin/longterm-mem. So on a machine that lost
+// install-state.json, one packaged uninstall leaves every runtime config
+// still carrying longterm-mem's own MCP entry, pointed at a binary that
+// no longer exists, and removes the only tool that could have adopted
+// them back. The user's recovery is hand-editing every runtime config —
+// exactly the outcome the adopt row was added to abolish.
+//
+// This package cannot fix that: the decision belongs to the overlay
+// script, which is a different lane. What it CAN do is stop describing
+// the outcome as bounded when the shipped caller unbounds it. The fix on
+// the overlay side is to stop folding 6 into 0 for this case — exit 6
+// means "an entry with our name is still in that runtime's config", which
+// is precisely when the shared binary must NOT be removed — and it is
+// reported as such rather than worked around here.
+//
+// Making uninstall self-heal on its own would mean threading a binary
+// path through Unregister's signature and cmd_unregister's flags — a
+// public API change, not a bug fix.
 const uninstallCannotDeriveOwnership = false
 
 // adoptExistingEntry is Decide's ActionAdopt outcome: the runtime's own
@@ -128,12 +162,22 @@ func jsonInstall(target, configPath, stateDir, containerKey, memberKey string, e
 	fingerprintMatches := entryPresent && recordPresent && record.Fingerprint == Fingerprint(entry)
 
 	// entryOwned is the other comparison, and the one that survives a lost
-	// install-state.json: the bytes CURRENTLY on disk against the entry
-	// this call would write. Splice writes an entry's bytes verbatim and
-	// readMember reads them back verbatim, so equality here is exact, not
-	// approximate — see Decide's own doc comment for why re-deriving
-	// ownership this way concedes nothing to a genuinely foreign entry.
-	entryOwned := entryPresent && current != nil && Fingerprint(current) == Fingerprint(entry)
+	// install-state.json: the entry CURRENTLY on disk against the entry
+	// this call would write, both reduced to their canonical ownership
+	// fingerprint (ownership.go) rather than hashed as raw bytes. That is
+	// the same derivation engine/runtime's read-only adapter uses to
+	// answer this question about the same file, so `doctor` and `register`
+	// cannot disagree about whose entry it is — and an entry ours that
+	// something re-serialized is adopted rather than met with exit 6. See
+	// Decide's own doc comment for why this concedes nothing to a
+	// genuinely foreign entry.
+	//
+	// The empty-fingerprint guard is load-bearing: an unparseable entry
+	// has no fingerprint at all, and without this two entries neither of
+	// which is ours would compare "" == "" into an adoption.
+	ownedFingerprint := ownershipFingerprintJSON(entry)
+	entryOwned := entryPresent && current != nil && ownedFingerprint != "" &&
+		ownershipFingerprintJSON(current) == ownedFingerprint
 
 	switch Decide(entryPresent, recordPresent, entryOwned, fingerprintMatches) {
 	case ActionNoop:
@@ -177,11 +221,15 @@ func tomlInstall(target, configPath, stateDir, tableKey, memberKey, binary strin
 
 	// See jsonInstall's identical comments: fingerprintMatches compares
 	// against the section this call is ABOUT TO WRITE, not the bytes
-	// currently on disk, while entryOwned compares exactly those bytes —
-	// TOMLSplice writes a section verbatim and readTOMLSection reads back
-	// the same span, so equality here is exact too.
+	// currently on disk, while entryOwned compares the section on disk
+	// through the canonical ownership derivation (ownership.go) — for
+	// TOML that means trailing newlines are trimmed on both sides, which
+	// is exactly what engine/runtime's read-only adapter does, so a config
+	// whose final line carries no newline is still recognized as ours.
 	fingerprintMatches := entryPresent && recordPresent && record.Fingerprint == Fingerprint(newSection)
-	entryOwned := entryPresent && current != nil && Fingerprint(current) == Fingerprint(newSection)
+	ownedFingerprint := ownershipFingerprintTOML(newSection)
+	entryOwned := entryPresent && current != nil &&
+		ownershipFingerprintTOML(current) == ownedFingerprint
 
 	switch Decide(entryPresent, recordPresent, entryOwned, fingerprintMatches) {
 	case ActionNoop:
@@ -225,13 +273,13 @@ func jsonUninstall(target, configPath, stateDir, containerKey, memberKey string)
 	statePath := filepath.Join(stateDir, installStateFileName)
 	state, err := LoadInstallState(statePath)
 	if err != nil {
-		return 0, fmt.Errorf("register: %s: %w", target, err)
+		return 0, fmt.Errorf("unregister: %s: %w", target, err)
 	}
 	record, recordPresent := state.Get(target)
 
 	current, entryPresent, err := readMember(configPath, containerKey, memberKey)
 	if err != nil {
-		return 0, fmt.Errorf("register: %s: %w", target, err)
+		return 0, fmt.Errorf("unregister: %s: %w", target, err)
 	}
 	fingerprintMatches := entryPresent && recordPresent && current != nil && record.Fingerprint == Fingerprint(current)
 
@@ -243,16 +291,16 @@ func jsonUninstall(target, configPath, stateDir, containerKey, memberKey string)
 	case ActionNoop, ActionReplace:
 		if entryPresent {
 			if err := RemoveMember(configPath, containerKey, memberKey); err != nil {
-				return 0, fmt.Errorf("register: %s: %w", target, err)
+				return 0, fmt.Errorf("unregister: %s: %w", target, err)
 			}
 		}
 		state.Delete(target)
 		if err := saveInstallState(state, statePath); err != nil {
-			return 0, fmt.Errorf("register: %s: %w", target, err)
+			return 0, fmt.Errorf("unregister: %s: %w", target, err)
 		}
 		return UnregisterRemoved, nil
 	default:
-		return 0, fmt.Errorf("register: %s: internal error: unreachable Decide outcome", target)
+		return 0, fmt.Errorf("unregister: %s: internal error: unreachable Decide outcome", target)
 	}
 }
 
@@ -263,13 +311,13 @@ func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (Un
 	statePath := filepath.Join(stateDir, installStateFileName)
 	state, err := LoadInstallState(statePath)
 	if err != nil {
-		return 0, fmt.Errorf("register: %s: %w", target, err)
+		return 0, fmt.Errorf("unregister: %s: %w", target, err)
 	}
 	record, recordPresent := state.Get(target)
 
 	current, entryPresent, err := readTOMLSection(configPath, tableKey, memberKey)
 	if err != nil {
-		return 0, fmt.Errorf("register: %s: %w", target, err)
+		return 0, fmt.Errorf("unregister: %s: %w", target, err)
 	}
 	fingerprintMatches := entryPresent && recordPresent && current != nil && record.Fingerprint == Fingerprint(current)
 
@@ -281,16 +329,16 @@ func tomlUninstall(target, configPath, stateDir, tableKey, memberKey string) (Un
 	case ActionNoop, ActionReplace:
 		if entryPresent {
 			if err := RemoveTOMLSection(configPath, tableKey, memberKey); err != nil {
-				return 0, fmt.Errorf("register: %s: %w", target, err)
+				return 0, fmt.Errorf("unregister: %s: %w", target, err)
 			}
 		}
 		state.Delete(target)
 		if err := saveInstallState(state, statePath); err != nil {
-			return 0, fmt.Errorf("register: %s: %w", target, err)
+			return 0, fmt.Errorf("unregister: %s: %w", target, err)
 		}
 		return UnregisterRemoved, nil
 	default:
-		return 0, fmt.Errorf("register: %s: internal error: unreachable Decide outcome", target)
+		return 0, fmt.Errorf("unregister: %s: internal error: unreachable Decide outcome", target)
 	}
 }
 

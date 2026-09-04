@@ -224,15 +224,52 @@ promoted page's content no longer matches its entry, but the page's own
 engram_revision stands above the revision that entry records and no higher
 than the revision now being promoted, and the page's body still closes with
 the promotion footer naming that observation at exactly the revision the page
-claims, THEN the promotion writer SHALL treat it as its own unrecorded
-update: republish the page at the current revision and record the entry the
-interrupted run never wrote.
+claims, and the page's frontmatter is what promotion would render now, THEN
+the promotion writer SHALL treat it as its own unrecorded update: republish
+the page at the current revision and record the entry the interrupted run
+never wrote.
+
+The frontmatter comparison SHALL disregard exactly the created and updated
+stamps, the engram_revision the two renders differ in by construction, and
+the status and related lines a status propagation rewrites in place; it SHALL
+compare every other key and value, so that a key a human added, changed or
+deleted is a refusal. Corroborating only the body's closing footer is not
+sufficient: a frontmatter-only edit leaves that footer intact, and adopting
+such a page overwrites the human's edit while reporting a successful update.
 
 A page whose engram_revision is level with the revision its entry records has
 been changed by someone other than the promotion writer — only the writer's
-own renders advance that field — and remains a refusal, as does a page whose
-entry records no revision at all, which is no evidence rather than revision
-zero.
+own renders advance that field — and remains a refusal.
+
+An entry that records no revision at all is a vault promoted before the store
+recorded one. Such an entry has no reachable path back on its own: the
+refusal it produces is a skip, a skip suppresses the store write, and the
+store write is the only thing that would have given the entry a revision, so
+the page is refused on every later run while the vault reports healthy. IF a
+promoted page's content no longer matches an entry that records no revision,
+but the entry's frontmatter fingerprint no longer matches the page either,
+and the page's own engram_revision stands strictly below the revision now
+being promoted, and the body and frontmatter corroborate as above, THEN the
+promotion writer SHALL treat it as its own unrecorded update and record the
+revision the entry never carried.
+
+An entry recording no revision whose FRONTMATTER fingerprint still matches
+the page remains a refusal: every render carries engram_revision in its
+frontmatter, so an unrecorded update of the writer's own always moves that
+fingerprint, and a divergence confined to the body is a human's. So does a
+page level with the revision now being promoted, since at that revision the
+writer's own render would already have been adopted by the byte comparison
+above.
+
+Two limits of this reconciliation are known and accepted, and both are stated
+here rather than left to be rediscovered. An edit buried mid-body, or one
+confined to the created, updated, status or related lines the comparison has
+to disregard, is indistinguishable from the writer's own render, because the
+fingerprint that would have separated them is exactly what the interruption
+destroyed. In the other direction, an interrupted update whose observation
+was retitled or retyped before the retry now renders a frontmatter the page
+cannot match, and is refused rather than adopted; that refusal is reported
+and names the page, which is the side of the trade this requirement takes.
 
 #### Scenario: An interrupted create is finished by the next run
 
@@ -283,6 +320,45 @@ zero.
   that its body no longer closes with the promotion footer for the revision
   it claims
 - WHEN promotion runs again for that observation
+- THEN the page is left byte-unchanged and the promotion is refused
+
+#### Scenario: A frontmatter-only edit inside the update crash window is refused
+
+- GIVEN that same interrupted update, and a page whose frontmatter a human has
+  since edited — a key added, a value changed or a key deleted — leaving the
+  body, promotion footer included, byte-identical
+- WHEN promotion runs again for that observation
+- THEN the page is left byte-unchanged and the promotion is refused
+
+#### Scenario: A page level with the revision its entry records is refused
+
+- GIVEN a page promoted completely at its current revision, whose body a human
+  has since edited without disturbing the promotion footer or the frontmatter
+- WHEN promotion runs again for a later revision of that observation
+- THEN the page is left byte-unchanged and the promotion is refused
+
+#### Scenario: A page claiming a revision Engram has not reached is refused
+
+- GIVEN a page whose engram_revision, and whose promotion footer, name a
+  revision above the one now being promoted
+- WHEN promotion runs for that observation
+- THEN the page is left byte-unchanged and the promotion is refused
+
+#### Scenario: An entry recording no revision stops wedging its page
+
+- GIVEN a precedence entry carrying content fingerprints but no revision, and
+  a page an interrupted update left holding a later render than those
+  fingerprints describe
+- WHEN promotion runs for a further revision of that observation
+- THEN the page is republished, its entry records the revision just published,
+  and every later revision takes the ordinary update path
+
+#### Scenario: An entry recording no revision still refuses an edited page
+
+- GIVEN that same entry recording no revision, whose frontmatter fingerprint
+  still matches the page, and a page whose body a human has edited without
+  disturbing the promotion footer
+- WHEN promotion runs for a later revision of that observation
 - THEN the page is left byte-unchanged and the promotion is refused
 
 ### Requirement: A Refused Promotion Is Reported as a Refusal

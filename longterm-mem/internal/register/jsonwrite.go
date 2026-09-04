@@ -20,15 +20,15 @@ import (
 func WriteMember(path, containerKey, memberKey string, newValue json.RawMessage) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("register: read %s: %w", path, err)
+		return fmt.Errorf("read %s: %w", path, err)
 	}
 
 	spliced, err := Splice(raw, containerKey, memberKey, newValue)
 	if err != nil {
-		return fmt.Errorf("register: splice %s: %w", path, err)
+		return fmt.Errorf("splice %s: %w", path, err)
 	}
 	if !json.Valid(spliced) {
-		return fmt.Errorf("register: splice of %s would produce invalid JSON, not written", path)
+		return fmt.Errorf("splice of %s would produce invalid JSON, not written", path)
 	}
 
 	return replaceConfig(path, raw, spliced)
@@ -46,18 +46,18 @@ func WriteMember(path, containerKey, memberKey string, newValue json.RawMessage)
 func RemoveMember(path, containerKey, memberKey string) error {
 	raw, err := os.ReadFile(path)
 	if err != nil {
-		return fmt.Errorf("register: read %s: %w", path, err)
+		return fmt.Errorf("read %s: %w", path, err)
 	}
 
 	removed, err := Remove(raw, containerKey, memberKey)
 	if err != nil {
-		return fmt.Errorf("register: remove from %s: %w", path, err)
+		return fmt.Errorf("remove from %s: %w", path, err)
 	}
 	if !json.Valid(removed) {
-		return fmt.Errorf("register: removing %s.%s from %s would produce invalid JSON, not written", containerKey, memberKey, path)
+		return fmt.Errorf("removing %s.%s from %s would produce invalid JSON, not written", containerKey, memberKey, path)
 	}
 	if stillPresent := jsonMemberPresent(removed, containerKey, memberKey); stillPresent {
-		return fmt.Errorf("register: removal of %s.%s from %s did not actually remove it, not written", containerKey, memberKey, path)
+		return fmt.Errorf("removal of %s.%s from %s did not actually remove it, not written", containerKey, memberKey, path)
 	}
 
 	return replaceConfig(path, raw, removed)

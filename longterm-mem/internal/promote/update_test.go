@@ -1,6 +1,7 @@
 package promote
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -686,6 +687,461 @@ func TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped(t *testing.T
 	}
 	if action.Diagnostic == nil || !strings.Contains(action.Diagnostic.Detail, "c-000311") {
 		t.Fatalf("action.Diagnostic = %+v, want a diagnostic naming c-000311", action.Diagnostic)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != edited {
+		t.Fatalf("the human's edit was overwritten; got:\n%s\nwant (unchanged):\n%s", got, edited)
+	}
+}
+
+// legacyEntryFor builds the precedence entry an older build wrote: the two
+// content hashes and nothing else. It is the shape every entry in a vault
+// promoted before promoted_revision existed still has, and the shape
+// Propagate leaves behind when it patches a page whose entry never carried
+// one.
+func legacyEntryFor(page Page) PrecedenceEntry {
+	return PrecedenceEntry{
+		BodyHash:        hashText(page.Body),
+		FrontmatterHash: hashText(page.Frontmatter),
+	}
+}
+
+// editFrontmatter applies edit to page's rendered frontmatter and returns
+// the full page content with the body left byte-identical, failing the test
+// when edit changed nothing (a fixture that silently stopped matching the
+// render would otherwise assert nothing at all).
+func editFrontmatter(t *testing.T, page Page, edit func(string) string) string {
+	t.Helper()
+	edited := edit(page.Frontmatter)
+	if edited == page.Frontmatter {
+		t.Fatalf("fixture edit changed nothing; frontmatter was:\n%s", page.Frontmatter)
+	}
+	return edited + page.Body
+}
+
+// TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped is the twin
+// of TestUpdate_PageAheadOfTheSidecarWithAnEditedBodyIsStillSkipped: the
+// same crash window, the same advanced engram_revision, but the human's
+// edit lands in the FRONTMATTER and leaves the body -- footer included --
+// byte-identical. Corroborating only the body's tail adopts every one of
+// these and overwrites it while reporting action=updated, which is exactly
+// the loss R-030 exists to prevent.
+//
+// The three shapes a frontmatter edit takes are all covered here -- a key the
+// human added, a value the human changed, and a key the human deleted -- and
+// each is run against BOTH entry shapes, because the recorded and the legacy
+// entry reach the corroboration down two different revision guards and a fix
+// that only covers the population it was reported against is not a fix.
+func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T) {
+	edits := []struct {
+		name string
+		edit func(string) string
+	}{
+		{
+			name: "a key the human added",
+			edit: func(fm string) string {
+				return strings.Replace(fm, "project: ", "my_own_field: keep me\nproject: ", 1)
+			},
+		},
+		{
+			name: "a value the human changed",
+			edit: func(fm string) string {
+				return strings.Replace(fm, `title: "Edited Frontmatter"`, `title: "The Human's Own Title"`, 1)
+			},
+		},
+		{
+			name: "a key the human deleted",
+			edit: func(fm string) string {
+				return strings.Replace(fm, "project: labdrian-sdd-overlay\n", "", 1)
+			},
+		},
+	}
+	entries := []struct {
+		name  string
+		build func(Page) PrecedenceEntry
+	}{
+		{name: "a recorded entry", build: entryFor},
+		{name: "an entry recording no revision", build: legacyEntryFor},
+	}
+
+	for _, entryShape := range entries {
+		for _, tt := range edits {
+			t.Run(entryShape.name+", "+tt.name, func(t *testing.T) {
+				vaultRoot := t.TempDir()
+				fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+				obs := engram.Observation{ID: 312, Type: "decision", Title: "Edited Frontmatter", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+				first, err := EmitPage(obs, "c-000312", nil)
+				if err != nil {
+					t.Fatalf("EmitPage (v1): %v", err)
+				}
+				existingPath := writePromotedPage(t, vaultRoot, first)
+
+				store := PrecedenceStore{}
+				store.Set(first.Address, entryShape.build(first))
+
+				// The interrupted write published revision 2 and the sidecar
+				// Save never ran, so the entry still fingerprints revision 1.
+				fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+				obs.RevisionCount = 2
+				obs.Content = "V2 body."
+				interrupted, err := EmitPage(obs, "c-000312", nil)
+				if err != nil {
+					t.Fatalf("EmitPage (interrupted v2): %v", err)
+				}
+				// A human then edited the published page's frontmatter, and
+				// only its frontmatter.
+				edited := editFrontmatter(t, interrupted, tt.edit)
+				if err := os.WriteFile(existingPath, []byte(edited), 0o644); err != nil {
+					t.Fatalf("write local edit: %v", err)
+				}
+
+				fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+				obs.RevisionCount = 3
+				obs.Content = "V3 body."
+				incoming, err := EmitPage(obs, "c-000312", nil)
+				if err != nil {
+					t.Fatalf("EmitPage (v3): %v", err)
+				}
+
+				action, err := UpdateInPlace(store, incoming, existingPath)
+				if err != nil {
+					t.Fatalf("UpdateInPlace: %v", err)
+				}
+				if action.Kind != ActionSkippedLocalEdit {
+					t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a frontmatter edit inside the crash window is a human's edit, not our own unrecorded write", action.Kind)
+				}
+				got, err := os.ReadFile(existingPath)
+				if err != nil {
+					t.Fatalf("read %s: %v", existingPath, err)
+				}
+				if string(got) != edited {
+					t.Fatalf("the human's frontmatter edit was overwritten; got:\n%s\nwant (unchanged):\n%s", got, edited)
+				}
+			})
+		}
+	}
+}
+
+// TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped pins the
+// level-with-the-entry half of the revision guard, the clause that protects
+// the single most ordinary shape of local edit there is: a page longterm-mem
+// promoted completely, whose body a human then edited in the middle, leaving
+// the promotion footer and the whole frontmatter exactly as they were.
+//
+// Every other piece of corroboration passes on that page -- the footer names
+// the revision the frontmatter claims, the frontmatter matches the incoming
+// render field for field -- so the ONLY thing standing between the human's
+// paragraph and an overwrite is that the page's revision is level with the
+// revision the entry records, and our own writes never leave it there.
+func TestUpdate_PageLevelWithTheSidecarRevisionIsSkipped(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 313, Type: "decision", Title: "Level With The Sidecar", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	promoted, err := EmitPage(obs, "c-000313", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v2): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, promoted)
+
+	// A COMPLETE promotion of revision 2: the entry records that revision.
+	store := PrecedenceStore{}
+	seedPrecedence(store, promoted)
+
+	// A human edits the middle of the body, leaving the footer -- and the
+	// entire frontmatter -- untouched.
+	edited := promoted.Frontmatter + strings.Replace(promoted.Body, "V2 body, first paragraph.", "V2 body, first paragraph.\n\nAnd the human's own second one.", 1)
+	if edited == promoted.Frontmatter+promoted.Body {
+		t.Fatalf("fixture edit changed nothing; body was:\n%s", promoted.Body)
+	}
+	if err := os.WriteFile(existingPath, []byte(edited), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 3
+	obs.Content = "V3 body."
+	incoming, err := EmitPage(obs, "c-000313", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v3): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a page level with the revision its entry records was changed by someone other than the promotion writer", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != edited {
+		t.Fatalf("the human's edit was overwritten; got:\n%s\nwant (unchanged):\n%s", got, edited)
+	}
+}
+
+// TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped pins the
+// other half of the revision guard. A page whose engram_revision stands
+// ABOVE the revision now being promoted is not a render this writer could
+// have produced -- we only ever render the revision Engram reports -- so
+// however well it corroborates otherwise, it is not our own unrecorded
+// write and must not be adopted.
+func TestUpdate_PageClaimingARevisionEngramHasNotReachedIsSkipped(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 314, Type: "decision", Title: "Ahead Of Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := EmitPage(obs, "c-000314", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v1): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, first)
+
+	store := PrecedenceStore{}
+	seedPrecedence(store, first)
+
+	// The page on disk claims revision 5, complete with the footer for it.
+	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 5
+	obs.Content = "A body claiming revision 5."
+	forged, err := EmitPage(obs, "c-000314", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (claimed v5): %v", err)
+	}
+	if err := os.WriteFile(existingPath, []byte(forged.Frontmatter+forged.Body), 0o644); err != nil {
+		t.Fatalf("write page claiming revision 5: %v", err)
+	}
+
+	// Engram itself is only at revision 3.
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 3
+	obs.Content = "V3 body."
+	incoming, err := EmitPage(obs, "c-000314", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v3): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a page claiming a revision Engram has not reached is not a render this writer produced", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != forged.Frontmatter+forged.Body {
+		t.Fatalf("the page was overwritten; got:\n%s", got)
+	}
+}
+
+// TestUpdate_LegacyEntryWithoutARecordedRevisionIsReconciled covers the
+// population the recorded-revision reconciliation cannot reach at all: a
+// vault whose sidecar predates promoted_revision. Such an entry carries the
+// two content hashes and nothing else, and once its page has diverged it can
+// never acquire a revision, because the only writer of one (entryFor) runs
+// after a write the refusal itself prevents. Engram then moves on, run after
+// run, and every one of them reports the same skipped_local_edit: a
+// permanent fixed point, in a vault doctor reports as entirely healthy.
+//
+// The evidence a legacy entry still has is its FRONTMATTER hash. Every one
+// of our own renders puts engram_revision in the frontmatter, so an
+// unrecorded update always moves that hash; an entry whose frontmatter hash
+// still matches the page has a divergence confined to the body, which only a
+// human puts there.
+func TestUpdate_LegacyEntryWithoutARecordedRevisionIsReconciled(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 315, Type: "decision", Title: "Legacy Sidecar", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := EmitPage(obs, "c-000315", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v1): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, first)
+
+	// The entry an older build wrote: hashes only, no revision.
+	store := PrecedenceStore{}
+	store.Set(first.Address, legacyEntryFor(first))
+
+	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 2
+	obs.Content = "V2 body."
+	interrupted, err := EmitPage(obs, "c-000315", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (interrupted v2): %v", err)
+	}
+	if err := os.WriteFile(existingPath, []byte(interrupted.Frontmatter+interrupted.Body), 0o644); err != nil {
+		t.Fatalf("simulate interrupted write: %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 3
+	obs.Content = "V3 body."
+	incoming, err := EmitPage(obs, "c-000315", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v3): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionUpdated {
+		t.Fatalf("action.Kind = %v, want ActionUpdated: a legacy entry must not wedge its page forever", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != incoming.Frontmatter+incoming.Body {
+		t.Fatalf("page was not refreshed to revision 3; got:\n%s", got)
+	}
+	entry, ok := store.Get(incoming.Address)
+	if !ok {
+		t.Fatalf("store has no entry for %s after reconciliation", incoming.Address)
+	}
+	if entry.PromotedRevision != 3 {
+		t.Fatalf("entry.PromotedRevision = %d, want 3: the reconciliation must leave the entry recorded, or the vault stays legacy forever", entry.PromotedRevision)
+	}
+
+	// And the vault must STAY out of the legacy state: every later revision
+	// goes through the ordinary update path, which is what "no longer a
+	// fixed point" actually means.
+	for _, revision := range []int{4, 5, 6} {
+		obs.RevisionCount = revision
+		obs.Content = fmt.Sprintf("V%d body.", revision)
+		later, err := EmitPage(obs, "c-000315", nil)
+		if err != nil {
+			t.Fatalf("EmitPage (v%d): %v", revision, err)
+		}
+		action, err := UpdateInPlace(store, later, existingPath)
+		if err != nil {
+			t.Fatalf("UpdateInPlace (v%d): %v", revision, err)
+		}
+		if action.Kind != ActionUpdated {
+			t.Fatalf("action.Kind at revision %d = %v, want ActionUpdated", revision, action.Kind)
+		}
+		if entry, _ := store.Get(later.Address); entry.PromotedRevision != revision {
+			t.Fatalf("entry.PromotedRevision after revision %d = %d, want %d", revision, entry.PromotedRevision, revision)
+		}
+	}
+}
+
+// TestUpdate_LegacyEntryWithABodyEditIsStillSkipped is the twin of the test
+// above, and the reason the legacy path is allowed to exist at all. Same
+// missing revision, same advanced engram_revision on disk, same intact
+// footer -- but the entry's frontmatter hash still matches the page, so the
+// divergence is confined to the body, and our own writes cannot produce
+// that: every render of a new revision moves the frontmatter's
+// engram_revision too.
+func TestUpdate_LegacyEntryWithABodyEditIsStillSkipped(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 316, Type: "decision", Title: "Legacy Body Edit", Content: "V2 body, first paragraph.", Project: "labdrian-sdd-overlay", RevisionCount: 2}
+	promoted, err := EmitPage(obs, "c-000316", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v2): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, promoted)
+
+	store := PrecedenceStore{}
+	store.Set(promoted.Address, legacyEntryFor(promoted))
+
+	edited := promoted.Frontmatter + strings.Replace(promoted.Body, "V2 body, first paragraph.", "V2 body, first paragraph.\n\nAnd the human's own second one.", 1)
+	if edited == promoted.Frontmatter+promoted.Body {
+		t.Fatalf("fixture edit changed nothing; body was:\n%s", promoted.Body)
+	}
+	if err := os.WriteFile(existingPath, []byte(edited), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
+
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 3
+	obs.Content = "V3 body."
+	incoming, err := EmitPage(obs, "c-000316", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v3): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: a legacy entry whose frontmatter hash still matches the page has a body-only divergence, which only a human writes", action.Kind)
+	}
+	got, err := os.ReadFile(existingPath)
+	if err != nil {
+		t.Fatalf("read %s: %v", existingPath, err)
+	}
+	if string(got) != edited {
+		t.Fatalf("the human's edit was overwritten; got:\n%s\nwant (unchanged):\n%s", got, edited)
+	}
+}
+
+// TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped pins the
+// strictness the legacy path needs and the recorded path does not. With no
+// recorded revision, the only thing separating "our write landed and the
+// sidecar did not" from "a human edited this page" is that the page's
+// revision is BEHIND the one now being promoted. At the same revision our
+// own write would have been byte-identical to the incoming render apart from
+// the wall-clock stamps, and the untracked-write comparison would already
+// have adopted it -- so a divergence there is the human's, not ours.
+func TestUpdate_LegacyEntryLevelWithTheIncomingRevisionIsSkipped(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	obs := engram.Observation{ID: 317, Type: "decision", Title: "Legacy Level With Engram", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	first, err := EmitPage(obs, "c-000317", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v1): %v", err)
+	}
+	existingPath := writePromotedPage(t, vaultRoot, first)
+
+	store := PrecedenceStore{}
+	store.Set(first.Address, legacyEntryFor(first))
+
+	// Revision 2 landed and a human then edited the middle of its body, so
+	// the entry's frontmatter hash (revision 1's) no longer matches.
+	fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+	obs.RevisionCount = 2
+	obs.Content = "V2 body, first paragraph."
+	second, err := EmitPage(obs, "c-000317", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v2): %v", err)
+	}
+	edited := second.Frontmatter + strings.Replace(second.Body, "V2 body, first paragraph.", "V2 body, first paragraph.\n\nAnd the human's own second one.", 1)
+	if edited == second.Frontmatter+second.Body {
+		t.Fatalf("fixture edit changed nothing; body was:\n%s", second.Body)
+	}
+	if err := os.WriteFile(existingPath, []byte(edited), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
+
+	// Engram is still at revision 2, so the promotion re-renders the same
+	// revision the page already claims.
+	fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+	incoming, err := EmitPage(obs, "c-000317", nil)
+	if err != nil {
+		t.Fatalf("EmitPage (v2 retry): %v", err)
+	}
+
+	action, err := UpdateInPlace(store, incoming, existingPath)
+	if err != nil {
+		t.Fatalf("UpdateInPlace: %v", err)
+	}
+	if action.Kind != ActionSkippedLocalEdit {
+		t.Fatalf("action.Kind = %v, want ActionSkippedLocalEdit: at the revision the page already claims, a divergence is the human's", action.Kind)
 	}
 	got, err := os.ReadFile(existingPath)
 	if err != nil {
