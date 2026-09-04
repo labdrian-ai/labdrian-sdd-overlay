@@ -63,7 +63,7 @@ Elapsed-calendar-time MUST be measured independently of the compute-time sum, co
 
 - GIVEN no non-durable checkpoints occurred
 - WHEN the record is closed
-- THEN `variance_vs_plan` explicitly states that all counted checkpoints were durably observed, not silently omitting comment
+- THEN `variance_vs_plan` explicitly states that all counted checkpoints were durably observed and that zero were reconstructed from the closure narrative, not silently omitting comment — the zero case names BOTH halves of the split, because the half-disclosure rule rejects prose that names only one
 
 ### Requirement: Compute-Time Baseline Built From Three Phase Fields Only (R-009)
 
@@ -111,7 +111,9 @@ The Actuals and Calibration output section (`sdd-time-estimation/SKILL.md` Outpu
 - WHEN scanned for structured actuals field names (`total_wall_clock_hours`, `checkpoint_count`, `implementation_hours`, `review_gate_hours`, `post_review_fix_hours`)
 - THEN none of those five names appears anywhere in the file, and every actuals-related mention (nine prose lines, not one) refers to the actuals record by its topic (`sdd/{change}/actuals`) and attributes ownership to `inception-pipeline` closure-feedback without naming any structured field
 
-**Scope note (deliberate deferral):** extending the `roadmap-maker` tracking-line template (`skills/roadmap-maker/SKILL.md`, `## Output Format`, the `**Tracking**:` line) with dedicated elapsed-calendar-time and checkpoint-count slots — the positive counterpart of "source tracking-line figures from the corrected fields" — is deliberately OUT OF SCOPE for this change and deferred to a future change. Design decision D6 explicitly chose not to edit `roadmap-maker`, and the template has no such slots today. R-013 above covers only the negative obligation (never reference any of the five structured actuals field names); it does not claim, and this change does not deliver, the positive tracking-line-sourcing obligation.
+**Scope note (superseded — the deferral has since been taken up elsewhere):** this note originally recorded that extending the tracking line with dedicated elapsed-calendar-time and checkpoint-count slots was OUT OF SCOPE, because design decision D6 chose not to edit `roadmap-maker` and "the template has no such slots today". The second half of that sentence is no longer true: `skills/roadmap-maker/assets/roadmap-template.md` was subsequently rewritten and now carries the full tracking table, including rows sourced from `total_wall_clock_hours` and `checkpoint_count`, each with its own source attribution and the `[PENDING]` / `[NOT MEASURED — reason]` sentinel pair.
+
+The two statements are not in conflict once the OWNER is named, which the original note never did. R-013's negative obligation binds `skills/roadmap-maker/SKILL.md` — no structured actuals field name appears there, and the enforcing whole-file forbid list is unchanged. The positive slots live in the template ASSET, which is a different file and was never in R-013's scope. `SKILL.md` now renders the tracking block FROM that asset instead of restating it, so the duplicate that let the two drift apart is gone: the asset owns the rows, and the skill owns nothing to contradict them with. Nothing in this requirement asks `SKILL.md` to name a field, and nothing here weakens the forbid list.
 
 ### Requirement: Historical Record Corrected With a Mandatory Provenance Disclaimer (R-014)
 

@@ -76,6 +76,6 @@ func Unregister(target, configRoot, stateDir string) (UnregisterOutcome, error) 
 		configPath := filepath.Join(configRoot, codexConfigFileName)
 		return tomlUninstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem")
 	default:
-		return 0, fmt.Errorf("register: %s: unknown target", target)
+		return 0, fmt.Errorf("unregister: %s: unknown target", target)
 	}
 }

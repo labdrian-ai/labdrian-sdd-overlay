@@ -1,0 +1,21 @@
+# Archive reports that do not yet satisfy the landing-commit anchor contract.
+#
+# This ledger is a RECORD of a gap, never a permission to keep it. Every line
+# is a report the gate genuinely fails on today, kept out of the run's exit
+# status only so a gate that is correct can ship before the records it judges
+# are corrected. Two properties make it safe:
+#
+#   * a NEW non-compliant report is not on this list, so it fails the run;
+#   * a listed report that starts passing fails the run as a stale waiver, so
+#     the entry has to be deleted when the gap closes. The list cannot rot into
+#     a permanent exemption by being forgotten.
+#
+# Each line is a repository-relative path. '#' starts a comment.
+
+# Archived 2026-09-02 with no `## Cycle Timestamps` section at all. The report
+# does say "82 PRs staged, not yet merged (no landing commit)" in its Delivery
+# header, which is the right FACT in the wrong PLACE: the anchor contract gives
+# a reader exactly one section to consult, and this report does not answer
+# there. Closing the gap means adding the section with the absent outcome
+# recorded in it; the file is outside this change's edit scope.
+openspec/changes/archive/2026-09-02-longterm-mem/archive-report.md

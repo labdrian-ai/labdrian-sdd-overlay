@@ -29,8 +29,8 @@ func PatchStatusFields(path, status string, related []string) (frontmatterHash, 
 	}
 	body := string(raw)[len(fmBlock):]
 
-	newBlock := setScalarField(fmBlock, "status", status)
-	newBlock = setListField(newBlock, "related", related)
+	newBlock := setScalarField(fmBlock, statusField, status)
+	newBlock = setListField(newBlock, relatedField, related)
 
 	if newBlock != fmBlock {
 		if err := writeFileAtomic(path, []byte(newBlock+body)); err != nil {
@@ -124,6 +124,32 @@ func insertBeforeClosingDelimiter(lines, newLines []string) string {
 // required fields (author, url, ...) promotion would otherwise fabricate.
 const vaultType = "concept"
 
+// These are the frontmatter keys some other part of this package reads
+// back, rather than merely rendering: engramIDField and engramRevisionField
+// identify WHICH observation, at WHICH revision, a page on disk was
+// rendered from (update.go's reconciliation, address.go's promoted-page
+// scan), statusField/relatedField are the two lines PatchStatusFields
+// rewrites in place, and titleField/aliasesField/tagsField/engramTypeField/
+// projectField/engramSyncIDField are the observation-derived lines update.go's
+// corroboration has to blank because the observation, not a human, moves them
+// between two of our own renders. Named here, next to the Render call that
+// emits them, so every reader and the writer cannot drift apart into two
+// spellings of the same key -- which is a claim this file only earns while
+// the readers actually use them, so a new read site spells the constant,
+// never the literal.
+const (
+	engramIDField       = "engram_id"
+	engramRevisionField = "engram_revision"
+	statusField         = "status"
+	relatedField        = "related"
+	titleField          = "title"
+	aliasesField        = "aliases"
+	tagsField           = "tags"
+	engramTypeField     = "engram_type"
+	engramSyncIDField   = "engram_sync_id"
+	projectField        = "project"
+)
+
 // frontmatter is the flat-YAML page header EmitPage renders.
 type frontmatter struct {
 	Title          string
@@ -149,20 +175,20 @@ func (fm frontmatter) Render() string {
 	var b strings.Builder
 	b.WriteString("---\n")
 	writeField(&b, "type", vaultType)
-	writeField(&b, "title", quoteYAML(fm.Title))
+	writeField(&b, titleField, quoteYAML(fm.Title))
 	writeField(&b, "address", fm.Address)
-	writeListField(&b, "aliases", fm.Aliases)
+	writeListField(&b, aliasesField, fm.Aliases)
 	writeField(&b, "created", fm.Created)
 	writeField(&b, "updated", fm.Updated)
-	writeListField(&b, "tags", fm.Tags)
-	writeField(&b, "status", fm.Status)
-	writeListField(&b, "related", fm.Related)
+	writeListField(&b, tagsField, fm.Tags)
+	writeField(&b, statusField, fm.Status)
+	writeListField(&b, relatedField, fm.Related)
 	writeListField(&b, "sources", nil)
-	writeField(&b, "engram_id", strconv.FormatInt(fm.EngramID, 10))
-	writeField(&b, "engram_sync_id", fm.EngramSyncID)
-	writeField(&b, "engram_type", fm.EngramType)
-	writeField(&b, "engram_revision", strconv.Itoa(fm.EngramRevision))
-	writeField(&b, "project", fm.Project)
+	writeField(&b, engramIDField, strconv.FormatInt(fm.EngramID, 10))
+	writeField(&b, engramSyncIDField, fm.EngramSyncID)
+	writeField(&b, engramTypeField, fm.EngramType)
+	writeField(&b, engramRevisionField, strconv.Itoa(fm.EngramRevision))
+	writeField(&b, projectField, fm.Project)
 	b.WriteString("---\n")
 	return b.String()
 }

@@ -3287,34 +3287,45 @@ func TestComponentFlag_LongtermMemRefusesUpdateRollback(t *testing.T) {
 
 // TestComponentFlag_LongtermMemLifecycleExitCodes covers the branch's whole
 // success path, which the refusal test above returns before ever reaching:
-// adapter construction, the result line on stdout, and the two DISTINCT
-// exit-code mappings — status exits 1 unless fully supported, while a
-// mutating action exits 1 only on unsupported/partial (review finding
-// R3-longterm-mem-lifecycle-unproved).
+// adapter construction, the result line on stdout, and the exit-code
+// mapping for each action (review finding R3-longterm-mem-lifecycle-unproved).
 //
-// Nothing is installed in this fixture, so every action lands on a
-// not-fully-supported result; that is enough to pin both mappings and to
-// prove the adapter really ran, which the refusal path cannot show.
+// The fixture is an empty HOME, so the shared binary does not exist and both
+// inspecting actions land on `partial — missing binary`. Uninstall is the
+// interesting one: it asks a DIFFERENT question — "did I remove what I own?"
+// — and on a machine where nothing was ever registered the answer is yes,
+// the requested end state already holds, so it exits 0. It used to exit 1
+// here, which meant a flawless uninstall on a fully healthy machine also
+// exited 1; there was no input at all for which it exited 0.
 func TestComponentFlag_LongtermMemLifecycleExitCodes(t *testing.T) {
-	for _, action := range []string{"status", "install", "uninstall"} {
-		t.Run(action, func(t *testing.T) {
+	cases := []struct {
+		action   string
+		wantExit int
+		why      string
+	}{
+		{action: "status", wantExit: 1, why: "the shared binary is missing, so the component is partial"},
+		{action: "install", wantExit: 1, why: "the shared binary is missing, so the component is partial"},
+		{action: "uninstall", wantExit: 0, why: "nothing was registered, so the requested end state already holds"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.action, func(t *testing.T) {
 			t.Setenv("HOME", t.TempDir())
 			stateDir := filepath.Join(t.TempDir(), "state")
 
 			var outBuf, errBuf bytes.Buffer
 			exitCode := -1
 			runRuntimeCore(
-				[]string{action, "--component", "longterm-mem", "--state-dir", stateDir},
+				[]string{tc.action, "--component", "longterm-mem", "--state-dir", stateDir},
 				&outBuf, &errBuf, func(code int) { exitCode = code },
 			)
 
-			if exitCode != 1 {
-				t.Fatalf("%s on an uninstalled component should exit 1, got %d\nstdout=%q\nstderr=%q", action, exitCode, outBuf.String(), errBuf.String())
+			if exitCode != tc.wantExit {
+				t.Fatalf("%s should exit %d (%s), got %d\nstdout=%q\nstderr=%q", tc.action, tc.wantExit, tc.why, exitCode, outBuf.String(), errBuf.String())
 			}
 			// The adapter ran and its result reached stdout -- the refusal
 			// path prints nothing there, so this distinguishes the two.
 			if !strings.Contains(outBuf.String(), "longterm-mem") {
-				t.Fatalf("%s printed no longterm-mem lifecycle result on stdout; got %q", action, outBuf.String())
+				t.Fatalf("%s printed no longterm-mem lifecycle result on stdout; got %q", tc.action, outBuf.String())
 			}
 		})
 	}
@@ -3323,8 +3334,36 @@ func TestComponentFlag_LongtermMemLifecycleExitCodes(t *testing.T) {
 // TestComponentFlag_LongtermMemDefaultsStateDir: --state-dir is optional and
 // the usage text promises a home-directory default, so an omitted flag must
 // resolve to that default rather than handing an empty path to the adapter.
+//
+// An exit code cannot prove that. This test used to read exit 1 as evidence
+// the adapter had run, but an EMPTY state dir produces exit 1 too — the
+// adapter simply finds no registration and reports the missing binary — so
+// the assertion held equally well whether or not the default was applied.
+//
+// The proof used here instead is content only a correctly defaulted path can
+// produce: a registration record is seeded at the default location
+// ($HOME/.labdrian-overlay), recording claude while no claude config exists.
+// Reading that record back is the ONLY way to reach "record without entry";
+// an unresolved state dir reports "runtime not installed" for claude instead.
+// The shared binary is seeded at its own default path for the same reason —
+// without it the run stops at "missing binary" before the record is ever
+// consulted, which would make the seeded record unobservable.
 func TestComponentFlag_LongtermMemDefaultsStateDir(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+
+	binPath := filepath.Join(home, ".labdrian-overlay", "bin", "longterm-mem")
+	if err := os.MkdirAll(filepath.Dir(binPath), 0o755); err != nil {
+		t.Fatalf("mkdir default bin dir: %v", err)
+	}
+	if err := os.WriteFile(binPath, []byte("#!/bin/sh\n"), 0o755); err != nil {
+		t.Fatalf("seed default binary: %v", err)
+	}
+	regPath := filepath.Join(home, ".labdrian-overlay", "longterm-mem-registration.json")
+	registration := `{"managed_by":"labdrian-sdd-overlay","targets":{"claude":{"fingerprint":"deadbeef","entry_present":true}}}`
+	if err := os.WriteFile(regPath, []byte(registration), 0o644); err != nil {
+		t.Fatalf("seed default registration: %v", err)
+	}
 
 	var outBuf, errBuf bytes.Buffer
 	exitCode := -1
@@ -3333,11 +3372,11 @@ func TestComponentFlag_LongtermMemDefaultsStateDir(t *testing.T) {
 		&outBuf, &errBuf, func(code int) { exitCode = code },
 	)
 
-	if exitCode != 1 {
-		t.Fatalf("status without --state-dir should still run and exit 1 for an uninstalled component, got %d\nstderr=%q", exitCode, errBuf.String())
+	if !strings.Contains(outBuf.String(), "claude: partial — record without entry") {
+		t.Fatalf("status without --state-dir did not read the registration seeded at the DEFAULT state dir (%s); the empty path was not defaulted.\nstdout=%q stderr=%q", regPath, outBuf.String(), errBuf.String())
 	}
-	if !strings.Contains(outBuf.String(), "longterm-mem") {
-		t.Fatalf("status without --state-dir produced no lifecycle result; the empty path was not defaulted. stdout=%q stderr=%q", outBuf.String(), errBuf.String())
+	if exitCode != 1 {
+		t.Fatalf("status reporting a partial component should exit 1, got %d\nstdout=%q stderr=%q", exitCode, outBuf.String(), errBuf.String())
 	}
 }
 

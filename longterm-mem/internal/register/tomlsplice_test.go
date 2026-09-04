@@ -166,9 +166,7 @@ func TestTOMLSplice_RemoveNotFoundReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("TOMLRemove returned nil error for a table that does not exist")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, "mcp_servers", "longterm-mem")
 }
 
 // TestTOMLSplice_RemoveRefusesWhenTheTableEndIsUnprovable proves TOMLRemove

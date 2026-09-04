@@ -52,3 +52,15 @@ func TestCodex_ReinstallIsIdempotent(t *testing.T) {
 func TestCodex_UntaggedSameNamedEntryRefused(t *testing.T) {
 	codexGoldenCase().testUntaggedSameNamedEntryRefused(t)
 }
+
+// TestCodex_LostInstallStateIsAdopted (D9, "install-state lockout"): the
+// TOML writer shares tomlInstall's own Decide call, so codex must
+// self-heal from a lost ownership record exactly as the JSON runtimes do.
+func TestCodex_LostInstallStateIsAdopted(t *testing.T) {
+	codexGoldenCase().testLostInstallStateIsAdopted(t)
+}
+
+// TestCodex_LostInstallStateWithAForeignEntryIsStillRefused.
+func TestCodex_LostInstallStateWithAForeignEntryIsStillRefused(t *testing.T) {
+	codexGoldenCase().testLostInstallStateWithAForeignEntryIsStillRefused(t)
+}

@@ -1,8 +1,8 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://labdrian.ai/schemas/pre-sdd-entry-contract/2.0.0",
+  "$id": "https://labdrian.ai/schemas/pre-sdd-entry-contract/2.1.0",
   "title": "Pre-SDD Entry Contract v2",
-  "description": "Closed, versioned handoff from inception-pipeline to the native SDD dispatcher. Artifact references identify persisted records without embedding their content.",
+  "description": "Closed, versioned handoff from inception-pipeline to the native SDD dispatcher. Artifact references identify persisted records without embedding their content. This document validates the UNION of every supported version's vocabulary: a property or enum member added by a later bundle is legal in an instance declaring an earlier supported version, and contract_version records which bundle produced the contract rather than gating which vocabulary applies. Per-version feature gating is deliberately NOT enforced here. This schema contains no conditional keywords (no if/then/else, allOf, anyOf, oneOf, or dependentRequired) by design, so a reader can determine a property's legality from one place; every version-sensitive and cross-field invariant lives in the deterministic validator at tools/entry-contract-validator instead.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -25,8 +25,9 @@
   ],
   "properties": {
     "contract_version": {
-      "const": "2.0.0",
-      "description": "Must match the inception-pipeline, shared authority, schemas, and deterministic validator bundle version."
+      "type": "string",
+      "enum": ["2.0.0", "2.1.0"],
+      "description": "The bundle version that produced this contract. The set lists every version the current bundle still accepts, newest last; the newest member must equal the inception-pipeline, shared authority, schemas, and deterministic validator bundle version. Adding a member is how a backwards-compatible extension ships without invalidating contracts written by an earlier bundle."
     },
     "change_name": {
       "type": "string",
@@ -111,6 +112,11 @@
         "human_review_included": {
           "const": true,
           "description": "The planned range includes human review and gate effort."
+        },
+        "expected_checkpoints": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional. Planned count of human-confirmation checkpoints, one unit per distinct human round-trip reply, over the same tiering-go-ahead-to-merge boundary the actuals record's checkpoint_count uses. This is the PLAN side of the only checkpoint pair that has both sides recorded: the actual side is checkpoint_count in sdd/{change}/actuals. sdd-time-estimation already persists it into sdd/{change}/estimate and calls it the real calendar-time driver for agent-orchestrated delivery, so omitting it here left a producer that carried the field failing the closed estimate object outright. Optional, not required: contracts written before this property existed stay valid, which is why adding it is a backwards-compatible extension of the 2.1.0 vocabulary rather than a version bump. The schema constrains the SHAPE (a non-negative integer); the deterministic validator enforces the floor of 1, which shape cannot express."
         }
       }
     },
@@ -129,8 +135,8 @@
     },
     "chain_strategy": {
       "type": "string",
-      "enum": ["none", "feature-branch-chain", "stacked-pr-chain"],
-      "description": "Concrete topology when chaining is required; none otherwise."
+      "enum": ["none", "feature-branch-chain", "stacked-to-main"],
+      "description": "Concrete topology when chaining is required; none otherwise. This token domain is shared with the SDD phase skills that consume it: skills/sdd-tasks/SKILL.md records it in the tasks artifact, skills/sdd-apply/SKILL.md branches on it for PR targeting, and skills/_shared/sdd-orchestrator-workflow.md defines it. A token no consumer implements would fall through every branch unguarded, so this enum must name exactly what they branch on."
     },
     "review_budget": {
       "type": "object",
@@ -152,16 +158,32 @@
           "type": "object",
           "additionalProperties": false,
           "required": ["state"],
+          "description": "Planning-time and delivery-time record of a per-slice budget overrun. The object stays closed: the companion fields of every state are enumerated here and unknown keys are rejected. Which companions each state requires is a cross-field invariant enforced by the deterministic validator, not by a schema conditional.",
           "properties": {
             "state": {
               "type": "string",
-              "enum": ["not-needed", "approved"]
+              "enum": ["not-needed", "approved", "granted"],
+              "description": "The states divide into two kinds, and the division is the point. not-needed and approved are PRE-START PLANNING states: both are asserted before any code is written, and both are claims about the plan. not-needed asserts every planned slice is within budget; approved asserts a slice was planned over budget and that overrun was authorized up front, and so requires reason and approved_by naming who authorized it and why. granted is a DELIVERY-TIME RECORD, not a claim about the plan: it reports that a slice actually landed over budget, which is a fact about what was written that planned line counts could not have predicted, and so requires scope, changed_lines, authorized_by, and reason. This is why granted is legal precisely when the plan was within budget: it does not contradict the plan, it records what delivery revealed. MODELLING LIMIT: state holds one value, so a change that was planned over budget with an approved exception AND then overran again at delivery cannot record both facts; the delivery-time overrun would displace the planning-time authorization. That is an accepted limit of this shape, recorded here so it is not rediscovered as a surprise."
             },
             "reason": {
               "type": "string",
               "minLength": 1
             },
             "approved_by": {
+              "type": "string",
+              "minLength": 1
+            },
+            "scope": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The artifact or area whose delivery-time overrun is recorded."
+            },
+            "changed_lines": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Authored additions and deletions actually landed in the over-budget scope."
+            },
+            "authorized_by": {
               "type": "string",
               "minLength": 1
             }

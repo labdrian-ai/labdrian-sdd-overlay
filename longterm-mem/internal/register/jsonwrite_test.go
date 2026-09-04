@@ -90,9 +90,7 @@ func TestWriteMember_InvalidResultLeavesOriginalUntouched(t *testing.T) {
 	if err == nil {
 		t.Fatalf("WriteMember returned nil error for a malformed member value")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, path)
 
 	gotFile, err := os.ReadFile(path)
 	if err != nil {
@@ -191,9 +189,7 @@ func TestRemoveMember_NotPresentLeavesOriginalUntouched(t *testing.T) {
 	if err == nil {
 		t.Fatalf("RemoveMember returned nil error for a member that does not exist")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, path, "longterm-mem", "mcpServers")
 
 	gotFile, err := os.ReadFile(path)
 	if err != nil {

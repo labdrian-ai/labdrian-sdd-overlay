@@ -1,8 +1,0 @@
-[
-  {"query": "cuánto tarda este cambio incluyendo review humano", "should_trigger": true},
-  {"query": "estimá el esfuerzo de este SDD antes de arrancar la implementación", "should_trigger": true},
-  {"query": "how long will this feature take to implement and review", "should_trigger": true},
-  {"query": "convertí esta transcripción en requerimientos técnicos", "should_trigger": false},
-  {"query": "tomá los requerimientos de esta charla y hacé el SDD completo ya", "should_trigger": false},
-  {"query": "hacé el roadmap del proyecto con los SDDs planificados", "should_trigger": false}
-]

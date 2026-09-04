@@ -6,6 +6,8 @@
 package testdata
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"os"
 	"path/filepath"
@@ -71,6 +73,36 @@ func WriteAddressMap(t *testing.T, vaultRoot string, addressMap map[string]strin
 	if err := os.WriteFile(filepath.Join(dir, ".manifest.json"), data, 0o644); err != nil {
 		t.Fatalf("write manifest: %v", err)
 	}
+}
+
+// WritePrecedenceEntry records page's own content hashes in vaultRoot's
+// precedence sidecar (.raw/.longterm-mem-manifest.json), the on-disk record
+// that longterm-mem itself wrote that page. Writer.Promote persists exactly
+// this alongside every page it publishes, so a fixture that writes a
+// promoted page without it is a vault caught mid-crash, not a healthy one.
+func WritePrecedenceEntry(t *testing.T, vaultRoot string, page promote.Page) {
+	t.Helper()
+	store, err := promote.LoadPrecedenceStore(vaultRoot)
+	if err != nil {
+		t.Fatalf("LoadPrecedenceStore: %v", err)
+	}
+	store.Set(page.Address, promote.PrecedenceEntry{
+		BodyHash:        sha256Hex(page.Body),
+		FrontmatterHash: sha256Hex(page.Frontmatter),
+	})
+	if err := store.Save(vaultRoot); err != nil {
+		t.Fatalf("PrecedenceStore.Save: %v", err)
+	}
+}
+
+// sha256Hex mirrors promote's own (unexported) hashText: the sha256 hex
+// digest a PrecedenceEntry stores for a page's body and frontmatter
+// separately. Re-derived here rather than exported from promote, the same
+// way WriteAddressMap re-derives .raw/.manifest.json's on-disk shape
+// instead of reaching for an internal writer.
+func sha256Hex(text string) string {
+	sum := sha256.Sum256([]byte(text))
+	return hex.EncodeToString(sum[:])
 }
 
 // RegisterPage records address/title in the vault's catalog

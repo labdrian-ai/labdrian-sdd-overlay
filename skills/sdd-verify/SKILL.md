@@ -34,6 +34,7 @@ The orchestrator should provide structured status from `skills/_shared/sdd-statu
 ## Hard Rules
 
 - Read all available status `contextFiles` before judging implementation. Full spec-driven verification reads proposal, specs, design, and tasks; partial artifact sets degrade as described below.
+- Also read `sdd/{change-name}/entry`, the pre-SDD entry contract, as a **read-only** input: never create, edit, or re-validate it. Use its `review_slices` length as the planned slice count **P** and compare it against the realized slice count **R** recorded in `apply-progress`; when `R < P`, name every planned slice with no realized counterpart in the verify report — a plan whose slices were never delivered is drift, not success. Treat the contract as absent unless the orchestrator states it satisfies the validation conditions in `skills/_shared/sdd-orchestrator-workflow.md`; absent is legal, but record that the comparison was skipped rather than omitting it silently.
 - Run full verification only after all tasks are complete. If any task is pending, return `blocked` without running the full suite.
 - Execute relevant tests; static analysis alone is never verification.
 - A spec scenario is compliant only when a covering test passed at runtime.

@@ -107,6 +107,16 @@ func renderBody(obs engram.Observation) string {
 	}
 	b.WriteString(content)
 	b.WriteString("\n\n")
-	fmt.Fprintf(&b, "---\nPromoted from Engram observation %d, revision %d.\n", obs.ID, obs.RevisionCount)
+	b.WriteString(promotionFooter(obs.ID, obs.RevisionCount))
 	return b.String()
+}
+
+// promotionFooter is the provenance line every rendered body closes with:
+// which Engram observation, at which revision, the page was rendered from.
+// It is named rather than inlined because update.go reads it back as
+// evidence -- a body that does not end in this exact line, for the revision
+// its own frontmatter claims, is not a body this renderer produced -- and
+// two spellings of it would make that check quietly stop matching.
+func promotionFooter(obsID int64, revision int) string {
+	return fmt.Sprintf("---\nPromoted from Engram observation %d, revision %d.\n", obsID, revision)
 }

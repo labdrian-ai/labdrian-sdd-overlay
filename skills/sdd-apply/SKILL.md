@@ -42,7 +42,7 @@ From the orchestrator:
 
 > Follow **Section B** (retrieval) and **Section C** (persistence) from `skills/_shared/sdd-phase-common.md`.
 
-- **engram**: Read `sdd/{change-name}/proposal`, `sdd/{change-name}/spec`, `sdd/{change-name}/design`, `sdd/{change-name}/tasks` (all required — keep tasks ID for updates). Mark tasks complete via `mem_update(id: {tasks-observation-id}, content: "...")`. Save progress as `sdd/{change-name}/apply-progress`.
+- **engram**: Read `sdd/{change-name}/proposal`, `sdd/{change-name}/spec`, `sdd/{change-name}/design`, `sdd/{change-name}/tasks` (all required — keep tasks ID for updates) and `sdd/{change-name}/entry` (optional, read-only — see Step 2c). Mark tasks complete via `mem_update(id: {tasks-observation-id}, content: "...")`. Save progress as `sdd/{change-name}/apply-progress`.
 - **openspec**: Read and follow `skills/_shared/openspec-convention.md`. Update `tasks.md` with `[x]` marks.
 - **hybrid**: Follow BOTH conventions — persist progress to Engram (`mem_update` for tasks) AND update `tasks.md` with `[x]` marks on filesystem.
 - **none**: Return progress only. Do not update project artifacts.
@@ -89,11 +89,19 @@ Then you MUST confirm the orchestrator/user provided a resolved delivery path:
 2. **`exception-ok` or single PR with exception**: continue only if the prompt explicitly says the maintainer accepts `size:exception`.
 3. **`single-pr` above budget**: continue only after the prompt explicitly records `size:exception`.
 
-Also check for `Chain strategy` in the tasks artifact. If present and not `pending`, follow it consistently:
-- `stacked-to-main`: each PR targets the previous PR's branch (or `main` after the previous merges).
-- `feature-branch-chain`: PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly.
+Also check for `Chain strategy` in the tasks artifact or the prompt. **This is the closed domain, and every value in it ROUTES — one row per `chain_strategy` value in `skills/_shared/entry-contract.schema.json`, and this table is the branch:**
 
-If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main, feature-branch-chain, or size-exception).`
+| `chain_strategy` | How apply routes it |
+| --- | --- |
+| `stacked-to-main` | Each PR targets the previous PR's branch (or `main` after the previous merges). Implement only the assigned work-unit slice and report the intended PR boundary. |
+| `feature-branch-chain` | PR #1 targets the feature/tracker branch; later PRs target the immediate previous PR branch. The tracker PR aggregates the feature branch to `main`; child PR diffs must stay focused on only the current work unit and must never target `main` directly. |
+| `none` | Not a topology and not an unknown value. It is what the entry contract stores when `chaining_required` is `false`, and what `sdd-tasks` emits on every change whose forecast says `Chained PRs recommended: No`. There is no chain, so there is no branch to look up: route by `delivery_strategy` alone and proceed. |
+
+**Unknown-value guard (MANDATORY, and it must fire HERE).** A value that is not a row in the table above has no route in this skill. Do NOT pick the nearest topology, and do NOT default to `stacked-to-main` because it is the common case. Do NOT proceed either: STOP before writing code and return `blocked`, naming the unrecognised value and where it came from (tasks artifact, prompt, or entry contract). The orchestrator carries the same guard, but it cannot fire on a value minted inside this phase agent, so the check has to exist on both sides of the handoff.
+
+**The guard fires on values outside the table, never on a member of it.** The sentinel row is the one that has to be said out loud, because an earlier version of this guard listed the sentinel among the values it excludes and then, one sentence later, told you to route it by `delivery_strategy` — a contradiction that read as an instruction to stop. Excluding the sentinel would halt apply on every single-PR change, which is the majority of them.
+
+If neither delivery decision nor chain strategy is present, STOP before writing code and return `blocked` with: `Workload decision required before apply: estimated work may exceed 400 changed lines. Ask the user which chain strategy to use (stacked-to-main or feature-branch-chain). Shipping as one PR is not a chain strategy — it is delivery_strategy exception-ok with a recorded size:exception and chain_strategy none.`
 
 #### Step 2b: Read Previous Apply-Progress (if exists)
 
@@ -106,6 +114,16 @@ Before starting work, check for existing apply-progress:
 5. When saving your apply-progress in Step 6, MERGE: include all previously completed tasks PLUS your newly completed tasks in a single combined artifact
 
 **CRITICAL**: If the orchestrator told you previous progress exists, you MUST read it. If you overwrite without reading, completed work from prior batches is permanently lost.
+
+#### Step 2c: Read the Entry Contract (optional artifact, required attempt)
+
+Read `sdd/{change-name}/entry` — the pre-SDD entry contract written by `inception-pipeline`. You are a **reader only**: never create it, never edit it, never re-validate it in place.
+
+1. `mem_search(query: "sdd/{change-name}/entry", project: "{project}")` → `mem_get_observation(id)`; under `openspec`/`hybrid` the same object may also sit at the declared OpenSpec entry path.
+2. Take `review_slices` (its length is **P** in the Plan vs Realized Slice Count record in Step 6), `chain_strategy`, `delivery_strategy`, and `strict_tdd` from it.
+3. Treat it as **absent** unless the orchestrator states it satisfies the validation conditions in `skills/_shared/sdd-orchestrator-workflow.md` (SDD Session Preflight) — reading the JSON and finding the fields present is not validation.
+4. Absent is a legal state, not a blocker: continue with the values the orchestrator passed in the prompt, and record in apply-progress that P was unavailable. What is NOT legal is silently substituting a guessed slice plan for a missing one.
+5. When the contract IS available and its `chain_strategy` or `delivery_strategy` disagrees with the prompt, STOP and report the disagreement. Do not pick a side.
 
 ### Step 3: Read Testing Capabilities and Resolve Mode
 
@@ -199,6 +217,18 @@ When saving apply-progress:
 1. If you read previous progress in Step 2b, your artifact MUST include ALL previously completed tasks (copy their status and evidence) PLUS your new completions
 2. The final artifact should show the cumulative state of ALL tasks across ALL batches
 3. Format: keep the same structure but ensure no completed task is lost from prior batches
+
+#### Plan vs Realized Slice Count (MANDATORY — you are the only writer of this record)
+
+The Plan-vs-Realized slice check in `skills/_shared/sdd-orchestrator-workflow.md` mandates recording its figures **in apply-progress**, and apply-progress has exactly one writer: this skill. A rule recorded only in the orchestrator document has no owner, so recording it is your obligation, at every batch boundary:
+
+- **P** = the number of entries in `review_slices` in the entry contract at `sdd/{change-name}/entry` (Step 2c). If no validated entry contract is available, P is undefined: record `slices planned=unknown realized=R` and say the plan was unavailable — a chained change running without a slice plan is itself worth reporting, and silence is not the same fact.
+- **R** = realized slices delivered so far: PRs opened for this change under the chosen `chain_strategy`, or, when not delivering via PRs, the apply batches that carried their own review boundary. Count what exists, never what was intended.
+- Within tolerance (`R <= P + max(1, ceil(0.2 * P))`): record `slices planned=P realized=R` in apply-progress and continue.
+- Above tolerance but `R <= 2 * P`: record `slice drift: planned=P realized=R` in apply-progress at the batch where it crossed, and report the crossing to the orchestrator so it reaches the archive report too.
+- `R > 2 * P`: record the same drift line, then STOP before the next batch and return `blocked` with P, R, and where the crossing happened. Do not resume on your own judgement.
+
+Substitute the real integers for `P` and `R` when you write the line; keep the `slices planned=… realized=…` and `slice drift: planned=… realized=…` wording so the figures stay greppable across batches.
 
 ### Step 7: Return Summary
 

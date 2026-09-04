@@ -1,8 +1,0 @@
-[
-  {"query": "generá el manifest del proyecto para mi app de gestión de inventario", "should_trigger": true},
-  {"query": "necesito el PRD inicial de mi app, bootstrap proyecto con manifest", "should_trigger": true},
-  {"query": "project manifest for my startup idea, define scope and rules", "should_trigger": true},
-  {"query": "diseñá la arquitectura técnica del proyecto", "should_trigger": false},
-  {"query": "hacé el roadmap del proyecto con los SDDs ordenados", "should_trigger": false},
-  {"query": "quiero el inception completo, manifest más arquitectura más roadmap", "should_trigger": false}
-]

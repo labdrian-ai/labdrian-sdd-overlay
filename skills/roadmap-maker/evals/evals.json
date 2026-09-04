@@ -1,8 +1,0 @@
-[
-  {"query": "hacé el roadmap del proyecto, secuenciá los SDDs planificados", "should_trigger": true},
-  {"query": "create a delivery roadmap from the manifest and architecture", "should_trigger": true},
-  {"query": "planificá los sprints del proyecto con los cambios SDD ordenados", "should_trigger": true},
-  {"query": "diseñá la arquitectura técnica del sistema", "should_trigger": false},
-  {"query": "generá el manifest estratégico del proyecto", "should_trigger": false},
-  {"query": "bootstrap completo del proyecto, quiero el inception entero", "should_trigger": false}
-]

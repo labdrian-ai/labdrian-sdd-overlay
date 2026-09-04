@@ -138,7 +138,7 @@ labdrian apply                              # redeploy to all targets
 labdrian sync-check                         # confirm in-sync
 ```
 
-The pre-SDD entry bundle is tracked as four inseparable assets: `inception-pipeline/SKILL.md`, `_shared/pre-sdd-contracts.md`, `_shared/entry-contract.schema.json`, and `_shared/actuals-record.schema.json`. Version `2.0.0` also uses the isolated validator in `tools/entry-contract-validator`; its dependency is intentionally not added to `engine/go.mod`.
+The pre-SDD entry bundle is tracked as four inseparable assets: `inception-pipeline/SKILL.md`, `_shared/pre-sdd-contracts.md`, `_shared/entry-contract.schema.json`, and `_shared/actuals-record.schema.json`. Version `2.1.0` also uses the isolated validator in `tools/entry-contract-validator`; its dependency is intentionally not added to `engine/go.mod`. The version is a compatibility set, not an exact-match lock: `2.1.0` still validates contracts written by the `2.0.0` bundle.
 
 `labdrian apply` propagates all four tracked assets to Claude, OpenCode, and Codex. Restart any already-running client after deployment so it reloads the updated skill and shared contracts. Validate a candidate without deploying anything:
 
@@ -354,10 +354,14 @@ overlay gadu-generate [--check]
     - skills/gadu-operator/SKILL.md
     from engine/gadu/persona/body.md.
 
-overlay validate-entry-contract --schema PATH --instance PATH
+overlay validate-entry-contract --schema PATH --instance PATH [--exists-root PATH]
     Build and run the isolated v2 entry-contract validator from a temporary binary.
-    Relative paths resolve from the caller's working directory. Exit codes 2-6 are
-    preserved; no installed skill root is modified.
+    Relative paths resolve from the caller's working directory. Exit codes 2-7 are
+    preserved; no installed skill root is modified. Exit 7 means the instance
+    declares no contract_version at all: a pre-v2 legacy contract that was not
+    validated, as distinct from a corrupt one. Optional --exists-root stats every
+    declared openspec_path under that root; it is off by default and is an
+    inception-time check for a live change directory, never for archived history.
 
 overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.

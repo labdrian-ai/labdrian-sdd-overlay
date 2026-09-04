@@ -43,3 +43,20 @@ func TestOpencode_ReinstallIsIdempotent(t *testing.T) {
 func TestOpencode_UntaggedSameNamedEntryRefused(t *testing.T) {
 	opencodeGoldenCase().testUntaggedSameNamedEntryRefused(t)
 }
+
+// TestOpencode_LostInstallStateIsAdopted (D9, "install-state lockout").
+func TestOpencode_LostInstallStateIsAdopted(t *testing.T) {
+	opencodeGoldenCase().testLostInstallStateIsAdopted(t)
+}
+
+// TestOpencode_LostInstallStateWithAForeignEntryIsStillRefused.
+func TestOpencode_LostInstallStateWithAForeignEntryIsStillRefused(t *testing.T) {
+	opencodeGoldenCase().testLostInstallStateWithAForeignEntryIsStillRefused(t)
+}
+
+// TestOpencode_MissingContainerIsSynthesized (A4): a fresh opencode
+// install has no "mcp" key at all, which makes this the common case on a
+// new machine rather than an exotic one.
+func TestOpencode_MissingContainerIsSynthesized(t *testing.T) {
+	opencodeGoldenCase().testMissingContainerIsSynthesized(t)
+}

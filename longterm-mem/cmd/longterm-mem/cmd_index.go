@@ -30,27 +30,27 @@ func cmdIndex(args []string) int {
 	vaultDir := fs.String("vault", "", "vault path override")
 	force := fs.Bool("rebuild", false, "force re-provisioning of the vault index, even if already provisioned")
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *project == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: index: --project is required")
-		return 2
+		return exitUsage
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return 3
+		return vaultExitCode(err)
 	}
 
 	runner := &vault.Runner{Root: vaultRoot}
 	if err := vault.Rebuild(context.Background(), runner, *force); err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
-		return 5
+		return exitVaultSubprocessFailed
 	}
 
 	fmt.Println("longterm-mem: index rebuilt")
-	return 0
+	return exitOK
 }
 
 // defaultVaultsPath resolves the vault-registry file: LONGTERM_MEM_VAULTS_FILE

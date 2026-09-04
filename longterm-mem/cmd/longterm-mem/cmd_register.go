@@ -18,12 +18,14 @@ import (
 // targets and default paths through register_paths.go; what is left here
 // is the effectful shell -- flag parsing, per-target dispatch, and mapping
 // each writer's outcome to a process exit code. An untagged same-named
-// conflict (register.ErrConflict) exits 6, any other per-target failure
-// exits 1, success exits 0 -- except that a --target all expansion skips a
-// runtime whose configuration file is absent, since that is how a runtime
-// nobody installed looks from here. Like cmdDoctor, every target in the expanded
-// list is attempted before the exit code is decided, so one target's
-// failure never hides another target's success or failure.
+// conflict (register.ErrConflict) exits 6, a path that could not be
+// resolved from the environment exits 8 (exitPathUnresolvable), any other
+// per-target failure exits 1, success exits 0 -- except that a --target
+// all expansion skips a runtime whose configuration file is absent, since
+// that is how a runtime nobody installed looks from here. Like cmdDoctor,
+// every target in the expanded list is attempted before the exit code is
+// decided, so one target's failure never hides another target's success or
+// failure.
 func cmdRegister(args []string) int {
 	fs := flag.NewFlagSet("register", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -66,18 +68,18 @@ func cmdRegister(args []string) int {
 	// target is touched, rather than written and reported as ok.
 	if resolvedStateDir == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: register: could not resolve the install-state directory; set HOME or pass --state-dir")
-		return 1
+		return exitPathUnresolvable
 	}
 	if resolvedBinary == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: register: could not resolve the longterm-mem binary path; set HOME or pass --binary")
-		return 1
+		return exitPathUnresolvable
 	}
 
 	// expandedAll distinguishes "register everything this machine has"
 	// from "register this one runtime, which I am telling you is there".
 	// Only the first may skip a runtime whose config is absent.
 	expandedAll := len(targets) > 1
-	conflict, failed := false, false
+	conflict, failed, unresolvable := false, false, false
 	for _, tgt := range targets {
 		root := *configRoot
 		if root == "" {
@@ -85,15 +87,20 @@ func cmdRegister(args []string) int {
 		}
 		if root == "" {
 			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: could not resolve a config root; set HOME or pass --config-root\n", tgt)
-			failed = true
+			unresolvable = true
 			continue
 		}
 
+		// Every error the writers return already names the package and the
+		// target it was working on ("register: claude: ..."), so this
+		// prints the error alone rather than re-stating both. Re-stating
+		// them is how the conflict message came to read "longterm-mem:
+		// register: claude: register: claude: register: an entry ...".
 		regErr := registerTarget(tgt, root, resolvedStateDir, resolvedBinary)
 		switch {
 		case regErr == nil:
 		case errors.Is(regErr, register.ErrConflict):
-			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: %v\n", tgt, regErr)
+			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", regErr)
 			conflict = true
 			continue
 		case expandedAll && errors.Is(regErr, iofs.ErrNotExist):
@@ -107,22 +114,27 @@ func cmdRegister(args []string) int {
 			fmt.Printf("longterm-mem: register: %s: skipped (no configuration found at %s)\n", tgt, root)
 			continue
 		default:
-			fmt.Fprintf(os.Stderr, "longterm-mem: register: %s: %v\n", tgt, regErr)
+			fmt.Fprintf(os.Stderr, "longterm-mem: %v\n", regErr)
 			failed = true
 			continue
 		}
 		fmt.Printf("longterm-mem: register: %s: ok\n", tgt)
 	}
 
-	// A hard failure outranks a conflict. A conflict is an expected,
-	// recoverable outcome the caller resolves by hand; a hard failure
-	// means a target was not registered at all. With --target all the two
-	// can happen in the same run, and reporting the softer of them would
-	// hide the harder one behind an exit code that reads as "nothing
-	// broke".
+	// A hard failure outranks an unresolvable path, which outranks a
+	// conflict. With --target all any two of them can happen in the same
+	// run, and reporting the softer of them would hide the harder one
+	// behind an exit code that reads as "nothing much broke".
+	//
+	// A hard failure means a target was attempted and could not be
+	// registered. An unresolvable path means a target was never attempted
+	// at all, and the remedy is the caller's environment. A conflict is an
+	// expected, recoverable outcome the caller resolves by hand.
 	switch {
 	case failed:
 		return 1
+	case unresolvable:
+		return exitPathUnresolvable
 	case conflict:
 		return 6
 	default:
