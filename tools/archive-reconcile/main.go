@@ -16,11 +16,31 @@ func main() {
 	os.Exit(run(os.Args[1:], os.Stdout, os.Stderr))
 }
 
-// usageText names the only flag this guard accepts. --repo lets it scan a
+// usageText names the flags this guard accepts. --repo lets it scan a
 // repository other than the caller's own working directory, which is what
 // makes it testable against a temp fixture directory instead of only the live
-// repo it ships in.
-const usageText = "usage: archive-reconcile [--repo <path>]\n"
+// repo it ships in. --known-gaps is documented the way the sibling
+// tools/archive-anchor-gate documents its own ledger: not just that the flag
+// exists, but the two properties that make the ledger a record of a gap rather
+// than a permission to keep it.
+const usageText = `usage: archive-reconcile [--repo <path>] [--known-gaps <path>]
+
+  --repo PATH        repository root to scan (default: the caller's working
+                     directory)
+  --known-gaps PATH  ledger of changes already known to be stranded or
+                     undetermined, one change directory name per line; '#'
+                     starts a comment. A listed change that is stranded or
+                     undetermined is reported as a known gap and does not fail
+                     the run. A listed change that is neither fails the run as
+                     a stale waiver, so the ledger cannot quietly outlive the
+                     gap it describes. Absent or empty means no waivers.
+
+exit codes:
+  0  every active change was classified and none is stranded (known gaps aside)
+  1  at least one unwaived stranded change
+  2  invalid usage
+  3  no complete verdict could be reached, or a waiver is stale
+`
 
 // changesRelDir and specsRelDir are the two fixed openspec locations this
 // guard reads. They are relative, not absolute, because every remediation
@@ -60,14 +80,27 @@ const (
 // and its delta specs may never have been promoted. Nothing else notices this
 // automatically today; it has been found three times by manual audit.
 func run(args []string, stdout, stderr io.Writer) int {
-	repoFlag, err := parseArgs(args)
+	opts, err := parseArgs(args)
 	if err != nil {
 		fmt.Fprintf(stderr, "archive-reconcile: %v\n", err)
 		fmt.Fprint(stderr, usageText)
 		return outcomeUsage
 	}
 
-	root, err := resolveRepoRoot(repoFlag)
+	// The ledger is read before the scan and a read failure is fatal, for the
+	// same reason countTasks refuses to treat an unreadable tasks.md as zero
+	// tasks: an unreadable ledger is a fact this guard never observed, and
+	// continuing with zero waivers would turn a typo in the CI path into a
+	// silent behaviour change — either a flood of "new" findings or, worse, a
+	// green run whose waivers were never actually applied.
+	waived, err := readKnownGaps(opts.KnownGaps)
+	if err != nil {
+		fmt.Fprintf(stderr, "archive-reconcile: %v\n", err)
+		fmt.Fprint(stderr, undeterminedNote)
+		return outcomeUndetermined
+	}
+
+	root, err := resolveRepoRoot(opts.Repo)
 	if err != nil {
 		fmt.Fprintf(stderr, "archive-reconcile: %v\n", err)
 		fmt.Fprint(stderr, undeterminedNote)
@@ -81,36 +114,193 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return outcomeUndetermined
 	}
 
-	if len(findings) == 0 && len(undetermined) == 0 {
-		// Only reachable when every active change was classified, so this
-		// summary claims no more than the scan actually established.
-		fmt.Fprintf(stdout, "archive-reconcile: clean — %d active change(s) checked under %s, all classified, none stranded.\n", scanned, changesRelDir)
-		return outcomeClean
+	// Waiving is keyed by change directory name — the identifier both reports
+	// already print — and applies to both finding kinds, because a stranded
+	// change and an undetermined one are equally real gaps and equally
+	// declarable. A waived finding is still printed, on stdout as a known gap,
+	// so a waiver is never invisible.
+	openStranded, knownStranded := partitionStranded(findings, waived)
+	openUndetermined, knownUndetermined := partitionUndetermined(undetermined, waived)
+	stale := staleWaivers(waived, findings, undetermined)
+	waivedCount := len(knownStranded) + len(knownUndetermined)
+
+	for _, f := range knownStranded {
+		fmt.Fprintf(stdout, "archive-reconcile: known gap %s — stranded (%d/%d tasks checked), waived by the ledger.\n", f.Name, f.TotalTasks, f.TotalTasks)
+	}
+	for _, u := range knownUndetermined {
+		fmt.Fprintf(stdout, "archive-reconcile: known gap %s — undetermined (%s), waived by the ledger.\n", u.Name, u.Observed)
+	}
+
+	if len(stale) > 0 {
+		reportStaleWaivers(stderr, opts.KnownGaps, stale)
 	}
 
 	// Both lists are printed whenever either is non-empty. Suppressing the
 	// stranded list because something was undetermined would hide work the
 	// scan did establish, and suppressing the undetermined list would hide
 	// the fact that the stranded list is partial.
-	if len(findings) > 0 {
-		reportStranded(stderr, findings)
+	if len(openStranded) > 0 {
+		reportStranded(stderr, openStranded)
 	}
-	if len(undetermined) > 0 {
-		reportUndetermined(stderr, undetermined, len(findings))
+	if len(openUndetermined) > 0 {
+		reportUndetermined(stderr, openUndetermined, len(openStranded))
 	}
 
-	// EXIT PRECEDENCE: undetermined outranks stranded. Exit 1 means "here are
-	// the stranded changes", which asserts that the scan classified every
-	// active change and these are the complete-but-unarchived ones. When even
-	// one change could not be classified, that stranded list is knowingly
-	// incomplete, and returning 1 would assert a completeness this guard does
-	// not have — the same overclaim its countTasks and ambiguousLine comments
-	// already refuse at the file and line levels. Exit 3 says "I could not
-	// tell", which is the only honest code for a partial answer.
-	if len(undetermined) > 0 {
+	// EXIT PRECEDENCE, with waivers.
+	//
+	// A stale waiver takes exit 3, ahead of everything else. It is a defect in
+	// the LEDGER rather than in the repository under scan, and exit 1 is
+	// reserved for a claim about the repository ("here are the stranded
+	// changes"), so reporting a ledger defect as 1 would put a sentence in the
+	// guard's mouth that is not true of the scanned tree. What exit 3 already
+	// means is "this run's answer is not one you can rely on as complete",
+	// which is exactly the state a stale waiver creates: the waiver set no
+	// longer describes this repository, so every suppression it performed on
+	// this run is suspect. Ranking it first also guarantees the property the
+	// ledger depends on — a stale waiver can never be swallowed by an exit
+	// code that means something else, because no other outcome outranks it.
+	//
+	// Among UNWAIVED findings the rule this guard already established still
+	// holds: undetermined outranks stranded. Exit 1 asserts that the scan
+	// classified every active change and these are the complete-but-unarchived
+	// ones; when even one change could not be classified, that stranded list is
+	// knowingly incomplete, and returning 1 would assert a completeness this
+	// guard does not have — the same overclaim its countTasks and ambiguousLine
+	// comments already refuse at the file and line levels.
+	if len(stale) > 0 {
 		return outcomeUndetermined
 	}
-	return outcomeStranded
+	if len(openUndetermined) > 0 {
+		return outcomeUndetermined
+	}
+	if len(openStranded) > 0 {
+		return outcomeStranded
+	}
+
+	// Two green summaries, because they assert different things. With no
+	// waivers applied, every active change really was classified and none was
+	// stranded — today's exact sentence, unchanged. With waivers applied, that
+	// sentence would be false: the waived changes are gaps, and the
+	// undetermined ones among them were never classified at all. So the
+	// summary states the count instead of claiming more than it checked, and a
+	// green run can never hide how many gaps it is carrying.
+	if waivedCount == 0 {
+		fmt.Fprintf(stdout, "archive-reconcile: clean — %d active change(s) checked under %s, all classified, none stranded.\n", scanned, changesRelDir)
+		return outcomeClean
+	}
+	fmt.Fprintf(stdout, "archive-reconcile: ok — %d active change(s) checked under %s, %d known gap(s) waived by %s, no unwaived finding.\n", scanned, changesRelDir, waivedCount, opts.KnownGaps)
+	return outcomeClean
+}
+
+// options is the parsed command line.
+type options struct {
+	Repo      string
+	KnownGaps string
+}
+
+// partitionStranded splits the stranded findings into the ones that must fail
+// the run and the ones the ledger already declares.
+func partitionStranded(findings []strandedChange, waived map[string]bool) (open, known []strandedChange) {
+	for _, f := range findings {
+		if waived[f.Name] {
+			known = append(known, f)
+			continue
+		}
+		open = append(open, f)
+	}
+	return open, known
+}
+
+// partitionUndetermined does the same for the changes that could not be
+// classified.
+func partitionUndetermined(undetermined []undeterminedChange, waived map[string]bool) (open, known []undeterminedChange) {
+	for _, u := range undetermined {
+		if waived[u.Name] {
+			known = append(known, u)
+			continue
+		}
+		open = append(open, u)
+	}
+	return open, known
+}
+
+// staleWaivers returns the ledger entries that are neither stranded nor
+// undetermined on this run, sorted. This is the property that makes the ledger
+// a record rather than a suppression: a gap that closes forces its line to be
+// deleted, so the list cannot rot into a permanent exemption by being
+// forgotten.
+func staleWaivers(waived map[string]bool, findings []strandedChange, undetermined []undeterminedChange) []string {
+	failing := make(map[string]bool, len(findings)+len(undetermined))
+	for _, f := range findings {
+		failing[f.Name] = true
+	}
+	for _, u := range undetermined {
+		failing[u.Name] = true
+	}
+
+	var stale []string
+	for name := range waived {
+		if !failing[name] {
+			stale = append(stale, name)
+		}
+	}
+	sort.Strings(stale)
+	return stale
+}
+
+// reportStaleWaivers names every ledger entry whose gap has closed and says
+// plainly what to do about it: delete the line. Naming the ledger path matters
+// because the defect is in that file, not in the change it names.
+func reportStaleWaivers(stderr io.Writer, ledgerPath string, stale []string) {
+	fmt.Fprintf(stderr, "archive-reconcile: STALE waiver(s) — %d entry(ies) in %s are neither stranded nor undetermined on this run.\n", len(stale), ledgerPath)
+	for _, name := range stale {
+		fmt.Fprintf(stderr, "\n  stale waiver: %s is listed as a known gap, but this run found no gap for it.\n", name)
+		fmt.Fprintf(stderr, "    fix: delete the %q line from %s. The gap it recorded has closed.\n", name, ledgerPath)
+	}
+	fmt.Fprint(stderr, staleWaiverNote)
+}
+
+// staleWaiverNote states why a stale waiver blocks at all: the ledger exists
+// only as a record of gaps that are real right now, and an entry that outlives
+// its gap is the first step back to a permanent, unexamined exemption.
+const staleWaiverNote = `
+A known-gaps ledger is a record of a gap, never a permission to keep it. An
+entry whose gap has closed is a waiver with nothing to waive: left in place it
+would silently suppress a future, unrelated regression on the same change.
+`
+
+// readKnownGaps reads the ledger of already-declared gaps: one change
+// directory name per line, '#' starting a comment, blank lines ignored so the
+// file can explain itself. An empty path means no waivers, which is exactly
+// this guard's behaviour before the flag existed. A path that cannot be read
+// is an error rather than an empty waiver set — see run for why.
+func readKnownGaps(path string) (map[string]bool, error) {
+	waived := map[string]bool{}
+	if path == "" {
+		return waived, nil
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, fmt.Errorf("known-gaps ledger %s could not be read: %w", path, err)
+	}
+	defer f.Close()
+
+	scanner := bufio.NewScanner(f)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if idx := strings.Index(line, "#"); idx >= 0 {
+			line = line[:idx]
+		}
+		line = strings.TrimSpace(line)
+		if line == "" {
+			continue
+		}
+		waived[line] = true
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("known-gaps ledger %s could not be parsed: %w", path, err)
+	}
+	return waived, nil
 }
 
 // parseArgs parses the guard's only flag, mirroring the sibling
@@ -120,17 +310,18 @@ func run(args []string, stdout, stderr io.Writer) int {
 // takes no subcommand, and silently accepting one would let an operator's
 // typo run as a bare invocation and report a verdict about something they did
 // not ask for.
-func parseArgs(args []string) (string, error) {
+func parseArgs(args []string) (options, error) {
 	fs := flag.NewFlagSet("archive-reconcile", flag.ContinueOnError)
 	fs.SetOutput(io.Discard)
 	repo := fs.String("repo", "", "repository root to scan (default: the caller's working directory)")
+	knownGaps := fs.String("known-gaps", "", "ledger of changes already known to be stranded or undetermined")
 	if err := fs.Parse(args); err != nil {
-		return "", err
+		return options{}, err
 	}
 	if fs.NArg() > 0 {
-		return "", fmt.Errorf("unexpected argument %q; this guard takes no subcommand", fs.Arg(0))
+		return options{}, fmt.Errorf("unexpected argument %q; this guard takes no subcommand", fs.Arg(0))
 	}
-	return *repo, nil
+	return options{Repo: *repo, KnownGaps: *knownGaps}, nil
 }
 
 // resolveRepoRoot resolves the repository root to scan: the --repo flag when
@@ -625,7 +816,13 @@ repository notices; it has previously been found only by manual audit.
 // out loud matters because the alternative reading — "the guard errored, so
 // the repository is probably fine" — reintroduces the exact blind spot this
 // guard exists to close.
-const undeterminedNote = `This guard fails closed: it could not read or parse everything it needed under
-openspec/changes/, so it does not report that the repository is clean.
-Resolve the error above and re-run.
+// undeterminedNote deliberately does NOT name openspec/changes/. It is
+// printed for an unreadable ledger and an unresolvable repo root too, and
+// neither lives there -- an earlier wording claimed that locality for all
+// three, which is the guard asserting more than it observed in the one
+// message whose whole job is to say it observed too little.
+const undeterminedNote = `This guard fails closed: it could not read or parse everything it needed,
+so it does not report that the repository is clean. The error above names
+what it could not read.
+Resolve it and re-run.
 `

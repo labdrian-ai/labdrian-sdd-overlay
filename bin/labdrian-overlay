@@ -477,9 +477,17 @@ Commands:
                                    3=could not determine; propagated unchanged from the guard.
   archive-reconcile                Detect completed SDD changes under openspec/changes/ (every
     [--repo PATH]                  tasks.md checkbox checked) that were never archived, and report
-                                   whether their delta capabilities were promoted into
-                                   openspec/specs/. Exit 0=clean, 1=stranded change found, 2=usage,
-                                   3=could not determine; propagated unchanged from the guard.
+    [--known-gaps PATH]            whether their delta capabilities were promoted into
+                                   openspec/specs/. A change whose completion signal the guard
+                                   cannot read is reported as undetermined, never skipped.
+                                   --known-gaps names a ledger of changes already known to fail;
+                                   a listed change that stops failing is reported as a stale
+                                   waiver, so the ledger cannot outlive the gap it records. The
+                                   path is resolved from YOUR current directory, since the guard
+                                   runs there -- pass it repository-relative.
+                                   Exit 0=clean, 1=stranded change found, 2=usage, 3=could not
+                                   determine (an unreadable signal, an unreadable ledger, or a
+                                   stale waiver); propagated unchanged from the guard.
   gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.

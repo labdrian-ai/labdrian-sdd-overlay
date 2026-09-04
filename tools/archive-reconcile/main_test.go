@@ -837,3 +837,264 @@ func TestRunCleanScanSaysSoWithoutOverclaiming(t *testing.T) {
 		t.Errorf("clean stdout %q does not say clean", stdout.String())
 	}
 }
+
+// writeLedger writes a --known-gaps ledger into the fixture and returns its
+// path.
+func writeLedger(t *testing.T, dir, content string) string {
+	t.Helper()
+	path := filepath.Join(dir, "known-gaps.txt")
+	mustWriteFile(t, path, content)
+	return path
+}
+
+// TestWaivedStrandedChangeDoesNotFailTheRun pins (a): a stranded change listed
+// in the ledger is recorded as a known gap and does not carry the run's exit
+// status, exactly as the sibling archive-anchor-gate waives a non-compliant
+// report it already knows about.
+func TestWaivedStrandedChangeDoesNotFailTheRun(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "stranded-known", allChecked)
+	ledger := writeLedger(t, t.TempDir(), "stranded-known\n")
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+	if got != outcomeClean {
+		t.Fatalf("run() with the only stranded change waived = exit %d, want %d (outcomeClean); stdout=%q stderr=%q", got, outcomeClean, stdout.String(), stderr.String())
+	}
+	if strings.Contains(stderr.String(), "STRANDED change(s)") {
+		t.Errorf("stderr %q still reports the waived change as a blocking stranded finding", stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "known gap") || !strings.Contains(stdout.String(), "stranded-known") {
+		t.Errorf("stdout %q does not record the waived change as a known gap", stdout.String())
+	}
+}
+
+// TestWaivedUndeterminedChangeDoesNotFailTheRun pins (b): waiving covers both
+// finding kinds. An undetermined change is exactly as waivable as a stranded
+// one, because both are gaps this repository genuinely has today.
+func TestWaivedUndeterminedChangeDoesNotFailTheRun(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "undetermined-known", zeroCheckboxes)
+	ledger := writeLedger(t, t.TempDir(), "undetermined-known\n")
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+	if got != outcomeClean {
+		t.Fatalf("run() with the only undetermined change waived = exit %d, want %d (outcomeClean); stdout=%q stderr=%q", got, outcomeClean, stdout.String(), stderr.String())
+	}
+	if strings.Contains(stderr.String(), "UNDETERMINED change(s)") {
+		t.Errorf("stderr %q still reports the waived change as a blocking undetermined finding", stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "undetermined-known") {
+		t.Errorf("stdout %q does not record the waived change as a known gap", stdout.String())
+	}
+}
+
+// TestUnwaivedFindingStillFailsAlongsideWaivedOnes pins (c) and the exit
+// precedence under waivers: waiving the gaps this repository already knows
+// about must not disarm the guard for anything new. Undetermined still
+// outranks stranded among the unwaived findings, because an incomplete scan
+// must not present itself as a complete one.
+func TestUnwaivedFindingStillFailsAlongsideWaivedOnes(t *testing.T) {
+	t.Run("unwaived stranded exits 1", func(t *testing.T) {
+		root := t.TempDir()
+		newChange(t, root, "undetermined-known", zeroCheckboxes)
+		newChange(t, root, "stranded-new", allChecked)
+		ledger := writeLedger(t, t.TempDir(), "undetermined-known\n")
+
+		var stdout, stderr bytes.Buffer
+		got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+		if got != outcomeStranded {
+			t.Fatalf("run() with a new stranded change and every undetermined one waived = exit %d, want %d (outcomeStranded); stdout=%q stderr=%q", got, outcomeStranded, stdout.String(), stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "stranded-new") {
+			t.Errorf("stderr %q does not name the unwaived stranded change", stderr.String())
+		}
+	})
+
+	t.Run("unwaived undetermined outranks waived stranded", func(t *testing.T) {
+		root := t.TempDir()
+		newChange(t, root, "stranded-known", allChecked)
+		newChange(t, root, "undetermined-new", zeroCheckboxes)
+		ledger := writeLedger(t, t.TempDir(), "stranded-known\n")
+
+		var stdout, stderr bytes.Buffer
+		got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+		if got != outcomeUndetermined {
+			t.Fatalf("run() with a new undetermined change and the stranded one waived = exit %d, want %d (outcomeUndetermined); stdout=%q stderr=%q", got, outcomeUndetermined, stdout.String(), stderr.String())
+		}
+		if !strings.Contains(stderr.String(), "undetermined-new") {
+			t.Errorf("stderr %q does not name the unwaived undetermined change", stderr.String())
+		}
+	})
+}
+
+// TestStaleWaiverFailsTheRun pins (d), the property that makes the ledger a
+// record rather than a suppression: a listed change that is neither stranded
+// nor undetermined on this run fails, is named, and is told to be deleted. A
+// waiver that outlives its gap is a silent permanent exemption.
+func TestStaleWaiverFailsTheRun(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "already-fixed", someUnchecked)
+	ledger := writeLedger(t, t.TempDir(), "already-fixed\n")
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+	if got == outcomeClean {
+		t.Fatalf("run() with a stale waiver exited %d (outcomeClean); a waiver that outlived its gap must never pass; stdout=%q stderr=%q", got, stdout.String(), stderr.String())
+	}
+	if got != outcomeUndetermined {
+		t.Fatalf("run() with a stale waiver = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "already-fixed") {
+		t.Errorf("stale-waiver diagnostic %q does not name the change", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "stale waiver") {
+		t.Errorf("stale-waiver diagnostic %q does not call it a stale waiver", stderr.String())
+	}
+	if !strings.Contains(stderr.String(), "delete") {
+		t.Errorf("stale-waiver diagnostic %q does not say to delete the line", stderr.String())
+	}
+}
+
+// TestStaleWaiverOutranksAnUnwaivedStrandedChange pins the precedence rule
+// itself, which the test above cannot reach.
+//
+// TestStaleWaiverFailsTheRun builds a repository whose ONLY change is in
+// progress, so the stale waiver never coexists with another finding and the
+// ranking is never exercised. An adversarial re-verification proved the gap
+// by mutation: moving the stale-waiver check from first to last, leaving
+// undetermined-outranks-stranded intact, kept the whole suite GREEN -- while
+// under that mutation this exact scenario exits 1, so the guard would assert
+// "here are the stranded changes" about a tree whose waiver set no longer
+// describes it. That is the sentence ranking-first exists to make impossible,
+// and nothing was stopping someone from reordering it away.
+func TestStaleWaiverOutranksAnUnwaivedStrandedChange(t *testing.T) {
+	root := t.TempDir()
+	// Genuinely stranded, and NOT in the ledger: on its own this is exit 1.
+	newChange(t, root, "stranded-open", allChecked)
+	// Listed, but no longer failing: a stale waiver.
+	newChange(t, root, "already-fixed", someUnchecked)
+	ledger := writeLedger(t, t.TempDir(), "already-fixed\n")
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+	if got == outcomeStranded {
+		t.Fatalf("run() with a stale waiver AND an unwaived stranded change = exit %d (outcomeStranded); exit 1 claims the stranded list describes this tree, but the waiver set no longer does -- the ledger defect has to outrank it; stderr=%q", got, stderr.String())
+	}
+	if got != outcomeUndetermined {
+		t.Fatalf("run() = exit %d, want %d (outcomeUndetermined); stderr=%q", got, outcomeUndetermined, stderr.String())
+	}
+	// Both must still be reported: ranking decides the exit code, never what
+	// the operator is told.
+	for _, want := range []string{"stranded-open", "already-fixed", "stale waiver"} {
+		if !strings.Contains(stderr.String(), want) {
+			t.Errorf("stderr %q does not mention %q; the exit code chooses which defect ranks, not which defects are named", stderr.String(), want)
+		}
+	}
+}
+
+// TestAllFindingsWaivedReportsTheWaivedCount pins (e): a green run states how
+// many gaps it waived, so passing never hides the count. This mirrors the
+// sibling gate's "ok: N report(s) checked, M known gap(s)" line.
+func TestAllFindingsWaivedReportsTheWaivedCount(t *testing.T) {
+	root := t.TempDir()
+	newChange(t, root, "stranded-known", allChecked)
+	newChange(t, root, "undetermined-known", zeroCheckboxes)
+	newChange(t, root, "in-progress", someUnchecked)
+	ledger := writeLedger(t, t.TempDir(), "stranded-known\nundetermined-known\n")
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+	if got != outcomeClean {
+		t.Fatalf("run() with every finding waived and no stale waiver = exit %d, want %d (outcomeClean); stdout=%q stderr=%q", got, outcomeClean, stdout.String(), stderr.String())
+	}
+	out := stdout.String()
+	if !strings.Contains(out, "2 known gap(s)") {
+		t.Errorf("green stdout %q does not state the waived count; a green run must not hide how many gaps it waived", out)
+	}
+	if strings.Contains(out, "none stranded.") {
+		t.Errorf("green stdout %q claims the unqualified clean summary while two gaps were waived", out)
+	}
+}
+
+// TestLedgerParsingAndUnreadableLedger pins (f). Comments and blank lines are
+// ignored so the ledger can explain itself, and an unreadable ledger path is a
+// fail-closed error rather than silently zero waivers — the same reasoning
+// countTasks uses for an unreadable tasks.md. A typo in the CI path must not
+// quietly turn every waiver off, nor quietly turn the gate green.
+func TestLedgerParsingAndUnreadableLedger(t *testing.T) {
+	t.Run("comments and blank lines are ignored", func(t *testing.T) {
+		root := t.TempDir()
+		newChange(t, root, "stranded-known", allChecked)
+		ledger := writeLedger(t, t.TempDir(), "# a header explaining the ledger\n\n   \nstranded-known  # why this one is here\n")
+
+		var stdout, stderr bytes.Buffer
+		got := run([]string{"--repo", root, "--known-gaps", ledger}, &stdout, &stderr)
+
+		if got != outcomeClean {
+			t.Fatalf("run() with a commented ledger = exit %d, want %d (outcomeClean); stdout=%q stderr=%q", got, outcomeClean, stdout.String(), stderr.String())
+		}
+		if strings.Contains(stderr.String(), "stale waiver") {
+			t.Errorf("a comment or blank line was parsed as a waiver: stderr=%q", stderr.String())
+		}
+	})
+
+	t.Run("an unreadable ledger fails closed", func(t *testing.T) {
+		root := t.TempDir()
+		newChange(t, root, "in-progress", someUnchecked)
+		missing := filepath.Join(t.TempDir(), "typo-known-gaps.txt")
+
+		var stdout, stderr bytes.Buffer
+		got := run([]string{"--repo", root, "--known-gaps", missing}, &stdout, &stderr)
+
+		if got != outcomeUndetermined {
+			t.Fatalf("run() with an unreadable ledger = exit %d, want %d (outcomeUndetermined); stdout=%q stderr=%q", got, outcomeUndetermined, stdout.String(), stderr.String())
+		}
+		if strings.Contains(stdout.String(), "clean") {
+			t.Errorf("stdout %q reports clean although the ledger could not be read", stdout.String())
+		}
+		if !strings.Contains(stderr.String(), "known-gaps") {
+			t.Errorf("stderr %q does not name the ledger it could not read", stderr.String())
+		}
+	})
+}
+
+// TestLedgerIsDocumentedInUsage pins requirement 1: the flag is documented the
+// way the sibling gate documents its own, so an operator reading the usage
+// text learns both properties rather than only that the flag exists.
+func TestLedgerIsDocumentedInUsage(t *testing.T) {
+	for _, want := range []string{"--known-gaps", "stale waiver"} {
+		if !strings.Contains(usageText, want) {
+			t.Errorf("usageText does not mention %q:\n%s", want, usageText)
+		}
+	}
+}
+
+// TestShippedLedgerMatchesThisRepository pins the ledger file itself: every
+// line in tools/archive-reconcile/known-gaps.txt must be a gap this repository
+// genuinely has right now. If one of them closes, this test and the guard both
+// fail until the line is deleted.
+func TestShippedLedgerMatchesThisRepository(t *testing.T) {
+	root := repoRoot(t)
+	if _, err := os.Stat(filepath.Join(root, "openspec", "changes")); err != nil {
+		t.Skipf("live openspec/changes not found under %s, skipping: %v", root, err)
+	}
+
+	var stdout, stderr bytes.Buffer
+	got := run([]string{"--repo", root, "--known-gaps", "known-gaps.txt"}, &stdout, &stderr)
+
+	if got != outcomeClean {
+		t.Fatalf("run() against this repository with the shipped ledger = exit %d, want %d (outcomeClean); stdout=%q stderr=%q", got, outcomeClean, stdout.String(), stderr.String())
+	}
+	if !strings.Contains(stdout.String(), "known gap(s)") {
+		t.Errorf("stdout %q does not state the waived count", stdout.String())
+	}
+}

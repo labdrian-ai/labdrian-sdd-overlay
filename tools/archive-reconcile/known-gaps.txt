@@ -1,0 +1,48 @@
+# Active changes under openspec/changes/ that this guard genuinely fails on
+# today: one stranded, four it cannot classify at all.
+#
+# This ledger is a RECORD of a gap, never a permission to keep it. Every line
+# is a change the guard really fails on right now, kept out of the run's exit
+# status only so a guard that is correct can ship before the records it judges
+# are corrected. Two properties make it safe:
+#
+#   * a NEW stranded or undetermined change is not on this list, so it fails
+#     the run;
+#   * a listed change that stops being stranded and stops being undetermined
+#     fails the run as a stale waiver, so the entry has to be deleted when the
+#     gap closes. The list cannot rot into a permanent exemption by being
+#     forgotten.
+#
+# Four of the five below are undetermined on the same signal: their tasks.md
+# carries no bullet checkbox, which is also what blocks them in the native SDD
+# engine today. Making those files readable is a change of its own, not a line
+# this guard can write for them.
+#
+# Each line is a change directory name under openspec/changes/. '#' starts a
+# comment.
+
+# STRANDED. 17/17 tasks checked and never archived, and 5 of its 7 delta
+# capabilities (overlay-backup-restore, overlay-release-identity,
+# overlay-release-state, overlay-release-surfacing, overlay-update-check) have
+# no openspec/specs/<name>/spec.md, so the canonical spec set is incomplete —
+# not merely the folder move. It is also blocked in the native SDD engine on an
+# unreadable runtime authority, so closing this gap is a promotion-plus-archive
+# cycle, not a folder move this change can perform.
+overlay-versioned-releases
+
+# UNDETERMINED. 0 bullet checkboxes; 10 `**Status**: [x] done` markers. The
+# completion convention is real but lives in a shape this guard deliberately
+# does not interpret, so it can say neither stranded nor in progress.
+skill-lifecycle
+
+# UNDETERMINED. 0 bullet checkboxes; 20 other [x]-shaped markers, same
+# convention mismatch as skill-lifecycle.
+skill-package-manager
+
+# UNDETERMINED. 0 checkboxes of any shape: its tasks are `### T-01` .. `### T-07`
+# headings with a dependency graph and no completion marker at all, so there is
+# nothing here for any tool to read a verdict from.
+skill-manifest-gen
+
+# UNDETERMINED. 0 checkboxes of any shape.
+skill-project-scope

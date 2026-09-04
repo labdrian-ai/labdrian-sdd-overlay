@@ -414,8 +414,34 @@ jobs:
       # that is the exact condition this guard exists to surface, not a test
       # bug. Do not add tolerance for a non-zero exit here to keep this job
       # green; that would defeat the guard it exists to run.
+      #
+      # Declared gaps live in known-gaps.txt, exactly as they do for the
+      # sibling archive-anchor-gate job: every line there is a change this
+      # guard genuinely fails on today. That ledger is a record, not an
+      # exemption — a NEW stranded or undetermined change is not on it and
+      # still fails this step, and a listed change that stops failing fails
+      # this step as a stale waiver until its line is deleted. Do not add
+      # entries to keep the job green.
+      # Invoked through the overlay wrapper, not `go run` directly. The wrapper
+      # is the only surface a maintainer actually types, and it carries real
+      # behaviour of its own: it builds the guard, runs it from $CALLER_CWD,
+      # and remaps the one exit-1 case that would otherwise read as "stranded
+      # change found" when the caller's directory has vanished. This step is
+      # its ONLY invocation anywhere -- nothing in engine/shelltest covers it --
+      # so calling the binary directly here would leave that wrapper untested
+      # while this comment still claimed the job owns the end-to-end assertion.
+      #
+      # The ledger path is REPOSITORY-RELATIVE on purpose: the wrapper runs the
+      # guard from $CALLER_CWD, so "known-gaps.txt" alone would resolve against
+      # whatever directory the caller happened to be in, not the tool's module
+      # directory. That is the same trap that made --exists-root a gate no
+      # contract could pass.
       - name: Archive reconcile guard against this repository
-        run: bin/labdrian-overlay archive-reconcile
+        run: |
+          set -euo pipefail
+          bin/labdrian-overlay archive-reconcile \
+            --repo "$PWD" \
+            --known-gaps tools/archive-reconcile/known-gaps.txt
 
   test-tui:
     name: TUI Tests
