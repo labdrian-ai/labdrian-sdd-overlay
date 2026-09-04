@@ -153,15 +153,32 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 			date, ConventionDate, cycleTimestampsHeading)}}
 	}
 
-	commit, tree := parseAnchorSection(section)
+	commit, tree, unlabelled := parseAnchorSection(section)
 	lowered := strings.ToLower(section)
+	declaresAbsent := declaresAbsence(lowered)
+
+	// An unnamed hash fills an empty slot ONLY when the report has not declared
+	// that the anchor is absent. A report that says "no landing commit" and
+	// also quotes a receipt or content digest is a compliant absence record,
+	// and promoting that digest would answer it with "records landing commit
+	// ..., which does not resolve" — a hard stop on the very disclosure the
+	// gate asks for. Prose beats an unnamed hash; a LABELLED hash still beats
+	// the prose, because a report that names its commit recorded one.
+	if !declaresAbsent {
+		for _, hash := range unlabelled {
+			switch {
+			case commit == "":
+				commit = hash
+			case tree == "":
+				tree = hash
+			}
+		}
+	}
 
 	if commit == "" {
 		report.Outcome = AnchorAbsent
-		for _, declaration := range absentDeclarations {
-			if strings.Contains(lowered, declaration) {
-				return report, nil
-			}
+		if declaresAbsent {
+			return report, nil
 		}
 		return report, []Finding{{relPath, fmt.Sprintf(
 			"records no landing commit and states no absent outcome. An anchor that is missing must SAY it is "+
@@ -270,11 +287,12 @@ func claimsOutcome(section string, word *regexp.Regexp) bool {
 // entirely. The mirror twin, an abbreviated `approved_tree`, was read as a
 // commit for exactly the same reason.
 //
-// A hash no field name governs fills the landing-commit slot first: the anchor
-// contract's primary field is the landing commit, and an unnamed hash is not
-// made a tree by being long.
-func parseAnchorSection(section string) (commit, tree string) {
-	var unlabelled []string
+// Hashes no field name governs are RETURNED separately, in reading order, and
+// never promoted here: the caller decides, because promotion is only correct
+// when the report has not declared the anchor absent. The anchor contract's
+// primary field is the landing commit, so a promoted unnamed hash fills that
+// slot first — an unnamed hash is not made a tree by being long.
+func parseAnchorSection(section string) (commit, tree string, unlabelled []string) {
 	for _, line := range strings.Split(section, "\n") {
 		for _, match := range recordedHashPattern.FindAllStringSubmatchIndex(line, -1) {
 			hash := strings.ToLower(line[match[2]:match[3]])
@@ -292,15 +310,18 @@ func parseAnchorSection(section string) (commit, tree string) {
 			}
 		}
 	}
-	for _, hash := range unlabelled {
-		switch {
-		case commit == "":
-			commit = hash
-		case tree == "":
-			tree = hash
+	return commit, tree, unlabelled
+}
+
+// declaresAbsence reports whether the (lowercased) section states positively
+// that no landing commit exists.
+func declaresAbsence(loweredSection string) bool {
+	for _, declaration := range absentDeclarations {
+		if strings.Contains(loweredSection, declaration) {
+			return true
 		}
 	}
-	return commit, tree
+	return false
 }
 
 // anchorLabel names which anchor field a hash belongs to.

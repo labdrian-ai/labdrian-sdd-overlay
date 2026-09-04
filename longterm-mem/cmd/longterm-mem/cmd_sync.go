@@ -45,6 +45,7 @@ func cmdSync(args []string) int {
 		return exitEngramUnavailable
 	}
 	defer store.Close()
+	declareDegradedEngram(store, "sync")
 
 	precedence, err := promote.LoadPrecedenceStore(vaultRoot)
 	if err != nil {

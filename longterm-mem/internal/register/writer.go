@@ -1,6 +1,7 @@
 package register
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -86,25 +87,24 @@ var saveInstallState = func(s *InstallState, path string) error { return s.Save(
 // `register` first adopts the entry and restores the record, after which
 // `unregister` removes it normally.
 //
-// That recovery is NOT what the packaged uninstall does with exit 6, and
-// this comment used to stop before saying so. bin/labdrian-overlay's
-// `longterm-mem uninstall` treats 6 the same as 0 — "this target has
-// nothing of ours left" — clears the target from its own tracking file,
-// and, once the last tracked target is cleared, deletes the shared binary
-// at ~/.labdrian-overlay/bin/longterm-mem. So on a machine that lost
-// install-state.json, one packaged uninstall leaves every runtime config
-// still carrying longterm-mem's own MCP entry, pointed at a binary that
-// no longer exists, and removes the only tool that could have adopted
-// them back. The user's recovery is hand-editing every runtime config —
-// exactly the outcome the adopt row was added to abolish.
+// That recovery used not to survive the packaged uninstall, and it is
+// worth recording why, because the comment half of this defect was fixed
+// a round before its behavioural half. bin/labdrian-overlay's
+// `longterm-mem uninstall` treated exit 6 exactly as exit 0 — "this
+// target has nothing of ours left" — cleared the target from its own
+// tracking file, and, once the last tracked target was cleared, deleted
+// the shared binary at ~/.labdrian-overlay/bin/longterm-mem. So on a
+// machine that lost install-state.json, one packaged uninstall left every
+// runtime config still carrying longterm-mem's own MCP entry, pointed at
+// a binary that no longer existed, and removed the only tool that could
+// have adopted them back.
 //
-// This package cannot fix that: the decision belongs to the overlay
-// script, which is a different lane. What it CAN do is stop describing
-// the outcome as bounded when the shipped caller unbounds it. The fix on
-// the overlay side is to stop folding 6 into 0 for this case — exit 6
-// means "an entry with our name is still in that runtime's config", which
-// is precisely when the shared binary must NOT be removed — and it is
-// reported as such rather than worked around here.
+// The overlay now keeps a target tracked on exit 6 (and on exit 2, its
+// twin: both mean "the entry was not removed"), so the binary-removal
+// guard holds and the recovery above stays reachable —
+// engine/shelltest/overlay_longterm_mem_test.sh pins both. The bounded,
+// recoverable outcome this comment claims is therefore true of the
+// shipped caller, not only of this package.
 //
 // Making uninstall self-heal on its own would mean threading a binary
 // path through Unregister's signature and cmd_unregister's flags — a
@@ -399,7 +399,7 @@ func readMember(path, containerKey, memberKey string) (json.RawMessage, bool, er
 	}
 
 	var doc map[string]json.RawMessage
-	if err := json.Unmarshal(raw, &doc); err != nil {
+	if err := json.Unmarshal(emptyDocumentAsObject(raw), &doc); err != nil {
 		return nil, false, fmt.Errorf("parse %s: %w", path, err)
 	}
 	containerRaw, ok := doc[containerKey]
@@ -441,5 +441,45 @@ func readTOMLSection(path, tableKey, memberKey string) ([]byte, bool, error) {
 	if !loc.found {
 		return nil, false, nil
 	}
-	return raw[loc.start:loc.end], true, nil
+	section := raw[loc.start:loc.end]
+	if !tomlSectionIsAnEntry(section) {
+		// A header with no `command =` line is not an entry -- the exact
+		// rule engine/runtime's read-only adapter applies to this same
+		// file for `doctor`/`status` (tomlSectionFingerprint: "a header
+		// with no command line is not a real entry -- nothing a register
+		// step would have written"). Reporting it as PRESENT here was the
+		// one place this package and that adapter still disagreed about a
+		// real file, and the disagreement had teeth: a stray bodyless
+		// `[mcp_servers.longterm-mem]` header read as absent to doctor and
+		// as a foreign entry to register, which refused it with exit 6 and
+		// left it -- an installation that reports itself missing and
+		// refuses to install, forever, over a section holding nothing.
+		//
+		// Calling it absent is safe in both directions. longterm-mem never
+		// writes a section without a command line, so such a section is
+		// provably not one of ours being protected; and it is not a
+		// working entry for anyone else either, since codex has nothing to
+		// launch without it. Install then fills the empty header in place
+		// (tomlsplice.go locates and replaces the same span), after
+		// replaceConfig has backed the original file up to .bak.
+		//
+		// Uninstall correspondingly leaves such a header alone rather than
+		// deleting a section it does not consider ours, which is the same
+		// answer it gives for any other entry it did not write.
+		return nil, false, nil
+	}
+	return section, true, nil
+}
+
+// tomlSectionIsAnEntry reports whether a located codex section is a real
+// MCP server entry, i.e. carries a `command =` line. It reproduces
+// engine/runtime's codexCommandLine test, so both sides of D9 answer
+// "does this entry exist?" with one rule.
+func tomlSectionIsAnEntry(section []byte) bool {
+	for _, line := range bytes.Split(section, []byte("\n")) {
+		if tomlCommandLinePattern.Match(line) {
+			return true
+		}
+	}
+	return false
 }

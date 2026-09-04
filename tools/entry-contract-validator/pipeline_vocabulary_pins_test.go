@@ -411,6 +411,116 @@ func TestChainingSpellingsTableCountsEverySurface(t *testing.T) {
 
 var backtickPattern = regexp.MustCompile("`([^`]+)`")
 
+const chainStrategySectionHeading = "### Chain Strategy"
+
+// chainStrategyStopPhrases are the ways prose says "this value has nowhere to
+// go". Paired with a member of the stored domain in one sentence, each one
+// contradicts the routing table that gives every member a route.
+var chainStrategyStopPhrases = []string{"STOP", "blocked", "no route", "no branch"}
+
+var (
+	// codeSpanPattern matches one inline code span. A span whose content holds
+	// whitespace is a quoted literal, not a token: the blocked-message text the
+	// agent is told to return quotes tokens without routing them.
+	codeSpanPattern  = regexp.MustCompile("`[^`\n]*`")
+	proseSentenceEnd = regexp.MustCompile(`(?:[.!?]\s+)|\n`)
+)
+
+// chainStrategyProseSentences returns the sentences of a section that are NOT
+// table rows and NOT quoted message literals — that is, the prose a reader
+// takes as instruction.
+func chainStrategyProseSentences(body string) []string {
+	var kept []string
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "|") {
+			continue
+		}
+		kept = append(kept, line)
+	}
+	prose := codeSpanPattern.ReplaceAllStringFunc(strings.Join(kept, "\n"), func(span string) string {
+		if strings.ContainsAny(strings.Trim(span, "`"), " \t") {
+			return "`quoted-literal`"
+		}
+		return span
+	})
+	return proseSentenceEnd.Split(prose, -1)
+}
+
+func namesToken(sentence, token string) bool {
+	pattern := regexp.MustCompile(`(?i)(?:^|[^A-Za-z0-9_-])` + regexp.QuoteMeta(token) + `(?:[^A-Za-z0-9_-]|$)`)
+	return pattern.MatchString(sentence)
+}
+
+// TestChainStrategyProseNeverContradictsTheRoutingTable closes the hole the
+// table-only pin left open. TestSddApplyChainStrategyConsumerDomainMatchesSchema
+// reads table CELLS, so the original self-contradiction — "Any other value —
+// including `none`, which names no branch to target — has no route in this
+// skill" — could be restored VERBATIM into the guard paragraph with the table
+// still correct and the suite still green. Prose is what the phase agent obeys,
+// so the pin has to reach it: no sentence outside the table, in either the
+// consumer skill or the orchestrator workflow that feeds it, may pair a member
+// of the stored domain with a stop outcome.
+func TestChainStrategyProseNeverContradictsTheRoutingTable(t *testing.T) {
+	domain := schemaEnum(t, chainStrategyField)
+	for _, target := range []struct{ path, heading string }{
+		{sddApplySkillRelPath, applyStep2aHeading},
+		{orchestratorWorkflowPath, chainStrategySectionHeading},
+	} {
+		body := markdownSection(t, readRepoDoc(t, target.path), target.heading)
+		for _, sentence := range chainStrategyProseSentences(body) {
+			for _, token := range domain {
+				if !namesToken(sentence, token) {
+					continue
+				}
+				for _, stop := range chainStrategyStopPhrases {
+					if strings.Contains(sentence, stop) {
+						t.Errorf("%s %s pairs the legal %s value %q with %q in prose: %q\nEvery member of the domain routes; the guard fires only on values outside it",
+							target.path, target.heading, chainStrategyField, token, stop, strings.TrimSpace(sentence))
+					}
+				}
+			}
+		}
+	}
+}
+
+// TestOrchestratorConsumerRowStatesTheWholeApplyDomain pins the one row of the
+// chaining-spellings table that describes sdd-apply. It claimed sdd-apply's
+// domain was the two topologies, which was the premise of the neighbouring
+// instruction to withhold `none` from the apply prompt — on every single-PR
+// change, i.e. most of them. The row is a claim about another file, so it is
+// pinned to that file's routing table and to the schema both derive from.
+func TestOrchestratorConsumerRowStatesTheWholeApplyDomain(t *testing.T) {
+	doc := readRepoDoc(t, orchestratorWorkflowPath)
+	idx := strings.Index(doc, chainingSpellingsMarker)
+	if idx == -1 {
+		t.Fatalf("%s no longer carries the %q headline", orchestratorWorkflowPath, chainingSpellingsMarker)
+	}
+	// The domain cell escapes its alternation bar (`a` \| `b`), and the row
+	// splitter is naive about that, so the domain arrives as every cell between
+	// the Surface cell and the trailing "How to read it" cell.
+	var domainCell string
+	for _, row := range markdownTableAfter(t, doc[idx:], "| Surface") {
+		if len(row) >= 3 && strings.Contains(row[0], "sdd-apply") {
+			domainCell = strings.Join(row[1:len(row)-1], " ")
+			break
+		}
+	}
+	if domainCell == "" {
+		t.Fatalf("the chaining-spellings table has no sdd-apply consumer row")
+	}
+	var stated []string
+	for _, match := range backtickPattern.FindAllStringSubmatch(domainCell, -1) {
+		stated = append(stated, match[1])
+	}
+	sort.Strings(stated)
+	stored := append([]string(nil), schemaEnum(t, chainStrategyField)...)
+	sort.Strings(stored)
+	if !equalCells(stated, stored) {
+		t.Errorf("%s describes sdd-apply's consumer domain as %v, but sdd-apply routes the schema domain %v — a short domain here is the premise for withholding a legal value from the apply prompt",
+			orchestratorWorkflowPath, stated, stored)
+	}
+}
+
 // TestPhaseIOTableReadsAreReferencedByPhaseSkills pins the phase I/O table
 // against the skills it describes. A backticked artifact in the Reads column is
 // a claim that the phase agent reads it; if that phase's own SKILL.md never

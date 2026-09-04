@@ -41,6 +41,13 @@ func tomlHeaderPattern(tableKey, memberKey string) *regexp.Regexp {
 // side; this package owns the write side).
 var tomlAnyHeaderPattern = regexp.MustCompile(`^\s*\[`)
 
+// tomlCommandLinePattern matches a `command =` line inside a codex
+// section — the line engine/runtime's read-only adapter (codexCommandLine)
+// requires before it calls a section a real entry. It lives beside the
+// other line patterns because it is part of the same line-oriented scan,
+// and it is spelled identically to that adapter's so the two cannot drift.
+var tomlCommandLinePattern = regexp.MustCompile(`^\s*command\s*=`)
+
 // locateTOMLSection walks raw line by line looking for a header matching
 // tableKey.memberKey (see tomlHeaderPattern). When found, the section's
 // span runs from that header line up to (but not including) any blank

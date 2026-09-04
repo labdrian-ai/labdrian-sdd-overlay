@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 )
 
 // checkStatus finds check name's Status in checks, failing the test if
@@ -23,6 +24,40 @@ func checkStatus(t *testing.T, checks []Check, name string) Check {
 	}
 	t.Fatalf("no check named %q in %+v", name, checks)
 	return Check{}
+}
+
+// recordPrecedenceRevision backfills revision onto address's existing
+// precedence entry, turning the fixture's legacy (hashes-only) entry into
+// the fully recorded shape every promotion writes today.
+func recordPrecedenceRevision(t *testing.T, vaultRoot, address string, revision int) {
+	t.Helper()
+	store, err := promote.LoadPrecedenceStore(vaultRoot)
+	if err != nil {
+		t.Fatalf("LoadPrecedenceStore: %v", err)
+	}
+	entry, ok := store.Get(address)
+	if !ok {
+		t.Fatalf("precedence store has no entry for %s to record a revision on", address)
+	}
+	entry.PromotedRevision = revision
+	store.Set(address, entry)
+	if err := store.Save(vaultRoot); err != nil {
+		t.Fatalf("PrecedenceStore.Save: %v", err)
+	}
+}
+
+// editPromotedPage appends a human's own line to a promoted page, so its
+// bytes no longer match whatever the precedence sidecar recorded.
+func editPromotedPage(t *testing.T, vaultRoot, address string) {
+	t.Helper()
+	pagePath := filepath.Join(vaultRoot, "wiki", "memory", address+".md")
+	data, err := os.ReadFile(pagePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", pagePath, err)
+	}
+	if err := os.WriteFile(pagePath, append(data, []byte("\nEdited by a human.\n")...), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
 }
 
 // TestDoctor: R-011's four named-check scenarios, table-driven (8a.4).
@@ -166,28 +201,48 @@ func TestDoctor(t *testing.T) {
 		}
 	})
 
-	t.Run("Locally edited page is not a precedence-sidecar failure", func(t *testing.T) {
+	t.Run("Locally edited page with a recorded entry is not a precedence-sidecar failure", func(t *testing.T) {
 		deps, vaultRoot := newHealthyDeps(t)
 		// R-030 makes a hand-edited promoted page a supported, reported
-		// state, not a broken vault: its sidecar entry exists and simply no
-		// longer matches the bytes. The check must look for a MISSING
-		// entry, never a stale one, or doctor would report every page a
-		// human has ever touched as a defect.
-		pagePath := filepath.Join(vaultRoot, "wiki", "memory", address+".md")
-		data, err := os.ReadFile(pagePath)
-		if err != nil {
-			t.Fatalf("read %s: %v", pagePath, err)
-		}
-		if err := os.WriteFile(pagePath, append(data, []byte("\nEdited by a human.\n")...), 0o644); err != nil {
-			t.Fatalf("write local edit: %v", err)
-		}
+		// state, not a broken vault: its sidecar entry exists, records the
+		// revision it published, and simply no longer matches the bytes.
+		// Promotion refuses that page and says so, and a later revision
+		// reconciles it -- nothing is wedged, so flagging it here would
+		// report every page a human has ever touched as a defect.
+		recordPrecedenceRevision(t, vaultRoot, address, 1)
+		editPromotedPage(t, vaultRoot, address)
 
 		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
 		if err != nil {
 			t.Fatalf("Doctor: %v", err)
 		}
 		if got := checkStatus(t, report.Checks, CheckPrecedenceSidecarConsistency); got.Status != CheckPassed {
-			t.Fatalf("precedence-sidecar-consistency = %+v, want PASSed: a local edit is a supported state (R-030), not a vault defect", got)
+			t.Fatalf("precedence-sidecar-consistency = %+v, want PASSed: a local edit on a fully recorded entry is a supported state (R-030), not a vault defect", got)
+		}
+	})
+
+	t.Run("Locally edited page whose entry records no revision is named", func(t *testing.T) {
+		deps, vaultRoot := newHealthyDeps(t)
+		// The wedged residue. An entry that records no promoted revision
+		// carries no evidence separating our own unrecorded write from a
+		// human's edit, so once its page diverges promotion refuses it --
+		// and the refusal is a skip, which suppresses the very store write
+		// that would have given the entry a revision. Every later run
+		// repeats it. A vault permanently refusing its own page must not
+		// report entirely healthy, which is the failure mode this check
+		// exists to end.
+		editPromotedPage(t, vaultRoot, address)
+
+		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+		got := checkStatus(t, report.Checks, CheckPrecedenceSidecarConsistency)
+		if got.Status != CheckFailed {
+			t.Fatalf("precedence-sidecar-consistency = %+v, want FAILed: a page its own sidecar can never adopt again is a vault defect, not a supported state", got)
+		}
+		if !strings.Contains(got.Detail, address) {
+			t.Fatalf("precedence-sidecar-consistency detail = %q, want it to name %q", got.Detail, address)
 		}
 	})
 

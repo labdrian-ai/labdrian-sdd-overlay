@@ -580,3 +580,51 @@ func TestDeclaredGapIsReportedNotSilenced(t *testing.T) {
 		t.Errorf("stdout %q does not report the declared gap — a silent waiver is the failure mode this ledger exists to avoid", stdout)
 	}
 }
+
+// TestAbsenceDeclarationSurvivesAnUnrelatedHash is the twin of the unlabelled
+// promotion rule. Promoting ANY unlabelled hash into the landing-commit slot
+// made the absent branch unreachable, because checkReport consults
+// absentDeclarations only when that slot is empty. A report that correctly
+// declares its absent outcome AND quotes a receipt or content digest — which
+// these reports routinely do — was then failed for "records landing commit ...
+// which does not resolve": a hard stop on a compliant record, the opposite of
+// its content. Absence is declared in prose, so the declaration must be read
+// BEFORE an unnamed hash is promoted into the field it says does not exist.
+func TestAbsenceDeclarationSurvivesAnUnrelatedHash(t *testing.T) {
+	root, _, _ := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-absent-with-digest",
+		"# Archive Report\n\n## Cycle Timestamps\n\nNo landing commit: 82 PRs staged, not yet merged.\n\nReview receipt digest `0123456789abcdef0123456789abcdef01234567`.\n")
+
+	reports, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("a declared absence carrying an unrelated digest produced findings: %v", findings)
+	}
+	if len(reports) != 1 || reports[0].Outcome != AnchorAbsent {
+		t.Fatalf("reports = %v, want one %q report", reports, AnchorAbsent)
+	}
+}
+
+// TestLabelledCommitIsStillReadWhenAbsenceProseIsPresent is that fix's own
+// twin: reading the declaration first must not make a LABELLED landing commit
+// invisible. A report that names its commit and also carries absence-shaped
+// prose still records an anchor, and that anchor is still resolved and checked.
+func TestLabelledCommitIsStillReadWhenAbsenceProseIsPresent(t *testing.T) {
+	root, commit, tree := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-labelled-with-absence-prose", fmt.Sprintf(
+		"# Archive Report\n\n## Cycle Timestamps\n\n| landing_commit | `%s` |\n| approved_tree | `%s` |\n\nThe predecessor change was never merged; this one was, and the tree is verified.\n",
+		commit, tree))
+
+	reports, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("a labelled, verified anchor produced findings: %v", findings)
+	}
+	if len(reports) != 1 || reports[0].Anchor == nil || reports[0].Anchor.LandingCommit != commit {
+		t.Fatalf("reports = %v, want the labelled landing commit %s", reports, commit)
+	}
+}

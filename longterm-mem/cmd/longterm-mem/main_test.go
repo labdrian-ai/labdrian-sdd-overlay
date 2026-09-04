@@ -168,6 +168,15 @@ func TestCmdSync_BothPassesRunDespiteAFailingObservation(t *testing.T) {
 	if !strings.Contains(string(stderr), "propagate") {
 		t.Fatalf("the second pass never ran: Sync's failure aborted the command instead of being reported alongside it; stderr:\n%s", stderr)
 	}
+	// The exit code above is the INDEX REBUILD's, and an assertion on it
+	// alone would hold just as well with the broken observation deleted --
+	// Sync reaches its RebuildIndex step either way, so 5 is reachable
+	// independently of the failure this test is named for. The failing
+	// observation is therefore pinned where it is actually visible: in the
+	// diagnostics the command reports.
+	if !strings.Contains(string(stderr), "c-000900") {
+		t.Fatalf("the failing observation was never reported: only the index rebuild's failure reached stderr, so nothing here would notice Sync silently skipping it; stderr:\n%s", stderr)
+	}
 }
 
 // TestRun_DispatchesStatusSubcommand proves "status" is registered in

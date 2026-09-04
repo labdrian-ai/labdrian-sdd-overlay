@@ -3411,7 +3411,23 @@ cmd_longterm_mem() {
           warn "longterm-mem register --target $t: refused — an entry exists that longterm-mem does not own, and it was left untouched. $t is NOT recorded as installed; remove that entry by hand and re-run install to register $t."
           ;;
         2)
-          warn "longterm-mem register --target $t: this binary does not accept the invocation (exit 2, version skew), so $t was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this."
+          # Exit 2 fails the run for the exact reason exit 8 does, one arm
+          # below: it is environment-independent, it reproduces identically
+          # on every target (so --target all softens nothing here either),
+          # and converging on it at exit 0 would report a component that
+          # registered NOTHING as a clean install. The two codes differ only
+          # in whose fault they name -- 8 the caller's environment, 2 this
+          # binary's own vintage -- and neither difference is visible to a
+          # script reading $?.
+          #
+          # Exit 6 above is deliberately NOT in this bucket: it is not a
+          # failure to register but a machine state (a same-named entry this
+          # overlay never wrote), the install did everything it is allowed to
+          # do, and re-running changes nothing until a human removes that
+          # entry. Failing the run there would make every install on such a
+          # machine non-zero forever.
+          warn "longterm-mem register --target $t: this binary does not accept the invocation (exit 2, version skew), so $t was not registered and is NOT recorded as installed. Not retried; every re-run reproduces this -- deploy a longterm-mem build whose register subcommand matches this overlay."
+          install_failed=1
           ;;
         8)
           # register_paths.go separates 8 from 1 precisely so a caller can
@@ -3489,12 +3505,27 @@ cmd_longterm_mem() {
       #
       # cmd_unregister.go's exit codes (0 removed, 1 hard failure, 2 usage,
       # 6 unmanaged, 8 a path it could not resolve from the environment at
-      # all, 1 outranking 6) are inspected, not swallowed: 0 and 6 both mean
-      # "$t has nothing of ours left in its runtime config" (an unmanaged
-      # entry was never ours to begin with), so both clear this target's
-      # tracking below. Any other status means $t's entry (and possibly its
-      # install-state record) may still be present, so tracking for $t is
-      # KEPT and the whole run is marked failed.
+      # all, 1 outranking 6) are inspected, not swallowed. ONLY exit 0 means
+      # "$t has nothing of ours left in its runtime config", and only exit 0
+      # clears this target's tracking below.
+      #
+      # 6 used to clear it too, on the reasoning that "an unmanaged entry was
+      # never ours to begin with". That reasoning describes the entry, not
+      # the run: exit 6 says only that unregister DID NOT REMOVE the entry it
+      # found, and unregister cannot tell "someone else's server that happens
+      # to share our name" from "our own entry, after install-state.json was
+      # lost or restored from a backup that predates the install". Clearing
+      # tracking on the second shape frees the guard below to delete the
+      # SHARED BINARY while our MCP entries still sit in every runtime config
+      # -- orphaned entries pointing at a binary that no longer exists, which
+      # is the single state this tracking file exists to prevent. So 6 keeps
+      # $t tracked; --purge stays the explicit way out.
+      #
+      # 2 is the same shape and the same hazard, and is nonetheless treated
+      # the other way, for the reason its own arm gives: exit 6 leaves a
+      # recovery open (fix the entry by hand, or let `register` adopt it
+      # back) while exit 2 leaves none, because the tool that would perform
+      # the recovery is the thing that is broken.
       #
       # 8 gets its own arm for the same reason it does on the install side:
       # it lands in the same bucket as the catch-all, but the catch-all's
@@ -3507,14 +3538,23 @@ cmd_longterm_mem() {
           longtermmem_installed_targets_remove "$t"
           ;;
         6)
-          warn "longterm-mem unregister --target $t: unmanaged (an entry exists that longterm-mem does not own; left untouched)"
-          longtermmem_installed_targets_remove "$t"
+          warn "longterm-mem unregister --target $t: unmanaged (an entry exists that longterm-mem does not own; left untouched). $t stays tracked as installed, because that entry was NOT removed and may be ours under a lost install-state.json -- inspect $t's config and remove the entry by hand, then re-run uninstall, or pass --purge to drop the shared binary regardless."
           ;;
         2)
           # Usage error: this binary does not accept the invocation
-          # (version skew, a subcommand it does not know). Like a missing
-          # binary, retrying reproduces it exactly, so it must converge
-          # rather than wedge the run.
+          # (version skew, a subcommand it does not know). It is the same
+          # "the entry was not removed" shape as exit 6 above, and the same
+          # orphan hazard, with ONE difference that decides it the other
+          # way: the tool itself is unusable, so no re-run of `uninstall`
+          # can ever remove the entry or clear the tracking, and keeping $t
+          # tracked would leave --purge -- the action that orphans the
+          # entries outright -- as the only way to finish. Exit 6 has a
+          # real recovery (fix the entry, or let `register` adopt it back);
+          # this has none until the binary is replaced. So it converges and
+          # clears tracking, and says what was left behind.
+          #
+          # engine/installer's TestUninstall_VersionSkewStillConverges pins
+          # this branch, alongside the missing-binary branch it mirrors.
           warn "longterm-mem unregister --target $t: this binary does not accept the invocation (exit 2, version skew), so $t's entry stays in its runtime config -- remove it by hand, or reinstall and re-run uninstall. Not retried; every re-run reproduces this."
           longtermmem_installed_targets_remove "$t"
           ;;

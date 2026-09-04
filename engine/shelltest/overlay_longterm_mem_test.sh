@@ -859,6 +859,145 @@ case_unregister_path_unresolvable_is_named() {
   pass "unregister exit 8 is named with its remedy and keeps the target tracked"
 }
 
+# unregister exit 6 ("an entry exists that longterm-mem does not own") is NOT
+# the same event as exit 0. Exit 0 means "the entry is gone"; exit 6 means "I
+# did not touch it". Dropping the target's tracking on 6 lets the guard below
+# delete the SHARED BINARY while a longterm-mem MCP entry may still sit in
+# that runtime's config -- an orphaned entry pointing at a binary that no
+# longer exists, which is the one state the tracking file exists to prevent.
+case_unregister_unmanaged_keeps_the_target_tracked() {
+  local dir status out
+  dir="$(new_case_dir unregister-unmanaged)"
+  write_fake_toolchain "$dir" 0
+
+  out="$(
+    STATE_DIR="$dir/state" \
+    FAKE_UNREGISTER_EXIT=6 \
+    bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      cp "$3" "$LONGTERM_MEM_BINARY"
+      chmod +x "$LONGTERM_MEM_BINARY"
+      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      cmd_longterm_mem uninstall --target claude
+      echo "UNINSTALL-STATUS=$?"
+      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" "$dir/engine-stub" "$dir/fake-longterm-mem" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "unregister exit 6: harness exited $status" "$out"
+    return
+  fi
+  if ! grep -q -F -e "TRACKED=[claude ]" <<<"$out"; then
+    fail "unregister exit 6 dropped the target's tracking, so the shared binary is removable while the entry may remain" "$out"
+    return
+  fi
+  if [[ ! -e "$dir/state/bin/longterm-mem" ]]; then
+    fail "unregister exit 6 removed the shared binary while claude's entry was left untouched" "$out"
+    return
+  fi
+  if ! grep -q -F -e "UNINSTALL-STATUS=0" <<<"$out"; then
+    fail "unregister exit 6 should converge: a foreign entry is a machine state, not a failure of this run" "$out"
+    return
+  fi
+  pass "a refused (exit 6) unregister keeps the target tracked and the shared binary in place"
+}
+
+# The TWIN of the case above, decided the other way and pinned so the
+# difference stays deliberate rather than accidental: exit 2 (version skew)
+# also means "I did not remove the entry" and carries the same orphan
+# hazard, but the tool that would perform exit 6's recovery is itself the
+# broken thing, so keeping the target tracked would leave --purge -- the
+# action that orphans the entries outright -- as the only way to finish. It
+# therefore converges AND clears tracking (engine/installer's
+# TestUninstall_VersionSkewStillConverges pins the same branch end to end).
+case_unregister_version_skew_converges() {
+  local dir status out
+  dir="$(new_case_dir unregister-skew)"
+  write_fake_toolchain "$dir" 0
+
+  out="$(
+    STATE_DIR="$dir/state" \
+    FAKE_UNREGISTER_EXIT=2 \
+    bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      mkdir -p "$(dirname "$LONGTERM_MEM_BINARY")" "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      cp "$3" "$LONGTERM_MEM_BINARY"
+      chmod +x "$LONGTERM_MEM_BINARY"
+      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      cmd_longterm_mem uninstall --target claude
+      echo "UNINSTALL-STATUS=$?"
+      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" "$dir/engine-stub" "$dir/fake-longterm-mem" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "unregister exit 2: harness exited $status" "$out"
+    return
+  fi
+  if grep -q -F -e "TRACKED=[claude" <<<"$out"; then
+    fail "unregister exit 2 kept claude tracked, so the run can never finish without --purge" "$out"
+    return
+  fi
+  if ! grep -q -F -e "UNINSTALL-STATUS=0" <<<"$out"; then
+    fail "unregister exit 2 did not converge" "$out"
+    return
+  fi
+  if ! grep -q -F -e "by hand" <<<"$out"; then
+    fail "unregister exit 2 did not say the entry was left behind" "$out"
+    return
+  fi
+  pass "a version-skewed (exit 2) unregister converges and says what it left behind"
+}
+
+# register exit 2 is the install-side mirror of exit 8, and the exit-8 arm's
+# own reasoning applies to it verbatim: it is environment-independent, it
+# reproduces identically on every target, and reporting a component that
+# registered NOTHING as a clean run is the failure that arm was written to
+# stop. So it must fail the run.
+case_register_version_skew_fails_the_run() {
+  local dir status out
+  dir="$(new_case_dir register-skew)"
+  write_fake_toolchain "$dir" 2
+
+  out="$(
+    STATE_DIR="$dir/state" \
+    FAKE_LONGTERM_MEM="$dir/fake-longterm-mem" \
+    PATH="$dir/bin:$PATH" \
+    bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      LONGTERM_MEM_SRC="$3/src"
+      cmd_longterm_mem install --target claude
+      echo "INSTALL-STATUS=$?"
+      echo "TRACKED=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" "$dir/engine-stub" "$dir" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "register exit 2: harness exited $status" "$out"
+    return
+  fi
+  if grep -q -F -e "INSTALL-STATUS=0" <<<"$out"; then
+    fail "register exit 2 reported a clean install having registered nothing" "$out"
+    return
+  fi
+  if grep -q -F -e "TRACKED=[claude " <<<"$out" || grep -q -F -e "TRACKED=[claude]" <<<"$out"; then
+    fail "register exit 2 marked claude as installed" "$out"
+    return
+  fi
+  pass "a version-skewed (exit 2) register fails the install run"
+}
+
 # Every case above runs with errexit off, because it needs to observe an
 # exit status. The CLI dispatch does NOT: `labdrian-overlay longterm-mem
 # install` runs the same code under the `set -euo pipefail` at the top of
@@ -974,6 +1113,9 @@ case_register_is_told_the_deployed_binary_path
 case_register_path_unresolvable_is_named
 case_register_path_unresolvable_under_target_all_is_named
 case_unregister_path_unresolvable_is_named
+case_unregister_unmanaged_keeps_the_target_tracked
+case_unregister_version_skew_converges
+case_register_version_skew_fails_the_run
 case_install_succeeds_under_errexit
 case_undeployable_binary_is_not_reported_as_deployed
 

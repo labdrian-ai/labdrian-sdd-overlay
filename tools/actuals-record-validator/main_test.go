@@ -373,3 +373,38 @@ func TestCommittedActualsFixturesValidate(t *testing.T) {
 		}
 	}
 }
+
+// TestSpecZeroCaseScenarioWordingIsAccepted pins the rule to the SCENARIO that
+// documents it. The zero case is the one where a writer has nothing to itemize,
+// and openspec/specs/actuals-instrumentation/spec.md spells out what the record
+// must then say. The half-disclosure guard requires BOTH stems, so a scenario
+// whose own words name only the durable half describes a record the validator
+// hard-stops at exit 6 — the spec and the rule disagreeing about the same
+// sentence, which is the defect class this instrument exists to remove.
+// Feeding the scenario's own words through the validator is the only check that
+// cannot drift from it.
+func TestSpecZeroCaseScenarioWordingIsAccepted(t *testing.T) {
+	specPath := filepath.Join(repoRoot(t), filepath.FromSlash("openspec/specs/actuals-instrumentation/spec.md"))
+	body, err := os.ReadFile(specPath)
+	if err != nil {
+		t.Fatalf("read spec: %v", err)
+	}
+	const marker = "explicitly states that all counted checkpoints"
+	var scenario string
+	for _, line := range strings.Split(string(body), "\n") {
+		if strings.Contains(line, marker) {
+			scenario = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(line), "- THEN"))
+			break
+		}
+	}
+	if scenario == "" {
+		t.Fatalf("spec.md no longer carries the zero-case scenario (%q)", marker)
+	}
+	record := validRecord()
+	record["checkpoint_count"] = 1
+	record["variance_vs_plan"] = scenario
+	if code, output := validateRecord(t, record); code != exitOK {
+		t.Fatalf("the spec's own zero-case wording %q is rejected: exit code = %d, want %d; output=%q",
+			scenario, code, exitOK, output)
+	}
+}

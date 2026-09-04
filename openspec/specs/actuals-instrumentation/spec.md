@@ -63,7 +63,7 @@ Elapsed-calendar-time MUST be measured independently of the compute-time sum, co
 
 - GIVEN no non-durable checkpoints occurred
 - WHEN the record is closed
-- THEN `variance_vs_plan` explicitly states that all counted checkpoints were durably observed, not silently omitting comment
+- THEN `variance_vs_plan` explicitly states that all counted checkpoints were durably observed and that zero were reconstructed from the closure narrative, not silently omitting comment — the zero case names BOTH halves of the split, because the half-disclosure rule rejects prose that names only one
 
 ### Requirement: Compute-Time Baseline Built From Three Phase Fields Only (R-009)
 

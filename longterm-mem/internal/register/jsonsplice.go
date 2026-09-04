@@ -40,6 +40,36 @@ type location struct {
 	indent string
 }
 
+// emptyDocumentAsObject maps a JSON config document that holds nothing at
+// all onto the empty object it means, so every reader and writer in this
+// package treats a zero-byte (or whitespace-only) config exactly as it
+// treats `{}`.
+//
+// This is the JSON half of a guarantee the TOML writer already made and
+// the spec already claimed for both: a config file with no content has no
+// entries, so `register` inserts into it and `unregister` finds nothing to
+// remove. Without it, encoding/json answered "unexpected end of JSON
+// input" and the whole install failed on the emptiest, most plausible
+// state a fresh machine can present -- while `{}`, one byte-pair away,
+// worked. That was never a boundary anyone chose.
+//
+// It is deliberately whitespace-insensitive rather than a len(raw)==0
+// check: "empty" is a property of the CONTENT, and a file holding one
+// newline carries exactly as much configuration as one holding nothing.
+//
+// It is equally deliberately narrow. Only a document with no
+// non-whitespace bytes is rewritten; anything else -- including a
+// truncated or corrupt document, which is a real failure with a real
+// remedy -- is handed to the parser unchanged and still fails loudly.
+// Callers pass the ORIGINAL bytes to replaceConfig for the .bak, so the
+// backup still records what was actually on disk.
+func emptyDocumentAsObject(raw []byte) []byte {
+	if len(bytes.TrimSpace(raw)) == 0 {
+		return []byte("{}")
+	}
+	return raw
+}
+
 // locate walks raw's top-level JSON object to find containerKey (which
 // must itself be an object), then walks that container's members looking
 // for memberKey, returning byte offsets precise enough for apply to build
@@ -258,6 +288,7 @@ func (loc location) apply(raw []byte, containerKey, memberKey string, newValue j
 // newValue's own well-formedness; that is WriteMember's job (jsonwrite.go),
 // so its post-write json.Valid gate has something real to catch.
 func Splice(raw []byte, containerKey, memberKey string, newValue json.RawMessage) ([]byte, error) {
+	raw = emptyDocumentAsObject(raw)
 	loc, err := locate(raw, containerKey, memberKey)
 	if err != nil {
 		return nil, err
@@ -279,6 +310,7 @@ func Splice(raw []byte, containerKey, memberKey string, newValue json.RawMessage
 // entryPresent themselves, so this is a defensive guard, not the normal
 // "nothing to do" path.
 func Remove(raw []byte, containerKey, memberKey string) ([]byte, error) {
+	raw = emptyDocumentAsObject(raw)
 	loc, err := locate(raw, containerKey, memberKey)
 	if err != nil {
 		return nil, err

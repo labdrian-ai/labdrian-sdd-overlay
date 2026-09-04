@@ -102,7 +102,25 @@ func vaultExitCode(err error) int {
 // code actually means -- "is Engram unavailable?" -- and answers it from
 // the database itself. It runs only after a failure, so a healthy run pays
 // nothing for it.
+//
+// It probes BOTH tables longterm-mem reads, because the callers it serves
+// read both: promote.Sync goes through observations, promote.Propagate
+// goes through memory_relations (engram.Store.RelatedEdges), and the two
+// report into one joined error value. Probing observations alone answered
+// "readable" for a database whose relations table had been dropped or
+// renamed out from under us -- exactly as unavailable, and classified exit
+// 1 (internal, "longterm-mem's own side went wrong") instead of exit 4.
+// One probe cannot stand for a corpus read through two tables.
+//
+// The relations probe passes an observation id no row can carry, so the
+// query matches nothing and costs nothing; what is under test is whether
+// the statement can be prepared and run at all.
 func engramReadable(store *engram.Store, project string) bool {
-	_, err := store.ListObservations(project)
-	return err == nil
+	if _, err := store.ListObservations(project); err != nil {
+		return false
+	}
+	if _, err := store.RelatedEdges(0); err != nil {
+		return false
+	}
+	return true
 }

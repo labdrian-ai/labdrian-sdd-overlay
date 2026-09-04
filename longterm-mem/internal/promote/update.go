@@ -248,7 +248,7 @@ func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Pag
 	if !ok {
 		return false
 	}
-	if !revisionsAllowAdoption(entry, fmBlock, onDisk, incoming) {
+	if !revisionsAllowAdoption(entry, onDisk, incoming) {
 		return false
 	}
 	obsID, ok := frontmatterEngramID(page.Frontmatter)
@@ -263,44 +263,42 @@ func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Pag
 
 // revisionsAllowAdoption reports whether the revision the page on disk
 // claims can be attributed to one of OUR interrupted writes rather than to
-// a human, given what the entry records. The two entry shapes carry
-// different evidence, so they are judged separately.
+// a human, given what the entry records.
 //
-// A RECORDED entry names the revision it fingerprinted, which is the strong
-// case: the page has to stand strictly above it (only our own renders
-// advance engram_revision, so a page level with the entry was changed by
-// someone else) and no higher than the render coming in (a page claiming a
-// revision Engram itself has not reached is not a render we could have
-// produced).
+// Only a RECORDED entry can answer that. It names the revision it
+// fingerprinted, so the page has to stand strictly above it (only our own
+// renders advance engram_revision, so a page level with the entry was
+// changed by someone else) and no higher than the render coming in (a page
+// claiming a revision Engram itself has not reached is not a render we
+// could have produced).
 //
-// A LEGACY entry -- hashes only, no revision -- is the population the rule
-// above cannot reach at all, and reaching it matters because the state is
-// otherwise permanent: an entry with no revision refuses its page, the
-// refusal is a skip, and a skip suppresses the very Save through which
-// entryFor would have given the entry a revision. Engram then moves on and
-// every later run repeats the same refusal -- a fixed point nothing in the
-// promotion path itself can leave, however many revisions go by.
+// A LEGACY entry -- hashes only, no revision -- can answer nothing, and
+// this function says so. The tempting inference is that a moved frontmatter
+// hash proves our own unrecorded write, because every render of ours puts
+// engram_revision in the frontmatter and therefore always moves that hash.
+// It does not: a human editing ANY frontmatter line moves that same hash
+// identically, so the predicate is satisfied by every legacy-tracked page a
+// human has ever hand-edited -- no interruption required. Combined with the
+// four line kinds corroboratingFrontmatter has to blank (created, updated,
+// status, related, the ones a human is most likely to touch by hand), it
+// would unlock adoption across the whole legacy population and overwrite
+// mid-body edits while reporting action=updated. In the package whose
+// guarantee (R-030) is preserving human edits, ambiguous evidence must
+// refuse, so a diverged legacy entry is refused.
 //
-// The evidence such an entry still has is its FRONTMATTER hash. Every
-// render puts engram_revision in the frontmatter, so an update of ours
-// always moves that hash; an entry whose frontmatter hash still matches the
-// page therefore has a divergence confined to the body, and only a human
-// puts one there. Adoption additionally requires the page to stand STRICTLY
-// behind the incoming render: at the same revision our own write would have
-// been the incoming bytes modulo the wall-clock stamps, so
-// isOwnUnrecordedWrite would already have adopted it, and a divergence that
-// survives that comparison is the human's.
-//
-// The legacy path is deliberately the more conservative of the two. It
-// refuses one state the recorded path adopts: an interrupted update that
-// Propagate has since status-patched, because Propagate re-records the
-// frontmatter hash of the block it just wrote. That is a false refusal, and
-// it is reported rather than silent.
-func revisionsAllowAdoption(entry PrecedenceEntry, fmBlock string, onDisk, incoming int) bool {
-	if entry.PromotedRevision > 0 {
-		return onDisk > entry.PromotedRevision && onDisk <= incoming
+// The legacy fixed point that inference was meant to break is broken the
+// unambiguous way instead: a legacy entry whose page still matches its
+// recorded fingerprints is NOT diverged, so it never reaches this branch at
+// all -- it takes the ordinary update path, and entryFor records the
+// revision the older build never wrote. The legacy population therefore
+// shrinks page by page with nothing adopted. What stays wedged is only a
+// legacy entry whose page has ALSO diverged, and that residue is reported
+// by doctor's precedence-sidecar check rather than left silent.
+func revisionsAllowAdoption(entry PrecedenceEntry, onDisk, incoming int) bool {
+	if entry.PromotedRevision <= 0 {
+		return false
 	}
-	return onDisk < incoming && entry.FrontmatterHash != hashText(fmBlock)
+	return onDisk > entry.PromotedRevision && onDisk <= incoming
 }
 
 // frontmatterEngramID reads a frontmatter block's engram_id, failing the
@@ -333,24 +331,38 @@ func withoutVolatileStamps(fmBlock string) string {
 // render is a real test of "did this block come out of Render()" rather
 // than a comparison guaranteed to fail.
 //
-// Exactly four kinds of line are blanked, and nothing else is:
+// Two kinds of line are blanked, and nothing else is:
 //
-//   - created and updated, the two stamps EmitPage takes from the wall
-//     clock (withoutVolatileStamps).
-//   - engram_revision, which differs by construction: the whole premise of
-//     this reconciliation is that the page holds an older revision than the
-//     one now being rendered.
-//   - status and related, the two lines Propagate (R-033) rewrites in place
-//     on a page it never re-bodies, recording only the patched block's
-//     hash. A page can therefore legitimately carry a status/related the
-//     incoming render does not.
+//   - the lines two of our own renders may legitimately differ on because
+//     WE moved them: created and updated, the stamps EmitPage takes from
+//     the wall clock (withoutVolatileStamps); engram_revision, which
+//     differs by construction, since the whole premise of this
+//     reconciliation is that the page holds an older revision than the one
+//     now being rendered; and status and related, the two lines Propagate
+//     (R-033) rewrites in place on a page it never re-bodies, recording
+//     only the patched block's hash.
+//   - the lines two of our own renders may legitimately differ on because
+//     the OBSERVATION moved them: title, aliases, tags and engram_type are
+//     all rendered from the observation (page.go's EmitPage), so a retitle
+//     or a retype between the interrupted write and the retry changes them
+//     without any human touching the page. Comparing them refuses a
+//     retitle, which R-008 scenario 2 makes a first-class supported case,
+//     and that refusal is a skip -- so it suppresses the Save, the entry
+//     never advances, and every later revision repeats it: a permanent
+//     wedge, the exact class this reconciliation exists to end.
 //
 // Every other key keeps its value, and a key present in one block and
 // absent from the other still differs -- which is what makes a human's
-// added, changed or deleted frontmatter key visible here.
+// added, changed or deleted frontmatter key visible here. What is left
+// covered is what neither we nor the observation move: type, address,
+// sources, engram_id, engram_sync_id and project.
 func corroboratingFrontmatter(fmBlock string) string {
-	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock), engramRevisionField, statusField)
-	return blankFrontmatterListSection(normalized, relatedField)
+	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock),
+		engramRevisionField, statusField, titleField, engramTypeField)
+	for _, key := range []string{relatedField, aliasesField, tagsField} {
+		normalized = blankFrontmatterListSection(normalized, key)
+	}
+	return normalized
 }
 
 // blankFrontmatterValues blanks the value of every `key: ...` line in a

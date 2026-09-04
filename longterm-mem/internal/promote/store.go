@@ -42,6 +42,24 @@ type PrecedenceEntry struct {
 	PromotedRevision int `json:"promoted_revision,omitempty"`
 }
 
+// MatchesPage reports whether raw -- one promoted page's WHOLE file, the
+// shape a scanner reads off disk -- still hashes to the two fingerprints
+// this entry records. It is the same comparison UpdateInPlace makes before
+// it decides whether a page has diverged, exported so a reader outside this
+// package (doctor's precedence-sidecar check) asks the question exactly one
+// way instead of re-deriving the frontmatter/body split and the digest.
+//
+// A file with no parseable frontmatter block reports false: promotion's own
+// reader fails closed on it too, so it is a page this entry cannot be shown
+// to still describe.
+func (e PrecedenceEntry) MatchesPage(raw string) bool {
+	fmBlock, ok := frontmatterBlock(raw)
+	if !ok {
+		return false
+	}
+	return e.FrontmatterHash == hashText(fmBlock) && e.BodyHash == hashText(raw[len(fmBlock):])
+}
+
 // PrecedenceStore is the sidecar precedence file's decoded form, keyed by
 // page_address (D6): what longterm-mem itself last wrote for each
 // promoted page, so a later re-promotion can detect a local edit (R-030).

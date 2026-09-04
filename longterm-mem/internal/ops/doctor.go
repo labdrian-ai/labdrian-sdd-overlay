@@ -190,10 +190,27 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 // reads this file, so a vault whose catalog and log had been repaired by
 // hand reported entirely healthy while still being permanently wedged.
 //
-// It reports only a MISSING entry, never a stale one. An entry that no
-// longer matches the page's bytes is a local edit, which R-030 makes a
-// supported and separately reported state, not a vault defect -- flagging
-// it here would report every page a human has ever touched as broken.
+// It reports two states, and deliberately not a third.
+//
+// A MISSING entry is the first: a page longterm-mem published without
+// recording that it did.
+//
+// A STALE entry that records NO PROMOTED REVISION is the second, and it is
+// the wedged one. Promotion can only attribute a diverged page to one of
+// its own interrupted writes when the entry names the revision it
+// fingerprinted; an entry that names none carries no such evidence, so the
+// page is refused -- and the refusal is a skip, which suppresses the very
+// store write that would have given the entry a revision. Every later run
+// repeats it. A vault permanently refusing its own page must not report
+// entirely healthy: that is the exact failure mode this check exists to
+// end, and reporting it is what makes the residue the promotion path
+// deliberately leaves behind visible to an operator.
+//
+// A stale entry that DOES record a revision is the third, and is not
+// reported. It is an ordinary local edit, which R-030 makes a supported and
+// separately reported state: promotion refuses that page and says so, and a
+// later revision reconciles it. Flagging it would report every page a human
+// has ever touched as broken.
 func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
@@ -208,8 +225,12 @@ func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
 			details = append(details, fmt.Sprintf("%s could not be read, so %s has no provable provenance: %v", precedenceSidecarRelPath, page.Address, storeErr))
 			continue
 		}
-		if _, tracked := store.Get(page.Address); !tracked {
+		entry, tracked := store.Get(page.Address)
+		switch {
+		case !tracked:
 			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", precedenceSidecarRelPath, page.Address))
+		case entry.PromotedRevision == 0 && !entry.MatchesPage(page.Frontmatter):
+			details = append(details, fmt.Sprintf("%s records no promoted revision for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", precedenceSidecarRelPath, page.Address))
 		}
 	}
 	if len(details) > 0 {

@@ -50,6 +50,7 @@ func cmdPromote(args []string) int {
 		return exitEngramUnavailable
 	}
 	defer store.Close()
+	declareDegradedEngram(store, "promote")
 
 	result, err := runPromote(store, vaultRoot, *id)
 	if err != nil {

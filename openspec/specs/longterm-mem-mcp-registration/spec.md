@@ -124,7 +124,9 @@ while another appends its own is a defect, not a scope boundary.
 
 #### Scenario: An empty configuration document is installed into
 
-- GIVEN a runtime's configuration file exists and is an empty document
+- GIVEN a runtime's configuration file exists and is an empty document —
+  zero bytes, or holding nothing but whitespace, as much as an explicit empty
+  object or table
 - WHEN longterm-mem installs
 - THEN the container and the ownership-tagged longterm-mem entry are created and
   the registration succeeds, rather than failing for want of a container to

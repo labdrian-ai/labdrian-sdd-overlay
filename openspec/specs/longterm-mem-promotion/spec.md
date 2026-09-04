@@ -229,47 +229,63 @@ the promotion writer SHALL treat it as its own unrecorded update: republish
 the page at the current revision and record the entry the interrupted run
 never wrote.
 
-The frontmatter comparison SHALL disregard exactly the created and updated
-stamps, the engram_revision the two renders differ in by construction, and
-the status and related lines a status propagation rewrites in place; it SHALL
-compare every other key and value, so that a key a human added, changed or
-deleted is a refusal. Corroborating only the body's closing footer is not
-sufficient: a frontmatter-only edit leaves that footer intact, and adopting
-such a page overwrites the human's edit while reporting a successful update.
+The frontmatter comparison SHALL disregard exactly the lines two renders of
+the writer's own may legitimately disagree on, and no others. Those are the
+created and updated stamps; the engram_revision the two renders differ in by
+construction; the status and related lines a status propagation rewrites in
+place; and the title, aliases, tags and engram_type lines rendered FROM the
+observation, which the observation itself moves when it is retitled or
+retyped between the interrupted write and the retry. It SHALL compare every
+other key and value, so that a key a human added, changed or deleted is a
+refusal. Corroborating only the body's closing footer is not sufficient: a
+frontmatter-only edit leaves that footer intact, and adopting such a page
+overwrites the human's edit while reporting a successful update. Comparing
+the observation-derived lines is equally wrong in the other direction: it
+refuses a retitle, which this requirement's own update scenario makes a
+first-class supported case, and that refusal is a skip — so it suppresses
+the store write, the entry never advances, and every later revision repeats
+it.
 
 A page whose engram_revision is level with the revision its entry records has
 been changed by someone other than the promotion writer — only the writer's
 own renders advance that field — and remains a refusal.
 
 An entry that records no revision at all is a vault promoted before the store
-recorded one. Such an entry has no reachable path back on its own: the
-refusal it produces is a skip, a skip suppresses the store write, and the
-store write is the only thing that would have given the entry a revision, so
-the page is refused on every later run while the vault reports healthy. IF a
+recorded one, and it carries NO evidence of the writer's own authorship. IF a
 promoted page's content no longer matches an entry that records no revision,
-but the entry's frontmatter fingerprint no longer matches the page either,
-and the page's own engram_revision stands strictly below the revision now
-being promoted, and the body and frontmatter corroborate as above, THEN the
-promotion writer SHALL treat it as its own unrecorded update and record the
-revision the entry never carried.
+THEN the promotion writer SHALL refuse that page. A moved frontmatter
+fingerprint SHALL NOT be read as proof that one of the writer's own
+unrecorded writes moved it: every render of the writer's own does move that
+fingerprint, but so does a human editing any frontmatter line, so the
+inference would unlock adoption on every legacy-tracked page a human has ever
+hand-edited — no interruption required — and the adoption would overwrite
+mid-body edits while reporting a successful update. Where the evidence is
+ambiguous, this requirement's guarantee of preserving human edits SHALL win.
 
-An entry recording no revision whose FRONTMATTER fingerprint still matches
-the page remains a refusal: every render carries engram_revision in its
-frontmatter, so an unrecorded update of the writer's own always moves that
-fingerprint, and a divergence confined to the body is a human's. So does a
-page level with the revision now being promoted, since at that revision the
-writer's own render would already have been adopted by the byte comparison
-above.
+The fixed point such an entry would otherwise sit in SHALL be broken without
+inference instead: an entry that records no revision whose page still matches
+its fingerprints is not diverged at all, so the ordinary update path
+republishes it and records the revision the older store never wrote. The
+population of entries recording no revision therefore shrinks page by page,
+with nothing adopted.
+
+What remains is an entry recording no revision whose page has ALSO diverged.
+That page is refused on every run, and no promotion of it can repair the
+entry. It SHALL therefore be reported by the vault's own precedence-sidecar
+diagnostic rather than left silent, so an operator learns about a wedged page
+instead of the vault reporting healthy.
 
 Two limits of this reconciliation are known and accepted, and both are stated
 here rather than left to be rediscovered. An edit buried mid-body, or one
 confined to the created, updated, status or related lines the comparison has
 to disregard, is indistinguishable from the writer's own render, because the
 fingerprint that would have separated them is exactly what the interruption
-destroyed. In the other direction, an interrupted update whose observation
-was retitled or retyped before the retry now renders a frontmatter the page
-cannot match, and is refused rather than adopted; that refusal is reported
-and names the page, which is the side of the trade this requirement takes.
+destroyed. In the other direction, a diverged page whose entry records no
+revision is refused however well it otherwise corroborates, because nothing
+distinguishes the writer's own unrecorded write from a human's edit there;
+that refusal is reported, names the page, and is reported again by the
+precedence-sidecar diagnostic, which is the side of the trade this
+requirement takes.
 
 #### Scenario: An interrupted create is finished by the next run
 
@@ -344,22 +360,31 @@ and names the page, which is the side of the trade this requirement takes.
 - WHEN promotion runs for that observation
 - THEN the page is left byte-unchanged and the promotion is refused
 
-#### Scenario: An entry recording no revision stops wedging its page
+#### Scenario: An interrupted update whose observation was retitled is reconciled
+
+- GIVEN that same interrupted update, and an observation Engram has since
+  revised AND retitled (or retyped), so the incoming render's
+  observation-derived frontmatter differs from the page's
+- WHEN promotion runs for that observation
+- THEN the page is republished at the current revision, its entry records that
+  revision, and the promotion is not refused
+
+#### Scenario: An entry recording no revision stops wedging its undiverged page
 
 - GIVEN a precedence entry carrying content fingerprints but no revision, and
-  a page an interrupted update left holding a later render than those
-  fingerprints describe
+  a page that still matches those fingerprints
 - WHEN promotion runs for a further revision of that observation
 - THEN the page is republished, its entry records the revision just published,
   and every later revision takes the ordinary update path
 
-#### Scenario: An entry recording no revision still refuses an edited page
+#### Scenario: An entry recording no revision refuses a diverged page
 
-- GIVEN that same entry recording no revision, whose frontmatter fingerprint
-  still matches the page, and a page whose body a human has edited without
-  disturbing the promotion footer
+- GIVEN a precedence entry carrying content fingerprints but no revision, and
+  a page whose content a human has since edited — in the body, in the
+  frontmatter, or both
 - WHEN promotion runs for a later revision of that observation
-- THEN the page is left byte-unchanged and the promotion is refused
+- THEN the page is left byte-unchanged and the promotion is refused,
+  regardless of whether the entry's frontmatter fingerprint still matches
 
 ### Requirement: A Refused Promotion Is Reported as a Refusal
 
