@@ -150,6 +150,172 @@ case_remove_does_not_use_a_shared_temp_path() {
   pass "remove does not use a shared temp path"
 }
 
+# slow_the_tracking_read emits shell source that replaces
+# longtermmem_installed_targets_read with a wrapper that returns the same
+# lines and the same status, then sleeps.
+#
+# A lost update is a timing bug, and a timing bug asserted by luck is a test
+# that passes on a fast machine while the bug is still there. Widening the
+# read-modify-write window by a fixed half second makes the interleaving
+# deterministic in BOTH directions: without serialization the two cycles
+# provably overlap and one write provably lands on stale state, and with
+# serialization the second cycle provably waits (the delay is spent INSIDE
+# the critical section, because every writer reads there).
+slow_the_tracking_read() {
+  cat <<'SLOW'
+      eval "longtermmem_installed_targets_read_real() $(declare -f longtermmem_installed_targets_read | tail -n +2)"
+      longtermmem_installed_targets_read() {
+        local rc=0
+        longtermmem_installed_targets_read_real "$@" || rc=$?
+        sleep 0.5
+        return "$rc"
+      }
+SLOW
+}
+
+# Two concurrent REMOVES are the twin of the concurrent adds above, and the
+# append that makes adds safe is unavailable to them: a removal is a real
+# read-modify-write. Unserialized, both cycles read the same three targets
+# and each writes back its own two, so whichever renames last silently
+# resurrects the target the other one removed -- or, with the operands
+# swapped, drops a target that is still installed, which is what lets the
+# binary-removal guard delete the shared binary out from under a runtime
+# that is still registered.
+case_parallel_removes_keep_every_other_target() {
+  local dir status out
+  dir="$(new_case_dir parallel-removes)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      printf "claude\nopencode\ncodex\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      '"$(slow_the_tracking_read)"'
+      longtermmem_installed_targets_remove claude &
+      longtermmem_installed_targets_remove opencode &
+      wait
+      longtermmem_installed_targets_read_real
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "parallel removes: the run itself failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -x -F -e codex <<<"$out"; then
+    fail "parallel removes: dropped the untouched target codex" "tracked: $(tr '\n' ' ' <<<"$out")"
+    return
+  fi
+  local t survived=()
+  for t in claude opencode; do
+    grep -q -x -F -e "$t" <<<"$out" && survived+=("$t")
+  done
+  if [[ ${#survived[@]} -gt 0 ]]; then
+    fail "parallel removes: a removal was lost, still tracked: ${survived[*]}" "tracked: $(tr '\n' ' ' <<<"$out")"
+    return
+  fi
+  pass "parallel removes keep every other target and lose no removal"
+}
+
+# The mixed race is the one that deletes a shared binary: a remove that read
+# BEFORE a concurrent add rewrites the file from its stale copy, so the
+# freshly installed target vanishes from tracking while its MCP entry stays
+# in that runtime's config. The add is started first and the remove a beat
+# later, so the stale read is deterministic rather than a coin flip.
+case_add_racing_a_remove_is_not_lost() {
+  local dir status out
+  dir="$(new_case_dir add-racing-remove)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      printf "claude\ncodex\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      '"$(slow_the_tracking_read)"'
+      longtermmem_installed_targets_add opencode &
+      sleep 0.1
+      longtermmem_installed_targets_remove claude &
+      wait
+      longtermmem_installed_targets_read_real
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "add racing a remove: the run itself failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -x -F -e opencode <<<"$out"; then
+    fail "add racing a remove: the concurrent add was lost" "tracked: $(tr '\n' ' ' <<<"$out")"
+    return
+  fi
+  if ! grep -q -x -F -e codex <<<"$out"; then
+    fail "add racing a remove: dropped the untouched target codex" "tracked: $(tr '\n' ' ' <<<"$out")"
+    return
+  fi
+  if grep -q -x -F -e claude <<<"$out"; then
+    fail "add racing a remove: the removal was lost" "tracked: $(tr '\n' ' ' <<<"$out")"
+    return
+  fi
+  pass "an add racing a remove loses neither"
+}
+
+# A lock a failed critical section keeps forever is worse than no lock: it
+# wedges every later invocation of this entrypoint. The failure is forced
+# through the exact path this file uses to report unrecoverable problems --
+# `die`, which exits the process rather than returning -- because that is
+# the path a RETURN trap alone does not cover.
+case_failed_critical_section_releases_the_lock() {
+  local dir status out
+  dir="$(new_case_dir lock-release-on-failure)"
+
+  out="$(
+    STATE_DIR="$dir/state" bash -c '
+      source "$1"
+      mkdir -p "$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
+      printf "claude\n" > "$LONGTERM_MEM_INSTALLED_TARGETS"
+      echo "LOCKPATH=[${LONGTERM_MEM_TARGETS_LOCK:-}]"
+      # Break the staging step INSIDE the critical section, so the writer
+      # dies while holding the lock. A subshell is how cmd_apply already
+      # reaches this code, so `die` is observable instead of fatal here.
+      mktemp() { return 1; }
+      ( longtermmem_installed_targets_remove claude ) || echo "REMOVE-FAILED"
+      unset -f mktemp
+      if [[ -e "${LONGTERM_MEM_TARGETS_LOCK:-/nonexistent}" ]]; then
+        echo "LOCK-HELD"
+      else
+        echo "LOCK-FREE"
+      fi
+      longtermmem_installed_targets_add opencode
+      echo "AFTER=[$(longtermmem_installed_targets_read | tr "\n" " ")]"
+    ' _ "$OVERLAY" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -ne 0 ]]; then
+    fail "failed critical section: the run itself failed (exit $status)" "$out"
+    return
+  fi
+  if ! grep -q -E '^LOCKPATH=\[.+\]$' <<<"$out"; then
+    fail "failed critical section: no install-tracking lock path is defined" "$out"
+    return
+  fi
+  if ! grep -q -F -e REMOVE-FAILED <<<"$out"; then
+    fail "failed critical section: the forced staging failure did not fail the remove" "$out"
+    return
+  fi
+  if ! grep -q -F -e LOCK-FREE <<<"$out"; then
+    fail "failed critical section left the lock held; the next invocation is wedged" "$out"
+    return
+  fi
+  if ! grep -q -F -e "opencode" <<<"$out"; then
+    fail "failed critical section: the next invocation could not record a target" "$out"
+    return
+  fi
+  pass "a failed critical section releases the lock"
+}
+
 # A tracking file that has picked up garbage — a partial write, a hand edit,
 # a file from some other tool — must not wedge the binary-removal guard
 # forever. Lines that do not name a target this entrypoint can install for
@@ -1097,6 +1263,9 @@ case_undeployable_binary_is_not_reported_as_deployed() {
 case_parallel_adds_keep_every_target
 case_add_does_not_use_a_shared_temp_path
 case_remove_does_not_use_a_shared_temp_path
+case_parallel_removes_keep_every_other_target
+case_add_racing_a_remove_is_not_lost
+case_failed_critical_section_releases_the_lock
 case_corrupt_tracking_file_does_not_wedge_cleanup
 case_unknown_wellformed_target_keeps_the_guard_closed
 case_nul_byte_makes_a_wellformed_name_garbage

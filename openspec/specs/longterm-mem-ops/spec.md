@@ -49,6 +49,17 @@ integrity, wiki-registration consistency, precedence-sidecar consistency, and
 runtime-prerequisite presence — and report each check's pass/fail state
 individually.
 
+A failed check is a verdict about the VAULT: the run completed, the report
+names the check, and the operator repairs the vault. A failure of doctor's
+own — an unresolvable vault registry, an unreportable result — is a verdict
+about longterm-mem: no check ran, and there is nothing for the operator to
+repair by changing configuration. The two SHALL therefore carry distinct
+exit codes: exit 9 (doctor_checks_failed) WHEN every check ran and at least
+one reported failed, and the component's generic internal code WHEN doctor
+could not run or report its checks at all. Sharing one code made the two
+indistinguishable to a caller acting on the code alone, which is the only
+reason the code exists.
+
 #### Scenario: Unresolvable vault config is named
 
 - GIVEN P's vault-registry entry points at a non-existent path
@@ -74,6 +85,21 @@ individually.
 - WHEN doctor runs
 - THEN the runtime-prerequisites check reports it missing rather than
   letting a later call fail with a generic error
+
+#### Scenario: A failed check exits with doctor's own code
+
+- GIVEN doctor ran every check to completion and at least one reported
+  failed
+- WHEN the process exits
+- THEN it exits 9, so a caller acting on the exit code alone knows the
+  vault has a named, repairable problem rather than that doctor broke
+
+#### Scenario: Doctor's own failure is not reported as a diagnostic verdict
+
+- GIVEN doctor could not resolve P's vault registry, so no check ran
+- WHEN the process exits
+- THEN it exits with the generic internal code rather than 9, so a failure
+  of longterm-mem's own is never mistaken for a finding about the vault
 
 ### Requirement: MCP Stdio Server Exposes Query and Promote
 

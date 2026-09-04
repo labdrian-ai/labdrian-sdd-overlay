@@ -15,12 +15,11 @@ import (
 // and returns, per file, every `exit<Something> = <integer literal>`
 // constant declared in it.
 //
-// It looks only at integer LITERALS on purpose. exitDoctorChecksFailed
-// (cmd_doctor.go) is deliberately an alias of another named code rather
-// than a number of its own -- splitting it for real means adding a code to
-// a contract callers already script against, which is a maintainer's
-// decision -- and an alias is not a second declaration of the contract, so
-// it is not one of the things this test insists lives in one place.
+// It looks only at integer LITERALS on purpose: an alias of another named
+// code is not a second declaration of the contract, so it is not one of the
+// things this test insists lives in one place. exitDoctorChecksFailed used
+// to be exactly such an alias, declared in cmd_doctor.go; it is now a code
+// of its own (9) and therefore lives in exit_codes.go like every other.
 func exitCodeConstantsBySourceFile(t *testing.T) map[string][]string {
 	t.Helper()
 

@@ -423,6 +423,105 @@ requirement takes.
 - THEN the page is left byte-unchanged and the promotion is refused,
   regardless of whether the entry's frontmatter fingerprint still matches
 
+### Requirement: A Named Page Can Be Reconciled, One Address at a Time
+
+Traces to: longterm-mem R-030
+
+No change-level `ID:` is claimed here, for the reason given above.
+
+The rule above leaves one residue on purpose: a promoted page whose entry
+carries no evidence of the writer's own authorship — no entry at all, or one
+recording no usable revision — and whose content has diverged. Promotion
+refuses it, that refusal is a skip, and a skip suppresses the store write
+that would have repaired the entry, so the page is refused identically on
+every later run. The vault's precedence-sidecar diagnostic names exactly
+those pages, and naming them is as far as an automatic path may go: nothing
+in the bytes distinguishes the writer's own unrecorded write from a human's
+edit.
+
+A human naming ONE address supplies exactly the evidence that is missing.
+The longterm-mem component SHALL therefore offer an explicit reconcile
+operation that takes a single promoted page address, records that page's
+current on-disk state as the writer's own last write, and leaves the page
+byte-unchanged, so that a later promotion of it takes the ordinary update
+path.
+
+The operation SHALL refuse every bulk form: an all-addresses flag, and any
+invocation naming more addresses than the operator wrote out. That refusal
+is the design, not a limitation. The naming IS the consent the automatic
+path lacks, and a bulk form would reintroduce behind a flag the silent
+mass-adoption the ambiguity rules out, with the consent reduced to one
+keystroke covering pages nobody inspected. The refusal SHALL be an explicit
+error stating that exactly one address is expected, and SHALL leave the
+precedence store unwritten.
+
+The revision recorded SHALL be read from the page itself, and a page whose
+own revision cannot be read as a positive integer SHALL be refused: adopting
+it would record another entry with no usable revision, recreating the very
+state the operation exists to end while reporting success.
+
+Two states are not that residue, and SHALL NOT be adopted. An entry that
+already fingerprints its page is a NO-OP reported as success, not an error:
+the operation is run off a diagnostic report, a page repaired in between by
+an ordinary promotion must not fail a command whose work is already done,
+and an idempotent command can be re-run and scripted. An entry recording a
+POSITIVE revision whose page has diverged is an ordinary local edit, and
+SHALL be refused with the registration-conflict code: that page is not
+wedged, the precedence rule is holding a human's edit, promotion says so on
+every run, and adopting it would overwrite that edit on the next promotion
+while reporting an ordinary update. Being asked for it by name does not
+change what would be destroyed.
+
+An address with no promoted page SHALL fail with the not-found code, never
+as a generic internal failure and never as a silent success.
+
+#### Scenario: A wedged page leaves the wedged state
+
+- GIVEN a promoted page whose precedence entry records no usable revision and
+  whose content has diverged from that entry, so every promotion of it is
+  refused
+- WHEN an operator reconciles that one address by name
+- AND a LATER revision of its observation is then promoted
+- THEN that promotion is an ordinary update rather than a refusal, and the
+  page is refreshed to the later revision
+
+#### Scenario: A page with no entry at all is adopted
+
+- GIVEN a promoted page the precedence store has no entry for
+- WHEN an operator reconciles that address by name
+- THEN the store records the page's current fingerprints and the revision the
+  page itself carries
+
+#### Scenario: Every bulk form is refused and writes nothing
+
+- GIVEN a vault holding a page that could be reconciled
+- WHEN reconcile is invoked with an all-addresses flag, with more than one
+  address, or with no address at all
+- THEN the invocation is refused with an error stating that exactly one
+  address is expected, and the precedence store is left unwritten
+
+#### Scenario: An ordinary local edit is refused rather than adopted
+
+- GIVEN a promoted page whose entry records a positive revision and whose
+  content a human has since edited
+- WHEN an operator reconciles that address by name
+- THEN the adoption is refused with the registration-conflict code and the
+  precedence store is left unchanged, so the next promotion still preserves
+  the edit
+
+#### Scenario: An already-recorded page is a no-op, not a failure
+
+- GIVEN a promoted page whose entry already fingerprints it
+- WHEN an operator reconciles that address by name
+- THEN nothing is written and the operation reports success, so running it
+  off a stale diagnostic report is harmless
+
+#### Scenario: An unknown address fails cleanly
+
+- GIVEN an address with no promoted page in the vault
+- WHEN an operator reconciles it
+- THEN the operation fails with the not-found code
+
 ### Requirement: A Refused Promotion Is Reported as a Refusal
 
 Traces to: longterm-mem R-030, R-032

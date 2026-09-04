@@ -72,6 +72,27 @@ const (
 	// code is not worth a contract that is only complete in one file and
 	// only true in another (exit_codes_source_test.go).
 	exitPathUnresolvable = 8
+	// exitDoctorChecksFailed: `doctor` ran every diagnostic check to
+	// completion and at least one of them reported FAIL. It is a verdict
+	// about the VAULT, not about longterm-mem: the run succeeded, and
+	// stdout (or --json) names exactly which check failed and why.
+	//
+	// It is deliberately NOT exitInternal. Exit 1 is longterm-mem's own
+	// residue -- doctor could not run its checks at all -- and a caller
+	// reading 1 for both could not tell "doctor works and your vault is
+	// broken" (a finding to act on, and one the operator CAN fix by
+	// changing configuration) from "doctor itself broke" (a bug to
+	// report). This constant lived in cmd_doctor.go as an explicit alias
+	// of exitInternal, with a comment saying it should be its own code as
+	// soon as a maintainer chose the number; 9 is that number, and this
+	// list is where the contract has to show it so the next code is not
+	// picked by scanning a list missing an entry
+	// (exit_codes_source_test.go).
+	//
+	// Doctor's own internal error branches -- an unresolvable vault
+	// registry, an ops.Doctor error, a JSON encode failure -- stay
+	// exitInternal. That separation is the whole point of the code.
+	exitDoctorChecksFailed = 9
 )
 
 // vaultExitCode maps a vaultreg.Resolve failure onto that contract.

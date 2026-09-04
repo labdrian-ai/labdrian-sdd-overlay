@@ -21,6 +21,13 @@ import (
 // precedence rule refuses (R-030) exits 6 (registration_conflict) rather
 // than reporting a page it deliberately did not write as promoted.
 func cmdPromote(args []string) int {
+	// `promote reconcile <address>` is its own verb, dispatched before the
+	// flag set below ever sees the arguments: it takes a page address, not
+	// an --id, and its refusals are its own.
+	if len(args) > 0 && args[0] == "reconcile" {
+		return cmdPromoteReconcile(args[1:])
+	}
+
 	fs := flag.NewFlagSet("promote", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", "project name (required)")
@@ -79,5 +86,81 @@ func cmdPromote(args []string) int {
 	}
 
 	fmt.Printf("longterm-mem: promoted %s (%s)\n", result.Page.Address, result.Action.Kind)
+	return exitOK
+}
+
+// cmdPromoteReconcile implements `longterm-mem promote reconcile --project P
+// <address>`: adopt ONE named, already-promoted page into the precedence
+// store, so future promotions of it proceed normally.
+//
+// It is the operator's exit from the state promotion deliberately refuses
+// and `doctor` names: a page whose sidecar entry carries no evidence
+// separating longterm-mem's own unrecorded write from a human's edit.
+// Promotion's refusal there is a skip, and a skip suppresses the store
+// write that would have repaired the entry, so without this command the
+// page is refused identically on every run forever.
+//
+// THE ABSENCE OF A BULK FORM IS THE DESIGN. A human naming one address is
+// precisely the consent the automatic path lacks -- which is why the
+// automatic path refuses in the first place. `--all`, or any invocation
+// naming more addresses than the operator wrote out, would reintroduce
+// behind a flag the silent mass-adoption that ambiguity rules out, with the
+// consent reduced to one keystroke covering pages nobody looked at. --all
+// is therefore DECLARED here rather than left undefined, so reaching for it
+// answers with that reason instead of "flag provided but not defined".
+func cmdPromoteReconcile(args []string) int {
+	fs := flag.NewFlagSet("promote reconcile", flag.ContinueOnError)
+	fs.SetOutput(os.Stderr)
+	project := fs.String("project", "", "project name (required)")
+	vaultDir := fs.String("vault", "", "vault path override")
+	all := fs.Bool("all", false, "refused: reconcile adopts exactly one explicitly named address")
+	if err := fs.Parse(args); err != nil {
+		return exitUsage
+	}
+	if *all {
+		fmt.Fprintln(os.Stderr, "longterm-mem: promote reconcile: --all is refused: reconcile adopts exactly one address, named explicitly, because that naming is the consent the automatic promotion path lacks; adopting in bulk would overwrite pages nobody looked at")
+		return exitUsage
+	}
+	if len(fs.Args()) != 1 {
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: expected exactly one address, got %d: reconcile adopts one page at a time on purpose\n", len(fs.Args()))
+		return exitUsage
+	}
+	if *project == "" {
+		fmt.Fprintln(os.Stderr, "longterm-mem: promote reconcile: --project is required")
+		return exitUsage
+	}
+	address := fs.Args()[0]
+
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
+		return vaultExitCode(err)
+	}
+
+	outcome, err := promote.Reconcile(vaultRoot, address)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
+		switch {
+		case errors.Is(err, promote.ErrPageNotFound):
+			return exitNotFound
+		case errors.Is(err, promote.ErrLocalEditPreserved):
+			// The same code the explicit promote path answers with when it
+			// refuses a page it cannot prove it wrote: an artifact occupies
+			// the target and longterm-mem changed nothing.
+			return exitRegistrationConflict
+		default:
+			return exitInternal
+		}
+	}
+
+	if !outcome.Adopted {
+		// Deliberately exit 0. Reconcile is run off a doctor report, and a
+		// page repaired between the report and the repair (by an ordinary
+		// promotion, which is how the population of unrecorded entries
+		// shrinks) must not fail a command whose work is already done.
+		fmt.Printf("longterm-mem: %s already recorded at revision %d; nothing to reconcile\n", outcome.Address, outcome.PromotedRevision)
+		return exitOK
+	}
+	fmt.Printf("longterm-mem: reconciled %s at revision %d\n", outcome.Address, outcome.PromotedRevision)
 	return exitOK
 }

@@ -160,13 +160,103 @@ LONGTERM_MEM_SRC="$OVERLAY_DIR/longterm-mem"
 # still-installed target's record because a DIFFERENT target was uninstalled.
 LONGTERM_MEM_INSTALLED_TARGETS="$STATE_DIR/longterm-mem/installed-targets"
 
+# LONGTERM_MEM_TARGETS_LOCK serializes the whole read-modify-write cycle over
+# the tracking file above (see longtermmem_targets_lock_acquire).
+#
+# Deliberately OUTSIDE the longterm-mem/ directory the tracking file lives in:
+# a writer that has to report "I could not stage a rewrite in that directory"
+# must still be able to take, and then release, the lock — a lock that can
+# only be created in the directory that just proved unwritable would fail
+# exactly when the failure path needs it.
+LONGTERM_MEM_TARGETS_LOCK="$STATE_DIR/.installed-targets.lock"
+
+# Minutes after which a lock directory is treated as abandoned. See the
+# staleness escape in longtermmem_targets_lock_acquire.
+LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES=5
+
+# Set while THIS shell holds the lock, so release is idempotent and a nested
+# `die` cannot rmdir a lock some other invocation owns.
+LONGTERM_MEM_TARGETS_LOCK_HELD=""
+
 # ---------------------------------------------------------------------------
 # helpers
 # ---------------------------------------------------------------------------
 
-die() { echo "ERROR: $*" >&2; exit 1; }
+# die releases the install-tracking lock before exiting. `die` exits the
+# PROCESS, so a RETURN trap inside the critical section never runs on this
+# path — and this is the path every unrecoverable problem in the tracking
+# writers takes. Without this, the single most likely way to leave a lock
+# behind would be the ordinary error path.
+die() { longtermmem_targets_lock_release; echo "ERROR: $*" >&2; exit 1; }
 info() { echo "==> $*"; }
 warn() { echo "WARN: $*" >&2; }
+
+# ---------------------------------------------------------------------------
+# installed-targets lock (mkdir-based, deliberately NOT flock)
+# ---------------------------------------------------------------------------
+#
+# The tracking file is read, modified and written back. Writing through a
+# per-process temporary made that write atomic, which fixed TORN files but
+# not LOST UPDATES: two overlay invocations can still each read before the
+# other's rename, and the second rename then publishes state that never saw
+# the first one's change. That file is what the binary-removal guard
+# consults, so a dropped target means the SHARED BINARY can be deleted while
+# a runtime is still registered against it.
+#
+# mkdir, not flock(1). mkdir is atomic on every platform this overlay runs
+# on. flock(1) ships with util-linux and is ABSENT on macOS, so a
+# flock-based guard would silently not run there — worse than no guard,
+# because the code reads as protected everywhere while protecting only
+# Linux.
+#
+# longtermmem_targets_lock_acquire blocks for a bounded number of tries and
+# then FAILS THE RUN rather than proceeding unlocked. Proceeding unlocked is
+# defensible in general, but not here: the thing the lock protects is the
+# only record of which runtimes still depend on a shared binary, and losing
+# an entry from it is silent and destructive, while a failed run is loud,
+# changes nothing, and is retryable. So the choice is explicit — refuse.
+#
+# A refusal that cannot clear would be its own bug (a lock directory left by
+# a SIGKILLed run would wedge every later invocation forever), so there IS a
+# staleness escape: a lock older than LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES
+# is treated as abandoned and broken into, with a warning. It is bounded on
+# both sides on purpose — long enough that no ordinary critical section here
+# (a few file reads, a rename) can be mistaken for abandoned, short enough
+# that an operator never has to know this directory exists. The age test
+# goes through `find -mmin`, which behaves the same on GNU and BSD/macOS,
+# rather than `stat`, whose format flags do not.
+longtermmem_targets_lock_acquire() {
+  mkdir -p "$STATE_DIR" || die "longterm-mem: could not create $STATE_DIR"
+
+  local i
+  for i in 1 2 3 4 5; do
+    if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+      LONGTERM_MEM_TARGETS_LOCK_HELD=1
+      return 0
+    fi
+    sleep 0.2
+  done
+
+  if [[ -n "$(find "$LONGTERM_MEM_TARGETS_LOCK" -maxdepth 0 \
+                -mmin "+$LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES" 2>/dev/null)" ]]; then
+    warn "longterm-mem: the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK is older than $LONGTERM_MEM_TARGETS_LOCK_STALE_MINUTES minutes; treating it as abandoned by a killed run and taking it over"
+    rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
+    if mkdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null; then
+      LONGTERM_MEM_TARGETS_LOCK_HELD=1
+      return 0
+    fi
+  fi
+
+  die "longterm-mem: could not acquire the install-tracking lock at $LONGTERM_MEM_TARGETS_LOCK; another overlay invocation is updating install state. Nothing was changed — re-run once it finishes, or remove that directory if no other invocation is running."
+}
+
+# longtermmem_targets_lock_release drops the lock if THIS shell holds it.
+# Safe to call unconditionally (die does), and safe to call twice.
+longtermmem_targets_lock_release() {
+  [[ -n "${LONGTERM_MEM_TARGETS_LOCK_HELD:-}" ]] || return 0
+  LONGTERM_MEM_TARGETS_LOCK_HELD=""
+  rmdir "$LONGTERM_MEM_TARGETS_LOCK" 2>/dev/null || true
+}
 
 # Read manifest: emit "path tag" lines, skipping blank lines and comments
 parse_manifest() {
@@ -3114,6 +3204,15 @@ longtermmem_installed_targets_add() {
   dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
   mkdir -p "$dir" || die "longterm-mem: could not create $dir"
 
+  # The lock covers the READ as well as the write. An append is atomic on its
+  # own, but the "already recorded" check below is not: it reads, decides, and
+  # only then appends, and a concurrent REWRITE (remove, or the guard's
+  # cleanup) landing in that window publishes state that never saw this
+  # append. Locking only the append would reproduce the exact lost update it
+  # is meant to fix.
+  longtermmem_targets_lock_acquire
+  trap 'longtermmem_targets_lock_release' RETURN
+
   # An unreadable tracking file makes the "already recorded" check below
   # meaningless: it would answer "not recorded" and append a duplicate to a
   # file it cannot see. Say so instead of appending blind.
@@ -3139,11 +3238,10 @@ longtermmem_installed_targets_add() {
 # It rewrites from longtermmem_installed_targets_read, so a file that had
 # picked up garbage is also compacted back to valid install state here.
 #
-# KNOWN LIMIT: this is still a read-modify-write. It cannot lose a torn
-# write any more, but a concurrent `add` that lands between the read and the
-# rename is still dropped. Closing that needs an actual lock, which needs an
-# answer to a question this script cannot answer for itself: is concurrent
-# overlay invocation a supported thing to do?
+# The read and the rename are ONE critical section, held under the
+# installed-targets lock: this is a real read-modify-write, so a concurrent
+# `add` landing between them used to be dropped outright. Concurrent overlay
+# invocation is now answered rather than avoided — it is serialized.
 longtermmem_installed_targets_remove() {
   local target="$1"
   [[ -f "$LONGTERM_MEM_INSTALLED_TARGETS" ]] || return 0
@@ -3151,6 +3249,9 @@ longtermmem_installed_targets_remove() {
   local dir
   dir="$(dirname "$LONGTERM_MEM_INSTALLED_TARGETS")"
   mkdir -p "$dir" || die "longterm-mem: could not create $dir"
+
+  longtermmem_targets_lock_acquire
+  trap 'longtermmem_targets_lock_release' RETURN
 
   # Read BEFORE staging anything. This function rewrites the file from what
   # the reader returns, so a reader that answered "empty" for a file it could
@@ -3197,6 +3298,15 @@ longtermmem_installed_targets_remove() {
 # single explicit override for all three.
 longtermmem_maybe_remove_binary() {
   local purge="$1"
+
+  # The third writer of the tracking file, and the easiest one to miss: it
+  # reads the file and then DELETES it, which is a read-modify-write like any
+  # other. Unserialized, a concurrent `add` landing between the two would be
+  # erased along with the file, leaving a runtime registered against a binary
+  # this call just removed.
+  longtermmem_targets_lock_acquire
+  trap 'longtermmem_targets_lock_release' RETURN
+
   local remaining readable=1
   remaining="$(longtermmem_installed_targets_read)" || readable=""
 

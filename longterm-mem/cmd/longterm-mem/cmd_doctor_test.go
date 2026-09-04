@@ -5,6 +5,8 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -117,4 +119,47 @@ func TestCmdDoctor_PrintsEveryCheckOpsDoctorReturns(t *testing.T) {
 			t.Fatalf("doctor output omits the %q check:\n%s", check.Name, stdout)
 		}
 	}
+}
+
+// TestCmdDoctor_FailedCheckAndInternalFailureCarryDifferentCodes pins the
+// separation that gave doctor its own exit code.
+//
+// A FAILED CHECK is a verdict about the vault: the operator reads which
+// check failed and repairs the vault -- something they CAN fix by changing
+// configuration. An INTERNAL failure is a verdict about longterm-mem:
+// doctor could not run the checks at all. While both answered exit 1, a
+// caller could not tell "doctor works and your vault is broken" from
+// "doctor itself broke", and the two have nothing in common but their
+// non-zeroness. The codes are asserted as exact numbers rather than
+// "non-zero" because the number IS the contract a script acts on.
+func TestCmdDoctor_FailedCheckAndInternalFailureCarryDifferentCodes(t *testing.T) {
+	t.Run("failed check exits 9", func(t *testing.T) {
+		t.Setenv("HOME", t.TempDir())
+		// A vault path that resolves fine but does not exist: doctor runs
+		// every check to completion and the vault-config-resolvable one
+		// reports FAIL.
+		t.Setenv("LONGTERM_MEM_VAULT", filepath.Join(t.TempDir(), "no-such-vault"))
+		t.Setenv("LONGTERM_MEM_VAULTS_FILE", filepath.Join(t.TempDir(), "vaults.json"))
+
+		if exit := runQuietly(t, []string{"doctor", "--project", "failing-check-project"}); exit != 9 {
+			t.Fatalf("doctor with a FAILing check exited %d, want 9 (doctor_checks_failed)", exit)
+		}
+	})
+
+	t.Run("internal failure exits 1", func(t *testing.T) {
+		registry := filepath.Join(t.TempDir(), "vaults.json")
+		if err := os.WriteFile(registry, []byte("{ this is not valid json"), 0o600); err != nil {
+			t.Fatalf("write corrupt registry: %v", err)
+		}
+		t.Setenv("HOME", t.TempDir())
+		t.Setenv("LONGTERM_MEM_VAULT", "")
+		t.Setenv("LONGTERM_MEM_VAULTS_FILE", registry)
+
+		// Doctor never got to run a check here: it could not read its own
+		// vault registry. That is longterm-mem's own side, exit 1, and it
+		// must NOT be reported as a diagnostic verdict.
+		if exit := runQuietly(t, []string{"doctor", "--project", "internal-failure-project"}); exit != 1 {
+			t.Fatalf("doctor that could not run its checks exited %d, want 1 (internal)", exit)
+		}
+	})
 }
