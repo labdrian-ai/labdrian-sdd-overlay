@@ -154,26 +154,41 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 	}
 
 	commit, tree, unlabelled := parseAnchorSection(section)
-	lowered := strings.ToLower(section)
-	declaresAbsent := declaresAbsence(lowered)
+	declaresAbsent := declaresAbsence(strings.ToLower(section))
 
-	// An unnamed hash fills an empty slot ONLY when the report has not declared
-	// that the anchor is absent. A report that says "no landing commit" and
-	// also quotes a receipt or content digest is a compliant absence record,
-	// and promoting that digest would answer it with "records landing commit
-	// ..., which does not resolve" — a hard stop on the very disclosure the
-	// gate asks for. Prose beats an unnamed hash; a LABELLED hash still beats
-	// the prose, because a report that names its commit recorded one.
-	if !declaresAbsent {
-		for _, hash := range unlabelled {
-			switch {
-			case commit == "":
-				commit = hash
-			case tree == "":
-				tree = hash
-			}
+	// ONE KNOB CANNOT SERVE BOTH DIRECTIONS, so an unnamed hash gets exactly
+	// one, and only towards the landing commit.
+	//
+	// An unlabelled hash is indistinguishable from a review-receipt or content
+	// digest, which reports quote routinely. It therefore NEVER fills the
+	// approved_tree slot: a digest promoted to a tree disagrees with the
+	// landing commit's real tree and hard-stops a truthful report with "a
+	// mis-recorded anchor is rejected". Only a hash the report LABELS as a tree
+	// is a tree.
+	//
+	// It may still fill the empty landing-commit slot, because the anchor
+	// contract's primary field is the commit and a report that writes its
+	// anchor bare has still recorded one — but only when it RESOLVES as a
+	// commit. That resolvability test replaces the earlier absence-prose knob,
+	// which read the whole section for a phrase and so let an unrelated "not
+	// yet merged" — about a sub-PR, say — silence the landing commit the next
+	// clause recorded. A hash that does not resolve was not a commit: the
+	// report records none, and falls to the absence branch below, which is
+	// where a quoted digest belongs.
+	var spareHashes []string
+	for _, hash := range unlabelled {
+		if commit == "" && resolvesAsCommit(repoRoot, hash) {
+			commit = hash
+			continue
 		}
+		spareHashes = append(spareHashes, hash)
 	}
+	// A tree the gate cannot read is UNKNOWN, not absent. With a spare hash in
+	// the section the fabricated-assurance branch below must stay quiet: it
+	// asserts that NO tree was recorded, and here one may well have been,
+	// unlabelled. Refusing to verify on an unnamed hash is conservative;
+	// accusing a report of fabricating on the same evidence is not.
+	treeUnknown := tree == "" && len(spareHashes) > 0
 
 	if commit == "" {
 		report.Outcome = AnchorAbsent
@@ -211,7 +226,7 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 				"A mis-recorded anchor is rejected, not trusted: omit t1 and disclose the mismatch",
 			commit, tree, commit)}}
 	case AnchorSelfAsserted:
-		if claimsVerified {
+		if claimsVerified && !treeUnknown {
 			return report, []Finding{{relPath, fmt.Sprintf(
 				"records landing commit `%s` with no approved_tree, yet the section claims the anchor is "+
 					"\"verified\". With no independent tree to check against there is nothing that could have "+
@@ -288,10 +303,9 @@ func claimsOutcome(section string, word *regexp.Regexp) bool {
 // commit for exactly the same reason.
 //
 // Hashes no field name governs are RETURNED separately, in reading order, and
-// never promoted here: the caller decides, because promotion is only correct
-// when the report has not declared the anchor absent. The anchor contract's
-// primary field is the landing commit, so a promoted unnamed hash fills that
-// slot first — an unnamed hash is not made a tree by being long.
+// never promoted here: the caller decides. An unnamed hash is a candidate for
+// the landing-commit slot ONLY, and an unnamed hash is not made a tree by being
+// long — see checkReport for why the tree slot takes labelled hashes alone.
 func parseAnchorSection(section string) (commit, tree string, unlabelled []string) {
 	for _, line := range strings.Split(section, "\n") {
 		for _, match := range recordedHashPattern.FindAllStringSubmatchIndex(line, -1) {
@@ -311,6 +325,16 @@ func parseAnchorSection(section string) (commit, tree string, unlabelled []strin
 		}
 	}
 	return commit, tree, unlabelled
+}
+
+// resolvesAsCommit reports whether a hash the report never named resolves, in
+// this repository, as a commit. It is the only evidence available that an
+// unnamed hash was meant as the landing commit; a digest, a content hash, or a
+// hash from another repository fails it, and is then left where it was written
+// instead of being hard-stopped as an unresolvable anchor.
+func resolvesAsCommit(repoRoot, hash string) bool {
+	out, err := runGitReadOnly("-C", repoRoot, "rev-parse", "--verify", "--quiet", hash+"^{commit}")
+	return err == nil && strings.TrimSpace(out) != ""
 }
 
 // declaresAbsence reports whether the (lowercased) section states positively

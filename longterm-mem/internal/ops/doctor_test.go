@@ -206,8 +206,9 @@ func TestDoctor(t *testing.T) {
 		// R-030 makes a hand-edited promoted page a supported, reported
 		// state, not a broken vault: its sidecar entry exists, records the
 		// revision it published, and simply no longer matches the bytes.
-		// Promotion refuses that page and says so, and a later revision
-		// reconciles it -- nothing is wedged, so flagging it here would
+		// Promotion refuses that page and says so on every run, which is
+		// R-030 holding the human's edit rather than a wedge to repair --
+		// the refusal is standing, not silent, and flagging it here would
 		// report every page a human has ever touched as a defect.
 		recordPrecedenceRevision(t, vaultRoot, address, 1)
 		editPromotedPage(t, vaultRoot, address)
@@ -240,6 +241,31 @@ func TestDoctor(t *testing.T) {
 		got := checkStatus(t, report.Checks, CheckPrecedenceSidecarConsistency)
 		if got.Status != CheckFailed {
 			t.Fatalf("precedence-sidecar-consistency = %+v, want FAILed: a page its own sidecar can never adopt again is a vault defect, not a supported state", got)
+		}
+		if !strings.Contains(got.Detail, address) {
+			t.Fatalf("precedence-sidecar-consistency detail = %q, want it to name %q", got.Detail, address)
+		}
+	})
+
+	t.Run("Locally edited page whose entry records a negative revision is named", func(t *testing.T) {
+		deps, vaultRoot := newHealthyDeps(t)
+		// The same wedge, spelled the other way round. Promotion's own
+		// guard (update.go's revisionsAllowAdoption) refuses on
+		// PromotedRevision <= 0, not just == 0, so a hand-edited or
+		// corrupted sidecar recording a negative revision is exactly as
+		// unadoptable as one recording none. This check has to spell the
+		// predicate the same way, or that page is wedged-but-unreported --
+		// the one state this check exists to make impossible.
+		recordPrecedenceRevision(t, vaultRoot, address, -1)
+		editPromotedPage(t, vaultRoot, address)
+
+		report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+		got := checkStatus(t, report.Checks, CheckPrecedenceSidecarConsistency)
+		if got.Status != CheckFailed {
+			t.Fatalf("precedence-sidecar-consistency = %+v, want FAILed: promotion refuses a non-positive recorded revision, so this page is wedged and must not report healthy", got)
 		}
 		if !strings.Contains(got.Detail, address) {
 			t.Fatalf("precedence-sidecar-consistency detail = %q, want it to name %q", got.Detail, address)

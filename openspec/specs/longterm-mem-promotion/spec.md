@@ -233,18 +233,21 @@ The frontmatter comparison SHALL disregard exactly the lines two renders of
 the writer's own may legitimately disagree on, and no others. Those are the
 created and updated stamps; the engram_revision the two renders differ in by
 construction; the status and related lines a status propagation rewrites in
-place; and the title, aliases, tags and engram_type lines rendered FROM the
-observation, which the observation itself moves when it is retitled or
-retyped between the interrupted write and the retry. It SHALL compare every
-other key and value, so that a key a human added, changed or deleted is a
-refusal. Corroborating only the body's closing footer is not sufficient: a
-frontmatter-only edit leaves that footer intact, and adopting such a page
-overwrites the human's edit while reporting a successful update. Comparing
-the observation-derived lines is equally wrong in the other direction: it
-refuses a retitle, which this requirement's own update scenario makes a
-first-class supported case, and that refusal is a skip — so it suppresses
-the store write, the entry never advances, and every later revision repeats
-it.
+place; and EVERY line rendered FROM the observation — title, aliases, tags,
+engram_type, engram_sync_id and project — which the observation itself moves
+when it is retitled, retyped, moved or merged into another project, or has a
+sync id backfilled between the interrupted write and the retry. The
+observation-derived set SHALL be exactly the fields the observation supplies,
+not a subset of them. It SHALL compare every other key and value — the fields
+only the writer emits: type, address, sources and engram_id — so that a key a
+human added, changed or deleted is a refusal. Corroborating only the body's
+closing footer is not sufficient: a frontmatter-only edit leaves that footer
+intact, and adopting such a page overwrites the human's edit while reporting a
+successful update. Comparing any observation-derived line is equally wrong in
+the other direction: it refuses an ordinary retitle or project move, which
+this requirement's own update scenario makes a first-class supported case, and
+that refusal is a skip — so it suppresses the store write, the entry never
+advances, and every later revision repeats it.
 
 A page whose engram_revision is level with the revision its entry records has
 been changed by someone other than the promotion writer — only the writer's
@@ -269,18 +272,33 @@ republishes it and records the revision the older store never wrote. The
 population of entries recording no revision therefore shrinks page by page,
 with nothing adopted.
 
-What remains is an entry recording no revision whose page has ALSO diverged.
-That page is refused on every run, and no promotion of it can repair the
-entry. It SHALL therefore be reported by the vault's own precedence-sidecar
-diagnostic rather than left silent, so an operator learns about a wedged page
-instead of the vault reporting healthy.
+What remains is an entry recording no usable revision whose page has ALSO
+diverged. That page is refused on every run, and no promotion of it can repair
+the entry. It SHALL therefore be reported by the vault's own
+precedence-sidecar diagnostic rather than left silent, so an operator learns
+about a wedged page instead of the vault reporting healthy. "No usable
+revision" SHALL mean the same thing in the diagnostic as in the adoption rule
+— a recorded revision that is not positive, whether absent or negative —
+so that no page the writer permanently refuses is left unreported.
+
+A diverged page whose entry DOES record a positive revision is not reported by
+that diagnostic: it is an ordinary local edit, refused and named by the
+promotion writer itself on every run. That refusal is standing rather than
+temporary — the page's engram_revision stays level with the entry's, so no
+later revision adopts it — which is this requirement preserving the human's
+edit, not a wedge to repair.
 
 Two limits of this reconciliation are known and accepted, and both are stated
 here rather than left to be rediscovered. An edit buried mid-body, or one
-confined to the created, updated, status or related lines the comparison has
-to disregard, is indistinguishable from the writer's own render, because the
-fingerprint that would have separated them is exactly what the interruption
-destroyed. In the other direction, a diverged page whose entry records no
+confined to any line the comparison has to disregard — created, updated,
+engram_revision, status and related, plus the observation-derived title,
+aliases, tags, engram_type, engram_sync_id and project — is indistinguishable
+from the writer's own render, because the fingerprint that would have
+separated them is exactly what the interruption destroyed. A human who
+hand-sets a title or inserts an alias inside this window therefore loses that
+edit to a reported update; keeping any of those lines compared would not
+preserve the edit, it would only turn an ordinary Engram-side move into a
+permanent refusal. In the other direction, a diverged page whose entry records no
 revision is refused however well it otherwise corroborates, because nothing
 distinguishes the writer's own unrecorded write from a human's edit there;
 that refusal is reported, names the page, and is reported again by the

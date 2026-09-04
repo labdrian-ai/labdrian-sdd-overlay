@@ -195,22 +195,33 @@ func checkWikiRegistrationConsistency(vaultRoot string) Check {
 // A MISSING entry is the first: a page longterm-mem published without
 // recording that it did.
 //
-// A STALE entry that records NO PROMOTED REVISION is the second, and it is
-// the wedged one. Promotion can only attribute a diverged page to one of
-// its own interrupted writes when the entry names the revision it
+// A STALE entry that records NO USABLE PROMOTED REVISION is the second, and
+// it is the wedged one. Promotion can only attribute a diverged page to one
+// of its own interrupted writes when the entry names the revision it
 // fingerprinted; an entry that names none carries no such evidence, so the
 // page is refused -- and the refusal is a skip, which suppresses the very
 // store write that would have given the entry a revision. Every later run
 // repeats it. A vault permanently refusing its own page must not report
 // entirely healthy: that is the exact failure mode this check exists to
 // end, and reporting it is what makes the residue the promotion path
-// deliberately leaves behind visible to an operator.
+// deliberately leaves behind visible to an operator. "No usable revision"
+// is spelled here exactly as promotion's own guard spells it
+// (revisionsAllowAdoption: PromotedRevision <= 0), so a sidecar recording a
+// negative revision -- equally unadoptable -- is reported rather than left
+// wedged-but-silent.
 //
-// A stale entry that DOES record a revision is the third, and is not
-// reported. It is an ordinary local edit, which R-030 makes a supported and
-// separately reported state: promotion refuses that page and says so, and a
-// later revision reconciles it. Flagging it would report every page a human
-// has ever touched as broken.
+// A stale entry that DOES record a positive revision is the third, and is
+// not reported. It is an ordinary local edit, which R-030 makes a supported
+// and separately reported state: promotion refuses that page, says so with
+// its own local-edit-precedence diagnostic, and preserving that edit is the
+// point. Note what this deliberately does NOT claim: a later revision does
+// not reconcile it. Adoption needs the page's engram_revision to stand
+// strictly ABOVE the entry's, and a human's edit leaves it level, so every
+// later revision refuses the page too. That is R-030 working, not a defect
+// -- the page is held, not lost, and the operator is told on every run --
+// but it is a standing refusal, and this check stays quiet about it
+// precisely because flagging it would report every page a human has ever
+// touched as broken.
 func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
 	pages, unreadable, err := loadPromotedPages(vaultRoot)
 	if err != nil {
@@ -229,8 +240,8 @@ func checkPrecedenceSidecarConsistency(vaultRoot string) Check {
 		switch {
 		case !tracked:
 			details = append(details, fmt.Sprintf("%s has no entry for %s, so longterm-mem cannot prove it wrote that page", precedenceSidecarRelPath, page.Address))
-		case entry.PromotedRevision == 0 && !entry.MatchesPage(page.Frontmatter):
-			details = append(details, fmt.Sprintf("%s records no promoted revision for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", precedenceSidecarRelPath, page.Address))
+		case entry.PromotedRevision <= 0 && !entry.MatchesPage(page.Frontmatter):
+			details = append(details, fmt.Sprintf("%s records no usable promoted revision (%d) for %s and no longer matches that page, so every promotion of it is refused and nothing in the promotion path can repair the entry", precedenceSidecarRelPath, entry.PromotedRevision, page.Address))
 		}
 	}
 	if len(details) > 0 {

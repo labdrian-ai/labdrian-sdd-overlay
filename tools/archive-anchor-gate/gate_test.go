@@ -628,3 +628,137 @@ func TestLabelledCommitIsStillReadWhenAbsenceProseIsPresent(t *testing.T) {
 		t.Fatalf("reports = %v, want the labelled landing commit %s", reports, commit)
 	}
 }
+
+// --- Only a LABELLED hash may fill the tree slot ---------------------------
+//
+// An unlabelled hash is indistinguishable from a receipt or content digest, so
+// it can neither BE the approved tree nor prove that none was recorded. The
+// four shapes below are the cross-product the gate has to keep straight:
+// labelled commit + labelled tree (above), labelled commit + bare digest,
+// absence declaration + bare digest (above), and labelled commit + a bare hash
+// that happens to equal the real tree.
+
+// TestLabelledCommitWithABareReceiptDigestIsNotRejected is the reported live
+// false hard stop. Quoting a review receipt digest in prose is the routine,
+// documented-compliant form; promoting that digest into the approved_tree slot
+// made it disagree with the landing commit's real tree and failed a truthful
+// report with "a mis-recorded anchor is rejected".
+func TestLabelledCommitWithABareReceiptDigestIsNotRejected(t *testing.T) {
+	for _, tc := range []struct{ name, prose string }{
+		{"plain", "Review receipt digest `0123456789abcdef0123456789abcdef01234567`.\n"},
+		{"claiming_verified", "Review receipt digest `0123456789abcdef0123456789abcdef01234567`; the anchor is verified.\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, commit, _ := fixtureRepo(t)
+			writeArchiveReport(t, root, "2026-09-10-receipt-digest", fmt.Sprintf(
+				"# Archive Report\n\n## Cycle Timestamps\n\n| landing_commit | `%s` |\n\n%s", commit, tc.prose))
+
+			reports, findings, err := ScanArchive(root, ConventionDate)
+			if err != nil {
+				t.Fatalf("scan: %v", err)
+			}
+			if len(findings) != 0 {
+				t.Fatalf("a bare receipt digest produced findings: %v", findings)
+			}
+			if len(reports) != 1 || reports[0].Outcome != AnchorSelfAsserted {
+				t.Fatalf("reports = %v, want one %q report", reports, AnchorSelfAsserted)
+			}
+			if reports[0].Anchor == nil || reports[0].Anchor.ApprovedTree != "" {
+				t.Fatalf("anchor = %#v, want an empty approved_tree — an unlabelled digest is not a tree", reports[0].Anchor)
+			}
+		})
+	}
+}
+
+// TestBareHashEqualToTheRealTreeIsNeitherVerifiedNorFabricated is the mirror.
+// The unlabelled hash IS the landing commit's tree, but nothing in the report
+// says so, so the gate may not upgrade the record to `verified` — and equally
+// may not call the report's own "verified" claim a fabricated assurance,
+// because a tree it cannot read is unknown, not absent.
+func TestBareHashEqualToTheRealTreeIsNeitherVerifiedNorFabricated(t *testing.T) {
+	root, commit, tree := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-bare-real-tree", fmt.Sprintf(
+		"# Archive Report\n\n## Cycle Timestamps\n\n| landing_commit | `%s` |\n\nThe review receipt reads `%s`; the anchor is verified.\n",
+		commit, tree))
+
+	reports, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("an unlabelled hash equal to the real tree produced findings: %v", findings)
+	}
+	if len(reports) != 1 || reports[0].Outcome != AnchorSelfAsserted {
+		t.Fatalf("reports = %v, want one %q report — an unnamed hash cannot promote a record to verified", reports, AnchorSelfAsserted)
+	}
+}
+
+// TestAbsenceProseElsewhereDoesNotSilenceARealLandingCommit is the absence
+// rule's own twin. A declaration scoped to something ELSE — a sub-PR that has
+// not landed — must not suppress the landing commit the very next clause
+// records, which would report a landed change as having no anchor at all.
+func TestAbsenceProseElsewhereDoesNotSilenceARealLandingCommit(t *testing.T) {
+	root, commit, _ := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-scoped-absence", fmt.Sprintf(
+		"# Archive Report\n\n## Cycle Timestamps\n\nSub-PR #3 is not yet merged. Merged to main as `%s`.\n", commit))
+
+	reports, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("a scoped absence phrase produced findings: %v", findings)
+	}
+	if len(reports) != 1 || reports[0].Outcome != AnchorSelfAsserted {
+		t.Fatalf("reports = %v, want one %q report", reports, AnchorSelfAsserted)
+	}
+	if reports[0].Anchor == nil || reports[0].Anchor.LandingCommit != commit {
+		t.Fatalf("anchor = %#v, want the recorded landing commit %s", reports[0].Anchor, commit)
+	}
+}
+
+// TestUnresolvableBareHashIsNotAnAnchorAndDoesNotExcuseSilence guards the
+// fallback that makes the three tests above safe. A bare hash that does not
+// resolve as a commit was never a landing commit, so the report records none —
+// and a report that records none while saying nothing about it is still the
+// silence this gate exists to catch.
+func TestUnresolvableBareHashIsNotAnAnchorAndDoesNotExcuseSilence(t *testing.T) {
+	root, _, _ := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-bare-digest-only",
+		"# Archive Report\n\n## Cycle Timestamps\n\nReview receipt digest `0123456789abcdef0123456789abcdef01234567`.\n")
+
+	_, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("want exactly one finding, got %v", findings)
+	}
+	if !strings.Contains(findings[0].Reason, "states no absent outcome") {
+		t.Errorf("finding %q does not name the missing absent declaration", findings[0].Reason)
+	}
+}
+
+// TestAResolvableBareHashOutranksAbsenceProse pins the boundary the two rules
+// above meet at, because it is the one case where they disagree. A section that
+// declares absence AND quotes a hash that really is a commit in this repository
+// records an anchor: it is read as self-asserted — used, never independently
+// checked — rather than as no anchor at all. The alternative, letting the prose
+// win, is what let an absence phrase about something ELSE erase a real landing
+// commit; resolvability is evidence, and a phrase is not.
+func TestAResolvableBareHashOutranksAbsenceProse(t *testing.T) {
+	root, commit, _ := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-absence-with-real-commit", fmt.Sprintf(
+		"# Archive Report\n\n## Cycle Timestamps\n\nNo landing commit was recorded for the tracker; the work landed as `%s`.\n", commit))
+
+	reports, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 0 {
+		t.Fatalf("a resolvable bare commit produced findings: %v", findings)
+	}
+	if len(reports) != 1 || reports[0].Outcome != AnchorSelfAsserted {
+		t.Fatalf("reports = %v, want one %q report", reports, AnchorSelfAsserted)
+	}
+}

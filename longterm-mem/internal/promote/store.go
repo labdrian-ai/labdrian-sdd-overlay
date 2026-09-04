@@ -51,7 +51,14 @@ type PrecedenceEntry struct {
 //
 // A file with no parseable frontmatter block reports false: promotion's own
 // reader fails closed on it too, so it is a page this entry cannot be shown
-// to still describe.
+// to still describe. That early return is a STATEMENT of that intent, not
+// the thing enforcing it -- deleting it changes no outcome, because the
+// degenerate split it would fall into (an empty frontmatter, a whole-file
+// body) hashes the empty string, and no entry carries that digest: every
+// FrontmatterHash is the digest of a rendered `---\n...` block, and a
+// hand-truncated sidecar entry carries the empty STRING, which is not a
+// digest at all. It is kept because a reader must not have to re-derive that
+// argument to know an unparseable page is refused.
 func (e PrecedenceEntry) MatchesPage(raw string) bool {
 	fmBlock, ok := frontmatterBlock(raw)
 	if !ok {

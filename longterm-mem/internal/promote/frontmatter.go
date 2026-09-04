@@ -129,13 +129,14 @@ const vaultType = "concept"
 // identify WHICH observation, at WHICH revision, a page on disk was
 // rendered from (update.go's reconciliation, address.go's promoted-page
 // scan), statusField/relatedField are the two lines PatchStatusFields
-// rewrites in place, and titleField/aliasesField/tagsField/engramTypeField
-// are the observation-derived lines update.go's corroboration has to blank
-// because the observation, not a human, moves them between two of our own
-// renders. Named here, next to the Render call that emits them, so every
-// reader and the writer cannot drift apart into two spellings of the same
-// key -- which is a claim this file only earns while the readers actually
-// use them, so a new read site spells the constant, never the literal.
+// rewrites in place, and titleField/aliasesField/tagsField/engramTypeField/
+// projectField/engramSyncIDField are the observation-derived lines update.go's
+// corroboration has to blank because the observation, not a human, moves them
+// between two of our own renders. Named here, next to the Render call that
+// emits them, so every reader and the writer cannot drift apart into two
+// spellings of the same key -- which is a claim this file only earns while
+// the readers actually use them, so a new read site spells the constant,
+// never the literal.
 const (
 	engramIDField       = "engram_id"
 	engramRevisionField = "engram_revision"
@@ -145,6 +146,8 @@ const (
 	aliasesField        = "aliases"
 	tagsField           = "tags"
 	engramTypeField     = "engram_type"
+	engramSyncIDField   = "engram_sync_id"
+	projectField        = "project"
 )
 
 // frontmatter is the flat-YAML page header EmitPage renders.
@@ -182,10 +185,10 @@ func (fm frontmatter) Render() string {
 	writeListField(&b, relatedField, fm.Related)
 	writeListField(&b, "sources", nil)
 	writeField(&b, engramIDField, strconv.FormatInt(fm.EngramID, 10))
-	writeField(&b, "engram_sync_id", fm.EngramSyncID)
+	writeField(&b, engramSyncIDField, fm.EngramSyncID)
 	writeField(&b, engramTypeField, fm.EngramType)
 	writeField(&b, engramRevisionField, strconv.Itoa(fm.EngramRevision))
-	writeField(&b, "project", fm.Project)
+	writeField(&b, projectField, fm.Project)
 	b.WriteString("---\n")
 	return b.String()
 }

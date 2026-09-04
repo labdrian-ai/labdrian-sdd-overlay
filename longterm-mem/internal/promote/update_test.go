@@ -747,14 +747,16 @@ func TestUpdate_FrontmatterEditInsideTheUpdateWindowIsStillSkipped(t *testing.T)
 			},
 		},
 		{
-			// A NON-derived key: title, aliases, tags and engram_type all
-			// come from the observation and legitimately differ between two
-			// of our own renders, so the corroboration blanks them and a
-			// changed value there is not evidence of anything. project does
-			// not move on its own, so a changed value there is a human's.
+			// A genuinely WRITER-owned key. Every field the observation
+			// supplies -- title, aliases, tags, engram_type, project and
+			// engram_sync_id -- legitimately differs between two of our own
+			// renders, so the corroboration blanks them all and a changed
+			// value there is not evidence of anything. type is written by
+			// Render() itself from a constant, so a changed value there
+			// cannot have come from any render of ours: it is a human's.
 			name: "a value the human changed",
 			edit: func(fm string) string {
-				return strings.Replace(fm, "project: labdrian-sdd-overlay", "project: the-humans-own-project", 1)
+				return strings.Replace(fm, "type: concept", "type: reference", 1)
 			},
 		},
 		{
@@ -1276,5 +1278,75 @@ func TestBlankFrontmatterListSection_AbsentKeyIsNotInserted(t *testing.T) {
 	}
 	if blankFrontmatterListSection(withSection, relatedField) == blankFrontmatterListSection(withoutSection, relatedField) {
 		t.Fatalf("a deleted related: section normalized into equality with a present one, so the human's deletion is invisible")
+	}
+}
+
+// TestUpdate_InterruptedUpdateWhoseObservationMovedProjectReconciles is the
+// surviving twin of the retitle case above. project and engram_sync_id are
+// rendered FROM the observation exactly as title, aliases, tags and
+// engram_type are (page.go's EmitPage reads obs.Project and obs.SyncID), so
+// an ordinary Engram project move or merge -- and a sync_id backfilled onto
+// an observation that had none -- changes them between two of our own
+// renders with no human touching the page. Comparing them makes an
+// interrupted update whose observation then moved a PERMANENT wedge: the
+// refusal is a skip, the skip suppresses the Save, the entry stays at the
+// old revision, and every later revision repeats it.
+func TestUpdate_InterruptedUpdateWhoseObservationMovedProjectReconciles(t *testing.T) {
+	for _, tt := range []struct {
+		name  string
+		apply func(*engram.Observation)
+	}{
+		{name: "moved to another project", apply: func(o *engram.Observation) { o.Project = "some-other-project" }},
+		{name: "sync id backfilled", apply: func(o *engram.Observation) { o.SyncID = "sync-abc123" }},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			vaultRoot := t.TempDir()
+			fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+			obs := engram.Observation{ID: 321, Type: "decision", Title: "Moved Observation", Content: "V1 body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+			first, err := EmitPage(obs, "c-000321", nil)
+			if err != nil {
+				t.Fatalf("EmitPage (v1): %v", err)
+			}
+			existingPath := writePromotedPage(t, vaultRoot, first)
+
+			store := PrecedenceStore{}
+			seedPrecedence(store, first)
+
+			// The interrupted write published revision 2; the sidecar Save
+			// never ran, so the entry still fingerprints revision 1.
+			fixedNow(t, time.Date(2026, 8, 10, 0, 0, 0, 0, time.UTC))
+			obs.RevisionCount = 2
+			obs.Content = "V2 body."
+			interrupted, err := EmitPage(obs, "c-000321", nil)
+			if err != nil {
+				t.Fatalf("EmitPage (interrupted v2): %v", err)
+			}
+			if err := os.WriteFile(existingPath, []byte(interrupted.Frontmatter+interrupted.Body), 0o644); err != nil {
+				t.Fatalf("simulate interrupted write: %v", err)
+			}
+
+			// Engram then revised the observation AND moved the field the
+			// page's frontmatter derives from it.
+			fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
+			obs.RevisionCount = 3
+			obs.Content = "V3 body."
+			tt.apply(&obs)
+			incoming, err := EmitPage(obs, "c-000321", nil)
+			if err != nil {
+				t.Fatalf("EmitPage (v3): %v", err)
+			}
+
+			action, err := UpdateInPlace(store, incoming, existingPath)
+			if err != nil {
+				t.Fatalf("UpdateInPlace: %v", err)
+			}
+			if action.Kind != ActionUpdated {
+				t.Fatalf("action.Kind = %v, want ActionUpdated: an observation-derived field differing between two of our own renders is not a human's edit", action.Kind)
+			}
+			if entry, _ := store.Get(incoming.Address); entry.PromotedRevision != 3 {
+				t.Fatalf("entry.PromotedRevision = %d, want 3: a refusal here is a skip, and a skip wedges the entry forever", entry.PromotedRevision)
+			}
+		})
 	}
 }

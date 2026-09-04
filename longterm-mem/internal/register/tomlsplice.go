@@ -41,12 +41,12 @@ func tomlHeaderPattern(tableKey, memberKey string) *regexp.Regexp {
 // side; this package owns the write side).
 var tomlAnyHeaderPattern = regexp.MustCompile(`^\s*\[`)
 
-// tomlCommandLinePattern matches a `command =` line inside a codex
-// section — the line engine/runtime's read-only adapter (codexCommandLine)
-// requires before it calls a section a real entry. It lives beside the
-// other line patterns because it is part of the same line-oriented scan,
-// and it is spelled identically to that adapter's so the two cannot drift.
-var tomlCommandLinePattern = regexp.MustCompile(`^\s*command\s*=`)
+// A tomlCommandLinePattern used to live here, mirroring engine/runtime's
+// read-only codexCommandLine test so the write side could call a section
+// without a `command =` line absent. That rule is wrong for a write: a
+// url-based codex entry carries no command and is still someone's entry.
+// The write side now asks only whether the section has a body at all
+// (writer.go's tomlSectionHasABody), so nothing here needs the pattern.
 
 // locateTOMLSection walks raw line by line looking for a header matching
 // tableKey.memberKey (see tomlHeaderPattern). When found, the section's

@@ -422,17 +422,32 @@ var (
 	// codeSpanPattern matches one inline code span. A span whose content holds
 	// whitespace is a quoted literal, not a token: the blocked-message text the
 	// agent is told to return quotes tokens without routing them.
-	codeSpanPattern  = regexp.MustCompile("`[^`\n]*`")
-	proseSentenceEnd = regexp.MustCompile(`(?:[.!?]\s+)|\n`)
+	codeSpanPattern = regexp.MustCompile("`[^`\n]*`")
+
+	// chainStrategyGuardScope is what makes a stop instruction legitimate: it
+	// says out loud that the guard fires on values OUTSIDE the closed domain.
+	// An unknown-value guard MUST name the topologies (it exists to stop you
+	// guessing one) and the orchestrator's spelling states the domain by
+	// listing its members, so naming a token near a stop cannot itself be the
+	// offence — only naming one with no such scope can.
+	chainStrategyGuardScope = regexp.MustCompile(`(?i)not a row in the table|outside (?:the|that|this) (?:closed |schema |stored )?(?:table|domain|enum)`)
 )
 
-// chainStrategyProseSentences returns the sentences of a section that are NOT
-// table rows and NOT quoted message literals — that is, the prose a reader
-// takes as instruction.
-func chainStrategyProseSentences(body string) []string {
+// chainStrategyProsePassages returns the PARAGRAPHS of a section that a reader
+// takes as instruction: table rows removed, quoted message literals masked,
+// blank-line boundaries preserved.
+//
+// Paragraphs, not sentences. A sentence-scoped read of this rule was defeated
+// by a full stop — the contradiction simply moved the token into one sentence
+// and the stop into the next — and a rule a keystroke defeats is worse than no
+// rule, because it certifies the text it cannot read.
+func chainStrategyProsePassages(body string) []string {
 	var kept []string
 	for _, line := range strings.Split(body, "\n") {
 		if strings.HasPrefix(strings.TrimSpace(line), "|") {
+			// Blanked, not dropped: a table between two paragraphs must not
+			// splice them into one.
+			kept = append(kept, "")
 			continue
 		}
 		kept = append(kept, line)
@@ -443,7 +458,13 @@ func chainStrategyProseSentences(body string) []string {
 		}
 		return span
 	})
-	return proseSentenceEnd.Split(prose, -1)
+	var passages []string
+	for _, passage := range strings.Split(prose, "\n\n") {
+		if strings.TrimSpace(passage) != "" {
+			passages = append(passages, passage)
+		}
+	}
+	return passages
 }
 
 func namesToken(sentence, token string) bool {
@@ -467,19 +488,89 @@ func TestChainStrategyProseNeverContradictsTheRoutingTable(t *testing.T) {
 		{orchestratorWorkflowPath, chainStrategySectionHeading},
 	} {
 		body := markdownSection(t, readRepoDoc(t, target.path), target.heading)
-		for _, sentence := range chainStrategyProseSentences(body) {
-			for _, token := range domain {
-				if !namesToken(sentence, token) {
-					continue
-				}
-				for _, stop := range chainStrategyStopPhrases {
-					if strings.Contains(sentence, stop) {
-						t.Errorf("%s %s pairs the legal %s value %q with %q in prose: %q\nEvery member of the domain routes; the guard fires only on values outside it",
-							target.path, target.heading, chainStrategyField, token, stop, strings.TrimSpace(sentence))
-					}
+		for _, contradiction := range contradictingChainStrategyProse(body, domain) {
+			t.Errorf("%s %s pairs the legal %s value %q with %q in prose: %q\nEvery member of the domain routes; a guard that stops must say it fires on values OUTSIDE the table",
+				target.path, target.heading, chainStrategyField, contradiction.token, contradiction.stop, contradiction.text)
+		}
+	}
+}
+
+// chainStrategyContradiction is one passage that tells the agent a legal
+// chain_strategy value has nowhere to go.
+type chainStrategyContradiction struct{ token, stop, text string }
+
+// contradictingChainStrategyProse returns the paragraphs of a section that pair
+// a member of the stored domain with a stop outcome WITHOUT scoping that stop
+// to values outside the domain. The exemption carries the whole distinction the
+// pin makes: a guard is allowed to name every token in the domain, as long as
+// it says which values it actually stops on.
+func contradictingChainStrategyProse(body string, domain []string) []chainStrategyContradiction {
+	var found []chainStrategyContradiction
+	for _, passage := range chainStrategyProsePassages(body) {
+		if chainStrategyGuardScope.MatchString(passage) {
+			continue
+		}
+		for _, token := range domain {
+			if !namesToken(passage, token) {
+				continue
+			}
+			for _, stop := range chainStrategyStopPhrases {
+				if strings.Contains(passage, stop) {
+					found = append(found, chainStrategyContradiction{token, stop, strings.TrimSpace(passage)})
 				}
 			}
 		}
+	}
+	return found
+}
+
+// --- The pin's own controls ------------------------------------------------
+//
+// A textual pin is worth exactly what its two error directions are worth, and
+// this one had both backwards. Scoped to a SENTENCE, it missed the paragraph
+// that contradicts itself across a full stop — "The `none` value names no
+// topology to target. Such a value has no route in this skill: STOP" — while
+// firing on the LEGITIMATE guard whose single sentence names a topology it
+// tells you not to default to. A pin that is red on the correct wording and
+// green on the evasion teaches the evasion, so both directions are pinned here
+// against fixtures rather than left to whatever the live documents happen to
+// say today.
+
+const evasionGuardProse = "**Unknown-value guard (MANDATORY).** The `none` value names no topology to target. " +
+	"Such a value has no route in this skill: STOP before writing code and return blocked.\n"
+
+// legitimateGuardProse is the correct wording: the stop outcome is scoped to
+// values outside the table, and the topology it names is named as the wrong
+// guess to make, not as a value that stops.
+const legitimateGuardProse = "**Unknown-value guard (MANDATORY).** A value that is not a row in the table above has no route in this skill, " +
+	"so do NOT pick the nearest topology and do NOT default to `stacked-to-main` because it is the common case, " +
+	"and do NOT proceed either: STOP before writing code and return `blocked`, naming the unrecognised value.\n"
+
+// legitimateInclusionGuardProse is the orchestrator's spelling of the same
+// rule: it states the closed domain by listing its members, which necessarily
+// names every one of them in the same breath as the stop.
+const legitimateInclusionGuardProse = "**Unknown-value guard (MANDATORY).** Any `chain_strategy` value outside the schema domain " +
+	"(`stacked-to-main`, `feature-branch-chain`, `none`) is invalid: STOP and re-collect it, because a value outside that domain " +
+	"reaches implementation with no route to take.\n"
+
+func TestChainStrategyProsePinCatchesTheSplitSentenceContradiction(t *testing.T) {
+	domain := schemaEnum(t, chainStrategyField)
+	if len(contradictingChainStrategyProse(evasionGuardProse, domain)) == 0 {
+		t.Errorf("the prose pin does not catch a guard that contradicts the routing table across a sentence boundary:\n%s\nA pin that a full stop defeats teaches the evasion it cannot detect", evasionGuardProse)
+	}
+}
+
+func TestChainStrategyProsePinDoesNotFireOnALegitimateGuard(t *testing.T) {
+	domain := schemaEnum(t, chainStrategyField)
+	for name, prose := range map[string]string{
+		"exclusion_by_table": legitimateGuardProse,
+		"inclusion_by_list":  legitimateInclusionGuardProse,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if found := contradictingChainStrategyProse(prose, domain); len(found) != 0 {
+				t.Errorf("the prose pin fires on a correct unknown-value guard %+v:\n%s\nFlagging the right wording is what pushed the last author to split the sentence instead of fixing anything", found, prose)
+			}
+		})
 	}
 }
 

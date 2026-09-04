@@ -442,24 +442,29 @@ func readTOMLSection(path, tableKey, memberKey string) ([]byte, bool, error) {
 		return nil, false, nil
 	}
 	section := raw[loc.start:loc.end]
-	if !tomlSectionIsAnEntry(section) {
-		// A header with no `command =` line is not an entry -- the exact
-		// rule engine/runtime's read-only adapter applies to this same
-		// file for `doctor`/`status` (tomlSectionFingerprint: "a header
-		// with no command line is not a real entry -- nothing a register
-		// step would have written"). Reporting it as PRESENT here was the
-		// one place this package and that adapter still disagreed about a
-		// real file, and the disagreement had teeth: a stray bodyless
-		// `[mcp_servers.longterm-mem]` header read as absent to doctor and
-		// as a foreign entry to register, which refused it with exit 6 and
-		// left it -- an installation that reports itself missing and
-		// refuses to install, forever, over a section holding nothing.
+	if !tomlSectionHasABody(section) {
+		// A header with NOTHING under it is not an entry: the stray
+		// bodyless `[mcp_servers.longterm-mem]` -- a half-finished hand
+		// edit, an interrupted writer, a merge that kept the header and
+		// dropped its lines -- read as absent to `doctor`/`status` and as
+		// a foreign entry to `register`, which refused it with exit 6 and
+		// left it. An installation that reports itself missing and refuses
+		// to install, forever, over a section holding nothing.
 		//
-		// Calling it absent is safe in both directions. longterm-mem never
-		// writes a section without a command line, so such a section is
-		// provably not one of ours being protected; and it is not a
-		// working entry for anyone else either, since codex has nothing to
-		// launch without it. Install then fills the empty header in place
+		// The rule is emptiness, NOT "no `command =` line". Aligning with
+		// engine/runtime's tomlSectionFingerprint ("a header with no
+		// command line is not a real entry") is fine for that READ-ONLY
+		// adapter, where being wrong only makes doctor report absent; it
+		// does not license a destructive WRITE here. A codex entry can be
+		// url-based -- type/url/bearer_token and no command at all -- and
+		// overwriting one destroys a working third-party server and its
+		// secret, leaving them only in .bak. Of the two justifications
+		// once given for the wider rule, only "longterm-mem never writes a
+		// section without a command line" is true; "codex has nothing to
+		// launch without it" is false for a url-based server.
+		//
+		// So: any section with a body is present, and a foreign one is
+		// refused. Only the truly empty header is filled in place
 		// (tomlsplice.go locates and replaces the same span), after
 		// replaceConfig has backed the original file up to .bak.
 		//
@@ -471,15 +476,22 @@ func readTOMLSection(path, tableKey, memberKey string) ([]byte, bool, error) {
 	return section, true, nil
 }
 
-// tomlSectionIsAnEntry reports whether a located codex section is a real
-// MCP server entry, i.e. carries a `command =` line. It reproduces
-// engine/runtime's codexCommandLine test, so both sides of D9 answer
-// "does this entry exist?" with one rule.
-func tomlSectionIsAnEntry(section []byte) bool {
-	for _, line := range bytes.Split(section, []byte("\n")) {
-		if tomlCommandLinePattern.Match(line) {
-			return true
+// tomlSectionHasABody reports whether a located codex section carries any
+// content at all under its header line: one non-blank, non-comment line is
+// enough. It deliberately asks nothing about WHICH keys are there -- a
+// url/bearer_token entry with no `command =` is as real as a command one,
+// and the write path must refuse both when they are not ours. section is
+// the span locateTOMLSection returned, whose first line is the header.
+func tomlSectionHasABody(section []byte) bool {
+	for i, line := range bytes.Split(section, []byte("\n")) {
+		if i == 0 {
+			continue // the `[mcp_servers.<name>]` header itself
 		}
+		trimmed := bytes.TrimSpace(line)
+		if len(trimmed) == 0 || trimmed[0] == '#' {
+			continue
+		}
+		return true
 	}
 	return false
 }

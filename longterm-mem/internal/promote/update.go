@@ -220,8 +220,9 @@ func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
 // Every one of these is required, and each fails closed:
 //
 //   - Both renders name a revision, and revisionsAllowAdoption accepts the
-//     pair against the entry (see there: the recorded and legacy entries
-//     have different evidence available and are judged separately).
+//     pair against the entry (see there: only a RECORDED entry can answer
+//     this at all, so a legacy entry -- hashes with no revision -- is
+//     refused unconditionally).
 //   - The body ends in the promotion footer for the observation and the
 //     exact revision the page claims. That catches an appended note, a
 //     truncation or a replaced body.
@@ -235,10 +236,18 @@ func isOwnUnrecordedWrite(fmBlock, body string, page Page) bool {
 //
 // What remains uncorroborated is an edit buried MID-BODY (the footer
 // survives it, and the body has no second witness) and an edit confined to
-// the created/updated/status/related lines corroboratingFrontmatter has to
-// blank. The fingerprint that would have separated those from our own write
-// is precisely what the interruption destroyed, so that residual is real --
-// but it is a residual, not the whole frontmatter.
+// the lines corroboratingFrontmatter has to blank: created, updated,
+// engram_revision, status and related (the ones WE move), plus title,
+// aliases, tags, engram_type, engram_sync_id and project (the ones the
+// OBSERVATION moves). A human who hand-sets title: or inserts an alias
+// inside this window therefore loses that edit to action=updated. The
+// fingerprint that would have separated those from our own write is
+// precisely what the interruption destroyed, and every one of those lines is
+// a line one of our own renders legitimately rewrites -- so keeping any of
+// them compared does not preserve the edit, it only converts the loss into a
+// permanent refusal of a page nothing is wrong with. The residual is real,
+// and it is bounded: type, address, sources and engram_id still have to
+// match exactly, and so does every key a human added or deleted.
 func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Page) bool {
 	onDisk, ok := frontmatterRevision(fmBlock)
 	if !ok {
@@ -279,8 +288,9 @@ func isOwnUnrecordedUpdate(entry PrecedenceEntry, fmBlock, body string, page Pag
 // It does not: a human editing ANY frontmatter line moves that same hash
 // identically, so the predicate is satisfied by every legacy-tracked page a
 // human has ever hand-edited -- no interruption required. Combined with the
-// four line kinds corroboratingFrontmatter has to blank (created, updated,
-// status, related, the ones a human is most likely to touch by hand), it
+// line kinds corroboratingFrontmatter has to blank (created, updated, status,
+// related and every observation-derived field, which between them are most of
+// the lines a human touches by hand), it
 // would unlock adoption across the whole legacy population and overwrite
 // mid-body edits while reporting action=updated. In the package whose
 // guarantee (R-030) is preserving human edits, ambiguous evidence must
@@ -342,23 +352,32 @@ func withoutVolatileStamps(fmBlock string) string {
 //     (R-033) rewrites in place on a page it never re-bodies, recording
 //     only the patched block's hash.
 //   - the lines two of our own renders may legitimately differ on because
-//     the OBSERVATION moved them: title, aliases, tags and engram_type are
-//     all rendered from the observation (page.go's EmitPage), so a retitle
-//     or a retype between the interrupted write and the retry changes them
-//     without any human touching the page. Comparing them refuses a
-//     retitle, which R-008 scenario 2 makes a first-class supported case,
-//     and that refusal is a skip -- so it suppresses the Save, the entry
+//     the OBSERVATION moved them: title, aliases, tags, engram_type,
+//     engram_sync_id and project are ALL rendered from the observation
+//     (page.go's EmitPage reads obs.Title, obs.Type, obs.SyncID and
+//     obs.Project), so a retitle, a retype, an Engram project move or merge,
+//     or a sync_id backfilled onto an observation that had none changes them
+//     between the interrupted write and the retry with no human touching the
+//     page. Comparing any of them refuses an ordinary Engram-side move --
+//     and R-008 scenario 2 makes a retitle a first-class supported case --
+//     while that refusal is a skip, so it suppresses the Save, the entry
 //     never advances, and every later revision repeats it: a permanent
-//     wedge, the exact class this reconciliation exists to end.
+//     wedge, the exact class this reconciliation exists to end. The set
+//     blanked here is therefore exactly "every field the observation
+//     supplies", not a hand-picked subset of it: leaving one such field
+//     compared to keep it as a human-edit witness buys that witness at the
+//     price of a permanent wedge on an ordinary Engram operation, and this
+//     package's whole reason for reconciling is to end wedges.
 //
 // Every other key keeps its value, and a key present in one block and
 // absent from the other still differs -- which is what makes a human's
 // added, changed or deleted frontmatter key visible here. What is left
-// covered is what neither we nor the observation move: type, address,
-// sources, engram_id, engram_sync_id and project.
+// covered is what the observation does not supply and only Render() writes:
+// type, address, sources and engram_id.
 func corroboratingFrontmatter(fmBlock string) string {
 	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock),
-		engramRevisionField, statusField, titleField, engramTypeField)
+		engramRevisionField, statusField, titleField, engramTypeField,
+		engramSyncIDField, projectField)
 	for _, key := range []string{relatedField, aliasesField, tagsField} {
 		normalized = blankFrontmatterListSection(normalized, key)
 	}

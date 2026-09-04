@@ -90,6 +90,27 @@ via a section-preserving edit that leaves unrelated sections untouched.
 - WHEN longterm-mem re-installs
 - THEN it replaces that section in place
 
+#### Scenario: An empty section header is filled, not refused
+
+- GIVEN codex's configuration carries a `[mcp_servers.longterm-mem]` header
+  with no key/value lines under it at all — only blank lines or comments
+- WHEN longterm-mem installs
+- THEN it treats that section as absent and fills it in place, rather than
+  reporting a conflict over a section that holds nothing
+
+#### Scenario: A foreign section without a command line is still refused
+
+- GIVEN codex's configuration carries a `[mcp_servers.longterm-mem]` section
+  that is not ours and declares a url-based server — `type`, `url`,
+  `bearer_token` — and therefore no `command` line
+- WHEN longterm-mem installs
+- THEN it refuses, reports the conflict, and leaves that section
+  byte-identical. Presence is decided by whether the section has a body, never
+  by whether it carries a `command` line: a section with any body is somebody's
+  entry. The read-only `doctor` adapter may key on the command line, because
+  being wrong there only under-reports; the write path may not, because being
+  wrong there destroys a working third-party entry and its secret.
+
 ### Requirement: A Configuration With No MCP Container Is Installed Into, Not Refused
 
 Traces to: longterm-mem R-016, R-017, R-018
