@@ -643,10 +643,22 @@ func TestLabelledCommitIsStillReadWhenAbsenceProseIsPresent(t *testing.T) {
 // documented-compliant form; promoting that digest into the approved_tree slot
 // made it disagree with the landing commit's real tree and failed a truthful
 // report with "a mis-recorded anchor is rejected".
+//
+// The `claiming_verified` case is where the false hard stop ENDS. Quoting a
+// digest still may not promote it into the tree slot, so the record stays
+// self-asserted -- but a report that then claims "verified" is claiming an
+// assurance nothing in it could have produced, and that finding is the gate's
+// only anti-fabrication check. It used to be silenced by the mere presence of
+// a leftover hex token, which made "quote any hex word" a complete bypass; the
+// suppression now requires a hash that really is the landing commit's tree
+// (see TestBareHashEqualToTheRealTreeIsNeitherVerifiedNorFabricated).
 func TestLabelledCommitWithABareReceiptDigestIsNotRejected(t *testing.T) {
-	for _, tc := range []struct{ name, prose string }{
-		{"plain", "Review receipt digest `0123456789abcdef0123456789abcdef01234567`.\n"},
-		{"claiming_verified", "Review receipt digest `0123456789abcdef0123456789abcdef01234567`; the anchor is verified.\n"},
+	for _, tc := range []struct {
+		name, prose     string
+		wantFabrication bool
+	}{
+		{name: "plain", prose: "Review receipt digest `0123456789abcdef0123456789abcdef01234567`.\n"},
+		{name: "claiming_verified", prose: "Review receipt digest `0123456789abcdef0123456789abcdef01234567`; the anchor is verified.\n", wantFabrication: true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			root, commit, _ := fixtureRepo(t)
@@ -657,7 +669,17 @@ func TestLabelledCommitWithABareReceiptDigestIsNotRejected(t *testing.T) {
 			if err != nil {
 				t.Fatalf("scan: %v", err)
 			}
-			if len(findings) != 0 {
+			for _, finding := range findings {
+				if strings.Contains(finding.Reason, "mis-recorded anchor is rejected") {
+					t.Fatalf("a bare receipt digest was promoted to the tree slot and rejected: %v", finding)
+				}
+			}
+			switch {
+			case tc.wantFabrication:
+				if len(findings) != 1 || !strings.Contains(findings[0].Reason, "fabricated assurance") {
+					t.Fatalf("findings = %v, want exactly the fabricated-assurance finding", findings)
+				}
+			case len(findings) != 0:
 				t.Fatalf("a bare receipt digest produced findings: %v", findings)
 			}
 			if len(reports) != 1 || reports[0].Outcome != AnchorSelfAsserted {
@@ -734,8 +756,15 @@ func TestUnresolvableBareHashIsNotAnAnchorAndDoesNotExcuseSilence(t *testing.T) 
 	if len(findings) != 1 {
 		t.Fatalf("want exactly one finding, got %v", findings)
 	}
-	if !strings.Contains(findings[0].Reason, "states no absent outcome") {
-		t.Errorf("finding %q does not name the missing absent declaration", findings[0].Reason)
+	// The remedy names BOTH exits: label a real commit, or declare the absence
+	// if that is the truth. It may not present the declaration as the only one,
+	// because for a report that does name a commit that exit is a lie -- see
+	// TestBothSpellingsOfAnUnresolvableCommitAgree.
+	if !strings.Contains(findings[0].Reason, "records no landing commit the gate can use") {
+		t.Errorf("finding %q does not say the section records no usable landing commit", findings[0].Reason)
+	}
+	if !strings.Contains(findings[0].Reason, "no landing commit exists, state that absent outcome") {
+		t.Errorf("finding %q does not offer the absent declaration as an exit", findings[0].Reason)
 	}
 }
 
@@ -760,5 +789,68 @@ func TestAResolvableBareHashOutranksAbsenceProse(t *testing.T) {
 	}
 	if len(reports) != 1 || reports[0].Outcome != AnchorSelfAsserted {
 		t.Fatalf("reports = %v, want one %q report", reports, AnchorSelfAsserted)
+	}
+}
+
+// TestBothSpellingsOfAnUnresolvableCommitAgree is the regression that made the
+// gate's remedy dangerous. A report body that NAMES its landing commit but
+// writes the SHA bare fell through to the absence branch, whose remedy told the
+// author to state "no landing commit" -- in a report that names one. An author
+// who obeys writes a false record, and the gate then passes it with zero
+// findings: a hard stop whose only exit is a lie. The LABELLED spelling of the
+// same defect always said the true thing, so the two spellings disagreed about
+// one defect. They must now give the same diagnosis.
+func TestBothSpellingsOfAnUnresolvableCommitAgree(t *testing.T) {
+	const unresolvable = "0123456789abcdef0123456789abcdef01234567"
+	for _, tc := range []struct{ name, section string }{
+		{"bare", "Merged to main as `" + unresolvable + "`.\n"},
+		{"labelled", "| landing_commit | `" + unresolvable + "` |\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			root, _, _ := fixtureRepo(t)
+			writeArchiveReport(t, root, "2026-09-10-unresolvable-"+tc.name,
+				"# Archive Report\n\n## Cycle Timestamps\n\n"+tc.section)
+
+			_, findings, err := ScanArchive(root, ConventionDate)
+			if err != nil {
+				t.Fatalf("scan: %v", err)
+			}
+			if len(findings) != 1 {
+				t.Fatalf("want exactly one finding, got %v", findings)
+			}
+			reason := findings[0].Reason
+			if !strings.Contains(reason, "does not resolve here as a commit") {
+				t.Errorf("finding %q does not diagnose the unresolvable SHA", reason)
+			}
+			if !strings.Contains(reason, "assertion, not an anchor") {
+				t.Errorf("finding %q does not name why an unresolvable SHA is not an anchor", reason)
+			}
+			if strings.Contains(reason, "must SAY it is missing") {
+				t.Errorf("finding %q offers a false absence declaration as the only remedy", reason)
+			}
+		})
+	}
+}
+
+// TestAnUnrelatedHexTokenDoesNotSilenceTheFabricationCheck pins the gate's ONLY
+// anti-fabrication check against the cheapest possible bypass. The suppression
+// key used to be "the section left some backticked hex over", so quoting any
+// hex word at all -- an issue id, an unrelated abbreviation -- bought silence
+// for a report claiming an assurance nothing could have produced.
+func TestAnUnrelatedHexTokenDoesNotSilenceTheFabricationCheck(t *testing.T) {
+	root, commit, _ := fixtureRepo(t)
+	writeArchiveReport(t, root, "2026-09-10-unrelated-hex", fmt.Sprintf(
+		"# Archive Report\n\n## Cycle Timestamps\n\n| landing_commit | `%s` |\n\nSee `deadbee` for context. Anchor outcome: verified.\n",
+		commit))
+
+	_, findings, err := ScanArchive(root, ConventionDate)
+	if err != nil {
+		t.Fatalf("scan: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("want exactly one finding, got %v", findings)
+	}
+	if !strings.Contains(findings[0].Reason, "fabricated assurance") {
+		t.Errorf("finding %q does not name the fabricated assurance", findings[0].Reason)
 	}
 }

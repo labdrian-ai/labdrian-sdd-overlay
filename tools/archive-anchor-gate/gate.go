@@ -183,17 +183,29 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 		}
 		spareHashes = append(spareHashes, hash)
 	}
-	// A tree the gate cannot read is UNKNOWN, not absent. With a spare hash in
-	// the section the fabricated-assurance branch below must stay quiet: it
-	// asserts that NO tree was recorded, and here one may well have been,
-	// unlabelled. Refusing to verify on an unnamed hash is conservative;
-	// accusing a report of fabricating on the same evidence is not.
-	treeUnknown := tree == "" && len(spareHashes) > 0
-
 	if commit == "" {
 		report.Outcome = AnchorAbsent
 		if declaresAbsent {
 			return report, nil
+		}
+		if len(spareHashes) > 0 {
+			// The section DOES quote a hash, so telling the author the record
+			// is empty is false, and telling them the only exit is to declare
+			// absence instructs them to write "no landing commit" into a
+			// report that names one -- after which this gate passes it. A bare
+			// unresolvable hash and a LABELLED unresolvable one are two
+			// spellings of the same defect and get the same diagnosis; what
+			// the bare spelling adds is a second, equally legitimate reading
+			// (a receipt or content digest), so both exits are named and the
+			// author picks the true one.
+			return report, []Finding{{relPath, fmt.Sprintf(
+				"quotes %s, which no field name calls a commit and which does not resolve here as a commit, "+
+					"so the section records no landing commit the gate can use. A SHA nobody can resolve is an "+
+					"assertion, not an anchor: if one of those hashes IS the landing commit, label it "+
+					"`landing_commit` and record a SHA that resolves here. If they are receipt or content "+
+					"digests and no landing commit exists, state that absent outcome (one of: %s) -- but only "+
+					"if it is true",
+				quotedHashList(spareHashes), strings.Join(absentDeclarations, "; "))}}
 		}
 		return report, []Finding{{relPath, fmt.Sprintf(
 			"records no landing commit and states no absent outcome. An anchor that is missing must SAY it is "+
@@ -209,7 +221,7 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 	_, outcome, err := ResolveT1(repoRoot, anchor)
 	if err != nil {
 		return report, []Finding{{relPath, fmt.Sprintf(
-			"records landing commit `%s`, which does not resolve in this repository: %v. A SHA nobody can "+
+			"records landing commit `%s`, which does not resolve here as a commit: %v. A SHA nobody can "+
 				"resolve is an assertion, not an anchor", commit, err)}}
 	}
 	report.Outcome = outcome
@@ -226,7 +238,15 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 				"A mis-recorded anchor is rejected, not trusted: omit t1 and disclose the mismatch",
 			commit, tree, commit)}}
 	case AnchorSelfAsserted:
-		if claimsVerified && !treeUnknown {
+		// A tree the gate cannot read is UNKNOWN, not absent, and accusing a
+		// report of fabricating an assurance on evidence the gate declined to
+		// read is not conservatism. But "some leftover hex was quoted" is not
+		// that evidence: under that key ANY backticked hex word -- a digest, an
+		// issue id, an unrelated abbreviation -- silenced the gate's only
+		// anti-fabrication check. The suppression therefore needs a hash that
+		// really is this landing commit's tree, which is the only shape under
+		// which an unlabelled tree was plausibly recorded.
+		if claimsVerified && !spareHashIsTheRealTree(repoRoot, commit, spareHashes) {
 			return report, []Finding{{relPath, fmt.Sprintf(
 				"records landing commit `%s` with no approved_tree, yet the section claims the anchor is "+
 					"\"verified\". With no independent tree to check against there is nothing that could have "+
@@ -325,6 +345,38 @@ func parseAnchorSection(section string) (commit, tree string, unlabelled []strin
 		}
 	}
 	return commit, tree, unlabelled
+}
+
+// spareHashIsTheRealTree reports whether any hash the report left unlabelled is
+// in fact the landing commit's own tree. That -- and only that -- is evidence
+// that a tree WAS recorded without a field name, which is what may excuse a
+// report from the fabricated-assurance finding. An unrelated hex token is not
+// evidence of anything, and must not buy silence.
+func spareHashIsTheRealTree(repoRoot, commit string, spareHashes []string) bool {
+	if len(spareHashes) == 0 {
+		return false
+	}
+	out, err := runGitReadOnly("-C", repoRoot, "show", "-s", "--format=%T", commit)
+	if err != nil {
+		return false
+	}
+	actualTree := strings.TrimSpace(out)
+	for _, hash := range spareHashes {
+		if treeMatches(actualTree, hash) {
+			return true
+		}
+	}
+	return false
+}
+
+// quotedHashList renders hashes back the way a report writes them, so a finding
+// names the exact tokens the author must look at.
+func quotedHashList(hashes []string) string {
+	quoted := make([]string, 0, len(hashes))
+	for _, hash := range hashes {
+		quoted = append(quoted, "`"+hash+"`")
+	}
+	return strings.Join(quoted, ", ")
 }
 
 // resolvesAsCommit reports whether a hash the report never named resolves, in

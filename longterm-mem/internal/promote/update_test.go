@@ -1281,23 +1281,31 @@ func TestBlankFrontmatterListSection_AbsentKeyIsNotInserted(t *testing.T) {
 	}
 }
 
-// TestUpdate_InterruptedUpdateWhoseObservationMovedProjectReconciles is the
-// surviving twin of the retitle case above. project and engram_sync_id are
-// rendered FROM the observation exactly as title, aliases, tags and
-// engram_type are (page.go's EmitPage reads obs.Project and obs.SyncID), so
-// an ordinary Engram project move or merge -- and a sync_id backfilled onto
-// an observation that had none -- changes them between two of our own
-// renders with no human touching the page. Comparing them makes an
-// interrupted update whose observation then moved a PERMANENT wedge: the
-// refusal is a skip, the skip suppresses the Save, the entry stays at the
-// old revision, and every later revision repeats it.
-func TestUpdate_InterruptedUpdateWhoseObservationMovedProjectReconciles(t *testing.T) {
+// TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconciles
+// is the surviving twin of the retitle case above. engram_sync_id and project
+// are rendered FROM the observation exactly as title, aliases, tags and
+// engram_type are (page.go's EmitPage reads obs.SyncID and obs.Project).
+//
+// The REACHABLE wedge is engram_sync_id: a sync id backfilled onto an
+// observation that had none changes that line between two of our own renders
+// with no human touching the page, and comparing it would make an interrupted
+// update whose observation then gained a sync id a PERMANENT wedge -- the
+// refusal is a skip, the skip suppresses the Save, the entry stays at the old
+// revision, and every later revision repeats it.
+//
+// The project subcase pins the comparator, not a reachable wedge: Allocate
+// reuses an existing page's address only when the on-disk project AND
+// engram_id both match (address.go's findPromotedPage), so an observation
+// moved to another project is handed a FRESH address and UpdateInPlace never
+// sees the old page. Blanking project is still correct and harmless, and this
+// subcase keeps it pinned; it just is not what justifies the rule.
+func TestUpdate_InterruptedUpdateWhoseObservationChangedDescriptiveFieldsReconciles(t *testing.T) {
 	for _, tt := range []struct {
 		name  string
 		apply func(*engram.Observation)
 	}{
-		{name: "moved to another project", apply: func(o *engram.Observation) { o.Project = "some-other-project" }},
 		{name: "sync id backfilled", apply: func(o *engram.Observation) { o.SyncID = "sync-abc123" }},
+		{name: "project differs (comparator only; not reachable via Allocate)", apply: func(o *engram.Observation) { o.Project = "some-other-project" }},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			vaultRoot := t.TempDir()
@@ -1326,8 +1334,8 @@ func TestUpdate_InterruptedUpdateWhoseObservationMovedProjectReconciles(t *testi
 				t.Fatalf("simulate interrupted write: %v", err)
 			}
 
-			// Engram then revised the observation AND moved the field the
-			// page's frontmatter derives from it.
+			// Engram then revised the observation AND moved a descriptive
+			// field the page's frontmatter derives from it.
 			fixedNow(t, time.Date(2026, 8, 15, 0, 0, 0, 0, time.UTC))
 			obs.RevisionCount = 3
 			obs.Content = "V3 body."

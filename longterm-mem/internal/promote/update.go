@@ -351,29 +351,44 @@ func withoutVolatileStamps(fmBlock string) string {
 //     now being rendered; and status and related, the two lines Propagate
 //     (R-033) rewrites in place on a page it never re-bodies, recording
 //     only the patched block's hash.
+//
 //   - the lines two of our own renders may legitimately differ on because
 //     the OBSERVATION moved them: title, aliases, tags, engram_type,
-//     engram_sync_id and project are ALL rendered from the observation
-//     (page.go's EmitPage reads obs.Title, obs.Type, obs.SyncID and
-//     obs.Project), so a retitle, a retype, an Engram project move or merge,
-//     or a sync_id backfilled onto an observation that had none changes them
-//     between the interrupted write and the retry with no human touching the
-//     page. Comparing any of them refuses an ordinary Engram-side move --
+//     engram_sync_id and project are the observation's DESCRIPTIVE fields,
+//     all rendered from it (page.go's EmitPage reads obs.Title, obs.Type,
+//     obs.SyncID and obs.Project), so a retitle, a retype, or a sync_id
+//     backfilled onto an observation that had none changes them between the
+//     interrupted write and the retry with no human touching the page.
+//     Comparing any of them refuses an ordinary Engram-side revision --
 //     and R-008 scenario 2 makes a retitle a first-class supported case --
 //     while that refusal is a skip, so it suppresses the Save, the entry
 //     never advances, and every later revision repeats it: a permanent
 //     wedge, the exact class this reconciliation exists to end. The set
-//     blanked here is therefore exactly "every field the observation
-//     supplies", not a hand-picked subset of it: leaving one such field
+//     blanked here is therefore exactly the observation's descriptive
+//     fields, not a hand-picked subset of them: leaving one such field
 //     compared to keep it as a human-edit witness buys that witness at the
 //     price of a permanent wedge on an ordinary Engram operation, and this
 //     package's whole reason for reconciling is to end wedges.
 //
+//     project rides along for consistency, not because a project move can
+//     reach this comparison: Allocate reuses an existing page's address only
+//     when the on-disk project AND engram_id both match (address.go's
+//     findPromotedPage), so a moved observation gets a FRESH address and no
+//     in-place update ever sees the old page. Blanking it is correct and
+//     harmless; the reachable wedge is the fields outside that lookup,
+//     engram_sync_id among them.
+//
+// engram_id is the exception in the other direction: the observation
+// supplies it (page.go sets EngramID from obs.ID), and it is still COMPARED,
+// because it IDENTIFIES the observation rather than describing it. It is the
+// only frontmatter witness of which observation a page belongs to, so
+// blanking it would make two different observations' pages compare equal.
+//
 // Every other key keeps its value, and a key present in one block and
 // absent from the other still differs -- which is what makes a human's
-// added, changed or deleted frontmatter key visible here. What is left
-// covered is what the observation does not supply and only Render() writes:
-// type, address, sources and engram_id.
+// added, changed or deleted frontmatter key visible here. So what stays
+// compared is engram_id plus what only Render() writes: type, address and
+// sources.
 func corroboratingFrontmatter(fmBlock string) string {
 	normalized := blankFrontmatterValues(withoutVolatileStamps(fmBlock),
 		engramRevisionField, statusField, titleField, engramTypeField,

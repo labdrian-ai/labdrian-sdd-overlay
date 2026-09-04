@@ -233,21 +233,40 @@ The frontmatter comparison SHALL disregard exactly the lines two renders of
 the writer's own may legitimately disagree on, and no others. Those are the
 created and updated stamps; the engram_revision the two renders differ in by
 construction; the status and related lines a status propagation rewrites in
-place; and EVERY line rendered FROM the observation — title, aliases, tags,
-engram_type, engram_sync_id and project — which the observation itself moves
-when it is retitled, retyped, moved or merged into another project, or has a
-sync id backfilled between the interrupted write and the retry. The
-observation-derived set SHALL be exactly the fields the observation supplies,
-not a subset of them. It SHALL compare every other key and value — the fields
-only the writer emits: type, address, sources and engram_id — so that a key a
-human added, changed or deleted is a refusal. Corroborating only the body's
-closing footer is not sufficient: a frontmatter-only edit leaves that footer
-intact, and adopting such a page overwrites the human's edit while reporting a
-successful update. Comparing any observation-derived line is equally wrong in
-the other direction: it refuses an ordinary retitle or project move, which
-this requirement's own update scenario makes a first-class supported case, and
-that refusal is a skip — so it suppresses the store write, the entry never
-advances, and every later revision repeats it.
+place; and every line rendered from the observation that DESCRIBES it rather
+than IDENTIFIES it — title, aliases, tags, engram_type, engram_sync_id and
+project — which the observation itself moves when it is retitled, retyped,
+merged into another project, or has a sync id backfilled between the
+interrupted write and the retry. The observation-derived part of the disregarded
+set SHALL be exactly the observation's descriptive fields, not a subset of
+them.
+
+The observation's IDENTIFYING field, engram_id, SHALL NOT be disregarded,
+even though the observation supplies it too. It is the only frontmatter
+witness of WHICH observation a page belongs to, so blanking it would make two
+different observations' pages compare equal and let one observation's page
+corroborate a render of another's. The comparison SHALL therefore compare
+engram_id together with every key the writer alone emits — type, address and
+sources — so that a key a human added, changed or deleted is a refusal.
+
+Corroborating only the body's closing footer is not sufficient: a
+frontmatter-only edit leaves that footer intact, and adopting such a page
+overwrites the human's edit while reporting a successful update. Comparing
+any DESCRIPTIVE observation-derived line is equally wrong in the other
+direction: it refuses an ordinary retitle, retype, or a sync id backfilled
+onto an observation that had none — each of which Engram can do between the
+interrupted write and the retry, and the first of which this requirement's
+own update scenario makes a first-class supported case — and that refusal is
+a skip, so it suppresses the store write, the entry never advances, and every
+later revision repeats it.
+
+project is disregarded for consistency with the rest of the descriptive set,
+not because a project move reaches this comparison: address allocation
+matches an already-promoted page on project as well as engram_id, so an
+observation moved to another project is allocated a FRESH address and never
+reaches an in-place update at all. Blanking it is therefore correct and
+harmless, but the wedge this rule exists to prevent is reached through the
+fields that are not part of that lookup, engram_sync_id among them.
 
 A page whose engram_revision is level with the revision its entry records has
 been changed by someone other than the promotion writer — only the writer's

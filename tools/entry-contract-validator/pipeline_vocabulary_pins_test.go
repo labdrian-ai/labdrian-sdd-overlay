@@ -423,15 +423,73 @@ var (
 	// whitespace is a quoted literal, not a token: the blocked-message text the
 	// agent is told to return quotes tokens without routing them.
 	codeSpanPattern = regexp.MustCompile("`[^`\n]*`")
-
-	// chainStrategyGuardScope is what makes a stop instruction legitimate: it
-	// says out loud that the guard fires on values OUTSIDE the closed domain.
-	// An unknown-value guard MUST name the topologies (it exists to stop you
-	// guessing one) and the orchestrator's spelling states the domain by
-	// listing its members, so naming a token near a stop cannot itself be the
-	// offence — only naming one with no such scope can.
-	chainStrategyGuardScope = regexp.MustCompile(`(?i)not a row in the table|outside (?:the|that|this) (?:closed |schema |stored )?(?:table|domain|enum)`)
 )
+
+// chainStrategyGuardMarker opens the ONE paragraph per section that is allowed
+// to pair a member of the stored domain with a stop outcome — the unknown-value
+// guard, which must name the topologies precisely because it exists to stop you
+// guessing one.
+//
+// It is exempt by IDENTITY, not by description. Three scopes of description
+// were tried and all three certified the contradiction they existed to catch:
+//
+//  1. Sentence-scoped: defeated by a full stop. The token moved into one
+//     sentence and the stop into the next.
+//  2. Paragraph-scoped: defeated by a BLANK LINE, which splits the paragraph
+//     the same way the full stop split the sentence.
+//  3. Paragraph-scoped with a "does it scope itself to values outside the
+//     table" exemption regex: defeated by APPENDING. Both live guard
+//     paragraphs match that regex — the exemption is what makes the live
+//     assertion green — so a contradiction added to the end of the very
+//     paragraph the pin exists to protect was invisible.
+//
+// Each fix widened the window and each was defeated by the next keystroke,
+// because substring search cannot decide whether prose contradicts a table. So
+// the guard paragraph is no longer DESCRIBED, it is QUOTED: the exempt
+// paragraph must equal the pinned text byte for byte, and every other paragraph
+// in the section gets the token-plus-stop check with no exemption at all. Split
+// it, append to it, or reword it and the pin goes red and names the diff; the
+// author must then change the pin deliberately, in the same commit, where a
+// reviewer sees it.
+//
+// What would remove the pin entirely: make the routing table the single source
+// and GENERATE the guard prose from it, so no hand-written sentence can
+// disagree with the table it is derived from. Until the prose is generated,
+// quoting it is the strongest check available, and a quoted paragraph cannot be
+// green while a contradiction sits inside it.
+const chainStrategyGuardMarker = "**Unknown-value guard (MANDATORY"
+
+// pinnedChainStrategyGuards is the exact current text of each document's guard
+// paragraph. Nothing derives it: it is a transcript, and that is the point.
+var pinnedChainStrategyGuards = map[string]string{
+	sddApplySkillRelPath: "**Unknown-value guard (MANDATORY, and it must fire HERE).** A value that is not a row in the table " +
+		"above has no route in this skill. Do NOT pick the nearest topology, and do NOT default to " +
+		"`stacked-to-main` because it is the common case. Do NOT proceed either: STOP before writing code and " +
+		"return `blocked`, naming the unrecognised value and where it came from (tasks artifact, prompt, or " +
+		"entry contract). The orchestrator carries the same guard, but it cannot fire on a value minted " +
+		"inside this phase agent, so the check has to exist on both sides of the handoff.",
+	orchestratorWorkflowPath: "**Unknown-value guard (MANDATORY).** Any `chain_strategy` value outside `stacked-to-main`, " +
+		"`feature-branch-chain`, and `none` is invalid. Do NOT pick the nearest branch, and do NOT default to " +
+		"`stacked-to-main` because it is the common case. Do NOT proceed either: STOP, report the " +
+		"unrecognised value and where it came from (entry contract, tasks forecast, or session cache), and " +
+		"re-collect the chain strategy before launching `sdd-apply`. This mirrors the identical rule for " +
+		"`delivery_strategy` in the Review Workload Guard, which this section previously lacked. The exposure " +
+		"is real and only latent: `sdd-apply` routes exactly the three stored values and nothing else, so a " +
+		"value outside that domain reaches implementation with no route to take.",
+}
+
+// markdownParagraphs splits a section into RAW blank-line-separated paragraphs,
+// unmasked, so the guard paragraph can be compared to its pin exactly as an
+// author reads it.
+func markdownParagraphs(body string) []string {
+	var paragraphs []string
+	for _, paragraph := range strings.Split(body, "\n\n") {
+		if trimmed := strings.TrimSpace(paragraph); trimmed != "" {
+			paragraphs = append(paragraphs, trimmed)
+		}
+	}
+	return paragraphs
+}
 
 // chainStrategyProsePassages returns the PARAGRAPHS of a section that a reader
 // takes as instruction: table rows removed, quoted message literals masked,
@@ -488,26 +546,67 @@ func TestChainStrategyProseNeverContradictsTheRoutingTable(t *testing.T) {
 		{orchestratorWorkflowPath, chainStrategySectionHeading},
 	} {
 		body := markdownSection(t, readRepoDoc(t, target.path), target.heading)
-		for _, contradiction := range contradictingChainStrategyProse(body, domain) {
-			t.Errorf("%s %s pairs the legal %s value %q with %q in prose: %q\nEvery member of the domain routes; a guard that stops must say it fires on values OUTSIDE the table",
-				target.path, target.heading, chainStrategyField, contradiction.token, contradiction.stop, contradiction.text)
+		for _, violation := range chainStrategyProseViolations(body, domain, pinnedChainStrategyGuards[target.path]) {
+			t.Errorf("%s %s: %s", target.path, target.heading, violation)
 		}
 	}
+}
+
+// chainStrategyProseViolations is the whole pin: the guard paragraph is checked
+// by identity against its pin, and EVERY other paragraph is checked for a
+// domain member paired with a stop outcome, with no exemption available to it.
+func chainStrategyProseViolations(body string, domain []string, pinnedGuard string) []string {
+	var violations []string
+
+	var guards []string
+	for _, paragraph := range markdownParagraphs(body) {
+		if strings.HasPrefix(paragraph, chainStrategyGuardMarker) {
+			guards = append(guards, paragraph)
+		}
+	}
+	switch {
+	case len(guards) == 0:
+		violations = append(violations, fmt.Sprintf(
+			"carries no paragraph opening %q. The unknown-value guard is the one paragraph allowed to name a "+
+				"domain member beside a stop outcome, and it is exempt only because it is pinned verbatim; "+
+				"remove or rename it and the exemption has nothing to stand on", chainStrategyGuardMarker))
+	case len(guards) > 1:
+		violations = append(violations, fmt.Sprintf(
+			"carries %d paragraphs opening %q, so the guard is no longer one quotable paragraph. Splitting it "+
+				"is exactly how a blank line used to hide a contradiction from this pin", len(guards), chainStrategyGuardMarker))
+	case guards[0] != strings.TrimSpace(pinnedGuard):
+		violations = append(violations, fmt.Sprintf(
+			"the unknown-value guard paragraph is not the pinned text. It is the only paragraph here permitted "+
+				"to pair a legal %s value with a stop outcome, so it is exempt by transcript, not by "+
+				"description: anything added to, removed from, or reworded inside it must be re-read by a "+
+				"human and re-pinned in the same commit.\n  found:  %q\n  pinned: %q",
+			chainStrategyField, guards[0], strings.TrimSpace(pinnedGuard)))
+	}
+
+	for _, contradiction := range contradictingChainStrategyProse(body, domain) {
+		violations = append(violations, fmt.Sprintf(
+			"pairs the legal %s value %q with %q in prose: %q\nEvery member of the domain routes; only the "+
+				"pinned unknown-value guard may name a member beside a stop",
+			chainStrategyField, contradiction.token, contradiction.stop, contradiction.text))
+	}
+	return violations
 }
 
 // chainStrategyContradiction is one passage that tells the agent a legal
 // chain_strategy value has nowhere to go.
 type chainStrategyContradiction struct{ token, stop, text string }
 
-// contradictingChainStrategyProse returns the paragraphs of a section that pair
-// a member of the stored domain with a stop outcome WITHOUT scoping that stop
-// to values outside the domain. The exemption carries the whole distinction the
-// pin makes: a guard is allowed to name every token in the domain, as long as
-// it says which values it actually stops on.
+// contradictingChainStrategyProse returns the paragraphs of a section, OTHER
+// than the pinned unknown-value guard, that pair a member of the stored domain
+// with a stop outcome. There is no self-scoping exemption: a paragraph that
+// describes itself as firing on values outside the table used to be excused,
+// and that description was trivially attached to a contradiction. Only the
+// guard paragraph is skipped, and only because chainStrategyProseViolations
+// checks it against a verbatim pin instead.
 func contradictingChainStrategyProse(body string, domain []string) []chainStrategyContradiction {
 	var found []chainStrategyContradiction
 	for _, passage := range chainStrategyProsePassages(body) {
-		if chainStrategyGuardScope.MatchString(passage) {
+		if strings.HasPrefix(strings.TrimSpace(passage), chainStrategyGuardMarker) {
 			continue
 		}
 		for _, token := range domain {
@@ -527,50 +626,70 @@ func contradictingChainStrategyProse(body string, domain []string) []chainStrate
 // --- The pin's own controls ------------------------------------------------
 //
 // A textual pin is worth exactly what its two error directions are worth, and
-// this one had both backwards. Scoped to a SENTENCE, it missed the paragraph
-// that contradicts itself across a full stop — "The `none` value names no
-// topology to target. Such a value has no route in this skill: STOP" — while
-// firing on the LEGITIMATE guard whose single sentence names a topology it
-// tells you not to default to. A pin that is red on the correct wording and
-// green on the evasion teaches the evasion, so both directions are pinned here
-// against fixtures rather than left to whatever the live documents happen to
-// say today.
+// this one had both backwards for three revisions running. The fixtures below
+// are the three evasions that were each demonstrated against the live
+// documents, plus the correct wording, so the pin is judged against text that
+// cannot quietly change under it.
 
-const evasionGuardProse = "**Unknown-value guard (MANDATORY).** The `none` value names no topology to target. " +
+// splitSentenceEvasion moves the token into one sentence and the stop into the
+// next. It defeated the sentence-scoped pin.
+const splitSentenceEvasion = "**Unknown-value guard (MANDATORY).** The `none` value names no topology to target. " +
 	"Such a value has no route in this skill: STOP before writing code and return blocked.\n"
 
-// legitimateGuardProse is the correct wording: the stop outcome is scoped to
-// values outside the table, and the topology it names is named as the wrong
-// guess to make, not as a value that stops.
-const legitimateGuardProse = "**Unknown-value guard (MANDATORY).** A value that is not a row in the table above has no route in this skill, " +
-	"so do NOT pick the nearest topology and do NOT default to `stacked-to-main` because it is the common case, " +
-	"and do NOT proceed either: STOP before writing code and return `blocked`, naming the unrecognised value.\n"
+// blankLineEvasion moves the stop into a new PARAGRAPH. It defeated the
+// paragraph-scoped pin, because a blank line splits a paragraph exactly as a
+// full stop splits a sentence.
+const blankLineEvasion = "**Unknown-value guard (MANDATORY).** The `none` value names no topology to target.\n\n" +
+	"Such a value has no route in this skill: STOP before writing code and return blocked.\n"
 
-// legitimateInclusionGuardProse is the orchestrator's spelling of the same
-// rule: it states the closed domain by listing its members, which necessarily
-// names every one of them in the same breath as the stop.
-const legitimateInclusionGuardProse = "**Unknown-value guard (MANDATORY).** Any `chain_strategy` value outside the schema domain " +
-	"(`stacked-to-main`, `feature-branch-chain`, `none`) is invalid: STOP and re-collect it, because a value outside that domain " +
-	"reaches implementation with no route to take.\n"
+// appendedContradictionEvasion leaves the correct guard wording intact and adds
+// the contradiction to the END of that same paragraph. It defeated the
+// scope-regex exemption: the paragraph still described itself as firing on
+// values outside the table, so the pin skipped the whole thing — including the
+// sentence that contradicted the table.
+const appendedContradictionEvasion = pinnedApplyGuardFixture + " The `none` value names no topology to target, " +
+	"so it too has no route here: STOP before writing code and return `blocked`."
 
-func TestChainStrategyProsePinCatchesTheSplitSentenceContradiction(t *testing.T) {
+// pinnedApplyGuardFixture is the correct wording the three evasions are
+// measured against; the live pin for the same paragraph lives in
+// pinnedChainStrategyGuards.
+const pinnedApplyGuardFixture = "**Unknown-value guard (MANDATORY).** A value that is not a row in the table above has no route " +
+	"in this skill. Do NOT pick the nearest topology, and do NOT default to `stacked-to-main` because it is " +
+	"the common case. Do NOT proceed either: STOP before writing code and return `blocked`, naming the " +
+	"unrecognised value."
+
+func TestChainStrategyProsePinCatchesEveryDemonstratedEvasion(t *testing.T) {
 	domain := schemaEnum(t, chainStrategyField)
-	if len(contradictingChainStrategyProse(evasionGuardProse, domain)) == 0 {
-		t.Errorf("the prose pin does not catch a guard that contradicts the routing table across a sentence boundary:\n%s\nA pin that a full stop defeats teaches the evasion it cannot detect", evasionGuardProse)
+	for name, prose := range map[string]string{
+		"split_sentence":        splitSentenceEvasion,
+		"blank_line":            blankLineEvasion,
+		"appended_to_the_guard": appendedContradictionEvasion,
+	} {
+		t.Run(name, func(t *testing.T) {
+			if len(chainStrategyProseViolations(prose, domain, pinnedApplyGuardFixture)) == 0 {
+				t.Errorf("the prose pin is green on a guard that contradicts the routing table:\n%s\nA pin that certifies the text it cannot read is worse than no pin", prose)
+			}
+		})
 	}
 }
 
-func TestChainStrategyProsePinDoesNotFireOnALegitimateGuard(t *testing.T) {
+func TestChainStrategyProsePinDoesNotFireOnThePinnedGuard(t *testing.T) {
 	domain := schemaEnum(t, chainStrategyField)
-	for name, prose := range map[string]string{
-		"exclusion_by_table": legitimateGuardProse,
-		"inclusion_by_list":  legitimateInclusionGuardProse,
-	} {
-		t.Run(name, func(t *testing.T) {
-			if found := contradictingChainStrategyProse(prose, domain); len(found) != 0 {
-				t.Errorf("the prose pin fires on a correct unknown-value guard %+v:\n%s\nFlagging the right wording is what pushed the last author to split the sentence instead of fixing anything", found, prose)
-			}
-		})
+	if found := chainStrategyProseViolations(pinnedApplyGuardFixture, domain, pinnedApplyGuardFixture); len(found) != 0 {
+		t.Errorf("the prose pin fires on its own pinned guard %+v", found)
+	}
+}
+
+// TestChainStrategyGuardExemptionIsScopedToTheGuardParagraph proves the
+// exemption is narrow: the SAME sentences, moved out of the guard slot into an
+// ordinary paragraph, are caught. Nothing about their wording earns silence —
+// only being the pinned guard does.
+func TestChainStrategyGuardExemptionIsScopedToTheGuardParagraph(t *testing.T) {
+	domain := schemaEnum(t, chainStrategyField)
+	relocated := strings.Replace(pinnedApplyGuardFixture, "**Unknown-value guard (MANDATORY).**", "**Note.**", 1)
+	body := pinnedApplyGuardFixture + "\n\n" + relocated
+	if found := chainStrategyProseViolations(body, domain, pinnedApplyGuardFixture); len(found) == 0 {
+		t.Errorf("the guard's wording buys silence outside the guard paragraph:\n%s", body)
 	}
 }
 
