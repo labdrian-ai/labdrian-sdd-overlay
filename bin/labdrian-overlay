@@ -475,6 +475,19 @@ Commands:
                                    reports. Exit 0=candidate covers something, 1=EMPTY candidate
                                    (a review here would approve nothing), 2=usage,
                                    3=could not determine; propagated unchanged from the guard.
+  archive-reconcile                Detect completed SDD changes under openspec/changes/ (every
+    [--repo PATH]                  tasks.md checkbox checked) that were never archived, and report
+    [--known-gaps PATH]            whether their delta capabilities were promoted into
+                                   openspec/specs/. A change whose completion signal the guard
+                                   cannot read is reported as undetermined, never skipped.
+                                   --known-gaps names a ledger of changes already known to fail;
+                                   a listed change that stops failing is reported as a stale
+                                   waiver, so the ledger cannot outlive the gap it records. The
+                                   path is resolved from YOUR current directory, since the guard
+                                   runs there -- pass it repository-relative.
+                                   Exit 0=clean, 1=stranded change found, 2=usage, 3=could not
+                                   determine (an unreadable signal, an unreadable ledger, or a
+                                   stale waiver); propagated unchanged from the guard.
   gadu-generate [--check]          Regenerate GADU artifacts from the canonical source
                                    (agents/GADU.md, opencode/agents/GADU.md,
                                    skills/gadu-operator/SKILL.md) under OVERLAY_DIR.
@@ -3106,6 +3119,51 @@ cmd_review_preflight() {
 }
 
 # ---------------------------------------------------------------------------
+# archive-reconcile
+# ---------------------------------------------------------------------------
+
+# Same shape as cmd_review_preflight above, deliberately: every failure to
+# reach the guard is exit 3 ("could not determine"), never exit 0, so a missing
+# source tree or a missing toolchain can never be read as "no stranded change
+# exists here". The guard's own exit code is propagated verbatim - the wrapper
+# never re-derives it.
+cmd_archive_reconcile() {
+  local guard_src="$OVERLAY_DIR/tools/archive-reconcile"
+  if [[ ! -f "$guard_src/go.mod" || ! -f "$guard_src/main.go" ]]; then
+    echo "error: archive-reconcile source is unavailable under $guard_src" >&2
+    return 3
+  fi
+  if ! command -v go >/dev/null 2>&1; then
+    echo "error: go is required to build the archive-reconcile guard" >&2
+    return 3
+  fi
+
+  local guard_binary
+  if ! guard_binary="$(mktemp "${TMPDIR:-/tmp}/archive-reconcile.XXXXXX")"; then
+    echo "error: could not allocate a temporary archive-reconcile binary" >&2
+    return 3
+  fi
+  rm -f "$guard_binary"
+
+  if ! (cd "$guard_src" && go build -o "$guard_binary" .); then
+    rm -f "$guard_binary"
+    echo "error: could not build the archive-reconcile guard" >&2
+    return 3
+  fi
+
+  local status=0
+  (cd "$CALLER_CWD" && "$guard_binary" "$@") || status=$?
+  # A CALLER_CWD that no longer exists makes the subshell's own `cd` fail with
+  # exit 1, which for this guard would read as "STRANDED change found" - a
+  # verdict about a scan that was never performed. Remap that one case to 3.
+  if [[ "$status" -ne 0 && ! -d "$CALLER_CWD" ]]; then
+    status=3
+  fi
+  rm -f "$guard_binary"
+  return "$status"
+}
+
+# ---------------------------------------------------------------------------
 # gadu-generate
 # ---------------------------------------------------------------------------
 
@@ -3854,6 +3912,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;
     deterministic-checks) cmd_deterministic_checks "$@" ;;
     review-preflight) cmd_review_preflight "$@" ;;
+    archive-reconcile) cmd_archive_reconcile "$@" ;;
     gadu-generate)   cmd_gadu_generate "$@" ;;
     longterm-mem)    cmd_longterm_mem "$@" ;;
     --help|-h)       usage; exit 0 ;;
