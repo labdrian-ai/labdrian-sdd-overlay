@@ -82,7 +82,9 @@ The roadmap is the faithful execution guide for what will be built — not a dis
 - deviations from the original plan and why;
 - next sequencing impact (changed ordering, dependencies, or scope).
 
-**Actuals are READ, not written here.** Actual implementation effort, verification effort, human review duration, post-review fix effort, cierre timestamp, and total wall-clock time are owned exclusively by `inception-pipeline` closure-feedback and persisted at `sdd/{change}/actuals` (see `../_shared/pre-sdd-contracts.md`). This skill reads those records to populate the tracking section — it does NOT maintain a parallel copy. When updating the roadmap for a completed SDD, retrieve actuals via `mem_search(query: "sdd/{change}/actuals")` + `mem_get_observation` and copy the relevant fields into the tracking line.
+**Actuals are READ, not written here.** Everything the record measures — implementation, verification and post-review effort, elapsed calendar time, the realized human-checkpoint count, and the approval outcome — is owned exclusively by `inception-pipeline` closure-feedback and persisted at `sdd/{change}/actuals` (see `../_shared/pre-sdd-contracts.md`). This skill reads those records to populate the tracking section — it does NOT maintain a parallel copy. When updating the roadmap for a completed SDD, retrieve actuals via `mem_search(query: "sdd/{change}/actuals")` + `mem_get_observation` and render them into the tracking block exactly as `assets/roadmap-template.md` lays it out.
+
+**The elapsed-time boundary is the MERGE, not the approval or the archive.** Post-merge archive-authorization replies are bookkeeping and are not development time; a tracking line that stops at approval measures a different thing from the record it is reading, and the two will disagree without either being wrong. The same boundary governs the realized checkpoint count.
 
 ### 5. Update the Roadmap When Reality Diverges
 If implementation or review reveals the roadmap is wrong, UPDATE it — do not silently continue. The roadmap must show the real history of decisions, timing, drift, and corrective work. Re-open it before each new SDD starts and after each SDD reaches human-approved closure.
@@ -97,7 +99,7 @@ If implementation or review reveals the roadmap is wrong, UPDATE it — do not s
 5. Derive candidate SDD changes from the architecture's modules, contracts, integrations, and risks. For each, cite its source(s).
 6. Order them by dependency and by risk-if-done-too-early. Earlier items unblock later ones.
 7. Mark any item lacking a citable source as `[PENDIENTE DE DECISIÓN]`.
-8. For each completed SDD, read its actuals from `sdd/{change}/actuals` (single source of truth, written by `inception-pipeline` closure-feedback per `../_shared/pre-sdd-contracts.md`) and copy relevant fields into the tracking line. Use `[PENDIENTE]` for actuals not yet recorded.
+8. For each completed SDD, read its actuals from `sdd/{change}/actuals` (single source of truth, written by `inception-pipeline` closure-feedback per `../_shared/pre-sdd-contracts.md`) and render them into the tracking block from `assets/roadmap-template.md`. **Two sentinels, and they mean different things** — the template states this and it is not optional: `[PENDING]` means the value is not recorded YET and a later pass can fill it; `[NOT MEASURED — reason]` means it will never be filled under the current contract, and the reason says why. Never substitute one for the other. In blocks already written in Spanish, leave the legacy `[PENDIENTE]` sentinels alone unless you are fully regenerating the block; new writes use the English pair.
 9. Persist per the artifact store mode, then return the structured response.
 
 ## Output Format
@@ -123,7 +125,7 @@ Use this format exactly. When producing or refreshing the full roadmap output (m
 - **Evidencia de aceptación**: {what proves this SDD is done}
 - **Riesgo si se hace antes de tiempo**: {concrete risk}
 - **Comando de entrada SDD**: `/sdd-new {change-id}`
-- **Tracking**: estimado {…} · impl {…} · verificación {…} · review humano {…} · fixes post-review {…} · cierre {…} · desvíos {…} · impacto en secuencia {…}
+- **Tracking**: render the tracking block from `assets/roadmap-template.md` — that file OWNS its rows, its sentinels, and its per-row source attribution. Do not restate the row list here and do not invent one; a second copy in this file is what let the two drift apart, and the copy that used to sit on this line was still offering slots the record can never fill and still bounding elapsed time at approval instead of at merge.
 
 {repeat per SDD, foundational/completed first}
 ```
@@ -133,7 +135,7 @@ Use this format exactly. When producing or refreshing the full roadmap output (m
 - Every item is evidence-backed with at least one citation, or explicitly `[PENDIENTE DE DECISIÓN]`.
 - Stable change ids; dependencies form a coherent order, no cycles.
 - Completed work shown as foundational, never queued for redo.
-- No fake certainty: unknown tracking fields are `[PENDIENTE]`, not invented numbers.
+- No fake certainty: a tracking value that is not recorded yet is `[PENDING]`, one that the contract will never supply is `[NOT MEASURED — reason]`, and neither is ever an invented number. Rendering both as the same sentinel lies about which one it is.
 - Anti-pattern: a flat task checklist instead of a dependency-ordered SDD sequence.
 - Anti-pattern: items with no manifest/architecture/history source ("porque sí").
 - Anti-pattern: producing a roadmap before manifest + architecture are final.

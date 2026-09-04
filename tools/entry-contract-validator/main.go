@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -16,7 +17,9 @@ import (
 )
 
 const (
-	contractVersion = "2.0.0"
+	// currentContractVersion is the bundle version this validator produces and
+	// pins the schema against.
+	currentContractVersion = "2.1.0"
 
 	exitOK                 = 0
 	exitUsage              = 2
@@ -24,7 +27,44 @@ const (
 	exitInstance           = 4
 	exitSchemaValidation   = 5
 	exitSemanticValidation = 6
+	exitLegacyContract     = 7
 )
+
+// supportedContractVersions lists every bundle version whose contracts this
+// validator still accepts, oldest first with currentContractVersion last.
+//
+// The version is a compatibility set, not an exact-match lock. A lock cannot
+// express a backwards-compatible extension: bumping it would invalidate every
+// contract an earlier bundle already wrote, including archived ones that are an
+// immutable historical record. Adding a member here, adding it to the schema's
+// contract_version enum, and extending the schema's vocabulary is how such an
+// extension ships. Removing a member is a breaking change.
+var supportedContractVersions = []string{"2.0.0", currentContractVersion}
+
+func isSupportedContractVersion(version string) bool {
+	for _, supported := range supportedContractVersions {
+		if version == supported {
+			return true
+		}
+	}
+	return false
+}
+
+// deliveryTimeSizeExceptionState records an overrun discovered at delivery
+// rather than predicted at planning time.
+//
+// There is exactly one spelling, and it is the one the archived contract
+// already carries. A second, more self-describing token would have to be
+// accepted forever — the archived contract is immutable and CI validates it on
+// every run — so it could never actually be retired. A synonym that cannot be
+// removed is not a deprecation; it is a second vocabulary, and this repository
+// already pays for undetected vocabulary drift. The name does not self-describe,
+// so the schema's state description carries that meaning instead.
+const deliveryTimeSizeExceptionState = "granted"
+
+func isDeliveryTimeSizeException(state string) bool {
+	return state == deliveryTimeSizeExceptionState
+}
 
 // nextRecommendationField is the schema property whose enum is the single
 // owner of the native dispatcher's token domain (see
@@ -34,14 +74,26 @@ const nextRecommendationField = "expected_native_next_recommendation"
 
 const usageText = `Usage: entry-contract-validator --schema PATH --instance PATH
 
-Validates a pre-SDD entry contract with the version-matched Draft 2020-12
-schema, then checks deterministic cross-field invariants.
+Validates a pre-SDD entry contract with a compatible Draft 2020-12 schema, then
+checks deterministic cross-field invariants.
+
+The schema validates the UNION of every supported version's vocabulary, and
+contract_version records which bundle produced the contract rather than gating
+which vocabulary applies. Per-version feature gating is deliberately NOT
+enforced: the schema carries no conditional keywords by design, so every
+version-sensitive and cross-field invariant is checked here instead.
 
 Options:
-  --schema PATH    Entry-contract schema file
-  --instance PATH  Entry-contract JSON instance
-  --version        Print validator/contract version
-  --help           Show this help
+  --schema PATH       Entry-contract schema file
+  --instance PATH     Entry-contract JSON instance
+  --exists-root PATH  Opt-in: resolve every artifact_refs openspec_path against
+                      PATH and fail if it is missing. Off by default. It is an
+                      inception-time check for a live change directory only:
+                      an archived contract points at a change directory that
+                      archiving consumed, so enabling it against history would
+                      make every archived contract permanently invalid.
+  --version           Print validator/contract version
+  --help              Show this help
 
 Exit codes:
   0  valid contract, help, or version
@@ -50,6 +102,8 @@ Exit codes:
   4  instance unavailable or malformed
   5  JSON Schema validation failed
   6  semantic invariant validation failed
+  7  pre-v2 legacy contract: no contract_version declared, not validated.
+     A contract declaring an unrecognised version is not legacy; it fails hard.
 `
 
 type contractError struct {
@@ -96,6 +150,11 @@ type entryContract struct {
 	ArtifactRefs      artifactRefs `json:"artifact_refs"`
 	Estimate          struct {
 		PlannedRangeHours numberRange `json:"planned_range_hours"`
+		// Pointer, so "omitted" stays distinguishable from "predicted zero".
+		// The two mean opposite things: omitted is a cache that does not carry
+		// the plan side, zero is a positive prediction that no human
+		// round-trip will occur.
+		ExpectedCheckpoints *int `json:"expected_checkpoints"`
 	} `json:"estimate"`
 	RequestedPRStrategy string `json:"requested_pr_strategy"`
 	DeliveryStrategy    string `json:"delivery_strategy"`
@@ -104,7 +163,12 @@ type entryContract struct {
 	ReviewBudget        struct {
 		MaxChangedLinesPerSlice int `json:"max_changed_lines_per_slice"`
 		SizeException           struct {
-			State string `json:"state"`
+			State        string `json:"state"`
+			Reason       string `json:"reason"`
+			ApprovedBy   string `json:"approved_by"`
+			Scope        string `json:"scope"`
+			ChangedLines int    `json:"changed_lines"`
+			AuthorizedBy string `json:"authorized_by"`
 		} `json:"size_exception"`
 	} `json:"review_budget"`
 	ReviewSlices []struct {
@@ -124,6 +188,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	flags.SetOutput(stderr)
 	schemaFile := flags.String("schema", "", "entry-contract schema file")
 	instanceFile := flags.String("instance", "", "entry-contract JSON instance")
+	existsRoot := flags.String("exists-root", "", "opt-in: stat every declared openspec_path under this root")
 	help := flags.Bool("help", false, "show help")
 	shortHelp := flags.Bool("h", false, "show help")
 	version := flags.Bool("version", false, "show version")
@@ -137,7 +202,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitOK
 	}
 	if *version {
-		fmt.Fprintf(stdout, "entry-contract-validator %s\n", contractVersion)
+		fmt.Fprintf(stdout, "entry-contract-validator %s\n", currentContractVersion)
 		return exitOK
 	}
 	if flags.NArg() != 0 || *schemaFile == "" || *instanceFile == "" {
@@ -145,20 +210,40 @@ func run(args []string, stdout, stderr io.Writer) int {
 		return exitUsage
 	}
 
-	if err := validateFiles(*schemaFile, *instanceFile); err != nil {
-		fmt.Fprintf(stderr, "error: %v\n", err)
+	if err := validateFiles(*schemaFile, *instanceFile, validationOptions{existsRoot: *existsRoot}); err != nil {
 		var classified *contractError
 		if errors.As(err, &classified) {
+			// A legacy contract is a skip, not a defect: it predates the
+			// versioned contract and there is nothing to repair in it.
+			if classified.code == exitLegacyContract {
+				fmt.Fprintf(stderr, "skipped: %v\n", err)
+			} else {
+				fmt.Fprintf(stderr, "error: %v\n", err)
+			}
 			return classified.code
 		}
+		fmt.Fprintf(stderr, "error: %v\n", err)
 		return exitSemanticValidation
 	}
 
-	fmt.Fprintf(stdout, "entry contract valid (version %s)\n", contractVersion)
+	fmt.Fprintf(stdout, "entry contract valid (validator version %s)\n", currentContractVersion)
 	return exitOK
 }
 
-func validateFiles(schemaFile, instanceFile string) error {
+// validationOptions carries opt-in checks that are deliberately off by default.
+type validationOptions struct {
+	// existsRoot, when non-empty, is the directory every declared
+	// artifact_refs openspec_path is resolved against and stat'd.
+	//
+	// It must never default on. Archived contracts point at change
+	// directories that archiving consumed, and the shipped fixtures declare
+	// paths for an illustrative change that does not exist, so an on-by-default
+	// stat would fail CI immediately and make history permanently invalid.
+	// This is an inception-time check for a live change directory.
+	existsRoot string
+}
+
+func validateFiles(schemaFile, instanceFile string, options validationOptions) error {
 	schemaDocument, err := decodeJSONFile(schemaFile)
 	if err != nil {
 		return &contractError{code: exitSchema, err: fmt.Errorf("schema: %w", err)}
@@ -182,16 +267,41 @@ func validateFiles(schemaFile, instanceFile string) error {
 	if err != nil {
 		return &contractError{code: exitInstance, err: fmt.Errorf("instance: %w", err)}
 	}
+	// Classify a pre-v2 legacy contract before schema validation. A v1 file
+	// shares almost no vocabulary with v2, so validating it would bury the one
+	// fact a caller needs — this contract predates the versioned schema — under
+	// a wall of shape errors indistinguishable from real corruption.
+	if err := classifyLegacyContract(instance); err != nil {
+		return err
+	}
 	if err := compiled.Validate(instance); err != nil {
 		if diagnostic, ok := diagnoseNextRecommendationRejection(err); ok {
 			return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %s: %w", diagnostic, err)}
 		}
 		return &contractError{code: exitSchemaValidation, err: fmt.Errorf("schema validation: %w", err)}
 	}
-	if err := validateSemantics(instance); err != nil {
+	if err := validateSemantics(instance, options); err != nil {
 		return &contractError{code: exitSemanticValidation, err: fmt.Errorf("semantic validation: %w", err)}
 	}
 	return nil
+}
+
+// classifyLegacyContract separates a pre-v2 legacy contract from a corrupt one
+// so the difference is machine-readable. Only the absent-field case is legacy:
+// an instance declaring a contract_version this bundle does not recognise is a
+// hard failure, because it claims a vocabulary the validator cannot honour.
+func classifyLegacyContract(instance any) error {
+	document, ok := instance.(map[string]any)
+	if !ok {
+		return nil
+	}
+	if _, declared := document["contract_version"]; declared {
+		return nil
+	}
+	return &contractError{code: exitLegacyContract, err: fmt.Errorf(
+		"legacy contract: no contract_version declared, so this predates the versioned entry contract and was not validated (supported versions: %s)",
+		strings.Join(supportedContractVersions, ", "),
+	)}
 }
 
 // diagnoseNextRecommendationRejection inspects a JSON Schema validation
@@ -278,13 +388,23 @@ func validateSchemaVersion(document any) error {
 	if !ok {
 		return fmt.Errorf("contract_version property is unavailable")
 	}
-	if got, _ := versionProperty["const"].(string); got != contractVersion {
-		return fmt.Errorf("contract_version const %q does not match validator %q", got, contractVersion)
+	// The handshake is set membership, not equality: the schema may accept
+	// versions this validator has retired, and it may accept versions a newer
+	// validator will add. All that matters is that it accepts the version this
+	// validator writes, so the two halves of the bundle agree.
+	accepted, ok := versionProperty["enum"].([]any)
+	if !ok {
+		return fmt.Errorf("contract_version must declare an enum of accepted versions containing %q", currentContractVersion)
 	}
-	return nil
+	for _, value := range accepted {
+		if version, _ := value.(string); version == currentContractVersion {
+			return nil
+		}
+	}
+	return fmt.Errorf("contract_version accepted-version set %v does not contain the validator's current version %q", accepted, currentContractVersion)
 }
 
-func validateSemantics(instance any) error {
+func validateSemantics(instance any, options validationOptions) error {
 	data, err := json.Marshal(instance)
 	if err != nil {
 		return err
@@ -294,11 +414,21 @@ func validateSemantics(instance any) error {
 		return err
 	}
 
-	if contract.ContractVersion != contractVersion {
-		return fmt.Errorf("contract_version %q does not match validator %q", contract.ContractVersion, contractVersion)
+	if !isSupportedContractVersion(contract.ContractVersion) {
+		return fmt.Errorf("contract_version %q is not supported by this bundle (supported: %s)",
+			contract.ContractVersion, strings.Join(supportedContractVersions, ", "))
 	}
 	if contract.Estimate.PlannedRangeHours.Low > contract.Estimate.PlannedRangeHours.High {
 		return fmt.Errorf("estimate.planned_range_hours.low must not exceed high")
+	}
+	// The schema constrains expected_checkpoints to a non-negative integer;
+	// the floor of 1 is a cross-field fact the shape cannot carry. The tiering
+	// go-ahead checkpoint fires on every change — interaction_mode auto
+	// suppresses SDD product questions, not authorizations — so a plan of zero
+	// human round-trips predicts that a checkpoint which always happens will
+	// not. Omitting the field is legal; predicting zero is not.
+	if checkpoints := contract.Estimate.ExpectedCheckpoints; checkpoints != nil && *checkpoints < 1 {
+		return fmt.Errorf("estimate.expected_checkpoints is %d: the tiering go-ahead checkpoint is a durable floor that fires on every change, so the planned count is at least 1 — omit the field if no checkpoint plan was made, but do not predict zero", *checkpoints)
 	}
 
 	if contract.RequestedPRStrategy == "force-chained" &&
@@ -348,11 +478,36 @@ func validateSemantics(instance any) error {
 			overBudget = true
 		}
 	}
-	if overBudget && contract.ReviewBudget.SizeException.State != "approved" {
+	exception := contract.ReviewBudget.SizeException
+	deliveryTime := isDeliveryTimeSizeException(exception.State)
+	if overBudget && exception.State != "approved" && !deliveryTime {
 		return fmt.Errorf("a review slice exceeds the per-slice budget but no size exception is approved")
 	}
-	if !overBudget && contract.ReviewBudget.SizeException.State != "not-needed" {
-		return fmt.Errorf("size exception must be not-needed when every review slice is within budget")
+	// A delivery-time exception is legal precisely when the plan was within
+	// budget: a realized overrun is a fact about what landed, and planned line
+	// counts cannot predict it. Rejecting it here would force the record to
+	// either lie about the plan or omit the overrun.
+	if !overBudget && exception.State != "not-needed" && !deliveryTime {
+		return fmt.Errorf("size exception must be %q when every review slice is within budget, or %q to record an overrun discovered at delivery",
+			"not-needed", deliveryTimeSizeExceptionState)
+	}
+	if exception.State == "approved" && (exception.Reason == "" || exception.ApprovedBy == "") {
+		return fmt.Errorf("size exception state approved requires both reason and approved_by: an approval that names neither an approver nor a justification records nothing a reviewer can act on")
+	}
+	if deliveryTime {
+		for _, companion := range []struct {
+			name    string
+			missing bool
+		}{
+			{"scope", exception.Scope == ""},
+			{"changed_lines", exception.ChangedLines == 0},
+			{"authorized_by", exception.AuthorizedBy == ""},
+			{"reason", exception.Reason == ""},
+		} {
+			if companion.missing {
+				return fmt.Errorf("size exception state %q requires %s", exception.State, companion.name)
+			}
+		}
 	}
 	if contract.DeliveryStrategy == "exception-ok" && contract.ReviewBudget.SizeException.State != "approved" {
 		return fmt.Errorf("delivery_strategy exception-ok requires an approved size exception")
@@ -393,6 +548,12 @@ func validateSemantics(instance any) error {
 		}
 		if err := validateOpenSpecPath(item.ref.OpenSpecPath); err != nil {
 			return fmt.Errorf("%s openspec_path: %w", item.name, err)
+		}
+		if options.existsRoot != "" {
+			target := filepath.Join(options.existsRoot, filepath.FromSlash(item.ref.OpenSpecPath))
+			if _, err := os.Stat(target); err != nil {
+				return fmt.Errorf("%s openspec_path %q does not exist under --exists-root %s", item.name, item.ref.OpenSpecPath, options.existsRoot)
+			}
 		}
 		if _, exists := seenPaths[item.ref.OpenSpecPath]; exists {
 			return fmt.Errorf("duplicate openspec_path %q", item.ref.OpenSpecPath)

@@ -8,8 +8,15 @@
 // anything the parser doesn't model (e.g. comments), rewriting a file a
 // human maintains out from under them.
 //
+// "Does not own" binds the file's identity as well as its bytes. Every
+// write here goes through internal/durable.WriteFile, so a config keeps its
+// permission bits and a config reached through a symlink (a dotfiles
+// layout) has its real target edited rather than its link replaced. See
+// that package's doc comment for the one identity property — hardlinks —
+// deliberately traded away, and why.
+//
 // All three runtimes share one ownership model, decided by Decide from
-// exactly three booleans:
+// exactly four booleans:
 //
 //   - entryPresent: does the runtime's own config already have a
 //     same-named entry/section?
@@ -17,16 +24,31 @@
 //   - recordPresent: does install-state.json have an ownership record for
 //     this target?
 //
+//   - entryOwned: is the entry currently on disk the one this call is
+//     about to write, compared through the canonical ownership
+//     fingerprint (ownership.go: key order and insignificant whitespace
+//     dropped for JSON, trailing newlines trimmed for TOML)? Only
+//     longterm-mem produces that entry, so this re-derives ownership when
+//     the record is gone — and it answers exactly as engine/runtime's
+//     read-only adapter does about the same file, which is the point.
+//
 //   - fingerprintMatches: does that record's fingerprint match the entry
 //     this call is about to write (not necessarily the bytes on disk —
 //     see Decide's own doc comment)?
 //
-//     entryPresent  recordPresent  fingerprintMatches  →  Action   meaning
-//     false         false          —                      insert   not installed yet
-//     false         true           —                      replace  entry missing (record stale)
-//     true          false          —                      refuse   conflict: an entry we did not write
-//     true          true           false                  replace  stale (hand-edited or old binary path)
-//     true          true           true                   noop     installed, up to date
+//     entryPresent  recordPresent  entryOwned  fingerprintMatches  →  Action   meaning
+//     false         false          —           —                      insert   not installed yet
+//     false         true           —           —                      replace  entry missing (record stale)
+//     true          false          false       —                      refuse   conflict: an entry we did not write
+//     true          false          true        —                      adopt    our own entry, record lost
+//     true          true           —           false                  replace  stale (hand-edited or old binary path)
+//     true          true           —           true                   noop     installed, up to date
+//
+// The adopt row is what keeps a lost install-state.json recoverable: see
+// Decide's own doc comment for why re-deriving ownership from the entry's
+// canonical content is safe, and writer.go's
+// uninstallCannotDeriveOwnership for the one direction that deliberately
+// does not do it.
 //
 // This is the single source of truth for what "installed"/"stale"/
 // "conflict" mean everywhere those words are used across this package's

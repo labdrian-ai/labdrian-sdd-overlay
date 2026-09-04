@@ -28,7 +28,7 @@ var allowedStatuses = map[string]bool{
 // must carry (WIKI.md; list fields are always emitted by EmitPage's
 // writeListField and are not re-checked here, per the design's 6-rule
 // line-budget mitigation for this slice).
-var requiredScalarFields = []string{"type", "title", "address", "created", "updated", "status"}
+var requiredScalarFields = []string{"type", titleField, "address", "created", "updated", statusField}
 
 // LintPage checks page against the vault's own contract, kept to exactly
 // the 6 rules the design's line-budget mitigation names for this slice:
@@ -49,8 +49,8 @@ func LintPage(page Page, vaultRoot string) []Diagnostic {
 	if fields["type"] != "" && fields["type"] != vaultType {
 		diags = append(diags, Diagnostic{Rule: "enum", Detail: fmt.Sprintf("type %q is not %q", fields["type"], vaultType)})
 	}
-	if fields["status"] != "" && !allowedStatuses[fields["status"]] {
-		diags = append(diags, Diagnostic{Rule: "enum", Detail: fmt.Sprintf("status %q is not a recognized value", fields["status"])})
+	if fields[statusField] != "" && !allowedStatuses[fields[statusField]] {
+		diags = append(diags, Diagnostic{Rule: "enum", Detail: fmt.Sprintf("status %q is not a recognized value", fields[statusField])})
 	}
 
 	if !addressPattern.MatchString(page.Address) {

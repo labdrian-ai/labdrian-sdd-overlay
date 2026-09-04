@@ -136,8 +136,8 @@ type syncStateRecord struct {
 	LastSyncCompletedAt string `json:"last_sync_completed_at"`
 }
 
-// writeSyncState atomically records vaultRoot's sync-state file (R-031,
-// tmp+fsync+rename via address.go's writeFileAtomic), stamped with
+// writeSyncState durably records vaultRoot's sync-state file (R-031, via
+// address.go's writeFileAtomic), stamped with
 // nowFunc (page.go) so tests can assert a deterministic completion
 // timestamp via fixedNow.
 func writeSyncState(vaultRoot string) error {

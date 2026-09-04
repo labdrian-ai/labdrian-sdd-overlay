@@ -66,6 +66,30 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 			wantStatus: engineRuntime.CapabilityUnsupported,
 			wantReason: engineRuntime.LongtermMemReasonConfigRootUnresolvable,
 		},
+		{
+			// A runtime that is not on this machine at all is not a defect
+			// this component can diagnose: there is nothing to register
+			// with. Reporting it as partial made a flawless single-runtime
+			// machine permanently unhealthy.
+			name: "supported: runtime not installed on this machine",
+			state: engineRuntime.LongtermMemComponentState{
+				RootResolvable: true, BinaryPresent: true, RuntimePresent: false,
+			},
+			wantStatus: engineRuntime.CapabilitySupported,
+			wantReason: engineRuntime.LongtermMemReasonRuntimeNotInstalled,
+		},
+		{
+			// The runtime IS installed but longterm-mem was never
+			// registered with it. Also not a defect: whether that runtime
+			// was ever asked for is the caller's knowledge, not the
+			// engine's.
+			name: "supported: runtime present but longterm-mem is not registered with it",
+			state: engineRuntime.LongtermMemComponentState{
+				RootResolvable: true, BinaryPresent: true, RuntimePresent: true,
+			},
+			wantStatus: engineRuntime.CapabilitySupported,
+			wantReason: engineRuntime.LongtermMemReasonNotRegistered,
+		},
 	}
 
 	for _, tc := range cases {
@@ -95,5 +119,24 @@ func TestLongtermMemAdapter_StatusMatrix(t *testing.T) {
 	}
 	if len(seen) != 4 {
 		t.Fatalf("expected exactly 4 distinct named partial reasons in this table, got %d: %v", len(seen), seen)
+	}
+
+	// The two "nothing is registered here, and that is fine" outcomes must
+	// stay distinguishable from each other and from every partial reason:
+	// collapsing them would hide whether the runtime is missing from the
+	// machine or merely unregistered, which is the whole point of splitting
+	// the old "not installed" default in two.
+	notInstalled := engineRuntime.LongtermMemReasonRuntimeNotInstalled
+	notRegistered := engineRuntime.LongtermMemReasonNotRegistered
+	if notInstalled == notRegistered {
+		t.Fatalf("the two supported-but-unregistered reasons collapsed into one string %q", notInstalled)
+	}
+	for _, reason := range []string{notInstalled, notRegistered} {
+		if reason == "" {
+			t.Fatalf("a supported-but-unregistered outcome must still name its reason, got an empty string")
+		}
+		if seen[reason] {
+			t.Fatalf("reason %q is used for BOTH a supported and a partial outcome — an operator cannot tell them apart", reason)
+		}
 	}
 }

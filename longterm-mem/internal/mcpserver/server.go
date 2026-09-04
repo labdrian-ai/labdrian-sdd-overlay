@@ -34,8 +34,31 @@ type Deps struct {
 	// (R-012's "Query round-trips over stdio" scenario).
 	Query func(ctx context.Context, req query.Request) (query.Result, error)
 	// Promote resolves project's vault and promotes engramID by explicit
-	// call, the same path the CLI promote subcommand uses (R-012, R-032).
-	Promote func(ctx context.Context, project string, engramID int64) (promote.Result, error)
+	// call, the same path the CLI promote subcommand uses (R-012, R-032),
+	// and -- when that promotion actually wrote a page -- rebuilds the
+	// vault index so the page is queryable over this same session
+	// (cmd_mcp.go wires that; see PromoteOutcome).
+	Promote func(ctx context.Context, project string, engramID int64) (PromoteOutcome, error)
+}
+
+// PromoteOutcome is what Deps.Promote reports back: the promotion itself,
+// plus whether the index rebuild that follows a written page succeeded.
+//
+// The two are separate on purpose. By the time the rebuild runs the page
+// is already written and durable, so a rebuild failure is NOT a promotion
+// failure -- returning it as the call's error would tell a caller that a
+// page it can see on disk was never written. Nor may it be swallowed: the
+// page exists but query cannot find it until the index is rebuilt, and a
+// caller told nothing would read an empty query result as "the promotion
+// did not happen". It is therefore carried beside a successful Result and
+// rendered as PromoteOut's own index_stale fields.
+type PromoteOutcome struct {
+	// Result is what the promotion did.
+	Result promote.Result
+	// IndexRebuildErr is the vault index rebuild's failure, or nil --
+	// which also covers "no rebuild was attempted", since a promotion
+	// that wrote nothing leaves the index correct as it stands.
+	IndexRebuildErr error
 }
 
 // QueryIn is the query tool's input (D3 contract: query{project,query,top?}).
@@ -62,6 +85,13 @@ type PromoteOut struct {
 	PageAddress string `json:"page_address,omitempty"`
 	PagePath    string `json:"page_path,omitempty"`
 	Action      string `json:"action"`
+	// IndexStale reports that the page was written and is durable but the
+	// vault index rebuild that follows it failed, so query cannot find the
+	// page yet. It is a condition of a SUCCESSFUL promotion, never an
+	// error: the caller must not read it as "the page was not written".
+	IndexStale bool `json:"index_stale,omitempty"`
+	// IndexStaleDetail names what failed and the remedy.
+	IndexStaleDetail string `json:"index_stale_detail,omitempty"`
 }
 
 // New builds an MCP server exposing the query and promote tools (R-012),
@@ -108,18 +138,25 @@ func promoteHandler(deps Deps) mcp.ToolHandlerFor[PromoteIn, PromoteOut] {
 		if deps.Promote == nil {
 			return nil, PromoteOut{}, fmt.Errorf("mcpserver: promote dependency is not configured")
 		}
-		result, err := deps.Promote(ctx, in.Project, in.EngramID)
+		outcome, err := deps.Promote(ctx, in.Project, in.EngramID)
 		if err != nil {
 			return nil, PromoteOut{}, err
 		}
-		return nil, PromoteOut{
-			PageAddress: result.Page.Address,
-			PagePath:    result.Page.Path,
+		out := PromoteOut{
+			PageAddress: outcome.Result.Page.Address,
+			PagePath:    outcome.Result.Page.Path,
 			// ActionKind.String() (promote/update.go, task 8b.11) is the
 			// one source of truth for this rendering: cmd_promote.go's
 			// CLI output calls the same method, so the two surfaces
 			// cannot drift into two different names for one outcome.
-			Action: result.Action.Kind.String(),
-		}, nil
+			Action: outcome.Result.Action.Kind.String(),
+		}
+		if outcome.IndexRebuildErr != nil {
+			out.IndexStale = true
+			out.IndexStaleDetail = fmt.Sprintf(
+				"the page was written and is durable, but rebuilding the vault index failed: %v; it will not be found by query until `longterm-mem sync --project %s` rebuilds it",
+				outcome.IndexRebuildErr, in.Project)
+		}
+		return nil, out, nil
 	}
 }

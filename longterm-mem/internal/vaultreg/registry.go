@@ -14,6 +14,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
 
 // DefaultProject is the project the registry is pre-seeded for the first
@@ -143,9 +145,22 @@ func expandVaultPath(raw string) (string, error) {
 	return expanded, nil
 }
 
+// registryCreatePerm is the mode the registry gets when vaultreg creates
+// it: per-user state, owner-only. It applies to creation only.
+const registryCreatePerm = 0o600
+
 // writeJSONAtomic marshals v as 2-space-indented JSON and writes it to path
-// via tmp-file + fsync + rename, so a reader never observes a partially
-// written registry. Extracted for reuse by later sidecar writers (D6).
+// through durable.WriteFile, so a reader never observes a partially written
+// registry (D6).
+//
+// Like register's install-state.json, and unlike the runtime configs and
+// the vault pages, vaults.json is a file only this module creates and
+// edits, so nothing about the user's own permissions or symlinks is at
+// stake. It routes through the shared primitive because this was the
+// original of three verbatim copies of the same subtle sequence —
+// installstate.go's own doc comment named this function as the convention
+// it mirrored — and keeping one of them hand-rolled would make that
+// statement false while leaving a fourth place for the sequence to drift.
 func writeJSONAtomic(path string, v any) error {
 	data, err := json.MarshalIndent(v, "", "  ")
 	if err != nil {
@@ -153,33 +168,14 @@ func writeJSONAtomic(path string, v any) error {
 	}
 	data = append(data, '\n')
 
-	dir := filepath.Dir(path)
 	// A fresh install has no state directory yet; materialize it so the
 	// first-run seed cannot fail with ENOENT (review finding
 	// R3-seed-missing-parent-dir). 0o700: the registry is per-user config.
-	if err := os.MkdirAll(dir, 0o700); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
 		return fmt.Errorf("vaultreg: create directory for %s: %w", path, err)
 	}
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("vaultreg: create temp file for %s: %w", path, err)
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename below succeeds
-
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return fmt.Errorf("vaultreg: write temp file for %s: %w", path, err)
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return fmt.Errorf("vaultreg: fsync temp file for %s: %w", path, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("vaultreg: close temp file for %s: %w", path, err)
-	}
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("vaultreg: rename temp file into %s: %w", path, err)
+	if err := durable.WriteFile(path, data, registryCreatePerm); err != nil {
+		return fmt.Errorf("vaultreg: %w", err)
 	}
 	return nil
 }

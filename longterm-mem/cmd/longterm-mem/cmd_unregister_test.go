@@ -145,3 +145,36 @@ func TestCmdUnregister_AllSkipsRuntimesThatAreNotInstalled(t *testing.T) {
 		t.Fatalf("run([unregister --target all]) with only claude present = %d, want 0", exit)
 	}
 }
+
+// TestCmdUnregister_UnresolvableStateDirExitsEight mirrors cmdRegister's
+// own exit-code discipline: a state directory that could not be resolved
+// from the environment is a precondition failure, not a target that was
+// attempted and failed, and it must not share exit 1 with one.
+func TestCmdUnregister_UnresolvableStateDirExitsEight(t *testing.T) {
+	t.Setenv("HOME", "")
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+
+	var exit int
+	_ = captureStderr(t, func() {
+		exit = run([]string{"unregister", "--target", "opencode"})
+	})
+	if exit != 8 {
+		t.Fatalf("run([unregister --target opencode]) with an unresolvable state dir = %d, want 8", exit)
+	}
+}
+
+// TestCmdUnregister_UnresolvableConfigRootExitsEight: the same for the
+// per-target config root, so exit 8 means one thing -- "a path could not be
+// resolved" -- wherever it is raised.
+func TestCmdUnregister_UnresolvableConfigRootExitsEight(t *testing.T) {
+	t.Setenv("HOME", "")
+
+	var exit int
+	_ = captureStderr(t, func() {
+		exit = run([]string{"unregister", "--target", "claude", "--state-dir", t.TempDir()})
+	})
+	if exit != 8 {
+		t.Fatalf("run([unregister --target claude --state-dir ...]) with an unresolvable config root = %d, want 8", exit)
+	}
+}

@@ -45,3 +45,22 @@ func TestClaude_ReinstallIsIdempotent(t *testing.T) {
 func TestClaude_UntaggedSameNamedEntryRefused(t *testing.T) {
 	claudeGoldenCase().testUntaggedSameNamedEntryRefused(t)
 }
+
+// TestClaude_LostInstallStateIsAdopted (D9, "install-state lockout"):
+// losing install-state.json must not turn claude's own entry into someone
+// else's.
+func TestClaude_LostInstallStateIsAdopted(t *testing.T) {
+	claudeGoldenCase().testLostInstallStateIsAdopted(t)
+}
+
+// TestClaude_LostInstallStateWithAForeignEntryIsStillRefused: adoption
+// keys on the entry's bytes, never on its name.
+func TestClaude_LostInstallStateWithAForeignEntryIsStillRefused(t *testing.T) {
+	claudeGoldenCase().testLostInstallStateWithAForeignEntryIsStillRefused(t)
+}
+
+// TestClaude_MissingContainerIsSynthesized (A4): a ~/.claude.json with no
+// mcpServers key at all is installed into, not hard-failed.
+func TestClaude_MissingContainerIsSynthesized(t *testing.T) {
+	claudeGoldenCase().testMissingContainerIsSynthesized(t)
+}

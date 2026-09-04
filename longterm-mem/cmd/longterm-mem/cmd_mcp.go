@@ -13,8 +13,8 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/mcpserver"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
@@ -31,7 +31,7 @@ func cmdMCP(args []string) int {
 	fs := flag.NewFlagSet("mcp", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -40,7 +40,7 @@ func cmdMCP(args []string) int {
 	store, err := engram.Open(os.Getenv(engramDBEnvVar))
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return 4
+		return exitEngramUnavailable
 	}
 	defer store.Close()
 
@@ -57,12 +57,27 @@ func cmdMCP(args []string) int {
 			}
 			return runQuery(ctx, store, vaultRoot, req)
 		},
-		Promote: func(_ context.Context, project string, engramID int64) (promote.Result, error) {
+		// A promotion that wrote a page rebuilds the vault index before
+		// the call returns, exactly as cmd_sync.go does: without it a page
+		// promoted over MCP stayed invisible to MCP query until someone
+		// ran `sync` out of band. The rebuild is keyed off the promotion's
+		// outcome (reindexAfterPromote), and its failure is reported
+		// beside a SUCCESSFUL promotion rather than as the call's error --
+		// the page is written and durable by then.
+		Promote: func(ctx context.Context, project string, engramID int64) (mcpserver.PromoteOutcome, error) {
 			vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), project, "")
 			if err != nil {
-				return promote.Result{}, err
+				return mcpserver.PromoteOutcome{}, err
 			}
-			return runPromote(store, vaultRoot, engramID)
+			result, err := runPromote(store, vaultRoot, engramID)
+			if err != nil {
+				return mcpserver.PromoteOutcome{}, err
+			}
+			runner := &vault.Runner{Root: vaultRoot}
+			rebuildErr := reindexAfterPromote(ctx, result, func(ctx context.Context) error {
+				return vault.Rebuild(ctx, runner, false)
+			})
+			return mcpserver.PromoteOutcome{Result: result, IndexRebuildErr: rebuildErr}, nil
 		},
 	}
 
@@ -72,7 +87,7 @@ func cmdMCP(args []string) int {
 	// error is reported and turns into a non-zero exit.
 	if err := server.Run(ctx, &mcp.StdioTransport{}); err != nil && !errors.Is(err, context.Canceled) {
 		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
-		return 1
+		return exitInternal
 	}
-	return 0
+	return exitOK
 }

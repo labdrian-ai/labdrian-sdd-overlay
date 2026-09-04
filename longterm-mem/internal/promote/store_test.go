@@ -47,3 +47,21 @@ func TestPrecedenceStore_LoadSaveRoundTrip(t *testing.T) {
 		t.Fatalf("entry = %+v, want body_hash=body-hash-1 frontmatter_hash=fm-hash-1", entry)
 	}
 }
+
+// TestPrecedenceEntry_MatchesPage_FailsClosedWithoutFrontmatter pins the
+// OUTCOME MatchesPage's doc promises for a file with no parseable
+// frontmatter block, including the zero-value entry a hand-truncated sidecar
+// (`{"c-000042":{}}`) decodes into. It deliberately does not claim to pin the
+// early return itself: deleting that return leaves this test green, because
+// the degenerate split hashes the empty string and no entry carries that
+// digest -- which is why the comment there says the return states the intent
+// rather than enforcing it. What must not change is the answer: false.
+func TestPrecedenceEntry_MatchesPage_FailsClosedWithoutFrontmatter(t *testing.T) {
+	if (PrecedenceEntry{}).MatchesPage("") {
+		t.Fatalf("an entry recording empty hashes matched an empty page; doctor would report a wedged page as healthy")
+	}
+	entry := PrecedenceEntry{BodyHash: hashText("body"), FrontmatterHash: hashText("---\ntitle: \"T\"\n---\n")}
+	if entry.MatchesPage("no frontmatter here, just prose\n") {
+		t.Fatalf("an entry matched a page with no parseable frontmatter block")
+	}
+}

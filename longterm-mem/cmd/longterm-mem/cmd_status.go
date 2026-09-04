@@ -26,17 +26,17 @@ func cmdStatus(args []string) int {
 	vaultDir := fs.String("vault", "", "vault path override")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
-		return 2
+		return exitUsage
 	}
 	if *project == "" {
 		fmt.Fprintln(os.Stderr, "longterm-mem: status: --project is required")
-		return 2
+		return exitUsage
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", err)
-		return 3
+		return vaultExitCode(err)
 	}
 
 	deps := ops.StatusDeps{
@@ -64,7 +64,7 @@ func cmdStatus(args []string) int {
 	report, err := ops.Status(context.Background(), deps, *project)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", err)
-		return 1
+		return exitInternal
 	}
 
 	if *asJSON {
@@ -72,16 +72,16 @@ func cmdStatus(args []string) int {
 		enc.SetIndent("", "  ")
 		if err := enc.Encode(report); err != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: status: encode result: %v\n", err)
-			return 1
+			return exitInternal
 		}
-		return 0
+		return exitOK
 	}
 
 	fmt.Printf("longterm-mem: status for %s\n", report.Project)
 	fmt.Printf("  engram: reachable=%t%s\n", report.EngramReachable, detailSuffix(report.EngramDetail))
 	fmt.Printf("  vault: provisioned=%t\n", report.VaultProvisioned)
 	fmt.Printf("  last sync: %s\n", report.LastSyncCompletedAt)
-	return 0
+	return exitOK
 }
 
 // detailSuffix formats an optional parenthetical detail, shared by

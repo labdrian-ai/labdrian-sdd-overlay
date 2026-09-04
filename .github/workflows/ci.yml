@@ -200,6 +200,32 @@ jobs:
           fi
           test "$status" -eq 5
 
+      # The fixtures above prove the validator's edges. This step proves the
+      # contracts the repository actually carries still pass, so a schema or
+      # validator change cannot silently invalidate real history.
+      # --exists-root is deliberately NOT used here: archived contracts point at
+      # change directories that archiving consumed.
+      - name: Validate real entry contracts
+        run: |
+          go build -C tools/entry-contract-validator -o "$RUNNER_TEMP/entry-contract-validator" .
+          shopt -s globstar nullglob
+          validated=0
+          skipped=0
+          failed=0
+          for contract in openspec/changes/**/entry.json; do
+            status=0
+            "$RUNNER_TEMP/entry-contract-validator" \
+              --schema skills/_shared/entry-contract.schema.json \
+              --instance "$contract" || status=$?
+            case "$status" in
+              0) validated=$((validated + 1)) ;;
+              7) skipped=$((skipped + 1)); echo "SKIPPED pre-v2 legacy contract: $contract" ;;
+              *) failed=$((failed + 1)); echo "::error file=$contract::entry-contract validation failed with exit $status" ;;
+            esac
+          done
+          echo "entry contracts: $validated validated, $skipped skipped (pre-v2 legacy), $failed failed"
+          test "$failed" -eq 0
+
   test-deterministic-check-runner:
     name: Deterministic Check Runner
     runs-on: ubuntu-latest
@@ -216,6 +242,89 @@ jobs:
       - name: Test
         working-directory: tools/deterministic-check-runner
         run: go test ./... -cover
+
+  test-actuals-record-validator:
+    name: Actuals Record Validator
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/actuals-record-validator/go.mod
+
+      - name: Gofmt
+        working-directory: tools/actuals-record-validator
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: tools/actuals-record-validator
+        run: go vet ./...
+
+      - name: Test
+        working-directory: tools/actuals-record-validator
+        run: go test ./... -cover
+
+      # The two committed actuals records are the only ones this project has.
+      # Validating them here, not only inside the Go tests, keeps the shipped
+      # binary honest about the shipped data: a rule that rejects a record the
+      # project already wrote would have blocked the closure that produced it.
+      - name: Committed actuals records validate
+        run: |
+          set -euo pipefail
+          go build -C tools/actuals-record-validator -o "$RUNNER_TEMP/actuals-record-validator" .
+          for record in engine/skills/testdata/corrected-actuals-*.json; do
+            "$RUNNER_TEMP/actuals-record-validator" \
+              --schema skills/_shared/actuals-record.schema.json \
+              --instance "$record"
+          done
+
+  test-archive-anchor-gate:
+    name: Archive Anchor Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # The gate resolves recorded landing commits with `git show`, so a
+          # shallow clone would make a truthful anchor look unresolvable.
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: tools/archive-anchor-gate/go.mod
+
+      - name: Gofmt
+        working-directory: tools/archive-anchor-gate
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: tools/archive-anchor-gate
+        run: go vet ./...
+
+      - name: Test
+        working-directory: tools/archive-anchor-gate
+        run: go test ./... -cover
+
+      # The behavioural half. Every archive report written under the anchor
+      # convention either carries a resolvable landing commit — verified against
+      # `git show -s --format=%T` when a tree was recorded — or explicitly
+      # records the absent/self-asserted/rejected outcome. Declared gaps live in
+      # known-gaps.txt; a gap that closes fails the run as a stale waiver, so the
+      # ledger cannot outlive the gap it describes.
+      - name: Archive reports carry a resolvable anchor
+        run: |
+          set -euo pipefail
+          # -C changes the process working directory, so --repo is absolute and
+          # --known-gaps is resolved inside the tool's own module directory.
+          go run -C tools/archive-anchor-gate . \
+            --repo "$PWD" \
+            --known-gaps known-gaps.txt
 
   test-review-preflight:
     name: Review Preflight Guard

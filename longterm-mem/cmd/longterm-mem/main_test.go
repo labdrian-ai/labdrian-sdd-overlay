@@ -149,8 +149,14 @@ func TestCmdSync_BothPassesRunDespiteAFailingObservation(t *testing.T) {
 		t.Fatalf("close stderr capture: %v", err)
 	}
 
-	if exit == 0 {
-		t.Fatal("run([sync ...]) = 0, want a non-zero exit: the failing observation must be reported")
+	// The exact code, not merely "non-zero": a bare non-zero assertion
+	// cannot tell a correct code from a wrong one, which is how sync
+	// answered 5 for every failure it met for as long as it did. This
+	// fixture vault carries no bin/setup-retrieve.sh, so its index rebuild
+	// genuinely fails -- 5 (vault_subprocess_failed) is the right code
+	// here, and exit_codes_test.go covers the two failures that are not.
+	if exit != 5 {
+		t.Fatalf("run([sync ...]) = %d, want 5 (vault_subprocess_failed): the failing observation must be reported, and this fixture's index rebuild is what failed", exit)
 	}
 	stderr, err := os.ReadFile(stderrPath)
 	if err != nil {
@@ -161,6 +167,15 @@ func TestCmdSync_BothPassesRunDespiteAFailingObservation(t *testing.T) {
 	// have prevented.
 	if !strings.Contains(string(stderr), "propagate") {
 		t.Fatalf("the second pass never ran: Sync's failure aborted the command instead of being reported alongside it; stderr:\n%s", stderr)
+	}
+	// The exit code above is the INDEX REBUILD's, and an assertion on it
+	// alone would hold just as well with the broken observation deleted --
+	// Sync reaches its RebuildIndex step either way, so 5 is reachable
+	// independently of the failure this test is named for. The failing
+	// observation is therefore pinned where it is actually visible: in the
+	// diagnostics the command reports.
+	if !strings.Contains(string(stderr), "c-000900") {
+		t.Fatalf("the failing observation was never reported: only the index rebuild's failure reached stderr, so nothing here would notice Sync silently skipping it; stderr:\n%s", stderr)
 	}
 }
 
@@ -240,10 +255,14 @@ func TestCmdDoctor_ReportsEveryCheckDespiteOneFailing(t *testing.T) {
 		exit = run([]string{"doctor", "--project", "cmd-doctor-project"})
 	})
 
-	if exit == 0 {
-		t.Fatal("run([doctor ...]) = 0, want non-zero: the unregistered page must fail wiki-registration-consistency")
+	// The exact code, not merely "non-zero", so a regression that answers
+	// some other non-zero code is caught. exitDoctorChecksFailed is the
+	// one constant this path returns; see cmd_doctor.go for why it still
+	// aliases exitInternal and what deciding otherwise would take.
+	if exit != exitDoctorChecksFailed {
+		t.Fatalf("run([doctor ...]) = %d, want %d: the unregistered page must fail wiki-registration-consistency", exit, exitDoctorChecksFailed)
 	}
-	for _, name := range []string{"vault-config-resolvable", "address-map-integrity", "wiki-registration-consistency", "runtime-prerequisites"} {
+	for _, name := range []string{"vault-config-resolvable", "address-map-integrity", "wiki-registration-consistency", "precedence-sidecar-consistency", "runtime-prerequisites"} {
 		if !strings.Contains(stdout, name) {
 			t.Errorf("doctor output missing check %q; the command must report every check even though one failed:\n%s", name, stdout)
 		}
@@ -463,6 +482,75 @@ func TestCmdPromote_PromotesObservationAndPrintsResult(t *testing.T) {
 	}
 	if !strings.Contains(string(indexData), "c-000901") {
 		t.Fatalf("wiki/index.md does not register the promoted page; got:\n%s", indexData)
+	}
+}
+
+// TestCmdPromote_RefusedPageExits6AndNeverClaimsItWasPromoted: a
+// promotion that deliberately wrote nothing (ActionSkippedLocalEdit, the
+// R-030 refusal) reported "longterm-mem: promoted <addr>
+// (skipped_local_edit)" and exit 0 -- a refusal wearing the word for a
+// success, and an exit code a caller cannot distinguish from a real one. A
+// vault wedged by the create path's crash window returned that exit 0 on
+// every run forever, so nothing in a script, a CI job, or an agent loop
+// could ever notice.
+//
+// The refusal maps onto exit 6 (registration_conflict), the code this
+// binary already uses for exactly this shape: an artifact exists at the
+// target location, longterm-mem cannot prove it owns it, so it refuses and
+// leaves the file byte-identical (cmd_register.go/cmd_unregister.go's own
+// untagged-entry refusal).
+func TestCmdPromote_RefusedPageExits6AndNeverClaimsItWasPromoted(t *testing.T) {
+	vaultRoot := t.TempDir()
+	scriptsDir := filepath.Join(vaultRoot, "scripts")
+	if err := os.MkdirAll(scriptsDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", scriptsDir, err)
+	}
+	if err := os.WriteFile(filepath.Join(scriptsDir, "allocate-address.sh"), []byte("#!/bin/sh\nprintf 'c-000902\\n'\n"), 0o755); err != nil {
+		t.Fatalf("write allocate fixture: %v", err)
+	}
+
+	dbPath, id := promoteFixtureDB(t, "Refused Promotion", "cmd-promote-project")
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
+	t.Setenv("LONGTERM_MEM_ENGRAM_DB", dbPath)
+
+	args := []string{"promote", "--project", "cmd-promote-project", "--id", strconv.FormatInt(id, 10)}
+	if exit := run(args); exit != 0 {
+		t.Fatalf("run([promote ...]) (first) = %d, want 0", exit)
+	}
+
+	// A human edits the page directly in the vault: the next promote is a
+	// genuine R-030 refusal, not an interrupted write of our own.
+	pagePath := filepath.Join(vaultRoot, "wiki", "memory", "c-000902.md")
+	original, err := os.ReadFile(pagePath)
+	if err != nil {
+		t.Fatalf("read %s: %v", pagePath, err)
+	}
+	edited := string(original) + "\nA human wrote this line, longterm-mem never did.\n"
+	if err := os.WriteFile(pagePath, []byte(edited), 0o644); err != nil {
+		t.Fatalf("write local edit: %v", err)
+	}
+
+	var exit int
+	stdout := captureStdout(t, func() { exit = run(args) })
+
+	if exit != 6 {
+		t.Fatalf("run([promote ...]) after a local edit = %d, want 6 (registration_conflict): a page that was deliberately NOT written must not report success", exit)
+	}
+	if strings.Contains(stdout, "promoted") {
+		t.Fatalf("promote output = %q, want it to describe a refusal; nothing was promoted", stdout)
+	}
+	if !strings.Contains(stdout, "c-000902") || !strings.Contains(stdout, promote.ActionSkippedLocalEdit.String()) {
+		t.Fatalf("promote output = %q, want it to name the page and the refusal's own outcome", stdout)
+	}
+
+	got, err := os.ReadFile(pagePath)
+	if err != nil {
+		t.Fatalf("read %s (after): %v", pagePath, err)
+	}
+	if string(got) != edited {
+		t.Fatalf("the refused page was modified; got:\n%s", got)
 	}
 }
 

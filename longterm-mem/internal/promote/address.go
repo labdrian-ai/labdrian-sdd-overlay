@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 )
 
@@ -108,7 +109,7 @@ func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bo
 			continue
 		}
 		fields := parseFrontmatterFields(block)
-		if fields["engram_id"] != wantID || fields["project"] != project {
+		if fields[engramIDField] != wantID || fields["project"] != project {
 			continue
 		}
 		address := strings.TrimSpace(fields["address"])
@@ -116,7 +117,7 @@ func findPromotedPage(vaultRoot, project string, engramID int) (promotedPage, bo
 			return promotedPage{}, false, fmt.Errorf("promote: promoted page %s matches engram_id %s but carries no address", entry.Name(), wantID)
 		}
 		revision := 0
-		if raw := strings.TrimSpace(fields["engram_revision"]); raw != "" {
+		if raw := strings.TrimSpace(fields[engramRevisionField]); raw != "" {
 			revision, err = strconv.Atoi(raw)
 			if err != nil {
 				return promotedPage{}, false, fmt.Errorf("promote: promoted page %s carries an unparseable engram_revision %q: %w", entry.Name(), raw, err)
@@ -181,35 +182,37 @@ func recordAddress(vaultRoot, path, address string) error {
 	return writeFileAtomic(full, append(data, '\n'))
 }
 
-// writeFileAtomic writes data to path via tmp+fsync+rename, MkdirAll'ing
-// the parent directory first -- vaultreg.writeJSONAtomic's pattern (D6),
-// copied here since vaultreg's helper is unexported and address.go/
-// register.go live in a different package. Shared by both.
+// pageCreatePerm is the mode a page or sidecar gets when promote is the one
+// creating it. Promoted pages carry memory content, so a file this module
+// brings into existence starts owner-only. It applies to creation only: a
+// page that already exists keeps whatever mode its owner gave it.
+const pageCreatePerm = 0o600
+
+// writeFileAtomic durably replaces path with data, MkdirAll'ing the parent
+// directory first.
+//
+// Everything it touches lives inside the USER'S Obsidian vault --
+// wiki/memory pages, index.md, log.md, .raw/.manifest.json -- not inside
+// longterm-mem's own state directory, and several callers rewrite a page
+// that already exists (PatchStatusFields patches frontmatter in place, the
+// update path republishes). So this is not a writer of module-owned files
+// that can pick its own permissions: a vault page is routinely 0o644,
+// routinely tracked by git, and in a synced or dotfiles-style vault
+// routinely reached through a symlink.
+//
+// It used to hand-roll tmp+fsync+rename, which made every page it touched
+// come back as a fresh os.CreateTemp inode: 0o644 silently became 0o600,
+// and a symlinked page was replaced by a regular file, leaving the user's
+// real note unedited while promote reported success. durable.WriteFile
+// resolves the link and carries the mode across; see its doc comment for
+// the one identity property (hardlinks) deliberately traded for atomicity.
 func writeFileAtomic(path string, data []byte) error {
 	dir := filepath.Dir(path)
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return fmt.Errorf("promote: create directory for %s: %w", path, err)
 	}
-	tmp, err := os.CreateTemp(dir, filepath.Base(path)+".tmp-*")
-	if err != nil {
-		return fmt.Errorf("promote: create temp file for %s: %w", path, err)
-	}
-	tmpName := tmp.Name()
-	defer os.Remove(tmpName) // no-op once the rename below succeeds
-
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		return fmt.Errorf("promote: write temp file for %s: %w", path, err)
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		return fmt.Errorf("promote: fsync temp file for %s: %w", path, err)
-	}
-	if err := tmp.Close(); err != nil {
-		return fmt.Errorf("promote: close temp file for %s: %w", path, err)
-	}
-	if err := os.Rename(tmpName, path); err != nil {
-		return fmt.Errorf("promote: rename temp file into %s: %w", path, err)
+	if err := durable.WriteFile(path, data, pageCreatePerm); err != nil {
+		return fmt.Errorf("promote: %w", err)
 	}
 	return nil
 }

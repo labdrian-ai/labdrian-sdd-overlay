@@ -32,6 +32,12 @@ func uninstallCases() []uninstallCase {
 		empty:      `{"mcpServers":{"other-project-server":{"type":"stdio"}}}`,
 		install:    RegisterClaude,
 	}, {
+		target:     opencodeTarget,
+		configFile: opencodeConfigFileName,
+		untagged:   `{"mcp":{"other-project-server":{"type":"local"},"longterm-mem":{"type":"local","command":["/someone/elses/binary","mcp"]}}}`,
+		empty:      `{"mcp":{"other-project-server":{"type":"local"}}}`,
+		install:    RegisterOpencode,
+	}, {
 		target:     codexTarget,
 		configFile: codexConfigFileName,
 		untagged:   "theme = \"dark\"\n\n[mcp_servers.longterm-mem]\ncommand = \"/someone/elses/binary\"\n",

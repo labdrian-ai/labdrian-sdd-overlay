@@ -41,6 +41,13 @@ func tomlHeaderPattern(tableKey, memberKey string) *regexp.Regexp {
 // side; this package owns the write side).
 var tomlAnyHeaderPattern = regexp.MustCompile(`^\s*\[`)
 
+// A tomlCommandLinePattern used to live here, mirroring engine/runtime's
+// read-only codexCommandLine test so the write side could call a section
+// without a `command =` line absent. That rule is wrong for a write: a
+// url-based codex entry carries no command and is still someone's entry.
+// The write side now asks only whether the section has a body at all
+// (writer.go's tomlSectionHasABody), so nothing here needs the pattern.
+
 // locateTOMLSection walks raw line by line looking for a header matching
 // tableKey.memberKey (see tomlHeaderPattern). When found, the section's
 // span runs from that header line up to (but not including) any blank
@@ -160,7 +167,7 @@ func TOMLSplice(raw []byte, tableKey, memberKey string, newSection []byte) ([]by
 func TOMLRemove(raw []byte, tableKey, memberKey string) ([]byte, error) {
 	loc := locateTOMLSection(raw, tableKey, memberKey)
 	if !loc.found {
-		return nil, fmt.Errorf("register: table %s.%s not found, nothing to remove", tableKey, memberKey)
+		return nil, fmt.Errorf("table %s.%s not found, nothing to remove", tableKey, memberKey)
 	}
 	if err := assertSpanIsWholeTable(raw[loc.start:loc.end], tableKey, memberKey); err != nil {
 		return nil, err
@@ -236,7 +243,7 @@ func tomlTrimBackwardBlankLines(raw []byte, start int) int {
 func assertSpanIsWholeTable(span []byte, tableKey, memberKey string) error {
 	var probe map[string]interface{}
 	if err := toml.Unmarshal(span, &probe); err != nil {
-		return fmt.Errorf("register: cannot determine where the %s.%s table ends (a line beginning with %q inside it is indistinguishable from the next table header); edit it by hand or put its values on one line each: %w", tableKey, memberKey, "[", err)
+		return fmt.Errorf("cannot determine where the %s.%s table ends (a line beginning with %q inside it is indistinguishable from the next table header); edit it by hand or put its values on one line each: %w", tableKey, memberKey, "[", err)
 	}
 	return nil
 }

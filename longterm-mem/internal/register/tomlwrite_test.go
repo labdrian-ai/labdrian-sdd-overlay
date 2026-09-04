@@ -73,9 +73,7 @@ func TestWriteTOMLSection_InvalidTOMLLeavesOriginalUntouched(t *testing.T) {
 	if err == nil {
 		t.Fatalf("WriteTOMLSection returned nil error for a malformed table")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, path)
 
 	assertUntouched(t, path, original)
 }
@@ -102,9 +100,7 @@ func TestWriteTOMLSection_CommandMismatchLeavesOriginalUntouched(t *testing.T) {
 	if err == nil {
 		t.Fatalf("WriteTOMLSection returned nil error for a command mismatch (newSection command != binary argument)")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, path, "longterm-mem")
 
 	assertUntouched(t, path, original)
 }
@@ -166,9 +162,7 @@ func TestRemoveTOMLSection_NotPresentLeavesOriginalUntouched(t *testing.T) {
 	if err == nil {
 		t.Fatalf("RemoveTOMLSection returned nil error for a table that does not exist")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, "mcp_servers", "longterm-mem")
 
 	assertUntouched(t, path, original)
 }

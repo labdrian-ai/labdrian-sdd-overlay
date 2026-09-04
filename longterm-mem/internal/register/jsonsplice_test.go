@@ -242,23 +242,102 @@ func TestJSONSplice_RemoveNotFoundReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatalf("Remove returned nil error for a member that does not exist")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
+	assertHelperErrorAttribution(t, err, "longterm-mem", "mcpServers")
+}
+
+// TestJSONSplice_SynthesizesAMissingContainer (A4) pins the behaviour that
+// replaced this test's predecessor. That test asserted Splice ERRORS on a
+// document whose root has no containerKey — it pinned the defect: a fresh
+// opencode install has no "mcp" key at all, so the most common config on a
+// new machine was the one case the JSON writer hard-failed on, while the
+// TOML writer happily appended its missing table at EOF.
+//
+// Splice now mirrors the TOML writer: it creates the container object at
+// the document root, holding the one member, and leaves every other byte
+// of the document exactly where it was.
+func TestJSONSplice_SynthesizesAMissingContainer(t *testing.T) {
+	entry := json.RawMessage(`{"type":"stdio","command":"/opt/bin/longterm-mem"}`)
+
+	for _, tc := range []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			// The empty document: opencode.json written by a runtime that
+			// has never had an MCP server configured.
+			name: "empty document",
+			raw:  `{}`,
+			want: `{
+  "mcpServers": {
+    "longterm-mem": {"type":"stdio","command":"/opt/bin/longterm-mem"}
+  }}`,
+		},
+		{
+			name: "unrelated keys, no trailing newline",
+			raw:  `{"theme": "system"}`,
+			want: `{"theme": "system",
+"mcpServers": {
+  "longterm-mem": {"type":"stdio","command":"/opt/bin/longterm-mem"}
+}}`,
+		},
+		{
+			name: "pretty-printed document with a trailing newline",
+			raw: `{
+  "theme": "system",
+  "model": "anthropic/claude-opus"
+}
+`,
+			want: `{
+  "theme": "system",
+  "model": "anthropic/claude-opus",
+  "mcpServers": {
+    "longterm-mem": {"type":"stdio","command":"/opt/bin/longterm-mem"}
+  }
+}
+`,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := Splice([]byte(tc.raw), "mcpServers", "longterm-mem", entry)
+			if err != nil {
+				t.Fatalf("Splice returned error for a document with no %q container: %v", "mcpServers", err)
+			}
+			if !json.Valid(got) {
+				t.Fatalf("Splice result is not valid JSON:\n%s", got)
+			}
+			if string(got) != tc.want {
+				t.Fatalf("Splice =\n%s\nwant =\n%s", got, tc.want)
+			}
+			if !isPureInsertion([]byte(tc.raw), got) {
+				t.Fatalf("synthesizing the container rewrote bytes outside the inserted span:\nbefore =\n%s\nafter =\n%s", tc.raw, got)
+			}
+
+			var doc map[string]json.RawMessage
+			if err := json.Unmarshal(got, &doc); err != nil {
+				t.Fatalf("failed to decode result: %v", err)
+			}
+			var container map[string]json.RawMessage
+			if err := json.Unmarshal(doc["mcpServers"], &container); err != nil {
+				t.Fatalf("failed to decode the synthesized container: %v", err)
+			}
+			if _, present := container["longterm-mem"]; !present {
+				t.Fatalf("mcpServers.longterm-mem is not present after Splice:\n%s", got)
+			}
+		})
 	}
 }
 
-// TestJSONSplice_ContainerKeyNotFound proves locate's error path for a
-// document whose root has no member named containerKey at all — a
-// deliberately out-of-scope case for 11a (see apply-progress.md), asserted
-// so the guard clause is real, not dead code.
-func TestJSONSplice_ContainerKeyNotFound(t *testing.T) {
-	raw := []byte(`{"unrelated": {"foo": "bar"}}`)
+// TestJSONSplice_ContainerIsNotAnObject keeps the other half of locate's
+// guard real: a root member named containerKey that is NOT an object is
+// still an error, never something to splice a member into or silently
+// replace.
+func TestJSONSplice_ContainerIsNotAnObject(t *testing.T) {
+	raw := []byte(`{"mcpServers": "disabled"}`)
 
 	_, err := Splice(raw, "mcpServers", "longterm-mem", json.RawMessage(`{}`))
 	if err == nil {
-		t.Fatalf("Splice returned nil error for a document with no %q container", "mcpServers")
+		t.Fatalf("Splice returned nil error for a document whose %q is not an object", "mcpServers")
 	}
-	if !strings.Contains(err.Error(), "register:") {
-		t.Fatalf("error %q is not prefixed with the package name", err.Error())
-	}
+	assertHelperErrorAttribution(t, err, "mcpServers")
 }

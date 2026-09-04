@@ -4,10 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"syscall"
 	"testing"
 	"time"
@@ -145,10 +147,10 @@ func TestServer_PromoteRoundTripsOverStdio(t *testing.T) {
 	var gotProject string
 	var gotID int64
 	deps := Deps{
-		Promote: func(_ context.Context, project string, engramID int64) (promote.Result, error) {
+		Promote: func(_ context.Context, project string, engramID int64) (PromoteOutcome, error) {
 			gotProject = project
 			gotID = engramID
-			return want, nil
+			return PromoteOutcome{Result: want}, nil
 		},
 	}
 	session := connectInMemory(t, deps)
@@ -168,6 +170,54 @@ func TestServer_PromoteRoundTripsOverStdio(t *testing.T) {
 	decodeStructured(t, res, &got)
 	if got.PageAddress != "c-000042" || got.Action != "created" {
 		t.Fatalf("promote round trip = %+v, want page_address=c-000042 action=created", got)
+	}
+	if got.IndexStale {
+		t.Fatalf("promote round trip reported a stale index for a run whose rebuild succeeded: %+v", got)
+	}
+}
+
+// TestServer_PromoteReportsAStaleIndexWithoutFailingThePromotion pins the
+// third state a promote call can end in, and the reason it needs a field
+// of its own.
+//
+// By the time the vault index is rebuilt the page is already written and
+// durable. So a rebuild failure is NOT a promotion failure -- reporting it
+// as an error would tell the caller a page it can see on disk was never
+// written -- and it is not nothing either: the page exists but query
+// cannot find it until the index is rebuilt. It is therefore reported
+// alongside a successful action, with the remedy named.
+func TestServer_PromoteReportsAStaleIndexWithoutFailingThePromotion(t *testing.T) {
+	deps := Deps{
+		Promote: func(context.Context, string, int64) (PromoteOutcome, error) {
+			return PromoteOutcome{
+				Result: promote.Result{
+					Page:   promote.Page{Address: "c-000043", Path: "wiki/memory/c-000043.md"},
+					Action: promote.Action{Kind: promote.ActionUpdated},
+				},
+				IndexRebuildErr: errors.New("vault rebuild script exited 1"),
+			}, nil
+		},
+	}
+	session := connectInMemory(t, deps)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name:      "promote",
+		Arguments: map[string]any{"project": "labdrian-sdd-overlay", "engram_id": 502},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(promote) reported the whole promotion as failed because the index rebuild failed: %v", err)
+	}
+
+	var got PromoteOut
+	decodeStructured(t, res, &got)
+	if got.Action != "updated" || got.PageAddress != "c-000043" {
+		t.Fatalf("promote result = %+v, want the promotion still reported as updated", got)
+	}
+	if !got.IndexStale {
+		t.Fatalf("promote result = %+v, want index_stale set so the caller knows the page exists but is not indexed", got)
+	}
+	if !strings.Contains(got.IndexStaleDetail, "sync") {
+		t.Fatalf("index_stale_detail = %q, want it to name the remedy (sync)", got.IndexStaleDetail)
 	}
 }
 

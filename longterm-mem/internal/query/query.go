@@ -33,6 +33,27 @@ const (
 	SourceLinked = "linked"
 )
 
+// Diagnostic.Code values.
+const (
+	// DiagnosticVaultSubprocessFailed reports that the vault's retrieval
+	// entrypoint failed, so these results are Engram-only (D8).
+	DiagnosticVaultSubprocessFailed = "vault_subprocess_failed"
+	// DiagnosticEngramDegradedSnapshot reports that Engram is being read
+	// through engram.Open's immutable=1 fallback: the results come from a
+	// point-in-time snapshot taken when the connection was opened, not
+	// from the live database.
+	//
+	// It matters most where the connection outlives the call. The MCP
+	// server opens Engram once for a whole session (cmd_mcp.go), so a
+	// degraded fallback there serves a frozen corpus for as long as the
+	// client stays connected -- observations saved during the session are
+	// simply absent, and the results look complete. Store.Degraded had
+	// exactly one production reader (the status command), which a client
+	// calling the query tool never sees, so the freeze was invisible
+	// precisely where it lasts longest.
+	DiagnosticEngramDegradedSnapshot = "engram_degraded_snapshot"
+)
+
 // Request is one Run call's input; Project is required.
 type Request struct {
 	Project string
@@ -106,6 +127,12 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	if err != nil {
 		return Result{}, fmt.Errorf("query: search engram: %w", err)
 	}
+	if degraded, cause := deps.Engram.Degraded(); degraded {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticEngramDegradedSnapshot,
+			Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
+		})
+	}
 
 	var vaultRows []vault.Candidate
 	vaultResult, vaultErr := deps.RetrieveVault(ctx, req.Project, req.Query, top)
@@ -117,7 +144,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		// exposes exit codes typed (retrieve.go/status.go are reused, not
 		// modified, in this slice).
 		result.VaultStatus = VaultStatusError
-		result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: "vault_subprocess_failed", Detail: vaultErr.Error()})
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticVaultSubprocessFailed, Detail: vaultErr.Error()})
 	case vaultResult.Status == vault.StatusNotProvisioned:
 		result.VaultStatus = VaultStatusNotProvisioned
 	default:
