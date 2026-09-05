@@ -6,15 +6,35 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
 
-// allowedExecImporter is the sole production file permitted to import
-// "os/exec". Every subprocess call to the vault's scripts must go through
-// internal/vault.Runner so it stays bounded to the vault root (R-021):
-// nothing in longterm-mem is allowed to shell out to Engram's own CLI.
-const allowedExecImporter = "internal/vault/runner.go"
+// allowedExecImporters are the ONLY production files permitted to import
+// "os/exec" (R-021). Nothing in longterm-mem is allowed to shell out to
+// Engram's own CLI, and every other subprocess is confined to one of these
+// two files so the bound it runs under is stated in one place.
+//
+//   - internal/vault/runner.go runs the claude-obsidian vault's own
+//     scripts, bounded to a resolved vault root.
+//   - internal/repohistory/history.go reads git history, bounded to one
+//     repository root and writing nothing. It is here because absence from
+//     the working tree is NOT evidence that a path was removed: measured
+//     against a real database, absent paths split into files genuinely
+//     extirpated, files recorded under a different root, files RENAMED, and
+//     files belonging to another repository. Only git can tell those apart,
+//     and a memory wrongly reported as describing something gone is a
+//     memory somebody deletes. Reproducing that judgement by parsing
+//     packfiles in-process would be a far larger, far more fragile surface
+//     than one read-only invocation of the tool that owns the answer.
+//
+// Adding a third entry is a change to R-021, not a convenience: it widens
+// the one boundary this test exists to hold.
+var allowedExecImporters = map[string]bool{
+	"internal/vault/runner.go":        true,
+	"internal/repohistory/history.go": true,
+}
 
 // findOSExecImporters walks root and returns the slash-separated paths
 // (relative to root) of every non-test .go file that imports "os/exec",
@@ -83,8 +103,8 @@ func TestOSExecImportAllowlist(t *testing.T) {
 	}
 
 	for _, offender := range offenders {
-		if offender != allowedExecImporter {
-			t.Errorf("forbidden os/exec import in %s — only %s may shell out (R-021)", offender, allowedExecImporter)
+		if !allowedExecImporters[offender] {
+			t.Errorf("forbidden os/exec import in %s — only %s may shell out (R-021)", offender, allowedNames())
 		}
 	}
 
@@ -128,5 +148,34 @@ func TestOSExecImportAllowlistCatchesTestdataPackage(t *testing.T) {
 	}
 	if !found {
 		t.Errorf("findOSExecImporters: expected to catch the os/exec import under a testdata/ directory (%s), got offenders=%v", want, offenders)
+	}
+}
+
+// allowedNames renders the allowlist for a failure message, sorted so the
+// message is stable.
+func allowedNames() string {
+	names := make([]string, 0, len(allowedExecImporters))
+	for name := range allowedExecImporters {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return strings.Join(names, ", ")
+}
+
+// TestOSExecImportAllowlistStillRefusesOthers: widening an allowlist is the
+// easy way to turn a guard into a rubber stamp. This asserts the list is a
+// list and not a shrug -- a plausible third file is still forbidden.
+func TestOSExecImportAllowlistStillRefusesOthers(t *testing.T) {
+	for _, path := range []string{
+		"internal/ops/doctor.go",
+		"cmd/longterm-mem/main.go",
+		"internal/repohistory/other.go",
+	} {
+		if allowedExecImporters[path] {
+			t.Errorf("%s must not be allowed to shell out (R-021)", path)
+		}
+	}
+	if len(allowedExecImporters) != 2 {
+		t.Errorf("the allowlist holds %d entries; every addition is a change to R-021 and must be argued for, not slipped in", len(allowedExecImporters))
 	}
 }

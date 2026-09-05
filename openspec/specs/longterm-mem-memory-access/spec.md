@@ -432,3 +432,82 @@ digest.
 - WHEN a subcommand resolves its project
 - THEN the command reports that the ledger could not be written and
   otherwise proceeds normally
+
+### Requirement: Repository History Read Access
+
+ID: R-047
+Traces to: longterm-mem R-047
+
+The longterm-mem component SHALL read the repository's git history through
+one dedicated file, permitted to invoke the git binary directly with
+literal arguments, never through a shell and never against Engram's CLI. It
+SHALL write nothing to the repository, and the allowlist of files permitted
+to invoke a subprocess SHALL name it explicitly.
+
+#### Scenario: The exec allowlist names every permitted file and refuses the rest
+
+- GIVEN production files importing a subprocess package
+- WHEN the allowlist check runs
+- THEN only the vault runner and the history reader are permitted, and any
+  other file importing it fails the check
+
+#### Scenario: A rename is never reported as a deletion
+
+- GIVEN a file whose content was renamed to another path
+- WHEN the history is asked what became of the old path
+- THEN it reports the rename and where the content went, because a
+  path-limited diff hides the rename and would report a plain deletion
+
+#### Scenario: A path never in the history yields no claim
+
+- GIVEN a path that never appeared in this repository
+- WHEN the history is asked about it
+- THEN it reports that the repository knows nothing about the path, rather
+  than treating its absence as a removal
+
+### Requirement: Stale Memory Reporting
+
+ID: R-048
+Traces to: longterm-mem R-048
+
+The longterm-mem component SHALL report observations that name a path
+deleted from the repository AFTER the observation was last written, SHALL
+report a renamed path separately from a deleted one, and SHALL NOT modify
+or delete any observation.
+
+#### Scenario: A memory describing something since removed is reported with its evidence
+
+- GIVEN an observation naming a path that a later commit deleted
+- WHEN stale memory is reported
+- THEN the observation is listed together with the commit that removed the
+  path and the date it happened
+
+#### Scenario: A memory written after the removal is not reported
+
+- GIVEN an observation written after the commit that deleted the path it
+  names
+- WHEN stale memory is reported
+- THEN it is not listed, because such an observation is most often the
+  record OF the removal, and reporting it invites deleting the knowledge
+  that prevents the thing being reintroduced
+
+#### Scenario: A path recorded under a different root is not a removal
+
+- GIVEN an observation naming a path that is absent where it was recorded
+  but present elsewhere in the tree under a longer path
+- WHEN stale memory is reported
+- THEN it is not listed, the path having been resolved against the working
+  tree before the history was consulted
+
+#### Scenario: Another repository's paths yield no findings
+
+- GIVEN an observation naming a file this repository never contained
+- WHEN stale memory is reported
+- THEN it is not listed
+
+#### Scenario: Reporting changes nothing
+
+- GIVEN any set of findings
+- WHEN stale memory is reported
+- THEN no observation is modified or deleted, the command says so, and it
+  exits successfully

@@ -30,6 +30,8 @@ func run(args []string) int {
 		return cmdSync(args[1:])
 	case "status":
 		return cmdStatus(args[1:])
+	case "stale":
+		return cmdStale(args[1:])
 	case "doctor":
 		return cmdDoctor(args[1:])
 	case "promote":
