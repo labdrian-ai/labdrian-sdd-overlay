@@ -355,21 +355,24 @@ func TestSelfUpdateBackend_BlockedCheckoutRestoresBranch(t *testing.T) {
 	mainHeadBefore := headRev(t, clone, "main")
 
 	out, code := runSelfUpdate(t, clone)
-	if code == 0 {
-		t.Fatalf("self-update exit=0, want nonzero when checkout to main is blocked\noutput:\n%s", out)
-	}
-	if !strings.Contains(out, "untracked working tree files") {
-		t.Errorf("output does not carry git's untracked-collision refusal:\n%s", out)
+	// This used to assert a NONZERO exit: the untracked collision blocked
+	// `git checkout main`, which self-update needed in order to fast-forward.
+	// It no longer checks main out at all -- off main it moves the ref alone
+	// -- so the collision is simply irrelevant now, and the update succeeds.
+	// The obstacle is kept in the fixture on purpose: it is the proof that
+	// the working tree is genuinely untouched, not merely believed to be.
+	if code != 0 {
+		t.Fatalf("self-update exit=%d, want 0: an untracked collision on main is no longer in the way, because main is never checked out\noutput:\n%s", code, out)
 	}
 
 	if got := currentBranch(t, clone); got != "feature-x" {
-		t.Errorf("current branch = %q, want restored/never-left feature-x", got)
+		t.Errorf("current branch = %q, want never-left feature-x", got)
 	}
 	if got := headRev(t, clone, "feature-x"); got != featureHeadBefore {
 		t.Errorf("feature-x HEAD changed (%s -> %s), want untouched", featureHeadBefore, got)
 	}
-	if got := headRev(t, clone, "main"); got != mainHeadBefore {
-		t.Errorf("main HEAD changed (%s -> %s), want untouched (checkout never completed)", mainHeadBefore, got)
+	if got := headRev(t, clone, "main"); got == mainHeadBefore {
+		t.Errorf("main HEAD did not move (%s); the whole point is that it converges while the operator's branch does not", got)
 	}
 
 	gotContent, err := os.ReadFile(filepath.Join(clone, "conflict.txt"))
@@ -381,9 +384,14 @@ func TestSelfUpdateBackend_BlockedCheckoutRestoresBranch(t *testing.T) {
 	}
 }
 
-// A held .git/index.lock (concurrent git op) makes the update fail loudly
-// while leaving the original branch intact.
-func TestSelfUpdateBackend_HeldIndexLockBlocksBranchIntact(t *testing.T) {
+// A held .git/index.lock is a concurrent git operation in progress. It used
+// to block the update, because checking main out writes the index. Moving a
+// ref does not, so the update now succeeds through it — and the operator's
+// branch and HEAD are still untouched, which was always the real guarantee.
+//
+// The lock stays in the fixture deliberately: it is the cheapest available
+// proof that this code path never writes the index.
+func TestSelfUpdateBackend_HeldIndexLockDoesNotBlockTheUpdate(t *testing.T) {
 	origin, clone := newScratchRepo(t)
 	pushUpstreamCommit(t, origin, "upstream.txt", "v2\n", "upstream advance")
 
@@ -391,13 +399,11 @@ func TestSelfUpdateBackend_HeldIndexLockBlocksBranchIntact(t *testing.T) {
 	writeFile(t, lockPath, "")
 
 	featureHeadBefore := headRev(t, clone, "feature-x")
+	mainHeadBefore := headRev(t, clone, "main")
 
 	out, code := runSelfUpdate(t, clone)
-	if code == 0 {
-		t.Fatalf("self-update exit=0, want nonzero with a held index.lock\noutput:\n%s", out)
-	}
-	if !strings.Contains(out, "index.lock") {
-		t.Errorf("output does not mention the held index.lock:\n%s", out)
+	if code != 0 {
+		t.Fatalf("self-update exit=%d, want 0: a held index.lock cannot block an update that never writes the index\noutput:\n%s", code, out)
 	}
 
 	if got := currentBranch(t, clone); got != "feature-x" {
@@ -405,6 +411,14 @@ func TestSelfUpdateBackend_HeldIndexLockBlocksBranchIntact(t *testing.T) {
 	}
 	if got := headRev(t, clone, "feature-x"); got != featureHeadBefore {
 		t.Errorf("feature-x HEAD changed (%s -> %s), want untouched", featureHeadBefore, got)
+	}
+	if got := headRev(t, clone, "main"); got == mainHeadBefore {
+		t.Errorf("main HEAD did not move (%s); the update was supposed to converge it", got)
+	}
+	// The lock must survive: self-update has no business clearing another
+	// process's lock, and removing it would be a far worse bug than failing.
+	if _, err := os.Stat(lockPath); err != nil {
+		t.Errorf("self-update removed a lock it did not create: %v", err)
 	}
 }
 
