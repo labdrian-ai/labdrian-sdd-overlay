@@ -176,3 +176,89 @@ func TestCommands_ProjectFlagIsOptional(t *testing.T) {
 		})
 	}
 }
+
+// remoteRepo builds a throwaway repository whose origin normalizes to
+// remote, and returns its canonical path.
+func remoteRepo(t *testing.T, remote string) string {
+	t.Helper()
+	root := t.TempDir()
+	for _, args := range [][]string{
+		{"init", "-q", "-b", "main"},
+		{"remote", "add", "origin", remote},
+	} {
+		cmd := exec.Command("git", args...)
+		cmd.Dir = root
+		cmd.Env = append(os.Environ(), "GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null")
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+		}
+	}
+	real, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatalf("EvalSymlinks: %v", err)
+	}
+	return real
+}
+
+// writeVaults writes a registry file naming exactly the given projects.
+func writeVaults(t *testing.T, projects ...string) string {
+	t.Helper()
+	rows := make([]string, 0, len(projects))
+	for _, p := range projects {
+		rows = append(rows, `"`+p+`": {"path": "~/somewhere"}`)
+	}
+	path := filepath.Join(t.TempDir(), "vaults.json")
+	if err := os.WriteFile(path, []byte(`{"schema":1,"vaults":{`+strings.Join(rows, ",")+`}}`), 0o600); err != nil {
+		t.Fatalf("write vaults.json: %v", err)
+	}
+	return path
+}
+
+// The defect this fixes, reproduced: a repository whose origin normalizes
+// to "github.com/acme/widgets" also derives the plain "widgets". When the
+// memory already lives under "widgets", minting the URL-shaped name is the
+// resolver fragmenting the repository itself -- a second, empty identity
+// beside the real one.
+func TestResolveProjectFlag_AdoptsTheNameTheMemoryAlreadyLivesUnder(t *testing.T) {
+	t.Setenv(vaultsFileEnvVar, writeVaults(t, "widgets"))
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	t.Chdir(remoteRepo(t, "https://github.com/acme/widgets.git"))
+
+	var project string
+	var exit int
+	stderr := captureStderr(t, func() { project, exit = resolveProjectFlag("query", "") })
+
+	if exit != exitOK {
+		t.Fatalf("exit = %d, want %d; stderr=%q", exit, exitOK, stderr)
+	}
+	if project != "widgets" {
+		t.Fatalf("an established derivable name must be adopted, not re-minted: got %q; stderr=%q", project, stderr)
+	}
+	if !strings.Contains(stderr, "adopted") {
+		t.Fatalf("adoption changes which project the command acts on and must be said out loud: stderr=%q", stderr)
+	}
+}
+
+// Two derivable names both holding memory is the fragmentation itself, and
+// it is provable rather than guessed. longterm-mem may not merge Engram's
+// store (R-002 keeps its connection read-only), so what it owes the
+// operator is the finding and the remedy -- not silence.
+func TestResolveProjectFlag_ReportsDerivableNamesOwedAnIntegration(t *testing.T) {
+	t.Setenv(vaultsFileEnvVar, writeVaults(t, "acme-widgets", "widgets"))
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	repo := remoteRepo(t, "https://github.com/acme/widgets.git")
+	if err := os.WriteFile(filepath.Join(repo, projectid.DeclaredFileName), []byte("acme-widgets\n"), 0o644); err != nil {
+		t.Fatalf("write declared file: %v", err)
+	}
+	t.Chdir(repo)
+
+	var project string
+	stderr := captureStderr(t, func() { project, _ = resolveProjectFlag("query", "") })
+
+	if project != "acme-widgets" {
+		t.Fatalf("the highest-ranked established name is canonical: got %q", project)
+	}
+	if !strings.Contains(stderr, "widgets") || !strings.Contains(stderr, "integrat") {
+		t.Fatalf("the fragment owed an integration must be named, with its remedy: stderr=%q", stderr)
+	}
+}

@@ -4,8 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
 // projectFlagUsage is the shared --project flag description. The flag is
@@ -36,13 +39,13 @@ const projectFlagUsage = "project name (default: resolved from the working direc
 // on purpose is legitimate and must stay possible.
 func resolveProjectFlag(cmd, given string) (string, int) {
 	if given == "" {
-		id, err := resolveFromWorkingDirectory()
+		adoption, notes, err := adoptFromWorkingDirectory()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: %s: --project is required: it could not be resolved from the working directory: %v\n", cmd, err)
 			return "", exitUsage
 		}
-		fmt.Fprintf(os.Stderr, "longterm-mem: %s: --project not given, resolved %q from the working directory (via the %s rule)\n", cmd, id.Project, id.Rule)
-		return id.Project, exitOK
+		reportAdoption(cmd, adoption, notes)
+		return adoption.Identity.Project, exitOK
 	}
 
 	wd, err := os.Getwd()
@@ -65,21 +68,118 @@ func resolveProjectFlag(cmd, given string) (string, int) {
 	return given, exitOK
 }
 
-// resolveFromWorkingDirectory answers the CLI's own working directory,
-// which is the directory the operator is standing in.
+// reportAdoption tells the operator which project the command is acting on
+// and, when it applies, what integrating that identity still owes.
+func reportAdoption(cmd string, a projectid.Adoption, notes []string) {
+	if a.Adopted {
+		fmt.Fprintf(os.Stderr, "longterm-mem: %s: --project not given, adopted %q from the working directory (the memory already lives under this name; derived via the %s rule)\n", cmd, a.Identity.Project, a.Identity.Rule)
+	} else {
+		fmt.Fprintf(os.Stderr, "longterm-mem: %s: --project not given, resolved %q from the working directory (via the %s rule)\n", cmd, a.Identity.Project, a.Identity.Rule)
+	}
+
+	if len(a.PendingIntegration) > 0 {
+		// Provable, not guessed: every name here came out of THIS
+		// repository's own metadata in a single read, so they are the same
+		// repository beyond argument. What is not ours is the merging --
+		// R-002 keeps this module's Engram connection read-only -- so the
+		// operator gets the finding and the remedy rather than a silent
+		// half-measure or a write we are not entitled to make.
+		fmt.Fprintf(os.Stderr, "WARN %s: %s also hold memory and are the same repository as %q; they are owed an integration into it. longterm-mem reads Engram read-only and must not merge it: run `engram projects consolidate` to fold them in.\n",
+			cmd, quoteAll(a.PendingIntegration), a.Identity.Project)
+	}
+
+	for _, note := range notes {
+		// An unconsulted store is not an empty one. Saying so is the whole
+		// point: silence here would be indistinguishable from "this really
+		// is a fresh repository", which is the answer that mints the second
+		// pile.
+		fmt.Fprintf(os.Stderr, "WARN %s: %s, so an identity the memory already uses may have been missed\n", cmd, note)
+	}
+}
+
+func quoteAll(names []string) string {
+	quoted := make([]string, 0, len(names))
+	for _, n := range names {
+		quoted = append(quoted, fmt.Sprintf("%q", n))
+	}
+	return strings.Join(quoted, ", ")
+}
+
+// adoptFromWorkingDirectory resolves the working directory's identity and
+// lets what is already STORED decide which of the derivable names is used.
+//
+// Adoption runs only on this path, where longterm-mem is choosing the name
+// itself. An explicit --project is the operator choosing it, and there the
+// existing correspondence warning already says when that choice disagrees
+// with the directory.
 //
 // This seam exists for the CLI and only for the CLI. Do NOT reach for it
-// from internal/mcpserver to validate or default an MCP tool's project
-// field: the MCP server is launched by a runtime (an editor, an agent
-// host) whose working directory has no relationship to the project a given
-// call is asking about, so checking a tool call against the server's cwd
-// would reject correct calls and, worse, "correct" them into the wrong
-// project. The MCP tools keep their explicit project field for exactly
-// that reason.
-func resolveFromWorkingDirectory() (projectid.Identity, error) {
+// from internal/mcpserver to default or validate an MCP tool's project
+// field: the MCP server is launched by a runtime (an editor, an agent host)
+// whose working directory has no relationship to the project a given call
+// is asking about, so adopting from its cwd would bind observations to
+// wherever the host happened to start -- the exact misattribution this
+// whole mechanism exists to prevent.
+func adoptFromWorkingDirectory() (projectid.Adoption, []string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
-		return projectid.Identity{}, fmt.Errorf("reading the working directory: %w", err)
+		return projectid.Adoption{}, nil, fmt.Errorf("reading the working directory: %w", err)
 	}
-	return projectid.Resolve(wd)
+
+	stores, notes := openEstablishedStores()
+	defer stores.close()
+
+	a, err := projectid.Adopt(wd, stores.lookup)
+	return a, notes, err
+}
+
+// establishedStores answers "does memory already live under this name?"
+// from the two stores longterm-mem is allowed to consult: its own vault
+// registry, and Engram's database, read-only.
+type establishedStores struct {
+	vaults map[string]bool
+	store  *engram.Store
+}
+
+// openEstablishedStores opens both, returning a note for each one that
+// could not be consulted rather than an error. A store that cannot be read
+// must not stop the command -- most subcommands never touch Engram -- but
+// it must not read as "nothing is established" in silence either, so the
+// caller reports every note it gets back.
+func openEstablishedStores() (*establishedStores, []string) {
+	s := &establishedStores{vaults: map[string]bool{}}
+	var notes []string
+
+	// Load, never Seed: consulting the registry must not create it. A
+	// missing registry is simply a machine where nothing is configured yet.
+	if reg, err := vaultreg.Load(defaultVaultsPath()); err == nil {
+		for name := range reg.Vaults {
+			s.vaults[name] = true
+		}
+	} else if !os.IsNotExist(errors.Unwrap(err)) {
+		notes = append(notes, fmt.Sprintf("the vault registry could not be read (%v)", err))
+	}
+
+	if store, err := engram.Open(os.Getenv(engramDBEnvVar)); err == nil {
+		s.store = store
+	} else {
+		notes = append(notes, fmt.Sprintf("Engram's database could not be opened (%v)", err))
+	}
+	return s, notes
+}
+
+func (s *establishedStores) lookup(name string) (bool, error) {
+	if s.vaults[name] {
+		return true, nil
+	}
+	if s.store == nil {
+		return false, nil
+	}
+	return s.store.HasMemory(name)
+}
+
+func (s *establishedStores) close() {
+	if s.store != nil {
+		s.store.Close()
+	}
 }
