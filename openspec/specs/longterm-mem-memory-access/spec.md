@@ -7,8 +7,9 @@ standalone module boundary, direct read access to Engram's mid-term memory,
 and per-project resolution and invocation of the long-term vault. Covers the
 no-CLI-shelling and query-scoping constraints on the Engram read path,
 vault-registry resolution (explicit override, per-project default, and
-rejection when unconfigured), and the vault query invoke/parse contract
-including its not-provisioned failure mode.
+rejection when unconfigured), the canonical resolution of project identity
+from a directory, and the vault query invoke/parse contract including its
+not-provisioned failure mode.
 
 ## Requirements
 
@@ -174,3 +175,142 @@ status instead of treating it as an error.
 - WHEN it is queried
 - THEN longterm-mem maps the resulting not-provisioned exit status to a
   `not_provisioned` result rather than a generic failure
+
+### Requirement: Canonical Project Identity Resolution
+
+ID: R-040
+Traces to: longterm-mem R-040
+
+WHEN the project identity of a directory is resolved, the longterm-mem
+component SHALL apply a first-match-wins chain of a declared project file
+read from the main checkout's working-tree root, then the normalized
+`origin` remote URL, then the absolute, symlink-resolved git common
+directory, and SHALL report which rule produced the identity.
+
+#### Scenario: The same repository resolves identically from every worktree
+
+- GIVEN a repository's main checkout and any number of linked worktrees
+- WHEN each directory's project identity is resolved
+- THEN every one of them yields the identical identity, independently at
+  each of the three chain rules
+
+#### Scenario: A declaration is a property of the repository, not of a worktree
+
+- GIVEN the declared project file present at the main checkout's root but
+  absent from a linked worktree, or present on a linked worktree's branch
+  but absent from the main checkout's
+- WHEN each directory's project identity is resolved
+- THEN both directories still yield the identical identity, because the
+  declaration is read from the main checkout's root only -- a declaration
+  visible from one worktree and not another would itself be the
+  fragmentation this requirement exists to prevent
+
+#### Scenario: A repository whose `.git` is a symlink still has an identity
+
+- GIVEN a working tree whose `.git` entry is a symlink to the real git
+  directory rather than the directory itself
+- WHEN its project identity is resolved
+- THEN the repository resolves normally, including its declared file, rather
+  than being reported as not a repository
+
+#### Scenario: The git common directory never keeps git's own relative answer
+
+- GIVEN `git rev-parse --git-common-dir` answers relatively from a main
+  checkout and absolutely from a linked worktree
+- WHEN the common-directory rule produces an identity
+- THEN that identity is absolute, free of unresolved parent segments, and
+  symlink-resolved, so a symlinked worktree path or a symlinked parent
+  directory resolves to the same identity as the real path
+
+#### Scenario: Remote spellings of one repository collapse
+
+- GIVEN the `origin` URL spelled as `git@host:owner/name.git`,
+  `https://host/owner/name`, or `https://host/owner/name.git`
+- WHEN the remote rule produces an identity
+- THEN all spellings yield the identical `host/owner/name` value
+
+#### Scenario: A declared name wins, and garbage in it is rejected
+
+- GIVEN a repository carrying a declared project file
+- WHEN its identity is resolved
+- THEN the declared name is used in preference to the remote and the common
+  directory, and an empty or multi-line declaration is rejected with a
+  declared-invalid error rather than silently falling through
+
+#### Scenario: Distinct repositories never collide
+
+- GIVEN two different repositories
+- WHEN each one's identity is resolved by the same chain rule
+- THEN the two identities differ
+
+#### Scenario: A non-repository directory is a named failure
+
+- GIVEN a directory that is not inside a git repository
+- WHEN its project identity is resolved
+- THEN resolution fails with a not-a-repository error and produces no
+  project name, empty or otherwise
+
+### Requirement: Working-Directory Project Default
+
+ID: R-041
+Traces to: longterm-mem R-041
+
+WHERE a CLI subcommand accepts `--project` and the flag is omitted, the
+longterm-mem component SHALL resolve the project from the working directory
+via the canonical identity chain, and IF that resolution fails THEN it
+SHALL refuse with the existing `--project is required` rejection, naming
+why resolution failed.
+
+#### Scenario: An omitted flag resolves from the working directory
+
+- GIVEN the working directory is inside a repository with a resolvable
+  identity
+- WHEN a subcommand that takes `--project` runs without the flag
+- THEN it acts on the resolved project instead of refusing
+
+#### Scenario: An unresolvable directory still refuses
+
+- GIVEN the working directory is not inside a git repository
+- WHEN a subcommand that takes `--project` runs without the flag
+- THEN it refuses with the `--project is required` rejection, names the
+  resolution failure, and passes no project name onward
+
+### Requirement: Project Correspondence Warning
+
+ID: R-042
+Traces to: longterm-mem R-042
+
+WHERE `--project` is given explicitly and the working directory is inside a
+git repository whose canonical identity does not correspond to it, the
+longterm-mem component SHALL report the mismatch and SHALL still act on the
+project the operator named.
+
+#### Scenario: A mismatch is reported and the command proceeds
+
+- GIVEN a working directory whose canonical identity is project A
+- WHEN a subcommand runs with `--project B`
+- THEN it emits a warning naming both B and A, and acts on B
+
+#### Scenario: A corresponding project is silent
+
+- GIVEN a working directory whose canonical identity corresponds to the
+  given project, including by the repository's own directory name when the
+  identity was derived from a path or a remote
+- WHEN a subcommand runs with that `--project`
+- THEN no correspondence warning is emitted
+
+### Requirement: MCP Project Field Is Not Working-Directory Derived
+
+ID: R-043
+Traces to: longterm-mem R-043
+
+The longterm-mem component SHALL NOT default or validate an MCP tool call's
+`project` field against the MCP server's working directory.
+
+#### Scenario: The MCP tool contract is unchanged by working-directory resolution
+
+- GIVEN the MCP server is launched by a host runtime whose working
+  directory is unrelated to the project being asked about
+- WHEN a `query` or `promote` tool call is handled
+- THEN its explicit `project` field is used as given, with no
+  working-directory default and no working-directory correspondence check

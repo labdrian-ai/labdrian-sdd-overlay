@@ -38,18 +38,18 @@ import (
 func cmdDoctor(args []string) int {
 	fs := flag.NewFlagSet("doctor", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: doctor: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("doctor", *project)
+	if exit != exitOK {
+		return exit
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: doctor: %v\n", err)
 		return vaultExitCode(err)
@@ -60,7 +60,7 @@ func cmdDoctor(args []string) int {
 		PrerequisitePresent: vault.PrerequisitePresent,
 	}
 
-	report, err := ops.Doctor(context.Background(), deps, *project)
+	report, err := ops.Doctor(context.Background(), deps, resolvedProject)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: doctor: %v\n", err)
 		return exitInternal

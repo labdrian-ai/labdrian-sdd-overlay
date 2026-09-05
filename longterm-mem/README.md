@@ -78,13 +78,47 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 
 | Subcommand | Flags | Purpose |
 |---|---|---|
-| `query` | `--project P` `"<text>"` `[--top N]` `[--vault DIR]` `[--json]` | Query vault + Engram FTS5, merged and ranked. |
-| `index` | `--project P` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
-| `sync` | `--project P` `[--vault DIR]` | Promote eligible Engram observations into vault pages. |
-| `status` | `--project P` `[--vault DIR]` `[--json]` | Report vault/index/sync-state health. |
-| `doctor` | `--project P` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency. |
-| `promote` | `--project P` `--id N` `[--vault DIR]` | Explicitly promote one Engram observation by id. |
+| `query` | `[--project P]` `"<text>"` `[--top N]` `[--vault DIR]` `[--json]` | Query vault + Engram FTS5, merged and ranked. |
+| `index` | `[--project P]` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
+| `sync` | `[--project P]` `[--vault DIR]` | Promote eligible Engram observations into vault pages. |
+| `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report vault/index/sync-state health. |
+| `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency. |
+| `promote` | `[--project P]` `--id N` `[--vault DIR]` | Explicitly promote one Engram observation by id. |
 | `mcp` | — | Run the MCP stdio server (`query`, `promote` tools). |
+
+### Project identity
+
+`--project` is optional. Omitted, the project is resolved from the working
+directory by a chain, first match wins (`internal/projectid`):
+
+1. **Declared** — a `.longterm-mem-project` file at the repository root
+   holding exactly one non-empty line with the project's name. It beats
+   both derived rules; it is the only rule a human controls. An empty or
+   multi-line file is rejected, never silently skipped.
+2. **Normalized origin remote** — reduced to `host/owner/name`, so
+   `git@github.com:acme/widgets.git`, `https://github.com/acme/widgets`
+   and `https://github.com/acme/widgets.git` all collapse to one value.
+3. **Realpath of the git common directory** — always available, even with
+   no remote; absolute and symlink-resolved so a linked worktree and the
+   main checkout answer identically.
+
+Every rule answers the same identity from a repository's main checkout and
+from any of its linked worktrees. That is the point: one repository
+addressed under several names becomes several memories that never find each
+other. Outside a git repository, an omitted `--project` is refused with the
+reason resolution failed — an unresolved project must never become an empty
+one.
+
+When `--project` **is** given and the working directory is inside a git
+repository that resolves to a different identity, the command prints a
+`WARN` and proceeds. It warns rather than refuses because addressing
+another project on purpose is legitimate (CI, an overlay repository
+operating on the projects it manages); what must not happen is doing it
+*silently*.
+
+The MCP tools keep their explicit `project` field and get no working-
+directory default: the server's working directory is the host runtime's,
+not the project's.
 
 Global env overrides: `LONGTERM_MEM_ENGRAM_DB` (Engram database path).
 

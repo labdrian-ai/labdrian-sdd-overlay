@@ -31,22 +31,22 @@ func cmdPromote(args []string) int {
 
 	fs := flag.NewFlagSet("promote", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	id := fs.Int64("id", 0, "Engram observation id (required)")
 	vaultDir := fs.String("vault", "", "vault path override")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: promote: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("promote", *project)
+	if exit != exitOK {
+		return exit
 	}
 	if *id <= 0 {
 		fmt.Fprintln(os.Stderr, "longterm-mem: promote: --id is required")
 		return exitUsage
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote: %v\n", err)
 		return vaultExitCode(err)
@@ -112,7 +112,7 @@ func cmdPromote(args []string) int {
 func cmdPromoteReconcile(args []string) int {
 	fs := flag.NewFlagSet("promote reconcile", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	all := fs.Bool("all", false, "refused: reconcile adopts exactly one explicitly named address")
 	if err := fs.Parse(args); err != nil {
@@ -139,19 +139,19 @@ func cmdPromoteReconcile(args []string) int {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: expected exactly one address, got %d: reconcile adopts one page at a time on purpose\n", len(rest))
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: promote reconcile: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("promote reconcile", *project)
+	if exit != exitOK {
+		return exit
 	}
 	address := fs.Args()[0]
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
 		return vaultExitCode(err)
 	}
 
-	outcome, err := promote.Reconcile(vaultRoot, *project, address)
+	outcome, err := promote.Reconcile(vaultRoot, resolvedProject, address)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: promote reconcile: %v\n", err)
 		switch {

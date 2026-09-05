@@ -30,16 +30,16 @@ const unsetTopN = -1
 func cmdQuery(args []string) int {
 	fs := flag.NewFlagSet("query", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	top := fs.Int("top", unsetTopN, "results per source, 1-50 (default 5)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: query: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("query", *project)
+	if exit != exitOK {
+		return exit
 	}
 	if *top != unsetTopN && (*top <= 0 || *top > maxTopN) {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: --top must be between 1 and %d\n", maxTopN)
@@ -51,7 +51,7 @@ func cmdQuery(args []string) int {
 		return exitUsage
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: query: %v\n", err)
 		return vaultExitCode(err)
@@ -69,7 +69,7 @@ func cmdQuery(args []string) int {
 		requestedTop = *top
 	}
 
-	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{Project: *project, Query: rest[0], Top: requestedTop})
+	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{Project: resolvedProject, Query: rest[0], Top: requestedTop})
 	if err != nil {
 		// query.Run degrades a failing vault to a diagnostic and only
 		// ever errors on the Engram side (a missing project is rejected
