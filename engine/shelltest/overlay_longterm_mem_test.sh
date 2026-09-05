@@ -1382,6 +1382,577 @@ case_undeployable_binary_is_not_reported_as_deployed() {
 }
 
 # ---------------------------------------------------------------------------
+# hazard (e): an engine binary older than the engine source it was built from
+# ---------------------------------------------------------------------------
+#
+# ensure_engine_binary used to build only when the binary was ABSENT, so a
+# repository that moved forward left a compiled artifact silently out of sync
+# with the source that defines it. The symptom is an engine that rejects a
+# flag the overlay legitimately passes, which reads as an overlay bug.
+
+# write_fake_engine_tree lays out an engine source tree plus a `go` stand-in
+# whose "build" writes a recognizable marker into the output path. That makes
+# a rebuild provable from the binary's CONTENT, not from log text.
+write_fake_engine_tree() {
+  local dir="$1"
+  mkdir -p "$dir/bin" "$dir/engine/cmd"
+  printf 'package main\n\nfunc main() {}\n' > "$dir/engine/cmd/main.go"
+  printf 'module engine\n' > "$dir/engine/go.mod"
+  printf '\n' > "$dir/engine/go.sum"
+
+  cat > "$dir/bin/go" <<'GOSTUB'
+#!/usr/bin/env bash
+# Minimal `go build -o <path> ./cmd/` stand-in.
+out=""
+while [[ $# -gt 0 ]]; do
+  if [[ "$1" == "-o" ]]; then
+    shift
+    out="${1:-}"
+  fi
+  shift || true
+done
+[[ -n "$out" ]] || exit 1
+if [[ "${FAKE_GO_BUILD_FAILS:-}" == "1" ]]; then
+  echo "fake go: build failed" >&2
+  exit 1
+fi
+printf '#!/usr/bin/env bash\n# %s\nexit 0\n' "${FAKE_BUILD_TAG:-rebuilt}" > "$out"
+chmod +x "$out"
+GOSTUB
+  chmod +x "$dir/bin/go"
+}
+
+# write_stale_binary drops a binary at <path> whose mtime predates the source
+# tree, i.e. exactly the fast-forwarded-repository shape.
+write_stale_binary() {
+  local path="$1"
+  mkdir -p "$(dirname "$path")"
+  printf '#!/usr/bin/env bash\n# original\nexit 0\n' > "$path"
+  chmod +x "$path"
+  touch -t 200001010000 "$path"
+}
+
+run_ensure_engine_binary() {
+  local dir="$1"
+  shift
+  env PATH="$dir/bin:/usr/bin:/bin" "$@" bash -c '
+    source "$1"
+    set +e
+    ENGINE_BINARY="$2"
+    ENGINE_SRC="$3"
+    ensure_engine_binary
+    echo "ENSURE-STATUS=$?"
+  ' _ "$OVERLAY" "$dir/binary/gentle-ai-overlay" "$dir/engine" 2>&1
+}
+
+case_binary_older_than_engine_source_is_rebuilt() {
+  local dir out
+  dir="$(new_case_dir engine-stale-go)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(run_ensure_engine_binary "$dir" FAKE_BUILD_TAG=rebuilt-by-go-change)"
+
+  if ! grep -q -F -e "ENSURE-STATUS=0" <<<"$out"; then
+    fail "stale binary: ensure_engine_binary did not succeed" "$out"
+    return
+  fi
+  if ! grep -q -F -e "rebuilt-by-go-change" "$dir/binary/gentle-ai-overlay"; then
+    fail "a binary older than a .go source was not rebuilt" "$out"
+    return
+  fi
+  pass "a binary older than an engine source is rebuilt"
+}
+
+# The twin the find expression can silently miss: a dependency bump changes
+# behaviour as surely as a source edit, so go.mod and go.sum count as source.
+case_binary_older_than_go_mod_is_rebuilt() {
+  local dir out
+  dir="$(new_case_dir engine-stale-gomod)"
+  write_fake_engine_tree "$dir"
+  touch -t 200001010000 "$dir/engine/cmd/main.go" "$dir/engine/go.sum"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  touch "$dir/engine/go.mod"
+
+  out="$(run_ensure_engine_binary "$dir" FAKE_BUILD_TAG=rebuilt-by-gomod)"
+
+  if ! grep -q -F -e "rebuilt-by-gomod" "$dir/binary/gentle-ai-overlay"; then
+    fail "a binary older than go.mod was not rebuilt" "$out"
+    return
+  fi
+  pass "a binary older than go.mod is rebuilt"
+}
+
+case_binary_older_than_go_sum_is_rebuilt() {
+  local dir out
+  dir="$(new_case_dir engine-stale-gosum)"
+  write_fake_engine_tree "$dir"
+  touch -t 200001010000 "$dir/engine/cmd/main.go" "$dir/engine/go.mod"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  touch "$dir/engine/go.sum"
+
+  out="$(run_ensure_engine_binary "$dir" FAKE_BUILD_TAG=rebuilt-by-gosum)"
+
+  if ! grep -q -F -e "rebuilt-by-gosum" "$dir/binary/gentle-ai-overlay"; then
+    fail "a binary older than go.sum was not rebuilt" "$out"
+    return
+  fi
+  pass "a binary older than go.sum is rebuilt"
+}
+
+# The twin that stops the fix from becoming its own defect: rebuilding on
+# every invocation would put a go build in front of every overlay command.
+case_binary_newer_than_every_source_is_not_rebuilt() {
+  local dir out before after
+  dir="$(new_case_dir engine-fresh)"
+  write_fake_engine_tree "$dir"
+  touch -t 200001010000 "$dir/engine/cmd/main.go" "$dir/engine/go.mod" "$dir/engine/go.sum"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  touch "$dir/binary/gentle-ai-overlay"
+  before="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  out="$(run_ensure_engine_binary "$dir" FAKE_BUILD_TAG=should-not-happen)"
+  after="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  if ! grep -q -F -e "ENSURE-STATUS=0" <<<"$out"; then
+    fail "fresh binary: ensure_engine_binary did not succeed" "$out"
+    return
+  fi
+  if [[ "$before" != "$after" ]]; then
+    fail "a binary newer than every engine source was rebuilt anyway" "$out"
+    return
+  fi
+  pass "a binary newer than every engine source is not rebuilt"
+}
+
+case_absent_binary_is_still_built() {
+  local dir out
+  dir="$(new_case_dir engine-absent)"
+  write_fake_engine_tree "$dir"
+  mkdir -p "$dir/binary"
+
+  out="$(run_ensure_engine_binary "$dir" FAKE_BUILD_TAG=built-from-absent)"
+
+  if ! grep -q -F -e "ENSURE-STATUS=0" <<<"$out"; then
+    fail "absent binary: ensure_engine_binary did not succeed" "$out"
+    return
+  fi
+  if [[ ! -x "$dir/binary/gentle-ai-overlay" ]]; then
+    fail "an absent binary was not built" "$out"
+    return
+  fi
+  if ! grep -q -F -e "built-from-absent" "$dir/binary/gentle-ai-overlay"; then
+    fail "an absent binary was not built from source" "$out"
+    return
+  fi
+  pass "an absent binary is still built"
+}
+
+# Stale and unbuildable is NOT the absent case: a stale binary may serve the
+# command at hand perfectly, so refusing would brick every overlay command for
+# a user whose Go toolchain disappeared. It must warn — naming the staleness
+# AND the unknown-flag symptom it predicts — and continue.
+assert_stale_warning_is_diagnosed() {
+  local label="$1" out="$2"
+  if ! grep -q -i -F -e "stale" <<<"$out"; then
+    fail "$label: the warning does not name the staleness" "$out"
+    return 1
+  fi
+  if ! grep -q -i -F -e "unknown flag" <<<"$out"; then
+    fail "$label: the warning does not predict the unknown-flag symptom" "$out"
+    return 1
+  fi
+  return 0
+}
+
+case_stale_binary_without_go_warns_and_continues() {
+  local dir out before after
+  dir="$(new_case_dir engine-stale-no-go)"
+  write_fake_engine_tree "$dir"
+  rm -f "$dir/bin/go"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  before="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  # A PATH with no `go` on it at all. It carries symlinks to the few
+  # utilities the staleness probe itself needs, so "go is missing" is the
+  # only thing this case injects.
+  local nogo="$dir/nogo-bin" util
+  mkdir -p "$nogo"
+  for util in bash dirname find head mkdir; do
+    ln -sf "$(command -v "$util")" "$nogo/$util"
+  done
+
+  out="$(
+    env PATH="$nogo" /usr/bin/env bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      ENGINE_SRC="$3"
+      ensure_engine_binary
+      echo "ENSURE-STATUS=$?"
+    ' _ "$OVERLAY" "$dir/binary/gentle-ai-overlay" "$dir/engine" 2>&1
+  )"
+  after="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  if ! grep -q -F -e "ENSURE-STATUS=0" <<<"$out"; then
+    fail "stale binary without go: the command did not continue" "$out"
+    return
+  fi
+  if [[ "$before" != "$after" ]]; then
+    fail "stale binary without go: the existing binary was disturbed" "$out"
+    return
+  fi
+  assert_stale_warning_is_diagnosed "stale binary without go" "$out" || return
+  pass "a stale binary with no go toolchain warns and continues"
+}
+
+case_stale_binary_with_failing_build_warns_and_continues() {
+  local dir out before after
+  dir="$(new_case_dir engine-stale-build-fails)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  before="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  out="$(run_ensure_engine_binary "$dir" FAKE_GO_BUILD_FAILS=1)"
+  after="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  if ! grep -q -F -e "ENSURE-STATUS=0" <<<"$out"; then
+    fail "stale binary with a failing build: the command did not continue" "$out"
+    return
+  fi
+  if [[ "$before" != "$after" ]]; then
+    fail "stale binary with a failing build: the existing binary was replaced" "$out"
+    return
+  fi
+  assert_stale_warning_is_diagnosed "stale binary with a failing build" "$out" || return
+  pass "a stale binary whose rebuild fails warns and continues"
+}
+
+# ---------------------------------------------------------------------------
+# hazard (f): the operator can neither SEE nor deliberately repair the engine
+# ---------------------------------------------------------------------------
+#
+# ensure_engine_binary heals on the way to running something, silently and by
+# design. That leaves two gaps this section pins: `doctor` never reported the
+# engine binary's freshness at all, and the only deliberate rebuild was
+# `install-hooks`, which also rewrites ~/.claude/settings.json.
+
+# run_doctor runs cmd_doctor against a fixture engine tree. <bindir> is the
+# first PATH entry, which is how a case chooses whether `go` exists at all.
+run_doctor() {
+  local dir="$1" path="$2"
+  shift 2
+  env PATH="$path" STATE_DIR="$dir/state" bash -c '
+    overlay="$1"; binary="$2"; src="$3"; shift 3
+    source "$overlay"
+    set +e
+    ENGINE_BINARY="$binary"
+    ENGINE_SRC="$src"
+    cmd_doctor "$@"
+    echo "DOCTOR-STATUS=$?"
+  ' _ "$OVERLAY" "$dir/binary/gentle-ai-overlay" "$dir/engine" "$@" 2>&1
+}
+
+# engine_doctor_line prints doctor's engine-binary line(s) only, so a case can
+# assert on that check without matching the rest of the preflight.
+engine_doctor_line() {
+  grep -i -e "engine binary" <<<"$1"
+}
+
+# no_go_bindir builds a PATH entry with every utility doctor's own checks need
+# and no `go`, so "the toolchain is missing" is the only injected condition.
+no_go_bindir() {
+  local dir="$1" nogo="$1/nogo-bin" util
+  mkdir -p "$nogo"
+  for util in bash cat dirname find grep head mkdir tr; do
+    ln -sf "$(command -v "$util")" "$nogo/$util"
+  done
+  printf '%s\n' "$nogo"
+}
+
+case_doctor_reports_a_stale_engine_binary() {
+  local dir out line
+  dir="$(new_case_dir doctor-stale)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(run_doctor "$dir" "$dir/bin:/usr/bin:/bin")"
+  line="$(engine_doctor_line "$out")"
+
+  if ! grep -q -i -F -e "stale" <<<"$line"; then
+    fail "doctor: a stale engine binary is not reported as stale" "$out"
+    return
+  fi
+  # The expensive part of the original incident was not the staleness, it was
+  # that the resulting engine error read as an overlay bug.
+  if ! grep -q -i -F -e "unknown flag" <<<"$line"; then
+    fail "doctor: the stale line does not name the unknown-flag symptom" "$out"
+    return
+  fi
+  pass "doctor reports a stale engine binary and names its symptom"
+}
+
+case_doctor_reports_an_absent_engine_binary_differently() {
+  local dir out line
+  dir="$(new_case_dir doctor-absent)"
+  write_fake_engine_tree "$dir"
+  mkdir -p "$dir/binary"
+
+  out="$(run_doctor "$dir" "$dir/bin:/usr/bin:/bin")"
+  line="$(engine_doctor_line "$out")"
+
+  if ! grep -q -i -F -e "not found" <<<"$line"; then
+    fail "doctor: an absent engine binary is not reported as absent" "$out"
+    return
+  fi
+  # Absent and stale need different remedies, so they must not read alike.
+  if grep -q -i -F -e "stale" <<<"$line"; then
+    fail "doctor: an absent engine binary is reported as if it were stale" "$out"
+    return
+  fi
+  # The deliberate repair is doctor --fix; install-hooks also rewrites
+  # ~/.claude/settings.json, which is a hammer for this tack.
+  if ! grep -q -F -e "doctor --fix" <<<"$line"; then
+    fail "doctor: the absent-binary line does not name the deliberate repair" "$out"
+    return
+  fi
+  pass "doctor reports an absent engine binary differently from a stale one"
+}
+
+# The twin that stops the check from reporting a problem on every run.
+case_doctor_reports_a_current_engine_binary_as_healthy() {
+  local dir out line
+  dir="$(new_case_dir doctor-healthy)"
+  write_fake_engine_tree "$dir"
+  touch -t 200001010000 "$dir/engine/cmd/main.go" "$dir/engine/go.mod" "$dir/engine/go.sum"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  touch "$dir/binary/gentle-ai-overlay"
+
+  out="$(run_doctor "$dir" "$dir/bin:/usr/bin:/bin")"
+  line="$(engine_doctor_line "$out")"
+
+  if ! grep -q -F -e "PASS" <<<"$line"; then
+    fail "doctor: a current engine binary is not reported as healthy" "$out"
+    return
+  fi
+  if grep -q -i -e "stale" -e "not found" <<<"$line"; then
+    fail "doctor: a current engine binary is reported as a problem" "$out"
+    return
+  fi
+  # The healthy state is the third of three, and says so.
+  if ! grep -q -i -F -e "current" <<<"$line"; then
+    fail "doctor: the healthy line does not distinguish current from merely present" "$out"
+    return
+  fi
+  pass "doctor reports a current engine binary as healthy"
+}
+
+case_doctor_fix_rebuilds_a_stale_engine_binary() {
+  local dir out
+  dir="$(new_case_dir doctor-fix-stale)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(FAKE_BUILD_TAG=rebuilt-by-doctor-fix run_doctor "$dir" "$dir/bin:/usr/bin:/bin" --fix)"
+
+  # Proven by CONTENT, not by log text.
+  if ! grep -q -F -e "rebuilt-by-doctor-fix" "$dir/binary/gentle-ai-overlay"; then
+    fail "doctor --fix did not rebuild a stale engine binary" "$out"
+    return
+  fi
+  pass "doctor --fix rebuilds a stale engine binary"
+}
+
+case_doctor_fix_without_go_does_not_claim_a_repair() {
+  local dir out before after nogo
+  dir="$(new_case_dir doctor-fix-no-go)"
+  write_fake_engine_tree "$dir"
+  rm -f "$dir/bin/go"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  before="$(cat "$dir/binary/gentle-ai-overlay")"
+  nogo="$(no_go_bindir "$dir")"
+
+  out="$(run_doctor "$dir" "$nogo" --fix)"
+  after="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  if [[ "$before" != "$after" ]]; then
+    fail "doctor --fix without go: the existing binary was disturbed" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "could not repair" <<<"$out"; then
+    fail "doctor --fix without go does not say it could not repair the engine binary" "$out"
+    return
+  fi
+  if grep -q -i -e "^Engine binary rebuilt" <<<"$out"; then
+    fail "doctor --fix without go claims a rebuild it did not perform" "$out"
+    return
+  fi
+  pass "doctor --fix without a Go toolchain reports that it could not repair"
+}
+
+# The TUI's "Estado" row folds status-hooks in, so the overlay's own
+# status path is where an operator sees this without any new TUI code.
+case_status_hooks_surfaces_a_stale_engine_binary() {
+  local dir out hits
+  dir="$(new_case_dir status-hooks-stale)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(
+    env PATH="$dir/bin:/usr/bin:/bin" bash -c '
+      overlay="$1"; binary="$2"; src="$3"
+      source "$overlay"
+      set +e
+      ENGINE_BINARY="$binary"
+      ENGINE_SRC="$src"
+      cmd_status_hooks
+    ' _ "$OVERLAY" "$dir/binary/gentle-ai-overlay" "$dir/engine" 2>&1
+  )"
+
+  hits="$(grep -c -i -F -e "stale" <<<"$out")"
+  if [[ "$hits" -eq 0 ]]; then
+    fail "status does not surface a stale engine binary" "$out"
+    return
+  fi
+  # status is a summary, not a report.
+  if [[ "$hits" -ne 1 ]]; then
+    fail "status surfaces the stale engine binary in $hits lines, not one" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "unknown flag" <<<"$out"; then
+    fail "status does not name the unknown-flag symptom" "$out"
+    return
+  fi
+  pass "status surfaces a stale engine binary in one line"
+}
+
+# ---------------------------------------------------------------------------
+# hazard (e): 'longterm-mem status' exit contract
+# ---------------------------------------------------------------------------
+
+# write_fake_runtime_status_engine drops an engine stand-in at <path> whose
+# 'runtime status' prints one status line and exits <code>. The engine exits
+# non-zero for CapabilityUnsupported/CapabilityPartial, which is the shape the
+# status branch has to translate into an exit code of its own.
+write_fake_runtime_status_engine() {
+  local path="$1" exit_code="$2"
+  mkdir -p "$(dirname "$path")"
+  cat > "$path" <<STUB
+#!/usr/bin/env bash
+if [[ "\${1:-}" == "runtime" && "\${2:-}" == "status" ]]; then
+  echo "[longterm-mem] status: partial -- longterm-mem per-runtime status"
+  exit $exit_code
+fi
+exit 0
+STUB
+  chmod +x "$path"
+}
+
+# run_longterm_mem_status calls the status branch directly. ENGINE_SRC points
+# at a path that does not exist so ensure_engine_binary treats the (present,
+# executable) stub as current and never tries to rebuild it.
+run_longterm_mem_status() {
+  local dir="$1"
+  env PATH="/usr/bin:/bin" bash -c '
+    source "$1"
+    set +e
+    ENGINE_BINARY="$2"
+    ENGINE_SRC="$2.no-such-source-tree"
+    STATE_DIR="$3"
+    cmd_longterm_mem status
+    echo "STATUS-EXIT=$?"
+  ' _ "$OVERLAY" "$dir/bin/engine" "$dir/state" 2>&1
+}
+
+# The TUI paints err == nil as a green "Completado" and exit 2 as DEGRADED.
+# Swallowing the engine's non-zero exit into a bare warn made the status
+# branch return 0, so the TUI green-ticked a component installed nowhere.
+# 2, not 1: the report itself succeeded; what it reported is unhealthy.
+case_status_reports_a_non_supported_status_as_degraded() {
+  local dir out
+  dir="$(new_case_dir longterm-mem-status-unsupported)"
+  write_fake_runtime_status_engine "$dir/bin/engine" 1
+
+  out="$(run_longterm_mem_status "$dir")"
+
+  if ! grep -q -F -e "STATUS-EXIT=2" <<<"$out"; then
+    fail "longterm-mem status does not exit 2 when the engine reports a non-supported status" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "non-supported status" <<<"$out"; then
+    fail "longterm-mem status drops the warning line the operator needs" "$out"
+    return
+  fi
+  pass "longterm-mem status exits 2 and still warns on a non-supported status"
+}
+
+# The twin: without it, "always exit 2" would pass the case above and make
+# every healthy status run read as degraded.
+case_status_reports_a_supported_status_as_success() {
+  local dir out
+  dir="$(new_case_dir longterm-mem-status-supported)"
+  write_fake_runtime_status_engine "$dir/bin/engine" 0
+
+  out="$(run_longterm_mem_status "$dir")"
+
+  if ! grep -q -F -e "STATUS-EXIT=0" <<<"$out"; then
+    fail "longterm-mem status does not exit 0 when the engine reports a supported status" "$out"
+    return
+  fi
+  if grep -q -i -F -e "non-supported status" <<<"$out"; then
+    fail "longterm-mem status warns about a non-supported status the engine did not report" "$out"
+    return
+  fi
+  pass "longterm-mem status exits 0 on a supported status"
+}
+
+# ---------------------------------------------------------------------------
+# hazard (f): messages must name a command that exists
+# ---------------------------------------------------------------------------
+
+# There is no `overlay` on PATH: the entrypoint operators actually have is
+# `labdrian` (install-alias symlinks it). Every "run 'overlay <something>'"
+# handed the operator a command that cannot run.
+#
+# This asserts over the WHOLE file against the script's OWN dispatch table,
+# not against a fixed list of messages, so a subcommand added later is covered
+# without editing this case and the wrong name cannot come back one message at
+# a time.
+case_no_message_names_a_command_called_overlay() {
+  local subs sub offenders=""
+  subs="$(
+    awk '/^  case "\$COMMAND" in$/{inside=1; next} inside && /^  esac$/{exit} inside' "$OVERLAY" \
+      | grep -oE '^ *[a-z][a-z-]*\)' \
+      | tr -d ' )'
+  )"
+  # '<command>' is the usage-line placeholder; it names the same command.
+  subs="$subs
+<command>"
+
+  if [[ -z "$(grep -v '^<command>$' <<<"$subs")" ]]; then
+    fail "could not read the dispatch table out of $OVERLAY; the guard below would pass vacuously"
+    return
+  fi
+
+  for sub in $subs; do
+    local hits
+    # The leading class rejects 'labdrian-overlay ...' and 'bin/overlay ...',
+    # which are file paths, not the invented command name.
+    hits="$(grep -nE "(^|[^-a-zA-Z0-9_./])overlay[[:space:]]+${sub}([^-a-zA-Z0-9_]|$)" "$OVERLAY" || true)"
+    if [[ -n "$hits" ]]; then
+      offenders="$offenders
+$hits"
+    fi
+  done
+
+  if [[ -n "$offenders" ]]; then
+    fail "bin/labdrian-overlay tells the operator to run a command named 'overlay', which does not exist" "$offenders"
+    return
+  fi
+  pass "no message names a command called 'overlay'"
+}
+
+# ---------------------------------------------------------------------------
 
 case_parallel_adds_keep_every_target
 case_add_does_not_use_a_shared_temp_path
@@ -1412,6 +1983,22 @@ case_unregister_version_skew_converges
 case_register_version_skew_fails_the_run
 case_install_succeeds_under_errexit
 case_undeployable_binary_is_not_reported_as_deployed
+case_binary_older_than_engine_source_is_rebuilt
+case_binary_older_than_go_mod_is_rebuilt
+case_binary_older_than_go_sum_is_rebuilt
+case_binary_newer_than_every_source_is_not_rebuilt
+case_absent_binary_is_still_built
+case_stale_binary_without_go_warns_and_continues
+case_stale_binary_with_failing_build_warns_and_continues
+case_doctor_reports_a_stale_engine_binary
+case_doctor_reports_an_absent_engine_binary_differently
+case_doctor_reports_a_current_engine_binary_as_healthy
+case_doctor_fix_rebuilds_a_stale_engine_binary
+case_doctor_fix_without_go_does_not_claim_a_repair
+case_status_hooks_surfaces_a_stale_engine_binary
+case_status_reports_a_non_supported_status_as_degraded
+case_status_reports_a_supported_status_as_success
+case_no_message_names_a_command_called_overlay
 
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures shell test case(s) failed" >&2

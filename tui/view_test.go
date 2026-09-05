@@ -332,7 +332,7 @@ func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
 				RepoBehindRelease: 2,
 				RecordedVersion:   "v1.3.0",
 				DigestMatch:       "yes",
-				Action:            "run 'overlay self-update' to fetch release v1.4.0",
+				Action:            "run 'labdrian self-update' to fetch release v1.4.0",
 			},
 		},
 		output: "ok",

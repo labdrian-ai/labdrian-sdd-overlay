@@ -564,7 +564,7 @@ func TestRestoreBackend_Doctor_DriftedTargetWarnsExitZero(t *testing.T) {
 	if !strings.Contains(out, "WARN  claude:") {
 		t.Errorf("doctor does not report a drift WARN row for claude:\n%s", out)
 	}
-	if !strings.Contains(out, "run 'overlay apply --target claude'") {
+	if !strings.Contains(out, "run 'labdrian apply --target claude'") {
 		t.Errorf("doctor's drift WARN does not recommend apply:\n%s", out)
 	}
 }

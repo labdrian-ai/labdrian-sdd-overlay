@@ -285,12 +285,12 @@ ACTION:claude: in sync with gentle-ai (healthy)
 === sync-check: opencode ===
   OVERLAY_NOT_DEPLOYED: skills/bar (live missing)
 VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=2 REPO_BEHIND_ORIGIN=NA
-ACTION:opencode: run 'overlay apply --target opencode'
+ACTION:opencode: run 'labdrian apply --target opencode'
 
 === sync-check: codex ===
   UPSTREAM_CHANGED: skills/baz
 VERDICT:codex:UPSTREAM_CHANGED=3 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=5
-ACTION:codex: gentle-ai sync detected: run 'overlay capture --target codex' then 'overlay apply'
+ACTION:codex: gentle-ai sync detected: run 'labdrian capture --target codex' then 'labdrian apply'
 `
 
 	verdicts := ParseSyncCheck(sample)
@@ -1167,7 +1167,7 @@ func TestParseSyncCheckAgentFiles(t *testing.T) {
   IN_SYNC: skills/foo
   OVERLAY_NOT_DEPLOYED: agents/GADU.md (live missing)
 VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1
-ACTION:claude: run 'overlay apply --target claude'
+ACTION:claude: run 'labdrian apply --target claude'
 
 === sync-check: opencode (/home/user/.config/opencode) ===
   IN_SYNC: skills/bar
@@ -1246,7 +1246,7 @@ func TestViewDashboardShowsAgentsSection(t *testing.T) {
 				Target:             "claude",
 				Status:             SyncNeedsApply,
 				OverlayNotDeployed: 1,
-				Action:             "run 'overlay apply --target claude'",
+				Action:             "run 'labdrian apply --target claude'",
 				AgentFiles: []AgentFileEntry{
 					{Path: "agents/GADU.md", Status: "OVERLAY_NOT_DEPLOYED"},
 				},
@@ -1875,7 +1875,7 @@ func TestParseSyncCheck_ReleaseFields(t *testing.T) {
 	sample := `
 === sync-check: claude ===
 VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=2 RECORDED_VERSION=v1.3.0 DIGEST_MATCH=no
-ACTION:claude: run 'overlay apply --target claude' (release v1.4.0 available)
+ACTION:claude: run 'labdrian apply --target claude' (release v1.4.0 available)
 
 === sync-check: opencode ===
 VERDICT:opencode:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=0 REPO_BEHIND_RELEASE=0 RECORDED_VERSION=v1.4.0 DIGEST_MATCH=yes
@@ -1883,7 +1883,7 @@ ACTION:opencode: in sync with gentle-ai at v1.4.0
 
 === sync-check: codex ===
 VERDICT:codex:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=1 REPO_BEHIND_ORIGIN=NA REPO_BEHIND_RELEASE=NA RECORDED_VERSION=NA DIGEST_MATCH=NA
-ACTION:codex: run 'overlay apply --target codex'
+ACTION:codex: run 'labdrian apply --target codex'
 `
 	verdicts := ParseSyncCheck(sample)
 	if len(verdicts) != 3 {
@@ -1957,7 +1957,7 @@ func TestProbeBehindRelease(t *testing.T) {
 			name: "concrete count",
 			output: "\n=== sync-check: claude ===\n" +
 				"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_RELEASE=3\n" +
-				"ACTION:claude: run 'overlay self-update'\n",
+				"ACTION:claude: run 'labdrian self-update'\n",
 			want: 3,
 		},
 		{
@@ -1997,7 +1997,7 @@ func TestProbeBehindOriginCmd_AlsoDeliversBehindRelease(t *testing.T) {
 	recorder := filepath.Join(root, "invoked.log")
 	const sample = "\n=== sync-check: claude ===\n" +
 		"VERDICT:claude:UPSTREAM_CHANGED=0 OVERLAY_NOT_DEPLOYED=0 REPO_BEHIND_ORIGIN=1 REPO_BEHIND_RELEASE=4\n" +
-		"ACTION:claude: run 'overlay self-update'\n"
+		"ACTION:claude: run 'labdrian self-update'\n"
 	writeStubBackend(t, root, recorder, sample, 0)
 
 	msg := probeBehindOriginCmd(root)()

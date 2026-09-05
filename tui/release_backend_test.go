@@ -102,7 +102,7 @@ func writeDigestFixtureFiles(t *testing.T, overlayDir, home string) {
 	t.Helper()
 	for _, name := range []string{"alpha", "beta"} {
 		if err := os.MkdirAll(filepath.Join(overlayDir, "skills", name), 0o755); err != nil {
-			t.Fatalf("mkdir overlay skills/%s: %v", name, err)
+			t.Fatalf("mkdir labdrian skills/%s: %v", name, err)
 		}
 		if err := os.MkdirAll(filepath.Join(home, ".claude", "skills", name), 0o755); err != nil {
 			t.Fatalf("mkdir home skills/%s: %v", name, err)
@@ -700,7 +700,7 @@ func TestReleaseBackend_SyncCheck_NeverDeployedTargetNoFabricatedVersion(t *test
 	if !strings.Contains(out, "DIGEST_MATCH=NA") {
 		t.Errorf("VERDICT does not report DIGEST_MATCH=NA for a never-deployed target:\n%s", out)
 	}
-	if !strings.Contains(out, "ACTION:claude: run 'overlay apply --target claude'") {
+	if !strings.Contains(out, "ACTION:claude: run 'labdrian apply --target claude'") {
 		t.Errorf("ACTION does not recommend apply for a never-deployed target:\n%s", out)
 	}
 	if strings.Contains(out, "release v") {
@@ -745,7 +745,7 @@ func TestReleaseBackend_SyncCheck_DigestMismatchActionNamesReleaseVersion(t *tes
 	if !strings.Contains(out, "DIGEST_MATCH=no") {
 		t.Errorf("VERDICT does not report DIGEST_MATCH=no:\n%s", out)
 	}
-	wantAction := "ACTION:claude: run 'overlay apply --target claude' (release v1.5.0 available)"
+	wantAction := "ACTION:claude: run 'labdrian apply --target claude' (release v1.5.0 available)"
 	if !strings.Contains(out, wantAction) {
 		t.Errorf("ACTION does not name the available release version:\nwant substring: %s\ngot:\n%s", wantAction, out)
 	}
@@ -784,7 +784,7 @@ func TestReleaseBackend_SyncCheck_DefaultDoesNotFetchTags(t *testing.T) {
 	if tags := runGit(t, clone, "tag", "-l"); strings.TrimSpace(tags) != "" {
 		t.Errorf("default sync-check (no --check-origin/--fetch) invoked git fetch and populated local tags: %q", tags)
 	}
-	if !strings.Contains(out, "ACTION:claude: run 'overlay apply --target claude'") {
+	if !strings.Contains(out, "ACTION:claude: run 'labdrian apply --target claude'") {
 		t.Errorf("ACTION did not fall back to the untagged case (no release version should be knowable without a fetch):\n%s", out)
 	}
 	if strings.Contains(out, "release v1.2.3") {
