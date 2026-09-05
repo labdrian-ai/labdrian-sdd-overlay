@@ -38,6 +38,12 @@ const (
 	// DiagnosticVaultSubprocessFailed reports that the vault's retrieval
 	// entrypoint failed, so these results are Engram-only (D8).
 	DiagnosticVaultSubprocessFailed = "vault_subprocess_failed"
+
+	// DiagnosticRelationsUnreadable: the relation ledger could not be
+	// read, so no result carries what it says. Silence here would read as
+	// "nothing is superseded", which is the reading that lets an abandoned
+	// decision pass as current.
+	DiagnosticRelationsUnreadable = "relations_unreadable"
 	// DiagnosticEngramDegradedSnapshot reports that Engram is being read
 	// through engram.Open's immutable=1 fallback: the results come from a
 	// point-in-time snapshot taken when the connection was opened, not
@@ -90,6 +96,18 @@ type ResultRow struct {
 	Title       string `json:"title,omitempty"`
 	Snippet     string `json:"snippet,omitempty"`
 	Score       *Score `json:"score,omitempty"`
+	// Standing is what Engram's relation ledger says about this
+	// observation: replaced, contradicted, or flagged and never decided.
+	// It is nil when there is nothing to say, and absent from a vault-only
+	// row, which has no observation behind it.
+	//
+	// It is carried here because Engram's own search does not carry it.
+	// Verified on a copy of a real database: inserting "B supersedes A"
+	// left A's results byte-identical, still first, unmarked. A memory that
+	// was explicitly replaced therefore reads as current, and gets
+	// reintroduced. This module cannot fix that search (R-002 keeps its
+	// connection read-only); it can decline to repeat the omission.
+	Standing *engram.Standing `json:"standing,omitempty"`
 }
 
 // Diagnostic is one non-fatal condition alongside a Result.
@@ -153,7 +171,44 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result.Results = mergeResults(vaultRows, engramRows, resolveLink)
+	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
 	return result, nil
+}
+
+// attachStandings annotates each row that has an observation behind it.
+//
+// A relation ledger that cannot be read degrades to a diagnostic rather
+// than failing the query, exactly as a failing vault does: the results are
+// still the results, and losing the annotation is a smaller harm than
+// losing the answer. It is reported rather than swallowed, because silence
+// here is indistinguishable from "nothing is superseded" -- the reading
+// that lets an abandoned decision pass as current.
+func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
+	ids := make([]int64, 0, len(rows))
+	for _, r := range rows {
+		if r.EngramID != 0 {
+			ids = append(ids, r.EngramID)
+		}
+	}
+	if len(ids) == 0 {
+		return nil
+	}
+
+	standings, err := store.Standings(ids)
+	if err != nil {
+		return []Diagnostic{{
+			Code:   DiagnosticRelationsUnreadable,
+			Detail: fmt.Sprintf("engram's relation ledger could not be read, so no result is marked as superseded or contradicted even if it is: %v", err),
+		}}
+	}
+
+	for i := range rows {
+		if st, ok := standings[rows[i].EngramID]; ok && !st.Empty() {
+			standing := st
+			rows[i].Standing = &standing
+		}
+	}
+	return nil
 }
 
 // mergeResults implements D8's merge (3b.8: MatchLinkedEngramRow is the

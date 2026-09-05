@@ -95,9 +95,34 @@ func cmdQuery(args []string) int {
 			label = fmt.Sprintf("engram:%d", row.EngramID)
 		}
 		fmt.Printf("  [%d] %-8s %s %s\n", row.Rank, row.Source, label, row.Title)
+		printStanding(row)
 	}
 	for _, d := range result.Diagnostics {
 		fmt.Fprintf(os.Stderr, "WARN %s: %s\n", d.Code, d.Detail)
 	}
 	return exitOK
+}
+
+// printStanding renders what the relation ledger says about a row, under
+// the row itself.
+//
+// It prints under the result rather than replacing or hiding it, and the
+// choice is deliberate. Suppressing a superseded memory would take the
+// decision away from the reader and lose the record of what was tried and
+// abandoned -- which is often the most useful thing in it. Saying "this was
+// replaced, by that" leaves both the knowledge and the judgement where they
+// belong.
+func printStanding(row query.ResultRow) {
+	if row.Standing == nil {
+		return
+	}
+	for _, n := range row.Standing.SupersededBy {
+		fmt.Printf("        SUPERSEDED BY engram:%d %s — do not treat as current\n", n.ID, n.Title)
+	}
+	for _, n := range row.Standing.ConflictsWith {
+		fmt.Printf("        CONFLICTS WITH engram:%d %s\n", n.ID, n.Title)
+	}
+	for _, n := range row.Standing.Unjudged {
+		fmt.Printf("        UNDECIDED against engram:%d %s — nobody judged this conflict\n", n.ID, n.Title)
+	}
 }
