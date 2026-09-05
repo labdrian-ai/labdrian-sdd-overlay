@@ -430,3 +430,39 @@ func TestObservationByID_UnknownIDReportsNotFoundNotAnError(t *testing.T) {
 		t.Fatalf("ObservationByID(999999) ok = true, want false; got %+v", got)
 	}
 }
+
+// HasMemory is the seam projectid.Adopt consults to decide whether a
+// derivable name is one the memory already lives under. It must scope by
+// project exactly as ListObservations does, and it must agree with it about
+// soft-deleted rows: a project whose every observation was deleted no
+// longer holds memory, and adopting its name would resurrect a dead
+// identity for a repository that has since moved on.
+func TestHasMemory_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	insertObservation(t, dbPath, "live", "widgets", sql.NullString{})
+	insertObservation(t, dbPath, "gone", "retired", sql.NullString{String: "2026-01-01 00:00:00", Valid: true})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer store.Close()
+
+	for _, tc := range []struct {
+		project string
+		want    bool
+	}{
+		{"widgets", true},
+		{"retired", false},
+		{"never-seen", false},
+	} {
+		got, err := store.HasMemory(tc.project)
+		if err != nil {
+			t.Fatalf("HasMemory(%q): %v", tc.project, err)
+		}
+		if got != tc.want {
+			t.Errorf("HasMemory(%q) = %v, want %v", tc.project, got, tc.want)
+		}
+	}
+}

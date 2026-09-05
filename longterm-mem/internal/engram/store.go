@@ -186,6 +186,34 @@ func (s *Store) ListObservations(project string) ([]Observation, error) {
 	return observations, nil
 }
 
+// HasMemory reports whether project already holds memory: at least one
+// observation that has not been soft-deleted.
+//
+// It exists for projectid.Adopt, which needs to know which of a
+// repository's derivable names the memory ALREADY lives under, so the
+// resolver adopts that name instead of minting a second one beside it. It
+// asks per name rather than enumerating every project on purpose -- the
+// only names it may ever consider are the ones this repository derives, and
+// a listing would invite matching on resemblance instead.
+//
+// Its scoping deliberately matches ListObservations' (R-020): a project
+// whose observations were all soft-deleted no longer holds memory, and
+// adopting its name would bind a live repository to a dead identity.
+func (s *Store) HasMemory(project string) (bool, error) {
+	var one int
+	err := s.db.QueryRow(
+		`SELECT 1 FROM observations WHERE project = ? AND deleted_at IS NULL LIMIT 1`,
+		project,
+	).Scan(&one)
+	if errors.Is(err, sql.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("engram: check whether project %q holds memory: %w", project, err)
+	}
+	return true, nil
+}
+
 // ObservationsIncludingDeleted returns every observation belonging to
 // project, including soft-deleted rows (R-033): Propagate needs a
 // soft-deleted observation's own row to decide archived-vs-superseded,

@@ -314,3 +314,65 @@ The longterm-mem component SHALL NOT default or validate an MCP tool call's
 - WHEN a `query` or `promote` tool call is handled
 - THEN its explicit `project` field is used as given, with no
   working-directory default and no working-directory correspondence check
+
+### Requirement: Established Identity Adoption
+
+ID: R-044
+Traces to: longterm-mem R-044
+
+WHERE the project is resolved from the working directory, the longterm-mem
+component SHALL use the highest-ranked derivable name that already holds
+memory, and SHALL fall back to the identity chain's own answer only when no
+derivable name holds any. It SHALL consider only names the repository
+itself derives, never names selected by resemblance to one.
+
+#### Scenario: An established derivable name is adopted rather than re-minted
+
+- GIVEN a repository whose `origin` normalizes to `host/owner/name` and
+  whose memory already lives under the plain `name`
+- WHEN the project is resolved from the working directory
+- THEN `name` is used, and the adoption is reported, rather than a second
+  identity being created beside the memory that already exists
+
+#### Scenario: Nothing established leaves the chain in charge
+
+- GIVEN a repository none of whose derivable names holds any memory
+- WHEN the project is resolved from the working directory
+- THEN the identity chain's own first-match-wins answer is used unchanged
+
+#### Scenario: Adoption preserves the identical-across-worktrees property
+
+- GIVEN a repository's main checkout and any number of linked worktrees
+- WHEN the project is resolved from each of them
+- THEN every one of them adopts the identical name
+
+#### Scenario: A store that cannot be consulted is reported, never read as empty
+
+- GIVEN the vault registry or Engram's database cannot be read
+- WHEN the project is resolved from the working directory
+- THEN the command reports that an already-established identity may have
+  been missed, rather than proceeding as though the repository were new
+
+### Requirement: Derivable Fragments Are Reported For Integration
+
+ID: R-045
+Traces to: longterm-mem R-045
+
+WHERE more than one derivable name of a single repository holds memory, the
+longterm-mem component SHALL report every name other than the adopted one
+as owed an integration into it, and SHALL NOT perform the merge itself.
+
+#### Scenario: Every other established derivable name is named, with its remedy
+
+- GIVEN a repository whose declared name and whose remote-derived name both
+  hold memory
+- WHEN the project is resolved from the working directory
+- THEN the declared name is adopted and the other is reported as owed an
+  integration into it, together with the command that performs the merge
+
+#### Scenario: The merge stays with the store that owns it
+
+- GIVEN derivable fragments have been reported
+- WHEN longterm-mem completes the command
+- THEN Engram's database is not written, its read-only connection contract
+  being unchanged
