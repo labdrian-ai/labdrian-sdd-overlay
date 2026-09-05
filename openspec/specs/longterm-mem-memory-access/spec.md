@@ -376,3 +376,59 @@ as owed an integration into it, and SHALL NOT perform the merge itself.
 - WHEN longterm-mem completes the command
 - THEN Engram's database is not written, its read-only connection contract
   being unchanged
+
+### Requirement: Repository Identity Ledger
+
+ID: R-046
+Traces to: longterm-mem R-046
+
+The longterm-mem component SHALL record every name it derives for a
+repository under that repository's git common directory, and SHALL treat a
+recorded strict name as derivable thereafter, ranked below every name the
+repository still derives. It SHALL NOT adopt a recorded loose spelling, and
+SHALL report rather than trust a ledger whose contents do not match its own
+digest.
+
+#### Scenario: A moved repository is reunited with its memory
+
+- GIVEN a repository identified only by its path, whose memory is stored
+  under that path
+- WHEN the repository is moved and its project is resolved from the new
+  location
+- THEN the name it was previously known by is adopted, because the ledger
+  travels inside the repository's own git directory
+
+#### Scenario: One ledger per repository, not one per worktree
+
+- GIVEN a repository's main checkout and a linked worktree
+- WHEN a project is resolved from either of them
+- THEN both read and write the same ledger, under the git common directory,
+  and no per-worktree ledger is created
+
+#### Scenario: A live derivation outranks a remembered name
+
+- GIVEN a repository that both derives a name now and was known by a
+  different name before, and both hold memory
+- WHEN its project is resolved
+- THEN the currently derived name is adopted and the remembered one is
+  reported as owed an integration
+
+#### Scenario: A loose spelling is never adopted from the ledger alone
+
+- GIVEN a ledger recording a repository's bare directory name
+- WHEN nothing derives that name any more
+- THEN it is not adopted, because it can equally name another repository
+
+#### Scenario: A ledger that cannot prove itself is reported
+
+- GIVEN a ledger file whose entries do not match its recorded digest
+- WHEN the project is resolved
+- THEN the command reports the ledger as unreadable rather than adopting a
+  name from it, and still resolves from the repository itself
+
+#### Scenario: A ledger that cannot be written never fails the command
+
+- GIVEN a repository whose git common directory cannot be written
+- WHEN a subcommand resolves its project
+- THEN the command reports that the ledger could not be written and
+  otherwise proceeds normally

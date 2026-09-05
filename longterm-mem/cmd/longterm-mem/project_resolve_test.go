@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/identityledger"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 )
 
@@ -261,4 +262,100 @@ func TestResolveProjectFlag_ReportsDerivableNamesOwedAnIntegration(t *testing.T)
 	if !strings.Contains(stderr, "widgets") || !strings.Contains(stderr, "integrat") {
 		t.Fatalf("the fragment owed an integration must be named, with its remedy: stderr=%q", stderr)
 	}
+}
+
+// The hole derivation alone cannot close, end to end: a repository with no
+// declaration and no remote is known only by its path. Move it, and that
+// name stops being derivable -- and the memory stored under it becomes
+// unreachable, silently, forever. The ledger travels inside .git, so it
+// moves WITH the repository and reunites the two.
+func TestResolveProjectFlag_AMovedRepositoryIsReunitedWithItsMemory(t *testing.T) {
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	parent := t.TempDir()
+	before := filepath.Join(parent, "before")
+	plainRepo(t, before)
+
+	// Live once at the old path, so the ledger records that name.
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
+	t.Chdir(before)
+	var oldName string
+	captureStderr(t, func() { oldName, _ = resolveProjectFlag("query", "") })
+	if oldName == "" {
+		t.Fatal("the first resolution produced no name")
+	}
+
+	// The repository moves. Nothing derives its old name any more.
+	after := filepath.Join(parent, "after")
+	if err := os.Rename(before, after); err != nil {
+		t.Fatalf("move the repository: %v", err)
+	}
+
+	// The memory is still filed under the old name.
+	t.Setenv(vaultsFileEnvVar, writeVaults(t, oldName))
+	t.Chdir(after)
+
+	var got string
+	stderr := captureStderr(t, func() { got, _ = resolveProjectFlag("query", "") })
+	if got != oldName {
+		t.Fatalf("a moved repository lost its memory: resolved %q, want the remembered %q; stderr=%q", got, oldName, stderr)
+	}
+}
+
+// The ledger records the repository, not one checkout of it, so it lives in
+// the git COMMON directory. A per-worktree ledger would fragment the very
+// record that exists to prevent fragmentation.
+func TestIdentityLedger_IsSharedByEveryWorktree(t *testing.T) {
+	t.Setenv(engramDBEnvVar, filepath.Join(t.TempDir(), "absent.db"))
+	t.Setenv(vaultsFileEnvVar, writeVaults(t))
+	parent := t.TempDir()
+	main := filepath.Join(parent, "main")
+	plainRepo(t, main)
+	runGit(t, main, "commit", "-q", "--allow-empty", "-m", "init")
+
+	// Resolve once from the main checkout: the ledger gets written.
+	t.Chdir(main)
+	captureStderr(t, func() { resolveProjectFlag("query", "") })
+
+	worktree := filepath.Join(parent, "feature")
+	runGit(t, main, "worktree", "add", "-q", "-b", "feature", worktree)
+
+	commonFromWorktree, err := projectid.CommonDir(worktree)
+	if err != nil {
+		t.Fatalf("CommonDir(worktree): %v", err)
+	}
+	names, err := identityledger.Names(commonFromWorktree)
+	if err != nil {
+		t.Fatalf("Names from the worktree: %v", err)
+	}
+	if len(names) == 0 {
+		t.Fatal("the worktree cannot see what the main checkout recorded: the ledger is not shared")
+	}
+
+	// And nothing was written into the worktree's own git directory.
+	if _, err := os.Stat(filepath.Join(main, ".git", "worktrees", "feature", "longterm-mem")); !os.IsNotExist(err) {
+		t.Fatalf("a per-worktree ledger was created; it must live in the common dir only (%v)", err)
+	}
+}
+
+func runGit(t *testing.T, dir string, args ...string) {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null", "GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com",
+		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com")
+	if out, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("git %s: %v\n%s", strings.Join(args, " "), err, out)
+	}
+}
+
+// plainRepo initializes a repository with no declaration and no remote, so
+// its only identity is its path.
+func plainRepo(t *testing.T, path string) {
+	t.Helper()
+	if err := os.MkdirAll(path, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", path, err)
+	}
+	runGit(t, path, "init", "-q", "-b", "main")
 }

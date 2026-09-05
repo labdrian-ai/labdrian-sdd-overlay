@@ -129,3 +129,75 @@ func TestAdopt_UnreadableStorageIsReportedNotAssumedEmpty(t *testing.T) {
 		t.Fatalf("an unreadable storage must surface, not read as empty: got %v", err)
 	}
 }
+
+// The hole derivation alone cannot close: a repository that MOVES stops
+// deriving its old path, so memory stored under that path becomes
+// unreachable -- silently, and forever. A name the repository was known by
+// before is still its name, and adopting it is the reunion.
+func TestAdoptWith_RemembersANameNothingDerivesAnyMore(t *testing.T) {
+	tmp := t.TempDir()
+	root := newRepo(t, tmp, "widgets") // no declaration, no remote: path-derived only
+
+	got, err := projectid.AdoptWith(root, projectid.AdoptOptions{
+		Established: established("/somewhere/else/.git"),
+		Remembered:  []string{"/somewhere/else/.git"},
+	})
+	if err != nil {
+		t.Fatalf("AdoptWith: %v", err)
+	}
+	if got.Identity.Project != "/somewhere/else/.git" {
+		t.Fatalf("a remembered name that still holds memory must be adopted: got %q", got.Identity.Project)
+	}
+	if !got.Adopted {
+		t.Fatal("Adopted must report that the identity came from storage")
+	}
+}
+
+// Remembered names rank BELOW everything the repository still derives. What
+// it looks like now is better evidence than what it looked like once, and
+// inverting that would let a stale name outrank a live declaration.
+func TestAdoptWith_LiveDerivationOutranksMemory(t *testing.T) {
+	tmp := t.TempDir()
+	root := newRepo(t, tmp, "widgets")
+	write(t, filepath.Join(root, projectid.DeclaredFileName), "current-name\n")
+
+	got, err := projectid.AdoptWith(root, projectid.AdoptOptions{
+		Established: established("current-name", "former-name"),
+		Remembered:  []string{"former-name"},
+	})
+	if err != nil {
+		t.Fatalf("AdoptWith: %v", err)
+	}
+	if got.Identity.Project != "current-name" {
+		t.Fatalf("a live declaration must outrank a remembered name: got %q", got.Identity.Project)
+	}
+	if len(got.PendingIntegration) != 1 || got.PendingIntegration[0] != "former-name" {
+		t.Fatalf("the remembered name still holds memory and is owed an integration: got %v", got.PendingIntegration)
+	}
+}
+
+// DerivableNames is what the caller writes to the ledger, so it must report
+// the rule and whether each name may later be adopted on the ledger's word
+// alone. The loose spellings may not: a bare directory name can name
+// somebody else's repository.
+func TestDerivableNames_MarksLooseSpellingsUnadoptable(t *testing.T) {
+	tmp := t.TempDir()
+	root := newRepo(t, tmp, "widgets")
+	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
+
+	names, err := projectid.DerivableNames(root)
+	if err != nil {
+		t.Fatalf("DerivableNames: %v", err)
+	}
+
+	strict := map[string]bool{}
+	for _, n := range names {
+		strict[n.Name] = n.Strict
+	}
+	if !strict["github.com/acme/widgets"] {
+		t.Error("a normalized remote is a strict identity")
+	}
+	if strict["widgets"] {
+		t.Error("a bare last segment can name another repository and must not be adoptable from memory alone")
+	}
+}

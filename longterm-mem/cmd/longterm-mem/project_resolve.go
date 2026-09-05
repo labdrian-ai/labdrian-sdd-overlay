@@ -6,7 +6,10 @@ import (
 	"os"
 	"strings"
 
+	"time"
+
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/identityledger"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
@@ -129,8 +132,77 @@ func adoptFromWorkingDirectory() (projectid.Adoption, []string, error) {
 	stores, notes := openEstablishedStores()
 	defer stores.close()
 
-	a, err := projectid.Adopt(wd, stores.lookup)
-	return a, notes, err
+	// The ledger is consulted BEFORE resolving and written AFTER, because
+	// the two answer different halves of one question: what this repository
+	// was called before, and what it is called now.
+	remembered, commonDir, ledgerNotes := rememberedNames(wd)
+	notes = append(notes, ledgerNotes...)
+
+	a, err := projectid.AdoptWith(wd, projectid.AdoptOptions{
+		Established: stores.lookup,
+		Remembered:  remembered,
+	})
+	if err != nil {
+		return projectid.Adoption{}, notes, err
+	}
+
+	notes = append(notes, recordDerivedNames(commonDir, a.Derived)...)
+	return a, notes, nil
+}
+
+// rememberedNames reads the names this repository was known by from its
+// ledger, and returns the common directory the ledger lives under so the
+// caller can write back to the same place.
+//
+// Only the STRICT names are offered for adoption. A ledger's bare directory
+// name can equally name somebody else's repository, and adopting it would
+// bind this one to another project's memory -- see projectid.DerivedName's
+// Strict field for why the visible failure is the better trade.
+func rememberedNames(wd string) ([]string, string, []string) {
+	commonDir, err := projectid.CommonDir(wd)
+	if err != nil {
+		// Not a repository, or unreadable metadata. AdoptWith is about to
+		// report that far more precisely than this path could.
+		return nil, "", nil
+	}
+
+	entries, err := identityledger.Names(commonDir)
+	if err != nil {
+		return nil, commonDir, []string{fmt.Sprintf("this repository's identity ledger could not be read (%v)", err)}
+	}
+
+	var remembered []string
+	for _, e := range entries {
+		if e.Adoptable {
+			remembered = append(remembered, e.Name)
+		}
+	}
+	return remembered, commonDir, nil
+}
+
+// recordDerivedNames writes today's derived names into the repository's
+// ledger, so a name stays findable after the repository stops deriving it.
+//
+// A ledger that cannot be written is a note, never a failure: the command
+// the operator actually asked for has nothing to do with it, and refusing
+// to run because a record could not be kept would be its own kind of
+// memory loss.
+func recordDerivedNames(commonDir string, derived []projectid.DerivedName) []string {
+	if commonDir == "" || len(derived) == 0 {
+		return nil
+	}
+	names := make([]identityledger.Name, 0, len(derived))
+	for _, d := range derived {
+		names = append(names, identityledger.Name{
+			Name:      d.Name,
+			Rule:      string(d.Rule),
+			Adoptable: d.Strict,
+		})
+	}
+	if err := identityledger.Record(commonDir, names, time.Now().UTC()); err != nil {
+		return []string{fmt.Sprintf("this repository's identity ledger could not be written (%v)", err)}
+	}
+	return nil
 }
 
 // establishedStores answers "does memory already live under this name?"
