@@ -1538,7 +1538,7 @@ func checkRegistry(registryPath string, readFile readFileFn) checkResult {
 		missing = append(missing, "review-projection-contract-scope")
 	}
 	note := fmt.Sprintf(
-		"present but scoped block(s) missing: %s (run 'overlay install-hooks' or propagate)",
+		"present but scoped block(s) missing: %s (run 'labdrian install-hooks' or propagate)",
 		strings.Join(missing, ", "),
 	)
 	return checkResult{label: label, ok: true, degraded: true, note: note}

@@ -1213,7 +1213,7 @@ func TestStatusHooks_IsReadOnlyAndFailLoudOnMissingBinary(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected status-hooks without binary to fail, but exit was 0\noutput:\n%s", out)
 	}
-	if !strings.Contains(out, "run 'overlay install-hooks'") {
+	if !strings.Contains(out, "run 'labdrian install-hooks'") {
 		t.Fatalf("expected install-hooks guidance, got: %s", out)
 	}
 

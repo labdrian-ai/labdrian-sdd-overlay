@@ -369,7 +369,7 @@ resolve_targets() {
 
 usage() {
   cat <<'EOF'
-Usage: overlay <command> [options]
+Usage: labdrian <command> [options]
 
 Commands:
   bootstrap                        Initialize overlay repo and branches
@@ -501,6 +501,16 @@ Commands:
                                    surface (D4, R-014/R-015). status/uninstall never
                                    build. The binary is removed only when --target
                                    all leaves zero install-state targets, or --purge.
+                                   Exits: install 0=every named target registered,
+                                   1=at least one named target was not registered.
+                                   status 0=the engine reports a supported status,
+                                   2=it reports a non-supported one (the report
+                                   succeeded; what it reported is unhealthy -- never
+                                   1, which would claim the report itself failed).
+                                   uninstall 0=converged, 1=an unregister call failed
+                                   so a target stays tracked as installed. Any
+                                   subcommand exits 1 on a usage error or a missing
+                                   prerequisite (die).
   --help                           Show this help
 
 Targets:
@@ -509,13 +519,13 @@ Targets:
   codex    → ~/.codex/skills
 
 Hook activation notes:
-  - 'overlay apply' does NOT call install-hooks. Deploy of skills and hook
+  - 'labdrian apply' does NOT call install-hooks. Deploy of skills and hook
     wiring are intentionally separate so skills can be updated without
     mutating ~/.claude/settings.json.
-  - Run 'overlay install-hooks' once after initial setup (or after a binary
+  - Run 'labdrian install-hooks' once after initial setup (or after a binary
     update) to activate deterministic scoping.
   - status-hooks is now read-only and fails loudly when the engine binary is
-    absent (run 'overlay install-hooks').
+    absent (run 'labdrian install-hooks').
 EOF
 }
 
@@ -1468,7 +1478,7 @@ cmd_apply() {
     echo "MERGE CONFLICTS detected. Resolve the following files, then run:"
     echo "  git -C \"$OVERLAY_DIR\" add <file>"
     echo "  git -C \"$OVERLAY_DIR\" commit"
-    echo "  overlay apply  (re-run to deploy after resolving)"
+    echo "  labdrian apply  (re-run to deploy after resolving)"
     echo ""
     echo "Conflicted files:"
     git diff --name-only --diff-filter=U
@@ -1607,7 +1617,7 @@ cmd_apply() {
     if [[ "$ahead" -gt 0 ]]; then
       echo ""
       echo "NOTICE: local main is $ahead commit(s) ahead of origin/main."
-      echo "  Push deliberately with: overlay apply --push"
+      echo "  Push deliberately with: labdrian apply --push"
       echo "  or: git -C \"$OVERLAY_DIR\" push origin main"
     fi
   fi
@@ -1668,7 +1678,7 @@ cmd_self_update() {
   local ahead
   ahead="$(git rev-list --count origin/main..main)"
   [[ "$ahead" -eq 0 ]] \
-    || die "Local main is $ahead commit(s) ahead of origin/main; self-update refuses to diverge further. Resolve manually (e.g. 'overlay apply --push')."
+    || die "Local main is $ahead commit(s) ahead of origin/main; self-update refuses to diverge further. Resolve manually (e.g. 'labdrian apply --push')."
 
   # 5. R-003/D1: resolve the highest release tag reachable from origin/main.
   #    "none" means no release tag exists anywhere yet -- fall back verbatim
@@ -1834,7 +1844,7 @@ cmd_restore() {
         backup_ts="${1:-}"
         [[ -n "$backup_ts" ]] || die "--backup requires a timestamp argument"
         ;;
-      *) die "Unknown option: $1. Usage: overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]" ;;
+      *) die "Unknown option: $1. Usage: labdrian restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]" ;;
     esac
     shift || true
   done
@@ -1895,7 +1905,7 @@ cmd_restore() {
       [[ "$e" == "$backup_ts" ]] && found=1 && break
     done
     [[ "$found" -eq 1 ]] \
-      || die "Backup '$backup_ts' not found for target '$target_arg'. Run 'overlay restore --target $target_arg --list' to see available backups."
+      || die "Backup '$backup_ts' not found for target '$target_arg'. Run 'labdrian restore --target $target_arg --list' to see available backups."
     selected="$backup_ts"
   else
     # 'entries' was explicitly re-sorted above; the last element is the
@@ -2063,7 +2073,7 @@ cmd_status() {
       if [[ "$target_digest" == "$recorded_digest" ]]; then
         echo "  version: in sync at $recorded_version"
       else
-        echo "  version: $recorded_version (drift detected -- run 'overlay apply --target $t')"
+        echo "  version: $recorded_version (drift detected -- run 'labdrian apply --target $t')"
       fi
     fi
   done
@@ -2375,7 +2385,7 @@ cmd_sync_check() {
     echo "VERDICT:$t:UPSTREAM_CHANGED=$upstream_changed OVERLAY_NOT_DEPLOYED=$overlay_not_deployed REPO_BEHIND_ORIGIN=$repo_behind_origin REPO_BEHIND_RELEASE=$repo_behind_release RECORDED_VERSION=$recorded_version DIGEST_MATCH=$digest_match"
 
     if [[ "$upstream_changed" -gt 0 ]]; then
-      echo "ACTION:$t: gentle-ai sync detected: run 'overlay capture --target $t' then 'overlay apply' to re-merge your customizations"
+      echo "ACTION:$t: gentle-ai sync detected: run 'labdrian capture --target $t' then 'labdrian apply' to re-merge your customizations"
     elif [[ "$overlay_not_deployed" -gt 0 ]]; then
       # R-007: name the release `apply` would bring only when there IS a
       # recorded version that has gone stale (digest_match=no) -- a
@@ -2383,9 +2393,9 @@ cmd_sync_check() {
       # fabricated version, and the pre-first-tag bootstrap (no real
       # version to name yet) is never papered over either.
       if [[ "$digest_match" == "no" && "$release_version" != "untagged" ]]; then
-        echo "ACTION:$t: run 'overlay apply --target $t' (release $release_version available)"
+        echo "ACTION:$t: run 'labdrian apply --target $t' (release $release_version available)"
       else
-        echo "ACTION:$t: run 'overlay apply --target $t'"
+        echo "ACTION:$t: run 'labdrian apply --target $t'"
       fi
     elif [[ "$repo_behind_origin" != "NA" && "$repo_behind_origin" -gt 0 ]]; then
       echo "ACTION:$t: run 'git pull' to update your local clone (behind origin/main by $repo_behind_origin commit(s))"
@@ -2538,10 +2548,10 @@ recheck_discovery_tools() {
 # ---------------------------------------------------------------------------
 #
 # Design decisions:
-#   1. SEPARATE from 'overlay apply'. Skills deployment and hook wiring are
+#   1. SEPARATE from 'labdrian apply'. Skills deployment and hook wiring are
 #      distinct operations — apply only copies files, never mutates
 #      ~/.claude/settings.json. This keeps apply non-invasive.
-#   2. DELIBERATE activation. The user must run 'overlay install-hooks'
+#   2. DELIBERATE activation. The user must run 'labdrian install-hooks'
 #      intentionally. This satisfies the "INERT until user activates" contract.
 #   3. MISSING-BINARY SAFETY. Hook commands emitted by the engine use the form:
 #        command -v <binary> &>/dev/null && <binary> ... || true
@@ -2553,7 +2563,7 @@ recheck_discovery_tools() {
 
 cmd_install_hooks() {
   command -v go >/dev/null 2>&1 || die "go is not installed; required to build the engine"
-  command -v gentle-ai >/dev/null 2>&1 || warn "gentle-ai not found on PATH — the overlay layers onto gentle-ai; hooks will install but skill propagation/scoping may be inert until gentle-ai is installed. Run 'overlay doctor' for a full preflight."
+  command -v gentle-ai >/dev/null 2>&1 || warn "gentle-ai not found on PATH — the overlay layers onto gentle-ai; hooks will install but skill propagation/scoping may be inert until gentle-ai is installed. Run 'labdrian doctor' for a full preflight."
   [[ -d "$ENGINE_SRC" ]] || die "engine source not found at $ENGINE_SRC"
 
   info "Building engine binary..."
@@ -2579,10 +2589,10 @@ cmd_install_hooks() {
   echo ""
   echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
   echo ""
-  echo "Run 'overlay doctor' to verify the full installation."
+  echo "Run 'labdrian doctor' to verify the full installation."
 
   # Guard: if the standalone skill-discovery-safety.md has not been deployed yet
-  # (user ran install-hooks but not 'overlay apply'), warn loudly so the safety
+  # (user ran install-hooks but not 'labdrian apply'), warn loudly so the safety
   # contract is not silently absent from the skill registry.
   local safety_path="$HOME/.claude/skills/_shared/skill-discovery-safety.md"
   if test -f "$safety_path"; then
@@ -2592,7 +2602,7 @@ cmd_install_hooks() {
     echo "WARNING: $safety_path not found."
     echo "  The safety contract is embedded in the engine binary and will propagate"
     echo "  via hooks, but the standalone copy has not been deployed yet."
-    echo "  Run 'overlay apply' to deploy all skills, then 'overlay doctor' to verify."
+    echo "  Run 'labdrian apply' to deploy all skills, then 'labdrian doctor' to verify."
   fi
 
   # Best-effort: provision discovery tools so agents don't hit the silent-empty
@@ -2602,7 +2612,7 @@ cmd_install_hooks() {
   if [[ -n "${OVERLAY_SKIP_TOOL_INSTALL:-}" ]]; then
     info "OVERLAY_SKIP_TOOL_INSTALL is set — skipping automatic discovery-tool installation."
     warn "Discovery tools (bat rg fd sd eza) were NOT auto-installed."
-    warn "Run 'overlay doctor --fix' later to provision them when ready."
+    warn "Run 'labdrian doctor --fix' later to provision them when ready."
   else
     echo ""
     echo "==> Installing host packages via Homebrew: discovery tools (bat rg fd sd eza)."
@@ -2629,7 +2639,7 @@ cmd_status_hooks() {
     # 'install-hooks' is no longer the narrowest remedy: doctor --fix rebuilds
     # the binary without also rewriting ~/.claude/settings.json. Hook wiring is
     # still named, because an engine that was never installed needs it too.
-    die "engine binary not found at $ENGINE_BINARY; run 'overlay doctor --fix' to build it, or run 'overlay install-hooks' to build it and wire the hooks"
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian doctor --fix' to build it, or run 'labdrian install-hooks' to build it and wire the hooks"
   fi
 
   # The engine binary's freshness belongs to THIS status command, not to
@@ -2637,7 +2647,7 @@ cmd_status_hooks() {
   # skills, while status-hooks is the read-only health check for the overlay's
   # own installation — the engine binary and its hooks. The TUI's "Estado" row
   # folds status-hooks in, so one line here surfaces there with no TUI change.
-  # One line, because status is a summary; 'overlay doctor' is the report.
+  # One line, because status is a summary; 'labdrian doctor' is the report.
   if engine_binary_is_stale; then
     warn "$(engine_stale_diagnosis)"
   fi
@@ -2676,7 +2686,7 @@ cmd_uninstall_hooks() {
   echo "  have been removed from $settings_path"
   echo "  (backup at ${settings_path}.bak if the file was modified)"
   echo ""
-  echo "Run 'overlay doctor' to verify the installation state."
+  echo "Run 'labdrian doctor' to verify the installation state."
 }
 
 # ---------------------------------------------------------------------------
@@ -2693,7 +2703,7 @@ cmd_install_alias() {
 # doctor_fix_engine_binary is doctor --fix's half of "update the engine on
 # purpose". ensure_engine_binary heals silently on the way to running
 # something; this is the DELIBERATE repair, and until it existed the only way
-# to rebuild the engine was 'overlay install-hooks', which also rewrites
+# to rebuild the engine was 'labdrian install-hooks', which also rewrites
 # ~/.claude/settings.json — a hammer for this tack, and so nobody ran it after
 # a repository update.
 #
@@ -2717,7 +2727,7 @@ cmd_install_alias() {
 # finishes.
 doctor_report_engine_binary() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
-    echo "WARN  engine binary not found at $ENGINE_BINARY — nothing the overlay hands to the engine can run. Rebuild it with 'overlay doctor --fix' (or 'overlay install-hooks', which also rewires ~/.claude/settings.json)."
+    echo "WARN  engine binary not found at $ENGINE_BINARY — nothing the overlay hands to the engine can run. Rebuild it with 'labdrian doctor --fix' (or 'labdrian install-hooks', which also rewires ~/.claude/settings.json)."
   elif engine_binary_is_stale; then
     echo "WARN  $(engine_stale_diagnosis)"
   else
@@ -2737,7 +2747,7 @@ doctor_fix_engine_binary() {
   fi
 
   if ! command -v go >/dev/null 2>&1; then
-    echo "COULD NOT REPAIR the $reason engine binary at $ENGINE_BINARY: go is not on PATH. Install a Go toolchain, then run 'overlay doctor --fix' again."
+    echo "COULD NOT REPAIR the $reason engine binary at $ENGINE_BINARY: go is not on PATH. Install a Go toolchain, then run 'labdrian doctor --fix' again."
     return 0
   fi
   if [[ ! -d "$ENGINE_SRC" ]]; then
@@ -2783,19 +2793,19 @@ cmd_doctor() {
   while [[ $# -gt 0 ]]; do
     case "$1" in
       --fix) fix=1 ;;
-      *) die "Unknown option: $1. Usage: overlay doctor [--fix]" ;;
+      *) die "Unknown option: $1. Usage: labdrian doctor [--fix]" ;;
     esac
     shift || true
   done
 
-  echo "overlay doctor — host-toolchain preflight"
+  echo "labdrian doctor — host-toolchain preflight"
   echo ""
 
   # (a) REQUIRED: go on PATH (needed to build the engine binary).
   if command -v go >/dev/null 2>&1; then
     echo "PASS  go on PATH"
   else
-    echo "FAIL  go not found on PATH — required to build the engine binary (run 'overlay install-hooks')."
+    echo "FAIL  go not found on PATH — required to build the engine binary (run 'labdrian install-hooks')."
     fail=1
   fi
 
@@ -2810,7 +2820,7 @@ cmd_doctor() {
 
   # (c) bat / rg / fd / sd / eza — the full set the persona rule mandates.
   #     Absence is a WARN, never a hard FAIL: the safety guard is the fallback.
-  #     Run 'overlay doctor --fix' to auto-install via Homebrew when available.
+  #     Run 'labdrian doctor --fix' to auto-install via Homebrew when available.
   local missing_discovery=()
   local t
   for t in "${DISCOVERY_TOOLS[@]}"; do
@@ -2822,7 +2832,7 @@ cmd_doctor() {
     echo "WARN  not found: ${missing_discovery[*]}. Without these tools agents that run"
     echo "      e.g. 'fd ... 2>/dev/null' get empty output (command not found, swallowed)"
     echo "      and may misread it as zero skills — the silent-empty footgun."
-    echo "      Run 'overlay doctor --fix' to auto-install via Homebrew (if available)."
+    echo "      Run 'labdrian doctor --fix' to auto-install via Homebrew (if available)."
     echo "      Skill discovery MUST use the registry (.atl/skill-registry.md or engram),"
     echo "      never a bare filesystem scan. An empty result is INCONCLUSIVE, not zero skills."
   fi
@@ -2878,7 +2888,7 @@ cmd_doctor() {
     if [[ "$dtarget_digest" == "$drecorded_digest" ]]; then
       echo "PASS  $dt: deployed at $drecorded_version, digest matches"
     else
-      echo "WARN  $dt: deployed at $drecorded_version, digest drift detected -- run 'overlay apply --target $dt'"
+      echo "WARN  $dt: deployed at $drecorded_version, digest drift detected -- run 'labdrian apply --target $dt'"
     fi
   done
 
@@ -2952,7 +2962,7 @@ cmd_repair_sdd_registry() {
       --no-refresh)
         refresh=0
         ;;
-      *) die "Unknown option: $1. Usage: overlay repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]" ;;
+      *) die "Unknown option: $1. Usage: labdrian repair-sdd-registry [--cwd DIR] [--target claude|opencode|codex] [--no-refresh]" ;;
     esac
     shift || true
   done
@@ -2978,7 +2988,7 @@ cmd_repair_sdd_registry() {
 
 cmd_skill_registry() {
   local verb="${1:-}"
-  [[ "$verb" == "refresh" ]] || die "Usage: overlay skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]"
+  [[ "$verb" == "refresh" ]] || die "Usage: labdrian skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]"
   shift || true
 
   local cwd="$CALLER_CWD"
@@ -3011,7 +3021,7 @@ cmd_skill_registry() {
       --force|--quiet)
         gentle_args+=("$1")
         ;;
-      *) die "Unknown option: $1. Usage: overlay skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]" ;;
+      *) die "Unknown option: $1. Usage: labdrian skill-registry refresh [--cwd DIR] [--target claude|opencode|codex] [--no-repair] [--force] [--quiet] [--no-gitignore]" ;;
     esac
     shift || true
   done
@@ -3032,7 +3042,7 @@ cmd_skill_registry() {
 # prespec-malandra skill calls (e.g. `labdrian prespec lint`).
 cmd_prespec() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
-    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
   fi
   exec "$ENGINE_BINARY" prespec "$@"
 }
@@ -3043,7 +3053,7 @@ cmd_prespec() {
 # Flags already supplied by the caller are never overridden.
 cmd_skills() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
-    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
   fi
 
   local has_registry=0 has_manifest=0 has_source_root=0
@@ -3259,7 +3269,7 @@ cmd_archive_reconcile() {
 
 cmd_gadu_generate() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
-    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
   fi
   exec env OVERLAY_DIR="$OVERLAY_DIR" "$ENGINE_BINARY" gadu-generate "$@"
 }
@@ -3277,7 +3287,7 @@ cmd_gadu_generate() {
 # It names 'doctor --fix' as the remedy, not 'install-hooks': the repair the
 # reader wants here is the engine binary, not a rewrite of settings.json.
 engine_stale_diagnosis() {
-  printf '%s' "engine binary at $ENGINE_BINARY is STALE — older than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Rebuild it with 'overlay doctor --fix'."
+  printf '%s' "engine binary at $ENGINE_BINARY is STALE — older than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Rebuild it with 'labdrian doctor --fix'."
 }
 
 # engine_binary_is_stale answers whether any Go source under $ENGINE_SRC is
@@ -3359,7 +3369,7 @@ ensure_engine_binary() {
 
   engine_binary_is_stale || return 0
 
-  local stale_warning="the engine binary at $ENGINE_BINARY is OLDER than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command below fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Fix it with 'overlay install-hooks', or by installing a Go toolchain so the overlay can rebuild the engine itself."
+  local stale_warning="the engine binary at $ENGINE_BINARY is OLDER than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command below fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Fix it with 'labdrian install-hooks', or by installing a Go toolchain so the overlay can rebuild the engine itself."
 
   if ! command -v go >/dev/null 2>&1; then
     warn "Engine binary is stale and go is not installed: $stale_warning"
@@ -3661,7 +3671,7 @@ longtermmem_install_step() {
   local status=0
   ( cmd_longterm_mem install --target "$target_arg" ) || status=$?
   if [[ "$status" -ne 0 ]]; then
-    warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian-overlay longterm-mem install --target $target_arg' directly."
+    warn "longterm-mem install FAILED after per-target state was already written: the MCP server is not installed. Target state now records a successful deploy, so re-running apply will NOT retry this step — run 'labdrian longterm-mem install --target $target_arg' directly."
   fi
   return "$status"
 }
@@ -3884,8 +3894,23 @@ cmd_longterm_mem() {
       return 1
     fi
   elif [[ "$subcmd" == "status" ]]; then
-    "$ENGINE_BINARY" runtime status --component longterm-mem --state-dir "$STATE_DIR" \
-      || warn "engine runtime status --component longterm-mem reported a non-supported status"
+    # The engine exits non-zero for CapabilityUnsupported/CapabilityPartial.
+    # Swallowing that into a bare warn made this branch return 0, and the TUI
+    # maps a zero exit to a green "Completado" -- so a component installed on
+    # no runtime at all was reported as complete, with the warning sentence
+    # sitting right underneath the tick.
+    #
+    # The exit is 2, not 1, and the distinction is the whole point: `status`
+    # is a READ-ONLY REPORT and it SUCCEEDED at reporting. 1 would claim the
+    # status command itself failed, which is false, and the TUI paints that as
+    # a hard failure. 2 is the code the TUI already renders as DEGRADED, which
+    # is exactly what "reported, and what it reported is unhealthy" means.
+    #
+    # The warn stays: the operator still needs the sentence.
+    if ! "$ENGINE_BINARY" runtime status --component longterm-mem --state-dir "$STATE_DIR"; then
+      warn "engine runtime status --component longterm-mem reported a non-supported status"
+      return 2
+    fi
   else
     local t
     # uninstall_failed tracks whether any target's unregister call returned

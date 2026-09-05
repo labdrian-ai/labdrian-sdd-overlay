@@ -1827,6 +1827,132 @@ case_status_hooks_surfaces_a_stale_engine_binary() {
 }
 
 # ---------------------------------------------------------------------------
+# hazard (e): 'longterm-mem status' exit contract
+# ---------------------------------------------------------------------------
+
+# write_fake_runtime_status_engine drops an engine stand-in at <path> whose
+# 'runtime status' prints one status line and exits <code>. The engine exits
+# non-zero for CapabilityUnsupported/CapabilityPartial, which is the shape the
+# status branch has to translate into an exit code of its own.
+write_fake_runtime_status_engine() {
+  local path="$1" exit_code="$2"
+  mkdir -p "$(dirname "$path")"
+  cat > "$path" <<STUB
+#!/usr/bin/env bash
+if [[ "\${1:-}" == "runtime" && "\${2:-}" == "status" ]]; then
+  echo "[longterm-mem] status: partial -- longterm-mem per-runtime status"
+  exit $exit_code
+fi
+exit 0
+STUB
+  chmod +x "$path"
+}
+
+# run_longterm_mem_status calls the status branch directly. ENGINE_SRC points
+# at a path that does not exist so ensure_engine_binary treats the (present,
+# executable) stub as current and never tries to rebuild it.
+run_longterm_mem_status() {
+  local dir="$1"
+  env PATH="/usr/bin:/bin" bash -c '
+    source "$1"
+    set +e
+    ENGINE_BINARY="$2"
+    ENGINE_SRC="$2.no-such-source-tree"
+    STATE_DIR="$3"
+    cmd_longterm_mem status
+    echo "STATUS-EXIT=$?"
+  ' _ "$OVERLAY" "$dir/bin/engine" "$dir/state" 2>&1
+}
+
+# The TUI paints err == nil as a green "Completado" and exit 2 as DEGRADED.
+# Swallowing the engine's non-zero exit into a bare warn made the status
+# branch return 0, so the TUI green-ticked a component installed nowhere.
+# 2, not 1: the report itself succeeded; what it reported is unhealthy.
+case_status_reports_a_non_supported_status_as_degraded() {
+  local dir out
+  dir="$(new_case_dir longterm-mem-status-unsupported)"
+  write_fake_runtime_status_engine "$dir/bin/engine" 1
+
+  out="$(run_longterm_mem_status "$dir")"
+
+  if ! grep -q -F -e "STATUS-EXIT=2" <<<"$out"; then
+    fail "longterm-mem status does not exit 2 when the engine reports a non-supported status" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "non-supported status" <<<"$out"; then
+    fail "longterm-mem status drops the warning line the operator needs" "$out"
+    return
+  fi
+  pass "longterm-mem status exits 2 and still warns on a non-supported status"
+}
+
+# The twin: without it, "always exit 2" would pass the case above and make
+# every healthy status run read as degraded.
+case_status_reports_a_supported_status_as_success() {
+  local dir out
+  dir="$(new_case_dir longterm-mem-status-supported)"
+  write_fake_runtime_status_engine "$dir/bin/engine" 0
+
+  out="$(run_longterm_mem_status "$dir")"
+
+  if ! grep -q -F -e "STATUS-EXIT=0" <<<"$out"; then
+    fail "longterm-mem status does not exit 0 when the engine reports a supported status" "$out"
+    return
+  fi
+  if grep -q -i -F -e "non-supported status" <<<"$out"; then
+    fail "longterm-mem status warns about a non-supported status the engine did not report" "$out"
+    return
+  fi
+  pass "longterm-mem status exits 0 on a supported status"
+}
+
+# ---------------------------------------------------------------------------
+# hazard (f): messages must name a command that exists
+# ---------------------------------------------------------------------------
+
+# There is no `overlay` on PATH: the entrypoint operators actually have is
+# `labdrian` (install-alias symlinks it). Every "run 'overlay <something>'"
+# handed the operator a command that cannot run.
+#
+# This asserts over the WHOLE file against the script's OWN dispatch table,
+# not against a fixed list of messages, so a subcommand added later is covered
+# without editing this case and the wrong name cannot come back one message at
+# a time.
+case_no_message_names_a_command_called_overlay() {
+  local subs sub offenders=""
+  subs="$(
+    awk '/^  case "\$COMMAND" in$/{inside=1; next} inside && /^  esac$/{exit} inside' "$OVERLAY" \
+      | grep -oE '^ *[a-z][a-z-]*\)' \
+      | tr -d ' )'
+  )"
+  # '<command>' is the usage-line placeholder; it names the same command.
+  subs="$subs
+<command>"
+
+  if [[ -z "$(grep -v '^<command>$' <<<"$subs")" ]]; then
+    fail "could not read the dispatch table out of $OVERLAY; the guard below would pass vacuously"
+    return
+  fi
+
+  for sub in $subs; do
+    local hits
+    # The leading class rejects 'labdrian-overlay ...' and 'bin/overlay ...',
+    # which are file paths, not the invented command name.
+    hits="$(grep -nE "(^|[^-a-zA-Z0-9_./])overlay[[:space:]]+${sub}([^-a-zA-Z0-9_]|$)" "$OVERLAY" || true)"
+    if [[ -n "$hits" ]]; then
+      offenders="$offenders
+$hits"
+    fi
+  done
+
+  if [[ -n "$offenders" ]]; then
+    fail "bin/labdrian-overlay tells the operator to run a command named 'overlay', which does not exist" "$offenders"
+    return
+  fi
+  pass "no message names a command called 'overlay'"
+}
+
+# ---------------------------------------------------------------------------
 
 case_parallel_adds_keep_every_target
 case_add_does_not_use_a_shared_temp_path
@@ -1870,6 +1996,9 @@ case_doctor_reports_a_current_engine_binary_as_healthy
 case_doctor_fix_rebuilds_a_stale_engine_binary
 case_doctor_fix_without_go_does_not_claim_a_repair
 case_status_hooks_surfaces_a_stale_engine_binary
+case_status_reports_a_non_supported_status_as_degraded
+case_status_reports_a_supported_status_as_success
+case_no_message_names_a_command_called_overlay
 
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures shell test case(s) failed" >&2
