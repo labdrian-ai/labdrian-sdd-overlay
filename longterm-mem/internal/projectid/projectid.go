@@ -69,6 +69,11 @@ const (
 	// where the repository happens to live, so it does not survive the
 	// repository being moved or re-cloned elsewhere.
 	RuleCommonDir Rule = "common_dir"
+	// RuleRemembered: a name this repository was known by before, recovered
+	// from a caller's ledger rather than derived from the repository as it
+	// looks now. It is what reunites a repository with memory it stored
+	// under a name nothing derives any more.
+	RuleRemembered Rule = "remembered"
 )
 
 var (
