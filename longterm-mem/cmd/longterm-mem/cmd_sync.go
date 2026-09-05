@@ -23,17 +23,17 @@ import (
 func cmdSync(args []string) int {
 	fs := flag.NewFlagSet("sync", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: sync: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("sync", *project)
+	if exit != exitOK {
+		return exit
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
 		return vaultExitCode(err)
@@ -81,14 +81,14 @@ func cmdSync(args []string) int {
 	// exits non-zero when anything failed, so a partial run is visible
 	// without being fatal to the work that can still be done.
 	ctx := context.Background()
-	syncReport, syncErr := promote.Sync(ctx, deps, *project)
-	propagateReport, propagateErr := promote.Propagate(ctx, deps, *project)
+	syncReport, syncErr := promote.Sync(ctx, deps, resolvedProject)
+	propagateReport, propagateErr := promote.Propagate(ctx, deps, resolvedProject)
 
 	fmt.Printf("longterm-mem: sync promoted %d observation(s), patched %d page(s)\n", len(syncReport.Promoted), len(propagateReport.Patched))
 
 	if err := errors.Join(syncErr, propagateErr); err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: sync: %v\n", err)
-		return syncExitCode(store, *project, rebuildErr)
+		return syncExitCode(store, resolvedProject, rebuildErr)
 	}
 	return exitOK
 }

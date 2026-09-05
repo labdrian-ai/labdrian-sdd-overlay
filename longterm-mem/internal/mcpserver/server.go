@@ -61,6 +61,22 @@ type PromoteOutcome struct {
 	IndexRebuildErr error
 }
 
+// Project stays an explicit, required field on both tool inputs below, and
+// is deliberately NOT defaulted from, or validated against, the server's
+// working directory.
+//
+// The CLI does resolve a missing --project from the working directory
+// (internal/projectid, wired in cmd/longterm-mem/project_resolve.go),
+// because there the working directory IS the operator standing in a
+// project. The MCP server is different: it is launched by a runtime -- an
+// editor, an agent host -- whose working directory has no relationship to
+// the project any given call is about. Defaulting from it would silently
+// bind observations to whatever directory the host happened to start in,
+// which is exactly the misattribution longterm-mem's project identity work
+// exists to prevent; validating against it would warn on every correct
+// call. So do not add a cwd default or a cwd correspondence check here:
+// the caller names the project, and that is the only trustworthy source.
+
 // QueryIn is the query tool's input (D3 contract: query{project,query,top?}).
 type QueryIn struct {
 	Project string `json:"project" jsonschema:"the project to search"`

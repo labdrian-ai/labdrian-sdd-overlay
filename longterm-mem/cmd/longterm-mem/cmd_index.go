@@ -26,18 +26,18 @@ const vaultsFileEnvVar = "LONGTERM_MEM_VAULTS_FILE"
 func cmdIndex(args []string) int {
 	fs := flag.NewFlagSet("index", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	force := fs.Bool("rebuild", false, "force re-provisioning of the vault index, even if already provisioned")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: index: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("index", *project)
+	if exit != exitOK {
+		return exit
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: index: %v\n", err)
 		return vaultExitCode(err)

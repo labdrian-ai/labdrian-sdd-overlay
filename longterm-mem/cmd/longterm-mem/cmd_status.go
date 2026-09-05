@@ -22,18 +22,18 @@ import (
 func cmdStatus(args []string) int {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
-	project := fs.String("project", "", "project name (required)")
+	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	if *project == "" {
-		fmt.Fprintln(os.Stderr, "longterm-mem: status: --project is required")
-		return exitUsage
+	resolvedProject, exit := resolveProjectFlag("status", *project)
+	if exit != exitOK {
+		return exit
 	}
 
-	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), *project, *vaultDir)
+	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", err)
 		return vaultExitCode(err)
@@ -61,7 +61,7 @@ func cmdStatus(args []string) int {
 		},
 	}
 
-	report, err := ops.Status(context.Background(), deps, *project)
+	report, err := ops.Status(context.Background(), deps, resolvedProject)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "longterm-mem: status: %v\n", err)
 		return exitInternal
