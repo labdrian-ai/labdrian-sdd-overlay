@@ -32,16 +32,63 @@ jobs:
           # (depth-1) checkout.
           fetch-depth: 0
 
-      - name: Skip if HEAD is already tagged
+      # Two different things reach this step, and only one of them is fine.
+      #
+      # A RE-RUN for a commit this workflow already tagged must skip: that is
+      # what the exact-match check is for, and the tag it finds was written by
+      # github-actions[bot].
+      #
+      # A HAND-TAGGED HEAD is not that. This workflow is the single writer of
+      # versions -- it computes the bump from conventional-commit messages, so
+      # the way to ask for a minor is to write `feat:` in the commit, not to
+      # push a tag. A human tag that lands BEFORE this run makes the skip
+      # above fire and silently REPLACES the computed version with a hand-
+      # picked one, with nothing in a green log saying so. That happened once:
+      # eeb3569 carries both v1.0.6 (this workflow's) and v1.1.0 (a hand tag
+      # added after the run, so it did not suppress anything -- but a minute
+      # earlier it would have).
+      #
+      # So the skip is no longer unconditional. A tag on HEAD that this
+      # workflow did not write FAILS the run, loudly, because a skip that
+      # looks like a pass is exactly how a silent replacement stays invisible.
+      - name: Skip a re-run, refuse a hand-tagged HEAD
         id: check
         run: |
           set -euo pipefail
-          if existing="$(git describe --tags --exact-match --match 'v*' HEAD 2>/dev/null)"; then
-            echo "HEAD is already tagged ($existing); skipping."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-          else
+
+          tags="$(git tag --points-at HEAD --list 'v*')"
+          if [[ -z "$tags" ]]; then
             echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
           fi
+
+          foreign=""
+          while IFS= read -r tag; do
+            [[ -z "$tag" ]] && continue
+            tagger="$(git for-each-ref --format='%(taggername)' "refs/tags/$tag")"
+            if [[ "$tagger" != "github-actions[bot]" ]]; then
+              foreign+="  $tag (tagged by: ${tagger:-<lightweight tag, no tagger>})"$'\n'
+            fi
+          done <<< "$tags"
+
+          if [[ -n "$foreign" ]]; then
+            {
+              echo "HEAD carries a release tag this workflow did not write:"
+              echo "$foreign"
+              echo "Release tags are computed here, from conventional-commit messages"
+              echo "since the last tag: '!' or 'BREAKING CHANGE:' -> major, 'feat:' -> minor,"
+              echo "otherwise patch. Ask for a minor by writing 'feat:' in the commit, not by"
+              echo "pushing a tag: a hand tag that lands before this run makes it skip, and the"
+              echo "computed version is replaced without anything saying so."
+              echo
+              echo "To proceed: delete the hand tag (locally and on origin) and re-run, or leave"
+              echo "it and accept it AS the release for this commit -- deliberately, not silently."
+            } >&2
+            exit 1
+          fi
+
+          echo "HEAD is already tagged by this workflow ($(echo "$tags" | tr '\n' ' ')); skipping."
+          echo "skip=true" >> "$GITHUB_OUTPUT"
 
       - name: Compute next version and push the tag
         if: steps.check.outputs.skip == 'false'
