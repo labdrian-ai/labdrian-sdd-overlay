@@ -794,8 +794,9 @@ Traces to: longterm-mem R-033
 WHEN a promoted observation is soft-deleted or superseded in Engram, the
 next sync SHALL patch that observation's vault page status field (to
 `superseded`, or `archived` for a soft-delete with no successor) and its
-related-links field to reference the successor's page — updating only those
-frontmatter fields, never the page body, even on a locally edited page —
+related-links field to reference the successor's page when the successor
+has one — updating only those frontmatter fields, never the page body, even
+on a locally edited page —
 with the patch itself recorded in the precedence store so a later sync does
 not misread it as a human edit.
 
@@ -812,6 +813,22 @@ not misread it as a human edit.
 - GIVEN a promoted observation later soft-deleted with no successor relation
 - WHEN the next sync runs
 - THEN its vault page's status becomes `archived`
+
+#### Scenario: A supersession lands even when the successor has no page
+
+- GIVEN a promoted observation superseded by one that is not itself
+  promoted
+- WHEN the next sync runs
+- THEN the page's status still becomes `superseded` with its related-links
+  field left empty, because the link is a convenience and the status is the
+  warning; dropping the status would leave the page reading as current
+
+#### Scenario: The successor link appears once the successor is promoted
+
+- GIVEN a page already patched to `superseded` with no related link
+- WHEN the successor is promoted and the sync runs again
+- THEN the related-links field gains the successor's page and the status is
+  unchanged
 
 #### Scenario: Untouched observation keeps its status
 

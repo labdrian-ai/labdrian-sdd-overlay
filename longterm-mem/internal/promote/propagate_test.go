@@ -273,3 +273,99 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 		t.Fatalf("Patched = %+v, want the healthy page c-000701 patched despite the broken one", report.Patched)
 	}
 }
+
+// A supersession whose successor has no page yet is still a supersession.
+//
+// resolveStatus used to skip the edge entirely in that case, reasoning that
+// there was no page to link to. That confuses being unable to DECORATE the
+// fact with being unable to RECORD it: the link is a convenience, the
+// status is the warning. Dropped, the page keeps reading as current -- and
+// a memory that reads as current is one an agent acts on and reintroduces,
+// which is the whole failure this machinery exists to prevent. Promotion
+// order is not something the ledger's truth should depend on.
+func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	store, ids := newFixtureEngramStore(t, []fixtureObs{
+		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
+		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+	}, []fixtureRelation{
+		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
+	})
+
+	// Only the OLD observation is promoted. The successor has no page.
+	precedence := PrecedenceStore{}
+	oldObs := engram.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
+
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+	report, err := Propagate(context.Background(), Deps{Engram: store, Writer: w}, "labdrian-sdd-overlay")
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+	if len(report.Patched) != 1 || report.Patched[0] != "c-000001" {
+		t.Fatalf("Patched = %+v, want [c-000001]: the supersession is known and must land", report.Patched)
+	}
+
+	data, err := os.ReadFile(filepath.Join(vaultRoot, oldPage.Path))
+	if err != nil {
+		t.Fatalf("read old page: %v", err)
+	}
+	if !strings.Contains(string(data), "status: superseded") {
+		t.Fatalf("a known supersession was dropped because its successor had no page; got:\n%s", data)
+	}
+	if !strings.Contains(string(data), "Old body.") {
+		t.Fatalf("body was rewritten; got:\n%s", data)
+	}
+}
+
+// The claim the fix above leaves in a comment: once the successor has a
+// page, a later run adds the link. A comment asserting behaviour nobody
+// exercises is how a record stops describing what it records, so it is
+// proven here rather than asserted.
+func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+
+	store, ids := newFixtureEngramStore(t, []fixtureObs{
+		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
+		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+	}, []fixtureRelation{
+		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
+	})
+
+	precedence := PrecedenceStore{}
+	oldObs := engram.Observation{ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	newObs := engram.Observation{ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	oldPage := seedPromotedPage(t, vaultRoot, precedence, oldObs, "c-000001")
+	w := &Writer{VaultRoot: vaultRoot, Store: precedence}
+
+	// First run: successor unpromoted. The status lands, the link cannot.
+	if _, err := Propagate(context.Background(), Deps{Engram: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {
+		t.Fatalf("first Propagate: %v", err)
+	}
+	first, err := os.ReadFile(filepath.Join(vaultRoot, oldPage.Path))
+	if err != nil {
+		t.Fatalf("read after first run: %v", err)
+	}
+	if strings.Contains(string(first), "c-000002") {
+		t.Fatalf("linked a page that does not exist yet; got:\n%s", first)
+	}
+
+	// The successor is promoted, and the same propagation runs again.
+	seedPromotedPage(t, vaultRoot, precedence, newObs, "c-000002")
+	if _, err := Propagate(context.Background(), Deps{Engram: store, Writer: w}, "labdrian-sdd-overlay"); err != nil {
+		t.Fatalf("second Propagate: %v", err)
+	}
+	second, err := os.ReadFile(filepath.Join(vaultRoot, oldPage.Path))
+	if err != nil {
+		t.Fatalf("read after second run: %v", err)
+	}
+	if !strings.Contains(string(second), "[[c-000002|New Decision]]") {
+		t.Fatalf("the link did not appear once the successor was promoted; got:\n%s", second)
+	}
+	if !strings.Contains(string(second), "status: superseded") {
+		t.Fatalf("the status was lost on the second run; got:\n%s", second)
+	}
+}

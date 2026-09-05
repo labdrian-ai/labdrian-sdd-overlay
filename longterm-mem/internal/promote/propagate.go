@@ -125,9 +125,18 @@ func resolveStatus(deps Deps, project string, obs engram.Observation, bySyncID m
 			return "", nil, err
 		}
 		if !ok {
-			// The successor is not itself promoted yet -- there is no
-			// page to link to, so obs is left untouched for now.
-			continue
+			// The successor has no page yet. It used to be left untouched
+			// here, on the reasoning that there was nothing to link to --
+			// which confuses being unable to DECORATE the fact with being
+			// unable to RECORD it. The link is a convenience; the status
+			// is the warning, and it is the whole point. Dropped, the page
+			// goes on reading as current, and a memory that reads as
+			// current is one an agent acts on and reintroduces: exactly
+			// the failure this machinery exists to prevent. The ledger's
+			// truth does not depend on promotion order, so the status
+			// lands with related left empty, and a later run adds the link
+			// once the successor has a page of its own.
+			return "superseded", nil, nil
 		}
 		return "superseded", []string{wikilink(successor.Address, other.Title)}, nil
 	}
