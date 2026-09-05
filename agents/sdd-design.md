@@ -4,7 +4,7 @@ description: >
   Create the technical design document with architecture decisions and approach. Use when a
   proposal is approved and the implementation approach needs to be chosen before tasks are
   broken down.
-model: opus
+model: fable
 tools: Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
 
