@@ -153,6 +153,126 @@ page.
 - THEN the same on-disk page is updated with the new title, no new file is
   created, and no old file is orphaned
 
+### Requirement: An Observation Moved Between Projects Leaves a Superseded Page
+
+Traces to: longterm-mem R-008, R-028, R-030, R-033
+
+No change-level `ID:` is claimed here on purpose. This rule was discovered
+during delivery rather than specified up front, so it has no R-NNN of its
+own; the longterm-mem space is otherwise contiguous and claiming a number
+inside it would assert a provenance this requirement does not have.
+`Traces to:` is the key that resolves a requirement, not `ID:`.
+
+A page's address is looked up by Engram id AND project, because the address
+is meant to imply a stable project and the sync gate shares that same
+lookup. Moving an observation between Engram projects is an ordinary
+operation, and it therefore produces a page under a new address while the
+page promoted under the old project stays behind — a second live page for
+one Engram id, frozen at a stale revision, which no later run revisits
+because every future promotion matches the new page first. That is exactly
+the duplicate R-008 forbids, arriving through the addressing rule rather
+than through the update path.
+
+WHEN an already-promoted observation is promoted again under a different
+Engram project, the promotion writer SHALL promote it to a fresh address
+under its new project and SHALL mark the page it left behind as
+`superseded`, with that page's related-links field pointing at the new
+page — rewriting only those two frontmatter fields, never the page body and
+never its recorded project, and recording the patch in the precedence store
+so a later sync does not misread it as a human edit.
+
+The successor page SHALL exist before anything points at it; it SHALL never
+leave the old page pointing at a page that does not exist. An interruption
+may therefore leave a new page nothing references, with the old page still
+live beside it. That state is NOT resolved automatically: sync skips an
+observation already promoted at its current revision before the promotion
+writer is reached, so until that revision advances the one path that
+supersedes the old page is an explicit promotion of that observation, which
+takes the update path and supersedes it from there. The ordering is still
+the lesser evil — two live pages a later run can reconcile, rather than a
+dangling pointer no run repairs.
+
+A page already marked `superseded` SHALL be left untouched, whether it was
+superseded by this rule or by Engram-side supersession propagation.
+
+WHEN more than one page is left behind (an observation moved twice), a
+failure on one of them SHALL NOT discard the patches already applied to the
+others: every page patched before the failure SHALL be recorded in the
+precedence store, and the failure SHALL be reported. A discarded patch would
+leave a superseded page with a stale precedence entry that no later run
+re-records, since a superseded page is skipped from then on.
+
+Finding a page by Engram id alone is how a moved page is recognised, but
+corrupted promotion state SHALL fail closed only for the project that owns
+the page: a page carrying this Engram id under a DIFFERENT project, with no
+address or an unparseable revision, SHALL NOT fail this project's lookup.
+That lookup is also the sync gate and the supersession-propagation lookup,
+and nothing ever writes an address into such a page, so failing it here
+would permanently block the one observation sharing that engram_id in a
+project it has nothing to do with. Sync and supersession propagation record
+such a failure per observation and continue, so the rest of the run
+survives — the harm is one unpromotable observation with no repair path,
+not a wedged run.
+
+#### Scenario: A corrupted page under another project does not block this one
+
+- GIVEN a page carrying observation X's Engram id under project A, with no
+  address recorded
+- WHEN X is promoted, synced, or propagated under project B
+- THEN the run is not failed by that page, and the same corruption under
+  project B itself still fails closed
+
+#### Scenario: A moved observation is superseded from the update path
+
+- GIVEN a moved observation whose new page already exists, whether its
+  content still needs updating or is skipped as locally edited
+- WHEN promotion runs
+- THEN the page left behind is marked `superseded` pointing at the new page,
+  and its precedence entry is re-recorded
+
+#### Scenario: One unpatchable old page does not discard the others
+
+- GIVEN two pages left behind and the second cannot be patched
+- WHEN promotion runs
+- THEN the first page's patch is recorded in the precedence store and the
+  failure on the second is reported
+
+#### Scenario: Moved observation gets a new page and supersedes the old one
+
+- GIVEN observation X promoted under project A, then moved to project B
+- WHEN promotion runs again
+- THEN X is promoted to a fresh address under B, and the page under A is
+  marked `superseded` with its related-links field pointing at the new page,
+  its body and its recorded project unchanged
+
+#### Scenario: The superseded page is not left looking locally edited
+
+- GIVEN the supersession patch above has been applied
+- WHEN a later sync inspects that page
+- THEN the precedence store's recorded content covers the patch and the page
+  is not reported as a local edit
+
+#### Scenario: Promoting the moved observation again changes nothing
+
+- GIVEN an observation already moved and its old page already superseded
+- WHEN promotion runs again
+- THEN the old page is not rewritten and its related-links field gains no
+  duplicate pointer
+
+#### Scenario: An existing successor pointer is not overwritten
+
+- GIVEN an old page already marked `superseded` pointing at some other
+  successor
+- WHEN the moved observation is promoted
+- THEN that page keeps its existing status and successor pointer
+
+#### Scenario: An unmoved observation still reuses its page
+
+- GIVEN a re-promotion of an observation whose project is unchanged
+- WHEN it runs
+- THEN the existing page is updated in place, no second page is created, and
+  nothing is superseded
+
 ### Requirement: Local-Edit Precedence
 
 ID: R-030

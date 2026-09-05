@@ -1,6 +1,7 @@
 package promote
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -77,6 +78,15 @@ func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) 
 		return Result{}, nil
 	}
 
+	// Collected before anything is written, but the timing is not what
+	// makes it correct: findMovedPages filters on project != obs.Project,
+	// so the page this run is about to create or update can never appear
+	// in it, whenever the scan runs.
+	moved, err := findMovedPages(w.VaultRoot, obs.Project, int(obs.ID))
+	if err != nil {
+		return Result{}, err
+	}
+
 	address, err := Allocate(w.VaultRoot, obs.Project, int(obs.ID))
 	if err != nil {
 		return Result{}, err
@@ -103,6 +113,14 @@ func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) 
 			if err := w.register(page.Address, obs.Title); err != nil {
 				return Result{}, err
 			}
+		}
+		// The successor already exists on disk (this branch was chosen by
+		// its presence), so pointing at it is safe even when the update
+		// itself was skipped: superseding the pages the observation left
+		// behind is independent of whether its current page needed new
+		// content.
+		if err := w.supersedeMoved(moved, page.Address, obs.Title); err != nil {
+			return Result{}, err
 		}
 		return Result{Page: page, Action: action}, nil
 	case !os.IsNotExist(err):
@@ -162,7 +180,100 @@ func (w *Writer) Promote(obs engram.Observation, explicit bool) (Result, error) 
 	if err := w.register(address, obs.Title); err != nil {
 		return Result{}, err
 	}
+	if err := w.supersedeMoved(moved, address, obs.Title); err != nil {
+		return Result{}, err
+	}
 	return Result{Page: page, Action: Action{Kind: ActionCreated}}, nil
+}
+
+// supersedeMoved marks every page the observation left behind in another
+// project as superseded, with related pointing at the page it now lives on
+// (successorAddress). It reuses R-033's idiom exactly -- status
+// "superseded" plus a related wikilink to the successor, patched through
+// PatchStatusFields, with the precedence sidecar updated afterward -- so
+// there is one supersession mechanism in this package, not two.
+//
+// ORDERING. This runs only AFTER the successor page is on disk, and the
+// choice is the lesser of two evils rather than a self-healing one. A
+// superseded page pointing at a page that does not exist is a dangling
+// wikilink the vault's own lint rule flags and no later run repairs,
+// because the pointer already looks done. An interruption in the other
+// order leaves the successor page with the orphan still live beside it,
+// which is the same shape as a failed registration twelve lines up, and it
+// heals the same way -- NOT automatically. Sync gates before Writer.Promote
+// is ever called (R-009's true-no-op gate), and after an interrupted move
+// the successor already exists at the observation's current revision, so
+// sync skips it and never reaches here. Until the observation's revision
+// advances, the one path that repairs it is an explicit promote of that
+// observation, which re-enters Promote, takes the update branch, and
+// supersedes the orphan from there. Two live pages that a later run can
+// still reconcile beat a dangling pointer no run repairs at all.
+//
+// AN ALREADY-SUPERSEDED PAGE IS NEVER TOUCHED. The rule's load-bearing
+// payoff is that it refuses to clobber a successor pointer somebody else
+// set -- R-033's Engram-side propagation may already have superseded this
+// page toward a different successor, which is real history; silently
+// overwriting another successor chain would be its own defect, and the
+// moved observation stays reachable by engram_id regardless. It is NOT
+// what makes a repeat promotion a no-op: PatchStatusFields already writes
+// nothing when the patched block is byte-identical (frontmatter.go's
+// `if newBlock != fmBlock`), so a second run would leave the page,
+// its mtime and its precedence entry alone even without this check.
+//
+// A FAILING PAGE DOES NOT DISCARD THE ONES ALREADY PATCHED. A double move
+// produces more than one orphan, so this follows Propagate's shape: record
+// the failure, carry on, and persist whatever was patched before
+// reporting. Returning early would leave an orphan superseded on disk with
+// a stale sidecar entry, and because a superseded page is skipped from
+// then on, nothing would ever re-record its hash: it would read as locally
+// edited forever, the exact permanent wedge R-030's reconciliation exists
+// to end.
+//
+// LOCAL-EDIT PRECEDENCE (R-030). The patch is unconditional, exactly as
+// Propagate's is, and for the same reason: it rewrites two frontmatter
+// lines and never re-bodies the page, so it destroys no human edit -- a
+// human's prose, their added frontmatter keys, everything else survives
+// byte for byte. Skipping a locally edited orphan would instead leave a
+// second live page for one engram_id with nothing marking it stale, which
+// is the very duplicate R-008 forbids. Only the frontmatter hash is
+// re-recorded, never the body hash: stamping the on-disk body as our own
+// last write would erase the divergence R-030 depends on and let the next
+// sync overwrite that edit in silence.
+func (w *Writer) supersedeMoved(moved []promotedPage, successorAddress, successorTitle string) error {
+	patched := false
+	var failures []error
+	for _, old := range moved {
+		path := filepath.Join(w.VaultRoot, pagePathPrefix, old.Address+".md")
+		raw, err := os.ReadFile(path)
+		if err != nil {
+			failures = append(failures, fmt.Errorf("promote: read superseded page %s: %w", path, err))
+			continue
+		}
+		block, ok := frontmatterBlock(string(raw))
+		if !ok {
+			failures = append(failures, fmt.Errorf("promote: %s has no parseable frontmatter block", path))
+			continue
+		}
+		if parseFrontmatterFields(block)[statusField] == "superseded" {
+			continue
+		}
+
+		frontmatterHash, _, err := PatchStatusFields(path, "superseded", []string{wikilink(successorAddress, successorTitle)})
+		if err != nil {
+			failures = append(failures, fmt.Errorf("promote: supersede %s: %w", path, err))
+			continue
+		}
+		entry, _ := w.Store.Get(old.Address)
+		entry.FrontmatterHash = frontmatterHash
+		w.Store.Set(old.Address, entry)
+		patched = true
+	}
+	if patched {
+		if err := w.Store.Save(w.VaultRoot); err != nil {
+			failures = append(failures, fmt.Errorf("promote: persist precedence after superseding a moved page: %w", err))
+		}
+	}
+	return errors.Join(failures...)
 }
 
 // register records addr/title's promotion in the vault's master catalog
