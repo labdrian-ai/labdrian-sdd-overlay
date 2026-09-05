@@ -1631,12 +1631,19 @@ cmd_apply() {
 # self-update
 # ---------------------------------------------------------------------------
 
-# Fast-forwards ONLY the local 'main' branch and restores the original
-# branch afterward, via the same trap-based EXIT pattern used by
-# cmd_capture/cmd_apply. Every refusal (no origin, dirty tree, local-ahead
-# divergence) fires BEFORE any checkout, so a refusal never touches the
-# working tree or leaves the caller's branch stranded. Flagless: this signal
-# is repo-level, not target-scoped.
+# Fast-forwards ONLY the local 'main' branch, and NEVER changes the branch
+# the caller is standing on -- see selfupdate_converge_main for how.
+#
+# This used to check main out and restore the caller's branch through an EXIT
+# trap. The restore was silenced with `|| true`, so when it failed the
+# operator was left standing on main with nothing saying so; they kept working
+# and committed there. That is the divergence this was reported for. The
+# checkout is gone: off main the ref is moved on its own, so there is nothing
+# to restore and no window in which an interruption can strand anyone.
+#
+# Every refusal (no origin, dirty tree, local-ahead divergence) still fires
+# BEFORE anything is fetched or moved, and every refusal now names the branch
+# the caller is on. Flagless: this signal is repo-level, not target-scoped.
 #
 # R-004 (MODIFIED): once at least one release tag exists anywhere, main
 # converges to the highest semver-ordered release tag reachable from
@@ -1645,6 +1652,69 @@ cmd_apply() {
 # original origin/main-HEAD convergence verbatim (legacy path below) until
 # the very first release tag is cut, so every zero-tag caller keeps its
 # exact documented behavior.
+# selfupdate_converge_main <target_commit> [<label suffix>]
+#
+# Fast-forwards local main to <target_commit> WITHOUT ever leaving the branch
+# the operator is standing on. This replaces the checkout/trap/checkout-back
+# dance both self-update modes used to carry byte-for-byte, which had three
+# compounding defects:
+#
+#   1. the restoring EXIT trap swallowed its own failure ('>/dev/null 2>&1 ||
+#      true'), so a failed return left the operator on main with nothing said
+#      -- they kept working and committed onto main, which is the divergence
+#      reported from real use;
+#   2. 'git checkout main' fails for reasons that are not the operator's --
+#      most obviously when main is checked out in another worktree, an
+#      ordinary layout and this repository's own -- and under 'set -e' that
+#      abort handed control straight to the silent trap above;
+#   3. it was duplicated, so any fix had to land twice and the copies could
+#      drift.
+#
+# On main we fast-forward in place with merge --ff-only, exactly as before:
+# no checkout, no trap, nothing to restore. Off main we move the REF with
+# 'git fetch . <commit>:refs/heads/main', which fast-forwards a local branch
+# from this same repository and REFUSES a non-fast-forward (the same
+# guarantee merge --ff-only gives, so R-006's spirit survives the rewrite)
+# and refuses outright when main is checked out in another worktree. That
+# refusal is the correct outcome and is reported, never silenced. The
+# working tree and HEAD are untouched, so there is nothing to put back and
+# no window in which an interruption can strand the operator.
+#
+# Finally it VERIFIES that main actually landed on the intended commit and
+# names the branch the operator is on -- the fact that was going wrong and
+# that the old success line never reported.
+selfupdate_converge_main() {
+  local target_commit="$1"
+  local suffix="${2:-}"
+
+  local current_branch old_main new_main
+  current_branch="$(git rev-parse --abbrev-ref HEAD)"
+  old_main="$(git rev-parse main)"
+
+  if [[ "$current_branch" == "main" ]]; then
+    git merge --ff-only "$target_commit" \
+      || die "main could not be fast-forwarded to ${target_commit:0:12}. Nothing was changed; you are still on 'main'."
+  else
+    git fetch . "${target_commit}:refs/heads/main" \
+      || die "main could not be fast-forwarded to ${target_commit:0:12}: either that is not a fast-forward, or main is checked out in another worktree. Nothing was changed; you are still on '$current_branch'."
+  fi
+
+  # Read main back and insist it is where it was sent. This is DEFENSIVE and
+  # carries no test on purpose: both writers above already fail loudly on a
+  # non-fast-forward, so reaching this line with the wrong value would mean
+  # git reported success and did not move the ref. Provoking that means
+  # breaking git itself, and a test that stubs git into lying would pin the
+  # stub, not the guard. It is recorded as untested rather than covered by a
+  # fabricated case -- the assertion costs one rev-parse, and the alternative
+  # is trusting a silent success.
+  new_main="$(git rev-parse main)"
+  [[ "$new_main" == "$target_commit" ]] \
+    || die "main is at ${new_main:0:12}, not the expected ${target_commit:0:12}; self-update did not converge. Nothing else was changed; you are still on '$current_branch'."
+
+  info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward)${suffix}"
+  info "main is now at ${new_main:0:12}; you are on '$current_branch' (working tree untouched)"
+}
+
 cmd_self_update() {
   cd "$OVERLAY_DIR"
 
@@ -1697,23 +1767,7 @@ cmd_self_update() {
       return
     fi
 
-    # Expand the branch name NOW: an EXIT trap fires after the function's
-    # locals are gone, and referencing them there is an unbound variable
-    # under 'set -u' (the c891c94 lesson).
-    local current_branch old_main new_main
-    current_branch="$(git rev-parse --abbrev-ref HEAD)"
-    old_main="$(git rev-parse main)"
-
-    trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
-
-    git checkout main
-    git merge --ff-only origin/main
-    new_main="$(git rev-parse main)"
-
-    git checkout "$current_branch"
-    trap - EXIT
-
-    info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward)"
+    selfupdate_converge_main "$(git rev-parse 'origin/main^{commit}')"
     return
   fi
 
@@ -1731,20 +1785,7 @@ cmd_self_update() {
     return
   fi
 
-  local current_branch old_main new_main
-  current_branch="$(git rev-parse --abbrev-ref HEAD)"
-  old_main="$main_head"
-
-  trap "git checkout '${current_branch}' >/dev/null 2>&1 || true" EXIT
-
-  git checkout main
-  git merge --ff-only "$target_commit"
-  new_main="$(git rev-parse main)"
-
-  git checkout "$current_branch"
-  trap - EXIT
-
-  info "Updated main: ${old_main:0:12}..${new_main:0:12} (fast-forward) -> $release_tag"
+  selfupdate_converge_main "$target_commit" " -> $release_tag"
 }
 
 # ---------------------------------------------------------------------------

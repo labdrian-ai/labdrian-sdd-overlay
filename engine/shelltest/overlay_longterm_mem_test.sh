@@ -1953,6 +1953,395 @@ $hits"
 }
 
 # ---------------------------------------------------------------------------
+# hazard (g): self-update must never move the operator off their branch
+# ---------------------------------------------------------------------------
+
+# cmd_self_update used to checkout main, merge, and checkout back, guarded by
+# an EXIT trap that swallowed its own failure. Failing to return left the
+# operator standing on main with nothing said, and 'git checkout main' fails
+# for ordinary reasons that are not theirs -- main checked out in another
+# worktree being the obvious one, and this repository's own layout. The cases
+# below pin the replacement: main converges, HEAD never moves, and a refusal
+# is reported instead of silently stranding anyone.
+#
+# They need REAL git repositories (a local 'origin' to fetch from), which no
+# earlier case here needed, so this section brings its own throwaway-repo
+# helper.
+
+# new_selfupdate_repo <name> <legacy|tag> creates a throwaway upstream repo
+# plus a clone of it under a fresh case directory and prints that directory.
+# The upstream is left ONE commit ahead of the clone, so the clone always has
+# something to converge to. In 'tag' mode that new upstream commit also
+# carries an annotated release tag, which is what puts cmd_self_update on its
+# tag path instead of its legacy origin/main path; 'legacy' mode leaves the
+# repositories with no tags at all.
+new_selfupdate_repo() {
+  local dir up clone
+  dir="$(new_case_dir "$1")"
+  up="$dir/upstream"
+  clone="$dir/clone"
+
+  git init -q -b main "$up"
+  git -C "$up" config user.email overlay@test.local
+  git -C "$up" config user.name "Overlay Test"
+  echo one > "$up/f"
+  git -C "$up" add f
+  git -C "$up" commit -qm one
+
+  git clone -q "$up" "$clone"
+  git -C "$clone" config user.email overlay@test.local
+  git -C "$clone" config user.name "Overlay Test"
+
+  echo two >> "$up/f"
+  git -C "$up" commit -qam two
+  [[ "$2" == tag ]] && git -C "$up" tag -a v1.0.0 -m release
+
+  printf '%s\n' "$dir"
+}
+
+# run_self_update <case dir> runs cmd_self_update against <case dir>/clone,
+# leaving its combined output in su_out and its exit status in su_status.
+su_out=""
+su_status=0
+run_self_update() {
+  su_out="$(
+    OVERLAY_DIR="$1/clone" \
+    STATE_DIR="$1/state" \
+    bash -c 'source "$1"; cmd_self_update' _ "$OVERLAY" 2>&1
+  )"
+  su_status=$?
+}
+
+# (a) The core case: the operator is on their own branch, and stays there.
+assert_side_branch_update_keeps_the_branch() {
+  local mode="$1" dir clone head_before branch main_now expected
+  dir="$(new_selfupdate_repo "self-update-side-$mode" "$mode")"
+  clone="$dir/clone"
+
+  git -C "$clone" checkout -q -b feature
+  head_before="$(git -C "$clone" rev-parse HEAD)"
+
+  run_self_update "$dir"
+  if [[ "$su_status" -ne 0 ]]; then
+    fail "[$mode] self-update from a side branch failed (exit $su_status)" "$su_out"
+    return
+  fi
+
+  branch="$(git -C "$clone" rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" != "feature" ]]; then
+    fail "[$mode] self-update left the operator on '$branch', not 'feature'" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse HEAD)" != "$head_before" ]]; then
+    fail "[$mode] self-update moved the operator's HEAD" "$su_out"
+    return
+  fi
+
+  expected="$(git -C "$dir/upstream" rev-parse main)"
+  main_now="$(git -C "$clone" rev-parse main)"
+  if [[ "$main_now" != "$expected" ]]; then
+    fail "[$mode] main is at $main_now, expected $expected" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "you are on 'feature'" <<<"$su_out"; then
+    fail "[$mode] self-update never reported which branch the operator ended up on" "$su_out"
+    return
+  fi
+  pass "[$mode] self-update from a side branch leaves the operator on it and fast-forwards main"
+}
+
+case_self_update_from_a_side_branch_legacy() {
+  assert_side_branch_update_keeps_the_branch legacy
+}
+
+case_self_update_from_a_side_branch_tag() {
+  assert_side_branch_update_keeps_the_branch tag
+}
+
+# (b) On main, the fast-forward happens in place and leaves them on main.
+assert_update_from_main_stays_on_main() {
+  local mode="$1" dir clone branch main_now expected
+  dir="$(new_selfupdate_repo "self-update-main-$mode" "$mode")"
+  clone="$dir/clone"
+
+  run_self_update "$dir"
+  if [[ "$su_status" -ne 0 ]]; then
+    fail "[$mode] self-update from main failed (exit $su_status)" "$su_out"
+    return
+  fi
+
+  branch="$(git -C "$clone" rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" != "main" ]]; then
+    fail "[$mode] self-update from main left the operator on '$branch'" "$su_out"
+    return
+  fi
+
+  expected="$(git -C "$dir/upstream" rev-parse main)"
+  main_now="$(git -C "$clone" rev-parse main)"
+  if [[ "$main_now" != "$expected" ]]; then
+    fail "[$mode] main is at $main_now, expected $expected" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse HEAD)" != "$expected" ]]; then
+    fail "[$mode] main's working tree did not follow the fast-forward" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "you are on 'main'" <<<"$su_out"; then
+    fail "[$mode] self-update never reported which branch the operator ended up on" "$su_out"
+    return
+  fi
+  pass "[$mode] self-update from main fast-forwards in place and stays on main"
+}
+
+case_self_update_from_main_legacy() {
+  assert_update_from_main_stays_on_main legacy
+}
+
+case_self_update_from_main_tag() {
+  assert_update_from_main_stays_on_main tag
+}
+
+# (c) main checked out in another worktree: the update must REFUSE and SAY
+# SO. This is precisely the case the old silent trap turned into "you are on
+# main now and nobody told you".
+assert_worktree_conflict_is_reported() {
+  local mode="$1" dir clone main_before head_before branch
+  dir="$(new_selfupdate_repo "self-update-worktree-$mode" "$mode")"
+  clone="$dir/clone"
+
+  git -C "$clone" checkout -q -b feature
+  git -C "$clone" worktree add -q "$dir/other-worktree" main
+  main_before="$(git -C "$clone" rev-parse main)"
+  head_before="$(git -C "$clone" rev-parse HEAD)"
+
+  run_self_update "$dir"
+  if [[ "$su_status" -eq 0 ]]; then
+    fail "[$mode] self-update reported success while main was checked out elsewhere" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "worktree" <<<"$su_out"; then
+    fail "[$mode] the refusal never mentions that main is checked out in another worktree" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "you are still on 'feature'" <<<"$su_out"; then
+    fail "[$mode] the refusal never tells the operator which branch they are on" "$su_out"
+    return
+  fi
+
+  branch="$(git -C "$clone" rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" != "feature" ]]; then
+    fail "[$mode] the refusal stranded the operator on '$branch'" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse HEAD)" != "$head_before" ]]; then
+    fail "[$mode] the refusal moved the operator's HEAD" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse main)" != "$main_before" ]]; then
+    fail "[$mode] the refusal moved main anyway" "$su_out"
+    return
+  fi
+  if [[ -n "$(git -C "$clone" status --porcelain --untracked-files=no)" ]]; then
+    fail "[$mode] the refusal dirtied the operator's working tree" "$su_out"
+    return
+  fi
+  pass "[$mode] main checked out in another worktree is refused, out loud, on the operator's own branch"
+}
+
+case_self_update_worktree_conflict_legacy() {
+  assert_worktree_conflict_is_reported legacy
+}
+
+case_self_update_worktree_conflict_tag() {
+  assert_worktree_conflict_is_reported tag
+}
+
+# (d1) R-006 survives the rewrite: local main ahead of the target is refused.
+assert_main_ahead_is_refused() {
+  local mode="$1" dir clone main_before branch
+  dir="$(new_selfupdate_repo "self-update-ahead-$mode" "$mode")"
+  clone="$dir/clone"
+
+  git -C "$clone" checkout -q main
+  echo local-only > "$clone/local"
+  git -C "$clone" add local
+  git -C "$clone" commit -qm "local only"
+  git -C "$clone" checkout -q -b feature
+  main_before="$(git -C "$clone" rev-parse main)"
+
+  run_self_update "$dir"
+  if [[ "$su_status" -eq 0 ]]; then
+    fail "[$mode] self-update converged a main that is ahead of the target" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "ahead of origin/main" <<<"$su_out"; then
+    fail "[$mode] the refusal does not name the ahead-of-origin/main reason (R-006)" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse main)" != "$main_before" ]]; then
+    fail "[$mode] the refusal moved main anyway" "$su_out"
+    return
+  fi
+  branch="$(git -C "$clone" rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" != "feature" ]]; then
+    fail "[$mode] the refusal left the operator on '$branch'" "$su_out"
+    return
+  fi
+  pass "[$mode] local main ahead of the target is still refused (R-006)"
+}
+
+case_self_update_main_ahead_legacy() {
+  assert_main_ahead_is_refused legacy
+}
+
+case_self_update_main_ahead_tag() {
+  assert_main_ahead_is_refused tag
+}
+
+# (d2) The ref move itself must refuse a non-fast-forward. R-006's guard
+# above catches the ordinary path, so this drives the convergence helper
+# directly with a genuinely divergent commit: merge --ff-only's guarantee has
+# to survive the switch to moving the ref without a checkout.
+case_self_update_refuses_a_non_fast_forward() {
+  local dir clone divergent main_before out status
+  dir="$(new_selfupdate_repo self-update-nonff legacy)"
+  clone="$dir/clone"
+
+  # feature forks at commit one; main is then advanced to commit two, so
+  # feature's tip is NOT a fast-forward of main.
+  git -C "$clone" checkout -q -b feature
+  echo side > "$clone/g"
+  git -C "$clone" add g
+  git -C "$clone" commit -qm side
+  divergent="$(git -C "$clone" rev-parse HEAD)"
+  git -C "$clone" fetch -q origin main
+  git -C "$clone" update-ref refs/heads/main "$(git -C "$clone" rev-parse origin/main)"
+  main_before="$(git -C "$clone" rev-parse main)"
+
+  out="$(
+    OVERLAY_DIR="$clone" \
+    STATE_DIR="$dir/state" \
+    bash -c 'source "$1"; cd "$2"; selfupdate_converge_main "$3"' \
+      _ "$OVERLAY" "$clone" "$divergent" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -eq 0 ]]; then
+    fail "a non-fast-forward target was accepted" "$out"
+    return
+  fi
+  if ! grep -q -F -e "fast-forward" <<<"$out"; then
+    fail "the refusal does not say it is not a fast-forward" "$out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse main)" != "$main_before" ]]; then
+    fail "a non-fast-forward target moved main anyway" "$out"
+    return
+  fi
+  pass "a non-fast-forward target is refused and main is left alone"
+}
+
+# The TWIN of the case above, and the one it cannot reach.
+#
+# selfupdate_converge_main has two branch positions: on main it merges in
+# place, off main it moves the ref with `git fetch .`. The case above always
+# calls from a side branch, so it only ever exercises the fetch refusal.
+# Replacing `git merge --ff-only` with a plain `git merge` therefore left the
+# whole harness green while main silently gained a merge commit -- the exact
+# non-fast-forward the refusal exists to prevent, on the half nobody drove.
+case_self_update_refuses_a_non_fast_forward_from_main() {
+  local dir clone divergent main_before commits_before out status
+  dir="$(new_selfupdate_repo self-update-nonff-onmain legacy)"
+  clone="$dir/clone"
+
+  # A TRUE sibling: fork, commit on the fork, then advance main independently.
+  # Forking and committing alone is not enough -- that tip is a DESCENDANT of
+  # main and merges cleanly as a fast-forward, which is how the first draft of
+  # this case passed against correct code and proved nothing.
+  git -C "$clone" checkout -q -b sibling
+  echo side > "$clone/g"
+  git -C "$clone" add g
+  git -C "$clone" commit -qm side
+  divergent="$(git -C "$clone" rev-parse HEAD)"
+  git -C "$clone" checkout -q main
+  echo mainline > "$clone/h"
+  git -C "$clone" add h
+  git -C "$clone" commit -qm mainline
+  main_before="$(git -C "$clone" rev-parse main)"
+  commits_before="$(git -C "$clone" rev-list --count main)"
+
+  out="$(
+    OVERLAY_DIR="$clone" \
+    STATE_DIR="$dir/state" \
+    bash -c 'source "$1"; cd "$2"; selfupdate_converge_main "$3"' \
+      _ "$OVERLAY" "$clone" "$divergent" 2>&1
+  )"
+  status=$?
+
+  if [[ "$status" -eq 0 ]]; then
+    fail "on main, a non-fast-forward target was accepted" "$out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse main)" != "$main_before" ]]; then
+    fail "on main, a non-fast-forward target moved main anyway" "$out"
+    return
+  fi
+  # The sharper assertion: a plain `git merge` would SUCCEED here and leave a
+  # merge commit behind. Counting commits catches that even if some future
+  # rewrite makes the exit status look right.
+  if [[ "$(git -C "$clone" rev-list --count main)" != "$commits_before" ]]; then
+    fail "on main, the target was merged instead of refused (main gained commits)" "$out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse --abbrev-ref HEAD)" != "main" ]]; then
+    fail "on main, a refusal moved the operator off main" "$out"
+    return
+  fi
+  pass "on main, a non-fast-forward target is refused without merging"
+}
+
+# (e) A dirty tracked tree is refused BEFORE anything is fetched or moved:
+# origin/main must still be where the clone left it.
+case_self_update_refuses_a_dirty_tracked_tree() {
+  local dir clone origin_before main_before branch
+  dir="$(new_selfupdate_repo self-update-dirty legacy)"
+  clone="$dir/clone"
+
+  git -C "$clone" checkout -q -b feature
+  echo dirty >> "$clone/f"
+  origin_before="$(git -C "$clone" rev-parse origin/main)"
+  main_before="$(git -C "$clone" rev-parse main)"
+
+  run_self_update "$dir"
+  if [[ "$su_status" -eq 0 ]]; then
+    fail "self-update ran with uncommitted tracked changes" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "uncommitted tracked changes" <<<"$su_out"; then
+    fail "the refusal does not name the dirty tracked tree" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse origin/main)" != "$origin_before" ]]; then
+    fail "self-update fetched before refusing a dirty tracked tree" "$su_out"
+    return
+  fi
+  if [[ "$(git -C "$clone" rev-parse main)" != "$main_before" ]]; then
+    fail "self-update moved main before refusing a dirty tracked tree" "$su_out"
+    return
+  fi
+  branch="$(git -C "$clone" rev-parse --abbrev-ref HEAD)"
+  if [[ "$branch" != "feature" ]]; then
+    fail "the refusal left the operator on '$branch'" "$su_out"
+    return
+  fi
+  if ! grep -q -F -e "dirty" "$clone/f"; then
+    fail "the refusal discarded the operator's uncommitted change" "$su_out"
+    return
+  fi
+  pass "a dirty tracked tree is refused before anything is fetched or moved"
+}
+
+# ---------------------------------------------------------------------------
 
 case_parallel_adds_keep_every_target
 case_add_does_not_use_a_shared_temp_path
@@ -1999,6 +2388,17 @@ case_status_hooks_surfaces_a_stale_engine_binary
 case_status_reports_a_non_supported_status_as_degraded
 case_status_reports_a_supported_status_as_success
 case_no_message_names_a_command_called_overlay
+case_self_update_from_a_side_branch_legacy
+case_self_update_from_a_side_branch_tag
+case_self_update_from_main_legacy
+case_self_update_from_main_tag
+case_self_update_worktree_conflict_legacy
+case_self_update_worktree_conflict_tag
+case_self_update_main_ahead_legacy
+case_self_update_main_ahead_tag
+case_self_update_refuses_a_non_fast_forward
+case_self_update_refuses_a_non_fast_forward_from_main
+case_self_update_refuses_a_dirty_tracked_tree
 
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures shell test case(s) failed" >&2
