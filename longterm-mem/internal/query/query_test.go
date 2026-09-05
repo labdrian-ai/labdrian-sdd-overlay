@@ -300,3 +300,92 @@ func TestQuery_HealthyEngramReportsNoDegradedDiagnostic(t *testing.T) {
 		}
 	}
 }
+
+// A memory that was explicitly replaced comes back from Engram's own search
+// looking exactly like one that was not: verified on a copy of a real
+// database, inserting "B supersedes A" left A's search results
+// byte-identical and still ranked first. That is how an abandoned decision
+// gets read as current and reintroduced. longterm-mem cannot change
+// Engram's search -- its connection is read-only (R-002) -- but repeating
+// the omission in its own answers is a choice, and this is it being made
+// the other way.
+func TestQuery_ResultsCarryWhatTheRelationLedgerSays(t *testing.T) {
+	store, oldID, newID := newRelatedFixtureStore(t)
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusNotProvisioned}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+
+	var oldRow, newRow *ResultRow
+	for i := range got.Results {
+		switch got.Results[i].EngramID {
+		case oldID:
+			oldRow = &got.Results[i]
+		case newID:
+			newRow = &got.Results[i]
+		}
+	}
+	if oldRow == nil || newRow == nil {
+		t.Fatalf("fixture did not return both observations: %+v", got.Results)
+	}
+
+	if oldRow.Standing == nil || len(oldRow.Standing.SupersededBy) != 1 {
+		t.Fatalf("the replaced memory must come back saying so: %+v", oldRow.Standing)
+	}
+	if oldRow.Standing.SupersededBy[0].ID != newID {
+		t.Errorf("it must name what replaced it: %+v", oldRow.Standing.SupersededBy[0])
+	}
+	if newRow.Standing != nil {
+		t.Errorf("the replacement carries no warning of its own: %+v", newRow.Standing)
+	}
+}
+
+// newRelatedFixtureStore builds a store holding two observations, the
+// second judged to supersede the first.
+func newRelatedFixtureStore(t *testing.T) (*engram.Store, int64, int64) {
+	t.Helper()
+	schema, err := os.ReadFile(filepath.Join("..", "engram", "testdata", "schema.sql"))
+	if err != nil {
+		t.Fatalf("read engram schema fixture: %v", err)
+	}
+	dbPath := filepath.Join(t.TempDir(), "engram.db")
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	defer setup.Close()
+	if _, err := setup.Exec(string(schema)); err != nil {
+		t.Fatalf("apply engram schema fixture: %v", err)
+	}
+
+	ids := make([]int64, 0, 2)
+	for i, sync := range []string{"sync-old", "sync-new"} {
+		res, err := setup.Exec(
+			`INSERT INTO observations (session_id, sync_id, type, title, content, project) VALUES (?, ?, ?, ?, ?, ?)`,
+			"sess-1", sync, "decision", "zephyr approach", "zephyr keyword body", "proj-a",
+		)
+		if err != nil {
+			t.Fatalf("insert fixture observation %d: %v", i, err)
+		}
+		id, err := res.LastInsertId()
+		if err != nil {
+			t.Fatalf("LastInsertId: %v", err)
+		}
+		ids = append(ids, id)
+	}
+	if _, err := setup.Exec(
+		`INSERT INTO memory_relations (sync_id, source_id, target_id, relation, judgment_status) VALUES (?, ?, ?, ?, ?)`,
+		"rel-1", "sync-new", "sync-old", "supersedes", "judged",
+	); err != nil {
+		t.Fatalf("insert fixture relation: %v", err)
+	}
+
+	store, err := engram.Open(dbPath)
+	if err != nil {
+		t.Fatalf("engram.Open: %v", err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	return store, ids[0], ids[1]
+}

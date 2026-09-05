@@ -511,3 +511,57 @@ or delete any observation.
 - WHEN stale memory is reported
 - THEN no observation is modified or deleted, the command says so, and it
   exits successfully
+
+### Requirement: Query Results Carry Their Relation Standing
+
+ID: R-049
+Traces to: longterm-mem R-049
+
+Each query result backed by an Engram observation SHALL carry what Engram's
+relation ledger says about it: the observations that superseded it, those
+judged to contradict it, and those flagged against it and never judged. A
+result SHALL NOT be suppressed on that basis, and a ledger that cannot be
+read SHALL be reported as a diagnostic rather than rendered as silence.
+
+#### Scenario: A superseded memory says so, and names its replacement
+
+- GIVEN an observation that another observation is judged to supersede
+- WHEN a query returns it
+- THEN the result reports that it was superseded and names the observation
+  that replaced it, while the replacement carries no such mark
+
+#### Scenario: An undecided conflict is reported as undecided
+
+- GIVEN two observations flagged against each other and never judged
+- WHEN a query returns either of them
+- THEN the result reports the undecided conflict and names the other side,
+  distinctly from a judged one
+
+#### Scenario: Verdicts that nothing is wrong are not warnings
+
+- GIVEN observations related by a `related`, `compatible`, `scoped` or
+  `not_conflict` verdict
+- WHEN a query returns them
+- THEN they carry no mark, a warning on almost every result being the same
+  as no warning at all
+
+#### Scenario: A withdrawn verdict is not reported
+
+- GIVEN a relation that was itself re-judged and carries a superseded-at
+  timestamp
+- WHEN a query returns either observation
+- THEN the withdrawn verdict is not reported
+
+#### Scenario: Nothing is suppressed
+
+- GIVEN a superseded observation matching a query
+- WHEN the query runs
+- THEN the observation is still returned, annotated rather than hidden, so
+  the record of what was tried and abandoned is not lost
+
+#### Scenario: An unreadable ledger is reported, not silent
+
+- GIVEN the relation ledger cannot be read
+- WHEN a query runs
+- THEN the results are still returned and a diagnostic says no result is
+  marked even if it should be
