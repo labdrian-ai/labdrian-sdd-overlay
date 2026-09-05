@@ -2626,7 +2626,20 @@ cmd_install_hooks() {
 
 cmd_status_hooks() {
   if [[ ! -x "$ENGINE_BINARY" ]]; then
-    die "engine binary not found at $ENGINE_BINARY; run 'overlay install-hooks' first"
+    # 'install-hooks' is no longer the narrowest remedy: doctor --fix rebuilds
+    # the binary without also rewriting ~/.claude/settings.json. Hook wiring is
+    # still named, because an engine that was never installed needs it too.
+    die "engine binary not found at $ENGINE_BINARY; run 'overlay doctor --fix' to build it, or run 'overlay install-hooks' to build it and wire the hooks"
+  fi
+
+  # The engine binary's freshness belongs to THIS status command, not to
+  # cmd_status: cmd_status reports per-target file/version sync of deployed
+  # skills, while status-hooks is the read-only health check for the overlay's
+  # own installation — the engine binary and its hooks. The TUI's "Estado" row
+  # folds status-hooks in, so one line here surfaces there with no TUI change.
+  # One line, because status is a summary; 'overlay doctor' is the report.
+  if engine_binary_is_stale; then
+    warn "$(engine_stale_diagnosis)"
   fi
 
   exec "$ENGINE_BINARY" status
@@ -2675,6 +2688,70 @@ cmd_install_alias() {
   mkdir -p "$HOME/.local/bin"
   ln -sf "$OVERLAY_DIR/bin/labdrian-overlay" "$HOME/.local/bin/$name"
   echo "Linked '$name' -> overlay. Run '$name tui' (needs ~/.local/bin on PATH)."
+}
+
+# doctor_fix_engine_binary is doctor --fix's half of "update the engine on
+# purpose". ensure_engine_binary heals silently on the way to running
+# something; this is the DELIBERATE repair, and until it existed the only way
+# to rebuild the engine was 'overlay install-hooks', which also rewrites
+# ~/.claude/settings.json — a hammer for this tack, and so nobody ran it after
+# a repository update.
+#
+# It never fails the run: doctor's engine-binary check is a WARN, and a repair
+# that could not happen is REPORTED as not-happened rather than claimed. That
+# is the whole point of the check — a repair reported but not performed is the
+# same invisible failure mode in a new place.
+# doctor_report_engine_binary prints the engine binary's state as one doctor
+# line: absent / stale / current. Three states, because they need three
+# different remedies -- "present" alone was the gap that let an eleven-day-old
+# engine keep executing every hook unreported. Staleness is asked of
+# engine_binary_is_stale so this file keeps exactly ONE staleness rule.
+# Neither problem state is a hard FAIL: a stale engine usually still serves the
+# command at hand, and an absent one is repairable from here.
+#
+# It is a function rather than an inline block so --fix can RE-RUN it after
+# rebuilding, the way --fix already re-runs recheck_discovery_tools after
+# provisioning. Without that, a --fix run left its own "is STALE" line standing
+# as the report's only state for the binary, contradicted further down by
+# "Engine binary rebuilt" -- a report that stops describing reality before it
+# finishes.
+doctor_report_engine_binary() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    echo "WARN  engine binary not found at $ENGINE_BINARY — nothing the overlay hands to the engine can run. Rebuild it with 'overlay doctor --fix' (or 'overlay install-hooks', which also rewires ~/.claude/settings.json)."
+  elif engine_binary_is_stale; then
+    echo "WARN  $(engine_stale_diagnosis)"
+  else
+    echo "PASS  engine binary present and current at $ENGINE_BINARY"
+  fi
+}
+
+doctor_fix_engine_binary() {
+  local reason
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    reason="absent"
+  elif engine_binary_is_stale; then
+    reason="stale"
+  else
+    echo "Engine binary already current at $ENGINE_BINARY — nothing to rebuild."
+    return 0
+  fi
+
+  if ! command -v go >/dev/null 2>&1; then
+    echo "COULD NOT REPAIR the $reason engine binary at $ENGINE_BINARY: go is not on PATH. Install a Go toolchain, then run 'overlay doctor --fix' again."
+    return 0
+  fi
+  if [[ ! -d "$ENGINE_SRC" ]]; then
+    echo "COULD NOT REPAIR the $reason engine binary at $ENGINE_BINARY: engine source not found at $ENGINE_SRC."
+    return 0
+  fi
+
+  echo "Rebuilding the $reason engine binary from $ENGINE_SRC..."
+  mkdir -p "$(dirname "$ENGINE_BINARY")"
+  if (cd "$ENGINE_SRC" && go build -o "$ENGINE_BINARY" ./cmd/); then
+    echo "Engine binary rebuilt: $ENGINE_BINARY"
+  else
+    echo "COULD NOT REPAIR the $reason engine binary at $ENGINE_BINARY: go build failed (see the build output above)."
+  fi
 }
 
 # ---------------------------------------------------------------------------
@@ -2750,12 +2827,13 @@ cmd_doctor() {
     echo "      never a bare filesystem scan. An empty result is INCONCLUSIVE, not zero skills."
   fi
 
-  # (d) Engine binary present + executable. Absent is a WARN with a hint.
-  if [[ -x "$ENGINE_BINARY" ]]; then
-    echo "PASS  engine binary present at $ENGINE_BINARY"
-  else
-    echo "WARN  engine binary not found at $ENGINE_BINARY — run 'overlay install-hooks' to build and deploy it."
-  fi
+  # (d) Engine binary: absent / stale / current. Three states, because they
+  #     need three different remedies — "present" alone was the gap that let an
+  #     eleven-day-old engine keep executing every hook unreported. Staleness is
+  #     asked of engine_binary_is_stale so this file keeps exactly ONE staleness
+  #     rule. Neither state is a hard FAIL: a stale engine usually still serves
+  #     the command at hand, and an absent one is repairable from here.
+  doctor_report_engine_binary
 
   # (e) REGISTRY-AUTHORITATIVE + FAIL-LOUD: registry present AND non-empty.
   #     Resolve under OVERLAY_DIR first, then CWD. A missing or empty/
@@ -2810,6 +2888,12 @@ cmd_doctor() {
     # Still run --fix provisioning if requested, then re-check tools, but exit 1 after.
     if [[ "$fix" -eq 1 ]]; then
       echo ""
+      echo "==> --fix: engine binary..."
+      doctor_fix_engine_binary
+      echo ""
+      echo "==> Re-checking the engine binary after --fix..."
+      doctor_report_engine_binary
+      echo ""
       echo "==> --fix: attempting to provision discovery tools despite FAIL above..."
       ensure_discovery_tools
       echo ""
@@ -2822,6 +2906,12 @@ cmd_doctor() {
 
   # --fix: explicit opt-in to provision missing discovery tools, then re-check.
   if [[ "$fix" -eq 1 ]]; then
+    echo ""
+    echo "==> --fix: engine binary..."
+    doctor_fix_engine_binary
+    echo ""
+    echo "==> Re-checking the engine binary after --fix..."
+    doctor_report_engine_binary
     echo ""
     echo "==> --fix: provisioning discovery tools (${DISCOVERY_TOOLS[*]})..."
     ensure_discovery_tools
@@ -3177,6 +3267,18 @@ cmd_gadu_generate() {
 # ---------------------------------------------------------------------------
 # longterm-mem (D4, D13, R-014/R-015)
 # ---------------------------------------------------------------------------
+
+# engine_stale_diagnosis prints the sentence a reader cannot reconstruct on
+# their own: that an unknown flag / unknown subcommand error coming OUT OF THE
+# ENGINE is this staleness and not an overlay bug. That mistaken reading, not
+# the staleness itself, is what made the original incident expensive, so every
+# operator-facing report of a stale binary uses this one text.
+#
+# It names 'doctor --fix' as the remedy, not 'install-hooks': the repair the
+# reader wants here is the engine binary, not a rewrite of settings.json.
+engine_stale_diagnosis() {
+  printf '%s' "engine binary at $ENGINE_BINARY is STALE — older than the engine source at $ENGINE_SRC, so it may not understand the flags and subcommands this overlay passes it. If a command fails with an unknown flag or unknown subcommand error from the engine, that is this staleness, not an overlay bug. Rebuild it with 'overlay doctor --fix'."
+}
 
 # engine_binary_is_stale answers whether any Go source under $ENGINE_SRC is
 # NEWER than $ENGINE_BINARY, i.e. whether the compiled artifact predates the

@@ -1629,6 +1629,204 @@ case_stale_binary_with_failing_build_warns_and_continues() {
 }
 
 # ---------------------------------------------------------------------------
+# hazard (f): the operator can neither SEE nor deliberately repair the engine
+# ---------------------------------------------------------------------------
+#
+# ensure_engine_binary heals on the way to running something, silently and by
+# design. That leaves two gaps this section pins: `doctor` never reported the
+# engine binary's freshness at all, and the only deliberate rebuild was
+# `install-hooks`, which also rewrites ~/.claude/settings.json.
+
+# run_doctor runs cmd_doctor against a fixture engine tree. <bindir> is the
+# first PATH entry, which is how a case chooses whether `go` exists at all.
+run_doctor() {
+  local dir="$1" path="$2"
+  shift 2
+  env PATH="$path" STATE_DIR="$dir/state" bash -c '
+    overlay="$1"; binary="$2"; src="$3"; shift 3
+    source "$overlay"
+    set +e
+    ENGINE_BINARY="$binary"
+    ENGINE_SRC="$src"
+    cmd_doctor "$@"
+    echo "DOCTOR-STATUS=$?"
+  ' _ "$OVERLAY" "$dir/binary/gentle-ai-overlay" "$dir/engine" "$@" 2>&1
+}
+
+# engine_doctor_line prints doctor's engine-binary line(s) only, so a case can
+# assert on that check without matching the rest of the preflight.
+engine_doctor_line() {
+  grep -i -e "engine binary" <<<"$1"
+}
+
+# no_go_bindir builds a PATH entry with every utility doctor's own checks need
+# and no `go`, so "the toolchain is missing" is the only injected condition.
+no_go_bindir() {
+  local dir="$1" nogo="$1/nogo-bin" util
+  mkdir -p "$nogo"
+  for util in bash cat dirname find grep head mkdir tr; do
+    ln -sf "$(command -v "$util")" "$nogo/$util"
+  done
+  printf '%s\n' "$nogo"
+}
+
+case_doctor_reports_a_stale_engine_binary() {
+  local dir out line
+  dir="$(new_case_dir doctor-stale)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(run_doctor "$dir" "$dir/bin:/usr/bin:/bin")"
+  line="$(engine_doctor_line "$out")"
+
+  if ! grep -q -i -F -e "stale" <<<"$line"; then
+    fail "doctor: a stale engine binary is not reported as stale" "$out"
+    return
+  fi
+  # The expensive part of the original incident was not the staleness, it was
+  # that the resulting engine error read as an overlay bug.
+  if ! grep -q -i -F -e "unknown flag" <<<"$line"; then
+    fail "doctor: the stale line does not name the unknown-flag symptom" "$out"
+    return
+  fi
+  pass "doctor reports a stale engine binary and names its symptom"
+}
+
+case_doctor_reports_an_absent_engine_binary_differently() {
+  local dir out line
+  dir="$(new_case_dir doctor-absent)"
+  write_fake_engine_tree "$dir"
+  mkdir -p "$dir/binary"
+
+  out="$(run_doctor "$dir" "$dir/bin:/usr/bin:/bin")"
+  line="$(engine_doctor_line "$out")"
+
+  if ! grep -q -i -F -e "not found" <<<"$line"; then
+    fail "doctor: an absent engine binary is not reported as absent" "$out"
+    return
+  fi
+  # Absent and stale need different remedies, so they must not read alike.
+  if grep -q -i -F -e "stale" <<<"$line"; then
+    fail "doctor: an absent engine binary is reported as if it were stale" "$out"
+    return
+  fi
+  # The deliberate repair is doctor --fix; install-hooks also rewrites
+  # ~/.claude/settings.json, which is a hammer for this tack.
+  if ! grep -q -F -e "doctor --fix" <<<"$line"; then
+    fail "doctor: the absent-binary line does not name the deliberate repair" "$out"
+    return
+  fi
+  pass "doctor reports an absent engine binary differently from a stale one"
+}
+
+# The twin that stops the check from reporting a problem on every run.
+case_doctor_reports_a_current_engine_binary_as_healthy() {
+  local dir out line
+  dir="$(new_case_dir doctor-healthy)"
+  write_fake_engine_tree "$dir"
+  touch -t 200001010000 "$dir/engine/cmd/main.go" "$dir/engine/go.mod" "$dir/engine/go.sum"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  touch "$dir/binary/gentle-ai-overlay"
+
+  out="$(run_doctor "$dir" "$dir/bin:/usr/bin:/bin")"
+  line="$(engine_doctor_line "$out")"
+
+  if ! grep -q -F -e "PASS" <<<"$line"; then
+    fail "doctor: a current engine binary is not reported as healthy" "$out"
+    return
+  fi
+  if grep -q -i -e "stale" -e "not found" <<<"$line"; then
+    fail "doctor: a current engine binary is reported as a problem" "$out"
+    return
+  fi
+  # The healthy state is the third of three, and says so.
+  if ! grep -q -i -F -e "current" <<<"$line"; then
+    fail "doctor: the healthy line does not distinguish current from merely present" "$out"
+    return
+  fi
+  pass "doctor reports a current engine binary as healthy"
+}
+
+case_doctor_fix_rebuilds_a_stale_engine_binary() {
+  local dir out
+  dir="$(new_case_dir doctor-fix-stale)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(FAKE_BUILD_TAG=rebuilt-by-doctor-fix run_doctor "$dir" "$dir/bin:/usr/bin:/bin" --fix)"
+
+  # Proven by CONTENT, not by log text.
+  if ! grep -q -F -e "rebuilt-by-doctor-fix" "$dir/binary/gentle-ai-overlay"; then
+    fail "doctor --fix did not rebuild a stale engine binary" "$out"
+    return
+  fi
+  pass "doctor --fix rebuilds a stale engine binary"
+}
+
+case_doctor_fix_without_go_does_not_claim_a_repair() {
+  local dir out before after nogo
+  dir="$(new_case_dir doctor-fix-no-go)"
+  write_fake_engine_tree "$dir"
+  rm -f "$dir/bin/go"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+  before="$(cat "$dir/binary/gentle-ai-overlay")"
+  nogo="$(no_go_bindir "$dir")"
+
+  out="$(run_doctor "$dir" "$nogo" --fix)"
+  after="$(cat "$dir/binary/gentle-ai-overlay")"
+
+  if [[ "$before" != "$after" ]]; then
+    fail "doctor --fix without go: the existing binary was disturbed" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "could not repair" <<<"$out"; then
+    fail "doctor --fix without go does not say it could not repair the engine binary" "$out"
+    return
+  fi
+  if grep -q -i -e "^Engine binary rebuilt" <<<"$out"; then
+    fail "doctor --fix without go claims a rebuild it did not perform" "$out"
+    return
+  fi
+  pass "doctor --fix without a Go toolchain reports that it could not repair"
+}
+
+# The TUI's "Estado" row folds status-hooks in, so the overlay's own
+# status path is where an operator sees this without any new TUI code.
+case_status_hooks_surfaces_a_stale_engine_binary() {
+  local dir out hits
+  dir="$(new_case_dir status-hooks-stale)"
+  write_fake_engine_tree "$dir"
+  write_stale_binary "$dir/binary/gentle-ai-overlay"
+
+  out="$(
+    env PATH="$dir/bin:/usr/bin:/bin" bash -c '
+      overlay="$1"; binary="$2"; src="$3"
+      source "$overlay"
+      set +e
+      ENGINE_BINARY="$binary"
+      ENGINE_SRC="$src"
+      cmd_status_hooks
+    ' _ "$OVERLAY" "$dir/binary/gentle-ai-overlay" "$dir/engine" 2>&1
+  )"
+
+  hits="$(grep -c -i -F -e "stale" <<<"$out")"
+  if [[ "$hits" -eq 0 ]]; then
+    fail "status does not surface a stale engine binary" "$out"
+    return
+  fi
+  # status is a summary, not a report.
+  if [[ "$hits" -ne 1 ]]; then
+    fail "status surfaces the stale engine binary in $hits lines, not one" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "unknown flag" <<<"$out"; then
+    fail "status does not name the unknown-flag symptom" "$out"
+    return
+  fi
+  pass "status surfaces a stale engine binary in one line"
+}
+
+# ---------------------------------------------------------------------------
 
 case_parallel_adds_keep_every_target
 case_add_does_not_use_a_shared_temp_path
@@ -1666,6 +1864,12 @@ case_binary_newer_than_every_source_is_not_rebuilt
 case_absent_binary_is_still_built
 case_stale_binary_without_go_warns_and_continues
 case_stale_binary_with_failing_build_warns_and_continues
+case_doctor_reports_a_stale_engine_binary
+case_doctor_reports_an_absent_engine_binary_differently
+case_doctor_reports_a_current_engine_binary_as_healthy
+case_doctor_fix_rebuilds_a_stale_engine_binary
+case_doctor_fix_without_go_does_not_claim_a_repair
+case_status_hooks_surfaces_a_stale_engine_binary
 
 if [[ "$failures" -gt 0 ]]; then
   echo "$failures shell test case(s) failed" >&2
