@@ -151,3 +151,113 @@ consumer. It is preserved on `union/gate-for-pr4` and moves to PR-4.
 
 Each slice builds, vets and tests clean on its own, which the original
 sequence did not.
+
+## PR-2: Embedding Client + Egress Guard (Phase 2, tasks.md)
+
+Branch `union/pr2-embed`, branched from `union/pr1b-merge` (feature-branch-chain:
+this PR targets the previous PR branch, not `main`). Scope: `internal/embed`
+client and the `net`/`net/http` egress allowlist test. Did not touch
+`internal/query/gate.go` (deferred to `union/gate-for-pr4`), Phase 3, Phase 4, or
+`openspec/changes/shared-project-vault/`.
+
+### Completed Tasks (Phase 2, all 4)
+
+- [x] 2.1 RED `internal/embed/client_test.go`: `TestNewClientRefusesNonLoopbackEndpoint`,
+  `TestNewClientRefusesHostnameEvenWhenItResolvesToLoopback`,
+  `TestClientRefusesRedirectAndNeverRequestsTheTarget`, `TestClientTimeoutIsExplicit`,
+  `TestUnreachableBackendAndMissingModelAreDistinctErrors`.
+- [x] 2.2 GREEN: `internal/embed/client.go` — one `*http.Client`, explicit
+  timeout (`DefaultTimeout = 30s` when unset), literal-loopback-or-`localhost`
+  check via `netip.Addr.IsLoopback()`, `CheckRedirect` refuses every redirect,
+  `Config.AllowRemote` per-invocation opt-in (never persisted), default
+  `http://127.0.0.1:11434`. `Embed` distinguishes `*BackendUnreachableError`
+  from `*ModelMissingError` by concrete type.
+- [x] 2.3 RED `longterm-mem/net_allowlist_test.go`: `TestNetImportAllowlist`,
+  `TestNetImportAllowlistStillRefusesOthers`, written against
+  `findImporters`/`allowedNetImporters` before they existed (confirmed
+  compile-fail RED by temporarily reverting `exec_allowlist_test.go` to its
+  pre-generalization form and re-running).
+- [x] 2.4 GREEN: generalized `findOSExecImporters` into
+  `findImporters(root, importPath)` in `exec_allowlist_test.go`;
+  `findOSExecImporters` kept as a thin wrapper —
+  `TestOSExecImportAllowlistCatchesTestdataPackage` untouched and still green.
+  Added `allowedNetImporters = {"internal/embed/client.go": true}` and
+  `guardedImports = []string{"net/http","net"}` in `net_allowlist_test.go`.
+
+**4/4 Phase 2 tasks complete.**
+
+### TDD Cycle Evidence
+
+| Test | RED (observed) | GREEN | REFACTOR |
+|---|---|---|---|
+| `TestNewClientRefusesNonLoopbackEndpoint` + `TestNewClientRefusesHostnameEvenWhenItResolvesToLoopback` | compile-fails: package `embed`, `NewClient`, `Config`, `ErrNonLoopbackEndpoint` did not exist | implemented `NewClient`/`checkLoopback` | n/a |
+| `TestClientRefusesRedirectAndNeverRequestsTheTarget` | same compile-fail | implemented `CheckRedirect` refusing every redirect | n/a |
+| `TestClientTimeoutIsExplicit` | same compile-fail; **also caught a real test-authoring bug**: first implementation deadlocked because `defer close(block)` was registered before `defer srv.Close()`, so LIFO ran `srv.Close()` (which waits for the still-blocked handler) before releasing it. Fixed by reordering the defers, not the production code | implemented explicit `Timeout` with `DefaultTimeout` fallback | n/a |
+| `TestUnreachableBackendAndMissingModelAreDistinctErrors` | same compile-fail | implemented `*BackendUnreachableError` / `*ModelMissingError` distinguished by HTTP status + Ollama-shaped error text (`"not found"`, `"try pulling"`) | n/a |
+| `TestNetImportAllowlist` / `TestNetImportAllowlistStillRefusesOthers` | compile-fails: `findImporters`, `allowedNetImporters` did not exist (confirmed by temporarily reverting `exec_allowlist_test.go`'s generalization and re-running — genuine RED, not inferred) | generalized `findImporters`; added `allowedNetImporters`/`guardedImports` | n/a |
+
+### Load-Bearing Mutation Proofs
+
+1. **Loopback refusal.** Made `checkLoopback` unconditionally `return nil` before
+   its body. `TestNewClientRefusesNonLoopbackEndpoint` and
+   `TestNewClientRefusesHostnameEvenWhenItResolvesToLoopback` both failed
+   (`err = <nil>, want ErrNonLoopbackEndpoint`). Reverted; re-ran GREEN.
+2. **Redirect refusal.** Removed the `CheckRedirect` field from the
+   constructed `*http.Client`. `TestClientRefusesRedirectAndNeverRequestsTheTarget`
+   failed (`Embed err = embed: decoding response: unexpected end of JSON
+   input, want ErrRedirectRefused` — proving the client would otherwise have
+   silently followed the redirect and tried to parse the target's empty
+   body). Reverted; re-ran GREEN.
+3. **Net egress allowlist.** Emptied `allowedNetImporters` to `{}`.
+   `TestNetImportAllowlist` failed, naming the real offender
+   (`forbidden "net/http" import in internal/embed/client.go`);
+   `TestNetImportAllowlistStillRefusesOthers` failed on the count guard
+   (`the allowlist holds 0 entries`). Reverted; re-ran GREEN.
+
+All three mutations were undone by restoring the pre-mutation file exactly
+(via `cp` of a saved copy, per the discipline note — never `git checkout --`
+on a scratch edit), then re-confirmed GREEN.
+
+### Deviations from Design / Tasks
+
+None. `Config.AllowRemote` implements `--allow-remote-embedder`'s semantics
+at the client layer; wiring the actual CLI flag onto `index` (never `query`)
+is task 3.9, out of this PR's scope, and was not attempted.
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `go test ./internal/embed/... ./...` (from `longterm-mem/`, package `guard` for the allowlist) → both `ok`, 0 failures |
+| Full-suite command and exact result | `go build ./...` clean; `go test ./... -count=1` (from `longterm-mem/`) → all 16 packages `ok` |
+| Runtime harness command/scenario and exact result | No live Ollama backend available in this sandbox. Substituted per design's own testing strategy (`testing.Short()`-skippable integration is explicitly out of this batch): `httptest.Server`-backed round trips for loopback success-shaped, redirect, timeout, unreachable (closed-port), and model-missing (404) scenarios in `client_test.go` — the project's existing convention for network-boundary code without a live dependency. |
+| Rollback boundary | `git revert` the two PR-2 commits on `union/pr2-embed`; nothing outside `internal/embed/` and the two allowlist test files reads or imports the new package yet, so rollback is isolated. |
+
+### Files Changed
+
+| File | Action | What Was Done |
+|---|---|---|
+| `longterm-mem/internal/embed/client.go` | Created | Loopback-only embedding client; refuses non-loopback/hostname endpoints and redirects; explicit timeout; typed unreachable-vs-model-missing errors |
+| `longterm-mem/internal/embed/client_test.go` | Created | 5 RED→GREEN tests per tasks.md 2.1 |
+| `longterm-mem/exec_allowlist_test.go` | Modified | Extracted `findImporters(root, importPath)`; `findOSExecImporters` now a thin wrapper |
+| `longterm-mem/net_allowlist_test.go` | Created | `allowedNetImporters`, `guardedImports`, `TestNetImportAllowlist`, `TestNetImportAllowlistStillRefusesOthers` |
+
+### Workload / PR Boundary
+
+- **Mode**: chained PR slice (feature-branch-chain).
+- **Current work unit**: PR-2 — `internal/embed` client + egress guard (Phase 2, all 4 tasks).
+- **Boundary**: starts from `union/pr1b-merge`; finishes with a loopback embedding
+  client that refuses non-loopback endpoints/hostnames/redirects at
+  construction/dial time, and a `net`/`net/http` import allowlist proven to
+  catch the real offender if untended.
+- **Estimated review budget impact**: **496 changed lines** (`git diff --stat
+  union/pr1b-merge..union/pr2-embed`: +487/−9 across 4 files), against the
+  design's ~420-line estimate and the 800-line ceiling. Within budget; no
+  exception needed.
+
+### Status
+
+4/4 Phase 2 tasks complete. `go test ./...`, `go vet ./...`, `gofmt -l .`
+clean in `longterm-mem`, `engine`, `tui`. `openspec/changes/shared-project-vault/`
+and `internal/query/gate.go` untouched. Phase 3 and Phase 4 not started.
+Ready for `sdd-verify` on PR-2's scope.

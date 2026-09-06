@@ -54,10 +54,10 @@ If PR-3 or PR-4 measures over 800 lines once check-1/check-3 evidence lands, spl
 
 ## Phase 2: Embedding Client + Egress Guard (PR-2) — R-071
 
-- [ ] 2.1 RED `TestNewClientRefusesNonLoopbackEndpoint`, `TestNewClientRefusesHostnameEvenWhenItResolvesToLoopback`, `TestClientRefusesRedirectAndNeverRequestsTheTarget` (httptest 302), `TestClientTimeoutIsExplicit`, `TestUnreachableBackendAndMissingModelAreDistinctErrors` (`internal/embed/client_test.go`).
-- [ ] 2.2 GREEN: create `internal/embed/client.go` — one `*http.Client`, explicit timeout, literal-loopback-or-`localhost` check via `netip.Addr.IsLoopback()`, `CheckRedirect` errors, `--allow-remote-embedder` opt-in per invocation, default `http://127.0.0.1:11434`.
-- [ ] 2.3 RED `TestOSExecImportAllowlistCatchesTestdataPackage` stays green; add `TestNetImportAllowlist`, `TestNetImportAllowlistStillRefusesOthers` (`longterm-mem/net_allowlist_test.go`) asserting `len(allowedNetImporters)==1` and refusing `internal/vecindex/build.go`, `internal/query/query.go`, `cmd/longterm-mem/main.go`.
-- [ ] 2.4 GREEN: generalize `findOSExecImporters` into `findImporters(root, importPath)`; add `allowedNetImporters` map and `guardedImports = []string{"net/http","net"}`.
+- [x] 2.1 RED `TestNewClientRefusesNonLoopbackEndpoint`, `TestNewClientRefusesHostnameEvenWhenItResolvesToLoopback`, `TestClientRefusesRedirectAndNeverRequestsTheTarget` (httptest 302), `TestClientTimeoutIsExplicit`, `TestUnreachableBackendAndMissingModelAreDistinctErrors` (`internal/embed/client_test.go`).
+- [x] 2.2 GREEN: create `internal/embed/client.go` — one `*http.Client`, explicit timeout, literal-loopback-or-`localhost` check via `netip.Addr.IsLoopback()`, `CheckRedirect` errors, `--allow-remote-embedder` opt-in per invocation, default `http://127.0.0.1:11434`.
+- [x] 2.3 RED `TestOSExecImportAllowlistCatchesTestdataPackage` stays green; add `TestNetImportAllowlist`, `TestNetImportAllowlistStillRefusesOthers` (`longterm-mem/net_allowlist_test.go`) asserting `len(allowedNetImporters)==1` and refusing `internal/vecindex/build.go`, `internal/query/query.go`, `cmd/longterm-mem/main.go`.
+- [x] 2.4 GREEN: generalize `findOSExecImporters` into `findImporters(root, importPath)`; add `allowedNetImporters` map and `guardedImports = []string{"net/http","net"}`.
 
 ## Phase 3: Vector Index + Ops Wiring (PR-3, blocked on Phase 0.5) — R-064–R-069
 
