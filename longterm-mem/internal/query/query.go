@@ -6,6 +6,7 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -76,7 +77,35 @@ const (
 	// removed before searching, so a caller can tell a corpus with no
 	// answer from a query that was quietly rewritten.
 	DiagnosticSearchStopwordsDropped = "search_stopwords_dropped"
+
+	// DiagnosticResponseCapped reports that the assembled response did not
+	// fit under ResponseTokenCeiling, so its tail was dropped. It names how
+	// many rows were dropped, because "these are the results" and "these
+	// are the results that fit" are different statements and only one of
+	// them is true here.
+	DiagnosticResponseCapped = "response_capped"
 )
+
+// ResponseTokenCeiling is the hard bound on one response, in tokens.
+//
+// It is on the WHOLE response rather than on a row count, because rows
+// vary by orders of magnitude -- the measured Engram body p50 is 4,483
+// bytes and the maximum 42,757 -- so any fixed number of rows bounds
+// nothing. It is a ceiling rather than an expectation because a limit
+// that is hoped for is not a limit: a caller may ask for fifty rows, and
+// the only place that can be refused is where the response is assembled.
+const ResponseTokenCeiling = 2000
+
+// ResponseByteCeiling is ResponseTokenCeiling in bytes.
+//
+// Four bytes per token is an approximation, not a tokenizer. It is used
+// deliberately: this package has no tokenizer available and inventing a
+// precise-looking one would be worse than an honest ratio. The ratio is
+// the same one every measurement behind this change was derived at, so
+// the ceiling is stated in the same units the evidence was.
+const ResponseByteCeiling = ResponseTokenCeiling * bytesPerToken
+
+const bytesPerToken = 4
 
 // Request is one Run call's input; Project is required.
 type Request struct {
@@ -220,7 +249,63 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	result.Results = mergeResults(vaultRows, engramRows, resolveLink)
 	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
+	capResponse(&result)
 	return result, nil
+}
+
+// capResponse drops rows from the end of result until it encodes within
+// ResponseByteCeiling.
+//
+// From the END, and only from the end. The rows are already in D8's merge
+// order and that order is a correctness guarantee, so the only thing this
+// may do is keep a prefix of it: dropping from the middle, reordering, or
+// re-scoring to pack more in would all be re-ranking, which this module
+// is forbidden to do. Rank numbers are left exactly as merged for the same
+// reason -- a kept row's rank is a fact about the merge, not about how
+// many rows survived the budget.
+//
+// It measures the encoded response rather than estimating it, because the
+// bound is on what goes on the wire and an estimate of that is not a
+// bound. The cost is one marshal per dropped row, on a response that is by
+// definition already too big to be cheap.
+func capResponse(result *Result) {
+	if responseBytes(*result) <= ResponseByteCeiling {
+		return
+	}
+
+	full := len(result.Results)
+	// The diagnostic is appended before the fit is measured so its own
+	// bytes are inside the ceiling, never pushing the response back over
+	// it after the trimming is done.
+	result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticResponseCapped})
+
+	for len(result.Results) > 0 {
+		result.Diagnostics[len(result.Diagnostics)-1].Detail = cappedDetail(full-len(result.Results), full)
+		if responseBytes(*result) <= ResponseByteCeiling {
+			return
+		}
+		result.Results = result.Results[:len(result.Results)-1]
+	}
+	result.Diagnostics[len(result.Diagnostics)-1].Detail = cappedDetail(full, full)
+}
+
+// cappedDetail states what was dropped in the terms a caller needs to act
+// on it: how many results exist that they are not looking at.
+func cappedDetail(dropped, full int) string {
+	return fmt.Sprintf(
+		"this response reached the %d-token ceiling, so %d of %d results were dropped from the end; the rows shown are the highest-ranked ones that fit, and narrowing the query or lowering top will surface the rest",
+		ResponseTokenCeiling, dropped, full)
+}
+
+// responseBytes is the size of result as it will be encoded on the wire.
+func responseBytes(result Result) int {
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		// A Result that cannot be marshalled cannot be sent either, so
+		// there is nothing to cap; the encoder downstream reports it.
+		return 0
+	}
+	return len(encoded)
 }
 
 // attachStandings annotates each row that has an observation behind it.

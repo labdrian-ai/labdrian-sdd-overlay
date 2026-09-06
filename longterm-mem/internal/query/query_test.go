@@ -3,6 +3,7 @@ package query
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
@@ -492,5 +493,109 @@ func TestQuery_VaultRowIsNotMarkedTruncated(t *testing.T) {
 	}
 	if got.Results[0].SnippetTruncated || got.Results[0].FullLength != 0 {
 		t.Fatalf("vault row claims a truncation it cannot know about: %+v", got.Results[0])
+	}
+}
+
+// bigFixture builds n observations whose bodies all match the query and
+// are each far larger than one row's share of the response ceiling.
+func bigFixture(n int) []fixtureObservation {
+	rows := make([]fixtureObservation, 0, n)
+	for i := 0; i < n; i++ {
+		rows = append(rows, fixtureObservation{
+			title:   "row " + string(rune('a'+i)),
+			content: strings.Repeat("padding ", 1200) + " the zephyr decision " + strings.Repeat("padding ", 1200),
+			project: "proj-a",
+		})
+	}
+	return rows
+}
+
+// TestQuery_ResponseNeverExceedsTheCeiling is the hard bound. Capping each
+// row is not enough on its own: rows vary by orders of magnitude and a
+// caller can ask for fifty of them, so a per-row budget multiplied by an
+// unbounded row count is not a bound at all. The ceiling is on the whole
+// assembled response, measured in the bytes that actually go on the wire.
+func TestQuery_ResponseNeverExceedsTheCeiling(t *testing.T) {
+	store := newFixtureEngramStore(t, bigFixture(20))
+	candidates := make([]vault.Candidate, 0, 20)
+	for i := 0; i < 20; i++ {
+		candidates = append(candidates, vault.Candidate{
+			PageAddress:  "c-00000" + string(rune('a'+i)),
+			AbsolutePath: "/vault/very/long/path/to/a/page/" + strings.Repeat("segment/", 8) + "page.md",
+			Snippet:      strings.Repeat("vault snippet text ", 20),
+		})
+	}
+	deps := Deps{
+		Engram:        store,
+		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK, Candidates: candidates}, nil),
+		ResolveLink:   NoLinkResolver,
+	}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if len(encoded) > ResponseByteCeiling {
+		t.Fatalf("response is %d bytes, over the %d-byte (%d-token) ceiling", len(encoded), ResponseByteCeiling, ResponseTokenCeiling)
+	}
+	if !hasDiagnostic(got, DiagnosticResponseCapped) {
+		t.Fatalf("the response was cut to fit and did not say so; diagnostics = %+v", got.Diagnostics)
+	}
+}
+
+// TestQuery_CeilingKeepsTheMergeOrder guards the one thing the ceiling
+// must not do. Dropping the tail of an over-budget response preserves
+// which rows outrank which; reordering or re-scoring to fit more in would
+// be re-ranking, which this module is forbidden to do (R-006, D8).
+func TestQuery_CeilingKeepsTheMergeOrder(t *testing.T) {
+	store := newFixtureEngramStore(t, bigFixture(20))
+	deps := Deps{
+		Engram: store,
+		RetrieveVault: fakeRetrieveVault(vault.Result{
+			Status:     vault.StatusOK,
+			Candidates: []vault.Candidate{{PageAddress: "c-first", AbsolutePath: "/v/first.md", Snippet: "first"}},
+		}, nil),
+		ResolveLink: NoLinkResolver,
+	}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) == 0 {
+		t.Fatalf("the ceiling emptied the response entirely")
+	}
+	if got.Results[0].Source != SourceVault || got.Results[0].PageAddress != "c-first" {
+		t.Fatalf("Results[0] = %+v, want the vault row still first", got.Results[0])
+	}
+	for i, row := range got.Results {
+		if row.Rank != i+1 {
+			t.Fatalf("Results[%d].Rank = %d, want %d: the ceiling must not renumber what it kept", i, row.Rank, i+1)
+		}
+	}
+}
+
+// TestQuery_SmallResponseIsUntouched keeps the ceiling from being a second
+// cap on ordinary calls. A response that already fits must come back whole
+// and must not claim it was cut.
+func TestQuery_SmallResponseIsUntouched(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "small", content: "a short note about zephyr", project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Snippet != "a short note about zephyr" {
+		t.Fatalf("a response well under the ceiling was altered: %+v", got.Results)
+	}
+	if hasDiagnostic(got, DiagnosticResponseCapped) {
+		t.Fatalf("unexpected %s on a response that already fits", DiagnosticResponseCapped)
 	}
 }
