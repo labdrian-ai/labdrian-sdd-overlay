@@ -54,7 +54,13 @@ func TestDoctorAndReconcile_CloseTheLoopOnARevisionZeroPage(t *testing.T) {
 		t.Fatalf("simulate the diverged page: %v", err)
 	}
 
-	deps := DoctorDeps{VaultRoot: vaultRoot, PrerequisitePresent: func(string) bool { return true }}
+	deps := DoctorDeps{
+		VaultRoot:             vaultRoot,
+		PrerequisitePresent:   func(string) bool { return true },
+		StateDir:              t.TempDir(),
+		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
+		EmbeddingBackendCheck: func(context.Context) error { return nil },
+	}
 
 	report, err := Doctor(context.Background(), deps, project)
 	if err != nil {

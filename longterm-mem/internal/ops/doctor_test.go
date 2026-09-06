@@ -2,13 +2,16 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // checkStatus finds check name's Status in checks, failing the test if
@@ -46,6 +49,45 @@ func recordPrecedenceRevision(t *testing.T, vaultRoot, address string, revision 
 	}
 }
 
+// doctorTestProject is the project name every TestDoctor subtest uses.
+// Shared as a constant so newHealthyEmbeddingDeps's index and each
+// subtest's Doctor() call always agree on which project's directory
+// vecindex.Dir resolves to.
+const doctorTestProject = "labdrian-sdd-overlay"
+
+// newHealthyEmbeddingDeps builds a state directory holding an embedding
+// index that exactly matches liveIDs -- present and fresh -- so the three
+// embedding checks (R-064) default to healthy the same way newHealthyDeps'
+// vault fixture defaults its own four checks to healthy. Each subtest that
+// exercises one embedding check breaks exactly that one piece, mirroring
+// the vault fixtures' own one-broken-piece convention.
+func newHealthyEmbeddingDeps(t *testing.T) (stateDir string, liveIDs []int64) {
+	t.Helper()
+	liveIDs = []int64{1, 2, 3}
+	stateDir = t.TempDir()
+
+	entries := make([]vecindex.ManifestEntry, len(liveIDs))
+	vectors := make([][]float32, len(liveIDs))
+	for i, id := range liveIDs {
+		entries[i] = vecindex.ManifestEntry{EngramID: id, Fingerprint: "fp"}
+		vectors[i] = []float32{0, 0}
+	}
+	idx := &vecindex.Index{
+		Manifest: vecindex.Manifest{
+			Model:      "nomic-embed-text",
+			Dimension:  2,
+			InputLimit: 2000,
+			BuiltAt:    "2026-01-01T00:00:00Z",
+			Entries:    entries,
+		},
+		Vectors: vectors,
+	}
+	if err := idx.Save(vecindex.Dir(stateDir, doctorTestProject)); err != nil {
+		t.Fatalf("save healthy embedding index fixture: %v", err)
+	}
+	return stateDir, liveIDs
+}
+
 // editPromotedPage appends a human's own line to a promoted page, so its
 // bytes no longer match whatever the precedence sidecar recorded.
 func editPromotedPage(t *testing.T, vaultRoot, address string) {
@@ -78,9 +120,15 @@ func TestDoctor(t *testing.T) {
 		testdata.WriteAddressMap(t, vaultRoot, map[string]string{"wiki/memory/" + address + ".md": address})
 		testdata.WritePrecedenceEntry(t, vaultRoot, page)
 		testdata.RegisterPage(t, vaultRoot, address, title)
+		stateDir, liveIDs := newHealthyEmbeddingDeps(t)
 		return DoctorDeps{
 			VaultRoot:           vaultRoot,
 			PrerequisitePresent: func(string) bool { return true },
+			StateDir:            stateDir,
+			LiveObservationIDs:  func(string) ([]int64, error) { return liveIDs, nil },
+			EmbeddingBackendCheck: func(context.Context) error {
+				return nil
+			},
 		}, vaultRoot
 	}
 
@@ -93,8 +141,8 @@ func TestDoctor(t *testing.T) {
 		if err != nil {
 			t.Fatalf("Doctor: %v", err)
 		}
-		if len(report.Checks) != 5 {
-			t.Fatalf("Checks = %+v, want exactly 5 (all checks must run and report)", report.Checks)
+		if len(report.Checks) != 8 {
+			t.Fatalf("Checks = %+v, want exactly 8 (R-011's five plus R-064's three embedding checks; all checks must run and report)", report.Checks)
 		}
 
 		got := checkStatus(t, report.Checks, CheckVaultConfigResolvable)
@@ -296,6 +344,93 @@ func TestDoctor(t *testing.T) {
 			t.Errorf("wiki-registration-consistency = %+v, want PASSed (one broken check must not abort the others)", got)
 		}
 	})
+
+	t.Run("Missing embedding index is named", func(t *testing.T) {
+		deps, _ := newHealthyDeps(t)
+		deps.StateDir = t.TempDir() // no index ever built at this path
+
+		report, err := Doctor(context.Background(), deps, doctorTestProject)
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+
+		got := checkStatus(t, report.Checks, CheckEmbeddingIndexPresent)
+		if got.Status != CheckFailed {
+			t.Fatalf("embedding-index-present = %+v, want FAILed", got)
+		}
+		if got := checkStatus(t, report.Checks, CheckVaultConfigResolvable); got.Status != CheckPassed {
+			t.Errorf("vault-config-resolvable = %+v, want PASSed (one broken check must not abort the others)", got)
+		}
+	})
+
+	t.Run("A stale index is named with its coverage gap", func(t *testing.T) {
+		deps, _ := newHealthyDeps(t)
+		// One live row (id 4) was never embedded -- the corpus grew past
+		// what the index knows about, exactly the condition this check
+		// exists to catch (R-064).
+		deps.LiveObservationIDs = func(string) ([]int64, error) {
+			return []int64{1, 2, 3, 4}, nil
+		}
+
+		report, err := Doctor(context.Background(), deps, doctorTestProject)
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+
+		got := checkStatus(t, report.Checks, CheckEmbeddingIndexFresh)
+		if got.Status != CheckFailed {
+			t.Fatalf("embedding-index-fresh = %+v, want FAILed", got)
+		}
+		if !strings.Contains(got.Detail, "1") {
+			t.Fatalf("embedding-index-fresh detail = %q, want it to name the missing-row count (N=1)", got.Detail)
+		}
+		if got := checkStatus(t, report.Checks, CheckEmbeddingIndexPresent); got.Status != CheckPassed {
+			t.Errorf("embedding-index-present = %+v, want PASSed (the index does exist, it is just incomplete)", got)
+		}
+	})
+
+	t.Run("An unreachable backend is distinguished from a missing model", func(t *testing.T) {
+		deps, _ := newHealthyDeps(t)
+		deps.EmbeddingBackendCheck = func(context.Context) error {
+			return &embed.BackendUnreachableError{Err: errors.New("connection refused")}
+		}
+
+		report, err := Doctor(context.Background(), deps, doctorTestProject)
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+
+		got := checkStatus(t, report.Checks, CheckEmbeddingBackendReachable)
+		if got.Status != CheckFailed {
+			t.Fatalf("embedding-backend-reachable = %+v, want FAILed", got)
+		}
+		if !strings.Contains(got.Detail, "unreachable") {
+			t.Fatalf("embedding-backend-reachable detail = %q, want it to say the backend is unreachable", got.Detail)
+		}
+	})
+
+	t.Run("A reachable backend missing its model is named distinctly from unreachable", func(t *testing.T) {
+		deps, _ := newHealthyDeps(t)
+		deps.EmbeddingBackendCheck = func(context.Context) error {
+			return &embed.ModelMissingError{Model: "nomic-embed-text"}
+		}
+
+		report, err := Doctor(context.Background(), deps, doctorTestProject)
+		if err != nil {
+			t.Fatalf("Doctor: %v", err)
+		}
+
+		got := checkStatus(t, report.Checks, CheckEmbeddingBackendReachable)
+		if got.Status != CheckFailed {
+			t.Fatalf("embedding-backend-reachable = %+v, want FAILed", got)
+		}
+		if strings.Contains(got.Detail, "unreachable") {
+			t.Fatalf("embedding-backend-reachable detail = %q, must not reuse the unreachable wording for a distinct model-missing failure", got.Detail)
+		}
+		if !strings.Contains(got.Detail, "nomic-embed-text") {
+			t.Fatalf("embedding-backend-reachable detail = %q, want it to name the missing model", got.Detail)
+		}
+	})
 }
 
 // TestDoctor_UnreadablePageDoesNotHideEveryOtherPage: one promoted page
@@ -324,8 +459,11 @@ func TestDoctor_UnreadablePageDoesNotHideEveryOtherPage(t *testing.T) {
 	}
 
 	deps := DoctorDeps{
-		VaultRoot:           vaultRoot,
-		PrerequisitePresent: func(name string) bool { return true },
+		VaultRoot:             vaultRoot,
+		PrerequisitePresent:   func(name string) bool { return true },
+		StateDir:              t.TempDir(),
+		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
+		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}
 	report, err := Doctor(context.Background(), deps, "labdrian-sdd-overlay")
 	if err != nil {

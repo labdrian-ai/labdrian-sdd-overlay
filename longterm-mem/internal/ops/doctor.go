@@ -2,12 +2,15 @@ package ops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // Check status values.
@@ -23,6 +26,14 @@ const (
 	CheckWikiRegistrationConsistency  = "wiki-registration-consistency"
 	CheckPrecedenceSidecarConsistency = "precedence-sidecar-consistency"
 	CheckRuntimePrerequisites         = "runtime-prerequisites"
+)
+
+// Check names -- the three additional embedding-index diagnostics R-064
+// requires, read-only over internal/vecindex's own state.
+const (
+	CheckEmbeddingIndexPresent     = "embedding-index-present"
+	CheckEmbeddingIndexFresh       = "embedding-index-fresh"
+	CheckEmbeddingBackendReachable = "embedding-backend-reachable"
 )
 
 // requiredPrerequisite is the one external runtime dependency the vault's
@@ -69,6 +80,27 @@ type DoctorDeps struct {
 	// prerequisite. Production wires vault.PrerequisitePresent (R-021: no
 	// direct os/exec import outside internal/vault/runner.go). Required.
 	PrerequisitePresent func(name string) bool
+
+	// StateDir is the directory this module's own derived state (the
+	// embedding index) lives under -- vecindex.Dir(StateDir, project)
+	// resolves the project's index directory. Production wires the same
+	// state directory `index --embeddings` writes to (cmd's
+	// defaultStateDir). Required for the three embedding checks (R-064).
+	StateDir string
+	// LiveObservationIDs returns every live (non-soft-deleted) engram_id
+	// for project, so embedding-index-fresh can name exactly how many of
+	// them the index is missing. Production wires
+	// engram.Store.ListObservations (already R-020-scoped), mapped to IDs.
+	// Required.
+	LiveObservationIDs func(project string) ([]int64, error)
+	// EmbeddingBackendCheck probes the configured embedding backend and
+	// reports nil when it answered with the required model present, or a
+	// typed error -- *embed.BackendUnreachableError or
+	// *embed.ModelMissingError -- otherwise. This is the seam that keeps
+	// doctor.go itself out of net_allowlist_test.go's allowedNetImporters
+	// (R-071): production wires embed.Client.Embed with a small probe
+	// input, this package never imports net/http directly. Required.
+	EmbeddingBackendCheck func(ctx context.Context) error
 }
 
 // DoctorReport is Doctor's R-011 output: each of the five named checks'
@@ -96,6 +128,9 @@ func Doctor(ctx context.Context, deps DoctorDeps, project string) (DoctorReport,
 			checkWikiRegistrationConsistency(deps.VaultRoot),
 			checkPrecedenceSidecarConsistency(deps.VaultRoot),
 			checkRuntimePrerequisites(deps),
+			checkEmbeddingIndexPresent(deps, project),
+			checkEmbeddingIndexFresh(deps, project),
+			checkEmbeddingBackendReachable(ctx, deps),
 		},
 	}, nil
 }
@@ -259,6 +294,84 @@ func checkRuntimePrerequisites(deps DoctorDeps) Check {
 		return Check{Name: CheckRuntimePrerequisites, Status: CheckFailed, Detail: fmt.Sprintf("%s is not present on PATH", requiredPrerequisite)}
 	}
 	return Check{Name: CheckRuntimePrerequisites, Status: CheckPassed}
+}
+
+// checkEmbeddingIndexPresent reports whether project has an embedding index
+// at all (R-064 scenario: "Missing index is named, not silently skipped").
+// It reports the same failure -- naming the directory doctor looked in --
+// whether no index has ever been built (vecindex.ErrNoIndex) or an index
+// exists but cannot be trusted (vecindex.ErrCorrupted): a corrupted index is
+// exactly as absent from a caller's point of view as no index at all, and
+// this is doctor's own read-only diagnostic, never a place that repairs or
+// rebuilds one (doctor is read-only by contract).
+func checkEmbeddingIndexPresent(deps DoctorDeps, project string) Check {
+	dir := vecindex.Dir(deps.StateDir, project)
+	if _, err := vecindex.Load(dir); err != nil {
+		if errors.Is(err, vecindex.ErrNoIndex) {
+			return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: fmt.Sprintf("no embedding index has been built at %s; run `longterm-mem index --embeddings`", dir)}
+		}
+		return Check{Name: CheckEmbeddingIndexPresent, Status: CheckFailed, Detail: fmt.Sprintf("embedding index at %s could not be loaded: %v", dir, err)}
+	}
+	return Check{Name: CheckEmbeddingIndexPresent, Status: CheckPassed}
+}
+
+// checkEmbeddingIndexFresh reports how many of project's live rows the
+// embedding index does not yet know about (R-064 scenario: "A stale index
+// is named with its coverage gap"). It compares deps.LiveObservationIDs
+// against the loaded manifest's own entries -- comparing ID sets, not
+// counts, so a corpus that both grew and shrank by the same amount is still
+// caught, unlike a bare length comparison.
+//
+// When the index cannot be loaded at all, freshness is reported as its own
+// failure naming that it cannot be determined, rather than fabricating
+// either a pass or a specific missing-row count doctor has no evidence for
+// -- "if it cannot determine freshness, it says so."
+func checkEmbeddingIndexFresh(deps DoctorDeps, project string) Check {
+	dir := vecindex.Dir(deps.StateDir, project)
+	idx, err := vecindex.Load(dir)
+	if err != nil {
+		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("freshness cannot be determined: embedding index at %s could not be loaded: %v", dir, err)}
+	}
+
+	liveIDs, err := deps.LiveObservationIDs(project)
+	if err != nil {
+		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("freshness cannot be determined: could not list live rows for %s: %v", project, err)}
+	}
+
+	indexed := make(map[int64]bool, len(idx.Manifest.Entries))
+	for _, e := range idx.Manifest.Entries {
+		indexed[e.EngramID] = true
+	}
+	missing := 0
+	for _, id := range liveIDs {
+		if !indexed[id] {
+			missing++
+		}
+	}
+	if missing > 0 {
+		return Check{Name: CheckEmbeddingIndexFresh, Status: CheckFailed, Detail: fmt.Sprintf("embedding index is missing %d live row(s) for %s; run `longterm-mem index --embeddings`", missing, project)}
+	}
+	return Check{Name: CheckEmbeddingIndexFresh, Status: CheckPassed}
+}
+
+// checkEmbeddingBackendReachable reports whether the configured embedding
+// backend actually answers with the required model present, distinguishing
+// unreachable from model-missing by deps.EmbeddingBackendCheck's typed
+// error (R-064 scenario: "An unreachable backend is distinguished from a
+// missing model"; R-070's own BackendUnreachableError/ModelMissingError
+// split). A check that could not fail would be worse than no check: this
+// one fails on either condition, with wording that never collapses the two.
+func checkEmbeddingBackendReachable(ctx context.Context, deps DoctorDeps) Check {
+	err := deps.EmbeddingBackendCheck(ctx)
+	if err == nil {
+		return Check{Name: CheckEmbeddingBackendReachable, Status: CheckPassed}
+	}
+
+	var modelMissing *embed.ModelMissingError
+	if errors.As(err, &modelMissing) {
+		return Check{Name: CheckEmbeddingBackendReachable, Status: CheckFailed, Detail: fmt.Sprintf("backend answered but required model is missing: %v", err)}
+	}
+	return Check{Name: CheckEmbeddingBackendReachable, Status: CheckFailed, Detail: fmt.Sprintf("backend is unreachable: %v", err)}
 }
 
 // loadPromotedPages scans vaultRoot's promoted-pages directory

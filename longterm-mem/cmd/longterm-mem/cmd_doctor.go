@@ -7,15 +7,20 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // cmdDoctor implements `longterm-mem doctor --project P [--vault DIR]
-// [--json]` (R-011): run the five read-only diagnostic checks and report
-// each one individually. ops.Doctor always runs and reports all five
-// checks regardless of any single one's own result (slice 7's review
+// [--json]` (R-011, R-064): run the eight read-only diagnostic checks --
+// R-011's original vault diagnostics plus R-064's embedding-index
+// diagnostics -- and report each one individually. ops.Doctor always runs
+// and reports all eight checks regardless of any single one's own result
+// (slice 7's review
 // finding: a per-item failure must never abort a whole run) -- this
 // command mirrors that at its own layer: it never returns on the first
 // FAIL, it always lets Doctor finish and prints every check's result
@@ -58,6 +63,37 @@ func cmdDoctor(args []string) int {
 	deps := ops.DoctorDeps{
 		VaultRoot:           vaultRoot,
 		PrerequisitePresent: vault.PrerequisitePresent,
+		// StateDir/LiveObservationIDs/EmbeddingBackendCheck back the three
+		// embedding-index checks (R-064). This command takes no
+		// --embed-endpoint/--embed-model flags of its own (unlike `index
+		// --embeddings`), so embedding-backend-reachable probes the same
+		// defaults `index --embeddings` uses when none are given.
+		StateDir: defaultStateDir(),
+		LiveObservationIDs: func(project string) ([]int64, error) {
+			store, err := engram.Open(os.Getenv(engramDBEnvVar))
+			if err != nil {
+				return nil, err
+			}
+			defer store.Close()
+			// R-020: ListObservations already excludes soft-deleted rows.
+			observations, err := store.ListObservations(project)
+			if err != nil {
+				return nil, err
+			}
+			ids := make([]int64, len(observations))
+			for i, o := range observations {
+				ids[i] = o.ID
+			}
+			return ids, nil
+		},
+		EmbeddingBackendCheck: func(ctx context.Context) error {
+			client, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+			if err != nil {
+				return err
+			}
+			_, err = client.Embed(ctx, "longterm-mem doctor: embedding-backend-reachable probe")
+			return err
+		},
 	}
 
 	report, err := ops.Doctor(context.Background(), deps, resolvedProject)
