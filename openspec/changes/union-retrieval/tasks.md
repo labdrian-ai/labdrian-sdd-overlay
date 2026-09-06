@@ -69,7 +69,9 @@ If PR-3 or PR-4 measures over 800 lines once check-1/check-3 evidence lands, spl
 - [ ] 3.6 GREEN: add the three checks to `internal/ops/doctor.go`.
 - [ ] 3.7 RED: `status` reports `embedding_index_built_at` or literal `never` (R-065).
 - [ ] 3.8 GREEN: add the field to `internal/ops/status.go`.
-- [ ] 3.9 Add `--allow-remote-embedder` flag to `cmd/longterm-mem/` `index` subcommand only (open question resolved: index-only, never `query`).
+- [x] 3.9 Add `--allow-remote-embedder` flag to `cmd/longterm-mem/` `index` subcommand only (open question resolved: index-only, never `query`). Shipped as part of 3.4's `cmd_index.go` flag wiring; `TestCmdIndexEmbeddings_NonLoopbackRefusedWithoutFlag` proves it is index-only (no such flag exists on `query`).
+
+**STOPPED HERE — budget overrun, needs a maintainer decision.** 3.1–3.4 and 3.9 are done and green (build+vet+test clean, gofmt clean, in `longterm-mem`; `engine`/`tui` untouched and independently verified clean). 3.5–3.8 (the three `ops.Check` tests/wiring + `status`'s `embedding_index_built_at` field) are NOT started. Authored diff so far is **988 lines** (984 add / 4 del, `git diff --numstat union/pr2-embed..union/pr3-vecindex`), already past design's own 800-line review budget and well past the ~450-line forecast — before the remaining ~150-200 lines 3.5–3.8 would add. See the apply-progress artifact and the phase return for the maintainer decision this needs (split 3.5–3.8 into its own PR-3b, or accept `size:exception` for PR-3 as a whole).
 
 ## Phase 4: Embedding Arm + Coverage + Golden Harness (PR-4) — R-058, R-061, R-068, R-070
 
