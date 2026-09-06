@@ -1,0 +1,327 @@
+[
+ {
+  "class": "identifier",
+  "query": "runPropagateVerified",
+  "truth": [
+   1889
+  ],
+  "why": "obs 1889 introduces this function as the bounded retry-verify wrapper around runPropagateCore"
+ },
+ {
+  "class": "identifier",
+  "query": "why does capPayload truncate raw bytes instead of dropping rows",
+  "truth": [
+   2719
+  ],
+  "why": "obs 2719 is the discovery that capPayload's byte-truncate deviates from design D6"
+ },
+ {
+  "class": "identifier",
+  "query": "quoteYAML backslash escaping bug",
+  "truth": [
+   3177
+  ],
+  "why": "obs 3177 is the exact fix for quoteYAML escaping only quotes, not backslashes"
+ },
+ {
+  "class": "identifier",
+  "query": "what happened to sectionHeaders and the Section* constants in brief.go",
+  "truth": [
+   1556
+  ],
+  "why": "obs 1556 renames sectionHeaders/Section* constants in engine/prespec/brief.go"
+ },
+ {
+  "class": "identifier",
+  "query": "ouroborosArt braille logo variable",
+  "truth": [
+   1563
+  ],
+  "why": "obs 1563 documents the ouroborosArt []string braille-rasterized logo in tui/view.go"
+ },
+ {
+  "class": "identifier",
+  "query": "findEntry test helper in settings_test.go",
+  "truth": [
+   2012
+  ],
+  "why": "obs 2012 adds the findEntry helper used by the new Merger upgrade-path test"
+ },
+ {
+  "class": "identifier",
+  "query": "what does the OVERLAY_NOT_DEPLOYED verdict mean in sync-check",
+  "truth": [
+   2537
+  ],
+  "why": "obs 2537 explains cmd_sync_check's classification states including OVERLAY_NOT_DEPLOYED"
+ },
+ {
+  "class": "identifier",
+  "query": "sawWroteThisRun evidence gap in classifyReadRace",
+  "truth": [
+   2035
+  ],
+  "why": "obs 2035 introduces sawWroteThisRun to fix the classifyReadRace wrote==true blind spot"
+ },
+ {
+  "class": "identifier",
+  "query": "DeployableManifestPaths and ScanSkillFiles callers",
+  "truth": [
+   2769
+  ],
+  "why": "obs 2769's requirements brief documents these ondisk.go functions and that they have zero production callers"
+ },
+ {
+  "class": "identifier",
+  "query": "pendingTargets field tui/model.go",
+  "truth": [
+   3089
+  ],
+  "why": "obs 3089 adds pendingTargets to fix the restore confirm-vs-invocation mismatch"
+ },
+ {
+  "class": "identifier",
+  "query": "why sort backup entries with LC_ALL=C in prune_backups",
+  "truth": [
+   3087
+  ],
+  "why": "obs 3087 fixes prune_backups/cmd_restore by explicitly re-sorting entries with LC_ALL=C"
+ },
+ {
+  "class": "identifier",
+  "query": "Runner.RunInterpreted retrieve.py python3",
+  "truth": [
+   3156
+  ],
+  "why": "obs 3156 is the correction requiring Retrieve to run retrieve.py via Runner.RunInterpreted under python3"
+ },
+ {
+  "class": "identifier",
+  "query": "R4-partial-provision-latched finding",
+  "truth": [
+   3161
+  ],
+  "why": "obs 3161 is the exact review finding about a latched half-provisioned vault and discarded --rebuild flag"
+ },
+ {
+  "class": "identifier",
+  "query": "why can't longterm-mem slice branches be named feat/longterm-mem/<slice-id>",
+  "truth": [
+   3142
+  ],
+  "why": "obs 3142 explains the git ref-namespace collision and the feat/lm/<slice-id> workaround"
+ },
+ {
+  "class": "identifier",
+  "query": "reviewer evidence references a path outside the frozen repository - bare filenames",
+  "truth": [
+   2653,
+   2793
+  ],
+  "why": "obs 2653 and 2793 both document the admission out_of_scope rejection of bare filenames in reviewer evidence"
+ },
+ {
+  "class": "identifier",
+  "query": "bin/overlay vs bin/labdrian-overlay router split",
+  "truth": [
+   1561
+  ],
+  "why": "obs 1561 is the fix separating labdrian's forked router from the byte-identical upstream bin/overlay"
+ },
+ {
+  "class": "identifier",
+  "query": "countTasks fence-aware bullet markers archive-reconcile",
+  "truth": [
+   2802
+  ],
+  "why": "obs 2802 fixes countTasks() to be fence/comment-aware and accept -, *, + bullets"
+ },
+ {
+  "class": "identifier",
+  "query": "deadcode CI step GITHUB_STEP_SUMMARY",
+  "truth": [
+   2712
+  ],
+  "why": "obs 2712 is the fix making the deadcode gate's findings surface in $GITHUB_STEP_SUMMARY"
+ },
+ {
+  "class": "identifier",
+  "query": "mem_save drops topic_key when nested in metadata",
+  "truth": [
+   2872
+  ],
+  "why": "obs 2872 documents exactly this mem_save defect and the engram export workaround"
+ },
+ {
+  "class": "identifier",
+  "query": "gentle-ai review recover --maintainer-authorization breaks self-authorization",
+  "truth": [
+   2935
+  ],
+  "why": "obs 2935 is the correction explaining that passing --maintainer-authorization forces the escalated path and breaks recovery"
+ },
+ {
+  "class": "paraphrase",
+  "query": "If a program reports that it saved data successfully, but a completely separate tool wrote to the same file afterward with no coordination between them, how do you make the first program notice its save didn't actually stick?",
+  "truth": [
+   1889
+  ],
+  "why": "describes the read-decide-write-verify retry wrapper built because an uncoordinated foreign writer could silently clobber a successful-looking write"
+ },
+ {
+  "class": "paraphrase",
+  "query": "Why might a code-quality check in a continuous integration pipeline always show green in the dashboard even when it has real complaints to report?",
+  "truth": [
+   2712
+  ],
+  "why": "describes the deadcode step whose findings were invisible because the tool's own exit code never reflected them"
+ },
+ {
+  "class": "paraphrase",
+  "query": "In a terminal app, why might the set of items a warning screen describes not match what the confirm button actually acts on?",
+  "truth": [
+   3089
+  ],
+  "why": "describes the TUI bug where the confirm text used a filtered subset while the real action recomputed the full selection"
+ },
+ {
+  "class": "paraphrase",
+  "query": "If you name backup folders by timestamp and only add a number when two happen in the exact same second, why might a 'restore the newest one' feature grab the wrong folder?",
+  "truth": [
+   3087
+  ],
+  "why": "describes the same-second backup naming collision that inverted chronological order under default sorting"
+ },
+ {
+  "class": "paraphrase",
+  "query": "A fix that stopped one failing part of a system from erasing another part's results accidentally made partially-incomplete checks look identical to fully clean ones to the pass/fail logic \u2014 what kind of regression is that?",
+  "truth": [
+   2752
+  ],
+  "why": "describes the B1 regression where per-module isolation made partial coverage report as passed",
+  "dropped": "author flagged the ground truth as disputed; protocol drops disagreements rather than resolving them"
+ },
+ {
+  "class": "paraphrase",
+  "query": "A test passed on every developer's own machine but failed only on the automated build server, and it turned out to be about how much version-control history the server's checkout actually keeps \u2014 what was going on?",
+  "truth": [
+   2918
+  ],
+  "why": "describes the shallow-clone (fetch-depth 1) CI failure for a test that shells out to git history"
+ },
+ {
+  "class": "paraphrase",
+  "query": "After making a build server fetch the entire commit history, a test that referred to the main branch by its plain name still failed \u2014 why wouldn't fetching everything be enough?",
+  "truth": [
+   2925
+  ],
+  "why": "describes how fetch-depth 0 alone doesn't create a local ref named main, only a remote-tracking one"
+ },
+ {
+  "class": "paraphrase",
+  "query": "A command's help text says an argument needs an 'exact' authorization block in a specific format, and every JSON-shaped guess gets rejected \u2014 how would you actually figure out the real expected shape?",
+  "truth": [
+   2804
+  ],
+  "why": "describes discovering the LF key=value authorization format by reading a previously accepted binding in the store"
+ },
+ {
+  "class": "paraphrase",
+  "query": "After upgrading a command-line tool through a package manager, none of the team's historical saved session records could be read anymore, even though the underlying files still looked structurally fine \u2014 what actually happened?",
+  "truth": [
+   2805
+  ],
+  "why": "describes the gentle-ai 2.2.4 to 2.3.0 upgrade making the review-authority store unreadable due to a version break, not corruption"
+ },
+ {
+  "class": "paraphrase",
+  "query": "Two consecutive releases of the same command-line tool could no longer read each other's saved progress files, because the record's internal shape quietly changed without any version number changing \u2014 what class of bug is this?",
+  "truth": [
+   3229
+  ],
+  "why": "describes gentle-ai 2.5.0-rc.2 failing to read SDD authority records written by the prior build under an unbumped schema version"
+ },
+ {
+  "class": "paraphrase",
+  "query": "In code that joins two record identifiers to build a list of connections between them, why would a single row with one missing identifier crash the whole listing instead of just that one row?",
+  "truth": [
+   3176
+  ],
+  "why": "describes the NULL-endpoint scan aborting the whole RelatedEdges query, fixed with a NOT NULL filter",
+  "dropped": "author flagged the ground truth as disputed; protocol drops disagreements rather than resolving them"
+ },
+ {
+  "class": "paraphrase",
+  "query": "Why might a text-formatting check silently break on a file that uses old single-character line endings, even though it already handles both Unix and Windows-style line breaks?",
+  "truth": [
+   2617
+  ],
+  "why": "describes the lone-CR line-ending case that collapsed a document and killed the actuals gate before normalisation was added"
+ },
+ {
+  "class": "paraphrase",
+  "query": "When you merge the first pull request in a chain of stacked PRs and let it delete its branch, why might the next PR in the chain get closed outright instead of just needing its base updated?",
+  "truth": [
+   3094
+  ],
+  "why": "describes GitHub auto-closing chained PR N+1 when PR N's head branch (its base) is deleted, with no auto-retarget",
+  "dropped": "68% content-word overlap with its target: fails the paraphrase class definition"
+ },
+ {
+  "class": "paraphrase",
+  "query": "Running a note-taking tool from a secondary checkout of a repository instead of the main one made all its searches come back empty \u2014 why would the environment itself cause that?",
+  "truth": [
+   3114
+  ],
+  "why": "describes Engram's project auto-detection failing inside a git worktree and falling back to directory-basename detection"
+ },
+ {
+  "class": "paraphrase",
+  "query": "An AI helper agent was supposed to be able to both read and write to a shared memory system according to its configuration, but in practice it could only write \u2014 with no error shown anywhere. What kind of mismatch causes that?",
+  "truth": [
+   3122
+  ],
+  "why": "describes the tool-name prefix mismatch between agent defs and the host's actual MCP tool naming, silently dropping read tools"
+ },
+ {
+  "class": "paraphrase",
+  "query": "Why is it risky to trust a deployment tool's own 'everything is in sync' verdict, and what should you actually check to be sure the right files reached where they're used?",
+  "truth": [
+   2627
+  ],
+  "why": "describes verifying overlay deploys by version marker and byte comparison rather than trusting sync-check's own verdict",
+  "dropped": "author flagged the ground truth as disputed; protocol drops disagreements rather than resolving them"
+ },
+ {
+  "class": "paraphrase",
+  "query": "A fully written and committed feature never became usable at runtime, and none of the deployment or sync-status checks flagged anything wrong \u2014 what kind of gap explains both facts at once?",
+  "truth": [
+   2628
+  ],
+  "why": "describes the anti-generic-design skill being tracked in git but missing its manifest deployment row, invisible to sync-check"
+ },
+ {
+  "class": "paraphrase",
+  "query": "Why might a team insist that absolutely every code change, no matter how small, go through a pull request rather than being pushed straight to the main branch?",
+  "truth": [
+   2106
+  ],
+  "why": "describes the standing rule adopted after small direct-to-main pushes broke the established branch-pr flow"
+ },
+ {
+  "class": "paraphrase",
+  "query": "In a system that stores semantic relationships between two records, why might a process reading 'the current relationships' need to explicitly skip some rows even though they still technically exist in the table?",
+  "truth": [
+   3129
+  ],
+  "why": "describes memory_relations rows that can themselves be marked superseded, requiring superseded_at IS NULL filtering"
+ },
+ {
+  "class": "paraphrase",
+  "query": "An automated review process only accepts findings tagged with one of a small fixed set of category words, and an AI reviewer's invented near-synonym gets flatly rejected \u2014 how should you handle that instead of re-running the whole review?",
+  "truth": [
+   2620
+  ],
+  "why": "describes evidence_class/causal_disposition enum rejection and normalizing to the nearest valid value instead of re-running the lens"
+ }
+]
