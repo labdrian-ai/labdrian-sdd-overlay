@@ -410,3 +410,114 @@ func TestServer_ToolListingListsGet(t *testing.T) {
 	}
 	t.Fatalf("the tool listing does not offer \"get\"; a truncated snippet then has nowhere to point")
 }
+
+// TestServer_QueryDoesNotShipItsResultTwice is the payload duplication.
+// The handler returned a nil *mcp.CallToolResult, and the go-sdk fills an
+// absent Content field with a byte-identical JSON serialization of
+// StructuredContent (server.go: `if res.Content == nil`). Measured on the
+// wire before this change: a 182,813 byte response carrying 89,741 bytes
+// of content text and 90,689 bytes of structuredContent, the first
+// parsing to exactly the second.
+func TestServer_QueryDoesNotShipItsResultTwice(t *testing.T) {
+	result := query.Result{
+		Project: "proj-a", Query: "zephyr", VaultStatus: query.VaultStatusOK,
+		Results: []query.ResultRow{
+			{Source: query.SourceEngram, Rank: 1, EngramID: 7, Title: "a decision", Snippet: strings.Repeat("body text ", 40), SnippetTruncated: true, FullLength: 9000},
+		},
+	}
+	deps := Deps{Query: func(context.Context, query.Request) (query.Result, error) { return result, nil }}
+	session := connectInMemory(t, deps)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "query", Arguments: map[string]any{"project": "proj-a", "query": "zephyr"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(query): %v", err)
+	}
+
+	structured, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatalf("marshal StructuredContent: %v", err)
+	}
+	text := textOf(t, res)
+	if text == "" {
+		t.Fatalf("the response carries no human-readable content at all")
+	}
+	var parsed any
+	if json.Unmarshal([]byte(text), &parsed) == nil {
+		t.Fatalf("the text block is still a JSON copy of the structured result (%d bytes beside %d)", len(text), len(structured))
+	}
+	if len(text) >= len(structured) {
+		t.Fatalf("the text block (%d bytes) is no smaller than the structured result (%d bytes)", len(text), len(structured))
+	}
+}
+
+// TestServer_QueryTextBlockStaysReadable guards what the duplication was
+// accidentally providing. Removing the JSON copy is only safe if what
+// replaces it still tells a person what came back; an empty text block
+// would be a regression dressed as a saving.
+func TestServer_QueryTextBlockStaysReadable(t *testing.T) {
+	result := query.Result{
+		Project: "proj-a", Query: "zephyr", VaultStatus: query.VaultStatusOK,
+		Results: []query.ResultRow{
+			{Source: query.SourceEngram, Rank: 1, EngramID: 7, Title: "a decision", Snippet: "the zephyr decision", SnippetTruncated: true, FullLength: 9000},
+		},
+		Diagnostics: []query.Diagnostic{{Code: query.DiagnosticSearchWidened, Detail: "widened"}},
+	}
+	deps := Deps{Query: func(context.Context, query.Request) (query.Result, error) { return result, nil }}
+	session := connectInMemory(t, deps)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "query", Arguments: map[string]any{"project": "proj-a", "query": "zephyr"},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(query): %v", err)
+	}
+	text := textOf(t, res)
+	for _, want := range []string{"a decision", "engram:7", "the zephyr decision", query.DiagnosticSearchWidened} {
+		if !strings.Contains(text, want) {
+			t.Fatalf("the text block does not mention %q:\n%s", want, text)
+		}
+	}
+	if !strings.Contains(text, "9000") {
+		t.Fatalf("the text block does not say how long the truncated full text is:\n%s", text)
+	}
+}
+
+// TestServer_GetDoesNotShipTheBodyTwice: get exists to deliver one whole
+// observation, so a JSON copy beside it doubles precisely the payload the
+// tool is for.
+func TestServer_GetDoesNotShipTheBodyTwice(t *testing.T) {
+	body := strings.Repeat("the whole body ", 400)
+	deps := Deps{Get: func(context.Context, int64) (GetOutcome, error) {
+		return GetOutcome{Found: true, Observation: engram.Observation{ID: 1, Title: "t", Content: body}}, nil
+	}}
+	session := connectInMemory(t, deps)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get", Arguments: map[string]any{"engram_id": 1},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get): %v", err)
+	}
+	text := textOf(t, res)
+	if !strings.Contains(text, "the whole body") {
+		t.Fatalf("the text block does not carry the observation a person asked to read:\n%.200s", text)
+	}
+	var parsed any
+	if json.Unmarshal([]byte(text), &parsed) == nil {
+		t.Fatalf("get still ships its body twice: the text block is a JSON copy of the structured result")
+	}
+}
+
+// textOf concatenates the text of every TextContent block in res.
+func textOf(t *testing.T, res *mcp.CallToolResult) string {
+	t.Helper()
+	var b strings.Builder
+	for _, c := range res.Content {
+		if tc, ok := c.(*mcp.TextContent); ok {
+			b.WriteString(tc.Text)
+		}
+	}
+	return b.String()
+}

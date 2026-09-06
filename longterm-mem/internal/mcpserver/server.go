@@ -10,6 +10,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
@@ -202,8 +203,92 @@ func queryHandler(deps Deps) mcp.ToolHandlerFor[QueryIn, QueryOut] {
 		if err != nil {
 			return nil, QueryOut{}, err
 		}
-		return nil, result, nil
+		return textResult(renderQuery(result)), result, nil
 	}
+}
+
+// textResult carries a handler's own human-readable content block.
+//
+// Supplying one is the entire mechanism for not sending a result twice.
+// The go-sdk fills an absent Content field with a byte-identical JSON
+// serialization of the structured result (server.go: `if res.Content ==
+// nil`), which measured on the wire as a 182,813 byte response carrying
+// 89,741 bytes of text beside 90,689 bytes of structuredContent, the
+// first parsing to exactly the second. Returning nil and hoping is what
+// produced that.
+//
+// The duplication is not suppressed, it is replaced, and the difference
+// matters. That fallback exists so a pre-SEP-2106 client -- one that
+// cannot read structuredContent at all -- can still recover the payload
+// from the text block, so deleting it outright would leave those clients
+// with an empty response. What they get instead is a compact rendering of
+// the same result: readable by a person, and shorter. The trade is
+// explicit and worth stating plainly -- such a client can no longer
+// re-parse the text block back into the structured shape, only read it.
+// For a result whose consumer is an agent or a human, prose is the better
+// half of that trade; a client that needs the structure has
+// structuredContent, which is where the structure belongs.
+func textResult(text string) *mcp.CallToolResult {
+	return &mcp.CallToolResult{Content: []mcp.Content{&mcp.TextContent{Text: text}}}
+}
+
+// renderQuery writes a query result as the lines a person reads.
+//
+// It names every truncation twice over, matching query.ResultRow's own
+// contract: the snippet already carries a "…" at each cut edge, and this
+// adds the full length and the call that fetches it, so a reader of the
+// text block is never left holding a fragment they think is whole.
+func renderQuery(result QueryOut) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "query %q in %s (vault_status=%s, %d results)\n", result.Query, result.Project, result.VaultStatus, len(result.Results))
+	for _, row := range result.Results {
+		label := row.PageAddress
+		if label == "" {
+			label = fmt.Sprintf("engram:%d", row.EngramID)
+		}
+		fmt.Fprintf(&b, "\n[%d] %s %s %s\n", row.Rank, row.Source, label, row.Title)
+		if row.Snippet != "" {
+			fmt.Fprintf(&b, "    %s\n", row.Snippet)
+		}
+		if row.SnippetTruncated {
+			fmt.Fprintf(&b, "    (extract of %d bytes; call get{engram_id: %d} for the whole text)\n", row.FullLength, row.EngramID)
+		}
+		if row.Standing != nil {
+			// A memory that was explicitly replaced must not read as
+			// current in the half of the response a person actually
+			// reads. cmd_query.go says the same thing for the CLI.
+			for _, n := range row.Standing.SupersededBy {
+				fmt.Fprintf(&b, "    SUPERSEDED BY engram:%d %s — do not treat as current\n", n.ID, n.Title)
+			}
+			for _, n := range row.Standing.ConflictsWith {
+				fmt.Fprintf(&b, "    CONFLICTS WITH engram:%d %s\n", n.ID, n.Title)
+			}
+			for _, n := range row.Standing.Unjudged {
+				fmt.Fprintf(&b, "    UNDECIDED against engram:%d %s — nobody judged this conflict\n", n.ID, n.Title)
+			}
+		}
+	}
+	for _, d := range result.Diagnostics {
+		fmt.Fprintf(&b, "\nWARN %s: %s\n", d.Code, d.Detail)
+	}
+	return b.String()
+}
+
+// renderObservation writes one whole observation as text. get exists to
+// deliver a body, so the body IS the rendering; a JSON envelope around it
+// would double the one payload this tool is for.
+func renderObservation(o engram.Observation) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "engram:%d %s", o.ID, o.Title)
+	if o.Type != "" {
+		fmt.Fprintf(&b, " (%s)", o.Type)
+	}
+	if o.DeletedAt != "" {
+		fmt.Fprintf(&b, " — RETIRED %s", o.DeletedAt)
+	}
+	b.WriteString("\n\n")
+	b.WriteString(o.Content)
+	return b.String()
 }
 
 // getHandler adapts Deps.Get to the get tool's typed handler shape.
@@ -217,13 +302,11 @@ func getHandler(deps Deps) mcp.ToolHandlerFor[GetIn, GetOut] {
 			return nil, GetOut{}, err
 		}
 		if !outcome.Found {
-			return nil, GetOut{
-				Found:  false,
-				Detail: fmt.Sprintf("no observation with id %d exists in Engram; it may have been hard-deleted, or the id may come from another database", in.EngramID),
-			}, nil
+			detail := fmt.Sprintf("no observation with id %d exists in Engram; it may have been hard-deleted, or the id may come from another database", in.EngramID)
+			return textResult(detail), GetOut{Found: false, Detail: detail}, nil
 		}
 		o := outcome.Observation
-		return nil, GetOut{
+		return textResult(renderObservation(o)), GetOut{
 			Found: true, EngramID: o.ID, Title: o.Title, Content: o.Content,
 			Project: o.Project, Type: o.Type,
 			CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, DeletedAt: o.DeletedAt,
