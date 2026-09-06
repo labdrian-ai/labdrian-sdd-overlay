@@ -1,5 +1,5 @@
 // Package mcpserver implements longterm-mem's MCP stdio server (R-012,
-// D3): the query and promote tools, both wired through Deps' function
+// D3): the query, get and promote tools, each wired through Deps' function
 // seams (matching query.Deps/promote.Deps's own convention elsewhere in
 // this module) so tests never need a real Engram database or vault
 // subprocess, and a real caller (cmd_mcp.go) wires those seams to the same
@@ -13,6 +13,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 )
@@ -39,6 +40,20 @@ type Deps struct {
 	// vault index so the page is queryable over this same session
 	// (cmd_mcp.go wires that; see PromoteOutcome).
 	Promote func(ctx context.Context, project string, engramID int64) (PromoteOutcome, error)
+	// Get reads one observation whole, by id (cmd_mcp.go wires it to
+	// engram.Store.ObservationByID, which is read-only like every other
+	// path in that package -- R-002).
+	Get func(ctx context.Context, engramID int64) (GetOutcome, error)
+}
+
+// GetOutcome is what Deps.Get found: the observation, and whether there
+// was one. The two are separate because "no such observation" is an
+// answer, not a failure -- an id that names nothing is a normal thing for
+// a caller holding a stale result to ask about, and returning it as an
+// error would make a routine miss look like a broken server.
+type GetOutcome struct {
+	Observation engram.Observation
+	Found       bool
 }
 
 // PromoteOutcome is what Deps.Promote reports back: the promotion itself,
@@ -89,6 +104,45 @@ type QueryIn struct {
 // second shape.
 type QueryOut = query.Result
 
+// GetIn is the get tool's input.
+type GetIn struct {
+	EngramID int64 `json:"engram_id" jsonschema:"the Engram observation id to read whole"`
+}
+
+// GetOut is the get tool's output: one observation, untruncated.
+//
+// This tool is what makes the query tool's truncation honest. query
+// returns an extract of each matched body and says so -- a "…" at each
+// cut edge, plus snippet_truncated and full_length. A caller reading that
+// has been told two things: that it is holding a fragment, and how much
+// it is missing. Neither is worth anything without somewhere to go for
+// the rest, and before this tool existed there was nowhere: the only way
+// to see a whole observation over MCP was to make query ship every body
+// in full, which is the cost this change removed. A cap with no way past
+// it is not a cap, it is data loss.
+type GetOut struct {
+	// Found is false when no observation carries that id. Content is then
+	// empty for a reason Detail names, rather than looking like an
+	// observation that happens to say nothing.
+	Found    bool   `json:"found"`
+	EngramID int64  `json:"engram_id,omitempty"`
+	Title    string `json:"title,omitempty"`
+	// Content is the whole body, never truncated. That is the entire
+	// point of the tool.
+	Content   string `json:"content,omitempty"`
+	Project   string `json:"project,omitempty"`
+	Type      string `json:"type,omitempty"`
+	CreatedAt string `json:"created_at,omitempty"`
+	UpdatedAt string `json:"updated_at,omitempty"`
+	// DeletedAt is non-empty for a soft-deleted observation. It is
+	// returned rather than hidden: a caller following a link out of an
+	// older result needs to know the memory was retired, and an empty
+	// result would say only that it is gone.
+	DeletedAt string `json:"deleted_at,omitempty"`
+	// Detail explains a false Found.
+	Detail string `json:"detail,omitempty"`
+}
+
 // PromoteIn is the promote tool's input (D3 contract: promote{project,engram_id}).
 type PromoteIn struct {
 	Project  string `json:"project" jsonschema:"the project owning the observation"`
@@ -110,8 +164,8 @@ type PromoteOut struct {
 	IndexStaleDetail string `json:"index_stale_detail,omitempty"`
 }
 
-// New builds an MCP server exposing the query and promote tools (R-012),
-// both wired to deps' function seams. New is called exactly once per
+// New builds an MCP server exposing the query, get and promote tools
+// (R-012), each wired to deps' function seams. New is called exactly once per
 // longterm-mem session (cmd_mcp.go): the returned *mcp.Server is run
 // against exactly one stdio transport and exits with that session,
 // spawning nothing else itself (R-034) -- any subprocess a handler
@@ -124,6 +178,11 @@ func New(deps Deps) *mcp.Server {
 		Name:        "query",
 		Description: "Search a project's Engram observations and vault pages, merged by source and never re-ranked (D8).",
 	}, queryHandler(deps))
+
+	mcp.AddTool(server, &mcp.Tool{
+		Name:        "get",
+		Description: "Read one Engram observation whole by id, untruncated -- the full text behind a query result whose snippet was cut.",
+	}, getHandler(deps))
 
 	mcp.AddTool(server, &mcp.Tool{
 		Name:        "promote",
@@ -144,6 +203,31 @@ func queryHandler(deps Deps) mcp.ToolHandlerFor[QueryIn, QueryOut] {
 			return nil, QueryOut{}, err
 		}
 		return nil, result, nil
+	}
+}
+
+// getHandler adapts Deps.Get to the get tool's typed handler shape.
+func getHandler(deps Deps) mcp.ToolHandlerFor[GetIn, GetOut] {
+	return func(ctx context.Context, _ *mcp.CallToolRequest, in GetIn) (*mcp.CallToolResult, GetOut, error) {
+		if deps.Get == nil {
+			return nil, GetOut{}, fmt.Errorf("mcpserver: get dependency is not configured")
+		}
+		outcome, err := deps.Get(ctx, in.EngramID)
+		if err != nil {
+			return nil, GetOut{}, err
+		}
+		if !outcome.Found {
+			return nil, GetOut{
+				Found:  false,
+				Detail: fmt.Sprintf("no observation with id %d exists in Engram; it may have been hard-deleted, or the id may come from another database", in.EngramID),
+			}, nil
+		}
+		o := outcome.Observation
+		return nil, GetOut{
+			Found: true, EngramID: o.ID, Title: o.Title, Content: o.Content,
+			Project: o.Project, Type: o.Type,
+			CreatedAt: o.CreatedAt, UpdatedAt: o.UpdatedAt, DeletedAt: o.DeletedAt,
+		}, nil
 	}
 }
 

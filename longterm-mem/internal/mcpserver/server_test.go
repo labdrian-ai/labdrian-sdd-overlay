@@ -16,6 +16,7 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 
@@ -328,4 +329,84 @@ func TestServer_ExitsWhenStdinCloses(t *testing.T) {
 	if residual, err := exec.Command("pgrep", "-P", strconv.Itoa(cmd.Process.Pid)).CombinedOutput(); err == nil {
 		t.Fatalf("mcp subprocess left a residual child process behind: %s", residual)
 	}
+}
+
+// TestServer_GetReturnsTheWholeObservation is the other half of the
+// truncation contract. query now returns an extract of each matched body,
+// which is only defensible if the whole body is one call away: a caller
+// that can see a preview was cut, and is told how long the full text is,
+// must have somewhere to go for it.
+func TestServer_GetReturnsTheWholeObservation(t *testing.T) {
+	body := strings.Repeat("the whole body ", 400)
+	deps := Deps{
+		Get: func(_ context.Context, id int64) (GetOutcome, error) {
+			if id != 4242 {
+				t.Fatalf("Get called with id %d, want 4242", id)
+			}
+			return GetOutcome{Found: true, Observation: engram.Observation{
+				ID: 4242, Title: "the whole thing", Content: body,
+				Project: "proj-a", Type: "decision", CreatedAt: "2026-09-01T00:00:00Z",
+			}}, nil
+		},
+	}
+	session := connectInMemory(t, deps)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get", Arguments: map[string]any{"engram_id": 4242},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get): %v", err)
+	}
+	var out GetOut
+	decodeStructured(t, res, &out)
+
+	if out.Content != body {
+		t.Fatalf("Content is %d bytes, want the whole %d-byte body: get exists precisely so a caller can stop guessing at an extract", len(out.Content), len(body))
+	}
+	if out.EngramID != 4242 || out.Title != "the whole thing" {
+		t.Fatalf("out = %+v, want the observation's own identity", out)
+	}
+}
+
+// TestServer_GetSaysSoWhenThereIsNoSuchObservation keeps a missing id from
+// arriving as an empty body. An observation that does not exist and an
+// observation whose content is empty must not look the same to a caller.
+func TestServer_GetSaysSoWhenThereIsNoSuchObservation(t *testing.T) {
+	deps := Deps{
+		Get: func(context.Context, int64) (GetOutcome, error) { return GetOutcome{Found: false}, nil },
+	}
+	session := connectInMemory(t, deps)
+
+	res, err := session.CallTool(context.Background(), &mcp.CallToolParams{
+		Name: "get", Arguments: map[string]any{"engram_id": 9},
+	})
+	if err != nil {
+		t.Fatalf("CallTool(get): %v", err)
+	}
+	var out GetOut
+	decodeStructured(t, res, &out)
+	if out.Found {
+		t.Fatalf("Found = true for an id that does not exist: %+v", out)
+	}
+	if out.Detail == "" {
+		t.Fatalf("a not-found result says nothing about why it is empty: %+v", out)
+	}
+}
+
+// TestServer_ToolListingListsGet: a tool a caller cannot discover is a
+// tool that does not exist. The truncation markers in a query result point
+// at this tool, so it has to be in the handshake.
+func TestServer_ToolListingListsGet(t *testing.T) {
+	session := connectInMemory(t, Deps{})
+
+	res, err := session.ListTools(context.Background(), nil)
+	if err != nil {
+		t.Fatalf("ListTools: %v", err)
+	}
+	for _, tool := range res.Tools {
+		if tool.Name == "get" {
+			return
+		}
+	}
+	t.Fatalf("the tool listing does not offer \"get\"; a truncated snippet then has nowhere to point")
 }
