@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/ops/testdata"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // TestStatus: R-010's three scenarios, table-driven (8a.1).
@@ -62,6 +63,7 @@ func TestStatus(t *testing.T) {
 
 			deps := StatusDeps{
 				VaultRoot: vaultRoot,
+				StateDir:  t.TempDir(),
 				EngramReachable: func(ctx context.Context) (bool, string) {
 					return tc.engramReachable, ""
 				},
@@ -108,6 +110,7 @@ func TestStatus_MalformedSyncStateIsAnErrorNotAFabricatedTimestamp(t *testing.T)
 
 	deps := StatusDeps{
 		VaultRoot:        vaultRoot,
+		StateDir:         t.TempDir(),
 		EngramReachable:  func(ctx context.Context) (bool, string) { return true, "" },
 		VaultProvisioned: func(vaultRoot string) bool { return true },
 	}
@@ -122,4 +125,59 @@ func TestStatus_MalformedSyncStateIsAnErrorNotAFabricatedTimestamp(t *testing.T)
 	if report != (StatusReport{}) {
 		t.Errorf("report = %+v, want the zero value: no field may carry a value derived from an unreadable record", report)
 	}
+}
+
+// TestStatus_EmbeddingIndexBuiltAt: R-065's two scenarios -- a built index
+// reports its own build time, and a project with no index ever built
+// reports the literal "never", never a fabricated timestamp.
+func TestStatus_EmbeddingIndexBuiltAt(t *testing.T) {
+	const project = "labdrian-sdd-overlay"
+
+	healthyDeps := func(t *testing.T, stateDir string) StatusDeps {
+		t.Helper()
+		vaultRoot := t.TempDir()
+		return StatusDeps{
+			VaultRoot:        vaultRoot,
+			StateDir:         stateDir,
+			EngramReachable:  func(ctx context.Context) (bool, string) { return true, "" },
+			VaultProvisioned: func(vaultRoot string) bool { return true },
+		}
+	}
+
+	t.Run("A built index reports its build time", func(t *testing.T) {
+		stateDir := t.TempDir()
+		idx := &vecindex.Index{
+			Manifest: vecindex.Manifest{
+				Model:      "nomic-embed-text",
+				Dimension:  2,
+				InputLimit: 2000,
+				BuiltAt:    "2026-03-14T09:00:00Z",
+				Entries:    []vecindex.ManifestEntry{{EngramID: 1, Fingerprint: "fp"}},
+			},
+			Vectors: [][]float32{{0, 0}},
+		}
+		if err := idx.Save(vecindex.Dir(stateDir, project)); err != nil {
+			t.Fatalf("save embedding index fixture: %v", err)
+		}
+
+		report, err := Status(context.Background(), healthyDeps(t, stateDir), project)
+		if err != nil {
+			t.Fatalf("Status: %v", err)
+		}
+		if report.EmbeddingIndexBuiltAt != "2026-03-14T09:00:00Z" {
+			t.Fatalf("EmbeddingIndexBuiltAt = %q, want the built index's own BuiltAt", report.EmbeddingIndexBuiltAt)
+		}
+	})
+
+	t.Run("Never-built reports never, not a fabricated timestamp", func(t *testing.T) {
+		stateDir := t.TempDir() // no index ever built here
+
+		report, err := Status(context.Background(), healthyDeps(t, stateDir), project)
+		if err != nil {
+			t.Fatalf("Status: %v", err)
+		}
+		if report.EmbeddingIndexBuiltAt != "never" {
+			t.Fatalf("EmbeddingIndexBuiltAt = %q, want the literal \"never\"", report.EmbeddingIndexBuiltAt)
+		}
+	})
 }

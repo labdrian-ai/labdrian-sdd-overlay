@@ -274,7 +274,7 @@ func TestCmdDoctor_ReportsEveryCheckDespiteOneFailing(t *testing.T) {
 
 // TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy: cmdStatus's
 // whole reporting contract sat behind the vault-resolution failure that
-// the only other status test triggers, so nothing ever executed the four
+// the only other status test triggers, so nothing ever executed the five
 // output lines or the documented "an unhealthy field is still exit 0"
 // behavior. Doctor got an end-to-end output test and status did not, so a
 // regression that swapped the reachable/provisioned booleans, dropped the
@@ -302,7 +302,7 @@ func TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy(t *testing.T) {
 	if !strings.Contains(stdout, "cmd-status-project") {
 		t.Errorf("status output does not name the project:\n%s", stdout)
 	}
-	for _, want := range []string{"engram: reachable=", "vault: provisioned=false", "last sync: never"} {
+	for _, want := range []string{"engram: reachable=", "vault: provisioned=false", "last sync: never", "embedding index built at: never"} {
 		if !strings.Contains(stdout, want) {
 			t.Errorf("status output missing %q; every field must be reported:\n%s", want, stdout)
 		}

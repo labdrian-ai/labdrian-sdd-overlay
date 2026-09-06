@@ -10,6 +10,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // syncStateRelPath mirrors promote's own (unexported) syncStateRelPath
@@ -25,6 +27,14 @@ const syncStateRelPath = ".vault-meta/longterm-mem-sync-state.json"
 // record exists yet. Status must never fabricate a timestamp (R-010).
 const neverSynced = "never"
 
+// neverIndexed is Report.EmbeddingIndexBuiltAt's value when no embedding
+// index has ever been built for the project. Named separately from
+// neverSynced even though the literal is the same word (R-065's own
+// wording) -- these are two distinct "never happened yet" facts about two
+// unrelated subsystems, and conflating their constants would make a future
+// change to one silently reword the other.
+const neverIndexed = "never"
+
 // StatusDeps are Status's dependencies (function-seam convention matching
 // query.Deps/promote.Deps): EngramReachable and VaultProvisioned are seams
 // so a test can prove Status's own composition logic without a real
@@ -39,16 +49,23 @@ type StatusDeps struct {
 	// VaultRoot is the resolved vault path Status inspects (provisioning
 	// state and the sync-state record).
 	VaultRoot string
+	// StateDir is the directory this module's own derived state (the
+	// embedding index) lives under -- vecindex.Dir(StateDir, project)
+	// resolves the project's index directory (R-065). Production wires the
+	// same state directory `index --embeddings` writes to.
+	StateDir string
 }
 
-// StatusReport is Status's R-010 output: Engram reachability, the vault's
-// provisioning state, and the last recorded sync completion.
+// StatusReport is Status's R-010/R-065 output: Engram reachability, the
+// vault's provisioning state, the last recorded sync completion, and the
+// embedding index's last build time.
 type StatusReport struct {
-	Project             string `json:"project"`
-	EngramReachable     bool   `json:"engram_reachable"`
-	EngramDetail        string `json:"engram_detail,omitempty"`
-	VaultProvisioned    bool   `json:"vault_provisioned"`
-	LastSyncCompletedAt string `json:"last_sync_completed_at"`
+	Project               string `json:"project"`
+	EngramReachable       bool   `json:"engram_reachable"`
+	EngramDetail          string `json:"engram_detail,omitempty"`
+	VaultProvisioned      bool   `json:"vault_provisioned"`
+	LastSyncCompletedAt   string `json:"last_sync_completed_at"`
+	EmbeddingIndexBuiltAt string `json:"embedding_index_built_at"`
 }
 
 // Status reports Engram reachability, project's vault provisioning state,
@@ -68,7 +85,21 @@ func Status(ctx context.Context, deps StatusDeps, project string) (StatusReport,
 	}
 	report.LastSyncCompletedAt = lastSync
 
+	report.EmbeddingIndexBuiltAt = readEmbeddingIndexBuiltAt(deps.StateDir, project)
+
 	return report, nil
+}
+
+// readEmbeddingIndexBuiltAt reports project's embedding index's own
+// recorded build time, or neverIndexed when no index has ever been built
+// (including when one exists but is corrupted -- Status, like Doctor, never
+// fabricates a timestamp it cannot stand behind, R-065).
+func readEmbeddingIndexBuiltAt(stateDir, project string) string {
+	idx, err := vecindex.Load(vecindex.Dir(stateDir, project))
+	if err != nil {
+		return neverIndexed
+	}
+	return idx.Manifest.BuiltAt
 }
 
 // readLastSyncCompletedAt reads vaultRoot's sync-state record and returns
