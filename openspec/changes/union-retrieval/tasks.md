@@ -61,10 +61,10 @@ If PR-3 or PR-4 measures over 800 lines once check-1/check-3 evidence lands, spl
 
 ## Phase 3: Vector Index + Ops Wiring (PR-3, blocked on Phase 0.5) — R-064–R-069
 
-- [ ] 3.1 RED `TestFingerprintIgnoresContentBeyondInputLimit`, corruption-detection test for a manifest revision mismatch (R-066).
-- [ ] 3.2 GREEN: create `internal/vecindex/{index,fingerprint,build}.go` — fixed-stride blob + self-digesting JSON manifest at `<state-dir>/index/<project>/`.
-- [ ] 3.3 RED: incremental build test — re-embeds only missing/changed fingerprints, removes entries for rows no longer live (R-069).
-- [ ] 3.4 GREEN: implement incremental `index --embeddings` build path in `internal/vecindex/build.go` and wire into `cmd/longterm-mem/`.
+- [x] 3.1 RED `TestFingerprintIgnoresContentBeyondInputLimit`, corruption-detection test for a manifest revision mismatch (R-066). Also added `TestFingerprintChangesWithContractFields`, `TestSaveThenLoadRoundTrips`, `TestLoadNoIndexReportsErrNoIndex` (`internal/vecindex/{fingerprint,index}_test.go`).
+- [x] 3.2 GREEN: create `internal/vecindex/{index,fingerprint,build}.go` — fixed-stride blob + self-digesting JSON manifest at `<state-dir>/index/<project>/`.
+- [x] 3.3 RED: incremental build test — re-embeds only missing/changed fingerprints, removes entries for rows no longer live (R-069). `TestBuildFromScratchEmbedsEveryLiveRow`, `TestBuildReembedsOnlyMissingOrChanged`, `TestBuildRemovesEntriesForRowsNoLongerLive`, `TestBuildRefusesOnCorruptedExistingIndex` (`internal/vecindex/build_test.go`).
+- [x] 3.4 GREEN: implement incremental `index --embeddings` build path in `internal/vecindex/build.go` and wire into `cmd/longterm-mem/` (`cmd_index.go`'s new flags, `cmd_index_embeddings.go`). RED/GREEN end-to-end proof: `TestCmdIndexEmbeddings_BuildsIndexOnDisk`, `TestCmdIndexEmbeddings_NonLoopbackRefusedWithoutFlag` (`cmd/longterm-mem/cmd_index_embeddings_test.go`), using a fake loopback ollama (`httptest`).
 - [ ] 3.5 RED: three `ops.Check` tests — `embedding-index-present`, `embedding-index-fresh` (names N), `embedding-backend-reachable` distinct from missing-model (R-064).
 - [ ] 3.6 GREEN: add the three checks to `internal/ops/doctor.go`.
 - [ ] 3.7 RED: `status` reports `embedding_index_built_at` or literal `never` (R-065).

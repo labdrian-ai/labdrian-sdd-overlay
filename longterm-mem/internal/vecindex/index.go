@@ -15,6 +15,18 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/durable"
 )
 
+// The three constants below are this module's default embedding contract
+// (openspec/decisions/union-retrieval.md's own measured values): the
+// production Ollama model, its output dimension, and the character count
+// embedded per row. A caller may override any of them (e.g. a future
+// model change), which is exactly what Fingerprint's contract-inside-the-
+// hash design exists to make safe.
+const (
+	DefaultModel      = "nomic-embed-text"
+	DefaultDimension  = 768
+	DefaultInputLimit = 2000
+)
+
 // manifestFileName and blobFileName are the two files one index directory
 // holds. Both are this module's own state (R-066/R-067): never a vault
 // path, never a write against Engram's database.
