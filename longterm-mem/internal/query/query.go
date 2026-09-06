@@ -191,12 +191,26 @@ type ResultRow struct {
 	// It is nil when there is nothing to say, and absent from a vault-only
 	// row, which has no observation behind it.
 	//
-	// It is carried here because Engram's own search does not carry it.
-	// Verified on a copy of a real database: inserting "B supersedes A"
-	// left A's results byte-identical, still first, unmarked. A memory that
-	// was explicitly replaced therefore reads as current, and gets
-	// reintroduced. This module cannot fix that search (R-002 keeps its
-	// connection read-only); it can decline to repeat the omission.
+	// It is carried here because Engram's own search does not carry it,
+	// and that is established from the SQL rather than from an
+	// experiment. engram.Search selects from observations_fts joined to
+	// observations and nothing else: memory_relations is not in the query,
+	// so no relation can reach a result through it, whatever any
+	// particular database happens to contain.
+	//
+	// An earlier version of this comment claimed the same conclusion from
+	// a probe run "on a copy of a real database". That claim was wrong and
+	// is corrected rather than quietly deleted, because it is the kind of
+	// evidence a later reader would rely on. ENGRAM_DATABASE_URL is
+	// silently ignored, so every probe said to run against a copy in fact
+	// read the live database (Engram observation #3239); the probes
+	// therefore measured nothing about a copy, and an experiment whose
+	// subject is not what it says it is cannot support anything.
+	//
+	// The consequence is unchanged: a memory that was explicitly replaced
+	// reads as current, and gets reintroduced. This module cannot fix that
+	// search (R-002 keeps its connection read-only); it can decline to
+	// repeat the omission.
 	Standing *engram.Standing `json:"standing,omitempty"`
 }
 
