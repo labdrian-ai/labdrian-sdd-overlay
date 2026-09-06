@@ -109,11 +109,11 @@ func TestQuery_LinkedPairEmittedOnce(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "linked observation", content: "shared topic notes", project: "proj-a"},
 	})
-	rows, err := store.Search("proj-a", "shared", 10)
-	if err != nil || len(rows) != 1 {
-		t.Fatalf("fixture setup: Search = %+v, %v", rows, err)
+	search, err := store.Search("proj-a", "shared", 10)
+	if err != nil || len(search.Rows) != 1 {
+		t.Fatalf("fixture setup: Search = %+v, %v", search, err)
 	}
-	linkedID := rows[0].ID
+	linkedID := search.Rows[0].ID
 	vaultResult := vault.Result{
 		Status:     vault.StatusOK,
 		Candidates: []vault.Candidate{{PageAddress: "c-000042", AbsolutePath: "/vault/c-000042.md", Snippet: "vault side snippet"}},
@@ -388,4 +388,53 @@ func newRelatedFixtureStore(t *testing.T) (*engram.Store, int64, int64) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 	return store, ids[0], ids[1]
+}
+
+// TestQuery_ReportsAWidenedSearch keeps the AND->OR fallback from being a
+// silent rewrite. Broadening the query is the right answer to an empty
+// precise one, but the caller is then reading results that satisfy one of
+// its words rather than all of them, and nothing in the rows themselves
+// says so.
+func TestQuery_ReportsAWidenedSearch(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "writer", content: "the register writer sorts its keys", project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "what conventions apply when editing the register writer", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("len(Results) = %d, want 1: the widened search must find the row the precise one missed", len(got.Results))
+	}
+	if !hasDiagnostic(got, DiagnosticSearchWidened) {
+		t.Fatalf("no %s diagnostic; diagnostics = %+v", DiagnosticSearchWidened, got.Diagnostics)
+	}
+}
+
+// TestQuery_SaysNothingAboutWideningWhenItDidNotWiden guards the other
+// direction: a diagnostic on every call is a diagnostic nobody reads.
+func TestQuery_SaysNothingAboutWideningWhenItDidNotWiden(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "both", content: "canonical identity resolution", project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "canonical identity", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if hasDiagnostic(got, DiagnosticSearchWidened) {
+		t.Fatalf("unexpected %s diagnostic on a search that matched every token: %+v", DiagnosticSearchWidened, got.Diagnostics)
+	}
+}
+
+func hasDiagnostic(r Result, code string) bool {
+	for _, d := range r.Diagnostics {
+		if d.Code == code {
+			return true
+		}
+	}
+	return false
 }

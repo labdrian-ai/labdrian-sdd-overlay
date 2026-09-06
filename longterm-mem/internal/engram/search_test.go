@@ -47,14 +47,14 @@ func TestSearch_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
 		t.Fatalf("Search: %v", err)
 	}
 
-	if len(got) != 1 {
-		t.Fatalf("len(got) = %d, want 1; got %+v", len(got), got)
+	if len(got.Rows) != 1 {
+		t.Fatalf("len(got.Rows) = %d, want 1; got %+v", len(got.Rows), got.Rows)
 	}
-	if got[0].Title != "in project" {
-		t.Fatalf("got[0].Title = %q, want %q", got[0].Title, "in project")
+	if got.Rows[0].Title != "in project" {
+		t.Fatalf("got.Rows[0].Title = %q, want %q", got.Rows[0].Title, "in project")
 	}
-	if got[0].Project != "labdrian-sdd-overlay" {
-		t.Fatalf("got[0].Project = %q, want %q", got[0].Project, "labdrian-sdd-overlay")
+	if got.Rows[0].Project != "labdrian-sdd-overlay" {
+		t.Fatalf("got.Rows[0].Project = %q, want %q", got.Rows[0].Project, "labdrian-sdd-overlay")
 	}
 }
 
@@ -86,8 +86,8 @@ func TestSearch_TokenStartingWithMinusIsTreatedAsLiteralText(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Search(-secret) returned an unexpected error (a leading '-' token must be quoted as literal text, not sent as an FTS5 NOT operator): %v", err)
 	}
-	if len(got) != 1 || got[0].Title != "confidential" {
-		t.Fatalf("got = %+v, want the one row containing the literal text \"secret\"", got)
+	if len(got.Rows) != 1 || got.Rows[0].Title != "confidential" {
+		t.Fatalf("got = %+v, want the one row containing the literal text \"-secret\"", got.Rows)
 	}
 }
 
@@ -120,7 +120,125 @@ func TestSearch_FixtureIndexMatchesLiveTokenizer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Search: %v", err)
 	}
-	if len(got) != 1 {
-		t.Fatalf("searching the mid-word fragment %q returned %d rows, want 1: the fixture index is not trigram-tokenized like the live one", "onvention", len(got))
+	if len(got.Rows) != 1 {
+		t.Fatalf("searching the mid-word fragment %q returned %d rows, want 1: the fixture index is not trigram-tokenized like the live one", "onvention", len(got.Rows))
+	}
+}
+
+// TestSearch_NaturalQuestionIsNotAndedIntoSilence is the regression this
+// change exists for. Every whitespace token was AND-joined, so a question
+// phrased the way a person phrases one required all eight of its words --
+// stopwords included -- to appear in a single observation. Measured on the
+// live corpus, "what conventions apply when editing the register writer"
+// returned 0 of 577 rows; the same tokens OR-joined returned 556.
+//
+// A silently empty result is the worst failure mode available here: it
+// costs nothing, reports nothing, and reads as "there is no such memory".
+func TestSearch_NaturalQuestionIsNotAndedIntoSilence(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	insertSearchRow(t, dbPath, "register writer conventions",
+		"the register writer sorts its keys before writing", "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "what conventions apply when editing the register writer", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Rows) != 1 {
+		t.Fatalf("len(Rows) = %d, want 1: a natural-language question must not be AND-joined into an empty result", len(got.Rows))
+	}
+	if got.MatchMode != MatchAny {
+		t.Fatalf("MatchMode = %q, want %q: a widened query must say so, or the caller cannot tell a precise hit from a broad one", got.MatchMode, MatchAny)
+	}
+}
+
+// TestSearch_KeepsEveryTokenRequiredWhenThatFindsSomething guards the
+// other half of the trade. Widening is a fallback, not the default: where
+// requiring every token already finds rows, the broader OR match -- which
+// on the live corpus turned 13 rows into 114 -- must never be reached.
+func TestSearch_KeepsEveryTokenRequiredWhenThatFindsSomething(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	insertSearchRow(t, dbPath, "both", "canonical identity resolution", "labdrian-sdd-overlay", sql.NullString{})
+	insertSearchRow(t, dbPath, "one", "identity only, nothing else here", "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "canonical identity", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Rows) != 1 || got.Rows[0].Title != "both" {
+		t.Fatalf("Rows = %+v, want only the row matching every token", got.Rows)
+	}
+	if got.MatchMode != MatchAll {
+		t.Fatalf("MatchMode = %q, want %q", got.MatchMode, MatchAll)
+	}
+}
+
+// TestSearch_StopwordOnlyQueryStillSearchesItsWords keeps stopword
+// stripping from turning a deliberate query into no query at all. If every
+// token is a stopword there is nothing else the caller can have meant, so
+// the words are searched as written rather than discarded into silence.
+func TestSearch_StopwordOnlyQueryStillSearchesItsWords(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	insertSearchRow(t, dbPath, "phrase", "the way that this works", "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "the way that", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Rows) != 1 {
+		t.Fatalf("len(Rows) = %d, want 1: a query made entirely of stopwords must still search them", len(got.Rows))
+	}
+}
+
+// TestSearch_ReportsTheStopwordsItDropped keeps the stripping visible. A
+// caller that cannot see which of its words were ignored cannot tell a
+// corpus with no answer from a query that was quietly rewritten.
+func TestSearch_ReportsTheStopwordsItDropped(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	insertSearchRow(t, dbPath, "writer", "the register writer", "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "what is the register writer", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	want := []string{"what", "is", "the"}
+	if len(got.DroppedTokens) != len(want) {
+		t.Fatalf("DroppedTokens = %v, want %v", got.DroppedTokens, want)
+	}
+	for i, w := range want {
+		if got.DroppedTokens[i] != w {
+			t.Fatalf("DroppedTokens = %v, want %v", got.DroppedTokens, want)
+		}
 	}
 }

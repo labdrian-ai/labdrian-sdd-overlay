@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
@@ -58,6 +59,23 @@ const (
 	// calling the query tool never sees, so the freeze was invisible
 	// precisely where it lasts longest.
 	DiagnosticEngramDegradedSnapshot = "engram_degraded_snapshot"
+
+	// DiagnosticSearchWidened reports that requiring every query token
+	// found nothing, so the search was retried requiring any one of them.
+	// The rows below it are real matches on part of the query, not on the
+	// whole of it, and are worth correspondingly less trust -- which is
+	// invisible in the rows themselves.
+	//
+	// The alternative was to widen silently. It is worse than it looks:
+	// the failure being fixed here IS a silent one, and answering it with
+	// a second silence trades an empty result nobody can see for a broad
+	// result nobody can see either.
+	DiagnosticSearchWidened = "search_widened"
+
+	// DiagnosticSearchStopwordsDropped names the query tokens that were
+	// removed before searching, so a caller can tell a corpus with no
+	// answer from a query that was quietly rewritten.
+	DiagnosticSearchStopwordsDropped = "search_stopwords_dropped"
 )
 
 // Request is one Run call's input; Project is required.
@@ -141,9 +159,22 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result := Result{Project: req.Project, Query: req.Query}
-	engramRows, err := deps.Engram.Search(req.Project, req.Query, top)
+	search, err := deps.Engram.Search(req.Project, req.Query, top)
 	if err != nil {
 		return Result{}, fmt.Errorf("query: search engram: %w", err)
+	}
+	engramRows := search.Rows
+	if search.MatchMode == engram.MatchAny {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticSearchWidened,
+			Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
+		})
+	}
+	if len(search.DroppedTokens) > 0 {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticSearchStopwordsDropped,
+			Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
+		})
 	}
 	if degraded, cause := deps.Engram.Degraded(); degraded {
 		result.Diagnostics = append(result.Diagnostics, Diagnostic{
