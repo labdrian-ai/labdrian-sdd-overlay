@@ -101,6 +101,10 @@ type QueryIn struct {
 	// ExcludeTypes is opt-in and defaults to excluding nothing; see
 	// query.Request.ExcludeTypes for why no type is filtered by default.
 	ExcludeTypes []string `json:"exclude_types,omitempty" jsonschema:"Engram observation types to leave out, e.g. session_summary (default: none excluded)"`
+	// Sources mirrors query.Request.Sources: which sources to query
+	// (R-060). Empty means engram-fts only -- the vault is no longer
+	// queried unless named here explicitly.
+	Sources []string `json:"sources,omitempty" jsonschema:"sources to query: engram-fts, engram-embed, vault (default: engram-fts only; vault is not queried unless named)"`
 }
 
 // QueryOut is the query tool's output: query.Result's own JSON shape,
@@ -202,7 +206,7 @@ func queryHandler(deps Deps) mcp.ToolHandlerFor[QueryIn, QueryOut] {
 		if deps.Query == nil {
 			return nil, QueryOut{}, fmt.Errorf("mcpserver: query dependency is not configured")
 		}
-		result, err := deps.Query(ctx, query.Request{Project: in.Project, Query: in.Query, Top: in.Top, ExcludeTypes: in.ExcludeTypes})
+		result, err := deps.Query(ctx, query.Request{Project: in.Project, Query: in.Query, Top: in.Top, ExcludeTypes: in.ExcludeTypes, Sources: in.Sources})
 		if err != nil {
 			return nil, QueryOut{}, err
 		}
@@ -249,7 +253,7 @@ func renderQuery(result QueryOut) string {
 		if label == "" {
 			label = fmt.Sprintf("engram:%d", row.EngramID)
 		}
-		fmt.Fprintf(&b, "\n[%d] %s %s %s\n", row.Rank, row.Source, label, row.Title)
+		fmt.Fprintf(&b, "\n[%d] %s %s %s\n", row.Rank, strings.Join(row.Sources, "+"), label, row.Title)
 		if row.Snippet != "" {
 			fmt.Fprintf(&b, "    %s\n", row.Snippet)
 		}

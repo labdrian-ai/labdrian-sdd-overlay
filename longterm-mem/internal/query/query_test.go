@@ -121,7 +121,7 @@ func TestQuery_GroupedBySourceInNativeRankOrder(t *testing.T) {
 	}
 	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
 
-	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr keyword", Top: 10})
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr keyword", Top: 10, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -131,10 +131,10 @@ func TestQuery_GroupedBySourceInNativeRankOrder(t *testing.T) {
 	if len(got.Results) != 4 {
 		t.Fatalf("len(Results) = %d, want 4; got %+v", len(got.Results), got.Results)
 	}
-	wantSources := []string{SourceVault, SourceVault, SourceEngram, SourceEngram}
+	wantSources := []string{SourceVault, SourceVault, SourceEngramFTS, SourceEngramFTS}
 	for i, row := range got.Results {
-		if row.Source != wantSources[i] {
-			t.Errorf("Results[%d].Source = %q, want %q", i, row.Source, wantSources[i])
+		if !hasSource(row, wantSources[i]) {
+			t.Errorf("Results[%d].Sources = %v, want to include %q", i, row.Sources, wantSources[i])
 		}
 		if row.Rank != i+1 {
 			t.Errorf("Results[%d].Rank = %d, want %d", i, row.Rank, i+1)
@@ -172,7 +172,7 @@ func TestQuery_LinkedPairEmittedOnce(t *testing.T) {
 		},
 	}
 
-	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "shared topic", Top: 10})
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "shared topic", Top: 10, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -180,8 +180,8 @@ func TestQuery_LinkedPairEmittedOnce(t *testing.T) {
 		t.Fatalf("len(Results) = %d, want 1 (linked pair collapsed); got %+v", len(got.Results), got.Results)
 	}
 	row := got.Results[0]
-	if row.Source != SourceLinked {
-		t.Fatalf("Source = %q, want %q", row.Source, SourceLinked)
+	if !hasSource(row, SourceLinked) {
+		t.Fatalf("Sources = %v, want to include %q", row.Sources, SourceLinked)
 	}
 	if row.PageAddress != "c-000042" {
 		t.Errorf("PageAddress = %q, want c-000042 (vault reference)", row.PageAddress)
@@ -206,15 +206,15 @@ func TestQuery_NotProvisionedDegradesToEngramOnly(t *testing.T) {
 		ResolveLink:   NoLinkResolver,
 	}
 
-	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "keyword", Top: 10})
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "keyword", Top: 10, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
 		t.Fatalf("Run returned an error; want nil (not_provisioned must degrade, not fail): %v", err)
 	}
 	if got.VaultStatus != VaultStatusNotProvisioned {
 		t.Fatalf("VaultStatus = %q, want %q", got.VaultStatus, VaultStatusNotProvisioned)
 	}
-	if len(got.Results) != 1 || got.Results[0].Source != SourceEngram {
-		t.Fatalf("Results = %+v, want exactly one engram-sourced row", got.Results)
+	if len(got.Results) != 1 || !hasSource(got.Results[0], SourceEngramFTS) {
+		t.Fatalf("Results = %+v, want exactly one engram-fts-sourced row", got.Results)
 	}
 }
 
@@ -482,6 +482,18 @@ func hasDiagnostic(r Result, code string) bool {
 	return false
 }
 
+// hasSource reports whether row names source among the sources that found
+// it, without assuming it is the only one -- a row may now be named by
+// more than one source (R-006's amended merge).
+func hasSource(row ResultRow, source string) bool {
+	for _, s := range row.Sources {
+		if s == source {
+			return true
+		}
+	}
+	return false
+}
+
 // TestQuery_EngramRowShipsAnExtractNotTheWholeBody is the payload fix.
 // mergeResults assigned Snippet: er.Content, so a query put every matched
 // observation body on the wire in full. Measured on the live corpus for
@@ -528,7 +540,7 @@ func TestQuery_VaultRowIsNotMarkedTruncated(t *testing.T) {
 	}
 	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
 
-	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -572,7 +584,7 @@ func TestQuery_ResponseNeverExceedsTheCeiling(t *testing.T) {
 		ResolveLink:   NoLinkResolver,
 	}
 
-	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20})
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
@@ -603,14 +615,14 @@ func TestQuery_CeilingKeepsTheMergeOrder(t *testing.T) {
 		ResolveLink: NoLinkResolver,
 	}
 
-	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20})
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20, Sources: []string{SourceVault, SourceEngramFTS}})
 	if err != nil {
 		t.Fatalf("Run: %v", err)
 	}
 	if len(got.Results) == 0 {
 		t.Fatalf("the ceiling emptied the response entirely")
 	}
-	if got.Results[0].Source != SourceVault || got.Results[0].PageAddress != "c-first" {
+	if !hasSource(got.Results[0], SourceVault) || got.Results[0].PageAddress != "c-first" {
 		t.Fatalf("Results[0] = %+v, want the vault row still first", got.Results[0])
 	}
 	for i, row := range got.Results {
@@ -686,5 +698,157 @@ func TestQuery_NoFilterByDefault(t *testing.T) {
 	}
 	if hasDiagnostic(got, DiagnosticTypesExcluded) {
 		t.Fatalf("unexpected %s on an unfiltered query", DiagnosticTypesExcluded)
+	}
+}
+
+// TestUnknownSourceIsRefusedNotIgnored guards R-060: naming a source this
+// function does not recognise must be refused, not silently dropped from
+// the set actually queried. Silently narrowing the corpus to the sources
+// that happen to be spelled correctly is exactly the failure this change
+// exists to remove.
+func TestUnknownSourceIsRefusedNotIgnored(t *testing.T) {
+	store := newFixtureEngramStore(t, nil)
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	_, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Sources: []string{"nonsense"}})
+	if !errors.Is(err, ErrUnknownSource) {
+		t.Fatalf("err = %v, want ErrUnknownSource", err)
+	}
+}
+
+// TestOmittedSourcesQueriesBothEngramArmsNotVault is R-060's default-set
+// scenario, narrowed to what this PR actually ships: engram-embed's own
+// retrieval pipeline (internal/embed, internal/vecindex, the embedding
+// arm) does not exist until a later PR of this same change, so the
+// default this PR ships is engram-fts alone, not "both Engram arms" --
+// shipping a default that silently queried a source with nothing behind
+// it would be the same failure R-060 forbids for an unknown name, in a
+// different costume. What both this PR and R-060's eventual full shape
+// share, and what this test actually proves, is the other half: an
+// omitted `sources` must never invoke the vault.
+func TestOmittedSourcesQueriesBothEngramArmsNotVault(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "engram row", content: "zephyr keyword", project: "proj-a"},
+	})
+	vaultInvoked := false
+	deps := Deps{
+		Engram: store,
+		RetrieveVault: func(context.Context, string, string, int) (vault.Result, error) {
+			vaultInvoked = true
+			return vault.Result{Status: vault.StatusOK}, nil
+		},
+		ResolveLink: NoLinkResolver,
+	}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr"})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if vaultInvoked {
+		t.Fatalf("omitted sources invoked the vault; R-060 requires vault only when named explicitly")
+	}
+	if got.VaultStatus != VaultStatusNotRequested {
+		t.Fatalf("VaultStatus = %q, want %q", got.VaultStatus, VaultStatusNotRequested)
+	}
+	if len(got.Results) != 1 || !hasSource(got.Results[0], SourceEngramFTS) {
+		t.Fatalf("Results = %+v, want the one engram-fts row", got.Results)
+	}
+}
+
+// TestNamingVaultInvokesIt is R-060's other half: a caller that explicitly
+// asks for the vault gets it.
+func TestNamingVaultInvokesIt(t *testing.T) {
+	store := newFixtureEngramStore(t, nil)
+	vaultInvoked := false
+	deps := Deps{
+		Engram: store,
+		RetrieveVault: func(context.Context, string, string, int) (vault.Result, error) {
+			vaultInvoked = true
+			return vault.Result{Status: vault.StatusOK, Candidates: []vault.Candidate{
+				{PageAddress: "c-000001", AbsolutePath: "/v/c-000001.md", Snippet: "vault snippet"},
+			}}, nil
+		},
+		ResolveLink: NoLinkResolver,
+	}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Sources: []string{SourceVault}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if !vaultInvoked {
+		t.Fatalf("naming the vault did not invoke it")
+	}
+	if len(got.Results) != 1 || !hasSource(got.Results[0], SourceVault) {
+		t.Fatalf("Results = %+v, want the one vault row", got.Results)
+	}
+}
+
+// TestRowFoundByBothEngramSourcesEmittedOnceAtEarliestRank exercises
+// interleaveEngramSources directly: PR-1 only ever gives mergeResults one
+// Engram source (engram-fts; Phase 4 adds engram-embed), so this proves
+// the round-robin dedup property the merge will rely on once a second
+// source exists, rather than waiting for that source to be built to prove
+// it at all.
+func TestRowFoundByBothEngramSourcesEmittedOnceAtEarliestRank(t *testing.T) {
+	shared := ResultRow{EngramID: 42, Title: "shared row"}
+	a := engramSourceRows{name: SourceEngramFTS, rows: []ResultRow{
+		{EngramID: 1, Title: "fts only"},
+		shared,
+	}}
+	b := engramSourceRows{name: SourceEngramEmbed, rows: []ResultRow{
+		shared,
+		{EngramID: 2, Title: "embed only"},
+	}}
+
+	merged := interleaveEngramSources([]engramSourceRows{a, b})
+
+	var sharedRow *ResultRow
+	for i := range merged {
+		if merged[i].EngramID == 42 {
+			if sharedRow != nil {
+				t.Fatalf("EngramID 42 appears more than once: %+v", merged)
+			}
+			sharedRow = &merged[i]
+		}
+	}
+	if sharedRow == nil {
+		t.Fatalf("the shared row is missing entirely: %+v", merged)
+	}
+	if !hasSource(*sharedRow, SourceEngramFTS) || !hasSource(*sharedRow, SourceEngramEmbed) {
+		t.Fatalf("Sources = %v, want both engram-fts and engram-embed named", sharedRow.Sources)
+	}
+	// fts's own top row (EngramID 1) precedes the shared row in fts's
+	// subsequence, so the earliest position the shared row could take is
+	// index 1 (round-robin: fts[0], embed[0]=shared -- embed's own first
+	// row IS the shared row, so it surfaces at the earliest slot either
+	// source offered it).
+	if merged[0].EngramID != 1 {
+		t.Fatalf("merged[0] = %+v, want fts's own top row first (its native order preserved)", merged[0])
+	}
+}
+
+// TestLinkedPairEmittedOnceViaMerge is mergeResults's own version of the
+// property above (TestQuery_LinkedPairEmittedOnce already covers the
+// vault<->Engram promotion-link case end to end); this direct-merge test
+// guards mergeResults not double-counting a row consumed by the vault
+// section when it also appears in the (later, round-robin-merged) Engram
+// section.
+func TestLinkedPairEmittedOnceViaMerge(t *testing.T) {
+	engramRows := []engram.Row{{ID: 7, Title: "linked observation"}}
+	vaultRows := []vault.Candidate{{PageAddress: "c-000042", AbsolutePath: "/v/c-000042.md", Snippet: "vault side"}}
+	resolveLink := func(pageAddress string) (int64, bool) {
+		if pageAddress == "c-000042" {
+			return 7, true
+		}
+		return 0, false
+	}
+
+	merged := mergeResults([]string{SourceVault, SourceEngramFTS}, vaultRows, engramRows, resolveLink)
+
+	if len(merged) != 1 {
+		t.Fatalf("len(merged) = %d, want 1 (linked pair collapsed); got %+v", len(merged), merged)
+	}
+	if !hasSource(merged[0], SourceLinked) {
+		t.Fatalf("Sources = %v, want %q", merged[0].Sources, SourceLinked)
 	}
 }
