@@ -51,12 +51,12 @@ const (
 	// requested source (R-060).
 	SourceEngramFTS = "engram-fts"
 	// SourceEngramEmbed names Engram's embedding-index search as a
-	// requested source (R-060). Naming it is refused until the embedding
-	// pipeline this change also adds (internal/embed, internal/vecindex,
-	// the embedding arm itself) ships in a later PR of this same change --
-	// answering a request this code cannot back up would be exactly the
-	// silent narrowing R-060 exists to prevent, worn as a different
-	// costume.
+	// requested source (R-060): a cosine-similarity search over
+	// internal/vecindex's own index, populated by `index --embeddings`.
+	// Naming it when no index has ever been built degrades to zero rows
+	// plus a Coverage entry saying so (design), rather than an error --
+	// the same soft-degradation rule R-026 applies to a not-provisioned
+	// vault.
 	SourceEngramEmbed = "engram-embed"
 	// SourceLinked names a row emitted from an existing vault<->Engram
 	// promotion link (R-006's "linked pair" scenario): one vault page and
@@ -142,6 +142,20 @@ const (
 	// corpus quietly empty: in both cases the caller reads "there is
 	// nothing else" from a result that does not say that.
 	DiagnosticTypesExcluded = "types_excluded"
+
+	// DiagnosticEmbeddingBackendUnreachable reports that the embedding
+	// backend never answered at all (R-070) -- distinct from
+	// DiagnosticEmbeddingModelMissing so a caller can act on which
+	// condition applies rather than treating both as one opaque failure.
+	DiagnosticEmbeddingBackendUnreachable = "embedding_backend_unreachable"
+	// DiagnosticEmbeddingModelMissing reports that the embedding backend
+	// answered but the configured model is not pulled (R-070).
+	DiagnosticEmbeddingModelMissing = "embedding_model_missing"
+	// DiagnosticEmbeddingIndexIncomplete names the exact command that
+	// fixes an embedding index behind the live corpus (or never built),
+	// so a caller reading a thin or empty paraphrase result is not left
+	// to infer the fix from Coverage's bare numbers.
+	DiagnosticEmbeddingIndexIncomplete = "embedding_index_incomplete"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.
@@ -205,6 +219,17 @@ type Deps struct {
 	// ResolveLink reports the Engram id an existing promotion links to
 	// vault page pageAddress (D6 store, not built until slice 4/5).
 	ResolveLink func(pageAddress string) (engramID int64, ok bool)
+	// StateDir is the directory internal/vecindex's embedding index lives
+	// under (StateDir/index/<project>/, vecindex.Dir). It is read only
+	// when a caller names engram-embed in Sources; every other call
+	// leaves it unused.
+	StateDir string
+	// Embed embeds one query string into a vector for the embedding arm.
+	// It is invoked only when engram-embed is requested, so a call that
+	// never names that source never reaches the network (R-071). nil
+	// degrades exactly like an index that was never built: zero rows,
+	// Coverage says so.
+	Embed EmbedFunc
 }
 
 // NoLinkResolver reports every page as unlinked (default until D6 exists).
@@ -300,6 +325,12 @@ type Result struct {
 	VaultStatus string       `json:"vault_status"`
 	Results     []ResultRow  `json:"results"`
 	Diagnostics []Diagnostic `json:"diagnostics,omitempty"`
+	// Coverage reports, per requested source that depends on an index
+	// this module owns, how much of the live corpus that index currently
+	// describes (design: "coverage is a response field, not a
+	// diagnostic"). Deliberately no `omitempty`: an absent field and "the
+	// index is complete" must never look alike.
+	Coverage []Coverage `json:"coverage"`
 }
 
 // Run fans a query out to every requested source, then merges them
@@ -316,12 +347,10 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		if !knownSources[s] {
 			return Result{}, fmt.Errorf("%w: %q", ErrUnknownSource, s)
 		}
-		if s == SourceEngramEmbed {
-			return Result{}, fmt.Errorf("query: source %q is not available yet: the embedding index and its query arm ship in a later PR of union-retrieval", s)
-		}
 	}
 	wantVault := containsSource(sources, SourceVault)
 	wantFTS := containsSource(sources, SourceEngramFTS)
+	wantEmbed := containsSource(sources, SourceEngramEmbed)
 
 	top := req.Top
 	if top <= 0 {
@@ -335,12 +364,14 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	result := Result{Project: req.Project, Query: req.Query}
 
 	var engramRows []engram.Row
+	matchMode := engram.MatchAll
 	if wantFTS {
 		search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
 		if err != nil {
 			return Result{}, fmt.Errorf("query: search engram: %w", err)
 		}
 		engramRows = search.Rows
+		matchMode = search.MatchMode
 		if search.MatchMode == engram.MatchAny {
 			result.Diagnostics = append(result.Diagnostics, Diagnostic{
 				Code:   DiagnosticSearchWidened,
@@ -367,6 +398,17 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		}
 	}
 
+	var embedRows []ResultRow
+	if wantEmbed {
+		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed)
+		embedRows = rows
+		result.Coverage = append(result.Coverage, coverage)
+		result.Diagnostics = append(result.Diagnostics, diags...)
+		if d := coverageIncompleteDiagnostic(coverage); d != nil {
+			result.Diagnostics = append(result.Diagnostics, *d)
+		}
+	}
+
 	var vaultRows []vault.Candidate
 	if wantVault {
 		vaultResult, vaultErr := deps.RetrieveVault(ctx, req.Project, req.Query, top)
@@ -389,7 +431,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		result.VaultStatus = VaultStatusNotRequested
 	}
 
-	result.Results = mergeResults(sources, vaultRows, engramRows, resolveLink)
+	result.Results = mergeResults(sources, vaultRows, engramRows, embedRows, resolveLink, req.Query, matchMode)
 	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
 	capResponse(&result)
 	return result, nil
@@ -658,9 +700,14 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 // rows only when the vault is a requested source (3b.8: MatchLinkedEngramRow
 // is the extracted matcher, reused unchanged by promote/MCP query later),
 // and Engram's own requested sources are round-robin-interleaved by
-// interleaveEngramSources, deduplicated by engram_id.
-func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []engram.Row, resolveLink func(string) (int64, bool)) []ResultRow {
-	consumed := make(map[int64]bool, len(engramRows))
+// interleaveEngramSources, deduplicated by engram_id. When both engram-fts
+// and engram-embed are requested, routeRank1 (R-058/R-059, Branch A: gate
+// wired live, published routing accuracy 89%/86%) decides which of the two
+// sources' own rows are offered first each round -- the only thing that
+// decides is which row lands at rank 1; interleaveEngramSources itself
+// never consults it, so the union guarantee is untouched by the decision.
+func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
+	consumed := make(map[int64]bool, len(engramRows)+len(embedRows))
 	var merged []ResultRow
 
 	if containsSource(sources, SourceVault) {
@@ -681,7 +728,11 @@ func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []en
 		}
 	}
 
-	if containsSource(sources, SourceEngramFTS) {
+	var engramSourceList []engramSourceRows
+	wantFTS := containsSource(sources, SourceEngramFTS)
+	wantEmbed := containsSource(sources, SourceEngramEmbed)
+
+	if wantFTS {
 		var ftsRows []ResultRow
 		for _, er := range engramRows {
 			if consumed[er.ID] {
@@ -693,12 +744,28 @@ func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []en
 				MatchOffset: er.MatchOffset, Content: er.Content,
 			})
 		}
-		// PR-1 ever supplies one engram source (engram-fts); Phase 4 adds
-		// engram-embed to this slice, and interleaveEngramSources is
-		// written for that already so wiring it in is not a second
-		// rewrite of this function.
-		merged = append(merged, interleaveEngramSources([]engramSourceRows{{name: SourceEngramFTS, rows: ftsRows}})...)
+		engramSourceList = append(engramSourceList, engramSourceRows{name: SourceEngramFTS, rows: ftsRows})
 	}
+	if wantEmbed {
+		var embRows []ResultRow
+		for _, er := range embedRows {
+			if consumed[er.EngramID] {
+				continue
+			}
+			embRows = append(embRows, er)
+		}
+		engramSourceList = append(engramSourceList, engramSourceRows{name: SourceEngramEmbed, rows: embRows})
+	}
+
+	if wantFTS && wantEmbed {
+		// engramSourceList is [FTS, Embed] by construction above; swap
+		// only when the gate names the embedding arm as rank 1's owner.
+		tokens, _ := engram.SearchTokens(queryText)
+		if routeRank1(tokens, matchMode) == SourceEngramEmbed {
+			engramSourceList[0], engramSourceList[1] = engramSourceList[1], engramSourceList[0]
+		}
+	}
+	merged = append(merged, interleaveEngramSources(engramSourceList)...)
 
 	for i := range merged {
 		merged[i].Rank = i + 1

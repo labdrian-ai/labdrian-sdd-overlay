@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/promote"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // runQuery builds query.Deps for vaultRoot/store and calls query.Run
@@ -14,6 +16,13 @@ import (
 // subcommand) and cmd_mcp.go's MCP query tool wiring both use, so neither
 // surface can drift from the other -- extracted out of cmdQuery's own
 // inline construction, which cmd_mcp.go originally duplicated verbatim.
+//
+// StateDir and Embed are always set, not only when a caller names
+// engram-embed: query.Run only reads StateDir/invokes Embed when that
+// source is actually requested (R-071), so wiring them here unconditionally
+// costs nothing on the default engram-fts-only path and lets a caller who
+// does name the source (over the MCP tool's own `sources` field) reach it
+// without a second construction path to keep in sync.
 func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, req query.Request) (query.Result, error) {
 	runner := &vault.Runner{Root: vaultRoot}
 	deps := query.Deps{
@@ -22,6 +31,14 @@ func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, req qu
 			return vault.Retrieve(ctx, runner, project, q, n)
 		},
 		ResolveLink: query.NoLinkResolver,
+		StateDir:    defaultStateDir(),
+		Embed: func(ctx context.Context, text string) ([]float32, error) {
+			client, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+			if err != nil {
+				return nil, err
+			}
+			return client.Embed(ctx, text)
+		},
 	}
 	return query.Run(ctx, deps, req)
 }
