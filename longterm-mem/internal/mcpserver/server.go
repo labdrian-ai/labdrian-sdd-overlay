@@ -98,6 +98,9 @@ type QueryIn struct {
 	Project string `json:"project" jsonschema:"the project to search"`
 	Query   string `json:"query" jsonschema:"the query text"`
 	Top     int    `json:"top,omitempty" jsonschema:"results per source (default 5 when omitted or 0)"`
+	// ExcludeTypes is opt-in and defaults to excluding nothing; see
+	// query.Request.ExcludeTypes for why no type is filtered by default.
+	ExcludeTypes []string `json:"exclude_types,omitempty" jsonschema:"Engram observation types to leave out, e.g. session_summary (default: none excluded)"`
 }
 
 // QueryOut is the query tool's output: query.Result's own JSON shape,
@@ -199,7 +202,7 @@ func queryHandler(deps Deps) mcp.ToolHandlerFor[QueryIn, QueryOut] {
 		if deps.Query == nil {
 			return nil, QueryOut{}, fmt.Errorf("mcpserver: query dependency is not configured")
 		}
-		result, err := deps.Query(ctx, query.Request{Project: in.Project, Query: in.Query, Top: in.Top})
+		result, err := deps.Query(ctx, query.Request{Project: in.Project, Query: in.Query, Top: in.Top, ExcludeTypes: in.ExcludeTypes})
 		if err != nil {
 			return nil, QueryOut{}, err
 		}

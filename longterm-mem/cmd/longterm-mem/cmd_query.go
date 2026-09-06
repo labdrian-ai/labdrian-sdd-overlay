@@ -33,6 +33,7 @@ func cmdQuery(args []string) int {
 	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	top := fs.Int("top", unsetTopN, "results per source, 1-50 (default 5)")
+	excludeTypes := fs.String("exclude-types", "", "comma-separated Engram observation types to leave out (default: none)")
 	asJSON := fs.Bool("json", false, "print the result as JSON")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
@@ -69,7 +70,10 @@ func cmdQuery(args []string) int {
 		requestedTop = *top
 	}
 
-	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{Project: resolvedProject, Query: rest[0], Top: requestedTop})
+	result, err := runQuery(context.Background(), store, vaultRoot, query.Request{
+		Project: resolvedProject, Query: rest[0], Top: requestedTop,
+		ExcludeTypes: splitTypes(*excludeTypes),
+	})
 	if err != nil {
 		// query.Run degrades a failing vault to a diagnostic and only
 		// ever errors on the Engram side (a missing project is rejected
@@ -101,6 +105,19 @@ func cmdQuery(args []string) int {
 		fmt.Fprintf(os.Stderr, "WARN %s: %s\n", d.Code, d.Detail)
 	}
 	return exitOK
+}
+
+// splitTypes turns a comma-separated --exclude-types into the list
+// query.Request takes, dropping empty entries so a trailing comma or a
+// bare "" never becomes a type that matches nothing under a NOT IN.
+func splitTypes(csv string) []string {
+	var types []string
+	for _, t := range strings.Split(csv, ",") {
+		if t = strings.TrimSpace(t); t != "" {
+			types = append(types, t)
+		}
+	}
+	return types
 }
 
 // printStanding renders what the relation ledger says about a row, under

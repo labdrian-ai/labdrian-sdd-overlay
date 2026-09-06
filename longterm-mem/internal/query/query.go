@@ -84,6 +84,12 @@ const (
 	// are the results that fit" are different statements and only one of
 	// them is true here.
 	DiagnosticResponseCapped = "response_capped"
+
+	// DiagnosticTypesExcluded names the observation types the caller asked
+	// to leave out. A corpus quietly narrowed is the same failure as a
+	// corpus quietly empty: in both cases the caller reads "there is
+	// nothing else" from a result that does not say that.
+	DiagnosticTypesExcluded = "types_excluded"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.
@@ -112,6 +118,26 @@ type Request struct {
 	Project string
 	Query   string
 	Top     int
+	// ExcludeTypes are Engram observation types to leave out.
+	//
+	// It is a filter, not a re-ranking, and the distinction is what makes
+	// it permissible: D8 forbids fusing scores across sources, and the
+	// rows that survive an exclusion keep exactly the merge order they
+	// had. Excluding a type is declining to return a row, not deciding it
+	// is worth less than another one.
+	//
+	// The default excludes nothing, and that is measured rather than
+	// timid. session_summary is the obvious candidate -- 71 of the live
+	// project's 581 observations, and the type whose bodies run 15k-43k
+	// bytes -- but the payload argument for excluding it is spent: those
+	// bodies now cost one snippet like every other row. The relevance
+	// argument does not survive measurement either: across eight real
+	// queries session_summary took 5 of 36 top-5 slots, about its 12%
+	// share of the corpus, so bm25 is already ranking it fairly. A
+	// default exclusion would drop real answers to buy a gain the numbers
+	// do not show. A caller who knows it wants implementation memory
+	// rather than session narrative can still say so.
+	ExcludeTypes []string
 }
 
 // Deps are Run's dependencies. RetrieveVault/ResolveLink are function seams
@@ -205,7 +231,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result := Result{Project: req.Project, Query: req.Query}
-	search, err := deps.Engram.Search(req.Project, req.Query, top)
+	search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
 	if err != nil {
 		return Result{}, fmt.Errorf("query: search engram: %w", err)
 	}
@@ -214,6 +240,12 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		result.Diagnostics = append(result.Diagnostics, Diagnostic{
 			Code:   DiagnosticSearchWidened,
 			Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
+		})
+	}
+	if len(req.ExcludeTypes) > 0 {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticTypesExcluded,
+			Detail: fmt.Sprintf("these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: %s", strings.Join(req.ExcludeTypes, ", ")),
 		})
 	}
 	if len(search.DroppedTokens) > 0 {

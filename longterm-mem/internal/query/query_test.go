@@ -60,6 +60,47 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObservation) *engram.Stor
 	return store
 }
 
+// typedObservation is a fixture row that also carries its Engram type,
+// which the plain fixtureObservation fixes to "discovery".
+type typedObservation struct{ title, content, project, obsType string }
+
+// newFixtureEngramStoreTyped is newFixtureEngramStore with a
+// caller-controlled observation type, for the type filter's tests.
+func newFixtureEngramStoreTyped(t *testing.T, rows []typedObservation) *engram.Store {
+	t.Helper()
+
+	schema, err := os.ReadFile(filepath.Join("..", "engram", "testdata", "schema.sql"))
+	if err != nil {
+		t.Fatalf("read engram schema fixture: %v", err)
+	}
+	dbPath := filepath.Join(t.TempDir(), "engram.db")
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	if _, err := setup.Exec(string(schema)); err != nil {
+		setup.Close()
+		t.Fatalf("apply engram schema fixture: %v", err)
+	}
+	for _, r := range rows {
+		if _, err := setup.Exec(
+			`INSERT INTO observations (session_id, type, title, content, project) VALUES (?, ?, ?, ?, ?)`,
+			"sess-1", r.obsType, r.title, r.content, r.project,
+		); err != nil {
+			setup.Close()
+			t.Fatalf("insert fixture observation %q: %v", r.title, err)
+		}
+	}
+	setup.Close()
+
+	store, err := engram.Open(dbPath)
+	if err != nil {
+		t.Fatalf("engram.Open(%q): %v", dbPath, err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	return store
+}
+
 // fakeRetrieveVault returns a Deps.RetrieveVault stand-in that ignores its
 // arguments and always answers with result/err.
 func fakeRetrieveVault(result vault.Result, err error) func(context.Context, string, string, int) (vault.Result, error) {
@@ -597,5 +638,53 @@ func TestQuery_SmallResponseIsUntouched(t *testing.T) {
 	}
 	if hasDiagnostic(got, DiagnosticResponseCapped) {
 		t.Fatalf("unexpected %s on a response that already fits", DiagnosticResponseCapped)
+	}
+}
+
+// TestQuery_ExcludeTypesFiltersAndSaysSo. Filtering is not re-ranking:
+// D8 forbids fusing scores across sources, not declining to return a row,
+// and the rows that survive keep their merge order. But a corpus quietly
+// narrowed is the same failure as a corpus quietly empty, so an applied
+// filter is always reported.
+func TestQuery_ExcludeTypesFiltersAndSaysSo(t *testing.T) {
+	store := newFixtureEngramStoreTyped(t, []typedObservation{
+		{title: "the summary", content: "zephyr came up in this session", project: "proj-a", obsType: "session_summary"},
+		{title: "the decision", content: "zephyr was chosen deliberately", project: "proj-a", obsType: "decision"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10, ExcludeTypes: []string{"session_summary"}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Title != "the decision" {
+		t.Fatalf("Results = %+v, want only the non-excluded type", got.Results)
+	}
+	if !hasDiagnostic(got, DiagnosticTypesExcluded) {
+		t.Fatalf("the corpus was narrowed and did not say so; diagnostics = %+v", got.Diagnostics)
+	}
+}
+
+// TestQuery_NoFilterByDefault. The default excludes nothing, and that is
+// a measured choice rather than caution: on the live corpus
+// session_summary is 71 of 581 rows (12%) and took 5 of 36 top-5 slots
+// across eight real queries (14%). bm25 is already ranking it at about
+// its share, so a default exclusion would remove real answers to buy a
+// relevance gain the measurement does not show.
+func TestQuery_NoFilterByDefault(t *testing.T) {
+	store := newFixtureEngramStoreTyped(t, []typedObservation{
+		{title: "the summary", content: "zephyr came up in this session", project: "proj-a", obsType: "session_summary"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("a query with no filter lost a row: %+v", got.Results)
+	}
+	if hasDiagnostic(got, DiagnosticTypesExcluded) {
+		t.Fatalf("unexpected %s on an unfiltered query", DiagnosticTypesExcluded)
 	}
 }

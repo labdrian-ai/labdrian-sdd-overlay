@@ -113,14 +113,14 @@ var stopwords = map[string]bool{
 // not exist. That case is the expensive one precisely because it looks
 // free: an empty result costs no tokens, so no audit of what a query
 // spends can ever find it.
-func (s *Store) Search(project, query string, limit int) (SearchResult, error) {
+func (s *Store) Search(project, query string, limit int, excludeTypes ...string) (SearchResult, error) {
 	tokens, dropped := searchTokens(query)
 	if len(tokens) == 0 {
 		return SearchResult{MatchMode: MatchAll}, nil
 	}
 	result := SearchResult{MatchMode: MatchAll, DroppedTokens: dropped}
 
-	rows, err := s.searchMatching(project, joinTokens(tokens, " AND "), limit)
+	rows, err := s.searchMatching(project, joinTokens(tokens, " AND "), limit, excludeTypes)
 	if err != nil {
 		return SearchResult{}, err
 	}
@@ -131,7 +131,7 @@ func (s *Store) Search(project, query string, limit int) (SearchResult, error) {
 		return result, nil
 	}
 
-	rows, err = s.searchMatching(project, joinTokens(tokens, " OR "), limit)
+	rows, err = s.searchMatching(project, joinTokens(tokens, " OR "), limit, excludeTypes)
 	if err != nil {
 		return SearchResult{}, err
 	}
@@ -158,16 +158,30 @@ func (s *Store) Search(project, query string, limit int) (SearchResult, error) {
 // offset. The window around that offset is then a character budget this
 // package controls, and it behaves identically whatever tokenizer the
 // index was built with.
-func (s *Store) searchMatching(project, match string, limit int) ([]Row, error) {
+func (s *Store) searchMatching(project, match string, limit int, excludeTypes []string) ([]Row, error) {
+	// The exclusion is a filter, applied in SQL beside the existing
+	// project and soft-delete filters. It changes which rows are
+	// eligible, never their order: the surviving rows come back in the
+	// same bm25 sequence they would have without it (R-006).
+	args := []any{matchOpen, matchClose, match, project}
+	exclusion := ""
+	if len(excludeTypes) > 0 {
+		exclusion = " AND o.type NOT IN (?" + strings.Repeat(", ?", len(excludeTypes)-1) + ")"
+		for _, t := range excludeTypes {
+			args = append(args, t)
+		}
+	}
+	args = append(args, limit)
+
 	rows, err := s.db.Query(
 		`SELECT o.id, o.title, o.content, o.project,
 		        highlight(observations_fts, 1, ?, ?)
 		 FROM observations_fts
 		 JOIN observations o ON o.id = observations_fts.rowid
-		 WHERE observations_fts MATCH ? AND o.project = ? AND o.deleted_at IS NULL
+		 WHERE observations_fts MATCH ? AND o.project = ? AND o.deleted_at IS NULL`+exclusion+`
 		 ORDER BY observations_fts.rank
 		 LIMIT ?`,
-		matchOpen, matchClose, match, project, limit,
+		args...,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("engram: search observations for project %q: %w", project, err)
