@@ -45,7 +45,22 @@ embedding, so the ranking had to be re-measured rather than assumed.
 Branch A under both. PR-3 is unblocked; had this failed, `internal/vecindex`
 would not have been written at all.
 
-## Staleness, third occurrence in this instrument
+## PR-4: Branch A shipped
+
+`routeRank1` (`internal/query/gate.go`, unwired since PR-1's 1.7/1.8) is now
+wired live into `mergeResults` (`internal/query/query.go`): when both
+`engram-fts` and `engram-embed` are requested, the gate decides which
+source's rows are offered first to `interleaveEngramSources`, deciding rank
+1 only — `interleaveEngramSources` itself never consults the gate, so the
+`@5` union guarantee (R-058) is provably unaffected by the gate's decision
+either way (`TestAnIncorrectRank1RoutingDoesNotShrinkTheGuarantee`,
+`TestMergedSetContainsEachRequestedSourceRow`).
+
+The routing accuracy this shipped on is the 80–89%-band number from 0.1–0.3
+above (89% identifier / 86% paraphrase), also published in
+`openspec/specs/longterm-mem-embedding-index/spec.md` per the 80–89% row of
+design's threshold table. Branch B (fixed FTS-first order, `gate.go` deleted
+or left unwired) was not taken.
 
 The corpus was 584 rows when first embedded, 586 at the blind scoring, and
 **591** at gate 0.5 — memory this session kept saving. Every measurement here

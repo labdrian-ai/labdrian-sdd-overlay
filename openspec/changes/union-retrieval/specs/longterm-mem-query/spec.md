@@ -101,11 +101,21 @@ Traces to: longterm-mem R-059
 
 WHEN more than one source is requested, the longterm-mem query function
 SHALL route rank 1 to the Engram FTS source WHERE any query token is
-identifier-shaped or the FTS match mode is `MatchAll`, and to the embedding
-source otherwise. This gate is a heuristic over query shape; it SHALL NOT
-compute or compare a relevance score, and a wrong routing decision SHALL
-only affect which source occupies rank 1, never the set guaranteed by
-R-058.
+identifier-shaped or the FTS match mode is `MatchAny` (a widened search is
+itself evidence the precise reading found nothing, which leans lexical
+rather than paraphrase), and to the embedding source otherwise. This gate
+is a heuristic over query shape; it SHALL NOT compute or compare a
+relevance score, and a wrong routing decision SHALL only affect which
+source occupies rank 1, never the set guaranteed by R-058.
+
+Shipped (Branch A) at a measured routing accuracy of 89% (identifier
+queries, n=18 decidable) and 86% (paraphrase queries, n=7) against blind,
+third-party-adjudicated ground truth — both in the 80–89% band, so the
+number is published here rather than only in a decision document (see
+`openspec/changes/union-retrieval/validation/phase0.md` and `score.md` for
+the full protocol and the surviving-n accounting). Under the design's exact
+embedding input shape (title‖NUL‖content, re-measured rather than assumed
+after a harness/shape mismatch was found), the same gate scores 94%/88%.
 
 #### Scenario: Identifier-shaped token routes FTS to rank 1
 
