@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
@@ -437,4 +438,59 @@ func hasDiagnostic(r Result, code string) bool {
 		}
 	}
 	return false
+}
+
+// TestQuery_EngramRowShipsAnExtractNotTheWholeBody is the payload fix.
+// mergeResults assigned Snippet: er.Content, so a query put every matched
+// observation body on the wire in full. Measured on the live corpus for
+// "canonical identity": 30,075 of 33,877 response bytes -- 88.8% -- were
+// Engram bodies, and the largest single body was 42,757 bytes.
+func TestQuery_EngramRowShipsAnExtractNotTheWholeBody(t *testing.T) {
+	body := strings.Repeat("padding ", 900) + " the zephyr decision " + strings.Repeat("padding ", 900)
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "buried", content: body, project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("len(Results) = %d, want 1", len(got.Results))
+	}
+	row := got.Results[0]
+	if len(row.Snippet) >= len(body) {
+		t.Fatalf("Snippet is %d bytes against a %d-byte body: the whole observation is still on the wire", len(row.Snippet), len(body))
+	}
+	if !strings.Contains(row.Snippet, "zephyr") {
+		t.Fatalf("Snippet is not centred on the match:\n%q", row.Snippet)
+	}
+	if !row.SnippetTruncated {
+		t.Fatalf("SnippetTruncated = false: a caller cannot tell this preview from the whole memory")
+	}
+	if row.FullLength != len(body) {
+		t.Fatalf("FullLength = %d, want %d: truncation is only honest if the caller is told how much is missing", row.FullLength, len(body))
+	}
+}
+
+// TestQuery_VaultRowIsNotMarkedTruncated keeps the truncation fields
+// meaning one thing. A vault snippet is cut by the vault's own retriever
+// before longterm-mem ever sees it, so this module has no full body to
+// compare against and must not claim to know one.
+func TestQuery_VaultRowIsNotMarkedTruncated(t *testing.T) {
+	store := newFixtureEngramStore(t, nil)
+	vaultResult := vault.Result{
+		Status:     vault.StatusOK,
+		Candidates: []vault.Candidate{{PageAddress: "c-000001", AbsolutePath: "/v/c-000001.md", Snippet: "vault side snippet"}},
+	}
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got.Results[0].SnippetTruncated || got.Results[0].FullLength != 0 {
+		t.Fatalf("vault row claims a truncation it cannot know about: %+v", got.Results[0])
+	}
 }

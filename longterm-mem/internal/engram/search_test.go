@@ -2,6 +2,7 @@ package engram
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 )
 
@@ -240,5 +241,132 @@ func TestSearch_ReportsTheStopwordsItDropped(t *testing.T) {
 		if got.DroppedTokens[i] != w {
 			t.Fatalf("DroppedTokens = %v, want %v", got.DroppedTokens, want)
 		}
+	}
+}
+
+// longFiller builds n characters of text that contains no match, so a test
+// can place a needle at a known distance from the start of a document.
+func longFiller(n int) string {
+	return strings.Repeat("padding ", (n/8)+1)[:n]
+}
+
+// TestSearch_SnippetIsCentredOnTheMatch is the whole argument for not
+// slicing content from the head. Engram observation bodies are structured
+// markdown: a session summary opens with frontmatter and a repeated title,
+// so its first 200 bytes are the least informative bytes it has. A preview
+// that always shows them tells the caller nothing about why the row
+// matched.
+func TestSearch_SnippetIsCentredOnTheMatch(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	content := longFiller(3000) + " the zephyr decision was taken here " + longFiller(3000)
+	insertSearchRow(t, dbPath, "buried", content, "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if len(got.Rows) != 1 {
+		t.Fatalf("len(Rows) = %d, want 1", len(got.Rows))
+	}
+	if !strings.Contains(got.Rows[0].Snippet, "zephyr") {
+		t.Fatalf("Snippet does not contain the match:\n%q", got.Rows[0].Snippet)
+	}
+}
+
+// TestSearch_SnippetIsCappedAndSaysSo is the truncation contract. A capped
+// preview a caller cannot distinguish from a whole body is worse than an
+// uncapped one: it reads as the complete memory, and a decision gets made
+// on a fragment. So the cap is reported twice -- once in the text a person
+// reads, once in a field a program reads.
+func TestSearch_SnippetIsCappedAndSaysSo(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	content := longFiller(3000) + " the zephyr decision was taken here " + longFiller(3000)
+	insertSearchRow(t, dbPath, "buried", content, "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	row := got.Rows[0]
+	if len(row.Snippet) > SnippetBudget+len(truncationMark)*2 {
+		t.Fatalf("len(Snippet) = %d, want at most the %d-character budget plus its markers", len(row.Snippet), SnippetBudget)
+	}
+	if !row.SnippetTruncated {
+		t.Fatalf("SnippetTruncated = false on a %d-byte body cut to %d: a caller cannot tell a preview from the whole memory", len(content), len(row.Snippet))
+	}
+	if row.ContentLength != len(content) {
+		t.Fatalf("ContentLength = %d, want %d: truncation is only honest if the caller is told how much it is missing", row.ContentLength, len(content))
+	}
+	if !strings.Contains(row.Snippet, truncationMark) {
+		t.Fatalf("Snippet carries no %q marker, so the text a person reads does not show it was cut:\n%q", truncationMark, row.Snippet)
+	}
+}
+
+// TestSearch_ShortBodyIsNotMarkedTruncated guards the other direction: a
+// body that fits is returned whole, unmarked. A truncation marker on
+// everything is a marker that means nothing.
+func TestSearch_ShortBodyIsNotMarkedTruncated(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	content := "a short note about zephyr and nothing else"
+	insertSearchRow(t, dbPath, "short", content, "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	row := got.Rows[0]
+	if row.SnippetTruncated {
+		t.Fatalf("SnippetTruncated = true for a body shorter than the budget")
+	}
+	if row.Snippet != content {
+		t.Fatalf("Snippet = %q, want the whole body %q", row.Snippet, content)
+	}
+}
+
+// TestSearch_MatchMarkersNeverReachTheCaller keeps the private-use
+// characters that locate a match inside this package. They exist to find
+// an offset, not to be rendered.
+func TestSearch_MatchMarkersNeverReachTheCaller(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+
+	insertSearchRow(t, dbPath, "short", "a note about zephyr", "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.Search("labdrian-sdd-overlay", "zephyr", 10)
+	if err != nil {
+		t.Fatalf("Search: %v", err)
+	}
+	if strings.ContainsAny(got.Rows[0].Snippet, matchOpen+matchClose) {
+		t.Fatalf("Snippet leaks an internal match marker: %q", got.Rows[0].Snippet)
 	}
 }

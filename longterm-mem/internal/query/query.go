@@ -113,7 +113,24 @@ type ResultRow struct {
 	EngramID    int64  `json:"engram_id,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Snippet     string `json:"snippet,omitempty"`
-	Score       *Score `json:"score,omitempty"`
+	// SnippetTruncated reports that Snippet is an extract of a longer
+	// body, and FullLength says how long that body is in bytes.
+	//
+	// They are the machine-readable half of a statement the snippet text
+	// also makes with a "…" at each cut edge, and both halves are
+	// required. A person reading the text needs the marker; a program
+	// deciding whether to fetch the rest needs the fields, and cannot be
+	// asked to look for an ellipsis. Without them a caller has no way to
+	// tell a preview from a whole memory, and will make a decision on a
+	// fragment that looked complete -- which is exactly the failure a cap
+	// introduces if it is shipped without visibility.
+	//
+	// A vault row leaves both zero: its snippet was cut by the vault's own
+	// retriever before this module saw it, so there is no full body here
+	// to measure and no claim to make about one.
+	SnippetTruncated bool   `json:"snippet_truncated,omitempty"`
+	FullLength       int    `json:"full_length,omitempty"`
+	Score            *Score `json:"score,omitempty"`
 	// Standing is what Engram's relation ledger says about this
 	// observation: replaced, contradicted, or flagged and never decided.
 	// It is nil when there is nothing to say, and absent from a vault-only
@@ -266,7 +283,10 @@ func mergeResults(vaultRows []vault.Candidate, engramRows []engram.Row, resolveL
 		if consumed[er.ID] {
 			continue
 		}
-		merged = append(merged, ResultRow{Source: SourceEngram, EngramID: er.ID, Title: er.Title, Snippet: er.Content})
+		merged = append(merged, ResultRow{
+			Source: SourceEngram, EngramID: er.ID, Title: er.Title,
+			Snippet: er.Snippet, SnippetTruncated: er.SnippetTruncated, FullLength: er.ContentLength,
+		})
 	}
 	for i := range merged {
 		merged[i].Rank = i + 1
