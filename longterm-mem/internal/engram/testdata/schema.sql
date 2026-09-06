@@ -43,21 +43,43 @@ CREATE INDEX idx_obs_dedupe ON observations(normalized_hash, project, scope, typ
 
 -- observations_fts: external-content FTS5 index (D8, R-006), kept in sync
 -- via triggers; Store.Search joins on observations.id = rowid.
+--
+-- Column list, tokenizer and options mirror the live index dumped from
+-- ~/.engram/engram.db. The `tokenize='trigram'` is load-bearing, not
+-- decoration: it makes a match a character-trigram substring match rather
+-- than a whole-word one, it makes every three-character window of a
+-- document its own token, and it makes a query token shorter than three
+-- characters match nothing at all. Any test about query semantics or about
+-- the size of a token-windowed extract is measuring the tokenizer as much
+-- as the code, so a fixture on FTS5's default tokenizer would report
+-- results this module never produces in production.
 CREATE VIRTUAL TABLE observations_fts USING fts5(
-    title, content, content='observations', content_rowid='id'
+    title,
+    content,
+    tool_name,
+    type,
+    project,
+    topic_key,
+    tokenize='trigram',
+    content='observations',
+    content_rowid='id'
 );
 
 CREATE TRIGGER observations_fts_ai AFTER INSERT ON observations BEGIN
-    INSERT INTO observations_fts(rowid, title, content) VALUES (new.id, new.title, new.content);
+    INSERT INTO observations_fts(rowid, title, content, tool_name, type, project, topic_key)
+    VALUES (new.id, new.title, new.content, new.tool_name, new.type, new.project, new.topic_key);
 END;
 
 CREATE TRIGGER observations_fts_ad AFTER DELETE ON observations BEGIN
-    INSERT INTO observations_fts(observations_fts, rowid, title, content) VALUES ('delete', old.id, old.title, old.content);
+    INSERT INTO observations_fts(observations_fts, rowid, title, content, tool_name, type, project, topic_key)
+    VALUES ('delete', old.id, old.title, old.content, old.tool_name, old.type, old.project, old.topic_key);
 END;
 
 CREATE TRIGGER observations_fts_au AFTER UPDATE ON observations BEGIN
-    INSERT INTO observations_fts(observations_fts, rowid, title, content) VALUES ('delete', old.id, old.title, old.content);
-    INSERT INTO observations_fts(rowid, title, content) VALUES (new.id, new.title, new.content);
+    INSERT INTO observations_fts(observations_fts, rowid, title, content, tool_name, type, project, topic_key)
+    VALUES ('delete', old.id, old.title, old.content, old.tool_name, old.type, old.project, old.topic_key);
+    INSERT INTO observations_fts(rowid, title, content, tool_name, type, project, topic_key)
+    VALUES (new.id, new.title, new.content, new.tool_name, new.type, new.project, new.topic_key);
 END;
 
 -- memory_relations: live schema #3129. source_id/target_id key on
