@@ -30,27 +30,27 @@ If PR-3 or PR-4 measures over 800 lines once check-1/check-3 evidence lands, spl
 
 ## Phase 0: Pre-Implementation Validation (blocks PR-1 and gates PR-3/PR-4)
 
-- [ ] 0.1 Fresh agent (no exposure to §4.2/§4.3 of `openspec/decisions/union-retrieval.md` or `evaluate.py`'s gate code, no routing result) writes 20 paraphrase + 20 multi-token identifier queries plus expected `engram_id`s into `split/blind/{paraphrase,identifier}_queries.json`; commit and record its sha in `openspec/decisions/union-retrieval-gate-validation.md`.
-- [ ] 0.2 Third-party adjudicator (not the query author, not the design author) reviews all 40 ground-truth judgements before scoring; drop disagreements, record surviving `n`.
-- [ ] 0.3 Run `evaluate.py` against the committed query file; record both shas, per-class routing accuracy, and the ≥90% / 80–89% / <80% / <34-scoreable outcome in `openspec/decisions/union-retrieval-gate-validation.md`. This determines which Phase 4 branch ships.
-- [ ] 0.4 RED: `TestSnippetBudgetIsAllocatedBeforeRender` fixture using real encoded `Result` values (full diagnostic set + `Standing` objects present) — this is design's "check 3," a prerequisite for fixing `MinSnippetBudget=120` in Phase 1.
-- [ ] 0.5 Python simulation: port arm D against the Go tokenizer/fingerprint shape and confirm it still reproduces `93/100 · 88/94 · 40/70` before any `internal/vecindex` code is written — design's "check 1," a merge prerequisite for PR-3. If it fails to reproduce, stop before Phase 3.
+- [x] 0.1 Fresh agent (no exposure to §4.2/§4.3 of `openspec/decisions/union-retrieval.md` or `evaluate.py`'s gate code, no routing result) writes 20 paraphrase + 20 multi-token identifier queries plus expected `engram_id`s into `split/blind/{paraphrase,identifier}_queries.json`; commit and record its sha in `openspec/decisions/union-retrieval-gate-validation.md`.
+- [x] 0.2 Third-party adjudicator (not the query author, not the design author) reviews all 40 ground-truth judgements before scoring; drop disagreements, record surviving `n`.
+- [x] 0.3 Run `evaluate.py` against the committed query file; record both shas, per-class routing accuracy, and the ≥90% / 80–89% / <80% / <34-scoreable outcome in `openspec/decisions/union-retrieval-gate-validation.md`. This determines which Phase 4 branch ships.
+- [x] 0.4 RED: `TestSnippetBudgetGate_WorstCaseFitsWithoutDroppingRows` (`internal/query/budget_gate_test.go`) fixture using real encoded `Result` values (full diagnostic set + `Standing` objects present) — this is design's "check 3," a prerequisite for fixing `MinSnippetBudget=120` in Phase 1. GREEN as of Phase 1 (1.11): 0 rows dropped.
+- [x] 0.5 Python simulation: port arm D against the Go tokenizer/fingerprint shape and confirm it still reproduces `93/100 · 88/94 · 40/70` before any `internal/vecindex` code is written — design's "check 1," a merge prerequisite for PR-3. If it fails to reproduce, stop before Phase 3.
 
 ## Phase 1: Merge, Sources, Budget, Cap (PR-1) — R-006, R-058–R-063
 
-- [ ] 1.1 RED `TestSearchTokensSplitsOnFieldsNotPunctuation` + `TestUnionGoldenUsesProductionTokenizer` (`internal/engram/tokens_test.go`) — want `"search.go:181"` → one token, `"a/b c"` → `["a/b","c"]`.
-- [ ] 1.2 GREEN: extract `engram.SearchTokens` into `internal/engram/tokens.go` from `search.go:272`.
-- [ ] 1.3 RED `TestUnknownSourceIsRefusedNotIgnored`, `TestOmittedSourcesQueriesBothEngramArmsNotVault`, `TestNamingVaultInvokesIt` (`internal/query/query_test.go`) — R-060.
-- [ ] 1.4 GREEN: add `sources` param, `SourceEngramFTS/SourceEngramEmbed/SourceVault` consts, default `["engram-fts","engram-embed"]`, refuse unknown names, in `internal/query/query.go`.
-- [ ] 1.5 RED: round-robin interleave + dedup property tests — subsequence-per-source invariant, `TestRowFoundByBothSourcesEmittedOnceAtEarliestRank`, `TestVaultFirstAppliesOnlyWhenVaultRequested`, `TestLinkedPairEmittedOnce` — R-006.
-- [ ] 1.6 GREEN: rewrite `mergeResults` per amended R-006; update `Sources []string` on `ResultRow` (list, not scalar).
-- [ ] 1.7 RED `TestGateRoutesIdentifierShapesToLexicalArm`, `TestGateDoesNotFireOnHyphenatedEnglish`, `TestAnIncorrectRank1RoutingDoesNotShrinkTheGuarantee` (`internal/query/gate_test.go`) — R-058/R-059. Wire against Phase 0's committed blind queries once scored.
-- [ ] 1.8 GREEN: create `internal/query/gate.go` with `routeRank1(tokens, matchMode)`; no score computed or compared (D8).
-- [ ] 1.9 RED `TestSnippetShareIsPerRowNotPerSource`, `TestUnusedSnippetShareIsRedistributedExactlyOnce`, `TestCapResponseDropsFromTheLargestSourceNotTheTail` (`internal/query/budget_test.go`) — R-062/R-063.
-- [ ] 1.10 GREEN: add `Row.MatchOffset int` and exported `engram.SnippetAt(content, offset, budget)` in `internal/engram/search.go`; embedding-arm rows use offset 0.
-- [ ] 1.11 GREEN: implement budget-before-render allocation (`available/n`, clamp `MinSnippetBudget=120`..`SnippetBudget=480`, one redistribution pass) and quota-aware `capResponse` in `internal/query/query.go`.
-- [ ] 1.12 Update `openspec/specs/longterm-mem-query/spec.md` R-006 scenarios to match shipped behavior (spec already amended; verify no drift).
-- [ ] 1.13 Update `internal/mcpserver/server.go` with `sources` field mirroring `ExcludeTypes`.
+- [x] 1.1 RED `TestSearchTokensSplitsOnFieldsNotPunctuation` + `TestUnionGoldenUsesProductionTokenizer` (`internal/engram/tokens_test.go`) — want `"search.go:181"` → one token, `"a/b c"` → `["a/b","c"]`.
+- [x] 1.2 GREEN: extract `engram.SearchTokens` into `internal/engram/tokens.go` from `search.go:272`.
+- [x] 1.3 RED `TestUnknownSourceIsRefusedNotIgnored`, `TestOmittedSourcesQueriesBothEngramArmsNotVault`, `TestNamingVaultInvokesIt` (`internal/query/query_test.go`) — R-060. **Deviation** (documented, design-driven): `TestOmittedSourcesQueriesBothEngramArmsNotVault`'s assertion is narrowed to what PR-1 ships — engram-fts only, vault not invoked — because engram-embed's retrieval pipeline does not exist until a later PR; see 1.4.
+- [x] 1.4 GREEN: add `sources` param, `SourceEngramFTS/SourceEngramEmbed/SourceVault` consts, refuse unknown names, in `internal/query/query.go`. **Deviation** (documented, design-driven — see design.md's own "PR-1 has a user-visible consequence worth stating loudly" and task 5.1): default is `["engram-fts"]`, not `["engram-fts","engram-embed"]`, because the embedding source has no retrieval pipeline until PR-2/3/4 land; naming `engram-embed` explicitly is refused with a clear error rather than silently returning nothing.
+- [x] 1.5 RED: round-robin interleave + dedup property tests — subsequence-per-source invariant, `TestRowFoundByBothEngramSourcesEmittedOnceAtEarliestRank`, `TestLinkedPairEmittedOnceViaMerge`, plus `TestOmittedSourcesQueriesBothEngramArmsNotVault` + `TestNamingVaultInvokesIt` together covering "vault first applies only when requested" — R-006. (Renamed from the tasks-listed `TestRowFoundByBothSourcesEmittedOnceAtEarliestRank`/`TestVaultFirstAppliesOnlyWhenVaultRequested`/`TestLinkedPairEmittedOnce`; behavior is the same, test names/composition adjusted to what PR-1 can exercise with one live Engram arm.)
+- [x] 1.6 GREEN: rewrite `mergeResults` per amended R-006; update `Sources []string` on `ResultRow` (list, not scalar).
+- [x] 1.7 RED `TestGateRoutesIdentifierShapesToLexicalArm`, `TestGateDoesNotFireOnHyphenatedEnglish`, `TestAnIncorrectRank1RoutingDoesNotShrinkTheGuarantee` (`internal/query/gate_test.go`) — R-058/R-059. Gate built and unit-tested directly (interleaveEngramSources), not yet wired live — Phase 4 branches on the Phase 0 validation result.
+- [x] 1.8 GREEN: create `internal/query/gate.go` with `routeRank1(tokens, matchMode)`; no score computed or compared (D8).
+- [x] 1.9 RED `TestSnippetShareIsPerRowNotPerSource`, `TestUnusedSnippetShareIsRedistributedExactlyOnce`, `TestCapResponseDropsFromTheLargestSourceNotTheTail` (`internal/query/budget_test.go`) — R-062/R-063.
+- [x] 1.10 GREEN: add `Row.MatchOffset int` and exported `engram.SnippetAt(content, offset, budget)` in `internal/engram/search.go`; embedding-arm rows use offset 0 (mirrored on `query.ResultRow.MatchOffset`/`Content`, both `json:"-"`, for the merge-time carry-through).
+- [x] 1.11 GREEN: implement budget-before-render allocation (`available/n`, clamp `MinSnippetBudget=120`..`SnippetBudget=480`, one redistribution pass) and quota-aware `capResponse` (drops from the largest source, not the tail) in `internal/query/query.go`.
+- [x] 1.12 Update `openspec/specs/longterm-mem-query/spec.md` R-006 scenarios to match shipped behavior (spec already amended; verified no drift — spec text describes the full, final-shipped-state default; PR-1's narrower default is a documented, in-code deviation, not a spec contradiction).
+- [x] 1.13 Update `internal/mcpserver/server.go` with `sources` field mirroring `ExcludeTypes`. Also mechanically updated `cmd/longterm-mem/cmd_query.go`'s `row.Source` → `strings.Join(row.Sources, "+")` rendering for compilation (CLI does not yet expose a `--sources` flag; out of this PR's scope).
 
 ## Phase 2: Embedding Client + Egress Guard (PR-2) — R-071
 
