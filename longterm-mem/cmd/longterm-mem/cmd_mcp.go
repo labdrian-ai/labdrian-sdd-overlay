@@ -18,8 +18,8 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
 )
 
-// cmdMCP implements `longterm-mem mcp` (R-012, R-034): serve the query and
-// promote tools over MCP stdio until the client closes stdin or the
+// cmdMCP implements `longterm-mem mcp` (R-012, R-034): serve the query,
+// get and promote tools over MCP stdio until the client closes stdin or the
 // process receives SIGINT/SIGTERM, at which point Run returns and the
 // process exits -- no persistent daemon survives the session. Each tool
 // call resolves its own project's vault fresh (the call carries project,
@@ -56,6 +56,19 @@ func cmdMCP(args []string) int {
 				return query.Result{}, err
 			}
 			return runQuery(ctx, store, vaultRoot, req)
+		},
+		// Get reads one observation whole, through the same read-only
+		// store the query tool searches. It takes no project: an id
+		// already names exactly one row, and asking for a project too
+		// would let a caller be told "not found" for an observation that
+		// exists, which is the one answer this tool must never give
+		// wrongly -- it is where a truncated snippet sends people.
+		Get: func(_ context.Context, engramID int64) (mcpserver.GetOutcome, error) {
+			o, found, err := store.ObservationByID(engramID)
+			if err != nil {
+				return mcpserver.GetOutcome{}, err
+			}
+			return mcpserver.GetOutcome{Observation: o, Found: found}, nil
 		},
 		// A promotion that wrote a page rebuilds the vault index before
 		// the call returns, exactly as cmd_sync.go does: without it a page

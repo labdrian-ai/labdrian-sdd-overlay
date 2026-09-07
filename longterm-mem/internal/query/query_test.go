@@ -3,9 +3,11 @@ package query
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
@@ -43,6 +45,47 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObservation) *engram.Stor
 		if _, err := setup.Exec(
 			`INSERT INTO observations (session_id, type, title, content, project) VALUES (?, ?, ?, ?, ?)`,
 			"sess-1", "discovery", r.title, r.content, r.project,
+		); err != nil {
+			setup.Close()
+			t.Fatalf("insert fixture observation %q: %v", r.title, err)
+		}
+	}
+	setup.Close()
+
+	store, err := engram.Open(dbPath)
+	if err != nil {
+		t.Fatalf("engram.Open(%q): %v", dbPath, err)
+	}
+	t.Cleanup(func() { _ = store.Close() })
+	return store
+}
+
+// typedObservation is a fixture row that also carries its Engram type,
+// which the plain fixtureObservation fixes to "discovery".
+type typedObservation struct{ title, content, project, obsType string }
+
+// newFixtureEngramStoreTyped is newFixtureEngramStore with a
+// caller-controlled observation type, for the type filter's tests.
+func newFixtureEngramStoreTyped(t *testing.T, rows []typedObservation) *engram.Store {
+	t.Helper()
+
+	schema, err := os.ReadFile(filepath.Join("..", "engram", "testdata", "schema.sql"))
+	if err != nil {
+		t.Fatalf("read engram schema fixture: %v", err)
+	}
+	dbPath := filepath.Join(t.TempDir(), "engram.db")
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	if _, err := setup.Exec(string(schema)); err != nil {
+		setup.Close()
+		t.Fatalf("apply engram schema fixture: %v", err)
+	}
+	for _, r := range rows {
+		if _, err := setup.Exec(
+			`INSERT INTO observations (session_id, type, title, content, project) VALUES (?, ?, ?, ?, ?)`,
+			"sess-1", r.obsType, r.title, r.content, r.project,
 		); err != nil {
 			setup.Close()
 			t.Fatalf("insert fixture observation %q: %v", r.title, err)
@@ -109,11 +152,11 @@ func TestQuery_LinkedPairEmittedOnce(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "linked observation", content: "shared topic notes", project: "proj-a"},
 	})
-	rows, err := store.Search("proj-a", "shared", 10)
-	if err != nil || len(rows) != 1 {
-		t.Fatalf("fixture setup: Search = %+v, %v", rows, err)
+	search, err := store.Search("proj-a", "shared", 10)
+	if err != nil || len(search.Rows) != 1 {
+		t.Fatalf("fixture setup: Search = %+v, %v", search, err)
 	}
-	linkedID := rows[0].ID
+	linkedID := search.Rows[0].ID
 	vaultResult := vault.Result{
 		Status:     vault.StatusOK,
 		Candidates: []vault.Candidate{{PageAddress: "c-000042", AbsolutePath: "/vault/c-000042.md", Snippet: "vault side snippet"}},
@@ -388,4 +431,260 @@ func newRelatedFixtureStore(t *testing.T) (*engram.Store, int64, int64) {
 	}
 	t.Cleanup(func() { _ = store.Close() })
 	return store, ids[0], ids[1]
+}
+
+// TestQuery_ReportsAWidenedSearch keeps the AND->OR fallback from being a
+// silent rewrite. Broadening the query is the right answer to an empty
+// precise one, but the caller is then reading results that satisfy one of
+// its words rather than all of them, and nothing in the rows themselves
+// says so.
+func TestQuery_ReportsAWidenedSearch(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "writer", content: "the register writer sorts its keys", project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "what conventions apply when editing the register writer", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("len(Results) = %d, want 1: the widened search must find the row the precise one missed", len(got.Results))
+	}
+	if !hasDiagnostic(got, DiagnosticSearchWidened) {
+		t.Fatalf("no %s diagnostic; diagnostics = %+v", DiagnosticSearchWidened, got.Diagnostics)
+	}
+}
+
+// TestQuery_SaysNothingAboutWideningWhenItDidNotWiden guards the other
+// direction: a diagnostic on every call is a diagnostic nobody reads.
+func TestQuery_SaysNothingAboutWideningWhenItDidNotWiden(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "both", content: "canonical identity resolution", project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "canonical identity", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if hasDiagnostic(got, DiagnosticSearchWidened) {
+		t.Fatalf("unexpected %s diagnostic on a search that matched every token: %+v", DiagnosticSearchWidened, got.Diagnostics)
+	}
+}
+
+func hasDiagnostic(r Result, code string) bool {
+	for _, d := range r.Diagnostics {
+		if d.Code == code {
+			return true
+		}
+	}
+	return false
+}
+
+// TestQuery_EngramRowShipsAnExtractNotTheWholeBody is the payload fix.
+// mergeResults assigned Snippet: er.Content, so a query put every matched
+// observation body on the wire in full. Measured on the live corpus for
+// "canonical identity": 30,075 of 33,877 response bytes -- 88.8% -- were
+// Engram bodies, and the largest single body was 42,757 bytes.
+func TestQuery_EngramRowShipsAnExtractNotTheWholeBody(t *testing.T) {
+	body := strings.Repeat("padding ", 900) + " the zephyr decision " + strings.Repeat("padding ", 900)
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "buried", content: body, project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("len(Results) = %d, want 1", len(got.Results))
+	}
+	row := got.Results[0]
+	if len(row.Snippet) >= len(body) {
+		t.Fatalf("Snippet is %d bytes against a %d-byte body: the whole observation is still on the wire", len(row.Snippet), len(body))
+	}
+	if !strings.Contains(row.Snippet, "zephyr") {
+		t.Fatalf("Snippet is not centred on the match:\n%q", row.Snippet)
+	}
+	if !row.SnippetTruncated {
+		t.Fatalf("SnippetTruncated = false: a caller cannot tell this preview from the whole memory")
+	}
+	if row.FullLength != len(body) {
+		t.Fatalf("FullLength = %d, want %d: truncation is only honest if the caller is told how much is missing", row.FullLength, len(body))
+	}
+}
+
+// TestQuery_VaultRowIsNotMarkedTruncated keeps the truncation fields
+// meaning one thing. A vault snippet is cut by the vault's own retriever
+// before longterm-mem ever sees it, so this module has no full body to
+// compare against and must not claim to know one.
+func TestQuery_VaultRowIsNotMarkedTruncated(t *testing.T) {
+	store := newFixtureEngramStore(t, nil)
+	vaultResult := vault.Result{
+		Status:     vault.StatusOK,
+		Candidates: []vault.Candidate{{PageAddress: "c-000001", AbsolutePath: "/v/c-000001.md", Snippet: "vault side snippet"}},
+	}
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vaultResult, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if got.Results[0].SnippetTruncated || got.Results[0].FullLength != 0 {
+		t.Fatalf("vault row claims a truncation it cannot know about: %+v", got.Results[0])
+	}
+}
+
+// bigFixture builds n observations whose bodies all match the query and
+// are each far larger than one row's share of the response ceiling.
+func bigFixture(n int) []fixtureObservation {
+	rows := make([]fixtureObservation, 0, n)
+	for i := 0; i < n; i++ {
+		rows = append(rows, fixtureObservation{
+			title:   "row " + string(rune('a'+i)),
+			content: strings.Repeat("padding ", 1200) + " the zephyr decision " + strings.Repeat("padding ", 1200),
+			project: "proj-a",
+		})
+	}
+	return rows
+}
+
+// TestQuery_ResponseNeverExceedsTheCeiling is the hard bound. Capping each
+// row is not enough on its own: rows vary by orders of magnitude and a
+// caller can ask for fifty of them, so a per-row budget multiplied by an
+// unbounded row count is not a bound at all. The ceiling is on the whole
+// assembled response, measured in the bytes that actually go on the wire.
+func TestQuery_ResponseNeverExceedsTheCeiling(t *testing.T) {
+	store := newFixtureEngramStore(t, bigFixture(20))
+	candidates := make([]vault.Candidate, 0, 20)
+	for i := 0; i < 20; i++ {
+		candidates = append(candidates, vault.Candidate{
+			PageAddress:  "c-00000" + string(rune('a'+i)),
+			AbsolutePath: "/vault/very/long/path/to/a/page/" + strings.Repeat("segment/", 8) + "page.md",
+			Snippet:      strings.Repeat("vault snippet text ", 20),
+		})
+	}
+	deps := Deps{
+		Engram:        store,
+		RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK, Candidates: candidates}, nil),
+		ResolveLink:   NoLinkResolver,
+	}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	encoded, err := json.Marshal(got)
+	if err != nil {
+		t.Fatalf("marshal result: %v", err)
+	}
+	if len(encoded) > ResponseByteCeiling {
+		t.Fatalf("response is %d bytes, over the %d-byte (%d-token) ceiling", len(encoded), ResponseByteCeiling, ResponseTokenCeiling)
+	}
+	if !hasDiagnostic(got, DiagnosticResponseCapped) {
+		t.Fatalf("the response was cut to fit and did not say so; diagnostics = %+v", got.Diagnostics)
+	}
+}
+
+// TestQuery_CeilingKeepsTheMergeOrder guards the one thing the ceiling
+// must not do. Dropping the tail of an over-budget response preserves
+// which rows outrank which; reordering or re-scoring to fit more in would
+// be re-ranking, which this module is forbidden to do (R-006, D8).
+func TestQuery_CeilingKeepsTheMergeOrder(t *testing.T) {
+	store := newFixtureEngramStore(t, bigFixture(20))
+	deps := Deps{
+		Engram: store,
+		RetrieveVault: fakeRetrieveVault(vault.Result{
+			Status:     vault.StatusOK,
+			Candidates: []vault.Candidate{{PageAddress: "c-first", AbsolutePath: "/v/first.md", Snippet: "first"}},
+		}, nil),
+		ResolveLink: NoLinkResolver,
+	}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 20})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) == 0 {
+		t.Fatalf("the ceiling emptied the response entirely")
+	}
+	if got.Results[0].Source != SourceVault || got.Results[0].PageAddress != "c-first" {
+		t.Fatalf("Results[0] = %+v, want the vault row still first", got.Results[0])
+	}
+	for i, row := range got.Results {
+		if row.Rank != i+1 {
+			t.Fatalf("Results[%d].Rank = %d, want %d: the ceiling must not renumber what it kept", i, row.Rank, i+1)
+		}
+	}
+}
+
+// TestQuery_SmallResponseIsUntouched keeps the ceiling from being a second
+// cap on ordinary calls. A response that already fits must come back whole
+// and must not claim it was cut.
+func TestQuery_SmallResponseIsUntouched(t *testing.T) {
+	store := newFixtureEngramStore(t, []fixtureObservation{
+		{title: "small", content: "a short note about zephyr", project: "proj-a"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Snippet != "a short note about zephyr" {
+		t.Fatalf("a response well under the ceiling was altered: %+v", got.Results)
+	}
+	if hasDiagnostic(got, DiagnosticResponseCapped) {
+		t.Fatalf("unexpected %s on a response that already fits", DiagnosticResponseCapped)
+	}
+}
+
+// TestQuery_ExcludeTypesFiltersAndSaysSo. Filtering is not re-ranking:
+// D8 forbids fusing scores across sources, not declining to return a row,
+// and the rows that survive keep their merge order. But a corpus quietly
+// narrowed is the same failure as a corpus quietly empty, so an applied
+// filter is always reported.
+func TestQuery_ExcludeTypesFiltersAndSaysSo(t *testing.T) {
+	store := newFixtureEngramStoreTyped(t, []typedObservation{
+		{title: "the summary", content: "zephyr came up in this session", project: "proj-a", obsType: "session_summary"},
+		{title: "the decision", content: "zephyr was chosen deliberately", project: "proj-a", obsType: "decision"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10, ExcludeTypes: []string{"session_summary"}})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 || got.Results[0].Title != "the decision" {
+		t.Fatalf("Results = %+v, want only the non-excluded type", got.Results)
+	}
+	if !hasDiagnostic(got, DiagnosticTypesExcluded) {
+		t.Fatalf("the corpus was narrowed and did not say so; diagnostics = %+v", got.Diagnostics)
+	}
+}
+
+// TestQuery_NoFilterByDefault. The default excludes nothing, and that is
+// a measured choice rather than caution: on the live corpus
+// session_summary is 71 of 581 rows (12%) and took 5 of 36 top-5 slots
+// across eight real queries (14%). bm25 is already ranking it at about
+// its share, so a default exclusion would remove real answers to buy a
+// relevance gain the measurement does not show.
+func TestQuery_NoFilterByDefault(t *testing.T) {
+	store := newFixtureEngramStoreTyped(t, []typedObservation{
+		{title: "the summary", content: "zephyr came up in this session", project: "proj-a", obsType: "session_summary"},
+	})
+	deps := Deps{Engram: store, RetrieveVault: fakeRetrieveVault(vault.Result{Status: vault.StatusOK}, nil), ResolveLink: NoLinkResolver}
+
+	got, err := Run(context.Background(), deps, Request{Project: "proj-a", Query: "zephyr", Top: 10})
+	if err != nil {
+		t.Fatalf("Run: %v", err)
+	}
+	if len(got.Results) != 1 {
+		t.Fatalf("a query with no filter lost a row: %+v", got.Results)
+	}
+	if hasDiagnostic(got, DiagnosticTypesExcluded) {
+		t.Fatalf("unexpected %s on an unfiltered query", DiagnosticTypesExcluded)
+	}
 }

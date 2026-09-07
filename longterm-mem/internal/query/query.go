@@ -6,8 +6,10 @@ package query
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
@@ -58,13 +60,84 @@ const (
 	// calling the query tool never sees, so the freeze was invisible
 	// precisely where it lasts longest.
 	DiagnosticEngramDegradedSnapshot = "engram_degraded_snapshot"
+
+	// DiagnosticSearchWidened reports that requiring every query token
+	// found nothing, so the search was retried requiring any one of them.
+	// The rows below it are real matches on part of the query, not on the
+	// whole of it, and are worth correspondingly less trust -- which is
+	// invisible in the rows themselves.
+	//
+	// The alternative was to widen silently. It is worse than it looks:
+	// the failure being fixed here IS a silent one, and answering it with
+	// a second silence trades an empty result nobody can see for a broad
+	// result nobody can see either.
+	DiagnosticSearchWidened = "search_widened"
+
+	// DiagnosticSearchStopwordsDropped names the query tokens that were
+	// removed before searching, so a caller can tell a corpus with no
+	// answer from a query that was quietly rewritten.
+	DiagnosticSearchStopwordsDropped = "search_stopwords_dropped"
+
+	// DiagnosticResponseCapped reports that the assembled response did not
+	// fit under ResponseTokenCeiling, so its tail was dropped. It names how
+	// many rows were dropped, because "these are the results" and "these
+	// are the results that fit" are different statements and only one of
+	// them is true here.
+	DiagnosticResponseCapped = "response_capped"
+
+	// DiagnosticTypesExcluded names the observation types the caller asked
+	// to leave out. A corpus quietly narrowed is the same failure as a
+	// corpus quietly empty: in both cases the caller reads "there is
+	// nothing else" from a result that does not say that.
+	DiagnosticTypesExcluded = "types_excluded"
 )
+
+// ResponseTokenCeiling is the hard bound on one response, in tokens.
+//
+// It is on the WHOLE response rather than on a row count, because rows
+// vary by orders of magnitude -- the measured Engram body p50 is 4,483
+// bytes and the maximum 42,757 -- so any fixed number of rows bounds
+// nothing. It is a ceiling rather than an expectation because a limit
+// that is hoped for is not a limit: a caller may ask for fifty rows, and
+// the only place that can be refused is where the response is assembled.
+const ResponseTokenCeiling = 2000
+
+// ResponseByteCeiling is ResponseTokenCeiling in bytes.
+//
+// Four bytes per token is an approximation, not a tokenizer. It is used
+// deliberately: this package has no tokenizer available and inventing a
+// precise-looking one would be worse than an honest ratio. The ratio is
+// the same one every measurement behind this change was derived at, so
+// the ceiling is stated in the same units the evidence was.
+const ResponseByteCeiling = ResponseTokenCeiling * bytesPerToken
+
+const bytesPerToken = 4
 
 // Request is one Run call's input; Project is required.
 type Request struct {
 	Project string
 	Query   string
 	Top     int
+	// ExcludeTypes are Engram observation types to leave out.
+	//
+	// It is a filter, not a re-ranking, and the distinction is what makes
+	// it permissible: D8 forbids fusing scores across sources, and the
+	// rows that survive an exclusion keep exactly the merge order they
+	// had. Excluding a type is declining to return a row, not deciding it
+	// is worth less than another one.
+	//
+	// The default excludes nothing, and that is measured rather than
+	// timid. session_summary is the obvious candidate -- 71 of the live
+	// project's 581 observations, and the type whose bodies run 15k-43k
+	// bytes -- but the payload argument for excluding it is spent: those
+	// bodies now cost one snippet like every other row. The relevance
+	// argument does not survive measurement either: across eight real
+	// queries session_summary took 5 of 36 top-5 slots, about its 12%
+	// share of the corpus, so bm25 is already ranking it fairly. A
+	// default exclusion would drop real answers to buy a gain the numbers
+	// do not show. A caller who knows it wants implementation memory
+	// rather than session narrative can still say so.
+	ExcludeTypes []string
 }
 
 // Deps are Run's dependencies. RetrieveVault/ResolveLink are function seams
@@ -95,18 +168,49 @@ type ResultRow struct {
 	EngramID    int64  `json:"engram_id,omitempty"`
 	Title       string `json:"title,omitempty"`
 	Snippet     string `json:"snippet,omitempty"`
-	Score       *Score `json:"score,omitempty"`
+	// SnippetTruncated reports that Snippet is an extract of a longer
+	// body, and FullLength says how long that body is in bytes.
+	//
+	// They are the machine-readable half of a statement the snippet text
+	// also makes with a "…" at each cut edge, and both halves are
+	// required. A person reading the text needs the marker; a program
+	// deciding whether to fetch the rest needs the fields, and cannot be
+	// asked to look for an ellipsis. Without them a caller has no way to
+	// tell a preview from a whole memory, and will make a decision on a
+	// fragment that looked complete -- which is exactly the failure a cap
+	// introduces if it is shipped without visibility.
+	//
+	// A vault row leaves both zero: its snippet was cut by the vault's own
+	// retriever before this module saw it, so there is no full body here
+	// to measure and no claim to make about one.
+	SnippetTruncated bool   `json:"snippet_truncated,omitempty"`
+	FullLength       int    `json:"full_length,omitempty"`
+	Score            *Score `json:"score,omitempty"`
 	// Standing is what Engram's relation ledger says about this
 	// observation: replaced, contradicted, or flagged and never decided.
 	// It is nil when there is nothing to say, and absent from a vault-only
 	// row, which has no observation behind it.
 	//
-	// It is carried here because Engram's own search does not carry it.
-	// Verified on a copy of a real database: inserting "B supersedes A"
-	// left A's results byte-identical, still first, unmarked. A memory that
-	// was explicitly replaced therefore reads as current, and gets
-	// reintroduced. This module cannot fix that search (R-002 keeps its
-	// connection read-only); it can decline to repeat the omission.
+	// It is carried here because Engram's own search does not carry it,
+	// and that is established from the SQL rather than from an
+	// experiment. engram.Search selects from observations_fts joined to
+	// observations and nothing else: memory_relations is not in the query,
+	// so no relation can reach a result through it, whatever any
+	// particular database happens to contain.
+	//
+	// An earlier version of this comment claimed the same conclusion from
+	// a probe run "on a copy of a real database". That claim was wrong and
+	// is corrected rather than quietly deleted, because it is the kind of
+	// evidence a later reader would rely on. ENGRAM_DATABASE_URL is
+	// silently ignored, so every probe said to run against a copy in fact
+	// read the live database (Engram observation #3239); the probes
+	// therefore measured nothing about a copy, and an experiment whose
+	// subject is not what it says it is cannot support anything.
+	//
+	// The consequence is unchanged: a memory that was explicitly replaced
+	// reads as current, and gets reintroduced. This module cannot fix that
+	// search (R-002 keeps its connection read-only); it can decline to
+	// repeat the omission.
 	Standing *engram.Standing `json:"standing,omitempty"`
 }
 
@@ -141,9 +245,28 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result := Result{Project: req.Project, Query: req.Query}
-	engramRows, err := deps.Engram.Search(req.Project, req.Query, top)
+	search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
 	if err != nil {
 		return Result{}, fmt.Errorf("query: search engram: %w", err)
+	}
+	engramRows := search.Rows
+	if search.MatchMode == engram.MatchAny {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticSearchWidened,
+			Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
+		})
+	}
+	if len(req.ExcludeTypes) > 0 {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticTypesExcluded,
+			Detail: fmt.Sprintf("these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: %s", strings.Join(req.ExcludeTypes, ", ")),
+		})
+	}
+	if len(search.DroppedTokens) > 0 {
+		result.Diagnostics = append(result.Diagnostics, Diagnostic{
+			Code:   DiagnosticSearchStopwordsDropped,
+			Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
+		})
 	}
 	if degraded, cause := deps.Engram.Degraded(); degraded {
 		result.Diagnostics = append(result.Diagnostics, Diagnostic{
@@ -172,7 +295,63 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	result.Results = mergeResults(vaultRows, engramRows, resolveLink)
 	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
+	capResponse(&result)
 	return result, nil
+}
+
+// capResponse drops rows from the end of result until it encodes within
+// ResponseByteCeiling.
+//
+// From the END, and only from the end. The rows are already in D8's merge
+// order and that order is a correctness guarantee, so the only thing this
+// may do is keep a prefix of it: dropping from the middle, reordering, or
+// re-scoring to pack more in would all be re-ranking, which this module
+// is forbidden to do. Rank numbers are left exactly as merged for the same
+// reason -- a kept row's rank is a fact about the merge, not about how
+// many rows survived the budget.
+//
+// It measures the encoded response rather than estimating it, because the
+// bound is on what goes on the wire and an estimate of that is not a
+// bound. The cost is one marshal per dropped row, on a response that is by
+// definition already too big to be cheap.
+func capResponse(result *Result) {
+	if responseBytes(*result) <= ResponseByteCeiling {
+		return
+	}
+
+	full := len(result.Results)
+	// The diagnostic is appended before the fit is measured so its own
+	// bytes are inside the ceiling, never pushing the response back over
+	// it after the trimming is done.
+	result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticResponseCapped})
+
+	for len(result.Results) > 0 {
+		result.Diagnostics[len(result.Diagnostics)-1].Detail = cappedDetail(full-len(result.Results), full)
+		if responseBytes(*result) <= ResponseByteCeiling {
+			return
+		}
+		result.Results = result.Results[:len(result.Results)-1]
+	}
+	result.Diagnostics[len(result.Diagnostics)-1].Detail = cappedDetail(full, full)
+}
+
+// cappedDetail states what was dropped in the terms a caller needs to act
+// on it: how many results exist that they are not looking at.
+func cappedDetail(dropped, full int) string {
+	return fmt.Sprintf(
+		"this response reached the %d-token ceiling, so %d of %d results were dropped from the end; the rows shown are the highest-ranked ones that fit, and narrowing the query or lowering top will surface the rest",
+		ResponseTokenCeiling, dropped, full)
+}
+
+// responseBytes is the size of result as it will be encoded on the wire.
+func responseBytes(result Result) int {
+	encoded, err := json.Marshal(result)
+	if err != nil {
+		// A Result that cannot be marshalled cannot be sent either, so
+		// there is nothing to cap; the encoder downstream reports it.
+		return 0
+	}
+	return len(encoded)
 }
 
 // attachStandings annotates each row that has an observation behind it.
@@ -235,7 +414,10 @@ func mergeResults(vaultRows []vault.Candidate, engramRows []engram.Row, resolveL
 		if consumed[er.ID] {
 			continue
 		}
-		merged = append(merged, ResultRow{Source: SourceEngram, EngramID: er.ID, Title: er.Title, Snippet: er.Content})
+		merged = append(merged, ResultRow{
+			Source: SourceEngram, EngramID: er.ID, Title: er.Title,
+			Snippet: er.Snippet, SnippetTruncated: er.SnippetTruncated, FullLength: er.ContentLength,
+		})
 	}
 	for i := range merged {
 		merged[i].Rank = i + 1
