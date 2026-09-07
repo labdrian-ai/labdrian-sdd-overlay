@@ -165,6 +165,14 @@ const (
 	// prevent (its own doc comment: "this module's unforgivable
 	// failure").
 	DiagnosticLiveCountUnreadable = "live_count_unreadable"
+	// DiagnosticCoverageCountsInconsistent reports that the embedding
+	// index held MORE observations than the store says are live -- a
+	// stale count, since Live and Indexed come from two separate calls.
+	// Unindexed is clamped to 0 so it never ships negative, and that is
+	// exactly why this code exists: a clamped 0 is byte-for-byte the
+	// value a fully-indexed project reports, so without a name the fix
+	// for a visibly wrong number becomes a plausible wrong one.
+	DiagnosticCoverageCountsInconsistent = "coverage_counts_inconsistent"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.

@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
@@ -215,32 +216,67 @@ func TestRunEmbeddingArm_LiveCountFailureIsNamedAndNeverNegative(t *testing.T) {
 	}
 }
 
-// TestCoverageUnindexed_NeverNegativeOrClaimedWhenLiveUnknown (JD-2) is the
-// unit-level guard on the pure subtraction: it must never report a
-// negative count, and it must not claim a subtraction happened -- and
-// report 0 -- when Live could not be measured at all.
-func TestCoverageUnindexed_NeverNegativeOrClaimedWhenLiveUnknown(t *testing.T) {
+// TestCoverageUnindexed_StaleCountIsNamedNotJustClamped (JD-2, JD-5) is the guard
+// on the clamp itself. Clamping `live < indexed` to 0 removes a negative
+// number that was at least visibly wrong and replaces it with 0 -- which
+// is byte-for-byte the value a fully-indexed project reports. A caller
+// cannot tell the two apart from the number, so the clamp must say it
+// fired; otherwise this is the same silent wrong answer JD-2 was raised to
+// remove, surviving one call deeper.
+func TestCoverageUnindexed_StaleCountIsNamedNotJustClamped(t *testing.T) {
 	cases := []struct {
 		name          string
 		live, indexed int
 		liveKnown     bool
 		want          int
+		wantStale     bool
 	}{
-		{name: "normal gap", live: 10, indexed: 4, liveKnown: true, want: 6},
-		{name: "fully indexed", live: 5, indexed: 5, liveKnown: true, want: 0},
-		{name: "live unknown, indexed positive", live: 0, indexed: 3, liveKnown: false, want: 0},
-		{name: "live known but less than indexed (stale count)", live: 2, indexed: 5, liveKnown: true, want: 0},
+		{name: "normal gap", live: 10, indexed: 4, liveKnown: true, want: 6, wantStale: false},
+		{name: "fully indexed", live: 5, indexed: 5, liveKnown: true, want: 0, wantStale: false},
+		{name: "live unknown", live: 0, indexed: 3, liveKnown: false, want: 0, wantStale: false},
+		{name: "stale count, clamp fires", live: 2, indexed: 5, liveKnown: true, want: 0, wantStale: true},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got := coverageUnindexed(tc.live, tc.indexed, tc.liveKnown)
+			got, stale := coverageUnindexed(tc.live, tc.indexed, tc.liveKnown)
 			if got != tc.want {
 				t.Fatalf("coverageUnindexed(%d, %d, %v) = %d, want %d", tc.live, tc.indexed, tc.liveKnown, got, tc.want)
 			}
 			if got < 0 {
-				t.Fatalf("coverageUnindexed returned a negative value: %d", got)
+				t.Fatalf("coverageUnindexed returned a negative value: %d (JD-2)", got)
+			}
+			if stale != tc.wantStale {
+				t.Fatalf("coverageUnindexed(%d, %d, %v) reported stale=%v, want %v -- a clamped 0 that does not say it was clamped is indistinguishable from full coverage", tc.live, tc.indexed, tc.liveKnown, stale, tc.wantStale)
 			}
 		})
+	}
+}
+
+// TestStaleCoverageDiagnostic_CarriesBothCounts (JD-5) covers what is
+// coverable here, and its name says so. runEmbeddingArm's clamp branch is
+// NOT exercised: coverage.Indexed is len(LiveObservationsByID(project, ...)),
+// which filters by the same project CountLiveObservations counts, so
+// indexed <= live holds on every path a test can construct. The branch
+// exists for the race between those two reads -- a writer soft-deleting
+// between them -- which needs a seam in engram.Store to force, and this
+// package has none. Naming that here is the point: a test called
+// TestRunEmbeddingArm_* that never calls runEmbeddingArm would be the
+// green check that cannot fail, which is the defect class this whole
+// change keeps re-finding.
+func TestStaleCoverageDiagnostic_CarriesBothCounts(t *testing.T) {
+	diags := staleCoverageDiagnostics(3, 7)
+	if len(diags) != 1 || diags[0].Code != DiagnosticCoverageCountsInconsistent {
+		t.Fatalf("staleCoverageDiagnostics = %+v, want one %q", diags, DiagnosticCoverageCountsInconsistent)
+	}
+	// Both counts must appear: "the counts disagree" without saying which
+	// pair disagreed leaves the reader exactly where the bare 0 did.
+	for _, want := range []string{"7", "3"} {
+		if !strings.Contains(diags[0].Detail, want) {
+			t.Fatalf("diagnostic detail %q omits the count %q", diags[0].Detail, want)
+		}
+	}
+	if !strings.Contains(diags[0].Detail, "not mean this project is fully indexed") {
+		t.Fatalf("diagnostic detail %q does not deny the reading it exists to deny", diags[0].Detail)
 	}
 }
 

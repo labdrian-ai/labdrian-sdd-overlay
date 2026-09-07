@@ -88,7 +88,7 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 		// on-disk index) both degrade to "no rows, coverage says so" --
 		// neither is a call failure, since the union's @5 guarantee is
 		// unaffected by one arm having nothing to contribute (R-058).
-		coverage.Unindexed = coverageUnindexed(coverage.Live, 0, liveKnown)
+		coverage.Unindexed, _ = coverageUnindexed(coverage.Live, 0, liveKnown)
 		return nil, coverage, diags
 	}
 	coverage.BuiltAt = idx.Manifest.BuiltAt
@@ -102,7 +102,11 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 		liveByID = map[int64]engram.Observation{}
 	}
 	coverage.Indexed = len(liveByID)
-	coverage.Unindexed = coverageUnindexed(coverage.Live, coverage.Indexed, liveKnown)
+	var staleCounts bool
+	coverage.Unindexed, staleCounts = coverageUnindexed(coverage.Live, coverage.Indexed, liveKnown)
+	if staleCounts {
+		diags = append(diags, staleCoverageDiagnostics(coverage.Live, coverage.Indexed)...)
+	}
 
 	if embedFn == nil {
 		return nil, coverage, diags
@@ -154,14 +158,28 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 // unindexed" reading as "fully covered" -- when live is not known at all;
 // the accompanying diagnostic is what carries that uncertainty, this
 // function only guarantees the number itself is never self-contradictory.
-func coverageUnindexed(live, indexed int, liveKnown bool) int {
+// The second return says whether the `live < indexed` clamp fired. It is
+// not a detail the caller may drop: that clamp turns a negative count into
+// 0, and 0 is what a fully-indexed project reports, so the number alone
+// can no longer distinguish "covered" from "our two counts disagree".
+func coverageUnindexed(live, indexed int, liveKnown bool) (int, bool) {
 	if !liveKnown {
-		return 0
+		return 0, false
 	}
 	if live < indexed {
-		return 0
+		return 0, true
 	}
-	return live - indexed
+	return live - indexed, false
+}
+
+// staleCoverageDiagnostics names a fired clamp in the caller's terms: both
+// counts, so the reader can see which pair disagreed rather than being told
+// only that something did.
+func staleCoverageDiagnostics(live, indexed int) []Diagnostic {
+	return []Diagnostic{{
+		Code:   DiagnosticCoverageCountsInconsistent,
+		Detail: fmt.Sprintf("the embedding index holds %d observations but the store reports only %d live, so coverage's unindexed count is clamped to 0 rather than measured -- it does not mean this project is fully indexed", indexed, live),
+	}}
 }
 
 // embeddingDegradationDiagnostic names which of the two conditions R-070
