@@ -191,8 +191,39 @@ func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
 	}
 	plan.PatchAddresses = addresses
 	plan.WouldPatch = len(addresses)
-	plan.Failed = append(plan.Failed, patchFailures...)
+	plan.Failed = mergeFailures(plan.Failed, patchFailures)
 	return plan, nil
+}
+
+// mergeFailures joins the two passes' failure lists, dropping an entry the
+// other pass already reported IDENTICALLY.
+//
+// Both passes call findPromotedPage on the same observation, so a page
+// whose frontmatter cannot be parsed fails both with the same message, and
+// one broken page arrived in the list twice: an operator reading "2
+// failures" goes looking for a second broken page that does not exist.
+//
+// Only an exact repeat is dropped. Two DIFFERENT failures for the same
+// observation are two real problems -- the promotion pass and the patch
+// pass ask different questions of it -- and collapsing those would hide
+// one, which is the same lie in the other direction.
+func mergeFailures(first, second []SyncFailure) []SyncFailure {
+	seen := make(map[string]bool, len(first))
+	key := func(f SyncFailure) string {
+		return fmt.Sprintf("%d\x00%v", f.ObservationID, f.Err)
+	}
+	for _, f := range first {
+		seen[key(f)] = true
+	}
+	merged := first
+	for _, f := range second {
+		if seen[key(f)] {
+			continue
+		}
+		seen[key(f)] = true
+		merged = append(merged, f)
+	}
+	return merged
 }
 
 // failureError summarizes op's per-observation failures as one error,

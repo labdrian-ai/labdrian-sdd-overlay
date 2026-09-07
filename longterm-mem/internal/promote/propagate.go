@@ -35,9 +35,62 @@ type PropagateReport struct {
 // longterm-mem's own last write and erase the divergence R-030 depends
 // on, letting the next sync overwrite that edit in silence.
 func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport, error) {
+	var report PropagateReport
+	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
+		pagePath := filepath.Join(deps.Writer.VaultRoot, pagePathPrefix, t.Address+".md")
+		frontmatterHash, _, err := PatchStatusFields(pagePath, t.Status, t.Related)
+		if err != nil {
+			return fmt.Errorf("patch %s: %w", pagePath, err)
+		}
+		// Only the frontmatter hash moves: longterm-mem wrote that block,
+		// and nothing else. Recording the on-disk body as our own last
+		// write would stamp a human's edit as ours and erase the
+		// divergence R-030 depends on, so a later Sync would overwrite
+		// that edit in silence. An absent entry keeps its zero BodyHash,
+		// which UpdateInPlace reads as diverged and refuses -- the safe
+		// side for a page whose body nobody can prove we wrote.
+		entry, _ := deps.Writer.Store.Get(t.Address)
+		entry.FrontmatterHash = frontmatterHash
+		deps.Writer.Store.Set(t.Address, entry)
+		report.Patched = append(report.Patched, t.Address)
+		return nil
+	})
+	if err != nil {
+		return PropagateReport{}, err
+	}
+	report.Failed = failed
+
+	if len(report.Patched) > 0 {
+		if err := deps.Writer.Store.Save(deps.Writer.VaultRoot); err != nil {
+			return report, fmt.Errorf("promote: propagate: persist precedence: %w", err)
+		}
+	}
+	return report, failureError("propagate", report.Failed)
+}
+
+// patchTarget is one already-promoted page the propagation pass would
+// rewrite, with the status it would be rewritten to.
+type patchTarget struct {
+	ObservationID int64
+	Address       string
+	Status        string
+	Related       []string
+}
+
+// eachPatchTarget walks project once and calls visit for every page the
+// propagation pass would rewrite. It returns the observations it could not
+// decide, and an error only when the walk itself could not start.
+//
+// This is the ONE walk. Propagate visits to patch; Plan visits to count.
+// The first attempt at the preview gave it its own copy of this loop and
+// shared only the decision inside it -- which is the same defect the
+// preview exists to prevent, moved one level out: the two copies agreed on
+// the day they were written and nothing structural kept them agreeing. A
+// filter added here is now added for both, because there is only one here.
+func eachPatchTarget(deps Deps, project string, visit func(patchTarget) error) ([]SyncFailure, error) {
 	observations, err := deps.Engram.ObservationsIncludingDeleted(project)
 	if err != nil {
-		return PropagateReport{}, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
+		return nil, fmt.Errorf("promote: propagate: list observations for %q: %w", project, err)
 	}
 
 	bySyncID := make(map[string]engram.Observation, len(observations))
@@ -47,11 +100,11 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 		}
 	}
 
-	var report PropagateReport
+	var failed []SyncFailure
 	for _, obs := range observations {
 		promoted, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(obs.ID))
 		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
+			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
 			continue
 		}
 		if !ok {
@@ -60,38 +113,18 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 
 		status, related, err := decidePatch(deps, project, obs, bySyncID)
 		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
 		}
 		if status == "" {
 			continue
 		}
 
-		pagePath := filepath.Join(deps.Writer.VaultRoot, pagePathPrefix, promoted.Address+".md")
-		frontmatterHash, _, err := PatchStatusFields(pagePath, status, related)
-		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("patch %s: %w", pagePath, err)})
-			continue
-		}
-		// Only the frontmatter hash moves: longterm-mem wrote that block,
-		// and nothing else. Recording the on-disk body as our own last
-		// write would stamp a human's edit as ours and erase the
-		// divergence R-030 depends on, so a later Sync would overwrite
-		// that edit in silence. An absent entry keeps its zero BodyHash,
-		// which UpdateInPlace reads as diverged and refuses -- the safe
-		// side for a page whose body nobody can prove we wrote.
-		entry, _ := deps.Writer.Store.Get(promoted.Address)
-		entry.FrontmatterHash = frontmatterHash
-		deps.Writer.Store.Set(promoted.Address, entry)
-		report.Patched = append(report.Patched, promoted.Address)
-	}
-
-	if len(report.Patched) > 0 {
-		if err := deps.Writer.Store.Save(deps.Writer.VaultRoot); err != nil {
-			return report, fmt.Errorf("promote: propagate: persist precedence: %w", err)
+		if err := visit(patchTarget{ObservationID: obs.ID, Address: promoted.Address, Status: status, Related: related}); err != nil {
+			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: err})
 		}
 	}
-	return report, failureError("propagate", report.Failed)
+	return failed, nil
 }
 
 // resolveStatus determines obs's new status and related wikilinks, or
@@ -163,45 +196,16 @@ func decidePatch(deps Deps, project string, obs engram.Observation, bySyncID map
 	return status, related, nil
 }
 
-// patchCandidates walks project's observations exactly as Propagate does
-// and returns the addresses it would rewrite, plus whatever it could not
-// decide. Propagate itself does not call this -- it needs the resolved
-// status per page as it goes -- but every decision it makes about WHETHER
-// to patch is decidePatch's, which is the part a preview must not
-// re-implement.
+// patchCandidates reports the addresses the propagation pass would
+// rewrite, using the same eachPatchTarget walk Propagate itself runs.
 func patchCandidates(deps Deps, project string) ([]string, []SyncFailure, error) {
-	observations, err := deps.Engram.ObservationsIncludingDeleted(project)
-	if err != nil {
-		return nil, nil, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
-	}
-
-	bySyncID := make(map[string]engram.Observation, len(observations))
-	for _, obs := range observations {
-		if obs.SyncID != "" {
-			bySyncID[obs.SyncID] = obs
-		}
-	}
-
 	var addresses []string
-	var failed []SyncFailure
-	for _, obs := range observations {
-		promoted, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(obs.ID))
-		if err != nil {
-			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
-			continue
-		}
-		if !ok {
-			continue
-		}
-		status, _, err := decidePatch(deps, project, obs, bySyncID)
-		if err != nil {
-			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: err})
-			continue
-		}
-		if status == "" {
-			continue
-		}
-		addresses = append(addresses, promoted.Address)
+	failed, err := eachPatchTarget(deps, project, func(t patchTarget) error {
+		addresses = append(addresses, t.Address)
+		return nil
+	})
+	if err != nil {
+		return nil, nil, err
 	}
 	return addresses, failed, nil
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"os"
 	"path/filepath"
+	"strconv"
 	"testing"
 	"time"
 
@@ -174,5 +175,48 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 	}
 	if plan.PatchAddresses[0] != report.Patched[0] {
 		t.Fatalf("plan named %q, Propagate patched %q", plan.PatchAddresses[0], report.Patched[0])
+	}
+}
+
+// TestPlan_OneBrokenObservationIsReportedOnce (round 2): Plan walks the
+// project twice -- once to decide promotions, once to decide patches -- and
+// both walks call findPromotedPage on the same observation. A page whose
+// frontmatter cannot be parsed fails both, so one broken observation
+// arrived in plan.Failed twice and the CLI printed the same line twice.
+//
+// A failure list that counts one problem as two is the same defect this
+// preview was built to remove, one layer in: the record stops describing
+// what it records. An operator reading "2 failures" goes looking for a
+// second broken page that does not exist.
+func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
+	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+
+	store, ids := newFixtureEngramStore(t, []fixtureObs{
+		{title: "Broken", content: "Body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-b"},
+	}, nil)
+
+	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
+	if err := os.MkdirAll(memoryDir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", memoryDir, err)
+	}
+	broken := "---\ntype: concept\ntitle: \"Broken\"\naddress: c-000900\nstatus: seed\nengram_id: " +
+		strconv.FormatInt(ids[0], 10) + "\nengram_revision: not-a-number\nproject: p\n---\n\nBody.\n"
+	if err := os.WriteFile(filepath.Join(memoryDir, "c-000900.md"), []byte(broken), 0o644); err != nil {
+		t.Fatalf("write broken page: %v", err)
+	}
+
+	deps := Deps{Engram: store, Writer: &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}}
+	plan, err := Plan(context.Background(), deps, "p")
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+
+	if len(plan.Failed) != 1 {
+		t.Fatalf("one broken observation produced %d failure entries: %+v", len(plan.Failed), plan.Failed)
+	}
+	if plan.Failed[0].ObservationID != ids[0] {
+		t.Fatalf("Failed[0].ObservationID = %d, want %d", plan.Failed[0].ObservationID, ids[0])
 	}
 }
