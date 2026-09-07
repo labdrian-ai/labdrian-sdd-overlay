@@ -25,10 +25,17 @@ func cmdSync(args []string) int {
 	fs.SetOutput(os.Stderr)
 	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
+	dryRun := fs.Bool("dry-run", false, "report what sync would promote and write nothing")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
-	resolvedProject, exit := resolveProjectFlag("sync", *project)
+	// A dry run must not record this repository's derived names either: an
+	// operator asking "what would this do" has not asked it to do anything.
+	resolve := resolveProjectFlag
+	if *dryRun {
+		resolve = resolveProjectFlagReadOnly
+	}
+	resolvedProject, exit := resolve("sync", *project)
 	if exit != exitOK {
 		return exit
 	}
@@ -81,6 +88,27 @@ func cmdSync(args []string) int {
 	// exits non-zero when anything failed, so a partial run is visible
 	// without being fatal to the work that can still be done.
 	ctx := context.Background()
+
+	if *dryRun {
+		plan, err := promote.Plan(ctx, deps, resolvedProject)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "longterm-mem: sync --dry-run: %v\n", err)
+			return exitInternal
+		}
+		fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), skip %d, into %s\n", plan.WouldPromote, plan.Skipped, vaultRoot)
+		for _, title := range plan.Titles {
+			fmt.Printf("  would promote: %s\n", title)
+		}
+		for _, f := range plan.Failed {
+			fmt.Fprintf(os.Stderr, "  cannot read promoted state for observation %d: %v\n", f.ObservationID, f.Err)
+		}
+		fmt.Println("longterm-mem: sync --dry-run: nothing was written")
+		if len(plan.Failed) > 0 {
+			return exitInternal
+		}
+		return exitOK
+	}
+
 	syncReport, syncErr := promote.Sync(ctx, deps, resolvedProject)
 	propagateReport, propagateErr := promote.Propagate(ctx, deps, resolvedProject)
 

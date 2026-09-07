@@ -79,17 +79,12 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 
 	var report SyncReport
 	for _, obs := range observations {
-		if !Eligible(obs, false) {
-			report.Skipped++
-			continue
-		}
-
-		promoted, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(obs.ID))
+		decision, err := decidePromotion(deps.Writer.VaultRoot, project, obs)
 		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
+			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
 		}
-		if ok && promoted.Revision >= obs.RevisionCount {
+		if !decision {
 			report.Skipped++
 			continue
 		}
@@ -112,6 +107,73 @@ func Sync(ctx context.Context, deps Deps, project string) (SyncReport, error) {
 		return report, fmt.Errorf("promote: sync: %w", err)
 	}
 	return report, failureError("sync", report.Failed)
+}
+
+// decidePromotion answers the one question Sync asks of each observation:
+// would this run write a page for it? It is extracted so Plan and Sync
+// cannot drift apart -- a dry run that predicts from its own copy of this
+// walk is a preview that stops describing the run the moment either copy
+// changes, and an operator only finds out by running the thing the preview
+// existed to let them avoid.
+func decidePromotion(vaultRoot, project string, obs engram.Observation) (bool, error) {
+	if !Eligible(obs, false) {
+		return false, nil
+	}
+	promoted, ok, err := findPromotedPage(vaultRoot, project, int(obs.ID))
+	if err != nil {
+		return false, fmt.Errorf("check promoted state: %w", err)
+	}
+	if ok && promoted.Revision >= obs.RevisionCount {
+		return false, nil
+	}
+	return true, nil
+}
+
+// SyncPlan is what a Sync run WOULD do, computed without writing anything.
+//
+// It exists because a first sync on an established project promotes every
+// eligible observation at once -- hundreds of pages -- into a vault whose
+// index.md and log.md may be hand-authored, and the run is otherwise
+// unannounced. Titles names them rather than only counting them, so the
+// operator can recognise what is about to land.
+type SyncPlan struct {
+	// WouldPromote is how many observations Sync would write a page for.
+	WouldPromote int
+	// Skipped counts ineligible and already-current observations.
+	Skipped int
+	// Failed names each observation whose promoted state could not even be
+	// read. A plan that silently omitted these would under-predict the run.
+	Failed []SyncFailure
+	// Titles names the observations WouldPromote counts, in the same order.
+	Titles []string
+}
+
+// Plan reports what Sync would do for project, writing nothing at all: no
+// page, no precedence entry, no index rebuild, and no sync-state record.
+// It walks the same observations through the same decidePromotion Sync
+// uses, so its prediction is the run's own decision rather than a second
+// opinion about it.
+func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
+	observations, err := deps.Engram.ListObservations(project)
+	if err != nil {
+		return SyncPlan{}, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
+	}
+
+	var plan SyncPlan
+	for _, obs := range observations {
+		promote, err := decidePromotion(deps.Writer.VaultRoot, project, obs)
+		if err != nil {
+			plan.Failed = append(plan.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			continue
+		}
+		if !promote {
+			plan.Skipped++
+			continue
+		}
+		plan.WouldPromote++
+		plan.Titles = append(plan.Titles, obs.Title)
+	}
+	return plan, nil
 }
 
 // failureError summarizes op's per-observation failures as one error,
