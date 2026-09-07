@@ -7,16 +7,27 @@ import (
 	"testing"
 )
 
-// TestCoverageSnapshot_BothCountsComeFromOneRead is the whole reason this
-// method exists.
+// TestCoverageSnapshot_ResolvesOnlyLiveRowsOfThisProject pins what this
+// test CAN prove: the pair it returns is internally consistent, and the id
+// lookup filters exactly as the count does -- soft-deleted rows and other
+// projects' rows are excluded from both halves, which is what makes
+// indexed <= live meaningful rather than accidental.
 //
-// Coverage.Live and Coverage.Indexed used to come from two independent
-// calls on the same connection, so nothing guaranteed indexed <= live and
-// the query package carried a clamp, a diagnostic, and an untestable
-// branch to cope with a disagreement it could not prevent. Reading both
-// inside one transaction makes the disagreement impossible instead of
-// survivable, which is what lets all three be deleted.
-func TestCoverageSnapshot_BothCountsComeFromOneRead(t *testing.T) {
+// It deliberately does NOT claim to prove the snapshot. That the two
+// queries run in one transaction is structural, and a first draft of this
+// test was named for it and could not see it: moving the second query back
+// onto s.db, outside the transaction, left this test green. A single
+// process reading a static database cannot observe an interleaved write,
+// so no test in this package can.
+//
+// The difference from the debt this replaces is worth stating. What used
+// to be untestable was a BRANCH THAT COULD RUN AND BE WRONG -- a clamp
+// firing on a disagreement, reporting a plausible zero. What is untestable
+// now is that a branch CANNOT EXIST, and that is verified by reading the
+// function: there is no clamp to misfire. An unobservable guarantee that
+// removes code is not the same liability as an unobservable branch that
+// runs.
+func TestCoverageSnapshot_ResolvesOnlyLiveRowsOfThisProject(t *testing.T) {
 	store, ids := newSnapshotFixture(t, []snapshotRow{
 		{title: "live one", project: "p", deleted: false},
 		{title: "live two", project: "p", deleted: false},
@@ -38,7 +49,7 @@ func TestCoverageSnapshot_BothCountsComeFromOneRead(t *testing.T) {
 		t.Fatalf("len(byID) = %d, want 2; a soft-deleted or foreign-project row was resolved: %+v", len(byID), byID)
 	}
 	if len(byID) > live {
-		t.Fatalf("indexed (%d) exceeded live (%d): the snapshot did not make the two counts consistent", len(byID), live)
+		t.Fatalf("indexed (%d) exceeded live (%d)", len(byID), live)
 	}
 }
 
