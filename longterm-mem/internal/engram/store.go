@@ -4,6 +4,7 @@
 package engram
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -279,6 +280,57 @@ func (s *Store) ObservationByID(id int64) (Observation, bool, error) {
 // that no longer qualifies is the ordinary case this method exists to
 // handle, not an exceptional one.
 func (s *Store) LiveObservationsByID(project string, ids []int64) (map[int64]Observation, error) {
+	return liveObservationsByIDTx(s.db, project, ids)
+}
+
+// CoverageSnapshot returns, from ONE consistent read, how many live
+// observations project has and which of indexedIDs resolve to live rows in
+// it -- the two numbers the embedding arm reports as Coverage.Live and
+// Coverage.Indexed.
+//
+// They are returned together because taking them apart is what made them
+// able to disagree. As two calls on the same connection, a write landing
+// between them could leave indexed > live, so the caller carried a clamp
+// to stop a negative "unindexed" reaching a caller, a diagnostic to say
+// the clamp had fired, and a branch that no unit test could reach because
+// forcing the race needs a seam that does not exist. Inside one deferred
+// read transaction the two queries see the same snapshot, indexed <= live
+// holds by construction, and all three of those disappear -- the branch is
+// not made testable, it is made impossible.
+//
+// One error, not two. The previous shape let the lookup's error be
+// discarded into an empty map, which reported Indexed as 0 and therefore
+// every live observation as unindexed: a read failure told the operator
+// their index was empty and to go rebuild a perfectly good one.
+func (s *Store) CoverageSnapshot(project string, indexedIDs []int64) (int, map[int64]Observation, error) {
+	tx, err := s.db.BeginTx(context.Background(), &sql.TxOptions{ReadOnly: true})
+	if err != nil {
+		return 0, nil, fmt.Errorf("engram: open coverage snapshot for project %q: %w", project, err)
+	}
+	defer tx.Rollback()
+
+	var live int
+	if err := tx.QueryRow(
+		`SELECT COUNT(*) FROM observations WHERE project = ? AND deleted_at IS NULL`,
+		project,
+	).Scan(&live); err != nil {
+		return 0, nil, fmt.Errorf("engram: count live observations for project %q: %w", project, err)
+	}
+
+	byID, err := liveObservationsByIDTx(tx, project, indexedIDs)
+	if err != nil {
+		return 0, nil, err
+	}
+	return live, byID, nil
+}
+
+// liveObservationsByIDTx is LiveObservationsByID's body, run against a
+// caller-owned transaction so CoverageSnapshot's two queries share one
+// snapshot. LiveObservationsByID delegates to it, which is what keeps the
+// two paths from being two definitions of "live".
+func liveObservationsByIDTx(q interface {
+	Query(string, ...any) (*sql.Rows, error)
+}, project string, ids []int64) (map[int64]Observation, error) {
 	result := make(map[int64]Observation, len(ids))
 	if len(ids) == 0 {
 		return result, nil
@@ -291,7 +343,7 @@ func (s *Store) LiveObservationsByID(project string, ids []int64) (map[int64]Obs
 		args = append(args, id)
 	}
 
-	rows, err := s.db.Query(
+	rows, err := q.Query(
 		`SELECT `+observationColumns+` FROM observations WHERE project = ? AND deleted_at IS NULL AND id IN (`+placeholders+`)`,
 		args...,
 	)

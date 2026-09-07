@@ -187,12 +187,21 @@ func TestEmbeddingArmReportsNeverBuiltWhenNoIndexExists(t *testing.T) {
 	}
 }
 
-// TestRunEmbeddingArm_LiveCountFailureIsNamedAndNeverNegative (JD-2): a
-// swallowed CountLiveObservations error must not vanish silently. It must
-// surface as a diagnostic, the same way every other degradation path in
-// this file already does, and Coverage.Unindexed must never go negative
-// because of it.
-func TestRunEmbeddingArm_LiveCountFailureIsNamedAndNeverNegative(t *testing.T) {
+// TestRunEmbeddingArm_UnreadableCoverageIsNamedAndReportsNoMeasurements
+// replaces three tests that no longer have anything to guard.
+//
+// Coverage's two counts now come from one CoverageSnapshot, so there is no
+// clamp to test, no "the counts disagree" diagnostic to carry, and no
+// unreachable branch to apologise for in a comment. What IS reachable, and
+// was not before, is the whole failure path end to end: one closed store,
+// one error, one diagnostic, and counts that stay zero and say so.
+//
+// The shape this replaces discarded LiveObservationsByID's error into an
+// empty map. That reported Indexed as 0 while Live stayed correct, so every
+// live observation looked unindexed and coverageIncompleteDiagnostic then
+// told the operator to rebuild an index that was never the problem -- a
+// read failure turned into a confident, actionable, wrong instruction.
+func TestRunEmbeddingArm_UnreadableCoverageIsNamedAndReportsNoMeasurements(t *testing.T) {
 	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
 		{title: "one", content: "alpha", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
@@ -202,81 +211,69 @@ func TestRunEmbeddingArm_LiveCountFailureIsNamedAndNeverNegative(t *testing.T) {
 
 	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil))
 
-	found := false
-	for _, d := range diags {
-		if d.Code == DiagnosticLiveCountUnreadable {
-			found = true
+	var found *Diagnostic
+	for i, d := range diags {
+		if d.Code == DiagnosticCoverageUnreadable {
+			found = &diags[i]
 		}
 	}
-	if !found {
-		t.Fatalf("diagnostics = %+v, want one %q naming the swallowed CountLiveObservations error", diags, DiagnosticLiveCountUnreadable)
+	if found == nil {
+		t.Fatalf("diagnostics = %+v, want one %q naming the failed coverage read", diags, DiagnosticCoverageUnreadable)
 	}
-	if coverage.Unindexed < 0 {
-		t.Fatalf("coverage.Unindexed = %d, must never be negative", coverage.Unindexed)
+	if !strings.Contains(found.Detail, "not measurements") {
+		t.Fatalf("diagnostic detail %q does not deny that the zeros below it are measurements", found.Detail)
+	}
+	if coverage.Live != 0 || coverage.Indexed != 0 || coverage.Unindexed != 0 {
+		t.Fatalf("coverage = %+v, want all zero: nothing was measured, so nothing may be claimed", coverage)
+	}
+	// The specific wrong instruction this replaces: Unindexed must not be
+	// left equal to Live, which is what makes the incomplete-index
+	// diagnostic tell the operator to rebuild.
+	if d := coverageIncompleteDiagnostic(coverage); d != nil && strings.Contains(d.Detail, "rebuild") {
+		t.Fatalf("a failed coverage read still produced a rebuild instruction: %q", d.Detail)
 	}
 }
 
-// TestCoverageUnindexed_StaleCountIsNamedNotJustClamped (JD-2, JD-5) is the guard
-// on the clamp itself. Clamping `live < indexed` to 0 removes a negative
-// number that was at least visibly wrong and replaces it with 0 -- which
-// is byte-for-byte the value a fully-indexed project reports. A caller
-// cannot tell the two apart from the number, so the clamp must say it
-// fired; otherwise this is the same silent wrong answer JD-2 was raised to
-// remove, surviving one call deeper.
-func TestCoverageUnindexed_StaleCountIsNamedNotJustClamped(t *testing.T) {
-	cases := []struct {
-		name          string
-		live, indexed int
-		liveKnown     bool
-		want          int
-		wantStale     bool
-	}{
-		{name: "normal gap", live: 10, indexed: 4, liveKnown: true, want: 6, wantStale: false},
-		{name: "fully indexed", live: 5, indexed: 5, liveKnown: true, want: 0, wantStale: false},
-		{name: "live unknown", live: 0, indexed: 3, liveKnown: false, want: 0, wantStale: false},
-		{name: "stale count, clamp fires", live: 2, indexed: 5, liveKnown: true, want: 0, wantStale: true},
+// TestRunEmbeddingArm_UnindexedIsAPlainSubtraction: with both counts from
+// one snapshot every indexed row is one of the live rows counted, so the
+// subtraction is total and needs no guard. This pins that the arm still
+// reports a real gap rather than having lost the number along with the
+// clamp.
+func TestRunEmbeddingArm_UnindexedIsAPlainSubtraction(t *testing.T) {
+	store, dbPath, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+		{title: "indexed one", content: "alpha", project: "proj-embed", vec: []float32{1, 0, 0}},
+	})
+	if err := store.Close(); err != nil {
+		t.Fatalf("close fixture store: %v", err)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			got, stale := coverageUnindexed(tc.live, tc.indexed, tc.liveKnown)
-			if got != tc.want {
-				t.Fatalf("coverageUnindexed(%d, %d, %v) = %d, want %d", tc.live, tc.indexed, tc.liveKnown, got, tc.want)
-			}
-			if got < 0 {
-				t.Fatalf("coverageUnindexed returned a negative value: %d (JD-2)", got)
-			}
-			if stale != tc.wantStale {
-				t.Fatalf("coverageUnindexed(%d, %d, %v) reported stale=%v, want %v -- a clamped 0 that does not say it was clamped is indistinguishable from full coverage", tc.live, tc.indexed, tc.liveKnown, stale, tc.wantStale)
-			}
-		})
+	// A live observation the index does not know about, written before the
+	// store is reopened so the read-only connection sees it.
+	writeConn, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open write connection: %v", err)
 	}
-}
+	if _, err := writeConn.Exec(
+		`INSERT INTO observations (session_id, type, title, content, project) VALUES (?, ?, ?, ?, ?)`,
+		"sess-1", "discovery", "unindexed one", "beta", "proj-embed",
+	); err != nil {
+		writeConn.Close()
+		t.Fatalf("insert unindexed observation: %v", err)
+	}
+	writeConn.Close()
 
-// TestStaleCoverageDiagnostic_CarriesBothCounts (JD-5) covers what is
-// coverable here, and its name says so. runEmbeddingArm's clamp branch is
-// NOT exercised: coverage.Indexed is len(LiveObservationsByID(project, ...)),
-// which filters by the same project CountLiveObservations counts, so
-// indexed <= live holds on every path a test can construct. The branch
-// exists for the race between those two reads -- a writer soft-deleting
-// between them -- which needs a seam in engram.Store to force, and this
-// package has none. Naming that here is the point: a test called
-// TestRunEmbeddingArm_* that never calls runEmbeddingArm would be the
-// green check that cannot fail, which is the defect class this whole
-// change keeps re-finding.
-func TestStaleCoverageDiagnostic_CarriesBothCounts(t *testing.T) {
-	diags := staleCoverageDiagnostics(3, 7)
-	if len(diags) != 1 || diags[0].Code != DiagnosticCoverageCountsInconsistent {
-		t.Fatalf("staleCoverageDiagnostics = %+v, want one %q", diags, DiagnosticCoverageCountsInconsistent)
+	reopened, err := engram.Open(dbPath)
+	if err != nil {
+		t.Fatalf("reopen store: %v", err)
 	}
-	// Both counts must appear: "the counts disagree" without saying which
-	// pair disagreed leaves the reader exactly where the bare 0 did.
-	for _, want := range []string{"7", "3"} {
-		if !strings.Contains(diags[0].Detail, want) {
-			t.Fatalf("diagnostic detail %q omits the count %q", diags[0].Detail, want)
-		}
+	t.Cleanup(func() { reopened.Close() })
+
+	_, coverage, _ := runEmbeddingArm(context.Background(), reopened, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+
+	if coverage.Live != 2 || coverage.Indexed != 1 {
+		t.Fatalf("coverage = %+v, want Live 2 / Indexed 1", coverage)
 	}
-	if !strings.Contains(diags[0].Detail, "not mean this project is fully indexed") {
-		t.Fatalf("diagnostic detail %q does not deny the reading it exists to deny", diags[0].Detail)
+	if coverage.Unindexed != 1 {
+		t.Fatalf("coverage.Unindexed = %d, want 1", coverage.Unindexed)
 	}
 }
 
