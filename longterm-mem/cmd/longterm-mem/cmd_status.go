@@ -14,11 +14,13 @@ import (
 )
 
 // cmdStatus implements `longterm-mem status --project P [--vault DIR]
-// [--json]` (R-010): report Engram reachability, P's vault provisioning
-// state, and the last successful sync completion time. ops.Status never
-// fails on an unhealthy field -- a never-provisioned vault or a
-// never-synced project is a reported state, not an error -- so this
-// command exits 0 once its own inputs (project, vault registry) resolve.
+// [--json]` (R-010, R-065): report Engram reachability, P's vault
+// provisioning state, the last successful sync completion time, and the
+// embedding index's own last build time (or the literal "never"). ops.Status
+// never fails on an unhealthy field -- a never-provisioned vault, a
+// never-synced project, or a never-built embedding index is a reported
+// state, not an error -- so this command exits 0 once its own inputs
+// (project, vault registry) resolve.
 func cmdStatus(args []string) int {
 	fs := flag.NewFlagSet("status", flag.ContinueOnError)
 	fs.SetOutput(os.Stderr)
@@ -41,6 +43,7 @@ func cmdStatus(args []string) int {
 
 	deps := ops.StatusDeps{
 		VaultRoot:        vaultRoot,
+		StateDir:         defaultStateDir(),
 		VaultProvisioned: vault.Provisioned,
 		EngramReachable: func(ctx context.Context) (bool, string) {
 			store, err := engram.Open(os.Getenv(engramDBEnvVar))
@@ -81,6 +84,7 @@ func cmdStatus(args []string) int {
 	fmt.Printf("  engram: reachable=%t%s\n", report.EngramReachable, detailSuffix(report.EngramDetail))
 	fmt.Printf("  vault: provisioned=%t\n", report.VaultProvisioned)
 	fmt.Printf("  last sync: %s\n", report.LastSyncCompletedAt)
+	fmt.Printf("  embedding index built at: %s\n", report.EmbeddingIndexBuiltAt)
 	return exitOK
 }
 

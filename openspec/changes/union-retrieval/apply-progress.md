@@ -4,7 +4,7 @@
 ## Phase 1 (PR-1) — done (pre-existing, unchanged)
 ## Phase 2 (PR-2) — done (pre-existing, unchanged)
 
-## Phase 3 (PR-3, branch `union/pr3-vecindex` off `union/pr2-embed`) — PARTIAL, stopped on budget overrun
+## Phase 3 (PR-3, branch `union/pr3-vecindex` off `union/pr2-embed`) — 3.1-3.4/3.9 done
 
 ### TDD Cycle Evidence
 
@@ -15,7 +15,68 @@
 | 3.3 | `go test ./internal/vecindex/...` failed to build (`undefined: Row`, `undefined: Build`) before `build.go` existed | `TestBuildFromScratchEmbedsEveryLiveRow`, `TestBuildReembedsOnlyMissingOrChanged`, `TestBuildRemovesEntriesForRowsNoLongerLive`, `TestBuildRefusesOnCorruptedExistingIndex` all PASS | n/a |
 | 3.4 | `go test ./cmd/longterm-mem/... -run TestCmdIndexEmbeddings` failed: `flag provided but not defined: -embeddings` | `TestCmdIndexEmbeddings_BuildsIndexOnDisk`, `TestCmdIndexEmbeddings_NonLoopbackRefusedWithoutFlag` PASS | n/a |
 | 3.9 | (shipped inside 3.4's RED/GREEN cycle — the `--allow-remote-embedder` flag was written together with `--embeddings`) | `TestCmdIndexEmbeddings_NonLoopbackRefusedWithoutFlag` proves the flag exists on `index` and gates the refusal | n/a |
-| 3.5–3.8 | **NOT STARTED** | | |
+
+## Phase 3b (PR-3b, branch `union/pr3b-ops-wiring` off `union/pr3-vecindex`) — 3.5-3.8 done
+
+Split out per the maintainer's decision recorded above: PR-3's authored diff
+had already passed the 800-line ceiling before 3.5–3.8 were started, so this
+batch landed as its own branch/PR rather than growing PR-3 further.
+
+### TDD Cycle Evidence
+
+| Task | RED | GREEN | REFACTOR |
+|---|---|---|---|
+| 3.5 | `go test ./internal/ops/...` failed to build: `unknown field StateDir/LiveObservationIDs/EmbeddingBackendCheck in struct literal of type DoctorDeps`, `undefined: CheckEmbeddingIndexPresent/CheckEmbeddingIndexFresh/CheckEmbeddingBackendReachable` (captured via `go vet`) | `TestDoctor/Missing_embedding_index_is_named`, `TestDoctor/A_stale_index_is_named_with_its_coverage_gap`, `TestDoctor/An_unreachable_backend_is_distinguished_from_a_missing_model`, `TestDoctor/A_reachable_backend_missing_its_model_is_named_distinctly_from_unreachable` all PASS | n/a — first implementation |
+| 3.6 | (paired with 3.5) | three new `Check` rows added to `internal/ops/doctor.go`'s `Doctor()` assembly (now 8 checks, was 5); `DoctorDeps` gained `StateDir`, `LiveObservationIDs`, `EmbeddingBackendCheck` seams | n/a |
+| 3.7 | `go vet ./internal/ops/...` failed: `unknown field StateDir in struct literal of type StatusDeps` | `TestStatus_EmbeddingIndexBuiltAt/A_built_index_reports_its_build_time`, `TestStatus_EmbeddingIndexBuiltAt/Never-built_reports_never,_not_a_fabricated_timestamp` PASS | n/a |
+| 3.8 | (paired with 3.7) | `StatusReport.EmbeddingIndexBuiltAt` added, sourced via `vecindex.Load` in `internal/ops/status.go`; `StatusDeps` gained `StateDir` | n/a |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `go test ./internal/ops/... ./cmd/longterm-mem/... -v -count=1` — all PASS (TestDoctor's 12 subtests including 4 new, TestStatus's 3 cases plus new TestStatus_EmbeddingIndexBuiltAt's 2, TestCmdDoctor_DocumentedCheckCountMatchesOpsDoctor, TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy) |
+| Runtime harness command/scenario and exact result | `longterm-mem doctor --project P` and `longterm-mem status --project P` exercised end to end via `TestCmdDoctor_PrintsEveryCheckOpsDoctorReturns`/`TestCmdDoctor_ReportsEveryCheckDespiteOneFailing` and `TestCmdStatus_ReportsEveryFieldAndExitsZeroWhenUnhealthy`: real `run([]string{...})` invocations against a fresh `HOME`/vault, with no live Ollama backend available (`embedding-backend-reachable`'s production probe hits real loopback `127.0.0.1:11434` and reports FAIL — connection refused — in this environment, exercising the actual unreachable path, not a fake) |
+| Rollback boundary | `git revert 512e9ec 4655b4e` on `union/pr3b-ops-wiring`; both commits touch only `internal/ops/{doctor,status}.go` + their tests and `cmd/longterm-mem/cmd_{doctor,status}.go` + their tests — nothing else in the module reads the new `DoctorDeps`/`StatusDeps` fields or `StatusReport.EmbeddingIndexBuiltAt` |
+
+### Load-bearing mutation proofs (go test -count=1, never cached)
+
+- `checkEmbeddingIndexFresh` forced to always return `CheckPassed`: turned `TestDoctor/A_stale_index_is_named_with_its_coverage_gap` red (`want FAILed`, got PASS). Reverted from a saved copy (never `git checkout -- <file>`), confirmed green again.
+- `checkEmbeddingBackendReachable` forced to always report the "unreachable" wording regardless of `errors.As` result: turned `TestDoctor/A_reachable_backend_missing_its_model_is_named_distinctly_from_unreachable` red (detail reused "unreachable" wording for a model-missing failure). Reverted, confirmed green again.
+- `Status`'s `EmbeddingIndexBuiltAt` assignment forced to the literal `"never"` unconditionally: turned `TestStatus_EmbeddingIndexBuiltAt/A_built_index_reports_its_build_time` red. Reverted, confirmed green again.
+
+### Full-module verification (both commits, standing alone and cumulatively)
+
+- `gofmt -l .` — clean, in `longterm-mem`, after each commit
+- `go vet ./...` — clean, in `longterm-mem`, after each commit
+- `go test ./...` — all packages PASS, in `longterm-mem`, after each commit (`count=1`)
+- `gofmt -l .` / `go vet ./...` / `go test ./... -count=1` — clean/PASS, in `engine` and `tui` (untouched, independently re-verified)
+- `go test . -run TestNetImportAllowlist` — PASS: `internal/ops/doctor.go` imports `internal/embed` (for its two typed error structs, `*embed.BackendUnreachableError`/`*embed.ModelMissingError`) but never `net`/`net/http` directly, so the allowlist still holds at exactly one entry (`internal/embed/client.go`)
+
+### Deviations from Design
+
+None. `embedding-index-present`/`embedding-index-fresh`/`embedding-backend-reachable` and `status`'s `embedding_index_built_at` match R-064/R-065's scenarios exactly. One design choice made where design left the mechanism open: `EmbeddingBackendCheck` is a `DoctorDeps` function seam (production wires `embed.NewClient(...).Embed(ctx, probe)`) rather than `doctor.go` importing `internal/embed`'s network path directly — required by `net_allowlist_test.go`'s `allowedNetImporters` staying at exactly one entry. Freshness compares live-ID *sets* against the manifest's entries (not a bare length/count diff), so a corpus that both grew and shrank by the same amount is still caught — this is a deliberate strengthening consistent with the launch prompt's own "a check that cannot fail is worse than no check" framing, not a spec deviation.
+
+### Issues Found
+
+None.
+
+### Remaining Tasks (Phase 3/3b)
+
+None — 3.1–3.9 are all complete. Phase 4 (PR-4) is untouched and out of scope, per the launch instructions ("Do not start Phase 4"). `internal/query/gate.go` and `openspec/changes/shared-project-vault/` are untouched, per the launch instructions.
+
+### Commits (branch `union/pr3b-ops-wiring`, off `union/pr3-vecindex`)
+
+1. `4655b4e` — `test(ops): RED+GREEN — doctor names a missing/stale embedding index and an unreachable backend distinctly from a missing model (R-064)` (5 files, +311/-12)
+2. `512e9ec` — `test(ops): RED+GREEN — status reports embedding_index_built_at or never (R-065)` (4 files, +107/-14)
+
+Combined authored diff: 418 additions / 26 deletions = 444 lines, over the
+~150–250 line forecast (driven by four pre-existing `DoctorDeps`/`StatusDeps`
+struct-literal call sites across `doctor_test.go`, `doctor_reconcile_test.go`,
+and `cmd_doctor_test.go` all needing the new required seam fields, plus a
+full RED+GREEN table for 4 new `TestDoctor` subtests and 2 new
+`TestStatus_EmbeddingIndexBuiltAt` cases) but well under the 800-line
+ceiling. Not pushed; no PR opened, per the launch instructions.
 
 ### Work Unit Evidence
 

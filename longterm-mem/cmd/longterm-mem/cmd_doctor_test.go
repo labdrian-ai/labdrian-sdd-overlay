@@ -59,8 +59,11 @@ func funcDocComment(t *testing.T, file, funcName string) string {
 // instead of quietly agreeing with a stale one.
 func TestCmdDoctor_DocumentedCheckCountMatchesOpsDoctor(t *testing.T) {
 	report, err := ops.Doctor(context.Background(), ops.DoctorDeps{
-		VaultRoot:           t.TempDir(),
-		PrerequisitePresent: func(string) bool { return true },
+		VaultRoot:             t.TempDir(),
+		PrerequisitePresent:   func(string) bool { return true },
+		StateDir:              t.TempDir(),
+		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
+		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}, "doc-count-project")
 	if err != nil {
 		t.Fatalf("ops.Doctor: %v", err)
@@ -104,8 +107,11 @@ func TestCmdDoctor_PrintsEveryCheckOpsDoctorReturns(t *testing.T) {
 	t.Setenv("LONGTERM_MEM_VAULT", vaultRoot)
 
 	report, err := ops.Doctor(context.Background(), ops.DoctorDeps{
-		VaultRoot:           vaultRoot,
-		PrerequisitePresent: func(string) bool { return true },
+		VaultRoot:             vaultRoot,
+		PrerequisitePresent:   func(string) bool { return true },
+		StateDir:              t.TempDir(),
+		LiveObservationIDs:    func(string) ([]int64, error) { return nil, nil },
+		EmbeddingBackendCheck: func(context.Context) error { return nil },
 	}, "doctor-print-project")
 	if err != nil {
 		t.Fatalf("ops.Doctor: %v", err)

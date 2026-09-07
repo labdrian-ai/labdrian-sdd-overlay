@@ -65,13 +65,13 @@ If PR-3 or PR-4 measures over 800 lines once check-1/check-3 evidence lands, spl
 - [x] 3.2 GREEN: create `internal/vecindex/{index,fingerprint,build}.go` — fixed-stride blob + self-digesting JSON manifest at `<state-dir>/index/<project>/`.
 - [x] 3.3 RED: incremental build test — re-embeds only missing/changed fingerprints, removes entries for rows no longer live (R-069). `TestBuildFromScratchEmbedsEveryLiveRow`, `TestBuildReembedsOnlyMissingOrChanged`, `TestBuildRemovesEntriesForRowsNoLongerLive`, `TestBuildRefusesOnCorruptedExistingIndex` (`internal/vecindex/build_test.go`).
 - [x] 3.4 GREEN: implement incremental `index --embeddings` build path in `internal/vecindex/build.go` and wire into `cmd/longterm-mem/` (`cmd_index.go`'s new flags, `cmd_index_embeddings.go`). RED/GREEN end-to-end proof: `TestCmdIndexEmbeddings_BuildsIndexOnDisk`, `TestCmdIndexEmbeddings_NonLoopbackRefusedWithoutFlag` (`cmd/longterm-mem/cmd_index_embeddings_test.go`), using a fake loopback ollama (`httptest`).
-- [ ] 3.5 RED: three `ops.Check` tests — `embedding-index-present`, `embedding-index-fresh` (names N), `embedding-backend-reachable` distinct from missing-model (R-064).
-- [ ] 3.6 GREEN: add the three checks to `internal/ops/doctor.go`.
-- [ ] 3.7 RED: `status` reports `embedding_index_built_at` or literal `never` (R-065).
-- [ ] 3.8 GREEN: add the field to `internal/ops/status.go`.
+- [x] 3.5 RED: three `ops.Check` tests — `embedding-index-present`, `embedding-index-fresh` (names N), `embedding-backend-reachable` distinct from missing-model (R-064).
+- [x] 3.6 GREEN: add the three checks to `internal/ops/doctor.go`.
+- [x] 3.7 RED: `status` reports `embedding_index_built_at` or literal `never` (R-065).
+- [x] 3.8 GREEN: add the field to `internal/ops/status.go`.
 - [x] 3.9 Add `--allow-remote-embedder` flag to `cmd/longterm-mem/` `index` subcommand only (open question resolved: index-only, never `query`). Shipped as part of 3.4's `cmd_index.go` flag wiring; `TestCmdIndexEmbeddings_NonLoopbackRefusedWithoutFlag` proves it is index-only (no such flag exists on `query`).
 
-**STOPPED HERE — budget overrun, needs a maintainer decision.** 3.1–3.4 and 3.9 are done and green (build+vet+test clean, gofmt clean, in `longterm-mem`; `engine`/`tui` untouched and independently verified clean). 3.5–3.8 (the three `ops.Check` tests/wiring + `status`'s `embedding_index_built_at` field) are NOT started. Authored diff so far is **988 lines** (984 add / 4 del, `git diff --numstat union/pr2-embed..union/pr3-vecindex`), already past design's own 800-line review budget and well past the ~450-line forecast — before the remaining ~150-200 lines 3.5–3.8 would add. See the apply-progress artifact and the phase return for the maintainer decision this needs (split 3.5–3.8 into its own PR-3b, or accept `size:exception` for PR-3 as a whole).
+**Phase 3 complete.** 3.1–3.4/3.9 landed on `union/pr3-vecindex` (988 authored lines). 3.5–3.8 landed as their own PR, `union/pr3b-ops-wiring` (branched off `union/pr3-vecindex`, per the maintainer's split decision): 418 additions / 26 deletions (444 authored lines) across `internal/ops/{doctor,status}.go` + their tests and `cmd/longterm-mem/cmd_{doctor,status}.go` + their tests — over the ~150–250 line estimate but well under the 800-line ceiling, driven mainly by the existing test suite's own `DoctorDeps`/`StatusDeps` literals needing the new required seam fields at every call site (doctor_reconcile_test.go, cmd_doctor_test.go) plus a full RED+GREEN table for all three new checks and both new `status` scenarios. See the apply-progress artifact for the two commits, TDD evidence, and load-bearing mutation proofs.
 
 ## Phase 4: Embedding Arm + Coverage + Golden Harness (PR-4) — R-058, R-061, R-068, R-070
 
