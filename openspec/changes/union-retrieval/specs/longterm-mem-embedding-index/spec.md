@@ -27,6 +27,19 @@ not depend on. Full protocol, adjudication accounting, and the metric this
 supersedes are in `openspec/changes/union-retrieval/validation/phase0.md`
 and `score.md`.
 
+**The paraphrase n (7-9 decidable, depending on measurement) is too small
+for the design's own 80% acceptance threshold to be reliably resolved by a
+single re-measurement.** One query is worth 12-14 percentage points at
+this sample size; two independently honest measurements of the shipped
+gate against the same frozen blind set landed at 77.8% and 87.5%,
+straddling 80%, differing only in embedding-index freshness at
+measurement time (`validation/score.md`, "PR-4: the predicted failure
+happened"). The 86%/88% figures are real, not estimated — but they should
+be read as "well clear of a defective gate measured at ~22% on this same
+set," not as a value that would reproduce to the point. Widening the
+blind paraphrase set is open debt before this threshold is relied on
+again.
+
 ## Requirements
 
 ### Requirement: Embedding Index Location and Format

@@ -62,6 +62,23 @@ above (89% identifier / 86% paraphrase), also published in
 design's threshold table. Branch B (fixed FTS-first order, `gate.go` deleted
 or left unwired) was not taken.
 
+**Post-ship correction.** The first wiring shipped a defective `routeRank1`:
+an early return on `matchMode == MatchAny` that pre-empted the token-shape
+rule below it instead of being ORed with it. Because every widened query in
+the blind paraphrase set (16/16) triggers `MatchAny`, that defect forced
+every paraphrase query to the lexical arm regardless of shape, measuring
+22% routing accuracy on `validation/queries.json` — a severe, real
+regression, caught by `TestGateRoutingAccuracyOnBlindSet`
+(`internal/query/gate_blind_test.go`), not by `gate_test.go`'s hand-made
+cases, which never varied shape and match-mode together and so could not
+see a defect in how they combine. Corrected to `shape OR
+matchMode==MatchAll` — the decision record's own validated rule (§4.3) —
+and re-verified: identifier still 100% (18/18), paraphrase recovers to
+77.8-87.5% depending on embedding-index freshness at measurement time (see
+`score.md`'s "PR-4: the predicted failure happened" for the full account
+and the maintainer's ruling on why the 80% threshold itself is not
+resolvable at this n).
+
 The corpus was 584 rows when first embedded, 586 at the blind scoring, and
 **591** at gate 0.5 — memory this session kept saving. Every measurement here
 is a snapshot of a moving corpus, and the index answered each time slightly
