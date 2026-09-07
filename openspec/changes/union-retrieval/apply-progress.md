@@ -178,6 +178,93 @@ None beyond the two documented deviations above, both investigated to a confirme
 
 Combined authored diff (excluding the generated `fixture.json.gz`): **1,450 lines** (1,407 additions / 43 deletions across 15 authored files) — over the ~400-line forecast and the 800-line ceiling named in the launch instructions. Per that instruction ("If it passes 800, stop and report — that call is the maintainer's"), this is reported rather than artificially trimmed: no comment, blank line, doc, or test was cut to reach a smaller number. The size is driven by: a full TDD suite across 8 distinct RED/GREEN pairs (4.1-4.6), a from-scratch golden harness requiring real empirical debugging of two genuine root causes (corpus-size-dependent bm25 statistics; the shipped gate's `MatchAny` rule interacting with paraphrase queries) rather than a mechanical port, a 200-iteration randomized property test, and doc-comment density matching this codebase's own established convention throughout. This is the last slice of `union-retrieval`; recommend `size:exception` rather than a further split, since Phase 4's five sub-tasks (embedding arm, coverage, degradation diagnostics, golden harness, gate wiring) are one cohesive, mutually-dependent unit that does not have a clean internal seam the way PR-3/PR-3b's build-vs-ops split did.
 
+### Post-ship correction (coordinator-directed, same PR-4 batch, branch `union/pr4-arm`)
+
+Coordinator review found a real defect in the shipped `routeRank1`: an
+early return on `matchMode == engram.MatchAny` that pre-empted the
+token-shape rule below it rather than being ORed with it. Because every
+natural-language paraphrase query in the frozen blind validation set
+(`openspec/changes/union-retrieval/validation/queries.json`, 16/16) widens
+to `MatchAny`, that defect forced all of them to the lexical arm
+regardless of shape — a severe routing regression invisible to
+`gate_test.go`'s hand-made cases, which only ever varied one signal
+(shape or match-mode) at a time and could not see a defect in how the two
+combine.
+
+**Fix**: `routeRank1` now ORs the two conditions: shape OR
+`matchMode==MatchAll` (the decision record's own validated rule, §4.3),
+never chaining one as an early return over the other. Measured tied with
+a simpler shape-only rule on the blind set; shipped the decision-record
+form for its independent 9/9-vs-8/9 evidence there.
+
+**New regression test**: `TestGateRoutingAccuracyOnBlindSet`
+(`internal/query/gate_blind_test.go`) plus a dedicated fixture
+(`testdata/union/blind_gate_fixture.json.gz`: the full 592-row live
+corpus, freshly embedded under production's own
+`title+NUL+content[:2000]` shape). Identifier keeps the design's 80%
+threshold (n=18, two independent 100% measurements). Paraphrase gets a
+separate 50% floor, not the design's 80% line — see the finding below.
+
+**TDD Cycle Evidence (this correction)**
+
+| Step | RED | GREEN |
+|---|---|---|
+| Fix | `TestGateRoutingAccuracyOnBlindSet/paraphrase` (new test, written against the still-buggy gate) failed at 22.2% against an 80% threshold | Corrected `routeRank1`; paraphrase recovered to 77.8% (this fixture) / 87.5% (maintainer re-run) |
+| Golden table | `TestUnionArmDReproducesPublishedTable/paraphrase` read 10%/70% instead of the published 40%/70% while the defect was live | Reproduces 40%/70% exactly once the gate was fixed |
+| `gate_test.go` | Several existing cases passed while the gate was wrong (asserted with `matchMode=MatchAll`, which independently forces FTS and never isolated the shape clause under test) | Rewrote against `matchMode=MatchAny` to isolate shape; added `TestGateRoutesToFTSOnMatchAllEvenWithoutIdentifierShape` for the match-mode clause on its own |
+
+**Load-bearing mutation proof (`go test -count=1`, reverted from a saved copy)**: reverting `routeRank1` to the early-return form turns both
+`TestGateRoutingAccuracyOnBlindSet/paraphrase` (22.2% against its 50%
+floor) and `TestUnionArmDReproducesPublishedTable/paraphrase` (10% against
+the published 40%) red. Restored, both are green.
+
+**Finding, not resolved by re-measuring**: two independently honest
+measurements of the CORRECTED gate against the identical frozen blind set
+disagree about whether it clears the design's 80% threshold — 77.8% (this
+apply batch's fixture, 592/592 rows embedded) vs. 87.5% (maintainer
+re-run, 591 rows), differing only in embedding-index freshness at
+measurement time. One query is worth 12.5 percentage points at this n.
+**Maintainer's ruling**: accept the corrected gate on the unambiguous
+evidence (22% broken vs. 78-88% fixed, and identifier 100% twice); declare
+the 80% threshold unmeasurable at paraphrase's sample size rather than
+picking whichever re-measurement is convenient; assert a wide-margin 50%
+floor instead; and record the debt (validation set needs more blind
+paraphrase queries before an 80% line means anything) in
+`validation/score.md` and both specs publishing the routing-accuracy
+numbers, rather than publish a percentage without the n behind it.
+
+**R-059's spec text was wrong a second time, in the opposite direction**:
+it described `MatchAny` as the routing condition (a faithful description
+of the DEFECTIVE gate, written before the defect was found) and needed
+correcting to `MatchAll` once the gate was fixed. Both `longterm-mem-query`
+and `longterm-mem-embedding-index` gained an explicit caveat that the
+published 86%/88% paraphrase figures should be read as "well clear of a
+~22% defect," not as values that would reproduce to the point.
+
+**Full-module verification (post-correction, every commit standing alone)**:
+`gofmt -l .` / `go vet ./...` / `go build ./...` / `go test ./... -count=1`
+clean in `longterm-mem` after each of the three correction commits and at
+HEAD; `engine` and `tui` independently re-verified clean and untouched.
+
+**Commits (branch `union/pr4-arm`, appended after the four already
+recorded above)**:
+
+6. `cfbae4d` — `fix(query): remove routeRank1's early-return defect on MatchAny (R-059)`
+7. `f217e15` — `test(query): pin routing accuracy against the frozen blind set (R-059)`
+8. `8d3f061` — `docs(sdd): correct R-059's spec text again, record the n-too-small debt`
+
+This correction's own authored diff (excluding the generated
+`blind_gate_fixture.json.gz`): **451 lines** (403 additions / 48 deletions
+across 8 files). **PR-4's cumulative authored diff across all 7 commits on
+this branch (excluding both generated fixtures) is 1,877 lines** (1,830
+additions / 47 deletions) — well past the 800-line ceiling. Reported per
+the same instruction as the original batch: nothing was trimmed to reach a
+smaller number, and `size:exception` is recommended for the same reason as
+before (Phase 4 plus its own coordinator-found correction is one
+cohesive unit for this last slice, not a further-splittable one).
+
 ### Remaining Tasks
 
-None. All of Phase 4 (4.1-4.12) and Phase 5 (5.1-5.3) are complete. `union-retrieval` has no remaining tasks across all five phases; ready for `sdd-verify`.
+None. All of Phase 4 (4.1-4.12) and Phase 5 (5.1-5.3) are complete,
+including the coordinator-directed correction above. `union-retrieval` has
+no remaining tasks across all five phases; ready for `sdd-verify`.
