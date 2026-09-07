@@ -9,6 +9,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // vaultsFileEnvVar overrides the default vault-registry file path (Anchors:
@@ -29,12 +30,31 @@ func cmdIndex(args []string) int {
 	project := fs.String("project", "", projectFlagUsage)
 	vaultDir := fs.String("vault", "", "vault path override")
 	force := fs.Bool("rebuild", false, "force re-provisioning of the vault index, even if already provisioned")
+	embeddings := fs.Bool("embeddings", false, "build or incrementally update the embedding index instead of the vault index (R-069)")
+	embedEndpoint := fs.String("embed-endpoint", "", "embedding backend endpoint (default: loopback ollama)")
+	embedModel := fs.String("embed-model", vecindex.DefaultModel, "embedding model name")
+	embedDimension := fs.Int("embed-dimension", vecindex.DefaultDimension, "embedding vector dimension")
+	embedInputLimit := fs.Int("embed-input-limit", vecindex.DefaultInputLimit, "characters embedded per observation")
+	// --allow-remote-embedder is deliberately an `index`-only flag, never a
+	// `query` one (design's own open question, resolved index-only): a
+	// query should never be the thing that egresses.
+	allowRemoteEmbedder := fs.Bool("allow-remote-embedder", false, "allow the embedding backend to be a non-loopback endpoint, for this invocation only (R-071)")
 	if err := fs.Parse(args); err != nil {
 		return exitUsage
 	}
 	resolvedProject, exit := resolveProjectFlag("index", *project)
 	if exit != exitOK {
 		return exit
+	}
+
+	if *embeddings {
+		return cmdIndexEmbeddings(resolvedProject, embedConfig{
+			Endpoint:    *embedEndpoint,
+			Model:       *embedModel,
+			Dimension:   *embedDimension,
+			InputLimit:  *embedInputLimit,
+			AllowRemote: *allowRemoteEmbedder,
+		})
 	}
 
 	vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), resolvedProject, *vaultDir)
