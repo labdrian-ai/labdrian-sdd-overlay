@@ -157,22 +157,14 @@ const (
 	// so a caller reading a thin or empty paraphrase result is not left
 	// to infer the fix from Coverage's bare numbers.
 	DiagnosticEmbeddingIndexIncomplete = "embedding_index_incomplete"
-	// DiagnosticLiveCountUnreadable reports that Coverage.Live could not
-	// be measured because engram.Store.CountLiveObservations failed. Left
-	// unnamed, this degrades to a silent Coverage.Live of 0, which is
-	// indistinguishable from a project that genuinely has no live
-	// observations -- exactly the silent wrong answer Coverage exists to
-	// prevent (its own doc comment: "this module's unforgivable
-	// failure").
-	DiagnosticLiveCountUnreadable = "live_count_unreadable"
-	// DiagnosticCoverageCountsInconsistent reports that the embedding
-	// index held MORE observations than the store says are live -- a
-	// stale count, since Live and Indexed come from two separate calls.
-	// Unindexed is clamped to 0 so it never ships negative, and that is
-	// exactly why this code exists: a clamped 0 is byte-for-byte the
-	// value a fully-indexed project reports, so without a name the fix
-	// for a visibly wrong number becomes a plausible wrong one.
-	DiagnosticCoverageCountsInconsistent = "coverage_counts_inconsistent"
+	// DiagnosticCoverageUnreadable reports that Coverage's counts could
+	// not be read from Engram at all, so the zeros below are not
+	// measurements. Left unnamed this degrades twice over: a Live of 0 is
+	// indistinguishable from a project with no memory, and an Indexed of 0
+	// makes every live observation look unindexed, which the incomplete-
+	// index diagnostic then turns into an instruction to rebuild an index
+	// that was never the problem.
+	DiagnosticCoverageUnreadable = "coverage_unreadable"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.
