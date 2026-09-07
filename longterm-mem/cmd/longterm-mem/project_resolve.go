@@ -41,8 +41,38 @@ const projectFlagUsage = "project name (default: resolved from the working direc
 // being prevented is a silent one, and an operator naming another project
 // on purpose is legitimate and must stay possible.
 func resolveProjectFlag(cmd, given string) (string, int) {
+	return resolveProjectFlagWith(cmd, given, recordDerived)
+}
+
+// resolveProjectFlagReadOnly is resolveProjectFlag for a command that
+// promises not to change the repository it is inspecting.
+//
+// doctor's own doc comment says it runs read-only diagnostic checks, and it
+// did not: resolving its project recorded this repository's derived names
+// in the identity ledger, so the first run of a diagnostic on a suspect
+// repository changed the state the operator was about to inspect. A
+// diagnostic you must mutate the subject to run is a diagnostic you cannot
+// trust the first result of.
+//
+// Only the WRITE is skipped. The ledger is still READ, because reading is
+// what makes an already-established name win over a freshly derived one --
+// suppressing that would make doctor report a different project than every
+// other command resolves, which is a worse lie than the one being fixed.
+func resolveProjectFlagReadOnly(cmd, given string) (string, int) {
+	return resolveProjectFlagWith(cmd, given, doNotRecordDerived)
+}
+
+// ledgerPolicy decides whether a resolution records what it derived.
+type ledgerPolicy bool
+
+const (
+	recordDerived      ledgerPolicy = true
+	doNotRecordDerived ledgerPolicy = false
+)
+
+func resolveProjectFlagWith(cmd, given string, policy ledgerPolicy) (string, int) {
 	if given == "" {
-		adoption, notes, err := adoptFromWorkingDirectory()
+		adoption, notes, err := adoptFromWorkingDirectory(policy)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "longterm-mem: %s: --project is required: it could not be resolved from the working directory: %v\n", cmd, err)
 			return "", exitUsage
@@ -123,7 +153,7 @@ func quoteAll(names []string) string {
 // is asking about, so adopting from its cwd would bind observations to
 // wherever the host happened to start -- the exact misattribution this
 // whole mechanism exists to prevent.
-func adoptFromWorkingDirectory() (projectid.Adoption, []string, error) {
+func adoptFromWorkingDirectory(policy ledgerPolicy) (projectid.Adoption, []string, error) {
 	wd, err := os.Getwd()
 	if err != nil {
 		return projectid.Adoption{}, nil, fmt.Errorf("reading the working directory: %w", err)
@@ -132,9 +162,11 @@ func adoptFromWorkingDirectory() (projectid.Adoption, []string, error) {
 	stores, notes := openEstablishedStores()
 	defer stores.close()
 
-	// The ledger is consulted BEFORE resolving and written AFTER, because
-	// the two answer different halves of one question: what this repository
-	// was called before, and what it is called now.
+	// The ledger is consulted BEFORE resolving, because it answers what
+	// this repository was called before. It is written after only when the
+	// caller's policy says so: a read-only resolution (doctor, and sync
+	// --dry-run) still READS it -- that read is what lets an established
+	// name beat a freshly derived one -- but records nothing.
 	remembered, commonDir, ledgerNotes := rememberedNames(wd)
 	notes = append(notes, ledgerNotes...)
 
@@ -146,7 +178,9 @@ func adoptFromWorkingDirectory() (projectid.Adoption, []string, error) {
 		return projectid.Adoption{}, notes, err
 	}
 
-	notes = append(notes, recordDerivedNames(commonDir, a.Derived)...)
+	if policy == recordDerived {
+		notes = append(notes, recordDerivedNames(commonDir, a.Derived)...)
+	}
 	return a, notes, nil
 }
 

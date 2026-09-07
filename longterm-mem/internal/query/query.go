@@ -743,8 +743,8 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 }
 
 // mergeResults implements the amended R-006: vault rows precede Engram
-// rows only when the vault is a requested source (3b.8: MatchLinkedEngramRow
-// is the extracted matcher, reused unchanged by promote/MCP query later),
+// rows only when the vault is a requested source (matchLinkedObservation
+// is the matcher; it consults both Engram-backed arms, see JD-4 there),
 // and Engram's own requested sources are round-robin-interleaved by
 // interleaveEngramSources, deduplicated by engram_id. When both engram-fts
 // and engram-embed are requested, routeRank1 (R-058/R-059, Branch A: gate
@@ -758,11 +758,11 @@ func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []en
 
 	if containsSource(sources, SourceVault) {
 		for _, c := range vaultRows {
-			if er, ok := MatchLinkedEngramRow(c.PageAddress, engramRows, resolveLink); ok && !consumed[er.ID] {
-				consumed[er.ID] = true
+			if id, title, ok := matchLinkedObservation(c.PageAddress, engramRows, embedRows, resolveLink); ok && !consumed[id] {
+				consumed[id] = true
 				merged = append(merged, ResultRow{
 					Sources: []string{SourceLinked}, PageAddress: c.PageAddress, PagePath: c.AbsolutePath,
-					EngramID: er.ID, Title: er.Title, Snippet: c.Snippet,
+					EngramID: id, Title: title, Snippet: c.Snippet,
 					Score: &Score{BM25: c.BM25Score, Rerank: c.RerankScore},
 				})
 				continue
@@ -869,20 +869,38 @@ func appendSourceOnce(list []string, name string) []string {
 	return append(list, name)
 }
 
-// MatchLinkedEngramRow reports whether pageAddress links (via resolveLink)
-// to one of engramRows (3b.8 REFACTOR).
-func MatchLinkedEngramRow(pageAddress string, engramRows []engram.Row, resolveLink func(string) (int64, bool)) (engram.Row, bool) {
+// matchLinkedObservation resolves pageAddress's linked observation and
+// finds it among the rows EITHER Engram-backed arm returned.
+//
+// It consults both arms because the linked-pair rule is about the
+// observation, not about which retriever happened to surface it. Checking
+// only the FTS rows -- which is what this did until JD-4 -- shipped the
+// same observation twice whenever the embedding arm was the one that found
+// it: once as a vault row and once as an engram_embed row. That failure
+// got WORSE the better paraphrase retrieval worked, since the paraphrase
+// queries the embedding arm exists to answer are exactly the ones FTS
+// misses, so the duplication would have arrived with the feature.
+//
+// FTS is searched first so that when both arms hold the observation the
+// consumed row is the FTS one, matching the pre-JD-4 behaviour exactly;
+// the embed copy is then dropped by the consumed check downstream.
+func matchLinkedObservation(pageAddress string, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool)) (int64, string, bool) {
 	if resolveLink == nil {
-		return engram.Row{}, false
+		return 0, "", false
 	}
 	id, ok := resolveLink(pageAddress)
 	if !ok {
-		return engram.Row{}, false
+		return 0, "", false
 	}
 	for _, row := range engramRows {
 		if row.ID == id {
-			return row, true
+			return row.ID, row.Title, true
 		}
 	}
-	return engram.Row{}, false
+	for _, row := range embedRows {
+		if row.EngramID == id {
+			return row.EngramID, row.Title, true
+		}
+	}
+	return 0, "", false
 }
