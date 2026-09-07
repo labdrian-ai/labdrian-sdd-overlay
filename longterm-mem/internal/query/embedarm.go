@@ -70,8 +70,16 @@ const embeddingIndexNeverBuilt = "never"
 func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project, queryText string, top int, embedFn EmbedFunc) ([]ResultRow, Coverage, []Diagnostic) {
 	coverage := Coverage{Source: SourceEngramEmbed, BuiltAt: embeddingIndexNeverBuilt}
 
-	if live, err := store.CountLiveObservations(project); err == nil {
+	var diags []Diagnostic
+	live, liveErr := store.CountLiveObservations(project)
+	liveKnown := liveErr == nil
+	if liveKnown {
 		coverage.Live = live
+	} else {
+		diags = append(diags, Diagnostic{
+			Code:   DiagnosticLiveCountUnreadable,
+			Detail: fmt.Sprintf("could not count project %q's live observations for coverage, so live/unindexed counts below are not measurements: %v", project, liveErr),
+		})
 	}
 
 	idx, loadErr := vecindex.Load(vecindex.Dir(stateDir, project))
@@ -80,8 +88,8 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 		// on-disk index) both degrade to "no rows, coverage says so" --
 		// neither is a call failure, since the union's @5 guarantee is
 		// unaffected by one arm having nothing to contribute (R-058).
-		coverage.Unindexed = coverage.Live
-		return nil, coverage, nil
+		coverage.Unindexed = coverageUnindexed(coverage.Live, 0, liveKnown)
+		return nil, coverage, diags
 	}
 	coverage.BuiltAt = idx.Manifest.BuiltAt
 
@@ -94,14 +102,14 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 		liveByID = map[int64]engram.Observation{}
 	}
 	coverage.Indexed = len(liveByID)
-	coverage.Unindexed = coverage.Live - coverage.Indexed
+	coverage.Unindexed = coverageUnindexed(coverage.Live, coverage.Indexed, liveKnown)
 
 	if embedFn == nil {
-		return nil, coverage, nil
+		return nil, coverage, diags
 	}
 	queryVector, embedErr := embedFn(ctx, queryText)
 	if embedErr != nil {
-		return nil, coverage, []Diagnostic{embeddingDegradationDiagnostic(embedErr)}
+		return nil, coverage, append(diags, embeddingDegradationDiagnostic(embedErr))
 	}
 
 	type scoredCandidate struct {
@@ -134,7 +142,26 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 			EngramID: obs.ID, Title: obs.Title, Content: obs.Content, FullLength: len(obs.Content),
 		})
 	}
-	return rows, coverage, nil
+	return rows, coverage, diags
+}
+
+// coverageUnindexed computes Coverage.Unindexed honestly. It is not a bare
+// `live - indexed`: that subtraction is only a fact when live was actually
+// measured, and Indexed is independently obtained from a separate store
+// call, so nothing here guarantees indexed <= live. A caller-facing field
+// with no `omitempty` (Coverage's own doc comment) must never ship a
+// negative count, and it must never imply a subtraction happened -- "0
+// unindexed" reading as "fully covered" -- when live is not known at all;
+// the accompanying diagnostic is what carries that uncertainty, this
+// function only guarantees the number itself is never self-contradictory.
+func coverageUnindexed(live, indexed int, liveKnown bool) int {
+	if !liveKnown {
+		return 0
+	}
+	if live < indexed {
+		return 0
+	}
+	return live - indexed
 }
 
 // embeddingDegradationDiagnostic names which of the two conditions R-070

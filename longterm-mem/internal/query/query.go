@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
@@ -156,6 +157,14 @@ const (
 	// so a caller reading a thin or empty paraphrase result is not left
 	// to infer the fix from Coverage's bare numbers.
 	DiagnosticEmbeddingIndexIncomplete = "embedding_index_incomplete"
+	// DiagnosticLiveCountUnreadable reports that Coverage.Live could not
+	// be measured because engram.Store.CountLiveObservations failed. Left
+	// unnamed, this degrades to a silent Coverage.Live of 0, which is
+	// indistinguishable from a project that genuinely has no live
+	// observations -- exactly the silent wrong answer Coverage exists to
+	// prevent (its own doc comment: "this module's unforgivable
+	// failure").
+	DiagnosticLiveCountUnreadable = "live_count_unreadable"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.
@@ -519,6 +528,14 @@ func capResponse(result *Result) {
 // This is the one place the cap looks at more than one source at once --
 // it compares slot counts, not scores, so D8 survives, but it is named
 // here rather than presented as free.
+//
+// A tie -- two sources holding the same number of slots -- is broken by
+// source name, alphabetically first: Go's map iteration order is
+// unspecified, so picking "whichever the runtime visits first" makes an
+// identical call return a different body on different runs. Names are
+// sorted before comparing, and the comparison stays strict ">", so the
+// alphabetically-first tied name is the one still standing when the loop
+// ends and is the one dropLargestSourceRow drops from.
 func dropLargestSourceRow(result *Result) {
 	counts := make(map[string]int)
 	for _, row := range result.Results {
@@ -526,9 +543,15 @@ func dropLargestSourceRow(result *Result) {
 			counts[s]++
 		}
 	}
+	names := make([]string, 0, len(counts))
+	for name := range counts {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+
 	var largest string
-	for name, n := range counts {
-		if n > counts[largest] {
+	for _, name := range names {
+		if counts[name] > counts[largest] {
 			largest = name
 		}
 	}
@@ -628,9 +651,19 @@ func allocateSnippetBudget(result *Result) {
 // renderRowSnippet re-renders row's Snippet at budget, reserving
 // snippetMarkerAllowance so the rendered bytes -- including whatever
 // truncation markers engram.SnippetAt adds -- do not exceed budget.
+//
+// A row with no Content -- a vault row, whose snippet was already cut by
+// the vault's own retriever before this module ever saw it -- has no full
+// body here to measure and no claim to make about one (ResultRow.
+// SnippetTruncated's own doc comment). Re-slicing that snippet down to
+// budget can still shrink the text, but it must never set
+// SnippetTruncated: doing so would ship "snippet_truncated: true" beside a
+// FullLength that stays 0, the exact contradiction the field exists to
+// forbid. FullLength is left untouched (0) either way.
 func renderRowSnippet(row *ResultRow, budget int) {
 	content, offset := row.Content, row.MatchOffset
-	if content == "" {
+	hasFullBody := content != ""
+	if !hasFullBody {
 		content, offset = row.Snippet, 0
 	}
 	window := budget - snippetMarkerAllowance
@@ -638,7 +671,12 @@ func renderRowSnippet(row *ResultRow, budget int) {
 		window = 1
 	}
 	snippet, truncated := engram.SnippetAt(content, offset, window)
-	row.Snippet, row.SnippetTruncated = snippet, truncated
+	row.Snippet = snippet
+	if hasFullBody {
+		row.SnippetTruncated = truncated
+	} else {
+		row.SnippetTruncated = false
+	}
 }
 
 // cappedDetail states what was dropped in the terms a caller needs to act

@@ -186,6 +186,64 @@ func TestEmbeddingArmReportsNeverBuiltWhenNoIndexExists(t *testing.T) {
 	}
 }
 
+// TestRunEmbeddingArm_LiveCountFailureIsNamedAndNeverNegative (JD-2): a
+// swallowed CountLiveObservations error must not vanish silently. It must
+// surface as a diagnostic, the same way every other degradation path in
+// this file already does, and Coverage.Unindexed must never go negative
+// because of it.
+func TestRunEmbeddingArm_LiveCountFailureIsNamedAndNeverNegative(t *testing.T) {
+	store, _, _, stateDir := newEmbedArmFixture(t, []embedArmFixture{
+		{title: "one", content: "alpha", project: "proj-embed", vec: []float32{1, 0, 0}},
+	})
+	if err := store.Close(); err != nil {
+		t.Fatalf("close fixture store: %v", err)
+	}
+
+	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+
+	found := false
+	for _, d := range diags {
+		if d.Code == DiagnosticLiveCountUnreadable {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("diagnostics = %+v, want one %q naming the swallowed CountLiveObservations error", diags, DiagnosticLiveCountUnreadable)
+	}
+	if coverage.Unindexed < 0 {
+		t.Fatalf("coverage.Unindexed = %d, must never be negative", coverage.Unindexed)
+	}
+}
+
+// TestCoverageUnindexed_NeverNegativeOrClaimedWhenLiveUnknown (JD-2) is the
+// unit-level guard on the pure subtraction: it must never report a
+// negative count, and it must not claim a subtraction happened -- and
+// report 0 -- when Live could not be measured at all.
+func TestCoverageUnindexed_NeverNegativeOrClaimedWhenLiveUnknown(t *testing.T) {
+	cases := []struct {
+		name          string
+		live, indexed int
+		liveKnown     bool
+		want          int
+	}{
+		{name: "normal gap", live: 10, indexed: 4, liveKnown: true, want: 6},
+		{name: "fully indexed", live: 5, indexed: 5, liveKnown: true, want: 0},
+		{name: "live unknown, indexed positive", live: 0, indexed: 3, liveKnown: false, want: 0},
+		{name: "live known but less than indexed (stale count)", live: 2, indexed: 5, liveKnown: true, want: 0},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			got := coverageUnindexed(tc.live, tc.indexed, tc.liveKnown)
+			if got != tc.want {
+				t.Fatalf("coverageUnindexed(%d, %d, %v) = %d, want %d", tc.live, tc.indexed, tc.liveKnown, got, tc.want)
+			}
+			if got < 0 {
+				t.Fatalf("coverageUnindexed returned a negative value: %d", got)
+			}
+		})
+	}
+}
+
 // TestUnreachableBackendAndMissingModelAreDistinctDiagnostics (R-070): the
 // two ways an embedding call can fail must never collapse into one code.
 func TestUnreachableBackendAndMissingModelAreDistinctDiagnostics(t *testing.T) {

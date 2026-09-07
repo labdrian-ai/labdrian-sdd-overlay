@@ -156,3 +156,81 @@ func TestCapResponseDropsFromTheLargestSourceNotTheTail(t *testing.T) {
 		t.Fatalf("ftsSurvivors = %d, want fewer than 35: the larger source must be the one the cap drops from", ftsSurvivors)
 	}
 }
+
+// tiedSourceFixture builds a fresh Result with an exact tie: 3 rows
+// sourced from SourceEngramFTS and 3 rows sourced from SourceVault, so
+// counts["engram-fts"] == counts["vault"] and no strict ">" comparison
+// picks a winner.
+func tiedSourceFixture() Result {
+	result := Result{Project: "proj-a", Query: "zephyr"}
+	for i := 0; i < 3; i++ {
+		result.Results = append(result.Results, ResultRow{
+			Sources: []string{SourceEngramFTS}, Rank: len(result.Results) + 1,
+			EngramID: int64(i + 1),
+		})
+	}
+	for i := 0; i < 3; i++ {
+		result.Results = append(result.Results, ResultRow{
+			Sources: []string{SourceVault}, Rank: len(result.Results) + 1,
+			PageAddress: fmt.Sprintf("c-%05d", i),
+		})
+	}
+	return result
+}
+
+// TestDropLargestSourceRow_TieIsDeterministic (JD-1): when two sources
+// hold the same number of slots, Go's unspecified map iteration order must
+// never decide which one loses a row. Calling dropLargestSourceRow
+// repeatedly against identical tied input must drop the same source every
+// time.
+func TestDropLargestSourceRow_TieIsDeterministic(t *testing.T) {
+	var droppedVault, droppedFTS int
+	for i := 0; i < 50; i++ {
+		result := tiedSourceFixture()
+		before := len(result.Results)
+		dropLargestSourceRow(&result)
+		if len(result.Results) != before-1 {
+			t.Fatalf("run %d: len(Results) = %d, want %d", i, len(result.Results), before-1)
+		}
+		vaultSurvivors, ftsSurvivors := 0, 0
+		for _, row := range result.Results {
+			switch {
+			case hasSource(row, SourceVault):
+				vaultSurvivors++
+			case hasSource(row, SourceEngramFTS):
+				ftsSurvivors++
+			}
+		}
+		switch {
+		case vaultSurvivors == 2 && ftsSurvivors == 3:
+			droppedVault++
+		case vaultSurvivors == 3 && ftsSurvivors == 2:
+			droppedFTS++
+		default:
+			t.Fatalf("run %d: unexpected survivor counts vault=%d fts=%d", i, vaultSurvivors, ftsSurvivors)
+		}
+	}
+	if droppedVault != 0 && droppedFTS != 0 {
+		t.Fatalf("dropLargestSourceRow is non-deterministic on a tie: dropped vault %d times and fts %d times across identical calls", droppedVault, droppedFTS)
+	}
+}
+
+// TestRenderRowSnippet_VaultRowNeverClaimsTruncation (JD-3): a row with no
+// Content -- a vault row, whose snippet was already cut by the vault's own
+// retriever -- has no full body here to measure and no claim to make about
+// one (ResultRow.SnippetTruncated's own doc comment). Re-rendering it at a
+// budget smaller than its already-cut snippet must never set
+// SnippetTruncated: doing so ships "snippet_truncated: true" beside a
+// FullLength that stays 0, which is the exact contradiction the field
+// exists to forbid.
+func TestRenderRowSnippet_VaultRowNeverClaimsTruncation(t *testing.T) {
+	row := ResultRow{Snippet: strings.Repeat("v", 500)}
+	renderRowSnippet(&row, 120) // budget far smaller than the existing snippet
+
+	if row.SnippetTruncated {
+		t.Fatalf("SnippetTruncated = true for a vault row (no Content): %+v", row)
+	}
+	if row.FullLength != 0 {
+		t.Fatalf("FullLength = %d, want 0 for a vault row", row.FullLength)
+	}
+}
