@@ -46,14 +46,3 @@ skill-manifest-gen
 
 # UNDETERMINED. 0 checkboxes of any shape.
 skill-project-scope
-
-# STRANDED, and closing within the chain that opened it. 46/46 tasks checked,
-# and openspec/specs/longterm-mem-embedding-index/spec.md is not promoted yet,
-# so this is a promotion-plus-archive cycle rather than a folder move. The
-# archive lands at the tip of this PR chain, where the change is actually
-# finished: the judgment ledgers two later PRs write for it belong inside the
-# archived folder, and archiving here would leave them recreating the folder
-# behind the archive. This entry is deleted in that same archiving commit --
-# the stale-waiver rule above is what makes that obligatory rather than
-# remembered.
-union-retrieval
