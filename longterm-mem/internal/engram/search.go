@@ -24,6 +24,13 @@ type Row struct {
 	// ContentLength is len(Content) in bytes: how much a truncated
 	// Snippet is not showing.
 	ContentLength int
+	// MatchOffset is Content's byte index of the first FTS match, the same
+	// position Snippet was centred on. It lets a caller re-render the
+	// snippet at a different budget (query's budget-before-render
+	// allocation) without re-running the search. A row with no match
+	// position to report is 0, the same head-of-content fallback extract
+	// already uses.
+	MatchOffset int
 }
 
 // SnippetBudget is the number of characters an extract may carry.
@@ -72,35 +79,6 @@ type SearchResult struct {
 	DroppedTokens []string
 }
 
-// stopwords are the high-frequency English function words stripped from a
-// query before its tokens are combined.
-//
-// They are stripped for one measured reason: AND-joining them is what
-// turns a question into silence. They are not stripped to save work, and
-// stripping alone does not fix the problem -- on the live corpus the
-// eight-token question "what conventions apply when editing the register
-// writer" returned 0 rows AND-joined, and still returned 0 rows AND-joined
-// after stripping. What stripping buys is a better precise attempt and a
-// less diluted widened one: fewer terms that appear in nearly every
-// document, so the query that survives is made of the words that carry the
-// question's meaning.
-var stopwords = map[string]bool{
-	"a": true, "about": true, "all": true, "an": true, "and": true,
-	"any": true, "are": true, "as": true, "at": true, "be": true,
-	"been": true, "but": true, "by": true, "can": true, "did": true,
-	"do": true, "does": true, "for": true, "from": true, "had": true,
-	"has": true, "have": true, "how": true, "i": true, "if": true,
-	"in": true, "into": true, "is": true, "it": true, "its": true,
-	"me": true, "my": true, "no": true, "not": true, "of": true,
-	"on": true, "or": true, "our": true, "should": true, "so": true,
-	"some": true, "than": true, "that": true, "the": true, "their": true,
-	"them": true, "then": true, "there": true, "these": true, "they": true,
-	"this": true, "to": true, "up": true, "was": true, "we": true,
-	"were": true, "what": true, "when": true, "where": true, "which": true,
-	"who": true, "why": true, "will": true, "with": true, "would": true,
-	"you": true, "your": true,
-}
-
 // Search runs an FTS5 search scoped to project, excluding soft-deleted rows
 // (R-020), in Engram's own bm25 order, limited to limit rows.
 //
@@ -114,7 +92,7 @@ var stopwords = map[string]bool{
 // free: an empty result costs no tokens, so no audit of what a query
 // spends can ever find it.
 func (s *Store) Search(project, query string, limit int, excludeTypes ...string) (SearchResult, error) {
-	tokens, dropped := searchTokens(query)
+	tokens, dropped := SearchTokens(query)
 	if len(tokens) == 0 {
 		return SearchResult{MatchMode: MatchAll}, nil
 	}
@@ -196,7 +174,7 @@ func (s *Store) searchMatching(project, match string, limit int, excludeTypes []
 			return nil, fmt.Errorf("engram: scan search row: %w", err)
 		}
 		r.ContentLength = len(r.Content)
-		r.Snippet, r.SnippetTruncated = extract(r.Content, highlighted)
+		r.Snippet, r.SnippetTruncated, r.MatchOffset = extract(r.Content, highlighted)
 		results = append(results, r)
 	}
 	if err := rows.Err(); err != nil {
@@ -217,31 +195,51 @@ const (
 )
 
 // extract returns a SnippetBudget-sized window of content centred on the
-// first match highlight() marked, and whether that window is a fragment.
+// first match highlight() marked, whether that window is a fragment, and
+// the match's byte offset in content.
 //
 // highlighted is content with markers inserted, so the marker's index in
 // it is the match's index in content: everything before the marker is
 // unmodified. A body with no marker (highlight matched in another column,
 // say the title) falls back to the head of the content -- the honest
-// answer when there is no match position to centre on.
-func extract(content, highlighted string) (string, bool) {
-	if len(content) <= SnippetBudget {
+// answer when there is no match position to centre on -- and reports
+// offset 0.
+func extract(content, highlighted string) (string, bool, int) {
+	offset := 0
+	if i := strings.Index(highlighted, matchOpen); i >= 0 {
+		offset = i
+	}
+	snippet, truncated := SnippetAt(content, offset, SnippetBudget)
+	return snippet, truncated, offset
+}
+
+// SnippetAt returns a budget-sized window of content centred on offset (a
+// byte index into content), and whether that window is a fragment of the
+// whole.
+//
+// It is exported so query's response assembly can re-render a row's
+// snippet at a different budget once the byte ceiling is allocated across
+// rows (design: "the snippet budget is allocated per ROW, not per
+// source"), without re-running the search that produced content. offset is
+// the match's position in content; a row with no lexical match position --
+// the embedding arm has none, a cosine match is not a location in text --
+// passes 0, which renders an honest head slice rather than inventing a
+// position the retrieval method cannot support.
+func SnippetAt(content string, offset, budget int) (string, bool) {
+	if len(content) <= budget {
 		return content, false
 	}
 
-	start := 0
-	if i := strings.Index(highlighted, matchOpen); i >= 0 {
-		// Centre the window on the match, then pull it back inside the
-		// body at both ends.
-		start = i - SnippetBudget/2
-		if start < 0 {
-			start = 0
-		}
-		if start+SnippetBudget > len(content) {
-			start = len(content) - SnippetBudget
-		}
+	// Centre the window on offset, then pull it back inside the body at
+	// both ends.
+	start := offset - budget/2
+	if start < 0 {
+		start = 0
 	}
-	end := start + SnippetBudget
+	if start+budget > len(content) {
+		start = len(content) - budget
+	}
+	end := start + budget
 
 	// Never cut a rune in half: a snippet is text a person reads, and a
 	// severed multi-byte character renders as a replacement glyph.
@@ -260,31 +258,6 @@ func extract(content, highlighted string) (string, bool) {
 		snippet += truncationMark
 	}
 	return snippet, true
-}
-
-// searchTokens splits query into the tokens actually searched, and the
-// stopwords removed from it.
-//
-// A query made entirely of stopwords keeps every one of them: there is
-// nothing else the caller can have meant by it, and answering a
-// deliberate query with an empty one is the failure this whole change
-// exists to remove.
-func searchTokens(query string) (tokens, dropped []string) {
-	fields := strings.Fields(query)
-	if len(fields) == 0 {
-		return nil, nil
-	}
-	for _, f := range fields {
-		if stopwords[strings.ToLower(f)] {
-			dropped = append(dropped, f)
-			continue
-		}
-		tokens = append(tokens, f)
-	}
-	if len(tokens) == 0 {
-		return fields, nil
-	}
-	return tokens, dropped
 }
 
 // joinTokens double-quotes each token (doubling any internal quote) and
