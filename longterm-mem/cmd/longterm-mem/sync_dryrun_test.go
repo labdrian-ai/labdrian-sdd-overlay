@@ -78,6 +78,9 @@ func TestCmdSync_DryRunWritesNothingAndNamesWhatItWould(t *testing.T) {
 	if string(got) != handAuthored {
 		t.Fatalf("--dry-run rewrote the hand-authored index:\n%s", got)
 	}
+	if !strings.Contains(stdout, "patch 0 page(s)") {
+		t.Fatalf("dry run did not report the second pass at all, so it describes half the command; stdout:\n%s", stdout)
+	}
 	if !strings.Contains(stdout, "would promote 1 observation") {
 		t.Fatalf("dry run did not report the count it found; stdout:\n%s", stdout)
 	}

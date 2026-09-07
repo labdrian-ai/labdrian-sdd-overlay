@@ -117,3 +117,62 @@ func equalSnapshots(a, b map[string]string) bool {
 	}
 	return true
 }
+
+// TestPlan_CountsThePagesPropagateWouldPatch (PD-1): `sync` runs TWO
+// passes and prints both counts -- promoted and patched. A preview that
+// covers only the first tells an operator "nothing will be rewritten" on a
+// re-sync that is about to rewrite existing pages, which is the opposite of
+// what a dry run is for. The count is asserted against what Propagate then
+// actually patches on the same fixture, for the same reason Plan's
+// promotion count is: a prediction from a second copy of the walk is a
+// prediction that can quietly stop being true.
+func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
+	vaultRoot := t.TempDir()
+	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
+	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
+
+	store, ids := newFixtureEngramStore(t, []fixtureObs{
+		{title: "Old Decision", content: "Old body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
+		{title: "New Decision", content: "New body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+	}, []fixtureRelation{
+		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
+	})
+
+	precedence := PrecedenceStore{}
+	seedPromotedPage(t, vaultRoot, precedence, engram.Observation{
+		ID: ids[0], Type: "decision", Title: "Old Decision", Content: "Old body.", Project: "p", RevisionCount: 1,
+	}, "c-000001")
+	seedPromotedPage(t, vaultRoot, precedence, engram.Observation{
+		ID: ids[1], Type: "decision", Title: "New Decision", Content: "New body.", Project: "p", RevisionCount: 1,
+	}, "c-000002")
+
+	deps := Deps{Engram: store, Writer: &Writer{VaultRoot: vaultRoot, Store: precedence}}
+
+	before := vaultSnapshot(t, vaultRoot)
+
+	plan, err := Plan(context.Background(), deps, "p")
+	if err != nil {
+		t.Fatalf("Plan: %v", err)
+	}
+	if after := vaultSnapshot(t, vaultRoot); !equalSnapshots(before, after) {
+		t.Fatalf("Plan changed the vault while previewing the patch pass.\nbefore: %v\nafter:  %v", before, after)
+	}
+
+	report, err := Propagate(context.Background(), deps, "p")
+	if err != nil {
+		t.Fatalf("Propagate: %v", err)
+	}
+
+	if plan.WouldPatch != len(report.Patched) {
+		t.Fatalf("plan predicted %d patched page(s), Propagate then patched %d -- the preview does not describe the second pass", plan.WouldPatch, len(report.Patched))
+	}
+	if plan.WouldPatch != 1 {
+		t.Fatalf("plan.WouldPatch = %d, want 1 (the superseded page)", plan.WouldPatch)
+	}
+	if len(plan.PatchAddresses) != plan.WouldPatch {
+		t.Fatalf("plan names %d addresses but predicts %d patches", len(plan.PatchAddresses), plan.WouldPatch)
+	}
+	if plan.PatchAddresses[0] != report.Patched[0] {
+		t.Fatalf("plan named %q, Propagate patched %q", plan.PatchAddresses[0], report.Patched[0])
+	}
+}

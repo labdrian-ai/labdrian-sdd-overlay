@@ -58,9 +58,9 @@ func Propagate(ctx context.Context, deps Deps, project string) (PropagateReport,
 			continue
 		}
 
-		status, related, err := resolveStatus(deps, project, obs, bySyncID)
+		status, related, err := decidePatch(deps, project, obs, bySyncID)
 		if err != nil {
-			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("resolve status: %w", err)})
+			report.Failed = append(report.Failed, SyncFailure{ObservationID: obs.ID, Err: err})
 			continue
 		}
 		if status == "" {
@@ -145,4 +145,63 @@ func resolveStatus(deps Deps, project string, obs engram.Observation, bySyncID m
 		return "archived", nil, nil
 	}
 	return "", nil, nil
+}
+
+// decidePatch answers the one question Propagate asks of each observation
+// that already has a page: does this run rewrite it, and to what?
+//
+// It is extracted for the same reason decidePromotion is. `sync` runs two
+// passes and reports two counts, so a preview that predicts only the first
+// tells an operator "nothing will be rewritten" immediately before a
+// re-sync rewrites existing pages. Plan calls this; so does Propagate; and
+// neither holds a second opinion about what the other will do.
+func decidePatch(deps Deps, project string, obs engram.Observation, bySyncID map[string]engram.Observation) (string, []string, error) {
+	status, related, err := resolveStatus(deps, project, obs, bySyncID)
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve status: %w", err)
+	}
+	return status, related, nil
+}
+
+// patchCandidates walks project's observations exactly as Propagate does
+// and returns the addresses it would rewrite, plus whatever it could not
+// decide. Propagate itself does not call this -- it needs the resolved
+// status per page as it goes -- but every decision it makes about WHETHER
+// to patch is decidePatch's, which is the part a preview must not
+// re-implement.
+func patchCandidates(deps Deps, project string) ([]string, []SyncFailure, error) {
+	observations, err := deps.Engram.ObservationsIncludingDeleted(project)
+	if err != nil {
+		return nil, nil, fmt.Errorf("promote: plan: list observations for %q: %w", project, err)
+	}
+
+	bySyncID := make(map[string]engram.Observation, len(observations))
+	for _, obs := range observations {
+		if obs.SyncID != "" {
+			bySyncID[obs.SyncID] = obs
+		}
+	}
+
+	var addresses []string
+	var failed []SyncFailure
+	for _, obs := range observations {
+		promoted, ok, err := findPromotedPage(deps.Writer.VaultRoot, project, int(obs.ID))
+		if err != nil {
+			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: fmt.Errorf("check promoted state: %w", err)})
+			continue
+		}
+		if !ok {
+			continue
+		}
+		status, _, err := decidePatch(deps, project, obs, bySyncID)
+		if err != nil {
+			failed = append(failed, SyncFailure{ObservationID: obs.ID, Err: err})
+			continue
+		}
+		if status == "" {
+			continue
+		}
+		addresses = append(addresses, promoted.Address)
+	}
+	return addresses, failed, nil
 }

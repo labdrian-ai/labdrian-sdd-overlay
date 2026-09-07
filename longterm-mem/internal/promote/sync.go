@@ -146,13 +146,24 @@ type SyncPlan struct {
 	Failed []SyncFailure
 	// Titles names the observations WouldPromote counts, in the same order.
 	Titles []string
+	// WouldPatch is how many ALREADY-PROMOTED pages the second pass
+	// (Propagate) would rewrite. `sync` runs both passes and reports both
+	// counts; a preview that carried only WouldPromote would tell an
+	// operator nothing is rewritten immediately before a re-sync rewrites
+	// existing pages.
+	WouldPatch int
+	// PatchAddresses names the pages WouldPatch counts, in the same order.
+	PatchAddresses []string
 }
 
-// Plan reports what Sync would do for project, writing nothing at all: no
-// page, no precedence entry, no index rebuild, and no sync-state record.
-// It walks the same observations through the same decidePromotion Sync
-// uses, so its prediction is the run's own decision rather than a second
-// opinion about it.
+// Plan reports what a `sync` run would do for project, writing nothing at
+// all: no page, no precedence entry, no patched frontmatter, no index
+// rebuild, and no sync-state record.
+//
+// It covers BOTH passes the command runs -- promotion and propagation --
+// walking the same observations through the same decidePromotion and
+// decidePatch those passes use, so its prediction is their own decision
+// rather than a second opinion about it.
 func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
 	observations, err := deps.Engram.ListObservations(project)
 	if err != nil {
@@ -173,6 +184,14 @@ func Plan(ctx context.Context, deps Deps, project string) (SyncPlan, error) {
 		plan.WouldPromote++
 		plan.Titles = append(plan.Titles, obs.Title)
 	}
+
+	addresses, patchFailures, err := patchCandidates(deps, project)
+	if err != nil {
+		return SyncPlan{}, err
+	}
+	plan.PatchAddresses = addresses
+	plan.WouldPatch = len(addresses)
+	plan.Failed = append(plan.Failed, patchFailures...)
 	return plan, nil
 }
 

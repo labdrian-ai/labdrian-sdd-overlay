@@ -743,8 +743,8 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 }
 
 // mergeResults implements the amended R-006: vault rows precede Engram
-// rows only when the vault is a requested source (3b.8: MatchLinkedEngramRow
-// is the extracted matcher, reused unchanged by promote/MCP query later),
+// rows only when the vault is a requested source (matchLinkedObservation
+// is the matcher; it consults both Engram-backed arms, see JD-4 there),
 // and Engram's own requested sources are round-robin-interleaved by
 // interleaveEngramSources, deduplicated by engram_id. When both engram-fts
 // and engram-embed are requested, routeRank1 (R-058/R-059, Branch A: gate
@@ -903,22 +903,4 @@ func matchLinkedObservation(pageAddress string, engramRows []engram.Row, embedRo
 		}
 	}
 	return 0, "", false
-}
-
-// MatchLinkedEngramRow reports whether pageAddress links (via resolveLink)
-// to one of engramRows (3b.8 REFACTOR).
-func MatchLinkedEngramRow(pageAddress string, engramRows []engram.Row, resolveLink func(string) (int64, bool)) (engram.Row, bool) {
-	if resolveLink == nil {
-		return engram.Row{}, false
-	}
-	id, ok := resolveLink(pageAddress)
-	if !ok {
-		return engram.Row{}, false
-	}
-	for _, row := range engramRows {
-		if row.ID == id {
-			return row, true
-		}
-	}
-	return engram.Row{}, false
 }

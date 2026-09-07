@@ -162,9 +162,11 @@ func adoptFromWorkingDirectory(policy ledgerPolicy) (projectid.Adoption, []strin
 	stores, notes := openEstablishedStores()
 	defer stores.close()
 
-	// The ledger is consulted BEFORE resolving and written AFTER, because
-	// the two answer different halves of one question: what this repository
-	// was called before, and what it is called now.
+	// The ledger is consulted BEFORE resolving, because it answers what
+	// this repository was called before. It is written after only when the
+	// caller's policy says so: a read-only resolution (doctor, and sync
+	// --dry-run) still READS it -- that read is what lets an established
+	// name beat a freshly derived one -- but records nothing.
 	remembered, commonDir, ledgerNotes := rememberedNames(wd)
 	notes = append(notes, ledgerNotes...)
 

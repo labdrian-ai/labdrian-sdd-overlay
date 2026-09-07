@@ -95,9 +95,16 @@ func cmdSync(args []string) int {
 			fmt.Fprintf(os.Stderr, "longterm-mem: sync --dry-run: %v\n", err)
 			return exitInternal
 		}
-		fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), skip %d, into %s\n", plan.WouldPromote, plan.Skipped, vaultRoot)
+		// Both counts, in the same shape the real run reports them
+		// (`promoted N, patched M`). A dry run that named only the
+		// promotions would tell an operator nothing is rewritten
+		// immediately before a re-sync rewrites existing pages.
+		fmt.Printf("longterm-mem: sync --dry-run: would promote %d observation(s), patch %d page(s), skip %d, into %s\n", plan.WouldPromote, plan.WouldPatch, plan.Skipped, vaultRoot)
 		for _, title := range plan.Titles {
 			fmt.Printf("  would promote: %s\n", title)
+		}
+		for _, addr := range plan.PatchAddresses {
+			fmt.Printf("  would patch: %s\n", addr)
 		}
 		for _, f := range plan.Failed {
 			fmt.Fprintf(os.Stderr, "  cannot read promoted state for observation %d: %v\n", f.ObservationID, f.Err)
