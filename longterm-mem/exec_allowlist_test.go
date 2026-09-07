@@ -36,13 +36,16 @@ var allowedExecImporters = map[string]bool{
 	"internal/repohistory/history.go": true,
 }
 
-// findOSExecImporters walks root and returns the slash-separated paths
-// (relative to root) of every non-test .go file that imports "os/exec",
-// plus the total number of production .go files visited.
+// findImporters walks root and returns the slash-separated paths (relative
+// to root) of every non-test .go file that imports importPath, plus the
+// total number of production .go files visited.
 //
-// It is factored out of TestOSExecImportAllowlist so the walk rule itself
-// can be regression-tested independently of the real longterm-mem/ tree
-// (see TestOSExecImportAllowlistCatchesTestdataPackage).
+// It is factored out so the walk rule itself can be regression-tested
+// independently of the real longterm-mem/ tree (see
+// TestOSExecImportAllowlistCatchesTestdataPackage) and reused by both the
+// os/exec guard (R-021) and the net/net-http egress guard (R-071) —
+// generalized rather than duplicated, so a fix to the walk rule (like the
+// testdata carve-out below) protects both boundaries at once.
 //
 // Only ".git" is pruned. A directory named "testdata" is deliberately NOT
 // pruned: Go's own toolchain treats "testdata" as special only for its own
@@ -53,7 +56,7 @@ var allowedExecImporters = map[string]bool{
 // content under testdata (fixtures, golden files, YAML) is already excluded
 // by the ".go" suffix check below, so there is nothing left for a directory
 // skip to usefully prune.
-func findOSExecImporters(root string) (offenders []string, totalFiles int, walkErr error) {
+func findImporters(root, importPath string) (offenders []string, totalFiles int, walkErr error) {
 	fset := token.NewFileSet()
 
 	walkErr = filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -77,8 +80,7 @@ func findOSExecImporters(root string) (offenders []string, totalFiles int, walkE
 		}
 
 		for _, imp := range file.Imports {
-			importPath := strings.Trim(imp.Path.Value, `"`)
-			if importPath != "os/exec" {
+			if strings.Trim(imp.Path.Value, `"`) != importPath {
 				continue
 			}
 			rel, relErr := filepath.Rel(root, path)
@@ -91,6 +93,13 @@ func findOSExecImporters(root string) (offenders []string, totalFiles int, walkE
 		return nil
 	})
 	return offenders, totalFiles, walkErr
+}
+
+// findOSExecImporters is a thin wrapper kept so
+// TestOSExecImportAllowlistCatchesTestdataPackage — and the walk-rule
+// regression it guards — stays untouched by the net-import generalization.
+func findOSExecImporters(root string) (offenders []string, totalFiles int, walkErr error) {
+	return findImporters(root, "os/exec")
 }
 
 // TestOSExecImportAllowlist statically parses every non-test .go file under
