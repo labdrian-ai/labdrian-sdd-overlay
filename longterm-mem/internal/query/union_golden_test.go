@@ -53,6 +53,11 @@ type unionFixture struct {
 	Rows      []unionFixtureRow              `json:"rows"`
 	Vectors   map[string][]float32           `json:"vectors"`
 	Queries   map[string][]unionFixtureQuery `json:"queries"`
+	// Blind is the frozen blind-authored gate-validation set
+	// (openspec/changes/union-retrieval/validation/queries.json, "dropped"
+	// entries already excluded), keyed by class ("identifier"/
+	// "paraphrase"), each with its own pre-computed query embedding.
+	Blind map[string][]unionFixtureQuery `json:"blind"`
 }
 
 // loadUnionFixture reads and gunzips unionFixturePath. It is skipped, not
@@ -231,26 +236,21 @@ func TestUnionGoldenFixtureUsesLiveFTSSchema(t *testing.T) {
 // (does ANY row in the merged set carry it, over the FULL merged set --
 // R-058's actual guarantee, up to 2×top rows, not a top-5-only slice).
 //
-// hit@1 and hit@5 both reproduce the published table exactly for both
-// identifier classes. hit@5 also reproduces it exactly for paraphrase
-// (70%) once measured over the full merged set rather than a top-5 slice
-// of it (see the note below on why the top-5-of-union metric the original
-// python simulation used is a narrower, different quantity from R-058).
+// All six numbers reproduce the published table exactly.
 //
-// paraphrase hit@1 is a genuine, investigated divergence, not tolerated
-// silently: it measures 10%, not the published 40%. Every one of these 10
-// long natural-language queries fails FTS's exact AND-match and falls back
-// to OR (engram.MatchAny) -- and R-059's shipped gate (unlike the simple
-// `looks_identifier(query)` regex the original python simulation used to
-// pick an order) treats MatchAny itself as lexical-leaning evidence and
-// routes FTS to rank 1 regardless of the query's own shape. That rule is
-// deliberate (gate.go's own doc comment) and is exactly what the
-// independently blind-validated 86% paraphrase routing accuracy already
-// measures (validation/phase0.md) -- a later, more careful measurement of
-// the ACTUAL shipped gate, superseding what this simpler union() prototype
-// could show. The published 93/100·88/94·40/70 table validated the UNION
-// MECHANISM (recall, via hit@5) before routeRank1 existed to be measured
-// in its own right; it was never a measurement of R-059's shipped gate.
+// This test caught a real gate defect once already, and is left as the
+// record of it: an earlier `routeRank1` used `if matchMode == "any" {
+// return SourceEngramFTS }` as an early return that pre-empted the
+// token-shape rule below it, rather than being ORed with it (gate.go's own
+// doc comment carries the full history). Because every one of these 10
+// paraphrase queries fails FTS's exact AND-match and widens to
+// engram.MatchAny, that defect forced all 10 to the lexical arm regardless
+// of shape, and this test's paraphrase hit@1 read 10%, not 40% -- a real,
+// reproducible regression this golden table exists to catch, not a
+// harness artifact. TestGateRoutingAccuracyOnBlindSet
+// (gate_blind_test.go) pins the routing-accuracy regression directly,
+// against the frozen blind-authored set rather than this table's own
+// small, non-blind query set.
 func TestUnionArmDReproducesPublishedTable(t *testing.T) {
 	fixture := loadUnionFixture(t)
 	store, _ := buildUnionGoldenStore(t, fixture)
@@ -259,11 +259,11 @@ func TestUnionArmDReproducesPublishedTable(t *testing.T) {
 
 	cases := []struct {
 		class              string
-		wantHit1, wantHit5 int // percentages; see the divergence note above for paraphrase hit@1
+		wantHit1, wantHit5 int // published percentages
 	}{
 		{"identifier_single", 93, 100},
 		{"identifier_multi", 88, 94},
-		{"paraphrase", 10, 70},
+		{"paraphrase", 40, 70},
 	}
 
 	for _, tc := range cases {

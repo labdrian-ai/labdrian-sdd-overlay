@@ -11,6 +11,11 @@ import (
 // separator, a call-shaped parenthesis, or a dotted word.word -- routes
 // rank 1 to the FTS source, the arm that finds an exact lexical match, not
 // the embedding source, which finds only an approximate one.
+//
+// matchMode is engram.MatchAny, isolating the shape clause from the
+// match-mode clause (the gate is "shape OR match-mode==MatchAll"; asserted
+// on MatchAll instead, every case here would pass regardless of whether
+// the shape check does anything at all).
 func TestGateRoutesIdentifierShapesToLexicalArm(t *testing.T) {
 	cases := []struct {
 		name  string
@@ -24,10 +29,25 @@ func TestGateRoutesIdentifierShapesToLexicalArm(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			if got := routeRank1(tc.query, engram.MatchAll); got != SourceEngramFTS {
+			if got := routeRank1(tc.query, engram.MatchAny); got != SourceEngramFTS {
 				t.Fatalf("routeRank1(%v) = %q, want %q", tc.query, got, SourceEngramFTS)
 			}
 		})
+	}
+}
+
+// TestGateRoutesToFTSOnMatchAllEvenWithoutIdentifierShape (R-059, the
+// decision record's own "shape OR match-mode" rule): FTS matching every
+// query token precisely -- MatchAll, no widening needed -- routes rank 1
+// to FTS on its own, independent of the shape clause. This is the exact
+// case the decision record's own realistic-query measurement needed
+// (openspec/decisions/union-retrieval.md §4.3: "R-021 exec allowlist"
+// misrouted under shape-only alone) and the exact clause an early-return
+// implementation would have pre-empted rather than ORed.
+func TestGateRoutesToFTSOnMatchAllEvenWithoutIdentifierShape(t *testing.T) {
+	query := []string{"exec", "allowlist"} // no identifier-shaped token
+	if got := routeRank1(query, engram.MatchAll); got != SourceEngramFTS {
+		t.Fatalf("routeRank1(%v, MatchAll) = %q, want %q (match-mode alone must route FTS)", query, got, SourceEngramFTS)
 	}
 }
 
@@ -36,9 +56,18 @@ func TestGateRoutesIdentifierShapesToLexicalArm(t *testing.T) {
 // gate that fired on hyphens would route most natural-language paraphrase
 // queries to the lexical arm by accident, defeating the whole point of
 // having an embedding arm to route to.
+//
+// matchMode is engram.MatchAny here, not MatchAll: MatchAll is itself an
+// independent (correct) routing signal for the FTS source (the gate is
+// "shape OR match-mode==MatchAll"), so asserting this on MatchAll would
+// pass regardless of whether the shape clause fires -- it would not
+// isolate what this test exists to check. A realistic paraphrase query
+// almost always widens to MatchAny in practice (its own words rarely all
+// co-occur), which is also the shape this test needs to isolate the shape
+// clause from the match-mode clause.
 func TestGateDoesNotFireOnHyphenatedEnglish(t *testing.T) {
 	query := []string{"well-known", "state-of-the-art", "results"}
-	if got := routeRank1(query, engram.MatchAll); got != SourceEngramEmbed {
+	if got := routeRank1(query, engram.MatchAny); got != SourceEngramEmbed {
 		t.Fatalf("routeRank1(%v) = %q, want %q (hyphenated English must not trip the identifier gate)", query, got, SourceEngramEmbed)
 	}
 }
@@ -65,7 +94,7 @@ func TestAnIncorrectRank1RoutingDoesNotShrinkTheGuarantee(t *testing.T) {
 		matchMode string
 	}{
 		{"routes to fts", []string{"search.go"}, engram.MatchAll},
-		{"routes to embed", []string{"what", "conventions", "apply"}, engram.MatchAll},
+		{"routes to embed", []string{"what", "conventions", "apply"}, engram.MatchAny},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// The routing decision is computed to prove it varies across

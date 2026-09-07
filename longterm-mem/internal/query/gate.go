@@ -1,34 +1,65 @@
 package query
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+)
 
 // routeRank1 decides which source's top row should occupy rank 1 when more
 // than one source is requested (R-059).
 //
-// It is a heuristic over query SHAPE, nothing else. It does not compute or
-// compare a relevance score (D8 is untouched by it), and a wrong decision
-// only affects which row is first: R-058's union guarantee holds
-// regardless, because the merge already contains both sources' top-`top`
-// rows before this gate is asked anything.
+// It is a heuristic over query SHAPE and FTS's own match-mode signal,
+// nothing else. It does not compute or compare a relevance score (D8 is
+// untouched by it), and a wrong decision only affects which row is first:
+// R-058's union guarantee holds regardless, because the merge already
+// contains both sources' top-`top` rows before this gate is asked
+// anything.
 //
-// matchMode is engram.MatchAll or engram.MatchAny (the caller's own
-// widened-search signal): MatchAny already means the precise reading found
-// nothing, which is itself evidence the query leans lexical/identifier
-// rather than paraphrase, so it alone routes to the FTS source.
+// The two conditions are ORed, not chained as an early return: an
+// identifier-shaped token -- an interior CamelCase boundary, a `/`, a `_`,
+// a `(`, a `)`, or a dotted `word.word` -- routes to the FTS source, and so
+// does matchMode == engram.MatchAll -- FTS matched the query PRECISELY,
+// every token required, without needing to widen. Only when NEITHER holds
+// does rank 1 go to the embedding source.
 //
-// An identifier-shaped token -- an interior CamelCase boundary, a `/`, a
-// `_`, a `(`, a `)`, or a dotted `word.word` -- routes to the FTS source.
-// Anything else routes to the embedding source. This function computes the
-// decision; PR-4's validation (openspec/decisions/union-retrieval-gate-
-// validation.md) decides, separately, whether it is ever wired live.
+// This was wrong once already, in the direction the natural first idea
+// gets it wrong (openspec/decisions/union-retrieval.md §4.3): using
+// engram.MatchAny (FTS had to WIDEN because the precise AND search found
+// nothing) as a signal FOR the embedding arm looked elegant -- "FTS's own
+// admission of weakness" -- and was rejected because ~90% of realistic
+// identifier questions ALSO widen (a multi-token natural-language question
+// about a symbol rarely AND-matches every one of its own words), so that
+// rule alone misroutes the majority of realistic identifier queries to the
+// arm measured at 0% identifier@1. A second, precisely inverted mistake
+// checked matchMode == engram.MatchAny as an early return FOR the FTS
+// source -- which pre-empts the token-shape rule below it rather than
+// being ORed with it, and since EVERY natural-language paraphrase question
+// also widens (100% of the frozen blind validation set), that early return
+// collapsed paraphrase routing accuracy to 22% (see
+// TestGateRoutingAccuracyOnBlindSet's mutation proof).
+//
+// The corrected form here -- shape OR matchMode==MatchAll -- is tied on
+// the blind set with a simpler shape-only rule (both land at the same
+// count of right decisions once the early-return defect is removed; see
+// git history for the measurement). It is shipped anyway, over shape-only,
+// because it is the decision record's own validated rule and a strict
+// superset of shape-only's FTS-routing conditions: it can only route MORE
+// precisely-matched queries to FTS, never fewer, and the decision record's
+// own realistic-query measurement needed exactly that (§4.3: shape-only
+// alone misrouted "R-021 exec allowlist", 8/9; shape-OR-match-mode got
+// 9/9). Nothing in the blind set exercises that difference (every blind
+// paraphrase query widens, so the match-mode clause never fires for
+// paraphrase either way here), so the tie is real and the choice rests on
+// that outside evidence, not on this set.
 func routeRank1(tokens []string, matchMode string) string {
-	if matchMode == "any" {
-		return SourceEngramFTS
-	}
 	for _, t := range tokens {
 		if isIdentifierShaped(t) {
 			return SourceEngramFTS
 		}
+	}
+	if matchMode == engram.MatchAll {
+		return SourceEngramFTS
 	}
 	return SourceEngramEmbed
 }
