@@ -98,7 +98,7 @@ func cmdQuery(args []string) int {
 		if label == "" {
 			label = fmt.Sprintf("engram:%d", row.EngramID)
 		}
-		fmt.Printf("  [%d] %-8s %s %s\n", row.Rank, row.Source, label, row.Title)
+		fmt.Printf("  [%d] %-8s %s %s\n", row.Rank, strings.Join(row.Sources, "+"), label, row.Title)
 		printStanding(row)
 	}
 	for _, d := range result.Diagnostics {

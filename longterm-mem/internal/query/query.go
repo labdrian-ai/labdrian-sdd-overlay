@@ -1,7 +1,9 @@
 // Package query implements longterm-mem's unified query fan-out and merge
-// (R-006, D8): vault matches first in vault order, then Engram matches in
-// Engram order -- never re-ranked -- with any linked pair collapsed into
-// one row. A not-provisioned vault degrades to Engram-only results (R-026).
+// (R-006, D8): a caller-selected set of sources, vault matches first in
+// vault order when the vault is requested, then Engram's own sources
+// round-robin-interleaved in their own native order -- never re-ranked --
+// with any linked pair or cross-arm duplicate collapsed into one row. A
+// not-provisioned vault degrades to Engram-only results (R-026).
 package query
 
 import (
@@ -21,19 +23,69 @@ const DefaultTopN = vault.DefaultTopN
 // ErrMissingProject rejects a call with no project (R-006).
 var ErrMissingProject = errors.New("query: project is required")
 
+// ErrUnknownSource rejects a Request naming a source this function does
+// not recognise. An unrecognised name is refused, never ignored: silently
+// narrowing the corpus to the sources that happen to be spelled correctly
+// is the failure R-060 exists to remove.
+var ErrUnknownSource = errors.New("query: unknown source")
+
 // Result.VaultStatus values.
 const (
 	VaultStatusOK             = "ok"
 	VaultStatusNotProvisioned = "not_provisioned"
-	VaultStatusError          = "error"
+	// VaultStatusNotRequested reports that the vault was never asked,
+	// because the caller's sources did not name it (R-060). It is a
+	// distinct value from "not_provisioned" -- one says the vault has
+	// nothing to offer, the other says it was never given the chance to
+	// answer -- and collapsing the two into one value would hide which is
+	// true.
+	VaultStatusNotRequested = "not_requested"
+	VaultStatusError        = "error"
 )
 
-// ResultRow.Source values.
+// ResultRow.Sources values.
 const (
-	SourceVault  = "vault"
-	SourceEngram = "engram"
+	// SourceVault names the vault as a requested source (R-060).
+	SourceVault = "vault"
+	// SourceEngramFTS names Engram's own lexical (bm25/FTS5) search as a
+	// requested source (R-060).
+	SourceEngramFTS = "engram-fts"
+	// SourceEngramEmbed names Engram's embedding-index search as a
+	// requested source (R-060). Naming it is refused until the embedding
+	// pipeline this change also adds (internal/embed, internal/vecindex,
+	// the embedding arm itself) ships in a later PR of this same change --
+	// answering a request this code cannot back up would be exactly the
+	// silent narrowing R-060 exists to prevent, worn as a different
+	// costume.
+	SourceEngramEmbed = "engram-embed"
+	// SourceLinked names a row emitted from an existing vault<->Engram
+	// promotion link (R-006's "linked pair" scenario): one vault page and
+	// one Engram observation known to refer to the same memory, merged
+	// into a single row rather than two.
 	SourceLinked = "linked"
 )
+
+// knownSources is every name Request.Sources may contain.
+var knownSources = map[string]bool{
+	SourceEngramFTS:   true,
+	SourceEngramEmbed: true,
+	SourceVault:       true,
+}
+
+// defaultSources is what Run queries when Request.Sources is empty.
+//
+// It is engram-fts only, not "engram-fts and engram-embed" as R-060's own
+// final shape reads, because the embedding source does not exist to query
+// yet in this PR -- its client, its index, and the arm that reads it are
+// later slices of this same change. Shipping a default that silently asks
+// for a source it cannot honour would be worse than an honest smaller
+// default.
+//
+// The user-visible consequence is worth stating loudly here too, not only
+// in the change's own notes: the vault, which every call used to query
+// unconditionally, is no longer queried by default. A caller that wants it
+// back names it: sources: ["vault", "engram-fts"].
+var defaultSources = []string{SourceEngramFTS}
 
 // Diagnostic.Code values.
 const (
@@ -138,6 +190,11 @@ type Request struct {
 	// do not show. A caller who knows it wants implementation memory
 	// rather than session narrative can still say so.
 	ExcludeTypes []string
+	// Sources names which sources to query (R-060). Empty means
+	// defaultSources: engram-fts only, in this PR (see defaultSources for
+	// why the vault is no longer queried unconditionally). An unknown name
+	// is rejected with ErrUnknownSource rather than silently skipped.
+	Sources []string
 }
 
 // Deps are Run's dependencies. RetrieveVault/ResolveLink are function seams
@@ -161,13 +218,18 @@ type Score struct {
 
 // ResultRow is one merged result (D8's JSON shape).
 type ResultRow struct {
-	Source      string `json:"source"`
-	Rank        int    `json:"rank"`
-	PageAddress string `json:"page_address,omitempty"`
-	PagePath    string `json:"page_path,omitempty"`
-	EngramID    int64  `json:"engram_id,omitempty"`
-	Title       string `json:"title,omitempty"`
-	Snippet     string `json:"snippet,omitempty"`
+	// Sources names every requested source that produced this row. A row
+	// found by more than one source (R-058's union recall guarantee makes
+	// this possible for the first time) names all of them, not just the
+	// one that happened to win a tie-break -- there is no tie-break, D8
+	// forbids one.
+	Sources     []string `json:"sources"`
+	Rank        int      `json:"rank"`
+	PageAddress string   `json:"page_address,omitempty"`
+	PagePath    string   `json:"page_path,omitempty"`
+	EngramID    int64    `json:"engram_id,omitempty"`
+	Title       string   `json:"title,omitempty"`
+	Snippet     string   `json:"snippet,omitempty"`
 	// SnippetTruncated reports that Snippet is an extract of a longer
 	// body, and FullLength says how long that body is in bytes.
 	//
@@ -212,6 +274,17 @@ type ResultRow struct {
 	// search (R-002 keeps its connection read-only); it can decline to
 	// repeat the omission.
 	Standing *engram.Standing `json:"standing,omitempty"`
+	// MatchOffset is the byte offset engram.SnippetAt should centre a
+	// re-render on, mirroring engram.Row.MatchOffset. It only matters for
+	// a row with Content set.
+	MatchOffset int `json:"-"`
+	// Content is the row's full Engram body, carried through the merge so
+	// the budget allocator can re-render Snippet at a share computed after
+	// every row is known, without a second query (R-062). It is never
+	// serialised: a vault or linked row leaves it empty, having no full
+	// body this module holds, and an engram-sourced row's Content is
+	// discarded once its snippet is rendered.
+	Content string `json:"-"`
 }
 
 // Diagnostic is one non-fatal condition alongside a Result.
@@ -229,12 +302,27 @@ type Result struct {
 	Diagnostics []Diagnostic `json:"diagnostics,omitempty"`
 }
 
-// Run fans a query out to Engram and the vault, then merges by source
-// (R-006, R-026).
+// Run fans a query out to every requested source, then merges them
+// (R-006, R-026, R-060).
 func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	if req.Project == "" {
 		return Result{}, ErrMissingProject
 	}
+	sources := req.Sources
+	if len(sources) == 0 {
+		sources = defaultSources
+	}
+	for _, s := range sources {
+		if !knownSources[s] {
+			return Result{}, fmt.Errorf("%w: %q", ErrUnknownSource, s)
+		}
+		if s == SourceEngramEmbed {
+			return Result{}, fmt.Errorf("query: source %q is not available yet: the embedding index and its query arm ship in a later PR of union-retrieval", s)
+		}
+	}
+	wantVault := containsSource(sources, SourceVault)
+	wantFTS := containsSource(sources, SourceEngramFTS)
+
 	top := req.Top
 	if top <= 0 {
 		top = DefaultTopN
@@ -245,76 +333,119 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 
 	result := Result{Project: req.Project, Query: req.Query}
-	search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
-	if err != nil {
-		return Result{}, fmt.Errorf("query: search engram: %w", err)
-	}
-	engramRows := search.Rows
-	if search.MatchMode == engram.MatchAny {
-		result.Diagnostics = append(result.Diagnostics, Diagnostic{
-			Code:   DiagnosticSearchWidened,
-			Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
-		})
-	}
-	if len(req.ExcludeTypes) > 0 {
-		result.Diagnostics = append(result.Diagnostics, Diagnostic{
-			Code:   DiagnosticTypesExcluded,
-			Detail: fmt.Sprintf("these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: %s", strings.Join(req.ExcludeTypes, ", ")),
-		})
-	}
-	if len(search.DroppedTokens) > 0 {
-		result.Diagnostics = append(result.Diagnostics, Diagnostic{
-			Code:   DiagnosticSearchStopwordsDropped,
-			Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
-		})
-	}
-	if degraded, cause := deps.Engram.Degraded(); degraded {
-		result.Diagnostics = append(result.Diagnostics, Diagnostic{
-			Code:   DiagnosticEngramDegradedSnapshot,
-			Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
-		})
+
+	var engramRows []engram.Row
+	if wantFTS {
+		search, err := deps.Engram.Search(req.Project, req.Query, top, req.ExcludeTypes...)
+		if err != nil {
+			return Result{}, fmt.Errorf("query: search engram: %w", err)
+		}
+		engramRows = search.Rows
+		if search.MatchMode == engram.MatchAny {
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{
+				Code:   DiagnosticSearchWidened,
+				Detail: "no observation matched every term of this query, so it was retried matching any one of them: these rows answer part of the query, not all of it",
+			})
+		}
+		if len(req.ExcludeTypes) > 0 {
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{
+				Code:   DiagnosticTypesExcluded,
+				Detail: fmt.Sprintf("these observation types were excluded from the search at the caller's request, so matching memories of these kinds are not shown: %s", strings.Join(req.ExcludeTypes, ", ")),
+			})
+		}
+		if len(search.DroppedTokens) > 0 {
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{
+				Code:   DiagnosticSearchStopwordsDropped,
+				Detail: fmt.Sprintf("these terms were not searched, as words too common to narrow anything down: %s", strings.Join(search.DroppedTokens, ", ")),
+			})
+		}
+		if degraded, cause := deps.Engram.Degraded(); degraded {
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{
+				Code:   DiagnosticEngramDegradedSnapshot,
+				Detail: fmt.Sprintf("engram is being read through the immutable=1 fallback, so these results come from the snapshot taken when the connection was opened, not the live database: %s", cause),
+			})
+		}
 	}
 
 	var vaultRows []vault.Candidate
-	vaultResult, vaultErr := deps.RetrieveVault(ctx, req.Project, req.Query, top)
-	switch {
-	case vaultErr != nil:
-		// D8: a subprocess failure degrades to Engram-only + a diagnostic
-		// rather than failing the call. Follow-up: distinguish the
-		// runner's synthetic timeout exit (124) once vault.Retrieve
-		// exposes exit codes typed (retrieve.go/status.go are reused, not
-		// modified, in this slice).
-		result.VaultStatus = VaultStatusError
-		result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticVaultSubprocessFailed, Detail: vaultErr.Error()})
-	case vaultResult.Status == vault.StatusNotProvisioned:
-		result.VaultStatus = VaultStatusNotProvisioned
-	default:
-		result.VaultStatus = VaultStatusOK
-		vaultRows = vaultResult.Candidates
+	if wantVault {
+		vaultResult, vaultErr := deps.RetrieveVault(ctx, req.Project, req.Query, top)
+		switch {
+		case vaultErr != nil:
+			// D8: a subprocess failure degrades to Engram-only + a diagnostic
+			// rather than failing the call. Follow-up: distinguish the
+			// runner's synthetic timeout exit (124) once vault.Retrieve
+			// exposes exit codes typed (retrieve.go/status.go are reused, not
+			// modified, in this slice).
+			result.VaultStatus = VaultStatusError
+			result.Diagnostics = append(result.Diagnostics, Diagnostic{Code: DiagnosticVaultSubprocessFailed, Detail: vaultErr.Error()})
+		case vaultResult.Status == vault.StatusNotProvisioned:
+			result.VaultStatus = VaultStatusNotProvisioned
+		default:
+			result.VaultStatus = VaultStatusOK
+			vaultRows = vaultResult.Candidates
+		}
+	} else {
+		result.VaultStatus = VaultStatusNotRequested
 	}
 
-	result.Results = mergeResults(vaultRows, engramRows, resolveLink)
+	result.Results = mergeResults(sources, vaultRows, engramRows, resolveLink)
 	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
 	capResponse(&result)
 	return result, nil
 }
 
-// capResponse drops rows from the end of result until it encodes within
-// ResponseByteCeiling.
+// containsSource reports whether name is in sources.
+func containsSource(sources []string, name string) bool {
+	for _, s := range sources {
+		if s == name {
+			return true
+		}
+	}
+	return false
+}
+
+// MinSnippetBudget is the smallest per-row snippet share allocateSnippetBudget
+// will render before it stops shrinking and lets capResponse fall back to
+// dropping rows.
 //
-// From the END, and only from the end. The rows are already in D8's merge
-// order and that order is a correctness guarantee, so the only thing this
-// may do is keep a prefix of it: dropping from the middle, reordering, or
-// re-scoring to pack more in would all be re-ranking, which this module
-// is forbidden to do. Rank numbers are left exactly as merged for the same
-// reason -- a kept row's rank is a fact about the merge, not about how
-// many rows survived the budget.
+// Below it a snippet cannot carry the sentence a match sits in -- the same
+// reasoning engram.SnippetBudget (480, derived from 2 sources x 5 rows) is
+// built from, at roughly the row count (about 20, at this ceiling) where
+// the bound should again correctly fall on row count rather than on
+// snippet length. It completes engram.SnippetBudget's derivation rather
+// than contradicting it: at ordinary row counts share never gets near 120,
+// and only a caller asking for many rows at once reaches it.
+const MinSnippetBudget = 120
+
+// snippetMarkerAllowance reserves bytes for the up-to-two truncation
+// markers engram.SnippetAt may add around a cut, and for the small JSON
+// overhead a row's own "sources" list carries beyond a bare string, so a
+// row rendered at share does not exceed it once those are counted. It is a
+// constant rather than an exact per-row computation because the exact
+// count depends on where in the body the match falls and how many sources
+// a row carries, and reserving for a representative case is what keeps
+// the whole response inside the measured ceiling rather than narrowly
+// over it.
+const snippetMarkerAllowance = 24
+
+// capResponse allocates ResponseByteCeiling across result's rows before
+// dropping any of them (R-062's budget-before-render), then, only if the
+// response still does not fit, drops rows from whichever source holds the
+// most surviving slots, iteratively, until it does (R-063).
+//
+// Shrinking snippets first is not optional politeness: the union this
+// change exists to deliver is a set of ROWS, and a layer that recovers a
+// byte overrun by deleting rows is deleting exactly what the union bought
+// -- in the one place forbidden to re-rank, so it cannot even choose which
+// loss hurts least. A shorter snippet on every row costs less than a
+// missing row.
 //
 // It measures the encoded response rather than estimating it, because the
 // bound is on what goes on the wire and an estimate of that is not a
-// bound. The cost is one marshal per dropped row, on a response that is by
-// definition already too big to be cheap.
+// bound.
 func capResponse(result *Result) {
+	allocateSnippetBudget(result)
 	if responseBytes(*result) <= ResponseByteCeiling {
 		return
 	}
@@ -330,9 +461,142 @@ func capResponse(result *Result) {
 		if responseBytes(*result) <= ResponseByteCeiling {
 			return
 		}
-		result.Results = result.Results[:len(result.Results)-1]
+		dropLargestSourceRow(result)
 	}
 	result.Diagnostics[len(result.Diagnostics)-1].Detail = cappedDetail(full, full)
+}
+
+// dropLargestSourceRow removes the lowest-ranked surviving row belonging
+// to whichever source currently holds the most slots (R-063), rather than
+// trimming from the tail of the merged list regardless of which source it
+// belongs to.
+//
+// Ranks are left untouched on the survivors: a kept row's rank is a fact
+// about the merge, not about how many rows survived the budget, so a drop
+// leaves a gap in the sequence rather than renumbering around itself.
+// This is the one place the cap looks at more than one source at once --
+// it compares slot counts, not scores, so D8 survives, but it is named
+// here rather than presented as free.
+func dropLargestSourceRow(result *Result) {
+	counts := make(map[string]int)
+	for _, row := range result.Results {
+		for _, s := range row.Sources {
+			counts[s]++
+		}
+	}
+	var largest string
+	for name, n := range counts {
+		if n > counts[largest] {
+			largest = name
+		}
+	}
+
+	for i := len(result.Results) - 1; i >= 0; i-- {
+		for _, s := range result.Results[i].Sources {
+			if s == largest {
+				result.Results = append(result.Results[:i], result.Results[i+1:]...)
+				return
+			}
+		}
+	}
+	// Every row carries at least one source, so this is unreachable in
+	// practice; it exists only so a future bug here degrades to the old
+	// tail-drop rather than looping forever.
+	if len(result.Results) > 0 {
+		result.Results = result.Results[:len(result.Results)-1]
+	}
+}
+
+// allocateSnippetBudget renders every row's snippet within a share of
+// ResponseByteCeiling computed from the rows actually selected by the
+// merge, before capResponse decides whether anything still needs to be
+// dropped (R-062).
+//
+// A row carrying Content -- an Engram-sourced row, which always does --
+// re-renders centred on MatchOffset, the same position its original
+// snippet was cut from, so shrinking it never moves what it is showing.
+// A row with no Content -- a vault or linked row, whose retriever already
+// cut its snippet once, or a future embedding-arm row with no match
+// position to centre on -- re-renders its existing Snippet from the
+// start, the same honest head-slice engram.SnippetAt already falls back
+// to when there is nothing to centre on.
+func allocateSnippetBudget(result *Result) {
+	rows := result.Results
+	n := len(rows)
+	if n == 0 {
+		return
+	}
+
+	saved := make([]string, n)
+	savedTrunc := make([]bool, n)
+	for i := range rows {
+		saved[i], savedTrunc[i] = rows[i].Snippet, rows[i].SnippetTruncated
+		rows[i].Snippet, rows[i].SnippetTruncated = "", false
+	}
+	// overhead is the response's encoded size with every snippet blanked
+	// -- measured, not estimated, the same discipline the drop pass above
+	// already applies.
+	overhead := responseBytes(*result)
+	for i := range rows {
+		rows[i].Snippet, rows[i].SnippetTruncated = saved[i], savedTrunc[i]
+	}
+
+	available := ResponseByteCeiling - overhead
+	share := available / n
+	if share > engram.SnippetBudget {
+		share = engram.SnippetBudget
+	}
+	if share < MinSnippetBudget {
+		share = MinSnippetBudget
+	}
+
+	rendered := 0
+	var stillTruncated []int
+	for i := range rows {
+		renderRowSnippet(&rows[i], share)
+		rendered += len(rows[i].Snippet)
+		if rows[i].SnippetTruncated {
+			stillTruncated = append(stillTruncated, i)
+		}
+	}
+
+	// Short bodies leave part of their row's share unused; that leftover
+	// is reclaimed exactly once for whatever is still truncated at share,
+	// rather than iterated to convergence -- a loop's termination would
+	// depend on the data, and one pass is deterministic and bounded.
+	if len(stillTruncated) == 0 {
+		return
+	}
+	leftover := available - rendered
+	if leftover <= 0 {
+		return
+	}
+	share2 := share + leftover/len(stillTruncated)
+	if share2 > engram.SnippetBudget {
+		share2 = engram.SnippetBudget
+	}
+	if share2 <= share {
+		return
+	}
+	for _, i := range stillTruncated {
+		renderRowSnippet(&rows[i], share2)
+	}
+}
+
+// renderRowSnippet re-renders row's Snippet at budget, reserving
+// snippetMarkerAllowance so the rendered bytes -- including whatever
+// truncation markers engram.SnippetAt adds -- do not exceed budget.
+func renderRowSnippet(row *ResultRow, budget int) {
+	content, offset := row.Content, row.MatchOffset
+	if content == "" {
+		content, offset = row.Snippet, 0
+	}
+	window := budget - snippetMarkerAllowance
+	if window < 1 {
+		window = 1
+	}
+	snippet, truncated := engram.SnippetAt(content, offset, window)
+	row.Snippet, row.SnippetTruncated = snippet, truncated
 }
 
 // cappedDetail states what was dropped in the terms a caller needs to act
@@ -390,39 +654,106 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 	return nil
 }
 
-// mergeResults implements D8's merge (3b.8: MatchLinkedEngramRow is the
-// extracted matcher, reused unchanged by promote/MCP query later).
-func mergeResults(vaultRows []vault.Candidate, engramRows []engram.Row, resolveLink func(string) (int64, bool)) []ResultRow {
+// mergeResults implements the amended R-006: vault rows precede Engram
+// rows only when the vault is a requested source (3b.8: MatchLinkedEngramRow
+// is the extracted matcher, reused unchanged by promote/MCP query later),
+// and Engram's own requested sources are round-robin-interleaved by
+// interleaveEngramSources, deduplicated by engram_id.
+func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []engram.Row, resolveLink func(string) (int64, bool)) []ResultRow {
 	consumed := make(map[int64]bool, len(engramRows))
 	var merged []ResultRow
-	for _, c := range vaultRows {
-		if er, ok := MatchLinkedEngramRow(c.PageAddress, engramRows, resolveLink); ok && !consumed[er.ID] {
-			consumed[er.ID] = true
+
+	if containsSource(sources, SourceVault) {
+		for _, c := range vaultRows {
+			if er, ok := MatchLinkedEngramRow(c.PageAddress, engramRows, resolveLink); ok && !consumed[er.ID] {
+				consumed[er.ID] = true
+				merged = append(merged, ResultRow{
+					Sources: []string{SourceLinked}, PageAddress: c.PageAddress, PagePath: c.AbsolutePath,
+					EngramID: er.ID, Title: er.Title, Snippet: c.Snippet,
+					Score: &Score{BM25: c.BM25Score, Rerank: c.RerankScore},
+				})
+				continue
+			}
 			merged = append(merged, ResultRow{
-				Source: SourceLinked, PageAddress: c.PageAddress, PagePath: c.AbsolutePath,
-				EngramID: er.ID, Title: er.Title, Snippet: c.Snippet,
+				Sources: []string{SourceVault}, PageAddress: c.PageAddress, PagePath: c.AbsolutePath, Snippet: c.Snippet,
 				Score: &Score{BM25: c.BM25Score, Rerank: c.RerankScore},
 			})
-			continue
 		}
-		merged = append(merged, ResultRow{
-			Source: SourceVault, PageAddress: c.PageAddress, PagePath: c.AbsolutePath, Snippet: c.Snippet,
-			Score: &Score{BM25: c.BM25Score, Rerank: c.RerankScore},
-		})
 	}
-	for _, er := range engramRows {
-		if consumed[er.ID] {
-			continue
+
+	if containsSource(sources, SourceEngramFTS) {
+		var ftsRows []ResultRow
+		for _, er := range engramRows {
+			if consumed[er.ID] {
+				continue
+			}
+			ftsRows = append(ftsRows, ResultRow{
+				EngramID: er.ID, Title: er.Title,
+				Snippet: er.Snippet, SnippetTruncated: er.SnippetTruncated, FullLength: er.ContentLength,
+				MatchOffset: er.MatchOffset, Content: er.Content,
+			})
 		}
-		merged = append(merged, ResultRow{
-			Source: SourceEngram, EngramID: er.ID, Title: er.Title,
-			Snippet: er.Snippet, SnippetTruncated: er.SnippetTruncated, FullLength: er.ContentLength,
-		})
+		// PR-1 ever supplies one engram source (engram-fts); Phase 4 adds
+		// engram-embed to this slice, and interleaveEngramSources is
+		// written for that already so wiring it in is not a second
+		// rewrite of this function.
+		merged = append(merged, interleaveEngramSources([]engramSourceRows{{name: SourceEngramFTS, rows: ftsRows}})...)
 	}
+
 	for i := range merged {
 		merged[i].Rank = i + 1
 	}
 	return merged
+}
+
+// engramSourceRows is one requested Engram-backed source's own ranked
+// rows, already in ResultRow shape (Sources not yet set).
+type engramSourceRows struct {
+	name string
+	rows []ResultRow
+}
+
+// interleaveEngramSources round-robins across sources's own rows,
+// preserving each source's native rank order as a subsequence of the
+// result and deduplicating by EngramID -- the first occurrence is kept
+// and every source that also produced it is added to its Sources (R-006's
+// "a row found by both sources appears once, at its earliest rank").
+func interleaveEngramSources(sources []engramSourceRows) []ResultRow {
+	idx := make([]int, len(sources))
+	seen := make(map[int64]int, len(sources))
+	var merged []ResultRow
+	for {
+		progressed := false
+		for s := range sources {
+			if idx[s] >= len(sources[s].rows) {
+				continue
+			}
+			progressed = true
+			row := sources[s].rows[idx[s]]
+			idx[s]++
+			if pos, ok := seen[row.EngramID]; ok {
+				merged[pos].Sources = appendSourceOnce(merged[pos].Sources, sources[s].name)
+				continue
+			}
+			seen[row.EngramID] = len(merged)
+			row.Sources = []string{sources[s].name}
+			merged = append(merged, row)
+		}
+		if !progressed {
+			break
+		}
+	}
+	return merged
+}
+
+// appendSourceOnce appends name to list unless it is already there.
+func appendSourceOnce(list []string, name string) []string {
+	for _, s := range list {
+		if s == name {
+			return list
+		}
+	}
+	return append(list, name)
 }
 
 // MatchLinkedEngramRow reports whether pageAddress links (via resolveLink)

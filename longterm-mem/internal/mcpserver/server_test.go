@@ -100,7 +100,7 @@ func TestServer_QueryRoundTripsOverStdio(t *testing.T) {
 		Query:       "dragonscale",
 		VaultStatus: query.VaultStatusOK,
 		Results: []query.ResultRow{
-			{Source: query.SourceVault, Rank: 1, PageAddress: "c-000001", Title: "Dragonscale"},
+			{Sources: []string{query.SourceVault}, Rank: 1, PageAddress: "c-000001", Title: "Dragonscale"},
 		},
 	}
 	var gotReq query.Request
@@ -422,7 +422,7 @@ func TestServer_QueryDoesNotShipItsResultTwice(t *testing.T) {
 	result := query.Result{
 		Project: "proj-a", Query: "zephyr", VaultStatus: query.VaultStatusOK,
 		Results: []query.ResultRow{
-			{Source: query.SourceEngram, Rank: 1, EngramID: 7, Title: "a decision", Snippet: strings.Repeat("body text ", 40), SnippetTruncated: true, FullLength: 9000},
+			{Sources: []string{query.SourceEngramFTS}, Rank: 1, EngramID: 7, Title: "a decision", Snippet: strings.Repeat("body text ", 40), SnippetTruncated: true, FullLength: 9000},
 		},
 	}
 	deps := Deps{Query: func(context.Context, query.Request) (query.Result, error) { return result, nil }}
@@ -460,7 +460,7 @@ func TestServer_QueryTextBlockStaysReadable(t *testing.T) {
 	result := query.Result{
 		Project: "proj-a", Query: "zephyr", VaultStatus: query.VaultStatusOK,
 		Results: []query.ResultRow{
-			{Source: query.SourceEngram, Rank: 1, EngramID: 7, Title: "a decision", Snippet: "the zephyr decision", SnippetTruncated: true, FullLength: 9000},
+			{Sources: []string{query.SourceEngramFTS}, Rank: 1, EngramID: 7, Title: "a decision", Snippet: "the zephyr decision", SnippetTruncated: true, FullLength: 9000},
 		},
 		Diagnostics: []query.Diagnostic{{Code: query.DiagnosticSearchWidened, Detail: "widened"}},
 	}
