@@ -8,6 +8,38 @@ per-response coverage reporting, its explicit build lifecycle, named
 degradation when the embedding backend is unavailable, and the network
 egress boundary its HTTP dependency introduces.
 
+## Measured Rank-1 Routing Accuracy
+
+The rank-1 routing gate this index feeds (`longterm-mem-query`'s R-059) is
+shipped live (Branch A), not fixed FTS-first order, on blind,
+third-party-adjudicated validation: **89%** routing accuracy on identifier
+queries (n=18 decidable of 20 authored) and **86%** on paraphrase queries
+(n=7 decidable of 20 authored) — both in the 80–89% band the design's own
+threshold table requires publishing here rather than only in a decision
+document. Re-measured under the design's exact embedding input shape
+(`title‖NUL‖content[:limit]`), the same gate scores **94%**/**88%**.
+
+Both numbers describe the gate's own job — of the queries where at least
+one arm holds the ground truth at its own rank 1, how often the gate routed
+to that arm — not the union's `@1`/`@5` hit rates, which is a different
+question the gate does not answer and R-058's set-membership guarantee does
+not depend on. Full protocol, adjudication accounting, and the metric this
+supersedes are in `openspec/changes/union-retrieval/validation/phase0.md`
+and `score.md`.
+
+**The paraphrase n (7-9 decidable, depending on measurement) is too small
+for the design's own 80% acceptance threshold to be reliably resolved by a
+single re-measurement.** One query is worth 12-14 percentage points at
+this sample size; two independently honest measurements of the shipped
+gate against the same frozen blind set landed at 77.8% and 87.5%,
+straddling 80%, differing only in embedding-index freshness at
+measurement time (`validation/score.md`, "PR-4: the predicted failure
+happened"). The 86%/88% figures are real, not estimated — but they should
+be read as "well clear of a defective gate measured at ~22% on this same
+set," not as a value that would reproduce to the point. Widening the
+blind paraphrase set is open debt before this threshold is relied on
+again.
+
 ## Requirements
 
 ### Requirement: Embedding Index Location and Format

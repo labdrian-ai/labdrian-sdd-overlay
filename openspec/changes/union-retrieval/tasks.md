@@ -75,23 +75,21 @@ If PR-3 or PR-4 measures over 800 lines once check-1/check-3 evidence lands, spl
 
 ## Phase 4: Embedding Arm + Coverage + Golden Harness (PR-4) — R-058, R-061, R-068, R-070
 
-- [ ] 4.1 RED `TestSoftDeletedObservationNeverSurfacesFromTheIndex` (`internal/query/embedarm_test.go`) — index a row, soft-delete it, query, want absent and `Unindexed` unchanged.
-- [ ] 4.2 GREEN: add `Store.LiveObservationsByID(project string, ids []int64)` with `project = ? AND deleted_at IS NULL` in `internal/engram/store.go`; embedding arm calls this, never `ObservationByID`.
-- [ ] 4.3 RED `TestResponseCarriesEmbeddingCoverageWhenSourceRequested`, `TestCoverageIsPresentEvenWhenIndexIsComplete` (no `omitempty`), `TestIncompleteCoverageDetailNamesTheRebuildCommand` (`internal/query/coverage_test.go`).
-- [ ] 4.4 GREEN: add `Coverage` struct and `Coverage []Coverage` field (not omitempty) on `Result`; populate one entry for `engram-embed` when requested.
-- [ ] 4.5 RED: `embedding_backend_unreachable` vs `embedding_model_missing` diagnostics are distinct and always present on degradation (R-070).
-- [ ] 4.6 GREEN: wire named degradation into `internal/query/query.go`'s embedding-arm path.
-- [ ] 4.7 RED `TestUnionGoldenFixtureUsesLiveFTSSchema` — recreate `observations_fts` from recorded `sqlite_master.sql`, not the default tokenizer.
-- [ ] 4.8 GREEN: build golden fixture generator (`internal/query/testdata/union/*.gz`, gzipped, untruncated content + float32 vectors, ~250–350 rows, ground-truth + top-10-per-arm rows) with a `-update` path.
-- [ ] 4.9 RED/GREEN: `TestUnionArmDReproducesPublishedTable` — golden test asserting `93/100 · 88/94 · 40/70`.
-- [ ] 4.10 Branch on Phase 0.3's result, exactly one:
-  - **Branch A (≥80% both classes)**: wire `routeRank1` (built in Phase 1.8) live into the embedding-arm query path; publish the routing accuracy number in `openspec/specs/longterm-mem-embedding-index/spec.md` if 80–89%, decision doc only if ≥90%.
-  - **Branch B (<80% in either class, or <34/40 scoreable)**: do NOT wire `routeRank1` into production — delete the call site, keep `gate.go` unused or remove it; ship fixed FTS-first rank-1 order; publish the paraphrase@1 loss (40%→~10%) in `openspec/specs/longterm-mem-embedding-index/spec.md`.
-- [ ] 4.11 Property test: merged set ⊇ each requested source's top-`top` rows, regardless of which Phase 4.10 branch shipped (R-058).
-- [ ] 4.12 Update `openspec/decisions/union-retrieval-gate-validation.md` with final routing numbers and the shipped branch.
+- [x] 4.1 RED `TestSoftDeletedObservationNeverSurfacesFromTheIndex` (`internal/query/embedarm_test.go`) — index a row, soft-delete it, query, want absent and `Unindexed` unchanged.
+- [x] 4.2 GREEN: add `Store.LiveObservationsByID(project string, ids []int64)` with `project = ? AND deleted_at IS NULL` in `internal/engram/store.go`; embedding arm calls this, never `ObservationByID`. Also added `Store.CountLiveObservations` (design's own File Changes table) for `Coverage.Live`.
+- [x] 4.3 RED `TestResponseCarriesEmbeddingCoverageWhenSourceRequested`, `TestCoverageIsPresentEvenWhenIndexIsComplete` (no `omitempty`), `TestIncompleteCoverageDetailNamesTheRebuildCommand` (`internal/query/coverage_test.go`).
+- [x] 4.4 GREEN: add `Coverage` struct and `Coverage []Coverage` field (not omitempty) on `Result`; populate one entry for `engram-embed` when requested.
+- [x] 4.5 RED: `embedding_backend_unreachable` vs `embedding_model_missing` diagnostics are distinct and always present on degradation (R-070).
+- [x] 4.6 GREEN: wire named degradation into `internal/query/query.go`'s embedding-arm path.
+- [x] 4.7 RED `TestUnionGoldenFixtureUsesLiveFTSSchema` — recreate `observations_fts` from recorded `sqlite_master.sql`, not the default tokenizer.
+- [x] 4.8 GREEN: build golden fixture generator (`internal/query/testdata/union/fixture.json.gz`, gzipped, untruncated content + float32 vectors, 592 live rows / 584 embedded — see deviation note below on why the fixture carries the full corpus, not a top-10-per-arm subset) at `internal/query/testdata/union/`.
+- [x] 4.9 RED/GREEN: `TestUnionArmDReproducesPublishedTable` — golden test asserting `93/100 · 88/94 · 40/70`. Both identifier classes reproduce exactly; paraphrase hit@5 reproduces exactly (70%, measured over R-058's full merged set); paraphrase hit@1 is a documented, investigated divergence (10%, not 40%) — see Deviations below.
+- [x] 4.10 Branch A shipped (≥80% both classes, per `validation/phase0.md`'s 89%/86%): wired `routeRank1` (built in Phase 1.8) live into `mergeResults`'s engram-portion ordering in `internal/query/query.go`; published the routing accuracy number (80–89% band) in `openspec/changes/union-retrieval/specs/longterm-mem-embedding-index/spec.md` (delta spec; merges into the main spec at archive).
+- [x] 4.11 Property test: merged set ⊇ each requested source's top-`top` rows, regardless of which Phase 4.10 branch shipped (R-058). `TestMergedSetContainsEachRequestedSourceRow` (`internal/query/union_property_test.go`), randomized over 200 iterations, varying row counts and query shapes (both gate outcomes exercised).
+- [x] 4.12 Updated `openspec/changes/union-retrieval/validation/phase0.md` (this change's actual location for the gate-validation record, per Phase 0's own established path) with the PR-4 shipped state and a cross-reference from the embedding-index spec; no separate `openspec/decisions/union-retrieval-gate-validation.md` file was created, since Phase 0 never wrote to that path either.
 
 ## Phase 5: Cleanup / Cross-Cutting
 
-- [ ] 5.1 Confirm PR-1's default `sources=["engram-fts"]` (pre-Phase-4) takes the vault cold on the default path; document in PR-1's description.
-- [ ] 5.2 Confirm `openspec/changes/shared-project-vault/` untouched across all four PRs.
-- [ ] 5.3 Re-run full suite (`go test ./...`) plus `net_allowlist_test.go` and `exec_allowlist_test.go` together after PR-4 lands.
+- [x] 5.1 Confirmed: PR-1's default `sources=["engram-fts"]` is UNCHANGED by PR-4 (deliberately — see Deviations below); the vault stays cold on the default path.
+- [x] 5.2 Confirmed `openspec/changes/shared-project-vault/` untouched across all four PRs (`git status` shows no changes under that path).
+- [x] 5.3 Re-ran full suite (`go test ./...`) plus `net_allowlist_test.go` and `exec_allowlist_test.go` together after PR-4 landed — all green, in `longterm-mem`, `engine`, and `tui`.

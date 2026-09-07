@@ -466,3 +466,100 @@ func TestHasMemory_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
 		}
 	}
 }
+
+// TestLiveObservationsByID_ExcludesSoftDeletedAndOtherProjects (design's
+// "the embedding arm may not reuse ObservationByID" -- ObservationByID
+// deliberately returns a soft-deleted row, and reusing it here would let an
+// observation deleted after the embedding index was built surface from a
+// months-old index, defeating R-020 by convenience). LiveObservationsByID
+// must return only rows that are both live (deleted_at IS NULL) and belong
+// to the requested project, even when a caller (by construction, a bug, or
+// a stale manifest naming a since-repurposed id) asks for an id outside
+// either boundary.
+func TestLiveObservationsByID_ExcludesSoftDeletedAndOtherProjects(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	liveID := insertObservationFull(t, dbPath, "live", "widgets", "discovery", 1, false, "")
+	deletedID := insertObservationFull(t, dbPath, "gone", "widgets", "discovery", 1, false, "")
+	setDeletedAt(t, dbPath, deletedID, "2026-01-01 00:00:00")
+	otherProjectID := insertObservationFull(t, dbPath, "elsewhere", "gadgets", "discovery", 1, false, "")
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.LiveObservationsByID("widgets", []int64{liveID, deletedID, otherProjectID, 999999})
+	if err != nil {
+		t.Fatalf("LiveObservationsByID: %v", err)
+	}
+	if len(got) != 1 {
+		t.Fatalf("LiveObservationsByID returned %d rows, want 1 (only the live widgets row): %+v", len(got), got)
+	}
+	if _, ok := got[liveID]; !ok {
+		t.Fatalf("LiveObservationsByID missing the live row %d: %+v", liveID, got)
+	}
+}
+
+// TestLiveObservationsByID_EmptyIDsReturnsEmptyNotError guards the zero-id
+// case a caller with an empty manifest (no index built yet) will actually
+// hit, rather than leaving it to an untested SQL edge (an empty IN () is a
+// syntax error in SQLite, not an empty result).
+func TestLiveObservationsByID_EmptyIDsReturnsEmptyNotError(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.LiveObservationsByID("widgets", nil)
+	if err != nil {
+		t.Fatalf("LiveObservationsByID(nil ids): %v", err)
+	}
+	if len(got) != 0 {
+		t.Fatalf("LiveObservationsByID(nil ids) = %+v, want empty", got)
+	}
+}
+
+// TestCountLiveObservations_ScopesProjectAndExcludesSoftDeleted mirrors
+// HasMemory's own scoping (R-020): a project's live count is required by
+// the embedding arm's Coverage field, and must never count a soft-deleted
+// row or a row belonging to a different project.
+func TestCountLiveObservations_ScopesProjectAndExcludesSoftDeleted(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	insertObservation(t, dbPath, "live-1", "widgets", sql.NullString{})
+	insertObservation(t, dbPath, "live-2", "widgets", sql.NullString{})
+	insertObservation(t, dbPath, "gone", "widgets", sql.NullString{String: "2026-01-01 00:00:00", Valid: true})
+	insertObservation(t, dbPath, "other-project", "gadgets", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open(%q): %v", dbPath, err)
+	}
+	defer store.Close()
+
+	got, err := store.CountLiveObservations("widgets")
+	if err != nil {
+		t.Fatalf("CountLiveObservations: %v", err)
+	}
+	if got != 2 {
+		t.Fatalf("CountLiveObservations(widgets) = %d, want 2", got)
+	}
+}
+
+// setDeletedAt soft-deletes id through a writable setup connection.
+func setDeletedAt(t *testing.T, dbPath string, id int64, deletedAt string) {
+	t.Helper()
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	defer setup.Close()
+	if _, err := setup.Exec(`UPDATE observations SET deleted_at = ? WHERE id = ?`, deletedAt, id); err != nil {
+		t.Fatalf("soft-delete observation %d: %v", id, err)
+	}
+}

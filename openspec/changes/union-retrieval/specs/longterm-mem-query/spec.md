@@ -101,11 +101,49 @@ Traces to: longterm-mem R-059
 
 WHEN more than one source is requested, the longterm-mem query function
 SHALL route rank 1 to the Engram FTS source WHERE any query token is
-identifier-shaped or the FTS match mode is `MatchAll`, and to the embedding
-source otherwise. This gate is a heuristic over query shape; it SHALL NOT
-compute or compare a relevance score, and a wrong routing decision SHALL
-only affect which source occupies rank 1, never the set guaranteed by
-R-058.
+identifier-shaped OR the FTS match mode is `MatchAll` (FTS matched every
+query token precisely, without needing to widen), and to the embedding
+source otherwise. The two conditions SHALL be combined with OR, never as
+an early return that pre-empts the other: a query that widens to
+`MatchAny` (the precise AND search found nothing) SHALL still route to FTS
+when it is also identifier-shaped, and SHALL NOT be forced to FTS by
+widening alone. This gate is a heuristic over query shape and FTS's own
+match-mode signal; it SHALL NOT compute or compare a relevance score, and
+a wrong routing decision SHALL only affect which source occupies rank 1,
+never the set guaranteed by R-058.
+
+An earlier implementation inverted this: `matchMode == MatchAny` as an
+early return FOR the FTS source, which pre-empted the token-shape check
+below it instead of being ORed with it. Because essentially every
+natural-language paraphrase query widens to `MatchAny` (its own words
+rarely all co-occur), that defect routed nearly all paraphrase queries to
+FTS regardless of shape, collapsing paraphrase routing accuracy to ~22%
+against the blind validation set below. This requirement's text
+previously (and incorrectly) described that defective behavior as
+intended; it is corrected here to describe the shipped, ORed rule.
+
+Shipped (Branch A) at a measured routing accuracy of 89% (identifier
+queries, n=18 decidable) and 86% (paraphrase queries, n=7) against blind,
+third-party-adjudicated ground truth — both in the 80–89% band, so the
+number is published here rather than only in a decision document (see
+`openspec/changes/union-retrieval/validation/phase0.md` and `score.md` for
+the full protocol and the surviving-n accounting). Under the design's exact
+embedding input shape (title‖NUL‖content, re-measured rather than assumed
+after a harness/shape mismatch was found), the same gate scores 94%/88%.
+
+**Paraphrase's n is too small for its own 80% acceptance threshold to be
+meaningful (validation/score.md, "PR-4: the predicted failure happened").**
+At n=7-9 decidable paraphrase queries, one query is worth 12-14 percentage
+points; two independently honest re-measurements of the corrected gate
+against the same frozen blind set landed at 77.8% and 87.5%, straddling
+80%, differing only in embedding-index freshness at measurement time. The
+89%/86%/94%/88% numbers above are real measurements, not estimates, and
+are published as such — but the 86%/88% paraphrase figures specifically
+should be read as "comfortably above a defect measured at ~22%," not as a
+number that would reliably reproduce to the point on a re-measurement.
+Widening the blind paraphrase set is open debt, tracked in
+`validation/score.md`, before this threshold is relied on again to decide
+a branch or gate a release.
 
 #### Scenario: Identifier-shaped token routes FTS to rank 1
 

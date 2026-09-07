@@ -45,7 +45,39 @@ embedding, so the ranking had to be re-measured rather than assumed.
 Branch A under both. PR-3 is unblocked; had this failed, `internal/vecindex`
 would not have been written at all.
 
-## Staleness, third occurrence in this instrument
+## PR-4: Branch A shipped
+
+`routeRank1` (`internal/query/gate.go`, unwired since PR-1's 1.7/1.8) is now
+wired live into `mergeResults` (`internal/query/query.go`): when both
+`engram-fts` and `engram-embed` are requested, the gate decides which
+source's rows are offered first to `interleaveEngramSources`, deciding rank
+1 only — `interleaveEngramSources` itself never consults the gate, so the
+`@5` union guarantee (R-058) is provably unaffected by the gate's decision
+either way (`TestAnIncorrectRank1RoutingDoesNotShrinkTheGuarantee`,
+`TestMergedSetContainsEachRequestedSourceRow`).
+
+The routing accuracy this shipped on is the 80–89%-band number from 0.1–0.3
+above (89% identifier / 86% paraphrase), also published in
+`openspec/specs/longterm-mem-embedding-index/spec.md` per the 80–89% row of
+design's threshold table. Branch B (fixed FTS-first order, `gate.go` deleted
+or left unwired) was not taken.
+
+**Post-ship correction.** The first wiring shipped a defective `routeRank1`:
+an early return on `matchMode == MatchAny` that pre-empted the token-shape
+rule below it instead of being ORed with it. Because every widened query in
+the blind paraphrase set (16/16) triggers `MatchAny`, that defect forced
+every paraphrase query to the lexical arm regardless of shape, measuring
+22% routing accuracy on `validation/queries.json` — a severe, real
+regression, caught by `TestGateRoutingAccuracyOnBlindSet`
+(`internal/query/gate_blind_test.go`), not by `gate_test.go`'s hand-made
+cases, which never varied shape and match-mode together and so could not
+see a defect in how they combine. Corrected to `shape OR
+matchMode==MatchAll` — the decision record's own validated rule (§4.3) —
+and re-verified: identifier still 100% (18/18), paraphrase recovers to
+77.8-87.5% depending on embedding-index freshness at measurement time (see
+`score.md`'s "PR-4: the predicted failure happened" for the full account
+and the maintainer's ruling on why the 80% threshold itself is not
+resolvable at this n).
 
 The corpus was 584 rows when first embedded, 586 at the blind scoring, and
 **591** at gate 0.5 — memory this session kept saving. Every measurement here

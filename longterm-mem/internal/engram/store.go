@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
 	_ "modernc.org/sqlite"
 )
@@ -262,4 +263,68 @@ func (s *Store) ObservationByID(id int64) (Observation, bool, error) {
 		return Observation{}, false, fmt.Errorf("engram: look up observation %d: %w", id, err)
 	}
 	return o, true, nil
+}
+
+// LiveObservationsByID returns every observation in ids that both belongs
+// to project and has not been soft-deleted (R-020), keyed by id.
+//
+// It exists so the embedding-index query arm never reuses ObservationByID
+// (design: "the embedding arm may not reuse ObservationByID" -- that method
+// deliberately returns a soft-deleted row for promote's explicit-id case,
+// and reusing it here would let an observation deleted after the embedding
+// index was built surface from a months-old index, defeating R-020 by
+// convenience rather than by decision). An id in ids that is missing,
+// belongs to another project, or is soft-deleted is simply absent from the
+// returned map -- not an error, since a stale manifest entry naming a row
+// that no longer qualifies is the ordinary case this method exists to
+// handle, not an exceptional one.
+func (s *Store) LiveObservationsByID(project string, ids []int64) (map[int64]Observation, error) {
+	result := make(map[int64]Observation, len(ids))
+	if len(ids) == 0 {
+		return result, nil
+	}
+
+	placeholders := strings.Repeat("?, ", len(ids)-1) + "?"
+	args := make([]any, 0, len(ids)+1)
+	args = append(args, project)
+	for _, id := range ids {
+		args = append(args, id)
+	}
+
+	rows, err := s.db.Query(
+		`SELECT `+observationColumns+` FROM observations WHERE project = ? AND deleted_at IS NULL AND id IN (`+placeholders+`)`,
+		args...,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("engram: look up live observations for project %q: %w", project, err)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		o, err := scanObservationRow(rows)
+		if err != nil {
+			return nil, err
+		}
+		result[o.ID] = o
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("engram: iterate live observation rows: %w", err)
+	}
+	return result, nil
+}
+
+// CountLiveObservations returns how many observations belonging to project
+// have not been soft-deleted (R-020) -- the embedding arm's Coverage.Live
+// field, computed the same way ListObservations and HasMemory already
+// scope live rows.
+func (s *Store) CountLiveObservations(project string) (int, error) {
+	var count int
+	err := s.db.QueryRow(
+		`SELECT COUNT(*) FROM observations WHERE project = ? AND deleted_at IS NULL`,
+		project,
+	).Scan(&count)
+	if err != nil {
+		return 0, fmt.Errorf("engram: count live observations for project %q: %w", project, err)
+	}
+	return count, nil
 }
