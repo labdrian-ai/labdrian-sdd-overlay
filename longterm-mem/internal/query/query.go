@@ -16,6 +16,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // DefaultTopN mirrors vault.DefaultTopN (D8: both sources share one bound).
@@ -73,20 +74,27 @@ var knownSources = map[string]bool{
 	SourceVault:       true,
 }
 
-// defaultSources is what Run queries when Request.Sources is empty.
+// defaultSources is what Run queries when Request.Sources is empty:
+// engram-fts and engram-embed together (R-060's own final shape) the
+// moment project's embedding index actually exists, since a caller has no
+// way to know from the outside whether one has ever been built -- and
+// engram-fts alone otherwise, since asking the embedding arm to run on
+// every query for a project with nothing indexed would cost a network
+// round trip for a guaranteed-empty answer (embedarm.go's own
+// "no index built yet" degradation covers a caller who names engram-embed
+// explicitly against such a project; this is only about what an omitted
+// Sources defaults to).
 //
-// It is engram-fts only, not "engram-fts and engram-embed" as R-060's own
-// final shape reads, because the embedding source does not exist to query
-// yet in this PR -- its client, its index, and the arm that reads it are
-// later slices of this same change. Shipping a default that silently asks
-// for a source it cannot honour would be worse than an honest smaller
-// default.
-//
-// The user-visible consequence is worth stating loudly here too, not only
-// in the change's own notes: the vault, which every call used to query
-// unconditionally, is no longer queried by default. A caller that wants it
-// back names it: sources: ["vault", "engram-fts"].
-var defaultSources = []string{SourceEngramFTS}
+// The vault is unaffected either way: it is opt-in, queried only when a
+// caller names it explicitly (R-060), regardless of what the two Engram
+// arms default to. A caller that wants it names it:
+// sources: ["vault", "engram-fts"].
+func defaultSources(deps Deps, project string) []string {
+	if _, err := vecindex.Load(vecindex.Dir(deps.StateDir, project)); err == nil {
+		return []string{SourceEngramFTS, SourceEngramEmbed}
+	}
+	return []string{SourceEngramFTS}
+}
 
 // Diagnostic.Code values.
 const (
@@ -214,9 +222,11 @@ type Request struct {
 	// rather than session narrative can still say so.
 	ExcludeTypes []string
 	// Sources names which sources to query (R-060). Empty means
-	// defaultSources: engram-fts only, in this PR (see defaultSources for
-	// why the vault is no longer queried unconditionally). An unknown name
-	// is rejected with ErrUnknownSource rather than silently skipped.
+	// defaultSources: engram-fts plus engram-embed when the project's
+	// embedding index exists, engram-fts alone otherwise (see
+	// defaultSources; the vault is never defaulted in, queried only when
+	// named explicitly). An unknown name is rejected with ErrUnknownSource
+	// rather than silently skipped.
 	Sources []string
 }
 
@@ -350,7 +360,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 	sources := req.Sources
 	if len(sources) == 0 {
-		sources = defaultSources
+		sources = defaultSources(deps, req.Project)
 	}
 	for _, s := range sources {
 		if !knownSources[s] {
