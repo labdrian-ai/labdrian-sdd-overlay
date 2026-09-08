@@ -56,8 +56,7 @@ func TestMergedSetContainsEachRequestedSourceRow(t *testing.T) {
 			wantIDs[id] = true
 		}
 
-		sources := []string{SourceEngramFTS, SourceEngramEmbed}
-		merged := mergeResults(sources, nil, ftsRows, embedRows, NoLinkResolver, q.text, q.matchMode)
+		merged := mergeResults(false, true, true, nil, ftsRows, embedRows, NoLinkResolver, q.text, q.matchMode)
 
 		if len(merged) != len(wantIDs) {
 			t.Fatalf("iter %d (query %q, nFTS=%d, nEmbed=%d): len(merged) = %d, want %d", iter, q.text, nFTS, nEmbed, len(merged), len(wantIDs))

@@ -29,28 +29,8 @@ type Adoption struct {
 	Derived []DerivedName
 }
 
-// Adopt resolves dir's identity the way Resolve does, then lets storage
-// override WHICH of the derivable names is used.
-//
-// The rule it implements: fragmented memory must be made one with the
-// source of truth, and anything derivable must be integrated rather than
-// left beside it. The cheapest form of that -- and the only one available
-// before any merge -- is not creating the second pile. A repository whose
-// remote normalizes to "github.com/acme/widgets" also derives the plain
-// "widgets"; if the memory already lives under "widgets", then minting the
-// URL-shaped name is the resolver fragmenting the repository itself. This
-// is not a hypothetical: it is what shipped, and what this fixes.
-//
-// Adoption is deliberately narrow. It only ever selects a name this
-// repository DERIVES -- never a name that merely looks similar to one --
-// so it cannot merge two repositories whose names happen to resemble each
-// other, which is the one mistake this package must never make. What it
-// cannot prove, it reports.
-func Adopt(dir string, established Established) (Adoption, error) {
-	return AdoptWith(dir, AdoptOptions{Established: established})
-}
-
-// AdoptOptions carries what Adopt consults besides the repository itself.
+// AdoptOptions carries what AdoptWith consults besides the repository
+// itself.
 type AdoptOptions struct {
 	// Established reports whether a name already holds memory.
 	Established Established
@@ -66,7 +46,24 @@ type AdoptOptions struct {
 	Remembered []string
 }
 
-// AdoptWith is Adopt, plus the names the repository was known by before.
+// AdoptWith resolves dir's identity the way Resolve does, then lets storage
+// override WHICH of the derivable names is used, optionally also
+// considering names the repository was known by before (Remembered).
+//
+// The rule it implements: fragmented memory must be made one with the
+// source of truth, and anything derivable must be integrated rather than
+// left beside it. The cheapest form of that -- and the only one available
+// before any merge -- is not creating the second pile. A repository whose
+// remote normalizes to "github.com/acme/widgets" also derives the plain
+// "widgets"; if the memory already lives under "widgets", then minting the
+// URL-shaped name is the resolver fragmenting the repository itself. This
+// is not a hypothetical: it is what shipped, and what this fixes.
+//
+// Adoption is deliberately narrow. It only ever selects a name this
+// repository DERIVES -- never a name that merely looks similar to one --
+// so it cannot merge two repositories whose names happen to resemble each
+// other, which is the one mistake this package must never make. What it
+// cannot prove, it reports.
 func AdoptWith(dir string, opts AdoptOptions) (Adoption, error) {
 	repo, err := discover(dir)
 	if err != nil {
@@ -147,16 +144,6 @@ func CommonDir(dir string) (string, error) {
 		return "", err
 	}
 	return repo.commonDir, nil
-}
-
-// DerivableNames returns every name dir's repository derives, in the rank
-// order that decides which becomes canonical when several hold memory.
-func DerivableNames(dir string) ([]DerivedName, error) {
-	repo, err := discover(dir)
-	if err != nil {
-		return nil, err
-	}
-	return derivableNames(repo)
 }
 
 // derivableNames lists every name this repository derives, in the order

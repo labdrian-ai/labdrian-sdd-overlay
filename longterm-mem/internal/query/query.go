@@ -440,7 +440,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 		result.VaultStatus = VaultStatusNotRequested
 	}
 
-	result.Results = mergeResults(sources, vaultRows, engramRows, embedRows, resolveLink, req.Query, matchMode)
+	result.Results = mergeResults(wantVault, wantFTS, wantEmbed, vaultRows, engramRows, embedRows, resolveLink, req.Query, matchMode)
 	result.Diagnostics = append(result.Diagnostics, attachStandings(deps.Engram, result.Results)...)
 	capResponse(&result)
 	return result, nil
@@ -744,11 +744,11 @@ func attachStandings(store *engram.Store, rows []ResultRow) []Diagnostic {
 // sources' own rows are offered first each round -- the only thing that
 // decides is which row lands at rank 1; interleaveEngramSources itself
 // never consults it, so the union guarantee is untouched by the decision.
-func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
+func mergeResults(wantVault, wantFTS, wantEmbed bool, vaultRows []vault.Candidate, engramRows []engram.Row, embedRows []ResultRow, resolveLink func(string) (int64, bool), queryText, matchMode string) []ResultRow {
 	consumed := make(map[int64]bool, len(engramRows)+len(embedRows))
 	var merged []ResultRow
 
-	if containsSource(sources, SourceVault) {
+	if wantVault {
 		for _, c := range vaultRows {
 			if id, title, ok := matchLinkedObservation(c.PageAddress, engramRows, embedRows, resolveLink); ok && !consumed[id] {
 				consumed[id] = true
@@ -767,8 +767,6 @@ func mergeResults(sources []string, vaultRows []vault.Candidate, engramRows []en
 	}
 
 	var engramSourceList []engramSourceRows
-	wantFTS := containsSource(sources, SourceEngramFTS)
-	wantEmbed := containsSource(sources, SourceEngramEmbed)
 
 	if wantFTS {
 		var ftsRows []ResultRow

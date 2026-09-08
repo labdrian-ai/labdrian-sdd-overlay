@@ -191,7 +191,7 @@ func (s *Store) ListObservations(project string) ([]Observation, error) {
 // HasMemory reports whether project already holds memory: at least one
 // observation that has not been soft-deleted.
 //
-// It exists for projectid.Adopt, which needs to know which of a
+// It exists for projectid.AdoptWith, which needs to know which of a
 // repository's derivable names the memory ALREADY lives under, so the
 // resolver adopts that name instead of minting a second one beside it. It
 // asks per name rather than enumerating every project on purpose -- the
@@ -266,23 +266,6 @@ func (s *Store) ObservationByID(id int64) (Observation, bool, error) {
 	return o, true, nil
 }
 
-// LiveObservationsByID returns every observation in ids that both belongs
-// to project and has not been soft-deleted (R-020), keyed by id.
-//
-// It exists so the embedding-index query arm never reuses ObservationByID
-// (design: "the embedding arm may not reuse ObservationByID" -- that method
-// deliberately returns a soft-deleted row for promote's explicit-id case,
-// and reusing it here would let an observation deleted after the embedding
-// index was built surface from a months-old index, defeating R-020 by
-// convenience rather than by decision). An id in ids that is missing,
-// belongs to another project, or is soft-deleted is simply absent from the
-// returned map -- not an error, since a stale manifest entry naming a row
-// that no longer qualifies is the ordinary case this method exists to
-// handle, not an exceptional one.
-func (s *Store) LiveObservationsByID(project string, ids []int64) (map[int64]Observation, error) {
-	return liveObservationsByIDTx(s.db, project, ids)
-}
-
 // CoverageSnapshot returns, from ONE consistent read, how many live
 // observations project has and which of indexedIDs resolve to live rows in
 // it -- the two numbers the embedding arm reports as Coverage.Live and
@@ -324,10 +307,9 @@ func (s *Store) CoverageSnapshot(project string, indexedIDs []int64) (int, map[i
 	return live, byID, nil
 }
 
-// liveObservationsByIDTx is LiveObservationsByID's body, run against a
-// caller-owned transaction so CoverageSnapshot's two queries share one
-// snapshot. LiveObservationsByID delegates to it, which is what keeps the
-// two paths from being two definitions of "live".
+// liveObservationsByIDTx resolves ids to live rows against a caller-owned
+// transaction, so CoverageSnapshot's two queries share one snapshot and
+// there is exactly one definition of "live".
 func liveObservationsByIDTx(q interface {
 	Query(string, ...any) (*sql.Rows, error)
 }, project string, ids []int64) (map[int64]Observation, error) {
@@ -363,20 +345,4 @@ func liveObservationsByIDTx(q interface {
 		return nil, fmt.Errorf("engram: iterate live observation rows: %w", err)
 	}
 	return result, nil
-}
-
-// CountLiveObservations returns how many observations belonging to project
-// have not been soft-deleted (R-020) -- the embedding arm's Coverage.Live
-// field, computed the same way ListObservations and HasMemory already
-// scope live rows.
-func (s *Store) CountLiveObservations(project string) (int, error) {
-	var count int
-	err := s.db.QueryRow(
-		`SELECT COUNT(*) FROM observations WHERE project = ? AND deleted_at IS NULL`,
-		project,
-	).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("engram: count live observations for project %q: %w", project, err)
-	}
-	return count, nil
 }

@@ -24,7 +24,7 @@ func TestMergeResults_LinkedPairCollapsesAgainstTheEmbeddingArm(t *testing.T) {
 	resolveLink := func(a string) (int64, bool) { return linkedID, a == addr }
 
 	merged := mergeResults(
-		[]string{SourceVault, SourceEngramFTS, SourceEngramEmbed},
+		true, true, true,
 		vaultRows, nil, embedRows, resolveLink, "some query", engram.MatchAll,
 	)
 
@@ -61,7 +61,7 @@ func TestMergeResults_EmbedOnlyLinkDoesNotStealAnFTSRow(t *testing.T) {
 	resolveLink := func(a string) (int64, bool) { return linkedID, a == addr }
 
 	merged := mergeResults(
-		[]string{SourceVault, SourceEngramFTS, SourceEngramEmbed},
+		true, true, true,
 		vaultRows, ftsRows, embedRows, resolveLink, "some query", engram.MatchAll,
 	)
 

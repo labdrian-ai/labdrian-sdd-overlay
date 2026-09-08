@@ -10,7 +10,10 @@ Packaged mid/long-term memory layer for the runtimes covered by
   of core + emerging knowledge, meta-cognition of how that project evolves. The
   vault is resolved per project from configuration (`labdrian-brain` is the
   default for `labdrian-sdd-overlay`); cross-project querying is out of scope
-  for the first wave.
+  for the first wave. The vault is **opt-in per query**: it is consulted only
+  when a caller names it in `sources` (see `openspec/decisions/vault-value.md`
+  for why). Engram is the default retrieval store, through two arms: trigram
+  FTS5, always on, and an embedding index over the same rows, opt-in.
 
 Goal: one mutable source of truth per project that the agent team can query
 before a fix/feature/core change, so it doesn't reprocess or re-derive things,
@@ -59,18 +62,14 @@ and is overridable via the `STATE_DIR` environment variable — mainly for
 tests). Once `install` places it there it stays there, invocable, until an
 `uninstall` removes it (R-015).
 
-**Current scope of `install`**: the overlay-side build/copy/record/report
-loop above is fully wired end-to-end. The two module-owned CLI subcommands it
-also calls per target, `longterm-mem vaults seed` and
-`longterm-mem register --target <t>` (writing the actual MCP entry into
-each runtime's own config file — `~/.claude.json`, `opencode.json`,
-`config.toml`), do not exist yet: `install` calls them and tolerates their
-current "unknown subcommand" refusal with a warning, so the rest of the
-install path (binary build/copy, `engine runtime install`'s registration
-bookkeeping and per-runtime status report) still completes. Those two
-subcommands land in later slices (`vaults`, `register`/`unregister`); once
-they do, `install`/`uninstall` start actually registering/unregistering
-without any change on the overlay side.
+**`install` end to end**: after the overlay-side build/copy/record/report
+loop above, `install` calls `longterm-mem register --target <t>` per
+requested target, which writes the MCP entry into that runtime's own config
+file (`~/.claude.json`, `opencode.json`, `config.toml`), and `uninstall`
+calls `longterm-mem unregister`. Both are ownership-tagged, idempotent, and
+refuse an untagged same-named entry. The only planned module-owned
+subcommand that does not exist yet is `vaults` (direct management of
+`vaults.json` seeding); registry seeding is lazy inside `vaultreg.Resolve`.
 
 ## CLI surface (as shipped)
 
@@ -78,13 +77,17 @@ The binary (`longterm-mem <subcommand> [flags]`) currently dispatches:
 
 | Subcommand | Flags | Purpose |
 |---|---|---|
-| `query` | `[--project P]` `"<text>"` `[--top N]` `[--vault DIR]` `[--json]` | Query vault + Engram FTS5, merged and ranked. |
+| `query` | `[--project P]` `"<text>"` `[--top N]` `[--exclude-types T,...]` `[--vault DIR]` `[--json]` | Query Engram FTS5 (always) and, when named in `sources`, the embedding index and the vault; results are unioned and ranked. The CLI queries FTS only. |
 | `index` | `[--project P]` `[--vault DIR]` `[--rebuild]` | Provision/refresh the vault's local retrieval index (no LLM). |
-| `sync` | `[--project P]` `[--vault DIR]` | Promote eligible Engram observations into vault pages. |
-| `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report vault/index/sync-state health. |
-| `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency. |
-| `promote` | `[--project P]` `--id N` `[--vault DIR]` | Explicitly promote one Engram observation by id. |
-| `mcp` | — | Run the MCP stdio server (`query`, `promote` tools). |
+| `index --embeddings` | `[--project P]` `[--embed-model M]` `[--embed-dimension N]` `[--embed-input-limit C]` `[--embed-endpoint URL]` `[--allow-remote-embedder]` | Build or incrementally update the embedding index over Engram rows against a loopback Ollama backend (`nomic-embed-text`, 768 dims by default). Unchanged rows are fingerprinted and reused, so a re-run after a few new observations takes well under a second. |
+| `sync` | `[--project P]` `[--vault DIR]` `[--dry-run]` | Promote eligible Engram observations into vault pages; `--dry-run` reports without writing. |
+| `status` | `[--project P]` `[--vault DIR]` `[--json]` | Report Engram reachability, vault provisioning, last sync, and when the embedding index was built. |
+| `stale` | `[--project P]` | Report the memories this repository's history disagrees with (removed or moved paths). Reports only; never deletes. |
+| `doctor` | `[--project P]` `[--vault DIR]` `[--json]` | Deeper diagnostics: prerequisites, wiki-lint, registration consistency, embedding index presence/freshness and backend reachability. |
+| `promote` | `[--project P]` `--id N` `[--vault DIR]` | Explicitly promote one Engram observation by id. `promote reconcile <address>` adopts one already-promoted page whose precedence entry cannot tell longterm-mem's own write from a human edit, so promotion stops refusing it; deliberately one address at a time. |
+| `mcp` | — | Run the MCP stdio server (`query`, `get`, `promote` tools). |
+| `register` | `--target claude\|opencode\|codex\|all` `[--binary PATH]` `[--config-root DIR]` `[--state-dir DIR]` | Write this binary's MCP entry into the runtime's config file (ownership-tagged, idempotent). |
+| `unregister` | `--target claude\|opencode\|codex\|all` `[--config-root DIR]` `[--state-dir DIR]` | Remove the entry `register` wrote; an entry it does not own is left untouched and reported as `unmanaged`. |
 
 ### Project identity
 
@@ -120,23 +123,29 @@ The MCP tools keep their explicit `project` field and get no working-
 directory default: the server's working directory is the host runtime's,
 not the project's.
 
-Global env overrides: `LONGTERM_MEM_ENGRAM_DB` (Engram database path).
-
-Not yet implemented (planned, see `openspec/changes/longterm-mem`):
-`register`, `unregister`, `vaults` — the module-owned CLI surface that
-writes/removes each runtime's MCP config entry and manages `vaults.json`
-seeding directly.
+Global env overrides: `LONGTERM_MEM_ENGRAM_DB` (Engram database path),
+`LONGTERM_MEM_VAULT` (vault path), `LONGTERM_MEM_VAULTS_FILE` (vault
+registry path), `LONGTERM_MEM_STATE_DIR` (state directory, default
+`~/.labdrian-overlay/longterm-mem`).
 
 ## MCP registration
 
-`longterm-mem mcp` is the stdio MCP server the `install` path above wires
-each runtime to use once `register` (a later slice) actually writes the
-entry. Engine records its own view of each runtime's registration
-(`~/.labdrian-overlay/longterm-mem-registration.json`) independently of the
-module-owned `install-state.json` a later slice will add; `overlay
-longterm-mem status` reports the engine-owned view today.
+`longterm-mem mcp` is the stdio MCP server that `register` wires each runtime
+to. It exposes three tools. `query` and `promote` take an explicit `project`
+field and get no working-directory default (the server's cwd is the host
+runtime's, not the project's):
 
-Status: install/status/uninstall exist end-to-end at the shell+engine layer
-(this document). The module-owned MCP config writers (`register`,
-`unregister`) and `vaults` CLI land in later slices; this document will be
-updated again once they do.
+- `query` — `project`, `query`, optional `top`, `exclude_types`, and
+  `sources`. `sources` names which arms answer: `engram-fts` (the default and
+  the only default), `engram-embed` (the embedding index; requires a prior
+  `index --embeddings`, and the response's `coverage` reports how many live
+  rows the index covers), `vault`. Responses are byte-budgeted and carry
+  `diagnostics` naming anything that degraded.
+- `get` — read one Engram observation whole by `engram_id`.
+- `promote` — explicitly promote one observation into the vault.
+
+Two records describe a registration: the engine-owned view
+(`~/.labdrian-overlay/longterm-mem-registration.json`, reported by `overlay
+longterm-mem status`) and the module-owned `install-state.json` under the
+state directory, which `register`/`unregister` maintain and `install`
+adopts when it finds an entry it wrote but no longer has a record of.
