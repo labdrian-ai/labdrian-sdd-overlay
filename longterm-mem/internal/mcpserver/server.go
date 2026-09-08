@@ -102,9 +102,11 @@ type QueryIn struct {
 	// query.Request.ExcludeTypes for why no type is filtered by default.
 	ExcludeTypes []string `json:"exclude_types,omitempty" jsonschema:"Engram observation types to leave out, e.g. session_summary (default: none excluded)"`
 	// Sources mirrors query.Request.Sources: which sources to query
-	// (R-060). Empty means engram-fts only -- the vault is no longer
-	// queried unless named here explicitly.
-	Sources []string `json:"sources,omitempty" jsonschema:"sources to query: engram-fts, engram-embed, vault (default: engram-fts only; vault is not queried unless named)"`
+	// (R-060). Empty means the union of engram-fts and engram-embed once
+	// the project's embedding index exists, engram-fts alone otherwise --
+	// the vault is never defaulted in, only queried when named here
+	// explicitly.
+	Sources []string `json:"sources,omitempty" jsonschema:"sources to query: engram-fts, engram-embed, vault (default: engram-fts plus engram-embed once the project's embedding index exists, else engram-fts only; vault is not queried unless named)"`
 }
 
 // QueryOut is the query tool's output: query.Result's own JSON shape,

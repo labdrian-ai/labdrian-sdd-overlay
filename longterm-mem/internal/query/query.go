@@ -16,6 +16,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // DefaultTopN mirrors vault.DefaultTopN (D8: both sources share one bound).
@@ -73,20 +74,28 @@ var knownSources = map[string]bool{
 	SourceVault:       true,
 }
 
-// defaultSources is what Run queries when Request.Sources is empty.
+// defaultSources is what Run queries when Request.Sources is empty:
+// engram-fts and engram-embed together (R-060's own final shape) the
+// moment project's embedding index actually exists, since a caller has no
+// way to know from the outside whether one has ever been built -- and
+// engram-fts alone otherwise, since asking the embedding arm to run on
+// every query for a project with nothing indexed would cost a network
+// round trip for a guaranteed-empty answer (embedarm.go's own
+// "no index built yet" degradation covers a caller who names engram-embed
+// explicitly against such a project; this is only about what an omitted
+// Sources defaults to).
 //
-// It is engram-fts only, not "engram-fts and engram-embed" as R-060's own
-// final shape reads, because the embedding source does not exist to query
-// yet in this PR -- its client, its index, and the arm that reads it are
-// later slices of this same change. Shipping a default that silently asks
-// for a source it cannot honour would be worse than an honest smaller
-// default.
-//
-// The user-visible consequence is worth stating loudly here too, not only
-// in the change's own notes: the vault, which every call used to query
-// unconditionally, is no longer queried by default. A caller that wants it
-// back names it: sources: ["vault", "engram-fts"].
-var defaultSources = []string{SourceEngramFTS}
+// The vault is unaffected either way: it is opt-in, queried only when a
+// caller names it explicitly (R-060), regardless of what the two Engram
+// arms default to. A caller that wants it names it:
+// sources: ["vault", "engram-fts"].
+func defaultSources(deps Deps, project string) []string {
+	loadIndex := resolveLoadIndex(deps)
+	if _, err := loadIndex(vecindex.Dir(deps.StateDir, project)); err == nil {
+		return []string{SourceEngramFTS, SourceEngramEmbed}
+	}
+	return []string{SourceEngramFTS}
+}
 
 // Diagnostic.Code values.
 const (
@@ -165,6 +174,21 @@ const (
 	// index diagnostic then turns into an instruction to rebuild an index
 	// that was never the problem.
 	DiagnosticCoverageUnreadable = "coverage_unreadable"
+
+	// DiagnosticEmbeddingToppedUp reports that the embedding arm found a
+	// small, bounded gap between the manifest and the live corpus (see
+	// TopUpMaxRows) and closed it with an incremental build BEFORE
+	// scanning, so this call's results already reflect the topped-up
+	// index rather than the stale one Coverage would otherwise have
+	// described.
+	DiagnosticEmbeddingToppedUp = "embedding_index_topped_up"
+	// DiagnosticEmbeddingTopUpFailed reports that a bounded top-up was
+	// attempted (the gap was within TopUpMaxRows) but the build itself
+	// failed -- the embedding backend was unreachable, for example. The
+	// query still answers: it degrades exactly as an index that was never
+	// topped up would, from the stale index it already had, plus this
+	// diagnostic naming what went wrong so the failure is not silent.
+	DiagnosticEmbeddingTopUpFailed = "embedding_topup_failed"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.
@@ -214,9 +238,11 @@ type Request struct {
 	// rather than session narrative can still say so.
 	ExcludeTypes []string
 	// Sources names which sources to query (R-060). Empty means
-	// defaultSources: engram-fts only, in this PR (see defaultSources for
-	// why the vault is no longer queried unconditionally). An unknown name
-	// is rejected with ErrUnknownSource rather than silently skipped.
+	// defaultSources: engram-fts plus engram-embed when the project's
+	// embedding index exists, engram-fts alone otherwise (see
+	// defaultSources; the vault is never defaulted in, queried only when
+	// named explicitly). An unknown name is rejected with ErrUnknownSource
+	// rather than silently skipped.
 	Sources []string
 }
 
@@ -239,6 +265,37 @@ type Deps struct {
 	// degrades exactly like an index that was never built: zero rows,
 	// Coverage says so.
 	Embed EmbedFunc
+	// BuildIndex incrementally (re)builds project's embedding index under
+	// the given model/dimension/inputLimit contract -- the same contract
+	// the embedding arm just read off the existing manifest, so a top-up
+	// never silently reinterprets what "the index" means for this project.
+	// It is invoked only when the embedding arm finds a small, bounded gap
+	// (see TopUpMaxRows) between the manifest and the live corpus, right
+	// before scanning; nil skips the top-up entirely and leaves today's
+	// degrade-and-name-the-CLI-command behaviour unchanged. A production
+	// caller wires it to read live rows and call vecindex.Build, the same
+	// way cmd_index_embeddings.go already does.
+	BuildIndex BuildIndexFunc
+	// LoadIndex loads one project's embedding index, defaulting to
+	// vecindex.Load when nil so an existing or non-MCP caller (the CLI
+	// query subcommand, every test that does not set this field) is
+	// unaffected. A long-lived caller that serves more than one query per
+	// process -- the MCP server -- wires it to a *vecindex.LoadCache's Load
+	// method instead, so a project's index is read from disk at most once
+	// per change rather than on every query that names or defaults to
+	// engram-embed.
+	LoadIndex func(dir string) (*vecindex.Index, error)
+}
+
+// resolveLoadIndex returns deps.LoadIndex, or vecindex.Load when deps did
+// not set one -- the one place that default is decided, so defaultSources
+// and runEmbeddingArm's own index load can never drift into resolving it
+// two different ways.
+func resolveLoadIndex(deps Deps) func(dir string) (*vecindex.Index, error) {
+	if deps.LoadIndex != nil {
+		return deps.LoadIndex
+	}
+	return vecindex.Load
 }
 
 // NoLinkResolver reports every page as unlinked (default until D6 exists).
@@ -350,7 +407,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 	}
 	sources := req.Sources
 	if len(sources) == 0 {
-		sources = defaultSources
+		sources = defaultSources(deps, req.Project)
 	}
 	for _, s := range sources {
 		if !knownSources[s] {
@@ -409,7 +466,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed)
+		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)

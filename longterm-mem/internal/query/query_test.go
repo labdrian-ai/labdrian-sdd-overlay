@@ -717,15 +717,15 @@ func TestUnknownSourceIsRefusedNotIgnored(t *testing.T) {
 }
 
 // TestOmittedSourcesQueriesBothEngramArmsNotVault is R-060's default-set
-// scenario, narrowed to what this PR actually ships: engram-embed's own
-// retrieval pipeline (internal/embed, internal/vecindex, the embedding
-// arm) does not exist until a later PR of this same change, so the
-// default this PR ships is engram-fts alone, not "both Engram arms" --
-// shipping a default that silently queried a source with nothing behind
-// it would be the same failure R-060 forbids for an unknown name, in a
-// different costume. What both this PR and R-060's eventual full shape
-// share, and what this test actually proves, is the other half: an
-// omitted `sources` must never invoke the vault.
+// scenario for a project with no embedding index: defaultSources still
+// falls back to engram-fts alone here (Deps.StateDir is unset, so no
+// index can be found), which is exactly right -- asking the embedding arm
+// to run against a project with nothing indexed would cost a network round
+// trip for a guaranteed-empty answer (see TestDefaultSources_UnionWhenIndexExists
+// for the case where an index exists and the union is used instead). What
+// this test actually proves is the one thing every default shares
+// regardless of whether an index exists: an omitted `sources` must never
+// invoke the vault.
 func TestOmittedSourcesQueriesBothEngramArmsNotVault(t *testing.T) {
 	store := newFixtureEngramStore(t, []fixtureObservation{
 		{title: "engram row", content: "zephyr keyword", project: "proj-a"},
