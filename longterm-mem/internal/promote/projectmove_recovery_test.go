@@ -37,7 +37,7 @@ func TestWriter_Promote_CorruptedPageInAnotherProjectDoesNotBlockThisOne(t *test
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 	writeRawPage(t, vaultRoot, "c-000001.md", "---\nengram_id: 905\nproject: p-one\n---\n\nBody.\n")
 
-	obs := engram.Observation{ID: 905, Type: "decision", Title: "Live Decision", Content: "Body.", Project: "p-two", RevisionCount: 1}
+	obs := engram.Observation{ID: 905, Type: "decision", Title: "Live Decision", Content: "Body.", Project: "p-two", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
 	result, err := w.Promote(obs, false)
 	if err != nil {
@@ -72,7 +72,7 @@ func TestFindPromotedPage_CorruptionIsScopedToItsOwnProject(t *testing.T) {
 // branch. The orphan must still be superseded there -- that branch is the
 // only path that finishes a move whose supersession was interrupted.
 func TestWriter_Promote_ProjectMoveSupersedesFromTheUpdateBranch(t *testing.T) {
-	obs := engram.Observation{ID: 328, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 328, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	successorObs := obs
@@ -113,7 +113,7 @@ func TestWriter_Promote_ProjectMoveSupersedesFromTheUpdateBranch(t *testing.T) {
 // whether the successor needed new content -- skipping it would leave two
 // live pages for one engram_id, the duplicate R-008 forbids.
 func TestWriter_Promote_ProjectMoveSupersedesEvenWhenTheSuccessorUpdateIsSkipped(t *testing.T) {
-	obs := engram.Observation{ID: 329, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 329, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	successorObs := obs
@@ -159,7 +159,7 @@ func TestWriter_Promote_ProjectMoveSupersedesEvenWhenTheSuccessorUpdateIsSkipped
 // disk nothing ever re-records it: it reads as locally edited forever --
 // the permanent wedge this whole rule exists to prevent.
 func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *testing.T) {
-	obs := engram.Observation{ID: 330, Type: "decision", Title: "Twice Moved", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 330, Type: "decision", Title: "Twice Moved", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	vaultRoot, store, firstOrphan := movedFixture(t, obs, "c-000001")
 	// The second orphan's address field disagrees with its filename, so the
 	// scan finds it but the supersession patch cannot open it.
@@ -206,7 +206,7 @@ func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageFails(t *test
 // renames a temp file into a directory the test must keep writable to seed
 // the fixture at all.
 func TestWriter_Promote_ProjectMoveKeepsPatchedHashesWhenALaterPageIsUnparseable(t *testing.T) {
-	obs := engram.Observation{ID: 331, Type: "decision", Title: "Twice Moved", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 331, Type: "decision", Title: "Twice Moved", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-recovery-fixture"}
 	vaultRoot, store, firstOrphan := movedFixture(t, obs, "c-000001")
 	// The second orphan is found by the scan (it carries the engram_id and a
 	// foreign project) and its address names a file that EXISTS -- but that

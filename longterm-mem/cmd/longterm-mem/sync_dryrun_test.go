@@ -48,8 +48,8 @@ func TestCmdSync_DryRunWritesNothingAndNamesWhatItWould(t *testing.T) {
 	if _, err := db.Exec(string(schema)); err != nil {
 		t.Fatalf("apply schema: %v", err)
 	}
-	if _, err := db.Exec(`INSERT INTO observations (session_id, sync_id, type, title, content, project, revision_count, pinned, created_at)
-		 VALUES ('sess-1', 'sync-dry', 'decision', 'A Decision Worth Promoting', 'Body.', 'dry-run-project', 1, 0, '2026-08-01 00:00:00')`); err != nil {
+	if _, err := db.Exec(`INSERT INTO observations (session_id, sync_id, type, title, content, project, revision_count, pinned, created_at, topic_key)
+		 VALUES ('sess-1', 'sync-dry', 'decision', 'A Decision Worth Promoting', 'Body.', 'dry-run-project', 1, 0, '2026-08-01 00:00:00', 'longterm-mem/a-decision-worth-promoting')`); err != nil {
 		t.Fatalf("insert observation: %v", err)
 	}
 	if err := db.Close(); err != nil {

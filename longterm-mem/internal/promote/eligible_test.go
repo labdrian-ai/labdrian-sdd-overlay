@@ -11,10 +11,10 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 )
 
-// TestEligible covers R-007's four scenarios plus one extra case proving
-// the eligible-type membership branch (decision/architecture/pattern) is
-// real, not merely reachable by the pin/revision branches the four named
-// scenarios already exercise.
+// TestEligible covers R-007's rewritten predicate: pinned, explicit, or a
+// non-empty topic_key whose first path segment is outside the excluded
+// {sdd, review, delivery} set. Type and revision count are retired as
+// automatic eligibility criteria (R-003).
 func TestEligible(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -28,24 +28,54 @@ func TestEligible(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "high-revision, untyped, unpinned observation is eligible",
-			obs:  engram.Observation{Type: "discovery", RevisionCount: 4, Pinned: false},
-			want: true,
-		},
-		{
-			name: "low-revision, untyped, unpinned observation is not eligible",
-			obs:  engram.Observation{Type: "discovery", RevisionCount: 1, Pinned: false},
-			want: false,
-		},
-		{
 			name:     "explicit promote call overrides the automatic criteria",
 			obs:      engram.Observation{Type: "discovery", RevisionCount: 1, Pinned: false},
 			explicit: true,
 			want:     true,
 		},
 		{
-			name: "eligible-type observation is eligible without pin or revision (type-membership branch)",
-			obs:  engram.Observation{Type: "architecture", RevisionCount: 1, Pinned: false},
+			name: "untopiced observation is not eligible",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 1, Pinned: false, TopicKey: ""},
+			want: false,
+		},
+		{
+			name: "curated topic_key is eligible regardless of type or revision count",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "longterm-mem/promotion-eligibility-policy"},
+			want: true,
+		},
+		{
+			name: "sdd/-prefixed topic_key is excluded",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "sdd/longterm-mem-promotion-scoping/tasks"},
+			want: false,
+		},
+		{
+			name: "review/-prefixed topic_key is excluded",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "review/some-change/verdict"},
+			want: false,
+		},
+		{
+			name: "delivery/-prefixed topic_key is excluded",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "delivery/some-change/receipt"},
+			want: false,
+		},
+		{
+			name: "sdd-init/ is not excluded (first segment sdd-init != sdd)",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sdd-init/onboarding"},
+			want: true,
+		},
+		{
+			name: "sddx/ is not excluded (first segment sddx != sdd)",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sddx/whatever"},
+			want: true,
+		},
+		{
+			name: "high-revision, decision-typed, unpinned, untopiced observation is not eligible",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: ""},
+			want: false,
+		},
+		{
+			name: "pinned observation overrides both the untopiced and prefix exclusions",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 0, Pinned: true, TopicKey: "review/some-change/verdict"},
 			want: true,
 		},
 	}

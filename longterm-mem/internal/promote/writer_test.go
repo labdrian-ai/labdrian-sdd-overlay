@@ -19,7 +19,7 @@ func TestWriter_Promote_CreatesNewPage(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 401, Type: "decision", Title: "Fresh Decision", Content: "Never promoted before.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 401, Type: "decision", Title: "Fresh Decision", Content: "Never promoted before.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
 	if err != nil {
@@ -54,7 +54,7 @@ func TestWriter_Promote_UpdatesExistingPage(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 402, Type: "pattern", Title: "Already Promoted", Content: "V1.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 402, Type: "pattern", Title: "Already Promoted", Content: "V1.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := EmitPage(obs, "c-000402", nil)
 	if err != nil {
 		t.Fatalf("EmitPage (seed v1): %v", err)
@@ -108,7 +108,7 @@ func TestWriter_Promote_SkipsLocalEdit(t *testing.T) {
 	vaultRoot := t.TempDir()
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
-	obs := engram.Observation{ID: 403, Type: "decision", Title: "Edited In Vault", Content: "Original.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 403, Type: "decision", Title: "Edited In Vault", Content: "Original.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := EmitPage(obs, "c-000403", nil)
 	if err != nil {
 		t.Fatalf("EmitPage: %v", err)
@@ -158,7 +158,7 @@ func TestWriter_Promote_PersistsPrecedenceEntry(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 404, Type: "decision", Title: "Durable Pairing", Content: "Entry must outlive the process.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 404, Type: "decision", Title: "Durable Pairing", Content: "Entry must outlive the process.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
 	if err != nil {
@@ -206,7 +206,7 @@ func TestWriter_Promote_UpdatePersistsPrecedenceEntry(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 405, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 405, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	result := promoteTwice(t, w, obs)
 
 	if result.Action.Kind != ActionUpdated {
@@ -235,7 +235,7 @@ func TestWriter_Promote_SkipDoesNotPersist(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 406, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 406, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
@@ -298,7 +298,7 @@ func TestWriter_Promote_CreateRollsBackWhenFingerprintCannotPersist(t *testing.T
 	}
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 407, Type: "decision", Title: "Unpersistable", Content: "Fingerprint cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 407, Type: "decision", Title: "Unpersistable", Content: "Fingerprint cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	if _, err := w.Promote(obs, false); err == nil {
 		t.Fatalf("Promote = nil error, want the sidecar persistence failure surfaced")
@@ -349,7 +349,7 @@ func TestWriter_Promote_CreatePersistsPrecedenceBeforeThePage(t *testing.T) {
 	}
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 408, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 408, Type: "decision", Title: "Unwritable Page", Content: "The page write cannot land.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	if _, err := w.Promote(obs, false); err == nil {
 		t.Fatalf("Promote = nil error, want the page write failure surfaced")
@@ -385,7 +385,7 @@ func TestWriter_Promote_CreateResumesAfterAnUnpairedFingerprint(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 409, Type: "decision", Title: "Entry Without A Page", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 409, Type: "decision", Title: "Entry Without A Page", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
@@ -439,7 +439,7 @@ func TestWriter_Promote_AdoptsAnUnrecordedOwnPageAndRepairsRegistration(t *testi
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 410, Type: "decision", Title: "Wedged In The Field", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)
@@ -503,7 +503,7 @@ func TestWriter_Promote_CreateRegistersIndexAndLog(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 501, Type: "decision", Title: "Catalog Me", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 501, Type: "decision", Title: "Catalog Me", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 
 	result, err := w.Promote(obs, false)
 	if err != nil {
@@ -538,7 +538,7 @@ func TestWriter_Promote_UpdateRegistersIndexAndLog(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 502, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 502, Type: "decision", Title: "Updated Twice", Content: "First content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	result := promoteTwice(t, w, obs)
 	if result.Action.Kind != ActionUpdated {
 		t.Fatalf("Action.Kind = %v, want ActionUpdated", result.Action.Kind)
@@ -575,7 +575,7 @@ func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
-	obs := engram.Observation{ID: 503, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
+	obs := engram.Observation{ID: 503, Type: "decision", Title: "Edited By Hand", Content: "Original content.", Project: "labdrian-sdd-overlay", RevisionCount: 1, TopicKey: "longterm-mem/writer-fixture"}
 	first, err := w.Promote(obs, false)
 	if err != nil {
 		t.Fatalf("Promote (first): %v", err)

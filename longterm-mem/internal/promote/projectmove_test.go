@@ -44,7 +44,7 @@ func readPage(t *testing.T, vaultRoot, address string) string {
 // engram_id with no signal which is current, which is the duplicate R-008
 // forbids.
 func TestWriter_Promote_ProjectMoveSupersedesOldPage(t *testing.T) {
-	obs := engram.Observation{ID: 321, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 321, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	moved := obs
@@ -81,7 +81,7 @@ func TestWriter_Promote_ProjectMoveSupersedesOldPage(t *testing.T) {
 // entry has to move with it. Left stale, the orphan reads as locally edited
 // forever -- the permanent wedge R-030's reconciliation exists to end.
 func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T) {
-	obs := engram.Observation{ID: 322, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 322, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	moved := obs
@@ -118,7 +118,7 @@ func TestWriter_Promote_ProjectMoveKeepsOldPageOffTheLocalEditPath(t *testing.T)
 // move must not re-supersede, must not duplicate the related link, and must
 // not rewrite the old page at all.
 func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
-	obs := engram.Observation{ID: 323, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 323, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	moved := obs
@@ -164,7 +164,7 @@ func TestWriter_Promote_ProjectMoveIsIdempotent(t *testing.T) {
 // chain silently would destroy real history, and the moved observation stays
 // reachable by engram_id regardless.
 func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.T) {
-	obs := engram.Observation{ID: 324, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 324, Type: "decision", Title: "Moved Decision", Content: "Body.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	oldPath := filepath.Join(vaultRoot, pagePathPrefix, oldPage.Address+".md")
@@ -197,7 +197,7 @@ func TestWriter_Promote_ProjectMoveLeavesAnExistingSupersessionAlone(t *testing.
 // must not regress: an observation promoted again under the SAME project
 // still updates its one page in place (R-008) and nothing is superseded.
 func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
-	obs := engram.Observation{ID: 325, Type: "decision", Title: "Stable Decision", Content: "V1.", Project: "p-one", RevisionCount: 1}
+	obs := engram.Observation{ID: 325, Type: "decision", Title: "Stable Decision", Content: "V1.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, oldPage := movedFixture(t, obs, "c-000001")
 
 	next := obs
@@ -236,10 +236,10 @@ func TestWriter_Promote_UnmovedObservationStillReusesItsPage(t *testing.T) {
 // other twin: the match key is engram_id, so two DIFFERENT observations that
 // merely share a project must never see each other as a moved page.
 func TestWriter_Promote_DistinctObservationsSharingAProjectDoNotCollide(t *testing.T) {
-	first := engram.Observation{ID: 326, Type: "decision", Title: "First", Content: "One.", Project: "p-one", RevisionCount: 1}
+	first := engram.Observation{ID: 326, Type: "decision", Title: "First", Content: "One.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	vaultRoot, store, firstPage := movedFixture(t, first, "c-000001")
 
-	second := engram.Observation{ID: 327, Type: "decision", Title: "Second", Content: "Two.", Project: "p-one", RevisionCount: 1}
+	second := engram.Observation{ID: 327, Type: "decision", Title: "Second", Content: "Two.", Project: "p-one", RevisionCount: 1, TopicKey: "longterm-mem/projectmove-fixture"}
 	w := &Writer{VaultRoot: vaultRoot, Store: store}
 	result, err := w.Promote(second, false)
 	if err != nil {

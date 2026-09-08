@@ -61,6 +61,66 @@ func insertObservation(t *testing.T, dbPath, title, project string, deletedAt sq
 	}
 }
 
+// insertObservationWithTopicKey inserts one fixture observation row with an
+// explicit topic_key (which may be NULL via sql.NullString{}), through a
+// writable setup connection to dbPath (never through the production Store).
+// It exists alongside insertObservation because TestListObservations_
+// PopulatesTopicKey needs to control topic_key directly, the one column
+// insertObservation's fixed argument list does not expose.
+func insertObservationWithTopicKey(t *testing.T, dbPath, title, project string, topicKey sql.NullString) {
+	t.Helper()
+
+	setup, err := sql.Open("sqlite", dbPath)
+	if err != nil {
+		t.Fatalf("open fixture setup connection: %v", err)
+	}
+	defer setup.Close()
+
+	_, err = setup.Exec(
+		`INSERT INTO observations (session_id, type, title, content, project, topic_key) VALUES (?, ?, ?, ?, ?, ?)`,
+		"sess-1", "discovery", title, "fixture content", project, topicKey,
+	)
+	if err != nil {
+		t.Fatalf("insert fixture observation %q: %v", title, err)
+	}
+}
+
+// TestListObservations_PopulatesTopicKey (R-020 memory-access domain,
+// "Observation topic_key Exposure"): ListObservations must populate
+// TopicKey from the topic_key column, mapping a NULL column to an empty
+// string field rather than leaving it nil/unset.
+func TestListObservations_PopulatesTopicKey(t *testing.T) {
+	dir := t.TempDir()
+	dbPath := newFixtureDB(t, dir)
+	insertObservationWithTopicKey(t, dbPath, "curated", "labdrian-sdd-overlay", sql.NullString{String: "longterm-mem/promotion-eligibility-policy", Valid: true})
+	insertObservationWithTopicKey(t, dbPath, "untopiced", "labdrian-sdd-overlay", sql.NullString{})
+
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("Open: %v", err)
+	}
+	defer store.Close()
+
+	got, err := store.ListObservations("labdrian-sdd-overlay")
+	if err != nil {
+		t.Fatalf("ListObservations: %v", err)
+	}
+	if len(got) != 2 {
+		t.Fatalf("len(got) = %d, want 2", len(got))
+	}
+
+	byTitle := map[string]string{}
+	for _, o := range got {
+		byTitle[o.Title] = o.TopicKey
+	}
+	if want := "longterm-mem/promotion-eligibility-policy"; byTitle["curated"] != want {
+		t.Errorf("TopicKey for curated row = %q, want %q", byTitle["curated"], want)
+	}
+	if byTitle["untopiced"] != "" {
+		t.Errorf("TopicKey for NULL topic_key row = %q, want empty string", byTitle["untopiced"])
+	}
+}
+
 func TestOpen_DefaultIsReadOnly(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)
