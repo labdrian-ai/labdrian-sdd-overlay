@@ -4,7 +4,67 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"os"
+	"path/filepath"
+	"sync"
+	"syscall"
 )
+
+// buildLockFileName is the advisory lock file Build takes an exclusive
+// syscall.Flock on inside dir, for the lifetime of one Build call. It never
+// holds index data itself.
+const buildLockFileName = ".build.lock"
+
+// dirLocks holds one *sync.Mutex per index directory Build has ever locked
+// in this process. It serializes concurrent Build calls that race inside a
+// single process (e.g. two MCP queries triggering a top-up for the same
+// project) before either one ever reaches the filesystem, which the
+// cross-process flock below cannot do on its own: flock is per-file-
+// descriptor advisory locking, and a second Open+Flock from the *same*
+// process on some platforms would not block a goroutine the way a second
+// process does. Keyed by dir so unrelated projects never contend.
+var (
+	dirLocksMu sync.Mutex
+	dirLocks   = map[string]*sync.Mutex{}
+)
+
+// dirLock returns the in-process mutex for dir, creating it on first use.
+func dirLock(dir string) *sync.Mutex {
+	dirLocksMu.Lock()
+	defer dirLocksMu.Unlock()
+	m, ok := dirLocks[dir]
+	if !ok {
+		m = &sync.Mutex{}
+		dirLocks[dir] = m
+	}
+	return m
+}
+
+// acquireFileLock takes a blocking exclusive syscall.Flock on
+// dir/.build.lock, serializing Build across separate processes (e.g. a
+// top-up racing a manually invoked `longterm-mem index --embeddings` in
+// another process) the same way dirLock serializes it within one process.
+// The caller must release the returned file with releaseFileLock on every
+// return path.
+func acquireFileLock(dir string) (*os.File, error) {
+	f, err := os.OpenFile(filepath.Join(dir, buildLockFileName), os.O_CREATE|os.O_RDWR, 0o600)
+	if err != nil {
+		return nil, fmt.Errorf("vecindex: build: open lock file: %w", err)
+	}
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
+		f.Close()
+		return nil, fmt.Errorf("vecindex: build: acquire lock: %w", err)
+	}
+	return f, nil
+}
+
+// releaseFileLock unlocks and closes a file opened by acquireFileLock. It is
+// best-effort: an error unlocking or closing a lock file we are done with is
+// not something a caller can usefully act on.
+func releaseFileLock(f *os.File) {
+	_ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
+	_ = f.Close()
+}
 
 // Row is one candidate observation for (re)indexing. Callers (the CLI's
 // `index --embeddings` command) supply only live rows -- typically via
@@ -57,6 +117,29 @@ type BuildResult struct {
 // defeat the whole point of Load reporting it. now is a seam for tests;
 // production passes a function returning time.Now().UTC().Format(time.RFC3339).
 func Build(ctx context.Context, dir, model string, dim, inputLimit int, rows []Row, embedder Embedder, now func() string) (*Index, BuildResult, error) {
+	// Serialize every Build call on dir, in both concurrency scopes this
+	// package must cover: an in-process mutex (two MCP queries racing a
+	// top-up for the same project inside one process) and a cross-process
+	// advisory file lock (a top-up racing a manually invoked
+	// `longterm-mem index --embeddings` in another process). Without this,
+	// two concurrent Save calls -- each an independent atomic rename of
+	// vectors.blob followed by manifest.json -- can interleave and pair one
+	// build's manifest with the other's blob; Load only checks blob length
+	// against entry count, so that corruption is silent.
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		return nil, BuildResult{}, fmt.Errorf("vecindex: build: create %s: %w", dir, err)
+	}
+
+	mu := dirLock(dir)
+	mu.Lock()
+	defer mu.Unlock()
+
+	lockFile, err := acquireFileLock(dir)
+	if err != nil {
+		return nil, BuildResult{}, err
+	}
+	defer releaseFileLock(lockFile)
+
 	existing, err := Load(dir)
 	switch {
 	case errors.Is(err, ErrNoIndex):
