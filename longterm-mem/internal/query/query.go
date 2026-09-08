@@ -173,6 +173,21 @@ const (
 	// index diagnostic then turns into an instruction to rebuild an index
 	// that was never the problem.
 	DiagnosticCoverageUnreadable = "coverage_unreadable"
+
+	// DiagnosticEmbeddingToppedUp reports that the embedding arm found a
+	// small, bounded gap between the manifest and the live corpus (see
+	// TopUpMaxRows) and closed it with an incremental build BEFORE
+	// scanning, so this call's results already reflect the topped-up
+	// index rather than the stale one Coverage would otherwise have
+	// described.
+	DiagnosticEmbeddingToppedUp = "embedding_index_topped_up"
+	// DiagnosticEmbeddingTopUpFailed reports that a bounded top-up was
+	// attempted (the gap was within TopUpMaxRows) but the build itself
+	// failed -- the embedding backend was unreachable, for example. The
+	// query still answers: it degrades exactly as an index that was never
+	// topped up would, from the stale index it already had, plus this
+	// diagnostic naming what went wrong so the failure is not silent.
+	DiagnosticEmbeddingTopUpFailed = "embedding_topup_failed"
 )
 
 // ResponseTokenCeiling is the hard bound on one response, in tokens.
@@ -249,6 +264,17 @@ type Deps struct {
 	// degrades exactly like an index that was never built: zero rows,
 	// Coverage says so.
 	Embed EmbedFunc
+	// BuildIndex incrementally (re)builds project's embedding index under
+	// the given model/dimension/inputLimit contract -- the same contract
+	// the embedding arm just read off the existing manifest, so a top-up
+	// never silently reinterprets what "the index" means for this project.
+	// It is invoked only when the embedding arm finds a small, bounded gap
+	// (see TopUpMaxRows) between the manifest and the live corpus, right
+	// before scanning; nil skips the top-up entirely and leaves today's
+	// degrade-and-name-the-CLI-command behaviour unchanged. A production
+	// caller wires it to read live rows and call vecindex.Build, the same
+	// way cmd_index_embeddings.go already does.
+	BuildIndex BuildIndexFunc
 }
 
 // NoLinkResolver reports every page as unlinked (default until D6 exists).
@@ -419,7 +445,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed)
+		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex)
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)

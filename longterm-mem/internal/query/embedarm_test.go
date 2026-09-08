@@ -121,7 +121,7 @@ func TestSoftDeletedObservationNeverSurfacesFromTheIndex(t *testing.T) {
 	})
 	softDeleteEmbedFixtureRow(t, dbPath, ids[0])
 
-	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil)
 	if len(diags) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diags)
 	}
@@ -162,7 +162,7 @@ func TestEmbeddingArmDropsAStaleFingerprint(t *testing.T) {
 	}
 	conn.Close()
 
-	rows, _, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "original", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+	rows, _, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "original", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil)
 	if len(diags) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diags)
 	}
@@ -178,7 +178,7 @@ func TestEmbeddingArmDropsAStaleFingerprint(t *testing.T) {
 func TestEmbeddingArmReportsNeverBuiltWhenNoIndexExists(t *testing.T) {
 	store, _, _, _ := newEmbedArmFixture(t, nil)
 	stateDir := t.TempDir() // deliberately empty: no index was ever saved here
-	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "anything", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "anything", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil)
 	if len(diags) != 0 {
 		t.Fatalf("unexpected diagnostics: %+v", diags)
 	}
@@ -209,7 +209,7 @@ func TestRunEmbeddingArm_UnreadableCoverageIsNamedAndReportsNoMeasurements(t *te
 		t.Fatalf("close fixture store: %v", err)
 	}
 
-	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+	_, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil)
 
 	var found *Diagnostic
 	for i, d := range diags {
@@ -267,7 +267,7 @@ func TestRunEmbeddingArm_UnindexedIsAPlainSubtraction(t *testing.T) {
 	}
 	t.Cleanup(func() { reopened.Close() })
 
-	_, coverage, _ := runEmbeddingArm(context.Background(), reopened, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil))
+	_, coverage, _ := runEmbeddingArm(context.Background(), reopened, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), nil)
 
 	if coverage.Live != 2 || coverage.Indexed != 1 {
 		t.Fatalf("coverage = %+v, want Live 2 / Indexed 1", coverage)
@@ -284,12 +284,12 @@ func TestUnreachableBackendAndMissingModelAreDistinctDiagnostics(t *testing.T) {
 		{title: "t", content: "c", project: "proj-embed", vec: []float32{1, 0, 0}},
 	})
 
-	_, _, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "q", 5, fakeEmbed(nil, &embed.BackendUnreachableError{Err: errors.New("dial tcp: connection refused")}))
+	_, _, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "q", 5, fakeEmbed(nil, &embed.BackendUnreachableError{Err: errors.New("dial tcp: connection refused")}), nil)
 	if len(diags) != 1 || diags[0].Code != DiagnosticEmbeddingBackendUnreachable {
 		t.Fatalf("diags = %+v, want exactly one %q", diags, DiagnosticEmbeddingBackendUnreachable)
 	}
 
-	_, _, diags = runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "q", 5, fakeEmbed(nil, &embed.ModelMissingError{Model: "nomic-embed-text"}))
+	_, _, diags = runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "q", 5, fakeEmbed(nil, &embed.ModelMissingError{Model: "nomic-embed-text"}), nil)
 	if len(diags) != 1 || diags[0].Code != DiagnosticEmbeddingModelMissing {
 		t.Fatalf("diags = %+v, want exactly one %q", diags, DiagnosticEmbeddingModelMissing)
 	}

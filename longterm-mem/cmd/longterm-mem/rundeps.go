@@ -39,8 +39,50 @@ func runQuery(ctx context.Context, store *engram.Store, vaultRoot string, req qu
 			}
 			return client.Embed(ctx, text)
 		},
+		BuildIndex: buildIndexForQuery(store),
 	}
 	return query.Run(ctx, deps, req)
+}
+
+// buildIndexForQuery wires query.Deps.BuildIndex for a query.Run bounded
+// top-up (issue #286): read project's live rows the same way
+// cmd_index_embeddings.go's own -embeddings flag does
+// (store.ListObservations, already R-020-scoped), then run one incremental
+// vecindex.Build under exactly the model/dimension/inputLimit contract the
+// embedding arm read off the existing manifest -- never this process's own
+// defaults, which could silently disagree with whatever contract the index
+// was actually built under.
+func buildIndexForQuery(store *engram.Store) func(ctx context.Context, project, model string, dimension, inputLimit int) error {
+	return func(ctx context.Context, project, model string, dimension, inputLimit int) error {
+		rows, err := observationRowsForIndex(store, project)
+		if err != nil {
+			return err
+		}
+		client, err := embed.NewClient(embed.Config{Model: model})
+		if err != nil {
+			return err
+		}
+		dir := vecindex.Dir(defaultStateDir(), project)
+		_, _, err = vecindex.Build(ctx, dir, model, dimension, inputLimit, rows, client, buildNowRFC3339)
+		return err
+	}
+}
+
+// observationRowsForIndex reads project's live Engram rows in the shape
+// vecindex.Build wants, the same source cmd_index_embeddings.go's own
+// -embeddings flag reads (store.ListObservations, already R-020 soft-delete
+// scoped) -- extracted so this mapping can be tested without a network
+// round trip to an embedding backend.
+func observationRowsForIndex(store *engram.Store, project string) ([]vecindex.Row, error) {
+	observations, err := store.ListObservations(project)
+	if err != nil {
+		return nil, err
+	}
+	rows := make([]vecindex.Row, 0, len(observations))
+	for _, o := range observations {
+		rows = append(rows, vecindex.Row{EngramID: o.ID, Title: o.Title, Content: o.Content})
+	}
+	return rows, nil
 }
 
 // runPromote builds a Writer for vaultRoot and calls
