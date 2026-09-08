@@ -11,11 +11,13 @@ import (
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/embed"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/mcpserver"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/query"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vault"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vaultreg"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/vecindex"
 )
 
 // cmdMCP implements `longterm-mem mcp` (R-012, R-034): serve the query,
@@ -44,18 +46,38 @@ func cmdMCP(args []string) int {
 	}
 	defer store.Close()
 
+	// The embedding client and the embedding index's load cache are each
+	// constructed exactly once for the whole session (issue #286): a long-
+	// lived MCP server otherwise pays a fresh loopback HTTP client and a
+	// full manifest.json+vectors.blob disk read on every single query that
+	// names or defaults to engram-embed, even when the same project is
+	// queried repeatedly and nothing about its index has changed between
+	// calls. embedClient.Embed and loadCache.Load are safe for concurrent
+	// use (http.Client and LoadCache's own mutex, respectively), matching
+	// how store is already shared across the whole session below.
+	embedClient, err := embed.NewClient(embed.Config{Model: vecindex.DefaultModel})
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "longterm-mem: mcp: %v\n", err)
+		return exitInternal
+	}
+	loadCache := vecindex.NewLoadCache()
+
 	// Both closures resolve their own project's vault fresh on every call
-	// (a session can serve more than one project) and then call runQuery/
+	// (a session can serve more than one project) and then call queryDeps/
 	// runPromote (rundeps.go, task 8b.11) -- the exact same
 	// construction+call functions cmdQuery/cmdPromote use for the CLI
-	// query/promote subcommands, so the CLI and MCP surfaces cannot drift.
+	// query/promote subcommands, so the CLI and MCP surfaces cannot drift
+	// (the query tool's Embed and LoadIndex are the one deliberate
+	// exception, issue #286: this session's shared client and load cache,
+	// not runQuery's per-call construction).
 	deps := mcpserver.Deps{
 		Query: func(ctx context.Context, req query.Request) (query.Result, error) {
 			vaultRoot, err := vaultreg.Resolve(defaultVaultsPath(), req.Project, "")
 			if err != nil {
 				return query.Result{}, err
 			}
-			return runQuery(ctx, store, vaultRoot, req)
+			qdeps := queryDeps(store, vaultRoot, embedClient.Embed, loadCache.Load, loadCache.Invalidate)
+			return query.Run(ctx, qdeps, req)
 		},
 		// Get reads one observation whole, through the same read-only
 		// store the query tool searches. It takes no project: an id

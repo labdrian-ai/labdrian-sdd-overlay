@@ -90,7 +90,8 @@ var knownSources = map[string]bool{
 // arms default to. A caller that wants it names it:
 // sources: ["vault", "engram-fts"].
 func defaultSources(deps Deps, project string) []string {
-	if _, err := vecindex.Load(vecindex.Dir(deps.StateDir, project)); err == nil {
+	loadIndex := resolveLoadIndex(deps)
+	if _, err := loadIndex(vecindex.Dir(deps.StateDir, project)); err == nil {
 		return []string{SourceEngramFTS, SourceEngramEmbed}
 	}
 	return []string{SourceEngramFTS}
@@ -275,6 +276,26 @@ type Deps struct {
 	// caller wires it to read live rows and call vecindex.Build, the same
 	// way cmd_index_embeddings.go already does.
 	BuildIndex BuildIndexFunc
+	// LoadIndex loads one project's embedding index, defaulting to
+	// vecindex.Load when nil so an existing or non-MCP caller (the CLI
+	// query subcommand, every test that does not set this field) is
+	// unaffected. A long-lived caller that serves more than one query per
+	// process -- the MCP server -- wires it to a *vecindex.LoadCache's Load
+	// method instead, so a project's index is read from disk at most once
+	// per change rather than on every query that names or defaults to
+	// engram-embed.
+	LoadIndex func(dir string) (*vecindex.Index, error)
+}
+
+// resolveLoadIndex returns deps.LoadIndex, or vecindex.Load when deps did
+// not set one -- the one place that default is decided, so defaultSources
+// and runEmbeddingArm's own index load can never drift into resolving it
+// two different ways.
+func resolveLoadIndex(deps Deps) func(dir string) (*vecindex.Index, error) {
+	if deps.LoadIndex != nil {
+		return deps.LoadIndex
+	}
+	return vecindex.Load
 }
 
 // NoLinkResolver reports every page as unlinked (default until D6 exists).
@@ -445,7 +466,7 @@ func Run(ctx context.Context, deps Deps, req Request) (Result, error) {
 
 	var embedRows []ResultRow
 	if wantEmbed {
-		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex)
+		rows, coverage, diags := runEmbeddingArm(ctx, deps.Engram, deps.StateDir, req.Project, req.Query, top, deps.Embed, deps.BuildIndex, resolveLoadIndex(deps))
 		embedRows = rows
 		result.Coverage = append(result.Coverage, coverage)
 		result.Diagnostics = append(result.Diagnostics, diags...)

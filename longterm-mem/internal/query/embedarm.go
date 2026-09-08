@@ -91,7 +91,10 @@ const embeddingIndexNeverBuilt = "never"
 // convenience. Every candidate is resolved through CoverageSnapshot
 // instead, which simply omits a row that is missing, soft-deleted, or
 // belongs to another project.
-func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project, queryText string, top int, embedFn EmbedFunc, buildIndex BuildIndexFunc) ([]ResultRow, Coverage, []Diagnostic) {
+func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project, queryText string, top int, embedFn EmbedFunc, buildIndex BuildIndexFunc, loadIndex func(dir string) (*vecindex.Index, error)) ([]ResultRow, Coverage, []Diagnostic) {
+	if loadIndex == nil {
+		loadIndex = vecindex.Load
+	}
 	coverage := Coverage{Source: SourceEngramEmbed, BuiltAt: embeddingIndexNeverBuilt}
 	dir := vecindex.Dir(stateDir, project)
 
@@ -99,7 +102,7 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 	// read that counts live observations. Coverage's two numbers used to
 	// come from two separate calls, which is what let them disagree and
 	// forced a clamp, a diagnostic and a branch no test could reach.
-	idx, loadErr := vecindex.Load(dir)
+	idx, loadErr := loadIndex(dir)
 
 	var diags []Diagnostic
 	live, liveByID, err := store.CoverageSnapshot(project, manifestEngramIDs(idx))
@@ -132,7 +135,7 @@ func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project
 	coverage.Unindexed = coverage.Live - coverage.Indexed
 
 	if coverage.Unindexed > 0 && coverage.Unindexed <= TopUpMaxRows && buildIndex != nil {
-		idx, coverage, liveByID, diags = topUpEmbeddingIndex(ctx, store, dir, project, idx, coverage, liveByID, buildIndex, diags)
+		idx, coverage, liveByID, diags = topUpEmbeddingIndex(ctx, store, dir, project, idx, coverage, liveByID, buildIndex, loadIndex, diags)
 	}
 
 	if embedFn == nil {
@@ -200,7 +203,7 @@ func manifestEngramIDs(idx *vecindex.Index) []int64 {
 // does -- the query never fails because a top-up could not run -- plus a
 // diagnostic naming what went wrong, appended to diags and returned
 // alongside the unchanged idx/coverage/liveByID the caller already had.
-func topUpEmbeddingIndex(ctx context.Context, store *engram.Store, dir, project string, idx *vecindex.Index, coverage Coverage, liveByID map[int64]engram.Observation, buildIndex BuildIndexFunc, diags []Diagnostic) (*vecindex.Index, Coverage, map[int64]engram.Observation, []Diagnostic) {
+func topUpEmbeddingIndex(ctx context.Context, store *engram.Store, dir, project string, idx *vecindex.Index, coverage Coverage, liveByID map[int64]engram.Observation, buildIndex BuildIndexFunc, loadIndex func(dir string) (*vecindex.Index, error), diags []Diagnostic) (*vecindex.Index, Coverage, map[int64]engram.Observation, []Diagnostic) {
 	toppedUp := coverage.Unindexed
 	if err := buildIndex(ctx, project, idx.Manifest.Model, idx.Manifest.Dimension, idx.Manifest.InputLimit); err != nil {
 		diags = append(diags, Diagnostic{
@@ -210,7 +213,7 @@ func topUpEmbeddingIndex(ctx context.Context, store *engram.Store, dir, project 
 		return idx, coverage, liveByID, diags
 	}
 
-	reloaded, err := vecindex.Load(dir)
+	reloaded, err := loadIndex(dir)
 	if err != nil {
 		// The build itself reported success but the index it wrote cannot
 		// be read back -- treated the same as a build failure: the query

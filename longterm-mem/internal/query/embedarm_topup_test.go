@@ -78,7 +78,7 @@ func TestEmbeddingArm_ToppedUpWhenUnindexedWithinBudget(t *testing.T) {
 		}
 	}, nil)
 
-	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn)
+	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn, nil)
 
 	if buildCalls != 1 {
 		t.Fatalf("BuildIndex was called %d times, want exactly 1", buildCalls)
@@ -117,7 +117,7 @@ func TestEmbeddingArm_NoTopUpWhenOverBudget(t *testing.T) {
 	buildCalls := 0
 	buildFn := fakeBuildIndex(&buildCalls, nil, nil)
 
-	_, coverage, _ := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn)
+	_, coverage, _ := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn, nil)
 
 	if buildCalls != 0 {
 		t.Fatalf("BuildIndex was called %d times, want 0: the gap exceeds TopUpMaxRows", buildCalls)
@@ -140,7 +140,7 @@ func TestEmbeddingArm_TopUpFailureDegradesWithoutFailingTheQuery(t *testing.T) {
 	buildErr := errors.New("embedding backend unreachable")
 	buildFn := fakeBuildIndex(&buildCalls, nil, buildErr)
 
-	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn)
+	rows, coverage, diags := runEmbeddingArm(context.Background(), store, stateDir, "proj-embed", "alpha", 5, fakeEmbed([]float32{1, 0, 0}, nil), buildFn, nil)
 
 	if buildCalls != 1 {
 		t.Fatalf("BuildIndex was called %d times, want exactly 1", buildCalls)
