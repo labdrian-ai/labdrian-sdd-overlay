@@ -7,7 +7,7 @@ A customization layer over `gentle-ai` (an SDD-driven, multi-agent dev runtime) 
 - Tracks vendor-managed and custom skills in a git overlay, so `gentle-ai sync`/`upgrade` never silently clobbers your changes.
 - Deploys your overlaid skills to **three agent runtimes**: Claude Code (`~/.claude/skills`), opencode (`~/.config/opencode/skills`), and codex (`~/.codex/skills`).
 - Deploys Claude Code **agent definitions** (e.g. GADU) to `~/.claude/agents/` — agents are Claude Code-only; opencode/codex receive the portable skill form instead.
-- Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject a minimalism contract **only** into the code-writing SDD phases (`sdd-tasks`/`sdd-apply`) and exclude it from all others. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
+- Adds a **deterministic minimalism-scoping layer**: a Go engine + Claude Code hooks (`UserPromptSubmit` → propagate, `PreToolUse`/`Agent` → gate-task) that inject two managed contracts (minimalism, anti-generic design) **only** into the code-writing SDD phases (`sdd-tasks`/`sdd-apply`) and exclude them from all others. Deterministic on Claude Code; documented platform limits apply on opencode/codex.
 - Cuts and tracks **named releases** (semver tags via CI) as an additional layer on top of the upstream/main model — versioning, per-target state, and rollback. See [Releases](#releases) below.
 
 ## Quick start — clone, then `labdrian tui` from anywhere
@@ -112,8 +112,8 @@ same confirm→run→result pattern as apply/self-update.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
-| `uninstall-hooks` | **modifies** | Remove the two overlay hook entries from `~/.claude/settings.json`, leaving all other keys intact. |
-| `status-hooks` | read-only | Check engine binary, hooks wired, contract readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (two pairs, four entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
+| `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
 | `install-alias [name]` | **modifies** | Symlink `labdrian` (or a custom name) into `~/.local/bin`. Run once per machine. |
@@ -121,7 +121,7 @@ same confirm→run→result pattern as apply/self-update.
 ### The 3 workflows
 
 **1. Day-to-day — nothing to do.**
-The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism contract into `sdd-tasks`/`sdd-apply` automatically.
+The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill registries fresh across sessions; `PreToolUse`/`Agent` (gate-task) injects the minimalism and anti-generic-design contracts into `sdd-tasks`/`sdd-apply` automatically. Review candidate coverage and skill discovery are handled by gentle-ai itself since v2.7.0; the overlay no longer ships contracts for them.
 
 **2. gentle-ai released an update.**
 ```bash
@@ -318,16 +318,17 @@ overlay sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
     'git fetch origin' first for a live count.
 
 overlay install-hooks
-    Build the Go engine binary and wire the two deterministic-scoping hooks into
-    ~/.claude/settings.json (UserPromptSubmit + PreToolUse/Agent). Backs up settings.json
+    Build the Go engine binary and wire the deterministic-scoping hooks into
+    ~/.claude/settings.json: one UserPromptSubmit + PreToolUse/Agent pair per managed
+    contract (minimalism-contract, anti-generic-design), four entries. Backs up settings.json
     to settings.json.bak before modifying. Run once to activate; inert until then.
 
 overlay uninstall-hooks
-    Remove the two overlay hook entries from ~/.claude/settings.json, leaving all
-    other keys and hooks intact.
+    Remove the overlay hook entries from ~/.claude/settings.json, including entries
+    left by contracts retired in earlier versions, leaving all other keys and hooks intact.
 
 overlay status-hooks
-    Check overlay installation health: binary present, hooks wired, contract readable.
+    Check overlay installation health: binary present, hooks wired, contracts readable.
     If the engine binary is missing, exits non-zero and directs users to run `overlay install-hooks`.
     Exits 0 if all OK, 1 if any check fails. Safe to run at any time.
 
