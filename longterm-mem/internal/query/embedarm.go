@@ -64,7 +64,7 @@ const embeddingIndexNeverBuilt = "never"
 // that method deliberately returns a soft-deleted row (store.go's own doc
 // comment), and reusing it here would let an observation deleted after the
 // index was built surface from a months-old index -- R-020 defeated by
-// convenience. Every candidate is resolved through LiveObservationsByID
+// convenience. Every candidate is resolved through CoverageSnapshot
 // instead, which simply omits a row that is missing, soft-deleted, or
 // belongs to another project.
 func runEmbeddingArm(ctx context.Context, store *engram.Store, stateDir, project, queryText string, top int, embedFn EmbedFunc) ([]ResultRow, Coverage, []Diagnostic) {

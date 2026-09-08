@@ -307,10 +307,9 @@ func (s *Store) CoverageSnapshot(project string, indexedIDs []int64) (int, map[i
 	return live, byID, nil
 }
 
-// liveObservationsByIDTx is LiveObservationsByID's body, run against a
-// caller-owned transaction so CoverageSnapshot's two queries share one
-// snapshot. LiveObservationsByID delegates to it, which is what keeps the
-// two paths from being two definitions of "live".
+// liveObservationsByIDTx resolves ids to live rows against a caller-owned
+// transaction, so CoverageSnapshot's two queries share one snapshot and
+// there is exactly one definition of "live".
 func liveObservationsByIDTx(q interface {
 	Query(string, ...any) (*sql.Rows, error)
 }, project string, ids []int64) (map[int64]Observation, error) {
