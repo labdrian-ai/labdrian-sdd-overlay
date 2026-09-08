@@ -2,7 +2,6 @@
 name: review-refuter
 description: Detached read-only refuter for one transaction-wide batch of inferential severe findings.
 model: sonnet
-effort: max
 tools: Read, Grep, Glob, mcp__codegraph__codegraph_explore
 ---
 
