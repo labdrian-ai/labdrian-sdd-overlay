@@ -3,8 +3,7 @@ name: sdd-spec
 description: >
   Write specifications with requirements and scenarios. Use when a proposal is approved and the
   change needs formal requirements (delta specs) captured before implementation.
-model: opus
-effort: xhigh
+model: sonnet
 tools: Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
 
