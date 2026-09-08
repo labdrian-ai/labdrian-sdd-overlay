@@ -49,13 +49,11 @@ type Merger struct {
 }
 
 const (
-	// Minimalism, safety, and design identity tokens are exposed to status
-	// checks so caller code can assert provable Labdrian ownership without
-	// duplicating parsing logic.
+	// Minimalism and design identity tokens are exposed to status checks so
+	// caller code can assert provable Labdrian ownership without duplicating
+	// parsing logic.
 	LabdrianMinimalismIdentity = "minimalism-contract.md"
-	LabdrianSafetyIdentity     = "--embedded-contract " + embeddedSafetyName
 	LabdrianDesignIdentity     = "--embedded-contract " + embeddedDesignName
-	LabdrianProjectionIdentity = "--embedded-contract " + embeddedProjectionName
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -104,21 +102,10 @@ func HasLabdrianMinimalismHook(root map[string]interface{}, key, hookCommand str
 	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianMinimalismIdentity)
 }
 
-// HasLabdrianSafetyHook reports whether key has our safety embedded-contract hook.
-func HasLabdrianSafetyHook(root map[string]interface{}, key, hookCommand string) bool {
-	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianSafetyIdentity)
-}
-
 // HasLabdrianDesignHook reports whether key has our anti-generic-design
 // embedded-contract hook.
 func HasLabdrianDesignHook(root map[string]interface{}, key, hookCommand string) bool {
 	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianDesignIdentity)
-}
-
-// HasLabdrianProjectionHook reports whether key has our review-projection-contract
-// embedded-contract hook.
-func HasLabdrianProjectionHook(root map[string]interface{}, key, hookCommand string) bool {
-	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianProjectionIdentity)
 }
 
 // HasSupportedClaudeLifecycleState reports whether settings contain all known
@@ -126,12 +113,8 @@ func HasLabdrianProjectionHook(root map[string]interface{}, key, hookCommand str
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
-		HasLabdrianSafetyHook(root, "UserPromptSubmit", hookCommand) &&
-		HasLabdrianSafetyHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianDesignHook(root, "UserPromptSubmit", hookCommand) &&
-		HasLabdrianDesignHook(root, "PreToolUse", hookCommand) &&
-		HasLabdrianProjectionHook(root, "UserPromptSubmit", hookCommand) &&
-		HasLabdrianProjectionHook(root, "PreToolUse", hookCommand)
+		HasLabdrianDesignHook(root, "PreToolUse", hookCommand)
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -202,74 +185,45 @@ func (m *Merger) loadOrEmpty() (map[string]interface{}, error) {
 	return root, nil
 }
 
-// embeddedSafetyName is the engine-owned managed contract that propagates the
-// skill-discovery-safety guard (REGISTRY-AUTHORITATIVE + FAIL-LOUD + PORTABLE
-// DISCOVERY). It rides the same propagate/gate-task machinery as the minimalism
-// contract but writes a DISTINCT registry block and injects into the phases that
-// discover skills or files.
-const embeddedSafetyName = "skill-discovery-safety"
-
-// safetyIdentity is the distinguishing token used to dedup/remove the safety
-// hook entries independently of the minimalism entries. Both pairs reference the
-// same binary path, so the binary substring alone is NOT a unique identity — we
-// also key on this token (the --embedded-contract argument) so the second pair
-// installs instead of being collapsed as a duplicate.
-const safetyIdentity = "--embedded-contract " + embeddedSafetyName
-
 // embeddedDesignName is the engine-owned managed contract that propagates the
 // anti-generic-design guard (countering the model's default "Claude/SaaS
 // look" design bias). It rides the same propagate/gate-task machinery as the
-// minimalism and safety contracts but writes a DISTINCT registry block.
+// minimalism contract but writes a DISTINCT registry block.
 const embeddedDesignName = "anti-generic-design"
 
 // designIdentity is the distinguishing token used to dedup/remove the design
-// hook entries independently of the minimalism and safety entries. Mirrors
-// safetyIdentity: the binary substring alone is not a unique identity once a
-// third pair rides the same binary, so we also key on this token (the
-// --embedded-contract argument).
+// hook entries independently of the minimalism entries. Both pairs reference
+// the same binary path, so the binary substring alone is NOT a unique
+// identity — we also key on this token (the --embedded-contract argument) so
+// the second pair installs instead of being collapsed as a duplicate.
 const designIdentity = "--embedded-contract " + embeddedDesignName
 
-// embeddedProjectionName is the engine-owned managed contract that propagates
-// the review-projection guard (never start a review whose candidate covers
-// nothing). It rides the same propagate/gate-task machinery as the minimalism,
-// safety, and design contracts but writes a DISTINCT registry block and injects
-// into the phases that produce or gate a review candidate.
-const embeddedProjectionName = "review-projection-contract"
-
-// projectionIdentity is the distinguishing token used to dedup/remove the
-// projection hook entries independently of the other three. Mirrors
-// safetyIdentity and designIdentity: the binary substring alone is not a unique
-// identity once a fourth pair rides the same binary, so we also key on this
-// token (the --embedded-contract argument).
-const projectionIdentity = "--embedded-contract " + embeddedProjectionName
-
 // mergeHooks inserts our hook entries if not already present. Returns true if
-// any change was made. It installs FOUR pairs: the minimalism-contract pair,
-// the skill-discovery-safety pair, the anti-generic-design pair, and the
-// review-projection-contract pair. Each pair is deduped by its own identity so
-// all four coexist.
+// any change was made. It installs TWO pairs: the minimalism-contract pair
+// and the anti-generic-design pair. Each pair is deduped by its own identity
+// so both coexist.
+//
+// Identity matching in this file is entirely name-based
+// (isMinimalismEntry / isDesignEntry), not a generic marker or
+// command-prefix scan: dropping a contract's support means dropping its
+// identity const, its isXEntry predicate, and its builder functions, and
+// mergeHooks simply stops writing that pair. Because that alone would also
+// stop Uninstall from ever recognizing a pair it no longer installs,
+// removeHooks additionally matches the fixed legacyIdentities list below —
+// see its doc comment for why that is a deliberate backward-compat
+// exception, not a general-purpose mechanism.
 func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 	hooks := ensureHooksMap(root)
 	changed := false
 
 	// Minimalism-contract pair (identity: binary path, scoped to the entry that
-	// does NOT carry the safety token).
+	// does NOT carry the design token).
 	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isMinimalismEntry) {
 		appendHook(hooks, "UserPromptSubmit", m.buildUserPromptSubmitEntry())
 		changed = true
 	}
 	if !hasEntryMatching(hooks, "PreToolUse", m.isMinimalismEntry) {
 		appendHook(hooks, "PreToolUse", m.buildPreToolUseEntry())
-		changed = true
-	}
-
-	// Skill-discovery-safety pair (identity: binary path + safetyIdentity).
-	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isSafetyEntry) {
-		appendHook(hooks, "UserPromptSubmit", m.buildSafetyUserPromptSubmitEntry())
-		changed = true
-	}
-	if !hasEntryMatching(hooks, "PreToolUse", m.isSafetyEntry) {
-		appendHook(hooks, "PreToolUse", m.buildSafetyPreToolUseEntry())
 		changed = true
 	}
 
@@ -283,23 +237,13 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
-	// Review-projection-contract pair (identity: binary path + projectionIdentity).
-	if !hasEntryMatching(hooks, "UserPromptSubmit", m.isProjectionEntry) {
-		appendHook(hooks, "UserPromptSubmit", m.buildProjectionUserPromptSubmitEntry())
-		changed = true
-	}
-	if !hasEntryMatching(hooks, "PreToolUse", m.isProjectionEntry) {
-		appendHook(hooks, "PreToolUse", m.buildProjectionPreToolUseEntry())
-		changed = true
-	}
-
 	root["hooks"] = hooks
 	return changed
 }
 
 // minimalismIdentity is the distinguishing token for the minimalism-contract
 // hook entries. Using a positive token (the --contract-file argument) keeps
-// the identity symmetric with isSafetyEntry and avoids collapsing a third
+// the identity symmetric with isDesignEntry and avoids collapsing a second
 // contract into the minimalism identity via NOT-logic.
 const minimalismIdentity = "minimalism-contract.md"
 
@@ -309,28 +253,47 @@ func (m *Merger) isMinimalismEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, minimalismIdentity)
 }
 
-// isSafetyEntry reports whether a hook entry is our skill-discovery-safety entry:
-// it references our binary AND the safety token.
-func (m *Merger) isSafetyEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, safetyIdentity)
-}
-
 // isDesignEntry reports whether a hook entry is our anti-generic-design entry:
 // it references our binary AND the design token.
 func (m *Merger) isDesignEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, designIdentity)
 }
 
-// isProjectionEntry reports whether a hook entry is our review-projection-contract
-// entry: it references our binary AND the projection token.
-func (m *Merger) isProjectionEntry(e interface{}) bool {
-	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, projectionIdentity)
+// legacyIdentities are the --embedded-contract identity tokens of hook pairs
+// this overlay used to install and no longer does (skill-discovery-safety,
+// review-projection-contract — both dropped because gentle-ai now covers
+// them natively). mergeHooks never writes these anymore, but removeHooks
+// still matches them so Uninstall stays idempotent for a machine that
+// installed them under an older version of this overlay: without this list,
+// a stale entry from a pre-upgrade install would no longer be recognized by
+// any isXEntry predicate and Uninstall would silently leave it behind.
+//
+// This is a deliberate, fixed, hand-maintained list — not a generic
+// marker/command-prefix scan. Retiring a contract's dedicated isXEntry
+// predicate and builder functions is exactly the moment its identity token
+// belongs here instead. TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries
+// (settings_test.go) pins that a stale entry using each of these tokens is
+// still removed.
+var legacyIdentities = []string{
+	"--embedded-contract skill-discovery-safety",
+	"--embedded-contract review-projection-contract",
+}
+
+// isLegacyEntry reports whether a hook entry is a leftover from a retired
+// contract pair: it references our binary AND one of legacyIdentities.
+func (m *Merger) isLegacyEntry(e interface{}) bool {
+	for _, identity := range legacyIdentities {
+		if entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, identity) {
+			return true
+		}
+	}
+	return false
 }
 
 // removeHooks removes our hook entries. Returns true if any change was made.
-// Identity is Labdrian-owned entry shape: our minimalism, safety, design, or
-// projection entries, not merely any entry that happens to reference the same
-// binary path.
+// Identity is Labdrian-owned entry shape: our minimalism or design entries,
+// plus any stale entry matching legacyIdentities (see its doc comment), not
+// merely any entry that happens to reference the same binary path.
 func (m *Merger) removeHooks(root map[string]interface{}) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -345,7 +308,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isSafetyEntry(e) || m.isDesignEntry(e) || m.isProjectionEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}
@@ -530,53 +493,13 @@ func (m *Merger) buildPreToolUseEntry() map[string]interface{} {
 	}
 }
 
-// buildSafetyUserPromptSubmitEntry returns the UserPromptSubmit entry that
-// propagates the skill-discovery-safety guard. It uses --embedded-contract so
-// the contract text ships in the engine binary (no external file dependency):
-// the guard propagates on every install regardless of the global persona rule.
-//
-// Same missing-binary guard as the minimalism entry. The --embedded-contract
-// argument doubles as this entry's dedup/uninstall identity.
-func (m *Merger) buildSafetyUserPromptSubmitEntry() map[string]interface{} {
-	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
-		m.hookCommand, m.hookCommand, embeddedSafetyName,
-	)
-	return map[string]interface{}{
-		"hooks": []interface{}{map[string]interface{}{
-			"type":    "command",
-			"command": cmd,
-		}},
-	}
-}
-
-// buildSafetyPreToolUseEntry returns the PreToolUse/Agent entry that injects the
-// skill-discovery-safety contract path into in-scope sub-agent prompts. The
-// contract content is embedded (--embedded-contract); --contract-path is the
-// absolute path the engine emits as the bare injected line so a sub-agent in any
-// cwd can resolve it.
-//
-// Same missing-binary guard and matcher="Agent" as the minimalism entry.
-func (m *Merger) buildSafetyPreToolUseEntry() map[string]interface{} {
-	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/skill-discovery-safety.md" || true`,
-		m.hookCommand, m.hookCommand, embeddedSafetyName,
-	)
-	return map[string]interface{}{
-		"matcher": "Agent",
-		"hooks": []interface{}{map[string]interface{}{
-			"type":    "command",
-			"command": cmd,
-		}},
-	}
-}
-
 // buildDesignUserPromptSubmitEntry returns the UserPromptSubmit entry that
-// propagates the anti-generic-design guard. Mirrors
-// buildSafetyUserPromptSubmitEntry exactly: it uses --embedded-contract so the
+// propagates the anti-generic-design guard. It uses --embedded-contract so the
 // contract text ships in the engine binary (no external file dependency), and
 // the --embedded-contract argument doubles as this entry's dedup/uninstall
 // identity.
+//
+// Same missing-binary guard as the minimalism entry.
 func (m *Merger) buildDesignUserPromptSubmitEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
@@ -596,56 +519,11 @@ func (m *Merger) buildDesignUserPromptSubmitEntry() map[string]interface{} {
 // absolute path the engine emits as the bare injected line so a sub-agent in
 // any cwd can resolve it.
 //
-// Same missing-binary guard and matcher="Agent" as the minimalism and safety
-// entries.
+// Same missing-binary guard and matcher="Agent" as the minimalism entry.
 func (m *Merger) buildDesignPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
 		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/anti-generic-design.md" || true`,
 		m.hookCommand, m.hookCommand, embeddedDesignName,
-	)
-	return map[string]interface{}{
-		"matcher": "Agent",
-		"hooks": []interface{}{map[string]interface{}{
-			"type":    "command",
-			"command": cmd,
-		}},
-	}
-}
-
-// buildProjectionUserPromptSubmitEntry returns the UserPromptSubmit entry that
-// propagates the review-projection guard. Mirrors
-// buildDesignUserPromptSubmitEntry exactly: it uses --embedded-contract so the
-// contract text ships in the engine binary (no external file dependency), and
-// the --embedded-contract argument doubles as this entry's dedup/uninstall
-// identity.
-func (m *Merger) buildProjectionUserPromptSubmitEntry() map[string]interface{} {
-	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract %s || true`,
-		m.hookCommand, m.hookCommand, embeddedProjectionName,
-	)
-	return map[string]interface{}{
-		"hooks": []interface{}{map[string]interface{}{
-			"type":    "command",
-			"command": cmd,
-		}},
-	}
-}
-
-// buildProjectionPreToolUseEntry returns the PreToolUse/Agent entry that injects
-// the review-projection contract path into in-scope sub-agent prompts. The
-// contract content is embedded (--embedded-contract); --contract-path is the
-// absolute path the engine emits as the bare injected line so a sub-agent in
-// any cwd can resolve it.
-//
-// This is the pair that matters most for sdd-apply: sdd-apply is not vendored in
-// this repository, so prompt injection through this entry is the only path the
-// review-projection rule has into that phase.
-//
-// Same missing-binary guard and matcher="Agent" as the other three entries.
-func (m *Merger) buildProjectionPreToolUseEntry() map[string]interface{} {
-	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s gate-task --embedded-contract %s --contract-path "$HOME/.claude/skills/_shared/review-projection-contract.md" || true`,
-		m.hookCommand, m.hookCommand, embeddedProjectionName,
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",

@@ -297,9 +297,9 @@ func TestRunCleanFixtureExitsZero(t *testing.T) {
 	}
 }
 
-// TestRunRejectsBadInvocations pins exit 2 for usage errors, mirroring the
-// review-preflight sibling's contract: a typo in a flag is the operator's to
-// fix and must not be conflated with "could not determine."
+// TestRunRejectsBadInvocations pins exit 2 for usage errors: a typo in a flag
+// is the operator's to fix and must not be conflated with "could not
+// determine."
 func TestRunRejectsBadInvocations(t *testing.T) {
 	cases := []struct {
 		name string
@@ -325,8 +325,8 @@ func TestRunRejectsBadInvocations(t *testing.T) {
 
 // TestRunDefaultsToTheCallerWorkingDirectory covers the no-flag path: with no
 // --repo given, the guard must scan the caller's own working directory,
-// exactly like the sibling review-preflight and deterministic-checks guards
-// default to the caller's cwd rather than requiring an explicit path.
+// exactly like the sibling deterministic-checks guard defaults to the
+// caller's cwd rather than requiring an explicit path.
 func TestRunDefaultsToTheCallerWorkingDirectory(t *testing.T) {
 	root := t.TempDir()
 	newChange(t, root, "done-change", allChecked)

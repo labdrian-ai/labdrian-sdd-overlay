@@ -162,28 +162,28 @@ state, rather than asserting a specific cause.
 
 ### Requirement: Authoritative Scoped Block Restoration
 
-The repair MUST use the existing authoritative propagator and shared contracts to generate exactly one marker-delimited block and exactly one generated row for each of `minimalism-contract-scope`, `skill-discovery-safety-scope`, and `anti-generic-design-scope`. Generated rows MUST NOT be hand-authored. (Traceability: AC-001)
+The repair MUST use the existing authoritative propagator and shared contracts to generate exactly one marker-delimited block and exactly one generated row for each of `minimalism-contract-scope` and `anti-generic-design-scope`. Generated rows MUST NOT be hand-authored. (Traceability: AC-001)
 
-#### Scenario: Restore exactly three unique scoped blocks
+#### Scenario: Restore exactly two unique scoped blocks
 
-- GIVEN `.atl/skill-registry.md` lacks the three required scope blocks
-- WHEN the authoritative propagation mechanism runs for the three corresponding contracts
+- GIVEN `.atl/skill-registry.md` lacks the two required scope blocks
+- WHEN the authoritative propagation mechanism runs for the two corresponding contracts
 - THEN each named BEGIN/END marker pair and its generated row occurs exactly once
 
 ### Requirement: Registry Preservation and Idempotence
 
-The repair MUST preserve all registry content unrelated to the three generated marker ranges, and a second identical propagation pass MUST produce no registry change. (Traceability: AC-002)
+The repair MUST preserve all registry content unrelated to the two generated marker ranges, and a second identical propagation pass MUST produce no registry change. (Traceability: AC-002)
 
 #### Scenario: Preserve unrelated registry content
 
 - GIVEN the registry content captured before restoration
 - WHEN the restored registry is compared with that capture
-- THEN content outside the three generated marker ranges is unchanged
+- THEN content outside the two generated marker ranges is unchanged
 
 #### Scenario: Repeat restoration without changes
 
-- GIVEN all three required blocks and rows occur exactly once
-- WHEN the same three authoritative propagations run again
+- GIVEN both required blocks and rows occur exactly once
+- WHEN the same two authoritative propagations run again
 - THEN `.atl/skill-registry.md` has no resulting diff and no duplicate marker or row
 
 ### Requirement: Healthy Hook Status
@@ -192,7 +192,7 @@ After restoration, `bin/labdrian-overlay status-hooks` MUST exit `0` and MUST NO
 
 #### Scenario: Report healthy status
 
-- GIVEN the three required generated blocks are present exactly once
+- GIVEN the two required generated blocks are present exactly once
 - WHEN `bin/labdrian-overlay status-hooks` runs
 - THEN it exits `0` without a missing-scope warning
 

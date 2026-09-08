@@ -103,12 +103,10 @@ func TestOpenCodeInstallWritesPromptConfigFromMinimalismContract(t *testing.T) {
 	}
 	contracts := promptConfig["contracts"].([]any)
 	// Assert every unconditional contract by name. A count-only bound cannot
-	// tell "all four are present" from "three are, plus the optional one",
-	// which is how anti-generic-design stayed unwired while this test passed.
+	// tell "both are present" from "one is, plus the optional one", which is
+	// how anti-generic-design stayed unwired while this test passed.
 	for _, want := range []string{
 		"skills/_shared/minimalism-contract.md",
-		"skills/_shared/skill-discovery-safety.md",
-		"skills/_shared/review-projection-contract.md",
 		"skills/_shared/anti-generic-design.md",
 	} {
 		if !hasPromptContract(contracts, want) {

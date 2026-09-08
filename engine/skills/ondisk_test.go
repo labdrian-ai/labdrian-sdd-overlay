@@ -21,7 +21,7 @@ _shared/minimalism-contract.md custom
 
 skills.registry.yaml custom
 GADU.md                  custom   agent
-sdd-explore.md           managed  agent
+sdd-apply.md             managed  agent
 opencode/agents/GADU.md custom   opencode-agent
 `
 
@@ -51,7 +51,7 @@ func TestDeployableManifestPaths(t *testing.T) {
 		"engine/skills/sync.go",
 		"skills.registry.yaml",
 		"GADU.md",
-		"sdd-explore.md",
+		"sdd-apply.md",
 		"opencode/agents/GADU.md",
 	}
 	for _, e := range excluded {

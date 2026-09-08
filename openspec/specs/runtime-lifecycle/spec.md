@@ -203,7 +203,7 @@ The runtime MUST support evaluating multiple managed guidance contracts without 
 
 #### Scenario: Multiple contracts are evaluated independently
 
-- GIVEN minimalism, skill-discovery-safety, and OO quality contracts are configured
+- GIVEN minimalism and OO quality contracts are configured
 - WHEN runtime guidance is evaluated for a supported phase
 - THEN each contract receives an independent decision
 - AND one contract's inclusion or exclusion does not force another contract's decision
@@ -249,11 +249,11 @@ OO quality guidance MUST NOT be injected from phase scope alone. The runtime SHA
 
 ### Requirement: Runtime Contract Non-Regression
 
-Adding context-aware OO contract support MUST preserve existing minimalism, skill-discovery-safety, Claude lifecycle, and OpenCode lifecycle behavior unless a later spec explicitly changes those contracts.
+Adding context-aware OO contract support MUST preserve existing minimalism, Claude lifecycle, and OpenCode lifecycle behavior unless a later spec explicitly changes those contracts.
 
 #### Scenario: Existing phase-only contracts remain stable
 
-- GIVEN a runtime prompt that currently receives minimalism or skill-discovery-safety guidance
+- GIVEN a runtime prompt that currently receives minimalism guidance
 - WHEN multi-contract evaluation is introduced
 - THEN the existing guidance behavior remains unchanged
 

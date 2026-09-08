@@ -23,36 +23,19 @@ import (
 
 // Markers wrapping the scoped minimalism-contract row. These remain the package
 // defaults so existing callers and tests keep working; Config may override them
-// when a second contract (e.g. skill-discovery-safety) needs its own block.
+// when a second contract (e.g. anti-generic-design) needs its own block.
 const (
 	BeginMarker = "<!-- BEGIN: minimalism-contract-scope (auto-generated) -->"
 	EndMarker   = "<!-- END: minimalism-contract-scope -->"
 )
 
-// Markers wrapping the scoped skill-discovery-safety row. A DISTINCT marker pair
-// is mandatory: if the second contract reused minimalism-contract-scope, the two
-// propagators would fight over the same BEGIN/END block in the registry.
-const (
-	DiscoverySafetyBeginMarker = "<!-- BEGIN: skill-discovery-safety-scope (auto-generated) -->"
-	DiscoverySafetyEndMarker   = "<!-- END: skill-discovery-safety-scope -->"
-)
-
 // Markers wrapping the scoped anti-generic-design row. A DISTINCT marker pair
-// is mandatory: reusing either the minimalism-contract or skill-discovery-safety
-// pair would make Propagate overwrite that contract's block instead of the two
-// coexisting (see package doc).
+// is mandatory: reusing the minimalism-contract pair would make Propagate
+// overwrite that contract's block instead of the two coexisting (see package
+// doc).
 const (
 	AntiGenericDesignBeginMarker = "<!-- BEGIN: anti-generic-design-scope (auto-generated) -->"
 	AntiGenericDesignEndMarker   = "<!-- END: anti-generic-design-scope -->"
-)
-
-// Markers wrapping the scoped review-projection-contract row. A DISTINCT marker
-// pair is mandatory for the same reason as the three pairs above: reusing any of
-// them would make Propagate overwrite that contract's block instead of the four
-// coexisting (see package doc).
-const (
-	ReviewProjectionBeginMarker = "<!-- BEGIN: review-projection-contract-scope (auto-generated) -->"
-	ReviewProjectionEndMarker   = "<!-- END: review-projection-contract-scope -->"
 )
 
 // defaultRowLabel is the leading table-cell label used when Config.RowLabel is
@@ -79,7 +62,7 @@ type Config struct {
 	// BeginMarker / EndMarker delimit the regeneration-safe block this contract
 	// owns. When empty they default to the package BeginMarker / EndMarker
 	// (minimalism-contract-scope). A second contract MUST set a distinct pair
-	// (e.g. DiscoverySafetyBeginMarker / DiscoverySafetyEndMarker) so the two
+	// (e.g. AntiGenericDesignBeginMarker / AntiGenericDesignEndMarker) so the two
 	// propagators do not overwrite each other's block.
 	BeginMarker string
 	EndMarker   string

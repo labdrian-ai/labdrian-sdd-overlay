@@ -33,7 +33,7 @@
 // Intended for manual diagnostics — never called by hooks.
 //
 // propagate/gate-task accept --embedded-contract <name> to source an
-// engine-owned managed contract (e.g. skill-discovery-safety) from the binary
+// engine-owned managed contract (e.g. anti-generic-design) from the binary
 // instead of an external file; propagate then writes that contract's DISTINCT
 // marker block. propagate also accepts --require-registry to turn an absent
 // registry into a fail-loud error instead of a silent no-op.
@@ -76,17 +76,6 @@ import (
 // no dependency on an external, regenerable skill file.
 func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 	switch name {
-	case "skill-discovery-safety":
-		return embeddedContractSpec{
-			content:     assets.SkillDiscoverySafety,
-			beginMarker: propagator.DiscoverySafetyBeginMarker,
-			endMarker:   propagator.DiscoverySafetyEndMarker,
-			rowLabel:    "skill-discovery-safety",
-			// defaultPath is the registry-row Path cell / bare injected line when
-			// the caller does not override --contract-path. It is where the
-			// overlay deploys the standalone copy of this contract.
-			defaultPath: "skills/_shared/skill-discovery-safety.md",
-		}, true
 	case "anti-generic-design":
 		return embeddedContractSpec{
 			content:     assets.AntiGenericDesign,
@@ -97,17 +86,6 @@ func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 			// the caller does not override --contract-path. It is where the
 			// overlay deploys the standalone copy of this contract.
 			defaultPath: "skills/_shared/anti-generic-design.md",
-		}, true
-	case "review-projection-contract":
-		return embeddedContractSpec{
-			content:     assets.ReviewProjectionContract,
-			beginMarker: propagator.ReviewProjectionBeginMarker,
-			endMarker:   propagator.ReviewProjectionEndMarker,
-			rowLabel:    "review-projection-contract",
-			// defaultPath is the registry-row Path cell / bare injected line when
-			// the caller does not override --contract-path. It is where the
-			// overlay deploys the standalone copy of this contract.
-			defaultPath: "skills/_shared/review-projection-contract.md",
 		}, true
 	default:
 		return embeddedContractSpec{}, false
@@ -181,7 +159,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest")
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
 	fmt.Fprintln(os.Stderr, "")
-	fmt.Fprintln(os.Stderr, "Embedded contracts: skill-discovery-safety, anti-generic-design")
+	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
 }
 
@@ -1516,11 +1494,9 @@ func checkRegistry(registryPath string, readFile readFileFn) checkResult {
 		}
 	}
 	hasMinimalism := containsSubstring(content, propagator.BeginMarker)
-	hasSafety := containsSubstring(content, propagator.DiscoverySafetyBeginMarker)
 	hasDesign := containsSubstring(content, propagator.AntiGenericDesignBeginMarker)
-	hasProjection := containsSubstring(content, propagator.ReviewProjectionBeginMarker)
 
-	if hasMinimalism && hasSafety && hasDesign && hasProjection {
+	if hasMinimalism && hasDesign {
 		return checkResult{label: label, ok: true, note: "scoped block present"}
 	}
 
@@ -1528,14 +1504,8 @@ func checkRegistry(registryPath string, readFile readFileFn) checkResult {
 	if !hasMinimalism {
 		missing = append(missing, "minimalism-contract-scope")
 	}
-	if !hasSafety {
-		missing = append(missing, "skill-discovery-safety-scope")
-	}
 	if !hasDesign {
 		missing = append(missing, "anti-generic-design-scope")
-	}
-	if !hasProjection {
-		missing = append(missing, "review-projection-contract-scope")
 	}
 	note := fmt.Sprintf(
 		"present but scoped block(s) missing: %s (run 'labdrian install-hooks' or propagate)",
