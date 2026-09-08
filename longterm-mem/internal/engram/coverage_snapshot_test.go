@@ -88,6 +88,53 @@ func TestCoverageSnapshot_ClosedStoreFailsAsOneError(t *testing.T) {
 	}
 }
 
+// TestCoverageSnapshot_ByIDExcludesSoftDeletedAndOtherProjects migrates the
+// assertions the deleted LiveObservationsByID's own test used to pin: the
+// byID half must filter to only the live, same-project row even when asked
+// about an id that is soft-deleted, belongs to another project, or does
+// not exist at all -- exactly the shape a stale manifest entry takes.
+func TestCoverageSnapshot_ByIDExcludesSoftDeletedAndOtherProjects(t *testing.T) {
+	store, ids := newSnapshotFixture(t, []snapshotRow{
+		{title: "live", project: "widgets", deleted: false},
+		{title: "gone", project: "widgets", deleted: true},
+		{title: "elsewhere", project: "gadgets", deleted: false},
+	})
+	liveID, deletedID, otherProjectID := ids[0], ids[1], ids[2]
+
+	_, byID, err := store.CoverageSnapshot("widgets", []int64{liveID, deletedID, otherProjectID, 999999})
+	if err != nil {
+		t.Fatalf("CoverageSnapshot: %v", err)
+	}
+	if len(byID) != 1 {
+		t.Fatalf("byID has %d rows, want 1 (only the live widgets row): %+v", len(byID), byID)
+	}
+	if _, ok := byID[liveID]; !ok {
+		t.Fatalf("byID is missing the live row %d: %+v", liveID, byID)
+	}
+}
+
+// TestCoverageSnapshot_LiveCountScopesProjectAndExcludesSoftDeleted
+// migrates the assertion the deleted CountLiveObservations's own test used
+// to pin, onto CoverageSnapshot's live return value: a project's live
+// count must never include a soft-deleted row or a row belonging to a
+// different project.
+func TestCoverageSnapshot_LiveCountScopesProjectAndExcludesSoftDeleted(t *testing.T) {
+	store, _ := newSnapshotFixture(t, []snapshotRow{
+		{title: "live-1", project: "widgets", deleted: false},
+		{title: "live-2", project: "widgets", deleted: false},
+		{title: "gone", project: "widgets", deleted: true},
+		{title: "other-project", project: "gadgets", deleted: false},
+	})
+
+	live, _, err := store.CoverageSnapshot("widgets", nil)
+	if err != nil {
+		t.Fatalf("CoverageSnapshot: %v", err)
+	}
+	if live != 2 {
+		t.Fatalf("live = %d, want 2", live)
+	}
+}
+
 type snapshotRow struct {
 	title   string
 	project string

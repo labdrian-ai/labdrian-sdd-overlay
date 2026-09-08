@@ -1,20 +1,101 @@
-package projectid_test
+package projectid
 
 import (
 	"errors"
+	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 )
 
-// established builds a projectid.Established backed by a fixed set of names.
-func established(names ...string) projectid.Established {
+// This file exercises AdoptWith and the unexported derivableNames directly
+// (white-box, package projectid) rather than through the now-deleted Adopt
+// and DerivableNames wrappers. Every assertion below is the one the deleted
+// wrappers' tests used to pin; only the entry point changed.
+//
+// Every test here builds its own throwaway repositories under t.TempDir()
+// and runs git inside those. Nothing touches the repository this module
+// lives in. Production code never shells out (exec_allowlist_test.go), but
+// a _test.go file may, and building a real linked worktree is the only
+// honest way to prove the property under test.
+
+// established builds an Established backed by a fixed set of names.
+func established(names ...string) Established {
 	have := map[string]bool{}
 	for _, n := range names {
 		have[n] = true
 	}
 	return func(name string) (bool, error) { return have[name], nil }
+}
+
+func git(t *testing.T, dir string, args ...string) string {
+	t.Helper()
+	cmd := exec.Command("git", args...)
+	cmd.Dir = dir
+	cmd.Env = append(os.Environ(),
+		"GIT_CONFIG_GLOBAL=/dev/null",
+		"GIT_CONFIG_SYSTEM=/dev/null",
+		"GIT_AUTHOR_NAME=t", "GIT_AUTHOR_EMAIL=t@example.com",
+		"GIT_COMMITTER_NAME=t", "GIT_COMMITTER_EMAIL=t@example.com",
+	)
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		t.Fatalf("git %s in %s: %v\n%s", strings.Join(args, " "), dir, err, out)
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// newRepo creates an initialized repository with one commit at parent/name
+// and returns its path.
+func newRepo(t *testing.T, parent, name string) string {
+	t.Helper()
+	root := filepath.Join(parent, name)
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", root, err)
+	}
+	git(t, root, "init", "-q", "-b", "main")
+	git(t, root, "commit", "-q", "--allow-empty", "-m", "init")
+	return root
+}
+
+// addWorktree creates a linked worktree of repo at path and returns path.
+func addWorktree(t *testing.T, repo, path string) string {
+	t.Helper()
+	git(t, repo, "worktree", "add", "-q", "-b", filepath.Base(path), path)
+	return path
+}
+
+func write(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatalf("write %s: %v", path, err)
+	}
+}
+
+func resolveIdentity(t *testing.T, dir string) Identity {
+	t.Helper()
+	id, err := Resolve(dir)
+	if err != nil {
+		t.Fatalf("Resolve(%s): unexpected error: %v", dir, err)
+	}
+	return id
+}
+
+// derivableNamesFor is the DerivableNames wrapper's body, inlined for
+// tests now that the exported wrapper is gone: discover dir's repository,
+// then list what it derives.
+func derivableNamesFor(t *testing.T, dir string) []DerivedName {
+	t.Helper()
+	repo, err := discover(dir)
+	if err != nil {
+		t.Fatalf("discover(%s): %v", dir, err)
+	}
+	names, err := derivableNames(repo)
+	if err != nil {
+		t.Fatalf("derivableNames(%s): %v", dir, err)
+	}
+	return names
 }
 
 // The cheapest form of integrating fragmented memory is not creating the
@@ -27,9 +108,9 @@ func TestAdopt_EstablishedAliasWinsOverTheChainsAnswer(t *testing.T) {
 	root := newRepo(t, tmp, "widgets")
 	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
 
-	got, err := projectid.Adopt(root, established("widgets"))
+	got, err := AdoptWith(root, AdoptOptions{Established: established("widgets")})
 	if err != nil {
-		t.Fatalf("Adopt: %v", err)
+		t.Fatalf("AdoptWith: %v", err)
 	}
 	if got.Identity.Project != "widgets" {
 		t.Fatalf("an established alias must be adopted, not re-minted: got %q", got.Identity.Project)
@@ -37,7 +118,7 @@ func TestAdopt_EstablishedAliasWinsOverTheChainsAnswer(t *testing.T) {
 	if !got.Adopted {
 		t.Fatal("Adopted must report that the identity came from storage, not from the chain")
 	}
-	if got.Identity.Rule != projectid.RuleRemote {
+	if got.Identity.Rule != RuleRemote {
 		t.Fatalf("the adopted name must still name the rule that derived it: got %q", got.Identity.Rule)
 	}
 }
@@ -50,13 +131,13 @@ func TestAdopt_NothingEstablishedFallsBackToTheChain(t *testing.T) {
 	root := newRepo(t, tmp, "widgets")
 	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
 
-	got, err := projectid.Adopt(root, established())
+	got, err := AdoptWith(root, AdoptOptions{Established: established()})
 	if err != nil {
-		t.Fatalf("Adopt: %v", err)
+		t.Fatalf("AdoptWith: %v", err)
 	}
-	want := resolve(t, root)
+	want := resolveIdentity(t, root)
 	if got.Identity.Project != want.Project || got.Identity.Rule != want.Rule {
-		t.Fatalf("with nothing established Adopt must equal Resolve: got %q (%s), want %q (%s)",
+		t.Fatalf("with nothing established AdoptWith must equal Resolve: got %q (%s), want %q (%s)",
 			got.Identity.Project, got.Identity.Rule, want.Project, want.Rule)
 	}
 	if got.Adopted {
@@ -76,12 +157,12 @@ func TestAdopt_NothingEstablishedFallsBackToTheChain(t *testing.T) {
 func TestAdopt_OtherEstablishedAliasesArePendingIntegration(t *testing.T) {
 	tmp := t.TempDir()
 	root := newRepo(t, tmp, "widgets")
-	write(t, filepath.Join(root, projectid.DeclaredFileName), "acme-widgets\n")
+	write(t, filepath.Join(root, DeclaredFileName), "acme-widgets\n")
 	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
 
-	got, err := projectid.Adopt(root, established("acme-widgets", "widgets"))
+	got, err := AdoptWith(root, AdoptOptions{Established: established("acme-widgets", "widgets")})
 	if err != nil {
-		t.Fatalf("Adopt: %v", err)
+		t.Fatalf("AdoptWith: %v", err)
 	}
 	if got.Identity.Project != "acme-widgets" {
 		t.Fatalf("the highest-ranked established name is canonical: got %q", got.Identity.Project)
@@ -101,13 +182,13 @@ func TestAdopt_MainCheckoutAndWorktreeAdoptIdentically(t *testing.T) {
 	wt := addWorktree(t, root, filepath.Join(tmp, "widgets-feature"))
 
 	e := established("widgets")
-	fromMain, err := projectid.Adopt(root, e)
+	fromMain, err := AdoptWith(root, AdoptOptions{Established: e})
 	if err != nil {
-		t.Fatalf("Adopt(main): %v", err)
+		t.Fatalf("AdoptWith(main): %v", err)
 	}
-	fromWorktree, err := projectid.Adopt(wt, e)
+	fromWorktree, err := AdoptWith(wt, AdoptOptions{Established: e})
 	if err != nil {
-		t.Fatalf("Adopt(worktree): %v", err)
+		t.Fatalf("AdoptWith(worktree): %v", err)
 	}
 	if fromMain.Identity.Project != fromWorktree.Identity.Project {
 		t.Fatalf("adoption fragmented the repository: main=%q worktree=%q",
@@ -124,7 +205,7 @@ func TestAdopt_UnreadableStorageIsReportedNotAssumedEmpty(t *testing.T) {
 	root := newRepo(t, tmp, "widgets")
 	boom := errors.New("storage unavailable")
 
-	_, err := projectid.Adopt(root, func(string) (bool, error) { return false, boom })
+	_, err := AdoptWith(root, AdoptOptions{Established: func(string) (bool, error) { return false, boom }})
 	if !errors.Is(err, boom) {
 		t.Fatalf("an unreadable storage must surface, not read as empty: got %v", err)
 	}
@@ -138,7 +219,7 @@ func TestAdoptWith_RemembersANameNothingDerivesAnyMore(t *testing.T) {
 	tmp := t.TempDir()
 	root := newRepo(t, tmp, "widgets") // no declaration, no remote: path-derived only
 
-	got, err := projectid.AdoptWith(root, projectid.AdoptOptions{
+	got, err := AdoptWith(root, AdoptOptions{
 		Established: established("/somewhere/else/.git"),
 		Remembered:  []string{"/somewhere/else/.git"},
 	})
@@ -159,9 +240,9 @@ func TestAdoptWith_RemembersANameNothingDerivesAnyMore(t *testing.T) {
 func TestAdoptWith_LiveDerivationOutranksMemory(t *testing.T) {
 	tmp := t.TempDir()
 	root := newRepo(t, tmp, "widgets")
-	write(t, filepath.Join(root, projectid.DeclaredFileName), "current-name\n")
+	write(t, filepath.Join(root, DeclaredFileName), "current-name\n")
 
-	got, err := projectid.AdoptWith(root, projectid.AdoptOptions{
+	got, err := AdoptWith(root, AdoptOptions{
 		Established: established("current-name", "former-name"),
 		Remembered:  []string{"former-name"},
 	})
@@ -176,7 +257,7 @@ func TestAdoptWith_LiveDerivationOutranksMemory(t *testing.T) {
 	}
 }
 
-// DerivableNames is what the caller writes to the ledger, so it must report
+// derivableNames is what the caller writes to the ledger, so it must report
 // the rule and whether each name may later be adopted on the ledger's word
 // alone. The loose spellings may not: a bare directory name can name
 // somebody else's repository.
@@ -185,10 +266,7 @@ func TestDerivableNames_MarksLooseSpellingsUnadoptable(t *testing.T) {
 	root := newRepo(t, tmp, "widgets")
 	git(t, root, "remote", "add", "origin", "https://github.com/acme/widgets.git")
 
-	names, err := projectid.DerivableNames(root)
-	if err != nil {
-		t.Fatalf("DerivableNames: %v", err)
-	}
+	names := derivableNamesFor(t, root)
 
 	strict := map[string]bool{}
 	for _, n := range names {

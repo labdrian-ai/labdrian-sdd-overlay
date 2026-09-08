@@ -843,7 +843,7 @@ func TestLinkedPairEmittedOnceViaMerge(t *testing.T) {
 		return 0, false
 	}
 
-	merged := mergeResults([]string{SourceVault, SourceEngramFTS}, vaultRows, engramRows, nil, resolveLink, "linked observation", engram.MatchAll)
+	merged := mergeResults(true, true, false, vaultRows, engramRows, nil, resolveLink, "linked observation", engram.MatchAll)
 
 	if len(merged) != 1 {
 		t.Fatalf("len(merged) = %d, want 1 (linked pair collapsed); got %+v", len(merged), merged)
