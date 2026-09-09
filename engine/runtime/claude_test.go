@@ -19,8 +19,8 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 		t.Fatalf("Install() = %#v", result)
 	}
 
-	// mergeHooks installs all three pairs (minimalism, safety, design) via the
-	// real Merger.Install() path (Phase 4, PR-3 of the
+	// mergeHooks installs both pairs (minimalism, design) via the real
+	// Merger.Install() path (Phase 4, PR-3 of the
 	// anti-generic-design-runtime-wiring chain) — no test-fixture workaround
 	// needed anymore.
 	settingsPath := filepath.Join(root, "settings.json")
@@ -38,17 +38,11 @@ func TestClaudeInstallWritesLifecycleHooksAndReportsSupportedStatus(t *testing.T
 	if !hasOwnedClaudeHook(rootSettings, "UserPromptSubmit", hookCommand, settings.LabdrianMinimalismIdentity) {
 		t.Fatalf("settings after install should include minimalism UserPromptSubmit hook: %#v", rootSettings["hooks"])
 	}
-	if !hasOwnedClaudeHook(rootSettings, "UserPromptSubmit", hookCommand, settings.LabdrianSafetyIdentity) {
-		t.Fatalf("settings after install should include safety UserPromptSubmit hook: %#v", rootSettings["hooks"])
-	}
 	if !hasOwnedClaudeHook(rootSettings, "UserPromptSubmit", hookCommand, settings.LabdrianDesignIdentity) {
 		t.Fatalf("settings after install should include design UserPromptSubmit hook: %#v", rootSettings["hooks"])
 	}
 	if !hasOwnedClaudeHook(rootSettings, "PreToolUse", hookCommand, settings.LabdrianMinimalismIdentity) {
 		t.Fatalf("settings after install should include minimalism PreToolUse hook: %#v", rootSettings["hooks"])
-	}
-	if !hasOwnedClaudeHook(rootSettings, "PreToolUse", hookCommand, settings.LabdrianSafetyIdentity) {
-		t.Fatalf("settings after install should include safety PreToolUse hook: %#v", rootSettings["hooks"])
 	}
 	if !hasOwnedClaudeHook(rootSettings, "PreToolUse", hookCommand, settings.LabdrianDesignIdentity) {
 		t.Fatalf("settings after install should include design PreToolUse hook: %#v", rootSettings["hooks"])
@@ -67,10 +61,9 @@ func TestClaudeUpdateRefreshesLifecycleAndKeepsSupportedStatus(t *testing.T) {
 		t.Fatalf("Update() = %#v", result)
 	}
 
-	// mergeHooks installs all three pairs (minimalism, safety, design) via the
-	// real Merger.Install()/Update() path — Update() keeps the
-	// (minimalism+safety+design) lifecycle state "supported" without any
-	// test-fixture workaround.
+	// mergeHooks installs both pairs (minimalism, design) via the real
+	// Merger.Install()/Update() path — Update() keeps the (minimalism+design)
+	// lifecycle state "supported" without any test-fixture workaround.
 	status := adapter.Status()
 	if status.Status != engineRuntime.CapabilitySupported {
 		t.Fatalf("Status() after update should remain supported, got %#v", status)
@@ -149,7 +142,7 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 		t.Fatal("settings hooks should be a map")
 	}
 	for _, key := range []string{"UserPromptSubmit", "PreToolUse"} {
-		rootSettings, _ = dropEntriesWithIdentity(rootSettings, key, hookCommand, settings.LabdrianSafetyIdentity)
+		rootSettings, _ = dropEntriesWithIdentity(rootSettings, key, hookCommand, settings.LabdrianDesignIdentity)
 		rootSettings["hooks"] = hooks
 	}
 
@@ -163,7 +156,7 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 
 	status := adapter.Status()
 	if status.Status != engineRuntime.CapabilityPartial {
-		t.Fatalf("status should be partial when safety hooks are missing, got %#v", status)
+		t.Fatalf("status should be partial when design hooks are missing, got %#v", status)
 	}
 }
 

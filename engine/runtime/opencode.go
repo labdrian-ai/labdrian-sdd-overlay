@@ -476,27 +476,13 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 		InjectionPoint: injectionHeader(phases),
 	}
 	contracts := []openCodeContractConfig{minimalism}
-	safety, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "skill-discovery-safety.md"), assets.SkillDiscoverySafety)
-	if err != nil {
-		return openCodePromptConfig{}, err
-	}
-	contracts = append(contracts, safety)
-	// The review-projection guard rides the embedded asset for the same reason
-	// the safety guard does: the empty-review-candidate hazard is runtime-
-	// agnostic, so an OpenCode user must get it too, and sourcing it from the
-	// binary keeps it independent of whether the deployed _shared file exists.
-	// It is appended before the OPTIONAL oo-quality contract so the
-	// unconditional contracts keep a stable order regardless of that file.
-	projection, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "review-projection-contract.md"), assets.ReviewProjectionContract)
-	if err != nil {
-		return openCodePromptConfig{}, err
-	}
-	contracts = append(contracts, projection)
 	// The anti-generic-design guard rides the embedded asset for the same
-	// reason the two above do: the generic-AI-look hazard is runtime-agnostic,
-	// so an OpenCode user generating UI must get it too. Without this append
-	// the contract deployed to disk on OpenCode was never read by anything —
-	// present, aligned, IN_SYNC, and inert.
+	// reason the minimalism contract above does: the generic-AI-look hazard is
+	// runtime-agnostic, so an OpenCode user generating UI must get it too.
+	// Without this append the contract deployed to disk on OpenCode was never
+	// read by anything — present, aligned, IN_SYNC, and inert. It is appended
+	// before the OPTIONAL oo-quality contract so the unconditional contracts
+	// keep a stable order regardless of that file.
 	design, err := openCodeContractFromContent(filepath.Join("skills", "_shared", "anti-generic-design.md"), assets.AntiGenericDesign)
 	if err != nil {
 		return openCodePromptConfig{}, err

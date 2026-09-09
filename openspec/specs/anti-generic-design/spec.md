@@ -145,21 +145,19 @@ ID: R-101
 WHEN the propagator scopes a registry block for the `anti-generic-design` embedded
 contract, `engine/propagator/propagator.go` SHALL expose dedicated
 `AntiGenericDesignBeginMarker`/`AntiGenericDesignEndMarker` constants distinct from
-both `BeginMarker`/`EndMarker` (minimalism-contract) and
-`DiscoverySafetyBeginMarker`/`DiscoverySafetyEndMarker` (skill-discovery-safety).
+`BeginMarker`/`EndMarker` (minimalism-contract).
 
-#### Scenario: Three independent blocks coexist
+#### Scenario: Independent blocks coexist
 
-- GIVEN a registry already containing minimalism-contract and
-  skill-discovery-safety scoped blocks
+- GIVEN a registry already containing a minimalism-contract scoped block
 - WHEN `propagate --embedded-contract anti-generic-design` runs
 - THEN the registry gains an `anti-generic-design-scope` block using its own
   BEGIN/END markers
-- AND the two pre-existing blocks are left byte-identical
+- AND the pre-existing block is left byte-identical
 
 #### Scenario: Marker uniqueness
 
-- GIVEN the three marker-pair constants defined in `propagator.go`
+- GIVEN the two marker-pair constants defined in `propagator.go`
 - WHEN their string values are compared pairwise
 - THEN no two marker pairs share a BEGIN or END string
 
@@ -193,7 +191,8 @@ embedded canonical text, `beginMarker`/`endMarker` are the R-101 constants,
 ID: R-103
 
 The engine SHALL ship the canonical `anti-generic-design` contract text as a
-compiled-in Go asset (mirroring `assets.SkillDiscoverySafety`) so `gate-task` and
+compiled-in Go asset (following the same embedded-asset pattern used elsewhere
+in `engine/assets`) so `gate-task` and
 `propagate` can source its content without reading an external file at runtime.
 
 #### Scenario: Works without the deployed file present
@@ -234,7 +233,7 @@ contain one `PreToolUse` entry (matcher `"Agent"`) whose command invokes
 entry whose command invokes
 `propagate --registry "${CLAUDE_PROJECT_DIR:-.}/.atl/skill-registry.md" --embedded-contract anti-generic-design`,
 each following the same `command -v ... && ... || true` fail-safe shape as the
-existing `skill-discovery-safety` lines.
+existing `minimalism-contract` lines.
 
 #### Scenario: Both hook lines present and shaped like the precedent
 
@@ -247,8 +246,7 @@ existing `skill-discovery-safety` lines.
 #### Scenario: Existing hook entries untouched
 
 - GIVEN the same updated `settings.json`
-- WHEN the pre-existing minimalism-contract and skill-discovery-safety hook
-  entries are compared before/after
+- WHEN the pre-existing minimalism-contract hook entries are compared before/after
 - THEN they are unchanged
 
 ### Requirement: Original invokable skill remains unchanged

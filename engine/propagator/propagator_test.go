@@ -715,11 +715,11 @@ func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
 	}
 }
 
-// TestAntiGenericDesignMarkersAreDistinct: the third managed contract
+// TestAntiGenericDesignMarkersAreDistinct: the second managed contract
 // (anti-generic-design) MUST own its own BEGIN/END marker pair, distinct from
-// both the minimalism-contract defaults and the skill-discovery-safety pair.
-// Reusing any existing marker pair would make Propagate overwrite a foreign
-// contract's block instead of coexisting with it (see package doc).
+// the minimalism-contract defaults. Reusing that marker pair would make
+// Propagate overwrite a foreign contract's block instead of coexisting with
+// it (see package doc).
 func TestAntiGenericDesignMarkersAreDistinct(t *testing.T) {
 	if propagator.AntiGenericDesignBeginMarker == "" {
 		t.Fatal("AntiGenericDesignBeginMarker must not be empty")
@@ -729,10 +729,8 @@ func TestAntiGenericDesignMarkersAreDistinct(t *testing.T) {
 	}
 
 	pairs := map[string]string{
-		"minimalism-contract (Begin)":    propagator.BeginMarker,
-		"minimalism-contract (End)":      propagator.EndMarker,
-		"skill-discovery-safety (Begin)": propagator.DiscoverySafetyBeginMarker,
-		"skill-discovery-safety (End)":   propagator.DiscoverySafetyEndMarker,
+		"minimalism-contract (Begin)": propagator.BeginMarker,
+		"minimalism-contract (End)":   propagator.EndMarker,
 	}
 
 	for label, marker := range pairs {
@@ -749,21 +747,17 @@ func TestAntiGenericDesignMarkersAreDistinct(t *testing.T) {
 	}
 }
 
-// TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency is the
+// TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency is the
 // Phase 5 (R-101) isolation/lock test: propagating anti-generic-design into a
-// registry that ALREADY contains correctly-scoped minimalism-contract and
-// skill-discovery-safety blocks must leave both pre-existing blocks
-// byte-identical, add its own third block, and be idempotent on re-run.
-func TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency(t *testing.T) {
+// registry that ALREADY contains a correctly-scoped minimalism-contract block
+// must leave that pre-existing block byte-identical, add its own second
+// block, and be idempotent on re-run.
+func TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency(t *testing.T) {
 	const minimalismBlock = `<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
 | minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
 <!-- END: minimalism-contract-scope -->`
 
-	const safetyBlock = `<!-- BEGIN: skill-discovery-safety-scope (auto-generated) -->
-| skill-discovery-safety | skills/_shared/skill-discovery-safety.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
-<!-- END: skill-discovery-safety-scope -->`
-
-	registryWithTwoBlocks := `# Skill Registry — test-project
+	registryWithOneBlock := `# Skill Registry — test-project
 
 ## Skills Index
 
@@ -773,7 +767,6 @@ func TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency(t *testing
 |----------|------|-------------|
 | pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
 ` + minimalismBlock + `
-` + safetyBlock + `
 `
 
 	designCfg := propagator.Config{
@@ -787,7 +780,7 @@ func TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency(t *testing
 		t.Fatalf("ParseFrontmatter: %v", err)
 	}
 
-	firstOut, changed, err := propagator.Propagate(registryWithTwoBlocks, designCfg, phases)
+	firstOut, changed, err := propagator.Propagate(registryWithOneBlock, designCfg, phases)
 	if err != nil {
 		t.Fatalf("Propagate (first run): %v", err)
 	}
@@ -795,12 +788,9 @@ func TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency(t *testing
 		t.Fatal("expected changed=true: anti-generic-design block was not yet present")
 	}
 
-	// The two pre-existing blocks must survive BYTE-IDENTICAL.
+	// The pre-existing block must survive BYTE-IDENTICAL.
 	if !strings.Contains(firstOut, minimalismBlock) {
 		t.Error("minimalism-contract block was not left byte-identical after propagating anti-generic-design")
-	}
-	if !strings.Contains(firstOut, safetyBlock) {
-		t.Error("skill-discovery-safety block was not left byte-identical after propagating anti-generic-design")
 	}
 
 	// The new anti-generic-design block must be present with its own markers.
@@ -811,9 +801,9 @@ func TestAntiGenericDesignPropagate_ThreeBlockIsolationAndIdempotency(t *testing
 		t.Error("anti-generic-design END marker missing after Propagate")
 	}
 
-	// All three BEGIN markers must coexist — no block overwrote another.
-	if n := strings.Count(firstOut, "BEGIN:"); n != 3 {
-		t.Errorf("expected 3 BEGIN: markers (minimalism + safety + anti-generic-design), got %d:\n%s", n, firstOut)
+	// Both BEGIN markers must coexist — no block overwrote another.
+	if n := strings.Count(firstOut, "BEGIN:"); n != 2 {
+		t.Errorf("expected 2 BEGIN: markers (minimalism + anti-generic-design), got %d:\n%s", n, firstOut)
 	}
 
 	// Idempotency: re-propagating the same design block on its own output is a no-op.

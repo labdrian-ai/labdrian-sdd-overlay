@@ -50,8 +50,6 @@ engine/runtime/labdrian-runtime-parity-plugin.mjs managed
 engine/assets/assets.go managed
 engine/assets/assets_test.go managed
 engine/assets/anti-generic-design.md managed
-engine/assets/review-projection-contract.md managed
-engine/assets/skill-discovery-safety.md managed
 engine/gadu/gadu.go managed
 engine/gadu/gadu_test.go managed
 engine/gadu/persona/body.md managed
@@ -129,11 +127,9 @@ anti-generic-design/references/palette-typography.md custom
 _shared/pre-sdd-contracts.md custom
 _shared/minimalism-contract.md custom
 _shared/oo-quality-contract.md custom
-_shared/skill-discovery-safety.md custom
 _shared/anti-generic-design.md custom
 _shared/entry-contract.schema.json custom
 _shared/actuals-record.schema.json custom
-_shared/review-projection-contract.md custom
 project-manifest/references/phase-templates.md custom
 project-manifest/references/universal-base-rules.md custom
 project-architect/references/architecture-template.md custom
@@ -143,7 +139,6 @@ requirements-from-transcripts/references/patterns-catalog.md custom
 inception-pipeline/references/tier-selection.md custom
 skills.registry.yaml custom
 GADU.md                  custom   agent
-sdd-explore.md           managed  agent
 opencode/agents/GADU.md custom   opencode-agent
 sdd-apply.md managed agent
 sdd-archive.md managed agent

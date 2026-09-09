@@ -470,11 +470,6 @@ Commands:
     <normalize|check> [--top-n N]  deadcode) via the overlay-owned runner. 'check' never mutates;
     [--out-dir DIR]                'normalize' applies fixers. Exit 0=passed, 1=verification_failed,
                                    3=procedural_tooling_failed; propagated unchanged from the runner.
-  review-preflight                 Ask whether a review started in the caller's cwd would cover
-    [--base-ref REF]               anything, by reading the projection 'gentle-ai review status'
-                                   reports. Exit 0=candidate covers something, 1=EMPTY candidate
-                                   (a review here would approve nothing), 2=usage,
-                                   3=could not determine; propagated unchanged from the guard.
   archive-reconcile                Detect completed SDD changes under openspec/changes/ (every
     [--repo PATH]                  tasks.md checkbox checked) that were never archived, and report
     [--known-gaps PATH]            whether their delta capabilities were promoted into
@@ -2542,7 +2537,6 @@ ensure_discovery_tools() {
     if [[ ${#failed[@]} -gt 0 ]]; then
       warn "Could not install: ${failed[*]}"
       warn "Install them manually so agents do not hit the silent-empty footgun."
-      warn "The skill-discovery-safety guard remains the fallback for any session."
     fi
   else
     # No brew — warn loudly about the silent-empty trap but stay non-fatal.
@@ -2556,7 +2550,6 @@ ensure_discovery_tools() {
     warn "    prefer cargo or a newer apt source for those."
     warn "  Fedora/RHEL (dnf): bat ripgrep fd-find eza  (sd may need cargo)"
     warn "  Arch (pacman): bat ripgrep fd sd eza"
-    warn "The skill-discovery-safety guard is the fallback but not a substitute."
   fi
 
   return 0  # always non-fatal
@@ -2624,31 +2617,16 @@ cmd_install_hooks() {
   echo "install-hooks complete."
   echo "  binary  : $ENGINE_BINARY"
   echo "  settings: $settings_path (backup at ${settings_path}.bak)"
-  echo "  hooks   : four hook pairs (minimalism-contract + skill-discovery-safety"
-  echo "            + anti-generic-design + review-projection-contract) wired"
-  echo "            into UserPromptSubmit and PreToolUse/Agent (eight entries total)."
+  echo "  hooks   : two hook pairs (minimalism-contract + anti-generic-design) wired"
+  echo "            into UserPromptSubmit and PreToolUse/Agent (four entries total)."
   echo ""
   echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
   echo ""
   echo "Run 'labdrian doctor' to verify the full installation."
 
-  # Guard: if the standalone skill-discovery-safety.md has not been deployed yet
-  # (user ran install-hooks but not 'labdrian apply'), warn loudly so the safety
-  # contract is not silently absent from the skill registry.
-  local safety_path="$HOME/.claude/skills/_shared/skill-discovery-safety.md"
-  if test -f "$safety_path"; then
-    :
-  else
-    echo ""
-    echo "WARNING: $safety_path not found."
-    echo "  The safety contract is embedded in the engine binary and will propagate"
-    echo "  via hooks, but the standalone copy has not been deployed yet."
-    echo "  Run 'labdrian apply' to deploy all skills, then 'labdrian doctor' to verify."
-  fi
-
   # Best-effort: provision discovery tools so agents don't hit the silent-empty
   # footgun on a fresh install. Non-fatal — a failure here must never abort
-  # install-hooks. The skill-discovery-safety guard is the fallback.
+  # install-hooks.
   # Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out (e.g. in CI or managed hosts).
   if [[ -n "${OVERLAY_SKIP_TOOL_INSTALL:-}" ]]; then
     info "OVERLAY_SKIP_TOOL_INSTALL is set — skipping automatic discovery-tool installation."
@@ -2722,8 +2700,7 @@ cmd_uninstall_hooks() {
 
   echo ""
   echo "uninstall-hooks complete."
-  echo "  Our eight hook entries (four pairs: minimalism-contract + skill-discovery-safety"
-  echo "  + anti-generic-design + review-projection-contract)"
+  echo "  Our four hook entries (two pairs: minimalism-contract + anti-generic-design)"
   echo "  have been removed from $settings_path"
   echo "  (backup at ${settings_path}.bak if the file was modified)"
   echo ""
@@ -3214,56 +3191,10 @@ cmd_deterministic_checks() {
 }
 
 # ---------------------------------------------------------------------------
-# review-preflight
-# ---------------------------------------------------------------------------
-
-# Same shape as cmd_deterministic_checks above, deliberately: every failure to
-# reach the guard is exit 3 ("could not determine"), never exit 0, so a missing
-# source tree or a missing toolchain can never be read as "a review here is
-# safe". The guard's own exit code is propagated verbatim - the wrapper never
-# re-derives it, exactly as skills/sdd-verify/SKILL.md requires of the sibling
-# runner.
-cmd_review_preflight() {
-  local guard_src="$OVERLAY_DIR/tools/review-preflight"
-  if [[ ! -f "$guard_src/go.mod" || ! -f "$guard_src/main.go" ]]; then
-    echo "error: review-preflight source is unavailable under $guard_src" >&2
-    return 3
-  fi
-  if ! command -v go >/dev/null 2>&1; then
-    echo "error: go is required to build the review-preflight guard" >&2
-    return 3
-  fi
-
-  local guard_binary
-  if ! guard_binary="$(mktemp "${TMPDIR:-/tmp}/review-preflight.XXXXXX")"; then
-    echo "error: could not allocate a temporary review-preflight binary" >&2
-    return 3
-  fi
-  rm -f "$guard_binary"
-
-  if ! (cd "$guard_src" && go build -o "$guard_binary" .); then
-    rm -f "$guard_binary"
-    echo "error: could not build the review-preflight guard" >&2
-    return 3
-  fi
-
-  local status=0
-  (cd "$CALLER_CWD" && "$guard_binary" "$@") || status=$?
-  # A CALLER_CWD that no longer exists makes the subshell's own `cd` fail with
-  # exit 1, which for this guard would read as "EMPTY candidate" - a verdict
-  # about a projection that was never observed. Remap that one case to 3.
-  if [[ "$status" -ne 0 && ! -d "$CALLER_CWD" ]]; then
-    status=3
-  fi
-  rm -f "$guard_binary"
-  return "$status"
-}
-
-# ---------------------------------------------------------------------------
 # archive-reconcile
 # ---------------------------------------------------------------------------
 
-# Same shape as cmd_review_preflight above, deliberately: every failure to
+# Same shape as cmd_deterministic_checks above, deliberately: every failure to
 # reach the guard is exit 3 ("could not determine"), never exit 0, so a missing
 # source tree or a missing toolchain can never be read as "no stranded change
 # exists here". The guard's own exit code is propagated verbatim - the wrapper
@@ -4157,7 +4088,6 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     skills)          cmd_skills "$@" ;;
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;
     deterministic-checks) cmd_deterministic_checks "$@" ;;
-    review-preflight) cmd_review_preflight "$@" ;;
     archive-reconcile) cmd_archive_reconcile "$@" ;;
     gadu-generate)   cmd_gadu_generate "$@" ;;
     longterm-mem)    cmd_longterm_mem "$@" ;;

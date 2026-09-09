@@ -54,9 +54,8 @@ const archiveDirName = "archive"
 const tasksFileName = "tasks.md"
 const specFileName = "spec.md"
 
-// Process exit codes. The split mirrors the sibling review-preflight guard
-// (tools/review-preflight/main.go): 0 clean, 1 the condition this tool exists
-// to catch, 2 a bad invocation, 3 no verdict could be reached.
+// Process exit codes: 0 clean, 1 the condition this tool exists to catch, 2 a
+// bad invocation, 3 no verdict could be reached.
 //
 // Only outcomeClean asserts that every active openspec/changes/ entry is
 // either still in progress or already archived. Every path that cannot prove
@@ -303,8 +302,7 @@ func readKnownGaps(path string) (map[string]bool, error) {
 	return waived, nil
 }
 
-// parseArgs parses the guard's only flag, mirroring the sibling
-// review-preflight's parseArgs shape (ContinueOnError plus a discarded
+// parseArgs parses the guard's only flag (ContinueOnError plus a discarded
 // FlagSet output, so run owns every byte written to stderr). Leftover
 // positional arguments are an error rather than being ignored: this tool
 // takes no subcommand, and silently accepting one would let an operator's
@@ -328,8 +326,7 @@ func parseArgs(args []string) (options, error) {
 // given, otherwise the caller's working directory. A --repo that does not
 // resolve to a real directory is reported as undetermined (3), not as a usage
 // error (2): the invocation itself parsed fine, and only the target it names
-// could not be reached, which is the same fact review-preflight reports as 3
-// when it cannot resolve the working directory it was asked to inspect.
+// could not be reached.
 func resolveRepoRoot(repoFlag string) (string, error) {
 	root := repoFlag
 	if root == "" {
@@ -382,11 +379,10 @@ type undeterminedChange struct {
 // number of active entries scanned (used only for the clean-case stdout
 // summary).
 //
-// Every error here is returned rather than skipped or defaulted, per the same
-// reasoning as review-preflight's parseProjection: a tasks.md this guard
-// cannot read or parse is a fact it never observed, and reporting the change
-// it belongs to as "not stranded" would silently reproduce the exact blind
-// spot this guard exists to close.
+// Every error here is returned rather than skipped or defaulted: a tasks.md
+// this guard cannot read or parse is a fact it never observed, and reporting
+// the change it belongs to as "not stranded" would silently reproduce the
+// exact blind spot this guard exists to close.
 //
 // Unclassifiable changes are collected rather than returned as the first
 // error: four live changes in this repository are in that state at once, and
