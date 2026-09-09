@@ -4,6 +4,8 @@
 
 **Status**: implemented, tests green, committed under a granted `size:exception`.
 
+**Validator findings fixed** (commit `199d8e1`, +72/-7 lines, `engine/synctrigger/{synctrigger.go,synctrigger_test.go}` only): F2 — `Run` now writes a `sync-trigger: <outcome>: <err>` stderr notice for `error:self` and `error:spawn`, matching `error:usage`/`error:log`. F3 — `RunChild` tees the child's stderr into the log via `io.MultiWriter` so the raw `longterm-mem` stderr lines land before the summary `outcome=` line, per design.md's Log contract. F4 — a present-but-non-executable `longterm-mem` binary now maps to its own `error:binary-not-executable` outcome instead of colliding with the parent's `error:spawn`. F5 — corrected the fake-self test script/comment: the re-exec argv puts the event at `$3` and the cwd at `$5`, not `$2`/`$4`. The optional table-fold of the single-case `TestRunChild_*` functions was skipped (not attempted) to keep this fix scoped to the four confirmed findings.
+
 ### Granted Exception
 
 - **Scope**: slice 1 `sync-runner` only
