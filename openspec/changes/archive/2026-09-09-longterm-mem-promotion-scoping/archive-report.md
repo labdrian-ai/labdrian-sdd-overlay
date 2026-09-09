@@ -158,9 +158,9 @@ The change has been fully planned (proposal), specified (delta specs merged), de
 **Ready for next change.** 
 ## Cycle Timestamps
 
-Recorded at archive time, before the change reached `main`. The inception-pipeline closure-feedback appends the landing-commit row after the merge; until then t1 is recorded as absent, never inferred.
+Recorded at archive time, before the change reached `main`. The inception-pipeline closure-feedback appends the landing-commit row after the merge.
 
 | Anchor | Value | Source | Outcome |
 |--------|-------|--------|---------|
 | **t0** (tiering go-ahead) | `2026-09-08T20:31:53Z` | `sdd/longterm-mem-promotion-scoping/pipeline-state`, Engram observation #3280 (`created_at`; provisional key restated as #3282) | primary |
-| **t1** (landing commit) | landing_commit is absent: not yet merged at archive time (PR #294 open) | to be recorded by closure-feedback from the merge commit | absent |
+| **t1** (landing commit) | `landing_commit`: `0a461d9c49713ba25ddbd0f41531987087c292a6` (merge of PR #294 onto `main`), committer timestamp `2026-09-09T03:03:42Z` | `gh pr view 294 --json mergeCommit,mergedAt`, cross-checked against `git show -s --format=%ci` | self-asserted, not verified — no native review receipt reached `approved` for this candidate (lineage `review-c7b86c944a5c7171` stopped `unachievable_lens_slot` after 2/4 lenses), so no `approved_tree` is recorded here and none can be checked against `landing_commit`'s own tree; t1 still resolves from `landing_commit`'s own committer timestamp alone |
