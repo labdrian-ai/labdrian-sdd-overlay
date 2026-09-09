@@ -19,8 +19,8 @@ func TestPropagate(t *testing.T) {
 		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
-			{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
-			{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+			{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
+			{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00", topicKey: "longterm-mem/new-decision"},
 		}, []fixtureRelation{
 			// Direction deliberately reversed from "source is superseded,
 			// target is successor" -- D11 resolves the successor purely by
@@ -74,7 +74,7 @@ func TestPropagate(t *testing.T) {
 		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
-			{title: "Deleted Decision", content: "Body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-del", deletedAt: "2026-08-20T00:00:00Z"},
+			{title: "Deleted Decision", content: "Body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-del", deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/deleted-decision"},
 		}, nil)
 
 		precedence := PrecedenceStore{}
@@ -104,7 +104,7 @@ func TestPropagate(t *testing.T) {
 		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
-			{title: "Stable Decision", content: "Body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-stable"},
+			{title: "Stable Decision", content: "Body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-stable", topicKey: "longterm-mem/stable-decision"},
 		}, nil)
 
 		precedence := PrecedenceStore{}
@@ -138,7 +138,7 @@ func TestPropagate(t *testing.T) {
 		fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 		store, ids := newFixtureEngramStore(t, []fixtureObs{
-			{title: "Edited Decision", content: "Original body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-edited", deletedAt: "2026-08-20T00:00:00Z"},
+			{title: "Edited Decision", content: "Original body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-edited", deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/edited-decision"},
 		}, nil)
 
 		precedence := PrecedenceStore{}
@@ -242,8 +242,8 @@ func TestPropagate_OneBrokenPageDoesNotWedgeTheRun(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 31, 12, 0, 0, 0, time.UTC))
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Broken Page", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z"},
-		{title: "Archivable", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z"},
+		{title: "Broken Page", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/broken-page"},
+		{title: "Archivable", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, deletedAt: "2026-08-20T00:00:00Z", topicKey: "longterm-mem/archivable"},
 	}, nil)
 
 	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)
@@ -288,8 +288,8 @@ func TestPropagate_SupersessionIsRecordedEvenWithNoSuccessorPage(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
-		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
+		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00", topicKey: "longterm-mem/new-decision"},
 	}, []fixtureRelation{
 		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
 	})
@@ -329,8 +329,8 @@ func TestPropagate_TheLinkAppearsOnceTheSuccessorIsPromoted(t *testing.T) {
 	fixedNow(t, time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC))
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
-		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+		{title: "Old Decision", content: "Old body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
+		{title: "New Decision", content: "New body.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00", topicKey: "longterm-mem/new-decision"},
 	}, []fixtureRelation{
 		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
 	})

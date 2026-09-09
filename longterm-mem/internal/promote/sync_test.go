@@ -29,6 +29,7 @@ type fixtureObs struct {
 	syncID                           string
 	createdAt                        string
 	deletedAt                        string
+	topicKey                         string
 }
 
 // fixtureRelation is one memory_relations row newFixtureEngramStore
@@ -65,9 +66,9 @@ func newFixtureEngramStore(t *testing.T, rows []fixtureObs, relations []fixtureR
 	for i, r := range rows {
 		res, err := setup.Exec(
 			`INSERT INTO observations
-			   (session_id, sync_id, type, title, content, project, revision_count, pinned, created_at, deleted_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), NULLIF(?, ''))`,
-			"sess-1", r.syncID, r.obsType, r.title, r.content, r.project, r.revisionCount, r.pinned, r.createdAt, r.deletedAt,
+			   (session_id, sync_id, type, title, content, project, revision_count, pinned, created_at, deleted_at, topic_key)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, COALESCE(NULLIF(?, ''), datetime('now')), NULLIF(?, ''), NULLIF(?, ''))`,
+			"sess-1", r.syncID, r.obsType, r.title, r.content, r.project, r.revisionCount, r.pinned, r.createdAt, r.deletedAt, r.topicKey,
 		)
 		if err != nil {
 			setup.Close()
@@ -150,7 +151,7 @@ func TestSync(t *testing.T) {
 			writeAllocateScript(t, vaultRoot, allocateAddressFixture)
 
 			store, ids := newFixtureEngramStore(t, []fixtureObs{
-				{title: "Eligible Decision", content: "Body content.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: tc.currentRevision, syncID: "sync-1"},
+				{title: "Eligible Decision", content: "Body content.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: tc.currentRevision, syncID: "sync-1", topicKey: "longterm-mem/eligible-decision"},
 			}, nil)
 			id := ids[0]
 
@@ -204,9 +205,9 @@ func TestSync_IndexAndSyncStateReflectCompletion(t *testing.T) {
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, _ := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Decision One", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1},
-		{title: "Architecture Two", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "architecture", revisionCount: 1},
-		{title: "Pattern Three", content: "Body three.", project: "labdrian-sdd-overlay", obsType: "pattern", revisionCount: 1},
+		{title: "Decision One", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, topicKey: "longterm-mem/decision-one"},
+		{title: "Architecture Two", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "architecture", revisionCount: 1, topicKey: "longterm-mem/architecture-two"},
+		{title: "Pattern Three", content: "Body three.", project: "labdrian-sdd-overlay", obsType: "pattern", revisionCount: 1, topicKey: "longterm-mem/pattern-three"},
 	}, nil)
 
 	var rebuildCalled bool
@@ -263,9 +264,9 @@ func TestSync_OneFailingObservationDoesNotWedgeTheRun(t *testing.T) {
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Healthy One", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1},
-		{title: "Poison Pill", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 2},
-		{title: "Healthy Three", content: "Body three.", project: "labdrian-sdd-overlay", obsType: "pattern", revisionCount: 1},
+		{title: "Healthy One", content: "Body one.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 1, topicKey: "longterm-mem/healthy-one"},
+		{title: "Poison Pill", content: "Body two.", project: "labdrian-sdd-overlay", obsType: "decision", revisionCount: 2, topicKey: "longterm-mem/poison-pill"},
+		{title: "Healthy Three", content: "Body three.", project: "labdrian-sdd-overlay", obsType: "pattern", revisionCount: 1, topicKey: "longterm-mem/healthy-three"},
 	}, nil)
 
 	// The middle observation is already promoted to a page whose

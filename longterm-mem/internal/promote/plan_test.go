@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 
@@ -32,9 +33,10 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "First Decision", content: "Body one.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-1"},
-		{title: "Second Decision", content: "Body two.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-2"},
-		{title: "Already Current", content: "Body three.", project: "p", obsType: "decision", revisionCount: 3, syncID: "s-3"},
+		{title: "First Decision", content: "Body one.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-1", topicKey: "longterm-mem/first-decision"},
+		{title: "Second Decision", content: "Body two.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-2", topicKey: "longterm-mem/second-decision"},
+		{title: "Already Current", content: "Body three.", project: "p", obsType: "decision", revisionCount: 3, syncID: "s-3", topicKey: "longterm-mem/already-current"},
+		{title: "SDD Bookkeeping", content: "Body four.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-4", topicKey: "sdd/x"},
 	}, nil)
 
 	precedence := PrecedenceStore{}
@@ -73,8 +75,21 @@ func TestPlan_WritesNothingAndPredictsWhatSyncThenDoes(t *testing.T) {
 	if plan.Skipped != report.Skipped {
 		t.Fatalf("plan predicted %d skipped, Sync then skipped %d", plan.Skipped, report.Skipped)
 	}
+	if plan.Skipped != 2 {
+		t.Fatalf("plan.Skipped = %d, want 2 (one already current, one sdd/-prefixed and thus ineligible)", plan.Skipped)
+	}
 	if len(plan.Titles) != plan.WouldPromote {
 		t.Fatalf("plan names %d observations but predicts %d promotions", len(plan.Titles), plan.WouldPromote)
+	}
+	for _, title := range plan.Titles {
+		if title == "SDD Bookkeeping" {
+			t.Fatalf("plan.Titles contains %q, an sdd/-prefixed observation the R-007 gate must skip", title)
+		}
+	}
+	for _, result := range report.Promoted {
+		if strings.Contains(result.Page.Body, "SDD Bookkeeping") {
+			t.Fatalf("Sync promoted a page for %q, an sdd/-prefixed observation the R-007 gate must skip", "SDD Bookkeeping")
+		}
 	}
 }
 
@@ -134,8 +149,8 @@ func TestPlan_CountsThePagesPropagateWouldPatch(t *testing.T) {
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Old Decision", content: "Old body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00"},
-		{title: "New Decision", content: "New body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00"},
+		{title: "Old Decision", content: "Old body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-old", createdAt: "2026-08-01 00:00:00", topicKey: "longterm-mem/old-decision"},
+		{title: "New Decision", content: "New body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "sync-new", createdAt: "2026-08-15 00:00:00", topicKey: "longterm-mem/new-decision"},
 	}, []fixtureRelation{
 		{syncID: "rel-1", sourceSyncID: "sync-new", targetSyncID: "sync-old", relation: "supersedes"},
 	})
@@ -195,7 +210,7 @@ func TestPlan_OneBrokenObservationIsReportedOnce(t *testing.T) {
 	writeAllocateScript(t, vaultRoot, uniqueAllocateAddressFixture)
 
 	store, ids := newFixtureEngramStore(t, []fixtureObs{
-		{title: "Broken", content: "Body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-b"},
+		{title: "Broken", content: "Body.", project: "p", obsType: "decision", revisionCount: 1, syncID: "s-b", topicKey: "longterm-mem/broken"},
 	}, nil)
 
 	memoryDir := filepath.Join(vaultRoot, pagePathPrefix)

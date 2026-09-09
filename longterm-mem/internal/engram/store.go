@@ -32,7 +32,9 @@ type Store struct {
 // (lexicographically sortable within one column, since every row in a
 // single Engram database is written through the same datetime('now')
 // convention) rather than parsed into time.Time -- there is no cross-row,
-// cross-format comparison this package needs to perform.
+// cross-format comparison this package needs to perform. TopicKey was
+// added for R-007's curated-topic_key eligibility gate: promote.Eligible
+// reads it directly, so every observation load must populate it.
 type Observation struct {
 	ID            int64
 	SyncID        string
@@ -45,6 +47,7 @@ type Observation struct {
 	CreatedAt     string
 	UpdatedAt     string
 	DeletedAt     string
+	TopicKey      string
 }
 
 // Open opens a read-only connection to the Engram database at dbPath. When
@@ -131,7 +134,7 @@ func readOnlyImmutableDSN(path string) string {
 // ObservationsIncludingDeleted share (7a REFACTOR): the only two callers of
 // the observations table's row shape, so one column list and one scan
 // function (scanObservationRow) stay the single source of truth for it.
-const observationColumns = `id, sync_id, type, title, content, project, revision_count, pinned, created_at, updated_at, deleted_at`
+const observationColumns = `id, sync_id, type, title, content, project, revision_count, pinned, created_at, updated_at, deleted_at, topic_key`
 
 // rowScanner is the Scan method *sql.Row and *sql.Rows both implement,
 // letting scanObservationRow serve ListObservations/
@@ -143,20 +146,22 @@ type rowScanner interface {
 }
 
 // scanObservationRow scans one observations row selected via
-// observationColumns. sync_id and deleted_at are the only two nullable
+// observationColumns. sync_id, deleted_at, and topic_key are the nullable
 // columns in the live schema (sync_id was added by a later migration with
-// no backfill; deleted_at is null for every active row) -- both are scanned
+// no backfill; deleted_at is null for every active row; topic_key is
+// absent on a substantial minority of rows) -- all three are scanned
 // through sql.NullString so a legacy or active row's NULL never fails the
 // scan, per the production incident this guards against: one row with a
 // NULL sync_id previously errored the entire list.
 func scanObservationRow(row rowScanner) (Observation, error) {
 	var o Observation
-	var syncID, deletedAt sql.NullString
-	if err := row.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &deletedAt); err != nil {
+	var syncID, deletedAt, topicKey sql.NullString
+	if err := row.Scan(&o.ID, &syncID, &o.Type, &o.Title, &o.Content, &o.Project, &o.RevisionCount, &o.Pinned, &o.CreatedAt, &o.UpdatedAt, &deletedAt, &topicKey); err != nil {
 		return Observation{}, fmt.Errorf("engram: scan observation row: %w", err)
 	}
 	o.SyncID = syncID.String
 	o.DeletedAt = deletedAt.String
+	o.TopicKey = topicKey.String
 	return o, nil
 }
 

@@ -11,10 +11,10 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
 )
 
-// TestEligible covers R-007's four scenarios plus one extra case proving
-// the eligible-type membership branch (decision/architecture/pattern) is
-// real, not merely reachable by the pin/revision branches the four named
-// scenarios already exercise.
+// TestEligible covers R-007's rewritten predicate: pinned, explicit, or a
+// non-empty topic_key whose first path segment is outside the excluded
+// {sdd, review, delivery} set. Type and revision count are retired as
+// automatic eligibility criteria (R-003).
 func TestEligible(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -28,24 +28,89 @@ func TestEligible(t *testing.T) {
 			want: true,
 		},
 		{
-			name: "high-revision, untyped, unpinned observation is eligible",
-			obs:  engram.Observation{Type: "discovery", RevisionCount: 4, Pinned: false},
-			want: true,
-		},
-		{
-			name: "low-revision, untyped, unpinned observation is not eligible",
-			obs:  engram.Observation{Type: "discovery", RevisionCount: 1, Pinned: false},
-			want: false,
-		},
-		{
 			name:     "explicit promote call overrides the automatic criteria",
 			obs:      engram.Observation{Type: "discovery", RevisionCount: 1, Pinned: false},
 			explicit: true,
 			want:     true,
 		},
 		{
-			name: "eligible-type observation is eligible without pin or revision (type-membership branch)",
-			obs:  engram.Observation{Type: "architecture", RevisionCount: 1, Pinned: false},
+			name: "untopiced observation is not eligible",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 1, Pinned: false, TopicKey: ""},
+			want: false,
+		},
+		{
+			name: "curated topic_key is eligible regardless of type or revision count",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "longterm-mem/promotion-eligibility-policy"},
+			want: true,
+		},
+		{
+			name: "sdd/-prefixed topic_key is excluded",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "sdd/longterm-mem-promotion-scoping/tasks"},
+			want: false,
+		},
+		{
+			name: "review/-prefixed topic_key is excluded",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "review/some-change/verdict"},
+			want: false,
+		},
+		{
+			name: "delivery/-prefixed topic_key is excluded",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: "delivery/some-change/receipt"},
+			want: false,
+		},
+		{
+			name: "sdd-init/ is not excluded (first segment sdd-init != sdd)",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sdd-init/onboarding"},
+			want: true,
+		},
+		{
+			name: "sddx/ is not excluded (first segment sddx != sdd)",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sddx/whatever"},
+			want: true,
+		},
+		{
+			name: "high-revision, decision-typed, unpinned, untopiced observation is not eligible",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 5, Pinned: false, TopicKey: ""},
+			want: false,
+		},
+		{
+			name: "pinned observation overrides both the untopiced and prefix exclusions",
+			obs:  engram.Observation{Type: "decision", RevisionCount: 0, Pinned: true, TopicKey: "review/some-change/verdict"},
+			want: true,
+		},
+		{
+			name: "bare sdd topic_key (no slash) is excluded",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sdd"},
+			want: false,
+		},
+		{
+			name: "bare non-excluded topic_key (no slash) is eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "foo"},
+			want: true,
+		},
+		{
+			name: "whitespace-only topic_key is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "   "},
+			want: false,
+		},
+		{
+			name: "leading-slash topic_key has an empty first segment and is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "/sdd/auth"},
+			want: false,
+		},
+		{
+			name: "leading-slash before a non-excluded segment still has an empty first segment and is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "/sdd/x"},
+			want: false,
+		},
+		{
+			name: "a single slash has an empty first segment and is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "/"},
+			want: false,
+		},
+		{
+			name: "uppercase SDD/ segment is a different string than sdd and is eligible (case-sensitive match)",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "SDD/x"},
 			want: true,
 		},
 	}
@@ -60,11 +125,12 @@ func TestEligible(t *testing.T) {
 }
 
 // TestPromote_ExplicitCallOverridesAutomaticEligibility (task 8b.4, R-032):
-// an observation that is not pinned, not of an eligible type, and below
-// the revision-count threshold -- Eligible(obs, false) reports false, per
-// TestEligible above -- must still be promoted through the same
-// page-emission, addressing, and registration path any other eligible
-// observation uses once an explicit promote call names it. This exercises
+// an observation that is not pinned and carries no topic_key --
+// Eligible(obs, false) reports false, per TestEligible's "untopiced
+// observation is not eligible" case above -- must still be promoted
+// through the same page-emission, addressing, and registration path any
+// other eligible observation uses once an explicit promote call names it.
+// This exercises
 // ExplicitPromote (explicit.go), the id-lookup entrypoint the CLI promote
 // subcommand (8b.6) and the MCP promote tool (8b.7) both call, proving
 // design.md's directive that R-032 flows through Writer.Promote's existing

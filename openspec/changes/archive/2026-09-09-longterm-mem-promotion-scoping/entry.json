@@ -1,0 +1,102 @@
+{
+  "contract_version": "2.1.0",
+  "change_name": "longterm-mem-promotion-scoping",
+  "project": "labdrian-sdd-overlay",
+  "tier": 2,
+  "interaction_mode": "auto",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/longterm-mem-promotion-scoping/entry",
+      "openspec_path": "openspec/changes/longterm-mem-promotion-scoping/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/labdrian-sdd-overlay/requirements/longterm-mem-promotion-scoping"
+    },
+    "manifest": {
+      "context": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/context"
+      },
+      "mission": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/mission"
+      },
+      "rules": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/rules"
+      }
+    },
+    "architecture": {
+      "topic_key": "project/labdrian-sdd-overlay/architect/final"
+    },
+    "roadmap": {
+      "topic_key": "project/labdrian-sdd-overlay/roadmap"
+    },
+    "estimate": {
+      "topic_key": "sdd/longterm-mem-promotion-scoping/estimate"
+    },
+    "sdd_init": {
+      "topic_key": "sdd-init/labdrian-sdd-overlay"
+    },
+    "pipeline_state": {
+      "topic_key": "sdd/longterm-mem-promotion-scoping/pipeline-state"
+    },
+    "delivery": {
+      "topic_key": "delivery/longterm-mem-promotion-scoping"
+    }
+  },
+  "estimate": {
+    "planned_range_hours": {
+      "low": 0.5,
+      "high": 2.5
+    },
+    "complexity": "medium",
+    "confidence": "low",
+    "human_review_included": true,
+    "expected_checkpoints": 5
+  },
+  "requested_pr_strategy": "auto",
+  "delivery_strategy": "single-pr",
+  "chaining_required": false,
+  "chain_strategy": "none",
+  "review_budget": {
+    "max_changed_lines_per_slice": 400,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": {
+      "state": "granted",
+      "scope": "promotion-scoping",
+      "changed_lines": 440,
+      "authorized_by": "labdrian (maintainer)",
+      "reason": "292 authored code lines under longterm-mem plus the change's own SDD artifacts under openspec/ total 440 against the 400 budget; granted 2026-09-08 at delivery"
+    }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "cd longterm-mem && go test ./internal/promote/... ./internal/engram/..."
+      ],
+      "broad": [
+        "cd longterm-mem && go vet ./... && go test ./..."
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "promotion-scoping",
+      "title": "Require a curated topic_key for automatic vault promotion; read topic_key from Engram; explicit and pinned overrides",
+      "requirements": [
+        "R-001",
+        "R-002",
+        "R-003",
+        "R-004",
+        "R-005"
+      ],
+      "dependencies": [],
+      "estimated_changed_lines": {
+        "low": 100,
+        "high": 250
+      }
+    }
+  ],
+  "expected_native_next_recommendation": "propose"
+}
