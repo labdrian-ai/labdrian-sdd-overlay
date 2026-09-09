@@ -11,9 +11,11 @@ WHILE promotion runs for project P, the longterm-mem promotion writer SHALL
 treat an Engram observation as eligible only if it is pinned, OR is
 explicitly targeted by a promote call, OR carries a non-empty `topic_key`
 whose first path segment (the substring before the first `/`, or the whole
-value when it contains no `/`) is not exactly `sdd`, `review`, or `delivery`.
-An observation's `type` value and its `revision_count` SHALL NOT be used as
-automatic eligibility criteria.
+value when it contains no `/`) is itself non-empty AND is not exactly
+`sdd`, `review`, or `delivery`. A `topic_key` starting with `/` splits into
+an empty first segment and is therefore not curated. An observation's
+`type` value and its `revision_count` SHALL NOT be used as automatic
+eligibility criteria.
 
 (Previously: eligibility was pinned, OR type in `decision`/`architecture`/
 `pattern`, OR revision count >= 3, OR explicitly targeted. The type- and
@@ -77,6 +79,15 @@ outside the excluded prefixes now gates automatic eligibility instead.)
 - WHEN eligibility is evaluated for each
 - THEN both are eligible, because their first path segments (`sdd-init` and
   `sddx`) are not an exact match for the excluded segment `sdd`
+
+#### Scenario: A leading-slash topic_key has an empty first segment and is excluded
+
+- GIVEN an observation with `topic_key` `/sdd/auth`, or separately `/`, not
+  pinned, not explicitly targeted
+- WHEN eligibility is evaluated for each
+- THEN neither is eligible, because splitting on the first `/` yields an
+  empty first segment, which is treated as uncurated rather than falling
+  through the excluded-prefix check by accident
 
 #### Scenario: High-revision, decision-typed, unpinned, untopiced observation is not eligible
 

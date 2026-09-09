@@ -54,3 +54,11 @@ Chain strategy: none
 - [x] 5.2 Run broad suite: `cd longterm-mem && go vet ./... && go test ./...` — all GREEN.
 - [x] 5.3 Update `longterm-mem/README.md` — restate what "eligible" means for `sync` under R-007 (curated `topic_key` gate, no more type/revision criteria).
 - [x] 5.4 Capture acceptance evidence: run `longterm-mem sync --project labdrian-sdd-overlay --dry-run`; confirm none of the 182 `sdd/`, 4 `delivery/`, 1 `review/`, 58 untopiced evidence rows appear unless pinned or explicit; attach the transcript to the verify report.
+
+## Remediation (verifier findings)
+
+- [x] R.1 Fix `curatedTopicKey` (`longterm-mem/internal/promote/eligible.go`): an empty first path segment (e.g. `/sdd/auth`, `/`, `//sdd`) is now treated as uncurated, not eligible-by-accident.
+- [x] R.2 Add table-driven cases to `eligible_test.go`: bare `sdd` (excluded), bare `foo` (eligible), whitespace-only (excluded), leading `/` variants and a bare `/` (excluded after the fix), `SDD/x` (eligible — case-sensitive).
+- [x] R.3 Add an integration assertion in `plan_test.go`'s `TestPlan_WritesNothingAndPredictsWhatSyncThenDoes`: one `sdd/x` fixture row appears in `Skipped` for both `Plan` and `Sync`, never in `Titles` or `Promoted`.
+- [x] R.4 Refresh stale comments: `eligible.go`'s `excludedTopicPrefixes` doc, `eligible_test.go`'s `TestPromote_ExplicitCallOverridesAutomaticEligibility` doc, `writer_test.go`'s `TestWriter_Promote_IneligibleDoesNotRegister` fixture comment.
+- [x] R.5 Document in `longterm-mem/README.md`'s `sync` row that a page promoted under a previous, looser eligibility rule is neither retracted nor refreshed once its observation stops being eligible; use `promote` or a pin to keep it current.
