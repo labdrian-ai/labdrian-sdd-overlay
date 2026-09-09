@@ -156,3 +156,11 @@ Change `longterm-mem-promotion-scoping` has been successfully archived. The sing
 The change has been fully planned (proposal), specified (delta specs merged), designed, implemented (20 core tasks + 5 remediation tasks), verified (18/18 scenarios PASS), and archived. The SDD cycle is closed.
 
 **Ready for next change.** 
+## Cycle Timestamps
+
+Recorded at archive time, before the change reached `main`. The inception-pipeline closure-feedback appends the landing-commit row after the merge; until then t1 is recorded as absent, never inferred.
+
+| Anchor | Value | Source | Outcome |
+|--------|-------|--------|---------|
+| **t0** (tiering go-ahead) | `2026-09-08T20:31:53Z` | `sdd/longterm-mem-promotion-scoping/pipeline-state`, Engram observation #3280 (`created_at`; provisional key restated as #3282) | primary |
+| **t1** (landing commit) | landing_commit is absent: not yet merged at archive time (PR #294 open) | to be recorded by closure-feedback from the merge commit | absent |
