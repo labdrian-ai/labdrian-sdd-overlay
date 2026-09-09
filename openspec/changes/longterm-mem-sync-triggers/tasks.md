@@ -26,12 +26,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 1: sync-runner (PR 1, R-003)
 
-- [ ] 1.1 RED `engine/synctrigger/synctrigger_test.go`: `RunChild` table — no binary→`skip:no-binary`; exit2+not-a-repo stderr→`skip:no-project`; exit2+other→`error:usage`; exit3/4/5/1→mapped; sleeping fake vs short timeout→`timeout`, no orphan; exit0→`ok`
-- [ ] 1.2 GREEN `engine/synctrigger/synctrigger.go`: `Options`, `RunChild`, `classify`, `openLog`, `appendLog`
-- [ ] 1.3 RED same file: `Run` table — bad `--event`→0+`error:usage`; unwritable logs dir (0500)→0+`error:log`; non-exec `Self`→0+`error:spawn`; happy path→0, log line within 2s
-- [ ] 1.4 GREEN `synctrigger.go` `Run`: validate argv → open log → `os.Executable()` → detached `Start()` (`Setsid`) → always `return 0`
-- [ ] 1.5 RED `engine/cmd/main_test.go`: `runSyncTrigger` with no args exits 0 (injected `exit`)
-- [ ] 1.6 GREEN `engine/cmd/main.go`: `case "sync-trigger"`, usage line, `runSyncTrigger`
+- [x] 1.1 RED `engine/synctrigger/synctrigger_test.go`: `RunChild` table — no binary→`skip:no-binary`; exit2+not-a-repo stderr→`skip:no-project`; exit2+other→`error:usage`; exit3/4/5/1→mapped; sleeping fake vs short timeout→`timeout`, no orphan; exit0→`ok`
+- [x] 1.2 GREEN `engine/synctrigger/synctrigger.go`: `Options`, `RunChild`, `classify`, `openLog`, `appendLog`
+- [x] 1.3 RED same file: `Run` table — bad `--event`→0+`error:usage`; unwritable logs dir (0500)→0+`error:log`; non-exec `Self`→0+`error:spawn`; happy path→0, log line within 2s
+- [x] 1.4 GREEN `synctrigger.go` `Run`: validate argv → open log → `os.Executable()` → detached `Start()` (`Setsid`) → always `return 0`
+- [x] 1.5 RED `engine/cmd/main_test.go`: `runSyncTrigger` with no args exits 0 (injected `exit`)
+- [x] 1.6 GREEN `engine/cmd/main.go`: `case "sync-trigger"`, usage line, `runSyncTrigger`
 
 ## Phase 2: session-end-hook (PR 2, R-002, R-003)
 
