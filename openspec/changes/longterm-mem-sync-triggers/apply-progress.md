@@ -76,10 +76,100 @@
 
 ### Remaining Tasks (this change, not this slice)
 
-- [ ] Phase 2: session-end-hook (PR 2, R-002/R-003) — `engine/settings`, `engine/runtime/claude.go`, `bin/labdrian-overlay`/`README.md` wording — **out of scope for slice 1, not touched**
-- [ ] Phase 3: archive-trigger (PR 3, R-001/R-003) — `bin/labdrian-overlay` wrapper, `engine/shelltest`, `skills/inception-pipeline/SKILL.md` — **out of scope for slice 1, not touched**
+- [x] Phase 2: session-end-hook (PR 2, R-002/R-003) — done, see below
+- [ ] Phase 3: archive-trigger (PR 3, R-001/R-003) — `bin/labdrian-overlay` wrapper, `engine/shelltest`, `skills/inception-pipeline/SKILL.md` — **out of scope for slice 2, not touched**
 - [ ] Phase 4: Full verification across `engine`, `longterm-mem`, `shellcheck`
 
 ### Status
 
-6/6 slice-1 tasks complete, verified, and committed under a granted `size:exception`. Ready for `sdd-verify` on slice 1, or for `sdd-apply` to resume with slice 2 (`session-end-hook`).
+6/6 slice-1 tasks complete, verified, and committed under a granted `size:exception`. Ready for `sdd-verify` on slice 1.
+
+---
+
+## Slice 2 — session-end-hook (Phase 2, R-002, R-003)
+
+**Status**: implemented, tests green, committed as two work units, within budget (no exception needed).
+
+### Plan vs Realized Slice Count
+
+- Planned: 3 slices (`sync-runner` → `session-end-hook` → `archive-trigger`)
+- Realized so far: 2 (`sync-runner`, `session-end-hook`)
+
+### Completed Tasks
+
+- [x] 2.1 RED `engine/settings/settings_test.go`: `TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign`, `TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign`
+- [x] 2.2 GREEN `engine/settings/settings.go`: `LabdrianSyncTriggerIdentity`, `buildSyncTriggerSessionEndEntry`, `isSyncTriggerEntry`; wired into `mergeHooks`/`removeHooks`
+- [x] 2.3 Extended counts for `SessionEnd`: `TestUninstall_CountIsZeroAfterInstall`, `TestMerge_Idempotent`, `TestSchema_InstallTwice_Idempotent`; `legacyIdentities`/`TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries` left unchanged
+- [x] 2.4 RED `TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily` (via new `withSyncTriggerFamily` helper), `TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting`; flipped the "both" case of `TestHasSupportedClaudeLifecycleState_RequiresDesignPair` to expect `false` (two families is no longer sufficient)
+- [x] 2.5 GREEN `HasSupportedClaudeLifecycleState` requires `HasLabdrianSyncTriggerHook(root,"SessionEnd")`
+- [x] 2.6 RED `engine/cmd/main_test.go`: `buildSettingsWithHooks` now adds a `SessionEnd` sync-trigger entry, flipping `TestStatusCore_AllOK` to the fully-installed (not-degraded) case; added `TestStatusCore_SessionEndMissing_Degraded` (WARN, exit tier 2, note names both remediation commands) and `TestStatusCore_SessionEndPresent_OK`
+- [x] 2.7 GREEN `engine/cmd/main.go`: `checkSessionEndHook` in `statusCore`, after `checkPreToolUseHook`; WARN/degraded on missing family, FAIL only on unreadable settings
+- [x] 2.8 RED `engine/runtime/claude_test.go`: `TestClaudeStatusPartialMessageNamesRemediationCommands` — seeds a two-family (no SessionEnd) fixture and asserts the partial message names both commands
+- [x] 2.9 GREEN `engine/runtime/claude.go`: partial message now appends `"; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'"`
+- [x] 2.10 Docs `bin/labdrian-overlay` (~2620-2621, 2703), `README.md` (~115, 323): updated to "three hook families (two pairs + SessionEnd sync-trigger), five entries"
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 2.1-2.5 | `engine/settings/settings_test.go` | Unit | ✅ full `settings` suite green before edit (14 pre-existing tests) | ✅ `go vet` failed `undefined: settings.LabdrianSyncTriggerIdentity` before any prod code | ✅ `go test ./settings/...` all pass after `LabdrianSyncTriggerIdentity`, `HasLabdrianSyncTriggerHook`, `isSyncTriggerEntry`, `buildSyncTriggerSessionEndEntry` added and wired | ✅ 4 new scenarios (coexist-with-foreign install, coexist-with-foreign uninstall, family-required-false, family-required-true) + 3 extended count assertions + 1 upgrade-preserves-existing test | ➖ None needed — mirrors the existing minimalism/design pair shape exactly |
+| 2.6-2.7 | `engine/cmd/main_test.go` | Unit | ✅ full `cmd` suite green before edit | ✅ `TestStatusCore_SessionEndMissing_Degraded` failed (no WARN emitted, no remediation text) before `checkSessionEndHook` existed | ✅ `go test ./cmd/...` all pass after `checkSessionEndHook` wired into `statusCore` | ✅ 3 scenarios: all-OK (not degraded), SessionEnd missing (WARN, tier 2, note text), SessionEnd present (OK) | ➖ Extracted `remediationNote` const shared by the WARN note and reused for consistency |
+| 2.8-2.9 | `engine/runtime/claude_test.go` | Unit | ✅ full `runtime` suite green before edit | ✅ new test failed: message lacked `labdrian uninstall-hooks`/`labdrian install-hooks` substrings | ✅ `go test ./runtime/...` all pass after message updated | ➖ Single scenario — the message text has one shape, no branching | ➖ None needed |
+| 2.10 | `bin/labdrian-overlay`, `README.md` | N/A | N/A (docs) | N/A | N/A | N/A (structural doc edit, no branching) | N/A |
+
+### Test Summary
+- Total tests written: 9 new (`TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily`, `TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting`, `TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign`, `TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign`, `TestStatusCore_SessionEndMissing_Degraded`, `TestStatusCore_SessionEndPresent_OK`, `TestClaudeStatusPartialMessageNamesRemediationCommands`) + 1 flipped assertion (`TestHasSupportedClaudeLifecycleState_RequiresDesignPair` "both" case) + 4 extended existing tests (count assertions in `TestUninstall_CountIsZeroAfterInstall`, `TestMerge_Idempotent`, `TestSchema_InstallTwice_Idempotent`, `TestStatusCore_AllOK`)
+- Total tests passing: all (`go test -count=1 ./...` — 12 packages `ok`, `go vet` clean)
+- Layers used: Unit (all)
+- Pure functions / helpers created: `isSyncTriggerEntry`, `buildSyncTriggerSessionEndEntry`, `HasLabdrianSyncTriggerHook`, `checkSessionEndHook`, test helpers `withSyncTriggerFamily` and `buildForeignSessionEndStopFixture`
+
+### Files Changed
+
+| File | Action | What Was Done |
+|------|--------|----------------|
+| `engine/settings/settings.go` | Modified | `LabdrianSyncTriggerIdentity` const, `HasLabdrianSyncTriggerHook`, `isSyncTriggerEntry`, `buildSyncTriggerSessionEndEntry`; wired into `mergeHooks` (SessionEnd only, never Stop), `removeHooks` (now also scans `SessionEnd`), `HasSupportedClaudeLifecycleState` |
+| `engine/settings/settings_test.go` | Modified | 2 new coexistence tests, 1 new family-required test + helper `withSyncTriggerFamily`, 1 new upgrade test, extended count assertions in 3 existing tests, flipped the "both" case in the design-pair test |
+| `engine/cmd/main.go` | Modified | `checkSessionEndHook`, `remediationNote` const, wired into `statusCore` after `checkPreToolUseHook` |
+| `engine/cmd/main_test.go` | Modified | `buildSettingsWithHooks` gains a `SessionEnd` entry; `TestStatusCore_AllOK` now asserts not-degraded/no-WARN; 2 new tests |
+| `engine/runtime/claude.go` | Modified | Partial status message appends the two-command remediation text |
+| `engine/runtime/claude_test.go` | Modified | New `TestClaudeStatusPartialMessageNamesRemediationCommands` |
+| `bin/labdrian-overlay` | Modified | Wording at install-hooks/uninstall-hooks completion banners: "three hook families ... five entries" |
+| `README.md` | Modified | `uninstall-hooks` table row and `install-hooks`/`uninstall-hooks` workflow description updated to the three-family/five-entry shape |
+
+### Verification (foreground, all observed)
+
+- `cd engine && go test ./settings/... ./cmd/... ./runtime/...` → all three packages `ok`
+- `cd engine && go vet ./... && go test -count=1 ./...` → all 12 packages `ok`, vet clean
+- `cd engine && gofmt -l .` → empty (no unformatted files)
+- `shellcheck -S warning bin/labdrian-overlay` → only the 2 pre-existing known SC2064 warnings at lines 1305/1466 (`trap "git checkout '${current_branch}' ..."`), unrelated to this change
+- `git diff --shortstat -- engine bin README.md` (working tree at the time of measurement) → **487 insertions(+), 25 deletions(-)** across 8 files — well within the native attempt's 600-line objective budget for this slice, no exception needed
+- Live-shaped fixture round-trip (scratchpad-built `engine-bin`, scratch copy of `~/.claude/settings.json` — real file never touched):
+  - Before: `SessionEnd` = `[{"hooks":[{"async":true,"command":"'/home/labdrian/.local/bin/moshi-hook' claude-hook","type":"command"}]}]`
+  - After `merge-settings`: moshi-hook entry preserved byte-for-byte, new `sync-trigger` entry appended: `command -v <bin> &>/dev/null && <bin> sync-trigger --event session-end --cwd "${CLAUDE_PROJECT_DIR:-.}" || true`
+  - `status` (against a fake `$HOME` mirroring the scratch settings): `[OK  ] hook: SessionEnd (sync-trigger)`, exit 0
+  - After `uninstall-hooks`: `SessionEnd` reduced back to only the moshi-hook entry — diffed byte-identical against the original pre-merge snapshot
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main), PR 2 of 3, on branch `feat/longterm-mem-sync-triggers-2-session-end` stacked on slice 1's `feat/longterm-mem-sync-triggers`
+- Current work unit: `2 session-end-hook`
+- Boundary: starts from slice 1's `d49bc81`; ends with the `engine/settings`/`engine/cmd`/`engine/runtime` SessionEnd wiring plus docs wording, fully tested and committed
+- Estimated review budget impact: 487+25=512 authored lines vs the 600-line objective budget — under budget, no exception needed
+- Rollback boundary: `git revert c18fda2 260a265` (two commits: prod+test code, then docs/tasks), or `git reset --hard d49bc81` to fully unwind slice 2
+
+### Deviations from Design
+
+None — implementation matches `design.md`'s "session-end-hook" row and the Interfaces/Contracts hook command exactly (`command -v <bin> &>/dev/null && <bin> sync-trigger --event session-end --cwd "${CLAUDE_PROJECT_DIR:-.}" || true`), except the `--cwd` fallback uses `${CLAUDE_PROJECT_DIR:-.}` per the injected task prompt and the existing minimalism/design entry convention in this same file, rather than design.md's `${CLAUDE_PROJECT_DIR:-$PWD}` prose — functionally equivalent (`.` and `$PWD` both resolve to the shell's current directory) and consistent with every other hook command this Merger already emits.
+
+### Issues Found
+
+None.
+
+### Remaining Tasks (this change, not this slice)
+
+- [ ] Phase 3: archive-trigger (PR 3, R-001/R-003) — `bin/labdrian-overlay` wrapper, `engine/shelltest`, `skills/inception-pipeline/SKILL.md` — **out of scope for slice 2, not touched**
+- [ ] Phase 4: Full verification across `engine`, `longterm-mem`, `shellcheck`
+
+### Status
+
+10/10 slice-2 tasks complete, verified, and committed within budget. 16/24 total tasks across the change complete (Phase 1 + Phase 2). Ready for `sdd-verify` on slice 2, or for `sdd-apply` to resume with slice 3 (`archive-trigger`).
