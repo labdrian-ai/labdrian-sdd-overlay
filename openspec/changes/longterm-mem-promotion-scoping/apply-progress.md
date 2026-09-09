@@ -110,3 +110,92 @@ None.
 ## Status
 
 20/20 tasks complete. Ready for verify.
+
+## Remediation batch
+
+**Status**: 5/5 remediation items complete — Ready for verify
+
+Independent verification of the original apply found one live defect and
+four documentation/coverage gaps in the delta. This batch (a fresh SDD
+attempt, ordinal 3, same objective lineage) fixes all five.
+
+### Completed Tasks
+
+- [x] R.1 RED/GREEN: `internal/promote/eligible.go` — `curatedTopicKey`
+  treated `strings.Cut("/sdd/auth", "/")`'s empty head (`""`) as absent
+  from `excludedTopicPrefixes`, so a leading-slash `topic_key` (`/sdd/auth`,
+  `/`, `//sdd`) bypassed the exclusion and was reported eligible. Added
+  `if head == "" { return false }`; case-sensitivity and `TrimSpace` kept
+  as-is.
+- [x] R.2 `internal/promote/eligible_test.go` — added table cases: bare
+  `sdd` (excluded), bare `foo` (eligible), whitespace-only (excluded),
+  `/sdd/auth`, `/sdd/x`, and `/` (all excluded post-fix), `SDD/x`
+  (eligible — documents case-sensitivity).
+- [x] R.3 `internal/promote/plan_test.go` —
+  `TestPlan_WritesNothingAndPredictsWhatSyncThenDoes` gained a fourth
+  `fixtureObs` row (`topicKey: "sdd/x"`), plus explicit assertions that it
+  contributes to `plan.Skipped` (now 2), never appears in `plan.Titles`,
+  and no promoted page's body contains its title — integration proof the
+  R-007 gate runs inside both `Plan` and `Sync`, not just the unit
+  predicate.
+- [x] R.4 Refreshed three stale comments left over from the retired
+  type/revision-count predicate: `eligible.go`'s `excludedTopicPrefixes`
+  doc (no longer references a deleted `eligibleTypes` map),
+  `eligible_test.go`'s `TestPromote_ExplicitCallOverridesAutomaticEligibility`
+  doc (now cites the untopiced-observation case instead of a
+  type/revision threshold), `writer_test.go`'s
+  `TestWriter_Promote_IneligibleDoesNotRegister` fixture (comment makes
+  explicit that the zero-value `TopicKey` is what makes it ineligible).
+- [x] R.5 `longterm-mem/README.md` — `sync` row states that a page
+  promoted under a previous, looser eligibility rule is neither retracted
+  nor refreshed by `sync` once its observation stops being eligible; use
+  an explicit `promote` or a pin to keep it current. A `doctor` check for
+  this is out of scope, noted as a follow-up.
+
+Delta spec (`specs/longterm-mem-promotion/spec.md`) updated: R-007's
+requirement text now states the first segment must be non-empty AND not
+one of the excluded prefixes, plus a new "leading-slash topic_key" scenario
+covering `/sdd/auth` and `/`.
+
+### TDD Cycle Evidence
+
+| Task | Test File | RED | GREEN | REFACTOR |
+|------|-----------|-----|-------|----------|
+| R.1/R.2 | `eligible_test.go` | ✅ 3 new cases failed against pre-fix `curatedTopicKey` (`/sdd/auth`, `/sdd/x`, `/` all reported eligible=true, want false) | ✅ all 19 `TestEligible` subtests pass after the `head == ""` guard | ➖ none needed, single-line guard |
+| R.3 | `plan_test.go` | N/A — integration assertion added alongside the fix, not a standalone RED (the underlying bug is already covered by R.1/R.2's RED) | ✅ `TestPlan_WritesNothingAndPredictsWhatSyncThenDoes` passes: `plan.Skipped == 2`, `sdd/x` absent from `Titles` and `Promoted` | ➖ none |
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd longterm-mem && go test ./internal/promote/... ./internal/engram/...` → `ok .../promote`, `ok .../engram` |
+| Runtime harness command/scenario and exact result | `cd longterm-mem && go vet ./... && go test -count=1 -race ./...` → all 17 packages `ok`, race detector clean |
+| Rollback boundary | Two commits, each independently revertible: `b51bf70` (code fix + tests + README) touches only `longterm-mem/`; `8e1fede` (spec + tasks) touches only `openspec/changes/longterm-mem-promotion-scoping/` |
+
+### Files Changed (remediation batch)
+
+| File | Action | What Was Done |
+|------|--------|---------------|
+| `longterm-mem/internal/promote/eligible.go` | Modified | `curatedTopicKey` rejects an empty first path segment; refreshed `excludedTopicPrefixes` doc comment |
+| `longterm-mem/internal/promote/eligible_test.go` | Modified | 8 new table cases (bare keys, whitespace, leading-slash, case-sensitivity); refreshed stale doc comment |
+| `longterm-mem/internal/promote/plan_test.go` | Modified | Fourth `sdd/x` fixture row + integration assertions on `Skipped`/`Titles`/`Promoted` |
+| `longterm-mem/internal/promote/writer_test.go` | Modified | Comment clarifying the "Not Eligible" fixture's untopiced zero-value |
+| `longterm-mem/README.md` | Modified | `sync` row documents stale-page retention behavior |
+| `openspec/changes/longterm-mem-promotion-scoping/specs/longterm-mem-promotion/spec.md` | Modified | R-007 requirement text + new leading-slash scenario |
+| `openspec/changes/longterm-mem-promotion-scoping/tasks.md` | Modified | Added "Remediation" checklist, 5/5 items marked done |
+
+### Verification (this batch)
+
+- `cd longterm-mem && go test ./internal/promote/... ./internal/engram/...` → GREEN
+- `cd longterm-mem && go vet ./... && go test -count=1 -race ./...` → GREEN, all 17 packages
+- `cd longterm-mem && gofmt -l .` → empty (clean)
+- `git diff --stat` for the uncommitted remediation changes (before commit): 7 files, 94 insertions(+), 16 deletions(-)
+
+### Commits
+
+- `b51bf70` — `fix(longterm-mem): reject empty first segment in curated topic keys`
+- `8e1fede` — `docs(sdd): record longterm-mem-promotion-scoping remediation`
+
+### Status
+
+5/5 remediation items complete. Ready for verify.
