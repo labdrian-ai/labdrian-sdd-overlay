@@ -78,6 +78,41 @@ func TestEligible(t *testing.T) {
 			obs:  engram.Observation{Type: "decision", RevisionCount: 0, Pinned: true, TopicKey: "review/some-change/verdict"},
 			want: true,
 		},
+		{
+			name: "bare sdd topic_key (no slash) is excluded",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "sdd"},
+			want: false,
+		},
+		{
+			name: "bare non-excluded topic_key (no slash) is eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "foo"},
+			want: true,
+		},
+		{
+			name: "whitespace-only topic_key is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "   "},
+			want: false,
+		},
+		{
+			name: "leading-slash topic_key has an empty first segment and is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "/sdd/auth"},
+			want: false,
+		},
+		{
+			name: "leading-slash before a non-excluded segment still has an empty first segment and is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "/sdd/x"},
+			want: false,
+		},
+		{
+			name: "a single slash has an empty first segment and is not eligible",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "/"},
+			want: false,
+		},
+		{
+			name: "uppercase SDD/ segment is a different string than sdd and is eligible (case-sensitive match)",
+			obs:  engram.Observation{Type: "discovery", RevisionCount: 0, Pinned: false, TopicKey: "SDD/x"},
+			want: true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -90,11 +125,12 @@ func TestEligible(t *testing.T) {
 }
 
 // TestPromote_ExplicitCallOverridesAutomaticEligibility (task 8b.4, R-032):
-// an observation that is not pinned, not of an eligible type, and below
-// the revision-count threshold -- Eligible(obs, false) reports false, per
-// TestEligible above -- must still be promoted through the same
-// page-emission, addressing, and registration path any other eligible
-// observation uses once an explicit promote call names it. This exercises
+// an observation that is not pinned and carries no topic_key --
+// Eligible(obs, false) reports false, per TestEligible's "untopiced
+// observation is not eligible" case above -- must still be promoted
+// through the same page-emission, addressing, and registration path any
+// other eligible observation uses once an explicit promote call names it.
+// This exercises
 // ExplicitPromote (explicit.go), the id-lookup entrypoint the CLI promote
 // subcommand (8b.6) and the MCP promote tool (8b.7) both call, proving
 // design.md's directive that R-032 flows through Writer.Promote's existing

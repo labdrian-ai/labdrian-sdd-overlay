@@ -631,6 +631,8 @@ func TestWriter_Promote_SkipDoesNotRegister(t *testing.T) {
 func TestWriter_Promote_IneligibleDoesNotRegister(t *testing.T) {
 	vaultRoot := t.TempDir()
 	w := &Writer{VaultRoot: vaultRoot, Store: PrecedenceStore{}}
+	// Not pinned, not explicit, and TopicKey left at its zero value: an
+	// untopiced observation is not automatically eligible (R-007).
 	obs := engram.Observation{ID: 504, Type: "note", Title: "Not Eligible", Content: "Body.", Project: "labdrian-sdd-overlay", RevisionCount: 1}
 
 	result, err := w.Promote(obs, false)
