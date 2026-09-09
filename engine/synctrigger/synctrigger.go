@@ -104,6 +104,7 @@ func Run(o Options) int {
 	if self == "" {
 		self, err = os.Executable()
 		if err != nil {
+			fmt.Fprintf(stderr, "sync-trigger: error:self: %v\n", err)
 			appendLog(logFile, o.Event, o.Cwd, "error:self", 0, 0)
 			return 0
 		}
@@ -118,6 +119,7 @@ func Run(o Options) int {
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
 
 	if err := cmd.Start(); err != nil {
+		fmt.Fprintf(stderr, "sync-trigger: error:spawn: %v\n", err)
 		appendLog(logFile, o.Event, o.Cwd, "error:spawn", 0, 0)
 		return 0
 	}
@@ -151,8 +153,12 @@ func RunChild(o Options) Outcome {
 		return outcome
 	}
 
-	if info, err := os.Stat(binary); err != nil || info.IsDir() {
+	info, statErr := os.Stat(binary)
+	if statErr != nil || info.IsDir() {
 		return logOutcome("skip:no-binary", 0, time.Since(start))
+	}
+	if info.Mode()&0o111 == 0 {
+		return logOutcome("error:binary-not-executable", 0, time.Since(start))
 	}
 
 	timeout := o.Timeout
@@ -166,7 +172,11 @@ func RunChild(o Options) Outcome {
 	cmd := exec.CommandContext(ctx, binary, "sync")
 	cmd.Dir = o.Cwd
 	var stderrBuf bytes.Buffer
-	cmd.Stderr = &stderrBuf
+	if logFile != nil {
+		cmd.Stderr = io.MultiWriter(&stderrBuf, logFile)
+	} else {
+		cmd.Stderr = &stderrBuf
+	}
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
 	cmd.Cancel = func() error {
 		if cmd.Process == nil {

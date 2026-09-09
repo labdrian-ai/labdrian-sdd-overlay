@@ -134,6 +134,54 @@ func TestRunChild_ExitMapping(t *testing.T) {
 	}
 }
 
+func TestRunChild_StderrReachesLogBeforeOutcomeLine(t *testing.T) {
+	stateDir := t.TempDir()
+	bin := newFakeLongtermMem(t, 3, "vault not configured", 0)
+	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
+
+	got := RunChild(o)
+
+	if got.Kind != "skip:no-vault" {
+		t.Fatalf("Kind = %q, want %q", got.Kind, "skip:no-vault")
+	}
+	data, err := os.ReadFile(filepath.Join(stateDir, "logs", "sync-trigger.log"))
+	if err != nil {
+		t.Fatalf("read log: %v", err)
+	}
+	log := string(data)
+	stderrIdx := strings.Index(log, "vault not configured")
+	if stderrIdx < 0 {
+		t.Fatalf("log = %q, want it to contain the child's stderr text", log)
+	}
+	outcomeIdx := strings.Index(log, "outcome=skip:no-vault")
+	if outcomeIdx < 0 {
+		t.Fatalf("log = %q, want it to contain the summary line", log)
+	}
+	if stderrIdx > outcomeIdx {
+		t.Fatalf("log = %q, want stderr text before the summary line", log)
+	}
+}
+
+func TestRunChild_NonExecutableBinary_ErrorBinaryNotExecutable(t *testing.T) {
+	stateDir := t.TempDir()
+	binDir := t.TempDir()
+	bin := filepath.Join(binDir, "longterm-mem")
+	if err := os.WriteFile(bin, []byte("#!/bin/sh\nexit 0\n"), 0o644); err != nil {
+		t.Fatalf("write non-executable binary: %v", err)
+	}
+	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Binary: bin}
+
+	got := RunChild(o)
+
+	if got.Kind != "error:binary-not-executable" {
+		t.Fatalf("Kind = %q, want %q", got.Kind, "error:binary-not-executable")
+	}
+	line := lastLogLine(t, stateDir)
+	if !strings.Contains(line, "outcome=error:binary-not-executable") {
+		t.Fatalf("log line = %q, want outcome=error:binary-not-executable", line)
+	}
+}
+
 func TestRunChild_ExitZero_Ok(t *testing.T) {
 	stateDir := t.TempDir()
 	bin := newFakeLongtermMem(t, 0, "", 0)
@@ -251,7 +299,8 @@ func TestRun_NonExecutableSelf_ErrorSpawn(t *testing.T) {
 		t.Fatalf("write self: %v", err)
 	}
 
-	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self}
+	var stderr strings.Builder
+	o := Options{Event: "session-end", Cwd: t.TempDir(), StateDir: stateDir, Self: self, Stderr: &stderr}
 
 	got := Run(o)
 
@@ -262,16 +311,22 @@ func TestRun_NonExecutableSelf_ErrorSpawn(t *testing.T) {
 	if !strings.Contains(line, "outcome=error:spawn") {
 		t.Fatalf("log line = %q, want outcome=error:spawn", line)
 	}
+	if !strings.Contains(stderr.String(), "error:spawn") {
+		t.Fatalf("stderr = %q, want it to mention error:spawn", stderr.String())
+	}
 }
 
 func TestRun_HappyPath_DetachesAndLogsWithin2s(t *testing.T) {
 	stateDir := t.TempDir()
 	self := filepath.Join(t.TempDir(), "fake-self")
 	// Simulates the detached "--child" re-exec: it writes its own summary
-	// line to the log the real parent already opened at $4 (stdout/stderr
-	// are redirected to that same file, but this script writes directly to
-	// prove the file Run opened is genuinely shared with the child).
-	script := "#!/bin/sh\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) event=$2 cwd=$4 outcome=ok exit=0 duration=1ms\" >> \"" + stateDir + "/logs/sync-trigger.log\"\n"
+	// line to the log the real parent already opened (stdout/stderr are
+	// redirected to that same file, but this script writes directly to
+	// prove the file Run opened is genuinely shared with the child). Run
+	// invokes self as: sync-trigger --event <event> --cwd <cwd> --state-dir
+	// <dir> --child, so within this script $1=sync-trigger, $2=--event,
+	// $3=<event>, $4=--cwd, $5=<cwd>.
+	script := "#!/bin/sh\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) event=$3 cwd=$5 outcome=ok exit=0 duration=1ms\" >> \"" + stateDir + "/logs/sync-trigger.log\"\n"
 	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
 		t.Fatalf("write self: %v", err)
 	}
