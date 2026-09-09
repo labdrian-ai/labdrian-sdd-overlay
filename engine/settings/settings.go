@@ -49,11 +49,16 @@ type Merger struct {
 }
 
 const (
-	// Minimalism and design identity tokens are exposed to status checks so
-	// caller code can assert provable Labdrian ownership without duplicating
-	// parsing logic.
+	// Minimalism, design, and sync-trigger identity tokens are exposed to
+	// status checks so caller code can assert provable Labdrian ownership
+	// without duplicating parsing logic.
 	LabdrianMinimalismIdentity = "minimalism-contract.md"
 	LabdrianDesignIdentity     = "--embedded-contract " + embeddedDesignName
+	// LabdrianSyncTriggerIdentity is both the sync-trigger verb name and the
+	// dedup/uninstall identity token for the SessionEnd hook entry — the verb
+	// argument itself distinguishes it from every other entry sharing our
+	// binary path.
+	LabdrianSyncTriggerIdentity = "sync-trigger"
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -108,13 +113,20 @@ func HasLabdrianDesignHook(root map[string]interface{}, key, hookCommand string)
 	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianDesignIdentity)
 }
 
+// HasLabdrianSyncTriggerHook reports whether key has our sync-trigger hook.
+func HasLabdrianSyncTriggerHook(root map[string]interface{}, key, hookCommand string) bool {
+	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianSyncTriggerIdentity)
+}
+
 // HasSupportedClaudeLifecycleState reports whether settings contain all known
-// Labdrian-owned Claude hook families.
+// Labdrian-owned Claude hook families: the minimalism pair, the
+// anti-generic-design pair, and the SessionEnd sync-trigger entry.
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianDesignHook(root, "UserPromptSubmit", hookCommand) &&
-		HasLabdrianDesignHook(root, "PreToolUse", hookCommand)
+		HasLabdrianDesignHook(root, "PreToolUse", hookCommand) &&
+		HasLabdrianSyncTriggerHook(root, "SessionEnd", hookCommand)
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -237,6 +249,14 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
+	// SessionEnd sync-trigger entry (identity: binary path + sync-trigger
+	// token). Never installs anything on Stop — SessionEnd fires once per
+	// session, Stop fires per turn.
+	if !hasEntryMatching(hooks, "SessionEnd", m.isSyncTriggerEntry) {
+		appendHook(hooks, "SessionEnd", m.buildSyncTriggerSessionEndEntry())
+		changed = true
+	}
+
 	root["hooks"] = hooks
 	return changed
 }
@@ -257,6 +277,12 @@ func (m *Merger) isMinimalismEntry(e interface{}) bool {
 // it references our binary AND the design token.
 func (m *Merger) isDesignEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, designIdentity)
+}
+
+// isSyncTriggerEntry reports whether a hook entry is our SessionEnd
+// sync-trigger entry: it references our binary AND the sync-trigger token.
+func (m *Merger) isSyncTriggerEntry(e interface{}) bool {
+	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianSyncTriggerIdentity)
 }
 
 // legacyIdentities are the --embedded-contract identity tokens of hook pairs
@@ -291,9 +317,12 @@ func (m *Merger) isLegacyEntry(e interface{}) bool {
 }
 
 // removeHooks removes our hook entries. Returns true if any change was made.
-// Identity is Labdrian-owned entry shape: our minimalism or design entries,
-// plus any stale entry matching legacyIdentities (see its doc comment), not
-// merely any entry that happens to reference the same binary path.
+// Identity is Labdrian-owned entry shape: our minimalism, design, or
+// sync-trigger entries, plus any stale entry matching legacyIdentities (see
+// its doc comment), not merely any entry that happens to reference the same
+// binary path. SessionEnd is scanned alongside UserPromptSubmit/PreToolUse
+// so an owned sync-trigger entry there is removed the same way; Stop is
+// never scanned because nothing owned is ever installed there.
 func (m *Merger) removeHooks(root map[string]interface{}) bool {
 	hooks, ok := root["hooks"].(map[string]interface{})
 	if !ok {
@@ -301,14 +330,14 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 	}
 
 	changed := false
-	for _, key := range []string{"UserPromptSubmit", "PreToolUse"} {
+	for _, key := range []string{"UserPromptSubmit", "PreToolUse", "SessionEnd"} {
 		entries, ok := hooks[key].([]interface{})
 		if !ok {
 			continue
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isLegacyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}
@@ -527,6 +556,27 @@ func (m *Merger) buildDesignPreToolUseEntry() map[string]interface{} {
 	)
 	return map[string]interface{}{
 		"matcher": "Agent",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildSyncTriggerSessionEndEntry returns the SessionEnd entry that invokes
+// the shared sync-trigger runner at session close.
+//
+// VERIFIED SHAPE (Claude Code docs, matcher-less like UserPromptSubmit):
+//
+//	{"hooks":[{"type":"command","command":"<bash>"}]}
+//
+// Missing-binary safety: same guard pattern as the other entries.
+func (m *Merger) buildSyncTriggerSessionEndEntry() map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s &>/dev/null && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-.}" || true`,
+		m.hookCommand, m.hookCommand, LabdrianSyncTriggerIdentity,
+	)
+	return map[string]interface{}{
 		"hooks": []interface{}{map[string]interface{}{
 			"type":    "command",
 			"command": cmd,

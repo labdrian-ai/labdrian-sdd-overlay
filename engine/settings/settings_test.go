@@ -4,6 +4,7 @@ package settings_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -279,6 +280,11 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 	if n := countOurHooks(root, "PreToolUse", settings.LabdrianDesignIdentity); n != 1 {
 		t.Errorf("PreToolUse: expected exactly 1 design entry, got %d", n)
+	}
+	// SessionEnd carries exactly one sync-trigger entry; a second Install adds
+	// no more.
+	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
+		t.Errorf("SessionEnd: expected exactly 1 sync-trigger entry, got %d", n)
 	}
 }
 
@@ -734,7 +740,7 @@ func TestUninstall_EmptiedKey_OtherEntriesPreserved(t *testing.T) {
 // TC-SET-UNINSTALL-COUNT: after Install then Uninstall, both hook keys must
 // contain exactly zero of our entries. This asserts the pair
 // (minimalism + design) is fully removed — previously no count assertion
-// existed.
+// existed. Also asserts the SessionEnd sync-trigger entry is fully removed.
 func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
@@ -744,8 +750,12 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 		t.Fatalf("Install: %v", err)
 	}
 
-	// Precondition: both keys carry exactly 2 of our entries after Install.
+	// Precondition: both keys carry exactly 2 of our entries after Install,
+	// and SessionEnd carries exactly 1 (the sync-trigger entry).
 	before := parseJSON(t, path)
+	if n := countOurHooks(before, "SessionEnd", testHookCommand); n != 1 {
+		t.Fatalf("precondition: expected 1 SessionEnd entry after Install, got %d", n)
+	}
 	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 2 {
 		t.Fatalf("precondition: expected 2 UserPromptSubmit entries after Install, got %d", n)
 	}
@@ -763,6 +773,9 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	}
 	if n := countOurHooks(after, "PreToolUse", testHookCommand); n != 0 {
 		t.Errorf("after Uninstall: expected 0 PreToolUse entries, got %d", n)
+	}
+	if n := countOurHooks(after, "SessionEnd", testHookCommand); n != 0 {
+		t.Errorf("after Uninstall: expected 0 SessionEnd entries, got %d", n)
 	}
 }
 
@@ -997,6 +1010,9 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
 		t.Errorf("Install×2: PreToolUse should have exactly 2 entries; got %d", n)
 	}
+	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
+		t.Errorf("Install×2: SessionEnd should have exactly 1 entry; got %d", n)
+	}
 }
 
 func TestInstall_DoesNotEnableOOQualityHookIdentityByDefault(t *testing.T) {
@@ -1089,7 +1105,9 @@ func buildRootWithPairs(hookCommand string, includeMinimalism, includeDesign boo
 
 // TestHasSupportedClaudeLifecycleState_RequiresDesignPair asserts the
 // lifecycle-state check returns false when the anti-generic-design pair is
-// absent, and true only when both pairs exist.
+// absent. "both" no longer proves true here — the SessionEnd sync-trigger
+// family is also required (TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily
+// covers the true case).
 func TestHasSupportedClaudeLifecycleState_RequiresDesignPair(t *testing.T) {
 	onlyMinimalism := buildRootWithPairs(testHookCommand, true, false)
 	if settings.HasSupportedClaudeLifecycleState(onlyMinimalism, testHookCommand) {
@@ -1097,8 +1115,47 @@ func TestHasSupportedClaudeLifecycleState_RequiresDesignPair(t *testing.T) {
 	}
 
 	both := buildRootWithPairs(testHookCommand, true, true)
-	if !settings.HasSupportedClaudeLifecycleState(both, testHookCommand) {
-		t.Error("HasSupportedClaudeLifecycleState: expected true when both pairs exist")
+	if settings.HasSupportedClaudeLifecycleState(both, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false when the SessionEnd sync-trigger family is absent")
+	}
+}
+
+// withSyncTriggerFamily adds a SessionEnd sync-trigger entry, shaped like
+// Merger's real builder output, to root's hooks map and returns root. Used to
+// compose a root built via buildRootWithPairs (which only knows about the
+// UserPromptSubmit/PreToolUse pairs) with the third owned family.
+func withSyncTriggerFamily(root map[string]interface{}, hookCommand string) map[string]interface{} {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		hooks = map[string]interface{}{}
+		root["hooks"] = hooks
+	}
+	command := fmt.Sprintf(
+		`command -v %s &>/dev/null && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-.}" || true`,
+		hookCommand, hookCommand, settings.LabdrianSyncTriggerIdentity,
+	)
+	existing, _ := hooks["SessionEnd"].([]interface{})
+	hooks["SessionEnd"] = append(existing, map[string]interface{}{
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": command,
+		}},
+	})
+	return root
+}
+
+// TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily asserts the
+// lifecycle-state check returns true only once all three owned families
+// (minimalism pair, design pair, SessionEnd sync-trigger) are present.
+func TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily(t *testing.T) {
+	twoFamilies := buildRootWithPairs(testHookCommand, true, true)
+	if settings.HasSupportedClaudeLifecycleState(twoFamilies, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false with only two families")
+	}
+
+	allThree := withSyncTriggerFamily(buildRootWithPairs(testHookCommand, true, true), testHookCommand)
+	if !settings.HasSupportedClaudeLifecycleState(allThree, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true once all three families exist")
 	}
 }
 
@@ -1196,5 +1253,191 @@ func TestInstall_UpgradesOnePairToTwo_PreservesExisting(t *testing.T) {
 	}
 	if n := countLabdrianIdentityEntries(root, "PreToolUse", testHookCommand, settings.LabdrianMinimalismIdentity); n != 1 {
 		t.Errorf("expected exactly 1 minimalism entry under PreToolUse; got %d", n)
+	}
+}
+
+// TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting covers the
+// post-#291 upgrade path (design.md "Migration / Rollout"): a machine
+// already carries both owned pairs (minimalism + design) but no SessionEnd
+// sync-trigger entry, and a rebuilt binary re-runs Install(), which must add
+// the SessionEnd family while leaving the pre-existing pairs completely
+// unchanged.
+func TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+
+	// Seed fixture: both pairs, no SessionEnd family yet.
+	seed := buildRootWithPairs(testHookCommand, true, true)
+	data, err := json.Marshal(seed)
+	if err != nil {
+		t.Fatalf("marshal seed fixture: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	before := parseJSON(t, path)
+	origMinimalismPrompt := findEntry(t, before, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
+	origDesignPreTool := findEntry(t, before, "PreToolUse", testHookCommand, settings.LabdrianDesignIdentity)
+
+	m := buildMerger(t, path)
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install on pre-existing two-family fixture: %v", err)
+	}
+
+	root := parseJSON(t, path)
+
+	// The SessionEnd sync-trigger entry must now be present, exactly once.
+	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
+		t.Errorf("expected exactly 1 SessionEnd sync-trigger entry after upgrade install; got %d", n)
+	}
+
+	// Pre-existing pairs must be unchanged, field for field.
+	newMinimalismPrompt := findEntry(t, root, "UserPromptSubmit", testHookCommand, settings.LabdrianMinimalismIdentity)
+	newDesignPreTool := findEntry(t, root, "PreToolUse", testHookCommand, settings.LabdrianDesignIdentity)
+
+	if !reflect.DeepEqual(origMinimalismPrompt, newMinimalismPrompt) {
+		t.Errorf("minimalism UserPromptSubmit entry changed after upgrade install:\nbefore: %v\nafter:  %v", origMinimalismPrompt, newMinimalismPrompt)
+	}
+	if !reflect.DeepEqual(origDesignPreTool, newDesignPreTool) {
+		t.Errorf("design PreToolUse entry changed after upgrade install:\nbefore: %v\nafter:  %v", origDesignPreTool, newDesignPreTool)
+	}
+}
+
+// buildForeignSessionEndStopFixture returns a raw settings root pre-seeded
+// with a matcher-less SessionEnd entry owned by "moshi-hook", and a Stop key
+// carrying entries owned by "moshi-hook" and "gentle-ai" — the coexistence
+// fixture required by the SessionEnd Sync Trigger requirement.
+func buildForeignSessionEndStopFixture() map[string]interface{} {
+	return map[string]interface{}{
+		"hooks": map[string]interface{}{
+			"SessionEnd": []interface{}{
+				map[string]interface{}{
+					"hooks": []interface{}{map[string]interface{}{
+						"type":    "command",
+						"command": "moshi-hook session-end",
+					}},
+				},
+			},
+			"Stop": []interface{}{
+				map[string]interface{}{
+					"hooks": []interface{}{map[string]interface{}{
+						"type":    "command",
+						"command": "moshi-hook stop",
+					}},
+				},
+				map[string]interface{}{
+					"hooks": []interface{}{map[string]interface{}{
+						"type":    "command",
+						"command": "gentle-ai review-stop",
+					}},
+				},
+			},
+		},
+	}
+}
+
+// TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign asserts Install
+// adds our SessionEnd sync-trigger entry alongside a pre-existing
+// foreign-owned SessionEnd entry, and never touches Stop at all (per the
+// requirement: "MUST NOT install any entry on Stop").
+func TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+
+	seed := buildForeignSessionEndStopFixture()
+	data, err := json.Marshal(seed)
+	if err != nil {
+		t.Fatalf("marshal seed fixture: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := buildMerger(t, path)
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	root := parseJSON(t, path)
+
+	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
+		t.Errorf("expected exactly 1 owned SessionEnd entry after Install; got %d", n)
+	}
+	if !containsInnerCommand(root, "SessionEnd", "moshi-hook session-end") {
+		t.Error("foreign SessionEnd entry (moshi-hook) should be preserved")
+	}
+
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hooks map should exist")
+	}
+	stopEntries, ok := hooks["Stop"].([]interface{})
+	if !ok || len(stopEntries) != 2 {
+		t.Fatalf("Stop entries should remain untouched (2 foreign entries); got %v", hooks["Stop"])
+	}
+	if !containsInnerCommand(root, "Stop", "moshi-hook stop") {
+		t.Error("foreign Stop entry (moshi-hook) should be preserved")
+	}
+	if !containsInnerCommand(root, "Stop", "gentle-ai review-stop") {
+		t.Error("foreign Stop entry (gentle-ai) should be preserved")
+	}
+	if n := countOurHooks(root, "Stop", testHookCommand); n != 0 {
+		t.Errorf("no owned entry should ever be installed on Stop; got %d", n)
+	}
+}
+
+// TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign asserts Uninstall
+// removes only our SessionEnd sync-trigger entry, leaving the foreign
+// SessionEnd entry and both Stop entries byte-for-byte intact.
+func TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+
+	seed := buildForeignSessionEndStopFixture()
+	data, err := json.Marshal(seed)
+	if err != nil {
+		t.Fatalf("marshal seed fixture: %v", err)
+	}
+	if err := os.WriteFile(path, data, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	m := buildMerger(t, path)
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+
+	before := parseJSON(t, path)
+	if n := countOurHooks(before, "SessionEnd", testHookCommand); n != 1 {
+		t.Fatalf("precondition: expected 1 owned SessionEnd entry after Install, got %d", n)
+	}
+
+	if err := m.Uninstall(); err != nil {
+		t.Fatalf("Uninstall: %v", err)
+	}
+
+	root := parseJSON(t, path)
+
+	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 0 {
+		t.Errorf("owned SessionEnd entry should be removed after Uninstall; got %d", n)
+	}
+	if !containsInnerCommand(root, "SessionEnd", "moshi-hook session-end") {
+		t.Error("foreign SessionEnd entry (moshi-hook) should survive Uninstall")
+	}
+
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		t.Fatal("hooks map should exist")
+	}
+	stopEntries, ok := hooks["Stop"].([]interface{})
+	if !ok || len(stopEntries) != 2 {
+		t.Fatalf("Stop entries should remain untouched (2 foreign entries); got %v", hooks["Stop"])
+	}
+	if !containsInnerCommand(root, "Stop", "moshi-hook stop") {
+		t.Error("foreign Stop entry (moshi-hook) should survive Uninstall")
+	}
+	if !containsInnerCommand(root, "Stop", "gentle-ai review-stop") {
+		t.Error("foreign Stop entry (gentle-ai) should survive Uninstall")
 	}
 }

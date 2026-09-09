@@ -160,6 +160,48 @@ func TestClaudeStatusRequiresFullLifecycleState(t *testing.T) {
 	}
 }
 
+// TestClaudeStatusPartialMessageNamesRemediationCommands asserts the partial
+// message names the exact upgrade step (post-#291): a machine missing any
+// owned family — including the SessionEnd sync-trigger family — must be told
+// to run 'labdrian uninstall-hooks' then 'labdrian install-hooks', not just
+// "not fully owned/installed".
+func TestClaudeStatusPartialMessageNamesRemediationCommands(t *testing.T) {
+	root := t.TempDir()
+	adapter := engineRuntime.NewClaudeAdapter(root)
+
+	// Fresh root: no settings.json at all is CapabilityUnsupported, not
+	// CapabilityPartial, so seed a two-family (no SessionEnd) fixture
+	// directly — the same "pre-upgrade machine" shape the SessionEnd
+	// requirement's status scenario covers.
+	settingsPath := filepath.Join(root, "settings.json")
+	hookCommand := filepath.Join(root, "bin", "gentle-ai-overlay")
+	if err := os.MkdirAll(filepath.Dir(settingsPath), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	merger := settings.NewMerger(settingsPath, hookCommand)
+	if err := merger.Install(); err != nil {
+		t.Fatalf("seed Install: %v", err)
+	}
+
+	seeded := parseClaudeSettingsFile(t, settingsPath)
+	seeded, _ = dropEntriesWithIdentity(seeded, "SessionEnd", hookCommand, settings.LabdrianSyncTriggerIdentity)
+	data, err := json.Marshal(seeded)
+	if err != nil {
+		t.Fatalf("marshal seeded settings: %v", err)
+	}
+	if err := os.WriteFile(settingsPath, data, 0644); err != nil {
+		t.Fatalf("write seeded settings: %v", err)
+	}
+
+	status := adapter.Status()
+	if status.Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("status should be partial when the SessionEnd family is missing, got %#v", status)
+	}
+	if !strings.Contains(status.Message, "labdrian uninstall-hooks") || !strings.Contains(status.Message, "labdrian install-hooks") {
+		t.Errorf("partial message must name both remediation commands; got %q", status.Message)
+	}
+}
+
 func TestClaudeStatusFailsWhenSettingsIsMalformed(t *testing.T) {
 	root := t.TempDir()
 	settingsPath := filepath.Join(root, "settings.json")
