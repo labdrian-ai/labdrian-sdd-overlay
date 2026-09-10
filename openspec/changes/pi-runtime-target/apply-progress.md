@@ -159,7 +159,7 @@ Cycle Evidence above; none are redundant across the Go/shelltest layers).
 
 - `9faf011` — `feat(runtime): accept pi as a package-model target`
   (engine/runtime, engine/cmd, engine/shelltest, bin/labdrian-overlay)
-- `386e2d8` — `docs(sdd): record pi-runtime-target slice 1 apply progress`
+- `eb8c14c` — `docs(sdd): record pi-runtime-target slice 1 apply progress`
   (tasks.md, apply-progress.md)
 
 ### Slice tracking
@@ -193,3 +193,88 @@ slice of the 5 planned.)
 work units. `size:exception` granted and recorded. Ready for the next
 slice (`pi-package-build`) or `sdd-verify` at the orchestrator's
 discretion.
+
+### Post-review fix (native review lineage `review-ea4451a282f311c9`)
+
+A native review of Slice 1 escalated one CRITICAL finding
+(R4-silent-package-skip) and several WARNING/MEDIUM findings against the
+commits above. This scoped follow-up, still within Slice 1
+(`pi-target-plumbing`), fixes them:
+
+1. **R4-silent-package-skip (CRITICAL)**: `apply|status|sync-check
+   --target pi` now `die`s (exit 1) with a clear message instead of
+   silently printing the stub and returning 0. Under `--target all`, the
+   pi stub now forces the same commands' own aggregate exit non-zero
+   (`pi_stub_included` tracked per command) — unattended automation can no
+   longer read a run that silently skipped pi as a clean success.
+   `engine/cmd/main.go`'s `runRuntimeCore` aggregate exemption for Pi's
+   honest `CapabilityUnsupported` is narrowed to the `status` action only
+   (mirroring the pre-existing Codex-partial exemption, which was already
+   status-only), so `engine runtime install|update|uninstall --target all`
+   also now fails while pi is unsupported instead of exiting 0.
+2. **R4-sync-check-success-without-check (WARNING)**: `sync-check` for a
+   non-copy target now emits `SYNC_CHECK:$t: unsupported -- ...` (was
+   `partial`) plus an explicit `VERDICT:$t:UNSUPPORTED` line, so a health
+   check parsing `SYNC_CHECK:`/`VERDICT:` output detects pi's
+   incompleteness the same way it detects every other target's state.
+3. **R2-misleading-stub-schedule (WARNING)**: `engine/runtime/pi.go`'s
+   `PiAdapter.stub()` used one shared message ("scheduled for the
+   pi-package-build PR slice") for every action, including Uninstall and
+   Rollback. It now names the slice that actually owns each action:
+   Apply/Install/Status/SyncCheck/Update → pi-package-build (package
+   delivery); Uninstall/Rollback → pi-lifecycle (there is no
+   install/undo logic to schedule into pi-package-build). The bash-side
+   `package_target_stub_message` (apply/status/sync-check only) was
+   already accurate and is unchanged.
+4. **R3-shell-stub-exit-unproved / R3-copy-target-preservation-unproved /
+   R3-longterm-all-regression-unproved (WARNING)**:
+   `engine/shelltest/overlay_pi_target_test.go` now asserts exit codes
+   explicitly for `status --target pi` (1), `sync-check --target pi`
+   (non-zero), and `--target all` for both commands (non-zero, pi
+   undeployed); a new byte-for-byte comparison test proves the
+   claude/opencode/codex sections of `status`/`sync-check --target all`
+   output are unchanged from a solo per-target run; and two new tests
+   cover `cmd_longterm_mem`'s pre-existing pi exclusion — an explicit
+   `longterm-mem ... --target pi` still dies, and `longterm-mem uninstall
+   --target all` never acts on a `pi` entry even if one is present in the
+   install-tracking file (regression guard).
+5. **Validator MEDIUM**: `overlay version`/`overlay update` listing
+   `pi: never deployed` (via `resolve_targets all`) is INTENTIONAL — the
+   same honest "never deployed" reporting every other never-installed
+   target gets, not a special case. Pinned by
+   `TestOverlayVersionAndUpdate_ListPiNeverDeployed`.
+6. Fixed a stale commit hash in this file's own Commits section
+   (`386e2d8` → `eb8c14c` — the same-message commit that actually landed
+   on this branch).
+
+**Regression fallout fixed in the same pass** (not part of the review
+findings, but caused by fix #1's exit-code change): 8 call sites across
+`engine/installer/route_test.go` and `engine/installer/sync_check_test.go`
+ran `apply --target all` (some followed by `status --target all`) purely
+as setup and asserted a 0 exit. `sync_check_test.go`'s 8 occurrences were
+switched to `apply --target claude` (all of them only exercise claude
+afterward). `route_test.go`'s 8 occurrences need claude+opencode+codex
+deployed together in one call (agent-file/multi-target assertions, or the
+`--target all` deploy-loop shape itself), so two new tolerant helpers
+(`runApplyAllTolerantOfPi`, `runStatusAllTolerantOfPi`) were added there:
+they fail the test on any error EXCEPT one whose output shows pi's own
+stub line, keeping every other regression surfaced normally.
+
+**Verification** (foreground, all green): `cd engine && gofmt -l .`
+(empty); `go vet ./... && go test -count=1 ./...` (every package,
+including `installer` and `shelltest`); `shellcheck -S warning
+bin/labdrian-overlay` (only the 2 pre-existing SC2064 warnings); a
+built-engine smoke test confirmed `status --target pi` exits 1,
+`sync-check --target pi` exits non-zero with a clear message,
+`sync-check --target all` emits `SYNC_CHECK:pi: unsupported` and
+`VERDICT:pi:UNSUPPORTED`, and `status --target all`'s claude/opencode/codex
+section is byte-identical to `git show 2279248:bin/labdrian-overlay`'s
+output for the same command (diffed under matched HOME) except for the
+trailing pi section.
+
+Diff: `git diff --shortstat` → 9 files changed, ~630 insertions(+), ~74
+deletions(-) (bin/labdrian-overlay, engine/cmd/main.go,
+engine/cmd/runtime_test.go, engine/installer/route_test.go,
+engine/installer/sync_check_test.go, engine/runtime/pi.go,
+engine/runtime/runtime_test.go, engine/shelltest/overlay_pi_target_test.go,
+and this file).
