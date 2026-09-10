@@ -14,6 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
@@ -43,6 +44,10 @@ type piField struct {
 // under a copied source tree and clearing whatever previously lived at
 // destDir. File modes are 0644, directory modes 0755.
 func Build(overlayRoot, registryPath, destDir string) error {
+	if err := checkNoOverlap(overlayRoot, destDir); err != nil {
+		return err
+	}
+
 	reg, err := loadRegistry(registryPath)
 	if err != nil {
 		return err
@@ -190,6 +195,33 @@ func resolvePackageVersion(overlayRoot string) string {
 	return strings.TrimPrefix(strings.TrimSpace(string(out)), "v")
 }
 
+// checkNoOverlap refuses a destDir that equals, is inside, or contains
+// overlayRoot (R3-destination-overlap).
+func checkNoOverlap(overlayRoot, destDir string) error {
+	absOverlay, err := filepath.Abs(overlayRoot)
+	if err != nil {
+		return fmt.Errorf("pipkg: resolving overlay root: %w", err)
+	}
+	if r, err := filepath.EvalSymlinks(absOverlay); err == nil {
+		absOverlay = r
+	}
+	absDest, err := filepath.Abs(destDir)
+	if err != nil {
+		return fmt.Errorf("pipkg: resolving destination: %w", err)
+	}
+	if r, err := filepath.EvalSymlinks(absDest); err == nil {
+		absDest = r
+	}
+	contains := func(base, target string) bool {
+		rel, err := filepath.Rel(base, target)
+		return err == nil && !strings.HasPrefix(rel, "..")
+	}
+	if contains(absOverlay, absDest) || contains(absDest, absOverlay) {
+		return fmt.Errorf("pipkg: destination %s overlaps overlay root %s", destDir, overlayRoot)
+	}
+	return nil
+}
+
 // containsTarget reports whether targets contains want.
 func containsTarget(targets []string, want string) bool {
 	for _, t := range targets {
@@ -210,6 +242,9 @@ func copyTree(src, dst string) error {
 		}
 		if d.Type()&fs.ModeSymlink != 0 {
 			return fmt.Errorf("refusing symlink at %s", path)
+		}
+		if !d.IsDir() && !d.Type().IsRegular() {
+			return fmt.Errorf("refusing non-regular file at %s", path)
 		}
 		rel, err := filepath.Rel(src, path)
 		if err != nil {
@@ -239,18 +274,20 @@ func copyFile(src, dst string) error {
 	return os.WriteFile(dst, data, 0644)
 }
 
-// swap atomically replaces destDir with tmpDir's content: the previous
-// destDir (if any) is renamed aside, tmpDir is renamed into place, then the
-// staged-aside previous content is removed — clearing any stale files a
-// prior build left behind. On rename failure it restores the prior
-// destDir so a failed swap never leaves destDir absent.
+// swap atomically replaces destDir with tmpDir's content, staging any
+// previous destDir aside in a freshly created sibling dir and removing only
+// that fresh dir afterward — a pre-existing "<destDir>.stale" is never
+// touched (R3-stale-directory-deletion). On failure it restores destDir.
 func swap(tmpDir, destDir string) error {
-	staleDir := destDir + ".stale"
-	_ = os.RemoveAll(staleDir)
-
 	hadPrevious := false
+	var staleDir string
 	if _, err := os.Stat(destDir); err == nil {
-		if err := os.Rename(destDir, staleDir); err != nil {
+		staleDir, err = os.MkdirTemp(filepath.Dir(destDir), ".labdrian-pi-stale-*")
+		if err != nil {
+			return fmt.Errorf("pipkg: creating stale staging dir: %w", err)
+		}
+		if err := syscall.Rename(destDir, staleDir); err != nil { // os.Rename refuses a dir newpath
+			_ = os.RemoveAll(staleDir)
 			return fmt.Errorf("pipkg: staging previous package aside: %w", err)
 		}
 		hadPrevious = true
@@ -262,7 +299,9 @@ func swap(tmpDir, destDir string) error {
 		}
 		return fmt.Errorf("pipkg: swapping built package into place: %w", err)
 	}
-	_ = os.RemoveAll(staleDir)
+	if hadPrevious {
+		_ = os.RemoveAll(staleDir)
+	}
 	return nil
 }
 
@@ -276,6 +315,12 @@ func listFiles(root string) (map[string][]byte, error) {
 		}
 		if d.IsDir() {
 			return nil
+		}
+		if d.Type()&fs.ModeSymlink != 0 {
+			return fmt.Errorf("refusing symlink at %s", path)
+		}
+		if !d.Type().IsRegular() {
+			return fmt.Errorf("refusing non-regular file at %s", path)
 		}
 		rel, err := filepath.Rel(root, path)
 		if err != nil {

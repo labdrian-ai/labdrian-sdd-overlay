@@ -5,7 +5,9 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
@@ -203,5 +205,68 @@ func TestPipkgCheck_DetectsDrift(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "pi-skill") {
 		t.Errorf("drift error should name the drifted entry, got: %v", err)
+	}
+}
+
+func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	for _, dest := range []string{overlayRoot, filepath.Join(overlayRoot, "skills"), filepath.Dir(overlayRoot)} {
+		if err := pipkg.Build(overlayRoot, registryPath, dest); err == nil || !strings.Contains(err.Error(), "overlaps overlay root") {
+			t.Errorf("Build(dest=%s) = %v, want overlap error", dest, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md")); err != nil {
+		t.Errorf("overlayRoot must remain intact: %v", err)
+	}
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	keep := filepath.Join(destDir+".stale", "keep.txt")
+	writeFile(t, keep, "user content\n")
+	for i := 0; i < 2; i++ {
+		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+			t.Fatalf("Build #%d: %v", i, err)
+		}
+	}
+	if data, err := os.ReadFile(keep); err != nil || string(data) != "user content\n" {
+		t.Errorf("pre-existing stale dir must survive, got %q, err=%v", data, err)
+	}
+}
+
+// runWithTimeout fails unless fn returns within 5s and its error mentions want.
+func runWithTimeout(t *testing.T, fn func() error, want string) {
+	t.Helper()
+	errCh := make(chan error, 1)
+	go func() { errCh <- fn() }()
+	select {
+	case err := <-errCh:
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("got %v, want error containing %q", err, want)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("hung instead of refusing the non-regular file")
+	}
+}
+
+func TestPipkgRefusesSpecialFiles(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	srcFifo := filepath.Join(overlayRoot, "skills", "pi-skill", "pipe")
+	if err := syscall.Mkfifo(srcFifo, 0644); err != nil {
+		t.Skipf("mkfifo unsupported: %v", err)
+	}
+	runWithTimeout(t, func() error { return pipkg.Build(overlayRoot, registryPath, destDir) }, "non-regular")
+	os.Remove(srcFifo)
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	dstFifo := filepath.Join(destDir, "pipe")
+	syscall.Mkfifo(dstFifo, 0644)
+	runWithTimeout(t, func() error { return pipkg.Check(overlayRoot, registryPath, destDir) }, "non-regular")
+	os.Remove(dstFifo)
+	link := filepath.Join(destDir, "link.json")
+	if err := os.Symlink(filepath.Join(destDir, "package.json"), link); err != nil {
+		t.Skipf("symlink unsupported: %v", err)
+	}
+	if err := pipkg.Check(overlayRoot, registryPath, destDir); err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Errorf("Check = %v, want symlink error", err)
 	}
 }
