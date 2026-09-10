@@ -43,12 +43,12 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: pi-contract-gate (R-004, R-007)
 
-- [ ] 3.1 RED (threat: path containment): `TestLabdrianGatePathContainment_RejectsTraversal` in `engine/runtime/pi_test.go`
-- [ ] 3.2 RED: `TestLabdrianGateInjectsPathLine_SddTasksSddApply` (via `runtime.go` mirror: LoadContractPhases/AppliesToPhase/MutatePrompt)
-- [ ] 3.3 GREEN: `engine/pipkg/labdrian-gate.ts` — `before_agent_start` handler, strict frontmatter parse, path-line injection, chained `systemPrompt`
-- [ ] 3.4 Embed and copy extension into package build (`engine/pipkg/pipkg.go`)
-- [ ] 3.5 Manual: `TestLabdrianGateChainsAfterGentlePi` (node, `.ts`→`.mjs` fixture copy, skip if node absent)
-- [ ] 3.6 Add `--no-extensions`/`--no-skills` disclosure text (no `-ns` alias) to status output
+- [x] 3.1 RED (threat: path containment): `TestLabdrianGatePathContainment_RejectsTraversal` in `engine/runtime/pi_test.go`
+- [x] 3.2 RED: `TestLabdrianGateInjectsPathLine_SddTasksSddApply` (Go-side oracle via `runtime.CanonicalEntry`/`runtime.InjectPrompt` for the same contracts/header)
+- [x] 3.3 GREEN: `engine/pipkg/labdrian-gate.ts` — `before_agent_start` handler, strict frontmatter parse, path-line injection, chained `systemPrompt`
+- [x] 3.4 Embed and copy extension into package build (`engine/pipkg/pipkg.go`); also copies `skills/_shared/{minimalism-contract,anti-generic-design}.md` (not registry-driven — gate infrastructure, not an installable skill)
+- [x] 3.5 Manual: `TestLabdrianGateChainsAfterGentlePi` (node, `.ts`→`.mjs` fixture copy, skip if node absent) — node was available in this environment so the test ran (not skipped)
+- [x] 3.6 Add `--no-extensions`/`--no-skills` disclosure text (no `-ns` alias) to `pipkg_status_and_report` (`bin/labdrian-overlay`)
 
 ## Phase 4: pi-longterm-mem-mcp (R-005)
 
