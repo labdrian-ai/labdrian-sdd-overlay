@@ -10,7 +10,7 @@
 | Phase | Timestamp | Notes |
 |-------|-----------|-------|
 | t0 (proposal launch) | 2026-09-09 02:23:47 | Engram observation #3300 created_at |
-| t1 (landing commit) | absent | Not yet merged at archive time; pending closure-feedback from merge commit (PRs #299, #300, #302) |
+| t1 (landing commit) | 2026-09-10T13:27:37Z | `landing_commit`: `5db8c3dabaaa9b769addb01f8dbe14f7305cddd1` (merge of PR #302, last of 3 stacked slices, onto `main`; `gh pr view 302 --json mergeCommit,mergedAt` mergedAt `2026-09-10T13:27:38Z`, cross-checked against `git show -s --format=%cI` committer timestamp `2026-09-10T13:27:37-03:00`). Outcome: self-asserted, not verified — no `review-receipt.json` survives under `.git/gentle-ai/review-transactions/v2/` for any of the 3 review lineages named in this report (`review-bd8f388a8eb9275c`, `review-42dbc0d7915e797d`, `review-3527d2e0e7957c37`; all checked directly and all MISSING), so no `approved_tree` is recorded here and none can be checked against `landing_commit`'s own tree; t1 still resolves from `landing_commit`'s own committer timestamp alone |
 
 ## Executive Summary
 
