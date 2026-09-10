@@ -1967,6 +1967,41 @@ case_sync_trigger_absent_engine_returns_zero() {
   pass "sync-trigger exits 0 and does not try to build the engine when it is absent"
 }
 
+# write_fake_slow_engine never exits on its own: it sleeps far longer than
+# any bound the wrapper should tolerate, simulating a stale or wedged engine
+# binary that never detaches.
+write_fake_slow_engine() {
+  local path="$1"
+  mkdir -p "$(dirname "$path")"
+  cat > "$path" <<'STUB'
+#!/usr/bin/env bash
+sleep 30
+exit 0
+STUB
+  chmod +x "$path"
+}
+
+case_sync_trigger_does_not_block_on_a_wedged_engine() {
+  local dir start end elapsed out
+  dir="$(new_case_dir sync-trigger-wedged-engine)"
+  write_fake_slow_engine "$dir/bin/engine"
+
+  start="$(date +%s)"
+  out="$(run_longterm_mem_sync_trigger "$dir/bin/engine" "$dir/state" --event session-end --cwd "$dir/project")"
+  end="$(date +%s)"
+  elapsed=$((end - start))
+
+  if ! grep -q -F -e "SYNC-TRIGGER-EXIT=0" <<<"$out"; then
+    fail "sync-trigger does not exit 0 when the engine is wedged" "$out"
+    return
+  fi
+  if (( elapsed > 12 )); then
+    fail "sync-trigger blocked on a wedged engine instead of bounding the call" "elapsed=${elapsed}s output: $out"
+    return
+  fi
+  pass "sync-trigger returns within bound and exits 0 when the engine is wedged"
+}
+
 case_sync_trigger_forwards_event_and_cwd() {
   local dir out record
   dir="$(new_case_dir sync-trigger-forwards)"
@@ -2528,6 +2563,7 @@ case_status_hooks_surfaces_a_stale_engine_binary
 case_status_reports_a_non_supported_status_as_degraded
 case_status_reports_a_supported_status_as_success
 case_sync_trigger_absent_engine_returns_zero
+case_sync_trigger_does_not_block_on_a_wedged_engine
 case_sync_trigger_forwards_event_and_cwd
 case_longterm_mem_unknown_subcommand_still_dies
 case_no_message_names_a_command_called_overlay

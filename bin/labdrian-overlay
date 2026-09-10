@@ -3703,12 +3703,24 @@ cmd_longterm_mem() {
   # engine — exactly what a SessionEnd hook or archive closure-feedback
   # caller must never observe, R-001/R-003), and it always returns 0.
   # A missing/non-executable engine binary degrades to a warning instead.
+  #
+  # The engine invocation itself is bounded too: a stale or wedged engine
+  # binary that never detaches must not be able to block the SessionEnd
+  # hook or archive closure-feedback caller indefinitely. When `timeout`
+  # is available we cap the call; when it is not, we fire the engine in
+  # the background and never wait on it. Either way this branch still
+  # always returns 0.
   if [[ "$subcmd" == "sync-trigger" ]]; then
     if [[ ! -x "$ENGINE_BINARY" ]]; then
       warn "longterm-mem sync-trigger: engine binary not found or not executable at $ENGINE_BINARY; skipping sync"
       return 0
     fi
-    "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@"
+    if command -v timeout >/dev/null 2>&1; then
+      timeout --kill-after=2 10 "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@"
+    else
+      "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@" >/dev/null 2>&1 &
+      disown 2>/dev/null || true
+    fi
     return 0
   fi
 
