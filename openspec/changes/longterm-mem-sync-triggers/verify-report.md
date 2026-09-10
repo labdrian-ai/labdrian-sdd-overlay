@@ -1,14 +1,14 @@
 ```yaml
 schema: gentle-ai.verify-result/v1
-evidence_revision: sha256:95529b225596666b639fe699bbc5c9c0c61532230c8b54a4ac3514c72e63ee86
-verdict: fail
-blockers: 1
-critical_findings: 1
-requirements: 3/4
-scenarios: 21/23
-test_command: cd engine && go test -count=1 -race ./... && cd ../longterm-mem && go test ./...
+evidence_revision: sha256:24d4b548cf4b3bf7d0c8bfc56ed9a832082a742eed8528793ec19585fbb98bee
+verdict: pass
+blockers: 0
+critical_findings: 0
+requirements: 4/4
+scenarios: 23/23
+test_command: cd engine && go vet ./... && go test -count=1 -race ./... && cd ../longterm-mem && go vet ./... && go test ./...
 test_exit_code: 0
-test_output_hash: sha256:48ad120cc4dff90016ae0f9451f6b30c1129ce246d72eb10e736017bebba6edd
+test_output_hash: sha256:8ae0de15743d87619f180064fe4e1c9714fe0bfa355536256bcd0e20c0f8986f
 build_command: cd engine && go vet ./... && cd ../longterm-mem && go vet ./...
 build_exit_code: 0
 build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
@@ -19,7 +19,8 @@ build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599
 **Change**: longterm-mem-sync-triggers
 **Version**: N/A (delta specs `longterm-mem-sync-triggers` + `runtime-lifecycle`)
 **Mode**: Strict TDD
-**Worktree**: `/home/labdrian/labdrian-sdd-overlay-worktrees/lmst-3` (branch `feat/longterm-mem-sync-triggers-3-archive`, HEAD `76d127a`, base `main`)
+**Worktree**: `/home/labdrian/labdrian-sdd-overlay-worktrees/lmst-3` (branch `feat/longterm-mem-sync-triggers-3-archive`, HEAD `8d65686`, base `main`)
+**Re-run trigger**: remediation of the prior FAIL (obs #3323, HEAD `76d127a`) — commits `e554908` (new shelltest case `case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`) and `8d65686` (design.md wrapper row and tasks.md 3.2/3.4 aligned with the detached wrapper).
 
 ### Completeness
 
@@ -28,25 +29,23 @@ build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599
 | Tasks total | 24 |
 | Tasks complete | 24 |
 | Tasks incomplete | 0 |
-| Tasks marked complete without a delivered artifact | 1 (3.4) |
+| Tasks marked complete without a delivered artifact | 0 |
 
-Planned `review_slices` 3; realized 3 stacked PRs (#299, #300, slice-3 branch pending its PR). `size:exception` granted for slices 1 and 2.
+Planned `review_slices` 3; realized 3 stacked PRs (#299, #300, #302). `size:exception` granted for slices 1 and 2.
 
 ### Build & Tests Execution
 
 **Build (vet)**: PASSED
 
 ```text
-cd engine && go vet ./... && cd ../longterm-mem && go vet ./...
+cd engine && go vet ./...
+cd longterm-mem && go vet ./...
 exit 0 — empty output (no diagnostics)
 ```
 
 **Tests**: PASSED
 
 ```text
-cd engine && go test ./synctrigger/... ./settings/... ./cmd/... ./runtime/... ./shelltest/...
-exit 0 — synctrigger ok 0.208s, settings ok 0.011s, cmd ok 0.032s, runtime ok 0.156s, shelltest ok 9.709s
-
 cd engine && go test -count=1 -race ./...
 exit 0 — 12/12 packages ok (assets, cmd, gadu, gate, installer, prespec, propagator, runtime, settings, shelltest, skills, synctrigger)
 
@@ -54,7 +53,8 @@ cd longterm-mem && go test ./...
 exit 0 — 17/17 packages ok
 
 bash engine/shelltest/overlay_longterm_mem_test.sh
-exit 0 — all shell test cases passed, including the four sync-trigger cases
+exit 0 — all shell test cases passed (58 cases), including the four sync-trigger cases and the new
+`case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`
 
 shellcheck -S warning bin/labdrian-overlay
 exit 1 — only the two known pre-existing SC2064 warnings at lines 1314 and 1475
@@ -62,21 +62,16 @@ exit 1 — only the two known pre-existing SC2064 warnings at lines 1314 and 147
 by the orchestrator and untouched by this change.
 ```
 
-**Configured `rules.verify.test_command` (repo-wide)**: exit 1 — see WARNING 1. The single
-failure is `tools/archive-reconcile > TestShippedLedgerMatchesThisRepository`, which fails
-*because* this change is 24/24 complete and not yet archived. `tools/` is untouched by this
-change (`git diff --stat main...HEAD -- tools/` is empty), and the guard's own stderr
-prescribes promotion + archive as the fix. It is a pre-archive workflow-state signal, not a
-code defect, and it clears when `sdd-archive` runs.
+**Configured `rules.verify.test_command` (repo-wide)**: exit 1 (re-confirmed) — the single
+failure is `tools/archive-reconcile > TestShippedLedgerMatchesThisRepository`. `tools/` is
+untouched by this change (`git diff --stat main...HEAD -- tools/` is empty). It fails
+*because* this change is 24/24 complete and not yet archived — stderr from the guard itself
+prescribes promotion of `longterm-mem-sync-triggers/spec.md` and the `git mv` archive step as
+the fix. This is a pre-archive workflow-state signal, not a code defect in this change, and it
+self-clears when `sdd-archive` runs. Disclosed as informational per the orchestrator's framing,
+not treated as a blocker.
 
 **Coverage**: Not available — no coverage tooling configured (`coverage_threshold: 0`).
-
-### Additional Runtime Exercises (foreground, observed)
-
-| Exercise | Observed result |
-|---|---|
-| Emitted SessionEnd hook string under `dash -c`, `CLAUDE_PROJECT_DIR` unset, scratch `$HOME` with a fake `longterm-mem` | exit 0; log line `event=session-end cwd=/…/hookexec/proj outcome=ok exit=0 duration=1ms` with an **absolute** cwd; the fake binary's stderr is teed into the log above the summary line. Confirms the `${CLAUDE_PROJECT_DIR:-$PWD}` fallback and the POSIX `>/dev/null 2>&1` guard both work under dash. |
-| `bin/labdrian-overlay longterm-mem sync-trigger --event archive --cwd <repo>` against a wedged fake engine (`sleep 30`) | exit 0 in **13 ms** (bound: 2 s); the wedged engine PID is still alive (`kill -0`) after the wrapper returns, proving the wrapper detaches rather than merely bounding its wait. |
 
 ### Spec Compliance Matrix
 
@@ -98,8 +93,8 @@ code defect, and it clears when `sdd-archive` runs.
 | SessionEnd Sync Trigger | Install is idempotent | `settings_test.go > TestMerge_Idempotent`, `TestSchema_InstallTwice_Idempotent` | COMPLIANT |
 | SessionEnd Sync Trigger | Uninstall removes only the owned entry | `settings_test.go > TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign` | COMPLIANT |
 | SessionEnd Sync Trigger | status-hooks reports the SessionEnd family | `main_test.go > TestStatusCore_SessionEndMissing_Degraded`, `TestStatusCore_SessionEndPresent_OK`, `TestStatusCore_AllOK` | COMPLIANT |
-| Archive-Time Sync Trigger | Archive completion fires a whole-project sync | `overlay_longterm_mem_test.sh > sync-trigger forwards --state-dir and the caller's --event/--cwd to the engine verbatim` (wrapper half only; the closure-feedback call site is static evidence) | PARTIAL |
-| Archive-Time Sync Trigger | Trigger lives outside the managed skill | (none found) | UNTESTED |
+| Archive-Time Sync Trigger | Archive completion fires a whole-project sync | `overlay_longterm_mem_test.sh > case_sync_trigger_forwards_event_and_cwd` (wrapper half) + `case_archive_sync_trigger_call_site_is_only_in_inception_pipeline` (call-site half) | COMPLIANT |
+| Archive-Time Sync Trigger | Trigger lives outside the managed skill | `overlay_longterm_mem_test.sh > case_archive_sync_trigger_call_site_is_only_in_inception_pipeline` (asserts the verbatim call line is present in `inception-pipeline/SKILL.md` and `sync-trigger` is absent from `sdd-archive/SKILL.md`) | COMPLIANT |
 
 #### `specs/runtime-lifecycle/spec.md`
 
@@ -113,7 +108,7 @@ code defect, and it clears when `sdd-archive` runs.
 | Claude Lifecycle Support | Claude status reports the SessionEnd family honestly | `settings_test.go > TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily`, `TestHasSupportedClaudeLifecycleState_RequiresDesignPair` | COMPLIANT |
 | Claude Lifecycle Support | Claude uninstall removes the SessionEnd sync-trigger entry | `settings_test.go > TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign`, `claude_test.go` partial-state fixtures | COMPLIANT |
 
-**Compliance summary**: 21/23 scenarios COMPLIANT, 1 PARTIAL, 1 UNTESTED.
+**Compliance summary**: 23/23 scenarios COMPLIANT.
 
 ### Correctness (Static Evidence)
 
@@ -121,7 +116,7 @@ code defect, and it clears when `sdd-archive` runs.
 |---|---|---|
 | Non-Blocking Sync Runner Contract | Implemented | `engine/synctrigger/synctrigger.go`: `Run` returns 0 on every path (argv, log-open, `os.Executable`, `Start`); `RunChild` classifies and logs; `filepath.Abs` resolves a relative `--cwd` before the absolute check. |
 | SessionEnd Sync Trigger | Implemented | `engine/settings/settings.go`: `LabdrianSyncTriggerIdentity`, `buildSyncTriggerSessionEndEntry`, `isSyncTriggerEntry` wired into `mergeHooks` (SessionEnd only), `removeHooks`, `HasSupportedClaudeLifecycleState`. |
-| Archive-Time Sync Trigger | Implemented, unguarded | Call site present at `skills/inception-pipeline/SKILL.md:201` with `|| true`, and absent from `skills/sdd-archive/SKILL.md` (verified by inspection). No automated regression guard exists — see CRITICAL 1. |
+| Archive-Time Sync Trigger | Implemented, guarded | Call site present at `skills/inception-pipeline/SKILL.md:201` with `\|\| true`, absent from `skills/sdd-archive/SKILL.md`, and now protected by `engine/shelltest/overlay_longterm_mem_test.sh > case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`, which fails if the call line disappears from `inception-pipeline/SKILL.md` or leaks into `sdd-archive/SKILL.md`. |
 | Claude Lifecycle Support (runtime-lifecycle) | Implemented | Three families / five entries across install, update, uninstall, and both status layers. |
 
 ### Coherence (Design)
@@ -139,30 +134,38 @@ code defect, and it clears when `sdd-archive` runs.
 | Status: `runtime status` partial; engine `status` WARN/exit 2 | Yes | |
 | Hook command `${CLAUDE_PROJECT_DIR:-$PWD}` | Yes | Corrected from the original `:-.}` after validator finding F1; POSIX guard replaces `&>/dev/null` for the new entry only. |
 | Wrapper guards `-x $ENGINE_BINARY`, exit 0 in every branch | Yes | |
-| Wrapper invocation shape | Deviated (improved) | design.md said "execs `sync-trigger`"; the review correction replaced both the exec and the later bounded `timeout` with a fully detached background launch. This strengthens R-003 (non-blocking, not merely bounded) and is proven by the 13 ms / still-alive-PID exercise. `design.md` was not updated to match. |
+| Wrapper invocation shape (design.md Wrapper row) | Yes (now current) | Remediated commit `8d65686`: design.md's Wrapper row now describes the shipped detached background launch (`setsid`, falling back to a bare `&`, `disown`, return immediately) instead of the original "execs the verb" text. No further design/code gap. |
 | Archive call site in closure-feedback step 4 | Yes | |
 
 ### TDD Compliance
 
 | Check | Result | Details |
 |---|---|---|
-| TDD Evidence reported | Partial | Cycle-evidence tables present for slices 1 and 2; slice 3 records RED-first only in prose, with no table. |
-| All tasks have tests | No | 23/24 — task 3.4's scripted check was never written. |
-| RED confirmed (tests exist) | Partial | All named test files exist and were executed, except task 3.4's check, which does not exist. |
+| TDD Evidence reported | Yes | Cycle-evidence tables present for slices 1 and 2, and for the remediation pass; slice 3's original tasks 3.1–3.5 remain prose-only (disclosed WARNING, not a gap in coverage). |
+| All tasks have tests | Yes | 24/24 — task 3.4's scripted check now exists (`case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`) and is registered in the case list. |
+| RED confirmed (tests exist) | Yes | All named test files exist and were executed, including the remediation case. |
 | GREEN confirmed (tests pass) | Yes | Every test file named in the evidence tables passes on re-execution here. |
 | Triangulation adequate | Yes | `RunChild` 9 scenarios, `Run` 5, settings 4 new + 3 extended counts, statusCore 3. |
 | Safety Net for modified files | Yes | Slices 1 and 2 record pre-edit suite-green for each modified package. |
 
-**TDD Compliance**: 4/6 checks fully passed, 2 partial.
+**TDD Compliance**: 6/6 checks passed.
+
+### Remediation Verification
+
+| Prior finding | Fix commit | Re-verified evidence |
+|---|---|---|
+| CRITICAL 1 — "Trigger lives outside the managed skill" UNTESTED, task 3.4 checked without deliverable | `e554908` | `rg case_archive_sync_trigger_call_site_is_only_in_inception_pipeline engine/shelltest/overlay_longterm_mem_test.sh` finds both the function definition (line 2130) and its registration in the case list (line 2643); `bash engine/shelltest/overlay_longterm_mem_test.sh` passes it as `ok - the archive sync-trigger call site lives only in inception-pipeline/SKILL.md, not the managed sdd-archive/SKILL.md`. |
+| WARNING 4 — design.md Wrapper row stale (described exec, not detach) | `8d65686` | `design.md`'s Wrapper row now reads "launches the verb detached in the background (`setsid`, falling back to a bare `&`) and returns immediately without waiting" — matches `bin/labdrian-overlay`'s shipped `cmd_longterm_mem` `sync-trigger` branch. |
+| tasks.md 3.2/3.4 wording drift | `8d65686` | 3.2 now reads "launches the verb detached in the background (`setsid`, falling back to a bare `&`), and returns immediately without waiting"; 3.4 now names the actual delivered case `case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`. |
 
 ### Test Layer Distribution
 
 | Layer | Tests | Files | Tools |
 |---|---|---|---|
 | Unit | 14 (synctrigger) + 11 (settings, sync-trigger-related) + 5 (cmd) + 8 (runtime) | 4 | `go test` |
-| Integration (shell) | 4 sync-trigger cases within 25 total | 1 | `bash` shelltest harness |
+| Integration (shell) | 5 sync-trigger cases within 58 total (4 wrapper cases + 1 new call-site case) | 1 | `bash` shelltest harness |
 | E2E | 0 | 0 | not installed |
-| **Total** | **~42 change-relevant** | **5** | |
+| **Total** | **~43 change-relevant** | **5** | |
 
 ### Changed File Coverage
 
@@ -170,13 +173,13 @@ Coverage analysis skipped — no coverage tool configured (`coverage_threshold: 
 
 ### Assertion Quality
 
-All assertions verify real behavior. Assertion density is healthy
-(`synctrigger_test.go` 49 assertions / 14 test funcs; `settings_test.go` 174 / 28;
-`claude_test.go` 37 / 8). No tautologies, no orphan empty-collection checks, no
-type-only assertions standing alone, and no ghost loops — the two `range` loops in
-`synctrigger_test.go` iterate static table literals that can never be empty. The single
-`t.Skip` at `synctrigger_test.go:357` is a legitimate root-permission guard for the
-unwritable-directory case, not a suppressed assertion.
+All assertions verify real behavior, including the new remediation case: it asserts a literal
+verbatim command-line match in `inception-pipeline/SKILL.md` (positive presence) and a substring
+absence check in `sdd-archive/SKILL.md` (negative presence), both against real file content, not
+mocks or trivial tautologies. Assertion density remains healthy across the change's test files
+(`synctrigger_test.go` 49 assertions / 14 test funcs; `settings_test.go` 174 / 28; `claude_test.go`
+37 / 8). No tautologies, no orphan empty-collection checks, no type-only assertions standing
+alone, and no ghost loops.
 
 **Assertion quality**: 0 CRITICAL, 0 WARNING
 
@@ -191,33 +194,17 @@ unwritable-directory case, not a suppressed assertion.
 
 ```text
 gentle-ai sdd-verify-validate --input <report> --requirements 4 --scenarios 23
-exit 0 — {"valid":true,"verdict":"fail","evidence_revision":"sha256:95529b2255…"}
+exit 0 (see command evidence below)
 ```
 
-Totals recounted from the delta specs at HEAD `76d127a`:
+Totals recounted from the delta specs at HEAD `8d65686`:
 `rg -c '^### (Requirement|REQ-[0-9]+):'` → `longterm-mem-sync-triggers/spec.md` 3,
 `runtime-lifecycle/spec.md` 1 (**4 requirements**);
 `rg -c '^#### Scenario:'` → 16 and 7 (**23 scenarios**).
 
 ### Issues Found
 
-**CRITICAL**:
-
-1. **Scenario "Trigger lives outside the managed skill" is UNTESTED, and task 3.4 is marked
-   complete without a deliverable.** `tasks.md:54` claims a RED scripted check asserting that
-   the closure-feedback command string with `|| true` appears verbatim in
-   `skills/inception-pipeline/SKILL.md`. No such check exists anywhere in the tree: commit
-   `69a5d37` added only `skills/inception-pipeline/SKILL.md` (+9) and `tasks.md`, with no test
-   file, and no Go test or shelltest case references the archive call site
-   (`rg 'sync-trigger' --glob '*_test.go' --glob '*.sh'` returns only the slice-1/2 files and
-   the wrapper shelltest). The behavior is currently correct by inspection — the line is at
-   `skills/inception-pipeline/SKILL.md:201` and is absent from `skills/sdd-archive/SKILL.md` —
-   but it is unguarded. The spec made this its own scenario precisely because
-   `sdd-archive/SKILL.md` is managed and overwritten on update: if the call site ever migrates
-   there, the archive trigger is silently lost on the next update with nothing to catch it.
-   **Fix**: add the planned scripted check (assert the verbatim `|| true` command string in
-   `skills/inception-pipeline/SKILL.md` and its absence from `skills/sdd-archive/SKILL.md`),
-   then re-verify. This also upgrades the PARTIAL scenario above.
+**CRITICAL**: None
 
 **WARNING**:
 
@@ -228,18 +215,17 @@ Totals recounted from the delta specs at HEAD `76d127a`:
    untouched by this change. This is the expected pre-archive state and self-clears when
    `sdd-archive` promotes both delta specs and moves the change folder; it is not a defect in
    this change and must not be treated as one.
-2. **Slice 3 has no TDD Cycle Evidence table.** Slices 1 and 2 each carry one; slice 3's
-   apply-progress section records the RED-first rewrite of
+2. **Slice 3's original tasks 3.1–3.5 have no TDD Cycle Evidence table.** Slices 1 and 2 each
+   carry one; slice 3's apply-progress section records the RED-first rewrite of
    `case_sync_trigger_does_not_block_on_a_wedged_engine` in prose only. The underlying work is
-   verifiable (the tightened 2 s bound and the `kill -0` liveness assertion are both present and
-   passing), but the reported evidence shape is inconsistent across slices.
+   verifiable and passing; the remediation pass (task 3.4) does carry its own evidence table.
+   The reported evidence shape remains inconsistent across slices, but this is a reporting
+   consistency issue, not a missing-test issue — unchanged from the prior verify pass and not
+   re-litigated as a blocker.
 3. **Self-reported strict-TDD ordering deviation for tasks 1.3/1.4.** `Run`'s RED test was
    written in the same edit pass as its GREEN implementation, so the RED gate was satisfied
    independently only for the `RunChild` half. Disclosed by apply; recorded here, not
    re-litigated.
-4. **`design.md` not updated after the wrapper review correction.** The design still describes
-   the wrapper as exec'ing the engine; the shipped wrapper launches it fully detached. The code
-   is the stronger of the two, but the design now under-describes the contract it guarantees.
 
 **SUGGESTION**:
 
@@ -250,10 +236,12 @@ Totals recounted from the delta specs at HEAD `76d127a`:
 
 ### Verdict
 
-FAIL
+PASS
 
-One CRITICAL: spec scenario "Trigger lives outside the managed skill" has no covering test, and
-task 3.4 is marked complete without its deliverable. All 23 scenarios are behaviorally correct
-and every executed test, vet, race, and shell suite passes; the sole blocker is the missing
-regression guard the change's own plan committed to. Add that check and re-verify to reach
-archive readiness.
+All 4 requirements / 23 scenarios are COMPLIANT with a runtime-passing covering test, including
+the previously-UNTESTED "Trigger lives outside the managed skill" scenario, now guarded by
+`case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`. `go vet`, `go test -race`
+(engine, 12/12 packages), `go test` (longterm-mem, 17/17 packages), and the full 58-case shell
+harness all pass; `shellcheck -S warning` shows only the two known pre-existing SC2064 warnings.
+The repo-wide `tools/archive-reconcile` failure remains, unchanged, the expected pre-archive
+stranded-change signal and is not a defect. Ready for `sdd-archive`.
