@@ -1078,7 +1078,9 @@ func runPropagateCore(
 	}
 
 	if !changed {
-		fmt.Fprintf(stdout, "registry: %s scope is already correct (no-op)\n", rowLabelForMsg)
+		// A correct scoped row is the steady state on every prompt; stay silent so the
+		// hook only speaks when it changed something.
+		_ = rowLabelForMsg
 		return
 	}
 
