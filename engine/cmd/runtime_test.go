@@ -350,8 +350,14 @@ func TestRunRuntimeCore_AllTargetsRunsCodexLifecycleTogether(t *testing.T) {
 		func(code int) { exitCode = code },
 	)
 
-	if exitCode != 0 {
-		t.Fatalf("runtime install --target all should succeed with all targets now real, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
+	// R4-silent-package-skip: the aggregate exemption now covers only
+	// `status` (mirroring the pre-existing Codex-partial exemption, which
+	// is also status-only), so `install --target all` must surface Pi's
+	// honest CapabilityUnsupported as a real failure rather than masking
+	// it behind an aggregate success — an install that silently skips
+	// deploying Pi must never report exit 0.
+	if exitCode != 1 {
+		t.Fatalf("runtime install --target all should fail (exit 1) while pi is unsupported, got %d\nstdout=%q\nstderr=%q", exitCode, outBuf.String(), errBuf.String())
 	}
 	if errBuf.Len() != 0 {
 		t.Fatalf("runtime install --target all should not print parse errors, got %q", errBuf.String())
@@ -438,6 +444,54 @@ func TestRunRuntimeCore_AllTargetsIncludesPiWithoutMaskingOtherFailures(t *testi
 	}
 	if !strings.Contains(outBuf.String(), "[pi] status: unsupported") {
 		t.Fatalf("runtime status --target all should still show pi's honest unsupported state, got %q", outBuf.String())
+	}
+}
+
+// TestRunRuntimeCore_AllTargetsNonStatusActionsFailWhenPiUnsupported
+// (R4-silent-package-skip): the aggregate exemption for Pi's honest
+// CapabilityUnsupported previously applied to EVERY action, so
+// `install|update|uninstall --target all` could exit 0 while Pi silently
+// went undeployed — unattended automation saw success with nothing
+// installed for Pi. The exemption is now status-only (mirroring the
+// pre-existing Codex-partial exemption, which was already status-only), so
+// every non-status action must surface Pi's incompleteness as a genuine
+// aggregate failure while still running and reporting every other target.
+func TestRunRuntimeCore_AllTargetsNonStatusActionsFailWhenPiUnsupported(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+
+	for _, action := range []string{"install", "update", "uninstall"} {
+		t.Run(action, func(t *testing.T) {
+			configRoot := t.TempDir()
+			t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+			t.Setenv("HOME", t.TempDir())
+
+			// Seed the state a prior install would have produced, so
+			// update/uninstall exercise their normal per-target path
+			// rather than failing for an unrelated reason.
+			var setupOut, setupErr bytes.Buffer
+			runRuntimeCore(
+				[]string{"install", "--target", "all", "--config-root", configRoot},
+				&setupOut, &setupErr, func(int) {},
+			)
+
+			var outBuf, errBuf bytes.Buffer
+			exitCode := -1
+			runRuntimeCore(
+				[]string{action, "--target", "all", "--config-root", configRoot},
+				&outBuf, &errBuf,
+				func(code int) { exitCode = code },
+			)
+
+			if exitCode != 1 {
+				t.Fatalf("runtime %s --target all should fail (exit 1) while pi is unsupported, got %d\nout=%q\nerr=%q", action, exitCode, outBuf.String(), errBuf.String())
+			}
+			if !strings.Contains(outBuf.String(), "[pi] "+action) {
+				t.Fatalf("runtime %s --target all should still print pi's own honest result line, got %q", action, outBuf.String())
+			}
+			if !strings.Contains(outBuf.String(), "[claude] "+action) {
+				t.Fatalf("runtime %s --target all should still run claude, not just fail on pi, got %q", action, outBuf.String())
+			}
+		})
 	}
 }
 
@@ -586,8 +640,13 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 		&installErr,
 		func(code int) { installExit = code },
 	)
-	if installExit != 0 {
-		t.Fatalf("runtime install --target all should succeed before status check, got %d\nout=%q\nerr=%q", installExit, installOut.String(), installErr.String())
+	// install --target all now fails (exit 1) because Pi's aggregate
+	// exemption is status-only (R4-silent-package-skip) — this setup step
+	// only needs claude/opencode/codex actually written to disk for the
+	// status assertions below, which install still does regardless of its
+	// own aggregate exit code.
+	if installExit != 1 {
+		t.Fatalf("runtime install --target all should fail (exit 1, pi unsupported) before status check, got %d\nout=%q\nerr=%q", installExit, installOut.String(), installErr.String())
 	}
 
 	// mergeHooks installs the anti-generic-design pair via the real

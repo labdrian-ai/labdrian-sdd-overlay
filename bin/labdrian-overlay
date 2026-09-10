@@ -1497,6 +1497,15 @@ cmd_apply() {
     shift || true
   done
 
+  # pi is a package target with no per-file deployment logic implemented
+  # yet in this slice (pi-target-plumbing, deployment lands in
+  # pi-package-build): an explicit --target pi must fail loudly rather
+  # than silently succeed at deploying nothing (R4-silent-package-skip).
+  # Mirrors cmd_longterm_mem's own explicit-pi refusal below.
+  if [[ "$target_arg" == "pi" ]]; then
+    die "apply does not support --target pi yet (package target; deployment lands in the pi-package-build slice); use claude, opencode, codex, or all"
+  fi
+
   # Refuse to run over uncommitted tracked changes: apply switches branches
   # and merges, and must never entangle a session's work in progress.
   [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
@@ -1541,12 +1550,21 @@ cmd_apply() {
   # after the loop.
   local saw_mcp_row=""
 
+  # Set when a package target (pi) rides along inside --target all and its
+  # stub is dispatched instead of a real deploy (R4-silent-package-skip):
+  # forces apply's own aggregate exit non-zero below, so unattended
+  # automation cannot read a run that silently skipped pi as a clean
+  # success. Only reachable here under "all" -- an explicit --target pi
+  # already died above, before this loop ever starts.
+  local pi_stub_included=""
+
   for t in $(resolve_targets "$target_arg"); do
     echo ""
     echo "=== Deploying to: $t ==="
 
     if ! is_copy_target "$t"; then
       package_target_stub_message "$t"
+      pi_stub_included=1
       continue
     fi
 
@@ -1670,8 +1688,10 @@ cmd_apply() {
     fi
   fi
 
-  # Deploy itself succeeded, but a failed mcp install must not exit 0.
-  [[ -n "$mcp_install_failed" ]] && return 1
+  # Deploy itself succeeded, but a failed mcp install must not exit 0
+  # (R4-silent-package-skip): neither may a run that included pi and only
+  # printed its stub, with nothing actually deployed for it.
+  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" ]] && return 1
   return 0
 }
 
@@ -2111,6 +2131,14 @@ cmd_status() {
     shift || true
   done
 
+  # pi has no per-file status logic implemented yet in this slice
+  # (pi-target-plumbing): an explicit --target pi must fail loudly rather
+  # than silently report a clean status with nothing actually checked
+  # (R4-silent-package-skip).
+  if [[ "$target_arg" == "pi" ]]; then
+    die "status does not support --target pi yet (package target; status lands in the pi-package-build slice); use claude, opencode, codex, or all"
+  fi
+
   echo "=== Branch ==="
   git rev-parse --abbrev-ref HEAD
 
@@ -2118,12 +2146,21 @@ cmd_status() {
   echo "=== Diff stat upstream..main ==="
   git diff --stat upstream..main || echo "(no diff)"
 
+  # Set when a package target (pi) rides along inside --target all and its
+  # stub is dispatched instead of a real status check
+  # (R4-silent-package-skip): forces status's own aggregate exit non-zero
+  # below, so pi's incompleteness cannot read as a clean report. Only
+  # reachable here under "all" -- an explicit --target pi already died
+  # above, before this loop ever starts.
+  local pi_stub_included=""
+
   for t in $(resolve_targets "$target_arg"); do
     echo ""
     echo "=== Status: $t ==="
 
     if ! is_copy_target "$t"; then
       package_target_stub_message "$t"
+      pi_stub_included=1
       continue
     fi
 
@@ -2174,6 +2211,12 @@ cmd_status() {
       fi
     fi
   done
+
+  # Read-only, but not exempt: a run that included pi and only printed its
+  # stub reported nothing about pi's own health, and must not exit 0 as if
+  # it had (R4-silent-package-skip).
+  [[ -n "$pi_stub_included" ]] && return 1
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -2356,6 +2399,14 @@ cmd_sync_check() {
     shift || true
   done
 
+  # pi has no per-file sync-check logic implemented yet in this slice
+  # (pi-target-plumbing): an explicit --target pi must fail loudly rather
+  # than silently report a clean sync-check with nothing actually checked
+  # (R4-silent-package-skip).
+  if [[ "$target_arg" == "pi" ]]; then
+    die "sync-check does not support --target pi yet (package target; sync-check lands in the pi-package-build slice); use claude, opencode, codex, or all"
+  fi
+
   local repo_behind_origin
   repo_behind_origin="$(compute_repo_behind_origin "$check_origin")"
 
@@ -2372,12 +2423,28 @@ cmd_sync_check() {
   release_version="$(resolve_latest_release_tag main "$check_origin")"
   [[ "$release_version" == "none" ]] && release_version="untagged"
 
+  # Set when a package target (pi) rides along inside --target all and its
+  # stub is dispatched instead of a real sync-check (R4-silent-package-
+  # skip): forces sync-check's own aggregate exit non-zero below, so pi's
+  # incompleteness cannot read as a clean, healthy report. Only reachable
+  # here under "all" -- an explicit --target pi already died above, before
+  # this loop ever starts.
+  local pi_stub_included=""
+
   for t in $(resolve_targets "$target_arg"); do
     if ! is_copy_target "$t"; then
       echo ""
       echo "=== sync-check: $t ==="
-      echo "SYNC_CHECK:$t: partial -- package target, handled by slice 2 (pi-package-build)"
+      # R2-sync-check-success-without-check: "partial" without a
+      # VERDICT/SYNC_CHECK line a health check can key off read as "this
+      # ran and found nothing wrong". "unsupported" plus an explicit
+      # VERDICT line below make pi's incompleteness detectable the same
+      # way every other target's VERDICT line is.
+      echo "SYNC_CHECK:$t: unsupported -- package target, handled by slice 2 (pi-package-build)"
       package_target_stub_message "$t"
+      echo ""
+      echo "VERDICT:$t:UNSUPPORTED"
+      pi_stub_included=1
       continue
     fi
 
@@ -2511,6 +2578,12 @@ cmd_sync_check() {
       echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
   done
+
+  # A run that included pi and only printed its stub reported nothing
+  # about pi's own health, and must not exit 0 as if it had
+  # (R4-silent-package-skip).
+  [[ -n "$pi_stub_included" ]] && return 1
+  return 0
 }
 
 # ---------------------------------------------------------------------------

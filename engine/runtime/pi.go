@@ -26,7 +26,23 @@ func (a PiAdapter) Update() LifecycleResult    { return a.stub(ActionUpdate) }
 func (a PiAdapter) Rollback() LifecycleResult  { return a.stub(ActionRollback) }
 func (a PiAdapter) Uninstall() LifecycleResult { return a.stub(ActionUninstall) }
 
+// stub reports an honest CapabilityUnsupported for the given action, with a
+// message naming the SLICE THAT ACTUALLY OWNS IT (R2-misleading-stub-
+// schedule) — a single shared "handled by pi-package-build" message for
+// every action was wrong for Uninstall/Rollback: there is no lifecycle
+// (undo/removal) logic to schedule into pi-package-build, that is
+// pi-lifecycle's job. Apply/Install/Status/SyncCheck/Update are all package
+// DELIVERY concerns (build, deploy, drift-check, refresh) and do land in
+// pi-package-build.
 func (a PiAdapter) stub(action Action) LifecycleResult {
-	return NewLifecycleResult(a.target, action, CapabilityUnsupported,
-		"pi package delivery (pipkg build/install) is not implemented yet; scheduled for the pi-package-build PR slice", nil)
+	return NewLifecycleResult(a.target, action, CapabilityUnsupported, a.stubMessage(action), nil)
+}
+
+func (a PiAdapter) stubMessage(action Action) string {
+	switch action {
+	case ActionUninstall, ActionRollback:
+		return "pi lifecycle (uninstall/rollback) is not implemented yet; scheduled for the pi-lifecycle PR slice"
+	default:
+		return "pi package delivery (pipkg build/install) is not implemented yet; scheduled for the pi-package-build PR slice"
+	}
 }

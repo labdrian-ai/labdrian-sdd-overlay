@@ -314,14 +314,24 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		fmt.Fprintln(stdout, result.String())
 		// Pi is a package target with no lifecycle logic implemented yet in
 		// this slice (pi-target-plumbing): its adapter honestly reports
-		// CapabilityUnsupported for every action. An aggregate --target all
+		// CapabilityUnsupported for every action. A `status --target all`
 		// run must not mask a real claude/opencode/codex failure behind
 		// that, nor treat Pi's own known incompleteness as one — this
-		// mirrors the pre-existing Codex partial exemption below and is
-		// removed once pi-lifecycle (slice 5) gives Pi a real status. An
-		// explicit `--target pi` (allTargets == false) still fails/reports
-		// honestly; only aggregation exempts it.
-		piUnsupportedInAggregate := allTargets && current == runtimepkg.TargetPi
+		// mirrors the pre-existing Codex partial exemption immediately
+		// below (also status-only) and is removed once pi-lifecycle
+		// (slice 5) gives Pi a real status.
+		//
+		// R4-silent-package-skip: this exemption is STATUS-ONLY. It used
+		// to also cover install/update/uninstall, so `runtime install
+		// --target all` exited 0 while Pi was silently never deployed —
+		// unattended automation saw a clean install with nothing done for
+		// Pi. status is a read-only report and reporting Pi's own known
+		// incompleteness there is not itself a failure; an action that
+		// actually changes state must not claim success while skipping a
+		// target it was asked to act on. An explicit `--target pi`
+		// (allTargets == false) always fails/reports honestly regardless
+		// of action; only status aggregation exempts it.
+		piStatusUnsupportedInAggregate := allTargets && action == "status" && current == runtimepkg.TargetPi
 		actionFailed := false
 		switch action {
 		case "status":
@@ -329,7 +339,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 			case result.Status == runtimepkg.CapabilityRestartRequired:
 				actionFailed = true
 			case result.Status == runtimepkg.CapabilityUnsupported:
-				actionFailed = !piUnsupportedInAggregate
+				actionFailed = !piStatusUnsupportedInAggregate
 			case result.Status == runtimepkg.CapabilityPartial && !(allTargets && current == runtimepkg.TargetCodex):
 				actionFailed = true
 			}
@@ -338,7 +348,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 			case runtimepkg.CapabilityPartial:
 				actionFailed = true
 			case runtimepkg.CapabilityUnsupported:
-				actionFailed = !piUnsupportedInAggregate
+				actionFailed = true
 			}
 		}
 		if actionFailed {

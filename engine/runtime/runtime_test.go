@@ -207,6 +207,41 @@ func TestExpandTarget_Pi(t *testing.T) {
 	}
 }
 
+// TestPiAdapter_StubMessageNamesTheOwningSlice (R2-misleading-stub-schedule):
+// a single shared stub message claiming every action is "handled by
+// pi-package-build" is wrong for Uninstall/Rollback — package delivery
+// (build/install/apply/status/sync-check/update) lands in pi-package-build,
+// but there is no lifecycle logic to undo anything until pi-lifecycle. Each
+// action's message must name the slice that will actually implement it.
+func TestPiAdapter_StubMessageNamesTheOwningSlice(t *testing.T) {
+	adapter := engineRuntime.NewPiAdapter()
+
+	packageBuildActions := []engineRuntime.LifecycleResult{
+		adapter.Apply(), adapter.Install(), adapter.Status(),
+		adapter.SyncCheck(), adapter.Update(),
+	}
+	for _, result := range packageBuildActions {
+		if !strings.Contains(result.Message, "pi-package-build") {
+			t.Fatalf("PiAdapter %s: message should name pi-package-build, got %q", result.Action, result.Message)
+		}
+		if strings.Contains(result.Message, "pi-lifecycle") {
+			t.Fatalf("PiAdapter %s: message should not claim pi-lifecycle, got %q", result.Action, result.Message)
+		}
+	}
+
+	lifecycleActions := []engineRuntime.LifecycleResult{
+		adapter.Uninstall(), adapter.Rollback(),
+	}
+	for _, result := range lifecycleActions {
+		if !strings.Contains(result.Message, "pi-lifecycle") {
+			t.Fatalf("PiAdapter %s: message should name pi-lifecycle, got %q", result.Action, result.Message)
+		}
+		if strings.Contains(result.Message, "pi-package-build") {
+			t.Fatalf("PiAdapter %s: message should not claim pi-package-build, got %q", result.Action, result.Message)
+		}
+	}
+}
+
 func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 	expanded := engineRuntime.ExpandTarget(engineRuntime.TargetAll)
 	wantTargets := []engineRuntime.Target{engineRuntime.TargetClaude, engineRuntime.TargetOpenCode, engineRuntime.TargetCodex, engineRuntime.TargetPi}

@@ -860,6 +860,35 @@ func runOverlay(t *testing.T, overlayPath string, env []string, args ...string) 
 	return string(out), err
 }
 
+// runApplyAllTolerantOfPi runs `apply --target all` and tolerates ONLY the
+// now-intentional non-zero exit caused by pi's own known incompleteness
+// (R4-silent-package-skip, pi-target-plumbing): apply's aggregate exit
+// reflects pi honestly (never deployed, exit 1) so unattended automation
+// cannot read a run that silently skipped pi as a clean success. These
+// fixtures exercise the claude/opencode/codex deploy loop under
+// --target all, not pi's own status, so a pi-only failure must not fail
+// them -- but any OTHER failure still must.
+func runApplyAllTolerantOfPi(t *testing.T, overlay string, env []string) string {
+	t.Helper()
+	out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
+	if err != nil && !strings.Contains(out, "pi: package target, handled by slice 2") {
+		t.Fatalf("apply --target all failed for a reason other than pi's known incompleteness: %v\noutput:\n%s", err, out)
+	}
+	return out
+}
+
+// runStatusAllTolerantOfPi is runApplyAllTolerantOfPi's sibling for `status
+// --target all`, which now fails the same way for the same reason
+// (R4-silent-package-skip).
+func runStatusAllTolerantOfPi(t *testing.T, overlay string, env []string) string {
+	t.Helper()
+	out, err := runOverlay(t, overlay, env, "status", "--target", "all")
+	if err != nil && !strings.Contains(out, "pi: package target, handled by slice 2") {
+		t.Fatalf("status --target all failed for a reason other than pi's known incompleteness: %v\noutput:\n%s", err, out)
+	}
+	return out
+}
+
 // TestApply_AgentsLandInNativeAgentDirs asserts that after overlay apply:
 // - agents/GADU.md lands at $HOME/.claude/agents/GADU.md (not .claude/skills)
 // - opencode/agents/GADU.md lands at $HOME/.config/opencode/agents/GADU.md
@@ -874,10 +903,7 @@ func TestApply_AgentsLandInNativeAgentDirs(t *testing.T) {
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home)
 
-	out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
-	if err != nil {
-		t.Fatalf("overlay apply: %v\noutput:\n%s", err, out)
-	}
+	out := runApplyAllTolerantOfPi(t, overlay, env)
 
 	agentDest := filepath.Join(home, ".claude", "agents", "GADU.md")
 	if _, err := os.Stat(agentDest); err != nil {
@@ -923,14 +949,9 @@ func TestStatus_ReportsAgentFile(t *testing.T) {
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
-		t.Fatalf("overlay apply: %v", err)
-	}
+	runApplyAllTolerantOfPi(t, overlay, env)
 
-	out, err := runOverlay(t, overlay, env, "status", "--target", "all")
-	if err != nil {
-		t.Fatalf("overlay status: %v\noutput:\n%s", err, out)
-	}
+	out := runStatusAllTolerantOfPi(t, overlay, env)
 
 	// GADU row must NOT be reported under a skills path
 	if strings.Contains(out, ".claude/skills/GADU.md") ||
@@ -963,9 +984,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 	_, env := setupSandboxOverlay(t, home)
 
 	// Deploy first
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
-		t.Fatalf("overlay apply: %v", err)
-	}
+	runApplyAllTolerantOfPi(t, overlay, env)
 
 	// Deployed agent row must report IN_SYNC — pins L511 fix
 	outSync, err := runOverlay(t, overlay, env, "sync-check", "--target", "claude")
@@ -993,9 +1012,7 @@ func TestSyncCheck_DetectsMissingAgentFile(t *testing.T) {
 
 	// Restoration half (AC-5): reapply must restore the missing agent file, and
 	// sync-check must report IN_SYNC again afterward.
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
-		t.Fatalf("overlay apply (reapply after removal): %v", err)
-	}
+	runApplyAllTolerantOfPi(t, overlay, env)
 
 	agentDest := filepath.Join(home, ".claude", "agents", "GADU.md")
 	if _, err := os.Stat(agentDest); err != nil {
@@ -1025,9 +1042,7 @@ func TestUnrelatedSkillUnchanged(t *testing.T) {
 	home := t.TempDir()
 	overlayDir, env := setupSandboxOverlay(t, home)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
-		t.Fatalf("overlay apply: %v", err)
-	}
+	runApplyAllTolerantOfPi(t, overlay, env)
 
 	srcContent, err := os.ReadFile(filepath.Join(overlayDir, "skills", "test-skill", "SKILL.md"))
 	if err != nil {
@@ -1060,9 +1075,7 @@ func TestEntryContractBundlePropagatesAndReportsIntegrityDrift(t *testing.T) {
 	home := t.TempDir()
 	overlayDir, env := setupSandboxOverlay(t, home)
 
-	if out, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
-		t.Fatalf("overlay apply: %v\noutput:\n%s", err, out)
-	}
+	runApplyAllTolerantOfPi(t, overlay, env)
 
 	assets := []string{
 		"inception-pipeline/SKILL.md",
@@ -1838,10 +1851,7 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 	}, goToolchainEnv(t)...)
 
 	overlay := overlayScript(t)
-	out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
-	if err != nil {
-		t.Fatalf("apply failed: %v\noutput:\n%s", err, out)
-	}
+	out := runApplyAllTolerantOfPi(t, overlay, env)
 
 	binPath := filepath.Join(stateDir, "bin", "longterm-mem")
 	if _, statErr := os.Stat(binPath); statErr != nil {
@@ -1877,10 +1887,7 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 		runGit(overlayDir, "commit", "-m", "upstream: drop the mcp row")
 		runGit(overlayDir, "checkout", "main")
 
-		out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
-		if err != nil {
-			t.Fatalf("apply failed: %v\noutput:\n%s", err, out)
-		}
+		out := runApplyAllTolerantOfPi(t, overlay, env)
 		if n := strings.Count(out, "running install once"); n != 0 {
 			t.Fatalf("the install hook fired %d time(s) for a manifest with no mcp row\noutput:\n%s", n, out)
 		}
