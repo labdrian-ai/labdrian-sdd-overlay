@@ -1,0 +1,163 @@
+{
+  "contract_version": "2.1.0",
+  "change_name": "pi-runtime-target",
+  "project": "labdrian-sdd-overlay",
+  "tier": 2,
+  "interaction_mode": "auto",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/pi-runtime-target/entry",
+      "openspec_path": "openspec/changes/pi-runtime-target/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/labdrian-sdd-overlay/requirements/pi-runtime-target"
+    },
+    "manifest": {
+      "context": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/context"
+      },
+      "mission": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/mission"
+      },
+      "rules": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/rules"
+      }
+    },
+    "architecture": {
+      "topic_key": "project/labdrian-sdd-overlay/architect/final"
+    },
+    "roadmap": {
+      "topic_key": "project/labdrian-sdd-overlay/roadmap"
+    },
+    "estimate": {
+      "topic_key": "sdd/pi-runtime-target/estimate"
+    },
+    "sdd_init": {
+      "topic_key": "sdd-init/labdrian-sdd-overlay"
+    },
+    "pipeline_state": {
+      "topic_key": "sdd/pi-runtime-target/pipeline-state"
+    },
+    "delivery": {
+      "topic_key": "delivery/pi-runtime-target"
+    }
+  },
+  "estimate": {
+    "planned_range_hours": {
+      "low": 4.5,
+      "high": 11.5
+    },
+    "complexity": "high",
+    "confidence": "low",
+    "human_review_included": true,
+    "expected_checkpoints": 14
+  },
+  "requested_pr_strategy": "auto",
+  "delivery_strategy": "auto-chain",
+  "chaining_required": true,
+  "chain_strategy": "stacked-to-main",
+  "review_budget": {
+    "max_changed_lines_per_slice": 400,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": {
+      "state": "not-needed"
+    }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "cd engine && go test ./runtime/... ./cmd/... ./shelltest/...",
+        "cd longterm-mem && go test ./internal/register/... ./cmd/..."
+      ],
+      "broad": [
+        "cd engine && go vet ./... && go test ./...",
+        "cd longterm-mem && go vet ./... && go test ./...",
+        "shellcheck -S warning bin/labdrian-overlay"
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "pi-target-plumbing",
+      "title": "Pi as a runtime target: Target enum, adapter skeleton with honest status, bin target validation and dispatch of the non-copy target across apply/status/sync-check, non-regression",
+      "requirements": [
+        "R-001",
+        "R-008"
+      ],
+      "dependencies": [],
+      "estimated_changed_lines": {
+        "low": 250,
+        "high": 400
+      }
+    },
+    {
+      "order": 2,
+      "id": "pi-package-build",
+      "title": "engine/pipkg builds the labdrian-pi package (skills by registry target, agents, package.json) with drift check and symlink/stale-file safety; apply and sync-check wiring",
+      "requirements": [
+        "R-002",
+        "R-003",
+        "R-010"
+      ],
+      "dependencies": [
+        "pi-target-plumbing"
+      ],
+      "estimated_changed_lines": {
+        "low": 250,
+        "high": 400
+      }
+    },
+    {
+      "order": 3,
+      "id": "pi-contract-gate",
+      "title": "before_agent_start extension injecting contract path lines into sdd-tasks/sdd-apply from frontmatter, contained to the package root, composed with gentle-pi; --no-extensions disclosure",
+      "requirements": [
+        "R-004",
+        "R-007"
+      ],
+      "dependencies": [
+        "pi-package-build"
+      ],
+      "estimated_changed_lines": {
+        "low": 220,
+        "high": 400
+      }
+    },
+    {
+      "order": 4,
+      "id": "pi-longterm-mem-mcp",
+      "title": "Package mcp.json declared via pi.mcp; longterm-mem register --target pi with existing single-level writer; --target all probe semantics",
+      "requirements": [
+        "R-005"
+      ],
+      "dependencies": [
+        "pi-package-build"
+      ],
+      "estimated_changed_lines": {
+        "low": 120,
+        "high": 300
+      }
+    },
+    {
+      "order": 5,
+      "id": "pi-lifecycle",
+      "title": "Honest partial status across package, extension and MCP; pi remove based uninstall; runtime-lifecycle spec and README",
+      "requirements": [
+        "R-006",
+        "R-009"
+      ],
+      "dependencies": [
+        "pi-contract-gate",
+        "pi-longterm-mem-mcp"
+      ],
+      "estimated_changed_lines": {
+        "low": 120,
+        "high": 300
+      }
+    }
+  ],
+  "expected_native_next_recommendation": "propose"
+}
