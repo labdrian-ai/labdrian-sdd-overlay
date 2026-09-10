@@ -2120,6 +2120,41 @@ case_longterm_mem_unknown_subcommand_still_dies() {
   pass "an unknown longterm-mem subcommand still dies; sync-trigger did not widen the whitelist"
 }
 
+# case_archive_sync_trigger_call_site_is_only_in_inception_pipeline guards
+# the "Trigger lives outside the managed skill" scenario: sdd-archive's
+# SKILL.md is managed and gets overwritten on every sync, so the
+# closure-feedback call to sync-trigger must live in inception-pipeline's
+# SKILL.md instead. If the call site ever migrated into the managed skill,
+# the next sync would silently drop it with nothing to catch it — this case
+# is that catch.
+case_archive_sync_trigger_call_site_is_only_in_inception_pipeline() {
+  local inception_skill sdd_archive_skill call_line
+  inception_skill="$REPO_ROOT/skills/inception-pipeline/SKILL.md"
+  sdd_archive_skill="$REPO_ROOT/skills/sdd-archive/SKILL.md"
+  call_line='labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true'
+
+  if [[ ! -f "$inception_skill" ]]; then
+    fail "inception-pipeline SKILL.md not found at $inception_skill"
+    return
+  fi
+  if [[ ! -f "$sdd_archive_skill" ]]; then
+    fail "sdd-archive SKILL.md not found at $sdd_archive_skill"
+    return
+  fi
+
+  if ! grep -q -F -e "$call_line" "$inception_skill"; then
+    fail "the archive sync-trigger call site is missing from inception-pipeline/SKILL.md" \
+      "expected literal line: $call_line"
+    return
+  fi
+  if grep -q -F -e "sync-trigger" "$sdd_archive_skill"; then
+    fail "the archive sync-trigger call site leaked into the managed sdd-archive/SKILL.md" \
+      "sdd-archive/SKILL.md is overwritten on sync, so any call site there is silently lost"
+    return
+  fi
+  pass "the archive sync-trigger call site lives only in inception-pipeline/SKILL.md, not the managed sdd-archive/SKILL.md"
+}
+
 # ---------------------------------------------------------------------------
 # hazard (f): messages must name a command that exists
 # ---------------------------------------------------------------------------
@@ -2605,6 +2640,7 @@ case_sync_trigger_absent_engine_returns_zero
 case_sync_trigger_does_not_block_on_a_wedged_engine
 case_sync_trigger_forwards_event_and_cwd
 case_longterm_mem_unknown_subcommand_still_dies
+case_archive_sync_trigger_call_site_is_only_in_inception_pipeline
 case_no_message_names_a_command_called_overlay
 case_self_update_from_a_side_branch_legacy
 case_self_update_from_a_side_branch_tag
