@@ -35,11 +35,11 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: pi-package-build (R-002, R-003, R-010)
 
-- [ ] 2.1 RED (threat: path/symlink): `TestPipkgBuild_RejectsSymlinks`, `TestPipkgBuild_AtomicSwap` in `engine/pipkg/pipkg_test.go`
-- [ ] 2.2 RED: `TestPipkgBuild_SelectsPiTargetedSkills`, `TestPipkgCheck_DetectsDrift`
-- [ ] 2.3 GREEN: `engine/pipkg/pipkg.go` `Build`/`Check` — temp-dir build, atomic swap, 0644/0755 modes
-- [ ] 2.4 Add `pi` as valid `install.targets` value in `skills.registry.yaml`; wire `Install`/`Apply`/`SyncCheck` in `engine/runtime/pi.go`
-- [ ] 2.5 Wire `apply`/`sync-check` dispatch to pipkg in `bin/labdrian-overlay`
+- [x] 2.1 RED (threat: path/symlink): `TestPipkgBuild_RejectsSymlinks`, `TestPipkgBuild_AtomicSwap` in `engine/pipkg/pipkg_test.go`
+- [x] 2.2 RED: `TestPipkgBuild_SelectsPiTargetedSkills`, `TestPipkgCheck_DetectsDrift`
+- [x] 2.3 GREEN: `engine/pipkg/pipkg.go` `Build`/`Check` — temp-dir build, atomic swap, 0644/0755 modes
+- [x] 2.4 Add `pi` as valid `install.targets` value in `skills.registry.yaml`; wire `Install`/`Apply`/`SyncCheck` in `engine/runtime/pi.go`
+- [x] 2.5 Wire `apply`/`sync-check` dispatch to pipkg in `bin/labdrian-overlay`
 
 ## Phase 3: pi-contract-gate (R-004, R-007)
 
