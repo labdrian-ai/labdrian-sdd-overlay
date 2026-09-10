@@ -291,6 +291,67 @@ func TestRun_BadEvent_ErrorUsage(t *testing.T) {
 	}
 }
 
+// TestRun_RelativeCwd_ResolvesToAbsoluteBeforeValidation covers F1: a
+// relative --cwd (as produced by the "${CLAUDE_PROJECT_DIR:-$PWD}" hook
+// fallback if $PWD itself were ever relative, or by any other caller that
+// passes a relative path) must not be rejected as error:usage. Run must
+// resolve it to an absolute path via filepath.Abs before the
+// filepath.IsAbs validation, and the spawned child must receive that
+// absolute path.
+func TestRun_RelativeCwd_ResolvesToAbsoluteBeforeValidation(t *testing.T) {
+	stateDir := t.TempDir()
+	projectDir := t.TempDir()
+
+	oldWd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(projectDir); err != nil {
+		t.Fatalf("Chdir: %v", err)
+	}
+	t.Cleanup(func() { os.Chdir(oldWd) })
+
+	self := filepath.Join(t.TempDir(), "fake-self")
+	// Same argv layout as TestRun_HappyPath_DetachesAndLogsWithin2s:
+	// $3=event, $5=cwd. Writes the received cwd verbatim so the test can
+	// assert it is absolute.
+	script := "#!/bin/sh\necho \"$(date -u +%Y-%m-%dT%H:%M:%SZ) event=$3 cwd=$5 outcome=ok exit=0 duration=1ms\" >> \"" + stateDir + "/logs/sync-trigger.log\"\n"
+	if err := os.WriteFile(self, []byte(script), 0o755); err != nil {
+		t.Fatalf("write self: %v", err)
+	}
+
+	var stderr strings.Builder
+	o := Options{Event: "session-end", Cwd: ".", StateDir: stateDir, Self: self, Stderr: &stderr}
+
+	got := Run(o)
+
+	if got != 0 {
+		t.Fatalf("Run() = %d, want 0", got)
+	}
+	if strings.Contains(stderr.String(), "error:usage") {
+		t.Fatalf("stderr = %q, want relative cwd \".\" to be resolved, not rejected as error:usage", stderr.String())
+	}
+
+	deadline := time.Now().Add(2 * time.Second)
+	var line string
+	for time.Now().Before(deadline) {
+		line = lastLogLine(t, stateDir)
+		if strings.Contains(line, "outcome=ok") {
+			break
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	if !strings.Contains(line, "outcome=ok") {
+		t.Fatalf("log line after 2s = %q, want it to contain outcome=ok", line)
+	}
+	if !strings.Contains(line, "cwd="+projectDir) {
+		t.Fatalf("log line = %q, want the child to receive the absolute cwd %q", line, projectDir)
+	}
+	if strings.Contains(line, "cwd=.") {
+		t.Fatalf("log line = %q, child received the unresolved relative cwd", line)
+	}
+}
+
 func TestRun_UnwritableLogDir_ErrorLog(t *testing.T) {
 	if os.Getuid() == 0 {
 		t.Skip("root ignores directory permissions")

@@ -35,16 +35,16 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: session-end-hook (PR 2, R-002, R-003)
 
-- [ ] 2.1 RED `engine/settings/settings_test.go`: `TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign`, `TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign`
-- [ ] 2.2 GREEN `engine/settings/settings.go`: `LabdrianSyncTriggerIdentity`, `buildSyncTriggerSessionEndEntry`, `isSyncTriggerEntry`; wire into `mergeHooks`/`removeHooks`
-- [ ] 2.3 Extend counts for `SessionEnd`: `TestUninstall_CountIsZeroAfterInstall`, `TestMerge_Idempotent`, `TestSchema_InstallTwice_Idempotent`; leave `legacyIdentities`/`TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries` unchanged
-- [ ] 2.4 RED `TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily` (via `withSyncTriggerFamily`), `TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting`
-- [ ] 2.5 GREEN `HasSupportedClaudeLifecycleState` requires `HasLabdrianSyncTriggerHook(root,"SessionEnd")`
-- [ ] 2.6 RED `engine/cmd/main_test.go`: update `buildSettingsWithHooks` (line 929) to add a `SessionEnd` sync-trigger entry, flipping `TestStatusCore_AllOK` (line 985) to the fully-installed case; add `TestStatusCore_SessionEndMissing_Degraded` (WARN, exit tier 2, note names both remediation commands) and `TestStatusCore_SessionEndPresent_OK` — 3 `TestStatusCore_*` fixtures affected (`rg 'func TestStatusCore_'` → 14 total in file)
-- [ ] 2.7 GREEN `engine/cmd/main.go`: `checkSessionEndHook` in `statusCore`, after `checkPreToolUseHook`, WARN/degraded not FAIL
-- [ ] 2.8 RED `engine/runtime/claude_test.go`: partial-message test names the upgrade step
-- [ ] 2.9 GREEN `engine/runtime/claude.go`: partial message text
-- [ ] 2.10 Docs `bin/labdrian-overlay` (2620-2621, 2703), `README.md` (115, 323): "three hook families (two pairs + SessionEnd sync-trigger), five entries"
+- [x] 2.1 RED `engine/settings/settings_test.go`: `TestMerge_AddsSessionEndSyncTrigger_CoexistsWithForeign`, `TestUninstall_RemovesSessionEndSyncTrigger_LeavesForeign`
+- [x] 2.2 GREEN `engine/settings/settings.go`: `LabdrianSyncTriggerIdentity`, `buildSyncTriggerSessionEndEntry`, `isSyncTriggerEntry`; wire into `mergeHooks`/`removeHooks`
+- [x] 2.3 Extend counts for `SessionEnd`: `TestUninstall_CountIsZeroAfterInstall`, `TestMerge_Idempotent`, `TestSchema_InstallTwice_Idempotent`; leave `legacyIdentities`/`TestRemoveHooksCleansUpLegacySafetyAndProjectionEntries` unchanged
+- [x] 2.4 RED `TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily` (via `withSyncTriggerFamily`), `TestInstall_UpgradesTwoFamiliesToThree_PreservesExisting`
+- [x] 2.5 GREEN `HasSupportedClaudeLifecycleState` requires `HasLabdrianSyncTriggerHook(root,"SessionEnd")`
+- [x] 2.6 RED `engine/cmd/main_test.go`: update `buildSettingsWithHooks` (line 929) to add a `SessionEnd` sync-trigger entry, flipping `TestStatusCore_AllOK` (line 985) to the fully-installed case; add `TestStatusCore_SessionEndMissing_Degraded` (WARN, exit tier 2, note names both remediation commands) and `TestStatusCore_SessionEndPresent_OK` — 3 `TestStatusCore_*` fixtures affected (`rg 'func TestStatusCore_'` → 14 total in file)
+- [x] 2.7 GREEN `engine/cmd/main.go`: `checkSessionEndHook` in `statusCore`, after `checkPreToolUseHook`, WARN/degraded not FAIL
+- [x] 2.8 RED `engine/runtime/claude_test.go`: partial-message test names the upgrade step
+- [x] 2.9 GREEN `engine/runtime/claude.go`: partial message text
+- [x] 2.10 Docs `bin/labdrian-overlay` (2620-2621, 2703), `README.md` (115, 323): "three hook families (two pairs + SessionEnd sync-trigger), five entries"
 
 ## Phase 3: archive-trigger (PR 3, R-001, R-003)
 

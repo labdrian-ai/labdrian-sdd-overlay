@@ -924,8 +924,9 @@ func TestRunPropagateCore_RegistryUnreadable_ExitOne(t *testing.T) {
 // Task 1: statusCore tests
 // ---------------------------------------------------------------------------
 
-// buildSettingsWithHooks builds a minimal settings.json map with both our
-// hook entries present (using the given hookCommand substring).
+// buildSettingsWithHooks builds a minimal settings.json map with all three
+// owned hook families present (using the given hookCommand substring):
+// UserPromptSubmit, PreToolUse/Agent, and the SessionEnd sync-trigger entry.
 func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
 	makeEntry := func(extraKey, extraVal string) map[string]interface{} {
 		entry := map[string]interface{}{
@@ -942,11 +943,18 @@ func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
 
 	preToolUse := makeEntry("matcher", "Agent")
 	userPromptSubmit := makeEntry("", "")
+	sessionEnd := map[string]interface{}{
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": "command -v " + hookCmd + " && " + hookCmd + " sync-trigger --event session-end --cwd \"${CLAUDE_PROJECT_DIR:-.}\" || true",
+		}},
+	}
 
 	return map[string]interface{}{
 		"hooks": map[string]interface{}{
 			"PreToolUse":       []interface{}{preToolUse},
 			"UserPromptSubmit": []interface{}{userPromptSubmit},
+			"SessionEnd":       []interface{}{sessionEnd},
 		},
 	}
 }
@@ -999,17 +1007,96 @@ func TestStatusCore_AllOK(t *testing.T) {
 	}
 
 	var outBuf bytes.Buffer
-	result, _ := statusCore(&outBuf, deps)
+	result, degraded := statusCore(&outBuf, deps)
 	out := outBuf.String()
 
 	if !result {
 		t.Errorf("statusCore: expected true (all OK); output:\n%s", out)
 	}
+	if degraded {
+		t.Errorf("statusCore: expected not degraded when all three hook families are installed; output:\n%s", out)
+	}
 	if strings.Contains(out, "[FAIL]") {
 		t.Errorf("statusCore: no [FAIL] expected when all OK; output:\n%s", out)
 	}
+	if strings.Contains(out, "[WARN]") {
+		t.Errorf("statusCore: no [WARN] expected when all three hook families are installed; output:\n%s", out)
+	}
 	if !strings.Contains(out, "[OK  ]") {
 		t.Errorf("statusCore: output must contain [OK  ] lines; output:\n%s", out)
+	}
+}
+
+// TestStatusCore_SessionEndMissing_Degraded asserts a missing SessionEnd
+// sync-trigger entry is reported as WARN/degraded (exit tier 2), not a hard
+// FAIL, and that its note names both remediation commands.
+func TestStatusCore_SessionEndMissing_Degraded(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+	// Strip the SessionEnd family only.
+	hooks := settingsData["hooks"].(map[string]interface{})
+	delete(hooks, "SessionEnd")
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, degraded := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !allOK {
+		t.Errorf("statusCore: SessionEnd missing must not be a hard FAIL; output:\n%s", out)
+	}
+	if !degraded {
+		t.Errorf("statusCore: SessionEnd missing must be degraded (WARN); output:\n%s", out)
+	}
+	if strings.Contains(out, "[FAIL]") {
+		t.Errorf("statusCore: SessionEnd missing must never emit [FAIL]; output:\n%s", out)
+	}
+	if !strings.Contains(out, "[WARN]") {
+		t.Errorf("statusCore: expected [WARN] for missing SessionEnd hook; output:\n%s", out)
+	}
+	if !strings.Contains(out, "labdrian uninstall-hooks") || !strings.Contains(out, "labdrian install-hooks") {
+		t.Errorf("statusCore: WARN note must name both remediation commands; output:\n%s", out)
+	}
+}
+
+// TestStatusCore_SessionEndPresent_OK asserts the SessionEnd check reports OK
+// when the sync-trigger entry references our binary.
+func TestStatusCore_SessionEndPresent_OK(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	_, _ = statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !strings.Contains(out, "SessionEnd") {
+		t.Errorf("statusCore: expected a SessionEnd hook check line; output:\n%s", out)
+	}
+	if strings.Contains(out, "[WARN] hook: SessionEnd") || strings.Contains(out, "[FAIL] hook: SessionEnd") {
+		t.Errorf("statusCore: SessionEnd hook check should be OK when present; output:\n%s", out)
 	}
 }
 

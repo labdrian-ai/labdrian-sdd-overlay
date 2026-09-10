@@ -1396,6 +1396,11 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	checks = append(checks, checkUserPromptSubmitHook(settingsRoot, settingsErr, settingsPath))
 	checks = append(checks, checkPreToolUseHook(settingsRoot, settingsErr, settingsPath))
 
+	// Check 3b: SessionEnd sync-trigger hook wired. A missing family is
+	// WARN/degraded, not FAIL — it means a pre-#291 two-family install that
+	// hasn't run the upgrade path yet, not a broken installation.
+	checks = append(checks, checkSessionEndHook(settingsRoot, settingsErr, settingsPath))
+
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))
 
@@ -1493,6 +1498,37 @@ func checkPreToolUseHook(root map[string]interface{}, settingsErr error, setting
 		}
 	}
 	return checkResult{label: label, ok: false, note: `no PreToolUse entry with matcher="Agent" referencing ` + binaryIdentity}
+}
+
+// remediationNote is the shared WARN note text pointing at the upgrade path
+// for any check that goes from a two-family install to the three-family
+// state (post-#291): re-run uninstall then install to pick up new entries.
+const remediationNote = "run 'labdrian uninstall-hooks' then 'labdrian install-hooks'"
+
+// checkSessionEndHook verifies the SessionEnd sync-trigger entry references
+// our binary and the sync-trigger identity token. Unreadable settings is a
+// hard FAIL like the other hook checks; a missing entry is WARN/degraded,
+// not FAIL — it names the same two remediation commands as the runtime
+// status partial message so a pre-upgrade machine (two families, no
+// SessionEnd) is actionable rather than treated as a broken install.
+func checkSessionEndHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
+	label := "hook: SessionEnd (sync-trigger)"
+	if settingsErr != nil {
+		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
+	}
+	if root == nil {
+		return checkResult{label: label, ok: true, degraded: true, note: settingsPath + " absent or empty; " + remediationNote}
+	}
+	hooks, _ := root["hooks"].(map[string]interface{})
+	if hooks != nil {
+		entries, _ := hooks["SessionEnd"].([]interface{})
+		for _, e := range entries {
+			if innerHookContainsBinary(e, binaryIdentity) && innerHookContainsBinary(e, settings.LabdrianSyncTriggerIdentity) {
+				return checkResult{label: label, ok: true}
+			}
+		}
+	}
+	return checkResult{label: label, ok: true, degraded: true, note: "no SessionEnd entry referencing " + binaryIdentity + "; " + remediationNote}
 }
 
 // innerHookContainsBinary returns true if the hook entry (outer object) contains

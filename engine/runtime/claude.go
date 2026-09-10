@@ -96,7 +96,9 @@ func (a ClaudeAdapter) status() LifecycleResult {
 
 	hookPath := settingsPath
 	if !settings.HasSupportedClaudeLifecycleState(root, hookCommand) {
-		return a.result(ActionStatus, CapabilityPartial, "Claude lifecycle hooks are not fully owned/installed in "+hookPath)
+		return a.result(ActionStatus, CapabilityPartial,
+			"Claude lifecycle hooks are not fully owned/installed in "+hookPath+
+				"; run 'labdrian uninstall-hooks' then 'labdrian install-hooks'")
 	}
 
 	return a.result(ActionStatus, CapabilitySupported, "Claude lifecycle hooks are installed and owned")

@@ -112,7 +112,7 @@ same confirm→run→result pattern as apply/self-update.
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (two pairs, four entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (three hook families — two pairs + SessionEnd sync-trigger — five entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
@@ -319,8 +319,10 @@ overlay sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
 
 overlay install-hooks
     Build the Go engine binary and wire the deterministic-scoping hooks into
-    ~/.claude/settings.json: one UserPromptSubmit + PreToolUse/Agent pair per managed
-    contract (minimalism-contract, anti-generic-design), four entries. Backs up settings.json
+    ~/.claude/settings.json: three hook families (two pairs + SessionEnd sync-trigger),
+    five entries — one UserPromptSubmit + PreToolUse/Agent pair per managed contract
+    (minimalism-contract, anti-generic-design), plus a SessionEnd entry that fires a
+    non-blocking longterm-mem sync at session close. Backs up settings.json
     to settings.json.bak before modifying. Run once to activate; inert until then.
 
 overlay uninstall-hooks
