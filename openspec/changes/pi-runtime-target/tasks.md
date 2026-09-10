@@ -28,10 +28,10 @@ Chain strategy: stacked-to-main
 
 ## Phase 1: pi-target-plumbing (R-001, R-008)
 
-- [ ] 1.1 RED: `TestExpandTarget_Pi`, `TestResolveTargets_Pi`, `TestIsCopyTarget_ClaudeTrue_PiFalse` in `engine/runtime/runtime_test.go`
-- [ ] 1.2 GREEN: add `TargetPi` to `Target` enum, `AllTargets`, `NewFoundationAdapter`; skeleton `engine/runtime/pi.go` (Adapter interface, no logic yet)
-- [ ] 1.3 Add `TARGET_KINDS`/`is_copy_target` to `bin/labdrian-overlay`; update `resolve_targets` (:355-364) and 8 non-copy call sites (:1298,:1506-1507,:1900,:2075-2076,:2323-2324,:2987,:3039) to skip `mkdir` for `pi`
-- [ ] 1.4 Verify non-regression: `shellcheck -S warning bin/labdrian-overlay`; re-run claude/opencode/codex `status`/`sync-check` for byte-identical output
+- [x] 1.1 RED: `TestExpandTarget_Pi` in `engine/runtime/runtime_test.go`; `TestResolveTargets_Pi`/`TestIsCopyTarget_ClaudeTrue_PiFalse` placed in `engine/shelltest/overlay_pi_target_test.go` instead (they exercise bash functions in `bin/labdrian-overlay`, not the Go `runtime` package — see Deviations below)
+- [x] 1.2 GREEN: added `TargetPi` to `Target` enum, `ExpandTarget`, `NewFoundationAdapter`; skeleton `engine/runtime/pi.go` (`PiAdapter`, `Target()` wired, every other method an honest `CapabilityUnsupported` stub)
+- [x] 1.3 Added `TARGET_KINDS`/`is_copy_target`/`is_valid_target`/`package_target_stub_message` to `bin/labdrian-overlay`; updated `resolve_targets` and all 8 `TARGET_PATHS`-keyed call sites (cmd_capture, cmd_apply loop, cmd_restore, cmd_status loop, cmd_sync_check loop, cmd_repair_sdd_registry, cmd_skill_registry) so `pi` is either dispatched to an honest stub (apply/status/sync-check) or rejected with a clear package-target message (capture/restore/repair-sdd-registry/skill-registry) — never an empty-path `mkdir`. Also fixed a regression this exposed in `cmd_longterm_mem` (out of scope for this slice): its `--target all` expansion now excludes `pi` explicitly, since longterm-mem's own register binary has no `pi` case.
+- [x] 1.4 Verify non-regression: `shellcheck -S warning bin/labdrian-overlay` (only the 2 pre-existing SC2064 warnings); re-ran claude/opencode/codex `status`/`sync-check` — byte-identical output confirmed by diff against the pre-change script
 
 ## Phase 2: pi-package-build (R-002, R-003, R-010)
 
