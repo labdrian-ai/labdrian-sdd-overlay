@@ -505,7 +505,7 @@ func TestRunPropagateCore_WriteFileError(t *testing.T) {
 	}
 }
 
-// TC-CLI-P7: no-op path — registry already correct → no file written, stdout says no-op.
+// TC-CLI-P7: no-op path — registry already correct → no file written, stdout silent.
 func TestRunPropagateCore_NoOp_AlreadyCorrect(t *testing.T) {
 	// Build the already-correct registry using BuildScopedRow.
 	// We do this programmatically to avoid hardcoding the exact string.
@@ -563,8 +563,8 @@ func TestRunPropagateCore_NoOp_AlreadyCorrect(t *testing.T) {
 	if _, wrote := writtenFiles2["/fake/registry.md"]; wrote {
 		t.Error("no-op: file should NOT be written when registry is already correct")
 	}
-	if !strings.Contains(outBuf.String(), "no-op") || !strings.Contains(outBuf.String(), "already correct") {
-		t.Errorf("no-op: stdout should say already correct/no-op; got: %q", outBuf.String())
+	if outBuf.String() != "" {
+		t.Errorf("no-op: stdout must stay silent when the registry is already correct; got: %q", outBuf.String())
 	}
 }
 
@@ -2394,8 +2394,8 @@ func TestRunPropagateVerified_NoOpDoesNotRetryOrWrite(t *testing.T) {
 	if readCount != 1 {
 		t.Errorf("no-op path must read the registry exactly once (no verification read needed when nothing was written); read count = %d", readCount)
 	}
-	if !strings.Contains(outBuf.String(), "already correct") {
-		t.Errorf("stdout should report the no-op; got: %q", outBuf.String())
+	if outBuf.String() != "" {
+		t.Errorf("stdout must stay silent on the no-op path; got: %q", outBuf.String())
 	}
 }
 
@@ -2542,7 +2542,7 @@ func TestClassifyReadRace(t *testing.T) {
 			name:     "no exit, no write, unrelated stdout classifies as raceNone (genuine no-op)",
 			coreExit: -1,
 			wrote:    false,
-			stdout:   "registry: minimalism-contract scope is already correct (no-op)\n",
+			stdout:   "registry: minimalism-contract scoped row inserted/updated\n",
 			stderr:   "",
 			want:     raceNone,
 		},
