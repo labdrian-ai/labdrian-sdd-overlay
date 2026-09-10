@@ -209,9 +209,7 @@ func checkNoOverlap(overlayRoot, destDir string) error {
 	if err != nil {
 		return fmt.Errorf("pipkg: resolving destination: %w", err)
 	}
-	if r, err := filepath.EvalSymlinks(absDest); err == nil {
-		absDest = r
-	}
+	absDest = resolveExistingAncestors(absDest)
 	contains := func(base, target string) bool {
 		rel, err := filepath.Rel(base, target)
 		return err == nil && !strings.HasPrefix(rel, "..")
@@ -220,6 +218,25 @@ func checkNoOverlap(overlayRoot, destDir string) error {
 		return fmt.Errorf("pipkg: destination %s overlaps overlay root %s", destDir, overlayRoot)
 	}
 	return nil
+}
+
+// resolveExistingAncestors canonicalizes path by evaluating symlinks on its
+// longest existing ancestor and re-appending the nonexistent tail, so a
+// destination reached through a symlinked parent cannot escape the overlap
+// check merely because it does not exist yet.
+func resolveExistingAncestors(path string) string {
+	tail := ""
+	for cur := path; ; {
+		if r, err := filepath.EvalSymlinks(cur); err == nil {
+			return filepath.Join(r, tail)
+		}
+		parent := filepath.Dir(cur)
+		if parent == cur {
+			return path
+		}
+		tail = filepath.Join(filepath.Base(cur), tail)
+		cur = parent
+	}
 }
 
 // containsTarget reports whether targets contains want.

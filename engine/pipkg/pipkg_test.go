@@ -215,6 +215,14 @@ func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
 			t.Errorf("Build(dest=%s) = %v, want overlap error", dest, err)
 		}
 	}
+	link := filepath.Join(t.TempDir(), "link-to-overlay")
+	if err := os.Symlink(overlayRoot, link); err != nil {
+		t.Fatal(err)
+	}
+	viaLink := filepath.Join(link, "not-yet", "labdrian-pi")
+	if err := pipkg.Build(overlayRoot, registryPath, viaLink); err == nil || !strings.Contains(err.Error(), "overlaps overlay root") {
+		t.Errorf("Build(dest via symlinked ancestor, nonexistent) = %v, want overlap error", err)
+	}
 	if _, err := os.Stat(filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md")); err != nil {
 		t.Errorf("overlayRoot must remain intact: %v", err)
 	}
