@@ -213,3 +213,75 @@ Fixed by removing the wait entirely: the `sync-trigger` branch in `cmd_longterm_
 
 - Planned: 3 slices (`sync-runner` → `session-end-hook` → `archive-trigger`)
 - Realized: 3 (`sync-runner`, `session-end-hook`, `archive-trigger`)
+
+## Remediation after verify
+
+**Trigger**: verify-report.md verdict `fail`, 1 CRITICAL. Task 3.4 claimed a RED
+scripted check asserting the closure-feedback `sync-trigger` command string
+appears verbatim in `skills/inception-pipeline/SKILL.md` and is absent from
+the managed `skills/sdd-archive/SKILL.md`. No such check existed anywhere in
+the tree — the behavior was correct only by inspection, with nothing to catch
+a future regression if the call site migrated into the managed skill.
+
+### CRITICAL 1 — fixed
+
+Added `case_archive_sync_trigger_call_site_is_only_in_inception_pipeline` to
+`engine/shelltest/overlay_longterm_mem_test.sh`. It asserts (a) the literal
+line `labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true`
+is present in `skills/inception-pipeline/SKILL.md`, and (b) the substring
+`sync-trigger` is absent from `skills/sdd-archive/SKILL.md`.
+
+#### TDD Cycle Evidence
+
+| Task | RED | GREEN | REFACTOR |
+|---|---|---|---|
+| 3.4 (remediation) | Ran the new case against two scratch copies of the repo (session scratchpad, not the worktree): (1) call line stripped from `inception-pipeline/SKILL.md` → `FAIL - the archive sync-trigger call site is missing from inception-pipeline/SKILL.md`; (2) the call line appended to `sdd-archive/SKILL.md` → `FAIL - the archive sync-trigger call site leaked into the managed sdd-archive/SKILL.md` | Ran the same case against the real worktree tree: `ok - the archive sync-trigger call site lives only in inception-pipeline/SKILL.md, not the managed sdd-archive/SKILL.md`; full suite: `all shell test cases passed` | None needed — single self-contained case function, registered once in the case list |
+
+This upgrades the spec scenario "Trigger lives outside the managed skill" from
+UNTESTED to COMPLIANT, and the "Archive completion fires a whole-project
+sync" scenario from PARTIAL to COMPLIANT (the closure-feedback call site is
+now covered end-to-end, not just the wrapper half).
+
+### WARNING 4 — fixed
+
+`design.md`'s Wrapper row described the wrapper as exec'ing the engine. It now
+describes the shipped behavior: the wrapper launches the engine detached via
+`setsid` (falling back to a bare `&`), `disown`s it, and returns immediately
+without waiting — no `exec`, no bounded `timeout` wait.
+
+### tasks.md wording
+
+- 3.2 reworded from "execs verb" to describe the detached background launch
+  that replaced it after the review correction (commit `e916872`).
+- 3.4 reworded to point at the real deliverable
+  (`case_archive_sync_trigger_call_site_is_only_in_inception_pipeline`)
+  instead of describing a check that was never written.
+
+### Left as-is (not one-liners / not in this slice's files)
+
+- **WARNING 1** (repo-wide `test_command` fails on `tools/archive-reconcile`):
+  expected pre-archive state per the verify report; self-clears on
+  `sdd-archive`. Not a defect in this change.
+- **WARNING 2** (slice 3 has no TDD Cycle Evidence table for its *original*
+  tasks 3.1–3.5, only prose): rewriting that historical evidence shape
+  retroactively would misrepresent when it was produced. This remediation
+  adds its own TDD Cycle Evidence table above, scoped to the remediation
+  work itself.
+- **WARNING 3** (self-reported RED/GREEN ordering deviation for tasks
+  1.3/1.4): already disclosed by the original apply pass; not re-litigated.
+- **SUGGESTION 1** (log rotation): out of scope, explicitly deferred to
+  `doctor` per design.md's open question.
+- **SUGGESTION 2** (folding single-case `TestRunChild_*` functions into the
+  table): explicitly skipped during the slice-1 findings fix; still optional
+  cleanup, not required for this remediation.
+
+### Verification (foreground, all observed)
+
+- `bash engine/shelltest/overlay_longterm_mem_test.sh` → `all shell test cases passed`, including the new archive-call-site case
+- `cd engine && go test ./shelltest/...` → `ok`
+- `shellcheck -S warning bin/labdrian-overlay` → unchanged, only the 2 pre-existing known SC2064 warnings
+
+### Status
+
+Remediation complete. All 4 requirements / 23 scenarios now have covering
+tests. Ready for re-verify.
