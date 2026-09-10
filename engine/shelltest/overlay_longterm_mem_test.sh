@@ -1907,6 +1907,146 @@ case_status_reports_a_supported_status_as_success() {
 }
 
 # ---------------------------------------------------------------------------
+# hazard (g): sync-trigger forwards to the engine and never fails its caller
+# ---------------------------------------------------------------------------
+#
+# sync-trigger is invoked from a SessionEnd hook and from archive
+# closure-feedback (R-003, R-001) — neither caller may ever see a non-zero
+# exit or a hang. The three cases below prove the wrapper: (1) degrades to a
+# no-op warning when the engine binary is absent rather than trying to build
+# it, (2) forwards the caller's flags to the engine verb unchanged, and (3)
+# still rejects a genuinely unknown longterm-mem subcommand — the new
+# whitelist entry must not widen dispatch beyond 'sync-trigger' itself.
+
+# write_fake_forwarding_engine records every argv it receives (one per line)
+# to $record_path, then exits 0.
+write_fake_forwarding_engine() {
+  local path="$1" record_path="$2"
+  mkdir -p "$(dirname "$path")"
+  cat > "$path" <<STUB
+#!/usr/bin/env bash
+printf '%s\n' "\$@" > "$record_path"
+exit 0
+STUB
+  chmod +x "$path"
+}
+
+# run_longterm_mem_sync_trigger calls the sync-trigger branch directly.
+# ENGINE_SRC points at a path that does not exist so, if the branch ever
+# regressed to calling ensure_engine_binary, a present stub would still be
+# treated as current rather than rebuilt.
+run_longterm_mem_sync_trigger() {
+  local engine_bin="$1" state_dir="$2"
+  shift 2
+  env PATH="/usr/bin:/bin" bash -c '
+    source "$1"
+    set +e
+    ENGINE_BINARY="$2"
+    ENGINE_SRC="$2.no-such-source-tree"
+    STATE_DIR="$3"
+    shift 3
+    cmd_longterm_mem sync-trigger "$@"
+    echo "SYNC-TRIGGER-EXIT=$?"
+  ' _ "$OVERLAY" "$engine_bin" "$state_dir" "$@" 2>&1
+}
+
+case_sync_trigger_absent_engine_returns_zero() {
+  local dir out
+  dir="$(new_case_dir sync-trigger-absent-engine)"
+
+  out="$(run_longterm_mem_sync_trigger "$dir/bin/engine" "$dir/state" --event archive --cwd "$dir/project")"
+
+  if ! grep -q -F -e "SYNC-TRIGGER-EXIT=0" <<<"$out"; then
+    fail "sync-trigger does not exit 0 when the engine binary is absent" "$out"
+    return
+  fi
+  if [[ -e "$dir/bin/engine" ]]; then
+    fail "sync-trigger built the engine binary instead of warning and returning" "$out"
+    return
+  fi
+  pass "sync-trigger exits 0 and does not try to build the engine when it is absent"
+}
+
+case_sync_trigger_forwards_event_and_cwd() {
+  local dir out record
+  dir="$(new_case_dir sync-trigger-forwards)"
+  record="$dir/record.txt"
+  write_fake_forwarding_engine "$dir/bin/engine" "$record"
+
+  out="$(run_longterm_mem_sync_trigger "$dir/bin/engine" "$dir/state" --event archive --cwd "$dir/project")"
+
+  if ! grep -q -F -e "SYNC-TRIGGER-EXIT=0" <<<"$out"; then
+    fail "sync-trigger does not exit 0 when the engine accepts the call" "$out"
+    return
+  fi
+  if [[ ! -f "$record" ]]; then
+    fail "sync-trigger never invoked the engine binary" "$out"
+    return
+  fi
+  local recorded
+  recorded="$(cat "$record")"
+  if ! grep -q -x -F -e "sync-trigger" <<<"$recorded"; then
+    fail "sync-trigger did not pass the 'sync-trigger' verb to the engine" "recorded: $recorded"
+    return
+  fi
+  if ! grep -q -x -F -e "--state-dir" <<<"$recorded"; then
+    fail "sync-trigger did not pass --state-dir to the engine" "recorded: $recorded"
+    return
+  fi
+  if ! grep -q -x -F -e "$dir/state" <<<"$recorded"; then
+    fail "sync-trigger did not pass the configured STATE_DIR value" "recorded: $recorded"
+    return
+  fi
+  if ! grep -q -x -F -e "--event" <<<"$recorded"; then
+    fail "sync-trigger did not forward --event" "recorded: $recorded"
+    return
+  fi
+  if ! grep -q -x -F -e "archive" <<<"$recorded"; then
+    fail "sync-trigger did not forward the archive event value" "recorded: $recorded"
+    return
+  fi
+  if ! grep -q -x -F -e "--cwd" <<<"$recorded"; then
+    fail "sync-trigger did not forward --cwd" "recorded: $recorded"
+    return
+  fi
+  if ! grep -q -x -F -e "$dir/project" <<<"$recorded"; then
+    fail "sync-trigger did not forward the caller's cwd value" "recorded: $recorded"
+    return
+  fi
+  pass "sync-trigger forwards --state-dir and the caller's --event/--cwd to the engine verbatim"
+}
+
+case_longterm_mem_unknown_subcommand_still_dies() {
+  local dir out
+  dir="$(new_case_dir sync-trigger-unknown-subcommand)"
+
+  # cmd_longterm_mem is called directly (not through the sync-trigger
+  # helper above, which is scoped to the 'sync-trigger' subcommand) with a
+  # genuinely unknown subcommand.
+  out="$(
+    env PATH="/usr/bin:/bin" bash -c '
+      source "$1"
+      set +e
+      ENGINE_BINARY="$2"
+      ENGINE_SRC="$2.no-such-source-tree"
+      STATE_DIR="$3"
+      cmd_longterm_mem bogus-subcommand
+      echo "UNKNOWN-EXIT=$?"
+    ' _ "$OVERLAY" "$dir/bin/engine" "$dir/state" 2>&1
+  )"
+
+  if grep -q -F -e "UNKNOWN-EXIT=0" <<<"$out"; then
+    fail "an unrelated unknown longterm-mem subcommand no longer dies after adding sync-trigger" "$out"
+    return
+  fi
+  if ! grep -q -i -F -e "Unknown longterm-mem subcommand" <<<"$out"; then
+    fail "the unknown-subcommand error message is missing or changed" "$out"
+    return
+  fi
+  pass "an unknown longterm-mem subcommand still dies; sync-trigger did not widen the whitelist"
+}
+
+# ---------------------------------------------------------------------------
 # hazard (f): messages must name a command that exists
 # ---------------------------------------------------------------------------
 
@@ -2387,6 +2527,9 @@ case_doctor_fix_without_go_does_not_claim_a_repair
 case_status_hooks_surfaces_a_stale_engine_binary
 case_status_reports_a_non_supported_status_as_degraded
 case_status_reports_a_supported_status_as_success
+case_sync_trigger_absent_engine_returns_zero
+case_sync_trigger_forwards_event_and_cwd
+case_longterm_mem_unknown_subcommand_still_dies
 case_no_message_names_a_command_called_overlay
 case_self_update_from_a_side_branch_legacy
 case_self_update_from_a_side_branch_tag
