@@ -61,7 +61,11 @@
     "max_changed_lines_per_slice": 400,
     "counting_method": "authored-additions-and-deletions",
     "size_exception": {
-      "state": "not-needed"
+      "state": "granted",
+      "scope": "pi-target-plumbing",
+      "changed_lines": 407,
+      "authorized_by": "labdrian (maintainer)",
+      "reason": "slice 1 pi-target-plumbing: 407 authored lines, seven over budget, on a cohesive plumbing unit including the cmd_longterm_mem regression fix; granted 2026-09-10 at delivery"
     }
   },
   "strict_tdd": {
