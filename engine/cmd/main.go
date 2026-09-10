@@ -60,6 +60,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
@@ -126,6 +127,8 @@ func main() {
 		runRuntime(os.Args[2:])
 	case "gadu-generate":
 		runGaduGenerate(os.Args[2:])
+	case "pipkg":
+		runPipkg(os.Args[2:])
 	case "skills":
 		runSkills(os.Args[2:])
 	case "sync-trigger":
@@ -153,6 +156,9 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "      (a single component spanning claude+opencode+codex; no update/rollback action)")
 	fmt.Fprintln(os.Stderr, "    --state-dir: registration.json directory for --component longterm-mem (default ~/.labdrian-overlay)")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
+	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
+	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
+	fmt.Fprintln(os.Stderr, "    check: reports drift between --dest-dir and the current manifest; exit 1 on drift")
 	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status        [--registry <path>]                                                      print count summary (total/core/custom)")
@@ -213,6 +219,87 @@ func runGaduGenerate(args []string) {
 		os.Exit(1)
 	}
 	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md written")
+}
+
+// runPipkg implements the 'pipkg build|check' subcommand.
+func runPipkg(args []string) {
+	runPipkgCore(args, os.Stdout, os.Stderr, os.Exit)
+}
+
+// runPipkgCore is the testable core of the pipkg subcommand: 'build' writes
+// the labdrian-pi package tree, 'check' reports drift against it. Requires
+// --overlay-root, --registry, and --dest-dir. Fails LOUD on a missing verb
+// or missing flag (ADR-4).
+func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "error: pipkg requires a verb: build, check")
+		exit(1)
+		return
+	}
+	verb := args[0]
+	if verb != "build" && verb != "check" {
+		fmt.Fprintf(stderr, "error: unknown pipkg verb %q; expected build or check\n", verb)
+		exit(1)
+		return
+	}
+
+	var overlayRoot, registryPath, destDir string
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--overlay-root":
+			i++
+			if i >= len(args) {
+				fmt.Fprintln(stderr, "error: --overlay-root requires a value")
+				exit(1)
+				return
+			}
+			overlayRoot = args[i]
+		case "--registry":
+			i++
+			if i >= len(args) {
+				fmt.Fprintln(stderr, "error: --registry requires a value")
+				exit(1)
+				return
+			}
+			registryPath = args[i]
+		case "--dest-dir":
+			i++
+			if i >= len(args) {
+				fmt.Fprintln(stderr, "error: --dest-dir requires a value")
+				exit(1)
+				return
+			}
+			destDir = args[i]
+		default:
+			fmt.Fprintf(stderr, "error: unknown option %q\n", args[i])
+			exit(1)
+			return
+		}
+	}
+	if overlayRoot == "" || registryPath == "" || destDir == "" {
+		fmt.Fprintln(stderr, "error: pipkg requires --overlay-root, --registry, and --dest-dir")
+		exit(1)
+		return
+	}
+
+	if verb == "build" {
+		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+			fmt.Fprintf(stderr, "pipkg build: %v\n", err)
+			exit(1)
+			return
+		}
+		fmt.Fprintf(stdout, "pipkg build: labdrian-pi package written to %s\n", destDir)
+		exit(0)
+		return
+	}
+
+	if err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+		fmt.Fprintf(stderr, "pipkg check: %v\n", err)
+		exit(1)
+		return
+	}
+	fmt.Fprintln(stdout, "pipkg check: OK (built package matches the current manifest)")
+	exit(0)
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.

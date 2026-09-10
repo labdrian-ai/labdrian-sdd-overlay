@@ -1,30 +1,93 @@
 package runtime
 
+import (
+	"os"
+	"path/filepath"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
+)
+
 // PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi).
 //
-// This is the pi-target-plumbing slice: only Target() is wired to a real
-// value. Every lifecycle method returns an honest CapabilityUnsupported
-// stub — package build (pipkg), install/apply dispatch, and status/
-// uninstall logic land in later slices (pi-package-build, pi-lifecycle).
-// Returning unsupported here (never supported or partial) keeps this slice
-// from claiming proof it cannot yet produce.
+// pi-target-plumbing wired only Target(). pi-package-build (this slice)
+// wires Apply/Install/SyncCheck to engine/pipkg's Build/Check, resolving
+// overlayRoot/registryPath/destDir from OVERLAY_DIR/STATE_DIR when
+// constructed via NewPiAdapter() (the zero-arg path NewFoundationAdapter
+// uses). Status/Update/Rollback/Uninstall remain honest
+// CapabilityUnsupported stubs — those land in pi-lifecycle.
 type PiAdapter struct {
-	target Target
+	target       Target
+	overlayRoot  string
+	registryPath string
+	destDir      string
 }
 
-// NewPiAdapter constructs the Pi adapter skeleton.
+// NewPiAdapter constructs the Pi adapter, resolving its build paths from
+// OVERLAY_DIR/STATE_DIR (empty when unset — every wired method then
+// honestly reports CapabilityUnsupported rather than fabricating success).
 func NewPiAdapter() PiAdapter {
-	return PiAdapter{target: TargetPi}
+	return NewPiAdapterWithPaths(os.Getenv("OVERLAY_DIR"), "", "")
 }
 
-func (a PiAdapter) Target() Target             { return a.target }
-func (a PiAdapter) Apply() LifecycleResult     { return a.stub(ActionApply) }
-func (a PiAdapter) Install() LifecycleResult   { return a.stub(ActionInstall) }
+// NewPiAdapterWithPaths constructs the Pi adapter with explicit build
+// paths. An empty registryPath defaults to "<overlayRoot>/skills.registry.yaml"
+// when overlayRoot is set; an empty destDir defaults to
+// DefaultPiPackageDir(os.Getenv("STATE_DIR")).
+func NewPiAdapterWithPaths(overlayRoot, registryPath, destDir string) PiAdapter {
+	if registryPath == "" && overlayRoot != "" {
+		registryPath = filepath.Join(overlayRoot, "skills.registry.yaml")
+	}
+	if destDir == "" {
+		destDir = DefaultPiPackageDir(os.Getenv("STATE_DIR"))
+	}
+	return PiAdapter{target: TargetPi, overlayRoot: overlayRoot, registryPath: registryPath, destDir: destDir}
+}
+
+// DefaultPiPackageDir returns "<stateDir>/pi/labdrian-pi", defaulting
+// stateDir to "$HOME/.labdrian-overlay" when empty.
+func DefaultPiPackageDir(stateDir string) string {
+	if stateDir == "" {
+		if home, err := os.UserHomeDir(); err == nil && home != "" {
+			stateDir = filepath.Join(home, ".labdrian-overlay")
+		}
+	}
+	return filepath.Join(stateDir, "pi", "labdrian-pi")
+}
+
+func (a PiAdapter) Target() Target { return a.target }
+
+func (a PiAdapter) Apply() LifecycleResult   { return a.build(ActionApply) }
+func (a PiAdapter) Install() LifecycleResult { return a.build(ActionInstall) }
+
+func (a PiAdapter) SyncCheck() LifecycleResult {
+	if a.overlayRoot == "" {
+		return a.stub(ActionSyncCheck)
+	}
+	if err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error(), nil)
+	}
+	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported, "labdrian-pi package matches the current manifest", nil)
+}
+
 func (a PiAdapter) Status() LifecycleResult    { return a.stub(ActionStatus) }
-func (a PiAdapter) SyncCheck() LifecycleResult { return a.stub(ActionSyncCheck) }
 func (a PiAdapter) Update() LifecycleResult    { return a.stub(ActionUpdate) }
 func (a PiAdapter) Rollback() LifecycleResult  { return a.stub(ActionRollback) }
 func (a PiAdapter) Uninstall() LifecycleResult { return a.stub(ActionUninstall) }
+
+// build runs pipkg.Build for Apply/Install. Honestly unsupported without an
+// overlayRoot (e.g. OVERLAY_DIR unset); partial (never fabricated supported)
+// on a build error, naming it; partial with the install hint on success —
+// this slice builds the package but never runs `pi install` itself.
+func (a PiAdapter) build(action Action) LifecycleResult {
+	if a.overlayRoot == "" {
+		return a.stub(action)
+	}
+	if err := pipkg.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		return NewLifecycleResult(a.target, action, CapabilityPartial, err.Error(), nil)
+	}
+	return NewLifecycleResult(a.target, action, CapabilityPartial,
+		"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
+}
 
 // stub reports an honest CapabilityUnsupported for the given action, with a
 // message naming the SLICE THAT ACTUALLY OWNS IT (R2-misleading-stub-
