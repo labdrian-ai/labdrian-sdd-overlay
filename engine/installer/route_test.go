@@ -862,16 +862,18 @@ func runOverlay(t *testing.T, overlayPath string, env []string, args ...string) 
 
 // runApplyAllTolerantOfPi runs `apply --target all` and tolerates ONLY the
 // now-intentional non-zero exit caused by pi's own known incompleteness
-// (R4-silent-package-skip, pi-target-plumbing): apply's aggregate exit
-// reflects pi honestly (never deployed, exit 1) so unattended automation
-// cannot read a run that silently skipped pi as a clean success. These
-// fixtures exercise the claude/opencode/codex deploy loop under
-// --target all, not pi's own status, so a pi-only failure must not fail
-// them -- but any OTHER failure still must.
+// (R4-silent-package-skip, pi-target-plumbing / pi-package-build): apply's
+// aggregate exit reflects pi honestly (build failed in this fixture
+// environment, which has no built engine binary at ENGINE_BINARY, so pi
+// never actually gets deployed, exit 1) so unattended automation cannot
+// read a run that silently skipped pi as a clean success. These fixtures
+// exercise the claude/opencode/codex deploy loop under --target all, not
+// pi's own build, so a pi-only failure must not fail them -- but any OTHER
+// failure still must.
 func runApplyAllTolerantOfPi(t *testing.T, overlay string, env []string) string {
 	t.Helper()
 	out, err := runOverlay(t, overlay, env, "apply", "--target", "all")
-	if err != nil && !strings.Contains(out, "pi: package target, handled by slice 2") {
+	if err != nil && !strings.Contains(out, "pi: package build failed") {
 		t.Fatalf("apply --target all failed for a reason other than pi's known incompleteness: %v\noutput:\n%s", err, out)
 	}
 	return out
@@ -879,11 +881,12 @@ func runApplyAllTolerantOfPi(t *testing.T, overlay string, env []string) string 
 
 // runStatusAllTolerantOfPi is runApplyAllTolerantOfPi's sibling for `status
 // --target all`, which now fails the same way for the same reason
-// (R4-silent-package-skip).
+// (R4-silent-package-skip) -- the pi package is never built in these
+// fixtures, so pipkg_status_and_report honestly reports "not built".
 func runStatusAllTolerantOfPi(t *testing.T, overlay string, env []string) string {
 	t.Helper()
 	out, err := runOverlay(t, overlay, env, "status", "--target", "all")
-	if err != nil && !strings.Contains(out, "pi: package target, handled by slice 2") {
+	if err != nil && !strings.Contains(out, "pi: not built") {
 		t.Fatalf("status --target all failed for a reason other than pi's known incompleteness: %v\noutput:\n%s", err, out)
 	}
 	return out

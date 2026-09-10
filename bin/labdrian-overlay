@@ -153,6 +153,80 @@ package_target_stub_message() {
   echo "  $1: package target, handled by slice 2 (pi-package-build)"
 }
 
+# pipkg_dest_dir prints the built labdrian-pi package directory
+# ($STATE_DIR/pi/labdrian-pi), the single source of truth every pipkg call
+# site below (apply/status/sync-check) resolves it from.
+pipkg_dest_dir() {
+  echo "$STATE_DIR/pi/labdrian-pi"
+}
+
+# pipkg_build_and_report runs `engine pipkg build` for the pi target and
+# prints the install hint on success. `pi install` itself is NOT run here
+# (R-002 scope boundary; deferred to a manual step / a later slice). Returns
+# non-zero on a build failure (R4-silent-package-skip): a failed pi package
+# build must never read as a clean apply.
+pipkg_build_and_report() {
+  local dest
+  dest="$(pipkg_dest_dir)"
+  if "$ENGINE_BINARY" pipkg build --overlay-root "$OVERLAY_DIR" --registry "$OVERLAY_DIR/skills.registry.yaml" --dest-dir "$dest"; then
+    echo "  install hint: pi install $dest"
+    return 0
+  else
+    echo "  pi: package build failed" >&2
+    return 1
+  fi
+}
+
+# pipkg_sync_check_and_report runs `engine pipkg check` for the pi target,
+# emitting the SYNC_CHECK:pi: line other sync-check callers grep for, plus
+# an explicit VERDICT:pi:<STATE> line (R2-sync-check-success-without-check)
+# so a health check can key off pi the same way it does every copy target.
+# Returns non-zero for anything other than IN_SYNC (R4-silent-package-skip):
+# a not-built or drifted pi package must never read as a healthy sync-check.
+pipkg_sync_check_and_report() {
+  local dest drift_output
+  dest="$(pipkg_dest_dir)"
+  if [[ ! -e "$dest/package.json" ]]; then
+    echo "SYNC_CHECK:pi: not built (run: labdrian-overlay apply --target pi)"
+    echo ""
+    echo "VERDICT:pi:NOT_BUILT"
+    return 1
+  fi
+  if drift_output="$("$ENGINE_BINARY" pipkg check --overlay-root "$OVERLAY_DIR" --registry "$OVERLAY_DIR/skills.registry.yaml" --dest-dir "$dest" 2>&1)"; then
+    echo "SYNC_CHECK:pi: no drift"
+    echo ""
+    echo "VERDICT:pi:IN_SYNC"
+    return 0
+  else
+    echo "SYNC_CHECK:pi: drift -- $drift_output"
+    echo ""
+    echo "VERDICT:pi:DRIFT"
+    return 1
+  fi
+}
+
+# pipkg_status_and_report prints whether the pi package is built and
+# whether it currently drifts from the manifest, for cmd_status. Returns
+# non-zero when there is nothing healthy to report -- not built, or built
+# but drifted (R4-silent-package-skip) -- and 0 only when built with no
+# drift, itself still "partial" in the printed message (R-006/pi-lifecycle
+# finalizes real proof of a fully supported status).
+pipkg_status_and_report() {
+  local dest drift_output
+  dest="$(pipkg_dest_dir)"
+  if [[ ! -e "$dest/package.json" ]]; then
+    echo "  pi: not built (run: labdrian-overlay apply --target pi)"
+    return 1
+  fi
+  if drift_output="$("$ENGINE_BINARY" pipkg check --overlay-root "$OVERLAY_DIR" --registry "$OVERLAY_DIR/skills.registry.yaml" --dest-dir "$dest" 2>&1)"; then
+    echo "  pi: built at $dest, no drift (partial -- lifecycle proof lands in a later slice)"
+    return 0
+  else
+    echo "  pi: built at $dest, drift detected -- $drift_output"
+    return 1
+  fi
+}
+
 # Known limitations (explicitly out of scope for this change, R-009):
 #   - The bootstrap init block's human-readable info echoes (dir creation) remain
 #     skills-first. They are a no-op for GADU (custom rows) and only matter for a
@@ -1497,15 +1571,6 @@ cmd_apply() {
     shift || true
   done
 
-  # pi is a package target with no per-file deployment logic implemented
-  # yet in this slice (pi-target-plumbing, deployment lands in
-  # pi-package-build): an explicit --target pi must fail loudly rather
-  # than silently succeed at deploying nothing (R4-silent-package-skip).
-  # Mirrors cmd_longterm_mem's own explicit-pi refusal below.
-  if [[ "$target_arg" == "pi" ]]; then
-    die "apply does not support --target pi yet (package target; deployment lands in the pi-package-build slice); use claude, opencode, codex, or all"
-  fi
-
   # Refuse to run over uncommitted tracked changes: apply switches branches
   # and merges, and must never entangle a session's work in progress.
   [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
@@ -1550,12 +1615,11 @@ cmd_apply() {
   # after the loop.
   local saw_mcp_row=""
 
-  # Set when a package target (pi) rides along inside --target all and its
-  # stub is dispatched instead of a real deploy (R4-silent-package-skip):
+  # Set when the pi package target fails to build (R4-silent-package-skip):
   # forces apply's own aggregate exit non-zero below, so unattended
-  # automation cannot read a run that silently skipped pi as a clean
-  # success. Only reachable here under "all" -- an explicit --target pi
-  # already died above, before this loop ever starts.
+  # automation cannot read a run that failed to build pi (or skipped it via
+  # a future package-target stub) as a clean success. Reachable both for an
+  # explicit --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
 
   for t in $(resolve_targets "$target_arg"); do
@@ -1563,8 +1627,12 @@ cmd_apply() {
     echo "=== Deploying to: $t ==="
 
     if ! is_copy_target "$t"; then
-      package_target_stub_message "$t"
-      pi_stub_included=1
+      if [[ "$t" == "pi" ]]; then
+        pipkg_build_and_report || pi_stub_included=1
+      else
+        package_target_stub_message "$t"
+        pi_stub_included=1
+      fi
       continue
     fi
 
@@ -2131,14 +2199,6 @@ cmd_status() {
     shift || true
   done
 
-  # pi has no per-file status logic implemented yet in this slice
-  # (pi-target-plumbing): an explicit --target pi must fail loudly rather
-  # than silently report a clean status with nothing actually checked
-  # (R4-silent-package-skip).
-  if [[ "$target_arg" == "pi" ]]; then
-    die "status does not support --target pi yet (package target; status lands in the pi-package-build slice); use claude, opencode, codex, or all"
-  fi
-
   echo "=== Branch ==="
   git rev-parse --abbrev-ref HEAD
 
@@ -2146,12 +2206,11 @@ cmd_status() {
   echo "=== Diff stat upstream..main ==="
   git diff --stat upstream..main || echo "(no diff)"
 
-  # Set when a package target (pi) rides along inside --target all and its
-  # stub is dispatched instead of a real status check
-  # (R4-silent-package-skip): forces status's own aggregate exit non-zero
-  # below, so pi's incompleteness cannot read as a clean report. Only
-  # reachable here under "all" -- an explicit --target pi already died
-  # above, before this loop ever starts.
+  # Set when the pi package target has nothing healthy to report --
+  # not built, or built but drifted (R4-silent-package-skip): forces
+  # status's own aggregate exit non-zero below, so pi's incompleteness
+  # cannot read as a clean report. Reachable both for an explicit
+  # --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
 
   for t in $(resolve_targets "$target_arg"); do
@@ -2159,8 +2218,12 @@ cmd_status() {
     echo "=== Status: $t ==="
 
     if ! is_copy_target "$t"; then
-      package_target_stub_message "$t"
-      pi_stub_included=1
+      if [[ "$t" == "pi" ]]; then
+        pipkg_status_and_report || pi_stub_included=1
+      else
+        package_target_stub_message "$t"
+        pi_stub_included=1
+      fi
       continue
     fi
 
@@ -2399,14 +2462,6 @@ cmd_sync_check() {
     shift || true
   done
 
-  # pi has no per-file sync-check logic implemented yet in this slice
-  # (pi-target-plumbing): an explicit --target pi must fail loudly rather
-  # than silently report a clean sync-check with nothing actually checked
-  # (R4-silent-package-skip).
-  if [[ "$target_arg" == "pi" ]]; then
-    die "sync-check does not support --target pi yet (package target; sync-check lands in the pi-package-build slice); use claude, opencode, codex, or all"
-  fi
-
   local repo_behind_origin
   repo_behind_origin="$(compute_repo_behind_origin "$check_origin")"
 
@@ -2423,28 +2478,32 @@ cmd_sync_check() {
   release_version="$(resolve_latest_release_tag main "$check_origin")"
   [[ "$release_version" == "none" ]] && release_version="untagged"
 
-  # Set when a package target (pi) rides along inside --target all and its
-  # stub is dispatched instead of a real sync-check (R4-silent-package-
-  # skip): forces sync-check's own aggregate exit non-zero below, so pi's
-  # incompleteness cannot read as a clean, healthy report. Only reachable
-  # here under "all" -- an explicit --target pi already died above, before
-  # this loop ever starts.
+  # Set when the pi package target's sync-check is anything other than
+  # IN_SYNC -- not built, drifted, or (for a future package target with no
+  # real check yet) unsupported (R4-silent-package-skip): forces
+  # sync-check's own aggregate exit non-zero below, so pi's incompleteness
+  # cannot read as a clean, healthy report. Reachable both for an explicit
+  # --target pi and for pi riding along inside --target all.
   local pi_stub_included=""
 
   for t in $(resolve_targets "$target_arg"); do
     if ! is_copy_target "$t"; then
       echo ""
       echo "=== sync-check: $t ==="
-      # R2-sync-check-success-without-check: "partial" without a
-      # VERDICT/SYNC_CHECK line a health check can key off read as "this
-      # ran and found nothing wrong". "unsupported" plus an explicit
-      # VERDICT line below make pi's incompleteness detectable the same
-      # way every other target's VERDICT line is.
-      echo "SYNC_CHECK:$t: unsupported -- package target, handled by slice 2 (pi-package-build)"
-      package_target_stub_message "$t"
-      echo ""
-      echo "VERDICT:$t:UNSUPPORTED"
-      pi_stub_included=1
+      if [[ "$t" == "pi" ]]; then
+        pipkg_sync_check_and_report || pi_stub_included=1
+      else
+        # R2-sync-check-success-without-check: "partial" without a
+        # VERDICT/SYNC_CHECK line a health check can key off read as "this
+        # ran and found nothing wrong". "unsupported" plus an explicit
+        # VERDICT line below make its incompleteness detectable the same
+        # way every other target's VERDICT line is.
+        echo "SYNC_CHECK:$t: unsupported -- package target, handled by slice 2 (pi-package-build)"
+        package_target_stub_message "$t"
+        echo ""
+        echo "VERDICT:$t:UNSUPPORTED"
+        pi_stub_included=1
+      fi
       continue
     fi
 
