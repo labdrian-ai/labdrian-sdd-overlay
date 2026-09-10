@@ -1159,6 +1159,60 @@ func TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily(t *testing.T
 	}
 }
 
+// extractCommand returns the inner hooks[0].command string of a hook entry
+// built like findEntry's result, failing the test if the shape is wrong.
+func extractCommand(t *testing.T, entry map[string]interface{}) string {
+	t.Helper()
+	innerHooks, ok := entry["hooks"].([]interface{})
+	if !ok || len(innerHooks) == 0 {
+		t.Fatalf("extractCommand: entry has no inner hooks: %#v", entry)
+	}
+	ihm, ok := innerHooks[0].(map[string]interface{})
+	if !ok {
+		t.Fatalf("extractCommand: inner hook is not a map: %#v", innerHooks[0])
+	}
+	cmd, ok := ihm["command"].(string)
+	if !ok {
+		t.Fatalf("extractCommand: inner hook has no command string: %#v", ihm)
+	}
+	return cmd
+}
+
+// TestBuildSyncTriggerSessionEndEntry_UsesPwdFallbackAndPosixGuard asserts
+// (F1) the emitted SessionEnd command falls back to $PWD, not the relative
+// ".", when CLAUDE_PROJECT_DIR is unset -- a relative fallback made
+// synctrigger.Run reject the cwd as error:usage before the log ever opened
+// -- and (F2) the missing-binary guard uses the POSIX-portable
+// ">/dev/null 2>&1" form rather than the bash-only "&>/dev/null", because
+// Claude Code invokes hooks via "sh -c" (dash), where "&>" is inert.
+func TestBuildSyncTriggerSessionEndEntry_UsesPwdFallbackAndPosixGuard(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "settings.json")
+	m := buildMerger(t, path)
+	if err := m.Install(); err != nil {
+		t.Fatalf("Install: %v", err)
+	}
+	root := parseJSON(t, path)
+	entry := findEntry(t, root, "SessionEnd", testHookCommand, settings.LabdrianSyncTriggerIdentity)
+	cmd := extractCommand(t, entry)
+
+	const wantCwdFallback = `${CLAUDE_PROJECT_DIR:-$PWD}`
+	if !strings.Contains(cmd, wantCwdFallback) {
+		t.Errorf("command %q does not contain %q (relative \".\" fallback disables the sync silently)", cmd, wantCwdFallback)
+	}
+	if strings.Contains(cmd, "${CLAUDE_PROJECT_DIR:-.}") {
+		t.Errorf("command %q still uses the relative \".\" fallback", cmd)
+	}
+
+	const wantPosixGuard = ">/dev/null 2>&1"
+	if !strings.Contains(cmd, wantPosixGuard) {
+		t.Errorf("command %q does not contain the POSIX guard %q", cmd, wantPosixGuard)
+	}
+	if strings.Contains(cmd, "&>/dev/null") {
+		t.Errorf("command %q still uses the bash-only \"&>/dev/null\" guard", cmd)
+	}
+}
+
 // findEntry locates the single hook entry under hooks[hookKey] that carries
 // both hookCommand and identity, and fails the test unless exactly one such
 // entry exists. Used to extract entries for field-for-field comparison.

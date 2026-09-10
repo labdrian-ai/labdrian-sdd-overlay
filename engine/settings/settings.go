@@ -566,14 +566,29 @@ func (m *Merger) buildDesignPreToolUseEntry() map[string]interface{} {
 // buildSyncTriggerSessionEndEntry returns the SessionEnd entry that invokes
 // the shared sync-trigger runner at session close.
 //
-// VERIFIED SHAPE (Claude Code docs, matcher-less like UserPromptSubmit):
+// VERIFIED SHAPE (Claude Code docs): SessionEnd supports a "matcher" field
+// like PreToolUse, but omitting one (as here) matches every SessionEnd
+// event, the same way a matcher-less UserPromptSubmit entry does:
 //
 //	{"hooks":[{"type":"command","command":"<bash>"}]}
 //
-// Missing-binary safety: same guard pattern as the other entries.
+// SessionEnd hooks run under a short default timeout, which is why
+// synctrigger.Run detaches its child immediately and returns rather than
+// waiting on the sync to finish.
+//
+// The --cwd fallback is "${CLAUDE_PROJECT_DIR:-$PWD}", not "-.": "." is a
+// relative path, and synctrigger.Run rejects a non-absolute --cwd as
+// error:usage before it even opens its log, so a relative fallback would
+// silently disable the sync whenever CLAUDE_PROJECT_DIR is unset. $PWD is
+// always absolute.
+//
+// Missing-binary safety: same guard pattern as the other entries, but
+// POSIX ">/dev/null 2>&1" rather than the bash-only "&>/dev/null" -- Claude
+// Code invokes hooks via "sh -c" (dash on most systems), where "&>" is not
+// a redirection operator and the guard would be silently inert.
 func (m *Merger) buildSyncTriggerSessionEndEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
-		`command -v %s &>/dev/null && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-.}" || true`,
+		`command -v %s >/dev/null 2>&1 && %s %s --event session-end --cwd "${CLAUDE_PROJECT_DIR:-$PWD}" || true`,
 		m.hookCommand, m.hookCommand, LabdrianSyncTriggerIdentity,
 	)
 	return map[string]interface{}{

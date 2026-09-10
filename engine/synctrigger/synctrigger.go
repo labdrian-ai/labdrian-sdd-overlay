@@ -95,6 +95,25 @@ func Run(o Options) int {
 		stderr = os.Stderr
 	}
 
+	if !validEvents[o.Event] {
+		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
+		return 0
+	}
+
+	// A relative --cwd (e.g. from a "${CLAUDE_PROJECT_DIR:-$PWD}" hook
+	// fallback whose $PWD was itself relative, or any other caller) is
+	// resolved against the process's own working directory before the
+	// shared validation below, so a relative path never becomes a silent
+	// error:usage. An empty cwd stays invalid: it must never inherit the
+	// caller's directory.
+	if o.Cwd != "" && !filepath.IsAbs(o.Cwd) {
+		abs, absErr := filepath.Abs(o.Cwd)
+		if absErr != nil {
+			fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
+			return 0
+		}
+		o.Cwd = abs
+	}
 	if !validArgs(o.Event, o.Cwd) {
 		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
 		return 0
