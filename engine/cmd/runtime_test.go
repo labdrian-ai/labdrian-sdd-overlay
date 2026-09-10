@@ -358,7 +358,7 @@ func TestRunRuntimeCore_AllTargetsRunsCodexLifecycleTogether(t *testing.T) {
 	}
 
 	out := outBuf.String()
-	for _, want := range []string{"[claude] install", "[opencode] install", "[codex] install"} {
+	for _, want := range []string{"[claude] install", "[opencode] install", "[codex] install", "[pi] install: unsupported"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("runtime install --target all output missing %q: %q", want, out)
 		}
@@ -371,6 +371,73 @@ func TestRunRuntimeCore_AllTargetsRunsCodexLifecycleTogether(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(configRoot, "labdrian-runtime-lifecycle.json")); err != nil {
 		t.Fatalf("expected codex manifest at config root %q: %v", filepath.Join(configRoot, "labdrian-runtime-lifecycle.json"), err)
+	}
+}
+
+// TestRunRuntimeCore_PiExplicitTargetReportsUnsupportedHonestly (R-001,
+// R-008): `--target pi` alone (not part of `all`) is a real, non-crashing
+// dispatch that reports the honest pi-target-plumbing stub state and fails
+// loudly — the aggregate exemption in runRuntimeCore only applies when Pi
+// rides along inside `--target all`.
+func TestRunRuntimeCore_PiExplicitTargetReportsUnsupportedHonestly(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+	t.Setenv("HOME", t.TempDir())
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runRuntimeCore(
+		[]string{"status", "--target", "pi"},
+		&outBuf, &errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("runtime status --target pi should honestly fail (unimplemented), got %d\nout=%q\nerr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "[pi] status: unsupported") {
+		t.Fatalf("runtime status --target pi should report unsupported, got %q", outBuf.String())
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("runtime status --target pi should not print argument errors, got %q", errBuf.String())
+	}
+}
+
+// TestRunRuntimeCore_AllTargetsIncludesPiWithoutMaskingOtherFailures
+// (R-001, R-008, runtime-lifecycle "Target all preserves non-Pi failures"):
+// Pi's own known incompleteness must never hide a genuine claude/opencode/
+// codex failure behind an aggregate success OR turn it into "the failure
+// was Pi" — the command must still fail and still name the real target.
+func TestRunRuntimeCore_AllTargetsIncludesPiWithoutMaskingOtherFailures(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+	codeHome := filepath.Join(t.TempDir(), "codex-failing-home")
+	if err := os.MkdirAll(codeHome, 0o755); err != nil {
+		t.Fatalf("create codex home: %v", err)
+	}
+	if err := writeCodexManifest(t, codeHome); err != nil {
+		t.Fatalf("write codex manifest: %v", err)
+	}
+
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("CODEX_HOME", codeHome)
+	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runRuntimeCore(
+		[]string{"status", "--target", "all"},
+		&outBuf, &errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("runtime status --target all should still fail when Claude/OpenCode fails, even with Pi included, got %d\nout=%q\nerr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "[claude] status: ") {
+		t.Fatalf("failure output should still name claude, got %q", outBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "[pi] status: unsupported") {
+		t.Fatalf("runtime status --target all should still show pi's honest unsupported state, got %q", outBuf.String())
 	}
 }
 

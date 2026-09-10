@@ -24,6 +24,7 @@ func TestParseTargetAcceptsKnownTargetsAndAll(t *testing.T) {
 		{name: "claude", raw: "claude", want: engineRuntime.TargetClaude},
 		{name: "opencode", raw: "opencode", want: engineRuntime.TargetOpenCode},
 		{name: "codex", raw: "codex", want: engineRuntime.TargetCodex},
+		{name: "pi", raw: "pi", want: engineRuntime.TargetPi},
 		{name: "all", raw: "all", want: engineRuntime.TargetAll},
 	}
 
@@ -164,9 +165,51 @@ func TestPromptHelpersHandleExistingHeaderAndDefaultHeader(t *testing.T) {
 	}
 }
 
+// TestExpandTarget_Pi pins Pi's inclusion in --target all's aggregation
+// (R-001, R-008): "all" must expand to all four real runtime targets, and a
+// single explicit target must still expand to itself only.
+func TestExpandTarget_Pi(t *testing.T) {
+	expanded := engineRuntime.ExpandTarget(engineRuntime.TargetAll)
+	wantTargets := []engineRuntime.Target{
+		engineRuntime.TargetClaude, engineRuntime.TargetOpenCode,
+		engineRuntime.TargetCodex, engineRuntime.TargetPi,
+	}
+	if len(expanded) != len(wantTargets) {
+		t.Fatalf("ExpandTarget(all) length = %d, want %d (%v)", len(expanded), len(wantTargets), expanded)
+	}
+	for i, want := range wantTargets {
+		if expanded[i] != want {
+			t.Fatalf("ExpandTarget(all)[%d] = %q, want %q", i, expanded[i], want)
+		}
+	}
+
+	if single := engineRuntime.ExpandTarget(engineRuntime.TargetPi); len(single) != 1 || single[0] != engineRuntime.TargetPi {
+		t.Fatalf("ExpandTarget(pi) = %#v, want [pi]", single)
+	}
+
+	adapter := engineRuntime.NewFoundationAdapter(engineRuntime.TargetPi)
+	if _, ok := adapter.(engineRuntime.PiAdapter); !ok {
+		t.Fatalf("NewFoundationAdapter(pi) should return PiAdapter, got %T", adapter)
+	}
+	if adapter.Target() != engineRuntime.TargetPi {
+		t.Fatalf("PiAdapter.Target() = %q, want %q", adapter.Target(), engineRuntime.TargetPi)
+	}
+	for _, result := range []engineRuntime.LifecycleResult{
+		adapter.Apply(), adapter.Install(), adapter.Status(), adapter.SyncCheck(),
+		adapter.Update(), adapter.Rollback(), adapter.Uninstall(),
+	} {
+		if result.Status != engineRuntime.CapabilityUnsupported {
+			t.Fatalf("PiAdapter %s: status = %q, want unsupported (honest stub for this slice)", result.Action, result.Status)
+		}
+		if result.Target != engineRuntime.TargetPi {
+			t.Fatalf("PiAdapter %s: target = %q, want %q", result.Action, result.Target, engineRuntime.TargetPi)
+		}
+	}
+}
+
 func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 	expanded := engineRuntime.ExpandTarget(engineRuntime.TargetAll)
-	wantTargets := []engineRuntime.Target{engineRuntime.TargetClaude, engineRuntime.TargetOpenCode, engineRuntime.TargetCodex}
+	wantTargets := []engineRuntime.Target{engineRuntime.TargetClaude, engineRuntime.TargetOpenCode, engineRuntime.TargetCodex, engineRuntime.TargetPi}
 	if len(expanded) != len(wantTargets) {
 		t.Fatalf("ExpandTarget(all) length = %d, want %d", len(expanded), len(wantTargets))
 	}
