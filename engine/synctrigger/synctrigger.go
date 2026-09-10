@@ -75,6 +75,13 @@ const (
 
 var validEvents = map[string]bool{"session-end": true, "archive": true}
 
+// validArgs reports whether event is recognized and cwd is absolute and
+// non-empty. Run and RunChild both reject argv failing this before doing
+// anything else.
+func validArgs(event, cwd string) bool {
+	return validEvents[event] && filepath.IsAbs(cwd)
+}
+
 // Run is the parent entrypoint. It validates its own argv, opens the log,
 // locates itself, and detaches a "--child" re-exec of itself under a new
 // session (Setsid) so it survives the caller's process-group teardown.
@@ -88,7 +95,7 @@ func Run(o Options) int {
 		stderr = os.Stderr
 	}
 
-	if !validEvents[o.Event] || !filepath.IsAbs(o.Cwd) {
+	if !validArgs(o.Event, o.Cwd) {
 		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
 		return 0
 	}
@@ -135,11 +142,6 @@ func Run(o Options) int {
 func RunChild(o Options) Outcome {
 	start := time.Now()
 
-	binary := o.Binary
-	if binary == "" {
-		binary = filepath.Join(o.StateDir, "bin", "longterm-mem")
-	}
-
 	logFile, logErr := openLog(o.StateDir)
 	if logErr == nil {
 		defer logFile.Close()
@@ -151,6 +153,20 @@ func RunChild(o Options) Outcome {
 			appendLog(logFile, o.Event, o.Cwd, outcome.Kind, outcome.Exit, outcome.Dur)
 		}
 		return outcome
+	}
+
+	if !validArgs(o.Event, o.Cwd) {
+		stderr := o.Stderr
+		if stderr == nil {
+			stderr = os.Stderr
+		}
+		fmt.Fprintf(stderr, "sync-trigger: error:usage event=%q cwd=%q\n", o.Event, o.Cwd)
+		return logOutcome("error:usage", 0, time.Since(start))
+	}
+
+	binary := o.Binary
+	if binary == "" {
+		binary = filepath.Join(o.StateDir, "bin", "longterm-mem")
 	}
 
 	info, statErr := os.Stat(binary)

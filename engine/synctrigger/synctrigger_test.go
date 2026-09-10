@@ -253,6 +253,29 @@ func TestRunChild_Timeout_KillsProcessGroup_NoOrphan(t *testing.T) {
 	}
 }
 
+// TestRunChild_InvalidArgs_ErrorUsageWithoutSpawn pins R3-child-validation-bypass: a bad Cwd/Event must be rejected before spawning.
+func TestRunChild_InvalidArgs_ErrorUsageWithoutSpawn(t *testing.T) {
+	cases := []struct{ name, event, cwd string }{
+		{"empty-cwd", "session-end", ""},
+		{"relative-cwd", "session-end", "relative/path"},
+		{"invalid-event", "bogus-event", "/tmp"},
+	}
+	bin := newFakeLongtermMem(t, 0, "", 0)
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var stderr strings.Builder
+			o := Options{Event: tc.event, Cwd: tc.cwd, StateDir: t.TempDir(), Binary: bin, Stderr: &stderr}
+			got := RunChild(o)
+			if got.Kind != "error:usage" {
+				t.Fatalf("Kind = %q, want %q", got.Kind, "error:usage")
+			}
+			if !strings.Contains(stderr.String(), "error:usage") {
+				t.Fatalf("stderr = %q, want it to mention error:usage", stderr.String())
+			}
+		})
+	}
+}
+
 func TestRun_BadEvent_ErrorUsage(t *testing.T) {
 	stateDir := t.TempDir()
 	var stderr strings.Builder

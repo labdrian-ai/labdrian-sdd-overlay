@@ -3296,3 +3296,20 @@ func TestRunSyncTriggerCore_NoArgs_ExitsZero(t *testing.T) {
 		t.Fatalf("runSyncTriggerCore(nil) exit = %d, want 0", exitCode)
 	}
 }
+
+// TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn pins R3-child-validation-bypass: a malformed "--child" must never spawn.
+func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T) {
+	stateDir := t.TempDir()
+	binDir := filepath.Join(stateDir, "bin")
+	os.MkdirAll(binDir, 0o755)
+	marker := filepath.Join(t.TempDir(), "spawned")
+	os.WriteFile(filepath.Join(binDir, "longterm-mem"), []byte("#!/bin/sh\ntouch \""+marker+"\"\nexit 0\n"), 0o755)
+	exitCode := -1
+	runSyncTriggerCore([]string{"--child", "--state-dir", stateDir}, func(code int) { exitCode = code })
+	if exitCode != 0 {
+		t.Fatalf("runSyncTriggerCore exit = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Fatalf("sync-trigger --child with no event/cwd spawned longterm-mem")
+	}
+}
