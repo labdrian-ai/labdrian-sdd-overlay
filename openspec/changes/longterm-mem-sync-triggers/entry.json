@@ -62,10 +62,10 @@
     "counting_method": "authored-additions-and-deletions",
     "size_exception": {
       "state": "granted",
-      "scope": "sync-runner",
-      "changed_lines": 624,
+      "scope": "sync-runner, session-end-hook",
+      "changed_lines": 1111,
       "authorized_by": "labdrian (maintainer)",
-      "reason": "slice 1 sync-runner: 624 authored lines under engine/, 299 of them strict-TDD tests for the R-003 runner contract; granted 2026-09-09 at delivery"
+      "reason": "slice 1 sync-runner 624 and slice 2 session-end-hook 487 authored lines, dominated by strict-TDD tests for the R-003 runner contract and the SessionEnd coexistence scenarios; granted 2026-09-09 and 2026-09-10 at delivery"
     }
   },
   "strict_tdd": {
