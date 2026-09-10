@@ -159,11 +159,28 @@
 
 ### Deviations from Design
 
-None — implementation matches `design.md`'s "session-end-hook" row and the Interfaces/Contracts hook command exactly (`command -v <bin> &>/dev/null && <bin> sync-trigger --event session-end --cwd "${CLAUDE_PROJECT_DIR:-.}" || true`), except the `--cwd` fallback uses `${CLAUDE_PROJECT_DIR:-.}` per the injected task prompt and the existing minimalism/design entry convention in this same file, rather than design.md's `${CLAUDE_PROJECT_DIR:-$PWD}` prose — functionally equivalent (`.` and `$PWD` both resolve to the shell's current directory) and consistent with every other hook command this Merger already emits.
+The original slice-2 commit used `${CLAUDE_PROJECT_DIR:-.}` for the `--cwd` fallback, following the existing minimalism/design entry convention in this file rather than design.md's `${CLAUDE_PROJECT_DIR:-$PWD}` prose. This was **not** functionally equivalent to `$PWD`: `.` is a relative path, and `engine/synctrigger/synctrigger.go`'s `Run` rejected any non-absolute `--cwd` as `error:usage` *before opening its log*, so whenever `CLAUDE_PROJECT_DIR` was unset the SessionEnd hook silently disabled the sync with no trace in the log. The phase validator caught this (finding F1) and it was fixed by:
+
+- emitting `${CLAUDE_PROJECT_DIR:-$PWD}` as design.md specifies (`engine/settings/settings.go`, `buildSyncTriggerSessionEndEntry`), and
+- making `Run` itself resolve a relative `--cwd` via `filepath.Abs` before the absolute-path validation, so a relative path never becomes a usage error regardless of how it was produced (`engine/synctrigger/synctrigger.go`).
+
+**Validator findings fixed**: F1 (relative `--cwd` fallback disabling the sync silently — fixed at both the emitter and `Run`'s validation, above), F2 (the missing-binary guard used the bash-only `&>/dev/null`, which is inert under the `sh -c`/dash runtime Claude Code actually uses to invoke hooks — changed to POSIX `>/dev/null 2>&1` for the new SessionEnd entry only; the four pre-existing entries are unchanged, filed as an observation, not a change), F3 (corrected the `matcher-less like UserPromptSubmit` comment — SessionEnd does support a `matcher` field, omitting one just matches every event — and added a note on SessionEnd's short default timeout, which is why the runner detaches immediately).
+
+### Size Exception
+
+- **Scope**: slice 2 `session-end-hook`, cumulative across its original commits and this follow-on fix
+- **Authored lines**: 487 code/doc lines + 380 test lines (git diff --shortstat across the slice's commits)
+- **Reason**: the SessionEnd hook family, its lifecycle-state/status wiring, and the three validator-findings fix are one cohesive contract; the overage is test coverage and doc updates, not padding
+- **Authorized by**: owner, 2026-09-09/2026-09-10
+
+### Plan vs Realized Slice Count (fix pass)
+
+- Planned: 3 slices (`sync-runner` → `session-end-hook` → `archive-trigger`)
+- Realized so far: 2 (`sync-runner`, `session-end-hook`)
 
 ### Issues Found
 
-None.
+None beyond the validator findings above, now fixed.
 
 ### Remaining Tasks (this change, not this slice)
 
