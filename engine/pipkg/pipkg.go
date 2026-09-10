@@ -6,6 +6,7 @@
 package pipkg
 
 import (
+	_ "embed"
 	"encoding/json"
 	"fmt"
 	"io/fs"
@@ -20,6 +21,27 @@ import (
 )
 
 const piTarget = "pi"
+
+// gateExtensionSource is the exact bytes shipped as
+// extensions/labdrian-gate.ts inside the built package (slice 3,
+// pi-contract-gate, R-004). Embedding rather than a string literal keeps a
+// single source of truth: the file this constant embeds is the same one
+// the node-driven Go tests and Pi's own jiti loader execute.
+//
+//go:embed labdrian-gate.ts
+var gateExtensionSource string
+
+// gateContractFiles are the managed contracts labdrian-gate.ts reads at
+// runtime (its CONTRACT_RELATIVE_PATHS), copied from overlayRoot's
+// skills/_shared/ into the built package's skills/_shared/ (R-004/R-007):
+// these two files are not registry-driven, since they are gate
+// infrastructure rather than an installable skill.
+var gateContractFiles = []string{"minimalism-contract.md", "anti-generic-design.md"}
+
+// GateExtensionSource returns the exact embedded labdrian-gate.ts bytes
+// this build ships, for tests that need to run the real source under Node
+// without duplicating it.
+func GateExtensionSource() string { return gateExtensionSource }
 
 // packageManifest is the subset of package.json fields this package writes.
 type packageManifest struct {
@@ -148,6 +170,25 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
 	agentSrc := filepath.Join(overlayRoot, "agents", "GADU.md")
 	if err := copyFile(agentSrc, filepath.Join(agentsDir, "GADU.md")); err != nil {
 		return fmt.Errorf("pipkg: copying agents/GADU.md: %w", err)
+	}
+
+	sharedDir := filepath.Join(skillsDir, "_shared")
+	if err := os.MkdirAll(sharedDir, 0755); err != nil {
+		return fmt.Errorf("pipkg: creating skills/_shared dir: %w", err)
+	}
+	for _, name := range gateContractFiles {
+		src := filepath.Join(overlayRoot, "skills", "_shared", name)
+		if err := copyFile(src, filepath.Join(sharedDir, name)); err != nil {
+			return fmt.Errorf("pipkg: copying skills/_shared/%s: %w", name, err)
+		}
+	}
+
+	extensionsDir := filepath.Join(dir, "extensions")
+	if err := os.MkdirAll(extensionsDir, 0755); err != nil {
+		return fmt.Errorf("pipkg: creating extensions dir: %w", err)
+	}
+	if err := os.WriteFile(filepath.Join(extensionsDir, "labdrian-gate.ts"), []byte(gateExtensionSource), 0644); err != nil {
+		return fmt.Errorf("pipkg: writing extensions/labdrian-gate.ts: %w", err)
 	}
 
 	manifest := packageManifest{
