@@ -48,14 +48,14 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: archive-trigger (PR 3, R-001, R-003)
 
-- [ ] 3.1 RED `engine/shelltest`: absent engine returns 0; fake engine forwards `--event archive --cwd`; unknown subcommand still dies
-- [ ] 3.2 GREEN `bin/labdrian-overlay`: add `sync-trigger` to whitelist (line 3686); `cmd_longterm_mem` branch guards `-x $ENGINE_BINARY`, execs verb, updates usage
-- [ ] 3.3 Verify: `shellcheck -S warning bin/labdrian-overlay`
-- [ ] 3.4 RED scripted check: closure-feedback command string with `|| true` appears verbatim in `skills/inception-pipeline/SKILL.md`
-- [ ] 3.5 GREEN `skills/inception-pipeline/SKILL.md`: step 4 call site + gotcha line (`sdd-archive/SKILL.md` stays untouched)
+- [x] 3.1 RED `engine/shelltest`: absent engine returns 0; fake engine forwards `--event archive --cwd`; unknown subcommand still dies
+- [x] 3.2 GREEN `bin/labdrian-overlay`: add `sync-trigger` to whitelist (line 3686); `cmd_longterm_mem` branch guards `-x $ENGINE_BINARY`, launches the verb detached in the background (`setsid`, falling back to a bare `&`) and returns immediately without waiting, updates usage
+- [x] 3.3 Verify: `shellcheck -S warning bin/labdrian-overlay`
+- [x] 3.4 RED `engine/shelltest`: `case_archive_sync_trigger_call_site_is_only_in_inception_pipeline` asserts the closure-feedback command string with `|| true` appears verbatim in `skills/inception-pipeline/SKILL.md` and is absent from the managed `skills/sdd-archive/SKILL.md`
+- [x] 3.5 GREEN `skills/inception-pipeline/SKILL.md`: step 4 call site + gotcha line (`sdd-archive/SKILL.md` stays untouched)
 
 ## Phase 4: Full Verification
 
-- [ ] 4.1 `cd engine && go vet ./... && go test ./...`
-- [ ] 4.2 `cd longterm-mem && go vet ./... && go test ./...`
-- [ ] 4.3 `shellcheck -S warning bin/labdrian-overlay`
+- [x] 4.1 `cd engine && go vet ./... && go test ./...`
+- [x] 4.2 `cd longterm-mem && go vet ./... && go test ./...`
+- [x] 4.3 `shellcheck -S warning bin/labdrian-overlay`

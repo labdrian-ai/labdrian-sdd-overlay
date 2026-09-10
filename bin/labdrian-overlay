@@ -506,6 +506,15 @@ Commands:
                                    so a target stays tracked as installed. Any
                                    subcommand exits 1 on a usage error or a missing
                                    prerequisite (die).
+  longterm-mem sync-trigger --event session-end|archive --cwd DIR
+                                   Forward to the engine's sync-trigger verb, which
+                                   detaches a bounded longterm-mem sync for the given
+                                   project directory and never blocks the caller. If
+                                   the engine binary is missing or not executable,
+                                   warns and skips instead of building it. Always
+                                   exits 0 (R-003) -- safe to call from a SessionEnd
+                                   hook or archive closure-feedback with no further
+                                   guard needed.
   --help                           Show this help
 
 Targets:
@@ -3683,9 +3692,42 @@ cmd_longterm_mem() {
   local subcmd="${1:-}"
   shift || true
   case "$subcmd" in
-    install|status|uninstall) ;;
-    *) die "Unknown longterm-mem subcommand: ${subcmd:-<none>}. Valid: install, status, uninstall" ;;
+    install|status|uninstall|sync-trigger) ;;
+    *) die "Unknown longterm-mem subcommand: ${subcmd:-<none>}. Valid: install, status, uninstall, sync-trigger" ;;
   esac
+
+  # sync-trigger is a pure forward to the engine verb, not a variant of
+  # install/status/uninstall's build-or-report shape, and it MUST NOT
+  # inherit any of it: it never resolves --target, never calls
+  # ensure_engine_binary (which can `die` trying to build a missing
+  # engine -- exactly what a SessionEnd hook or archive closure-feedback
+  # caller must never observe, R-001/R-003), and it always returns 0.
+  # A missing/non-executable engine binary degrades to a warning instead.
+  #
+  # The wrapper MUST return without waiting on the engine at all -- a
+  # bounded wait (even a short `timeout`) is still a wait, and a review
+  # correction rejected exactly that: it blocks the SessionEnd hook or
+  # archive closure-feedback caller for up to the bound. The engine is
+  # therefore launched fully detached -- its own session via `setsid`
+  # when available, so it outlives the wrapper's own exit -- with stdin
+  # from /dev/null and stdout/stderr discarded, backgrounded, and never
+  # awaited; `disown` best-effort covers shells where the background job
+  # is not already detached. The engine process owns its own bounded
+  # child timeout internally; the wrapper adds no wait of its own on top
+  # of that.
+  if [[ "$subcmd" == "sync-trigger" ]]; then
+    if [[ ! -x "$ENGINE_BINARY" ]]; then
+      warn "longterm-mem sync-trigger: engine binary not found or not executable at $ENGINE_BINARY; skipping sync"
+      return 0
+    fi
+    if command -v setsid >/dev/null 2>&1; then
+      setsid "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@" </dev/null >/dev/null 2>&1 &
+    else
+      "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@" </dev/null >/dev/null 2>&1 &
+    fi
+    disown 2>/dev/null || true
+    return 0
+  fi
 
   local target_arg="all"
   local purge=""

@@ -195,6 +195,14 @@ go run -C "$root/tools/actuals-record-validator" . \
 
 On any partial-write failure (any of the three written, another not), **report the inconsistency and STOP**. Do not silently leave the stores out of sync.
 
+4. AFTER the three writes above succeed, fire the archive-time sync trigger from the project root:
+
+```bash
+labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true
+```
+
+This is a **best-effort, non-blocking, informational** call — it runs strictly after the STOP-on-partial-write rule above, never before, and its outcome (including the `|| true` swallowing a non-zero exit) never blocks or reverses closure. `labdrian longterm-mem sync-trigger` itself always exits 0 regardless of whether the sync it schedules actually ran (`bin/labdrian-overlay`'s `sync-trigger` branch), so the trailing `|| true` here is a second, redundant safety net — kept because closure-feedback must stay non-blocking even if that guarantee ever regresses.
+
 Downstream consumers read on their next run — you do NOT push to them:
 - **roadmap-maker** reads `sdd/{change}/actuals` on its next render.
 - **sdd-time-estimation** reads `project/{project}/estimation-calibration` on its next pre-start estimate.
@@ -210,6 +218,7 @@ Downstream consumers read on their next run — you do NOT push to them:
 - **change-name is derived once.** requirements-capture owns it; inherit verbatim, never re-derive downstream.
 - **Stop on partial closure writes.** If actuals, calibration, or the archive-report append fails, report and stop — do not leave the stores inconsistent.
 - **The archive-report append is a named carve-out, not a precedent.** The `## Cycle Timestamps` append-only carve-out applies to that one delimited section only — it does not license editing any other part of the engine's native `archive-report.md`, and the Engram archive-report topic stays untouched either way.
+- **The archive-time sync trigger never gates closure.** Execute step 4's `labdrian longterm-mem sync-trigger --event archive --cwd "$root" || true` runs after all three writes succeed and its result is purely informational — a failed, skipped, or missing sync is never a reason to report closure as incomplete, and it lives here rather than in the managed `sdd-archive/SKILL.md`.
 
 ## References
 
