@@ -65,6 +65,7 @@ import (
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 )
 
 // embeddedContract resolves a named engine-owned managed contract to its content
@@ -127,6 +128,8 @@ func main() {
 		runGaduGenerate(os.Args[2:])
 	case "skills":
 		runSkills(os.Args[2:])
+	case "sync-trigger":
+		runSyncTrigger(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -158,6 +161,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    add           <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill")
 	fmt.Fprintln(os.Stderr, "    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest")
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
+	fmt.Fprintln(os.Stderr, "  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]")
+	fmt.Fprintln(os.Stderr, "    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
@@ -407,6 +412,76 @@ func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, c
 	}
 
 	return action, target, configRoot, component, stateDir, nil
+}
+
+// ---------------------------------------------------------------------------
+// sync-trigger subcommand
+// ---------------------------------------------------------------------------
+
+// defaultStateDirName is the overlay state root under $HOME, used when
+// --state-dir is not given.
+const defaultStateDirName = ".labdrian-overlay"
+
+// runSyncTrigger implements the 'sync-trigger --event <e> --cwd <dir>
+// [--state-dir <dir>] [--child]' subcommand.
+func runSyncTrigger(args []string) {
+	runSyncTriggerCore(args, os.Exit)
+}
+
+// runSyncTriggerCore is the testable core of the sync-trigger subcommand.
+// It never rejects its own argv: any invalid or missing flag is left to
+// synctrigger.Run to classify as error:usage, so this always exits 0
+// (R-003) -- the same "core takes an injected exit" shape as
+// runRuntimeCore above, but with a fixed exit(0) rather than a computed
+// one, because sync-trigger has no failure that is allowed to propagate.
+func runSyncTriggerCore(args []string, exit func(int)) {
+	o, isChild := parseSyncTriggerArgs(args)
+	if o.StateDir == "" {
+		if home, err := os.UserHomeDir(); err == nil {
+			o.StateDir = filepath.Join(home, defaultStateDirName)
+		}
+	}
+
+	if isChild {
+		synctrigger.RunChild(o)
+		exit(0)
+		return
+	}
+	synctrigger.Run(o)
+	exit(0)
+}
+
+// parseSyncTriggerArgs extracts sync-trigger flags into synctrigger.Options
+// and reports whether "--child" was present. It deliberately does not
+// validate values (missing/unknown flags simply leave fields empty) --
+// synctrigger.Run and RunChild own that validation and both always return
+// 0, so a parse error here would only duplicate a check that already
+// cannot fail the caller.
+func parseSyncTriggerArgs(args []string) (synctrigger.Options, bool) {
+	var o synctrigger.Options
+	child := false
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--event":
+			i++
+			if i < len(args) {
+				o.Event = args[i]
+			}
+		case "--cwd":
+			i++
+			if i < len(args) {
+				o.Cwd = args[i]
+			}
+		case "--state-dir":
+			i++
+			if i < len(args) {
+				o.StateDir = args[i]
+			}
+		case "--child":
+			child = true
+		}
+	}
+	return o, child
 }
 
 func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {

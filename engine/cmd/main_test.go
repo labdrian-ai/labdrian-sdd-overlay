@@ -3280,3 +3280,36 @@ func TestComponentFlag_DefaultIsRuntimeParity(t *testing.T) {
 		t.Fatalf("runtime status should report unsupported Claude lifecycle exactly as before this slice, got %q", outBuf.String())
 	}
 }
+
+// TestRunSyncTriggerCore_NoArgs_ExitsZero pins R-003: the sync-trigger verb
+// must never surface a non-zero exit to its caller (a Claude Code hook or
+// the archive closure-feedback step), even with no arguments at all --
+// synctrigger.Run classifies that as its own error:usage and still returns
+// 0, and runSyncTriggerCore must forward that 0 through an injected exit,
+// exactly like runRuntimeCore's testable core above.
+func TestRunSyncTriggerCore_NoArgs_ExitsZero(t *testing.T) {
+	exitCode := -1
+
+	runSyncTriggerCore(nil, func(code int) { exitCode = code })
+
+	if exitCode != 0 {
+		t.Fatalf("runSyncTriggerCore(nil) exit = %d, want 0", exitCode)
+	}
+}
+
+// TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn pins R3-child-validation-bypass: a malformed "--child" must never spawn.
+func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T) {
+	stateDir := t.TempDir()
+	binDir := filepath.Join(stateDir, "bin")
+	os.MkdirAll(binDir, 0o755)
+	marker := filepath.Join(t.TempDir(), "spawned")
+	os.WriteFile(filepath.Join(binDir, "longterm-mem"), []byte("#!/bin/sh\ntouch \""+marker+"\"\nexit 0\n"), 0o755)
+	exitCode := -1
+	runSyncTriggerCore([]string{"--child", "--state-dir", stateDir}, func(code int) { exitCode = code })
+	if exitCode != 0 {
+		t.Fatalf("runSyncTriggerCore exit = %d, want 0", exitCode)
+	}
+	if _, err := os.Stat(marker); err == nil {
+		t.Fatalf("sync-trigger --child with no event/cwd spawned longterm-mem")
+	}
+}
