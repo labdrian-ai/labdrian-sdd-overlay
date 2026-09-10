@@ -1969,22 +1969,33 @@ case_sync_trigger_absent_engine_returns_zero() {
 
 # write_fake_slow_engine never exits on its own: it sleeps far longer than
 # any bound the wrapper should tolerate, simulating a stale or wedged engine
-# binary that never detaches.
+# binary that never detaches. It also records its own PID to $2 right away
+# so the test can confirm afterward that it was launched detached and left
+# running rather than being waited on.
 write_fake_slow_engine() {
-  local path="$1"
+  local path="$1" pid_path="$2"
   mkdir -p "$(dirname "$path")"
-  cat > "$path" <<'STUB'
+  cat > "$path" <<STUB
 #!/usr/bin/env bash
+echo "\$\$" > "$pid_path"
 sleep 30
 exit 0
 STUB
   chmod +x "$path"
 }
 
+# The review correction that produced this test: a bounded wait (even a
+# short `timeout`) is still a wait, and the previous fix was rejected for
+# blocking the caller for up to that bound. sync-trigger must now return
+# almost immediately regardless of what the engine does, so the bound here
+# is tight (2s, not the old 12s) and — the real proof of non-blocking — the
+# wedged engine's own PID must still be alive and running right after the
+# wrapper returns, showing the wrapper never awaited it as its own child.
 case_sync_trigger_does_not_block_on_a_wedged_engine() {
-  local dir start end elapsed out
+  local dir start end elapsed out pid_file engine_pid
   dir="$(new_case_dir sync-trigger-wedged-engine)"
-  write_fake_slow_engine "$dir/bin/engine"
+  pid_file="$dir/engine.pid"
+  write_fake_slow_engine "$dir/bin/engine" "$pid_file"
 
   start="$(date +%s)"
   out="$(run_longterm_mem_sync_trigger "$dir/bin/engine" "$dir/state" --event session-end --cwd "$dir/project")"
@@ -1995,11 +2006,31 @@ case_sync_trigger_does_not_block_on_a_wedged_engine() {
     fail "sync-trigger does not exit 0 when the engine is wedged" "$out"
     return
   fi
-  if (( elapsed > 12 )); then
-    fail "sync-trigger blocked on a wedged engine instead of bounding the call" "elapsed=${elapsed}s output: $out"
+  if (( elapsed > 2 )); then
+    fail "sync-trigger blocked instead of returning immediately without waiting on the engine" "elapsed=${elapsed}s output: $out"
     return
   fi
-  pass "sync-trigger returns within bound and exits 0 when the engine is wedged"
+
+  # Give the detached engine a brief moment to have written its PID file
+  # (it writes that line before sleeping, so this is not the same as
+  # waiting on the sleep itself).
+  local waited=0
+  while [[ ! -s "$pid_file" && $waited -lt 20 ]]; do
+    sleep 0.1
+    waited=$((waited + 1))
+  done
+  if [[ ! -s "$pid_file" ]]; then
+    fail "sync-trigger did not appear to launch the engine at all" "$out"
+    return
+  fi
+  engine_pid="$(cat "$pid_file")"
+  if ! kill -0 "$engine_pid" 2>/dev/null; then
+    fail "the wedged engine process was not left running detached after sync-trigger returned" "pid=$engine_pid $out"
+    return
+  fi
+  kill -9 "$engine_pid" 2>/dev/null || true
+
+  pass "sync-trigger returns immediately and never waits on the engine, even when it is wedged"
 }
 
 case_sync_trigger_forwards_event_and_cwd() {
@@ -2014,6 +2045,14 @@ case_sync_trigger_forwards_event_and_cwd() {
     fail "sync-trigger does not exit 0 when the engine accepts the call" "$out"
     return
   fi
+  # sync-trigger now launches the engine detached and returns before it
+  # necessarily finishes writing the record file, so poll for it (up to
+  # 3s) instead of expecting it synchronously.
+  local waited=0
+  while [[ ! -f "$record" && $waited -lt 30 ]]; do
+    sleep 0.1
+    waited=$((waited + 1))
+  done
   if [[ ! -f "$record" ]]; then
     fail "sync-trigger never invoked the engine binary" "$out"
     return

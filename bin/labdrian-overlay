@@ -3700,27 +3700,32 @@ cmd_longterm_mem() {
   # install/status/uninstall's build-or-report shape, and it MUST NOT
   # inherit any of it: it never resolves --target, never calls
   # ensure_engine_binary (which can `die` trying to build a missing
-  # engine — exactly what a SessionEnd hook or archive closure-feedback
+  # engine -- exactly what a SessionEnd hook or archive closure-feedback
   # caller must never observe, R-001/R-003), and it always returns 0.
   # A missing/non-executable engine binary degrades to a warning instead.
   #
-  # The engine invocation itself is bounded too: a stale or wedged engine
-  # binary that never detaches must not be able to block the SessionEnd
-  # hook or archive closure-feedback caller indefinitely. When `timeout`
-  # is available we cap the call; when it is not, we fire the engine in
-  # the background and never wait on it. Either way this branch still
-  # always returns 0.
+  # The wrapper MUST return without waiting on the engine at all -- a
+  # bounded wait (even a short `timeout`) is still a wait, and a review
+  # correction rejected exactly that: it blocks the SessionEnd hook or
+  # archive closure-feedback caller for up to the bound. The engine is
+  # therefore launched fully detached -- its own session via `setsid`
+  # when available, so it outlives the wrapper's own exit -- with stdin
+  # from /dev/null and stdout/stderr discarded, backgrounded, and never
+  # awaited; `disown` best-effort covers shells where the background job
+  # is not already detached. The engine process owns its own bounded
+  # child timeout internally; the wrapper adds no wait of its own on top
+  # of that.
   if [[ "$subcmd" == "sync-trigger" ]]; then
     if [[ ! -x "$ENGINE_BINARY" ]]; then
       warn "longterm-mem sync-trigger: engine binary not found or not executable at $ENGINE_BINARY; skipping sync"
       return 0
     fi
-    if command -v timeout >/dev/null 2>&1; then
-      timeout --kill-after=2 10 "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@"
+    if command -v setsid >/dev/null 2>&1; then
+      setsid "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@" </dev/null >/dev/null 2>&1 &
     else
-      "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@" >/dev/null 2>&1 &
-      disown 2>/dev/null || true
+      "$ENGINE_BINARY" sync-trigger --state-dir "$STATE_DIR" "$@" </dev/null >/dev/null 2>&1 &
     fi
+    disown 2>/dev/null || true
     return 0
   fi
 
