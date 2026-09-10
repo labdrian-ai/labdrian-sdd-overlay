@@ -190,3 +190,26 @@ None beyond the validator findings above, now fixed.
 ### Status
 
 10/10 slice-2 tasks complete, verified, and committed within budget. 16/24 total tasks across the change complete (Phase 1 + Phase 2). Ready for `sdd-verify` on slice 2, or for `sdd-apply` to resume with slice 3 (`archive-trigger`).
+
+## Slice 3 — archive-trigger (Phase 3, R-001/R-003)
+
+**Status**: implemented, tests green.
+
+**Review correction**: bounded-wait rejected as not non-blocking; wrapper now returns immediately, engine detached.
+
+The native review's targeted validator rejected the first `sync-trigger` fix (commit `0468a80`): when `timeout` was available, `bin/labdrian-overlay`'s `sync-trigger` branch still invoked the engine synchronously and could block the SessionEnd or archive caller for up to 10 seconds, and the shelltest accepted elapsed times up to 12 seconds — it verified *bounded waiting*, not the documented *non-blocking* guarantee.
+
+Fixed by removing the wait entirely: the `sync-trigger` branch in `cmd_longterm_mem` (`bin/labdrian-overlay`) now always launches the engine detached (`setsid` when available, falling back to a plain background job) with stdin from `/dev/null` and stdout/stderr discarded, backgrounds it, and returns 0 immediately without waiting on it at all. The `timeout` path is gone — the engine already carries its own internal bounded child timeout, so the wrapper adds no wait on top of it. A missing/non-executable engine binary still degrades to a warning and an immediate `return 0`.
+
+`engine/shelltest/overlay_longterm_mem_test.sh`'s `case_sync_trigger_does_not_block_on_a_wedged_engine` was rewritten RED-first: the fake wedged engine (30s sleep) now also records its own PID, the wrapper's elapsed-time bound was tightened from 12s to 2s, and the test additionally asserts the wedged engine's PID is still alive (`kill -0`) right after the wrapper returns — proving the wrapper never awaited it as its own child, not merely that it returned within some bound. `case_sync_trigger_forwards_event_and_cwd` was adjusted to poll (up to 3s) for the fake engine's record file instead of expecting it synchronously, since the launch is now asynchronous; the forwarded-args assertions themselves are unchanged.
+
+### Verification (foreground, all observed)
+
+- `bash engine/shelltest/overlay_longterm_mem_test.sh` → all cases pass, including the rewritten wedged-engine and forwarding cases
+- `shellcheck -S warning bin/labdrian-overlay` → only the 2 pre-existing known SC2064 warnings (`trap "git checkout '${current_branch}' ..."`), unrelated to this change
+- `git diff --shortstat 69a5d37..HEAD` → measured at commit time, see commit message
+
+### Plan vs Realized Slice Count
+
+- Planned: 3 slices (`sync-runner` → `session-end-hook` → `archive-trigger`)
+- Realized: 3 (`sync-runner`, `session-end-hook`, `archive-trigger`)
