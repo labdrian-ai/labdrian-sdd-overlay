@@ -147,10 +147,11 @@ is_copy_target() {
 }
 
 # Emits the shared stub line for a recognized package target whose
-# apply/status/sync-check dispatch is not implemented yet in this slice
-# (pi-target-plumbing) -- lands in pi-package-build (slice 2).
+# package_target_stub_message is the honest fallback for a package-model
+# target that has no adapter wired yet (today every package target, i.e.
+# pi, is dispatched explicitly above this call).
 package_target_stub_message() {
-  echo "  $1: package target, handled by slice 2 (pi-package-build)"
+  echo "  $1: package target without a lifecycle adapter (not implemented)"
 }
 
 # pipkg_dest_dir prints the built labdrian-pi package directory
@@ -238,7 +239,7 @@ pipkg_status_and_report() {
   local dest result
   dest="$(pipkg_dest_dir)"
   if [[ ! -e "$dest/package.json" ]]; then
-    echo "  pi: note -- 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime, and there is no short alias for either flag"
+    echo "  pi: note -- 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)"
     echo "  pi: not built (run: labdrian-overlay apply --target pi)"
     return 1
   fi
@@ -2522,7 +2523,7 @@ cmd_sync_check() {
         # ran and found nothing wrong". "unsupported" plus an explicit
         # VERDICT line below make its incompleteness detectable the same
         # way every other target's VERDICT line is.
-        echo "SYNC_CHECK:$t: unsupported -- package target, handled by slice 2 (pi-package-build)"
+        echo "SYNC_CHECK:$t: unsupported -- package target without a lifecycle adapter"
         package_target_stub_message "$t"
         echo ""
         echo "VERDICT:$t:UNSUPPORTED"

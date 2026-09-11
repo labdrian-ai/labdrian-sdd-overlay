@@ -503,7 +503,7 @@ func TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries(t *testing.T) {
 			listed:        true,
 			mcpRegistered: true,
 			wantStatus:    engineRuntime.CapabilitySupported,
-			wantContains:  "labdrian-pi package is built, in sync, and listed",
+			wantContains:  "longterm-mem is registered in its mcp.json",
 		},
 	}
 

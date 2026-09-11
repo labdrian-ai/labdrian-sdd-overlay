@@ -122,7 +122,7 @@ func (a PiAdapter) Status() LifecycleResult {
 
 	if len(problems) == 0 {
 		return NewLifecycleResult(a.target, ActionStatus, CapabilitySupported,
-			"labdrian-pi package is built, in sync, and listed in ~/.pi/agent/settings.json. "+piNoDiscoveryFlagsDisclosure, nil)
+			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, and longterm-mem is registered in its mcp.json. "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 	return NewLifecycleResult(a.target, ActionStatus, CapabilityPartial,
 		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, problems)
