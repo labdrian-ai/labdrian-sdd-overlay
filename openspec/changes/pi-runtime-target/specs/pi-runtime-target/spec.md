@@ -7,15 +7,15 @@ honest status, disclosure, and lifecycle actions that let Pi (via gentle-pi)
 receive the overlay's skills, agents, and per-phase SDD contract, without
 touching gentle-pi's own managed state.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Pi Accepted as a Valid CLI Target
 
 The `labdrian-overlay` CLI MUST accept `pi` as a valid value for `--target`
-on `apply`, `status`, `sync-check`, and `uninstall`.
+on `apply`, `status`, and `sync-check`, and to `engine runtime uninstall`.
 
 #### Scenario: Pi target is recognized
-- GIVEN `--target pi` is passed to any of `apply`, `status`, `sync-check`, `uninstall`
+- GIVEN `--target pi` is passed to any of `apply`, `status`, `sync-check`, or `engine runtime uninstall`
 - WHEN the command runs
 - THEN it does not report an unknown-target error and returns a Pi-specific result
 
@@ -85,9 +85,9 @@ as `.ts` so it is loaded by Pi's jiti-based loader — not `.js`.
 - AND no injected path line ever resolves outside the package root
 
 #### Scenario: Extension is discovered from the package extensions directory
-- GIVEN the `labdrian-pi` package ships `extensions/gate.ts`
+- GIVEN the `labdrian-pi` package ships `extensions/labdrian-gate.ts`
 - WHEN Pi's extension discovery scans the installed package
-- THEN it loads `gate.ts` via jiti
+- THEN it loads `labdrian-gate.ts` via jiti
 - AND no `.js` extension file is required or expected
 
 ### Requirement: Honest Status for Unproven Activation
@@ -122,14 +122,14 @@ either flag was used. There is no `-ns` alias.
 
 ### Requirement: Pi-Scoped Uninstall
 
-`uninstall --target pi` MUST remove only the `labdrian-pi` package entry via
+`engine runtime uninstall --target pi` (the adapter path; there is no top-level `labdrian-overlay uninstall` verb) MUST remove only the `labdrian-pi` package entry via
 `pi remove <source>`, passing the same local package path used at install
 as `<source>`, and MUST deregister the longterm-mem MCP entry, without
 touching gentle-pi- or pi-engram-owned state.
 
 #### Scenario: Only the owned package entry is removed
 - GIVEN gentle-pi/pi-engram-owned entries coexist with the `labdrian-pi` package entry
-- WHEN `uninstall --target pi` runs
+- WHEN `engine runtime uninstall --target pi` runs
 - THEN it runs `pi remove <local-package-path>`
 - AND the `labdrian-pi` entry disappears from `~/.pi/agent/settings.json`
   packages, its MCP registration is removed, and gentle-pi/pi-engram-owned
