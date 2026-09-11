@@ -1100,3 +1100,11 @@ slices planned=5 realized=5 (unchanged from Remediation 1 — this batch is scop
 ### Status
 
 W-01, W-02, and W-03 (the three remaining WARNING findings from the verify-report) are now fixed, tested, verified at runtime, and committed as three independent work-unit commits. All findings from the verify-report's Remediation 1 + Remediation 2 scope (C-01, C-02, W-01, W-02, W-03) are now resolved. W-04, W-05, W-06, W-07 were explicitly out of scope for both remediation batches. Ready for `sdd-verify` to re-check the full scope.
+
+## Manual Verification (Phase 6, live Pi 0.85.1, 2026-09-11)
+
+- 6.1 `engine runtime install --target pi` ran `pi install /home/labdrian/.labdrian-overlay/pi/labdrian-pi`; Pi recorded it RELATIVE to `~/.pi/agent/` (`../../.labdrian-overlay/pi/labdrian-pi`), which exposed a real bug: both listing probes compared absolute strings (fixed in 368b33d). A headless session (`pi --no-session -p`) listed `gadu-operator, gadu-orchestrate, sdd-time-estimation`; nothing was written under `~/.pi/agent/agents/`.
+- 6.2 `pi list` shows the package with its `extensions/labdrian-gate.ts`; a session with extensions answers a trivial prompt in 2.7s (the gate does not block startup). `--no-extensions` also disables the pi-claude-bridge provider on this machine, so the with/without comparison of the injected prompt could not be observed headlessly; node-driven tests in `engine/runtime/pi_test.go` remain the evidence for the injection content.
+- 6.3 `engine runtime uninstall --target pi` ran `pi remove <package>`; `~/.pi/agent/settings.json` minus `packages` (sha256 9b12ea77…), `~/.pi/agent/mcp.json` (302d5494…) and `~/.pi/agent/agents/` were byte-identical before and after; only our package entry disappeared.
+- Live incident: running `go test ./...` in `engine/` while the package was installed executed a real `pi remove` from `TestExpandTarget_Pi`; fixed by `TestMain` guards in the runtime and cmd test packages (15016a7).
+- Correction: Pi 0.85.1 documents `-ne`/`-ns` short aliases; the research/spec/disclosure claiming none existed were fixed (4d3ba7e).

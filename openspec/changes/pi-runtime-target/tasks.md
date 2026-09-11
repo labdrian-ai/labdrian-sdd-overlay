@@ -67,7 +67,7 @@ Chain strategy: stacked-to-main
 
 ## Phase 6: Manual-Only Verification (live Pi, post-chain)
 
-- [ ] 6.1 `pi install <local-path>` then open a Pi session: GADU skill/agent discoverable, no file under `~/.pi/agent/agents/` written
-- [ ] 6.2 Observe gate injection in real `sdd-tasks`/`sdd-apply` system prompt; confirm every other agent unaffected
-- [ ] 6.3 Confirm `pi remove <source>` leaves gentle-pi/pi-engram entries byte-identical
+- [x] 6.1 `pi install <local-path>` then open a Pi session: GADU skill/agent discoverable, no file under `~/.pi/agent/agents/` written
+- [x] 6.2 Observe gate injection in real `sdd-tasks`/`sdd-apply` system prompt; confirm every other agent unaffected
+- [x] 6.3 Confirm `pi remove <source>` leaves gentle-pi/pi-engram entries byte-identical
 - [x] 6.4 Broad: `cd engine && go vet ./... && go test ./...`; `cd longterm-mem && go vet ./... && go test ./...`
