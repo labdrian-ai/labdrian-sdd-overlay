@@ -2,7 +2,21 @@
 // agents/) that gets installed into a Pi (gentle-pi) session via
 // `pi install <path>`. It mirrors engine/gadu's Generate/Check idiom: Build
 // writes the package, Check regenerates into a temp dir and diffs against
-// the deployed copy to report drift (R-003).
+// the deployed copy to report drift.
+//
+// Integrity guarantees (pipkg-integrity slice, R-001..R-004):
+//   - Mode drift: Check diffs both content and permission bits, so a
+//     byte-identical file whose mode changed (e.g. 0644 -> 0755) is still
+//     reported as drift.
+//   - Build root permissions: the build root (destDir after the atomic
+//     swap) is always 0755, never MkdirTemp's default 0700.
+//   - Path containment: a registry entry's path is validated relative and
+//     `..`-free at parse time (engine/skills.validateEntry); buildInto
+//     re-checks the destination join as defense in depth before any file
+//     is written for that entry.
+//   - SKILL.md name/directory match: buildInto rejects a skill whose
+//     SKILL.md frontmatter `name` does not equal its registry directory
+//     name, so every built skill is addressable by its own id.
 package pipkg
 
 import (
@@ -115,6 +129,12 @@ func Build(overlayRoot, registryPath, destDir string) error {
 		return fmt.Errorf("pipkg: creating temp build dir: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
+	// os.MkdirTemp creates its directory 0700; the build root (which
+	// becomes destDir via swap) must be 0755 like every other directory
+	// this package writes (R-002).
+	if err := os.Chmod(tmpDir, 0755); err != nil {
+		return fmt.Errorf("pipkg: setting build root permissions: %w", err)
+	}
 
 	if err := buildInto(overlayRoot, reg, tmpDir); err != nil {
 		return err
@@ -196,14 +216,20 @@ func Check(overlayRoot, registryPath, destDir string) error {
 	delete(got, mcpConfigBakFileName)
 
 	var drift []string
-	for rel, wantBytes := range want {
-		gotBytes, ok := got[rel]
+	for rel, wantEntry := range want {
+		gotEntry, ok := got[rel]
 		if !ok {
 			drift = append(drift, fmt.Sprintf("%s: missing", rel))
 			continue
 		}
-		if string(wantBytes) != string(gotBytes) {
+		if string(wantEntry.data) != string(gotEntry.data) {
 			drift = append(drift, fmt.Sprintf("%s: changed", rel))
+			continue
+		}
+		// R-001: a byte-identical file whose mode changed is still
+		// drift -- the registry-recorded mode is part of build output.
+		if wantEntry.perm != gotEntry.perm {
+			drift = append(drift, fmt.Sprintf("%s: mode %04o -> %04o", rel, wantEntry.perm, gotEntry.perm))
 		}
 	}
 	for rel := range got {
@@ -229,8 +255,23 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
 		if !containsTarget(e.Install.Targets, piTarget) {
 			continue
 		}
-		src := filepath.Join(overlayRoot, "skills", e.Path)
+		// R-003 (defense in depth, D3): validateEntry already rejects an
+		// unclean/absolute/".."-bearing path at parse time, since the
+		// same e.Path is joined to both the source and destination roots
+		// below. Re-check the destination join here too, so a future
+		// caller that constructs a Registry without going through
+		// ParseRegistry cannot escape skillsDir either.
 		dst := filepath.Join(skillsDir, e.Path)
+		if rel, err := filepath.Rel(skillsDir, dst); err != nil || strings.HasPrefix(rel, "..") {
+			return fmt.Errorf("pipkg: entry %q: path %q escapes the package skills directory", e.ID, e.Path)
+		}
+		// R-004: the skill's SKILL.md frontmatter `name` must match the
+		// entry's directory name, or the built package would ship a
+		// skill that Claude/Codex/Pi cannot address by its own id.
+		src := filepath.Join(overlayRoot, "skills", e.Path)
+		if err := checkSkillNameMatchesPath(src, e.Path); err != nil {
+			return fmt.Errorf("pipkg: entry %q: %w", e.ID, err)
+		}
 		if err := copyTree(src, dst); err != nil {
 			return fmt.Errorf("pipkg: copying skill %q: %w", e.ID, err)
 		}
@@ -286,6 +327,54 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
 		return fmt.Errorf("pipkg: writing package.json: %w", err)
 	}
 	return nil
+}
+
+// checkSkillNameMatchesPath reads <src>/SKILL.md and requires its
+// frontmatter `name:` field to equal filepath.Base(entryPath) (R-004,
+// D4). It scans only the line-oriented frontmatter block (between the
+// opening and closing "---" delimiters) for a top-level "name:" key,
+// deliberately not a general YAML parser -- validateEntry in
+// engine/skills stays filesystem-free by design, so this filesystem-aware
+// check lives here instead.
+func checkSkillNameMatchesPath(src, entryPath string) error {
+	data, err := os.ReadFile(filepath.Join(src, "SKILL.md"))
+	if err != nil {
+		return fmt.Errorf("reading SKILL.md: %w", err)
+	}
+	name, err := frontmatterName(string(data))
+	if err != nil {
+		return err
+	}
+	want := filepath.Base(entryPath)
+	if name != want {
+		return fmt.Errorf("SKILL.md name %q does not match directory %q", name, want)
+	}
+	return nil
+}
+
+// frontmatterName extracts the `name:` value from a SKILL.md's YAML
+// frontmatter block (the text between the first two "---" delimiter
+// lines). It is a minimal, line-oriented scan -- not a YAML parser -- and
+// returns an error if no frontmatter block or no name key is found.
+func frontmatterName(content string) (string, error) {
+	lines := strings.Split(content, "\n")
+	if len(lines) == 0 || strings.TrimSpace(lines[0]) != "---" {
+		return "", fmt.Errorf("SKILL.md has no frontmatter block")
+	}
+	for _, line := range lines[1:] {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "---" {
+			return "", fmt.Errorf("SKILL.md frontmatter has no %q field", "name")
+		}
+		rest, ok := strings.CutPrefix(trimmed, "name:")
+		if !ok {
+			continue
+		}
+		name := strings.TrimSpace(rest)
+		name = strings.Trim(name, `"'`)
+		return name, nil
+	}
+	return "", fmt.Errorf("SKILL.md frontmatter is not terminated")
 }
 
 // loadRegistry parses the skills registry at registryPath.
@@ -441,19 +530,27 @@ func swap(tmpDir, destDir string) error {
 	return nil
 }
 
-// listFiles walks root and returns every regular file's content, keyed by
-// its slash-separated path relative to root.
-func listFiles(root string) (map[string][]byte, error) {
-	out := make(map[string][]byte)
+// fileEntry is one file's content plus its permission bits, as recorded by
+// listFiles. Check diffs both: a byte-identical file whose mode changed is
+// still drift (R-001).
+type fileEntry struct {
+	data []byte
+	perm fs.FileMode
+}
+
+// listFiles walks root and returns every regular file's content and mode,
+// keyed by its slash-separated path relative to root.
+func listFiles(root string) (map[string]fileEntry, error) {
+	out := make(map[string]fileEntry)
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
-		if d.IsDir() {
-			return nil
-		}
 		if d.Type()&fs.ModeSymlink != 0 {
 			return fmt.Errorf("refusing symlink at %s", path)
+		}
+		if d.IsDir() {
+			return nil
 		}
 		if !d.Type().IsRegular() {
 			return fmt.Errorf("refusing non-regular file at %s", path)
@@ -466,7 +563,11 @@ func listFiles(root string) (map[string][]byte, error) {
 		if err != nil {
 			return err
 		}
-		out[filepath.ToSlash(rel)] = data
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		out[filepath.ToSlash(rel)] = fileEntry{data: data, perm: info.Mode().Perm()}
 		return nil
 	})
 	if err != nil {

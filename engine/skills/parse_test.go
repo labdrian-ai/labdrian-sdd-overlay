@@ -488,4 +488,54 @@ skills:
 			t.Errorf("WARNING-1: error %q should mention external", err.Error())
 		}
 	})
+
+	// TestValidateEntry_PathTraversal (R-003): a registry entry's `path`
+	// must be non-empty, relative, contain no ".." component, and be
+	// already clean, so pipkg can join it to both the overlay source root
+	// and the built package's destination root without ever resolving
+	// outside either.
+	t.Run("path_traversal_rejected", func(t *testing.T) {
+		cases := []struct {
+			name string
+			path string
+		}{
+			{"parent_traversal", "../../outside"},
+			{"absolute_path", "/etc/passwd"},
+			{"unclean_path", "foo/../bar"},
+			{"empty_path", ""},
+		}
+		for _, tc := range cases {
+			t.Run(tc.name, func(t *testing.T) {
+				yaml := "version: \"1\"\nskills:\n  - id: bad-path\n    path: " + escapeYAMLPath(tc.path) + "\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+				_, err := ParseRegistry(strings.NewReader(yaml))
+				if err == nil {
+					t.Fatalf("expected non-nil error for path %q, got nil", tc.path)
+				}
+				if !strings.Contains(err.Error(), "bad-path") {
+					t.Errorf("error %q should reference entry id %q", err.Error(), "bad-path")
+				}
+				if !strings.Contains(err.Error(), "path") {
+					t.Errorf("error %q should mention path", err.Error())
+				}
+			})
+		}
+	})
+
+	t.Run("path_in_root_passes", func(t *testing.T) {
+		yaml := "version: \"1\"\nskills:\n  - id: good-path\n    path: good-path\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
+		_, err := ParseRegistry(strings.NewReader(yaml))
+		if err != nil {
+			t.Errorf("expected a clean relative path to pass, got: %v", err)
+		}
+	})
+}
+
+// escapeYAMLPath renders path as an inline-YAML-safe scalar for the
+// path_traversal_rejected table, quoting an empty value so the parser sees
+// an explicit empty string rather than a missing key.
+func escapeYAMLPath(path string) string {
+	if path == "" {
+		return `""`
+	}
+	return path
 }

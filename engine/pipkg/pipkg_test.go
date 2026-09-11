@@ -238,6 +238,144 @@ func TestPipkgCheck_DetectsDrift(t *testing.T) {
 	}
 }
 
+// TestPipkgCheck_ModeDrift (R-001): a byte-identical file whose mode
+// changed after Build (e.g. chmod 0644 -> 0755) must be reported as
+// drifted even though its content is untouched.
+func TestPipkgCheck_ModeDrift(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	if err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Check must report no drift right after Build, got: %v", err)
+	}
+
+	target := filepath.Join(destDir, "skills", "pi-skill", "SKILL.md")
+	if err := os.Chmod(target, 0755); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+
+	err := pipkg.Check(overlayRoot, registryPath, destDir)
+	if err == nil {
+		t.Fatal("Check must detect mode-only drift (0644 -> 0755)")
+	}
+	if !strings.Contains(err.Error(), "skills/pi-skill/SKILL.md") {
+		t.Errorf("drift error should name the drifted entry, got: %v", err)
+	}
+	if !strings.Contains(err.Error(), "0644") || !strings.Contains(err.Error(), "0755") {
+		t.Errorf("drift error should name both modes (0644 -> 0755), got: %v", err)
+	}
+}
+
+// TestPipkgCheck_SymlinkedDestRootRefused (R-001, defense in depth): a
+// destDir whose root itself is a symlink must be refused by Check, not
+// silently followed into whatever it points at. listFiles already refuses
+// this via WalkDir's Lstat-based root entry; this test pins that behavior.
+func TestPipkgCheck_SymlinkedDestRootRefused(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	realDest := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := pipkg.Build(overlayRoot, registryPath, realDest); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	linkedDest := filepath.Join(t.TempDir(), "labdrian-pi-link")
+	if err := os.Symlink(realDest, linkedDest); err != nil {
+		t.Skipf("symlink unsupported in this environment: %v", err)
+	}
+
+	err := pipkg.Check(overlayRoot, registryPath, linkedDest)
+	if err == nil || !strings.Contains(err.Error(), "symlink") {
+		t.Errorf("Check(destDir=symlink) = %v, want symlink refusal", err)
+	}
+}
+
+// TestPipkgBuild_RootPermissions (R-002): the built package root itself
+// (destDir after the atomic swap) must be 0755, not the 0700 MkdirTemp
+// default.
+func TestPipkgBuild_RootPermissions(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	info, err := os.Stat(destDir)
+	if err != nil {
+		t.Fatalf("stat destDir: %v", err)
+	}
+	if info.Mode().Perm() != 0755 {
+		t.Errorf("destDir mode = %o, want 0755", info.Mode().Perm())
+	}
+}
+
+// TestPipkgBuild_RejectsNameMismatch (R-004): a skill whose SKILL.md
+// frontmatter `name` does not match its registry directory must be
+// rejected before any file is written for it.
+func TestPipkgBuild_RejectsNameMismatch(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	writeFile(t, filepath.Join(overlayRoot, "skills", "mismatch-skill", "SKILL.md"), "---\nname: something-else\n---\nbody\n")
+
+	registry := `version: "1"
+skills:
+  - id: pi-skill
+    path: pi-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: mismatch-skill
+    path: mismatch-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
+`
+	writeFile(t, registryPath, registry)
+
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	err := pipkg.Build(overlayRoot, registryPath, destDir)
+	if err == nil {
+		t.Fatal("Build must reject a skill whose SKILL.md name != directory name")
+	}
+	if !strings.Contains(err.Error(), "mismatch-skill") || !strings.Contains(err.Error(), "something-else") {
+		t.Errorf("error should name the entry and the declared name, got: %v", err)
+	}
+	if _, statErr := os.Stat(destDir); statErr == nil {
+		t.Error("destDir must not be created when Build rejects a name mismatch")
+	}
+}
+
+// TestPipkgBuild_LiveRegistryNamesMatch (R-004) pins that the real overlay
+// registry's skill directories all match their SKILL.md frontmatter names,
+// so the new check never blocks a legitimate rebuild of the shipped
+// package.
+func TestPipkgBuild_LiveRegistryNamesMatch(t *testing.T) {
+	overlayRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatalf("resolving overlay root: %v", err)
+	}
+	registryPath := filepath.Join(overlayRoot, "skills.registry.yaml")
+	if _, err := os.Stat(registryPath); err != nil {
+		t.Skipf("live registry not found at %s: %v", registryPath, err)
+	}
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Errorf("Build against the live registry must pass the name/directory check, got: %v", err)
+	}
+}
+
 func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	for _, dest := range []string{overlayRoot, filepath.Join(overlayRoot, "skills"), filepath.Dir(overlayRoot)} {

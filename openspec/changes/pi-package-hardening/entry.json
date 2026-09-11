@@ -1,0 +1,166 @@
+{
+  "contract_version": "2.1.0",
+  "change_name": "pi-package-hardening",
+  "project": "labdrian-sdd-overlay",
+  "tier": 2,
+  "interaction_mode": "auto",
+  "artifact_store_mode": "hybrid",
+  "artifact_refs": {
+    "entry": {
+      "topic_key": "sdd/pi-package-hardening/entry",
+      "openspec_path": "openspec/changes/pi-package-hardening/entry.json"
+    },
+    "requirements": {
+      "topic_key": "project/labdrian-sdd-overlay/requirements/pi-package-hardening"
+    },
+    "manifest": {
+      "context": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/context"
+      },
+      "mission": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/mission"
+      },
+      "rules": {
+        "topic_key": "project/labdrian-sdd-overlay/manifest/rules"
+      }
+    },
+    "architecture": {
+      "topic_key": "project/labdrian-sdd-overlay/architect/final"
+    },
+    "roadmap": {
+      "topic_key": "project/labdrian-sdd-overlay/roadmap"
+    },
+    "estimate": {
+      "topic_key": "sdd/pi-package-hardening/estimate"
+    },
+    "sdd_init": {
+      "topic_key": "sdd-init/labdrian-sdd-overlay"
+    },
+    "pipeline_state": {
+      "topic_key": "sdd/pi-package-hardening/pipeline-state"
+    },
+    "delivery": {
+      "topic_key": "delivery/pi-package-hardening"
+    }
+  },
+  "estimate": {
+    "planned_range_hours": {
+      "low": 3.1,
+      "high": 7.8
+    },
+    "complexity": "high",
+    "confidence": "low",
+    "human_review_included": true,
+    "expected_checkpoints": 18
+  },
+  "requested_pr_strategy": "auto",
+  "delivery_strategy": "auto-chain",
+  "chaining_required": true,
+  "chain_strategy": "stacked-to-main",
+  "review_budget": {
+    "max_changed_lines_per_slice": 400,
+    "counting_method": "authored-additions-and-deletions",
+    "size_exception": {
+      "state": "not-needed"
+    }
+  },
+  "strict_tdd": {
+    "enabled": true,
+    "test_commands": {
+      "focused": [
+        "cd engine && go test ./pipkg/... ./runtime/... ./cmd/... ./shelltest/...",
+        "cd tools/archive-anchor-gate && go test ./..."
+      ],
+      "broad": [
+        "cd engine && go vet ./... && go test ./...",
+        "cd longterm-mem && go vet ./... && go test ./...",
+        "shellcheck -S warning bin/labdrian-overlay"
+      ]
+    }
+  },
+  "review_slices": [
+    {
+      "order": 1,
+      "id": "pipkg-integrity",
+      "title": "pipkg drift check compares modes and refuses destination symlinks; 0755 package root; registry path containment; SKILL.md name/directory check",
+      "requirements": [
+        "R-001",
+        "R-002",
+        "R-003",
+        "R-004"
+      ],
+      "dependencies": [],
+      "estimated_changed_lines": {
+        "low": 230,
+        "high": 320
+      }
+    },
+    {
+      "order": 2,
+      "id": "sync-check-provenance",
+      "title": "pipkg records labdrian.builtFrom; Check gains a disclosed comparison basis (ref|main|worktree); sync-check --target pi compares against the recorded ref",
+      "requirements": [
+        "R-005",
+        "R-006",
+        "R-007"
+      ],
+      "dependencies": [
+        "pipkg-integrity"
+      ],
+      "estimated_changed_lines": {
+        "low": 280,
+        "high": 380
+      }
+    },
+    {
+      "order": 3,
+      "id": "review-receipt-capture",
+      "title": "engine/reviewreceipt captures surviving approved receipts into openspec/changes/<change>/review-receipts/ via a fail-closed PreToolUse hook on acknowledge-approved",
+      "requirements": [
+        "R-008"
+      ],
+      "dependencies": [],
+      "estimated_changed_lines": {
+        "low": 300,
+        "high": 400
+      }
+    },
+    {
+      "order": 4,
+      "id": "receipt-anchor-gate",
+      "title": "archive-anchor-gate and closure-feedback consume the persisted receipt as the sole verified approved_tree; archive blocked without a receipt unless an override.json is recorded",
+      "requirements": [
+        "R-009",
+        "R-010",
+        "R-011"
+      ],
+      "dependencies": [
+        "review-receipt-capture"
+      ],
+      "estimated_changed_lines": {
+        "low": 250,
+        "high": 350
+      }
+    },
+    {
+      "order": 5,
+      "id": "gadu-pi-subagent",
+      "title": "Probe/install the Pi Subagents extension, overlay-owned GADU symlink into ~/.pi/agent/agents, frontmatter guard, two-value honest status, selective uninstall",
+      "requirements": [
+        "R-012",
+        "R-013",
+        "R-014",
+        "R-015",
+        "R-016"
+      ],
+      "dependencies": [
+        "sync-check-provenance"
+      ],
+      "estimated_changed_lines": {
+        "low": 320,
+        "high": 400
+      }
+    }
+  ],
+  "expected_native_next_recommendation": "propose"
+}
