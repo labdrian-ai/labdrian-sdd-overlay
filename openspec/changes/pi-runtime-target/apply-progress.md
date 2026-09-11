@@ -278,3 +278,208 @@ engine/cmd/runtime_test.go, engine/installer/route_test.go,
 engine/installer/sync_check_test.go, engine/runtime/pi.go,
 engine/runtime/runtime_test.go, engine/shelltest/overlay_pi_target_test.go,
 and this file).
+
+## Batch 2 — Slice 2: pi-package-build (R-002, R-003, R-010)
+
+**Mode**: Strict TDD
+**Status**: Implementation, tests, and verification COMPLETE and GREEN;
+`size:exception` granted by the owner and committed as work units (see
+"Granted exception" and "Commits" below).
+
+### Granted exception
+
+- **Scope**: `pi-package-build` (slice 2)
+- **Lines**: 1038 authored (1018 insertions + 20 deletions), 2.6× the
+  400-line default guard (638 lines over)
+- **Reason**: cohesive pipkg unit with strict-TDD safety tests plus wiring
+  — not separable without splitting a single behavioral unit (per the
+  coordinator's explicit grant)
+- **Authorized by**: owner, 2026-09-10
+- **Note**: `openspec/changes/pi-runtime-target/entry.json` was
+  intentionally NOT touched for this grant, per explicit instruction
+
+### Budget (exception granted — committed)
+
+`git diff --shortstat 2279248..HEAD -- engine bin skills.registry.yaml
+README.md` → **1018 insertions(+), 20 deletions(-) = 1038 changed lines**,
+2.6× the 400-line default guard (638 lines over). Per the minimalism
+contract and `work-unit-commits`, this was NOT reduced by trimming
+comments, docs, or tests, or by restyling code to fit the budget — every
+test is load-bearing (see TDD Cycle Evidence below; RED confirmed for each
+new file before its GREEN implementation was written) and every comment
+documents a design rationale (atomic-swap staging, the `pi.mcp`
+scope-boundary note, the aggregate-honesty guard in `PiAdapter.build`).
+
+The design-named fallback (folding `Check` into slice 1's already-committed
+wiring) was not attempted; the owner granted a `size:exception` for this
+scope instead (2026-09-10).
+
+Rough breakdown (insertions, from `git diff --stat`):
+
+| File | Lines | Why |
+|---|---|---|
+| `engine/pipkg/pipkg.go` | 295 | Core deliverable: `Build`/`Check`, symlink refusal, atomic swap, version resolution |
+| `engine/pipkg/pipkg_test.go` | 207 | RED-first tests: symlink refusal, atomic swap, skill selection, drift detection |
+| `engine/cmd/pipkg_test.go` | 99 | RED-first cmd-level test for the new `pipkg build\|check` verb |
+| `engine/runtime/pi.go` | 89 (net, incl. modified lines) | Wires `Apply`/`Install`/`SyncCheck` to `pipkg`, preserving the honest-unsupported stub for `Status`/`Update`/`Rollback`/`Uninstall` |
+| `engine/cmd/main.go` | 87 | New `pipkg build\|check` subcommand + usage text |
+| `engine/runtime/pi_test.go` | 86 | RED-first wiring tests, incl. a safety-net test pinning the pre-existing zero-arg-unsupported contract |
+| `engine/shelltest/overlay_pi_package_build_test.go` | 88 | Shelltest: real engine binary, build→status→sync-check→tamper→drift, end to end |
+| `bin/labdrian-overlay` | 69 (net) | `pipkg_build_and_report`/`pipkg_status_and_report`/`pipkg_sync_check_and_report` helpers wired into `cmd_apply`/`cmd_status`/`cmd_sync_check`'s pi branches |
+| `engine/skills/{parse,types}.go` | 6 | `pi` added to `install.targets`' valid set |
+| `skills.registry.yaml` | 12 | `pi` added to the 12 custom skills' `install.targets` (gadu-orchestrate, gadu-operator, prespec-malandra, requirements-from-transcripts, project-inception, inception-pipeline, project-manifest, project-architect, roadmap-maker, sdd-time-estimation, anti-generic-design, chat-thread-analyzer) |
+
+The two heaviest single units (`pipkg.go`+`pipkg_test.go` = 502 lines) are
+the load-bearing core (R-002/R-003/R-010: build, drift-check, symlink
+refusal, atomic swap) and are not separable from each other under Strict
+TDD (implementation without its RED-first tests is not admissible). The
+remaining ~536 lines are the wiring tasks 2.4/2.5 explicitly assign
+(`PiAdapter`, the `pipkg` CLI verb, the three bash call sites, the registry
+targets) plus their own RED-first tests and one end-to-end shelltest.
+
+### Completed Tasks
+
+- [x] 2.1 RED (threat: path/symlink): `TestPipkgBuild_RejectsSymlinks`,
+  `TestPipkgBuild_AtomicSwap` in `engine/pipkg/pipkg_test.go` — confirmed
+  RED (package did not exist: `no non-test Go files in .../pipkg`) before
+  `pipkg.go` was written
+- [x] 2.2 RED: `TestPipkgBuild_SelectsPiTargetedSkills`,
+  `TestPipkgCheck_DetectsDrift` in the same file, same RED confirmation
+- [x] 2.3 GREEN: `engine/pipkg/pipkg.go` `Build`/`Check` — builds into a
+  sibling temp dir, atomically swaps into `destDir` via `os.Rename`
+  (stage-aside/rename/cleanup, restoring the prior directory on a failed
+  swap), refuses any symlink found via `fs.ModeSymlink` checks during the
+  tree walk, sets 0644 on files / 0755 on directories, resolves
+  `package.json`'s version from the newest reachable `v*` git tag (no
+  fetch) or falls back to `0.0.0-dev`
+- [x] 2.4 `pi` added to `validTargets` in `engine/skills/parse.go` (error
+  message and `types.go` comment updated to match);
+  `engine/runtime/pi.go`'s `PiAdapter.Apply()`/`Install()` now call
+  `pipkg.Build`, `SyncCheck()` calls `pipkg.Check` — all three stay honestly
+  `CapabilityUnsupported` when `overlayRoot` is unresolved (e.g. `OVERLAY_DIR`
+  unset), matching the existing `TestExpandTarget_Pi` safety-net contract
+  unchanged (verified green, no test edit needed — see Deviations)
+- [x] 2.5 `bin/labdrian-overlay`: new `pipkg_build_and_report`/
+  `pipkg_status_and_report`/`pipkg_sync_check_and_report` helpers, wired
+  into `cmd_apply`'s, `cmd_status`'s, and `cmd_sync_check`'s pi branches
+  (replacing the slice-1 `package_target_stub_message` call for `pi`
+  specifically; every other package/unknown target still gets the generic
+  stub). `apply` prints `install hint: pi install <path>` and never runs
+  `pi install` itself; `sync-check` emits `SYNC_CHECK:pi: no drift` /
+  `SYNC_CHECK:pi: drift -- <reason>`; `status` reports `not built` or
+  `built ... (partial -- lifecycle proof lands in a later slice)`
+
+### Files Changed
+
+| File | Action | What Was Done |
+|---|---|---|
+| `engine/pipkg/pipkg.go` | Created | `Build`/`Check`, symlink refusal, atomic swap, version resolution |
+| `engine/pipkg/pipkg_test.go` | Created | 4 RED-first tests (symlink refusal, atomic swap incl. mode + stale-clear assertions, skill selection + package.json shape, drift detection) |
+| `engine/runtime/pi.go` | Modified | `PiAdapter` gains `overlayRoot`/`registryPath`/`destDir`; `Apply`/`Install`/`SyncCheck` wired to `pipkg`; `NewPiAdapterWithPaths` exported constructor; `DefaultPiPackageDir` helper |
+| `engine/runtime/pi_test.go` | Created | Wiring test (`Apply`→builds, `SyncCheck`→no-drift) + safety-net test (empty `overlayRoot` stays unsupported) |
+| `engine/cmd/main.go` | Modified | New `pipkg` subcommand (`runPipkg`/`runPipkgCore`: build/check, `--overlay-root`/`--registry`/`--dest-dir`), usage text |
+| `engine/cmd/pipkg_test.go` | Created | `runPipkgCore` build→check, drift-before-build, missing-verb tests |
+| `bin/labdrian-overlay` | Modified | 3 new pipkg helper functions; pi branches in `cmd_apply`/`cmd_status`/`cmd_sync_check` |
+| `engine/shelltest/overlay_pi_package_build_test.go` | Created | End-to-end: real built engine binary, build→status→sync-check→tamper→drift |
+| `engine/skills/parse.go`, `engine/skills/types.go` | Modified | `pi` added to `install.targets`' valid set |
+| `skills.registry.yaml` | Modified | `pi` added to the 12 custom skills' `install.targets` |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 2.1/2.2/2.3 (pipkg core) | `engine/pipkg/pipkg_test.go` | Unit | N/A (new package) | ✅ Confirmed — `go test ./pipkg/...` failed with "no non-test Go files" before `pipkg.go` existed | ✅ Passed — all 4 tests green after `pipkg.go` | ✅ 4 distinct behaviors (select, refuse symlink, atomic swap incl. stale-clear + mode assertions, drift before/after/after-tamper) | ➖ None needed — first implementation, no duplication to extract |
+| 2.4 (runtime wiring) | `engine/runtime/pi_test.go` | Unit | ✅ Full `runtime` suite green before change; `TestExpandTarget_Pi` re-run green after (unchanged, safety-net preserved) | ✅ Confirmed — `undefined: engineRuntime.NewPiAdapterWithPaths` before `pi.go` was edited | ✅ Passed | ✅ 2 cases: real paths (builds, not unsupported) vs. empty `overlayRoot` (stays honestly unsupported) | ➖ None needed |
+| 2.4 (skills validTargets) | `engine/skills/*_test.go` (pre-existing suite) | Unit | ✅ Full `skills` suite green before and after — no existing test pinned the old error-message wording, so this is a pure additive change, not a red/green cycle of its own | ➖ N/A — enum/message addition, no new test required per triangulation-skip rule (structural, one possible output) | ✅ `go test ./skills/...` green | ➖ Single | ➖ None needed |
+| 2.5 (cmd `pipkg` verb) | `engine/cmd/pipkg_test.go` | Unit/integration (`runPipkgCore`) | ✅ Full `cmd` suite green before and after | ✅ Confirmed — `undefined: runPipkgCore` before `main.go` was edited | ✅ Passed | ✅ 3 cases: build→check happy path, check-before-build failure, missing-verb failure | ➖ None needed |
+| 2.5 (bash wiring) | `engine/shelltest/overlay_pi_package_build_test.go` | Integration (real built binary, sourced bash functions) | ✅ Full `shelltest` suite (incl. slice 1's `overlay_pi_target_test.go`) green before and after | ✅ Written against helpers (`pipkg_build_and_report` etc.) that did not exist beforehand | ✅ Passed — build, status-before/after, sync-check-before/after, tamper→drift all asserted | ✅ 5 states covered: not-built, built/no-drift (status), built/no-drift (sync-check), tampered/drift naming `package.json` | ➖ None needed |
+
+### Test Summary
+
+- **Total tests written**: 12 (4 `pipkg`, 2 `runtime/pi_test.go`, 3
+  `cmd/pipkg_test.go`, 1 `shelltest`, plus the pre-existing suites re-run
+  green — no new `skills` test needed, see table above)
+- **Total tests passing**: all 12 new tests, plus the FULL pre-existing
+  suite (`cd engine && go vet ./... && go test -count=1 ./...` — every
+  package green: assets, cmd, gadu, gate, installer, pipkg, prespec,
+  propagator, runtime, settings, shelltest, skills, synctrigger)
+- **Layers used**: Unit (`pipkg`, `runtime`, `cmd`), Integration
+  (`shelltest` — real built engine binary + sourced bash functions)
+- **Approval tests**: None — no refactor of pre-existing behavior
+
+### Deviations from Design
+
+1. **`Build`'s signature carries no explicit version parameter.** Design's
+   Data Flow snippet shows `pipkg.Build(overlayRoot, registryPath,
+   destDir)` with no version argument, so version resolution is internal
+   (`resolvePackageVersion`: newest reachable `v*` git tag from
+   `overlayRoot`, no fetch, `0.0.0-dev` fallback) rather than passed in by
+   the bash caller. This keeps the 3-arg signature the design's own Data
+   Flow diagram commits to, and matches the prompt's "version from the
+   overlay release/tag or 0.0.0-dev" instruction without adding a 4th
+   parameter design never named.
+2. **`extensions/` is declared in `package.json`'s `pi` key but the
+   directory itself is never created** — per this batch's explicit
+   instruction ("an empty `extensions/` dir placeholder is NOT needed").
+   `pi.mcp` is omitted entirely (Go's `omitempty` on an unset string field)
+   rather than present-but-empty, since slice 4 has not landed.
+3. **`PiAdapter.Apply()`/`Install()` report `CapabilityPartial` on a
+   successful build, never `CapabilitySupported`** — this slice builds the
+   package but never runs `pi install` itself (explicitly out of scope:
+   "do not run `pi install` in this slice"), so claiming `supported` would
+   overstate what was proven. `SyncCheck()` DOES report `CapabilitySupported`
+   on a real no-drift result, since drift-checking is this slice's own
+   completed proof.
+4. **task 2.4's "wire Install/Apply/SyncCheck" did not require touching
+   `engine/cmd/main.go`'s `runtimeAdapterForTarget`/`runRuntimeCore`** (the
+   `engine runtime --target pi` CLI path): `NewFoundationAdapter(TargetPi)`
+   still resolves through the zero-arg `NewPiAdapter()`, which now reads
+   `OVERLAY_DIR`/`STATE_DIR` from the environment rather than requiring new
+   CLI flags on the pre-existing `runtime` subcommand. `bin/labdrian-overlay`
+   dispatches to the pipkg build/check paths through the **new**, separate
+   `engine pipkg build|check` verb instead (as this batch's prompt
+   specified), not through `engine runtime --target pi`.
+
+### Issues Found
+
+None — all implementation is GREEN. The review-budget overage (2.6× the
+400-line default) was a delivery-slicing question, not a defect, and was
+resolved by an owner-granted `size:exception` (see "Granted exception"
+above).
+
+### Commits
+
+- `acc746b` — `feat(engine): build the labdrian-pi package with
+  registry-selected skills and drift check` (engine/pipkg, engine/runtime,
+  engine/cmd, engine/skills)
+- `8be8a55` — `feat(overlay): wire pi package build, status and
+  sync-check` (bin/labdrian-overlay, engine/shelltest, skills.registry.yaml)
+- `<sha-3>` — `docs(sdd): record pi-runtime-target slice 2 apply progress`
+  (tasks.md, apply-progress.md) — this commit's own SHA, recorded in the
+  return envelope
+
+Local-only, not pushed.
+
+### Plan vs Realized Slice Count
+
+slices planned=5 realized=2 (`pi-target-plumbing` [slice 1, Batch 1] +
+`pi-package-build` [slice 2, this batch] both committed).
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main, auto-chain)
+- Current work unit: `pi-package-build` (PR2) — implemented, tested,
+  verified, `size:exception` granted, committed as work units
+- Boundary: starts at `2279248` (slice 1's docs commit) and ends at the
+  three commits above
+- Estimated review budget impact: 1038 changed lines (2.6× the 400-line
+  default; `size:exception` granted by the owner, 2026-09-10)
+
+### Status
+
+5/5 Phase 2 tasks functionally complete, verified, and committed as three
+work units. `size:exception` granted and recorded (scope `pi-package-build`,
+1038 lines, owner, 2026-09-10). `openspec/changes/pi-runtime-target/tasks.md`
+Phase 2 checkboxes marked `[x]`. `entry.json` was intentionally NOT touched
+for this grant. Ready for the next slice (`pi-contract-gate`) or
+`sdd-verify` at the orchestrator's discretion.

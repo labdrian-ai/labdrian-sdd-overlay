@@ -587,7 +587,7 @@ func (p *tokParser) parseScalarSequence(indent, lineNum int) ([]string, error) {
 // --- schema validation ---
 
 var validSourceTypes = map[string]bool{"core": true, "custom": true, "external": true}
-var validTargets = map[string]bool{"claude": true, "opencode": true, "codex": true}
+var validTargets = map[string]bool{"claude": true, "opencode": true, "codex": true, "pi": true}
 var validUpdateStrategies = map[string]bool{"vendor-merge": true, "overlay-only": true}
 
 // validateEntry enforces the schema-level constraints on a single Entry.
@@ -618,7 +618,7 @@ func validateEntry(e *Entry) error {
 	}
 	for _, target := range e.Install.Targets {
 		if !validTargets[target] {
-			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: claude, opencode, codex", e.ID, target)
+			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: claude, opencode, codex, pi", e.ID, target)
 		}
 	}
 	if !validUpdateStrategies[e.Lifecycle.UpdateStrategy] {
