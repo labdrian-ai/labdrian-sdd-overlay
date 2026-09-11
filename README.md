@@ -57,9 +57,19 @@ The TUI shows whether each target is in sync with gentle-ai and lets you re-capt
 | `opencode` | `~/.config/opencode/skills` |
 | `codex` | `~/.codex/skills` |
 
-Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (all three targets). Default for `capture` is `claude`.
+Use `--target <name>` on `apply`, `status`, `capture`, and `sync-check`. Default for `apply`/`status`/`sync-check` is `all` (all three targets, plus `pi` when it is genuinely installed). Default for `capture` is `claude`.
 
 The `agent` route (see [Tracked files](#tracked-files-overlaymanifest)) additionally deploys to `~/.claude/agents` (claude target only). `--target opencode` or `--target codex` on an agent row is a no-op — zero applicable targets.
+
+### Pi (via gentle-pi)
+
+Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`/`status`/`sync-check` builds a `labdrian-pi` package (`package.json`, `skills/`, `agents/`, `extensions/`, `mcp.json`) into `$STATE_DIR/pi/labdrian-pi` from the same `skills.registry.yaml`/`agents/` source every other target reads, instead of copying files into a runtime-owned directory.
+
+- `apply --target pi` builds the package, then — when a `pi` CLI is on `PATH` — runs `pi install <path>` so the change is picked up on the next Pi session. Without `pi` on `PATH` it prints the install hint instead.
+- `status --target pi` reports honest per-entry proof: built, in sync with the current manifest, and listed in `~/.pi/agent/settings.json`'s `packages` array (read-only — this overlay never writes that file itself). It always discloses that `pi --no-extensions` bypasses the contract-gate extension and `pi --no-skills` bypasses skill discovery for that session, since neither flag's use can be detected at runtime (short aliases `-ne` and `-ns`).
+- Uninstalling runs `pi remove <path>` (not `pi uninstall`, which does not exist) and removes the built package directory — it never edits `~/.pi/agent/settings.json` or `~/.pi/agent/mcp.json` directly, and never touches any gentle-pi- or pi-engram-owned entry.
+- A `before_agent_start` package extension injects the same bare contract-path line Claude/OpenCode/Codex receive into the `sdd-tasks`/`sdd-apply` system prompt, composing with (not overwriting) gentle-pi's own handler output.
+- `longterm-mem register --target pi` writes its MCP entry into the package's own `mcp.json`; `--target all` only attempts Pi when the package is both built and genuinely installed.
 
 ## Tracked files (overlay.manifest)
 

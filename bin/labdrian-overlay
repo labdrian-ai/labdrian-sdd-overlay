@@ -147,10 +147,11 @@ is_copy_target() {
 }
 
 # Emits the shared stub line for a recognized package target whose
-# apply/status/sync-check dispatch is not implemented yet in this slice
-# (pi-target-plumbing) -- lands in pi-package-build (slice 2).
+# package_target_stub_message is the honest fallback for a package-model
+# target that has no adapter wired yet (today every package target, i.e.
+# pi, is dispatched explicitly above this call).
 package_target_stub_message() {
-  echo "  $1: package target, handled by slice 2 (pi-package-build)"
+  echo "  $1: package target without a lifecycle adapter (not implemented)"
 }
 
 # pipkg_dest_dir prints the built labdrian-pi package directory
@@ -175,6 +176,21 @@ pipkg_build_and_report() {
     echo "  pi: package build failed" >&2
     return 1
   fi
+}
+
+# pipkg_apply_and_report builds (pipkg_build_and_report), then runs the
+# real `pi install` via PiAdapter when `pi` is on PATH; the install hint
+# already covers the "pi not on PATH" case. Non-zero on a build failure or
+# a `pi` that IS on PATH but whose install failed (R4-silent-package-skip).
+pipkg_apply_and_report() {
+  pipkg_build_and_report || return 1
+  command -v pi >/dev/null 2>&1 || return 0
+  local result
+  if ! result="$(OVERLAY_DIR="$OVERLAY_DIR" STATE_DIR="$STATE_DIR" "$ENGINE_BINARY" runtime install --target pi 2>&1)"; then
+    echo "  $result" >&2
+    return 1
+  fi
+  echo "  $result"
 }
 
 # pipkg_sync_check_and_report runs `engine pipkg check` for the pi target,
@@ -205,31 +221,33 @@ pipkg_sync_check_and_report() {
   fi
 }
 
-# pipkg_status_and_report prints whether the pi package is built and
-# whether it currently drifts from the manifest, for cmd_status. Returns
-# non-zero when there is nothing healthy to report -- not built, or built
-# but drifted (R4-silent-package-skip) -- and 0 only when built with no
-# drift, itself still "partial" in the printed message (R-006/pi-lifecycle
-# finalizes real proof of a fully supported status).
-#
-# It also always prints the R-007 "--no-extensions"/"--no-skills" disclosure:
-# a static note (never a runtime-detected fact -- there is no detection API
-# for either flag, and no "-ns" alias) that "pi --no-extensions" bypasses the
-# before_agent_start gate extension for that session, and "pi --no-skills"
-# bypasses skill discovery.
+# pipkg_status_and_report prints the pi package's status for cmd_status.
+# The "not built" case is decided in pure bash (no ENGINE_BINARY call): it
+# must stay reachable even when the engine binary has not been built yet
+# (see TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir). Once the package
+# IS built, it delegates to `engine runtime status --target pi` -- the
+# same PiAdapter.Status() the "runtime" subcommand uses -- for the honest
+# three-entry proof (built+in-sync, listed in ~/.pi/agent/settings.json,
+# longterm-mem MCP-registered), rather than reimplementing that logic here
+# from a bare drift check. Its message already carries the R-007
+# "--no-extensions"/"--no-skills" disclosure in every branch, so this
+# helper only adds its own disclosure line for the not-built early return,
+# which never reaches the delegate call. Returns non-zero exactly when the
+# delegated `runtime status --target pi` does (not built, unproven/partial,
+# or drifted); 0 only once every owned entry is proven supported.
 pipkg_status_and_report() {
-  local dest drift_output
+  local dest result
   dest="$(pipkg_dest_dir)"
-  echo "  pi: note -- 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime, and there is no short alias for either flag"
   if [[ ! -e "$dest/package.json" ]]; then
+    echo "  pi: note -- 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)"
     echo "  pi: not built (run: labdrian-overlay apply --target pi)"
     return 1
   fi
-  if drift_output="$("$ENGINE_BINARY" pipkg check --overlay-root "$OVERLAY_DIR" --registry "$OVERLAY_DIR/skills.registry.yaml" --dest-dir "$dest" 2>&1)"; then
-    echo "  pi: built at $dest, no drift (partial -- lifecycle proof lands in a later slice)"
+  if result="$(OVERLAY_DIR="$OVERLAY_DIR" STATE_DIR="$STATE_DIR" "$ENGINE_BINARY" runtime status --target pi)"; then
+    echo "  $result"
     return 0
   else
-    echo "  pi: built at $dest, drift detected -- $drift_output"
+    echo "  $result"
     return 1
   fi
 }
@@ -1631,7 +1649,7 @@ cmd_apply() {
 
     if ! is_copy_target "$t"; then
       if [[ "$t" == "pi" ]]; then
-        pipkg_build_and_report || pi_stub_included=1
+        pipkg_apply_and_report || pi_stub_included=1
       else
         package_target_stub_message "$t"
         pi_stub_included=1
@@ -2500,7 +2518,7 @@ cmd_sync_check() {
         # ran and found nothing wrong". "unsupported" plus an explicit
         # VERDICT line below make its incompleteness detectable the same
         # way every other target's VERDICT line is.
-        echo "SYNC_CHECK:$t: unsupported -- package target, handled by slice 2 (pi-package-build)"
+        echo "SYNC_CHECK:$t: unsupported -- package target without a lifecycle adapter"
         package_target_stub_message "$t"
         echo ""
         echo "VERDICT:$t:UNSUPPORTED"

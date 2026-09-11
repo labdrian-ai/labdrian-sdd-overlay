@@ -1,20 +1,19 @@
 package runtime
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
 
-// PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi).
-//
-// pi-target-plumbing wired only Target(). pi-package-build (this slice)
-// wires Apply/Install/SyncCheck to engine/pipkg's Build/Check, resolving
-// overlayRoot/registryPath/destDir from OVERLAY_DIR/STATE_DIR when
-// constructed via NewPiAdapter() (the zero-arg path NewFoundationAdapter
-// uses). Status/Update/Rollback/Uninstall remain honest
-// CapabilityUnsupported stubs — those land in pi-lifecycle.
+// PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi). It NEVER
+// writes ~/.pi/agent/settings.json or ~/.pi/agent/mcp.json itself — only
+// the `pi` CLI does, via the install/remove subprocess calls below.
 type PiAdapter struct {
 	target       Target
 	overlayRoot  string
@@ -54,10 +53,39 @@ func DefaultPiPackageDir(stateDir string) string {
 	return filepath.Join(stateDir, "pi", "labdrian-pi")
 }
 
+// piNoDiscoveryFlagsDisclosure is a STATIC note (R-007) — never a runtime-
+// detected fact, since there is no API to detect either flag. Pi 0.85.1
+// documents the short aliases -ne and -ns.
+const piNoDiscoveryFlagsDisclosure = "'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)"
+
 func (a PiAdapter) Target() Target { return a.target }
 
-func (a PiAdapter) Apply() LifecycleResult   { return a.build(ActionApply) }
-func (a PiAdapter) Install() LifecycleResult { return a.build(ActionInstall) }
+// Apply mirrors OpenCodeAdapter's Apply/Install identity (a package target
+// has no separate "apply without installing" concept).
+func (a PiAdapter) Apply() LifecycleResult { return a.Install() }
+
+// Install builds the package then, when `pi` is resolvable, runs
+// `pi install <destDir>` with a FIXED argv (never a shell string). Without
+// `pi` on PATH it keeps the build-succeeded-with-hint result.
+func (a PiAdapter) Install() LifecycleResult {
+	if a.overlayRoot == "" {
+		return a.stub(ActionInstall)
+	}
+	if err := pipkg.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		return NewLifecycleResult(a.target, ActionInstall, CapabilityUnsupported, err.Error(), nil)
+	}
+	bin, err := resolvePiBinary()
+	if err != nil {
+		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
+			"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
+	}
+	if err := runPiCommand(bin, "install", a.destDir); err != nil {
+		return NewLifecycleResult(a.target, ActionInstall, CapabilityPartial,
+			"labdrian-pi package built at "+a.destDir+" but `pi install` failed: "+err.Error(), nil)
+	}
+	return NewLifecycleResult(a.target, ActionInstall, CapabilityRestartRequired,
+		"ran `pi install "+a.destDir+"`; start a new Pi session to load it", nil)
+}
 
 func (a PiAdapter) SyncCheck() LifecycleResult {
 	if a.overlayRoot == "" {
@@ -69,15 +97,76 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported, "labdrian-pi package matches the current manifest", nil)
 }
 
-func (a PiAdapter) Status() LifecycleResult    { return a.stub(ActionStatus) }
-func (a PiAdapter) Update() LifecycleResult    { return a.stub(ActionUpdate) }
-func (a PiAdapter) Rollback() LifecycleResult  { return a.stub(ActionRollback) }
-func (a PiAdapter) Uninstall() LifecycleResult { return a.stub(ActionUninstall) }
+// Status reports per-entry proof: built, in sync, listed in
+// ~/.pi/agent/settings.json, and longterm-mem MCP-registered in mcp.json
+// (read-only). All proven -> supported; built but unproven -> partial,
+// naming each entry; never built -> unsupported.
+func (a PiAdapter) Status() LifecycleResult {
+	if !a.piPackageBuilt() {
+		return NewLifecycleResult(a.target, ActionStatus, CapabilityUnsupported,
+			"labdrian-pi package is not built at "+a.destDir+" (run: labdrian-overlay apply --target pi). "+piNoDiscoveryFlagsDisclosure, nil)
+	}
 
-// build runs pipkg.Build for Apply/Install. Honestly unsupported without an
-// overlayRoot (e.g. OVERLAY_DIR unset); partial (never fabricated supported)
-// on a build error, naming it; partial with the install hint on success —
-// this slice builds the package but never runs `pi install` itself.
+	var problems []string
+	if a.overlayRoot == "" {
+		problems = append(problems, "in sync (OVERLAY_DIR unset; cannot verify the build matches the current manifest)")
+	} else if err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		problems = append(problems, "in sync ("+err.Error()+")")
+	}
+	if !isPiPackageListed(a.destDir) {
+		problems = append(problems, "listed in ~/.pi/agent/settings.json packages (not listed; run: pi install "+a.destDir+")")
+	}
+	if !isPiMcpRegistered(a.destDir) {
+		problems = append(problems, "longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi)")
+	}
+
+	if len(problems) == 0 {
+		return NewLifecycleResult(a.target, ActionStatus, CapabilitySupported,
+			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, and longterm-mem is registered in its mcp.json. "+piNoDiscoveryFlagsDisclosure, nil)
+	}
+	return NewLifecycleResult(a.target, ActionStatus, CapabilityPartial,
+		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, problems)
+}
+
+func (a PiAdapter) Update() LifecycleResult   { return a.build(ActionUpdate) }
+func (a PiAdapter) Rollback() LifecycleResult { return a.build(ActionRollback) }
+
+// Uninstall runs `pi remove <destDir>` (A2 — NOT `pi uninstall`), then
+// removes the built package directory. `pi remove` owns settings.json
+// cleanup; this adapter never opens it or mcp.json directly.
+func (a PiAdapter) Uninstall() LifecycleResult {
+	if !a.piPackageBuilt() {
+		return NewLifecycleResult(a.target, ActionUninstall, CapabilityUnsupported,
+			"labdrian-pi package is not built at "+a.destDir+"; nothing to uninstall", nil)
+	}
+	bin, err := resolvePiBinary()
+	if err != nil {
+		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+			"pi CLI not found on PATH; cannot run `pi remove "+a.destDir+"` ("+err.Error()+")", nil)
+	}
+	if err := runPiCommand(bin, "remove", a.destDir); err != nil {
+		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+			"`pi remove "+a.destDir+"` failed: "+err.Error(), nil)
+	}
+	if err := os.RemoveAll(a.destDir); err != nil {
+		return NewLifecycleResult(a.target, ActionUninstall, CapabilityPartial,
+			"ran `pi remove "+a.destDir+"` but could not remove the package directory: "+err.Error(), nil)
+	}
+	return NewLifecycleResult(a.target, ActionUninstall, CapabilitySupported,
+		"removed via `pi remove "+a.destDir+"`; package directory deleted", nil)
+}
+
+// piPackageBuilt reports whether destDir holds a built package
+// (package.json present) — the proof Status/Uninstall gate on before ever
+// resolving or invoking the `pi` CLI.
+func (a PiAdapter) piPackageBuilt() bool {
+	_, err := os.Stat(filepath.Join(a.destDir, "package.json"))
+	return err == nil
+}
+
+// build runs pipkg.Build for Update/Rollback: unsupported without an
+// overlayRoot, partial (never fabricated supported) either way otherwise —
+// a rebuild alone cannot prove Status's per-entry proof.
 func (a PiAdapter) build(action Action) LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(action)
@@ -86,26 +175,85 @@ func (a PiAdapter) build(action Action) LifecycleResult {
 		return NewLifecycleResult(a.target, action, CapabilityPartial, err.Error(), nil)
 	}
 	return NewLifecycleResult(a.target, action, CapabilityPartial,
-		"labdrian-pi package built at "+a.destDir+"; run: pi install "+a.destDir, nil)
+		"labdrian-pi package rebuilt at "+a.destDir+"; run: pi install "+a.destDir, nil)
 }
 
-// stub reports an honest CapabilityUnsupported for the given action, with a
-// message naming the SLICE THAT ACTUALLY OWNS IT (R2-misleading-stub-
-// schedule) — a single shared "handled by pi-package-build" message for
-// every action was wrong for Uninstall/Rollback: there is no lifecycle
-// (undo/removal) logic to schedule into pi-package-build, that is
-// pi-lifecycle's job. Apply/Install/Status/SyncCheck/Update are all package
-// DELIVERY concerns (build, deploy, drift-check, refresh) and do land in
-// pi-package-build.
+// stub reports an honest CapabilityUnsupported when the action cannot run
+// without an overlayRoot (OVERLAY_DIR unset).
 func (a PiAdapter) stub(action Action) LifecycleResult {
-	return NewLifecycleResult(a.target, action, CapabilityUnsupported, a.stubMessage(action), nil)
+	msg := "pi package delivery (pipkg build/install) cannot run without OVERLAY_DIR set"
+	if action == ActionRollback {
+		msg = "pi lifecycle rollback cannot rebuild without OVERLAY_DIR set"
+	}
+	return NewLifecycleResult(a.target, action, CapabilityUnsupported, msg, nil)
 }
 
-func (a PiAdapter) stubMessage(action Action) string {
-	switch action {
-	case ActionUninstall, ActionRollback:
-		return "pi lifecycle (uninstall/rollback) is not implemented yet; scheduled for the pi-lifecycle PR slice"
-	default:
-		return "pi package delivery (pipkg build/install) is not implemented yet; scheduled for the pi-package-build PR slice"
+// resolvePiBinary returns the pi CLI to invoke. LABDRIAN_PI_BIN overrides
+// discovery (tests use it, so they never touch a real `pi` a developer
+// machine may have on PATH); production resolves via exec.LookPath("pi").
+func resolvePiBinary() (string, error) {
+	if override := strings.TrimSpace(os.Getenv("LABDRIAN_PI_BIN")); override != "" {
+		return override, nil
 	}
+	return exec.LookPath("pi")
+}
+
+// runPiCommand execs bin with a FIXED argv (verb, path), never a shell
+// string, so no path content is ever shell-interpreted.
+func runPiCommand(bin, verb, path string) error {
+	out, err := exec.Command(bin, verb, path).CombinedOutput()
+	if err != nil {
+		return fmt.Errorf("%w (output: %s)", err, strings.TrimSpace(string(out)))
+	}
+	return nil
+}
+
+// isPiPackageListed reports whether destDir is present in
+// ~/.pi/agent/settings.json's "packages" array (read-only probe).
+func isPiPackageListed(destDir string) bool {
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return false
+	}
+	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))
+	if err != nil {
+		return false
+	}
+	var settings struct {
+		Packages []string `json:"packages"`
+	}
+	if json.Unmarshal(raw, &settings) != nil {
+		return false
+	}
+	want := filepath.Clean(destDir)
+	settingsDir := filepath.Join(home, ".pi", "agent")
+	for _, p := range settings.Packages {
+		// Pi resolves relative package entries against the settings file's
+		// directory (packages.md); `pi install <abs>` records them that way.
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(settingsDir, p)
+		}
+		if filepath.Clean(p) == want {
+			return true
+		}
+	}
+	return false
+}
+
+// isPiMcpRegistered reports whether destDir/mcp.json exists, parses, and
+// carries an mcpServers.longterm-mem entry -- the proof `longterm-mem
+// register --target pi` ran (read-only probe; never written here).
+func isPiMcpRegistered(destDir string) bool {
+	raw, err := os.ReadFile(filepath.Join(destDir, "mcp.json"))
+	if err != nil {
+		return false
+	}
+	var mcp struct {
+		MCPServers map[string]json.RawMessage `json:"mcpServers"`
+	}
+	if json.Unmarshal(raw, &mcp) != nil {
+		return false
+	}
+	_, ok := mcp.MCPServers["longterm-mem"]
+	return ok
 }

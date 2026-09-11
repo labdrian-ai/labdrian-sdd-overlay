@@ -53,12 +53,31 @@ func mustWrite(t *testing.T, path, content string) {
 	}
 }
 
+// writeStubPiScript writes a fake `pi` recording every argv it received
+// (one per line) to recorderPath, then exits 0. Every test exercising
+// Install/Uninstall MUST set LABDRIAN_PI_BIN to one via t.Setenv — a
+// developer machine may have a real `pi` on PATH, and an unstubbed test
+// would shell out to it and mutate the real ~/.pi/agent/settings.json.
+func writeStubPiScript(t *testing.T, recorderPath string) string {
+	t.Helper()
+	scriptPath := filepath.Join(t.TempDir(), "pi-stub.sh")
+	quoted := "'" + strings.ReplaceAll(recorderPath, "'", `'\''`) + "'"
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\" > " + quoted + "\nexit 0\n"
+	if err := os.WriteFile(scriptPath, []byte(script), 0755); err != nil {
+		t.Fatalf("write stub pi script: %v", err)
+	}
+	return scriptPath
+}
+
 // TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg pins task 2.4: with real
 // overlay/registry/dest paths, Apply/Install build the package via pipkg and
 // SyncCheck reports it as drift-free right after.
 func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 	overlayRoot, registryPath := piFixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	recorder := filepath.Join(t.TempDir(), "argv.txt")
+	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
 
 	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
 
@@ -313,5 +332,265 @@ console.log(JSON.stringify(result));
 	}
 	if !engineRuntime.HasExactEntry(got, minimalismPath) || !engineRuntime.HasExactEntry(got, antiGenericPath) {
 		t.Errorf("gate must still inject both contract path lines on top of gentle-pi's prompt, got:\n%s", got)
+	}
+}
+
+// buildPiPackage builds destDir via pipkg.Build, failing the test on error.
+func buildPiPackage(t *testing.T, overlayRoot, registryPath, destDir string) {
+	t.Helper()
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("pipkg.Build: %v", err)
+	}
+}
+
+// newBuiltPiAdapterWithStub builds a real package at a fresh destDir and
+// returns an adapter for it plus the destDir and a writeStubPiScript
+// recorder path already set as LABDRIAN_PI_BIN.
+func newBuiltPiAdapterWithStub(t *testing.T) (adapter engineRuntime.PiAdapter, destDir, recorder string) {
+	t.Helper()
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir = filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	recorder = filepath.Join(t.TempDir(), "argv.txt")
+	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
+	return engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir), destDir, recorder
+}
+
+// readRecordedArgv reads a writeStubPiScript recorder file and returns its
+// lines (one argv element per line).
+func readRecordedArgv(t *testing.T, recorderPath string) []string {
+	t.Helper()
+	data, err := os.ReadFile(recorderPath)
+	if err != nil {
+		t.Fatalf("read recorder %s: %v", recorderPath, err)
+	}
+	trimmed := strings.TrimRight(string(data), "\n")
+	if trimmed == "" {
+		return nil
+	}
+	return strings.Split(trimmed, "\n")
+}
+
+// TestPiAdapter_InstallNoShellInjection (task 5.1): a destDir containing
+// shell metacharacters must reach `pi install` byte-for-byte, never
+// interpreted.
+func TestPiAdapter_InstallNoShellInjection(t *testing.T) {
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), `labdrian-pi; $(touch injected); \`)
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+
+	recorder := filepath.Join(t.TempDir(), "argv.txt")
+	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
+
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+	result := adapter.Install()
+	if result.Status == engineRuntime.CapabilityUnsupported {
+		t.Fatalf("Install with a stub pi on PATH must not be unsupported, got: %s", result)
+	}
+
+	got := readRecordedArgv(t, recorder)
+	if len(got) != 2 || got[0] != "install" || got[1] != destDir {
+		t.Fatalf("recorded argv = %#v, want [\"install\", %q] (fixed argv, no shell interpretation)", got, destDir)
+	}
+	if _, err := os.Stat("injected"); err == nil {
+		t.Fatal("destDir's shell metacharacters were interpreted -- a file named \"injected\" was created")
+	}
+}
+
+// TestPiAdapter_StatusPartialOnUnprovenEntry (task 5.2): built but unlisted
+// must report partial, naming the unproven entry.
+func TestPiAdapter_StatusPartialOnUnprovenEntry(t *testing.T) {
+	t.Setenv("HOME", t.TempDir()) // no real ~/.pi/agent/settings.json to read
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+	result := adapter.Status()
+	if result.Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("Status on a built-but-unlisted package = %s, want partial", result)
+	}
+	if !strings.Contains(result.Message, "listed in ~/.pi/agent/settings.json") {
+		t.Fatalf("Status message should name the unproven listing entry, got %q", result.Message)
+	}
+}
+
+// writePiSettingsListing writes a scratch ~/.pi/agent/settings.json that
+// lists destDir as an installed package, so isPiPackageListed proves the
+// "listed" entry (mirrors what a real `pi install <destDir>` would do).
+func writePiSettingsListing(t *testing.T, destDir string) {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		t.Fatalf("os.UserHomeDir: %v", err)
+	}
+	settingsPath := filepath.Join(home, ".pi", "agent", "settings.json")
+	raw, err := json.Marshal(struct {
+		Packages []string `json:"packages"`
+	}{Packages: []string{destDir}})
+	if err != nil {
+		t.Fatalf("marshal settings.json: %v", err)
+	}
+	mustWrite(t, settingsPath, string(raw))
+}
+
+// TestPiAdapter_StatusAcceptsRelativePackageListing: a real `pi install
+// <abs path>` records the package RELATIVE to ~/.pi/agent/ (observed on
+// Pi 0.85.1: "../../.labdrian-overlay/pi/labdrian-pi"); the docs state
+// relative entries resolve against the settings file. The listing probe
+// must resolve entries the same way instead of comparing raw strings.
+func TestPiAdapter_StatusAcceptsRelativePackageListing(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(home, ".labdrian-overlay", "pi", "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	writePiMcpRegistration(t, destDir, true)
+	settingsPath := filepath.Join(home, ".pi", "agent", "settings.json")
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+
+	mustWrite(t, settingsPath, `{"packages":["../../.labdrian-overlay/pi/labdrian-pi"]}`)
+	if result := adapter.Status(); result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Status with a relative listing resolved against ~/.pi/agent = %s, want supported", result)
+	}
+	mustWrite(t, settingsPath, `{"packages":["../../elsewhere/labdrian-pi"]}`)
+	if result := adapter.Status(); result.Status == engineRuntime.CapabilitySupported {
+		t.Fatalf("Status must not accept a relative listing that resolves elsewhere, got %s", result)
+	}
+}
+
+// writePiMcpRegistration writes destDir/mcp.json with (or without) the
+// longterm-mem MCP entry a real `longterm-mem register --target pi` call
+// would add.
+func writePiMcpRegistration(t *testing.T, destDir string, registered bool) {
+	t.Helper()
+	content := `{"mcpServers": {}}`
+	if registered {
+		content = `{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/opt/labdrian-overlay/bin/longterm-mem", "args": ["mcp"]}}}`
+	}
+	mustWrite(t, filepath.Join(destDir, "mcp.json"), content)
+}
+
+// TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries (C-01 remediation):
+// Status names three owned entries -- built+in-sync, listed in
+// settings.json, and longterm-mem registered in mcp.json. It must never
+// report supported while any one of them is unproven, and must report
+// supported only once all three are proven.
+func TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries(t *testing.T) {
+	cases := []struct {
+		name          string
+		listed        bool
+		mcpRegistered bool
+		wantStatus    engineRuntime.CapabilityStatus
+		wantContains  string
+	}{
+		{
+			name:          "listed but MCP unregistered stays partial and names the register command",
+			listed:        true,
+			mcpRegistered: false,
+			wantStatus:    engineRuntime.CapabilityPartial,
+			wantContains:  "longterm-mem register --target pi",
+		},
+		{
+			name:          "unlisted and MCP unregistered stays partial",
+			listed:        false,
+			mcpRegistered: false,
+			wantStatus:    engineRuntime.CapabilityPartial,
+			wantContains:  "listed in ~/.pi/agent/settings.json",
+		},
+		{
+			name:          "all three entries proven reports supported",
+			listed:        true,
+			mcpRegistered: true,
+			wantStatus:    engineRuntime.CapabilitySupported,
+			wantContains:  "longterm-mem is registered in its mcp.json",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			overlayRoot, registryPath := piFixtureOverlay(t)
+			destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+			buildPiPackage(t, overlayRoot, registryPath, destDir)
+			if c.listed {
+				writePiSettingsListing(t, destDir)
+			}
+			writePiMcpRegistration(t, destDir, c.mcpRegistered)
+
+			adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+			result := adapter.Status()
+			if result.Status != c.wantStatus {
+				t.Fatalf("Status = %s, want %s", result, c.wantStatus)
+			}
+			if !strings.Contains(result.Message, c.wantContains) {
+				t.Fatalf("Status message = %q, want it to contain %q", result.Message, c.wantContains)
+			}
+		})
+	}
+}
+
+// TestPiAdapter_StatusDisclosesNoExtensionsNoSkills (task 5.2): always
+// discloses the --no-extensions/--no-skills bypass and their -ne/-ns aliases.
+func TestPiAdapter_StatusDisclosesNoExtensionsNoSkills(t *testing.T) {
+	adapter := engineRuntime.NewPiAdapterWithPaths("", "", filepath.Join(t.TempDir(), "labdrian-pi"))
+	result := adapter.Status()
+	if !strings.Contains(result.Message, "--no-extensions") || !strings.Contains(result.Message, "--no-skills") {
+		t.Fatalf("Status must always disclose --no-extensions/--no-skills, got %q", result.Message)
+	}
+	if !strings.Contains(result.Message, "-ns") || !strings.Contains(result.Message, "-ne") {
+		t.Fatalf("disclosure must name the -ne/-ns aliases pi --help documents, got %q", result.Message)
+	}
+}
+
+// TestPiAdapter_UninstallUsesRemoveNotUninstall (task 5.2): `pi uninstall`
+// does not exist -- must run `pi remove <path>`.
+func TestPiAdapter_UninstallUsesRemoveNotUninstall(t *testing.T) {
+	adapter, destDir, recorder := newBuiltPiAdapterWithStub(t)
+	result := adapter.Uninstall()
+	if result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Uninstall with a stub pi on PATH must report supported, got: %s", result)
+	}
+
+	got := readRecordedArgv(t, recorder)
+	if len(got) != 2 || got[0] != "remove" || got[1] != destDir {
+		t.Fatalf("recorded argv = %#v, want [\"remove\", %q]", got, destDir)
+	}
+	if _, err := os.Stat(destDir); !os.IsNotExist(err) {
+		t.Fatalf("Uninstall should remove the built package directory, stat err = %v", err)
+	}
+}
+
+// TestPiAdapter_UninstallNeverTouchesGentlePiFiles (task 5.2): settings.json
+// and mcp.json stay byte-identical -- only `pi remove` may touch them.
+func TestPiAdapter_UninstallNeverTouchesGentlePiFiles(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	piAgentDir := filepath.Join(home, ".pi", "agent")
+	settingsPath := filepath.Join(piAgentDir, "settings.json")
+	mcpPath := filepath.Join(piAgentDir, "mcp.json")
+	settingsContent := []byte(`{"packages":["npm:gentle-pi"]}`)
+	mcpContent := []byte(`{"mcpServers":{"other":{}}}`)
+	mustWrite(t, settingsPath, string(settingsContent))
+	mustWrite(t, mcpPath, string(mcpContent))
+
+	adapter, _, _ := newBuiltPiAdapterWithStub(t)
+	if result := adapter.Uninstall(); result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Uninstall = %s, want supported", result)
+	}
+
+	assertFileUnchanged(t, settingsPath, settingsContent)
+	assertFileUnchanged(t, mcpPath, mcpContent)
+}
+
+// assertFileUnchanged fails the test if path's bytes differ from want.
+func assertFileUnchanged(t *testing.T, path string, want []byte) {
+	t.Helper()
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read %s: %v", path, err)
+	}
+	if string(got) != string(want) {
+		t.Errorf("%s changed: got %q, want %q", path, got, want)
 	}
 }

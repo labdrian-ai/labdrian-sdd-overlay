@@ -7,15 +7,15 @@ honest status, disclosure, and lifecycle actions that let Pi (via gentle-pi)
 receive the overlay's skills, agents, and per-phase SDD contract, without
 touching gentle-pi's own managed state.
 
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Pi Accepted as a Valid CLI Target
 
 The `labdrian-overlay` CLI MUST accept `pi` as a valid value for `--target`
-on `apply`, `status`, `sync-check`, and `uninstall`.
+on `apply`, `status`, and `sync-check`, and to `engine runtime uninstall`.
 
 #### Scenario: Pi target is recognized
-- GIVEN `--target pi` is passed to any of `apply`, `status`, `sync-check`, `uninstall`
+- GIVEN `--target pi` is passed to any of `apply`, `status`, `sync-check`, or `engine runtime uninstall`
 - WHEN the command runs
 - THEN it does not report an unknown-target error and returns a Pi-specific result
 
@@ -39,10 +39,11 @@ package's `agents/`, never written into `~/.pi/agent/agents/`.
 - THEN the package is listed in `~/.pi/agent/settings.json` packages
 - AND re-running install leaves a single package entry, not a duplicate
 
-#### Scenario: Skills and agents are visible in a Pi session
+#### Scenario: Skills are visible in a Pi session and agents ship as package content
 - GIVEN the package is installed
 - WHEN a Pi agent session starts
-- THEN overlay skills are discoverable and custom agents are present
+- THEN overlay skills are discoverable
+- AND the custom agent files are present under the package's `agents/` (Pi 0.85.1 packages declare no agent resource and gentle-pi discovers agents only from `~/.pi/agent/agents/`, so a package cannot make them session-visible)
 - AND no file under `~/.pi/agent/agents/` was written or overwritten
 
 ### Requirement: Deterministic Contract Gate via `before_agent_start`
@@ -85,9 +86,9 @@ as `.ts` so it is loaded by Pi's jiti-based loader — not `.js`.
 - AND no injected path line ever resolves outside the package root
 
 #### Scenario: Extension is discovered from the package extensions directory
-- GIVEN the `labdrian-pi` package ships `extensions/gate.ts`
+- GIVEN the `labdrian-pi` package ships `extensions/labdrian-gate.ts`
 - WHEN Pi's extension discovery scans the installed package
-- THEN it loads `gate.ts` via jiti
+- THEN it loads `labdrian-gate.ts` via jiti
 - AND no `.js` extension file is required or expected
 
 ### Requirement: Honest Status for Unproven Activation
@@ -111,7 +112,7 @@ proven for any owned entry, naming the unproven entry.
 `status --target pi` output and docs MUST state that `pi --no-extensions`
 bypasses the `before_agent_start` gate extension for that session, and that
 `--no-skills` bypasses skill discovery, without claiming to detect that
-either flag was used. There is no `-ns` alias.
+either flag was used. The short aliases are `-ne` and `-ns`.
 
 #### Scenario: Disclosure text is present
 - GIVEN `status --target pi` is run
@@ -122,14 +123,14 @@ either flag was used. There is no `-ns` alias.
 
 ### Requirement: Pi-Scoped Uninstall
 
-`uninstall --target pi` MUST remove only the `labdrian-pi` package entry via
+`engine runtime uninstall --target pi` (the adapter path; there is no top-level `labdrian-overlay uninstall` verb) MUST remove only the `labdrian-pi` package entry via
 `pi remove <source>`, passing the same local package path used at install
 as `<source>`, and MUST deregister the longterm-mem MCP entry, without
 touching gentle-pi- or pi-engram-owned state.
 
 #### Scenario: Only the owned package entry is removed
 - GIVEN gentle-pi/pi-engram-owned entries coexist with the `labdrian-pi` package entry
-- WHEN `uninstall --target pi` runs
+- WHEN `engine runtime uninstall --target pi` runs
 - THEN it runs `pi remove <local-package-path>`
 - AND the `labdrian-pi` entry disappears from `~/.pi/agent/settings.json`
   packages, its MCP registration is removed, and gentle-pi/pi-engram-owned

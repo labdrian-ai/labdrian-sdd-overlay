@@ -62,10 +62,10 @@
     "counting_method": "authored-additions-and-deletions",
     "size_exception": {
       "state": "granted",
-      "scope": "pi-target-plumbing, pi-package-build, pi-contract-gate, pi-longterm-mem-mcp",
-      "changed_lines": 2624,
+      "scope": "pi-target-plumbing, pi-package-build, pi-contract-gate, pi-longterm-mem-mcp, pi-lifecycle, verify-remediation",
+      "changed_lines": 3484,
       "authorized_by": "labdrian (maintainer)",
-      "reason": "slice 1 407, slice 2 1193 (post-correction), slice 3 531 and slice 4 493 authored lines, each a cohesive strict-TDD unit; slice 4 granted 2026-09-11 at delivery"
+      "reason": "slice 1 407, slice 2 1193 (post-correction), slice 3 531, slice 4 493, slice 5 407 and verify remediation 453 authored lines, each a cohesive strict-TDD unit; remediation granted 2026-09-11 at delivery"
     }
   },
   "strict_tdd": {

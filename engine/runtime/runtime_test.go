@@ -199,7 +199,7 @@ func TestExpandTarget_Pi(t *testing.T) {
 		adapter.Update(), adapter.Rollback(), adapter.Uninstall(),
 	} {
 		if result.Status != engineRuntime.CapabilityUnsupported {
-			t.Fatalf("PiAdapter %s: status = %q, want unsupported (honest stub for this slice)", result.Action, result.Status)
+			t.Fatalf("PiAdapter %s: status = %q, want unsupported (nothing built, no OVERLAY_DIR)", result.Action, result.Status)
 		}
 		if result.Target != engineRuntime.TargetPi {
 			t.Fatalf("PiAdapter %s: target = %q, want %q", result.Action, result.Target, engineRuntime.TargetPi)
@@ -207,37 +207,20 @@ func TestExpandTarget_Pi(t *testing.T) {
 	}
 }
 
-// TestPiAdapter_StubMessageNamesTheOwningSlice (R2-misleading-stub-schedule):
-// a single shared stub message claiming every action is "handled by
-// pi-package-build" is wrong for Uninstall/Rollback — package delivery
-// (build/install/apply/status/sync-check/update) lands in pi-package-build,
-// but there is no lifecycle logic to undo anything until pi-lifecycle. Each
-// action's message must name the slice that will actually implement it.
-func TestPiAdapter_StubMessageNamesTheOwningSlice(t *testing.T) {
+// TestPiAdapter_UnbuiltDefaultReportsConcreteReasons (supersedes the
+// pre-pi-lifecycle stub-wording test): an unbuilt package now reports its
+// own concrete reason instead of a "scheduled for a later slice" placeholder.
+func TestPiAdapter_UnbuiltDefaultReportsConcreteReasons(t *testing.T) {
 	adapter := engineRuntime.NewPiAdapter()
 
-	packageBuildActions := []engineRuntime.LifecycleResult{
-		adapter.Apply(), adapter.Install(), adapter.Status(),
-		adapter.SyncCheck(), adapter.Update(),
-	}
-	for _, result := range packageBuildActions {
-		if !strings.Contains(result.Message, "pi-package-build") {
-			t.Fatalf("PiAdapter %s: message should name pi-package-build, got %q", result.Action, result.Message)
-		}
-		if strings.Contains(result.Message, "pi-lifecycle") {
-			t.Fatalf("PiAdapter %s: message should not claim pi-lifecycle, got %q", result.Action, result.Message)
+	for _, result := range []engineRuntime.LifecycleResult{adapter.Status(), adapter.Uninstall()} {
+		if !strings.Contains(result.Message, "not built") {
+			t.Fatalf("PiAdapter %s: message should say the package is not built, got %q", result.Action, result.Message)
 		}
 	}
-
-	lifecycleActions := []engineRuntime.LifecycleResult{
-		adapter.Uninstall(), adapter.Rollback(),
-	}
-	for _, result := range lifecycleActions {
-		if !strings.Contains(result.Message, "pi-lifecycle") {
-			t.Fatalf("PiAdapter %s: message should name pi-lifecycle, got %q", result.Action, result.Message)
-		}
-		if strings.Contains(result.Message, "pi-package-build") {
-			t.Fatalf("PiAdapter %s: message should not claim pi-package-build, got %q", result.Action, result.Message)
+	for _, result := range []engineRuntime.LifecycleResult{adapter.Update(), adapter.Rollback()} {
+		if !strings.Contains(result.Message, "OVERLAY_DIR") {
+			t.Fatalf("PiAdapter %s: message should name the missing OVERLAY_DIR, got %q", result.Action, result.Message)
 		}
 	}
 }

@@ -128,6 +128,11 @@ func TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir(t *testing.T) {
 		if !strings.Contains(out, "pi") {
 			t.Fatalf("status --target pi should name pi in its refusal, got %s", out)
 		}
+		// N-01: the not-built disclosure must match the adapter's and name
+		// the real -ne/-ns aliases pi --help documents.
+		if !strings.Contains(out, "(short aliases: -ne and -ns)") || strings.Contains(out, "no short alias") {
+			t.Fatalf("not-built disclosure must name the -ne/-ns aliases, got %s", out)
+		}
 	})
 
 	t.Run("sync-check --target pi exits non-zero with a clear message", func(t *testing.T) {

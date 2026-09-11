@@ -71,8 +71,15 @@ func piInstalled(packageDir string) bool {
 	if json.Unmarshal(raw, &settings) != nil {
 		return false
 	}
+	want := filepath.Clean(packageDir)
+	settingsDir := filepath.Join(home, ".pi", "agent")
 	for _, p := range settings.Packages {
-		if p == packageDir {
+		// Pi resolves relative package entries against the settings file's
+		// directory; `pi install <abs>` records them that way.
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(settingsDir, p)
+		}
+		if filepath.Clean(p) == want {
 			return true
 		}
 	}

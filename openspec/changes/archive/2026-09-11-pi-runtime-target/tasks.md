@@ -52,22 +52,22 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: pi-longterm-mem-mcp (R-005)
 
-- [ ] 4.1 RED: `TestRegisterPi_WritesMcpServersLongtermMem` in `longterm-mem/internal/register/pi_test.go`
-- [ ] 4.2 RED: `TestCmdRegister_TargetAll_SkipsAbsentPi`, `TestCmdRegister_TargetPiExplicit_FailsWhenPackageAbsent`
-- [ ] 4.3 GREEN: `longterm-mem/internal/register/pi.go` — `RegisterPi` writes `<packageDir>/mcp.json` via existing `jsonInstall(containerKey="mcpServers")`
-- [ ] 4.4 Add `--target pi` case to `longterm-mem/cmd/longterm-mem/cmd_register.go` with skip/fail probe semantics
-- [ ] 4.5 `engine/pipkg/pipkg.go`: emit `package.json` `pi.mcp` path + `mcp.json` skeleton
+- [x] 4.1 RED: `TestRegisterPi_WritesMcpServersLongtermMem` in `longterm-mem/internal/register/pi_test.go`
+- [x] 4.2 RED: `TestCmdRegister_TargetAll_SkipsAbsentPi`, `TestCmdRegister_TargetPiExplicit_FailsWhenPackageAbsent`
+- [x] 4.3 GREEN: `longterm-mem/internal/register/pi.go` — `RegisterPi` writes `<packageDir>/mcp.json` via existing `jsonInstall(containerKey="mcpServers")`
+- [x] 4.4 Add `--target pi` case to `longterm-mem/cmd/longterm-mem/cmd_register.go` with skip/fail probe semantics
+- [x] 4.5 `engine/pipkg/pipkg.go`: emit `package.json` `pi.mcp` path + `mcp.json` skeleton
 
 ## Phase 5: pi-lifecycle (R-006, R-009)
 
-- [ ] 5.1 RED: `TestPiAdapter_InstallNoShellInjection` (threat: process integration, fixed argv, `exec.LookPath`)
-- [ ] 5.2 RED: `TestPiAdapter_StatusPartialOnUnprovenEntry`, `TestPiAdapter_StatusDisclosesNoExtensionsNoSkills`, `TestPiAdapter_UninstallUsesRemoveNotUninstall`, `TestPiAdapter_UninstallNeverTouchesGentlePiFiles`
-- [ ] 5.3 GREEN: `engine/runtime/pi.go` `Status` (honest per-entry), `Uninstall` (`pi remove <source>`), `Update`/`Rollback`
-- [ ] 5.4 Update `openspec/specs/runtime-lifecycle/spec.md` and `README.md`
+- [x] 5.1 RED: `TestPiAdapter_InstallNoShellInjection` (threat: process integration, fixed argv, `exec.LookPath`)
+- [x] 5.2 RED: `TestPiAdapter_StatusPartialOnUnprovenEntry`, `TestPiAdapter_StatusDisclosesNoExtensionsNoSkills`, `TestPiAdapter_UninstallUsesRemoveNotUninstall`, `TestPiAdapter_UninstallNeverTouchesGentlePiFiles`
+- [x] 5.3 GREEN: `engine/runtime/pi.go` `Status` (honest per-entry), `Uninstall` (`pi remove <source>`), `Update`/`Rollback`
+- [x] 5.4 Update `openspec/specs/runtime-lifecycle/spec.md` and `README.md`
 
 ## Phase 6: Manual-Only Verification (live Pi, post-chain)
 
-- [ ] 6.1 `pi install <local-path>` then open a Pi session: GADU skill/agent discoverable, no file under `~/.pi/agent/agents/` written
-- [ ] 6.2 Observe gate injection in real `sdd-tasks`/`sdd-apply` system prompt; confirm every other agent unaffected
-- [ ] 6.3 Confirm `pi remove <source>` leaves gentle-pi/pi-engram entries byte-identical
-- [ ] 6.4 Broad: `cd engine && go vet ./... && go test ./...`; `cd longterm-mem && go vet ./... && go test ./...`
+- [x] 6.1 `pi install <local-path>` then open a Pi session: GADU skill/agent discoverable, no file under `~/.pi/agent/agents/` written
+- [x] 6.2 Observe gate injection in real `sdd-tasks`/`sdd-apply` system prompt; confirm every other agent unaffected
+- [x] 6.3 Confirm `pi remove <source>` leaves gentle-pi/pi-engram entries byte-identical
+- [x] 6.4 Broad: `cd engine && go vet ./... && go test ./...`; `cd longterm-mem && go vet ./... && go test ./...`

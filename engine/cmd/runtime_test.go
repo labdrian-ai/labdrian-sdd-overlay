@@ -625,6 +625,58 @@ func TestRunRuntimeCore_CodexStatusWithoutManifestIsPartial(t *testing.T) {
 	}
 }
 
+// TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported (W-03):
+// piStatusUnsupportedInAggregate used to exempt Pi's honest
+// CapabilityUnsupported from the `status --target all` aggregate even after
+// pi-lifecycle (slice 5) gave Pi a real Status() implementation — so a
+// status check with every real target (claude/opencode/codex) supported
+// and Pi genuinely never built still reported a clean exit 0, masking that
+// Pi itself is not usable. The exemption must be gone: the aggregate must
+// fail while Pi is unsupported, exactly like every other target.
+func TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported(t *testing.T) {
+	overlayRoot := writeMinimalismOverlayFixture(t)
+	configRoot := t.TempDir()
+	t.Setenv("HOME", t.TempDir())
+	t.Setenv("LABDRIAN_OVERLAY_DIR", overlayRoot)
+
+	var setupOut, setupErr bytes.Buffer
+	runRuntimeCore(
+		[]string{"install", "--target", "all", "--config-root", configRoot},
+		&setupOut, &setupErr, func(int) {},
+	)
+
+	// Give OpenCode its active marker so it reports "supported" rather than
+	// "restart_required" -- this test isolates Pi's own honest unsupported
+	// state, not OpenCode's separate restart-required lifecycle.
+	configPath := filepath.Join(configRoot, "labdrian-runtime-parity.json")
+	if err := writeOpenCodeActiveMarkerFromConfig(t, configRoot, configPath); err != nil {
+		t.Fatalf("write matching OpenCode active marker: %v", err)
+	}
+
+	var outBuf, errBuf bytes.Buffer
+	exitCode := -1
+	runRuntimeCore(
+		[]string{"status", "--target", "all", "--config-root", configRoot},
+		&outBuf, &errBuf,
+		func(code int) { exitCode = code },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("runtime status --target all should fail (exit 1) while pi is honestly unsupported -- the status-only aggregate exemption must not mask it, got %d\nout=%q\nerr=%q", exitCode, outBuf.String(), errBuf.String())
+	}
+	// Codex's own honest "partial" state stays exempted from failing the
+	// aggregate by itself (pre-existing behavior); this test proves Pi's
+	// unsupported state fails it regardless.
+	for _, want := range []string{"[claude] status: supported", "[opencode] status: supported", "[codex] status: partial", "[pi] status: unsupported"} {
+		if !strings.Contains(outBuf.String(), want) {
+			t.Fatalf("runtime status --target all output missing %q: %q", want, outBuf.String())
+		}
+	}
+	if errBuf.Len() != 0 {
+		t.Fatalf("runtime status --target all should not print parse errors, got %q", errBuf.String())
+	}
+}
+
 func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *testing.T) {
 	overlayRoot := writeMinimalismOverlayFixture(t)
 	configRoot := t.TempDir()
@@ -673,8 +725,17 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 		func(code int) { exitCode = code },
 	)
 
-	if exitCode != 0 {
-		t.Fatalf("runtime status --target all should exit 0 when codex is partial and other targets remain supported, got %d\nout=%q\nerr=%q", exitCode, outBuf.String(), errBuf.String())
+	// Pi is never built in this test (OVERLAY_DIR unset), so it is honestly
+	// unsupported and now fails the aggregate on its own (W-03 — the
+	// status-only Pi exemption is gone). This test's own purpose --
+	// proving codex's partial status does not by itself fail the
+	// aggregate -- still holds: codex stays present as "partial" without
+	// contributing to the failure, which is why the aggregate exit stays
+	// tied to Pi and would flip back to 0 the moment Pi is genuinely
+	// supported (see TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported
+	// for the isolated proof of the Pi-only failure).
+	if exitCode != 1 {
+		t.Fatalf("runtime status --target all should fail (exit 1) because pi is honestly unsupported, even though codex is merely partial, got %d\nout=%q\nerr=%q", exitCode, outBuf.String(), errBuf.String())
 	}
 	if !strings.Contains(outBuf.String(), "[codex] status: partial") {
 		t.Fatalf("runtime status --target all should include codex partial state, got %q", outBuf.String())
@@ -684,6 +745,9 @@ func TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing(t *test
 	}
 	if !strings.Contains(outBuf.String(), "[opencode] status: supported") {
 		t.Fatalf("runtime status --target all should show supported OpenCode status, got %q", outBuf.String())
+	}
+	if !strings.Contains(outBuf.String(), "[pi] status: unsupported") {
+		t.Fatalf("runtime status --target all should show pi's own honest unsupported state, got %q", outBuf.String())
 	}
 
 	if errBuf.Len() != 0 {
