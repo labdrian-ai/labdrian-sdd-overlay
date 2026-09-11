@@ -39,10 +39,11 @@ package's `agents/`, never written into `~/.pi/agent/agents/`.
 - THEN the package is listed in `~/.pi/agent/settings.json` packages
 - AND re-running install leaves a single package entry, not a duplicate
 
-#### Scenario: Skills and agents are visible in a Pi session
+#### Scenario: Skills are visible in a Pi session and agents ship as package content
 - GIVEN the package is installed
 - WHEN a Pi agent session starts
-- THEN overlay skills are discoverable and custom agents are present
+- THEN overlay skills are discoverable
+- AND the custom agent files are present under the package's `agents/` (Pi 0.85.1 packages declare no agent resource and gentle-pi discovers agents only from `~/.pi/agent/agents/`, so a package cannot make them session-visible)
 - AND no file under `~/.pi/agent/agents/` was written or overwritten
 
 ### Requirement: Deterministic Contract Gate via `before_agent_start`
