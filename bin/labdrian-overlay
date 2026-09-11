@@ -177,6 +177,21 @@ pipkg_build_and_report() {
   fi
 }
 
+# pipkg_apply_and_report builds (pipkg_build_and_report), then runs the
+# real `pi install` via PiAdapter when `pi` is on PATH; the install hint
+# already covers the "pi not on PATH" case. Non-zero on a build failure or
+# a `pi` that IS on PATH but whose install failed (R4-silent-package-skip).
+pipkg_apply_and_report() {
+  pipkg_build_and_report || return 1
+  command -v pi >/dev/null 2>&1 || return 0
+  local result
+  if ! result="$(OVERLAY_DIR="$OVERLAY_DIR" STATE_DIR="$STATE_DIR" "$ENGINE_BINARY" runtime install --target pi 2>&1)"; then
+    echo "  $result" >&2
+    return 1
+  fi
+  echo "  $result"
+}
+
 # pipkg_sync_check_and_report runs `engine pipkg check` for the pi target,
 # emitting the SYNC_CHECK:pi: line other sync-check callers grep for, plus
 # an explicit VERDICT:pi:<STATE> line (R2-sync-check-success-without-check)
@@ -1635,7 +1650,7 @@ cmd_apply() {
 
     if ! is_copy_target "$t"; then
       if [[ "$t" == "pi" ]]; then
-        pipkg_build_and_report || pi_stub_included=1
+        pipkg_apply_and_report || pi_stub_included=1
       else
         package_target_stub_message "$t"
         pi_stub_included=1
