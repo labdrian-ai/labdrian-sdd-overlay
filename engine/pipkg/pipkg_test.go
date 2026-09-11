@@ -124,8 +124,21 @@ func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {
 	if len(manifest.Pi.Extensions) != 1 || manifest.Pi.Extensions[0] != "./extensions" {
 		t.Errorf("package.json pi.extensions = %v, want [./extensions]", manifest.Pi.Extensions)
 	}
-	if manifest.Pi.MCP != "" {
-		t.Errorf("package.json pi.mcp = %q, want omitted (slice 4 not landed)", manifest.Pi.MCP)
+	if manifest.Pi.MCP != "./mcp.json" {
+		t.Errorf("package.json pi.mcp = %q, want ./mcp.json", manifest.Pi.MCP)
+	}
+	mcpRaw, err := os.ReadFile(filepath.Join(destDir, "mcp.json"))
+	if err != nil {
+		t.Fatalf("expected mcp.json to be built: %v", err)
+	}
+	var mcpDoc struct {
+		MCPServers map[string]json.RawMessage `json:"mcpServers"`
+	}
+	if err := json.Unmarshal(mcpRaw, &mcpDoc); err != nil {
+		t.Fatalf("unmarshal mcp.json: %v", err)
+	}
+	if len(mcpDoc.MCPServers) != 0 {
+		t.Errorf("fresh mcp.json mcpServers = %v, want empty", mcpDoc.MCPServers)
 	}
 
 	gateBytes, err := os.ReadFile(filepath.Join(destDir, "extensions", "labdrian-gate.ts"))
@@ -293,5 +306,40 @@ func TestPipkgRefusesSpecialFiles(t *testing.T) {
 	}
 	if err := pipkg.Check(overlayRoot, registryPath, destDir); err == nil || !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("Check = %v, want symlink error", err)
+	}
+}
+
+// TestPipkgBuild_PreservesRegisteredMcpJSON pins the rule Build's own doc
+// comment states: mcp.json is registration state `longterm-mem register
+// --target pi` owns, so a rebuild must carry an already-registered
+// mcp.json's bytes forward rather than clobbering them with a fresh empty
+// skeleton (R-005).
+func TestPipkgBuild_PreservesRegisteredMcpJSON(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("first Build: %v", err)
+	}
+
+	registered := `{"mcpServers":{"longterm-mem":{"type":"stdio","command":"/opt/labdrian-overlay/bin/longterm-mem","args":["mcp"]}}}`
+	if err := os.WriteFile(filepath.Join(destDir, "mcp.json"), []byte(registered), 0644); err != nil {
+		t.Fatalf("simulating a prior registration: %v", err)
+	}
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("second Build: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(destDir, "mcp.json"))
+	if err != nil {
+		t.Fatalf("read mcp.json after rebuild: %v", err)
+	}
+	if string(got) != registered {
+		t.Errorf("mcp.json after rebuild = %s, want the registered bytes preserved unchanged:\n%s", got, registered)
+	}
+
+	if err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+		t.Errorf("Check must not report drift for a registered mcp.json, got: %v", err)
 	}
 }

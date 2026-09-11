@@ -50,21 +50,43 @@ type packageManifest struct {
 	Pi      piField `json:"pi"`
 }
 
-// piField is the "pi" key inside package.json. MCP is omitted (empty)
-// until the pi-longterm-mem-mcp slice lands (R-002 scope boundary).
+// piField is the "pi" key inside package.json. MCP is a package-relative
+// path to mcp.json (A1, R-005) — pi-mcp-adapter reads that file's own
+// top-level mcpServers object, not an inline value here.
 type piField struct {
 	Skills     []string `json:"skills"`
 	Agents     []string `json:"agents"`
 	Extensions []string `json:"extensions"`
-	MCP        string   `json:"mcp,omitempty"`
+	MCP        string   `json:"mcp"`
 }
+
+// mcpConfigFileName is the file package.json's "pi":{"mcp":...} points at
+// (A1). registerPi (longterm-mem/internal/register) writes
+// mcpServers.longterm-mem into this exact file; Build never overwrites an
+// existing one's content (see Build's own doc comment) because that
+// registration is state longterm-mem owns, not build output.
+const mcpConfigFileName = "mcp.json"
+
+// mcpSkeleton is the empty mcp.json Build ships for a package that has
+// never been registered against yet.
+const mcpSkeleton = "{\"mcpServers\": {}}\n"
 
 // Build assembles the labdrian-pi package into destDir: package.json,
 // skills/ (every skills.registry.yaml entry whose install.targets includes
-// "pi"), and agents/GADU.md. It builds into a sibling temp directory first
-// and atomically swaps it into destDir (R-010), refusing any symlink found
-// under a copied source tree and clearing whatever previously lived at
-// destDir. File modes are 0644, directory modes 0755.
+// "pi"), agents/GADU.md, and mcp.json (R-005). It builds into a sibling
+// temp directory first and atomically swaps it into destDir (R-010),
+// refusing any symlink found under a copied source tree and clearing
+// whatever previously lived at destDir. File modes are 0644, directory
+// modes 0755.
+//
+// mcp.json is the one file this rebuild does NOT unconditionally
+// overwrite: it is registration state `longterm-mem register --target pi`
+// owns, not generated build output, so a previously registered destDir's
+// mcp.json bytes are carried forward into the freshly built tree before
+// the swap — the simplest rule that survives a rebuild without ever
+// touching the registered content, and the only one this atomic
+// stage/rename/replace shape (swap) permits: destDir is wholesale replaced
+// by tmpDir, so anything not copied into tmpDir first is lost.
 func Build(overlayRoot, registryPath, destDir string) error {
 	if err := checkNoOverlap(overlayRoot, destDir); err != nil {
 		return err
@@ -87,6 +109,13 @@ func Build(overlayRoot, registryPath, destDir string) error {
 
 	if err := buildInto(overlayRoot, reg, tmpDir); err != nil {
 		return err
+	}
+	if existing, err := os.ReadFile(filepath.Join(destDir, mcpConfigFileName)); err == nil {
+		if err := os.WriteFile(filepath.Join(tmpDir, mcpConfigFileName), existing, 0644); err != nil {
+			return fmt.Errorf("pipkg: preserving existing mcp.json: %w", err)
+		}
+	} else if !os.IsNotExist(err) {
+		return fmt.Errorf("pipkg: reading existing mcp.json: %w", err)
 	}
 	return swap(tmpDir, destDir)
 }
@@ -120,6 +149,18 @@ func Check(overlayRoot, registryPath, destDir string) error {
 			return fmt.Errorf("pipkg: package not built at %s (run: labdrian-overlay apply --target pi)", destDir)
 		}
 		return fmt.Errorf("pipkg: reading built package: %w", err)
+	}
+
+	// mcp.json is registration state longterm-mem owns (Build's own doc
+	// comment), never regenerated build output: Check only proves the file
+	// is present, and never diffs its content, or every `register --target
+	// pi` call would show as permanent drift.
+	_, wantHasMCP := want[mcpConfigFileName]
+	_, gotHasMCP := got[mcpConfigFileName]
+	delete(want, mcpConfigFileName)
+	delete(got, mcpConfigFileName)
+	if wantHasMCP && !gotHasMCP {
+		return fmt.Errorf("labdrian-pi package drift:\n  %s: missing", mcpConfigFileName)
 	}
 
 	var drift []string
@@ -191,6 +232,10 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
 		return fmt.Errorf("pipkg: writing extensions/labdrian-gate.ts: %w", err)
 	}
 
+	if err := os.WriteFile(filepath.Join(dir, mcpConfigFileName), []byte(mcpSkeleton), 0644); err != nil {
+		return fmt.Errorf("pipkg: writing %s: %w", mcpConfigFileName, err)
+	}
+
 	manifest := packageManifest{
 		Name:    "labdrian-pi",
 		Version: resolvePackageVersion(overlayRoot),
@@ -198,6 +243,7 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
 			Skills:     []string{"./skills"},
 			Agents:     []string{"./agents"},
 			Extensions: []string{"./extensions"},
+			MCP:        "./" + mcpConfigFileName,
 		},
 	}
 	raw, err := json.MarshalIndent(manifest, "", "  ")

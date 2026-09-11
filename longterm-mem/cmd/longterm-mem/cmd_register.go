@@ -75,6 +75,29 @@ func cmdRegister(args []string) int {
 		return exitPathUnresolvable
 	}
 
+	// pi is not part of registerExpandTarget's own "all" expansion
+	// (registerExpandTarget's own doc comment says why); it is folded in
+	// here instead, gated on piInstalled's probe (C6): --target all
+	// attempts pi only when it looks installed, silently skipping it
+	// otherwise — the same "this machine does not have it" story the
+	// other three targets get from a missing config file. --target pi
+	// named explicitly gets the opposite: fail loudly when the probe says
+	// no, rather than let jsonInstall discover the missing package dir on
+	// its own with a less specific error.
+	if *target == "all" || *target == "pi" {
+		piRoot := *configRoot
+		if piRoot == "" {
+			piRoot = defaultRegisterConfigRoot("pi")
+		}
+		switch {
+		case *target == "pi" && !piInstalled(piRoot):
+			fmt.Fprintf(os.Stderr, "longterm-mem: register: pi: not installed (no package at %s, or not listed in ~/.pi/agent/settings.json); build it (labdrian-overlay apply --target pi) and run pi install first\n", piRoot)
+			return 1
+		case *target == "all" && piInstalled(piRoot):
+			targets = append(targets, "pi")
+		}
+	}
+
 	// expandedAll distinguishes "register everything this machine has"
 	// from "register this one runtime, which I am telling you is there".
 	// Only the first may skip a runtime whose config is absent.
@@ -151,6 +174,8 @@ func registerTarget(target, configRoot, stateDir, binary string) error {
 		return register.RegisterOpencode(configRoot, stateDir, binary)
 	case "codex":
 		return register.RegisterCodex(configRoot, stateDir, binary)
+	case "pi":
+		return register.RegisterPi(configRoot, stateDir, binary)
 	default:
 		return fmt.Errorf("register: %s: unknown target", target)
 	}

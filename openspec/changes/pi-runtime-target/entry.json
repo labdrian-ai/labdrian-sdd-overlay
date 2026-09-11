@@ -62,10 +62,10 @@
     "counting_method": "authored-additions-and-deletions",
     "size_exception": {
       "state": "granted",
-      "scope": "pi-target-plumbing, pi-package-build, pi-contract-gate",
-      "changed_lines": 1976,
+      "scope": "pi-target-plumbing, pi-package-build, pi-contract-gate, pi-longterm-mem-mcp",
+      "changed_lines": 2624,
       "authorized_by": "labdrian (maintainer)",
-      "reason": "slice 1 407, slice 2 1038 and slice 3 531 authored lines, each a cohesive strict-TDD unit (pipkg safety tests, node-driven gate tests); granted 2026-09-10 at delivery"
+      "reason": "slice 1 407, slice 2 1193 (post-correction), slice 3 531 and slice 4 493 authored lines, each a cohesive strict-TDD unit; slice 4 granted 2026-09-11 at delivery"
     }
   },
   "strict_tdd": {
