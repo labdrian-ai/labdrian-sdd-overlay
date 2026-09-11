@@ -10,7 +10,7 @@
 | Phase | Timestamp | Notes |
 |-------|-----------|-------|
 | t0 (proposal launch) | 2026-09-10 13:31:43 | Engram observation #3330 (`sdd/pi-runtime-target/pipeline-state`) created_at |
-| t1 (landing commit) | (not yet merged) | This archive is committed inside the delivery chain (PRs #308 → #310 → #311 → #313 → #314) before the merge exists. `landing_commit` is intentionally absent and will be recorded by closure-feedback after the chain merges. |
+| t1 (landing commit) | 2026-09-11T16:46:55-03:00 | `landing_commit`: `ca7ed2a0b3258cc50116497f953df46fa1e906d5` (merge of PR #314, last of the 5 stacked PRs #308 → #310 → #311 → #313 → #314, onto `main`; `gh pr view 314 --json mergedAt` mergedAt `2026-09-11T19:46:55Z`, cross-checked against `git show -s --format=%cI` committer timestamp `2026-09-11T16:46:55-03:00` — the same instant in UTC). Outcome: self-asserted, not verified — no `review-receipt.json` survives under `.git/gentle-ai/review-transactions/v2/` for the final lineage `review-1c85b8d1be41654c` (checked directly: MISSING), so no `approved_tree` is recorded here and none can be checked against `landing_commit`'s own tree; t1 still resolves from `landing_commit`'s own committer timestamp alone |
 
 ## Executive Summary
 
