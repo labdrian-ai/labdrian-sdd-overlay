@@ -700,3 +700,210 @@ batch] all committed).
 work units (plus this docs commit). `openspec/changes/pi-runtime-target/tasks.md`
 Phase 3 checkboxes marked `[x]`. Ready for the next slice
 (`pi-longterm-mem-mcp`) or `sdd-verify` at the orchestrator's discretion.
+
+## Batch 4 — Slice 4: pi-longterm-mem-mcp (R-005)
+
+**Mode**: Strict TDD
+**Status**: IMPLEMENTED and GREEN, **NOT COMMITTED** — stopped on the
+300-authored-line budget per this batch's own explicit instruction
+("if exceeded STOP with partial before committing"), staged in the
+worktree (`git add -A` run, HEAD still at `8bfc36f`).
+
+### Budget
+
+`git diff --shortstat 8bfc36f..HEAD -- engine longterm-mem bin` (staged,
+uncommitted) = **493 insertions(+), 73 deletions(-)**, 15 files changed —
+1.64x the 300-line prompt-stated budget. Well inside the native attempt
+authority's own `max_changed_lines: 600` ceiling for this objective
+generation (`gentle-ai sdd-attempt status` — attempt 4, `next_action:
+finish`), but the prompt's explicit local STOP instruction is stricter
+than that ceiling and is honored here rather than overridden. Mirrors the
+exact shape of slices 1-3, each of which exceeded its own prompt-stated
+target and proceeded only after an explicit owner-granted `size:exception`
+relayed via the coordinator — this batch is at that same decision point,
+just not yet granted.
+
+Rough breakdown (excludes 5 testdata JSON fixtures, ~46 lines): pipkg.go
++writer.go-side changes ~110 lines, longterm-mem register/pi.go+tests
+~180 lines, cmd_register.go+register_paths.go+main_test.go ~180 lines,
+bin/labdrian-overlay wiring ~25 lines, shelltest rewrite of 2 pre-existing
+tests ~-40/+55 lines (net small, but counted).
+
+### Completed Tasks (all functionally done, GREEN, NOT committed)
+
+- [x] 4.1 RED->GREEN: `TestRegisterPi_WritesMcpServersLongtermMem` (+
+      `TestPi_ReinstallIsIdempotent`, `TestPi_UntaggedSameNamedEntryRefused`,
+      `TestPi_UninstallRemovesOwnedEntry`) in
+      `longterm-mem/internal/register/pi_test.go`, driven off the existing
+      `goldenWriterCase` harness (golden_writer_test.go) rather than
+      hand-rolled scenario bodies — adding pi meant one `piGoldenCase()`
+      value + 5 fixtures (`testdata/pi/*.json`), not new test plumbing.
+- [x] 4.2 RED->GREEN: `TestCmdRegister_TargetAll_SkipsAbsentPi`,
+      `TestCmdRegister_TargetPiExplicit_FailsWhenPackageAbsent` (+ a third,
+      `TestCmdRegister_TargetPi_RegistersWhenInstalled`, proving the
+      positive path) in `longterm-mem/cmd/longterm-mem/main_test.go`.
+- [x] 4.3 GREEN: `longterm-mem/internal/register/pi.go` — `RegisterPi`
+      writes `<configRoot>/mcp.json` via the existing, unmodified
+      `jsonInstall(containerKey="mcpServers")` — no writer change, exactly
+      as design.md's A1 decision requires. `Unregister` (unregister.go)
+      also got a `pi` case.
+- [x] 4.4 GREEN: `--target pi` case added to
+      `longterm-mem/cmd/longterm-mem/cmd_register.go`'s `registerTarget`
+      switch, plus a `piInstalled` probe (new,
+      `longterm-mem/cmd/longterm-mem/register_paths.go`) implementing C6's
+      skip/fail asymmetry: `--target all` attempts pi only when its
+      package dir exists AND `~/.pi/agent/settings.json` lists it under
+      `packages` (read-only, never touches `~/.pi/agent/mcp.json` itself);
+      `--target pi` named explicitly fails loudly when that probe says no.
+      `registerExpandTarget`'s own "all" case is deliberately UNCHANGED
+      (still `[claude, opencode, codex]`, keeping
+      `TestRegisterExpandTarget` and
+      `TestCmdRegister_AllExpandsToClaudeAndOpencodeAndCodex` pinned
+      as-is) — `cmdRegister` appends `"pi"` to `targets` itself, gated on
+      the probe, right before `expandedAll` is computed. `pi` DID join
+      `registerExpandTarget`'s single-target switch (so
+      `--target pi` alone resolves), and `defaultRegisterConfigRoot("pi")`
+      was added, independently re-deriving
+      `engine/runtime.DefaultPiPackageDir`'s exact
+      `$STATE_DIR/pi/labdrian-pi` path (D4: longterm-mem cannot import
+      engine, separate Go modules).
+- [x] 4.5 GREEN: `engine/pipkg/pipkg.go` — `package.json`'s `"pi"` key now
+      always declares `"mcp": "./mcp.json"` (previously
+      `omitempty`/unset); `buildInto` always writes a fresh
+      `mcp.json` skeleton (`{"mcpServers": {}}`). `Build` preserves an
+      **existing** `destDir/mcp.json`'s bytes across a rebuild by copying
+      them into the temp build dir BEFORE the atomic `swap` (the only
+      point that can work, since `swap` wholesale-replaces `destDir` with
+      the temp tree) — the simplest rule that survives a rebuild without
+      ever touching registered content, documented directly on `Build`'s
+      own doc comment. `Check` excludes `mcp.json` from its content-diff
+      (registration state longterm-mem owns, not build output) but still
+      requires the file be present, so drift detection stays honest about
+      "was it built" without treating every `register --target pi` call
+      as permanent drift.
+
+### Deviations from Design
+
+1. **`piInstalled` probe is a NEW helper, not reused from `engine`**:
+   design.md's C6 describes the probe abstractly ("package dir present AND
+   listed in settings.json") without naming which module owns it.
+   Implemented in `longterm-mem/cmd/longterm-mem/register_paths.go`
+   (D4-consistent: longterm-mem cannot import engine) rather than in
+   `engine/runtime/pi.go`, since the CALLER that needs it is
+   `cmd_register.go`, not anything in `engine`.
+2. **`bin/labdrian-overlay`'s own `cmd_longterm_mem` does NOT re-implement
+   the piInstalled probe**: `longterm-mem register --target pi`'s own
+   internal probe already fires per-target inside the SAME generic
+   register/unregister loop bin/labdrian-overlay already runs for
+   claude/opencode/codex — an absent/not-yet-`pi install`-ed package
+   returns exit 1 from `register`, which that loop's PRE-EXISTING
+   `expanded_all` bash variable already softens to a warn-and-continue
+   under `--target all` (exactly like an absent codex config does) or
+   escalates to `install_failed=1` under an explicit `--target pi` — with
+   ZERO new bash-side probe logic needed. Confirmed by
+   `TestLongtermMemUninstall_TargetAllIncludesPi`
+   (`engine/shelltest/overlay_pi_target_test.go`): pi is walked by the
+   exact same per-target loop as every other target now.
+3. **`--config-root` IS passed explicitly for pi** in
+   `bin/labdrian-overlay`'s register/unregister calls
+   (`--config-root "$(pipkg_dest_dir)"`), rather than relying on
+   `defaultRegisterConfigRoot("pi")`'s `STATE_DIR` env-var inheritance
+   agreeing by accident — both resolve to the same path under the
+   ordinary default, but the explicit flag removes that assumption.
+4. **Two pre-existing slice-1 shelltest tests were REWRITTEN, not left
+   alone**: `TestLongtermMemExplicitTargetPi_Dies` and
+   `TestLongtermMemUninstall_TargetAllNeverTouchesPi`
+   (`engine/shelltest/overlay_pi_target_test.go`) pinned the OLD blanket
+   "--target pi dies" exclusion this slice's own task 4.4/bin wiring was
+   asked to lift. Renamed to
+   `TestLongtermMemUninstall_TargetPiNoLongerDies` and
+   `TestLongtermMemUninstall_TargetAllIncludesPi`, asserting the NEW
+   behavior (no refusal; pi walked by the uninstall loop like every other
+   target, including the tracking-file-deletion convergence guard firing
+   once all four targets clear). This is corrective, not scope creep: the
+   old assertions would otherwise actively lie about post-slice-4
+   behavior.
+5. **`status`/`uninstall` "parity for the registration" scoped down**:
+   `cmd_longterm_mem status`'s own subcommand branch never consulted
+   `$targets` even before this slice (it calls
+   `engine runtime status --component longterm-mem` once, unconditionally
+   for every subcommand's arg set) — wiring a genuine per-target pi
+   status into that engine-side surface (`engine/runtime/longtermmem.go`)
+   would mean teaching `engine/runtime` about a package-shaped MCP target,
+   a materially larger, separate change outside this slice's line budget
+   and R-005's own scope (MCP delivery + registration, not lifecycle
+   status). `uninstall` DID get full parity (task 4.4's own scope): pi is
+   walked by the same per-target unregister loop, tracked in the same
+   install-tracking file, and subject to the same binary-removal
+   convergence guard as claude/opencode/codex.
+
+### Verification (foreground, all green — before staging)
+
+- `cd longterm-mem && go test ./internal/register/... ./cmd/...` — green
+- `cd engine && go test ./pipkg/... ./shelltest/...` — green (after fixing
+  the two rewritten pre-existing tests above)
+- `cd longterm-mem && go vet ./... && go test -count=1 ./...` — every
+  package green (durable, embed, engram, identityledger, mcpserver, ops,
+  projectid, promote, query, register, repohistory, staleness, vault,
+  vaultreg, vecindex, cmd/longterm-mem, root)
+- `cd engine && go vet ./... && go test -count=1 ./...` — every package
+  green (assets, cmd, gadu, gate, installer, pipkg, prespec, propagator,
+  runtime, settings, shelltest, skills, synctrigger)
+- `gofmt -l engine longterm-mem` — empty, both modules
+- `shellcheck -S warning bin/labdrian-overlay` — only the 2 pre-existing
+  SC2064 warnings (unchanged from prior slices)
+- Smoke test (scratchpad-built binaries, scratch `STATE_DIR`/`HOME`, never
+  inside the repo): `pipkg build` → `package.json` declares
+  `"pi":{"mcp":"./mcp.json"}`, fresh `mcp.json` = `{"mcpServers": {}}`;
+  `longterm-mem register --target pi --config-root <pkg>` with no
+  `~/.pi/agent/settings.json` listing → **exit 1**, "not installed";
+  seeding `settings.json` with the package path listed → **exit 0**,
+  `mcp.json` gains `mcpServers.longterm-mem`; rebuilding the package
+  (`pipkg build` again) → the registered entry **survives byte-for-byte**;
+  `unregister --target pi` → entry removed, `mcp.json` back to
+  `{"mcpServers": {}}`.
+- Hygiene: `git status --short` shows only the 15 tracked files above (all
+  staged, `M`/`A`, nothing else); `git ls-files --others
+  --exclude-standard | wc -l` = 0 — no build output or scratch state
+  leaked into the repo; both built binaries and the scratch `STATE_DIR`/
+  `HOME` for the smoke test live entirely under
+  `/tmp/claude-1000/.../scratchpad/pi-slice4-smoke`.
+
+### Issues Found
+
+None — all implementation is GREEN, including the two pre-existing tests
+this slice's own bin wiring change made obsolete (rewritten, not papered
+over). The budget overage is a delivery-slicing note, not a defect.
+
+### Plan vs Realized Slice Count
+
+slices planned=5 realized=3 committed (`pi-target-plumbing`,
+`pi-package-build`, `pi-contract-gate`) + 1 implemented-but-uncommitted
+(`pi-longterm-mem-mcp`, this batch, awaiting a size exception).
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main, auto-chain)
+- Current work unit: `pi-longterm-mem-mcp` (would-be PR4) — implemented,
+  tested, verified, **staged but NOT committed**
+- Boundary: would start at `8bfc36f` (slice 3's docs commit, current HEAD)
+- Estimated review budget impact: 493 insertions / 73 deletions, 15 files
+  (1.64x the 300-line prompt-stated budget; within the native attempt
+  authority's explicit 600-line ceiling for this objective generation, not
+  yet within the prompt's own stricter local budget)
+
+### Status
+
+5/5 Phase 4 tasks functionally complete and verified GREEN, but **NOT
+committed** and `tasks.md` Phase 4 checkboxes deliberately left
+UNCHECKED — this batch stopped at the explicit 300-line budget instruction
+rather than committing over it or requesting an exception unilaterally.
+The work is fully staged in the worktree
+(`/home/labdrian/labdrian-sdd-overlay-worktrees/pi-4`, branch
+`feat/pi-runtime-target-4-mcp`) and ready to commit as soon as either (a)
+an owner-granted `size:exception` is relayed (matching slices 1-3's own
+precedent), or (b) a follow-up attempt is asked to split it into two
+commits under budget. Next slice (`pi-lifecycle`) is blocked on this one
+landing first (Phase 5 depends on `PiAdapter.Uninstall` calling `pi
+remove`, unrelated to this slice's own scope, so it is NOT blocked on the
+mcp.json work itself — but the stacked-branch chain is).
