@@ -220,31 +220,33 @@ pipkg_sync_check_and_report() {
   fi
 }
 
-# pipkg_status_and_report prints whether the pi package is built and
-# whether it currently drifts from the manifest, for cmd_status. Returns
-# non-zero when there is nothing healthy to report -- not built, or built
-# but drifted (R4-silent-package-skip) -- and 0 only when built with no
-# drift, itself still "partial" in the printed message (R-006/pi-lifecycle
-# finalizes real proof of a fully supported status).
-#
-# It also always prints the R-007 "--no-extensions"/"--no-skills" disclosure:
-# a static note (never a runtime-detected fact -- there is no detection API
-# for either flag, and no "-ns" alias) that "pi --no-extensions" bypasses the
-# before_agent_start gate extension for that session, and "pi --no-skills"
-# bypasses skill discovery.
+# pipkg_status_and_report prints the pi package's status for cmd_status.
+# The "not built" case is decided in pure bash (no ENGINE_BINARY call): it
+# must stay reachable even when the engine binary has not been built yet
+# (see TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir). Once the package
+# IS built, it delegates to `engine runtime status --target pi` -- the
+# same PiAdapter.Status() the "runtime" subcommand uses -- for the honest
+# three-entry proof (built+in-sync, listed in ~/.pi/agent/settings.json,
+# longterm-mem MCP-registered), rather than reimplementing that logic here
+# from a bare drift check. Its message already carries the R-007
+# "--no-extensions"/"--no-skills" disclosure in every branch, so this
+# helper only adds its own disclosure line for the not-built early return,
+# which never reaches the delegate call. Returns non-zero exactly when the
+# delegated `runtime status --target pi` does (not built, unproven/partial,
+# or drifted); 0 only once every owned entry is proven supported.
 pipkg_status_and_report() {
-  local dest drift_output
+  local dest result
   dest="$(pipkg_dest_dir)"
-  echo "  pi: note -- 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime, and there is no short alias for either flag"
   if [[ ! -e "$dest/package.json" ]]; then
+    echo "  pi: note -- 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime, and there is no short alias for either flag"
     echo "  pi: not built (run: labdrian-overlay apply --target pi)"
     return 1
   fi
-  if drift_output="$("$ENGINE_BINARY" pipkg check --overlay-root "$OVERLAY_DIR" --registry "$OVERLAY_DIR/skills.registry.yaml" --dest-dir "$dest" 2>&1)"; then
-    echo "  pi: built at $dest, no drift (partial -- lifecycle proof lands in a later slice)"
+  if result="$(OVERLAY_DIR="$OVERLAY_DIR" STATE_DIR="$STATE_DIR" "$ENGINE_BINARY" runtime status --target pi)"; then
+    echo "  $result"
     return 0
   else
-    echo "  pi: built at $dest, drift detected -- $drift_output"
+    echo "  $result"
     return 1
   fi
 }
