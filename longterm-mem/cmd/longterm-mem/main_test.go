@@ -1024,6 +1024,92 @@ func TestCmdRegister_NamedTargetWithoutAConfigStillFails(t *testing.T) {
 	}
 }
 
+// TestCmdRegister_TargetAll_SkipsAbsentPi (4.2, R-005, C6): pi has no
+// package built and is not listed anywhere — piInstalled's probe says no
+// — so --target all silently skips it while still registering the other
+// runtimes, exactly like an absent codex config does.
+func TestCmdRegister_TargetAll_SkipsAbsentPi(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("STATE_DIR", "")
+	xdgConfig := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdgConfig)
+	t.Setenv("CODEX_HOME", "")
+
+	if err := os.WriteFile(filepath.Join(home, ".claude.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed .claude.json: %v", err)
+	}
+	opencodeDir := filepath.Join(xdgConfig, "opencode")
+	if err := os.MkdirAll(opencodeDir, 0o755); err != nil {
+		t.Fatalf("mkdir opencode config dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(opencodeDir, "opencode.json"), []byte(`{"mcp":{}}`), 0o600); err != nil {
+		t.Fatalf("seed opencode.json: %v", err)
+	}
+	// No ~/.codex/config.toml, no ~/.labdrian-overlay/pi/labdrian-pi, no
+	// ~/.pi/agent/settings.json: neither codex nor pi is installed here.
+
+	exit := run([]string{"register", "--target", "all", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
+	if exit != 0 {
+		t.Fatalf("run([register --target all]) with pi absent = %d, want 0", exit)
+	}
+	if _, statErr := os.Stat(filepath.Join(home, ".labdrian-overlay", "pi", "labdrian-pi", "mcp.json")); !os.IsNotExist(statErr) {
+		t.Fatalf("an mcp.json was created for a pi package that was never installed (stat err: %v)", statErr)
+	}
+}
+
+// TestCmdRegister_TargetPiExplicit_FailsWhenPackageAbsent (4.2, R-005,
+// C6): asking for pi by name is a statement that it should be there, so a
+// failed probe is a real failure, matching every other target's explicit-
+// vs-all asymmetry (TestCmdRegister_NamedTargetWithoutAConfigStillFails).
+func TestCmdRegister_TargetPiExplicit_FailsWhenPackageAbsent(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("STATE_DIR", "")
+
+	exit := run([]string{"register", "--target", "pi", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
+	if exit != 1 {
+		t.Fatalf("run([register --target pi]) with no pi package built = %d, want 1", exit)
+	}
+}
+
+// TestCmdRegister_TargetPi_RegistersWhenInstalled (4.3/4.4, R-005): once
+// piInstalled's probe says yes (a package dir with mcp.json, and
+// ~/.pi/agent/settings.json listing it), --target pi writes
+// mcpServers.longterm-mem into mcp.json exactly like the other three
+// writers do into their own config.
+func TestCmdRegister_TargetPi_RegistersWhenInstalled(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	packageDir := filepath.Join(home, ".labdrian-overlay", "pi", "labdrian-pi")
+	if err := os.MkdirAll(packageDir, 0o755); err != nil {
+		t.Fatalf("mkdir package dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(packageDir, "mcp.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatalf("seed mcp.json: %v", err)
+	}
+	settingsDir := filepath.Join(home, ".pi", "agent")
+	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
+		t.Fatalf("mkdir settings dir: %v", err)
+	}
+	settings := `{"packages":["` + packageDir + `"]}`
+	if err := os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(settings), 0o600); err != nil {
+		t.Fatalf("seed settings.json: %v", err)
+	}
+
+	exit := run([]string{"register", "--target", "pi", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"})
+	if exit != 0 {
+		t.Fatalf("run([register --target pi]) with pi installed = %d, want 0", exit)
+	}
+	got, err := os.ReadFile(filepath.Join(packageDir, "mcp.json"))
+	if err != nil {
+		t.Fatalf("read mcp.json: %v", err)
+	}
+	if !strings.Contains(string(got), `"longterm-mem":`) {
+		t.Fatalf("mcp.json missing longterm-mem entry:\n%s", got)
+	}
+}
+
 // buildLongtermMemBinary compiles the real longterm-mem binary to a
 // scratch path, mirroring TestMain_BuildsIndependentModule's own build
 // invocation, so TestCLI_NoResidualProcessAfterAnySubcommand exercises the

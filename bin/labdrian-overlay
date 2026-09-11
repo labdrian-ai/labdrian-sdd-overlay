@@ -3951,21 +3951,21 @@ cmd_longterm_mem() {
   local targets
   targets="$(resolve_targets "$target_arg")"
 
-  # longterm-mem is a per-runtime-config component (claude/opencode/codex
-  # config files, D4); it has no equivalent for a package target like pi
-  # and stays out of scope for the pi-target-plumbing slice. An explicit
-  # --target pi is rejected loudly, matching capture/restore above;
-  # --target all silently drops it, since pi is not one of "the runtimes
-  # this machine has" in longterm-mem's own sense (see expanded_all below).
-  if [[ "$target_arg" == "pi" ]]; then
-    die "longterm-mem does not support --target pi (package target, no per-runtime config file); use claude, opencode, codex, or all"
-  fi
+  # pi joined this loop in pi-longterm-mem-mcp (R-005): its MCP config is
+  # mcp.json inside the built package (pipkg_dest_dir), not a per-runtime
+  # config file, so it gets --config-root below instead of the module's
+  # own default. `register`/`unregister --target pi` apply the SAME
+  # explicit-vs-all probe asymmetry as claude/opencode/codex's missing
+  # config (register_paths.go's piInstalled): under --target all a pi
+  # package nobody has run `pi install` on yet is skipped, softened by
+  # expanded_all below exactly like an absent codex config is; named
+  # explicitly it is a real failure.
   if [[ "$target_arg" == "all" ]]; then
     local copy_targets="" ct
     for ct in $targets; do
       is_copy_target "$ct" && copy_targets+="$ct "
     done
-    targets="$copy_targets"
+    targets="${copy_targets}pi"
   fi
 
   ensure_engine_binary
@@ -4060,8 +4060,11 @@ cmd_longterm_mem() {
       # catch-all arm carries a story ("a runtime this machine does not
       # have") that is only true for exit 1. A code that falls through to it
       # is not merely reported vaguely — it is reported WRONG.
-      local register_exit=0
-      "$LONGTERM_MEM_BINARY" register --target "$t" --binary "$LONGTERM_MEM_BINARY" \
+      local register_exit=0 register_args=(--target "$t" --binary "$LONGTERM_MEM_BINARY")
+      # pi's config root IS the built package (pipkg_dest_dir), not the
+      # module's own per-runtime default.
+      [[ "$t" == "pi" ]] && register_args+=(--config-root "$(pipkg_dest_dir)")
+      "$LONGTERM_MEM_BINARY" register "${register_args[@]}" \
         || register_exit=$?
 
       # The engine record is rebuilt from OBSERVED state on every call and
@@ -4217,8 +4220,9 @@ cmd_longterm_mem() {
       # it lands in the same bucket as the catch-all, but the catch-all's
       # message ("failed") names no remedy, and 8's remedy is the one the
       # operator can actually act on.
-      local unregister_exit=0
-      "$LONGTERM_MEM_BINARY" unregister --target "$t" || unregister_exit=$?
+      local unregister_exit=0 unregister_args=(--target "$t")
+      [[ "$t" == "pi" ]] && unregister_args+=(--config-root "$(pipkg_dest_dir)")
+      "$LONGTERM_MEM_BINARY" unregister "${unregister_args[@]}" || unregister_exit=$?
       case "$unregister_exit" in
         0)
           longtermmem_installed_targets_remove "$t"

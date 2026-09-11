@@ -314,51 +314,38 @@ func TestOverlayVersionAndUpdate_ListPiNeverDeployed(t *testing.T) {
 	}
 }
 
-// TestLongtermMemExplicitTargetPi_Dies (R3-longterm-all-regression-unproved):
-// longterm-mem has no per-runtime config file for pi (D4) and must reject
-// an explicit --target pi loudly rather than silently accepting it.
-func TestLongtermMemExplicitTargetPi_Dies(t *testing.T) {
+// TestLongtermMemUninstall_TargetPiNoLongerDies
+// (pi-longterm-mem-mcp, R-005, C6): the old blanket "--target pi dies"
+// refusal (R3-longterm-all-regression-unproved) is lifted this slice — pi
+// now flows into the same register/unregister loop as every other target.
+// A fake engine binary skips ensure_engine_binary's real build (mirroring
+// TestLongtermMemUninstall_TargetAllIncludesPi below); the real assertion
+// is that the run reaches the uninstall loop's own output at all, which
+// the removed die would have preempted.
+func TestLongtermMemUninstall_TargetPiNoLongerDies(t *testing.T) {
 	overlay := piTargetOverlayPath(t)
 	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {
 		t.Fatalf("resolve overlay dir: %v", err)
 	}
+	home := t.TempDir()
+	seedFakeEngineBinary(t, home)
 
-	cmd := exec.Command(overlay, "longterm-mem", "status", "--target", "pi")
-	cmd.Env = append(os.Environ(), "HOME="+t.TempDir())
+	cmd := exec.Command(overlay, "longterm-mem", "uninstall", "--target", "pi")
+	cmd.Env = append(os.Environ(), "HOME="+home)
 	cmd.Dir = overlayDir
-	out, err := cmd.CombinedOutput()
-	if err == nil {
-		t.Fatalf("longterm-mem status --target pi should exit non-zero, got success: %s", out)
-	}
-	if !strings.Contains(string(out), "does not support --target pi") {
-		t.Fatalf("longterm-mem status --target pi should name the explicit refusal, got: %s", out)
+	out, _ := cmd.CombinedOutput()
+	if strings.Contains(string(out), "does not support --target pi") {
+		t.Fatalf("longterm-mem uninstall --target pi should no longer be refused at argument parsing, got: %s", out)
 	}
 }
 
-// TestLongtermMemUninstall_TargetAllNeverTouchesPi
-// (R3-longterm-all-regression-unproved): longterm-mem's own --target all
-// expansion must exclude pi (it has no per-runtime config file, D4) even
-// though resolve_targets all includes it. Seeds the install-tracking file
-// as though pi had once been erroneously recorded (a regression state, not
-// a state this slice's own install path can produce) and proves an
-// uninstall --target all run never acts on that entry: pi stays tracked
-// while claude/opencode/codex are removed, and the run reports pi as
-// "still installed" rather than silently dropping or converging on it.
-func TestLongtermMemUninstall_TargetAllNeverTouchesPi(t *testing.T) {
-	overlay := piTargetOverlayPath(t)
-	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
-	if err != nil {
-		t.Fatalf("resolve overlay dir: %v", err)
-	}
-
-	home := t.TempDir()
-
-	// A fake, always-succeeding engine binary: ensure_engine_binary only
-	// needs something executable at this exact path to skip a real `go
-	// build`, and the code path this test exercises (tracking file present
-	// but claude/opencode/codex's own longterm-mem binary absent) never
-	// actually invokes it -- see the trace in the review finding.
+// seedFakeEngineBinary writes an always-succeeding stand-in at
+// ENGINE_BINARY's fixed path so ensure_engine_binary skips a real `go
+// build` — shared by the two tests below that only need to reach
+// cmd_longterm_mem's own per-target loop.
+func seedFakeEngineBinary(t *testing.T, home string) {
+	t.Helper()
 	engineBin := filepath.Join(home, ".claude", "bin", "gentle-ai-overlay")
 	if err := os.MkdirAll(filepath.Dir(engineBin), 0o755); err != nil {
 		t.Fatalf("mkdir engine bin dir: %v", err)
@@ -366,6 +353,25 @@ func TestLongtermMemUninstall_TargetAllNeverTouchesPi(t *testing.T) {
 	if err := os.WriteFile(engineBin, []byte("#!/bin/sh\nexit 0\n"), 0o755); err != nil {
 		t.Fatalf("write fake engine binary: %v", err)
 	}
+}
+
+// TestLongtermMemUninstall_TargetAllIncludesPi (pi-longterm-mem-mcp,
+// R-005): pi joined "all"'s expansion this slice (superseding
+// R3-longterm-all-regression-unproved's old exclusion, which this test
+// used to pin). Seeds the install-tracking file with all four targets and
+// a missing/non-executable LONGTERM_MEM_BINARY, the branch that clears
+// every target's tracking unconditionally regardless of its own outcome
+// (cmd_longterm_mem's own "unregister_usable" guard) — proving pi is now
+// walked by the SAME loop as claude/opencode/codex, not skipped over.
+func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
+	overlay := piTargetOverlayPath(t)
+	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatalf("resolve overlay dir: %v", err)
+	}
+
+	home := t.TempDir()
+	seedFakeEngineBinary(t, home)
 
 	trackingDir := filepath.Join(home, ".labdrian-overlay", "longterm-mem")
 	if err := os.MkdirAll(trackingDir, 0o755); err != nil {
@@ -379,18 +385,15 @@ func TestLongtermMemUninstall_TargetAllNeverTouchesPi(t *testing.T) {
 	cmd := exec.Command(overlay, "longterm-mem", "uninstall", "--target", "all")
 	cmd.Env = append(os.Environ(), "HOME="+home)
 	cmd.Dir = overlayDir
-	out, _ := cmd.CombinedOutput()
-	text := string(out)
-
-	if !strings.Contains(text, "still installed for") || !strings.Contains(text, "pi") {
-		t.Fatalf("uninstall --target all should report pi as still installed (never acted on, no per-runtime config equivalent), got: %s", text)
+	if out, _ := cmd.CombinedOutput(); strings.Contains(string(out), "does not support --target pi") {
+		t.Fatalf("uninstall --target all must not refuse pi, got: %s", out)
 	}
 
-	remainingBytes, err := os.ReadFile(trackingFile)
-	if err != nil {
-		t.Fatalf("read tracking file after uninstall: %v", err)
-	}
-	if remaining := strings.TrimSpace(string(remainingBytes)); remaining != "pi" {
-		t.Fatalf("tracking file after uninstall --target all should hold only pi (claude/opencode/codex removed by the run, pi never touched), got %q", remaining)
+	// Every target (including pi) was cleared, which is exactly what makes
+	// longtermmem_maybe_remove_binary's convergence guard fire and delete
+	// the now-empty tracking file itself (its own doc comment). A stray pi
+	// entry left behind would keep this file non-empty and present instead.
+	if _, statErr := os.Stat(trackingFile); !os.IsNotExist(statErr) {
+		t.Fatalf("tracking file should be removed once every target (including pi) converges to untracked, stat err: %v", statErr)
 	}
 }

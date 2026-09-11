@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -19,18 +20,63 @@ import (
 
 // registerExpandTarget expands --target's value into the ordered list of
 // concrete targets to register, mirroring the runtime-parity --target
-// convention: claude|opencode|codex select one, all expands to every
-// currently-wired target — codex joined "all"'s expansion in 12a.6, once
-// its writer (register.RegisterCodex) existed to receive it.
+// convention: claude|opencode|codex|pi select one, all expands to every
+// currently-wired per-runtime-config target — codex joined "all"'s
+// expansion in 12a.6, once its writer (register.RegisterCodex) existed to
+// receive it.
+//
+// pi is deliberately NOT part of "all"'s expansion here: unlike the other
+// three, a missing pi package is not "a runtime this machine does not
+// run" (register's own all-vs-explicit skip story) but "this machine built
+// the package and never ran pi install" — a state piInstalled's own probe
+// distinguishes, not a missing config file. cmdRegister appends "pi" to
+// the expanded list itself, only when that probe says it looks installed
+// (C6).
 func registerExpandTarget(target string) ([]string, error) {
 	switch target {
-	case "claude", "opencode", "codex":
+	case "claude", "opencode", "codex", "pi":
 		return []string{target}, nil
 	case "all":
 		return []string{"claude", "opencode", "codex"}, nil
 	default:
-		return nil, fmt.Errorf("unknown --target %q (want claude|opencode|codex|all)", target)
+		return nil, fmt.Errorf("unknown --target %q (want claude|opencode|codex|pi|all)", target)
 	}
+}
+
+// piInstalled probes, read-only, whether labdrian-pi looks genuinely
+// installed rather than merely built: packageDir exists AND
+// ~/.pi/agent/settings.json lists it under "packages" (C6, design.md A1).
+// A built-but-never-`pi install`-ed package fails this probe on purpose —
+// mcp.json existing is proof the package was built, not proof Pi will ever
+// read it. This never reads or writes ~/.pi/agent/mcp.json itself; that
+// file belongs to gentle-pi/pi-engram, not this probe.
+func piInstalled(packageDir string) bool {
+	if packageDir == "" {
+		return false
+	}
+	if info, err := os.Stat(packageDir); err != nil || !info.IsDir() {
+		return false
+	}
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		return false
+	}
+	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))
+	if err != nil {
+		return false
+	}
+	var settings struct {
+		Packages []string `json:"packages"`
+	}
+	if json.Unmarshal(raw, &settings) != nil {
+		return false
+	}
+	for _, p := range settings.Packages {
+		if p == packageDir {
+			return true
+		}
+	}
+	return false
 }
 
 // defaultRegisterStateDir returns ~/.labdrian-overlay/longterm-mem, the
@@ -96,6 +142,19 @@ func defaultRegisterConfigRoot(target string) string {
 			return ""
 		}
 		return filepath.Join(home, ".codex")
+	case "pi":
+		// Mirrors engine/runtime.DefaultPiPackageDir exactly (D4: a
+		// deliberately independent re-implementation, engine and
+		// longterm-mem are separate Go modules) — configRoot IS the built
+		// package directory for pi, not a user config root (C3).
+		stateDir := strings.TrimSpace(os.Getenv("STATE_DIR"))
+		if stateDir == "" {
+			if homeErr != nil {
+				return ""
+			}
+			stateDir = filepath.Join(home, ".labdrian-overlay")
+		}
+		return filepath.Join(stateDir, "pi", "labdrian-pi")
 	default:
 		return ""
 	}
