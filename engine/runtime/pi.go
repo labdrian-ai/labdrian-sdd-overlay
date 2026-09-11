@@ -54,8 +54,8 @@ func DefaultPiPackageDir(stateDir string) string {
 }
 
 // piNoDiscoveryFlagsDisclosure is a STATIC note (R-007) — never a runtime-
-// detected fact, since there is no API to detect either flag (Pi 0.85.1
-// alias exists for either.
+// detected fact, since there is no API to detect either flag. Pi 0.85.1
+// documents the short aliases -ne and -ns.
 const piNoDiscoveryFlagsDisclosure = "'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns)"
 
 func (a PiAdapter) Target() Target { return a.target }
