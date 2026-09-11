@@ -343,3 +343,57 @@ func TestPipkgBuild_PreservesRegisteredMcpJSON(t *testing.T) {
 		t.Errorf("Check must not report drift for a registered mcp.json, got: %v", err)
 	}
 }
+
+// TestPipkgCheck_IgnoresMcpJSONBak (C-02 remediation): jsonInstall (the
+// writer `longterm-mem register --target pi` uses) leaves an mcp.json.bak
+// sibling beside mcp.json on any content-changing register/unregister call.
+// Check must exclude it from its content diff exactly as it excludes
+// mcp.json itself, or every documented register call permanently drifts.
+func TestPipkgCheck_IgnoresMcpJSONBak(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	// Simulate the .bak jsonInstall writes on a content-changing register.
+	original := `{"mcpServers": {}}` + "\n"
+	if err := os.WriteFile(filepath.Join(destDir, "mcp.json.bak"), []byte(original), 0644); err != nil {
+		t.Fatalf("simulating jsonInstall's .bak: %v", err)
+	}
+
+	if err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+		t.Errorf("Check must not report drift for a registration-owned mcp.json.bak, got: %v", err)
+	}
+}
+
+// TestPipkgBuild_PreservesRegisteredMcpJSONBak (C-02 remediation): a
+// rebuild must carry an already-registered mcp.json.bak forward the same
+// way it already carries mcp.json forward, so the backup sibling survives
+// an `engine pipkg build` the same as its primary file does.
+func TestPipkgBuild_PreservesRegisteredMcpJSONBak(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("first Build: %v", err)
+	}
+
+	registeredBak := `{"mcpServers": {}}` + "\n"
+	if err := os.WriteFile(filepath.Join(destDir, "mcp.json.bak"), []byte(registeredBak), 0644); err != nil {
+		t.Fatalf("simulating a prior registration's .bak: %v", err)
+	}
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("second Build: %v", err)
+	}
+
+	got, err := os.ReadFile(filepath.Join(destDir, "mcp.json.bak"))
+	if err != nil {
+		t.Fatalf("mcp.json.bak must survive a rebuild: %v", err)
+	}
+	if string(got) != registeredBak {
+		t.Errorf("mcp.json.bak after rebuild = %s, want preserved unchanged:\n%s", got, registeredBak)
+	}
+}

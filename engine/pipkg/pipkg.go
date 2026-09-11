@@ -71,6 +71,15 @@ const mcpConfigFileName = "mcp.json"
 // never been registered against yet.
 const mcpSkeleton = "{\"mcpServers\": {}}\n"
 
+// mcpConfigBakFileName is the backup sibling jsonInstall (the writer
+// `longterm-mem register --target pi` uses) writes beside mcp.json on any
+// content-changing register/unregister call. It is registration state the
+// same as mcp.json itself (Build's own doc comment), so Build preserves it
+// across a rebuild and Check excludes it from its content diff, exactly as
+// both already do for mcp.json -- otherwise every documented register call
+// would show as permanent drift.
+const mcpConfigBakFileName = mcpConfigFileName + ".bak"
+
 // Build assembles the labdrian-pi package into destDir: package.json,
 // skills/ (every skills.registry.yaml entry whose install.targets includes
 // "pi"), agents/GADU.md, and mcp.json (R-005). It builds into a sibling
@@ -110,14 +119,30 @@ func Build(overlayRoot, registryPath, destDir string) error {
 	if err := buildInto(overlayRoot, reg, tmpDir); err != nil {
 		return err
 	}
-	if existing, err := os.ReadFile(filepath.Join(destDir, mcpConfigFileName)); err == nil {
-		if err := os.WriteFile(filepath.Join(tmpDir, mcpConfigFileName), existing, 0644); err != nil {
-			return fmt.Errorf("pipkg: preserving existing mcp.json: %w", err)
-		}
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("pipkg: reading existing mcp.json: %w", err)
+	if err := preserveIfExists(destDir, tmpDir, mcpConfigFileName); err != nil {
+		return err
+	}
+	if err := preserveIfExists(destDir, tmpDir, mcpConfigBakFileName); err != nil {
+		return err
 	}
 	return swap(tmpDir, destDir)
+}
+
+// preserveIfExists copies name from destDir into tmpDir unchanged when it
+// exists, so a rebuild carries registration-owned state forward instead of
+// losing it to the atomic swap (Build never regenerates name itself).
+func preserveIfExists(destDir, tmpDir, name string) error {
+	existing, err := os.ReadFile(filepath.Join(destDir, name))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return fmt.Errorf("pipkg: reading existing %s: %w", name, err)
+	}
+	if err := os.WriteFile(filepath.Join(tmpDir, name), existing, 0644); err != nil {
+		return fmt.Errorf("pipkg: preserving existing %s: %w", name, err)
+	}
+	return nil
 }
 
 // Check regenerates the package into a temp dir and diffs it, file by file,
@@ -162,6 +187,13 @@ func Check(overlayRoot, registryPath, destDir string) error {
 	if wantHasMCP && !gotHasMCP {
 		return fmt.Errorf("labdrian-pi package drift:\n  %s: missing", mcpConfigFileName)
 	}
+
+	// mcp.json.bak is the backup sibling jsonInstall writes on any
+	// content-changing register/unregister call -- the same registration
+	// state as mcp.json itself, and never regenerated build output. Build
+	// never writes it into want, so it is only ever present in got; drop it
+	// unconditionally rather than flagging it as "extra".
+	delete(got, mcpConfigBakFileName)
 
 	var drift []string
 	for rel, wantBytes := range want {
