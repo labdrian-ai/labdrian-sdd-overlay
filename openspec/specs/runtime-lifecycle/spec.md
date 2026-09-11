@@ -492,11 +492,13 @@ remains governed by the status requirements above.
 Traces to: pi-runtime-target R-001, R-008
 
 The `labdrian-overlay` CLI MUST accept `pi` as a valid value for `--target`
-on `apply`, `status`, `sync-check`, and `uninstall`.
+on `apply`, `status`, and `sync-check`. Uninstall is not a `labdrian-overlay`
+verb; it MUST accept `pi` as a valid value for `--target` on the `engine
+runtime uninstall` adapter command instead (see "Pi-Scoped Uninstall" below).
 
 #### Scenario: Pi target is recognized
 
-- GIVEN `--target pi` is passed to any of `apply`, `status`, `sync-check`, `uninstall`
+- GIVEN `--target pi` is passed to any of `labdrian-overlay apply`, `labdrian-overlay status`, `labdrian-overlay sync-check`, or `engine runtime uninstall`
 - WHEN the command runs
 - THEN it does not report an unknown-target error and returns a Pi-specific result
 
@@ -609,16 +611,18 @@ either flag was used. There is no `-ns` alias.
 
 Traces to: pi-runtime-target R-006, R-009
 
-`uninstall --target pi` MUST remove only the `labdrian-pi` package entry via
-`pi remove <source>`, passing the same local package path used at install
-as `<source>`, and MUST remove the built package directory (which holds the
-longterm-mem MCP registration), without touching gentle-pi- or
-pi-engram-owned state.
+`engine runtime uninstall --target pi` MUST remove only the `labdrian-pi`
+package entry via `pi remove <source>`, passing the same local package path
+used at install as `<source>`, and MUST remove the built package directory
+(which holds the longterm-mem MCP registration), without touching gentle-pi-
+or pi-engram-owned state. There is no top-level `labdrian-overlay uninstall`
+verb; `engine runtime uninstall --target pi` is the adapter command that
+owns this action.
 
 #### Scenario: Only the owned package entry is removed
 
 - GIVEN gentle-pi/pi-engram-owned entries coexist with the `labdrian-pi` package entry
-- WHEN `uninstall --target pi` runs
+- WHEN `engine runtime uninstall --target pi` runs
 - THEN it runs `pi remove <local-package-path>`
 - AND the `labdrian-pi` entry disappears from `~/.pi/agent/settings.json`
   packages, the built package directory (and its MCP registration) is
