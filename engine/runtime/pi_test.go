@@ -531,15 +531,15 @@ func TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries(t *testing.T) {
 }
 
 // TestPiAdapter_StatusDisclosesNoExtensionsNoSkills (task 5.2): always
-// discloses the --no-extensions/--no-skills bypass, with no "-ns" alias.
+// discloses the --no-extensions/--no-skills bypass and their -ne/-ns aliases.
 func TestPiAdapter_StatusDisclosesNoExtensionsNoSkills(t *testing.T) {
 	adapter := engineRuntime.NewPiAdapterWithPaths("", "", filepath.Join(t.TempDir(), "labdrian-pi"))
 	result := adapter.Status()
 	if !strings.Contains(result.Message, "--no-extensions") || !strings.Contains(result.Message, "--no-skills") {
 		t.Fatalf("Status must always disclose --no-extensions/--no-skills, got %q", result.Message)
 	}
-	if strings.Contains(result.Message, "-ns") {
-		t.Fatalf("disclosure must not claim a \"-ns\" alias exists, got %q", result.Message)
+	if !strings.Contains(result.Message, "-ns") || !strings.Contains(result.Message, "-ne") {
+		t.Fatalf("disclosure must name the -ne/-ns aliases pi --help documents, got %q", result.Message)
 	}
 }
 

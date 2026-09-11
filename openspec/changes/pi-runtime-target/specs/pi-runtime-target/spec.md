@@ -111,7 +111,7 @@ proven for any owned entry, naming the unproven entry.
 `status --target pi` output and docs MUST state that `pi --no-extensions`
 bypasses the `before_agent_start` gate extension for that session, and that
 `--no-skills` bypasses skill discovery, without claiming to detect that
-either flag was used. There is no `-ns` alias.
+either flag was used. The short aliases are `-ne` and `-ns`.
 
 #### Scenario: Disclosure text is present
 - GIVEN `status --target pi` is run
