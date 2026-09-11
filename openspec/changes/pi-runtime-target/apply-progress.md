@@ -979,3 +979,66 @@ slices planned=5 realized=4 committed (`pi-target-plumbing`, `pi-package-build`,
 ### Status
 
 All Phase 5 tasks (5.1-5.4) functionally complete and verified GREEN, but **NOT committed** and `tasks.md` Phase 5 checkboxes deliberately left UNCHECKED — this batch stopped at the explicit 400-line budget instruction (407 measured) rather than committing over it or requesting an exception unilaterally. The work is fully present in the worktree (`/home/labdrian/labdrian-sdd-overlay-worktrees/pi-5`, branch `feat/pi-runtime-target-5-lifecycle`) and ready to commit as soon as an owner-granted `size:exception` is relayed (matching slices 1-4's own precedent, all of which exceeded budget too). This is the LAST slice in the chain — once committed, `pi-runtime-target` is otherwise ready for `sdd-verify` (Phase 6's manual-only live-Pi checkpoints are explicitly out of automated scope).
+
+---
+
+## Remediation 1 (post-verify FAIL, 2 critical findings)
+
+**Change**: pi-runtime-target
+**Worktree**: `/home/labdrian/labdrian-sdd-overlay-worktrees/pi-5`, branch `feat/pi-runtime-target-5-lifecycle`
+**Source**: `verify-report.md` verdict FAIL (2 CRITICAL, 7 WARNING, 3 SUGGESTION), `evidence_revision: sha256:c6899165c39e4d2aaac503f5904afa409c6d4e8a2f6f698e6ee312418382d006`
+**Scope assigned**: C-01, C-02, W-01, W-02, W-03 (explicitly excluding W-04/W-05/W-06 and issue #312 items)
+
+### Completed This Batch
+
+- [x] **C-01** — `engine/runtime/pi.go` `PiAdapter.Status`: added the third owned entry (longterm-mem MCP visibility). Status now probes `<destDir>/mcp.json` for `mcpServers.longterm-mem`; package built+in-sync+listed but MCP entry absent now stays `partial`, naming `longterm-mem register --target pi`, instead of falsely reporting `supported`.
+- [x] **C-02** — `engine/pipkg/pipkg.go` `Check`/`Build`: `Check` now excludes `mcp.json.bak` (the backup sibling `jsonInstall` writes on any content-changing register/unregister) from its content diff, exactly as it already excluded `mcp.json` itself. `Build` now carries an existing `mcp.json.bak` forward across a rebuild the same way it already carries `mcp.json` forward, so the backup survives `pipkg build` too.
+
+### Not Completed This Batch (budget)
+
+- [ ] **W-01** — `bin/labdrian-overlay status --target pi` still prints the hard-coded "lifecycle proof lands in a later slice" stub instead of calling the adapter (`engine runtime status --target pi`). Investigated: a naive delegation breaks `TestOverlayStatusAndSyncCheck_PiStubNoEmptyMkdir` (which runs the real `bin/labdrian-overlay` binary against a fresh `$HOME` with no engine binary built at `$HOME/.claude/bin/gentle-ai-overlay` yet — the current "not built" early-return in `pipkg_status_and_report` never shells out to `$ENGINE_BINARY` in that state, so a naive full delegation would need to preserve that early-return path, not just forward to the adapter). Left for a follow-up batch to do carefully with its own shelltest coverage.
+- [ ] **W-02** — spec text in `openspec/changes/pi-runtime-target/specs/runtime-lifecycle/spec.md` (and the main merged spec) still says the uninstall verb is a top-level `labdrian-overlay uninstall`; not yet amended to name `engine runtime uninstall --target pi`.
+- [ ] **W-03** — `piStatusUnsupportedInAggregate` in `engine/cmd/main.go` not yet removed. Implemented and fully verified in this session (RED test `TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported` proved the exemption masks an honestly-unsupported Pi behind an exit-0 aggregate; GREEN after removing the exemption; `TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing` updated to prove Pi genuinely reaching `supported` instead of relying on the removed exemption), but **reverted (`git checkout --`) and left uncommitted** rather than committed, because committing it would have pushed the cumulative remediation diff to 406 lines against the 400-line budget. The fix itself is proven correct; a follow-up batch can re-apply it as its own work unit (main.go: delete the `piStatusUnsupportedInAggregate` variable and its branch in the status switch; runtime_test.go: the two test changes described above) well within a fresh 400-line budget.
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| C-01 | `engine/runtime/pi_test.go` | Unit | ✅ full `engine/runtime` suite green before edit | Confirmed: `TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries/listed_but_MCP_unregistered...` failed against pre-fix `Status` (`got: supported, want partial`) | Passed after `isPiMcpRegistered` + third `problems` probe | 3-case table: listed+MCP-unregistered→partial (names register cmd), unlisted+MCP-unregistered→partial (names listing), all-three-proven→supported | None needed — `isPiMcpRegistered` mirrors the existing `isPiPackageListed` shape |
+| C-02 | `engine/pipkg/pipkg_test.go` | Unit | ✅ full `engine/pipkg` suite green before edit | Confirmed: `TestPipkgCheck_IgnoresMcpJSONBak` failed against pre-fix `Check` (`mcp.json.bak: extra`); `TestPipkgBuild_PreservesRegisteredMcpJSONBak` failed (`no such file`) | Both passed after `preserveIfExists` helper + `mcpConfigBakFileName` exclusion in `Check` | 2 independent RED tests (Check-side and Build-side), each single-case since the rule is structural (exclude/preserve exactly one named file) | Extracted shared `preserveIfExists(destDir, tmpDir, name)` helper used for both `mcp.json` and `mcp.json.bak`, replacing the old inline mcp.json-only preservation block |
+
+### Test Summary
+
+- **Total tests written**: 4 new (`TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries` [3 subtests], `TestPipkgCheck_IgnoresMcpJSONBak`, `TestPipkgBuild_PreservesRegisteredMcpJSONBak`); 1 W-03 test pair implemented+verified then reverted (not committed, see above)
+- **Total tests passing**: all of `engine/{runtime,pipkg,cmd,shelltest,assets,gadu,gate,installer,prespec,propagator,settings,skills,synctrigger}` under `-race`; all of `longterm-mem/...`
+- **Layers used**: Unit only (both fixes are pure adapter/package-builder logic, no new integration surface)
+- **Pure functions created**: `isPiMcpRegistered(destDir string) bool`, `preserveIfExists(destDir, tmpDir, name string) error`
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./runtime/... ./pipkg/...` → `ok` both packages, all new + pre-existing tests pass |
+| Runtime harness command/scenario and exact result | Scratch `STATE_DIR`/`HOME`, stub `pi` via `LABDRIAN_PI_BIN`: `engine runtime install --target pi` → `restart_required`; `engine runtime status --target pi` (no settings listing, no MCP) → `partial`, names both `pi install` and `longterm-mem register --target pi`; after writing settings.json listing only → `partial`, names only `longterm-mem register --target pi` (isolates C-01); `longterm-mem register --target pi --config-root <dest>` → `ok`, creates `mcp.json.bak`; `engine pipkg check` → `OK` (no drift, proves C-02); `engine runtime status --target pi` → `supported`; `bin/labdrian-overlay sync-check --target pi` → `SYNC_CHECK:pi: no drift` / `VERDICT:pi:IN_SYNC` exit 0; `engine pipkg build` over the registered package → `mcp.json.bak` sha256 identical before/after (proves Build-side preservation) |
+| Rollback boundary | `git revert a0f6ee8 716ccdf` cleanly removes both fixes independently (C-02 first, then C-01) without touching any other file; nothing else in the worktree was modified this batch |
+
+### Budget
+
+`git diff --shortstat 5e68140..HEAD -- engine longterm-mem bin` = **206 insertions(+), 8 deletions(-) = 214 authored lines**, well within the 400-line budget.
+
+W-01/W-02/W-03 were deliberately deferred rather than pushed into this batch: W-03 alone measured 192 lines (main.go fix + the test rework needed to make `TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing` prove genuine Pi `supported` instead of relying on the exemption it removes), which would have brought the cumulative diff to 406 — 6 lines over budget. Per the explicit phase instruction, that increment was reverted before committing rather than committed over budget.
+
+### Plan vs Realized Slice Count
+
+slices planned=5 (unchanged from the original chain) realized=5 committed + this remediation batch is its own review unit, not a new planned slice — recorded as `slice drift: planned=5 realized=6` is NOT appropriate here since remediation of a FAIL verdict is not a new deliverable slice per `sdd-phase-common.md`'s Plan vs Realized accounting; it is corrective work against the already-realized slice 5. No drift to report.
+
+### Workload / PR Boundary
+
+- Mode: focused remediation (not a new chained-PR slice)
+- Current work unit: verify-report C-01 + C-02 remediation, committed as two independent work-unit commits (`716ccdf` C-01, `a0f6ee8` C-02)
+- Boundary: starts at `5e68140` (verify-report commit), ends at `a0f6ee8`
+- Estimated review budget impact: 214 authored lines in `engine/` (0.535x the 400-line budget)
+
+### Status
+
+C-01 and C-02 (both CRITICAL findings) fixed, tested, verified at runtime, and committed. W-01, W-02, W-03 (WARNING findings) remain — W-03 is fully implemented and proven correct but uncommitted (reverted to stay within budget); W-01 needs additional design care around the "engine binary not yet built" early-return path; W-02 is a small spec-text edit not yet made. Recommend a second remediation batch (`sdd-apply`) for W-01 + W-02 + re-applying W-03, followed by `sdd-verify`.
