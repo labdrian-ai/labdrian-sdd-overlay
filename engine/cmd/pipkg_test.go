@@ -14,6 +14,10 @@ func pipkgFixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nbody\n")
 	writeTestFile(t, filepath.Join(root, "agents", "GADU.md"), "---\nname: GADU\n---\nbody\n")
+	writeTestFile(t, filepath.Join(root, "skills", "_shared", "minimalism-contract.md"),
+		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
+	writeTestFile(t, filepath.Join(root, "skills", "_shared", "anti-generic-design.md"),
+		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
 	registry := `version: "1"
 skills:
   - id: pi-skill

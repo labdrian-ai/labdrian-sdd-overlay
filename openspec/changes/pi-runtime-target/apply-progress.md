@@ -483,3 +483,220 @@ work units. `size:exception` granted and recorded (scope `pi-package-build`,
 Phase 2 checkboxes marked `[x]`. `entry.json` was intentionally NOT touched
 for this grant. Ready for the next slice (`pi-contract-gate`) or
 `sdd-verify` at the orchestrator's discretion.
+
+## Batch 3 — Slice 3: pi-contract-gate (R-004, R-007)
+
+**Mode**: Strict TDD
+**Status**: Implementation, tests, and verification COMPLETE and GREEN;
+committed as work units (see "Budget" and "Commits" below).
+
+### Budget
+
+`git diff --shortstat a7568dd..HEAD -- engine bin pi` (measured before the
+docs commit): **530 insertions(+), 1 deletion(-) = 531 changed lines**.
+This exceeds the 400-line default guard named in the batch prompt (by 131
+lines, 1.33x), but stays within the native attempt authority's own
+explicit `max_changed_lines: 600` recorded for this objective generation
+(`gentle-ai sdd-attempt status` — `"max_changed_lines": 600,
+"max_changed_lines_source": "explicit"`), which is the mechanism that
+actually governs settle/acceptance. Given that explicit generation-3
+ceiling (set higher than the batch prompt's stated 400, consistent with
+design.md's own "Where I doubt the 400-line budget" note flagging this
+slice as tight), this was not reduced further by trimming documentation
+comments or test coverage — every comment documents a design rationale
+(strict-frontmatter-parse mirroring, path-containment reasoning,
+composition-with-gentle-pi behavior) and every test is load-bearing (see
+TDD Cycle Evidence below). **Flagging the 400-vs-600 discrepancy here
+explicitly** so the orchestrator/reviewer is aware rather than treating
+this as a silent overage; committed as-is rather than stopped, since the
+native ceiling was not breached.
+
+Rough breakdown (insertions, from `git diff --stat`):
+
+| File | Lines | Why |
+|---|---|---|
+| `engine/pipkg/labdrian-gate.ts` | 222 | Core deliverable: the `before_agent_start` extension itself (strict frontmatter parse, path containment, injection, composition) |
+| `engine/runtime/pi_test.go` | 231 | RED-first node-driven tests: containment rejection, path-line injection matching the Go-side oracle, idempotence, exclusion, malformed-frontmatter no-op, composition |
+| `engine/pipkg/pipkg.go` | 41 | Embeds and copies the extension + the two managed contracts into the built package |
+| `engine/pipkg/pipkg_test.go` | 17 | Fixture extension (shared contracts) + build assertions for the new extension/contract files |
+| `engine/cmd/pipkg_test.go` | 4 | Fixture extension (shared contracts) so the existing `runPipkgCore` test keeps passing |
+| `bin/labdrian-overlay` | 7 | `--no-extensions`/`--no-skills` disclosure line in `pipkg_status_and_report` (R-007) |
+| `engine/shelltest/overlay_pi_package_build_test.go` | 9 | Assertion that the disclosure text is always present in real `status --target pi` output |
+
+The two heaviest units (`labdrian-gate.ts` + its node-driven test,
+453 lines) are the load-bearing core (R-004: deterministic contract gate)
+and are not separable under Strict TDD.
+
+### Completed Tasks
+
+- [x] 3.1 RED (threat: path containment): `TestLabdrianGatePathContainment_RejectsTraversal`
+  in `engine/runtime/pi_test.go` — confirmed RED (`resolveContractPath` did
+  not exist) before `labdrian-gate.ts` was written; asserts a contained
+  relative path resolves, while `..` traversal, an absolute input, and a
+  `.` segment are all rejected (return `undefined`, never throw)
+- [x] 3.2 RED: `TestLabdrianGateInjectsPathLine_SddTasksSddApply` — the
+  default `before_agent_start` handler's output is compared directly
+  against the Go-side oracle (`runtime.CanonicalEntry`/`runtime.InjectPrompt`
+  for the same two contracts and header), for both `sdd-tasks` and
+  `sdd-apply`, plus idempotence on a second call, no-op for `sdd-explore`
+  and an unnamed agent, and — folded into the same test — a malformed-
+  frontmatter fixture (`applies_to_phases` missing its `[...]` brackets)
+  proving that contract is silently dropped while its sibling still
+  injects and the handler never throws
+- [x] 3.3 GREEN: `engine/pipkg/labdrian-gate.ts` — `before_agent_start`
+  handler; `readAgentStartNames` mirrors gentle-pi's own name-reading
+  exactly (`agentName`/`agent`/`name`/`agent.name`/`subagent.name`);
+  `parseFrontmatter`/`parseStrictInlineList` mirror `engine/gate/gate.go`'s
+  strict bracket-list parse; `injectContractLine` mirrors
+  `runtime.go`'s `InjectPrompt` exactly (same header-insertion/separator
+  rules); `resolveContractPath` contains every contract read to the
+  package root; the whole handler is wrapped in try/catch, returning `{}`
+  on any error (fail-safe, matching `engine/gate/gate.go`'s own contract)
+- [x] 3.4 `engine/pipkg/pipkg.go`'s `buildInto` now `//go:embed`s
+  `labdrian-gate.ts` and writes it to `extensions/labdrian-gate.ts` in the
+  built package (package.json's `pi.extensions: ["./extensions"]` was
+  already wired in slice 2); also copies
+  `skills/_shared/{minimalism-contract,anti-generic-design}.md` from
+  `overlayRoot` into the package's `skills/_shared/` — unconditionally,
+  not registry-driven, since these are gate infrastructure the extension
+  reads directly, not an installable skill entry
+- [x] 3.5 `TestLabdrianGateChainsAfterGentlePi` in `engine/runtime/pi_test.go`
+  — node was available in this execution environment (`node v22.22.2`), so
+  the test ran for real rather than skipping; asserts a prior handler's
+  `systemPrompt` contribution (a fixture string standing in for gentle-pi's
+  own preflight prompt) survives untouched alongside this gate's own two
+  injected path lines
+- [x] 3.6 `pipkg_status_and_report` in `bin/labdrian-overlay` now always
+  prints a static disclosure line: `'pi --no-extensions'` disables the
+  gate extension for that session, `'pi --no-skills'` disables skill
+  discovery, neither is runtime-detected, and neither has a short alias —
+  independent of whether the package is built yet
+
+### Files Changed
+
+| File | Action | What Was Done |
+|---|---|---|
+| `engine/pipkg/labdrian-gate.ts` | Created | The `before_agent_start` contract-gate extension (embedded, plain-JS-compatible TS) |
+| `engine/pipkg/pipkg.go` | Modified | `//go:embed`s and copies the extension + the two managed contracts into the built package; `GateExtensionSource()` exported for tests |
+| `engine/pipkg/pipkg_test.go` | Modified | Fixture gains `skills/_shared/*.md`; new assertions for the built extension file and shared contracts |
+| `engine/cmd/pipkg_test.go` | Modified | Fixture gains `skills/_shared/*.md` (unrelated pre-existing test kept green) |
+| `engine/runtime/pi_test.go` | Modified | 3 new node-driven tests (containment, injection/oracle/idempotence/exclusion/malformed, composition); existing `piFixtureOverlay` gains `skills/_shared/*.md` |
+| `bin/labdrian-overlay` | Modified | `--no-extensions`/`--no-skills` disclosure line in `pipkg_status_and_report` |
+| `engine/shelltest/overlay_pi_package_build_test.go` | Modified | Assertion that the disclosure text is always present, and never claims a `-ns` alias |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 3.1 (containment) | `engine/runtime/pi_test.go` | Integration (node, real embedded source) | ✅ Full `runtime`/`pipkg` suites green before change | ✅ Confirmed — `mod.resolveContractPath` undefined before `labdrian-gate.ts` existed | ✅ Passed | ✅ 4 cases: contained path, `..` traversal, absolute input, `.` segment | ➖ None needed |
+| 3.2 (injection/oracle) | `engine/runtime/pi_test.go` | Integration (node) + Go-side oracle comparison | ✅ Full `runtime` suite green before and after | ✅ Confirmed — handler/module did not exist before GREEN | ✅ Passed — byte-identical to `runtime.CanonicalEntry`/`InjectPrompt` output | ✅ tasks/apply/idempotent-retry/excluded-agent/unnamed-agent/malformed-sibling — 6 states in one script | ➖ None needed |
+| 3.5 (composition) | `engine/runtime/pi_test.go` | Integration (node) | ✅ Full `runtime` suite green before and after | ✅ Confirmed — same module, new scenario | ✅ Passed — node available, ran for real | ✅ Single composition scenario (design-mandated, per A4) | ➖ None needed |
+| 3.4 (pipkg embed/copy) | `engine/pipkg/pipkg_test.go` | Unit | ✅ Full `pipkg` suite green before and after | ✅ Confirmed — new assertions failed before `buildInto` was edited | ✅ Passed | ✅ Extension bytes + both shared contract files | ➖ None needed |
+| 3.6 (disclosure) | `engine/shelltest/overlay_pi_package_build_test.go` | Integration (real built binary, sourced bash function) | ✅ Full `shelltest` suite green before and after | ✅ Confirmed — assertion failed before the `echo` line was added | ✅ Passed | ✅ Text present + no `-ns` alias claimed | ➖ None needed |
+
+### Test Summary
+
+- **Total tests written/extended**: 3 new Go tests (`engine/runtime/pi_test.go`,
+  node-driven, real embedded source under Node), plus fixture/assertion
+  extensions to 3 pre-existing tests (`pipkg_test.go`,
+  `cmd/pipkg_test.go`, `overlay_pi_package_build_test.go`)
+- **Total tests passing**: all of the above, plus the FULL pre-existing
+  suite (`cd engine && go vet ./... && go test -count=1 ./...` — every
+  package green: assets, cmd, gadu, gate, installer, pipkg, prespec,
+  propagator, runtime, settings, shelltest, skills, synctrigger)
+- **Layers used**: Integration (Node running the real embedded extension
+  source, byte-identical to what Pi's jiti loader executes), Unit (`pipkg`
+  build assertions), Integration (`shelltest` — real built engine binary +
+  sourced bash function)
+- **Approval tests**: None — no refactor of pre-existing behavior
+- **node availability**: `node v22.22.2` was present in this execution
+  environment, so all three node-driven tests ran for real rather than
+  skipping via `t.Skipf`
+
+### Deviations from Design
+
+1. **Extension filename**: `specs/pi-runtime-target/spec.md`'s scenario
+   text says `extensions/gate.ts`, while `design.md`, `tasks.md`, and this
+   batch's own prompt consistently say `labdrian-gate.ts`. Followed
+   design.md/tasks.md/the prompt (the more detailed and repeatedly
+   consistent source): the shipped file is
+   `extensions/labdrian-gate.ts`. The spec's behavioral requirement (bare
+   path-line injection, jiti-loaded `.ts`, not `.js`) is satisfied
+   regardless of the exact filename.
+2. **`skills/_shared/*.md` copy is unconditional, not registry-driven**:
+   neither the batch prompt nor design.md specified a registry-targets
+   gate for these two files (unlike every other skill, which requires
+   `install.targets` to include `pi`), and no `skills.registry.yaml` entry
+   exists for a `_shared` path. Copied directly by path, always, matching
+   the prompt's explicit instruction ("add those two files to the build
+   under `skills/_shared/`").
+3. **Path-containment and malformed-frontmatter Go tests, task 3.1/3.2
+   naming**: `tasks.md` names `TestLabdrianGatePathContainment_RejectsTraversal`
+   as testing a Go-mirrored containment check, and `TestLabdrianGateInjectsPathLine_SddTasksSddApply`
+   as using the `runtime.go` mirror (`LoadContractPhases`/`AppliesToPhase`/
+   `MutatePrompt`). Implemented instead as node-driven tests running the
+   REAL `labdrian-gate.ts` source (per this batch's own more detailed
+   prompt, which explicitly asked for node-driven tests with a Go-side
+   oracle comparing against `runtime.CanonicalEntry`/`InjectPrompt` rather
+   than a duplicate Go-only containment implementation) — this avoids a
+   second, drift-prone Go reimplementation of containment/parsing logic
+   that only the JS extension actually enforces at runtime.
+4. **Budget**: 531 changed lines vs. the batch prompt's 400-line target;
+   see "Budget" above for the explicit native-authority (600) vs.
+   prompt-stated (400) discrepancy this was measured against.
+
+### Issues Found
+
+None — all implementation is GREEN on first run (all three node-driven
+tests, the full focused suite, and the full broad suite passed without
+iteration). The budget overage (531 vs. the prompt's stated 400) is a
+delivery-slicing note, not a defect — see "Budget" above.
+
+### Manual-Only Verification (not run here — no headless Pi runner)
+
+Per design.md's "Manual-only" section and `tasks.md` Phase 6: live Pi
+session skill/agent discovery post-install, and gate injection observed in
+an actual `sdd-tasks`/`sdd-apply` system prompt, remain manual checkpoint
+steps for after the full chain lands — not automated RED tests. This
+batch's own smoke test (building the engine to scratch, running `apply
+--target pi`, then running `node` against the real built
+`extensions/labdrian-gate.ts` copied to `.mjs`) confirmed the built
+package's extension injects the two contract path lines for a
+`sdd-apply`-named event, and is a no-op for `sdd-explore` — see
+Verification in the return envelope.
+
+### Commits
+
+- `9201aaf` — `feat(pipkg): ship the pi contract-gate extension in the
+  built package` (engine/pipkg, engine/runtime, engine/cmd, engine/shelltest,
+  bin/labdrian-overlay)
+- `a5ab38c` — `docs(sdd): mark pi-runtime-target slice 3 tasks complete`
+  (tasks.md)
+- `<sha-3>` — this apply-progress commit (apply-progress.md) — this
+  commit's own SHA, recorded in the return envelope
+
+Local-only, not pushed.
+
+### Plan vs Realized Slice Count
+
+slices planned=5 realized=3 (`pi-target-plumbing` [slice 1, Batch 1] +
+`pi-package-build` [slice 2, Batch 2] + `pi-contract-gate` [slice 3, this
+batch] all committed).
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main, auto-chain)
+- Current work unit: `pi-contract-gate` (PR3) — implemented, tested,
+  verified, committed as work units
+- Boundary: starts at `a7568dd` (slice 2's docs commit) and ends at the
+  two commits above (plus this batch's own docs commit)
+- Estimated review budget impact: 531 changed lines (1.33x the 400-line
+  prompt-stated target; within the native attempt authority's explicit
+  600-line ceiling for this objective generation — see "Budget" above)
+
+### Status
+
+6/6 Phase 3 tasks functionally complete, verified, and committed as two
+work units (plus this docs commit). `openspec/changes/pi-runtime-target/tasks.md`
+Phase 3 checkboxes marked `[x]`. Ready for the next slice
+(`pi-longterm-mem-mcp`) or `sdd-verify` at the orchestrator's discretion.

@@ -23,6 +23,10 @@ func fixtureOverlay(t *testing.T) (overlayRoot, registryPath string) {
 	writeFile(t, filepath.Join(root, "skills", "pi-skill", "references", "notes.md"), "notes\n")
 	writeFile(t, filepath.Join(root, "skills", "other-skill", "SKILL.md"), "---\nname: other-skill\n---\nbody\n")
 	writeFile(t, filepath.Join(root, "agents", "GADU.md"), "---\nname: GADU\n---\nbody\n")
+	writeFile(t, filepath.Join(root, "skills", "_shared", "minimalism-contract.md"),
+		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
+	writeFile(t, filepath.Join(root, "skills", "_shared", "anti-generic-design.md"),
+		"---\napplies_to_phases: [sdd-tasks, sdd-apply]\nexcluded_phases: [sdd-verify]\ninjection_point: \"## Skills to load before work\"\n---\nbody\n")
 
 	registry := `version: "1"
 skills:
@@ -122,6 +126,19 @@ func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {
 	}
 	if manifest.Pi.MCP != "" {
 		t.Errorf("package.json pi.mcp = %q, want omitted (slice 4 not landed)", manifest.Pi.MCP)
+	}
+
+	gateBytes, err := os.ReadFile(filepath.Join(destDir, "extensions", "labdrian-gate.ts"))
+	if err != nil {
+		t.Fatalf("expected extensions/labdrian-gate.ts to be built: %v", err)
+	}
+	if string(gateBytes) != pipkg.GateExtensionSource() {
+		t.Error("built extensions/labdrian-gate.ts must match the embedded source exactly")
+	}
+	for _, name := range []string{"minimalism-contract.md", "anti-generic-design.md"} {
+		if _, err := os.Stat(filepath.Join(destDir, "skills", "_shared", name)); err != nil {
+			t.Errorf("expected skills/_shared/%s to be built: %v", name, err)
+		}
 	}
 }
 

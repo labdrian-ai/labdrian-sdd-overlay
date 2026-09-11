@@ -51,13 +51,20 @@ func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
 	// Before any build: status honestly reports "not built" and exits
 	// non-zero; sync-check emits VERDICT:pi:NOT_BUILT and exits non-zero
 	// too -- neither state is healthy, so neither may exit 0
-	// (R4-silent-package-skip).
+	// (R4-silent-package-skip). The R-007 --no-extensions/--no-skills
+	// disclosure is always present in status, independent of build state.
 	statusBefore, statusBeforeErr := runHelper("pipkg_status_and_report")
 	if statusBeforeErr == nil {
 		t.Fatalf("status before build should exit non-zero (not built), got success: %s", statusBefore)
 	}
 	if !strings.Contains(statusBefore, "not built") {
 		t.Fatalf("status before build should report 'not built', got: %s", statusBefore)
+	}
+	if !strings.Contains(statusBefore, "--no-extensions") || !strings.Contains(statusBefore, "--no-skills") {
+		t.Fatalf("status should always disclose --no-extensions/--no-skills, got: %s", statusBefore)
+	}
+	if strings.Contains(statusBefore, "-ns") {
+		t.Fatalf("disclosure must not claim a '-ns' alias exists, got: %s", statusBefore)
 	}
 	syncBefore, syncBeforeErr := runHelper("pipkg_sync_check_and_report")
 	if syncBeforeErr == nil {
