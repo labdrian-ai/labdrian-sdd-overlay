@@ -293,7 +293,11 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	if err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+	report, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	if d := report.Disclosure(); d != "" {
+		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
+	}
+	if err != nil {
 		fmt.Fprintf(stderr, "pipkg check: %v\n", err)
 		exit(1)
 		return

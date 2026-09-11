@@ -17,16 +17,28 @@
 //   - SKILL.md name/directory match: buildInto rejects a skill whose
 //     SKILL.md frontmatter `name` does not equal its registry directory
 //     name, so every built skill is addressable by its own id.
+//
+// Build provenance (sync-check-provenance slice, R-005..R-007): Build
+// records the resolved source commit into package.json's
+// labdrian.builtFrom (D5). Check uses that field to pick its comparison
+// basis (CheckReport.Basis, resolveComparisonSource): the recorded commit
+// when it is a resolvable 40-hex SHA ("ref"), main when it is not
+// ("main", always disclosed), or the plain working tree when overlayRoot
+// is not a git repository at all ("worktree"). This closes #315's false
+// drift reports on a feature branch with unrelated changes.
 package pipkg
 
 import (
+	"archive/tar"
 	_ "embed"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"sort"
 	"strings"
 	"syscall"
@@ -59,9 +71,18 @@ func GateExtensionSource() string { return gateExtensionSource }
 
 // packageManifest is the subset of package.json fields this package writes.
 type packageManifest struct {
-	Name    string  `json:"name"`
-	Version string  `json:"version"`
-	Pi      piField `json:"pi"`
+	Name     string         `json:"name"`
+	Version  string         `json:"version"`
+	Pi       piField        `json:"pi"`
+	Labdrian *labdrianField `json:"labdrian,omitempty"`
+}
+
+// labdrianField is the "labdrian" key inside package.json (R-005): the
+// resolved source commit this package was built from, so a later
+// sync-check can compare against that exact ref instead of whatever branch
+// happens to be checked out (#315).
+type labdrianField struct {
+	BuiltFrom string `json:"builtFrom,omitempty"`
 }
 
 // piField is the "pi" key inside package.json. MCP is a package-relative
@@ -136,7 +157,7 @@ func Build(overlayRoot, registryPath, destDir string) error {
 		return fmt.Errorf("pipkg: setting build root permissions: %w", err)
 	}
 
-	if err := buildInto(overlayRoot, reg, tmpDir); err != nil {
+	if err := buildInto(overlayRoot, reg, tmpDir, overlayRoot, resolveBuildRev(overlayRoot)); err != nil {
 		return err
 	}
 	if err := preserveIfExists(destDir, tmpDir, mcpConfigFileName); err != nil {
@@ -165,35 +186,99 @@ func preserveIfExists(destDir, tmpDir, name string) error {
 	return nil
 }
 
+// CheckReport discloses which git state Check actually compared the
+// deployed package against (R-006/R-007):
+//   - "ref": the deployed package.json's labdrian.builtFrom SHA, resolvable
+//     locally. Ref holds that SHA.
+//   - "main": builtFrom was absent, non-hex, or not resolvable locally, so
+//     Check fell back to comparing against main. Ref holds the recorded
+//     (unresolvable) builtFrom value, if any, for the disclosure message.
+//   - "worktree": overlayRoot is not a git repository at all, so Check
+//     compared against the plain working tree, exactly as before R-005.
+type CheckReport struct {
+	Basis string
+	Ref   string
+}
+
+// Disclosure renders a one-line, human-readable statement of what Check
+// actually compared against, for callers (pipkg CLI, PiAdapter, the
+// sync-check bash helper) to surface (R-006/R-007: the comparison basis
+// must always be disclosed, not just on fallback).
+func (r CheckReport) Disclosure() string {
+	switch r.Basis {
+	case "ref":
+		return "compared against builtFrom ref " + r.Ref
+	case "main":
+		if r.Ref != "" {
+			return "compared against main; builtFrom " + r.Ref + " is not resolvable locally"
+		}
+		return "compared against main; builtFrom is not recorded"
+	case "worktree":
+		return "compared against the worktree (overlay root is not a git repository)"
+	default:
+		return ""
+	}
+}
+
+// builtFromPattern is the full-length hex-SHA-1 shape a recorded
+// labdrian.builtFrom value must match before it is ever used in a git
+// argument (R-007 threat matrix: a non-hex or "--option"-shaped value must
+// never reach a git subprocess argv).
+var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
+
 // Check regenerates the package into a temp dir and diffs it, file by file,
-// against destDir. Returns a non-nil, drift-naming error when destDir is
-// missing, has extra files, is missing files, or has changed content.
-func Check(overlayRoot, registryPath, destDir string) error {
-	reg, err := loadRegistry(registryPath)
+// against destDir. Returns a CheckReport disclosing the comparison basis,
+// and a non-nil, drift-naming error when destDir is missing, has extra
+// files, is missing files, or has changed content.
+//
+// The comparison source is resolved by resolveComparisonSource (R-006):
+// when destDir's package.json carries a resolvable labdrian.builtFrom SHA,
+// Check compares against that commit's exported tree rather than the
+// current working-tree checkout, so a feature branch with unrelated
+// changes no longer reports false drift (#315). package.json's own
+// labdrian.builtFrom field is normalized out of the content comparison
+// (via stripBuiltFrom) so recording a different (but still correct) ref
+// never counts as drift by itself.
+func Check(overlayRoot, registryPath, destDir string) (CheckReport, error) {
+	got, err := listFiles(destDir)
 	if err != nil {
-		return err
+		if os.IsNotExist(err) {
+			return CheckReport{}, fmt.Errorf("pipkg: package not built at %s (run: labdrian-overlay apply --target pi)", destDir)
+		}
+		return CheckReport{}, fmt.Errorf("pipkg: reading built package: %w", err)
+	}
+
+	report, sourceRoot, sourceRegistry, buildRev, cleanup, err := resolveComparisonSource(overlayRoot, registryPath, destDir)
+	if err != nil {
+		return CheckReport{}, err
+	}
+	defer cleanup()
+
+	reg, err := loadRegistry(sourceRegistry)
+	if err != nil {
+		return report, err
 	}
 
 	tmpDir, err := os.MkdirTemp("", "labdrian-pi-check-*")
 	if err != nil {
-		return fmt.Errorf("pipkg: creating temp check dir: %w", err)
+		return report, fmt.Errorf("pipkg: creating temp check dir: %w", err)
 	}
 	defer os.RemoveAll(tmpDir)
 
-	if err := buildInto(overlayRoot, reg, tmpDir); err != nil {
-		return fmt.Errorf("pipkg: regenerating for check: %w", err)
+	// versionRoot is always the ORIGINAL overlayRoot, never sourceRoot: a
+	// git-archive export has no .git directory, so it cannot resolve tag
+	// history itself. Using overlayRoot (which has full history) plus the
+	// resolved buildRev keeps the comparison's package.json "version"
+	// field consistent with what a real Build at that ref would have
+	// produced, exactly the same reasoning as builtFrom being normalized
+	// out of the diff, but here fixing the input instead of the output.
+	if err := buildInto(sourceRoot, reg, tmpDir, overlayRoot, buildRev); err != nil {
+		return report, fmt.Errorf("pipkg: regenerating for check: %w", err)
 	}
 
 	want, err := listFiles(tmpDir)
 	if err != nil {
-		return fmt.Errorf("pipkg: reading regenerated package: %w", err)
-	}
-	got, err := listFiles(destDir)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return fmt.Errorf("pipkg: package not built at %s (run: labdrian-overlay apply --target pi)", destDir)
-		}
-		return fmt.Errorf("pipkg: reading built package: %w", err)
+		return report, fmt.Errorf("pipkg: reading regenerated package: %w", err)
 	}
 
 	// mcp.json is registration state longterm-mem owns (Build's own doc
@@ -205,7 +290,7 @@ func Check(overlayRoot, registryPath, destDir string) error {
 	delete(want, mcpConfigFileName)
 	delete(got, mcpConfigFileName)
 	if wantHasMCP && !gotHasMCP {
-		return fmt.Errorf("labdrian-pi package drift:\n  %s: missing", mcpConfigFileName)
+		return report, fmt.Errorf("labdrian-pi package drift:\n  %s: missing", mcpConfigFileName)
 	}
 
 	// mcp.json.bak is the backup sibling jsonInstall writes on any
@@ -222,7 +307,17 @@ func Check(overlayRoot, registryPath, destDir string) error {
 			drift = append(drift, fmt.Sprintf("%s: missing", rel))
 			continue
 		}
-		if string(wantEntry.data) != string(gotEntry.data) {
+		wantData, gotData := wantEntry.data, gotEntry.data
+		if rel == "package.json" {
+			// R-006/R-007: the two sides were built from different git
+			// states on purpose (the deployed package vs. its recorded
+			// builtFrom, or the main fallback); comparing raw bytes would
+			// make every recomputed labdrian.builtFrom value read as
+			// drift. Strip it from both sides before comparing content.
+			wantData = stripBuiltFrom(wantData)
+			gotData = stripBuiltFrom(gotData)
+		}
+		if string(wantData) != string(gotData) {
 			drift = append(drift, fmt.Sprintf("%s: changed", rel))
 			continue
 		}
@@ -239,14 +334,212 @@ func Check(overlayRoot, registryPath, destDir string) error {
 	}
 	if len(drift) > 0 {
 		sort.Strings(drift)
-		return fmt.Errorf("labdrian-pi package drift:\n  %s", strings.Join(drift, "\n  "))
+		return report, fmt.Errorf("labdrian-pi package drift:\n  %s", strings.Join(drift, "\n  "))
 	}
-	return nil
+	return report, nil
+}
+
+// stripBuiltFrom removes package.json's labdrian.builtFrom field before
+// Check compares two package.json files that were legitimately built from
+// different git states (R-006/R-007's own-basis normalization), and always
+// re-marshals through encoding/json so both sides are compared in the same
+// canonical (compact, key-sorted) form regardless of whether either side
+// had a labdrian.builtFrom field at all -- otherwise a byte-identical pair
+// that merely differs in json.MarshalIndent's whitespace would misreport
+// as drift. A parse failure returns data unchanged, so a malformed
+// package.json still surfaces as ordinary content drift rather than being
+// silently swallowed.
+func stripBuiltFrom(data []byte) []byte {
+	var doc map[string]json.RawMessage
+	if json.Unmarshal(data, &doc) != nil {
+		return data
+	}
+	rawLabdrian, ok := doc["labdrian"]
+	if !ok {
+		out, err := json.Marshal(doc)
+		if err != nil {
+			return data
+		}
+		return out
+	}
+	var labdrian map[string]json.RawMessage
+	if json.Unmarshal(rawLabdrian, &labdrian) != nil {
+		return data
+	}
+	delete(labdrian, "builtFrom")
+	if len(labdrian) == 0 {
+		delete(doc, "labdrian")
+	} else {
+		merged, err := json.Marshal(labdrian)
+		if err != nil {
+			return data
+		}
+		doc["labdrian"] = merged
+	}
+	out, err := json.Marshal(doc)
+	if err != nil {
+		return data
+	}
+	return out
+}
+
+// resolveComparisonSource decides Check's comparison basis (R-006/R-007)
+// and returns the root directory and registry path to build the "want"
+// side from, plus a cleanup func for any temp export directory created.
+//
+//   - overlayRoot is not a git repository at all -> Basis="worktree",
+//     comparing directly against overlayRoot/registryPath (unchanged
+//     pre-R-005 behavior).
+//   - destDir's package.json carries a labdrian.builtFrom value matching
+//     builtFromPattern AND resolvable via `git cat-file -e <sha>^{commit}`
+//     -> Basis="ref": export skills/, agents/, and skills.registry.yaml at
+//     that commit via `git archive` into a temp dir and compare against
+//     that.
+//   - otherwise (absent, non-hex, or unresolvable) -> Basis="main": the
+//     same export, but at "main", with the original (possibly empty,
+//     possibly malicious-looking) builtFrom value carried in Ref purely
+//     for the disclosure message -- it is NEVER passed to git itself.
+//
+// buildRev is the ref buildInto's provenance resolution should use for the
+// comparison build (fed to resolvePackageVersion against the ORIGINAL
+// overlayRoot, which -- unlike a git-archive export -- still has full tag
+// history): the resolved builtFrom SHA for "ref", the literal "main" for
+// "main" (git describe accepts a branch name), or overlayRoot's current
+// HEAD for "worktree" (matching Check's pre-R-005 behavior exactly).
+func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
+	noopCleanup := func() {}
+	if exec.Command("git", "-C", overlayRoot, "rev-parse", "--is-inside-work-tree").Run() != nil {
+		return CheckReport{Basis: "worktree"}, overlayRoot, registryPath, resolveBuildRev(overlayRoot), noopCleanup, nil
+	}
+
+	builtFrom := readBuiltFrom(destDir)
+	if builtFrom != "" && builtFromPattern.MatchString(builtFrom) {
+		if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", builtFrom+"^{commit}").Run() == nil {
+			root, refCleanup, exportErr := exportGitTree(overlayRoot, builtFrom)
+			if exportErr == nil {
+				return CheckReport{Basis: "ref", Ref: builtFrom}, root, filepath.Join(root, "skills.registry.yaml"), builtFrom, refCleanup, nil
+			}
+		}
+	}
+
+	root, mainCleanup, exportErr := exportGitTree(overlayRoot, "main")
+	if exportErr != nil {
+		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting main for comparison: %w", exportErr)
+	}
+	return CheckReport{Basis: "main", Ref: builtFrom}, root, filepath.Join(root, "skills.registry.yaml"), "main", mainCleanup, nil
+}
+
+// readBuiltFrom reads destDir/package.json's labdrian.builtFrom value,
+// returning "" on any read/parse failure or when the field is absent --
+// never an error, since an unrecorded/unreadable value simply means Check
+// falls back to the main basis.
+func readBuiltFrom(destDir string) string {
+	raw, err := os.ReadFile(filepath.Join(destDir, "package.json"))
+	if err != nil {
+		return ""
+	}
+	var manifest packageManifest
+	if json.Unmarshal(raw, &manifest) != nil || manifest.Labdrian == nil {
+		return ""
+	}
+	return manifest.Labdrian.BuiltFrom
+}
+
+// exportGitTree exports skills/, agents/, and skills.registry.yaml at rev
+// from the overlayRoot git repository into a fresh temp directory via `git
+// archive`, returning that directory and a cleanup func. rev MUST already
+// be a value this package trusts as a git ref (a validated 40-hex SHA, or
+// the fixed literal "main") -- never attacker-controlled input, since it is
+// passed directly as a git argument.
+func exportGitTree(overlayRoot, rev string) (string, func(), error) {
+	tmp, err := os.MkdirTemp("", "labdrian-pi-source-*")
+	if err != nil {
+		return "", func() {}, fmt.Errorf("pipkg: creating temp source dir: %w", err)
+	}
+	cleanup := func() { os.RemoveAll(tmp) }
+
+	cmd := exec.Command("git", "-C", overlayRoot, "archive", "--format=tar", rev, "--", "skills", "agents", "skills.registry.yaml")
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("pipkg: preparing git archive: %w", err)
+	}
+	var stderr strings.Builder
+	cmd.Stderr = &stderr
+	if err := cmd.Start(); err != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("pipkg: starting git archive: %w", err)
+	}
+	extractErr := extractTar(stdout, tmp)
+	waitErr := cmd.Wait()
+	if waitErr != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("pipkg: git archive %s: %w (%s)", rev, waitErr, strings.TrimSpace(stderr.String()))
+	}
+	if extractErr != nil {
+		cleanup()
+		return "", func() {}, fmt.Errorf("pipkg: extracting git archive %s: %w", rev, extractErr)
+	}
+	return tmp, cleanup, nil
+}
+
+// extractTar writes r's tar stream into dest, refusing any entry (symlink
+// or otherwise) whose name would resolve outside dest -- git archive never
+// produces such entries for a normal repository, but this is defense in
+// depth against a corrupted or crafted archive stream.
+func extractTar(r io.Reader, dest string) error {
+	tr := tar.NewReader(r)
+	for {
+		hdr, err := tr.Next()
+		if err == io.EOF {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(dest, filepath.FromSlash(hdr.Name))
+		if rel, relErr := filepath.Rel(dest, target); relErr != nil || strings.HasPrefix(rel, "..") {
+			return fmt.Errorf("refusing tar entry outside destination: %s", hdr.Name)
+		}
+		switch hdr.Typeflag {
+		case tar.TypeDir:
+			if err := os.MkdirAll(target, 0755); err != nil {
+				return err
+			}
+		case tar.TypeReg:
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			f, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0644)
+			if err != nil {
+				return err
+			}
+			if _, err := io.Copy(f, tr); err != nil {
+				f.Close()
+				return err
+			}
+			if err := f.Close(); err != nil {
+				return err
+			}
+		case tar.TypeSymlink, tar.TypeLink:
+			return fmt.Errorf("refusing symlink in git archive: %s", hdr.Name)
+		}
+	}
 }
 
 // buildInto writes the full package tree for reg into dir (either the real
 // temp build dir for Build, or a throwaway comparison dir for Check).
-func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
+// overlayRoot is where skills/agents/_shared source files are read from --
+// for Check's ref/main basis this is a throwaway git-archive export, never
+// a full checkout. provenanceRoot is always a real git checkout (Build's
+// own overlayRoot) with full tag history, used together with rev to
+// compute package.json's version and labdrian.builtFrom fields (D5): an
+// export has no .git and cannot resolve tags itself, so provenanceRoot
+// keeps that resolution correct even when overlayRoot is a export. rev ==
+// "" means provenanceRoot is not a git repo (or HEAD is unresolvable),
+// yielding the same "0.0.0-dev" / omitted-labdrian fallback as before
+// R-005.
+func buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRoot, rev string) error {
 	skillsDir := filepath.Join(dir, "skills")
 	if err := os.MkdirAll(skillsDir, 0755); err != nil {
 		return fmt.Errorf("pipkg: creating skills dir: %w", err)
@@ -309,15 +602,23 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string) error {
 		return fmt.Errorf("pipkg: writing %s: %w", mcpConfigFileName, err)
 	}
 
+	// D5: feed the caller-resolved rev to both the version tag lookup and
+	// labdrian.builtFrom -- "Build already shells to git; single source"
+	// (design D5). rev == "" (provenanceRoot not a git repo, or HEAD
+	// unresolvable) leaves Labdrian nil (omitempty), exactly the
+	// pre-R-005 behavior.
 	manifest := packageManifest{
 		Name:    "labdrian-pi",
-		Version: resolvePackageVersion(overlayRoot),
+		Version: resolvePackageVersion(provenanceRoot, rev),
 		Pi: piField{
 			Skills:     []string{"./skills"},
 			Agents:     []string{"./agents"},
 			Extensions: []string{"./extensions"},
 			MCP:        "./" + mcpConfigFileName,
 		},
+	}
+	if rev != "" {
+		manifest.Labdrian = &labdrianField{BuiltFrom: rev}
 	}
 	raw, err := json.MarshalIndent(manifest, "", "  ")
 	if err != nil {
@@ -391,12 +692,30 @@ func loadRegistry(registryPath string) (skills.Registry, error) {
 	return reg, nil
 }
 
-// resolvePackageVersion resolves the newest reachable "v*"-tag from
-// overlayRoot's git history, stripped of its leading "v", falling back to
-// "0.0.0-dev" when no tag is reachable or overlayRoot is not a git repo
-// (this is a local, no-fetch lookup — never touches the network).
-func resolvePackageVersion(overlayRoot string) string {
-	out, err := exec.Command("git", "-C", overlayRoot, "describe", "--tags", "--abbrev=0", "--match", "v*").Output()
+// resolveBuildRev resolves overlayRoot's checked-out HEAD commit SHA
+// (R-005), returning "" when overlayRoot is not a git repo or HEAD cannot
+// be resolved (this is a local, no-fetch lookup — never touches the
+// network).
+func resolveBuildRev(overlayRoot string) string {
+	out, err := exec.Command("git", "-C", overlayRoot, "rev-parse", "HEAD").Output()
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(string(out))
+}
+
+// resolvePackageVersion resolves the newest reachable "v*"-tag reachable
+// from rev (D5: the same resolved commit labdrian.builtFrom records,
+// "single source"), stripped of its leading "v", falling back to
+// "0.0.0-dev" when no tag is reachable, rev is empty, or overlayRoot is not
+// a git repo (this is a local, no-fetch lookup — never touches the
+// network).
+func resolvePackageVersion(overlayRoot, rev string) string {
+	args := []string{"-C", overlayRoot, "describe", "--tags", "--abbrev=0", "--match", "v*"}
+	if rev != "" {
+		args = append(args, rev)
+	}
+	out, err := exec.Command("git", args...).Output()
 	if err != nil {
 		return "0.0.0-dev"
 	}

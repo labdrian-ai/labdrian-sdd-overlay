@@ -197,6 +197,12 @@ pipkg_apply_and_report() {
 # emitting the SYNC_CHECK:pi: line other sync-check callers grep for, plus
 # an explicit VERDICT:pi:<STATE> line (R2-sync-check-success-without-check)
 # so a health check can key off pi the same way it does every copy target.
+# `engine pipkg check` always prints a "pipkg check: compared against ..."
+# basis-disclosure line on stdout (R-006/R-007) before its OK/drift verdict;
+# that line is preserved verbatim in $drift_output and echoed in both the
+# no-drift and drift branches below, so this command always discloses
+# whether it compared against the recorded builtFrom ref, a main fallback,
+# or the plain worktree -- never just silently "no drift".
 # Returns non-zero for anything other than IN_SYNC (R4-silent-package-skip):
 # a not-built or drifted pi package must never read as a healthy sync-check.
 pipkg_sync_check_and_report() {
@@ -210,6 +216,7 @@ pipkg_sync_check_and_report() {
   fi
   if drift_output="$("$ENGINE_BINARY" pipkg check --overlay-root "$OVERLAY_DIR" --registry "$OVERLAY_DIR/skills.registry.yaml" --dest-dir "$dest" 2>&1)"; then
     echo "SYNC_CHECK:pi: no drift"
+    echo "$drift_output"
     echo ""
     echo "VERDICT:pi:IN_SYNC"
     return 0
@@ -2461,6 +2468,15 @@ compute_repo_behind_release() {
   fi
 }
 
+# cmd_sync_check's --target pi output always includes a "pipkg check:
+# compared against ..." basis-disclosure line (via pipkg_sync_check_and_report,
+# R-006/R-007): "builtFrom ref <sha>" when the deployed package's recorded
+# commit was resolvable locally, "main; builtFrom <sha> is not resolvable
+# locally" on fallback, or "the worktree" when OVERLAY_DIR is not a git
+# repository at all. This is what closes #315: a feature branch with
+# unrelated changes no longer reports false drift, because the comparison
+# target is disclosed rather than silently assumed to be the current
+# checkout.
 cmd_sync_check() {
   cd "$OVERLAY_DIR"
 
