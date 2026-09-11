@@ -1237,3 +1237,28 @@ func TestCLI_NoResidualProcessAfterAnySubcommand(t *testing.T) {
 		}
 	}
 }
+
+// TestCmdRegister_TargetPi_AcceptsRelativePackageListing: `pi install`
+// records local packages relative to ~/.pi/agent/ (observed on Pi 0.85.1),
+// so the installed-probe must resolve entries against that directory.
+func TestCmdRegister_TargetPi_AcceptsRelativePackageListing(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	packageDir := filepath.Join(home, ".labdrian-overlay", "pi", "labdrian-pi")
+	if err := os.MkdirAll(packageDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(packageDir, "mcp.json"), []byte(`{"mcpServers":{}}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	settingsDir := filepath.Join(home, ".pi", "agent")
+	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(`{"packages":["../../.labdrian-overlay/pi/labdrian-pi"]}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if exit := run([]string{"register", "--target", "pi", "--state-dir", t.TempDir(), "--binary", "/opt/bin/longterm-mem"}); exit != 0 {
+		t.Fatalf("run([register --target pi]) with a relative listing = %d, want 0", exit)
+	}
+}

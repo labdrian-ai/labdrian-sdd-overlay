@@ -434,6 +434,31 @@ func writePiSettingsListing(t *testing.T, destDir string) {
 	mustWrite(t, settingsPath, string(raw))
 }
 
+// TestPiAdapter_StatusAcceptsRelativePackageListing: a real `pi install
+// <abs path>` records the package RELATIVE to ~/.pi/agent/ (observed on
+// Pi 0.85.1: "../../.labdrian-overlay/pi/labdrian-pi"); the docs state
+// relative entries resolve against the settings file. The listing probe
+// must resolve entries the same way instead of comparing raw strings.
+func TestPiAdapter_StatusAcceptsRelativePackageListing(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(home, ".labdrian-overlay", "pi", "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	writePiMcpRegistration(t, destDir, true)
+	settingsPath := filepath.Join(home, ".pi", "agent", "settings.json")
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+
+	mustWrite(t, settingsPath, `{"packages":["../../.labdrian-overlay/pi/labdrian-pi"]}`)
+	if result := adapter.Status(); result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Status with a relative listing resolved against ~/.pi/agent = %s, want supported", result)
+	}
+	mustWrite(t, settingsPath, `{"packages":["../../elsewhere/labdrian-pi"]}`)
+	if result := adapter.Status(); result.Status == engineRuntime.CapabilitySupported {
+		t.Fatalf("Status must not accept a relative listing that resolves elsewhere, got %s", result)
+	}
+}
+
 // writePiMcpRegistration writes destDir/mcp.json with (or without) the
 // longterm-mem MCP entry a real `longterm-mem register --target pi` call
 // would add.

@@ -225,8 +225,15 @@ func isPiPackageListed(destDir string) bool {
 	if json.Unmarshal(raw, &settings) != nil {
 		return false
 	}
+	want := filepath.Clean(destDir)
+	settingsDir := filepath.Join(home, ".pi", "agent")
 	for _, p := range settings.Packages {
-		if p == destDir {
+		// Pi resolves relative package entries against the settings file's
+		// directory (packages.md); `pi install <abs>` records them that way.
+		if !filepath.IsAbs(p) {
+			p = filepath.Join(settingsDir, p)
+		}
+		if filepath.Clean(p) == want {
 			return true
 		}
 	}
