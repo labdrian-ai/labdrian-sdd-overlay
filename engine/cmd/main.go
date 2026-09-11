@@ -145,10 +145,10 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
-	fmt.Fprintln(os.Stderr, "  engine runtime <action> [--target claude|opencode|codex|all] [--config-root <path>]")
+	fmt.Fprintln(os.Stderr, "  engine runtime <action> [--target claude|opencode|codex|pi|all] [--config-root <path>]")
 	fmt.Fprintln(os.Stderr, "                          [--component runtime-parity|longterm-mem] [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    action: status | install | update | uninstall")
-	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, or all (--component runtime-parity only)")
+	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, pi, or all (--component runtime-parity only)")
 	fmt.Fprintln(os.Stderr, "    --component: runtime-parity (default, the --target adapters above), or longterm-mem")
 	fmt.Fprintln(os.Stderr, "      (a single component spanning claude+opencode+codex; no update/rollback action)")
 	fmt.Fprintln(os.Stderr, "    --state-dir: registration.json directory for --component longterm-mem (default ~/.labdrian-overlay)")
@@ -312,18 +312,42 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		adapter := runtimeAdapterForTarget(current, targetRoot)
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
+		// Pi is a package target with no lifecycle logic implemented yet in
+		// this slice (pi-target-plumbing): its adapter honestly reports
+		// CapabilityUnsupported for every action. A `status --target all`
+		// run must not mask a real claude/opencode/codex failure behind
+		// that, nor treat Pi's own known incompleteness as one — this
+		// mirrors the pre-existing Codex partial exemption immediately
+		// below (also status-only) and is removed once pi-lifecycle
+		// (slice 5) gives Pi a real status.
+		//
+		// R4-silent-package-skip: this exemption is STATUS-ONLY. It used
+		// to also cover install/update/uninstall, so `runtime install
+		// --target all` exited 0 while Pi was silently never deployed —
+		// unattended automation saw a clean install with nothing done for
+		// Pi. status is a read-only report and reporting Pi's own known
+		// incompleteness there is not itself a failure; an action that
+		// actually changes state must not claim success while skipping a
+		// target it was asked to act on. An explicit `--target pi`
+		// (allTargets == false) always fails/reports honestly regardless
+		// of action; only status aggregation exempts it.
+		piStatusUnsupportedInAggregate := allTargets && action == "status" && current == runtimepkg.TargetPi
 		actionFailed := false
 		switch action {
 		case "status":
 			switch {
-			case result.Status == runtimepkg.CapabilityUnsupported,
-				result.Status == runtimepkg.CapabilityRestartRequired:
+			case result.Status == runtimepkg.CapabilityRestartRequired:
 				actionFailed = true
+			case result.Status == runtimepkg.CapabilityUnsupported:
+				actionFailed = !piStatusUnsupportedInAggregate
 			case result.Status == runtimepkg.CapabilityPartial && !(allTargets && current == runtimepkg.TargetCodex):
 				actionFailed = true
 			}
 		default:
-			if result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial {
+			switch result.Status {
+			case runtimepkg.CapabilityPartial:
+				actionFailed = true
+			case runtimepkg.CapabilityUnsupported:
 				actionFailed = true
 			}
 		}

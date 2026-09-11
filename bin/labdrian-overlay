@@ -117,6 +117,42 @@ declare -A AGENT_TARGET_PATHS=(
   [opencode]="$HOME/.config/opencode/agents"
 )
 
+# Every recognized --target, mapped to how it receives content (pi-target-
+# plumbing, R-001/R-008). "copy": per-file, deployed via TARGET_PATHS above.
+# "package": built and installed as a whole (pi, via `pi install`/`pi
+# remove` — engine/pipkg, wired starting in the pi-package-build slice).
+# This is the single source of truth for "is this a known target at all"
+# and "does it have a TARGET_PATHS entry" — every call site that used to
+# probe TARGET_PATHS directly for either question now goes through
+# is_valid_target/is_copy_target below instead, so a package target is
+# never silently treated as a copy target with an empty destination.
+declare -A TARGET_KINDS=(
+  [claude]="copy"
+  [opencode]="copy"
+  [codex]="copy"
+  [pi]="package"
+)
+
+# True (exit 0) when $1 names any recognized target, copy or package.
+is_valid_target() {
+  [[ -v TARGET_KINDS["${1:-}"] ]]
+}
+
+# True (exit 0) when $1 is a per-file copy target with a TARGET_PATHS entry
+# (claude/opencode/codex). False for a package target (pi) or an unknown
+# name — callers must check is_valid_target first if they need to
+# distinguish "package" from "unknown".
+is_copy_target() {
+  [[ "${TARGET_KINDS[${1:-}]:-}" == "copy" ]]
+}
+
+# Emits the shared stub line for a recognized package target whose
+# apply/status/sync-check dispatch is not implemented yet in this slice
+# (pi-target-plumbing) -- lands in pi-package-build (slice 2).
+package_target_stub_message() {
+  echo "  $1: package target, handled by slice 2 (pi-package-build)"
+}
+
 # Known limitations (explicitly out of scope for this change, R-009):
 #   - The bootstrap init block's human-readable info echoes (dir creation) remain
 #     skills-first. They are a no-op for GADU (custom rows) and only matter for a
@@ -355,11 +391,11 @@ ensure_parent() {
 resolve_targets() {
   local arg="${1:-all}"
   if [[ "$arg" == "all" ]]; then
-    echo "claude opencode codex"
-  elif [[ -v TARGET_PATHS["$arg"] ]]; then
+    echo "claude opencode codex pi"
+  elif is_valid_target "$arg"; then
     echo "$arg"
   else
-    die "Unknown target: $arg. Valid: claude, opencode, codex, all"
+    die "Unknown target: $arg. Valid: claude, opencode, codex, pi, all"
   fi
 }
 
@@ -376,7 +412,7 @@ Commands:
   capture [--target claude|opencode|codex] [--from-backup DIR]
                                    Capture managed files from target (default: claude).
                                    Pushes the 'upstream' mirror branch to origin.
-  apply [--target claude|opencode|codex|all]
+  apply [--target claude|opencode|codex|pi|all]
                                    Merge upstream and deploy to target(s) (default: all).
                                    Pushes 'main' to origin immediately after the merge, so a
                                    local apply never strands main ahead of origin.
@@ -404,9 +440,9 @@ Commands:
                                    (from local main) and each target's recorded deployed
                                    version, naming any that are behind. Never-deployed
                                    targets are reported honestly, never fabricated.
-  status [--target claude|opencode|codex|all]
+  status [--target claude|opencode|codex|pi|all]
                                    Show drift between repo and target(s) (default: all)
-  sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
+  sync-check [--target claude|opencode|codex|pi|all] [--check-origin|--fetch]
                                    Validate gentle-ai sync state per target (default: all).
                                    Also reports REPO_BEHIND_ORIGIN=<count|NA> on each VERDICT
                                    line: how many commits local main is behind this repo's own
@@ -1295,7 +1331,9 @@ cmd_capture() {
   if [[ "$target_arg" == "all" ]]; then
     die "capture does not support --target all. Specify a single target: claude, opencode, codex"
   fi
-  [[ -v TARGET_PATHS["$target_arg"] ]] || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+  is_valid_target "$target_arg" || die "Unknown target: $target_arg. Valid: claude, opencode, codex, pi"
+  is_copy_target "$target_arg" \
+    || die "capture does not support --target $target_arg (package target, no per-file copy source); capture only supports claude, opencode, codex"
 
   local target_dir="${TARGET_PATHS[$target_arg]}"
 
@@ -1455,6 +1493,15 @@ cmd_apply() {
     shift || true
   done
 
+  # pi is a package target with no per-file deployment logic implemented
+  # yet in this slice (pi-target-plumbing, deployment lands in
+  # pi-package-build): an explicit --target pi must fail loudly rather
+  # than silently succeed at deploying nothing (R4-silent-package-skip).
+  # Mirrors cmd_longterm_mem's own explicit-pi refusal below.
+  if [[ "$target_arg" == "pi" ]]; then
+    die "apply does not support --target pi yet (package target; deployment lands in the pi-package-build slice); use claude, opencode, codex, or all"
+  fi
+
   # Refuse to run over uncommitted tracked changes: apply switches branches
   # and merges, and must never entangle a session's work in progress.
   [[ -z "$(git status --porcelain --untracked-files=no)" ]] \
@@ -1499,10 +1546,25 @@ cmd_apply() {
   # after the loop.
   local saw_mcp_row=""
 
+  # Set when a package target (pi) rides along inside --target all and its
+  # stub is dispatched instead of a real deploy (R4-silent-package-skip):
+  # forces apply's own aggregate exit non-zero below, so unattended
+  # automation cannot read a run that silently skipped pi as a clean
+  # success. Only reachable here under "all" -- an explicit --target pi
+  # already died above, before this loop ever starts.
+  local pi_stub_included=""
+
   for t in $(resolve_targets "$target_arg"); do
-    local tpath="${TARGET_PATHS[$t]}"
     echo ""
     echo "=== Deploying to: $t ==="
+
+    if ! is_copy_target "$t"; then
+      package_target_stub_message "$t"
+      pi_stub_included=1
+      continue
+    fi
+
+    local tpath="${TARGET_PATHS[$t]}"
 
     if [[ ! -d "$tpath" ]]; then
       mkdir -p "$tpath"
@@ -1621,8 +1683,10 @@ cmd_apply() {
     fi
   fi
 
-  # Deploy itself succeeded, but a failed mcp install must not exit 0.
-  [[ -n "$mcp_install_failed" ]] && return 1
+  # Deploy itself succeeded, but a failed mcp install must not exit 0
+  # (R4-silent-package-skip): neither may a run that included pi and only
+  # printed its stub, with nothing actually deployed for it.
+  [[ -n "$mcp_install_failed" || -n "$pi_stub_included" ]] && return 1
   return 0
 }
 
@@ -1892,8 +1956,10 @@ cmd_restore() {
   [[ -n "$target_arg" ]] || die "restore requires --target claude|opencode|codex"
   [[ "$target_arg" != "all" ]] \
     || die "restore does not support --target all. Specify a single target: claude, opencode, codex"
-  [[ -v TARGET_PATHS["$target_arg"] ]] \
-    || die "Unknown target: $target_arg. Valid: claude, opencode, codex"
+  is_valid_target "$target_arg" \
+    || die "Unknown target: $target_arg. Valid: claude, opencode, codex, pi"
+  is_copy_target "$target_arg" \
+    || die "restore does not support --target $target_arg (package target, no per-target backups); restore only supports claude, opencode, codex"
 
   local backups_dir="$STATE_DIR/backups/$target_arg"
 
@@ -2060,6 +2126,14 @@ cmd_status() {
     shift || true
   done
 
+  # pi has no per-file status logic implemented yet in this slice
+  # (pi-target-plumbing): an explicit --target pi must fail loudly rather
+  # than silently report a clean status with nothing actually checked
+  # (R4-silent-package-skip).
+  if [[ "$target_arg" == "pi" ]]; then
+    die "status does not support --target pi yet (package target; status lands in the pi-package-build slice); use claude, opencode, codex, or all"
+  fi
+
   echo "=== Branch ==="
   git rev-parse --abbrev-ref HEAD
 
@@ -2067,10 +2141,25 @@ cmd_status() {
   echo "=== Diff stat upstream..main ==="
   git diff --stat upstream..main || echo "(no diff)"
 
+  # Set when a package target (pi) rides along inside --target all and its
+  # stub is dispatched instead of a real status check
+  # (R4-silent-package-skip): forces status's own aggregate exit non-zero
+  # below, so pi's incompleteness cannot read as a clean report. Only
+  # reachable here under "all" -- an explicit --target pi already died
+  # above, before this loop ever starts.
+  local pi_stub_included=""
+
   for t in $(resolve_targets "$target_arg"); do
-    local tpath="${TARGET_PATHS[$t]}"
     echo ""
     echo "=== Status: $t ==="
+
+    if ! is_copy_target "$t"; then
+      package_target_stub_message "$t"
+      pi_stub_included=1
+      continue
+    fi
+
+    local tpath="${TARGET_PATHS[$t]}"
 
     while IFS= read -r rel_path; do
       local rr_line rr_src rr_targets rr_dest rr_pair
@@ -2117,6 +2206,12 @@ cmd_status() {
       fi
     fi
   done
+
+  # Read-only, but not exempt: a run that included pi and only printed its
+  # stub reported nothing about pi's own health, and must not exit 0 as if
+  # it had (R4-silent-package-skip).
+  [[ -n "$pi_stub_included" ]] && return 1
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -2299,6 +2394,14 @@ cmd_sync_check() {
     shift || true
   done
 
+  # pi has no per-file sync-check logic implemented yet in this slice
+  # (pi-target-plumbing): an explicit --target pi must fail loudly rather
+  # than silently report a clean sync-check with nothing actually checked
+  # (R4-silent-package-skip).
+  if [[ "$target_arg" == "pi" ]]; then
+    die "sync-check does not support --target pi yet (package target; sync-check lands in the pi-package-build slice); use claude, opencode, codex, or all"
+  fi
+
   local repo_behind_origin
   repo_behind_origin="$(compute_repo_behind_origin "$check_origin")"
 
@@ -2315,7 +2418,31 @@ cmd_sync_check() {
   release_version="$(resolve_latest_release_tag main "$check_origin")"
   [[ "$release_version" == "none" ]] && release_version="untagged"
 
+  # Set when a package target (pi) rides along inside --target all and its
+  # stub is dispatched instead of a real sync-check (R4-silent-package-
+  # skip): forces sync-check's own aggregate exit non-zero below, so pi's
+  # incompleteness cannot read as a clean, healthy report. Only reachable
+  # here under "all" -- an explicit --target pi already died above, before
+  # this loop ever starts.
+  local pi_stub_included=""
+
   for t in $(resolve_targets "$target_arg"); do
+    if ! is_copy_target "$t"; then
+      echo ""
+      echo "=== sync-check: $t ==="
+      # R2-sync-check-success-without-check: "partial" without a
+      # VERDICT/SYNC_CHECK line a health check can key off read as "this
+      # ran and found nothing wrong". "unsupported" plus an explicit
+      # VERDICT line below make pi's incompleteness detectable the same
+      # way every other target's VERDICT line is.
+      echo "SYNC_CHECK:$t: unsupported -- package target, handled by slice 2 (pi-package-build)"
+      package_target_stub_message "$t"
+      echo ""
+      echo "VERDICT:$t:UNSUPPORTED"
+      pi_stub_included=1
+      continue
+    fi
+
     local tpath="${TARGET_PATHS[$t]}"
     echo ""
     echo "=== sync-check: $t ($tpath) ==="
@@ -2446,6 +2573,12 @@ cmd_sync_check() {
       echo "ACTION:$t: in sync with gentle-ai (healthy)"
     fi
   done
+
+  # A run that included pi and only printed its stub reported nothing
+  # about pi's own health, and must not exit 0 as if it had
+  # (R4-silent-package-skip).
+  [[ -n "$pi_stub_included" ]] && return 1
+  return 0
 }
 
 # ---------------------------------------------------------------------------
@@ -2979,7 +3112,8 @@ cmd_repair_sdd_registry() {
         shift
         target="${1:-}"
         [[ -n "$target" ]] || die "--target requires an argument"
-        [[ -v TARGET_PATHS["$target"] ]] || die "Unknown target: $target. Valid: claude, opencode, codex"
+        is_valid_target "$target" || die "Unknown target: $target. Valid: claude, opencode, codex, pi"
+        is_copy_target "$target" || die "--target $target is a package target with no gentle-ai skill-registry.md; only claude, opencode, codex are supported here"
         ;;
       --no-refresh)
         refresh=0
@@ -3031,7 +3165,8 @@ cmd_skill_registry() {
         shift
         target="${1:-}"
         [[ -n "$target" ]] || die "--target requires an argument"
-        [[ -v TARGET_PATHS["$target"] ]] || die "Unknown target: $target. Valid: claude, opencode, codex"
+        is_valid_target "$target" || die "Unknown target: $target. Valid: claude, opencode, codex, pi"
+        is_copy_target "$target" || die "--target $target is a package target with no gentle-ai skill-registry.md; only claude, opencode, codex are supported here"
         ;;
       --no-repair)
         repair=0
@@ -3744,6 +3879,23 @@ cmd_longterm_mem() {
 
   local targets
   targets="$(resolve_targets "$target_arg")"
+
+  # longterm-mem is a per-runtime-config component (claude/opencode/codex
+  # config files, D4); it has no equivalent for a package target like pi
+  # and stays out of scope for the pi-target-plumbing slice. An explicit
+  # --target pi is rejected loudly, matching capture/restore above;
+  # --target all silently drops it, since pi is not one of "the runtimes
+  # this machine has" in longterm-mem's own sense (see expanded_all below).
+  if [[ "$target_arg" == "pi" ]]; then
+    die "longterm-mem does not support --target pi (package target, no per-runtime config file); use claude, opencode, codex, or all"
+  fi
+  if [[ "$target_arg" == "all" ]]; then
+    local copy_targets="" ct
+    for ct in $targets; do
+      is_copy_target "$ct" && copy_targets+="$ct "
+    done
+    targets="$copy_targets"
+  fi
 
   ensure_engine_binary
 
