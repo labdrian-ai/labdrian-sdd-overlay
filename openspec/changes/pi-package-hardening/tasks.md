@@ -28,13 +28,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 1: pipkg-integrity (PR 1, R-001..R-004)
 
-- [ ] 1.1 RED: `engine/pipkg/pipkg_test.go` TestCheck_ModeDrift — 0644→0755 reported; symlinked destDir root refused.
-- [ ] 1.2 RED: `engine/skills/parse_test.go` TestValidateEntry_PathTraversal — `../`, non-relative, unclean path rejected.
-- [ ] 1.3 RED: `engine/pipkg/pipkg_test.go` TestBuildInto_NameMismatch — SKILL.md `name` ≠ dir rejected; live registry passes.
-- [ ] 1.4 GREEN: `engine/pipkg/pipkg.go` — `listFiles` returns `{data,perm}`; `Check` diffs `Perm()`; `copyFile` keeps 0644; `Chmod(tmpDir,0755)` build root.
-- [ ] 1.5 GREEN: `engine/skills/parse.go` `validateEntry` — non-empty, relative, no `..`, `Clean(path)==path`.
-- [ ] 1.6 GREEN: `engine/pipkg/pipkg.go` `buildInto` — SKILL.md frontmatter `name==Base(e.Path)`; `Rel(skillsDir,dst)` no `..` prefix.
-- [ ] 1.7 Docs: `engine/pipkg/pipkg.go` doc comment — mode-drift + containment behavior.
+- [x] 1.1 RED: `engine/pipkg/pipkg_test.go` TestCheck_ModeDrift — 0644→0755 reported; symlinked destDir root refused.
+- [x] 1.2 RED: `engine/skills/parse_test.go` TestValidateEntry_PathTraversal — `../`, non-relative, unclean path rejected.
+- [x] 1.3 RED: `engine/pipkg/pipkg_test.go` TestBuildInto_NameMismatch — SKILL.md `name` ≠ dir rejected; live registry passes.
+- [x] 1.4 GREEN: `engine/pipkg/pipkg.go` — `listFiles` returns `{data,perm}`; `Check` diffs `Perm()`; `copyFile` keeps 0644; `Chmod(tmpDir,0755)` build root.
+- [x] 1.5 GREEN: `engine/skills/parse.go` `validateEntry` — non-empty, relative, no `..`, `Clean(path)==path`.
+- [x] 1.6 GREEN: `engine/pipkg/pipkg.go` `buildInto` — SKILL.md frontmatter `name==Base(e.Path)`; `Rel(skillsDir,dst)` no `..` prefix.
+- [x] 1.7 Docs: `engine/pipkg/pipkg.go` doc comment — mode-drift + containment behavior.
 
 ## Phase 2: sync-check-provenance (PR 2, R-005..R-007)
 
