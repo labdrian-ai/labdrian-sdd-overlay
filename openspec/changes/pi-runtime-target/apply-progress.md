@@ -907,3 +907,75 @@ commits under budget. Next slice (`pi-lifecycle`) is blocked on this one
 landing first (Phase 5 depends on `PiAdapter.Uninstall` calling `pi
 remove`, unrelated to this slice's own scope, so it is NOT blocked on the
 mcp.json work itself — but the stacked-branch chain is).
+
+## Slice 5 — pi-lifecycle (R-006, R-009)
+
+**Change**: pi-runtime-target
+**Mode**: Strict TDD
+**Worktree**: `/home/labdrian/labdrian-sdd-overlay-worktrees/pi-5`, branch `feat/pi-runtime-target-5-lifecycle` (stacked on slice 4 at `de435cb`)
+
+### Completed Tasks (implemented and GREEN, NOT committed — see Status)
+
+- [x] 5.1 RED: `TestPiAdapter_InstallNoShellInjection`
+- [x] 5.2 RED: `TestPiAdapter_StatusPartialOnUnprovenEntry`, `TestPiAdapter_StatusDisclosesNoExtensionsNoSkills`, `TestPiAdapter_UninstallUsesRemoveNotUninstall`, `TestPiAdapter_UninstallNeverTouchesGentlePiFiles`
+- [x] 5.3 GREEN: `engine/runtime/pi.go` — `Status` (honest per-entry: built + in sync + listed in `~/.pi/agent/settings.json`, read-only), `Install` (build then `pi install <path>` via `exec.LookPath`/`LABDRIAN_PI_BIN` override, fixed argv), `Uninstall` (`pi remove <path>`, never `pi uninstall`, never touches settings.json/mcp.json directly, removes the built package directory), `Update`/`Rollback` (rebuild + honest partial/unsupported)
+- [x] 5.4 Updated `openspec/specs/runtime-lifecycle/spec.md` (merged the pi-runtime-target delta's requirements forward, `Traces to:` lines) and `README.md` (new "Pi (via gentle-pi)" subsection under Deploy targets)
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 5.1 | `engine/runtime/pi_test.go` | Unit | N/A (new tests) | Confirmed via `git stash` on `pi.go` — all 5 new tests failed against the pre-slice-5 stub | Passed after `pi.go` rewrite | N/A — single adversarial destDir with embedded shell metacharacters, plus the injected-file-absence check | Extracted `buildPiPackage`/`newBuiltPiAdapterWithStub`/`assertFileUnchanged` helpers |
+| 5.2 (Status) | `engine/runtime/pi_test.go`, `runtime_test.go` | Unit | ✅ pre-existing `engine/runtime` suite green before edits | Confirmed failing (old stub message) | Passed | 3 cases: unbuilt→unsupported, built-but-unlisted→partial, fully-proven→supported (smoke) | Simplified the in-sync `switch` to `if/else`, inlined `stubMessage` |
+| 5.2 (Uninstall) | `engine/runtime/pi_test.go` | Unit | ✅ same suite | Confirmed failing (`unsupported`/stub message) | Passed | 2 cases: correct verb+argv, and settings.json/mcp.json byte-identity | Shared `newBuiltPiAdapterWithStub` setup |
+| 5.4 | `openspec/specs/runtime-lifecycle/spec.md`, `README.md` | Docs | N/A | N/A (docs) | N/A | N/A | N/A |
+
+### Test Summary
+
+- **Total tests written**: 5 new (`TestPiAdapter_InstallNoShellInjection`, `TestPiAdapter_StatusPartialOnUnprovenEntry`, `TestPiAdapter_StatusDisclosesNoExtensionsNoSkills`, `TestPiAdapter_UninstallUsesRemoveNotUninstall`, `TestPiAdapter_UninstallNeverTouchesGentlePiFiles`), plus 1 rewritten (`TestPiAdapter_StubMessageNamesTheOwningSlice` → `TestPiAdapter_UnbuiltDefaultReportsConcreteReasons`) and 1 safety-hardened (`TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg` now stubs `LABDRIAN_PI_BIN` so it never shells out to the real `pi` CLI this dev machine has on `PATH`)
+- **Total tests passing**: all of `engine/runtime`, `engine/pipkg`, `engine/shelltest`, `engine/cmd` (focused + `-race` full suite), all of `longterm-mem` (unaffected by this slice)
+- **Layers used**: Unit (6 new/changed in `engine/runtime`), Docs (2 files, `runtime-lifecycle/spec.md` + `README.md`)
+- **Approval tests**: N/A — no refactoring-of-existing-behavior task this slice (Status/Uninstall were honest stubs, now real; not a preserve-behavior refactor)
+- **Pure functions created**: `resolvePiBinary`, `runPiCommand`, `isPiPackageListed`, `piPackageBuilt` (all side-effect-isolated at the process/filesystem boundary, no logic hidden inside `Install`/`Uninstall`/`Status` themselves)
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./runtime/... ./shelltest/...` → `ok` both packages |
+| Runtime harness command/scenario and exact result | Manual smoke in scratch STATE_DIR/HOME with a stub `pi` on PATH (records argv, mutates a scratch `~/.pi/agent/settings.json`): `pipkg_apply_and_report` (sourced) → build succeeds, stub records `install <path>`, settings.json lists the path; `engine runtime status --target pi` → `supported` (all three entries proven); `engine runtime uninstall --target pi` → `supported`, stub records `remove <path>`, package directory removed, settings.json empties. All exactly as designed. |
+| Rollback boundary | `git checkout -- engine/runtime/pi.go engine/runtime/pi_test.go engine/runtime/runtime_test.go bin/labdrian-overlay openspec/specs/runtime-lifecycle/spec.md README.md` restores the pre-slice-5 `de435cb` state exactly; nothing else was touched |
+
+### Deviations from Design
+
+- **No new top-level `uninstall` command in `bin/labdrian-overlay`.** The Suggested Work Units table names `bin/labdrian-overlay uninstall --target pi (manual)` as this slice's runtime harness. `bin/labdrian-overlay` has NO top-level `uninstall` command today for ANY target (claude/opencode/codex have none either — only `uninstall-hooks`, which is Claude-hook-specific). Adding one was in an earlier draft of this batch (~35 lines) but was cut to fit the 400-line budget (see below); "uninstall --target pi dispatches to the adapter" is satisfied by the pre-existing `engine runtime uninstall --target pi` path (`runtimeAdapterForTarget` → `NewFoundationAdapter(TargetPi)` → `NewPiAdapter()` → `PiAdapter.Uninstall()`), which this slice makes honest. The smoke test above exercises exactly that path. Recommend a follow-up decides whether a generic `bin/labdrian-overlay uninstall --target <t>` command is wanted for all four targets, as a separate change.
+- **`Apply()` now equals `Install()`** (mirrors `OpenCodeAdapter`'s `Apply() { return a.Install() }`) rather than staying a bare rebuild — pi-lifecycle makes "apply" mean "build, then actually install when possible", matching the phase prompt's explicit instruction. Pre-slice-5 `Apply()`/`Install()` were already identical (`a.build(ActionApply)` / `a.build(ActionInstall)`), so this is a refinement, not a behavior split.
+- **`Update()`/`Rollback()` stay a rebuild-only partial/unsupported result** (never invoke `pi install`/`pi remove` themselves) — the phase prompt said "Update/Rollback = rebuild + honest result", and a rebuild alone cannot prove the per-entry proof `Status` reports, so neither escalates to `supported`.
+
+### Issues Found
+
+None — all implementation is GREEN. The 400-line budget was exceeded by a small, honest margin after one real trimming pass (see below); this is reported, not hidden or worked around by weakening tests.
+
+### Budget
+
+`git diff --shortstat de435cb -- engine bin` = **344 insertions(+), 63 deletions(-) = 407 authored lines**, against the 400-line budget for this slice.
+
+- First honest draft (full implementation + 5 new tests + safety-hardened existing test + a new top-level `bin/labdrian-overlay uninstall` command): **502 lines**.
+- Trimmed comments to the minimum that still states rationale/safety properties, extracted `buildPiPackage`/`newBuiltPiAdapterWithStub`/`assertFileUnchanged` test helpers to remove duplication, and **dropped the new top-level `uninstall` command entirely** (see Deviations above): **407 lines**.
+- Further line-count-driven cuts were not made because the remaining code is: (a) the honest lifecycle logic the tests pin, (b) the 5 explicitly-named RED tests plus one required safety fix to a slice-2 test that would otherwise shell out to this machine's real installed `pi` CLI, or (c) rationale comments for security-sensitive code (fixed-argv subprocess exec, never-touch-these-files guarantees) that this repo's own conventions require. Cutting further would mean weakening a named test or removing a safety comment on exec code, which the budget-vs-code-golf rule in `work-unit-commits`/`minimalism-contract` both forbid.
+- **Per the explicit phase instruction ("Budget 400 authored lines ...; if exceeded STOP with partial before committing"), this batch STOPPED before committing.** Recommend a `size:exception` (7 lines over 400, 1.75% — the smallest overage of any slice in this chain; slices 1-4 all needed exceptions of far larger magnitude).
+
+### Plan vs Realized Slice Count
+
+slices planned=5 realized=4 committed (`pi-target-plumbing`, `pi-package-build`, `pi-contract-gate`, `pi-longterm-mem-mcp`) + 1 implemented-but-uncommitted (`pi-lifecycle`, this batch, awaiting a size exception — the last slice in the chain).
+
+### Workload / PR Boundary
+
+- Mode: chained PR slice (stacked-to-main, auto-chain)
+- Current work unit: `pi-lifecycle` (would-be PR5) — implemented, tested, verified, **staged but NOT committed**
+- Boundary: would start at `de435cb` (slice 4's docs commit, current HEAD)
+- Estimated review budget impact: 407 authored lines in `engine`/`bin` (1.02x the 400-line budget) + 2 docs files (README.md, openspec/specs/runtime-lifecycle/spec.md — not counted toward the engine/bin budget)
+
+### Status
+
+All Phase 5 tasks (5.1-5.4) functionally complete and verified GREEN, but **NOT committed** and `tasks.md` Phase 5 checkboxes deliberately left UNCHECKED — this batch stopped at the explicit 400-line budget instruction (407 measured) rather than committing over it or requesting an exception unilaterally. The work is fully present in the worktree (`/home/labdrian/labdrian-sdd-overlay-worktrees/pi-5`, branch `feat/pi-runtime-target-5-lifecycle`) and ready to commit as soon as an owner-granted `size:exception` is relayed (matching slices 1-4's own precedent, all of which exceeded budget too). This is the LAST slice in the chain — once committed, `pi-runtime-target` is otherwise ready for `sdd-verify` (Phase 6's manual-only live-Pi checkpoints are explicitly out of automated scope).
