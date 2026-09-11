@@ -415,6 +415,96 @@ func TestPiAdapter_StatusPartialOnUnprovenEntry(t *testing.T) {
 	}
 }
 
+// writePiSettingsListing writes a scratch ~/.pi/agent/settings.json that
+// lists destDir as an installed package, so isPiPackageListed proves the
+// "listed" entry (mirrors what a real `pi install <destDir>` would do).
+func writePiSettingsListing(t *testing.T, destDir string) {
+	t.Helper()
+	home, err := os.UserHomeDir()
+	if err != nil || home == "" {
+		t.Fatalf("os.UserHomeDir: %v", err)
+	}
+	settingsPath := filepath.Join(home, ".pi", "agent", "settings.json")
+	raw, err := json.Marshal(struct {
+		Packages []string `json:"packages"`
+	}{Packages: []string{destDir}})
+	if err != nil {
+		t.Fatalf("marshal settings.json: %v", err)
+	}
+	mustWrite(t, settingsPath, string(raw))
+}
+
+// writePiMcpRegistration writes destDir/mcp.json with (or without) the
+// longterm-mem MCP entry a real `longterm-mem register --target pi` call
+// would add.
+func writePiMcpRegistration(t *testing.T, destDir string, registered bool) {
+	t.Helper()
+	content := `{"mcpServers": {}}`
+	if registered {
+		content = `{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/opt/labdrian-overlay/bin/longterm-mem", "args": ["mcp"]}}}`
+	}
+	mustWrite(t, filepath.Join(destDir, "mcp.json"), content)
+}
+
+// TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries (C-01 remediation):
+// Status names three owned entries -- built+in-sync, listed in
+// settings.json, and longterm-mem registered in mcp.json. It must never
+// report supported while any one of them is unproven, and must report
+// supported only once all three are proven.
+func TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries(t *testing.T) {
+	cases := []struct {
+		name          string
+		listed        bool
+		mcpRegistered bool
+		wantStatus    engineRuntime.CapabilityStatus
+		wantContains  string
+	}{
+		{
+			name:          "listed but MCP unregistered stays partial and names the register command",
+			listed:        true,
+			mcpRegistered: false,
+			wantStatus:    engineRuntime.CapabilityPartial,
+			wantContains:  "longterm-mem register --target pi",
+		},
+		{
+			name:          "unlisted and MCP unregistered stays partial",
+			listed:        false,
+			mcpRegistered: false,
+			wantStatus:    engineRuntime.CapabilityPartial,
+			wantContains:  "listed in ~/.pi/agent/settings.json",
+		},
+		{
+			name:          "all three entries proven reports supported",
+			listed:        true,
+			mcpRegistered: true,
+			wantStatus:    engineRuntime.CapabilitySupported,
+			wantContains:  "labdrian-pi package is built, in sync, and listed",
+		},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			t.Setenv("HOME", t.TempDir())
+			overlayRoot, registryPath := piFixtureOverlay(t)
+			destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+			buildPiPackage(t, overlayRoot, registryPath, destDir)
+			if c.listed {
+				writePiSettingsListing(t, destDir)
+			}
+			writePiMcpRegistration(t, destDir, c.mcpRegistered)
+
+			adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+			result := adapter.Status()
+			if result.Status != c.wantStatus {
+				t.Fatalf("Status = %s, want %s", result, c.wantStatus)
+			}
+			if !strings.Contains(result.Message, c.wantContains) {
+				t.Fatalf("Status message = %q, want it to contain %q", result.Message, c.wantContains)
+			}
+		})
+	}
+}
+
 // TestPiAdapter_StatusDisclosesNoExtensionsNoSkills (task 5.2): always
 // discloses the --no-extensions/--no-skills bypass, with no "-ns" alias.
 func TestPiAdapter_StatusDisclosesNoExtensionsNoSkills(t *testing.T) {

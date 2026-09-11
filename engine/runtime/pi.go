@@ -98,8 +98,9 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 }
 
 // Status reports per-entry proof: built, in sync, listed in
-// ~/.pi/agent/settings.json (read-only). All proven -> supported; built but
-// unproven -> partial, naming each entry; never built -> unsupported.
+// ~/.pi/agent/settings.json, and longterm-mem MCP-registered in mcp.json
+// (read-only). All proven -> supported; built but unproven -> partial,
+// naming each entry; never built -> unsupported.
 func (a PiAdapter) Status() LifecycleResult {
 	if !a.piPackageBuilt() {
 		return NewLifecycleResult(a.target, ActionStatus, CapabilityUnsupported,
@@ -114,6 +115,9 @@ func (a PiAdapter) Status() LifecycleResult {
 	}
 	if !isPiPackageListed(a.destDir) {
 		problems = append(problems, "listed in ~/.pi/agent/settings.json packages (not listed; run: pi install "+a.destDir+")")
+	}
+	if !isPiMcpRegistered(a.destDir) {
+		problems = append(problems, "longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi)")
 	}
 
 	if len(problems) == 0 {
@@ -227,4 +231,22 @@ func isPiPackageListed(destDir string) bool {
 		}
 	}
 	return false
+}
+
+// isPiMcpRegistered reports whether destDir/mcp.json exists, parses, and
+// carries an mcpServers.longterm-mem entry -- the proof `longterm-mem
+// register --target pi` ran (read-only probe; never written here).
+func isPiMcpRegistered(destDir string) bool {
+	raw, err := os.ReadFile(filepath.Join(destDir, "mcp.json"))
+	if err != nil {
+		return false
+	}
+	var mcp struct {
+		MCPServers map[string]json.RawMessage `json:"mcpServers"`
+	}
+	if json.Unmarshal(raw, &mcp) != nil {
+		return false
+	}
+	_, ok := mcp.MCPServers["longterm-mem"]
+	return ok
 }
