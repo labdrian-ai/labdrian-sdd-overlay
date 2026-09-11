@@ -1042,3 +1042,61 @@ slices planned=5 (unchanged from the original chain) realized=5 committed + this
 ### Status
 
 C-01 and C-02 (both CRITICAL findings) fixed, tested, verified at runtime, and committed. W-01, W-02, W-03 (WARNING findings) remain — W-03 is fully implemented and proven correct but uncommitted (reverted to stay within budget); W-01 needs additional design care around the "engine binary not yet built" early-return path; W-02 is a small spec-text edit not yet made. Recommend a second remediation batch (`sdd-apply`) for W-01 + W-02 + re-applying W-03, followed by `sdd-verify`.
+
+## Remediation 2 (W-01, W-02, W-03 — the three remaining WARNING findings from the verify-report)
+
+**Change**: pi-runtime-target
+**Worktree**: `/home/labdrian/labdrian-sdd-overlay-worktrees/pi-5`, branch `feat/pi-runtime-target-5-lifecycle`
+**Source**: `verify-report.md` verdict FAIL, `evidence_revision: sha256:c6899165c39e4d2aaac503f5904afa409c6d4e8a2f6f698e6ee312418382d006`
+**Scope assigned**: W-01, W-02, W-03 (the three findings Remediation 1 left open)
+
+### Completed This Batch
+
+- [x] **W-03** — `piStatusUnsupportedInAggregate` removed from `engine/cmd/main.go`'s `runRuntimeCore`. Pi's honest `CapabilityUnsupported`/`CapabilityPartial`/`CapabilityRestartRequired` now fails `status --target all` exactly like every other target; the status-only carve-out that outlived pi-lifecycle (slice 5) is gone.
+- [x] **W-01** — `bin/labdrian-overlay`'s `pipkg_status_and_report` now delegates to `engine runtime status --target pi` (the same `PiAdapter.Status()` three-entry proof) once the package is built, instead of its own bash-only "no drift = partial" heuristic. The pure-bash "not built" early return (needed so status still works with no engine binary built yet) is unchanged. The stale "lifecycle proof lands in a later slice" text is gone.
+- [x] **W-02** — `openspec/specs/runtime-lifecycle/spec.md`'s "Pi Accepted as a Valid CLI Target" and "Pi-Scoped Uninstall" requirements corrected: uninstall is not a `labdrian-overlay` CLI verb (the script has no top-level `uninstall`); the adapter command is `engine runtime uninstall --target pi`. `openspec/changes/pi-runtime-target/specs/runtime-lifecycle/spec.md` (the change's own delta) was checked and does not contain these two requirements — they were written directly into the merged main spec during slice 5 rather than through a delta — so there was nothing to amend there.
+
+### Commits (Remediation 2)
+
+- `2ffe96e` — `fix(engine): remove stale Pi status exemption from --target all aggregate (W-03)`
+- `186cdcc` — `fix(overlay): delegate pi status to the engine runtime adapter (W-01)`
+- `f8ae0c6` — `docs(spec): name the pi uninstall adapter command correctly (W-02)`
+
+### TDD Cycle Evidence
+
+| Task | Test File | RED | GREEN | TRIANGULATE |
+|------|-----------|-----|-------|-------------|
+| W-03 | `engine/cmd/runtime_test.go` | Confirmed: `TestRunRuntimeCore_AllTargetsStatusFailsWhenPiIsHonestlyUnsupported` failed against the pre-fix exemption (`got 0, want 1`, output showed claude/opencode supported, codex partial, pi unsupported, yet exit 0) | Passed after removing `piStatusUnsupportedInAggregate` and its branch | `TestRunRuntimeCore_AllTargetsStatusAllowsCodexPartialWithoutFailing` updated in the same commit to assert the now-honest exit 1 while still proving codex's own partial status does not independently fail the aggregate |
+| W-01 | `engine/shelltest/overlay_pi_package_build_test.go` | Ran `TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported` and the updated assertions in `TestPipkgHelpers_BuildStatusSyncCheck` against the pre-fix bash-only drift heuristic first — pre-fix `pipkg_status_and_report` reported "no drift"/exit 0 right after build with nothing installed/registered, which the new assertions (expecting "partial"/exit non-zero) failed against | Passed after rewiring `pipkg_status_and_report` to delegate to `engine runtime status --target pi` | 2-case delegation proof: built-but-unregistered stays partial (names `longterm-mem register --target pi`); built + listed in `~/.pi/agent/settings.json` + `mcp.json` registered reports supported |
+| W-02 | N/A (spec-text-only fix, no executable behavior changed) | N/A | N/A | N/A — structural spec-text correction; triangulation skipped per the strict-TDD rule for purely structural, single-output changes |
+
+Pure functions/behavior changed: none new — both fixes are removal of a stale exemption branch (W-03) and rewiring an existing bash helper to call an existing, already-tested Go code path (W-01) rather than reimplementing logic.
+
+### Work Unit Evidence
+
+- Focused test commands:
+  - W-03: `cd engine && go test ./cmd/... -run TestRunRuntimeCore -v` → all pass, including the new and updated tests
+  - W-01: `cd engine && go test ./shelltest/... -run 'TestPipkgHelpers_BuildStatusSyncCheck|TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported' -v` → both pass
+- Runtime harness: `cd engine && go test -count=1 -race ./...` → all 12 packages green (including `installer` and `shelltest`, which run the real built `bin/labdrian-overlay` and `gentle-ai-overlay` binaries end-to-end); `shellcheck -S warning bin/labdrian-overlay` → only the 2 pre-existing SC2064 warnings (unchanged line content, shifted line numbers)
+- Rollback boundary: `git revert f8ae0c6 186cdcc 2ffe96e` cleanly removes all three fixes independently (each is its own commit, no shared file touched by more than one of the three)
+
+### Budget
+
+`git diff --shortstat fbfd483..HEAD -- engine longterm-mem bin` = **192 insertions(+), 47 deletions(-) = 239 authored lines**, well within the 400-line batch budget for this remediation batch (`openspec/specs/runtime-lifecycle/spec.md` is spec text, not counted against the `engine`/`longterm-mem`/`bin` budget per the phase instruction, and is a further 12 insertions/8 deletions on its own).
+
+### Verification (foreground, all green)
+
+- `cd engine && gofmt -l .` → empty
+- `cd engine && go vet ./...` → clean
+- `cd engine && go test -count=1 -race ./...` → all 12 packages `ok`
+- `cd longterm-mem && go vet ./...` → clean
+- `cd longterm-mem && go test ./...` → all 16 packages `ok` (untouched by this batch; run for the phase's explicit verification contract)
+- `shellcheck -S warning bin/labdrian-overlay` → only the 2 pre-existing SC2064 warnings
+
+### Slice tracking
+
+slices planned=5 realized=5 (unchanged from Remediation 1 — this batch is scoped remediation against an already-realized slice 5, not a new planned slice; per the apply skill's "Focused remediation is the sole `applyState: all_done` exception" rule).
+
+### Status
+
+W-01, W-02, and W-03 (the three remaining WARNING findings from the verify-report) are now fixed, tested, verified at runtime, and committed as three independent work-unit commits. All findings from the verify-report's Remediation 1 + Remediation 2 scope (C-01, C-02, W-01, W-02, W-03) are now resolved. W-04, W-05, W-06, W-07 were explicitly out of scope for both remediation batches. Ready for `sdd-verify` to re-check the full scope.
