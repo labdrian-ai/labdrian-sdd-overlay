@@ -3587,13 +3587,10 @@ ensure_engine_binary() {
 # longtermmem_target_name_is_wellformed below for why those are two
 # different questions.
 longtermmem_installed_targets_known() {
-  local candidate="${1:-}" known
-  for known in "${!TARGET_PATHS[@]}"; do
-    if [[ "$candidate" == "$known" ]]; then
-      return 0
-    fi
-  done
-  return 1
+  # Every declared target is installable: copy targets (TARGET_PATHS) and
+  # package targets such as pi, whose registration lives in the built
+  # package's mcp.json.
+  is_valid_target "${1:-}"
 }
 
 # longtermmem_target_name_is_wellformed <line> answers whether <line> is a

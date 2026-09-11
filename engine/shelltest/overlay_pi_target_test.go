@@ -402,3 +402,53 @@ func TestLongtermMemUninstall_TargetAllIncludesPi(t *testing.T) {
 		t.Fatalf("tracking file should be removed once every target (including pi) converges to untracked, stat err: %v", statErr)
 	}
 }
+
+// TestLongtermMemInstall_TargetPiRecordsTracking: found live after the
+// chain landed — `longterm-mem install --target pi` registered the MCP
+// entry and then died with "refusing to record an unknown install target:
+// pi", because the tracking allowlist only knew the copy targets
+// (TARGET_PATHS keys). A package target must be recordable too.
+func TestLongtermMemInstall_TargetPiRecordsTracking(t *testing.T) {
+	overlay := piTargetOverlayPath(t)
+	overlayDir, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatalf("resolve overlay dir: %v", err)
+	}
+	home := t.TempDir()
+	seedFakeEngineBinary(t, home)
+	stateDir := filepath.Join(home, ".labdrian-overlay")
+	// A built package listed in ~/.pi/agent/settings.json (relative, as a
+	// real `pi install` records it) is what the real register probe needs.
+	pkg := filepath.Join(stateDir, "pi", "labdrian-pi")
+	if err := os.MkdirAll(pkg, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(pkg, "mcp.json"), []byte(`{"mcpServers":{}}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	settingsDir := filepath.Join(home, ".pi", "agent")
+	if err := os.MkdirAll(settingsDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(settingsDir, "settings.json"), []byte(`{"packages":["../../.labdrian-overlay/pi/labdrian-pi"]}`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	cmd := exec.Command(overlay, "longterm-mem", "install", "--target", "pi")
+	// install rebuilds the longterm-mem binary; keep Go's caches out of the
+	// temp HOME (a module cache there is read-only and breaks cleanup).
+	modCache, _ := exec.Command("go", "env", "GOMODCACHE").Output()
+	buildCache, _ := exec.Command("go", "env", "GOCACHE").Output()
+	cmd.Env = append(os.Environ(), "HOME="+home,
+		"GOMODCACHE="+strings.TrimSpace(string(modCache)),
+		"GOCACHE="+strings.TrimSpace(string(buildCache)))
+	cmd.Dir = overlayDir
+	out, runErr := cmd.CombinedOutput()
+	if runErr != nil {
+		t.Fatalf("longterm-mem install --target pi must exit 0 after a successful register, got %v:\n%s", runErr, out)
+	}
+	tracked, err := os.ReadFile(filepath.Join(stateDir, "longterm-mem", "installed-targets"))
+	if err != nil || !strings.Contains(string(tracked), "pi") {
+		t.Fatalf("pi must be recorded in installed-targets, got err=%v content=%q\n%s", err, tracked, out)
+	}
+}
