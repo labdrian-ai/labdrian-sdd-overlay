@@ -63,8 +63,8 @@ func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
 	if !strings.Contains(statusBefore, "--no-extensions") || !strings.Contains(statusBefore, "--no-skills") {
 		t.Fatalf("status should always disclose --no-extensions/--no-skills, got: %s", statusBefore)
 	}
-	if strings.Contains(statusBefore, "-ns") {
-		t.Fatalf("disclosure must not claim a '-ns' alias exists, got: %s", statusBefore)
+	if !strings.Contains(statusBefore, "(short aliases: -ne and -ns)") {
+		t.Fatalf("disclosure must name the -ne/-ns aliases pi --help documents, got: %s", statusBefore)
 	}
 	syncBefore, syncBeforeErr := runHelper("pipkg_sync_check_and_report")
 	if syncBeforeErr == nil {
