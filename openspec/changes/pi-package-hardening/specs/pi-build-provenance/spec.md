@@ -3,8 +3,12 @@
 ## Purpose
 
 Record which source ref a deployed Pi package was actually built from, and
-make `sync-check --target pi` compare against that ref instead of the
-currently checked-out branch, closing #315's false-drift reports.
+make `sync-check --target pi` always compare against the DEPLOY ref (what
+`apply` actually deploys from), disclosing the recorded build ref as
+provenance rather than as the comparison target. This closes both #315's
+false-drift reports on a feature branch with unrelated changes, and the
+converse gap where comparing against the recorded build ref let committed
+source changes made after the last build go undetected as drift.
 
 ## Requirements
 
@@ -23,14 +27,17 @@ under a `labdrian.builtFrom` field.
 - WHEN the deployed `package.json` is inspected
 - THEN `labdrian.builtFrom` SHALL equal `abc123`
 
-### Requirement: Sync-Check Compares Against the Recorded Ref
+### Requirement: Sync-Check Compares Against the Deploy Ref
 
 Traces to: R-006
 
-WHEN `sync-check --target pi` runs and the deployed package's
-`package.json` carries a resolvable `labdrian.builtFrom` ref, `sync-check
---target pi` SHALL compare the deployed package's files against that ref's
-git tree rather than against the current working-tree checkout.
+WHEN `sync-check --target pi` runs, `sync-check --target pi` SHALL compare
+the deployed package's files against the DEPLOY ref's git tree (the ref
+`apply` actually deploys from) rather than against the current
+working-tree checkout and rather than the deployed package's recorded
+`labdrian.builtFrom` ref, so that a deployed package left behind by
+committed source changes on the deploy ref is still detected as drift even
+when it byte-matches what was built at its own (now stale) recorded ref.
 
 #### Scenario: Unrelated feature-branch diffs do not cause drift
 
@@ -39,21 +46,27 @@ git tree rather than against the current working-tree checkout.
 - WHEN `sync-check --target pi` runs
 - THEN it SHALL report no drift caused by the branch's unrelated changes
 
-#### Scenario: Real divergence from the built ref is still reported
+#### Scenario: Real divergence from the deploy ref is still reported
 
-- GIVEN `main` has genuinely diverged from the deployed package (e.g. a
-  source file changed after build)
+- GIVEN the deploy ref has genuinely diverged from the deployed package
+  (e.g. a source file changed and committed on the deploy ref after the
+  package was last built), regardless of whether that divergence has also
+  advanced the deployed package's own recorded `labdrian.builtFrom` ref
 - WHEN `sync-check --target pi` runs
-- THEN it SHALL report that real drift
+- THEN it SHALL report that real drift, naming the deployed package as
+  stale relative to the deploy ref
 
 ### Requirement: Unresolvable Ref Discloses a Main-Only Comparison
 
 Traces to: R-007
 
-IF `sync-check --target pi` cannot resolve the deployed package's
-`labdrian.builtFrom` ref locally, THEN `sync-check --target pi` SHALL
-compare against `main` and SHALL state in its output that the comparison
-target was `main`, not the recorded build ref.
+`sync-check --target pi` SHALL always compare against the deploy ref
+(`main`, or its `origin/main`/`HEAD` fallback), independent of whether the
+deployed package's `labdrian.builtFrom` ref is locally resolvable. IF
+`labdrian.builtFrom` is absent or not locally resolvable, THEN
+`sync-check --target pi` SHALL state in its output that the comparison
+target was the deploy ref and that the recorded build ref could not be
+used as provenance.
 
 #### Scenario: Fallback comparison is disclosed
 
@@ -61,4 +74,5 @@ target was `main`, not the recorded build ref.
   the local repository
 - WHEN `sync-check --target pi` runs
 - THEN its output SHALL include an explicit statement that it compared
-  against `main`
+  against the deploy ref, with the unresolvable recorded build ref
+  disclosed only as provenance

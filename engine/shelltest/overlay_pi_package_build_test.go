@@ -43,7 +43,9 @@ func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
 		t.Helper()
 		cmd := exec.Command("bash", "-c", `source "$1"; `+script, "_", overlay)
 		cmd.Dir = overlayDir
-		cmd.Env = append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir)
+		cmd.Env = append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir,
+			// these tests build directly from the checkout (no apply, so no main checkout); pin the deploy ref to HEAD
+			"LABDRIAN_PI_DEPLOY_REF=HEAD")
 		out, err := cmd.CombinedOutput()
 		return string(out), err
 	}
@@ -170,7 +172,9 @@ func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) 
 		t.Helper()
 		cmd := exec.Command("bash", "-c", `source "$1"; `+script, "_", overlay)
 		cmd.Dir = overlayDir
-		cmd.Env = append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir)
+		cmd.Env = append(os.Environ(), "HOME="+home, "STATE_DIR="+stateDir, "OVERLAY_DIR="+overlayDir,
+			// these tests build directly from the checkout (no apply, so no main checkout); pin the deploy ref to HEAD
+			"LABDRIAN_PI_DEPLOY_REF=HEAD")
 		out, err := cmd.CombinedOutput()
 		return string(out), err
 	}
