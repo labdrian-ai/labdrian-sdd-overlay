@@ -317,3 +317,29 @@ func TestExportGitTree_DrainsPipeOnExtractionError(t *testing.T) {
 		t.Fatal("Check hung: git archive's stdout pipe was not drained after an extraction error (R3-002)")
 	}
 }
+
+// TestCheck_MainFallbackWithoutMainBranch: CI checks a pull request out as
+// a detached HEAD with no local "main" branch. When builtFrom is not
+// resolvable the fallback must still compare against something that
+// exists (origin/main, then HEAD) and disclose which, instead of failing
+// with "not a valid object name: main".
+func TestCheck_MainFallbackWithoutMainBranch(t *testing.T) {
+	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
+	runGit(t, overlayRoot, "checkout", "-q", "-b", "trunk")
+	if strings.TrimSpace(runGit(t, overlayRoot, "branch", "--list", "main")) != "" {
+		runGit(t, overlayRoot, "branch", "-D", "main")
+	}
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+	corruptBuiltFrom(t, destDir, "0000000000000000000000000000000000000000")
+
+	report, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	if err != nil {
+		t.Fatalf("Check without a local main branch must fall back, got: %v", err)
+	}
+	if report.Basis != "main" || !strings.Contains(report.Disclosure(), "HEAD") {
+		t.Fatalf("expected the main basis disclosing the HEAD fallback, got basis=%q disclosure=%q", report.Basis, report.Disclosure())
+	}
+}

@@ -201,6 +201,9 @@ func preserveIfExists(destDir, tmpDir, name string) error {
 type CheckReport struct {
 	Basis string
 	Ref   string
+	// Fallback names the ref actually exported for the "main" basis
+	// ("main", "origin/main", or "HEAD" when the checkout has no main).
+	Fallback string
 }
 
 // Disclosure renders a one-line, human-readable statement of what Check
@@ -212,10 +215,14 @@ func (r CheckReport) Disclosure() string {
 	case "ref":
 		return "compared against builtFrom ref " + r.Ref
 	case "main":
-		if r.Ref != "" {
-			return "compared against main; builtFrom " + r.Ref + " is not resolvable locally"
+		target := r.Fallback
+		if target == "" {
+			target = "main"
 		}
-		return "compared against main; builtFrom is not recorded"
+		if r.Ref != "" {
+			return "compared against " + target + "; builtFrom " + r.Ref + " is not resolvable locally"
+		}
+		return "compared against " + target + "; builtFrom is not recorded"
 	case "worktree":
 		return "compared against the worktree (overlay root is not a git repository)"
 	case "dirty":
@@ -433,11 +440,20 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report 
 		}
 	}
 
-	root, mainCleanup, exportErr := exportGitTree(overlayRoot, "main")
-	if exportErr != nil {
-		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting main for comparison: %w", exportErr)
+	// A pull-request checkout in CI is a detached HEAD with no local "main";
+	// fall back through the refs that can exist and disclose the one used.
+	fallback := "main"
+	for _, candidate := range []string{"main", "origin/main", "HEAD"} {
+		if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", candidate+"^{commit}").Run() == nil {
+			fallback = candidate
+			break
+		}
 	}
-	return CheckReport{Basis: "main", Ref: builtFrom}, root, filepath.Join(root, "skills.registry.yaml"), "main", mainCleanup, nil
+	root, mainCleanup, exportErr := exportGitTree(overlayRoot, fallback)
+	if exportErr != nil {
+		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting %s for comparison: %w", fallback, exportErr)
+	}
+	return CheckReport{Basis: "main", Ref: builtFrom, Fallback: fallback}, root, filepath.Join(root, "skills.registry.yaml"), fallback, mainCleanup, nil
 }
 
 // readBuiltFrom reads destDir/package.json's labdrian.builtFrom value,
