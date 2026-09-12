@@ -1,0 +1,271 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:74cfbb1142ed6a27d6e193037a06942869d6389c98773bee1883611e06c63aad",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-70c10f02e85ba374",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+      "candidate_tree": "600c92c0cb98aee446260f608b6e0c60b362cc13",
+      "paths_digest": "sha256:f7855a362fcea6805cdc1b7399798eda56d1dbfb8f0680b2d9f3a829aef52028",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/pi-package-hardening/apply-progress.md",
+        "openspec/changes/pi-package-hardening/entry.json",
+        "openspec/changes/pi-package-hardening/tasks.md",
+        "skills/inception-pipeline/SKILL.md",
+        "tools/archive-anchor-gate/gate.go",
+        "tools/archive-anchor-gate/main.go",
+        "tools/archive-anchor-gate/receipt.go",
+        "tools/archive-anchor-gate/receipt_test.go"
+      ],
+      "identity": "sha256:9e1080931f5fe64b7ae51e4abe7964b3d70a9550ba3ba86ea250576514570695"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+      "candidate_tree": "600c92c0cb98aee446260f608b6e0c60b362cc13",
+      "paths_digest": "sha256:f7855a362fcea6805cdc1b7399798eda56d1dbfb8f0680b2d9f3a829aef52028",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/pi-package-hardening/apply-progress.md",
+        "openspec/changes/pi-package-hardening/entry.json",
+        "openspec/changes/pi-package-hardening/tasks.md",
+        "skills/inception-pipeline/SKILL.md",
+        "tools/archive-anchor-gate/gate.go",
+        "tools/archive-anchor-gate/main.go",
+        "tools/archive-anchor-gate/receipt.go",
+        "tools/archive-anchor-gate/receipt_test.go"
+      ],
+      "identity": "sha256:9e1080931f5fe64b7ae51e4abe7964b3d70a9550ba3ba86ea250576514570695"
+    },
+    "genesis_paths": [
+      "openspec/changes/pi-package-hardening/apply-progress.md",
+      "openspec/changes/pi-package-hardening/entry.json",
+      "openspec/changes/pi-package-hardening/tasks.md",
+      "skills/inception-pipeline/SKILL.md",
+      "tools/archive-anchor-gate/gate.go",
+      "tools/archive-anchor-gate/main.go",
+      "tools/archive-anchor-gate/receipt.go",
+      "tools/archive-anchor-gate/receipt_test.go"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 649,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:b1ec79117e32329db5f8687c0721225296627c15a92aa2ead47085f02c5aa98e",
+    "capture_phase_revision": "sha256:e47d99ff489725f151fac0b5fb4eae8653cf5df7488600d271c623adfa803d9b",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:9e1080931f5fe64b7ae51e4abe7964b3d70a9550ba3ba86ea250576514570695",
+        "capture_phase_revision": "sha256:e47d99ff489725f151fac0b5fb4eae8653cf5df7488600d271c623adfa803d9b",
+        "artifact_digest": "sha256:2f3ea7ef7ecb08275684172b8aabbb533541241350f5d591b3c526df74ae83ba",
+        "result_hash": "sha256:f2cfd287d644a2f892d16b3df93a2a829398799c38d03bc3a0e6aa8a5039942e",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d632a12d2057ce891074dc67640b06b7ba4dfe63ba7437848e999e3632964d70",
+            "lineage_id": "review-70c10f02e85ba374",
+            "authority_revision": "sha256:e47d99ff489725f151fac0b5fb4eae8653cf5df7488600d271c623adfa803d9b",
+            "target_identity": "sha256:9e1080931f5fe64b7ae51e4abe7964b3d70a9550ba3ba86ea250576514570695",
+            "base_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+            "candidate_tree": "600c92c0cb98aee446260f608b6e0c60b362cc13",
+            "changed_path_manifest_sha256": "sha256:6b775bfea58abba34bdd8e9496fa5fba1013276beabe75bf0aa6049f6f4511ce",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d632a12d2057ce891074dc67640b06b7ba4dfe63ba7437848e999e3632964d70",
+            "raw_sha256": "sha256:d0ba91d32cbd0903a956a7cf20903d70b17f50f70c42c40dffb82d977a3928ab",
+            "canonical_sha256": "sha256:7df3b49654cc364d67ed0e34b23d0457406e360ad18056d8562cafd24e8d8da1",
+            "result_hash": "sha256:f2cfd287d644a2f892d16b3df93a2a829398799c38d03bc3a0e6aa8a5039942e",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d632a12d2057ce891074dc67640b06b7ba4dfe63ba7437848e999e3632964d70",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "openspec/changes/pi-package-hardening/apply-progress.md",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/tasks.md",
+                "skills/inception-pipeline/SKILL.md",
+                "tools/archive-anchor-gate/gate.go",
+                "tools/archive-anchor-gate/main.go",
+                "tools/archive-anchor-gate/receipt.go",
+                "tools/archive-anchor-gate/receipt_test.go"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "tools/archive-anchor-gate/receipt.go:115-131",
+                "severity": "WARNING",
+                "claim": "When a change persists more than one approved receipt, the gate trusts the one whose filename sorts last. Lineage ids are opaque hash-like tokens, so that order has no relation to recency. A change re-reviewed after post-review fixes can hold two approved lineages. The gate may then take approved_tree from the stale candidate. checkReport would raise the AnchorRejected finding against a correctly anchored report and block archive with a misleading mismatch message. A non-approved or unparseable file that sorts last is skipped, so an older approved one silently wins. No test covers multiple persisted files, mixed shapes, or a non-approved file. A safer rule would be: verified if ANY approved persisted tree matches the landing tree, otherwise report the ambiguity explicitly.",
+                "proof_refs": [
+                  "tools/archive-anchor-gate/receipt.go:92-98",
+                  "tools/archive-anchor-gate/receipt.go:115-131",
+                  "tools/archive-anchor-gate/gate.go:234-235",
+                  "tools/archive-anchor-gate/gate.go:274-277",
+                  "tools/archive-anchor-gate/receipt_test.go:87-139"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "tools/archive-anchor-gate/gate.go:236-255",
+                "severity": "WARNING",
+                "claim": "The two-part override rule (R-011) is only tested for the case where both parts are present. TestOverride_RecordedSelfAsserted writes a valid override file plus the disclosure word. No test proves either of these still blocks: an override file without prose disclosure, or a malformed override file (a Finding in archive mode, exit 3 under --change). Changing the `||` on line 241 to `\u0026\u0026` would still pass the whole suite. apply-progress says the tests for these scenarios were deliberately deleted for budget and checked only in uncommitted scratch fixtures. The disclosure check is also a bare lowercase substring match, so negated wording that mentions the override would count as disclosure, and no test covers that either.",
+                "proof_refs": [
+                  "tools/archive-anchor-gate/gate.go:241",
+                  "tools/archive-anchor-gate/gate.go:237-240",
+                  "tools/archive-anchor-gate/receipt_test.go:191-212",
+                  "openspec/changes/pi-package-hardening/apply-progress.md:328"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-003",
+                "lens": "reliability",
+                "location": "tools/archive-anchor-gate/gate.go:277",
+                "severity": "WARNING",
+                "claim": "No test proves the gate rejects a post-convention report whose approved receipt tree disagrees with the landing commit's tree. That includes the message fix citing the receipt-sourced anchor.ApprovedTree instead of the prose tree, and the rule that a prose tree is ignored once a receipt exists. Every receipt test plants a matching tree. A regression that falls back to the prose tree, or cites the wrong tree in the rejection, would not fail the suite. apply-progress records these behaviors as verified only ad hoc in scratch fixtures.",
+                "proof_refs": [
+                  "tools/archive-anchor-gate/gate.go:234-235",
+                  "tools/archive-anchor-gate/gate.go:277",
+                  "tools/archive-anchor-gate/receipt_test.go:95",
+                  "tools/archive-anchor-gate/receipt_test.go:124",
+                  "openspec/changes/pi-package-hardening/apply-progress.md:328"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-004",
+                "lens": "reliability",
+                "location": "tools/archive-anchor-gate/main.go:92-104",
+                "severity": "WARNING",
+                "claim": "The help text says --change is mutually exclusive with --since and --known-gaps, but the --change branch never checks this. Passing --change with --known-gaps (or an explicit --since) silently ignores the other flag and can exit 0. It should return exitUsage (2) as documented. No test exercises the combined invocation.",
+                "proof_refs": [
+                  "tools/archive-anchor-gate/main.go:53-54",
+                  "tools/archive-anchor-gate/main.go:92-104",
+                  "tools/archive-anchor-gate/receipt_test.go:217-263"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-005",
+                "lens": "reliability",
+                "location": "openspec/changes/pi-package-hardening/apply-progress.md:304-315",
+                "severity": "WARNING",
+                "claim": "The Slice 4 ledger this candidate adds contradicts the rest of the candidate. It says Phase 4 is NOT COMMITTED, that the tasks checkboxes are intentionally left unchecked, and that no size exception was granted for slice 4. The same candidate checks tasks 4.1-4.9 and extends the granted size_exception to receipt-anchor-gate (2518 lines). The skill requires continuation batches to MERGE prior apply-progress, so a follow-up batch would read contradictory delivery state and could redo the commit or size-exception decision.",
+                "proof_refs": [
+                  "openspec/changes/pi-package-hardening/apply-progress.md:357-358",
+                  "openspec/changes/pi-package-hardening/apply-progress.md:363",
+                  "openspec/changes/pi-package-hardening/tasks.md:62-70",
+                  "openspec/changes/pi-package-hardening/entry.json:65-68",
+                  "skills/inception-pipeline/SKILL.md:128"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-006",
+                "lens": "reliability",
+                "location": "tools/archive-anchor-gate/receipt.go:139-161",
+                "severity": "SUGGESTION",
+                "claim": "Unparseable persisted receipts, in either shape, are silently skipped. A truncated or corrupt capture therefore produces the generic 'no verified receipt' outcome. The override loader's own doc comment explicitly says this kind of silent miss misdirects the operator. Consider reporting parse failures of files in the receipts folder as errors, consistent with the override file handling.",
+                "proof_refs": [
+                  "tools/archive-anchor-gate/receipt.go:141-143",
+                  "tools/archive-anchor-gate/receipt.go:155-157",
+                  "tools/archive-anchor-gate/receipt.go:164-169"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-007",
+                "lens": "reliability",
+                "location": "skills/inception-pipeline/SKILL.md:130",
+                "severity": "SUGGESTION",
+                "claim": "The pre-archive instruction says any non-zero exit means no persisted receipt or override exists. The gate also exits non-zero for other reasons: 2 for usage errors, and 3 for an unreadable receipts folder or a malformed override file surfaced through CheckPreArchive's error path. An agent following this text would try to capture a receipt or override when the real fault is a bad invocation or a malformed override. Tie the instruction to exit 1 and treat 2/3 separately.",
+                "proof_refs": [
+                  "skills/inception-pipeline/SKILL.md:130",
+                  "tools/archive-anchor-gate/main.go:92-100",
+                  "tools/archive-anchor-gate/receipt.go:212-215"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-008",
+                "lens": "reliability",
+                "location": "tools/archive-anchor-gate/receipt.go:201-202",
+                "severity": "SUGGESTION",
+                "claim": "CheckPreArchive joins the raw --change value into a path without checking it. A misspelled or nonexistent change gets the same exit 1 'no verified review receipt' as a real missing receipt, which invites capturing a receipt into the wrong folder. Names with separators or parent segments resolve outside the live changes folder, including into the archive subtree. Consider requiring the change folder to exist and rejecting separator-bearing names as usage errors.",
+                "proof_refs": [
+                  "tools/archive-anchor-gate/receipt.go:202",
+                  "tools/archive-anchor-gate/receipt.go:222-226",
+                  "tools/archive-anchor-gate/main.go:92-104"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 8 manifest paths from the supplied patch sections only; no working tree, index, or command output was consulted.",
+              "The date gate in tools/archive-anchor-gate/receipt.go:75-77 compares YYYY-MM-DD strings lexically, so only reports archived on or after 2026-09-12 hit the new receipt path. Pre-convention reports keep their old control flow; only the rejection message argument changed, in tools/archive-anchor-gate/gate.go:277.",
+              "The pre-archive check fails closed: a missing receipts folder or a non-approved receipt with no override returns exit 1 (tools/archive-anchor-gate/receipt.go:100-106 and tools/archive-anchor-gate/receipt.go:222-226).",
+              "The gate.go hunk depends on surrounding checkReport variables (anchor, section, commit, report) that are not visible in this candidate. TestApprovedTree_FromReceipt's assertion on the report anchor is the only visible proof that the receipt tree reaches the resolved anchor.",
+              "The passing test runs and coverage numbers are claimed in apply-progress prose only, and the candidate provides no test output. Missing-coverage findings are therefore judged against the test file content in tools/archive-anchor-gate/receipt_test.go.",
+              "No BLOCKER or CRITICAL issue was found; all findings are WARNING or SUGGESTION and anchored on lines this candidate added."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "267af5457cc656f28d49d947abaec039d53440b397171bc6f8e9aaaa46af1206",
+    "initial_atomic_start": {
+      "lineage_id": "review-70c10f02e85ba374",
+      "worktree_identity": "sha256:637a99ca07e7da0eda530b20ea75323d9d7839958e8276f0e08451877641c134",
+      "target_identity": "sha256:9e1080931f5fe64b7ae51e4abe7964b3d70a9550ba3ba86ea250576514570695",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 649,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
