@@ -85,16 +85,22 @@ entry; did not address the GADU link.)
 Traces to: R-006, R-007
 
 `sync-check --target pi` MUST report drift between the installed package's
-built content plus longterm-mem MCP availability and the current overlay
-manifest, using the same idiom as the GADU generator's drift check. WHEN
-the deployed package's `package.json` carries a resolvable
-`labdrian.builtFrom` ref, the comparison SHALL use that ref's git tree
-rather than the current working-tree checkout; WHEN the ref is
-unresolvable, `sync-check --target pi` SHALL compare against `main` and
-SHALL state in its output that the comparison target was `main`.
+built content plus longterm-mem MCP availability and the DEPLOY ref (the
+ref `apply` actually deploys from: `main`, or its `origin/main`/`HEAD`
+fallback), using the same idiom as the GADU generator's drift check. The
+comparison SHALL always use the deploy ref's git tree, never the current
+working-tree checkout and never the deployed package's own recorded
+`labdrian.builtFrom` ref; a deployed package whose recorded `builtFrom` is
+resolvable but no longer matches the deploy ref's tip commit MUST be
+reported as drift (stale) even when its content still byte-matches what
+was built at that older commit. `sync-check --target pi` SHALL state in
+its output which ref it compared against, and SHALL disclose the recorded
+`labdrian.builtFrom` value (or its absence) as provenance.
 (Previously: compared against the current overlay manifest with no
 built-from-ref awareness, which produced false drift against the current
-checkout on feature branches — #315.)
+checkout on feature branches — #315; then compared against the recorded
+`labdrian.builtFrom` ref itself, which let committed source changes made
+on the deploy ref after the last build go undetected as drift.)
 
 #### Scenario: No drift is reported when unchanged
 - GIVEN the installed package matches the current manifest

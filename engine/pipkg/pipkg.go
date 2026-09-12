@@ -20,12 +20,17 @@
 //
 // Build provenance (sync-check-provenance slice, R-005..R-007): Build
 // records the resolved source commit into package.json's
-// labdrian.builtFrom (D5). Check uses that field to pick its comparison
-// basis (CheckReport.Basis, resolveComparisonSource): the recorded commit
-// when it is a resolvable 40-hex SHA ("ref"), main when it is not
-// ("main", always disclosed), or the plain working tree when overlayRoot
-// is not a git repository at all ("worktree"). This closes #315's false
-// drift reports on a feature branch with unrelated changes.
+// labdrian.builtFrom (D5), but Check's comparison target is always the
+// DEPLOY ref -- what `apply` actually deploys from (main, or its
+// origin/main / HEAD fallback in a detached-HEAD checkout), never
+// builtFrom itself (R3-001, issue #315 follow-up): comparing against
+// builtFrom let committed source changes made after the last Build go
+// undetected as drift. builtFrom is provenance surfaced via
+// CheckReport.Stale/Disclosure, not the comparison basis. resolveComparisonSource
+// picks "deploy" (a git repository, comparing against the resolved deploy
+// ref), "dirty" (the package was built from an uncommitted source tree,
+// comparing against the live worktree), or "worktree" (overlayRoot is not
+// a git repository at all).
 package pipkg
 
 import (
@@ -187,23 +192,31 @@ func preserveIfExists(destDir, tmpDir, name string) error {
 }
 
 // CheckReport discloses which git state Check actually compared the
-// deployed package against (R-006/R-007):
-//   - "ref": the deployed package.json's labdrian.builtFrom SHA, resolvable
-//     locally. Ref holds that SHA.
-//   - "main": builtFrom was absent, non-hex, or not resolvable locally, so
-//     Check fell back to comparing against main. Ref holds the recorded
-//     (unresolvable) builtFrom value, if any, for the disclosure message.
+// deployed package against, and whether the deployed package is stale
+// relative to the deploy ref (R3-001):
+//   - "deploy": overlayRoot is a git repository. DeployRef names the ref
+//     actually exported and compared against ("main", "origin/main", or
+//     "HEAD" in a detached-HEAD checkout with no local main). DeployTip
+//     holds that ref's resolved tip commit, short form. BuiltFrom holds
+//     the deployed package's recorded labdrian.builtFrom SHA, if any
+//     (provenance, never the comparison target).
 //   - "worktree": overlayRoot is not a git repository at all, so Check
 //     compared against the plain working tree, exactly as before R-005.
 //   - "dirty": builtFrom is absent because Build ran against a dirty
-//     source tree (R3-001), so Check compared directly against the live
+//     source tree, so Check compared directly against the live
 //     overlayRoot instead of any git export.
+//
+// Stale reports whether the deployed package is out of date: BuiltFrom is
+// a locally resolvable commit that differs from DeployRef's tip. A stale
+// package means committed source changes since the last Build are not
+// deployed, even though the deployed content still matches DeployRef's
+// tree at build time -- Check treats this as drift in its own right.
 type CheckReport struct {
-	Basis string
-	Ref   string
-	// Fallback names the ref actually exported for the "main" basis
-	// ("main", "origin/main", or "HEAD" when the checkout has no main).
-	Fallback string
+	Basis     string
+	DeployRef string
+	DeployTip string
+	BuiltFrom string
+	Stale     bool
 }
 
 // Disclosure renders a one-line, human-readable statement of what Check
@@ -212,17 +225,12 @@ type CheckReport struct {
 // must always be disclosed, not just on fallback).
 func (r CheckReport) Disclosure() string {
 	switch r.Basis {
-	case "ref":
-		return "compared against builtFrom ref " + r.Ref
-	case "main":
-		target := r.Fallback
-		if target == "" {
-			target = "main"
+	case "deploy":
+		builtFrom := r.BuiltFrom
+		if builtFrom == "" {
+			builtFrom = "unrecorded"
 		}
-		if r.Ref != "" {
-			return "compared against " + target + "; builtFrom " + r.Ref + " is not resolvable locally"
-		}
-		return "compared against " + target + "; builtFrom is not recorded"
+		return "compared against " + r.DeployRef + " (" + r.DeployTip + "); package built from " + builtFrom
 	case "worktree":
 		return "compared against the worktree (overlay root is not a git repository)"
 	case "dirty":
@@ -244,13 +252,16 @@ var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // files, is missing files, or has changed content.
 //
 // The comparison source is resolved by resolveComparisonSource (R-006):
-// when destDir's package.json carries a resolvable labdrian.builtFrom SHA,
-// Check compares against that commit's exported tree rather than the
-// current working-tree checkout, so a feature branch with unrelated
-// changes no longer reports false drift (#315). package.json's own
+// Check compares the deployed package against the DEPLOY ref's exported
+// tree (main, or its origin/main / HEAD fallback), never against the
+// recorded labdrian.builtFrom commit -- comparing against builtFrom let
+// committed source changes made after the last Build go undetected as
+// drift (R3-001). A stale deployed package (builtFrom resolvable and
+// behind the deploy ref's tip) is reported as drift in its own right, in
+// addition to any file-level differences. package.json's own
 // labdrian.builtFrom field is normalized out of the content comparison
 // (via stripBuiltFrom) so recording a different (but still correct) ref
-// never counts as drift by itself.
+// never counts as file-level drift by itself.
 func Check(overlayRoot, registryPath, destDir string) (CheckReport, error) {
 	got, err := listFiles(destDir)
 	if err != nil {
@@ -344,6 +355,9 @@ func Check(overlayRoot, registryPath, destDir string) (CheckReport, error) {
 			drift = append(drift, fmt.Sprintf("%s: extra", rel))
 		}
 	}
+	if report.Stale {
+		drift = append(drift, fmt.Sprintf("package built from %s but %s is at %s: rebuild with apply --target pi", report.BuiltFrom, report.DeployRef, report.DeployTip))
+	}
 	if len(drift) > 0 {
 		sort.Strings(drift)
 		return report, fmt.Errorf("labdrian-pi package drift:\n  %s", strings.Join(drift, "\n  "))
@@ -395,29 +409,37 @@ func stripBuiltFrom(data []byte) []byte {
 	return out
 }
 
-// resolveComparisonSource decides Check's comparison basis (R-006/R-007)
-// and returns the root directory and registry path to build the "want"
-// side from, plus a cleanup func for any temp export directory created.
+// resolveComparisonSource decides Check's comparison basis (R-006/R-007,
+// R3-001) and returns the root directory and registry path to build the
+// "want" side from, plus a cleanup func for any temp export directory
+// created.
 //
 //   - overlayRoot is not a git repository at all -> Basis="worktree",
 //     comparing directly against overlayRoot/registryPath (unchanged
 //     pre-R-005 behavior).
-//   - destDir's package.json carries a labdrian.builtFrom value matching
-//     builtFromPattern AND resolvable via `git cat-file -e <sha>^{commit}`
-//     -> Basis="ref": export skills/, agents/, and skills.registry.yaml at
-//     that commit via `git archive` into a temp dir and compare against
-//     that.
-//   - otherwise (absent, non-hex, or unresolvable) -> Basis="main": the
-//     same export, but at "main", with the original (possibly empty,
-//     possibly malicious-looking) builtFrom value carried in Ref purely
-//     for the disclosure message -- it is NEVER passed to git itself.
+//   - builtFrom is absent because Build ran against a dirty source tree ->
+//     Basis="dirty": comparing directly against the live overlayRoot,
+//     since any git export would reproduce the last commit instead of the
+//     uncommitted content Build actually shipped.
+//   - otherwise -> Basis="deploy": resolve the DEPLOY ref (the first of
+//     "main", "origin/main", "HEAD" that exists locally -- a pull-request
+//     checkout in CI is a detached HEAD with no local "main") and export
+//     skills/, agents/, and skills.registry.yaml at that commit via `git
+//     archive` into a temp dir to compare against. This is always the
+//     deploy ref, never the recorded labdrian.builtFrom commit (R3-001):
+//     cmd_apply always deploys from main, so that is what "does the
+//     deployed package match what apply would deploy" must compare
+//     against. builtFrom (read from destDir's package.json, validated
+//     against builtFromPattern before ever reaching a git argument -- an
+//     absent, non-hex, or unresolvable value is simply carried as "" into
+//     the report) is surfaced as provenance via Stale/Disclosure only.
 //
 // buildRev is the ref buildInto's provenance resolution should use for the
 // comparison build (fed to resolvePackageVersion against the ORIGINAL
 // overlayRoot, which -- unlike a git-archive export -- still has full tag
-// history): the resolved builtFrom SHA for "ref", the literal "main" for
-// "main" (git describe accepts a branch name), or overlayRoot's current
-// HEAD for "worktree" (matching Check's pre-R-005 behavior exactly).
+// history): the resolved deploy ref for "deploy" (git describe accepts a
+// branch name), or overlayRoot's current HEAD for "worktree" (matching
+// Check's pre-R-005 behavior exactly).
 func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report CheckReport, sourceRoot, sourceRegistry, buildRev string, cleanup func(), err error) {
 	noopCleanup := func() {}
 	if exec.Command("git", "-C", overlayRoot, "rev-parse", "--is-inside-work-tree").Run() != nil {
@@ -431,29 +453,53 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report 
 	if builtFrom == "" && isSourceDirty(overlayRoot) {
 		return CheckReport{Basis: "dirty"}, overlayRoot, registryPath, "", noopCleanup, nil
 	}
-	if builtFrom != "" && builtFromPattern.MatchString(builtFrom) {
-		if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", builtFrom+"^{commit}").Run() == nil {
-			root, refCleanup, exportErr := exportGitTree(overlayRoot, builtFrom)
-			if exportErr == nil {
-				return CheckReport{Basis: "ref", Ref: builtFrom}, root, filepath.Join(root, "skills.registry.yaml"), builtFrom, refCleanup, nil
-			}
-		}
-	}
 
-	// A pull-request checkout in CI is a detached HEAD with no local "main";
-	// fall back through the refs that can exist and disclose the one used.
-	fallback := "main"
-	for _, candidate := range []string{"main", "origin/main", "HEAD"} {
+	// A pull-request checkout in CI is a detached HEAD with no local
+	// "main"; fall back through the refs that can exist and disclose the
+	// one used. This -- never builtFrom -- is the comparison target
+	// (R3-001): cmd_apply always deploys from main.
+	// LABDRIAN_PI_DEPLOY_REF lets a checkout that is not main (CI on a pull
+	// request, a feature-branch shelltest) name the ref it deploys from; the
+	// disclosure always prints whichever ref won, so an override never hides.
+	candidates := []string{"main", "origin/main", "HEAD"}
+	if override := strings.TrimSpace(os.Getenv("LABDRIAN_PI_DEPLOY_REF")); override != "" {
+		candidates = append([]string{override}, candidates...)
+	}
+	deployRef := "main"
+	for _, candidate := range candidates {
 		if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", candidate+"^{commit}").Run() == nil {
-			fallback = candidate
+			deployRef = candidate
 			break
 		}
 	}
-	root, mainCleanup, exportErr := exportGitTree(overlayRoot, fallback)
-	if exportErr != nil {
-		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting %s for comparison: %w", fallback, exportErr)
+	tipOut, tipErr := exec.Command("git", "-C", overlayRoot, "rev-parse", deployRef).Output()
+	if tipErr != nil {
+		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: resolving %s: %w", deployRef, tipErr)
 	}
-	return CheckReport{Basis: "main", Ref: builtFrom, Fallback: fallback}, root, filepath.Join(root, "skills.registry.yaml"), fallback, mainCleanup, nil
+	tip := strings.TrimSpace(string(tipOut))
+
+	// Stale: builtFrom is a resolvable commit that is not the deploy ref's
+	// tip -- committed source changes since the last Build are not
+	// deployed, even though (per the file-level diff below) the deployed
+	// content may still exactly match what was built at that older commit.
+	stale := builtFrom != "" && builtFromPattern.MatchString(builtFrom) && builtFrom != tip &&
+		exec.Command("git", "-C", overlayRoot, "cat-file", "-e", builtFrom+"^{commit}").Run() == nil
+
+	root, deployCleanup, exportErr := exportGitTree(overlayRoot, deployRef)
+	if exportErr != nil {
+		return CheckReport{}, "", "", "", noopCleanup, fmt.Errorf("pipkg: exporting %s for comparison: %w", deployRef, exportErr)
+	}
+	report = CheckReport{Basis: "deploy", DeployRef: deployRef, DeployTip: shortSHA(tip), BuiltFrom: builtFrom, Stale: stale}
+	return report, root, filepath.Join(root, "skills.registry.yaml"), deployRef, deployCleanup, nil
+}
+
+// shortSHA renders sha's short (12-hex-char) form, or sha unchanged when
+// it is already shorter than that.
+func shortSHA(sha string) string {
+	if len(sha) > 12 {
+		return sha[:12]
+	}
+	return sha
 }
 
 // readBuiltFrom reads destDir/package.json's labdrian.builtFrom value,
