@@ -49,13 +49,13 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: review-receipt-capture (PR 3, R-008)
 
-- [ ] 3.1 RED: `engine/reviewreceipt/reviewreceipt_test.go` TestCapture_SchemaAndTerminalState — `gentle-ai.review-receipt/v2` + `terminal_state==approved` required.
-- [ ] 3.2 RED: TestCapture_AtomicWrite — byte-identical write to `review-receipts/<lineage_id>.json`.
-- [ ] 3.3 RED: hook test — TestHook_PassThrough_NoOpenspecChanges; TestHook_Deny_MultipleActiveChanges (exit 2 naming `review-receipt capture --change <name>`); TestHook_Capture_SingleActiveChange.
-- [ ] 3.4 GREEN: `engine/reviewreceipt/reviewreceipt.go` `Capture(repo,change)`.
-- [ ] 3.5 GREEN: `bin/labdrian-overlay` `gentle-ai-overlay review-receipt hook` — fail-closed PreToolUse Bash hook matching `gentle-ai review acknowledge-approved`.
-- [ ] 3.6 GREEN: install-hooks registers hook under third settings identity.
-- [ ] 3.7 Docs: `engine/reviewreceipt/` package doc — fail-closed semantics, single-active-change rule.
+- [x] 3.1 RED: `engine/reviewreceipt/reviewreceipt_test.go` TestCapture_SchemaAndTerminalState — `gentle-ai.review-receipt/v2` + `terminal_state==approved` required.
+- [x] 3.2 RED: TestCapture_AtomicWrite — byte-identical write to `review-receipts/<lineage_id>.json`.
+- [x] 3.3 RED: hook test — TestHook_PassThrough_NoOpenspecChanges; TestHook_Deny_MultipleActiveChanges (exit 2 naming `review-receipt capture --change <name>`); TestHook_Capture_SingleActiveChange.
+- [x] 3.4 GREEN: `engine/reviewreceipt/reviewreceipt.go` `Capture(repo,change)`.
+- [x] 3.5 GREEN: `bin/labdrian-overlay` `gentle-ai-overlay review-receipt hook` — fail-closed PreToolUse Bash hook matching `gentle-ai review acknowledge-approved`.
+- [x] 3.6 GREEN: install-hooks registers hook under third settings identity.
+- [x] 3.7 Docs: `engine/reviewreceipt/` package doc — fail-closed semantics, single-active-change rule.
 
 ## Phase 4: receipt-anchor-gate (PR 4, R-009..R-011; depends on Phase 3)
 

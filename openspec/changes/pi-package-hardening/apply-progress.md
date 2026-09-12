@@ -183,3 +183,61 @@ None functionally — matches D5/D6/D7's intent exactly (`labdrian.builtFrom`, `
 ### Status
 
 Phase 2 (sync-check-provenance, R-005..R-007) is implemented and fully verified (all focused, runtime, and broad checks pass) but **blocked from committing by the 400-line review budget** (677 authored lines). Returning `partial`. The orchestrator should choose one of: (a) grant `size:exception` and have a follow-up apply batch commit this exact diff as-is, or (b) direct a further split (e.g., a separate PR for the `bin/labdrian-overlay` disclosure-line plumbing vs. the `engine/pipkg` core) before landing. No code was reverted; the worktree retains the full, tested Phase 2 implementation uncommitted.
+
+**Note (Slice 3 batch)**: Phase 2 landed on `main`'s stack at commit `f4bf3e4` ("docs(sdd): mark pi-package-hardening slice 2 tasks complete and record its size exception") with a granted `size:exception` before this Slice 3 batch started — `openspec/changes/pi-package-hardening/tasks.md` Phase 2 checkboxes are `[x]` on that commit. This apply-progress.md section is left as originally written (historical record); it does not reflect that later landing.
+
+## Slice 3: review-receipt-capture (PR 3, R-008)
+
+**Change**: pi-package-hardening
+**Mode**: Strict TDD (RED → GREEN → REFACTOR)
+**Branch**: `feat/pi-package-hardening-3-receipt` (stacked on `feat/pi-package-hardening-2-provenance` @ `f4bf3e4`)
+**Delivery status**: implemented and fully verified, **NOT committed** — exceeds the 400-authored-line budget (960 lines; see Workload / PR Boundary below). Working tree left uncommitted so the orchestrator can decide `size:exception` vs. a further split before this lands, mirroring the Slice 2 precedent.
+
+### Implemented (uncommitted) — tasks 3.1–3.7
+
+`tasks.md` Phase 3 checkboxes are intentionally left `[ ]` because nothing was committed this batch. The code, on disk in this worktree, is complete and passing:
+
+- 3.1 RED: `engine/reviewreceipt/reviewreceipt_test.go` `TestCapture_SchemaAndTerminalState` — real git-in-`t.TempDir()` fixture (skipped under `-short`); a receipt with the wrong schema or a non-`approved` `terminal_state` is silently skipped, never persisted.
+- 3.2 RED: `TestCapture_AtomicWrite` — byte-identical copy; a second `Capture` on the same source is a no-op (idempotent); a differing existing destination file is an error, never silently overwritten.
+- 3.3 RED: `engine/reviewreceipt/hook_test.go` `TestHook_PassThrough_NoOpenspecChanges`, `TestHook_Deny_MultipleActiveChanges` (exit 2 naming `review-receipt capture --change <name>`), `TestHook_Capture_SingleActiveChange`; plus `TestHook_PassThrough_CommandDoesNotMatch` (a non-acknowledge Bash command never triggers detection/capture).
+- 3.4 GREEN: `engine/reviewreceipt/reviewreceipt.go` `Capture(repoRoot, change) ([]Captured, error)` — resolves the transaction store from BOTH `git rev-parse --git-dir` (worktree-private) and `--git-common-dir` (shared), scans every lineage dir for an approved `gentle-ai.review-receipt/v2` receipt, and persists each byte-for-byte via a temp-file+rename atomic write. `DetectActiveChange(repoRoot)` resolves the single active (non-archive, artifact-bearing) change under `openspec/changes/`, returning `*MultipleActiveChangesError` when more than one qualifies.
+- 3.5 GREEN: `engine/reviewreceipt/hook.go` `RunHook(rawInput, repoRoot) (exitCode, message)` — string-matches `gentle-ai review acknowledge-approved` in `tool_input.command` (never parses the lineage or executes anything else); resolves the active change and calls `Capture`; fails CLOSED (exit 2) on ambiguity or capture error. Wired into `engine/cmd/main.go` as `engine review-receipt capture --cwd <repo> [--change <name>]` (CLI, exit 1 on error) and `engine review-receipt hook --cwd <repo>` (reads stdin, exits with `RunHook`'s code).
+- 3.6 GREEN: `engine/settings/settings.go` — fourth Labdrian identity `LabdrianReviewReceiptIdentity = "review-receipt"`; `HasLabdrianReviewReceiptHook`; `mergeHooks`/`removeHooks` install/uninstall a `PreToolUse`/`matcher:"Bash"` entry (dedup by binary+identity, mirroring the SessionEnd family's shape); `HasSupportedClaudeLifecycleState` now requires all four families. `engine/cmd/main.go` gained `checkReviewReceiptHook` (WARN/degraded, not FAIL, when absent — same tier and remediation note as `checkSessionEndHook`) wired into `statusCore`. `bin/labdrian-overlay`'s `cmd_install_hooks`/`cmd_uninstall_hooks` needed NO changes — both already delegate to `merge-settings`/`uninstall-hooks`, which pick up the new family automatically through `settings.Merger`.
+- 3.7 Docs: `engine/reviewreceipt/reviewreceipt.go` carries the package doc comment (fail-closed semantics, dual git-dir resolution, single-active-change rule, byte-identical/idempotent write contract).
+
+### Deviations from Design
+
+1. **Active-change detection does NOT use `state.yaml`.** D7/the spec literally says "non-archive dir under `openspec/changes/` with `state.yaml`". This repository's own `openspec/changes/*/` directories (pi-package-hardening included) **never carry a `state.yaml`** — confirmed by `find openspec -iname state.yaml` returning nothing anywhere in this repo's history. Requiring `state.yaml` would make `DetectActiveChange` permanently return zero active changes, i.e. the entire R-008 fix would be a silent no-op in this repository forever — exactly the self-asserted-archive bug it exists to close. `DetectActiveChange` instead treats any non-`archive` directory under `openspec/changes/` that contains at least one of `tasks.md`, `design.md`, `proposal.md`, or `entry.json` as active, which matches this repo's actual archiving convention (archived changes move into `archive/YYYY-MM-DD-<name>/`; active ones stay as plain directories). This is a functional necessity, not a style choice — flagging per the apply-phase rule to note when design is wrong rather than silently freelancing.
+2. **The missing-binary guard is NOT the `|| true` pattern used by every other hook family.** The other three families (minimalism, design, sync-trigger) are fail-SAFE and always exit 0 regardless of the wrapped command's outcome. review-receipt must be fail-CLOSED per D7/the spec, so its guard is `command -v <bin> >/dev/null 2>&1 || exit 0; <bin> review-receipt hook ...` — the binary's own exit code (0 allow / 2 deny) propagates unmasked once the binary is found; only a genuinely absent binary short-circuits to 0. Documented inline in `buildReviewReceiptPreToolUseEntry`'s doc comment.
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./reviewreceipt/... ./settings/... ./cmd/...` → all three packages `ok`, 0 failures (`reviewreceipt` 6 tests incl. 2 real-git fixtures; `settings` includes the extended 4-family lifecycle test; `cmd` includes the new CLI/status tests). |
+| Runtime harness command/scenario and exact result | Real `git init` fixture in `t.TempDir()` (skipped under `-short`) exercising `git rev-parse --git-dir`/`--git-common-dir` against an actual repository, a fabricated approved `review-receipt.json` under `.git/gentle-ai/review-transactions/v2/<lineage>/`, and the full `engine review-receipt capture --cwd <repo> --change <name>` CLI path end to end (`TestRunReviewReceiptCapture_ExplicitChange_Captures`): the receipt is copied byte-for-byte into `openspec/changes/<change>/review-receipts/<lineage>.json`. |
+| Rollback boundary | Delete `engine/reviewreceipt/` entirely; revert `engine/cmd/main.go` (review-receipt subcommand + status check), `engine/cmd/main_test.go`, `engine/settings/settings.go` (4th identity), `engine/settings/settings_test.go` — independently revertible; no cross-slice coupling (Phase 1/2 files untouched this batch). |
+
+### Broad Verification
+
+| Command | Result |
+|---|---|
+| `cd engine && gofmt -l .` | empty (clean) |
+| `cd engine && go vet ./...` | no output (clean) |
+| `cd engine && go test -count=1 -race ./...` | all 13 packages `ok` |
+| `shellcheck -S warning bin/labdrian-overlay` | 2 findings, both pre-existing `SC2064` (unrelated to this slice; no new findings; bin/labdrian-overlay was not modified) |
+| `git diff --stat f4bf3e4 -- engine bin tools skills` (working tree, uncommitted) | 8 files changed, 960 insertions(+), 19 deletions(-) — **960 authored lines total, over the 400-line budget** (design's own slice table estimated 300–400 for this slice) |
+
+### Workload / PR Boundary — BLOCKED on budget, size:exception recommended
+
+- Mode: stacked-to-main PR slice (PR 3 of 5), per the entry contract's `review_slices` (P=5, when available — see Plan vs Realized below).
+- Current work unit: review-receipt-capture (R-008), tasks 3.1–3.7 (all of Phase 3).
+- Boundary: starts from `f4bf3e4` (Phases 1–2, merged into this stack), would end with Phase 3 GREEN + docs, all tests passing, tasks 3.1–3.7 marked `[x]` — **not yet landed**.
+- One honest slicing pass was completed (this is that pass): the new `engine/reviewreceipt` package (594 lines incl. tests) is inherently a new package with its own git-fixture-based RED tests; the CLI/settings/status wiring (385 lines incl. tests) is the minimum needed to actually register and exercise the hook per D7. No code-golfing was applied (no comments, blank lines, docs, or tests removed to shrink the diff), per the explicit "never shrink a diff... to fit the review budget" guard.
+- **STOPPED before committing per this batch's explicit instruction** ("Budget 400 authored lines... STOP `partial` before committing if exceeded"), mirroring the Slice 2 precedent exactly. The worktree is left with all Phase 3 changes present but uncommitted (`git status` shows 4 modified files + 4 untracked new files in `engine/reviewreceipt/`).
+- `tasks.md` Phase 3 checkboxes (3.1–3.7) are intentionally left `[ ]` — the work is implemented and verified, but not delivered.
+- Slices planned=5 realized=2 (Slice 1 @ `98f8410`, Slice 2 @ `f4bf3e4` — both already landed on this stack before this batch started; no new slice delivered/committed this batch). Within tolerance (`R=2 <= P + max(1, ceil(0.2*5))=6`).
+
+### Status
+
+Phase 3 (review-receipt-capture, R-008) is implemented and fully verified (all focused, runtime, and broad checks pass) but **blocked from committing by the 400-line review budget** (960 authored lines). Returning `partial`. The orchestrator should choose one of: (a) grant `size:exception` and have a follow-up apply batch commit this exact diff as-is (the precedent from Slice 2), or (b) direct a further split (e.g., a separate PR for the `engine/reviewreceipt` core+hook package vs. the CLI/settings/status wiring) before landing. No code was reverted; the worktree retains the full, tested Phase 3 implementation uncommitted.

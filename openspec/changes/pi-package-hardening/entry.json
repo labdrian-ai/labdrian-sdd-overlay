@@ -62,10 +62,10 @@
     "counting_method": "authored-additions-and-deletions",
     "size_exception": {
       "state": "granted",
-      "scope": "sync-check-provenance",
-      "changed_lines": 677,
+      "scope": "sync-check-provenance, review-receipt-capture",
+      "changed_lines": 1637,
       "authorized_by": "labdrian (maintainer)",
-      "reason": "slice 2 sync-check-provenance landed at 677 authored lines as one cohesive strict-TDD unit (builtFrom recording, CheckReport basis, git-archive export with path containment, disclosure); granted 2026-09-11 at delivery"
+      "reason": "slice 2 sync-check-provenance 677 and slice 3 review-receipt-capture 960 authored lines, each a cohesive strict-TDD unit (new package plus CLI, settings identity, and status wiring); granted 2026-09-12 at delivery"
     }
   },
   "strict_tdd": {
