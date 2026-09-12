@@ -2,6 +2,7 @@ package reviewreceipt_test
 
 import (
 	"encoding/json"
+	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -108,6 +109,116 @@ func TestCapture_SchemaAndTerminalState(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(destDir, "review-notapproved.json")); !os.IsNotExist(err) {
 		t.Errorf("non-approved receipt should NOT be persisted, stat err=%v", err)
+	}
+}
+
+// stateJSON builds a minimal gentle-ai 2.7.0+ review-state.json payload.
+func stateJSON(lineage, state string) []byte {
+	return []byte(fmt.Sprintf(
+		`{"schema":"gentle-ai.review-transaction/v2","revision":3,"state":{`+
+			`"schema":"gentle-ai.review-state/v2","lineage_id":%q,"generation":1,"state":%q,`+
+			`"risk_level":"medium","selected_lenses":["review-risk","review-readability"],`+
+			`"initial_snapshot":{"base_tree":"basetree1"},`+
+			`"current_snapshot":{"kind":"candidate","base_tree":"basetree1","candidate_tree":"candidatetree1"}}}`,
+		lineage, state))
+}
+
+// writeReviewState writes review-state.json (gentle-ai 2.7.0+ shape) under
+// repo's git-dir transaction store.
+func writeReviewState(t *testing.T, repo, lineage, state string) {
+	t.Helper()
+	lineageDir := filepath.Join(repo, ".git", "gentle-ai", "review-transactions", "v2", lineage)
+	if err := os.MkdirAll(lineageDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(lineageDir, "review-state.json"), stateJSON(lineage, state), 0644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestCapture_ReviewStateApproved: Capture also captures an approved
+// review-state.json (2.7.0+ writes no review-receipt.json).
+func TestCapture_ReviewStateApproved(t *testing.T) {
+	repo := gitFixtureRepo(t)
+	seedActiveChange(t, repo, "my-change")
+	writeReviewState(t, repo, "review-state-approved1", "approved")
+
+	captured, err := reviewreceipt.Capture(repo, "my-change")
+	if err != nil || len(captured) != 1 || captured[0].LineageID != "review-state-approved1" {
+		t.Fatalf("Capture: got %#v, err=%v", captured, err)
+	}
+	dest := filepath.Join(repo, "openspec", "changes", "my-change", "review-receipts", "review-state-approved1.review-state.json")
+	if _, err := os.Stat(dest); err != nil {
+		t.Errorf("expected review-state.json persisted at %s: %v", dest, err)
+	}
+}
+
+// TestCapture_ReviewStateNotApproved asserts a review-state.json still in
+// review (not yet terminal-approved) is skipped, not captured.
+func TestCapture_ReviewStateNotApproved(t *testing.T) {
+	for _, state := range []string{"reviewing", "escalated"} {
+		repo := gitFixtureRepo(t)
+		seedActiveChange(t, repo, "my-change")
+		writeReviewState(t, repo, "review-state-x", state)
+
+		captured, err := reviewreceipt.Capture(repo, "my-change")
+		if err != nil || len(captured) != 0 {
+			t.Fatalf("state=%q: got %#v, err=%v", state, captured, err)
+		}
+	}
+}
+
+// TestCapture_BothFormatsPresent asserts a lineage carrying both an
+// approved legacy receipt AND an approved review-state.json (a
+// mixed-version transition) captures both, to distinct destinations.
+func TestCapture_BothFormatsPresent(t *testing.T) {
+	repo := gitFixtureRepo(t)
+	seedActiveChange(t, repo, "my-change")
+	writeReceipt(t, repo, "review-both1", "gentle-ai.review-receipt/v2", "approved")
+	writeReviewState(t, repo, "review-both1", "approved")
+
+	captured, err := reviewreceipt.Capture(repo, "my-change")
+	if err != nil || len(captured) != 2 {
+		t.Fatalf("expected 2 captured, got %#v, err=%v", captured, err)
+	}
+	destDir := filepath.Join(repo, "openspec", "changes", "my-change", "review-receipts")
+	for _, name := range []string{"review-both1.json", "review-both1.review-state.json"} {
+		if _, err := os.Stat(filepath.Join(destDir, name)); err != nil {
+			t.Errorf("expected %s persisted: %v", name, err)
+		}
+	}
+}
+
+// TestApprovedSummary asserts ApprovedSummary reads the same logical tuple
+// from equivalent legacy-receipt and review-state fixtures.
+func TestApprovedSummary(t *testing.T) {
+	dir := t.TempDir()
+	receiptPath := filepath.Join(dir, "receipt.json")
+	receiptJSON := []byte(`{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-summary1",` +
+		`"final_candidate_tree":"candidatetree1","base_tree":"basetree1",` +
+		`"selected_lenses":["review-risk","review-readability"],"risk_level":"medium","terminal_state":"approved"}`)
+	if err := os.WriteFile(receiptPath, receiptJSON, 0644); err != nil {
+		t.Fatal(err)
+	}
+	statePath := filepath.Join(dir, "state.json")
+	if err := os.WriteFile(statePath, stateJSON("review-summary1", "approved"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	rLineage, rTree, rBase, rLenses, rRisk, err := reviewreceipt.ApprovedSummary(receiptPath)
+	if err != nil {
+		t.Fatalf("ApprovedSummary(receipt): %v", err)
+	}
+	sLineage, sTree, sBase, sLenses, sRisk, err := reviewreceipt.ApprovedSummary(statePath)
+	if err != nil {
+		t.Fatalf("ApprovedSummary(state): %v", err)
+	}
+	if rLineage != sLineage || rTree != sTree || rBase != sBase || rRisk != sRisk || len(rLenses) != len(sLenses) {
+		t.Errorf("summary mismatch: receipt=(%q,%q,%q,%v,%q) state=(%q,%q,%q,%v,%q)",
+			rLineage, rTree, rBase, rLenses, rRisk, sLineage, sTree, sBase, sLenses, sRisk)
+	}
+	if rLineage != "review-summary1" || rTree != "candidatetree1" || rBase != "basetree1" || rRisk != "medium" {
+		t.Errorf("unexpected values: %q %q %q %q", rLineage, rTree, rBase, rRisk)
 	}
 }
 

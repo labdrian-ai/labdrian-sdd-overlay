@@ -7,8 +7,13 @@
 // `git rev-parse --git-dir` (worktree-private, where the active review
 // transaction for a linked worktree lives) and `--git-common-dir` (the
 // shared store), scans each for lineage directories carrying an approved
-// gentle-ai.review-receipt/v2 receipt, and copies each byte-for-byte into
-// openspec/changes/<change>/review-receipts/<lineage_id>.json.
+// artifact, and copies each byte-for-byte into
+// openspec/changes/<change>/review-receipts/. Two on-disk shapes are
+// recognized: the legacy "review-receipt.json" (gentle-ai < 2.7.0),
+// persisted as <lineage_id>.json, and the 2.7.0+ lifecycle
+// "review-state.json" (an approved-but-unacknowledged lineage directory
+// contains ONLY this file), persisted as <lineage_id>.review-state.json.
+// Both are captured when both are present.
 //
 // Single-active-change rule: a review receipt names no change of its own, so
 // DetectActiveChange resolves which change a captured receipt belongs to by
@@ -48,8 +53,17 @@ const receiptSchema = "gentle-ai.review-receipt/v2"
 // un-acknowledged and worth preserving before the burn.
 const approvedState = "approved"
 
-// receiptFileName is the file Capture looks for inside each lineage directory.
+// receiptFileName is the legacy receipt file (gentle-ai < 2.7.0) Capture
+// looks for inside each lineage directory.
 const receiptFileName = "review-receipt.json"
+
+// stateFileName is the lifecycle state file gentle-ai 2.7.0+ writes
+// instead of receiptFileName.
+const stateFileName = "review-state.json"
+
+// stateSuffix distinguishes a captured review-state.json from a captured
+// legacy receipt sharing the same lineage id.
+const stateSuffix = ".review-state.json"
 
 // storeRelPath is the transaction store location relative to a git-dir.
 var storeRelPath = filepath.Join("gentle-ai", "review-transactions", "v2")
@@ -70,12 +84,33 @@ type Captured struct {
 	Path      string
 }
 
-// receipt is the subset of gentle-ai.review-receipt/v2 fields Capture
-// validates before persisting the receipt byte-for-byte.
+// receipt is the subset of gentle-ai.review-receipt/v2 fields Capture and
+// ApprovedSummary read.
 type receipt struct {
-	Schema        string `json:"schema"`
-	LineageID     string `json:"lineage_id"`
-	TerminalState string `json:"terminal_state"`
+	Schema             string   `json:"schema"`
+	LineageID          string   `json:"lineage_id"`
+	TerminalState      string   `json:"terminal_state"`
+	FinalCandidateTree string   `json:"final_candidate_tree"`
+	BaseTree           string   `json:"base_tree"`
+	SelectedLenses     []string `json:"selected_lenses"`
+	RiskLevel          string   `json:"risk_level"`
+}
+
+// reviewState is the subset of review-state.json's nested "state" object
+// that Capture and ApprovedSummary read.
+type reviewState struct {
+	State struct {
+		LineageID       string   `json:"lineage_id"`
+		State           string   `json:"state"`
+		RiskLevel       string   `json:"risk_level"`
+		SelectedLenses  []string `json:"selected_lenses"`
+		InitialSnapshot struct {
+			BaseTree string `json:"base_tree"`
+		} `json:"initial_snapshot"`
+		CurrentSnapshot struct {
+			CandidateTree string `json:"candidate_tree"`
+		} `json:"current_snapshot"`
+	} `json:"state"`
 }
 
 // Capture scans both the worktree-private and common git transaction stores
@@ -95,7 +130,8 @@ func Capture(repoRoot, change string) ([]Captured, error) {
 	targetDir := filepath.Join(repoRoot, "openspec", "changes", change, "review-receipts")
 
 	var captured []Captured
-	seen := map[string]bool{}
+	seenReceipt := map[string]bool{}
+	seenState := map[string]bool{}
 	for _, store := range stores {
 		entries, err := os.ReadDir(store)
 		if err != nil {
@@ -108,30 +144,66 @@ func Capture(repoRoot, change string) ([]Captured, error) {
 			if !e.IsDir() {
 				continue
 			}
-			data, err := os.ReadFile(filepath.Join(store, e.Name(), receiptFileName))
-			if err != nil {
-				continue // no receipt in this lineage dir -- not Capture's concern
-			}
-			var r receipt
-			if err := json.Unmarshal(data, &r); err != nil {
-				continue
-			}
-			if r.Schema != receiptSchema || r.TerminalState != approvedState || r.LineageID == "" {
-				continue
-			}
-			if seen[r.LineageID] {
-				continue
-			}
-			seen[r.LineageID] = true
+			lineageDir := filepath.Join(store, e.Name())
 
-			dest := filepath.Join(targetDir, r.LineageID+".json")
-			if err := writeReceiptFile(targetDir, dest, data); err != nil {
-				return captured, err
+			if data, err := os.ReadFile(filepath.Join(lineageDir, receiptFileName)); err == nil {
+				var r receipt
+				if json.Unmarshal(data, &r) == nil && r.Schema == receiptSchema &&
+					r.TerminalState == approvedState && r.LineageID != "" && !seenReceipt[r.LineageID] {
+					seenReceipt[r.LineageID] = true
+					dest := filepath.Join(targetDir, r.LineageID+".json")
+					if err := writeReceiptFile(targetDir, dest, data); err != nil {
+						return captured, err
+					}
+					captured = append(captured, Captured{LineageID: r.LineageID, Path: dest})
+				}
 			}
-			captured = append(captured, Captured{LineageID: r.LineageID, Path: dest})
+			if data, err := os.ReadFile(filepath.Join(lineageDir, stateFileName)); err == nil {
+				var s reviewState
+				if json.Unmarshal(data, &s) == nil && s.State.State == approvedState &&
+					s.State.LineageID != "" && !seenState[s.State.LineageID] {
+					seenState[s.State.LineageID] = true
+					dest := filepath.Join(targetDir, s.State.LineageID+stateSuffix)
+					if err := writeReceiptFile(targetDir, dest, data); err != nil {
+						return captured, err
+					}
+					captured = append(captured, Captured{LineageID: s.State.LineageID, Path: dest})
+				}
+			}
 		}
 	}
 	return captured, nil
+}
+
+// ApprovedSummary reads an approved review artifact at path -- either
+// shape Capture persists -- and returns the tuple a caller needs to
+// verify an approved_tree anchor. Errors if path is unreadable, unparsable
+// as either shape, or not approved.
+func ApprovedSummary(path string) (lineage, finalCandidateTree, baseTree string, lenses []string, riskLevel string, err error) {
+	data, readErr := os.ReadFile(path)
+	if readErr != nil {
+		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: read %s: %w", path, readErr)
+	}
+
+	var r receipt
+	if json.Unmarshal(data, &r) == nil && r.Schema == receiptSchema {
+		if r.TerminalState != approvedState {
+			return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is not approved (terminal_state=%q)", path, r.TerminalState)
+		}
+		return r.LineageID, r.FinalCandidateTree, r.BaseTree, r.SelectedLenses, r.RiskLevel, nil
+	}
+
+	var s reviewState
+	if err := json.Unmarshal(data, &s); err != nil {
+		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is neither a recognized receipt nor review-state file: %w", path, err)
+	}
+	if s.State.LineageID == "" {
+		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is neither a recognized receipt nor review-state file", path)
+	}
+	if s.State.State != approvedState {
+		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is not approved (state=%q)", path, s.State.State)
+	}
+	return s.State.LineageID, s.State.CurrentSnapshot.CandidateTree, s.State.InitialSnapshot.BaseTree, s.State.SelectedLenses, s.State.RiskLevel, nil
 }
 
 // writeReceiptFile persists data at dest byte-for-byte, atomically (temp

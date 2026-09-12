@@ -241,3 +241,61 @@ Phase 2 (sync-check-provenance, R-005..R-007) is implemented and fully verified 
 ### Status
 
 Phase 3 (review-receipt-capture, R-008) is implemented and fully verified (all focused, runtime, and broad checks pass) but **blocked from committing by the 400-line review budget** (960 authored lines). Returning `partial`. The orchestrator should choose one of: (a) grant `size:exception` and have a follow-up apply batch commit this exact diff as-is (the precedent from Slice 2), or (b) direct a further split (e.g., a separate PR for the `engine/reviewreceipt` core+hook package vs. the CLI/settings/status wiring) before landing. No code was reverted; the worktree retains the full, tested Phase 3 implementation uncommitted.
+
+### Slice 3 amendment (gentle-ai 2.7.0 compatibility)
+
+Verified fact: gentle-ai 2.7.0 no longer writes `review-receipt.json` on
+approval. An approved-but-unacknowledged lineage directory under
+`<git-common-dir>/gentle-ai/review-transactions/v2/<lineage>/` now contains
+ONLY `review-state.json` (`{"schema", "revision", "state": {"schema":
+"gentle-ai.review-state/v2", "lineage_id", "generation", "state":
+"approved", "initial_snapshot": {"base_tree", ...}, "current_snapshot":
+{"kind", "base_tree", "candidate_tree", ...}, "risk_level",
+"selected_lenses", ...}}`), confirmed against a real (never-acknowledged)
+lineage in this repo's own `.git/gentle-ai/review-transactions/v2/`. As
+written, `Capture` only recognized the legacy `review-receipt.json` shape
+and was therefore inert on 2.7.0.
+
+`engine/reviewreceipt/reviewreceipt.go` now recognizes BOTH shapes inside
+each scanned lineage directory, independently and non-exclusively: the
+legacy `review-receipt.json` (schema `gentle-ai.review-receipt/v2`,
+`terminal_state == "approved"`) is persisted as before to
+`<lineage>.json`; an approved `review-state.json`
+(`state.state == "approved"`) is persisted to
+`<lineage>.review-state.json`. A lineage carrying both (a mixed-version
+transition) captures both, to their distinct destinations — verified by
+`TestCapture_BothFormatsPresent`. A non-terminal `review-state.json`
+(`reviewing`, `escalated`, ...) is skipped, not captured
+(`TestCapture_ReviewStateNotApproved`). Byte-for-byte, atomic,
+idempotent-write semantics (`writeReceiptFile`) are unchanged and apply to
+both shapes alike.
+
+A new exported `ApprovedSummary(path) (lineage, finalCandidateTree,
+baseTree string, lenses []string, riskLevel string, err error)` reads
+either persisted shape and returns the tuple slice 4's archive-anchor gate
+needs, so that gate never has to special-case which shape a given change's
+captured artifact happens to be. `TestApprovedSummary` fixtures the same
+logical values (lineage, candidate tree, base tree, lenses, risk level) in
+both shapes and asserts `ApprovedSummary` returns an identical tuple from
+either. RED confirmed by a compile failure (`undefined:
+reviewreceipt.ApprovedSummary`) before implementation; all new and
+pre-existing `reviewreceipt`, `cmd`, and `settings` tests are GREEN after.
+
+`engine/cmd/main.go` needed no change: `runReviewReceiptCapture`'s output
+("N receipt(s) captured for %q") already counts `len(captured)` generically
+across whatever `Capture` returns, regardless of shape.
+
+`openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md`'s
+first requirement (R-008) is reworded to describe both on-disk shapes
+instead of asserting the legacy receipt is the only artifact; scenario
+count and R-008 tracing are unchanged.
+
+Budget note: this amendment's diff (`reviewreceipt.go` +100/-28,
+`reviewreceipt_test.go` +111, `spec.md` +15/-7 — 261 changed lines total)
+runs somewhat over the 200-line guidance for this batch. The overage is the
+struct-field growth needed on the existing `receipt` type (four new fields
+so `ApprovedSummary` can read the legacy shape too) plus the new
+`reviewState` type and its nested snapshot shape — both load-bearing for
+correctness, not incidental. Two trimming passes were applied (test fixture
+JSON collapsed into a shared `stateJSON` helper; doc comments shortened)
+before accepting the remainder.
