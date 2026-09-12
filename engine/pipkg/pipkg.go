@@ -195,6 +195,9 @@ func preserveIfExists(destDir, tmpDir, name string) error {
 //     (unresolvable) builtFrom value, if any, for the disclosure message.
 //   - "worktree": overlayRoot is not a git repository at all, so Check
 //     compared against the plain working tree, exactly as before R-005.
+//   - "dirty": builtFrom is absent because Build ran against a dirty
+//     source tree (R3-001), so Check compared directly against the live
+//     overlayRoot instead of any git export.
 type CheckReport struct {
 	Basis string
 	Ref   string
@@ -215,6 +218,8 @@ func (r CheckReport) Disclosure() string {
 		return "compared against main; builtFrom is not recorded"
 	case "worktree":
 		return "compared against the worktree (overlay root is not a git repository)"
+	case "dirty":
+		return "compared against the worktree; the package was built from an uncommitted source tree"
 	default:
 		return ""
 	}
@@ -413,6 +418,12 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report 
 	}
 
 	builtFrom := readBuiltFrom(destDir)
+	// R3-001: an absent builtFrom because Build ran against a dirty tree
+	// can only be reproduced by comparing against that same live tree --
+	// any git export would reproduce the last commit instead.
+	if builtFrom == "" && isSourceDirty(overlayRoot) {
+		return CheckReport{Basis: "dirty"}, overlayRoot, registryPath, "", noopCleanup, nil
+	}
 	if builtFrom != "" && builtFromPattern.MatchString(builtFrom) {
 		if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", builtFrom+"^{commit}").Run() == nil {
 			root, refCleanup, exportErr := exportGitTree(overlayRoot, builtFrom)
@@ -471,6 +482,9 @@ func exportGitTree(overlayRoot, rev string) (string, func(), error) {
 		return "", func() {}, fmt.Errorf("pipkg: starting git archive: %w", err)
 	}
 	extractErr := extractTar(stdout, tmp)
+	// R3-002: extractTar can return before the stream is exhausted; drain
+	// any remainder or git blocks forever on a full stdout pipe below.
+	_, _ = io.Copy(io.Discard, stdout)
 	waitErr := cmd.Wait()
 	if waitErr != nil {
 		cleanup()
@@ -693,15 +707,29 @@ func loadRegistry(registryPath string) (skills.Registry, error) {
 }
 
 // resolveBuildRev resolves overlayRoot's checked-out HEAD commit SHA
-// (R-005), returning "" when overlayRoot is not a git repo or HEAD cannot
-// be resolved (this is a local, no-fetch lookup — never touches the
-// network).
+// (R-005), returning "" when overlayRoot is not a git repo, HEAD cannot be
+// resolved, or the source tree is dirty (R3-001: files Build is about to
+// copy would not match a recorded HEAD). Local, no-fetch lookup.
 func resolveBuildRev(overlayRoot string) string {
+	if isSourceDirty(overlayRoot) {
+		return ""
+	}
 	out, err := exec.Command("git", "-C", overlayRoot, "rev-parse", "HEAD").Output()
 	if err != nil {
 		return ""
 	}
 	return strings.TrimSpace(string(out))
+}
+
+// isSourceDirty reports whether skills/, agents/, or skills.registry.yaml
+// under overlayRoot have any uncommitted change, tracked or untracked
+// (R3-001). A non-git overlayRoot or any git error is reported as clean.
+func isSourceDirty(overlayRoot string) bool {
+	out, err := exec.Command("git", "-C", overlayRoot, "status", "--porcelain", "--untracked-files=all", "--", "skills", "agents", "skills.registry.yaml").Output()
+	if err != nil {
+		return false
+	}
+	return len(strings.TrimSpace(string(out))) > 0
 }
 
 // resolvePackageVersion resolves the newest reachable "v*"-tag reachable

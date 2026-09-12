@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 )
@@ -233,5 +234,86 @@ func corruptBuiltFrom(t *testing.T, destDir, builtFrom string) {
 	}
 	if err := os.WriteFile(path, out, 0644); err != nil {
 		t.Fatalf("write package.json: %v", err)
+	}
+}
+
+// TestBuiltFrom_DirtyTreeNotRecorded (R3-001): Build must not record
+// builtFrom as the committed HEAD when the source tree is dirty --
+// otherwise Check's ref-basis regeneration would read the stale committed
+// content and misreport the uncommitted edit Build actually shipped as
+// drift.
+func TestBuiltFrom_DirtyTreeNotRecorded(t *testing.T) {
+	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	// Edit a registered skill WITHOUT committing.
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nuncommitted edit\n")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	raw, err := os.ReadFile(filepath.Join(destDir, "package.json"))
+	if err != nil {
+		t.Fatalf("read package.json: %v", err)
+	}
+	var manifest struct {
+		Labdrian *struct {
+			BuiltFrom string `json:"builtFrom"`
+		} `json:"labdrian"`
+	}
+	if err := json.Unmarshal(raw, &manifest); err != nil {
+		t.Fatalf("unmarshal package.json: %v", err)
+	}
+	if manifest.Labdrian != nil && manifest.Labdrian.BuiltFrom != "" {
+		t.Errorf("labdrian.builtFrom = %q, want absent for a dirty source tree", manifest.Labdrian.BuiltFrom)
+	}
+
+	report, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	if err != nil {
+		t.Errorf("Check must report no drift right after a dirty-tree Build, got: %v", err)
+	}
+	if report.Basis == "ref" {
+		t.Errorf("report.Basis = %q, want a non-ref basis for an unrecorded builtFrom", report.Basis)
+	}
+}
+
+// TestExportGitTree_DrainsPipeOnExtractionError (R3-002): an extraction
+// error (a symlink entry) partway through a `git archive` tar stream must
+// not leave the remainder of stdout unread -- git blocks writing to a full
+// (~64KB) pipe, so a caller that fails to drain it before cmd.Wait() hangs
+// forever. Export must return the extraction error promptly instead.
+func TestExportGitTree_DrainsPipeOnExtractionError(t *testing.T) {
+	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	// A symlink (sorts before the large file, so extractTar hits the
+	// refusal before the large entry is read off the stream) plus a
+	// >64KB file, so the unread tar remainder exceeds a pipe's kernel
+	// buffer.
+	if err := os.Symlink("other-skill", filepath.Join(overlayRoot, "skills", "a-symlink")); err != nil {
+		t.Fatalf("create symlink fixture: %v", err)
+	}
+	writeFile(t, filepath.Join(overlayRoot, "skills", "z-large.bin"), strings.Repeat("x", 256*1024))
+	runGit(t, overlayRoot, "add", "-A")
+	runGit(t, overlayRoot, "commit", "-q", "-m", "add symlink and large file")
+	badSHA := strings.TrimSpace(runGit(t, overlayRoot, "rev-parse", "HEAD"))
+	corruptBuiltFrom(t, destDir, badSHA)
+
+	done := make(chan error, 1)
+	go func() {
+		_, err := pipkg.Check(overlayRoot, registryPath, destDir)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("Check must report an error for a symlink found in the exported git tree")
+		}
+	case <-time.After(10 * time.Second):
+		t.Fatal("Check hung: git archive's stdout pipe was not drained after an extraction error (R3-002)")
 	}
 }
