@@ -34,8 +34,9 @@ func TestHook_PassThrough_NoOpenspecChanges(t *testing.T) {
 
 // TestHook_Deny_MultipleActiveChanges asserts the hook denies (exit 2) with
 // a message naming `review-receipt capture --change <name>` when more than
-// one active change exists -- it must not guess which change owns the
-// receipt.
+// one active change exists and the surviving approved receipt has NOT been
+// explicitly captured anywhere yet -- it must not guess which change owns
+// the receipt.
 func TestHook_Deny_MultipleActiveChanges(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "change-a")
@@ -45,6 +46,54 @@ func TestHook_Deny_MultipleActiveChanges(t *testing.T) {
 	exitCode, message := reviewreceipt.RunHook([]byte(ackHookInput), repo)
 	if exitCode != 2 {
 		t.Fatalf("expected exit 2, got %d", exitCode)
+	}
+	if !strings.Contains(message, "review-receipt capture --change <name>") {
+		t.Errorf("message %q does not name the remediation command", message)
+	}
+}
+
+// TestHook_MultiChange_PassesAfterExplicitCapture: deny, then Capture into
+// one active change, then a retried acknowledgement passes.
+func TestHook_MultiChange_PassesAfterExplicitCapture(t *testing.T) {
+	repo := gitFixtureRepo(t)
+	seedActiveChange(t, repo, "change-a")
+	seedActiveChange(t, repo, "change-b")
+	writeReceipt(t, repo, "review-fixable", "gentle-ai.review-receipt/v2", "approved")
+
+	exitCode, _ := reviewreceipt.RunHook([]byte(ackHookInput), repo)
+	if exitCode != 2 {
+		t.Fatalf("expected first run to deny (exit 2), got %d", exitCode)
+	}
+
+	if _, err := reviewreceipt.Capture(repo, "change-a"); err != nil {
+		t.Fatalf("Capture: %v", err)
+	}
+
+	exitCode, message := reviewreceipt.RunHook([]byte(ackHookInput), repo)
+	if exitCode != 0 {
+		t.Fatalf("expected second run to pass (exit 0) after explicit capture, got %d (message: %q)", exitCode, message)
+	}
+}
+
+// TestHook_MultiChange_DeniesWhenAnyUncaptured: capturing one of two
+// surviving lineages must not clear the deny for the other, uncaptured one.
+func TestHook_MultiChange_DeniesWhenAnyUncaptured(t *testing.T) {
+	repo := gitFixtureRepo(t)
+	seedActiveChange(t, repo, "change-a")
+	seedActiveChange(t, repo, "change-b")
+	writeReceipt(t, repo, "review-captured", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, repo, "review-uncaptured", "gentle-ai.review-receipt/v2", "approved")
+
+	if _, err := reviewreceipt.Capture(repo, "change-a"); err != nil {
+		t.Fatalf("Capture: %v", err)
+	}
+	if err := os.Remove(filepath.Join(repo, "openspec", "changes", "change-a", "review-receipts", "review-uncaptured.json")); err != nil {
+		t.Fatalf("cleanup: %v", err)
+	}
+
+	exitCode, message := reviewreceipt.RunHook([]byte(ackHookInput), repo)
+	if exitCode != 2 {
+		t.Fatalf("expected exit 2 (one lineage still uncaptured), got %d (message: %q)", exitCode, message)
 	}
 	if !strings.Contains(message, "review-receipt capture --change <name>") {
 		t.Errorf("message %q does not name the remediation command", message)

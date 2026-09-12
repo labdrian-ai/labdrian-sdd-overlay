@@ -38,10 +38,13 @@ type hookInput struct {
 //     receipt to.
 //   - (0, "") -- allow: exactly one active change existed and Capture
 //     succeeded.
-//   - (2, message) -- deny: more than one active change exists, or Capture
-//     itself failed. Fail-closed: the acknowledgement must never proceed
-//     without a persisted receipt when capture could not be resolved
-//     unambiguously.
+//   - (0, "") -- allow: more than one active change exists, but every
+//     surviving approved receipt is already persisted under some active
+//     change (the `capture --change <name>` remedy already ran) -- a
+//     fix-forward path for a retried acknowledgement.
+//   - (2, message) -- deny: more than one active change exists and at
+//     least one surviving approved receipt is unpersisted, or Capture
+//     itself failed. Fail-closed.
 //
 // Malformed or empty input is treated the same as a non-matching command --
 // pass through -- because a hook that cannot even see a command is not
@@ -59,6 +62,13 @@ func RunHook(rawInput []byte, repoRoot string) (exitCode int, message string) {
 	if err != nil {
 		var multi *MultipleActiveChangesError
 		if errors.As(err, &multi) {
+			allPersisted, perr := AllSurvivingApprovedPersisted(repoRoot, multi.Changes)
+			if perr != nil {
+				return 2, fmt.Sprintf("review-receipt: %v", perr)
+			}
+			if allPersisted {
+				return 0, ""
+			}
 			return 2, multi.Error()
 		}
 		return 2, fmt.Sprintf("review-receipt: %v", err)

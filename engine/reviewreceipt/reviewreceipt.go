@@ -175,6 +175,82 @@ func Capture(repoRoot, change string) ([]Captured, error) {
 	return captured, nil
 }
 
+// survivingReceipt is one currently-approved receipt, either shape; FileName
+// is the name Capture persists it under (e.g. "<lineage>.json").
+type survivingReceipt struct {
+	LineageID, FileName string
+	Data                []byte
+}
+
+// scanSurvivingApproved lists every currently-approved receipt across
+// stores (either shape), deduped by lineage ID like Capture.
+func scanSurvivingApproved(stores []string) ([]survivingReceipt, error) {
+	var out []survivingReceipt
+	seen := map[string]bool{}
+	for _, store := range stores {
+		entries, err := os.ReadDir(store)
+		if err != nil {
+			if os.IsNotExist(err) {
+				continue
+			}
+			return nil, fmt.Errorf("reviewreceipt: read %s: %w", store, err)
+		}
+		for _, e := range entries {
+			if !e.IsDir() {
+				continue
+			}
+			dir := filepath.Join(store, e.Name())
+			if data, err := os.ReadFile(filepath.Join(dir, receiptFileName)); err == nil {
+				var r receipt
+				if json.Unmarshal(data, &r) == nil && r.Schema == receiptSchema &&
+					r.TerminalState == approvedState && r.LineageID != "" && !seen["r:"+r.LineageID] {
+					seen["r:"+r.LineageID] = true
+					out = append(out, survivingReceipt{r.LineageID, r.LineageID + ".json", data})
+				}
+			}
+			if data, err := os.ReadFile(filepath.Join(dir, stateFileName)); err == nil {
+				var s reviewState
+				if json.Unmarshal(data, &s) == nil && s.State.State == approvedState &&
+					s.State.LineageID != "" && !seen["s:"+s.State.LineageID] {
+					seen["s:"+s.State.LineageID] = true
+					out = append(out, survivingReceipt{s.State.LineageID, s.State.LineageID + stateSuffix, data})
+				}
+			}
+		}
+	}
+	return out, nil
+}
+
+// AllSurvivingApprovedPersisted reports whether every currently-approved
+// receipt is already persisted byte-for-byte under some change in changes
+// (the explicit capture remedy already ran); zero surviving receipts is true.
+func AllSurvivingApprovedPersisted(repoRoot string, changes []string) (bool, error) {
+	stores, err := transactionStores(repoRoot)
+	if err != nil {
+		return false, err
+	}
+	surviving, err := scanSurvivingApproved(stores)
+	if err != nil {
+		return false, err
+	}
+	for _, s := range surviving {
+		found := false
+		for _, change := range changes {
+			dest := filepath.Join(repoRoot, "openspec", "changes", change, "review-receipts", s.FileName)
+			if exists, persisted, err := isPersistedByteForByte(dest, s.Data); err != nil {
+				return false, err
+			} else if exists && persisted {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return false, nil
+		}
+	}
+	return true, nil
+}
+
 // ApprovedSummary reads an approved review artifact at path -- either
 // shape Capture persists -- and returns the tuple a caller needs to
 // verify an approved_tree anchor. Errors if path is unreadable, unparsable
@@ -206,17 +282,30 @@ func ApprovedSummary(path string) (lineage, finalCandidateTree, baseTree string,
 	return s.State.LineageID, s.State.CurrentSnapshot.CandidateTree, s.State.InitialSnapshot.BaseTree, s.State.SelectedLenses, s.State.RiskLevel, nil
 }
 
+// isPersistedByteForByte is the single "already persisted?" check shared by
+// writeReceiptFile and AllSurvivingApprovedPersisted.
+func isPersistedByteForByte(dest string, data []byte) (exists, persisted bool, err error) {
+	existing, err := os.ReadFile(dest)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return false, false, nil
+		}
+		return false, false, fmt.Errorf("reviewreceipt: read %s: %w", dest, err)
+	}
+	return true, bytes.Equal(existing, data), nil
+}
+
 // writeReceiptFile persists data at dest byte-for-byte, atomically (temp
 // file + rename). It is idempotent -- identical existing content is a
 // no-op -- but refuses to overwrite an existing file with different content.
 func writeReceiptFile(targetDir, dest string, data []byte) error {
-	if existing, err := os.ReadFile(dest); err == nil {
-		if bytes.Equal(existing, data) {
+	if exists, persisted, err := isPersistedByteForByte(dest, data); err != nil {
+		return err
+	} else if exists {
+		if persisted {
 			return nil
 		}
 		return fmt.Errorf("reviewreceipt: %s already exists with different content", dest)
-	} else if !os.IsNotExist(err) {
-		return fmt.Errorf("reviewreceipt: read %s: %w", dest, err)
 	}
 
 	if err := os.MkdirAll(targetDir, 0o755); err != nil {
