@@ -59,15 +59,15 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: receipt-anchor-gate (PR 4, R-009..R-011; depends on Phase 3)
 
-- [ ] 4.1 RED: `tools/archive-anchor-gate` TestApprovedTree_FromReceipt — verified via `final_candidate_tree` prefix match.
-- [ ] 4.2 RED: TestArchiveBlock_NoReceiptPostConvention — blocks on/after `2026-09-12` without receipt; TestOverride_RecordedSelfAsserted — `override.json` + Cycle Timestamps `override` passes.
-- [ ] 4.3 RED: TestPreArchiveFlag — `--change <name>` exits 1 when receipt missing pre-archive.
-- [ ] 4.4 RED: closure-feedback test — reads `approved_tree`/`review_lens_count` from receipt file, not live state.
-- [ ] 4.5 GREEN: archive-anchor-gate reads `review-receipts/*.json`, compares `approved_tree` prefix.
-- [ ] 4.6 GREEN: `ReceiptConventionDate = "2026-09-12"` const + `override.json` schema check.
-- [ ] 4.7 GREEN: `--change` flag wiring for pre-archive check.
-- [ ] 4.8 GREEN: inception-pipeline closure-feedback reads receipt file; remove `.git/...` path from Plan.
-- [ ] 4.9 Docs: inception-pipeline Gate Compliance list — add pre-archive receipt check before sdd-archive.
+- [x] 4.1 RED: `tools/archive-anchor-gate` TestApprovedTree_FromReceipt — verified via `final_candidate_tree` prefix match.
+- [x] 4.2 RED: TestArchiveBlock_NoReceiptPostConvention — blocks on/after `2026-09-12` without receipt; TestOverride_RecordedSelfAsserted — `override.json` + Cycle Timestamps `override` passes.
+- [x] 4.3 RED: TestPreArchiveFlag — `--change <name>` exits 1 when receipt missing pre-archive.
+- [x] 4.4 RED: closure-feedback test — reads `approved_tree`/`review_lens_count` from receipt file, not live state.
+- [x] 4.5 GREEN: archive-anchor-gate reads `review-receipts/*.json`, compares `approved_tree` prefix.
+- [x] 4.6 GREEN: `ReceiptConventionDate = "2026-09-12"` const + `override.json` schema check.
+- [x] 4.7 GREEN: `--change` flag wiring for pre-archive check.
+- [x] 4.8 GREEN: inception-pipeline closure-feedback reads receipt file; remove `.git/...` path from Plan.
+- [x] 4.9 Docs: inception-pipeline Gate Compliance list — add pre-archive receipt check before sdd-archive.
 
 ## Phase 5: gadu-pi-subagent (PR 5, R-012..R-016; depends on Phase 2)
 
