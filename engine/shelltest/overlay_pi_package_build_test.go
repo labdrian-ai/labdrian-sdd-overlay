@@ -145,8 +145,8 @@ func TestPipkgHelpers_BuildStatusSyncCheck(t *testing.T) {
 // a freshly built engine binary: built-but-unregistered stays "partial"
 // (naming the still-missing register step), and only reports "supported"
 // once the package is also listed in ~/.pi/agent/settings.json and has a
-// longterm-mem MCP entry in mcp.json (the same three owned entries
-// PiAdapter.Status() proves -- see TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries
+// longterm-mem MCP entry in mcp.json (the same owned entries
+// PiAdapter.Status() proves -- see TestPiAdapter_StatusTriangulatesAllOwnedEntries
 // in engine/runtime/pi_test.go for the unit-level equivalent).
 func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) {
 	overlay := piTargetOverlayPath(t)
@@ -205,13 +205,25 @@ func TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported(t *testing.T) 
 	if err := os.MkdirAll(filepath.Dir(settingsPath), 0755); err != nil {
 		t.Fatalf("mkdir settings.json dir: %v", err)
 	}
-	settingsJSON := `{"packages": ["` + destDir + `"]}`
+	// Also simulate the Pi Subagents extension already being installed and
+	// the GADU.md link already existing (R-012/R-013 -- two more owned
+	// entries PiAdapter.Status() now proves, see
+	// TestPiAdapter_StatusTriangulatesAllOwnedEntries for the unit-level
+	// equivalent).
+	settingsJSON := `{"packages": ["` + destDir + `", "npm:pi-subagents-j0k3r"]}`
 	if err := os.WriteFile(settingsPath, []byte(settingsJSON), 0644); err != nil {
 		t.Fatalf("write settings.json: %v", err)
 	}
 	mcpJSON := `{"mcpServers": {"longterm-mem": {"type": "stdio", "command": "/opt/labdrian-overlay/bin/longterm-mem", "args": ["mcp"]}}}`
 	if err := os.WriteFile(filepath.Join(destDir, "mcp.json"), []byte(mcpJSON), 0644); err != nil {
 		t.Fatalf("write mcp.json: %v", err)
+	}
+	gaduLinkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
+	if err := os.MkdirAll(filepath.Dir(gaduLinkPath), 0755); err != nil {
+		t.Fatalf("mkdir gadu link dir: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(destDir, "agents", "GADU.md"), gaduLinkPath); err != nil {
+		t.Fatalf("symlink gadu link: %v", err)
 	}
 
 	// Now every owned entry is proven: supported.

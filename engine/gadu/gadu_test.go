@@ -260,6 +260,42 @@ func TestGenerate_DoNotEditHeader(t *testing.T) {
 	}
 }
 
+// TestFrontmatter_InlineToolsScalar (task 5.5, R-014): the generated Claude
+// agent frontmatter's `tools` field stays a single inline scalar line
+// (`tools: '*'`), never a YAML list -- pi-subagents-j0k3r@1.5.15 blocks
+// loading a subagent whose frontmatter declares `tools` both ways (D12).
+func TestFrontmatter_InlineToolsScalar(t *testing.T) {
+	dir := t.TempDir()
+	if err := gadu.Generate(dir); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(dir, "agents", "GADU.md"))
+	if err != nil {
+		t.Fatalf("read agent: %v", err)
+	}
+	s := string(content)
+
+	var toolsLineCount, listItemLines int
+	for _, line := range strings.Split(s, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "tools: '*'" {
+			toolsLineCount++
+		}
+		if strings.HasPrefix(trimmed, "- ") {
+			listItemLines++
+		}
+		if trimmed == "---" && toolsLineCount > 0 {
+			break // reached the end of frontmatter
+		}
+	}
+	if toolsLineCount != 1 {
+		t.Fatalf("expected exactly one inline `tools: '*'` line, got %d in:\n%s", toolsLineCount, s)
+	}
+	if listItemLines != 0 {
+		t.Fatalf("frontmatter must never carry YAML list items alongside the inline tools scalar, got %d list lines in:\n%s", listItemLines, s)
+	}
+}
+
 // TestCheck_FailsWhenMissing verifies Check returns an error when the skill
 // file is missing from the repo root. (R-003)
 func TestCheck_FailsWhenMissing(t *testing.T) {
