@@ -6,6 +6,7 @@ import (
 	"errors"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -681,13 +682,14 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 		}
 		return n
 	}
-	// Two pairs install (minimalism + anti-generic-design) → 2 entries per
-	// key; merge-settings run twice stays at 2 (idempotent).
+	// Two pairs install (minimalism + anti-generic-design) → 2 entries under
+	// UserPromptSubmit; PreToolUse additionally carries the review-receipt
+	// entry → 3. merge-settings run twice stays at these counts (idempotent).
 	if n := countEntries("UserPromptSubmit"); n != 2 {
 		t.Errorf("UserPromptSubmit: expected 2 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 2 {
-		t.Errorf("PreToolUse: expected 2 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 3 {
+		t.Errorf("PreToolUse: expected 3 entries, got %d", n)
 	}
 }
 
@@ -949,10 +951,17 @@ func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
 			"command": "command -v " + hookCmd + " && " + hookCmd + " sync-trigger --event session-end --cwd \"${CLAUDE_PROJECT_DIR:-.}\" || true",
 		}},
 	}
+	reviewReceipt := map[string]interface{}{
+		"matcher": "Bash",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": "command -v " + hookCmd + " >/dev/null 2>&1 || exit 0; " + hookCmd + " review-receipt hook --cwd \"${CLAUDE_PROJECT_DIR:-$PWD}\"",
+		}},
+	}
 
 	return map[string]interface{}{
 		"hooks": map[string]interface{}{
-			"PreToolUse":       []interface{}{preToolUse},
+			"PreToolUse":       []interface{}{preToolUse, reviewReceipt},
 			"UserPromptSubmit": []interface{}{userPromptSubmit},
 			"SessionEnd":       []interface{}{sessionEnd},
 		},
@@ -1097,6 +1106,49 @@ func TestStatusCore_SessionEndPresent_OK(t *testing.T) {
 	}
 	if strings.Contains(out, "[WARN] hook: SessionEnd") || strings.Contains(out, "[FAIL] hook: SessionEnd") {
 		t.Errorf("statusCore: SessionEnd hook check should be OK when present; output:\n%s", out)
+	}
+}
+
+// TestStatusCore_ReviewReceiptMissing_Degraded mirrors
+// TestStatusCore_SessionEndMissing_Degraded for the fourth (review-receipt)
+// family: a missing PreToolUse/Bash review-receipt entry is WARN/degraded,
+// never a hard FAIL, and its note names both remediation commands.
+func TestStatusCore_ReviewReceiptMissing_Degraded(t *testing.T) {
+	homeDir, binaryPath := buildFakeHomeWithBinary(t)
+	buildFakeContract(t, homeDir)
+
+	settingsData := buildSettingsWithHooks(binaryPath)
+	// Strip only the review-receipt PreToolUse/Bash entry, keeping the
+	// Agent-matcher gate-task entry intact.
+	hooks := settingsData["hooks"].(map[string]interface{})
+	preToolUse := hooks["PreToolUse"].([]interface{})
+	hooks["PreToolUse"] = preToolUse[:1]
+
+	deps := statusDeps{
+		stat:     os.Stat,
+		readFile: os.ReadFile,
+		loadSettings: func(_ string) (map[string]interface{}, error) {
+			return settingsData, nil
+		},
+		home: func() string { return homeDir },
+		cwd:  func() string { return "" },
+	}
+
+	var outBuf bytes.Buffer
+	allOK, degraded := statusCore(&outBuf, deps)
+	out := outBuf.String()
+
+	if !allOK {
+		t.Errorf("statusCore: review-receipt missing must not be a hard FAIL; output:\n%s", out)
+	}
+	if !degraded {
+		t.Errorf("statusCore: review-receipt missing must be degraded (WARN); output:\n%s", out)
+	}
+	if !strings.Contains(out, "[WARN] hook: PreToolUse matcher=\"Bash\" (review-receipt)") {
+		t.Errorf("statusCore: expected [WARN] for missing review-receipt hook; output:\n%s", out)
+	}
+	if !strings.Contains(out, "labdrian uninstall-hooks") || !strings.Contains(out, "labdrian install-hooks") {
+		t.Errorf("statusCore: WARN note must name both remediation commands; output:\n%s", out)
 	}
 }
 
@@ -3398,5 +3450,66 @@ func TestRunSyncTriggerCore_ChildNoEventNoCwd_ExitsZeroWithoutSpawn(t *testing.T
 	}
 	if _, err := os.Stat(marker); err == nil {
 		t.Fatalf("sync-trigger --child with no event/cwd spawned longterm-mem")
+	}
+}
+
+// TestParseReviewReceiptArgs_BothFlags pins the mechanical --cwd/--change
+// flag parsing shared by the capture and hook verbs.
+func TestParseReviewReceiptArgs_BothFlags(t *testing.T) {
+	cwd, change := parseReviewReceiptArgs([]string{"--cwd", "/repo", "--change", "my-change"})
+	if cwd != "/repo" || change != "my-change" {
+		t.Fatalf("parseReviewReceiptArgs = (%q, %q), want (/repo, my-change)", cwd, change)
+	}
+}
+
+// TestRunReviewReceiptCapture_NoActiveChange_NoOp asserts the capture verb
+// is a happy-path no-op (no exit, no panic) when the repo has no
+// openspec/changes/ directory to auto-detect an active change from.
+func TestRunReviewReceiptCapture_NoActiveChange_NoOp(t *testing.T) {
+	dir := t.TempDir()
+	runReviewReceiptCapture([]string{"--cwd", dir})
+	if _, err := os.Stat(filepath.Join(dir, "openspec")); !os.IsNotExist(err) {
+		t.Errorf("no-op capture should not create openspec/, stat err=%v", err)
+	}
+}
+
+// TestRunReviewReceiptCapture_ExplicitChange_Captures exercises the CLI
+// verb end to end against a real git-in-t.TempDir fixture (skipped under
+// -short, matching engine/pipkg's provenance suite): with an explicit
+// --change, the approved receipt sitting in the fixture's git-dir
+// transaction store is captured into openspec/changes/<change>/review-receipts/.
+func TestRunReviewReceiptCapture_ExplicitChange_Captures(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping git-in-TempDir fixture under -short")
+	}
+	dir := t.TempDir()
+	runGit := func(args ...string) {
+		t.Helper()
+		cmd := exec.Command("git", append([]string{"-C", dir}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+	runGit("init", "-q")
+	runGit("config", "user.email", "test@example.com")
+	runGit("config", "user.name", "Test")
+	os.WriteFile(filepath.Join(dir, "README.md"), []byte("fixture\n"), 0644)
+	runGit("add", ".")
+	runGit("commit", "-q", "-m", "initial")
+
+	changeDir := filepath.Join(dir, "openspec", "changes", "cli-change")
+	os.MkdirAll(changeDir, 0o755)
+	os.WriteFile(filepath.Join(changeDir, "tasks.md"), []byte("# tasks\n"), 0644)
+
+	lineageDir := filepath.Join(dir, ".git", "gentle-ai", "review-transactions", "v2", "review-cli1")
+	os.MkdirAll(lineageDir, 0o755)
+	receipt := `{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-cli1","terminal_state":"approved"}`
+	os.WriteFile(filepath.Join(lineageDir, "review-receipt.json"), []byte(receipt), 0644)
+
+	runReviewReceiptCapture([]string{"--cwd", dir, "--change", "cli-change"})
+
+	dest := filepath.Join(changeDir, "review-receipts", "review-cli1.json")
+	if _, err := os.Stat(dest); err != nil {
+		t.Errorf("expected receipt captured at %s: %v", dest, err)
 	}
 }

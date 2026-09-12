@@ -63,6 +63,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -133,6 +134,8 @@ func main() {
 		runSkills(os.Args[2:])
 	case "sync-trigger":
 		runSyncTrigger(os.Args[2:])
+	case "review-receipt":
+		runReviewReceipt(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -169,6 +172,12 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
 	fmt.Fprintln(os.Stderr, "  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome")
+	fmt.Fprintln(os.Stderr, "  engine review-receipt capture --cwd <repo> [--change <name>]")
+	fmt.Fprintln(os.Stderr, "    persists every surviving approved review receipt to openspec/changes/<change>/review-receipts/")
+	fmt.Fprintln(os.Stderr, "    --change resolves ambiguity when more than one active change exists; omit it to auto-detect")
+	fmt.Fprintln(os.Stderr, "  engine review-receipt hook --cwd <repo>")
+	fmt.Fprintln(os.Stderr, "    fail-closed PreToolUse Bash hook: reads tool_input JSON from stdin, captures before")
+	fmt.Fprintln(os.Stderr, "    'gentle-ai review acknowledge-approved', denies (exit 2) on ambiguity or capture failure")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
@@ -582,6 +591,107 @@ func parseSyncTriggerArgs(args []string) (synctrigger.Options, bool) {
 		}
 	}
 	return o, child
+}
+
+// ---------------------------------------------------------------------------
+// review-receipt subcommand
+// ---------------------------------------------------------------------------
+
+// runReviewReceipt implements the 'review-receipt <verb>' subcommand.
+// Verbs: capture, hook.
+func runReviewReceipt(args []string) {
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "error: review-receipt requires a verb: capture, hook")
+		os.Exit(1)
+	}
+	switch args[0] {
+	case "capture":
+		runReviewReceiptCapture(args[1:])
+	case "hook":
+		runReviewReceiptHook(args[1:])
+	default:
+		fmt.Fprintf(os.Stderr, "error: review-receipt: unknown verb %q (expected capture or hook)\n", args[0])
+		os.Exit(1)
+	}
+}
+
+// parseReviewReceiptArgs extracts --cwd and --change from args.
+func parseReviewReceiptArgs(args []string) (cwd, change string) {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--cwd":
+			i++
+			if i < len(args) {
+				cwd = args[i]
+			}
+		case "--change":
+			i++
+			if i < len(args) {
+				change = args[i]
+			}
+		}
+	}
+	return
+}
+
+// runReviewReceiptCapture implements 'review-receipt capture --cwd <repo>
+// [--change <name>]'. With --change, captures directly into that change.
+// Without it, auto-detects the single active change: zero active changes is
+// a no-op (exit 0); more than one is a loud failure (exit 1) naming
+// --change as the remedy.
+func runReviewReceiptCapture(args []string) {
+	cwd, change := parseReviewReceiptArgs(args)
+	if cwd == "" {
+		fmt.Fprintln(os.Stderr, "error: --cwd is required")
+		os.Exit(1)
+	}
+
+	if change == "" {
+		detected, err := reviewreceipt.DetectActiveChange(cwd)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if detected == "" {
+			fmt.Fprintln(os.Stdout, "review-receipt capture: no active change; nothing to capture")
+			return
+		}
+		change = detected
+	}
+
+	captured, err := reviewreceipt.Capture(cwd, change)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stdout, "review-receipt capture: %d receipt(s) captured for %q\n", len(captured), change)
+}
+
+// runReviewReceiptHook implements 'review-receipt hook --cwd <repo>': the
+// fail-closed PreToolUse Bash hook entry point. Reads the raw hook input
+// JSON from stdin and exits with reviewreceipt.RunHook's exit code, printing
+// its message (if any) to stderr.
+func runReviewReceiptHook(args []string) {
+	cwd, _ := parseReviewReceiptArgs(args)
+	if cwd == "" {
+		fmt.Fprintln(os.Stderr, "error: --cwd is required")
+		os.Exit(2)
+	}
+
+	raw, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		// Fail closed: an unreadable hook input is treated the same as any
+		// other capture-resolution failure -- deny rather than silently
+		// allow an acknowledgement this hook could not even inspect.
+		fmt.Fprintf(os.Stderr, "review-receipt hook: read stdin: %v\n", err)
+		os.Exit(2)
+	}
+
+	exitCode, message := reviewreceipt.RunHook(raw, cwd)
+	if message != "" {
+		fmt.Fprintln(os.Stderr, message)
+	}
+	os.Exit(exitCode)
 }
 
 func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {
@@ -1503,6 +1613,11 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	// hasn't run the upgrade path yet, not a broken installation.
 	checks = append(checks, checkSessionEndHook(settingsRoot, settingsErr, settingsPath))
 
+	// Check 3c: PreToolUse/Bash review-receipt hook wired. Same WARN/degraded
+	// tier as SessionEnd — a machine that hasn't run the upgrade path yet is
+	// pre-#3a, not broken.
+	checks = append(checks, checkReviewReceiptHook(settingsRoot, settingsErr, settingsPath))
+
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))
 
@@ -1631,6 +1746,34 @@ func checkSessionEndHook(root map[string]interface{}, settingsErr error, setting
 		}
 	}
 	return checkResult{label: label, ok: true, degraded: true, note: "no SessionEnd entry referencing " + binaryIdentity + "; " + remediationNote}
+}
+
+// checkReviewReceiptHook verifies the PreToolUse/Bash review-receipt entry
+// references our binary and the review-receipt identity token. Unreadable
+// settings is a hard FAIL like the other hook checks; a missing entry is
+// WARN/degraded, not FAIL — same remediation as checkSessionEndHook.
+func checkReviewReceiptHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
+	label := `hook: PreToolUse matcher="Bash" (review-receipt)`
+	if settingsErr != nil {
+		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
+	}
+	if root == nil {
+		return checkResult{label: label, ok: true, degraded: true, note: settingsPath + " absent or empty; " + remediationNote}
+	}
+	hooks, _ := root["hooks"].(map[string]interface{})
+	if hooks != nil {
+		entries, _ := hooks["PreToolUse"].([]interface{})
+		for _, e := range entries {
+			em, ok := e.(map[string]interface{})
+			if !ok || em["matcher"] != "Bash" {
+				continue
+			}
+			if innerHookContainsBinary(e, binaryIdentity) && innerHookContainsBinary(e, settings.LabdrianReviewReceiptIdentity) {
+				return checkResult{label: label, ok: true}
+			}
+		}
+	}
+	return checkResult{label: label, ok: true, degraded: true, note: "no PreToolUse entry with matcher=\"Bash\" referencing " + binaryIdentity + "; " + remediationNote}
 }
 
 // innerHookContainsBinary returns true if the hook entry (outer object) contains
