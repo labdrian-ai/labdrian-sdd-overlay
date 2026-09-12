@@ -424,3 +424,28 @@ func TestCheck_DeployRefOverride(t *testing.T) {
 		t.Fatalf("expected DeployRef=feature disclosed, got %q / %q", report.DeployRef, report.Disclosure())
 	}
 }
+
+// TestCheck_BuildOnFeatureBranchIsNotStale (#315): a package built while a
+// feature branch is checked out records that branch's HEAD as builtFrom.
+// That commit is ahead of (not behind) main, so it is not a stale build;
+// only committed changes on the deploy ref that the package lacks count.
+func TestCheck_BuildOnFeatureBranchIsNotStale(t *testing.T) {
+	overlayRoot, registryPath, _ := gitFixtureOverlay(t)
+	runGit(t, overlayRoot, "branch", "-M", "main")
+	runGit(t, overlayRoot, "checkout", "-q", "-b", "feature")
+	writeFile(t, filepath.Join(overlayRoot, "README.md"), "feature note\n")
+	runGit(t, overlayRoot, "add", "-A")
+	runGit(t, overlayRoot, "commit", "-q", "-m", "feature commit outside the package sources")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	report, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	if err != nil {
+		t.Fatalf("Check after a feature-branch build with identical sources must be clean, got: %v", err)
+	}
+	if report.Stale || report.DeployRef != "main" {
+		t.Fatalf("report = %+v, want Stale=false DeployRef=main", report)
+	}
+}

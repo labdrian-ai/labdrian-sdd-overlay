@@ -478,12 +478,14 @@ func resolveComparisonSource(overlayRoot, registryPath, destDir string) (report 
 	}
 	tip := strings.TrimSpace(string(tipOut))
 
-	// Stale: builtFrom is a resolvable commit that is not the deploy ref's
-	// tip -- committed source changes since the last Build are not
-	// deployed, even though (per the file-level diff below) the deployed
-	// content may still exactly match what was built at that older commit.
+	// Stale: builtFrom is a resolvable commit strictly BEHIND the deploy
+	// ref's tip (a proper ancestor): commits landed on the deploy ref since
+	// the last Build are not deployed, even when the file-level diff below
+	// still matches. A build that is ahead of or diverged from the deploy
+	// ref (a feature-branch checkout, #315) is not stale; any content it
+	// differs in is caught by the file-level diff, never by this flag.
 	stale := builtFrom != "" && builtFromPattern.MatchString(builtFrom) && builtFrom != tip &&
-		exec.Command("git", "-C", overlayRoot, "cat-file", "-e", builtFrom+"^{commit}").Run() == nil
+		exec.Command("git", "-C", overlayRoot, "merge-base", "--is-ancestor", builtFrom, tip).Run() == nil
 
 	root, deployCleanup, exportErr := exportGitTree(overlayRoot, deployRef)
 	if exportErr != nil {
