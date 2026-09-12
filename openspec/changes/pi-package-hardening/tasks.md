@@ -38,14 +38,14 @@ Chain strategy: stacked-to-main
 
 ## Phase 2: sync-check-provenance (PR 2, R-005..R-007)
 
-- [ ] 2.1 RED: `engine/pipkg/pipkg_test.go` TestBuiltFrom_RecordedAtBuild — matches `git rev-parse HEAD` in t.TempDir (skip `-short`).
-- [ ] 2.2 RED: TestCheck_RefBasis — sha `^[0-9a-f]{40}$` + `cat-file -e` resolvable → `git archive` compare, Basis=ref.
-- [ ] 2.3 RED: TestCheck_MainFallback — unresolvable sha → Basis="main" with disclosure message; TestCheck_NonGitRoot → Basis="worktree".
-- [ ] 2.4 RED: TestCheck_RejectsNonHexBuiltFrom — non-hex/`--option` never spawns git.
-- [ ] 2.5 GREEN: `engine/pipkg/pipkg.go` `packageManifest.Labdrian{BuiltFrom}`, `resolvePackageVersion(root,rev)`.
-- [ ] 2.6 GREEN: `Check` returns `(CheckReport{Basis,Ref}, error)` — ref/main/worktree basis logic per 2.2–2.4.
-- [ ] 2.7 GREEN: `bin/labdrian-overlay` `cmd_sync_check` — print basis for `--target pi` / `SYNC_CHECK:pi:`.
-- [ ] 2.8 Docs: `cmd_sync_check` usage note — basis disclosure line.
+- [x] 2.1 RED: `engine/pipkg/pipkg_test.go` TestBuiltFrom_RecordedAtBuild — matches `git rev-parse HEAD` in t.TempDir (skip `-short`).
+- [x] 2.2 RED: TestCheck_RefBasis — sha `^[0-9a-f]{40}$` + `cat-file -e` resolvable → `git archive` compare, Basis=ref.
+- [x] 2.3 RED: TestCheck_MainFallback — unresolvable sha → Basis="main" with disclosure message; TestCheck_NonGitRoot → Basis="worktree".
+- [x] 2.4 RED: TestCheck_RejectsNonHexBuiltFrom — non-hex/`--option` never spawns git.
+- [x] 2.5 GREEN: `engine/pipkg/pipkg.go` `packageManifest.Labdrian{BuiltFrom}`, `resolvePackageVersion(root,rev)`.
+- [x] 2.6 GREEN: `Check` returns `(CheckReport{Basis,Ref}, error)` — ref/main/worktree basis logic per 2.2–2.4.
+- [x] 2.7 GREEN: `bin/labdrian-overlay` `cmd_sync_check` — print basis for `--target pi` / `SYNC_CHECK:pi:`.
+- [x] 2.8 Docs: `cmd_sync_check` usage note — basis disclosure line.
 
 ## Phase 3: review-receipt-capture (PR 3, R-008)
 

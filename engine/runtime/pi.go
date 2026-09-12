@@ -91,10 +91,12 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(ActionSyncCheck)
 	}
-	if err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
-		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error(), nil)
+	report, err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir)
+	if err != nil {
+		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+report.Disclosure()+")", nil)
 	}
-	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported, "labdrian-pi package matches the current manifest", nil)
+	return NewLifecycleResult(a.target, ActionSyncCheck, CapabilitySupported,
+		"labdrian-pi package matches the current manifest ("+report.Disclosure()+")", nil)
 }
 
 // Status reports per-entry proof: built, in sync, listed in
@@ -110,8 +112,8 @@ func (a PiAdapter) Status() LifecycleResult {
 	var problems []string
 	if a.overlayRoot == "" {
 		problems = append(problems, "in sync (OVERLAY_DIR unset; cannot verify the build matches the current manifest)")
-	} else if err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
-		problems = append(problems, "in sync ("+err.Error()+")")
+	} else if report, err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+		problems = append(problems, "in sync ("+err.Error()+"; "+report.Disclosure()+")")
 	}
 	if !isPiPackageListed(a.destDir) {
 		problems = append(problems, "listed in ~/.pi/agent/settings.json packages (not listed; run: pi install "+a.destDir+")")

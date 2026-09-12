@@ -91,3 +91,95 @@ None.
 ### Status
 
 7/7 Phase 1 tasks complete. Ready for the next SDD phase (verify or the next apply batch for Phase 2).
+
+## Slice 2: sync-check-provenance (PR 2, R-005..R-007)
+
+**Change**: pi-package-hardening
+**Mode**: Strict TDD (RED → GREEN → REFACTOR)
+**Branch**: `feat/pi-package-hardening-2-provenance` (stacked on `feat/pi-package-hardening` @ `a1f2bc0`)
+**Delivery status**: implemented and fully verified, **NOT committed** — exceeds the 400-authored-line budget (see Workload / PR Boundary below). Working tree left uncommitted and unstaged so the orchestrator can decide `size:exception` vs. a further split before this lands.
+
+### Implemented (uncommitted) — tasks 2.1–2.8
+
+All Phase 2 RED/GREEN/Docs work is implemented and green, but **tasks.md checkboxes are intentionally left `[ ]`** because nothing was committed this batch (see Delivery status above). Do not treat this as "not started" — the code, on disk in this worktree, is complete and passing:
+
+- 2.1 RED: `engine/pipkg/pipkg_provenance_test.go` `TestBuiltFrom_RecordedAtBuild` — `labdrian.builtFrom` equals `git rev-parse HEAD` in a `gitFixtureOverlay` (git-in-`t.TempDir()`, skipped under `-short`).
+- 2.2 RED: `TestCheck_RefBasis` — resolvable builtFrom SHA → `Basis="ref"`; an uncommitted working-tree edit does NOT cause drift; a genuinely tampered deployed file still reports drift naming the entry.
+- 2.3 RED: `TestCheck_MainFallback` — unresolvable-but-well-formed SHA → `Basis="main"`, `Ref` carries the disclosed unresolvable value; `TestCheck_NonGitRoot` — non-git `overlayRoot` → `Basis="worktree"`.
+- 2.4 RED: `TestCheck_RejectsNonHexBuiltFrom` — `--upload-pack=evil`, `not-hex-at-all`, and `""` all fall back to `main` cleanly; `builtFromPattern` (`^[0-9a-f]{40}$`) is checked BEFORE any of these values ever reaches a `git` argv.
+- 2.5 GREEN: `engine/pipkg/pipkg.go` — `packageManifest.Labdrian *labdrianField{BuiltFrom}`; `resolveBuildRev(overlayRoot)` (`git rev-parse HEAD`, `""` on any failure); `resolvePackageVersion(overlayRoot, rev)` gained the `rev` argument (D5 "single source").
+- 2.6 GREEN: `Check` now returns `(CheckReport{Basis, Ref}, error)`. `resolveComparisonSource` picks the basis (worktree / ref / main), `exportGitTree` + `extractTar` (`archive/tar`) export `skills/ agents/ skills.registry.yaml` at the resolved rev via `git archive --format=tar`, and `buildInto` gained `(provenanceRoot, rev string)` parameters so the comparison build's `package.json` version/builtFrom are resolved against the ORIGINAL `overlayRoot` (which has full tag history) even when the file-source root is a throwaway export (which has no `.git`). `stripBuiltFrom` normalizes `package.json`'s `labdrian.builtFrom` (and canonicalizes JSON formatting) out of the content diff so a legitimately different recorded ref never reads as drift by itself.
+- 2.7 GREEN: `bin/labdrian-overlay` `pipkg_sync_check_and_report` now echoes `$drift_output` (which always carries the engine's `pipkg check: compared against ...` basis line) in the no-drift branch too, not just the drift branch — `SYNC_CHECK:pi:`/`VERDICT:pi:` lines unchanged.
+- 2.8 Docs: doc comment added above `cmd_sync_check` describing the three basis-disclosure forms; `CheckReport.Disclosure()` is the single rendering function all four surfaces (`pipkg check` CLI, `PiAdapter.SyncCheck`/`Status`, the bash helper) call.
+
+### Files Changed (uncommitted)
+
+| File | Action | What Was Done |
+|------|--------|----------------|
+| `engine/pipkg/pipkg.go` | Modified | `CheckReport`/`Disclosure`; `labdrianField`; `resolveBuildRev`; `resolvePackageVersion(root, rev)`; `Check` signature → `(CheckReport, error)`; `resolveComparisonSource`, `exportGitTree`, `extractTar`, `readBuiltFrom`, `stripBuiltFrom`; `buildInto(overlayRoot, reg, dir, provenanceRoot, rev)`; package doc comment extended. |
+| `engine/pipkg/pipkg_provenance_test.go` | Created | `gitFixtureOverlay`/`runGit`/`corruptBuiltFrom` helpers; `TestBuiltFrom_RecordedAtBuild`, `TestCheck_RefBasis`, `TestCheck_MainFallback`, `TestCheck_NonGitRoot`, `TestCheck_RejectsNonHexBuiltFrom`. |
+| `engine/pipkg/pipkg_test.go` | Modified | All ~10 pre-existing `pipkg.Check(...)` call sites updated for the new `(CheckReport, error)` return signature — no behavior change (all still exercise the "worktree" basis since `fixtureOverlay` is a plain non-git temp dir). |
+| `engine/runtime/pi.go` | Modified | `SyncCheck`/`Status` updated for `Check`'s new signature; both messages now append `report.Disclosure()`. |
+| `engine/cmd/main.go` | Modified | `runPipkgCore`'s `check` verb prints `report.Disclosure()` to stdout before the OK/error line, always, on both success and failure. |
+| `bin/labdrian-overlay` | Modified | `pipkg_sync_check_and_report` echoes `$drift_output` (carries the basis line) on the no-drift path too; doc comment on `cmd_sync_check`. |
+
+### TDD Cycle Evidence
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| 2.1 | `engine/pipkg/pipkg_provenance_test.go` | Unit (git-in-`t.TempDir`) | ✅ full `pipkg` suite green before edit | ✅ Written — confirmed failing (`assignment mismatch: 2 variables but pipkg.Check returns 1 value`, i.e. the whole provenance test file failed to compile against the old `Check` signature, proving the RED state) | ✅ Passed | ➖ Single scenario (builtFrom == HEAD) | ➖ None needed |
+| 2.2 | `engine/pipkg/pipkg_provenance_test.go` | Unit (git-in-`t.TempDir`) | same run | ✅ Written — confirmed failing | ✅ Passed | ✅ uncommitted edit / committed edit (still ref) / tampered deployed file (real drift) — 3 cases | ✅ Fixed two real bugs surfaced by triangulation (see Issues Found) |
+| 2.3 | `engine/pipkg/pipkg_provenance_test.go` | Unit (git-in-`t.TempDir`) | same run | ✅ Written — confirmed failing | ✅ Passed | ✅ main-fallback + non-git-root — 2 cases | ➖ None needed |
+| 2.4 | `engine/pipkg/pipkg_provenance_test.go` | Unit (git-in-`t.TempDir`) | same run | ✅ Written — confirmed failing | ✅ Passed | ✅ `--option`-shaped / non-hex / empty — 3 cases, all proven to never reach `git` (regex gate runs before any `exec.Command` using the value) | ➖ None needed |
+
+### Test Summary
+
+- **Total tests written**: 5 new test functions (`pipkg_provenance_test.go`) plus ~10 pre-existing `pipkg_test.go` call sites mechanically updated for the new signature (no new assertions there).
+- **Total tests passing**: full `engine/pipkg`, `engine/runtime`, `engine/cmd`, `engine/shelltest` packages green; full repo `go test -count=1 -race ./...` green (13 packages).
+- **Layers used**: Unit (git-in-`t.TempDir`, real `git` subprocess, skipped under `-short`) — no runtime harness applicable beyond the existing `shelltest` bash-helper suite, which was re-run and confirmed unaffected.
+- **Approval tests**: none new this slice.
+- **Pure functions created**: `stripBuiltFrom` (JSON normalization, no I/O); `CheckReport.Disclosure` (pure rendering).
+
+### Issues Found (during TRIANGULATE — fixed before REFACTOR)
+
+1. **package.json comparison bug (1)**: the first `stripBuiltFrom` implementation only re-marshaled `package.json` when a `labdrian` key was present, so a side with no `labdrian` field stayed pretty-printed (`json.MarshalIndent`) while the other side (post-strip) became compact — a pure formatting difference misreported as `package.json: changed`. Fixed by always re-marshaling both sides through the same canonical (compact) path regardless of whether `labdrian` is present.
+2. **package.json comparison bug (2)**: the real deployed package (built from the actual repo, which has reachable `v*` tags) resolved a real semantic `version`, while the comparison rebuild — built from a `git archive` export with no `.git` directory — always fell back to `"0.0.0-dev"`, a genuine (but spurious) version mismatch. Fixed by threading a separate `provenanceRoot` (always the original, tag-history-bearing `overlayRoot`) and an explicit `rev` into `buildInto`, decoupled from the file-source root used for reading `skills/`/`agents/`.
+
+Both were caught by triangulating against the REAL overlay repo (`TestPipkgBuild_LiveRegistryNamesMatch`'s pattern, and the `engine/shelltest` suite which builds against this worktree's actual git history) rather than only the synthetic `fixtureOverlay` fixture (which is never a git repo and would not have exposed either bug).
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./pipkg/... ./runtime/... ./cmd/... ./shelltest/...` → all four packages `ok`, 0 failures. |
+| Runtime harness command/scenario and exact result | `engine/shelltest` `TestPipkgHelpers_BuildStatusSyncCheck` and `TestPipkgStatusAndReport_DelegatesHonestPartialThenSupported` — real `bash` + a freshly `go build`'t `gentle-ai-overlay` binary, against this worktree's real git history (basis=ref against this worktree's actual HEAD): both pass, `SYNC_CHECK:pi:`/`VERDICT:pi:` lines unchanged from Slice 1. |
+| Rollback boundary | Revert `engine/pipkg/pipkg.go`, delete `engine/pipkg/pipkg_provenance_test.go`, revert `engine/pipkg/pipkg_test.go`, `engine/runtime/pi.go`, `engine/cmd/main.go`, `bin/labdrian-overlay` — independently revertible; no cross-slice coupling (Phase 1 files untouched this batch). |
+
+### Broad Verification
+
+| Command | Result |
+|---|---|
+| `cd engine && gofmt -l .` | empty (clean) |
+| `cd engine && go vet ./...` | no output (clean) |
+| `cd engine && go test -count=1 -race ./...` | all 13 packages `ok` |
+| `shellcheck -S warning bin/labdrian-overlay` | 2 findings, both pre-existing `SC2064` (unrelated to this slice; no new findings) |
+| `git diff --shortstat a1f2bc0..HEAD -- engine bin` (working tree, uncommitted) | `5 files changed, 628 insertions(+), 49 deletions(-)` — plus one new file `engine/pipkg/pipkg_provenance_test.go` (237 lines) → **677 authored lines total, over the 400-line budget** |
+
+### Deviations from Design
+
+None functionally — matches D5/D6/D7's intent exactly (`labdrian.builtFrom`, `CheckReport{Basis,Ref}`, `git archive`+`archive/tar` export, always-disclosed basis). One implementation detail beyond what D6's prose states explicitly: `buildInto` needed a `provenanceRoot` parameter (distinct from the file-source root) that D6 does not call out, because a `git archive` export has no `.git` and cannot resolve `resolvePackageVersion`'s tag lookup itself — without this, comparing against a real, tagged repository would misreport `package.json.version` as drift (Issues Found #2 above). This is a strict subset of D6's existing "export at that sha... buildInto from it" description, not a deviation from it.
+
+### Workload / PR Boundary — BLOCKED on budget, size:exception recommended
+
+- Mode: stacked-to-main PR slice (PR 2 of 5), per the entry contract's `review_slices` (P=5).
+- Current work unit: sync-check-provenance (R-005..R-007), tasks 2.1–2.8 (all of Phase 2).
+- Boundary: starts from `a1f2bc0` (Phase 1, merged into this stack), would end with Phase 2 GREEN + docs, all tests passing, tasks 2.1–2.8 marked `[x]` — **not yet landed**.
+- **Estimated review budget impact: 677 authored lines (`git diff --shortstat a1f2bc0..HEAD -- engine bin`), well over the 400-line budget** (design's own slice table estimated 280–380 for this slice; the actual `git archive`/`archive/tar` export plumbing plus `resolveComparisonSource`'s three-basis logic plus the git-fixture RED test file exceeded that estimate).
+- One honest slicing pass was completed (this is that pass) with no further split attempted, per `work-unit-commits`' "Splitting is bounded" rule and the explicit "never shrink a diff by deleting comments, blank lines, docs, or tests... to fit the review budget" guard — no code-golfing was applied.
+- **STOPPED before committing per this batch's explicit instruction** ("Budget 400 authored lines... STOP `partial` before committing if exceeded"). The worktree is left with all Phase 2 changes present but uncommitted and unstaged (`git status` shows 5 modified files + 1 untracked new test file), so a size:exception decision or a further slice split (e.g., separating the `CheckReport`/basis-resolution core from the `bin/labdrian-overlay` disclosure wiring — though the latter alone is only ~20 lines and would not meaningfully reduce the total) can be made before this lands.
+- `tasks.md` Phase 2 checkboxes (2.1–2.8) are intentionally left `[ ]` — the work is implemented and verified, but not delivered.
+- Slices planned=5 realized=1 (unchanged this batch — no new slice was delivered/committed; Slice 1 remains the only realized slice. Within tolerance.)
+
+### Status
+
+Phase 2 (sync-check-provenance, R-005..R-007) is implemented and fully verified (all focused, runtime, and broad checks pass) but **blocked from committing by the 400-line review budget** (677 authored lines). Returning `partial`. The orchestrator should choose one of: (a) grant `size:exception` and have a follow-up apply batch commit this exact diff as-is, or (b) direct a further split (e.g., a separate PR for the `bin/labdrian-overlay` disclosure-line plumbing vs. the `engine/pipkg` core) before landing. No code was reverted; the worktree retains the full, tested Phase 2 implementation uncommitted.
