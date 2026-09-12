@@ -1,0 +1,643 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:b1a0649b83f627f36b28c2040c9a0a21ee3f0f3031e522259d3971299853862d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-96dcb185b95c4cbd",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+      "candidate_tree": "8ebee83093c16bf927f9e1a626a4c9dadf74c163",
+      "paths_digest": "sha256:ba59c00df807c0c53459923ddb7c1e732072000c3b8c6e9b15bf46b96543e2b4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/pipkg/pipkg.go",
+        "engine/pipkg/pipkg_provenance_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+        "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+      ],
+      "identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+      "candidate_tree": "ec56969bdb2a7ade90b83e47d971beb857ddadab",
+      "paths_digest": "sha256:ba59c00df807c0c53459923ddb7c1e732072000c3b8c6e9b15bf46b96543e2b4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/pipkg/pipkg.go",
+        "engine/pipkg/pipkg_provenance_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+        "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+      ],
+      "identity": "sha256:6fe60e0d54afccc579b3b98637a43424797f82eeed8c3faff394b22e2a4d84da"
+    },
+    "genesis_paths": [
+      "engine/pipkg/pipkg.go",
+      "engine/pipkg/pipkg_provenance_test.go",
+      "engine/shelltest/overlay_pi_package_build_test.go",
+      "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+      "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 421,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [
+      "R3-001"
+    ],
+    "proposed_correction_lines": 41,
+    "actual_correction_lines": 41,
+    "fix_delta_hash": "sha256:7b20f1a04e5980210f43d5ecb2706c937679bf89d19baeda501940a049f08d6b",
+    "original_criteria": {
+      "evidence_hash": "sha256:efbee2a67700f5a13a89f3b6ac5409fe97537a35a72076f32cf927dca0a6722a",
+      "fix_delta_hash": "sha256:7b20f1a04e5980210f43d5ecb2706c937679bf89d19baeda501940a049f08d6b",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:8e67f82e33e69e7f07c5e891f8b6ba6d9eadcc3f5b8d18b5606815d745f785ca",
+      "fix_delta_hash": "sha256:7b20f1a04e5980210f43d5ecb2706c937679bf89d19baeda501940a049f08d6b",
+      "passed": true
+    },
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "8ebee83093c16bf927f9e1a626a4c9dadf74c163",
+          "candidate_tree": "ec56969bdb2a7ade90b83e47d971beb857ddadab",
+          "paths_digest": "sha256:5febc815c773b9779ac8c1c9685a029351777d8deae84610779c690002339c63",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R3-001"
+          ],
+          "paths": [
+            "engine/pipkg/pipkg.go",
+            "engine/pipkg/pipkg_provenance_test.go",
+            "engine/shelltest/overlay_pi_package_build_test.go"
+          ],
+          "identity": "sha256:45f2e424a920f5f13f666ba89226faad9b504c51ea43d869cd8f6763fa39202e"
+        },
+        "proposed_lines": 41,
+        "actual_lines": 41,
+        "fix_delta_hash": "sha256:7b20f1a04e5980210f43d5ecb2706c937679bf89d19baeda501940a049f08d6b",
+        "original_criteria": {
+          "evidence_hash": "sha256:efbee2a67700f5a13a89f3b6ac5409fe97537a35a72076f32cf927dca0a6722a",
+          "fix_delta_hash": "sha256:7b20f1a04e5980210f43d5ecb2706c937679bf89d19baeda501940a049f08d6b",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:8e67f82e33e69e7f07c5e891f8b6ba6d9eadcc3f5b8d18b5606815d745f785ca",
+          "fix_delta_hash": "sha256:7b20f1a04e5980210f43d5ecb2706c937679bf89d19baeda501940a049f08d6b",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:55583fc8bac89ec25604194a2454214f78c66c803d2e3c56208bcd22b87d8987",
+        "correction_target_identity": "sha256:45f2e424a920f5f13f666ba89226faad9b504c51ea43d869cd8f6763fa39202e"
+      }
+    ],
+    "cumulative_correction_lines": 41,
+    "capture_phase_revision": "sha256:ca2fec2dd4181ce4af0fd0ba775e01bf5b89215ae2560cd882ec395071bd688b",
+    "capture_phase_epoch": 2,
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+        "capture_phase_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+        "artifact_digest": "sha256:f654ad1a46f0191311c89992e569c8707fc1c0093fe02169f5972fee86a62636",
+        "result_hash": "sha256:abdedcea82d700435bec2249b5514f450c9a2076414496518c412d258b9e2e4f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:b30095d7c1577d2fecbd08870ad46da39f3503c5e8925a72499b1516db7e7de7",
+            "lineage_id": "review-96dcb185b95c4cbd",
+            "authority_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+            "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+            "base_tree": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+            "candidate_tree": "8ebee83093c16bf927f9e1a626a4c9dadf74c163",
+            "changed_path_manifest_sha256": "sha256:cca6561d13ba40ab087d9ed58fb58fd2db7ffba74714ade6dd78f47ea233d4a2",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:b30095d7c1577d2fecbd08870ad46da39f3503c5e8925a72499b1516db7e7de7",
+            "raw_sha256": "sha256:416ff9d56ed349fbf68b7ea7f942134750f5d73bbc41c80ea285ccc4b0dc7a75",
+            "canonical_sha256": "sha256:6e0e5b4d4831c6c493b34b78f0be0cfd29323964ef0812fc53213e53e4f0f6f2",
+            "result_hash": "sha256:abdedcea82d700435bec2249b5514f450c9a2076414496518c412d258b9e2e4f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:b30095d7c1577d2fecbd08870ad46da39f3503c5e8925a72499b1516db7e7de7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_provenance_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+                "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "All five manifest paths were inspected in full from the supplied patch sections. No other file, working tree, or command was used.",
+              "Untrusted input to git argv: the deployed package.json builtFrom value still reaches git only after the 40-hex check. The new stale computation at engine/pipkg/pipkg.go:485-486 checks builtFromPattern and the tip mismatch before running the cat-file probe. A non-hex or option-shaped value is only carried into the report. The updated test at engine/pipkg/pipkg_provenance_test.go:252-262 asserts that such a value does not produce staleness or an error.",
+              "New env-derived argv input: LABDRIAN_PI_DEPLOY_REF is read at engine/pipkg/pipkg.go:465-466 and prepended to the candidate refs. It first reaches git as a single exec argument (no shell) with a commit-peel suffix appended, in a cat-file existence probe. An option-shaped value would be rejected by git's option parser and not resolve, so the loop falls through. Only a value that passes that probe becomes deployRef and reaches the rev-parse at engine/pipkg/pipkg.go:475 and the export call at engine/pipkg/pipkg.go:488. The variable is controlled only by the local invoking user, who already controls PATH and the process environment. That grants no new privilege.",
+              "A possible concern with the override is weakened drift detection: pointing it at a non-deploy ref could mask drift. The Disclosure at engine/pipkg/pipkg.go:228-233 always prints the winning DeployRef and tip, so the override is visible. sync-check is a local consistency report, not a backend authorization boundary, so no exploitable impact is reachable. Recorded as an observation, not a finding.",
+              "Output content: the new stale drift line at engine/pipkg/pipkg.go:358-359 interpolates BuiltFrom (regex-validated whenever Stale is true), DeployRef (already resolved by git), and DeployTip (a git-produced hex SHA). Echoing the raw recorded builtFrom in Disclosure predates this candidate: the base Disclosure printed the old Ref field the same way. That is pre-existing behavior and not a finding for this candidate.",
+              "Test-only change: engine/shelltest/overlay_pi_package_build_test.go:46-48 and engine/shelltest/overlay_pi_package_build_test.go:175-177 set LABDRIAN_PI_DEPLOY_REF=HEAD only in the environment of bash subprocesses spawned by the test. This does not affect production behavior and exposes no secrets.",
+              "The two openspec files are documentation-only spec text with no executable surface, secrets, or dependency changes.",
+              "No new dependencies, credentials, file-permission changes, or deletion paths were introduced. The temp export cleanup contract (a cleanup func returned alongside the export root) is preserved on the new deploy path, and the error paths return a no-op cleanup."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+        "capture_phase_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+        "artifact_digest": "sha256:612885c7466014db8cb031ad6ac7a019e348d6d74fb8372a160b1cd84c6570b6",
+        "result_hash": "sha256:82e07a4d620399162cbc7437c1b9168ff69c7a19469c2c425e88b099056fd403",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:55906855addc7942536b356c92723bec0037e241a2e446355d6c917442cdc3d6",
+            "lineage_id": "review-96dcb185b95c4cbd",
+            "authority_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+            "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+            "base_tree": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+            "candidate_tree": "8ebee83093c16bf927f9e1a626a4c9dadf74c163",
+            "changed_path_manifest_sha256": "sha256:cca6561d13ba40ab087d9ed58fb58fd2db7ffba74714ade6dd78f47ea233d4a2",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:55906855addc7942536b356c92723bec0037e241a2e446355d6c917442cdc3d6",
+            "raw_sha256": "sha256:f9cccf86504c2ca6ad6ac92a1e58b94bfff1d34c563d12887a99d38645a2d904",
+            "canonical_sha256": "sha256:dd8866b4641fb098ac79b13a254f521eb9cdfae953d3d63f1b1298e91b1340e2",
+            "result_hash": "sha256:82e07a4d620399162cbc7437c1b9168ff69c7a19469c2c425e88b099056fd403",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:55906855addc7942536b356c92723bec0037e241a2e446355d6c917442cdc3d6",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_provenance_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+                "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-stale-sha-inequality-false-drift",
+                "lens": "resilience",
+                "location": "engine/pipkg/pipkg.go:485-486",
+                "severity": "WARNING",
+                "claim": "Staleness is decided by raw commit-SHA inequality (builtFrom != tip), not by whether the packaged sources changed. Any commit that lands on main without touching skills/, agents/, or skills.registry.yaml makes Stale true, for example a docs-only or engine-only merge. Check then appends the 'rebuild with apply --target pi' drift entry and returns an error. As a result, sync-check --target pi fails after every unrelated merge until someone rebuilds, even though the deployed package is byte-identical to the deploy ref's export. On an active main this keeps the drift check red and hides real drift. A path-scoped check would avoid this, for example git diff --quiet builtFrom tip over the three exported paths, or comparing tree ids for those paths.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:485-486",
+                  "engine/pipkg/pipkg.go:358-360",
+                  "engine/pipkg/pipkg_provenance_test.go:135-155"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-non-main-build-nonconvergent-drift",
+                "lens": "resilience",
+                "location": "engine/pipkg/pipkg.go:464-469",
+                "severity": "WARNING",
+                "claim": "The comparison target is now always main, then origin/main, then HEAD. Build still records the live checkout's commit, which the shelltest comment describes as deploying from HEAD. The candidate had to inject LABDRIAN_PI_DEPLOY_REF=HEAD into both shelltest harnesses to keep them passing. Any caller that builds from a non-main checkout without that override now gets drift where the base 'ref' basis reported clean. Examples are a CI pull-request checkout where origin/main was fetched, which is preferred over HEAD, or an operator on a feature branch. Both the content diff and Stale fire. Following the emitted remediation ('rebuild with apply --target pi') records the same non-main HEAD again, so the drift never clears without knowing about the env override.",
+                "proof_refs": [
+                  "engine/shelltest/overlay_pi_package_build_test.go:46-48",
+                  "engine/shelltest/overlay_pi_package_build_test.go:175-177",
+                  "engine/pipkg/pipkg.go:464-469",
+                  "engine/pipkg/pipkg.go:359"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "behavior-activated"
+              },
+              {
+                "id": "R4-tip-not-peeled-to-commit",
+                "lens": "resilience",
+                "location": "engine/pipkg/pipkg.go:475",
+                "severity": "SUGGESTION",
+                "claim": "The candidate loop accepts a ref once its commit-peeled form exists. The tip, however, is resolved with a plain git rev-parse of the ref, which is not peeled to a commit. If LABDRIAN_PI_DEPLOY_REF names an annotated tag, the tip is the tag object id, which can never equal a recorded commit SHA. Stale is then permanently true, and DeployTip discloses a tag-object id. Resolving with rev-parse --verify on the commit-peeled form would keep the tip consistent with the existence check.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:470",
+                  "engine/pipkg/pipkg.go:475-479",
+                  "engine/pipkg/pipkg.go:485-486"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all five manifest paths in full, from the patch sections only.",
+              "Stale detection is introduced at engine/pipkg/pipkg.go:485-486. It compares builtFrom against the deploy ref tip by SHA equality only and is surfaced as a hard drift error at engine/pipkg/pipkg.go:358-360.",
+              "The new deploy-ref resolution and env override are at engine/pipkg/pipkg.go:464-469. The tip resolution at engine/pipkg/pipkg.go:475-479 fails closed with an explicit error, which is acceptable.",
+              "The shelltest harness change at engine/shelltest/overlay_pi_package_build_test.go:46-48 and engine/shelltest/overlay_pi_package_build_test.go:175-177 shows that live-checkout builds need the override to avoid the new drift.",
+              "Check's failure handling is otherwise acceptable: export errors still return cleanly with the no-op cleanup, a missing override ref falls through to a disclosed default, and the non-hex builtFrom validation still happens before any git argv use. The added per-Check git invocations are negligible for latency.",
+              "The spec files at openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md and openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md explicitly mandate SHA-tip staleness as drift. The resilience concern is the operational noise that behavior produces, not a divergence from the spec."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+        "capture_phase_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+        "artifact_digest": "sha256:ed54655e762e56b99017acdff752bd220a10cec8aac8fc7ed0cf4fdd3f1e31b1",
+        "result_hash": "sha256:ca077bd710fbc91cb567ffe5b8af203c0049b9872c683a13e3f776300dcf542a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:6d738e70e95850b949658a784148a2ac904d1f37ff2dd539b804eda179a82a13",
+            "lineage_id": "review-96dcb185b95c4cbd",
+            "authority_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+            "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+            "base_tree": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+            "candidate_tree": "8ebee83093c16bf927f9e1a626a4c9dadf74c163",
+            "changed_path_manifest_sha256": "sha256:cca6561d13ba40ab087d9ed58fb58fd2db7ffba74714ade6dd78f47ea233d4a2",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:6d738e70e95850b949658a784148a2ac904d1f37ff2dd539b804eda179a82a13",
+            "raw_sha256": "sha256:502d5307efe28c0b275774ee6f886ed4e498ef70e88a7e90c9523f1a24ec8073",
+            "canonical_sha256": "sha256:fe15d5d5f79bdd2519f2cf1539d80e5859b34731331e81ea65fca56d51be18ea",
+            "result_hash": "sha256:ca077bd710fbc91cb567ffe5b8af203c0049b9872c683a13e3f776300dcf542a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:6d738e70e95850b949658a784148a2ac904d1f37ff2dd539b804eda179a82a13",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_provenance_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+                "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/pipkg/pipkg.go:432-435",
+                "severity": "WARNING",
+                "claim": "The new resolveComparisonSource doc says an absent, non-hex, or unresolvable builtFrom value is carried into the report as an empty string. The code does the opposite. The report construction stores the raw builtFrom value, and TestCheck_MainFallback asserts that report.BuiltFrom equals the unresolvable value. The CheckReport doc also calls BuiltFrom the recorded SHA, but it can hold an arbitrary non-hex string. A maintainer who trusts either comment will assume BuiltFrom is always empty or a valid SHA, and that is false.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:492",
+                  "engine/pipkg/pipkg.go:200-202",
+                  "engine/pipkg/pipkg_provenance_test.go:210-212"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/pipkg/pipkg.go:424-431",
+                "severity": "WARNING",
+                "claim": "The documented deploy-ref resolution disagrees with the code in two ways. First, the function doc, the CheckReport DeployRef doc, the Check doc and both specs list the deploy ref as main, then origin/main, then HEAD. The code actually tries the LABDRIAN_PI_DEPLOY_REF override first, and none of those docs or specs mention it. Second, the comments say cmd_apply always deploys from main. The inline override comment, the new override test and the shelltest env comments all say some checkouts deploy from HEAD or a feature ref. So the stated rationale for the comparison target contradicts itself, and an environment variable can silently change what Check compares against.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:459-466",
+                  "engine/pipkg/pipkg.go:197-199",
+                  "engine/pipkg/pipkg.go:255-256",
+                  "engine/pipkg/pipkg_provenance_test.go:404-406",
+                  "engine/shelltest/overlay_pi_package_build_test.go:46-48",
+                  "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md:63-64",
+                  "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md:88-90"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "engine/pipkg/pipkg.go:260",
+                "severity": "WARNING",
+                "claim": "The Check doc defines a stale package as one whose builtFrom is behind the deploy ref's tip, and the inline Stale comment assumes committed changes since the last Build. The predicate only checks that builtFrom is resolvable and differs from the tip; it never checks ancestry. A package built from a commit that is ahead of the deploy ref, or on another branch, is also flagged stale. It then gets the rebuild drift message. The comments misstate the condition that turns Check into a failure.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:485-486",
+                  "engine/pipkg/pipkg.go:481-484",
+                  "engine/pipkg/pipkg.go:358-360"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-004",
+                "lens": "readability",
+                "location": "engine/pipkg/pipkg.go:233",
+                "severity": "WARNING",
+                "claim": "The new deploy-basis disclosure prints the recorded builtFrom the same way whether it is a resolvable SHA, an unresolvable SHA, or a non-hex or option-like string. The removed branch explicitly said the value was not resolvable locally. The revised provenance spec still requires the output to state that an absent or unresolvable recorded ref could not be used as provenance. Operator-facing output now presents unverified or garbage values as real build provenance, and the spec text no longer matches the code.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:228-231",
+                  "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md:66-69",
+                  "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md:76-78"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-005",
+                "lens": "readability",
+                "location": "engine/pipkg/pipkg.go:468",
+                "severity": "SUGGESTION",
+                "claim": "deployRef defaults to main before the candidate loop, and that default is only used when no candidate resolves. In that case the rev-parse error reports a failure resolving main, even when an override or HEAD was the relevant ref. The default is effectively dead and makes the failure message misleading. Consider reporting that no candidate ref resolved, and listing the candidates.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:469-479"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-006",
+                "lens": "readability",
+                "location": "engine/pipkg/pipkg_provenance_test.go:76-80",
+                "severity": "SUGGESTION",
+                "claim": "The test comments were rewritten for the deploy basis, but the test names still describe removed concepts. TestCheck_RefBasis refers to the removed ref basis, and TestCheck_MainFallback now tests no fallback. Likewise, the provenance spec requirement heading still says Main-Only Comparison although its body now describes the deploy ref. Renaming these would stop readers from inferring behavior that no longer exists.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg_provenance_test.go:188-189",
+                  "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md:63-69"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all five manifest paths in full from the supplied patch sections. That covers the pipkg source, its provenance tests, the shelltest env change and both openspec spec deltas.",
+              "Checked the new package, CheckReport, Check and resolveComparisonSource doc comments against the code in engine/pipkg/pipkg.go. Mismatches were found in the BuiltFrom contents, the deploy-ref candidate list and override, the stale predicate wording and the disclosure behavior.",
+              "Cross-checked the doc claims against test assertions in engine/pipkg/pipkg_provenance_test.go and against the revised requirement text in both openspec spec files.",
+              "No BLOCKER or CRITICAL readability defects found. All findings are introduced by this candidate and anchored on candidate-changed lines."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+        "capture_phase_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+        "artifact_digest": "sha256:c3f5c439101e6fe6d1c97be944c38acd877e531ac958b5afe8aed7e09de52a5d",
+        "result_hash": "sha256:601771f2e692165e072be349b8d1cdab2de9e0faed772ace909165af862f3ac4",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:fc6e6ed83a4c1bb9f21a76e189582e479a39bf26704f72465fafb21bdb0fadd0",
+            "lineage_id": "review-96dcb185b95c4cbd",
+            "authority_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+            "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+            "base_tree": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+            "candidate_tree": "8ebee83093c16bf927f9e1a626a4c9dadf74c163",
+            "changed_path_manifest_sha256": "sha256:cca6561d13ba40ab087d9ed58fb58fd2db7ffba74714ade6dd78f47ea233d4a2",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:fc6e6ed83a4c1bb9f21a76e189582e479a39bf26704f72465fafb21bdb0fadd0",
+            "raw_sha256": "sha256:3a28f16177dac0d974f36399fbc61753d8ce426db07f668bc8ad7b84d1d5bf96",
+            "canonical_sha256": "sha256:6d7f955ab228616685305836a1c1d83685ac89b2b6e8e2c06675f9e5df9f2bfd",
+            "result_hash": "sha256:601771f2e692165e072be349b8d1cdab2de9e0faed772ace909165af862f3ac4",
+            "candidate_causal_finding_ids": [
+              "R3-001"
+            ]
+          },
+          "result": {
+            "subject_hash": "sha256:fc6e6ed83a4c1bb9f21a76e189582e479a39bf26704f72465fafb21bdb0fadd0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/pipkg/pipkg.go",
+                "engine/pipkg/pipkg_provenance_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md",
+                "openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-001",
+                "lens": "reliability",
+                "location": "engine/pipkg/pipkg.go:485-486",
+                "severity": "CRITICAL",
+                "claim": "Staleness is now any mismatch between builtFrom and the deploy ref's tip. Build records the checked-out HEAD, so a Build on a feature branch, or on a detached PR HEAD while origin/main exists, is reported as drift right after apply. The appended hint, rebuild with apply --target pi, cannot clear it, because a rebuild records the same HEAD again. This brings back #315-style false drift. The candidate's own shelltests had to set the deploy-ref override to HEAD, with a comment saying the live checkout deploys from HEAD. That contradicts the new claim that cmd_apply always deploys from main. The check is plain inequality, so a build that is ahead of or diverged from the deploy ref is also called stale, although the doc comment says 'behind'. TestCheck_FeatureBranchDoesNotFalseDrift builds on main before creating the feature branch, so the original #315 case (Build run on the feature branch) has no test.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:485-486",
+                  "engine/pipkg/pipkg.go:358-360",
+                  "engine/pipkg/pipkg.go:430",
+                  "engine/pipkg/pipkg.go:260",
+                  "engine/pipkg/pipkg.go:464-469",
+                  "engine/shelltest/overlay_pi_package_build_test.go:46-48",
+                  "engine/shelltest/overlay_pi_package_build_test.go:175-177",
+                  "engine/pipkg/pipkg_provenance_test.go:163-167"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-002",
+                "lens": "reliability",
+                "location": "engine/pipkg/pipkg.go:475",
+                "severity": "WARNING",
+                "claim": "The deploy tip is resolved with a bare rev-parse of deployRef, without --verify and without peeling to a commit (the candidate loop does peel with a commit suffix). If the override names an annotated tag, rev-parse returns the tag object SHA. That SHA never equals the recorded builtFrom commit, so Stale is permanently true (false drift) and DeployTip shows a non-commit object. Resolving the ref as a verified commit would fix this. No test covers a tag override.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:475",
+                  "engine/pipkg/pipkg.go:479",
+                  "engine/pipkg/pipkg.go:485",
+                  "engine/pipkg/pipkg.go:492",
+                  "engine/pipkg/pipkg.go:465-466"
+                ]
+              },
+              {
+                "id": "R3-003",
+                "lens": "reliability",
+                "location": "engine/pipkg/pipkg.go:233",
+                "severity": "WARNING",
+                "claim": "For a builtFrom that is non-hex or cannot be resolved, the deploy-basis Disclosure prints 'package built from \u003craw value\u003e' as if it were valid provenance. It never says the recorded ref could not be resolved or used. The candidate's own spec requires that statement when builtFrom is absent or unresolvable. The doc comment says such values are carried into the report as an empty string, but the report carries the raw value, and the updated MainFallback test asserts the raw value. No test asserts the Disclosure text for the unresolvable or non-hex case, so the spec requirement is unimplemented and unproved.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:228-231",
+                  "engine/pipkg/pipkg.go:433-434",
+                  "engine/pipkg/pipkg.go:492",
+                  "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md:66-69",
+                  "openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md:77-78",
+                  "engine/pipkg/pipkg_provenance_test.go:210-212"
+                ]
+              },
+              {
+                "id": "R3-004",
+                "lens": "reliability",
+                "location": "engine/pipkg/pipkg_provenance_test.go:158-160",
+                "severity": "WARNING",
+                "claim": "Check now reads LABDRIAN_PI_DEPLOY_REF from the process environment. The pipkg unit tests that assert DeployRef=main or DeployRef=HEAD never clear that variable. The candidate recommends setting it for CI pull-request checkouts, and its shelltests use HEAD. If a CI job or developer shell exports it (for example as HEAD), it wins over main in the fixture repos. The deploy-ref assertions in TestCheck_RefBasis, TestCheck_StaleAfterCommittedSourceChange, TestCheck_FeatureBranchDoesNotFalseDrift, TestCheck_MainFallback and TestCheck_MainFallbackWithoutMainBranch then fail. The feature-branch test would also report drift. The tests should clear the variable, for example by setting it to empty with t.Setenv.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:465-466",
+                  "engine/pipkg/pipkg_provenance_test.go:94",
+                  "engine/pipkg/pipkg_provenance_test.go:150",
+                  "engine/pipkg/pipkg_provenance_test.go:179",
+                  "engine/pipkg/pipkg_provenance_test.go:207",
+                  "engine/pipkg/pipkg_provenance_test.go:399"
+                ]
+              },
+              {
+                "id": "R3-005",
+                "lens": "reliability",
+                "location": "engine/pipkg/pipkg.go:465-469",
+                "severity": "SUGGESTION",
+                "claim": "If the LABDRIAN_PI_DEPLOY_REF override does not resolve (for example a typo), Check silently falls back to main, origin/main or HEAD with no error or warning. The disclosure then names a different ref than the operator configured. The override is also passed to git argv without the pattern validation applied to builtFrom, so a value starting with a dash reaches git as an argument. No test covers an unresolvable or malformed override.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:465-469",
+                  "engine/pipkg/pipkg.go:471",
+                  "engine/pipkg/pipkg.go:461-463",
+                  "engine/pipkg/pipkg_provenance_test.go:407-426"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all five manifest paths from the supplied patch sections only; no working tree, index, or command was used.",
+              "engine/pipkg/pipkg.go: the builtFrom ref basis was removed, so Check always exports the deploy ref chosen from override, main, origin/main, then HEAD (engine/pipkg/pipkg.go:464-469). Staleness is builtFrom differing from the tip (engine/pipkg/pipkg.go:485-486) and is appended as drift (engine/pipkg/pipkg.go:358-360).",
+              "The claim that cmd_apply always deploys from main (engine/pipkg/pipkg.go:430) cannot be verified from this candidate. The candidate's shelltests contradict it by forcing the deploy ref to HEAD because the live checkout deploys from HEAD (engine/shelltest/overlay_pi_package_build_test.go:46-48), so R3-001 is classed inferential.",
+              "The new unit tests cover staleness after a committed change on main (engine/pipkg/pipkg_provenance_test.go:130-153), a feature branch created after a Build on main (engine/pipkg/pipkg_provenance_test.go:158-185), and the override (engine/pipkg/pipkg_provenance_test.go:407-426). None covers a Build run on a non-main HEAD, an annotated-tag or unresolvable override, or Disclosure text for an unresolvable builtFrom.",
+              "Spec edits in openspec/changes/pi-package-hardening/specs/pi-build-provenance/spec.md and openspec/changes/pi-package-hardening/specs/pi-runtime-target/spec.md require disclosing an unresolvable builtFrom as unusable provenance. The Disclosure implementation at engine/pipkg/pipkg.go:233 does not do this."
+            ]
+          }
+        }
+      },
+      {
+        "role": "refuter",
+        "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+        "capture_phase_revision": "sha256:07e45dc6fdffb2c525e72257449667d2ed9976d3293b73191e835ce18a9ca081",
+        "request_hash": "sha256:1d2ec213c9ad36e8fabb195558193b95a1219171439897f08e4471c73301d4eb",
+        "artifact_digest": "sha256:0196ed8513ec166bd79bd71f0dd440e3fc2dc2d4b853359d076a7ce13e5408a3",
+        "value": {
+          "results": [
+            {
+              "finding_id": "R3-001",
+              "outcome": "corroborated",
+              "proof": "engine/pipkg/pipkg.go:485-486; engine/pipkg/pipkg.go:358-360; engine/pipkg/pipkg.go:464-469; engine/pipkg/pipkg.go:430; engine/pipkg/pipkg.go:260; engine/shelltest/overlay_pi_package_build_test.go:46-48; engine/shelltest/overlay_pi_package_build_test.go:175-177; engine/pipkg/pipkg_provenance_test.go:163-167"
+            }
+          ]
+        }
+      },
+      {
+        "role": "targeted_validator",
+        "target_identity": "sha256:45f2e424a920f5f13f666ba89226faad9b504c51ea43d869cd8f6763fa39202e",
+        "capture_phase_revision": "sha256:ca2fec2dd4181ce4af0fd0ba775e01bf5b89215ae2560cd882ec395071bd688b",
+        "request_hash": "sha256:55583fc8bac89ec25604194a2454214f78c66c803d2e3c56208bcd22b87d8987",
+        "artifact_digest": "sha256:bbc8d543a731c075bbda2e35708eae67806cd5c129a7390bbb0f62703ff279f9",
+        "value": {
+          "outcome": "passed",
+          "evidence": {
+            "targeted_validation_request_hash": "sha256:55583fc8bac89ec25604194a2454214f78c66c803d2e3c56208bcd22b87d8987",
+            "correction_target_identity": "sha256:45f2e424a920f5f13f666ba89226faad9b504c51ea43d869cd8f6763fa39202e",
+            "original_criteria": {
+              "passed": true,
+              "evidence": [
+                "R3-001 (plain inequality flags ahead or diverged builds as stale): engine/pipkg/pipkg.go:487-488 still requires builtFrom to be non-empty, to match builtFromPattern and to differ from tip. It now replaces the `cat-file -e builtFrom^{commit}` existence probe with `git merge-base --is-ancestor builtFrom tip`, which exits 0 only when builtFrom is a proper ancestor of the deploy ref's tip.",
+                "A Build on a feature branch or a detached PR HEAD that is ahead of or diverged from main is no longer an ancestor of main's tip. It is therefore not reported as stale, which removes the #315-style false drift that a rebuild could never clear.",
+                "The retained `builtFrom != tip` guard is needed because --is-ancestor returns true for equal commits, so a build at the tip stays non-stale. A missing or unresolvable builtFrom makes merge-base exit 128 and is treated as non-stale, the same result the old cat-file probe gave.",
+                "The doc comment/implementation mismatch is resolved: engine/pipkg/pipkg.go:481-486 now says 'strictly BEHIND ... (a proper ancestor)'. It also states that ahead or diverged builds are left to the file-level diff, which matches the ancestry check.",
+                "The missing test for the original #315 case is added: TestCheck_BuildOnFeatureBranchIsNotStale (engine/pipkg/pipkg_provenance_test.go:432-451) checks out a feature branch and commits on it before calling Build. It then asserts that Check returns no error, Stale=false and DeployRef=main.",
+                "The shelltest comment contradiction is resolved: engine/shelltest/overlay_pi_package_build_test.go:47 and :176 now explain that LABDRIAN_PI_DEPLOY_REF=HEAD is pinned because these tests build directly from the checkout without apply. They no longer claim that the live checkout deploys from HEAD, so they no longer contradict apply deploying from main."
+              ]
+            },
+            "correction_regression": {
+              "passed": true,
+              "evidence": [
+                "The correction is confined to the stale predicate and its comment in engine/pipkg/pipkg.go, one added test, and two comment-only edits in the shelltest. All three files are inside the frozen correction_paths.",
+                "A build that is truly behind the deploy ref, where builtFrom is a proper ancestor of tip, is still reported as stale, so the intended drift signal is preserved. Only ahead or diverged builds change from stale to not stale, and those still go through the unchanged file-level diff that follows.",
+                "The shelltest changes touch comments only; the LABDRIAN_PI_DEPLOY_REF=HEAD environment values are unchanged, so shelltest behaviour is identical.",
+                "No existing test or assertion was removed or weakened in the frozen patch. The new test adds coverage without altering prior fixtures such as TestCheck_DeployRefOverride."
+              ]
+            },
+            "follow_ups": [
+              {
+                "observation": "In a shallow clone, or whenever builtFrom's ancestry to the deploy ref tip is not locally available, `git merge-base --is-ancestor` exits non-zero and the build is silently treated as not stale. The previous cat-file probe would have flagged it. Consider distinguishing exit 1 (not an ancestor) from exit 128 (error, e.g. missing history) and disclosing the error case.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:487-488"
+                ]
+              },
+              {
+                "observation": "No test covers a feature branch that diverged from an older main while main advanced. Such a build is neither an ancestor nor a descendant of the tip, so it is not stale, and package-source differences are expected to surface only through the file-level diff. A test would pin that contract.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg.go:481-488",
+                  "engine/pipkg/pipkg_provenance_test.go:432-451"
+                ]
+              },
+              {
+                "observation": "TestCheck_BuildOnFeatureBranchIsNotStale assumes README.md is outside the package sources defined by gitFixtureOverlay. If the fixture ever includes README.md among package sources, the Check-must-be-clean assertion would fail for reasons unrelated to staleness.",
+                "proof_refs": [
+                  "engine/pipkg/pipkg_provenance_test.go:436-446"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "3b150f69750d622c15f98678d0e99e6aa2da97c0d638a570b00d19983ca8b4bf",
+    "initial_atomic_start": {
+      "lineage_id": "review-96dcb185b95c4cbd",
+      "worktree_identity": "sha256:a0bd1e050caa41695bd538f1f1d9672c82c1fd135dfb53e18727c45f9bb8583c",
+      "target_identity": "sha256:c4c61b579ccedcddbf360d984ebc8dfd32c1e5f672ec428191abc8fe94dc4c53",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "6aa7e17754d6456f2a40ba0594394b4acae4f325",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 421,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
