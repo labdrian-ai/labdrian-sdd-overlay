@@ -32,6 +32,7 @@ const (
 )
 
 const usageText = `Usage: archive-anchor-gate --repo PATH [--since YYYY-MM-DD] [--known-gaps PATH]
+       archive-anchor-gate --repo PATH --change NAME
 
 Checks every openspec/changes/archive/<date>-<change>/archive-report.md dated on
 or after the anchor convention against the landing-commit anchor contract.
@@ -45,11 +46,19 @@ Options:
                      FAILS is reported as a known gap and does not fail the run.
                      A listed report that PASSES fails the run as a stale
                      waiver, so the ledger cannot quietly outlive the gap.
+  --change NAME      Pre-archive check (R-011): runs the receipt-requirement
+                     check against the LIVE openspec/changes/NAME/ folder
+                     instead of scanning the archive. Exits 1 when no
+                     persisted review receipt or recorded owner override
+                     exists for NAME. Mutually exclusive with --since and
+                     --known-gaps.
   --help             Show this help
 
 Exit codes:
-  0  every in-scope report satisfies the anchor contract (known gaps aside)
-  1  at least one report does not, or a waiver is stale
+  0  every in-scope report satisfies the anchor contract (known gaps aside),
+     or (with --change) a receipt/override was found for the named change
+  1  at least one report does not, a waiver is stale, or (with --change) no
+     receipt or override was found
   2  invalid command-line usage
   3  the repository or the ledger could not be read
 `
@@ -64,6 +73,7 @@ func run(args []string, stdout, stderr io.Writer) int {
 	repo := flags.String("repo", "", "repository root to scan")
 	since := flags.String("since", ConventionDate, "convention date")
 	knownGaps := flags.String("known-gaps", "", "ledger of reports known not to comply yet")
+	change := flags.String("change", "", "pre-archive receipt check for this live change")
 	showHelp := flags.Bool("help", false, "show help")
 
 	if err := flags.Parse(args); err != nil {
@@ -77,6 +87,20 @@ func run(args []string, stdout, stderr io.Writer) int {
 	if *repo == "" {
 		fmt.Fprintf(stderr, "error: --repo is required\n\n%s", usageText)
 		return exitUsage
+	}
+
+	if *change != "" {
+		ok, message, err := CheckPreArchive(*repo, *change)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: %v\n", err)
+			return exitIO
+		}
+		if !ok {
+			fmt.Fprintf(stderr, "FAIL %s\n", message)
+			return exitFinding
+		}
+		fmt.Fprintln(stdout, message)
+		return exitOK
 	}
 
 	waived, err := readKnownGaps(*knownGaps)
