@@ -13,18 +13,26 @@ unverified anchors.
 
 Traces to: R-008
 
-WHEN a review transaction's final capture reaches `approved` state and
-before the `acknowledge-approved` invocation runs, the orchestrator
-workflow SHALL persist that transaction's `gentle-ai.review-receipt/v2`
-payload to `openspec/changes/<change>/review-receipts/<lineage>.json`.
+WHEN a review transaction reaches the `approved` state and before the
+`acknowledge-approved` invocation runs, the orchestrator workflow SHALL
+persist that transaction's approved artifact to
+`openspec/changes/<change>/review-receipts/`. Two on-disk shapes are
+recognized: the legacy `gentle-ai.review-receipt/v2` `review-receipt.json`
+(gentle-ai versions before 2.7.0), persisted as `<lineage>.json`, and the
+gentle-ai 2.7.0+ lifecycle `review-state.json` -- under which an
+approved-but-unacknowledged lineage directory contains ONLY this file --
+persisted as `<lineage>.review-state.json`. Both are captured when both are
+present for the same lineage.
 
 #### Scenario: Receipt file exists before acknowledge is invoked
 
 - GIVEN a review transaction reaches `approved`
 - WHEN the orchestrator proceeds to acknowledge it
-- THEN `openspec/changes/<change>/review-receipts/<lineage>.json` SHALL
-  exist and SHALL contain `final_candidate_tree`, `selected_lenses`, and
-  `terminal_state` before `acknowledge-approved` is invoked
+- THEN `openspec/changes/<change>/review-receipts/<lineage>.json` (or
+  `<lineage>.review-state.json` on gentle-ai 2.7.0+) SHALL exist and SHALL
+  resolve, via `reviewreceipt.ApprovedSummary`, to a `final_candidate_tree`,
+  `selected_lenses`, and approved state before `acknowledge-approved` is
+  invoked
 
 ### Requirement: approved_tree Sourced Only From the Persisted Receipt
 
