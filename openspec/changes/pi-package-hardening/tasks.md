@@ -71,16 +71,16 @@ Chain strategy: stacked-to-main
 
 ## Phase 5: gadu-pi-subagent (PR 5, R-012..R-016; depends on Phase 2)
 
-- [ ] 5.1 RED: `engine/runtime/pi_test.go` TestSubagentsExtension_InstallWhenAbsent (via `LABDRIAN_PI_BIN` stub, disclosure line); TestSubagentsExtension_Noop (either prefix present); TestSubagentsExtension_SkipEnv (`LABDRIAN_PI_SKIP_SUBAGENTS=1`).
-- [ ] 5.2 RED: TestGaduLinkState_Matrix — missing/current/stale/conflict, 4×2.
-- [ ] 5.3 RED: TestGaduLink_SurvivesOverwrite — gentle-pi-style overwrite leaves our symlink intact.
-- [ ] 5.4 RED: TestUninstall_OwnedLinkOnly — removes only our symlink, then `pi remove`; extension/conflict entries untouched.
-- [ ] 5.5 RED: TestFrontmatter_InlineToolsScalar — `tools: '*'` stays a single inline scalar.
-- [ ] 5.6 GREEN: `engine/runtime/pi.go` extension probe (`settings.json packages[]` prefix `npm:pi-subagents-j0k3r`/`npm:pi-subagents`) + `runPiCommand(bin,"install",...)`.
-- [ ] 5.7 GREEN: symlink `~/.pi/agent/agents/GADU.md` → `<destDir>/agents/GADU.md`; `gaduLinkState(home,destDir,expected)`.
-- [ ] 5.8 GREEN: status reports `subagents_extension`/`gadu_link`; uninstall removes only owned link, then `pi remove`.
-- [ ] 5.9 GREEN: wire extension install inside `apply --target pi`.
-- [ ] 5.10 Docs: pi-runtime-target status docs — two new status reasons.
+- [x] 5.1 RED: `engine/runtime/pi_test.go` TestSubagentsExtension_InstallWhenAbsent (via `LABDRIAN_PI_BIN` stub, disclosure line); TestSubagentsExtension_Noop (either prefix present); TestSubagentsExtension_SkipEnv (`LABDRIAN_PI_SKIP_SUBAGENTS=1`).
+- [x] 5.2 RED: TestGaduLinkState_Matrix — missing/current/stale/conflict, 4×2.
+- [x] 5.3 RED: TestGaduLink_SurvivesOverwrite — gentle-pi-style overwrite leaves our symlink intact.
+- [x] 5.4 RED: TestUninstall_OwnedLinkOnly — removes only our symlink, then `pi remove`; extension/conflict entries untouched.
+- [x] 5.5 RED: TestFrontmatter_InlineToolsScalar — `tools: '*'` stays a single inline scalar.
+- [x] 5.6 GREEN: `engine/runtime/pi.go` extension probe (`settings.json packages[]` prefix `npm:pi-subagents-j0k3r`/`npm:pi-subagents`) + `runPiCommand(bin,"install",...)`.
+- [x] 5.7 GREEN: symlink `~/.pi/agent/agents/GADU.md` → `<destDir>/agents/GADU.md`; `gaduLinkState(home,destDir,expected)`.
+- [x] 5.8 GREEN: status reports `subagents_extension`/`gadu_link`; uninstall removes only owned link, then `pi remove`.
+- [x] 5.9 GREEN: wire extension install inside `apply --target pi`.
+- [x] 5.10 Docs: pi-runtime-target status docs — two new status reasons.
 
 ## Phase M: Manual live-Pi checkpoints (MANUAL, not run by `sdd-apply`)
 
