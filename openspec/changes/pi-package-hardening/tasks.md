@@ -77,13 +77,13 @@ Chain strategy: stacked-to-main
 - [x] 5.4 RED: TestUninstall_OwnedLinkOnly — removes only our symlink, then `pi remove`; extension/conflict entries untouched.
 - [x] 5.5 RED: TestFrontmatter_InlineToolsScalar — `tools: '*'` stays a single inline scalar.
 - [x] 5.6 GREEN: `engine/runtime/pi.go` extension probe (`settings.json packages[]` prefix `npm:pi-subagents-j0k3r`/`npm:pi-subagents`) + `runPiCommand(bin,"install",...)`.
-- [x] 5.7 GREEN: symlink `~/.pi/agent/agents/GADU.md` → `<destDir>/agents/GADU.md`; `gaduLinkState(home,destDir,expected)`.
+- [x] 5.7 GREEN: symlink `<Pi agent dir>/agents/GADU.md` (read-only) → `<destDir>/agents/GADU.md`; `gaduLinkState(home,destDir,expected)`.
 - [x] 5.8 GREEN: status reports `subagents_extension`/`gadu_link`; uninstall removes only owned link, then `pi remove`.
 - [x] 5.9 GREEN: wire extension install inside `apply --target pi`.
 - [x] 5.10 Docs: pi-runtime-target status docs — two new status reasons.
 
 ## Phase M: Manual live-Pi checkpoints (MANUAL, not run by `sdd-apply`)
 
-- [ ] M.1 MANUAL: On real machine, run `apply --target pi`; confirm `pi-subagents-j0k3r` installs and `GADU.md` links.
-- [ ] M.2 MANUAL: Dispatch GADU via gentle-pi `subagent_*` from the overlay-linked file; confirm response.
-- [ ] M.3 MANUAL: Run `pi remove npm:pi-subagents-j0k3r`; confirm byte-identical extension removal, overlay link handled per uninstall scope.
+- [x] M.1 MANUAL: On real machine, run `apply --target pi`; confirm `pi-subagents-j0k3r` installs and `GADU.md` links.
+- [x] M.2 MANUAL: Dispatch GADU via gentle-pi `subagent_*` from the overlay-linked file; confirm response.
+- [x] M.3 MANUAL: Run `pi remove npm:pi-subagents-j0k3r`; confirm byte-identical extension removal, overlay link handled per uninstall scope.
