@@ -1003,6 +1003,131 @@ func TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries(t *testing.T) {
 	}
 }
 
+// TestPiAdapter_InstallSkipsExtensionWhenGentlePiNative (R-012 revised):
+// when ~/.pi/agent/settings.json already lists gentle-pi at a version whose
+// native subagent_* tools replace the third-party extension, Install must
+// NEVER run `pi install npm:pi-subagents-j0k3r` -- installing it would
+// leave gentle-pi's native tools unregistered (verified live 2026-09-13).
+func TestPiAdapter_InstallSkipsExtensionWhenGentlePiNative(t *testing.T) {
+	adapter, _, recorder := newBuiltPiAdapterWithStub(t)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+	writePiSettingsPackages(t, home, []string{"npm:gentle-pi@2.6.0"})
+
+	result := adapter.Install()
+	if result.Status == engineRuntime.CapabilityUnsupported {
+		t.Fatalf("Install must not be unsupported, got: %s", result)
+	}
+	if !strings.Contains(result.Message, "native subagents") {
+		t.Fatalf("Install message must disclose native subagent detection, got %q", result.Message)
+	}
+
+	for _, argv := range readAllRecordedTokens(t, recorder) {
+		if strings.Contains(argv, "pi-subagents") {
+			t.Fatalf("Install must not install the obsolete pi-subagents extension when gentle-pi native subagents are available, recorded argv contained %q", argv)
+		}
+	}
+}
+
+// TestPiAdapter_StatusFlagsExtensionConflictWithNativeSubagents (R-015
+// revised): when BOTH gentle-pi native subagents (>= 2.6.0) AND the
+// obsolete pi-subagents extension are listed, Status must report partial
+// and name the exact remediation -- this is exactly the state that
+// silently broke dispatch live on 2026-09-13.
+func TestPiAdapter_StatusFlagsExtensionConflictWithNativeSubagents(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	writePiSettingsPackages(t, home, []string{destDir, "npm:gentle-pi@2.6.0", "npm:pi-subagents-j0k3r"})
+	writePiMcpRegistration(t, destDir, true)
+	writeGaduLinkCurrent(t, home, destDir)
+
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+	result := adapter.Status()
+	if result.Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("Status with both native and legacy subagent runners installed = %s, want partial", result)
+	}
+	if !strings.Contains(result.Message, "pi remove npm:pi-subagents-j0k3r") {
+		t.Fatalf("Status message must name the exact removal command, got %q", result.Message)
+	}
+}
+
+// TestPiAdapter_StatusSupportedWithNativeSubagents (R-015 revised): native
+// gentle-pi subagents (>= 2.6.0) alone -- without the legacy extension --
+// combined with every other owned entry proven, must report supported.
+func TestPiAdapter_StatusSupportedWithNativeSubagents(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	writePiSettingsPackages(t, home, []string{destDir, "npm:gentle-pi@2.6.0"})
+	writePiMcpRegistration(t, destDir, true)
+	writeGaduLinkCurrent(t, home, destDir)
+
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+	result := adapter.Status()
+	if result.Status != engineRuntime.CapabilitySupported {
+		t.Fatalf("Status with native subagents + link + package + mcp all proven = %s, want supported", result)
+	}
+}
+
+// TestPiAdapter_InstallSkipsExtensionWhenGentlePiNative_Unversioned (R-012
+// revised): an unversioned "npm:gentle-pi" entry must resolve the
+// installed version from gentle-pi's own package.json rather than assuming
+// native support either way.
+func TestPiAdapter_InstallSkipsExtensionWhenGentlePiNative_Unversioned(t *testing.T) {
+	adapter, _, recorder := newBuiltPiAdapterWithStub(t)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+	writePiSettingsPackages(t, home, []string{"npm:gentle-pi"})
+	mustWrite(t, filepath.Join(home, ".pi", "agent", "npm", "node_modules", "gentle-pi", "package.json"),
+		`{"name":"gentle-pi","version":"2.6.0"}`)
+
+	result := adapter.Install()
+	if result.Status == engineRuntime.CapabilityUnsupported {
+		t.Fatalf("Install must not be unsupported, got: %s", result)
+	}
+	for _, argv := range readAllRecordedTokens(t, recorder) {
+		if strings.Contains(argv, "pi-subagents") {
+			t.Fatalf("Install must not install the obsolete extension when the resolved installed gentle-pi version is native-capable, recorded argv contained %q", argv)
+		}
+	}
+}
+
+// TestPiAdapter_InstallUsesLegacyExtensionWhenGentlePiBelowNativeVersion
+// (R-012 revised): gentle-pi below the native-subagents version must keep
+// the existing legacy extension install path unchanged.
+func TestPiAdapter_InstallUsesLegacyExtensionWhenGentlePiBelowNativeVersion(t *testing.T) {
+	adapter, _, recorder := newBuiltPiAdapterWithStub(t)
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+	writePiSettingsPackages(t, home, []string{"npm:gentle-pi@2.5.0"})
+
+	result := adapter.Install()
+	if result.Status == engineRuntime.CapabilityUnsupported {
+		t.Fatalf("Install must not be unsupported, got: %s", result)
+	}
+
+	var sawSubagents bool
+	for _, argv := range readAllRecordedTokens(t, recorder) {
+		if strings.Contains(argv, "pi-subagents") {
+			sawSubagents = true
+		}
+	}
+	if !sawSubagents {
+		t.Fatalf("Install with gentle-pi below the native-subagents version must still install the legacy extension, got argv: %v", readRecordedInvocations(t, recorder))
+	}
+}
+
 // TestInstall_RejectsAmbiguousGaduFrontmatter (task 5.5/R-014): a package
 // agents/GADU.md whose frontmatter mixes an inline `tools` scalar with a
 // YAML list is refused before linking, with a named error, and no link is

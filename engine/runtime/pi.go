@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strconv"
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
@@ -104,7 +105,7 @@ func (a PiAdapter) installGaduSubagent(bin string) string {
 	}
 
 	var parts []string
-	parts = append(parts, ensureSubagentsExtension(bin, home))
+	parts = append(parts, ensureSubagentRunner(bin, home))
 
 	if err := linkGaduAgent(home, a.destDir); err != nil {
 		parts = append(parts, err.Error()+".")
@@ -149,8 +150,13 @@ func (a PiAdapter) Status() LifecycleResult {
 		problems = append(problems, "longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi)")
 	}
 	if home, err := os.UserHomeDir(); err == nil && home != "" {
-		if !isSubagentsExtensionListed(home) {
-			problems = append(problems, "Pi Subagents extension installed (not installed; run: labdrian-overlay apply --target pi)")
+		switch subagentRunnerState(home) {
+		case subagentRunnerNative, subagentRunnerLegacy:
+			// proven
+		case subagentRunnerConflict:
+			problems = append(problems, "subagent runner (gentle-pi native subagents (>= 2.6.0) AND the pi-subagents extension are both installed; the obsolete extension conflicts with gentle-pi's native subagent tools and must be removed: pi remove npm:pi-subagents-j0k3r)")
+		case subagentRunnerAbsent:
+			problems = append(problems, "subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi)")
 		}
 		switch gaduLinkState(gaduLinkPath(home), gaduSourcePath(a.destDir)) {
 		case gaduLinkCurrent:
@@ -163,13 +169,13 @@ func (a PiAdapter) Status() LifecycleResult {
 			problems = append(problems, "GADU.md linked at ~/.pi/agent/agents/GADU.md (conflict: a foreign file already exists there)")
 		}
 	} else {
-		problems = append(problems, "Pi Subagents extension installed (cannot resolve home directory)")
+		problems = append(problems, "subagent runner not proven (cannot resolve home directory)")
 		problems = append(problems, "GADU.md linked at ~/.pi/agent/agents/GADU.md (cannot resolve home directory)")
 	}
 
 	if len(problems) == 0 {
 		return NewLifecycleResult(a.target, ActionStatus, CapabilitySupported,
-			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, the Pi Subagents extension is installed, and GADU.md is linked. "+piNoDiscoveryFlagsDisclosure, nil)
+			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, a subagent runner (gentle-pi native subagents or the legacy Pi Subagents extension) is available, and GADU.md is linked. "+piNoDiscoveryFlagsDisclosure, nil)
 	}
 	return NewLifecycleResult(a.target, ActionStatus, CapabilityPartial,
 		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, problems)
@@ -363,6 +369,172 @@ func ensureSubagentsExtension(bin, home string) string {
 		return disclosure + " `pi install " + subagentsExtensionPackage + "` failed: " + err.Error() + "."
 	}
 	return disclosure + " Ran `pi install " + subagentsExtensionPackage + "`."
+}
+
+// gentlePiPackagePrefix is the fixed package name gentle-pi's own npm
+// entry is listed under in ~/.pi/agent/settings.json.
+const gentlePiPackagePrefix = "npm:gentle-pi"
+
+// minNativeSubagentsVersion is the first gentle-pi release whose README
+// documents the native subagent_* tools replacing the third-party
+// pi-subagents-j0k3r/pi-subagents extension (verified live 2026-09-13
+// against gentle-pi 2.6.0, README.md line 782).
+var minNativeSubagentsVersion = piVersion{major: 2, minor: 6, patch: 0}
+
+// piVersion is a minimal major.minor.patch comparator -- enough to compare
+// gentle-pi's semver-ish version strings without pulling in a full semver
+// dependency. Any unparseable suffix past the numeric patch (a prerelease
+// tag, say) is ignored.
+type piVersion struct {
+	major, minor, patch int
+}
+
+// lessThan reports whether v is strictly older than o.
+func (v piVersion) lessThan(o piVersion) bool {
+	if v.major != o.major {
+		return v.major < o.major
+	}
+	if v.minor != o.minor {
+		return v.minor < o.minor
+	}
+	return v.patch < o.patch
+}
+
+// parsePiVersion parses a "major.minor.patch[...]" string, ignoring any
+// non-numeric suffix on the patch component (e.g. "2.6.0-rc.1" parses as
+// 2.6.0). Returns ok=false when major/minor/patch cannot be parsed as
+// integers.
+func parsePiVersion(s string) (piVersion, bool) {
+	parts := strings.SplitN(strings.TrimSpace(s), ".", 3)
+	if len(parts) < 3 {
+		return piVersion{}, false
+	}
+	patchStr := parts[2]
+	for i, r := range patchStr {
+		if r < '0' || r > '9' {
+			patchStr = patchStr[:i]
+			break
+		}
+	}
+	major, errMajor := strconv.Atoi(parts[0])
+	minor, errMinor := strconv.Atoi(parts[1])
+	patch, errPatch := strconv.Atoi(patchStr)
+	if errMajor != nil || errMinor != nil || errPatch != nil {
+		return piVersion{}, false
+	}
+	return piVersion{major: major, minor: minor, patch: patch}, true
+}
+
+// installedGentlePiVersion reads the installed gentle-pi package's own
+// package.json under <home>/.pi/agent/npm/node_modules/gentle-pi (the path
+// verified live 2026-09-13) and returns its "version" field, or "" when it
+// cannot be read or parsed. Used only when settings.json lists an
+// unversioned "npm:gentle-pi" entry.
+func installedGentlePiVersion(home string) string {
+	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "npm", "node_modules", "gentle-pi", "package.json"))
+	if err != nil {
+		return ""
+	}
+	var pkg struct {
+		Version string `json:"version"`
+	}
+	if json.Unmarshal(raw, &pkg) != nil {
+		return ""
+	}
+	return pkg.Version
+}
+
+// nativeSubagentsAvailable is a read-only probe (R-012 revised) reporting
+// whether ~/.pi/agent/settings.json's "packages" array lists "npm:gentle-pi"
+// at a version >= minNativeSubagentsVersion -- the version whose native
+// subagent_* tools replace the third-party Subagents extension. An
+// unversioned "npm:gentle-pi" entry resolves the installed version from
+// gentle-pi's own package.json. Absent, unparseable, or below the minimum
+// version all report false.
+func nativeSubagentsAvailable(home string) bool {
+	raw, err := os.ReadFile(filepath.Join(home, ".pi", "agent", "settings.json"))
+	if err != nil {
+		return false
+	}
+	var settings struct {
+		Packages []string `json:"packages"`
+	}
+	if json.Unmarshal(raw, &settings) != nil {
+		return false
+	}
+	for _, p := range settings.Packages {
+		if p != gentlePiPackagePrefix && !strings.HasPrefix(p, gentlePiPackagePrefix+"@") {
+			continue
+		}
+		versionStr := strings.TrimPrefix(strings.TrimPrefix(p, gentlePiPackagePrefix), "@")
+		if versionStr == "" {
+			versionStr = installedGentlePiVersion(home)
+		}
+		if versionStr == "" {
+			return false
+		}
+		v, ok := parsePiVersion(versionStr)
+		if !ok {
+			return false
+		}
+		return !v.lessThan(minNativeSubagentsVersion)
+	}
+	return false
+}
+
+// subagentRunnerState is subagentRunnerState's result: exactly one of
+// native (gentle-pi's own subagent_* tools, gentle-pi >= 2.6.0), legacy
+// (the third-party pi-subagents-j0k3r/pi-subagents extension, no native
+// support detected), conflict (BOTH installed -- the exact state that
+// silently broke dispatch on a live machine 2026-09-13, since installing
+// the obsolete extension leaves gentle-pi's native tools unregistered), or
+// absent (neither installed).
+type subagentRunner string
+
+const (
+	subagentRunnerNative   subagentRunner = "native"
+	subagentRunnerLegacy   subagentRunner = "legacy"
+	subagentRunnerConflict subagentRunner = "conflict"
+	subagentRunnerAbsent   subagentRunner = "absent"
+)
+
+// subagentRunnerState reports which dispatch runner(s) are proven present.
+func subagentRunnerState(home string) subagentRunner {
+	native := nativeSubagentsAvailable(home)
+	legacy := isSubagentsExtensionListed(home)
+	switch {
+	case native && legacy:
+		return subagentRunnerConflict
+	case native:
+		return subagentRunnerNative
+	case legacy:
+		return subagentRunnerLegacy
+	default:
+		return subagentRunnerAbsent
+	}
+}
+
+// ensureSubagentRunner decides GADU's Pi dispatch runner at install time
+// (R-012 revised): when gentle-pi's native subagent_* tools are available
+// (>= 2.6.0), the obsolete pi-subagents-j0k3r/pi-subagents extension is
+// NEVER installed -- installing it would leave gentle-pi's native tools
+// unregistered (verified live 2026-09-13, gentle-pi README.md line 782).
+// If that obsolete extension is already listed alongside native support,
+// the conflict is disclosed with the exact removal command, but the
+// overlay never removes a package it does not own. Only when native
+// support is unavailable does this fall back to the legacy extension
+// install path unchanged.
+func ensureSubagentRunner(bin, home string) string {
+	if os.Getenv(subagentsSkipEnv) == "1" {
+		return "Pi Subagents extension check skipped (" + subagentsSkipEnv + "=1)."
+	}
+	if nativeSubagentsAvailable(home) {
+		if isSubagentsExtensionListed(home) {
+			return "gentle-pi native subagents (>= 2.6.0) detected; the installed pi-subagents-j0k3r/pi-subagents extension conflicts with gentle-pi's native subagent tools and must be removed (it is not overlay-owned, so run this yourself): pi remove npm:pi-subagents-j0k3r."
+		}
+		return "gentle-pi native subagents (>= 2.6.0) detected; skipping the legacy Pi Subagents extension install."
+	}
+	return ensureSubagentsExtension(bin, home)
 }
 
 // gaduLinkPath returns the overlay-owned GADU agent link location.
