@@ -277,16 +277,16 @@ func TestPreArchiveFlag(t *testing.T) {
 
 // TestApprovedTree_FromRealCapturedReceipt (CRIT-1 remediation) loads one of
 // the four review-receipt files this change actually persisted under
-// openspec/changes/pi-package-hardening/review-receipts/ -- the real
+// testdata/real-review-state-record-v2.json (a byte-for-byte copy of a
+// receipt captured on 2026-09-13, lineage review-42353e66bae50ad8, pinned
+// inside this module because the live change folder relocates on archive) -- the real
 // gentle-ai.review-state-record/v2 wrapper shape, nested one level under
 // "state" -- and asserts the gate extracts its true
 // state.current_snapshot.candidate_tree. A fabricated fixture (like
 // writeReviewStateFile above) cannot catch a gate that only agrees with
 // itself; this test is seeded from production data.
 func TestApprovedTree_FromRealCapturedReceipt(t *testing.T) {
-	repo := repoRoot(t)
-	src := filepath.Join(repo, "openspec", "changes", "pi-package-hardening",
-		"review-receipts", "review-42353e66bae50ad8.review-state.json")
+	src := filepath.Join("testdata", "real-review-state-record-v2.json")
 	data, err := os.ReadFile(src)
 	if err != nil {
 		t.Fatalf("read real receipt fixture %s: %v", src, err)
