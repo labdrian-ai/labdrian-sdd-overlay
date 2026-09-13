@@ -67,10 +67,14 @@ install npm:pi-subagents-j0k3r`.
 Traces to: R-013
 
 WHEN the overlay installs GADU's Pi integration, the overlay SHALL place
-the generated `agents/GADU.md` (source: `engine/gadu/persona/body.md`,
-produced by `gadu-generate`) at `~/.pi/agent/agents/GADU.md`, marked as
-overlay-owned and distinct from gentle-pi's or pi-engram's package-owned
-manifest.
+the package's own generated `agents/GADU.md` at `~/.pi/agent/agents/GADU.md`,
+marked as overlay-owned and distinct from gentle-pi's or pi-engram's
+package-owned manifest. That package `agents/GADU.md` is built by
+`pipkg.Build` from the overlay's Pi-specific `pi/agents/GADU.md` (source:
+`engine/gadu/persona/body.md` via `piCompactBody`, produced by
+`gadu-generate`) when present, falling back to the overlay's generic
+`agents/GADU.md` only on an older checkout that predates the Pi-specific
+variant.
 
 #### Scenario: Linked content matches the current generation
 
@@ -91,13 +95,32 @@ manifest.
 
 Traces to: R-014
 
-WHEN the overlay generates `agents/GADU.md`, the generator SHALL emit
+WHEN the overlay generates `agents/GADU.md` (the generic variant) or
+`pi/agents/GADU.md` (the Pi-specific variant), the generator SHALL emit
 `tools` in a form verified to parse correctly under the installed Pi
 Subagents extension. The verified form for `pi-subagents-j0k3r@1.5.15` is
 the inline `tools: '*'` wildcard string, which `parseInlineTools` expands
 at runtime against the parent session's active tools; the generator SHALL
 switch to an explicit tool list only IF a differently-behaving extension
 version is detected.
+
+`pi/agents/GADU.md` additionally declares `model: pi-claude-cli/claude-sonnet-5`
+(exported as `gadu.PiAgentModel`) -- verified live 2026-09-13 (Pi 0.85.1,
+gentle-pi 2.6.0, `@saccolabs/pi-claude-cli` 0.8.1) as the only model id form
+that lets gentle-pi's native `subagent_run` complete a GADU child on this
+stack; an `anthropic/*` or `openai-codex/*` model, or an absent `model:`,
+ends the child with an error instead. `validateGaduFrontmatter` treats
+`model` as optional and unconstrained, so this provider-prefixed form is
+accepted without a code change. `pi/agents/GADU.md` also carries a
+deliberately compact body (`piCompactBody`, target < 1500 bytes for the
+whole file) instead of the full canonical persona body the other two
+variants ship: the `pi-claude-cli` bridge relays the agent file's system
+prompt to a fresh Claude Code process via `--append-system-prompt-file`,
+and a ~7 KB prompt (the full persona body, verified with both GADU's own
+body and a same-size neutral filler) hangs that child indefinitely, while a
+compact prompt completes normally. The compact body instructs loading the
+`gadu-operator` skill for the full persona and protocols before non-trivial
+work.
 
 #### Scenario: GADU dispatches with working tool access
 

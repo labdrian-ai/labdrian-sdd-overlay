@@ -1,12 +1,17 @@
 // Package gadu implements the GADU persona generator.
 // It reads the canonical persona body (engine/gadu/persona/body.md) and emits
-// three delivery artifacts:
+// four delivery artifacts:
 //   - agents/GADU.md                  (Claude Code agent file)
 //   - opencode/agents/GADU.md         (OpenCode agent file)
+//   - pi/agents/GADU.md               (Pi native subagent file, compact body)
 //   - skills/gadu-operator/SKILL.md   (portable overlay skill)
 //
-// All artifacts carry identical persona body content and are never hand-edited.
-// Use Generate to write them; use Check to assert they are not stale.
+// agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md
+// carry identical persona body content. pi/agents/GADU.md is the one
+// exception: it carries a deliberately compact body (see PiAgentModel's doc
+// comment for why) that defers the full persona to the gadu-operator skill.
+// None of these artifacts are ever hand-edited. Use Generate to write them;
+// use Check to assert they are not stale.
 package gadu
 
 import (
@@ -41,6 +46,59 @@ permission:
   task: allow
 ---`
 
+// PiAgentModel is the model id the Pi native subagent variant (pi/agents/GADU.md)
+// declares in its frontmatter.
+//
+// Verified live 2026-09-13 (Pi 0.85.1, gentle-pi 2.6.0, @saccolabs/pi-claude-cli
+// 0.8.1): gentle-pi's native subagent_run only completes a child whose agent
+// file declares a "pi-claude-cli/<model>" id. An "anthropic/*" (OAuth) or
+// "openai-codex/*" model ends the child with "assistant reported an error",
+// and an absent model: routes to "anthropic/claude-opus-4-8" (also fails).
+// Separately, the pi-claude-cli bridge passes the agent's system prompt to a
+// fresh Claude Code process via --append-system-prompt-file: a ~7 KB prompt
+// (GADU's full persona body, or a same-size neutral filler) HANGS that child
+// indefinitely, while a ~400-byte prompt completes normally. That bridge
+// prompt-size limit is why pi/agents/GADU.md ships a compact body (see
+// piCompactBody) instead of the full persona body used by the other two
+// agent variants, deferring the full persona to the gadu-operator skill.
+const PiAgentModel = "pi-claude-cli/claude-sonnet-5"
+
+// piAgentFrontmatter is the generator-owned template for pi/agents/GADU.md.
+// It declares PiAgentModel (the only model id verified to complete a native
+// gentle-pi subagent_run on this stack) and keeps the same Claude
+// Code-compatible `tools: '*'` inline scalar the pi-subagents-j0k3r frontmatter
+// parser (and gentle-pi's own) already accept.
+const piAgentFrontmatter = `---
+name: GADU
+description: High-judgment operator agent — invoke by name. Opinionated, red-teams the user's reasoning, recommends the highest-odds option, orchestrates sub-agents as lead, grounds claims in verified sources. Not a warm assistant.
+model: ` + PiAgentModel + `
+tools: '*'
+---`
+
+// piCompactBody is the deliberately compact GADU body shipped in
+// pi/agents/GADU.md (target < 1500 bytes for the whole file, PiAgentModel's
+// doc comment). It carries the identity line, the six defining traits as
+// one-line headlines, a two-line voice summary, and an explicit instruction
+// to load the gadu-operator skill for the full persona and protocols before
+// non-trivial work -- the bridge prompt-size limit means the full persona
+// body (as shipped in agents/GADU.md and opencode/agents/GADU.md) cannot be
+// used here.
+const piCompactBody = `# GADU
+
+You are GADU, the user's high-judgment OPERATOR — not a warm assistant. Be useful and truthful, not liked.
+
+- Judgment: be opinionated and decisive.
+- Red-team the user's logic: steelman it, then find its flaws.
+- No sycophancy, no condescension.
+- Recommend the highest-probability path; don't dump a neutral menu.
+- Autonomy: lead and orchestrate sub-agents for broad or adversarial work.
+- Source-grounded: verify claims against real evidence before asserting.
+
+Voice: direct, precise, economical, honest. Match the user's language.
+
+Load the ` + "`gadu-operator`" + ` skill for the full persona, the adversarial-review and fan-out protocols, and the safety/memory baselines before non-trivial work.
+`
+
 // skillFrontmatter is the generator-owned template for skills/gadu-operator/SKILL.md (D7, R-005).
 // The description carries the Trigger: line required by the overlay skill convention.
 // The preamble instructs loaders to use the skill on demand; no auto-spawn (R-009).
@@ -71,6 +129,7 @@ const doNotEditHeader = "<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/per
 // Generate writes all delivery artifacts under repoRoot:
 //   - <repoRoot>/agents/GADU.md
 //   - <repoRoot>/opencode/agents/GADU.md
+//   - <repoRoot>/pi/agents/GADU.md
 //   - <repoRoot>/skills/gadu-operator/SKILL.md
 //
 // Parent directories are created as needed. Generate is idempotent and
@@ -78,10 +137,12 @@ const doNotEditHeader = "<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/per
 func Generate(repoRoot string) error {
 	agentContent := buildAgentFile()
 	opencodeAgentContent := buildOpenCodeAgentFile()
+	piAgentContent := buildPiAgentFile()
 	skillContent := buildSkillFile()
 
 	agentPath := filepath.Join(repoRoot, "agents", "GADU.md")
 	opencodeAgentPath := filepath.Join(repoRoot, "opencode", "agents", "GADU.md")
+	piAgentPath := filepath.Join(repoRoot, "pi", "agents", "GADU.md")
 	skillPath := filepath.Join(repoRoot, "skills", "gadu-operator", "SKILL.md")
 
 	if err := writeFile(agentPath, agentContent); err != nil {
@@ -89,6 +150,9 @@ func Generate(repoRoot string) error {
 	}
 	if err := writeFile(opencodeAgentPath, opencodeAgentContent); err != nil {
 		return fmt.Errorf("writing opencode/agents/GADU.md: %w", err)
+	}
+	if err := writeFile(piAgentPath, piAgentContent); err != nil {
+		return fmt.Errorf("writing pi/agents/GADU.md: %w", err)
 	}
 	if err := writeFile(skillPath, skillContent); err != nil {
 		return fmt.Errorf("writing skills/gadu-operator/SKILL.md: %w", err)
@@ -124,6 +188,11 @@ func Check(repoRoot string) error {
 			label:     "opencode/agents/GADU.md",
 			committed: filepath.Join(repoRoot, "opencode", "agents", "GADU.md"),
 			generated: filepath.Join(tmpDir, "opencode", "agents", "GADU.md"),
+		},
+		{
+			label:     "pi/agents/GADU.md",
+			committed: filepath.Join(repoRoot, "pi", "agents", "GADU.md"),
+			generated: filepath.Join(tmpDir, "pi", "agents", "GADU.md"),
 		},
 		{
 			label:     "skills/gadu-operator/SKILL.md",
@@ -168,6 +237,13 @@ func buildAgentFile() string {
 // opencode/agents/GADU.md.
 func buildOpenCodeAgentFile() string {
 	return opencodeAgentFrontmatter + "\n\n" + doNotEditHeader + "\n\n" + personaBody
+}
+
+// buildPiAgentFile assembles the complete content for pi/agents/GADU.md,
+// using piCompactBody instead of the full canonical persona body (see
+// PiAgentModel's doc comment for why).
+func buildPiAgentFile() string {
+	return piAgentFrontmatter + "\n\n" + doNotEditHeader + "\n\n" + piCompactBody
 }
 
 // buildSkillFile assembles the complete content for skills/gadu-operator/SKILL.md.

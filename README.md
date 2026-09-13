@@ -71,6 +71,7 @@ Pi is a **package target**, not a per-file copy target: `--target pi` on `apply`
 - A `before_agent_start` package extension injects the same bare contract-path line Claude/OpenCode/Codex receive into the `sdd-tasks`/`sdd-apply` system prompt, composing with (not overwriting) gentle-pi's own handler output.
 - `longterm-mem register --target pi` writes its MCP entry into the package's own `mcp.json`; `--target all` only attempts Pi when the package is both built and genuinely installed.
 - **GADU as a real Pi subagent.** `apply --target pi`, right after `pi install`, ensures GADU has a working `subagent_*` dispatch runner: when `~/.pi/agent/settings.json` already lists `npm:gentle-pi` at version 2.6.0 or later, its **native** `subagent_*` tools are used and the third-party [Pi Subagents extension](https://www.npmjs.com/package/pi-subagents-j0k3r) is never installed — installing it while native support is present leaves gentle-pi's own tools unregistered, so if that obsolete extension is already present the output discloses the conflict and names the exact removal command (`pi remove npm:pi-subagents-j0k3r`) without removing it (it is not overlay-owned). Only when gentle-pi's native subagents are unavailable (older gentle-pi, or none installed) does it fall back to installing `npm:pi-subagents-j0k3r` via a fixed `pi install` argv — unless `pi-subagents` (the alternate package name) is already installed, or `LABDRIAN_PI_SKIP_SUBAGENTS=1` opts out. Either way it then links the package's own generated `agents/GADU.md` at `~/.pi/agent/agents/GADU.md`, so GADU is dispatchable through whichever runner is active instead of only being a relayed persona. That link is overlay-owned: ownership is proven by `readlink` equality with the stable package path (only the inode changes across a `swap` rebuild), a pre-existing foreign file or symlink is left untouched and reported as a conflict, and `status --target pi` reports the subagent runner's state (native/legacy/conflict/absent) and the link's state (missing/current/stale/conflict) as two separate, honest entries. `runtime uninstall --target pi` removes only that symlink — never the extension package, never gentle-pi's own package, and never any gentle-pi- or pi-engram-owned file.
+- **Pi-specific GADU model and body.** The `agents/GADU.md` the Pi package ships is built from `pi/agents/GADU.md` (falling back to the generic `agents/GADU.md` only on an older checkout that predates it), not the same bytes Claude Code and opencode receive. It declares `model: pi-claude-cli/claude-sonnet-5` and carries a deliberately compact body (under 1.5 KB) that defers the full persona to the `gadu-operator` skill. Both choices trace to findings verified live 2026-09-13 against Pi 0.85.1 / gentle-pi 2.6.0 / `@saccolabs/pi-claude-cli` 0.8.1: gentle-pi's native `subagent_run` only completes a child whose agent file names a `pi-claude-cli/<model>` id (an `anthropic/*` or `openai-codex/*` model, or an absent `model:`, ends the child with an error), and the `pi-claude-cli` bridge — which relays the agent's system prompt to a fresh Claude Code process via `--append-system-prompt-file` — hangs indefinitely on a ~7 KB prompt (GADU's full persona body included) while a compact one completes normally.
 
 ## Tracked files (overlay.manifest)
 
@@ -270,10 +271,11 @@ The overlay ships **GADU**, a portable operator persona generated from a single 
 
 Running `overlay gadu-generate [--check]` forwards to the engine with
 `OVERLAY_DIR` set to the repository root. Without `--check`, it regenerates
-three artifacts from that one canonical source:
+four artifacts from that one canonical source:
 
 - `agents/GADU.md` — Claude Code agent definition (deployed to `~/.claude/agents`)
 - `opencode/agents/GADU.md` — Opencode-native agent definition
+- `pi/agents/GADU.md` — Pi-native subagent definition: `model: pi-claude-cli/claude-sonnet-5` and a compact (< 1.5 KB) body that defers the full persona to the `gadu-operator` skill — see the Pi section above for why. `pipkg.Build` copies this file into the built package's `agents/GADU.md` when it is present, falling back to the generic `agents/GADU.md` on an older checkout.
 - `skills/gadu-operator/SKILL.md` — portable skill (deployed to all three skill runtimes)
 
 All generated files carry a `<!-- GENERATED — DO NOT EDIT. Source: engine/gadu/persona/body.md. Run: gentle-ai-overlay gadu-generate -->` header. Edit the canonical source, then regenerate — do not edit the output files directly.
@@ -365,6 +367,7 @@ overlay gadu-generate [--check]
     Regenerates (or checks):
     - agents/GADU.md
     - opencode/agents/GADU.md
+    - pi/agents/GADU.md (compact body, model: pi-claude-cli/claude-sonnet-5)
     - skills/gadu-operator/SKILL.md
     from engine/gadu/persona/body.md.
 

@@ -1157,3 +1157,34 @@ func TestInstall_RejectsAmbiguousGaduFrontmatter(t *testing.T) {
 		t.Fatalf("GADU.md must not be linked when its frontmatter is ambiguous, stat err = %v", err)
 	}
 }
+
+// TestInstall_AcceptsProviderPrefixedModel (gadu-pi-subagent R-014
+// follow-up): a "provider/model" form model id (the shape pi/agents/GADU.md
+// now ships, e.g. "pi-claude-cli/claude-sonnet-5") must not be rejected by
+// validateGaduFrontmatter -- model is optional and unconstrained, so any
+// non-empty value, prefixed or not, is accepted.
+func TestInstall_AcceptsProviderPrefixedModel(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	mustWrite(t, filepath.Join(overlayRoot, "agents", "GADU.md"),
+		"---\nname: GADU\ndescription: test\nmodel: pi-claude-cli/claude-sonnet-5\ntools: '*'\n---\nbody\n")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+	recorder := filepath.Join(t.TempDir(), "argv.txt")
+	t.Setenv("LABDRIAN_PI_BIN", writeStubPiScript(t, recorder))
+	home, err := os.UserHomeDir()
+	if err != nil {
+		t.Fatalf("UserHomeDir: %v", err)
+	}
+
+	adapter := engineRuntime.NewPiAdapterWithPaths(overlayRoot, registryPath, destDir)
+	result := adapter.Install()
+	if strings.Contains(result.Message, "frontmatter") {
+		t.Fatalf("Install must accept a provider-prefixed model id, got %q", result.Message)
+	}
+
+	linkPath := filepath.Join(home, ".pi", "agent", "agents", "GADU.md")
+	if _, err := os.Lstat(linkPath); err != nil {
+		t.Fatalf("GADU.md must be linked when its frontmatter is valid: %v", err)
+	}
+}

@@ -533,7 +533,16 @@ func exportGitTree(overlayRoot, rev string) (string, func(), error) {
 	}
 	cleanup := func() { os.RemoveAll(tmp) }
 
-	cmd := exec.Command("git", "-C", overlayRoot, "archive", "--format=tar", rev, "--", "skills", "agents", "skills.registry.yaml")
+	paths := []string{"skills", "agents", "skills.registry.yaml"}
+	// "pi" (pi/agents/GADU.md, resolveGaduAgentSource's preferred source) is
+	// a newer addition to the tree: a git-archive pathspec that matches no
+	// files at rev makes the whole archive command fail, so only include it
+	// when rev actually has that path -- otherwise comparing against a
+	// deploy ref that predates it would break every Check call.
+	if exec.Command("git", "-C", overlayRoot, "cat-file", "-e", rev+":pi").Run() == nil {
+		paths = append(paths, "pi")
+	}
+	cmd := exec.Command("git", append([]string{"-C", overlayRoot, "archive", "--format=tar", rev, "--"}, paths...)...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		cleanup()
@@ -652,7 +661,7 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRo
 	if err := os.MkdirAll(agentsDir, 0755); err != nil {
 		return fmt.Errorf("pipkg: creating agents dir: %w", err)
 	}
-	agentSrc := filepath.Join(overlayRoot, "agents", "GADU.md")
+	agentSrc := resolveGaduAgentSource(overlayRoot)
 	if err := copyFile(agentSrc, filepath.Join(agentsDir, "GADU.md")); err != nil {
 		return fmt.Errorf("pipkg: copying agents/GADU.md: %w", err)
 	}
@@ -706,6 +715,20 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRo
 		return fmt.Errorf("pipkg: writing package.json: %w", err)
 	}
 	return nil
+}
+
+// resolveGaduAgentSource returns the source path this package's
+// agents/GADU.md is copied from: overlayRoot's pi-specific
+// pi/agents/GADU.md (the compact, pi-claude-cli-modeled variant
+// engine/gadu.Generate emits) when present, else overlayRoot's generic
+// agents/GADU.md -- kept as a fallback so an older checkout that predates
+// the pi/agents/GADU.md variant still builds.
+func resolveGaduAgentSource(overlayRoot string) string {
+	piSpecific := filepath.Join(overlayRoot, "pi", "agents", "GADU.md")
+	if _, err := os.Stat(piSpecific); err == nil {
+		return piSpecific
+	}
+	return filepath.Join(overlayRoot, "agents", "GADU.md")
 }
 
 // checkSkillNameMatchesPath reads <src>/SKILL.md and requires its
