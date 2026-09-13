@@ -97,7 +97,7 @@ None.
 **Change**: pi-package-hardening
 **Mode**: Strict TDD (RED → GREEN → REFACTOR)
 **Branch**: `feat/pi-package-hardening-2-provenance` (stacked on `feat/pi-package-hardening` @ `a1f2bc0`)
-**Delivery status**: implemented and fully verified, **NOT committed** — exceeds the 400-authored-line budget (see Workload / PR Boundary below). Working tree left uncommitted and unstaged so the orchestrator can decide `size:exception` vs. a further split before this lands.
+**Delivery status**: implemented and fully verified; initially withheld for exceeding the 400-authored-line budget, then committed under the maintainer size exception and merged as PR #322 (plus the review follow-up PR #324). Working tree left uncommitted and unstaged so the orchestrator can decide `size:exception` vs. a further split before this lands.
 
 ### Implemented (uncommitted) — tasks 2.1–2.8
 
@@ -191,7 +191,7 @@ Phase 2 (sync-check-provenance, R-005..R-007) is implemented and fully verified 
 **Change**: pi-package-hardening
 **Mode**: Strict TDD (RED → GREEN → REFACTOR)
 **Branch**: `feat/pi-package-hardening-3-receipt` (stacked on `feat/pi-package-hardening-2-provenance` @ `f4bf3e4`)
-**Delivery status**: implemented and fully verified, **NOT committed** — exceeds the 400-authored-line budget (960 lines; see Workload / PR Boundary below). Working tree left uncommitted so the orchestrator can decide `size:exception` vs. a further split before this lands, mirroring the Slice 2 precedent.
+**Delivery status**: implemented and fully verified; initially withheld at 960 authored lines, then committed under the maintainer size exception and merged as PR #323 (see Workload / PR Boundary below). Working tree left uncommitted so the orchestrator can decide `size:exception` vs. a further split before this lands, mirroring the Slice 2 precedent.
 
 ### Implemented (uncommitted) — tasks 3.1–3.7
 
@@ -306,7 +306,7 @@ before accepting the remainder.
 **Change**: pi-package-hardening
 **Mode**: Strict TDD (RED → GREEN → REFACTOR)
 **Branch**: `feat/pi-package-hardening-4-gate` (stacked on `feat/pi-package-hardening-3-receipt` @ `307b79e`)
-**Delivery status**: fully implemented and verified, NOT committed — 563 authored lines vs the 400-line budget (grew from an initial 434 after a coordinator-issued mid-batch amendment; see below). Mirrors the Slice 2/3 precedent: STOPPED before committing per the batch's explicit instruction ("the owner has granted exceptions for slices 2 and 3 ... still report honestly" — no exception was pre-granted for slice 4), worktree left with everything present but uncommitted.
+**Delivery status**: fully implemented and verified; initially withheld at 563 authored lines vs the 400-line budget, then committed under the maintainer size exception and merged as PR #325 (grew from an initial 434 after a coordinator-issued mid-batch amendment; see below). Mirrors the Slice 2/3 precedent: STOPPED before committing per the batch's explicit instruction ("the owner has granted exceptions for slices 2 and 3 ... still report honestly" — no exception was pre-granted for slice 4), worktree left with everything present but uncommitted.
 
 **Mid-batch amendment (coordinator-issued, load-bearing)**: verified live on gentle-ai 2.7.0, the review lifecycle no longer writes `review-receipt.json` at all. An approved-but-unacknowledged lineage now holds only `review-state.json` (`state.state == "approved"`, `state.current_snapshot.candidate_tree`, `state.selected_lenses`, `state.lineage_id`, `state.risk_level`, `state.initial_snapshot.base_tree`). Slice 3 is being amended separately to persist that file as `<lineage>.review-state.json` (raw bytes) alongside any legacy `<lineage>.json` receipt. This batch amended the gate to accept BOTH persisted shapes for R-009/R-011, since the legacy-only gate would otherwise silently stop working the moment slice 3's capture path switches to the new shape.
 

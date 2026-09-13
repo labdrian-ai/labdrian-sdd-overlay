@@ -1,6 +1,6 @@
 ```yaml
 schema: gentle-ai.verify-result/v1
-evidence_revision: sha256:3ba47acf19c8582029ef4a23b12c07ff48f5fb3ddad007f11dcebb9f77aa4748
+evidence_revision: sha256:6aa546e2cb9869035db1b8217d79820b54cca5bd8901d0f08b4a0fb4fe026e57
 verdict: fail
 blockers: 0
 critical_findings: 0
@@ -8,8 +8,8 @@ requirements: 17/21
 scenarios: 35/41
 test_command: cd engine && go test -count=1 -race ./... && cd ../tools/archive-anchor-gate && go test -count=1 ./... && cd ../../longterm-mem && go test -count=1 ./...
 test_exit_code: 0
-test_output_hash: sha256:48a8f174fddd1b0308b596298f5ef0884e6b6d324da6d4e536c2323624456a4a
-build_command: cd engine && gofmt -l . && go vet ./... && cd ../tools/archive-anchor-gate && gofmt -l . && go vet ./... && go build ./... && cd ../../longterm-mem && go vet ./...
+test_output_hash: sha256:4501f81aba2327010555fe970f9433774442565600fda0411133407c1ebcd309
+build_command: cd engine && gofmt -l . && go vet ./... && cd ../tools/archive-anchor-gate && gofmt -l . && go vet ./... && cd ../../longterm-mem && go vet ./...
 build_exit_code: 0
 build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855
 ```
@@ -19,25 +19,19 @@ build_output_hash: sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599
 **Change**: pi-package-hardening
 **Version**: N/A (delta specs)
 **Mode**: Strict TDD
-**Pass**: 2 (post-remediation re-verification)
-**Worktree**: `/home/labdrian/labdrian-sdd-overlay-worktrees/pph-5` @ `fcd46e2` on `feat/pi-package-hardening-5-gadu` (PR #326)
-**Supersedes**: pass-1 report `evidence_revision: sha256:dec2d35984887ecf3e676aca867828d7960e90ce30818b3dfea361a1fc1ecfc2` (verdict `fail`, CRIT-1)
+**Pass**: 3 (post-merge, post-Phase-M re-verification)
+**Worktree**: `/home/labdrian/labdrian-sdd-overlay` @ `d385311` on `docs/pi-package-hardening-closure` (main `1952772` plus the manual-evidence commit)
+**Supersedes**: pass-2 report `evidence_revision: sha256:3ba47acf19c8582029ef4a23b12c07ff48f5fb3ddad007f11dcebb9f77aa4748` (verdict `fail`, 0 CRITICAL, 5 WARNING)
 
-### What changed since pass 1
+`evidence_revision` is `sha256(HEAD tree `c31cbad3762a3c1597a6f08be455cf28b6ce70b9` + build_output_hash + test_output_hash, newline-separated)`, recomputed this pass.
 
-`git diff --stat bf1f4b7..HEAD` is exactly seven files — three code/module files and four SDD documents:
+### What changed since pass 2
 
-```text
-openspec/changes/pi-package-hardening/apply-progress.md | 107 +++++++++++
-openspec/changes/pi-package-hardening/design.md         |   2 +-
-.../specs/gadu-pi-subagent/spec.md                      |  15 ++-
-.../specs/review-receipt-capture/spec.md                |  13 +++
-tools/archive-anchor-gate/go.mod                        |   4 +
-tools/archive-anchor-gate/receipt.go                    | 103 +++++---------
-tools/archive-anchor-gate/receipt_test.go               |  86 +++++++++--
-```
+All five slices are merged (PRs #321–#326); `main` is at `1952772`. The working tree is clean. Three things moved since the pass-2 report was written:
 
-No file under `engine/`, `bin/`, `longterm-mem/`, or `skills/` was touched. The pass-1 scratch smoke evidence (S1–S24) therefore still describes the exact bytes under test and is carried forward; S25/S26 are superseded by this pass's direct gate runs below.
+1. **PR #326** landed the CRIT-1 remediation with the review-state fixture pinned as real captured data in `tools/archive-anchor-gate/testdata/real-review-state-record-v2.json` (48 KB, byte-for-byte copy of a production receipt), and `.gitignore:27` gained `/tools/*/archive-anchor-gate`.
+2. **`ac87563`** persisted the fifth review receipt (`review-6e01e9510e00f068`).
+3. **`d385311`** recorded live-Pi manual verification: `apply-progress.md` gained a "Manual Verification (Phase M, live Pi 0.85.1, 2026-09-13)" section and `tasks.md` M.1–M.3 are now `[x]`.
 
 ### Completeness
 
@@ -46,78 +40,71 @@ No file under `engine/`, `bin/`, `longterm-mem/`, or `skills/` was touched. The 
 | Tasks total (automated, 1.x–5.x) | 42 |
 | Tasks complete | 42 |
 | Tasks incomplete | 0 |
-| Manual tasks (Phase M, deferred by design) | 3 (M.1–M.3, unchecked) |
-| Planned slices (P, from `entry.json` `review_slices`) | 5 |
+| Manual tasks (Phase M) | 3 (M.1–M.3) — **all now run and checked `[x]`** |
+| Planned slices (P, from `entry.json` `review_slices`) | 5 (`pipkg-integrity`, `sync-check-provenance`, `review-receipt-capture`, `receipt-anchor-gate`, `gadu-pi-subagent`) |
 | Realized slices (R, from `apply-progress.md`) | 5 |
-| Plan vs realized drift | None — every planned slice has a landed counterpart |
+| Plan vs realized drift | None — every planned slice has a landed, merged counterpart |
+| Review receipts persisted | 5 (was 4 at pass 2) |
 
-Slice landings: 1 `98f8410`, 2 `f4bf3e4`, 3 `9506918`/`307b79e`, 4 `bcb1df7`, 5 `fb27128`/`5d1fec2`. Remediation 1: `89fa4d3`, `eaaac7e`, `fcd46e2`.
-
-`apply-progress.md` now carries Slice 5 and Remediation 1 in the OpenSpec copy (WARN-5 closed — verified by reading the file, not the Engram copy).
-
-**Phase M disclosure**: M.1–M.3 are unchecked. `tasks.md` declares Phase M `MANUAL, not run by sdd-apply`, and this verification session is explicitly forbidden from touching the live `~/.pi` or launching a `pi` session. The generic rule "unchecked tasks are CRITICAL" is therefore ruled down to WARNING here (WARN-8) — but the obligation is real and open, not discharged. See WARN-8.
+**Phase M is discharged as an obligation.** Pass 2 recorded M.1–M.3 as unrun and open (WARN-8). They have now been executed against the real machine and recorded. Every task in `tasks.md` is checked; zero unchecked tasks remain.
 
 ### Build & Tests Execution
 
-**Build**: PASS — combined build command exit 0, output empty (hash is the sha256 of the empty string, as expected).
+**Build**: PASS — exit 0, output empty (`sha256` of the empty string, as expected).
 
 ```text
-cd engine                     && gofmt -l .   -> empty, exit 0
-cd engine                     && go vet ./... -> no output, exit 0
-cd tools/archive-anchor-gate  && gofmt -l .   -> empty, exit 0
-cd tools/archive-anchor-gate  && go vet ./... -> no output, exit 0
-cd tools/archive-anchor-gate  && go build ./... -> exit 0 (standalone module build, as CI does)
-cd longterm-mem               && go vet ./... -> no output, exit 0
+cd engine                    && gofmt -l .   -> empty, exit 0
+cd engine                    && go vet ./... -> no output, exit 0
+cd tools/archive-anchor-gate && gofmt -l .   -> empty, exit 0
+cd tools/archive-anchor-gate && go vet ./... -> no output, exit 0
+cd longterm-mem              && go vet ./... -> no output, exit 0
 ```
 
-**Tests**: PASS — 32 packages `ok`, 0 failed, 0 skipped-as-failure.
+`go build ./...` inside `tools/archive-anchor-gate` was deliberately NOT run this pass: it drops a 4 MB binary next to its source. The module's compilability is proven instead by `go test -count=1 ./...` and two `go run .` invocations, all exit 0 — the same linker work, without the artifact.
+
+**Tests**: PASS — 32 packages `ok`, 0 failed, 0 skipped-as-failure, exit 0.
 
 ```text
-cd engine && go test -count=1 -race ./...            -> 14 packages ok, exit 0
-cd tools/archive-anchor-gate && go test -count=1 ./... -> ok, exit 0 (41 --- PASS)
-cd longterm-mem && go test -count=1 ./...            -> 17 packages ok, exit 0
-shellcheck -S warning bin/labdrian-overlay           -> exit 1, 2 findings
-   both pre-existing SC2064 at lines 1458 and 1615; byte-identical to pass 1; no new findings
+cd engine && go test -count=1 -race ./...              -> 14 packages ok, exit 0
+cd tools/archive-anchor-gate && go test -count=1 ./... -> ok 0.674s, exit 0 (59 PASS lines incl. subtests)
+cd longterm-mem && go test -count=1 ./...              -> 17 packages ok, exit 0
+shellcheck -S warning bin/labdrian-overlay             -> exit 1, 2 findings
+   both pre-existing SC2064 at lines 1458 and 1615; byte-identical to passes 1 and 2; no new findings
 ```
 
-The gate module was re-run with `-count=1` after an initial cached `ok`, so the recorded result is a real execution, not a cache hit.
-
-### Gate runs (CRIT-1 verification)
+### Gate runs (pre-archive gate, re-run against merged `main`)
 
 ```text
-cd tools/archive-anchor-gate && go run . --repo <worktree> --known-gaps known-gaps.txt
+cd tools/archive-anchor-gate && go run . --repo /home/labdrian/labdrian-sdd-overlay --known-gaps known-gaps.txt
    -> exit 0, "ok: 7 report(s) checked, 1 known gap(s)"
-      (7 archive reports checked: 1 verified, 5 self-asserted, 1 absent; the 2026-09-02
-       longterm-mem gap is the single declared known gap — unchanged from pass 1)
+      (1 verified, 5 self-asserted, 1 absent; the 2026-09-02 longterm-mem gap is the single declared known gap)
 
-cd tools/archive-anchor-gate && go run . --repo <worktree> --known-gaps known-gaps.txt \
+cd tools/archive-anchor-gate && go run . --repo /home/labdrian/labdrian-sdd-overlay --known-gaps known-gaps.txt \
      --change pi-package-hardening
    -> exit 0
    -> verified review receipt found for "pi-package-hardening"
       (approved_tree=ec56969bdb2a7ade90b83e47d971beb857ddadab)
 ```
 
-**CRIT-1 is fixed and the fix is load-bearing — proven by reversion, not by assertion.** I rebuilt the gate in the session scratchpad from `git show 89fa4d3^:tools/archive-anchor-gate/receipt.go` plus the pre-fix `go.mod`, against the unchanged `gate.go`/`main.go`, and ran that pre-fix binary against this same worktree and the same four real receipts:
+The change passes the pre-archive gate it introduced, now against the merged repository rather than a slice worktree. The pass-2 reversion proof (pre-fix gate binary exits 1 on the same receipts) stands unchallenged and is not re-run.
 
-```text
-<scratch>/gate-prefix --repo <worktree> --known-gaps known-gaps.txt --change pi-package-hardening
-   -> exit 1
-   -> FAIL no verified review receipt for change "pi-package-hardening"
-```
+### Manual Verification (Phase M) — evidence and ruling
 
-Same repository, same receipts, same command — exit 1 before the fix, exit 0 after. The remediation's RED claim is independently confirmed, and the change now passes the pre-archive gate it introduced.
+`apply-progress.md` records three live-machine checkpoints against Pi 0.85.1. This session may not launch `pi`, so the Phase M results are **reported manual evidence**, corroborated by the read-only observations below, not re-executed.
 
-The root cause is also confirmed directly against production data: `jq 'keys, (.state|keys)'` on `review-receipts/review-42353e66bae50ad8.review-state.json` returns top-level `["revision","schema","state"]` with `lineage_id`, `state`, `current_snapshot`, `initial_snapshot`, `selected_lenses`, `risk_level` all nested inside the `state` object — the `gentle-ai.review-state-record/v2` wrapper the pre-fix `persistedReviewState` modeled as a flat `state string`.
+| Checkpoint | Reported result | Independent read-only corroboration this pass |
+|---|---|---|
+| M.1 real `apply --target pi` | installed `npm:pi-subagents-j0k3r` with third-party disclosure, rebuilt the package, linked `GADU.md`; `status --target pi` reported `supported` naming all entries; gentle-pi `settings.json` (minus `packages`) and pi-engram `mcp.json` byte-identical | `readlink ~/.pi/agent/agents/GADU.md` → `/home/labdrian/.labdrian-overlay/pi/labdrian-pi/agents/GADU.md` (overlay-owned target, as D10 specifies). `settings.json` `packages` contains both `npm:pi-subagents-j0k3r` and `../../.labdrian-overlay/pi/labdrian-pi`, alongside four pre-existing foreign packages left intact |
+| M.2 GADU dispatch | headless session lists `gadu` in `subagent_list_agents` beside gentle-pi's agents and exposes the `subagent_*` tools; `subagent_run gadu` fails "provider auth error"; control run of gentle-pi's own `gentle-ai-explore` fails identically | `ls ~/.pi/agent/agents` → `GADU.md` present beside 22 gentle-pi agent files. Issue **#327** confirmed OPEN: "pi: subagent_run fails with provider auth error when the parent uses the Claude bridge" |
+| M.3 uninstall scope | removed only the overlay link and package; extension, every gentle-pi agent file, `settings.json` (minus our entry), and `mcp.json` unchanged | The live machine is currently in the re-installed state, so M.3's removal is not observable now; its non-destructive scope is independently proven by `TestUninstall_OwnedLinkOnly` and `TestUninstall_LeavesForeignGaduFileUntouched`, both green this pass |
 
-The fix deletes the gate's private model entirely and delegates to `engine/reviewreceipt.ApprovedSummary` (`tools/archive-anchor-gate/receipt.go:11` import; `go.mod` `require` + relative `replace ../../engine`). The `engine` module is stdlib-only with no `go.sum`, and `go build ./...` inside the gate module succeeds standalone, so CI's `test-archive-anchor-gate` job (`.github/workflows/ci.yml:245`, which runs `gofmt`/`vet`/`go test ./... -cover` with `working-directory: tools/archive-anchor-gate` and then `go run -C tools/archive-anchor-gate .`) resolves the same way. Verified here by running exactly those four commands.
+**M.2's ruling, stated plainly.** The control run is what makes this evidence load-bearing: `subagent_run` fails identically for gentle-pi's *own* agent, so the failure is not a property of our GADU.md, our frontmatter, or our symlink. It is the extension spawning a child on a real provider (`default_model` `provider/model-id`) on a machine whose parent session runs through the pi-claude-bridge with no provider key. That is an environment gap, filed as #327, not an overlay defect.
 
-**WARN-3 closed as a consequence**: `receipt_test.go`'s `writeReviewStateFile` now emits the real nested `gentle-ai.review-state-record/v2` wrapper, and the new `TestApprovedTree_FromRealCapturedReceipt` is seeded from the committed production receipt rather than a fabricated payload. Both verified by reading the test source and running it (`--- PASS`).
-
-**Coverage**: `tools/archive-anchor-gate` 88.3% (as reported by apply). Not re-measured repo-wide — informational, non-blocking.
+What this **does** newly prove, and pass 2 explicitly could not: the real Pi Subagents extension read our real overlay-linked `GADU.md`, accepted it, and registered `gadu` as a dispatchable agent. Pass 2's stated residual — "'the extension parses our frontmatter' remains an inference from a Go port of the extension's parser" — is now a direct observation. What it still does not prove is the second half of R-014's THEN clause: that the dispatched agent receives a non-empty, correctly-expanded tool set. No child ever started, so no tool set was ever observed.
 
 ### Spec Compliance Matrix
 
-Authoritative counts, recounted this pass from the six delta spec files: **21 requirements, 41 scenarios** (`rg -c '^### (Requirement:|REQ-[0-9]+:)'` and `rg -c '^#### Scenario:'`). Pass 1 counted 40 scenarios; `review-receipt-capture` gained one in `eaaac7e`.
+Authoritative counts, recounted this pass from the six delta spec files: **21 requirements, 41 scenarios** (`rg -c '^### (Requirement:|REQ-[0-9]+:)'` → 4+3+4+1+5+4 = 21; `rg -c '^#### Scenario:'` → 9+4+7+7+8+6 = 41). Unchanged from pass 2.
 
 | Requirement | Scenario | Test / evidence | Result |
 |-------------|----------|-----------------|--------|
@@ -134,36 +121,38 @@ Authoritative counts, recounted this pass from the six delta spec files: **21 re
 | R-007 Unresolvable Ref Discloses a Main-Only Comparison | Fallback comparison is disclosed | `TestCheck_MainFallback`; smoke S10 | PARTIAL (WARN-1) |
 | R-008 Receipt Persisted Before Acknowledge | Receipt file exists before acknowledge is invoked | `TestCapture_*`, `TestApprovedSummary`, `TestHook_*`; smoke S12–S17 | COMPLIANT |
 | R-008 | Multiple active changes deny, unless every surviving receipt is already persisted | `TestHook_Deny_MultipleActiveChanges`, `TestHook_MultiChange_DeniesWhenAnyUncaptured`, `TestHook_MultiChange_PassesAfterExplicitCapture`; smoke S13/S14 | COMPLIANT |
-| R-009 approved_tree Sourced Only From the Persisted Receipt | approved_tree equals the receipt's final_candidate_tree | `TestApprovedTree_FromReceipt`, `TestApprovedTree_FromReviewStateShape`, `TestApprovedTree_FromRealCapturedReceipt`; live gate run exit 0 naming `approved_tree=ec56969b…` | COMPLIANT |
+| R-009 approved_tree Sourced Only From the Persisted Receipt | approved_tree equals the receipt's final_candidate_tree | `TestApprovedTree_FromReceipt`, `TestApprovedTree_FromReviewStateShape`, `TestApprovedTree_FromRealCapturedReceipt` (now reading committed `testdata/real-review-state-record-v2.json`); live gate run exit 0 naming `approved_tree=ec56969b…` | COMPLIANT |
 | R-010 Closure-Feedback Reads the Persisted Receipt | Post-acknowledge closure still produces a verified value | `TestApprovedTree_NeverReadFromGitTransactionStore` (proxy) + `skills/inception-pipeline/SKILL.md` prose; no executable harness | PARTIAL (WARN-2) |
-| R-011 Archive Blocks Without a Receipt Unless Overridden | Missing receipt blocks archive | `TestArchiveBlock_NoReceiptPostConvention`; pre-fix binary run reproduced the exact block message | COMPLIANT |
+| R-011 Archive Blocks Without a Receipt Unless Overridden | Missing receipt blocks archive | `TestArchiveBlock_NoReceiptPostConvention`; pass-2 pre-fix binary reproduced the exact block message | COMPLIANT |
 | R-011 | Recorded owner override permits archive | `TestOverride_RecordedSelfAsserted`, `TestPreArchiveFlag/override_present_passes` | COMPLIANT |
-| R-012 Subagents Extension Installed When Missing | Neither package present triggers install | `TestSubagentsExtension_InstallWhenAbsent`; smoke S18 | COMPLIANT |
+| R-012 Subagents Extension Installed When Missing | Neither package present triggers install | `TestSubagentsExtension_InstallWhenAbsent`; smoke S18; **M.1 live install observed** | COMPLIANT |
 | R-012 | Alternate package already installed is treated as satisfied | `TestSubagentsExtension_Noop` (4 sub-cases) | COMPLIANT |
-| R-013 GADU.md Linked as an Overlay-Owned Asset | Linked content matches the current generation | `TestInstall_WiresSubagentsExtensionAndGaduLink`; smoke S19 | COMPLIANT |
-| R-013 | gentle-pi's own asset management does not touch it | `TestGaduLink_SurvivesOverwrite`; smoke S22 | COMPLIANT |
-| R-014 Frontmatter Verified Compatible | GADU dispatches with working tool access | `TestFrontmatter_InlineToolsScalar`, `TestInstall_RejectsAmbiguousGaduFrontmatter` guard the emitted form; actual dispatch is Phase M (manual, deferred) | PARTIAL (WARN-8) |
-| R-015 Honest, Distinct Extension and Link Status | Stale link is reported independent of extension state | `TestGaduLinkState_Matrix/stale (broken target)` — scenario reworded in `eaaac7e` to the state the design makes reachable; test and spec now agree | COMPLIANT |
+| R-013 GADU.md Linked as an Overlay-Owned Asset | Linked content matches the current generation | `TestInstall_WiresSubagentsExtensionAndGaduLink`; smoke S19; **live `readlink` confirms the overlay-owned target** | COMPLIANT |
+| R-013 | gentle-pi's own asset management does not touch it | `TestGaduLink_SurvivesOverwrite`; smoke S22; **live `ls ~/.pi/agent/agents` shows GADU.md intact beside 22 gentle-pi files** | COMPLIANT |
+| R-014 Frontmatter Verified Compatible | GADU dispatches with working tool access | `TestFrontmatter_InlineToolsScalar`, `TestInstall_RejectsAmbiguousGaduFrontmatter` guard the emitted form; **M.2 observed the real extension parse our file and register `gadu`**; tool-set expansion unobserved — `subagent_run` blocked by provider auth (#327), identically for gentle-pi's own agent | PARTIAL (WARN-8) |
+| R-015 Honest, Distinct Extension and Link Status | Stale link is reported independent of extension state | `TestGaduLinkState_Matrix/stale (broken target)` | COMPLIANT |
 | R-015 | Missing extension does not collapse link status | `TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries`; smoke S21 | COMPLIANT |
-| R-016 Uninstall Removes Only the Overlay-Owned Link | Only GADU.md is removed | `TestUninstall_OwnedLinkOnly`, `TestUninstall_LeavesForeignGaduFileUntouched`; smoke S22, S23 | COMPLIANT |
-| PRT Package-Delivered Skills and Agents | Local-path install registers the package idempotently | `engine/runtime` pi suite; smoke S18 argv | COMPLIANT |
-| PRT | Skills are visible in a Pi session and agents ship as package content | `engine/runtime` pi suite; smoke S18/S19 — only `GADU.md` written under `~/.pi/agent/agents/` | COMPLIANT |
+| R-016 Uninstall Removes Only the Overlay-Owned Link | Only GADU.md is removed | `TestUninstall_OwnedLinkOnly`, `TestUninstall_LeavesForeignGaduFileUntouched`; smoke S22, S23; **M.3 live uninstall left the extension and every foreign agent untouched** | COMPLIANT |
+| PRT Package-Delivered Skills and Agents | Local-path install registers the package idempotently | `engine/runtime` pi suite; smoke S18 argv; **live `settings.json` `packages` carries the overlay entry once** | COMPLIANT |
+| PRT | Skills are visible in a Pi session and agents ship as package content | `engine/runtime` pi suite; smoke S18/S19; **M.1 live: only `GADU.md` written under `~/.pi/agent/agents/`** | COMPLIANT |
 | PRT Honest Status for Unproven Activation | Unproven entry forces partial | smoke S21 (five entries named separately) | COMPLIANT |
-| PRT | All entries proven report supported | `TestPiAdapter_StatusTriangulatesAllOwnedEntries/all_five_entries_proven_reports_supported` | COMPLIANT |
-| PRT Pi-Scoped Uninstall | Only the owned package entry is removed | `TestUninstall_OwnedLinkOnly`; smoke S22 argv `remove <destDir>` | COMPLIANT |
-| PRT | GADU link is removed without touching the extension package | smoke S22 — no `remove npm:pi-subagents-j0k3r` in argv | COMPLIANT |
+| PRT | All entries proven report supported | `TestPiAdapter_StatusTriangulatesAllOwnedEntries/all_five_entries_proven_reports_supported`; **M.1 live `status --target pi` reported `supported` naming every entry** | COMPLIANT |
+| PRT Pi-Scoped Uninstall | Only the owned package entry is removed | `TestUninstall_OwnedLinkOnly`; smoke S22 argv `remove <destDir>`; **M.3 live** | COMPLIANT |
+| PRT | GADU link is removed without touching the extension package | smoke S22 — no `remove npm:pi-subagents-j0k3r` in argv; **M.3 live: extension survived** | COMPLIANT |
 | PRT Pi Drift Detection via Sync-Check | No drift is reported when unchanged | smoke S6 | COMPLIANT |
 | PRT | A source edit is detected as drift | smoke S7 | COMPLIANT |
 | PRT | Feature-branch checkout does not cause false drift | smoke S8; `TestCheck_BuildOnFeatureBranchIsNotStale` | COMPLIANT |
-| AI Boundary Anchors | Anchors resolve and are legible in both stores | gate half now runtime-proven (exit 0, verified `approved_tree`); the t0/Engram + archive-report half is agent prose with no harness | PARTIAL (WARN-2) |
-| AI | A missing receipt blocks archive unless an owner override is recorded | `TestArchiveBlock_NoReceiptPostConvention`, `TestOverride_RecordedSelfAsserted`; pre-fix binary reproduced the block | COMPLIANT |
+| AI Boundary Anchors | Anchors resolve and are legible in both stores | gate half runtime-proven (exit 0, verified `approved_tree`); the t0/Engram + archive-report half is agent prose with no harness | PARTIAL (WARN-2) |
+| AI | A missing receipt blocks archive unless an owner override is recorded | `TestArchiveBlock_NoReceiptPostConvention`, `TestOverride_RecordedSelfAsserted` | COMPLIANT |
 | AI | An unrelated change touching the folder does not become the anchor | `TestAbsenceProseElsewhereDoesNotSilenceARealLandingCommit`, `TestLabelledCommitIsStillReadWhenAbsenceProseIsPresent` | COMPLIANT |
 | AI | A mis-recorded anchor is rejected, not trusted | `TestScanArchiveRejectsAnUndisclosedTreeMismatch`, `TestScanArchiveAcceptsADisclosedRejection` | COMPLIANT |
 | AI | A change predating the convention omits rather than guesses | `TestScanArchiveIgnoresReportsPredatingTheConvention`; gate run reports `anchor absent` for 2026-09-02 | COMPLIANT |
 | AI | A change that skipped inception-pipeline still measures | `skills/inception-pipeline/SKILL.md` prose only; no executable harness | PARTIAL (WARN-2) |
 | AI | Neither anchor resolves | `skills/inception-pipeline/SKILL.md` prose only; no executable harness | PARTIAL (WARN-2) |
 
-**Compliance summary**: 35/41 scenarios COMPLIANT, 0 FAILING, 0 UNTESTED, 6 PARTIAL. 17/21 requirements fully compliant (every scenario COMPLIANT). The 4 requirements short of full are R-007 (WARN-1), R-010 (WARN-2), R-014 (WARN-8), and the `actuals-instrumentation` boundary-anchor requirement (WARN-2). Pass 1's 2 FAILING scenarios are both resolved.
+**Compliance summary**: 35/41 scenarios COMPLIANT, 0 FAILING, 0 UNTESTED, 6 PARTIAL. 17/21 requirements fully compliant. The 4 requirements short of full are R-007 (WARN-1), R-010 (WARN-2), R-014 (WARN-8), and the `actuals-instrumentation` boundary-anchor requirement (WARN-2).
+
+**Why R-014 stays PARTIAL and was not promoted.** Its THEN clause has two halves: "no parse error" *and* "access to the tools the frontmatter declares, with no silently-empty tool set". M.2 observed the first directly and could not observe the second, because no child process ever started. Promoting it to COMPLIANT would mean reading "the extension listed the agent" as "the agent had working tools" — an inference, and precisely the kind of inference pass 2 flagged. The honest position is that R-014 is now *better evidenced and environment-blocked* rather than *unrun*, which is a real improvement that does not reach compliance.
 
 ### Correctness (Static Evidence)
 
@@ -171,12 +160,12 @@ Authoritative counts, recounted this pass from the six delta spec files: **21 re
 |------------|--------|-------|
 | R-001..R-004 | Implemented | `fileEntry{data,perm}`, `Chmod(tmpDir,0755)`, `validateEntry` containment, `checkSkillNameMatchesPath` |
 | R-005..R-006 | Implemented | `labdrianField{BuiltFrom}`, `CheckReport{Basis,DeployRef,DeployTip,BuiltFrom}`, `git archive` + `archive/tar` export |
-| R-007 | Implemented with a gap | `Disclosure()` (`engine/pipkg/pipkg.go:226`) branches only on `Basis`; on `deploy` it renders one sentence whose only variation is `BuiltFrom == ""` → `"unrecorded"`. A well-formed but unresolvable SHA renders identically to a resolvable one (WARN-1) |
+| R-007 | Implemented with a gap | `Disclosure()` (`engine/pipkg/pipkg.go:226`) re-read this pass and unchanged: the `deploy` branch returns `"compared against " + DeployRef + " (" + DeployTip + "); package built from " + builtFrom`, varying only when `BuiltFrom == ""` → `"unrecorded"`. A well-formed but unresolvable SHA renders identically to a resolvable one (WARN-1) |
 | R-008 | Implemented | `Capture`, `DetectActiveChange`, `ApprovedSummary`, `RunHook` + `AllSurvivingApprovedPersisted`, fourth settings identity |
-| R-009 | **Fixed** | gate's private `persistedReviewState` deleted; `loadApprovedTreeFromReceipts` delegates to `reviewreceipt.ApprovedSummary` — one reader for both on-disk shapes |
+| R-009 | Fixed and merged | gate's private `persistedReviewState` deleted; `loadApprovedTreeFromReceipts` delegates to `reviewreceipt.ApprovedSummary`; fixture is now committed production data |
 | R-010 | Implemented (docs) | `skills/inception-pipeline/SKILL.md` reads the persisted file, both shapes; `.git/...` path removed from the Plan |
 | R-011 | Implemented | `ReceiptConventionDate`, `loadReceiptOverride`, `CheckPreArchive`, `--change` flag, Gate Compliance bullet |
-| R-012..R-016 | Implemented | `isSubagentsExtensionListed`, `ensureSubagentsExtension`, `gaduLinkState`, `linkGaduAgent`, `unlinkGaduAgent`, `validateGaduFrontmatter` |
+| R-012..R-016 | Implemented and live-confirmed | `isSubagentsExtensionListed`, `ensureSubagentsExtension`, `gaduLinkState`, `linkGaduAgent`, `unlinkGaduAgent`, `validateGaduFrontmatter`; M.1/M.3 exercised the install and uninstall paths on a real Pi |
 
 ### Coherence (Design)
 
@@ -187,22 +176,22 @@ Authoritative counts, recounted this pass from the six delta spec files: **21 re
 | D3 path containment | Yes | `validateEntry` + `filepath.Rel` defense in depth |
 | D4 SKILL.md name in pipkg | Yes | line-oriented scan, zero-dependency ADR preserved |
 | D5 provenance | Yes | `resolveBuildRev` + `resolvePackageVersion(root, rev)` |
-| D6 comparison basis | Superseded, then followed | `Check` resolves the deploy ref and treats `builtFrom` as provenance; basis values `deploy`/`worktree`/`dirty` rename is consistent with the superseding decision. Runtime-proven (S7/S8) |
-| D7 receipt capture | Yes | DEV-1 corrected in the design text (`eaaac7e`): `DetectActiveChange` is documented as artifact-bearing, not `state.yaml`-bearing, matching `activeChangeMarkers`. The previously-undisclosed multi-change allow path is now a named spec scenario with two covering tests (WARN-4 closed) |
-| D8 receipt consumption | Yes | dual-shape dispatch now routed through the single correct reader; verified against all four real receipts |
+| D6 comparison basis | Superseded, then followed | `Check` resolves the deploy ref and treats `builtFrom` as provenance; runtime-proven (S7/S8) |
+| D7 receipt capture | Yes | DEV-1 corrected in `eaaac7e`; multi-change allow path is a named scenario with two covering tests |
+| D8 receipt consumption | Yes | single correct reader; verified against all real receipts, now including a committed production fixture |
 | D9 missing receipt | Yes | `ReceiptConventionDate = "2026-09-12"`, override schema, `--change` flag, documented gate |
-| D10 GADU placement | Yes | symlink; ownership proven by `Readlink` equality; no state file |
-| D11 extension probe/install | Yes | prefix match on both package names, fixed argv, disclosure, skip env |
-| D12 frontmatter | Yes | `tools: '*'` inline scalar emitted and guarded |
-| D13 status/uninstall | Yes | DEV-3 resolved by reworking the spec, not the code: R-015's stale scenario now describes the broken-target state D10's stable-path symlink actually reaches, and `TestGaduLinkState_Matrix/stale (broken target)` covers it (WARN-7 closed) |
+| D10 GADU placement | Yes | symlink; **live `readlink` confirms the overlay-owned target on the real machine**; no state file |
+| D11 extension probe/install | Yes | prefix match on both package names, fixed argv, disclosure, skip env; M.1 observed the disclosure |
+| D12 frontmatter | Yes | `tools: '*'` inline scalar emitted and guarded; **the real extension accepted it and registered `gadu`** |
+| D13 status/uninstall | Yes | DEV-3 resolved by reworking the spec; M.1/M.3 confirm status honesty and uninstall scope live |
 
-### Deviation Rulings (pass 2)
+### Deviation Rulings (pass 3)
 
-| # | Pass-1 ruling | Pass-2 status |
+| # | Pass-2 status | Pass-3 status |
 |---|---|---|
-| DEV-1 | Spec is wrong; correct D7's `state.yaml` wording before archive | **CLOSED** — `design.md` D7 reworded in `eaaac7e` |
+| DEV-1 | CLOSED | Unchanged |
 | DEV-2 | ACCEPTABLE (fail-closed is the spec's requirement) | Unchanged |
-| DEV-3 | SPEC GAP — reword the unsatisfiable stale scenario | **CLOSED** — `specs/gadu-pi-subagent/spec.md` R-015 reworded in `eaaac7e`; test agrees |
+| DEV-3 | CLOSED | Unchanged |
 | DEV-4 | ACCEPTABLE (gate-side proxy for agent prose) | Unchanged; residual risk remains WARN-2 |
 | DEV-5 | ACCEPTABLE but regrettable | Unchanged |
 | DEV-6 | ACCEPTABLE (`HOME` isolation is load-bearing) | Unchanged |
@@ -212,11 +201,11 @@ Authoritative counts, recounted this pass from the six delta spec files: **21 re
 
 | Check | Result | Details |
 |-------|--------|---------|
-| TDD Evidence reported | PASS | TDD Cycle Evidence tables present in `apply-progress.md` for slices 1–5 **and** Remediation 1 (WARN-5 closed) |
-| All tasks have tests | PASS | all 31 task-named test functions verified present by name across the repo; zero missing |
-| RED confirmed (tests exist) | PASS | Remediation 1's RED independently reproduced: the pre-fix gate binary exits 1 on the same real receipts where HEAD exits 0 |
-| GREEN confirmed (tests pass) | PASS | all named tests re-executed at `-count=1`; 32 packages `ok`, 41 `--- PASS` in the gate module alone |
-| Triangulation adequate | PASS | 4 traversal cases, 4 extension no-op cases, 5 link-state cases, 3 non-hex builtFrom cases, 4 `TestPreArchiveFlag` sub-cases, legacy + fabricated-nested + real-production receipt shapes |
+| TDD Evidence reported | PASS | TDD Cycle Evidence tables present in `apply-progress.md` for slices 1–5 and Remediation 1 |
+| All tasks have tests | PASS | all 31 task-named test functions verified present by name; zero missing |
+| RED confirmed (tests exist) | PASS | Remediation 1's RED independently reproduced at pass 2 by rebuilding the pre-fix gate binary (exit 1 on the same real receipts where HEAD exits 0); the fixture it needs is now committed under `testdata/` |
+| GREEN confirmed (tests pass) | PASS | all named tests re-executed at `-count=1` this pass; 32 packages `ok`, 59 PASS lines in the gate module alone |
+| Triangulation adequate | PASS | 4 traversal cases, 4 extension no-op cases, 5 link-state cases, 3 non-hex builtFrom cases, 4 `TestPreArchiveFlag` sub-cases, legacy + nested + real-production receipt shapes |
 | Safety Net for modified files | PASS | Remediation 1 records the full gate suite green pre-fix; earlier slices record pre-existing suites green before each modification |
 
 **TDD Compliance**: 6/6 checks passed.
@@ -226,11 +215,12 @@ Authoritative counts, recounted this pass from the six delta spec files: **21 re
 | Layer | Tests | Files | Tools |
 |-------|-------|-------|-------|
 | Unit | 62 | 6 | `go test` |
-| Integration (git-in-TempDir, scratch `HOME` + stub `pi`, real `bash`, real-production-data fixture) | 17 | 3 | `go test`, `git`, `bash` |
-| E2E | 0 | 0 | not installed (deferred to Phase M) |
-| **Total** | **79** | **9** | |
+| Integration (git-in-TempDir, scratch `HOME` + stub `pi`, real `bash`, committed real-production-data fixture) | 17 | 3 | `go test`, `git`, `bash` |
+| Manual / live-system (Phase M) | 3 | — | real Pi 0.85.1, real `~/.pi` |
+| E2E (automated) | 0 | 0 | not installed |
+| **Total (automated)** | **79** | **9** | |
 
-`TestApprovedTree_FromRealCapturedReceipt` is classified as integration: it reads a committed production artifact from the repository rather than a constructed fixture, which is exactly the property that makes it able to catch CRIT-1.
+Phase M is listed as its own layer rather than folded into E2E: it is real-system evidence, but it is human-executed and unrepeatable by CI, so it must not be counted as automated coverage.
 
 ### Changed File Coverage
 
@@ -238,9 +228,7 @@ Authoritative counts, recounted this pass from the six delta spec files: **21 re
 
 ### Assertion Quality
 
-Re-audited the two files changed since pass 1 (`tools/archive-anchor-gate/receipt_test.go`, and the gate sources it exercises), and re-confirmed the pass-1 audit of the other seven test files. No tautologies, no orphan empty-collection checks, no ghost loops, no smoke-test-only patterns, no mock-heavy files.
-
-Pass 1's single assertion-quality defect — `writeReviewStateFile` fabricating a payload shape gentle-ai never writes — is **fixed**: the helper now emits the real nested wrapper, and a second test pins behaviour against a committed production receipt so the suite can no longer agree only with itself.
+Re-confirmed the pass-1 and pass-2 audits across all nine test files. No tautologies, no orphan empty-collection checks, no ghost loops, no smoke-test-only patterns, no mock-heavy files. Pass 1's single defect (a fabricated review-state payload shape) is fixed twice over: the helper emits the real nested `gentle-ai.review-state-record/v2` wrapper, and `TestApprovedTree_FromRealCapturedReceipt` now reads a committed 48 KB byte-for-byte copy of a production receipt from `testdata/`, so the suite cannot drift back into agreeing only with itself.
 
 **Assertion quality**: 0 CRITICAL, 0 WARNING.
 
@@ -254,41 +242,47 @@ Pass 1's single assertion-quality defect — `writeReviewStateFile` fabricating 
 
 **CRITICAL**
 
-None. Pass 1's CRIT-1 is fixed, and the fix was verified by reversion rather than by trusting the remediation report.
+None.
 
 **WARNING**
 
-- **WARN-N1 (new this pass) — the gate's compiled binary is untracked and not gitignored.** `tools/archive-anchor-gate/archive-anchor-gate` (4.0 MB) is present in the worktree and `git check-ignore` exits 1 for it. `.gitignore` already carries a block titled "Compiled guard binaries: `go build ./...` inside a tools/ module writes the binary next to its source, where `git add -A` will sweep it in", listing `/tools/*/archive-reconcile`, `/tools/*/deterministic-check-runner`, and `/tools/*/entry-contract-validator` — `/tools/*/archive-anchor-gate` is missing from that list. This change is the one that makes the gate a routinely-built module (CI builds it; the new pre-archive step runs `go run -C tools/archive-anchor-gate .`), so it inherits exactly the hazard that block was written to prevent. **Follow-up, not blocking** — nothing is committed and archive does not run `git add -A` — but it should be one line in `.gitignore` before the next commit touching that directory.
-- **WARN-1 (R-007) — unresolvable `builtFrom` is disclosed but not flagged as unusable.** `CheckReport.Disclosure()` (`engine/pipkg/pipkg.go:226`) switches only on `Basis`; on `deploy` the only variation is `BuiltFrom == ""` rendering as `"unrecorded"`. A well-formed-but-unresolvable SHA prints the same sentence as a resolvable one, so a reader cannot tell. R-007's requirement body asks the output to state "that the recorded build ref could not be used as provenance". **Ruling: follow-up, not blocking.** The scenario's own THEN clause ("compared against the deploy ref, with the unresolvable recorded build ref disclosed only as provenance") is satisfied, the operator is never misled about what was compared, and no safety property depends on it — but the requirement body is not fully met, so the scenario stays PARTIAL rather than being quietly promoted.
-- **WARN-2 (R-010 and three `actuals-instrumentation` scenarios) — agent-prose behaviour has no executable harness.** closure-feedback lives in `skills/inception-pipeline/SKILL.md` and is executed by an agent, not by code. Compliance rests on a gate-side proxy test (`TestApprovedTree_NeverReadFromGitTransactionStore`) plus documentation. **Ruling: follow-up, not blocking** — the repo has no harness for agent prose, the proxy asserts the real invariant, and the gate half is now runtime-proven. The residual risk is that the prose and the gate could drift apart with nothing to catch it.
-- **WARN-6 — `apply-progress.md`'s Slice 2 and Slice 3 narratives still read "NOT committed / blocked on budget".** Both landed (`f4bf3e4`, `9506918`/`307b79e`). Slice 4 gained a correcting landing note during Remediation 1; Slices 2 and 3 were explicitly deferred. **Ruling: follow-up, not blocking.** The Workload/PR Boundary sections and the Slice 5 / Remediation 1 sections state the true landed state, and the Completeness table above is authoritative. But this file is the one that travels into the archive, and a future reader opening it cold will read three stale "blocked" headers before reaching the correction. One sentence per section would close it.
-- **WARN-8 (R-014, and Phase M M.1–M.3) — live GADU dispatch is unproven.** The frontmatter *form* is verified by two tests; the *dispatch* through `subagent_*` is Phase M, which requires a real `pi` session against the real `~/.pi` and is forbidden in this session. **Ruling: follow-up, not blocking for archive** — Phase M is declared manual and out of `sdd-apply` scope by `tasks.md` itself. But it is an open obligation: until M.1–M.3 run on a real machine, R-014's only scenario is unproven, and "the extension parses our frontmatter" remains an inference from a Go port of the extension's parser, not an observation.
+- **WARN-1 (R-007) — unresolvable `builtFrom` is disclosed but not flagged as unusable. Ruling: FOLLOW-UP, not blocking.** Re-read `Disclosure()` this pass: unchanged. R-007's requirement body demands the output state "that the recorded build ref could not be used as provenance"; the `deploy` branch never says that, so a well-formed-but-unresolvable SHA prints the same sentence as a resolvable one. The scenario's own THEN clause is satisfied and the operator is never misled about *what was compared*, so no safety property depends on it — but the requirement body is not met, and the scenario is not promoted. This is a source edit to `engine/pipkg/pipkg.go`, out of scope for a closure pass; it pairs naturally with SUG-2 as one branch in one function.
+- **WARN-2 (R-010 and three `actuals-instrumentation` scenarios) — agent-prose behaviour has no executable harness. Ruling: FOLLOW-UP, not blocking.** Closure-feedback lives in `skills/inception-pipeline/SKILL.md` and is executed by an agent, not by code. Compliance rests on a gate-side proxy test plus documentation. The repo has no harness for agent prose; this is a structural limit of the codebase, not an omission of this change. Residual risk: prose and gate could drift apart with nothing to catch it.
+- **WARN-6 — `apply-progress.md` still opens three slice narratives with "NOT committed". Ruling: FIX BEFORE ARCHIVE.** Lines 100 (Slice 2), 194 (Slice 3), and 309 (Slice 4) still read `**Delivery status**: implemented and fully verified, **NOT committed**`. All three landed and are merged (`f4bf3e4`, `9506918`/`307b79e`, `bcb1df7`). This is the only finding I rule fix-needed rather than follow-up, and the reason is timing, not severity: `apply-progress.md` is the file that travels into `openspec/changes/archive/` and becomes the permanent record. A future reader opening it cold meets three stale "blocked" headers before reaching any correction. The cost is three sentences; the cost of not doing it is a permanently misleading audit trail. It changes no code and no count, so it does not affect this verdict.
+- **WARN-8 (R-014) — live GADU tool-set expansion remains unobserved. Ruling: FOLLOW-UP, not blocking; obligation narrowed, not discharged.** Materially improved since pass 2: Phase M ran, M.1–M.3 are checked, and the real extension demonstrably parsed our real GADU.md and registered `gadu`. What remains unproven is that a dispatched GADU receives a non-empty tool set, because `subagent_run` never reaches a child on this machine — a provider-auth gap that reproduces identically for gentle-pi's own agent and is filed as issue #327. This closes only when someone runs M.2 on a machine with a provider key configured; it is not work this repository can do.
+
+**Closed since pass 2**
+
+- **WARN-N1 CLOSED** — `.gitignore:27` now carries `/tools/*/archive-anchor-gate`; `git check-ignore -v` resolves to that line, and no stray binary is present in the module.
+- **WARN-3, WARN-4, WARN-5, WARN-7** — closed at pass 2, re-confirmed here.
+- **SUG-1 CLOSED** — five review receipts are now persisted for five slices (`ac87563` added `review-6e01e9510e00f068`); the archive report no longer needs to explain a missing fifth.
+- **Phase M unchecked-tasks concern CLOSED** — every task in `tasks.md`, including M.1–M.3, is checked.
 
 **SUGGESTION**
 
-- **SUG-1** — Four receipts are persisted for five slices; Slice 1's lineage predates the capture path. Worth one line in the archive report so a reader does not go hunting for a fifth.
-- **SUG-2** — `pipkg check` echoes a raw `builtFrom` value (e.g. `--upload-pack=evil`) verbatim into operator-facing output. It never reaches a git argv (`builtFromPattern` gates it first), but consider quoting or eliding a value that fails the pattern. Naturally pairs with WARN-1, since both are edits to the same disclosure path.
-- **SUG-3** — Add a gate self-test that runs `--change` against this repository's own real `review-receipts/` directory. `TestApprovedTree_FromRealCapturedReceipt` now pins the parser against production data, which is most of the value; a full end-to-end self-test would additionally pin the wiring. This is the test that would have caught CRIT-1 on the first pass.
+- **SUG-2** — `pipkg check` echoes a raw `builtFrom` value (e.g. `--upload-pack=evil`) verbatim into operator-facing output. It never reaches a git argv (`builtFromPattern` gates it first), but consider quoting or eliding a value that fails the pattern. Same function as WARN-1.
+- **SUG-3** — Add a gate self-test that runs `--change` against this repository's own real `review-receipts/` directory. `TestApprovedTree_FromRealCapturedReceipt` now pins the parser against committed production data, which is most of the value; a full end-to-end self-test would additionally pin the wiring.
+- **SUG-4 (new)** — Issue #327 is an environment gap that will block *every* future subagent dispatch verification on this machine, not just GADU's. Worth resolving before the next change whose acceptance depends on observing a child agent reply, so the same scenario does not go unproven a third time.
 
 ### Verdict
 
-**FAIL (no defects; not fully spec-proven)** — 0 blockers, 0 CRITICAL, 5 WARNING, 3 SUGGESTION, 17/21 requirements and 35/41 scenarios complete.
+**FAIL (no defects; not fully spec-proven)** — 0 blockers, 0 CRITICAL, 4 WARNING, 3 SUGGESTION, 17/21 requirements and 35/41 scenarios complete.
 
-This verdict needs its plain meaning stated, because "fail" with zero blockers and zero critical findings reads like a contradiction. `gentle-ai sdd-verify-validate` ties any passing verdict to *complete* requirement and scenario counts: probed directly this pass, `pass` and `pass_with_warnings` are admitted only at 21/21 and 41/41, and are denied at 17/21 and 35/41 with "passing verdict contradicts failing or incomplete evidence". Six scenarios are not runtime-proven, so the counts cannot honestly reach complete, so the verdict cannot honestly be passing. The counts were not adjusted to reach a passing verdict.
+The verdict word needs its meaning stated, because "fail" with zero blockers and zero critical findings reads like a contradiction. `gentle-ai sdd-verify-validate` ties any passing verdict to *complete* requirement and scenario counts: `pass` and `pass_with_warnings` are admitted only at 21/21 and 41/41. Six scenarios have no covering test that passed at runtime, so the counts cannot honestly reach complete, so the verdict cannot honestly be passing. **The counts were not adjusted to reach a passing verdict**, and the Phase M evidence — genuinely good evidence — was not stretched to cover a clause it does not reach.
 
 **The exact blocker**: six scenarios have no covering test that passed at runtime.
 
 | Scenario | Why not runtime-proven | Closable by |
 |---|---|---|
-| R-014 — GADU dispatches with working tool access | Requires a real `pi` session against the real `~/.pi`; forbidden this session | Running Phase M M.1–M.3 on a real machine |
-| R-010 — Post-acknowledge closure produces a verified value | closure-feedback is agent prose; only a gate-side proxy test exists | Building a harness for agent prose, or accepting the proxy explicitly |
-| AI — Anchors resolve and are legible in both stores | Gate half proven; t0-from-Engram and archive-report half is agent prose | as above |
+| R-014 — GADU dispatches with working tool access | Parse and registration now observed live; tool-set expansion unobserved because `subagent_run` cannot spawn a child without a provider key (#327, reproduces for gentle-pi's own agent) | Re-running M.2 on a machine with a provider key; nothing in this repository |
+| R-010 — Post-acknowledge closure produces a verified value | Closure-feedback is agent prose; only a gate-side proxy test exists | Building a harness for agent prose, or accepting the proxy explicitly |
+| AI — Anchors resolve and are legible in both stores | Gate half proven; the t0-from-Engram and archive-report half is agent prose | as above |
 | AI — A change that skipped inception-pipeline still measures | Agent prose only | as above |
 | AI — Neither anchor resolves | Agent prose only | as above |
 | R-007 — Fallback comparison is disclosed | Test passes; the requirement body's "could not be used as provenance" statement is absent from `Disclosure()` | A one-branch edit to `Disclosure()` (WARN-1, pairs with SUG-2) |
 
-Only the first and last are closable by work in this repository. The middle four describe behaviour executed by an agent reading `skills/inception-pipeline/SKILL.md`, for which this repo has no harness — a structural limit, not an omission of this change. Ruling R-007 COMPLIANT instead would yield 36/41 and 18/21, still short of a passing verdict, so the grade does not turn on that judgement call.
+Only R-007 is closable by work in this repository. R-014 is now blocked by a machine configuration gap rather than by unrun work — a different and much smaller thing than pass 2 faced, but still not proof. The middle four describe behaviour executed by an agent reading `skills/inception-pipeline/SKILL.md`, for which this repo has no harness: a structural limit, not an omission of this change. Ruling R-007 COMPLIANT instead would yield 36/41 and 18/21, still short of passing, so the grade does not turn on that judgement call.
 
-**Everything this change actually built is green.** All 42 automated tasks complete across 5 planned and 5 realized slices with no drift; 32 packages pass at `-count=1 -race`; `gofmt`, `go vet`, and the standalone gate module build are clean; 35 scenarios are runtime-proven with 0 FAILING and 0 UNTESTED. Pass 1's CRIT-1 is fixed, and I proved the fix load-bearing by rebuilding the pre-fix gate and watching it exit 1 on the same four real receipts where HEAD exits 0. WARN-3, WARN-4, WARN-5, WARN-7, DEV-1 and DEV-3 are all closed.
+**Everything this change actually built is green and merged.** 42 automated tasks plus 3 manual checkpoints complete across 5 planned and 5 realized slices with zero drift; PRs #321–#326 merged; 32 packages pass at `-count=1 -race` with exit 0; `gofmt` and `go vet` clean; the change passes the pre-archive gate it introduced, run against merged `main` (`--change pi-package-hardening` → exit 0, verified `approved_tree=ec56969b…`). Five review receipts are persisted for five slices. Pass 1's CRIT-1 stays fixed and its fixture is now committed production data. WARN-N1 and SUG-1 closed this pass.
 
-**Archive readiness is the orchestrator's call, not this report's.** Validity and archive readiness are separate decisions. No finding here blocks archive on correctness grounds: the change passes the pre-archive gate it introduced (`--change pi-package-hardening` exits 0 with a verified `approved_tree`). What a reader must not do is mistake this for full spec proof — R-014 in particular rests on a Go port of the extension's parser rather than on an observed dispatch, and that gap closes only when a human runs Phase M.
+**Archive readiness is the orchestrator's call, not this report's.** Validity and archive readiness are separate decisions, and no finding here blocks archive on correctness grounds. One item genuinely wants attention first: WARN-6's three stale "NOT committed" headers, because archiving is the moment that text stops being fixable cheaply. R-014 and the four agent-prose scenarios should be carried forward as named open obligations in the archive report rather than quietly dropped — the change is done, but it is not fully spec-proven, and those are different claims.
