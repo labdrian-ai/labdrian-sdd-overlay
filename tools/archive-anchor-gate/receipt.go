@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 )
 
 // ReceiptConventionDate is the day the review-receipt-capture convention
@@ -18,46 +20,9 @@ import (
 const ReceiptConventionDate = "2026-09-12"
 
 const (
-	receiptSchemaName  = "gentle-ai.review-receipt/v2"
-	receiptApprovedTag = "approved"
 	overrideSchemaName = "labdrian.review-receipt-override/v1"
 	overrideFileName   = "override.json"
-	// reviewStateSuffix names the second persisted shape (gentle-ai 2.7.0+):
-	// the raw review-state.json the lifecycle now leaves behind for an
-	// approved-but-unacknowledged lineage, copied byte-for-byte to
-	// <lineage>.review-state.json. It never carries a `schema`/
-	// `terminal_state` pair -- see persistedReviewState.
-	reviewStateSuffix = ".review-state.json"
 )
-
-// persistedReceipt is the LEGACY gentle-ai.review-receipt/v2 shape the gate
-// reads from openspec/changes/<change>/review-receipts/<lineage>.json.
-type persistedReceipt struct {
-	Schema             string `json:"schema"`
-	LineageID          string `json:"lineage_id"`
-	TerminalState      string `json:"terminal_state"`
-	FinalCandidateTree string `json:"final_candidate_tree"`
-}
-
-// persistedReviewState is the SECOND persisted shape: a raw
-// review-state.json, copied verbatim to
-// openspec/changes/<change>/review-receipts/<lineage>.review-state.json.
-// As of gentle-ai 2.7.0 the lifecycle no longer writes a
-// gentle-ai.review-receipt/v2 file at all; an approved-but-unacknowledged
-// lineage holds only this shape, so the gate must read it directly rather
-// than wait for a receipt file that will never exist.
-type persistedReviewState struct {
-	State           string   `json:"state"`
-	LineageID       string   `json:"lineage_id"`
-	SelectedLenses  []string `json:"selected_lenses"`
-	RiskLevel       string   `json:"risk_level"`
-	CurrentSnapshot struct {
-		CandidateTree string `json:"candidate_tree"`
-	} `json:"current_snapshot"`
-	InitialSnapshot struct {
-		BaseTree string `json:"base_tree"`
-	} `json:"initial_snapshot"`
-}
 
 // receiptOverride is the labdrian.review-receipt-override/v1 payload an
 // owner records at openspec/changes/<change>/review-receipts/override.json
@@ -82,12 +47,23 @@ func requiresReceipt(date string) bool {
 // trust. override.json is never a candidate here; it is read separately by
 // loadReceiptOverride.
 //
+// Parsing both shapes is delegated to engine/reviewreceipt.ApprovedSummary,
+// the single reader Capture itself uses to persist these files -- CRIT-1
+// (verify-report, pi-package-hardening) found this gate maintaining its own,
+// wrong model of the gentle-ai.review-state-record/v2 wrapper shape
+// (`<lineage>.review-state.json`): it expected a flat top-level `state`
+// string, but the real file nests `lineage_id`, `state`,
+// `current_snapshot.candidate_tree`, `selected_lenses` and `risk_level`
+// under a `state` OBJECT. Reusing ApprovedSummary means there is exactly one
+// place in the repository that knows either on-disk shape.
+//
 //   - legacy `<lineage>.json`: gentle-ai.review-receipt/v2, approved when
 //     `terminal_state == "approved"`; the tree is `final_candidate_tree`.
-//   - `<lineage>.review-state.json`: the raw review-state gentle-ai 2.7.0+
-//     leaves behind for an approved-but-unacknowledged lineage (the
-//     lifecycle no longer writes a v2 receipt at all), approved when
-//     `state == "approved"`; the tree is `current_snapshot.candidate_tree`.
+//   - `<lineage>.review-state.json`: the gentle-ai.review-state-record/v2
+//     wrapper gentle-ai 2.7.0+ leaves behind for an approved-but-
+//     unacknowledged lineage (the lifecycle no longer writes a v2 receipt at
+//     all), approved when `state.state == "approved"`; the tree is
+//     `state.current_snapshot.candidate_tree`.
 //
 // Neither shape carries a timestamp of its own (see engine/reviewreceipt),
 // so when more than one approved file is persisted for the same change the
@@ -116,49 +92,18 @@ func loadApprovedTreeFromReceipts(dir string) (tree, lineageID string, found boo
 
 	for i := len(names) - 1; i >= 0; i-- {
 		path := filepath.Join(dir, names[i])
-		data, readErr := os.ReadFile(path)
-		if readErr != nil {
-			return "", "", false, fmt.Errorf("reading %s: %w", path, readErr)
-		}
-		if strings.HasSuffix(names[i], reviewStateSuffix) {
-			if candidateTree, lineage, ok := approvedTreeFromReviewState(data); ok {
-				return candidateTree, lineage, true, nil
-			}
+		lineage, candidateTree, _, _, _, summaryErr := reviewreceipt.ApprovedSummary(path)
+		if summaryErr != nil {
+			// Not approved, not one of the two recognized shapes, or
+			// unreadable content -- not a candidate, try the next file.
 			continue
 		}
-		if candidateTree, lineage, ok := approvedTreeFromLegacyReceipt(data); ok {
-			return candidateTree, lineage, true, nil
+		if strings.TrimSpace(candidateTree) == "" {
+			continue
 		}
+		return candidateTree, lineage, true, nil
 	}
 	return "", "", false, nil
-}
-
-// approvedTreeFromLegacyReceipt extracts the approved candidate tree from a
-// legacy gentle-ai.review-receipt/v2 payload, or reports false when the
-// payload does not parse or is not an approved receipt.
-func approvedTreeFromLegacyReceipt(data []byte) (tree, lineageID string, ok bool) {
-	var r persistedReceipt
-	if err := json.Unmarshal(data, &r); err != nil {
-		return "", "", false
-	}
-	if r.Schema != receiptSchemaName || r.TerminalState != receiptApprovedTag || strings.TrimSpace(r.FinalCandidateTree) == "" {
-		return "", "", false
-	}
-	return r.FinalCandidateTree, r.LineageID, true
-}
-
-// approvedTreeFromReviewState extracts the approved candidate tree from a
-// raw review-state.json payload, or reports false when the payload does not
-// parse or is not in the approved state.
-func approvedTreeFromReviewState(data []byte) (tree, lineageID string, ok bool) {
-	var s persistedReviewState
-	if err := json.Unmarshal(data, &s); err != nil {
-		return "", "", false
-	}
-	if s.State != receiptApprovedTag || strings.TrimSpace(s.CurrentSnapshot.CandidateTree) == "" {
-		return "", "", false
-	}
-	return s.CurrentSnapshot.CandidateTree, s.LineageID, true
 }
 
 // loadReceiptOverride reads dir/override.json and validates it as a

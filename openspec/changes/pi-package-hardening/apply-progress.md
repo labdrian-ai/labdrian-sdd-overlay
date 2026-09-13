@@ -361,3 +361,110 @@ before accepting the remainder.
 ### Status
 
 Phase 4 (receipt-anchor-gate, R-009..R-011), amended mid-batch to accept both persisted receipt shapes, is implemented and fully verified (all focused, runtime, and broad checks pass, modulo the two expected/explained pi-package drift failures caused by the pending commit itself) but **blocked from committing by the 400-line review budget** (563 authored lines). Returning `partial`. The orchestrator should choose one of: (a) grant `size:exception` (Slice 2/3 precedent) and have a follow-up apply batch commit this exact diff as-is, or (b) direct a further split before landing — though no cohesive sub-split was found beyond the extra-test trim already applied, and the dual-shape support added mid-batch is a correctness requirement, not discretionary scope, so it was not deferred to reduce the count. No code was reverted; the worktree retains the full, tested Phase 4 implementation uncommitted.
+
+**Landing note (added during Slice 5 batch)**: Slice 4's diff landed unchanged at `bcb1df7` ("docs(sdd): mark pi-package-hardening slice 4 tasks complete and record its size exception"), with `tasks.md` Phase 4 checkboxes 4.1–4.9 marked `[x]`. `size:exception` was granted. This landing note is added here to correct WARN-6 (verify-report, `pi-package-hardening`) only for Slice 4's status line; the rest of Slice 4's prose is left as originally reported (WARN-6 is out of scope for this remediation batch — see Remediation 1 below).
+
+## Slice 5: gadu-pi-subagent (PR 5, R-012..R-016) — LANDED at `fb27128`/`5d1fec2` (size:exception granted)
+
+**Change**: pi-package-hardening
+**Mode**: Strict TDD (RED → GREEN → REFACTOR)
+**Branch**: `feat/pi-package-hardening-5-gadu` (stacked on `feat/pi-package-hardening-4-gate` @ `bcb1df7`)
+**Delivery status**: fully implemented, verified, and **LANDED** — `fb27128` ("feat(runtime): make GADU a real Pi subagent through the Subagents extension") and `5d1fec2` ("docs(sdd): mark pi-package-hardening slice 5 tasks complete and record its size exception"). 872 authored lines (827+/45- in engine/bin, plus 1 line in README) vs the 400-line budget. This slice was not on the original pre-granted exception list (only slices 2–4 were pre-approved at the time it was implemented); the orchestrator subsequently granted `size:exception` for this slice and it landed as-is. `tasks.md` Phase 5 checkboxes 5.1–5.10 are marked `[x]`.
+
+### Implemented — tasks 5.1-5.10
+
+- 5.1 RED→GREEN: `TestSubagentsExtension_InstallWhenAbsent`, `TestSubagentsExtension_Noop` (4 sub-cases), `TestSubagentsExtension_SkipEnv`. GREEN: `isSubagentsExtensionListed(home)` (prefix match on `npm:pi-subagents-j0k3r`/`npm:pi-subagents`, optional `@version`), `ensureSubagentsExtension(bin, home)` (fixed-argv `pi install npm:pi-subagents-j0k3r`, disclosure message, `LABDRIAN_PI_SKIP_SUBAGENTS=1` opt-out).
+- 5.2 RED→GREEN: `TestGaduLinkState_Matrix` (5 sub-cases). GREEN: `gaduLinkState(linkPath, expectedTarget) gaduLink` (ownership proven ONLY by `os.Readlink` equality); exported test-only wrapper `GaduLinkStateForTest` since `pi_test.go` is in the external `runtime_test` package.
+- 5.3 RED→GREEN: `TestGaduLink_SurvivesOverwrite` — rewriting a sibling "gentle-pi managed" file never touches our symlink (per-file ownership, not directory-scoped).
+- 5.4 RED→GREEN: `TestUninstall_OwnedLinkOnly`, `TestUninstall_LeavesForeignGaduFileUntouched`. GREEN: `unlinkGaduAgent(home, destDir)` removes only when `gaduLinkState` proves ownership; `Uninstall()` now unlinks GADU.md FIRST (before `pi remove`), reports a conflict inline via `linkNote` without failing the whole uninstall.
+- 5.5 RED→GREEN: `TestFrontmatter_InlineToolsScalar` (in `engine/gadu/gadu_test.go` — guards the generator template), `TestInstall_RejectsAmbiguousGaduFrontmatter` (guards the runtime linking guard). GREEN: `validateGaduFrontmatter(content) error` — a minimal Go port of `pi-subagents-j0k3r`'s `parseFrontmatterWithIssues` catching `tools` declared BOTH as inline scalar and YAML list. Requires non-empty `name`/`description`; `model` unconstrained.
+- 5.6 GREEN: `ensureSubagentsExtension` (see 5.1).
+- 5.7 GREEN: `gaduSourcePath(destDir)` = `<destDir>/agents/GADU.md` (stable across `swap` — D10); `gaduLinkPath(home)` = `~/.pi/agent/agents/GADU.md`; `linkGaduAgent(home, destDir)` validates frontmatter then creates/recreates the symlink, refusing (never overwriting) a conflict.
+- 5.8 GREEN: `Status()` gained two new owned-entry checks folded into the existing partial/supported honesty model. `TestStatus_ReportsUnprovenSubagentsAndGaduLinkEntries`, `TestInstall_WiresSubagentsExtensionAndGaduLink`, and the renamed `TestPiAdapter_StatusTriangulatesAllOwnedEntries` (was `...AllThreeOwnedEntries`, now 5 entries) cover it.
+- 5.9 GREEN: `Install()` now calls `installGaduSubagent(bin)` right after `pi install <destDir>` succeeds — never fails Install as a whole on an extension/link problem.
+- 5.10 Docs: README.md Pi section gained one bullet documenting the extension install/disclosure, the overlay-owned link and its ownership proof, the two new status entries, and the selective uninstall.
+
+### Deviations from Design
+
+1. `gaduLinkState`'s "stale" case is narrower than design D13's parenthetical: since the symlink always resolves to the SAME file it's compared against, byte comparison is trivially always-equal when the target exists, so "stale" reduces to exactly "ours, but the target file no longer exists" — the only state reachable given the design's own stable-path symlink choice. **Verify-report ruling (DEV-3/WARN-7): SPEC GAP.** The `gadu-pi-subagent` delta spec's R-015 scenario was reworded during Remediation 1 (see below) to match what D10's own stable-path symlink makes reachable, rather than leaving a scenario no implementation can satisfy.
+2. `Uninstall()` unlinks GADU.md BEFORE running `pi remove` (matches task 5.4's test-name ordering); no correctness dependency either way since `pi remove` never touches `~/.pi/agent/agents/`.
+3. Test isolation gotcha (documented inline): `Install()` now unconditionally tries to symlink into `$HOME/.pi/agent/agents/GADU.md`, so any test lacking its own isolated HOME pollutes every LATER sequential test in the package. Two pre-existing tests needed an added `t.Setenv("HOME", t.TempDir())` — a real, load-bearing fix this slice would otherwise have silently broken.
+4. `writeStubPiScript`'s recorder format changed from single-shot overwrite to append-with-blank-line-separator, because `Install()` now makes up to TWO `pi` invocations. `readRecordedArgv` stays backward-compatible (first invocation); new `readRecordedInvocations`/`readAllRecordedTokens` helpers added. A shelltest fixture needed the same settings.json/link additions to reach "supported" after the two new owned Status entries.
+5. `TestPiAdapter_StatusTriangulatesAllThreeOwnedEntries` renamed to `...AllOwnedEntries` (now 5 entries) — a required adaptation of an existing test, not scope creep.
+6. Slice 5 added no `bin/labdrian-overlay` edits; wiring is transitive through `engine runtime install/status --target pi` (`pipkg_apply_and_report`/`pipkg_status_and_report` already delegate to it). Verify-report ruling (DEV-7): ACCEPTABLE, verified at runtime by the verify batch's smoke tests S18–S24.
+
+### Work Unit Evidence
+
+| Evidence | Value |
+|---|---|
+| Focused test command and exact result | `cd engine && go test ./runtime/... ./cmd/... ./shelltest/...` → all pass. |
+| Runtime harness command/scenario and exact result | `cd engine && go test -count=1 -race ./...` → all 13 packages ok. `shellcheck -S warning bin/labdrian-overlay` → only the 2 pre-existing SC2064 warnings (zero edits to `bin/labdrian-overlay` this slice). |
+| Rollback boundary | Revert `fb27128` and `5d1fec2`; touches only `engine/runtime/pi.go`, `engine/runtime/pi_test.go`, `engine/gadu/gadu_test.go`, `README.md`, and `openspec/changes/pi-package-hardening/tasks.md` — independently revertible; no cross-slice coupling (Phases 1–4 files untouched). |
+
+### Broad Verification (Slice 5)
+
+`gofmt -l .` clean. `go vet ./...` clean. `git diff --shortstat bcb1df7..fb27128 -- engine bin` = 4 files, 827(+)/45(-) = 872 authored lines; README.md +1 line separately.
+
+### Workload / PR Boundary — landed with size:exception
+
+- Mode: stacked-to-main PR slice (PR 5 of 5, FINAL slice).
+- One honest slicing consideration was made before landing: dropping the two most triangulation-only tests (~55 lines) would not bring the diff anywhere near 400 (872 vs 400), and both cover design-mandated Testing Strategy scenarios — cutting them would leave R-015/R-016 undertested, not just under-budget. No comments, blank lines, docs, or assigned tests were removed to shrink the count.
+- `size:exception` granted by the orchestrator; landed as `fb27128`/`5d1fec2`. `tasks.md` Phase 5 checkboxes (5.1–5.10) marked `[x]`.
+- Slices planned=5 realized=5 (Slice 1 @ `98f8410`, Slice 2 @ `f4bf3e4`, Slice 3 @ `9506918`/`307b79e`, Slice 4 @ `bcb1df7`, Slice 5 @ `fb27128`/`5d1fec2`). No drift — every planned slice has a realized, landed counterpart.
+
+### Status
+
+Phase 5 (final slice, R-012..R-016) is implemented, fully verified, and **landed**. All 42 automated tasks (1.x–5.x) across all 5 slices are complete and marked `[x]` in `tasks.md`. This completed the implementation portion of `pi-package-hardening` and triggered `sdd-verify`, which returned FAIL (see `verify-report.md`, CRIT-1 and 8 WARNINGs) — addressed below in Remediation 1.
+
+## Remediation 1 (post-verify-FAIL apply batch)
+
+**Trigger**: `verify-report.md` verdict `fail` (`evidence_revision: sha256:dec2d35984887ecf3e676aca867828d7960e90ce30818b3dfea361a1fc1ecfc2`) — 1 CRITICAL, 8 WARNING, 3 SUGGESTION. This batch fixes CRIT-1 and the wording gaps in DEV-1/DEV-3/WARN-4/WARN-5, per explicit remediation scope. WARN-1, WARN-2, WARN-3 (already implicitly addressed as part of the CRIT-1 fix — see below), WARN-6, WARN-7 (addressed via the DEV-3 spec reword, see below), WARN-8, and the 3 SUGGESTIONs were explicitly out of scope for this batch and are listed as follow-ups.
+
+**Attempt token**: `sha256:6bd8e537fd4272767fc5ee359895377ddcba088934d197f67b9787f2b24eb71d`.
+
+### CRIT-1 fix — `archive-anchor-gate` cannot read the review-state receipts it is supposed to verify
+
+**Root cause**: `tools/archive-anchor-gate/receipt.go`'s `persistedReviewState` modeled `<lineage>.review-state.json` as a flat top-level `state` string. The real file gentle-ai 2.7.0+ writes is a `gentle-ai.review-state-record/v2` wrapper: `{"schema","revision","state":{...}}`, with `state.state`, `state.lineage_id`, `state.current_snapshot.candidate_tree`, `state.selected_lenses`, `state.risk_level` all nested one level inside the `state` object. `json.Unmarshal` therefore silently failed the type match (a JSON object into a Go `string` field) for every one of the four real receipts persisted at `openspec/changes/pi-package-hardening/review-receipts/`, so `go run . --repo <worktree> --known-gaps known-gaps.txt --change pi-package-hardening` exited 1 with "no verified review receipt" despite four approved receipts on disk.
+
+**Fix (RED → GREEN, TDD)**:
+- RED: added `TestApprovedTree_FromRealCapturedReceipt` in `tools/archive-anchor-gate/receipt_test.go`, seeded from the real `review-42353e66bae50ad8.review-state.json` file already committed in this change's `review-receipts/` folder (not a fabricated fixture) — confirmed FAILING against the pre-fix code (`a real, approved gentle-ai.review-state-record/v2 receipt was not recognized`).
+- GREEN: deleted `persistedReceipt`, `persistedReviewState`, `approvedTreeFromLegacyReceipt`, `approvedTreeFromReviewState`, `receiptSchemaName`, `receiptApprovedTag`, `reviewStateSuffix` from `receipt.go`. `loadApprovedTreeFromReceipts` now calls `engine/reviewreceipt.ApprovedSummary(path)` for every candidate file — the single reader `Capture` itself already uses correctly for both persisted shapes (`engine/reviewreceipt/reviewreceipt.go`, confirmed correct against the same four real receipts by the verify batch's smoke S25).
+- Module wiring: `tools/archive-anchor-gate/go.mod` gained `require github.com/labdrian-ai/labdrian-sdd-overlay/engine v0.0.0` + `replace ... => ../../engine`. The `engine` module has zero external dependencies (no `go.sum`, stdlib-only `reviewreceipt` package), so this adds no dependency-graph risk to the CI job that builds the gate module standalone (`go run -C tools/archive-anchor-gate .`, `.github/workflows/ci.yml`'s `test-archive-anchor-gate` job) — a relative `replace` resolves the same regardless of the process's `-C` working directory.
+- **WARN-3 fixed as a consequence**: `receipt_test.go`'s `writeReviewStateFile` fabricated-fixture helper (the root of CRIT-1 per the verify report — "a fixture-fidelity failure... exactly the class of green test that proves nothing") was corrected to emit the real nested `gentle-ai.review-state-record/v2` wrapper shape instead of the flat one. `TestApprovedTree_FromReviewStateShape` and `TestPreArchiveFlag/review_state_shape_present_passes` (which both use this helper) still pass, now against a fixture that matches production.
+
+**Landed**: `89fa4d3` ("fix(archive-anchor-gate): read the real review-state-record/v2 shape (CRIT-1)").
+
+### DEV-1 / WARN-4 fix — review-receipt-capture design/spec wording
+
+- `design.md` D7: corrected "exactly one active change (non-archive dir under `openspec/changes/` with `state.yaml`)" to "carries at least one recognized SDD artifact file (`tasks.md`, `design.md`, `proposal.md`, or `entry.json`) — not `state.yaml`, which this repository's own changes never write" — matching `engine/reviewreceipt.DetectActiveChange`'s actual `activeChangeMarkers` and the DEV-1 ruling ("ACCEPTABLE — and the spec is the thing that is wrong").
+- `design.md` D7 and `specs/review-receipt-capture/spec.md`: documented the previously-undisclosed multi-change allow path (`RunHook` allows, exit 0, when `AllSurvivingApprovedPersisted` is true, rather than always denying on multiple active changes) as a new scenario, "Multiple active changes deny, unless every surviving receipt is already persisted" — closing WARN-4 ("a design change that `apply-progress.md` never lists under Deviations from Design").
+
+**Landed**: `eaaac7e` ("docs(sdd): fix DEV-1/DEV-3/WARN-4 spec and design wording gaps").
+
+### DEV-3 / WARN-7 fix — gadu-pi-subagent R-015 stale-link scenario
+
+`specs/gadu-pi-subagent/spec.md`'s R-015 "Stale link is reported independent of extension state" scenario previously said stale means "`GADU.md` predates the current `engine/gadu/persona/body.md` content" — a state `gaduLinkState` cannot reach under D10's stable-path symlink (ownership is proven only by `os.Readlink` equality, never byte comparison; the design's own D13 parenthetical was already narrower in practice, per Deviation 1 above). Reworded to the state the implementation actually reaches: "the extension is installed and `GADU.md` is the overlay-owned symlink, but its target file no longer exists". Added a prose note that content drift is instead caught independently by `pipkg check` on `agents/GADU.md`. Closes WARN-7 ("the stale-link scenario is unsatisfiable as written").
+
+**Landed**: `eaaac7e` (same commit as the DEV-1/WARN-4 fix — both are spec/design wording corrections with no code change, applied as one work unit).
+
+### WARN-5 fix — Slice 5 progress restored to the OpenSpec copy
+
+`apply-progress.md` (this file) previously stopped at Slice 4; Slice 5's progress, TDD evidence, and deviations existed only in the Engram copy (`sdd/pi-package-hardening/apply-progress`, obs #3381). This section and the "Slice 5" section above restore that content to the file that travels into the archive, correcting Slice 5's status from the Engram copy's stale "IMPLEMENTED, NOT COMMITTED" (obs #3381 was saved before Slice 5 actually landed at `fb27128`/`5d1fec2`) to the accurate landed state. A one-line landing note was also added to the end of the Slice 4 section above, correcting its stale "blocked from committing" framing to note it landed at `bcb1df7` — this is the minimum correction needed to keep the newly-added Slice 5 section internally consistent; the rest of WARN-6 (Slices 2/3's similarly stale narrative) is explicitly deferred as a follow-up, not fixed in this batch.
+
+### Plan vs Realized Slice Count (Remediation 1)
+
+P = 5 (unchanged, from `entry.json` `review_slices`). R = 5 realized slices, all already landed before this remediation batch began (this batch adds two follow-up commits — `89fa4d3`, `eaaac7e` — to the already-landed Slice 5 stack; it does not create a new slice). `slices planned=5 realized=5` — within tolerance, no drift.
+
+### TDD Cycle Evidence (Remediation 1)
+
+| Task | Test File | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|------|-----------|-------|------------|-----|-------|-------------|----------|
+| CRIT-1 fix | `tools/archive-anchor-gate/receipt_test.go` `TestApprovedTree_FromRealCapturedReceipt` | Unit (real-data fixture) | ✅ `go test ./...` all green pre-fix (77 tests) | ✅ Written — confirmed FAILING (`a real, approved gentle-ai.review-state-record/v2 receipt was not recognized`) | ✅ Passed — full suite re-run green (`go test ./... -v -run "ApprovedTree\|PreArchiveFlag"`, all PASS; full `go test ./...` `ok`) | ✅ Existing `TestApprovedTree_FromReceipt` (legacy shape), `TestApprovedTree_FromReviewStateShape` (now-corrected nested fixture), `TestApprovedTree_NeverReadFromGitTransactionStore`, `TestPreArchiveFlag` (4 sub-cases) all continue to pass against the same `ApprovedSummary`-based implementation | ✅ Deleted 4 now-dead functions/types (`persistedReceipt`, `persistedReviewState`, `approvedTreeFromLegacyReceipt`, `approvedTreeFromReviewState`) and 3 now-unused consts; net -14 lines in `receipt.go` (103 deletions, 89 insertions across both files) |
+
+### Work Unit Evidence (Remediation 1)
+
+| Evidence | Required value |
+|---|---|
+| Focused test command and exact result | `cd tools/archive-anchor-gate && go test ./... -v -run "ApprovedTree\|PreArchiveFlag"` → all PASS (`TestApprovedTree_FromReceipt`, `TestApprovedTree_FromReviewStateShape`, `TestApprovedTree_NeverReadFromGitTransactionStore`, `TestPreArchiveFlag` w/ 4 subtests, `TestApprovedTree_FromRealCapturedReceipt`); `go test ./...` → `ok`. |
+| Runtime harness command/scenario and exact result | `go run . --repo /home/labdrian/labdrian-sdd-overlay-worktrees/pph-5 --known-gaps known-gaps.txt --change pi-package-hardening` → exit 0, `verified review receipt found for "pi-package-hardening" (approved_tree=ec56969bdb2a7ade90b83e47d971beb857ddadab)` (was exit 1 "no verified review receipt" before this fix). No-`--change` gate run unchanged: exit 0, "ok: 7 report(s) checked, 1 known gap(s)". |
+| Rollback boundary | Revert `89fa4d3` to undo the CRIT-1 code fix (`receipt.go`, `receipt_test.go`, `go.mod` only); revert `eaaac7e` to undo the spec/design wording fixes (`design.md`, two `spec.md` files only) — independently revertible, no cross-cutting changes. |

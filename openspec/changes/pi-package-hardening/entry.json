@@ -62,10 +62,10 @@
     "counting_method": "authored-additions-and-deletions",
     "size_exception": {
       "state": "granted",
-      "scope": "sync-check-provenance, review-receipt-capture, receipt-anchor-gate",
-      "changed_lines": 2518,
+      "scope": "sync-check-provenance, review-receipt-capture, receipt-anchor-gate, gadu-pi-subagent",
+      "changed_lines": 3390,
       "authorized_by": "labdrian (maintainer)",
-      "reason": "slice 2 sync-check-provenance 677, slice 3 review-receipt-capture 1278 (incl. the review-state.json amendment for gentle-ai 2.7.0) and slice 4 receipt-anchor-gate 563 (dual receipt shape) authored lines, each a cohesive strict-TDD unit; granted 2026-09-12 at delivery"
+      "reason": "slice 2 sync-check-provenance 677, slice 3 review-receipt-capture 1278, slice 4 receipt-anchor-gate 563 and slice 5 gadu-pi-subagent 872 authored lines, each a cohesive strict-TDD unit; granted 2026-09-12 at delivery"
     }
   },
   "strict_tdd": {

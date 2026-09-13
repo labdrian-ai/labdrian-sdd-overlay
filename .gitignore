@@ -24,6 +24,8 @@ coverage.html
 
 # Compiled guard binaries: `go build ./...` inside a tools/ module writes the
 # binary next to its source, where `git add -A` will sweep it in.
+/tools/*/archive-anchor-gate
 /tools/*/archive-reconcile
+/tools/*/actuals-record-validator
 /tools/*/deterministic-check-runner
 /tools/*/entry-contract-validator

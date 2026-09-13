@@ -85,10 +85,21 @@ Pi Subagents extension's installation state (not-installed, installed) and
 the `~/.pi/agent/agents/GADU.md` link state (missing, current, stale,
 conflict) as two separate, individually observable status values.
 
+Ownership of the link is proven only by `os.Readlink` equality with the
+expected `<destDir>/agents/GADU.md` target -- never by comparing file
+contents or a side-record fingerprint. Under the stable-path symlink
+design (D10), the link's target path does not change across a rebuild,
+which is what makes `stale` reachable only when the symlink itself is
+broken (its target file no longer exists, e.g. `destDir` was rebuilt from
+scratch), never when the linked content merely predates the current
+`engine/gadu/persona/body.md` -- that drift is instead caught independently
+by `pipkg check` reporting a mode/content mismatch on `agents/GADU.md`.
+
 #### Scenario: Stale link is reported independent of extension state
 
-- GIVEN the extension is installed but `GADU.md` predates the current
-  `engine/gadu/persona/body.md` content
+- GIVEN the extension is installed and `GADU.md` is the overlay-owned
+  symlink, but its target file no longer exists (`destDir` was rebuilt from
+  scratch without recreating the link)
 - WHEN status is reported
 - THEN the GADU link state SHALL read `stale`, independent of the
   extension state reading `installed`

@@ -34,6 +34,19 @@ present for the same lineage.
   `selected_lenses`, and approved state before `acknowledge-approved` is
   invoked
 
+#### Scenario: Multiple active changes deny, unless every surviving receipt is already persisted
+
+- GIVEN more than one non-archive directory under `openspec/changes/`
+  carries a recognized SDD artifact file (`tasks.md`, `design.md`,
+  `proposal.md`, or `entry.json`)
+- WHEN the `PreToolUse` hook runs before `acknowledge-approved`
+- THEN it SHALL deny (exit 2, naming
+  `review-receipt capture --change <name>`) UNLESS every currently-approved
+  receipt still surviving in the git transaction store is already
+  persisted byte-for-byte under some change's `review-receipts/` folder --
+  for example because an explicit `capture --change <name>` remedy already
+  ran -- in which case it SHALL allow (exit 0)
+
 ### Requirement: approved_tree Sourced Only From the Persisted Receipt
 
 Traces to: R-009
