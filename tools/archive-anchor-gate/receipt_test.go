@@ -32,22 +32,35 @@ func writeReceiptFile(t *testing.T, dir, lineage, finalCandidateTree, terminalSt
 	}
 }
 
-// writeReviewStateFile persists a raw review-state.json-shaped payload under
-// dir/<lineage>.review-state.json, the second persisted shape gentle-ai
-// 2.7.0+ leaves behind for an approved-but-unacknowledged lineage (it no
-// longer writes a gentle-ai.review-receipt/v2 file at all).
+// writeReviewStateFile persists the SECOND persisted shape under
+// dir/<lineage>.review-state.json: the real gentle-ai.review-state-record/v2
+// wrapper gentle-ai 2.7.0+ leaves behind for an approved-but-unacknowledged
+// lineage (it no longer writes a gentle-ai.review-receipt/v2 file at all).
+// This mirrors the four real files persisted at
+// openspec/changes/pi-package-hardening/review-receipts/ -- a top-level
+// `state` OBJECT nesting `lineage_id`, `state`, `current_snapshot` and
+// `initial_snapshot`. An earlier revision of this helper wrote a flat
+// top-level `state` string instead; that fixture-fidelity gap (WARN-3, and
+// the root of CRIT-1) let the gate's own now-deleted flat model pass while
+// the real files it needed to read never parsed. See
+// TestApprovedTree_FromRealCapturedReceipt for the production-data pin.
 func writeReviewStateFile(t *testing.T, dir, lineage, candidateTree, state string) {
 	t.Helper()
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatalf("mkdir %s: %v", dir, err)
 	}
 	payload := map[string]any{
-		"state":            state,
-		"lineage_id":       lineage,
-		"selected_lenses":  []string{"review-risk"},
-		"risk_level":       "medium",
-		"current_snapshot": map[string]any{"candidate_tree": candidateTree},
-		"initial_snapshot": map[string]any{"base_tree": "0000000000000000000000000000000000000000"},
+		"schema":   "gentle-ai.review-state-record/v2",
+		"revision": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+		"state": map[string]any{
+			"schema":           "gentle-ai.review-state/v2",
+			"lineage_id":       lineage,
+			"state":            state,
+			"risk_level":       "medium",
+			"selected_lenses":  []string{"review-risk"},
+			"initial_snapshot": map[string]any{"base_tree": "0000000000000000000000000000000000000000"},
+			"current_snapshot": map[string]any{"candidate_tree": candidateTree},
+		},
 	}
 	data, err := json.Marshal(payload)
 	if err != nil {
@@ -260,4 +273,57 @@ func TestPreArchiveFlag(t *testing.T) {
 			t.Fatalf("code = %d, want %d (ok); stdout=%s stderr=%s", code, exitOK, stdout, stderr)
 		}
 	})
+}
+
+// TestApprovedTree_FromRealCapturedReceipt (CRIT-1 remediation) loads one of
+// the four review-receipt files this change actually persisted under
+// openspec/changes/pi-package-hardening/review-receipts/ -- the real
+// gentle-ai.review-state-record/v2 wrapper shape, nested one level under
+// "state" -- and asserts the gate extracts its true
+// state.current_snapshot.candidate_tree. A fabricated fixture (like
+// writeReviewStateFile above) cannot catch a gate that only agrees with
+// itself; this test is seeded from production data.
+func TestApprovedTree_FromRealCapturedReceipt(t *testing.T) {
+	repo := repoRoot(t)
+	src := filepath.Join(repo, "openspec", "changes", "pi-package-hardening",
+		"review-receipts", "review-42353e66bae50ad8.review-state.json")
+	data, err := os.ReadFile(src)
+	if err != nil {
+		t.Fatalf("read real receipt fixture %s: %v", src, err)
+	}
+
+	var wrapper struct {
+		State struct {
+			CurrentSnapshot struct {
+				CandidateTree string `json:"candidate_tree"`
+			} `json:"current_snapshot"`
+		} `json:"state"`
+	}
+	if err := json.Unmarshal(data, &wrapper); err != nil {
+		t.Fatalf("parse real receipt fixture: %v", err)
+	}
+	wantTree := wrapper.State.CurrentSnapshot.CandidateTree
+	if wantTree == "" {
+		t.Fatalf("real receipt fixture %s has no state.current_snapshot.candidate_tree", src)
+	}
+
+	dir := t.TempDir()
+	dest := filepath.Join(dir, "review-42353e66bae50ad8.review-state.json")
+	if err := os.WriteFile(dest, data, 0o600); err != nil {
+		t.Fatalf("copy real receipt fixture: %v", err)
+	}
+
+	tree, lineage, found, err := loadApprovedTreeFromReceipts(dir)
+	if err != nil {
+		t.Fatalf("loadApprovedTreeFromReceipts: %v", err)
+	}
+	if !found {
+		t.Fatalf("a real, approved gentle-ai.review-state-record/v2 receipt was not recognized")
+	}
+	if tree != wantTree {
+		t.Fatalf("tree = %q, want %q (from the real captured receipt)", tree, wantTree)
+	}
+	if lineage != "review-42353e66bae50ad8" {
+		t.Fatalf("lineage = %q, want review-42353e66bae50ad8", lineage)
+	}
 }
