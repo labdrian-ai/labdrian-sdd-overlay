@@ -1,0 +1,676 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:e0f6f5abf565065677d7b4eba7463955efc79dbac295468df15d0a7e0689963d",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-42353e66bae50ad8",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+      "candidate_tree": "666c01dd55c516e741245cefd965cc48802e3320",
+      "paths_digest": "sha256:6aaeeea6c194b3acfa5841b38f34823ab41ad12f5acee1a1405085ef8dd7f089",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/gadu/gadu_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "openspec/changes/pi-package-hardening/entry.json",
+        "openspec/changes/pi-package-hardening/tasks.md"
+      ],
+      "identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+      "candidate_tree": "666c01dd55c516e741245cefd965cc48802e3320",
+      "paths_digest": "sha256:6aaeeea6c194b3acfa5841b38f34823ab41ad12f5acee1a1405085ef8dd7f089",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "README.md",
+        "engine/gadu/gadu_test.go",
+        "engine/runtime/pi.go",
+        "engine/runtime/pi_test.go",
+        "engine/shelltest/overlay_pi_package_build_test.go",
+        "openspec/changes/pi-package-hardening/entry.json",
+        "openspec/changes/pi-package-hardening/tasks.md"
+      ],
+      "identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6"
+    },
+    "genesis_paths": [
+      "README.md",
+      "engine/gadu/gadu_test.go",
+      "engine/runtime/pi.go",
+      "engine/runtime/pi_test.go",
+      "engine/shelltest/overlay_pi_package_build_test.go",
+      "openspec/changes/pi-package-hardening/entry.json",
+      "openspec/changes/pi-package-hardening/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 899,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:4eaf5c1fcc800b67a91a0a5846fc00ff1c4a7e36bea1860a55403158114e3dcb",
+    "capture_phase_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+        "capture_phase_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+        "artifact_digest": "sha256:10c69edae027c2104f098d16524469a76add8fd7e442208fe9bbc834bc4109fa",
+        "result_hash": "sha256:f9715b9e4c127b540e5d9892584fde449e690d5bd1fbcc9ae3ab3acd9dca7ea9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a2abdec686f54fd9d7633be807ae4448b19770cad96fb0378a1dbf60c4afe420",
+            "lineage_id": "review-42353e66bae50ad8",
+            "authority_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+            "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+            "base_tree": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+            "candidate_tree": "666c01dd55c516e741245cefd965cc48802e3320",
+            "changed_path_manifest_sha256": "sha256:d7fc6b502a89df0158e6ed5246acfb3be36f91dc4033152bf042d4fab83b3523",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a2abdec686f54fd9d7633be807ae4448b19770cad96fb0378a1dbf60c4afe420",
+            "raw_sha256": "sha256:597a1e45fd3e9fc0e44cb321d75b27f15b449b8953e3e66c7f6c3a2c4f1aa370",
+            "canonical_sha256": "sha256:9ad7bbdef1a99b54846afbd5129c231a2f121efcef51e3d780b90cc2397693f8",
+            "result_hash": "sha256:f9715b9e4c127b540e5d9892584fde449e690d5bd1fbcc9ae3ab3acd9dca7ea9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a2abdec686f54fd9d7633be807ae4448b19770cad96fb0378a1dbf60c4afe420",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/gadu/gadu_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/runtime/pi.go:354-366",
+                "severity": "WARNING",
+                "claim": "The candidate makes every `apply --target pi` run install a third-party npm package into the user's Pi agent runtime. It does this by default, without asking first; the user can only opt out through an environment variable. The install target has no version pin, so `pi install` resolves to whatever version the registry serves at install time. That code then runs inside the agent process, and the linked GADU subagent has all tools granted. The candidate's own compatibility notes name one specific tested release, but a later compromised or incompatible release would be pulled in with no integrity check. The output message tells the user about the install only after it has started, not before. This is a supply-chain exposure the candidate introduced. It is not an exploit already observed. Pinning the tested version in the fixed argv, or asking for consent before installing, would close it.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:305",
+                  "engine/runtime/pi.go:361-362",
+                  "engine/runtime/pi.go:90",
+                  "engine/gadu/gadu_test.go:265",
+                  "README.md:73"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "The subagents install is only a disclosure-and-pinning concern; the argv itself is safe. engine/runtime/pi.go:362 calls runPiCommand with a fixed verb and a constant package name, so neither the package name nor destDir passes through a shell string.",
+              "The accepted-package probe does not match on loose substrings. It requires the listed entry to equal the name exactly or to start with the name plus an at-sign, and it only reads settings.json without writing it (engine/runtime/pi.go:317-347).",
+              "The GADU link ownership model is safe against data loss. gaduLinkState uses Lstat plus Readlink equality, so a foreign regular file or a symlink pointing elsewhere is classed as conflict. linkGaduAgent and unlinkGaduAgent never remove a conflict; they remove only a symlink proven to be ours.",
+              "The only race window between the ownership check and os.Remove is inside the user's own home agents directory. An attacker who can write there already controls the account, so no escalation is reachable.",
+              "The Uninstall link removal runs before `pi remove`. It never touches the Subagents extension package, settings.json, or mcp.json.",
+              "Test isolation holds for the tests this candidate adds. Every new test that calls Install or Uninstall points HOME at a temp dir and uses newBuiltPiAdapterWithStub or sets LABDRIAN_PI_BIN explicitly, so no new test shells out to a real pi or mutates the developer's real Pi settings.",
+              "Whether the pre-existing wired-to-pipkg test stubs the pi binary is not visible in this patch. It is not reported, because only its added HOME isolation line is part of the candidate.",
+              "README.md, openspec/changes/pi-package-hardening/entry.json, openspec/changes/pi-package-hardening/tasks.md and engine/shelltest/overlay_pi_package_build_test.go change only docs, bookkeeping and test fixtures. None of them has a security impact."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+        "capture_phase_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+        "artifact_digest": "sha256:b64b5dcc6c7be453fb5d1c96a5301dc8782e354a2ef6713e1872d892ccc68bc6",
+        "result_hash": "sha256:89c8ab23b180022b1824c21150099c027a439cfc5e540735c20811d4408840a4",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:e861919b7f9c100700e80c369ad59e4ae68537220f3d65d9c738f56c418db941",
+            "lineage_id": "review-42353e66bae50ad8",
+            "authority_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+            "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+            "base_tree": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+            "candidate_tree": "666c01dd55c516e741245cefd965cc48802e3320",
+            "changed_path_manifest_sha256": "sha256:d7fc6b502a89df0158e6ed5246acfb3be36f91dc4033152bf042d4fab83b3523",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:e861919b7f9c100700e80c369ad59e4ae68537220f3d65d9c738f56c418db941",
+            "raw_sha256": "sha256:5ec744c38307d889c00c429f7b92720cc1a6e169ef7170d138c60f5747d512ba",
+            "canonical_sha256": "sha256:2080f2c69954b500bfef30eac76f71c51362675bc59b93efadd1baedcf23bb59",
+            "result_hash": "sha256:89c8ab23b180022b1824c21150099c027a439cfc5e540735c20811d4408840a4",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:e861919b7f9c100700e80c369ad59e4ae68537220f3d65d9c738f56c418db941",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/gadu/gadu_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-install-status-masks-subagent-failure",
+                "lens": "resilience",
+                "location": "engine/runtime/pi.go:106-114",
+                "severity": "WARNING",
+                "claim": "installGaduSubagent returns only a prose note, so Install reports CapabilityRestartRequired whether or not the GADU wiring worked. Three failures produce the same status as full success: the network-dependent `pi install npm:pi-subagents-j0k3r` fails (offline, or the npm registry is unreachable), the frontmatter validation rejects agents/GADU.md, or the symlink cannot be created. An `apply --target pi` caller that branches on the status code sees success, while GADU is not dispatchable. The failure only shows up in free text, or later when `status` reports partial. The new test also asserts only on the message for the ambiguous-frontmatter case, never on the status.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:90",
+                  "engine/runtime/pi.go:92",
+                  "engine/runtime/pi.go:362-363",
+                  "engine/runtime/pi_test.go:1012-1015"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-status-partial-loop-with-skip-env",
+                "lens": "resilience",
+                "location": "engine/runtime/pi.go:151-154",
+                "severity": "WARNING",
+                "claim": "Status always requires an npm:pi-subagents* entry in settings.json, even when LABDRIAN_PI_SKIP_SUBAGENTS=1 is set. That env var exists for environments that manage the extension separately. In those environments `status --target pi` stays partial permanently, and its remediation hint says to run `labdrian-overlay apply --target pi`. That apply skips the extension again, so the fix-forward path never converges. The status signal becomes a false negative that operators learn to ignore.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:355-356",
+                  "engine/runtime/pi.go:152-153",
+                  "README.md:73"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-narrow-extension-probe-reinstalls",
+                "lens": "resilience",
+                "location": "engine/runtime/pi.go:330-347",
+                "severity": "WARNING",
+                "claim": "The extension probe reads settings.json packages only as a []string and accepts only the exact npm: prefixes. It returns false in several cases: the file is malformed, any packages entry is not a plain string (for example an object-form entry with filters), or the extension was installed from a git or local source. When the probe is false, every apply runs another network `pi install npm:pi-subagents-j0k3r`, adding latency and a registry dependency on each apply. It can also install a second copy next to an existing non-npm install, and Status stays permanently partial. The package-listing probe this code mirrors has the same parse, but the reinstall side effect is new with this candidate.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:335-340",
+                  "engine/runtime/pi.go:358-362",
+                  "engine/runtime/pi.go:152-153"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-uninstall-mutates-before-precondition",
+                "lens": "resilience",
+                "location": "engine/runtime/pi.go:192-201",
+                "severity": "WARNING",
+                "claim": "Uninstall removes the GADU link before it resolves the pi binary or runs `pi remove`. If `pi` is not on PATH or `pi remove` fails, Uninstall returns partial, but the link is already gone. The labdrian-pi package stays listed and loaded by Pi, so GADU silently stops being a dispatchable subagent until apply is re-run. The message is also wrong in two cases. It says \"GADU.md link removed.\" when unlinkGaduAgent returns nil because the link was missing, and gaduLinkState maps any Lstat error, including permission denied, to missing. When the home directory cannot be resolved, the unlink is skipped with no note at all.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:202-205",
+                  "engine/runtime/pi.go:197-198",
+                  "engine/runtime/pi.go:401-403"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 7 manifest paths in the supplied patch sections; the only production change is engine/runtime/pi.go, and the rest are tests, README and openspec bookkeeping.",
+              "Install ordering: the extension install and GADU link run only after the package `pi install` succeeds (engine/runtime/pi.go:90). Failures are folded into the message without changing the status (engine/runtime/pi.go:106-114). Re-running apply is idempotent: the current link is a no-op, a stale link is recreated, and a conflict is left untouched (see linkGaduAgent in engine/runtime/pi.go).",
+              "Uninstall retry: unlinkGaduAgent treats a missing link as success, so a second Uninstall after a failed `pi remove` retries cleanly. The problem is the ordering and messaging, not the retry path.",
+              "runPiCommand timeout behavior is base code and is not visible in this patch. A possible hang on the new npm fetch is therefore not reported as a finding; only the repeated-fetch path from the narrow probe is flagged.",
+              "No BLOCKER or CRITICAL resilience impact was found; foreign or conflicting GADU.md entries are never overwritten or removed (engine/runtime/pi.go:405-410)."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+        "capture_phase_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+        "artifact_digest": "sha256:668be9ec9ec7504190dd2c06f89a7dec9e4f1d2e3a61b62f00d666e7776a882e",
+        "result_hash": "sha256:0b2d6aaf3e4b06fe09f8ca32ac5e6e09eee563645da210388563d5b8ec95c2c6",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:93546c9c6c6acbeace6521facd3d015bbbe4d42b498d327a6a9012270c269291",
+            "lineage_id": "review-42353e66bae50ad8",
+            "authority_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+            "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+            "base_tree": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+            "candidate_tree": "666c01dd55c516e741245cefd965cc48802e3320",
+            "changed_path_manifest_sha256": "sha256:d7fc6b502a89df0158e6ed5246acfb3be36f91dc4033152bf042d4fab83b3523",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:93546c9c6c6acbeace6521facd3d015bbbe4d42b498d327a6a9012270c269291",
+            "raw_sha256": "sha256:f53cc86e050bc520dd2a22c208fa4ea08d6939898dbea3a1950a3c60379237b9",
+            "canonical_sha256": "sha256:9908d52b03e352d118ee1cae4b8dd8f633b8b8a41b2df5297add31d4e92c0506",
+            "result_hash": "sha256:0b2d6aaf3e4b06fe09f8ca32ac5e6e09eee563645da210388563d5b8ec95c2c6",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:93546c9c6c6acbeace6521facd3d015bbbe4d42b498d327a6a9012270c269291",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/gadu/gadu_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:488-512",
+                "severity": "WARNING",
+                "claim": "linkGaduAgent's stale branch cannot run, and its doc comment says stale links are recreated. The function reads the package GADU agent file first and returns a 'not found' error if the target is missing. By the time gaduLinkState stats that same target, it exists, so gaduLinkStale is never returned there. Recreating an identical symlink would change nothing anyway. A maintainer reading the comment will think Install repairs stale links, but it actually fails with a 'package ... not found' error.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:495-498",
+                  "engine/runtime/pi.go:412-414",
+                  "engine/runtime/pi.go:491-492",
+                  "engine/runtime/pi.go:509-512"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/runtime/pi_test.go:374",
+                "severity": "WARNING",
+                "claim": "readRecordedInvocations now silently returns nil when the recorder file cannot be read (it used to call t.Fatalf). As a result, the 'no pi-subagents call happened' checks in TestSubagentsExtension_Noop and TestSubagentsExtension_SkipEnv pass even if the stub never ran or LABDRIAN_PI_BIN was not used. TestUninstall_OwnedLinkOnly would also crash with an index-out-of-range panic instead of a clear failure message. The t parameter is kept but no longer reports this failure.",
+                "proof_refs": [
+                  "engine/runtime/pi_test.go:374",
+                  "engine/runtime/pi_test.go:743-747",
+                  "engine/runtime/pi_test.go:770-774",
+                  "engine/runtime/pi_test.go:910-911"
+                ]
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "engine/runtime/pi_test.go:869-880",
+                "severity": "WARNING",
+                "claim": "TestGaduLink_SurvivesOverwrite cannot fail. Between the before and after Readlink calls, only the test itself writes a sibling file with mustWrite; no adapter or production code runs. The test name, its comment, and the checked-off task 5.3 all suggest the overwrite scenario is covered, when it is not. TestUninstall_OwnedLinkOnly has a similar gap: its doc comment says foreign entries and the extension package are never touched, but the test does not check either.",
+                "proof_refs": [
+                  "engine/runtime/pi_test.go:869-872",
+                  "engine/runtime/pi_test.go:874-880",
+                  "engine/runtime/pi_test.go:883-885",
+                  "openspec/changes/pi-package-hardening/tasks.md:76"
+                ]
+              },
+              {
+                "id": "R2-004",
+                "lens": "readability",
+                "location": "engine/gadu/gadu_test.go:278-290",
+                "severity": "WARNING",
+                "claim": "TestFrontmatter_InlineToolsScalar uses its own frontmatter scan, and it checks a different rule than its name and comment describe. Any line starting with a dash and a space counts as a violation, even under a key other than tools. The scan only stops at the closing delimiter if a tools line was already seen, so without one it counts markdown bullets in the body. The real rule lives in validateGaduFrontmatter, which only rejects tools declared both inline and as a list. The two checks will drift apart, and adding any legitimate YAML list to the frontmatter will fail this test for an unrelated reason.",
+                "proof_refs": [
+                  "engine/gadu/gadu_test.go:284-289",
+                  "engine/runtime/pi.go:449-454",
+                  "engine/runtime/pi.go:482-484"
+                ]
+              },
+              {
+                "id": "R2-005",
+                "lens": "readability",
+                "location": "openspec/changes/pi-package-hardening/tasks.md:75-81",
+                "severity": "WARNING",
+                "claim": "Tasks are marked done, but their descriptions don't match the code, which makes the change record misleading. Task 5.7 names a gaduLinkState(home,destDir,expected) signature, but the code takes (linkPath, expectedTarget). Task 5.8 says Status reports subagents_extension and gadu_link keys, but Status only adds prose problem strings. Task 5.2 describes a 4x2 matrix, but the test has five subtests. Task 5.6 calls the match a prefix match, but the code requires an exact name or a name followed by @version.",
+                "proof_refs": [
+                  "openspec/changes/pi-package-hardening/tasks.md:75",
+                  "openspec/changes/pi-package-hardening/tasks.md:79-81",
+                  "engine/runtime/pi.go:400",
+                  "engine/runtime/pi.go:152-167",
+                  "engine/runtime/pi.go:317-324"
+                ]
+              },
+              {
+                "id": "R2-006",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:152-154",
+                "severity": "WARNING",
+                "claim": "When the extension is not listed, Status always suggests running labdrian-overlay apply. But when LABDRIAN_PI_SKIP_SUBAGENTS=1 is set, apply skips the extension on purpose, so Status stays partial forever with advice that can't fix it and no mention of the opt-out. The README describes this environment variable as a supported opt-out.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:152-154",
+                  "engine/runtime/pi.go:355-357",
+                  "README.md:73"
+                ]
+              },
+              {
+                "id": "R2-007",
+                "lens": "readability",
+                "location": "engine/runtime/pi.go:303-313",
+                "severity": "SUGGESTION",
+                "claim": "The name subagentsAcceptedPackagePrefixes suggests prefix matching, but hasAcceptedSubagentsPrefix matches an exact name or name@version; a true prefix match on the alternate name would also match the canonical one. The canonical package string is written out twice, once in the const and once in the slice. The GADU link message fragment is also repeated across Install and all four Status branches. Deriving these from shared constants would stop the wording from drifting.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:305",
+                  "engine/runtime/pi.go:313",
+                  "engine/runtime/pi.go:317-324",
+                  "engine/runtime/pi.go:112",
+                  "engine/runtime/pi.go:159-163"
+                ]
+              },
+              {
+                "id": "R2-008",
+                "lens": "readability",
+                "location": "openspec/changes/pi-package-hardening/entry.json:68",
+                "severity": "SUGGESTION",
+                "claim": "The size-exception reason now covers slice 5 but keeps the original 'granted 2026-09-12' date, so it doesn't say when or how slice 5 was authorized. The edit also drops the earlier explanations for slices 3 and 4: the review-state amendment note and the dual receipt shape note.",
+                "proof_refs": [
+                  "openspec/changes/pi-package-hardening/entry.json:68",
+                  "openspec/changes/pi-package-hardening/entry.json:65-66"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 7 manifest paths in the supplied patch sections only; line numbers were derived from the hunk headers.",
+              "engine/runtime/pi.go:493-512 reads the GADU target before calling gaduLinkState, which leaves the stale branch unreachable.",
+              "engine/runtime/pi_test.go:374 replaced the recorder-read t.Fatalf with return nil, which weakens the negative assertions at engine/runtime/pi_test.go:743-747 and engine/runtime/pi_test.go:770-774.",
+              "engine/runtime/pi_test.go:869-880 runs no production code between its before and after assertions.",
+              "openspec/changes/pi-package-hardening/tasks.md:75-81 describes a signature and status keys that differ from engine/runtime/pi.go:400 and engine/runtime/pi.go:152-167.",
+              "No BLOCKER or CRITICAL readability defects were found; all findings concern maintainability and misleading change context introduced by this candidate.",
+              "engine/shelltest/overlay_pi_package_build_test.go and README.md were reviewed; their changes are consistent with the new Status contract."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+        "capture_phase_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+        "artifact_digest": "sha256:8592ebb72435c34c21092aa5530a52c11ae0de389b5e5da211687f86b56e1a61",
+        "result_hash": "sha256:311ea26a5feb7ffec83225e7c3c2ac66128aed9add58c58582755d325b4e2b8d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:bc5e92e49d8e504e4714c90ef88cb405213a0ee0d42c3aea57fec746eb8f25c9",
+            "lineage_id": "review-42353e66bae50ad8",
+            "authority_revision": "sha256:ac37e9902a21e78f19ae547230467f6360485386d029f0e9a444bc347942a68e",
+            "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+            "base_tree": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+            "candidate_tree": "666c01dd55c516e741245cefd965cc48802e3320",
+            "changed_path_manifest_sha256": "sha256:d7fc6b502a89df0158e6ed5246acfb3be36f91dc4033152bf042d4fab83b3523",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:bc5e92e49d8e504e4714c90ef88cb405213a0ee0d42c3aea57fec746eb8f25c9",
+            "raw_sha256": "sha256:0f86a8d612bd49701a3cf29ddf1ad25f5f78c94a9873720c828a51f1f5559d60",
+            "canonical_sha256": "sha256:95f52b034e3ffba28dfe1f77e0e3d899a15e13deb9ca59d8b4ee63dcaf93264e",
+            "result_hash": "sha256:311ea26a5feb7ffec83225e7c3c2ac66128aed9add58c58582755d325b4e2b8d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:bc5e92e49d8e504e4714c90ef88cb405213a0ee0d42c3aea57fec746eb8f25c9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "README.md",
+                "engine/gadu/gadu_test.go",
+                "engine/runtime/pi.go",
+                "engine/runtime/pi_test.go",
+                "engine/shelltest/overlay_pi_package_build_test.go",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-status-link-current-despite-invalid-frontmatter",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:155-164",
+                "severity": "WARNING",
+                "claim": "Status can report the GADU link as current, and the whole target as supported, when the linked package agent file is rejected by the frontmatter check. linkGaduAgent validates the frontmatter before it looks at the link state, so it returns early and leaves an existing link in place. That happens on a re-apply after an earlier good install, when the rebuilt package file (same stable path) now has ambiguous tools frontmatter. Install reports the error only in message prose. Status checks only readlink equality and target existence and never re-validates. The result is a supported status for an agent the extension will drop at dispatch. TestInstall_RejectsAmbiguousGaduFrontmatter only covers a fresh HOME with no prior link, so this path is untested.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:155-157",
+                  "engine/runtime/pi.go:494-506",
+                  "engine/runtime/pi.go:412-415",
+                  "engine/runtime/pi_test.go:1010-1033"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-install-status-hides-subagent-failures",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:90",
+                "severity": "WARNING",
+                "claim": "Install always returns the restart-required success status once the package install succeeds. It does this even when any of the following fail: the pi-subagents extension install, the frontmatter validation, or the GADU link creation (for example, a conflict). The failure appears only in concatenated message prose. Callers or exit codes that key on status see a clean success while GADU is not dispatchable. The new tests assert only that status is not unsupported, plus message substrings, so no test covers the status outcome of a failed extension install or link.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:100-114",
+                  "engine/runtime/pi.go:362-363",
+                  "engine/runtime/pi_test.go:1025-1028",
+                  "engine/runtime/pi_test.go:698-704"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-uninstall-supported-despite-owned-unlink-failure",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:194-200",
+                "severity": "WARNING",
+                "claim": "Uninstall still returns supported when removing the overlay-owned link fails. unlinkGaduAgent propagates the os.Remove error for the current or stale state, but that error only becomes a note appended to the success message. The link is also removed before the pi binary is resolved and before `pi remove` runs. If either step fails, the package stays installed but its GADU link is already gone, and Status then reports it missing. No test covers an unlink failure or the pi-missing/remove-failure path with a link present.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:216",
+                  "engine/runtime/pi.go:205",
+                  "engine/runtime/pi.go:209",
+                  "engine/runtime/pi.go:536-537"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-strict-string-packages-decode",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:335-340",
+                "severity": "WARNING",
+                "claim": "isSubagentsExtensionListed decodes the Pi settings packages array strictly as a list of strings. A single non-string entry anywhere in the array (for example, an object-form package entry with filters) or a malformed file makes the whole decode fail, and the probe then returns false. Every apply would then re-run an external npm `pi install` of the j0k3r package, possibly alongside an already-installed alternate-name extension. Status would also stay partial permanently. The existing package-listing probe has the same parse (pre-existing), but this candidate newly gates a network install on it. No test covers mixed, object, or malformed entries.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:358-365",
+                  "engine/runtime/pi.go:152-154",
+                  "engine/runtime/pi_test.go:675-684"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-status-ignores-skip-env",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:152-154",
+                "severity": "WARNING",
+                "claim": "Status never honors LABDRIAN_PI_SKIP_SUBAGENTS. It also only recognizes the two npm package names. Environments that opt out because they manage the Subagents extension separately (the stated purpose of the env var) can therefore never reach supported. For them, Status tells the user to run apply, which will again skip the extension. No test covers Status under the skip env.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:307-309",
+                  "engine/runtime/pi.go:355-357",
+                  "README.md:73",
+                  "engine/runtime/pi_test.go:754-775"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-real-gadu-artifact-validation-unproven",
+                "lens": "reliability",
+                "location": "engine/gadu/gadu_test.go:278-290",
+                "severity": "WARNING",
+                "claim": "No test proves that the real generated GADU agent passes validateGaduFrontmatter. The validator requires the opening delimiter on the very first line, a closing delimiter, and non-empty name and description. The runtime tests instead use a hand-written fixture that had to gain description and tools lines. The new gadu test checks only the inline tools line and scans for list items. If the real artifact has a header before the delimiter or lacks a description, every real apply skips linking, and that surfaces only in message prose. The validator's missing-name, missing-description and missing-delimiter branches are also untested.",
+                "proof_refs": [
+                  "engine/runtime/pi_test.go:23",
+                  "engine/runtime/pi.go:432-486",
+                  "engine/gadu/gadu_test.go:267-276"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-survives-overwrite-test-proves-nothing",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_test.go:869-880",
+                "severity": "WARNING",
+                "claim": "TestGaduLink_SurvivesOverwrite does not exercise any adapter behavior after the first Install. Writing an unrelated sibling file cannot affect a symlink, so the test passes trivially. The README and design claim is that the link stays current across a swap rebuild (only the inode changes) and that a repeat Install is an idempotent no-op on a current link. Nothing rebuilds the package directory and re-checks the link state, and nothing calls Install twice, so that claim is unproven.",
+                "proof_refs": [
+                  "README.md:73",
+                  "engine/runtime/pi.go:373-377",
+                  "engine/runtime/pi.go:504-506"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-stale-link-unreachable-by-uninstall",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:192-200",
+                "severity": "SUGGESTION",
+                "claim": "The owned-link cleanup sits after the not-built early return. If the package directory is already gone, the link is in the stale state and still overlay-owned, but Uninstall reports nothing to uninstall and leaves a dangling symlink in the Pi agents directory. No test covers uninstall with a stale link.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:188-191",
+                  "engine/runtime/pi.go:536-537"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-stale-detection-stats-expected-not-link",
+                "lens": "reliability",
+                "location": "engine/runtime/pi.go:412-414",
+                "severity": "SUGGESTION",
+                "claim": "gaduLinkState decides stale versus current by calling Stat on the expected target, not by following the link itself. The symlink is created with the target string exactly as joined from destDir. If destDir were ever relative, the link would resolve relative to the agents directory and dangle, yet the state would report current because Stat resolves the path against the process working directory. Absolutizing the target before symlinking, or calling Stat on the link path, would make this robust.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:376-377",
+                  "engine/runtime/pi.go:517"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-recorder-helper-weakened-diagnostics",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_test.go:910-911",
+                "severity": "SUGGESTION",
+                "claim": "Two test helpers now give weaker diagnostics. First, readRecordedInvocations silently returns nil when the recorder is unreadable, where it previously failed with Fatalf. Second, TestUninstall_OwnedLinkOnly indexes the last invocation without a length guard, so a missing recording panics instead of failing with a diagnostic. That test's doc also claims the extension package is never touched on uninstall, but it does not assert that no uninstall-time invocation references the extension or that exactly one invocation happened.",
+                "proof_refs": [
+                  "engine/runtime/pi_test.go:373-375",
+                  "engine/runtime/pi_test.go:883-885"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-weak-negative-assertions",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_test.go:1026-1028",
+                "severity": "SUGGESTION",
+                "claim": "Several negative tests pass on the wrong failure mode. TestInstall_RejectsAmbiguousGaduFrontmatter accepts any message containing the word frontmatter, so a spurious missing-description or missing-delimiter error would also pass. TestSubagentsExtension_Noop only asserts the absence of an extension argv. It never positively asserts exactly one package-install invocation or the already-installed note, so an Install that skipped all pi calls would pass.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:482-483",
+                  "engine/runtime/pi_test.go:743-747",
+                  "engine/runtime/pi.go:358-359"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-status-branch-coverage",
+                "lens": "reliability",
+                "location": "engine/runtime/pi_test.go:994-1003",
+                "severity": "SUGGESTION",
+                "claim": "The new Status tests cover only the case where both new entries are missing together, plus the all-proven case. The stale and conflict link messages, the unresolvable-home branch, and each new entry forcing partial on its own are not exercised. The doc claim that each entry is independently observable is therefore only partly proven.",
+                "proof_refs": [
+                  "engine/runtime/pi.go:158-167",
+                  "engine/runtime/pi_test.go:980-982"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 7 manifest paths from the patch sections only: README.md, engine/gadu/gadu_test.go, engine/runtime/pi.go, engine/runtime/pi_test.go, engine/shelltest/overlay_pi_package_build_test.go, openspec/changes/pi-package-hardening/entry.json, openspec/changes/pi-package-hardening/tasks.md.",
+              "engine/runtime/pi.go: traced Install, installGaduSubagent, ensureSubagentsExtension, Status, Uninstall, gaduLinkState, validateGaduFrontmatter, linkGaduAgent and unlinkGaduAgent for failure paths, status honesty and ownership proofs; all new finding locations are on candidate-added lines.",
+              "engine/runtime/pi_test.go: the appending stub recorder, the invocation splitting, and per-test HOME isolation via t.Setenv look correct. The fixture change at engine/runtime/pi_test.go:23 is required by the new validator. The link-state matrix covers missing, current, stale, and both conflict kinds at unit level.",
+              "engine/shelltest/overlay_pi_package_build_test.go: the supported-phase setup now also lists the extension and creates the GADU symlink, which is consistent with the stricter Status; the earlier partial-phase expectations remain satisfiable.",
+              "openspec/changes/pi-package-hardening/entry.json and openspec/changes/pi-package-hardening/tasks.md are bookkeeping-only (size exception and checkbox state) with no runtime behavior; tasks.md describes structured status keys that the implementation expresses only as prose, but that is not a reliability defect.",
+              "No BLOCKER or CRITICAL issues were identified; the gaps are status-honesty edge cases and tests that leave documented behavior (swap-rebuild stability, real-artifact frontmatter compatibility, skip-env status) unproven."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "cfae0e6711ae819e2adfff748b6d0667ce5d9320eead669a5a3604a7ddded45c",
+    "initial_atomic_start": {
+      "lineage_id": "review-42353e66bae50ad8",
+      "worktree_identity": "sha256:c5b169e1c0f02d99e5fb235804943f175c0d0191ab4e078cee475c2863201e51",
+      "target_identity": "sha256:db041a13d80ebcfa94f5a15bfa515f6edbce35331b09f127ffe27bf50ccf52e6",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "509ad6831fc2e288b19c768554bf4928c0173f8f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 899,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
