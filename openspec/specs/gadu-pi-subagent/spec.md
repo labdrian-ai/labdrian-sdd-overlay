@@ -3,31 +3,61 @@
 ## Purpose
 
 Make GADU dispatchable as a real Pi subagent (not a relayed persona): the
-overlay installs/verifies the Pi Subagents extension, links the generated
-`agents/GADU.md` into `~/.pi/agent/agents/` as an overlay-owned asset,
-verifies frontmatter compatibility, and reports honest, distinct status and
-selective uninstall — never touching gentle-pi- or pi-engram-owned files.
+overlay ensures a working `subagent_*` dispatch runner is present —
+preferring gentle-pi's own native subagents (>= 2.6.0) and falling back to
+the third-party Pi Subagents extension only when native support is
+unavailable — links the generated `agents/GADU.md` into
+`~/.pi/agent/agents/` as an overlay-owned asset, verifies frontmatter
+compatibility, and reports honest, distinct status and selective
+uninstall — never touching gentle-pi- or pi-engram-owned files.
 
 ## Requirements
 
-### Requirement: Subagents Extension Installed When Missing
+### Requirement: Subagent Runner Selected, Preferring Native Over the Legacy Extension
 
 Traces to: R-012
 
-WHEN the overlay installs or verifies GADU's Pi integration, IF neither
-`pi-subagents-j0k3r` nor `pi-subagents` is already installed as a Pi
-package, THEN the overlay SHALL install `pi-subagents-j0k3r` via `pi
+WHEN the overlay installs or verifies GADU's Pi integration, IF
+`~/.pi/agent/settings.json`'s `packages` array lists `npm:gentle-pi` at a
+version >= 2.6.0 (gentle-pi's own native `subagent_*` tools), THEN the
+overlay SHALL NOT install the third-party Subagents extension — doing so
+while native support is present leaves gentle-pi's native tools
+unregistered. IF that obsolete extension (`pi-subagents-j0k3r` or
+`pi-subagents`) is already installed alongside native support, THEN the
+overlay SHALL disclose the conflict and the exact removal command
+(`pi remove npm:pi-subagents-j0k3r`) without removing it itself (it is not
+overlay-owned). Otherwise — gentle-pi native subagents unavailable — IF
+neither `pi-subagents-j0k3r` nor `pi-subagents` is already installed as a
+Pi package, THEN the overlay SHALL install `pi-subagents-j0k3r` via `pi
 install npm:pi-subagents-j0k3r`.
 
-#### Scenario: Neither package present triggers install
+#### Scenario: Native gentle-pi subagents present skips the legacy extension
 
-- GIVEN neither package is installed
+- GIVEN `npm:gentle-pi` at version >= 2.6.0 is listed in
+  `~/.pi/agent/settings.json`
+- WHEN the overlay runs its GADU-install step
+- THEN `pi-subagents-j0k3r` SHALL NOT be installed
+
+#### Scenario: Both native and the legacy extension present discloses the conflict
+
+- GIVEN `npm:gentle-pi` at version >= 2.6.0 AND `pi-subagents-j0k3r` are
+  both listed
+- WHEN the overlay runs its GADU-install step
+- THEN the overlay SHALL disclose the conflict and name
+  `pi remove npm:pi-subagents-j0k3r` as the remediation
+- AND the overlay SHALL NOT remove the extension package itself
+
+#### Scenario: Neither package present triggers install when native is unavailable
+
+- GIVEN gentle-pi native subagents are unavailable and neither extension
+  package is installed
 - WHEN the overlay runs its GADU-install step
 - THEN `pi-subagents-j0k3r` SHALL be installed afterward
 
 #### Scenario: Alternate package already installed is treated as satisfied
 
-- GIVEN `pi-subagents` (the alternate package) is already installed
+- GIVEN gentle-pi native subagents are unavailable and `pi-subagents` (the
+  alternate package) is already installed
 - WHEN the overlay runs its GADU-install step
 - THEN the overlay SHALL treat the extension as already satisfied and
   SHALL NOT install a second, redundant package
@@ -37,10 +67,14 @@ install npm:pi-subagents-j0k3r`.
 Traces to: R-013
 
 WHEN the overlay installs GADU's Pi integration, the overlay SHALL place
-the generated `agents/GADU.md` (source: `engine/gadu/persona/body.md`,
-produced by `gadu-generate`) at `~/.pi/agent/agents/GADU.md`, marked as
-overlay-owned and distinct from gentle-pi's or pi-engram's package-owned
-manifest.
+the package's own generated `agents/GADU.md` at `~/.pi/agent/agents/GADU.md`,
+marked as overlay-owned and distinct from gentle-pi's or pi-engram's
+package-owned manifest. That package `agents/GADU.md` is built by
+`pipkg.Build` from the overlay's Pi-specific `pi/agents/GADU.md` (source:
+`engine/gadu/persona/body.md` via `piCompactBody`, produced by
+`gadu-generate`) when present, falling back to the overlay's generic
+`agents/GADU.md` only on an older checkout that predates the Pi-specific
+variant.
 
 #### Scenario: Linked content matches the current generation
 
@@ -61,13 +95,32 @@ manifest.
 
 Traces to: R-014
 
-WHEN the overlay generates `agents/GADU.md`, the generator SHALL emit
+WHEN the overlay generates `agents/GADU.md` (the generic variant) or
+`pi/agents/GADU.md` (the Pi-specific variant), the generator SHALL emit
 `tools` in a form verified to parse correctly under the installed Pi
 Subagents extension. The verified form for `pi-subagents-j0k3r@1.5.15` is
 the inline `tools: '*'` wildcard string, which `parseInlineTools` expands
 at runtime against the parent session's active tools; the generator SHALL
 switch to an explicit tool list only IF a differently-behaving extension
 version is detected.
+
+`pi/agents/GADU.md` additionally declares `model: pi-claude-cli/claude-sonnet-5`
+(exported as `gadu.PiAgentModel`) -- verified live 2026-09-13 (Pi 0.85.1,
+gentle-pi 2.6.0, `@saccolabs/pi-claude-cli` 0.8.1) as the only model id form
+that lets gentle-pi's native `subagent_run` complete a GADU child on this
+stack; an `anthropic/*` or `openai-codex/*` model, or an absent `model:`,
+ends the child with an error instead. `validateGaduFrontmatter` treats
+`model` as optional and unconstrained, so this provider-prefixed form is
+accepted without a code change. `pi/agents/GADU.md` also carries a
+deliberately compact body (`piCompactBody`, target < 1500 bytes for the
+whole file) instead of the full canonical persona body the other two
+variants ship: the `pi-claude-cli` bridge relays the agent file's system
+prompt to a fresh Claude Code process via `--append-system-prompt-file`,
+and a ~7 KB prompt (the full persona body, verified with both GADU's own
+body and a same-size neutral filler) hangs that child indefinitely, while a
+compact prompt completes normally. The compact body instructs loading the
+`gadu-operator` skill for the full persona and protocols before non-trivial
+work.
 
 #### Scenario: GADU dispatches with working tool access
 
@@ -76,14 +129,19 @@ version is detected.
 - THEN GADU SHALL have access to the tools the frontmatter declares, with
   no parse error or silently-empty tool set
 
-### Requirement: Honest, Distinct Extension and Link Status
+### Requirement: Honest, Distinct Subagent Runner and Link Status
 
 Traces to: R-015
 
 WHEN the overlay reports Pi package status, the overlay SHALL report the
-Pi Subagents extension's installation state (not-installed, installed) and
-the `~/.pi/agent/agents/GADU.md` link state (missing, current, stale,
-conflict) as two separate, individually observable status values.
+subagent runner's state (`native` — gentle-pi >= 2.6.0, `legacy` — the Pi
+Subagents extension only, `conflict` — both installed, `absent` —
+neither installed) and the `~/.pi/agent/agents/GADU.md` link state
+(missing, current, stale, conflict) as two separate, individually
+observable status values. `native` and `legacy` are both proven/supported
+states; `conflict` and `absent` are partial, and a `conflict` names the
+exact removal command (`pi remove npm:pi-subagents-j0k3r`) for the
+obsolete extension.
 
 Ownership of the link is proven only by `os.Readlink` equality with the
 expected `<destDir>/agents/GADU.md` target -- never by comparing file
@@ -95,21 +153,30 @@ scratch), never when the linked content merely predates the current
 `engine/gadu/persona/body.md` -- that drift is instead caught independently
 by `pipkg check` reporting a mode/content mismatch on `agents/GADU.md`.
 
-#### Scenario: Stale link is reported independent of extension state
+#### Scenario: Stale link is reported independent of subagent runner state
 
-- GIVEN the extension is installed and `GADU.md` is the overlay-owned
-  symlink, but its target file no longer exists (`destDir` was rebuilt from
-  scratch without recreating the link)
+- GIVEN the subagent runner state reads `native` or `legacy` and `GADU.md`
+  is the overlay-owned symlink, but its target file no longer exists
+  (`destDir` was rebuilt from scratch without recreating the link)
 - WHEN status is reported
 - THEN the GADU link state SHALL read `stale`, independent of the
-  extension state reading `installed`
+  subagent runner state
 
-#### Scenario: Missing extension does not collapse link status
+#### Scenario: Missing subagent runner does not collapse link status
 
-- GIVEN the extension is missing
+- GIVEN the subagent runner state reads `absent`
 - WHEN status is reported
-- THEN both fields SHALL be independently visible: extension
-  `not-installed`, link state reported regardless of extension state
+- THEN both fields SHALL be independently visible: subagent runner
+  `absent`, link state reported regardless of runner state
+
+#### Scenario: Both runners present is reported as conflict, not supported
+
+- GIVEN gentle-pi native subagents (>= 2.6.0) AND the Pi Subagents
+  extension are both installed
+- WHEN status is reported
+- THEN the subagent runner state SHALL read `conflict`
+- AND status SHALL NOT report supported while this conflict is unproven
+  clear
 
 ### Requirement: Uninstall Removes Only the Overlay-Owned Link
 

@@ -68,6 +68,55 @@ func writeFile(t *testing.T, path, content string) {
 	}
 }
 
+// TestPipkgBuild_PrefersPiAgentVariant (gadu-pi-subagent R-014 follow-up):
+// the built package's agents/GADU.md is copied from overlayRoot's
+// pi/agents/GADU.md when present, and falls back to overlayRoot's generic
+// agents/GADU.md when it is absent (an older checkout).
+func TestPipkgBuild_PrefersPiAgentVariant(t *testing.T) {
+	t.Run("prefers pi/agents/GADU.md when present", func(t *testing.T) {
+		overlayRoot, registryPath := fixtureOverlay(t)
+		writeFile(t, filepath.Join(overlayRoot, "pi", "agents", "GADU.md"), "---\nname: GADU\nmodel: pi-claude-cli/claude-sonnet-5\n---\npi body\n")
+		destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+
+		got, err := os.ReadFile(filepath.Join(destDir, "agents", "GADU.md"))
+		if err != nil {
+			t.Fatalf("read built agents/GADU.md: %v", err)
+		}
+		want, err := os.ReadFile(filepath.Join(overlayRoot, "pi", "agents", "GADU.md"))
+		if err != nil {
+			t.Fatalf("read overlay pi/agents/GADU.md: %v", err)
+		}
+		if string(got) != string(want) {
+			t.Errorf("built agents/GADU.md = %q, want the pi/agents/GADU.md content %q", got, want)
+		}
+	})
+
+	t.Run("falls back to agents/GADU.md when pi variant absent", func(t *testing.T) {
+		overlayRoot, registryPath := fixtureOverlay(t)
+		destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+			t.Fatalf("Build: %v", err)
+		}
+
+		got, err := os.ReadFile(filepath.Join(destDir, "agents", "GADU.md"))
+		if err != nil {
+			t.Fatalf("read built agents/GADU.md: %v", err)
+		}
+		want, err := os.ReadFile(filepath.Join(overlayRoot, "agents", "GADU.md"))
+		if err != nil {
+			t.Fatalf("read overlay agents/GADU.md: %v", err)
+		}
+		if string(got) != string(want) {
+			t.Errorf("built agents/GADU.md = %q, want the fallback agents/GADU.md content %q", got, want)
+		}
+	})
+}
+
 func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
