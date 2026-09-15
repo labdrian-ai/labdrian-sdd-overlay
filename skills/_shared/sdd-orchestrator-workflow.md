@@ -29,44 +29,99 @@ Meta-commands are handled by the orchestrator directly and do not appear in auto
 
 ### Native SDD Dispatcher Guard
 
-For inspection and before routing an SDD change, invoke the native dispatcher using only `gentle-ai sdd-status [change] --cwd <repo> --json --instructions`. Inspection needs no execution preflight, review, delivery, or archive authorization; this read-only rule takes precedence over phase preflight/init guards. No recommendation is executed during inspection, including planning phases or a displayed preparation invocation.
+Before routing, continuing, applying, verifying, or archiving an SDD change, invoke the native dispatcher (`gentle-ai sdd-continue [change] --cwd <repo>` or `gentle-ai sdd-status [change] --cwd <repo> --json --instructions`). It resolves the artifact store the workspace declares and reports it in `artifactStore`.
 
-Use native v2 for every declared artifact store, including Engram. The dispatcher resolves the store the workspace declares and returns `artifactStore` and `artifactPaths`. Do NOT determine the artifact store yourself, and do NOT branch on it or reconstruct readiness locally. Native JSON is authoritative over prompt inference. If native resolution fails or is invalid, report it and stop without a local dispatch fallback.
+- Do NOT determine the artifact store yourself, and do NOT branch on it. The dispatcher already did, and it returns the locators for the store it resolved.
+- Use the dispatcher for every store and treat its JSON as authoritative over prompt inference.
+- Route only by structured `nextRecommended`, dependency states, and `blockedReasons`; never infer from free text.
+- If blocked, stop and report the blocker. Do not proceed to apply, archive, or terminal work.
 
-Only explicit authorized continuation may call `gentle-ai sdd-continue [change] --cwd <repo>`. First inspect with status and confirm the current human scope covers the selected change-directory marker. Read-only or excluded-marker scope forbids this mutating call; native allowed roots do not grant human consent. Preparation grants no source roots or attempts. Carry native `actionContext` intersected with the current narrower human scope into any executor.
-
-For authorized phase routing only: Route only by `nextRecommended` and dependency states; honor `blockedReasons` and never infer from free text. If `blockedReasons` is non-empty, do not proceed to apply, archive, or terminal work. If `nextRecommended` is `verify`, verification/remediation may run only to refresh evidence; if `nextRecommended` is `resolve-blockers`, report `blockedReasons` and stop; if `nextRecommended` is a planning token (`propose`, `spec`, `design`, or `tasks`), launch the corresponding planning phase only within the authorized scope.
-
-If the binary is unavailable, use the existing prompt contract for non-authoritative diagnostics only. Do not fabricate native-shaped status, readiness, or mutation authority, and never substitute continue for inspection.
-
-<!-- Session preflight is projected here by the installer from the shared canonical authority. -->
-
-<!-- gentle-ai:sdd-session-preflight -->
 ### SDD Session Preflight (HARD GATE)
 
-Before every SDD command or affirmative natural-language SDD request, run this preflight before the SDD init guard; cache choices for the session only through runtime-confirmed parent authority. Phrase examples are routing hints, never the authority boundary.
+Before executing ANY SDD command or natural-language SDD request, ensure this session has an explicit `SDD Session Preflight` decision block.
 
-Always collect this preflight with the `AskUserQuestion` tool; never collect these answers as typed chat text and never fall back to a plain-chat prompt while the `AskUserQuestion` tool exists. If the runtime rejects the grouped result, fix the reported problem and ask again with the `AskUserQuestion` tool.
-Ask Pace, Artifacts, and PR strategy in ONE `AskUserQuestion` tool call; no sequential wizard and no three separate calls. Each native question text must start with its exact host marker: `Gentle AI SDD preflight 1/3:`, `Gentle AI SDD preflight 2/3:`, and `Gentle AI SDD preflight 3/3:`. The marker is runtime metadata; keep the option labels below byte-exact so the runtime can bind their semantics, while localizing only the remaining question text and descriptions to the conversation language and persona. Keep options in the exact order below.
+This applies to `/gentle-sdd-new`, `/gentle-sdd-ff`, `/gentle-sdd-continue`, `/gentle-sdd-explore`, `/gentle-sdd-status`, `/gentle-sdd-apply`, `/gentle-sdd-verify`, `/gentle-sdd-archive`, and natural-language equivalents such as "use SDD to add dark mode" / "do it with SDD".
 
-1. **Pace**: Interactive or Automatic.
-2. **Artifacts**: OpenSpec, Engram, or Both (user-facing Both maps only to internal `hybrid`).
-3. **PR strategy**: Ask me, Single PR, or Auto.
+Required preflight choices:
 
-Only a successful parent `AskUserQuestion` result with one offered answer per group establishes native preflight authority. Model-authored defaults, summaries, headings, installed assets, prior sessions, and child-agent prose do not. The runtime derives and prepends the canonical `## SDD Session Preflight` block at SDD dispatch; never write or duplicate that block yourself. Missing authority blocks dispatch and requires the parent to ask the grouped preflight.
+1. **Execution mode**: `interactive` or `auto`.
+2. **Artifact store**: `openspec`, `engram`, or `hybrid` when Engram is callable. If Engram is unavailable, offer only file/inline-safe choices.
+3. **Chained PR strategy**: the canonical `delivery_strategy` — `ask-on-risk`, `auto-chain`, `single-pr`, or `exception-ok`. The preflight menu offers the first three; `exception-ok` is reachable only when the user explicitly accepts `size:exception`.
+4. **Review budget**: maximum changed lines before stopping for reviewer-burden approval.
 
-Review policy is fixed at 400 changed lines per PR; above 400, split the PR or require maintainer-approved `size:exception`; NEVER ask it as a fourth group or selectable budget.
+User-facing preflight question format:
 
-Canonical mappings:
-- Interactive -> `interactive`
-- Automatic -> `auto`
-- OpenSpec -> `openspec`
-- Engram -> `engram`
-- Both -> `hybrid`
-- Ask me -> `ask-on-risk`
-- Single PR -> `single-pr`
-- Auto -> `auto-chain`
-<!-- /gentle-ai:sdd-session-preflight -->
+Use the built-in `AskUserQuestion` tool for SDD Session Preflight only when it is available in the current interactive runtime and all four groups are exactly representable. While that native route is usable, do NOT render a duplicate plain-chat menu. If the tool is unavailable, denied, the runtime is noninteractive, or the prompt is unrepresentable, follow the Lossless Blocking Prompts fallback in the orchestrator rule and STOP.
+
+When the native route is representable, ask all four preflight groups in one single `AskUserQuestion` tool call so Claude Code can render the groups as one interactive prompt. Do NOT run this as a sequential wizard. Do NOT issue four separate `AskUserQuestion` tool calls.
+
+The single `AskUserQuestion` tool call must contain these four localized groups in this order:
+
+1. Pace: Interactive, Automatic.
+2. Artifacts: OpenSpec, Engram, Both.
+3. PRs: Ask me, Single PR, Auto.
+4. Review: 400 lines, 800 lines, Other.
+
+Match the user's current language and active persona for question labels and descriptions. Treat the preflight UI as direct orchestrator conversation, not as a generated technical artifact. Technical artifacts still default to English, but this UI follows the user's conversation language/persona. Do NOT mix languages inside one grouped question.
+
+Do NOT show option codes in the interactive UI. Do NOT show canonical values or other internal values in the interactive UI labels or descriptions.
+
+After the single grouped `AskUserQuestion` tool call returns, map the selected human labels to canonical values internally. Do not reveal the canonical values in the UI.
+
+If Other is selected for review budget, ask one follow-up question for the numeric budget.
+
+Only after all four preflight choices are collected, summarize them as the `SDD Session Preflight` decision block and continue with the SDD init guard/requested phase.
+
+Map answers to canonical values:
+
+- Pace: Interactive -> `interactive`; Automatic -> `auto`.
+- Artifacts: OpenSpec -> `openspec`; Engram -> `engram`; Both -> `hybrid`.
+- PRs: Ask me -> `ask-on-risk`; Single PR -> `single-pr`; Auto -> `auto-chain`.
+- Review: 400 lines -> `review_budget_lines: 400`; 800 lines -> `review_budget_lines: 800`; Other -> ask one follow-up for the number.
+
+The PR canonical values are exactly the `delivery_strategy` domain `sdd-tasks` and `sdd-apply` accept; never emit a value outside it. The preflight offers no separate chained option because `delivery_strategy` is only consulted once the tasks forecast flags review-budget risk: below that line there is nothing to chain, and above it `Auto` already resolves to `auto-chain` without asking again.
+
+Hard gate rules:
+
+- `openspec/config.yaml`, existing SDD artifacts, previous `sdd-init` results, or installed SDD assets do NOT satisfy session preflight. That exclusion is unchanged and absolute: none of them records a user decision, so none of them can stand in for one.
+- A **validated entry contract** DOES satisfy session preflight — but only for the four values it caches, and only under the operational definition of "validated" below. It is the single exception to the bullet above.
+- If the session has no preflight block and no validated entry contract, ask the single grouped `AskUserQuestion` preflight above. Do not run init, delegate phases, edit files, or apply tasks until all four choices are collected.
+- Cache the choices for this session and include them in later phase prompts.
+- If the user explicitly provided all four choices in the current conversation, summarize them as the session preflight block and continue.
+
+#### Validated Entry Contract as Preflight Evidence
+
+`inception-pipeline` already collects these four values, normalizes them, and persists them at `sdd/{change-name}/entry`. Asking again is not extra safety — it invites the user to answer differently from the contract the change was validated against, and leaves the engine running on a value the artifacts do not record.
+
+"Validated" is a mechanical result, never a reading of the file. An entry contract satisfies preflight only when ALL of these hold:
+
+1. The object is the one persisted at topic key `sdd/{change-name}/entry` (writer: `inception-pipeline`; see Topic Keys), or the exact candidate bytes that were persisted there.
+2. Its `contract_version` is one the installed contract bundle supports. The bundle is a compatibility set, not an exact-match lock: the installed `skills/_shared/entry-contract.schema.json` accepts any supported version and new contracts declare the current one. An unsupported version fails closed; an older but supported one does not. `skills/_shared/pre-sdd-contracts.md` is the authority on which versions are currently supported — read it rather than assuming.
+3. `labdrian validate-entry-contract --schema skills/_shared/entry-contract.schema.json --instance <candidate-path>` exited `0` for those exact bytes — in this session, or as an inception-pipeline result carried into this session with the exit code stated. Non-zero exit, a missing validator, or an unstated exit code all fail closed.
+
+Reading the JSON, checking that the fields look present, or accepting a claim that inception validated it is NOT validation. If no exit-0 result is available for the persisted bytes, re-run the validator against them before using the contract as preflight evidence. Schema shape alone is also not enough: the validator enforces the ordering, path, range, and delivery invariants the schema cannot express.
+
+**`--exists-root` belongs to inception, not to preflight.** `inception-pipeline` passes `--exists-root {project-root}` when it validates the candidate, while the change directory is still live, so a contract naming a path that was never written fails at the one moment the check can succeed. The root is the PROJECT ROOT and not the change directory, because every `openspec_path` is repository-root-relative and already begins `openspec/changes/{change}/…` — pointing the flag at the change directory makes the validator look for that prefix twice and fails every declared artifact. Do NOT add the flag when re-running the validator here: archiving consumes the change directory, so an archived contract's declared paths are legitimately gone, and re-checking them later would invalidate a contract that was truthful when written.
+
+When all three hold, map the contract to the preflight block instead of asking:
+
+| Preflight choice     | Entry contract field                       | Canonical value                                    |
+| -------------------- | ------------------------------------------ | -------------------------------------------------- |
+| Execution mode       | `interaction_mode`                         | `interactive` \| `auto`                             |
+| Artifact store       | `artifact_store_mode`                      | `openspec` \| `engram` \| `hybrid` \| `none`        |
+| Chained PR strategy  | `delivery_strategy`                        | `single-pr` \| `auto-chain` \| `exception-ok`       |
+| Review budget        | `review_budget.max_changed_lines_per_slice`| integer, lines                                      |
+
+Then summarize them as the `SDD Session Preflight` decision block exactly as if the user had answered, and add one provenance line so the source is auditable: `source: sdd/{change-name}/entry, contract_version <version>, validator exit 0`. Continue with the init guard / requested phase.
+
+Scope limits on this exception:
+
+- It satisfies **only** those four rows. Every other preflight or scope decision is still asked.
+- `delivery_strategy` from the contract is already resolved, so `ask-on-risk` can never arrive this way — see Delivery Strategy for why that is correct and not a missing value.
+- `chain_strategy` is cached by the same contract and satisfies the Chain Strategy ask under the identical validation rule.
+- One change's entry contract satisfies preflight for that change only. Switching to a different change re-runs this gate against that change's own entry contract.
+- If the contract is present but fails any of the three conditions, fall through to the `AskUserQuestion` preflight and report why the contract was rejected. Do NOT silently prefer the contract, and do NOT silently prefer the user's answer over a valid contract without saying the two disagree.
+
 ### SDD Entry Routing (MANDATORY)
 
 For a new product/code change request that says to use SDD, start at preflight -> init guard -> explore/proposal (`/gentle-sdd-new` equivalent). Never launch `sdd-apply` just because the user asked to implement a feature.
@@ -139,14 +194,45 @@ Pass the artifact store mode to every SDD phase agent.
 
 ### Delivery Strategy
 
-Use the delivery strategy cached by SDD Session Preflight; do not ask a separate strategy question:
+On the first SDD chain request in a session, ask once for delivery strategy and cache it:
 
 - `ask-on-risk` — default; ask only when the tasks forecast detects review-budget risk.
 - `auto-chain` — automatically split into chained/stacked PR slices when needed.
 - `single-pr` — proceed as one PR only if the size is within budget.
 - `exception-ok` — user accepts `size:exception` when over budget. The preflight menu cannot select this; it is reached only when the user explicitly accepts `size:exception`, either up front or when `ask-on-risk` stops to ask.
 
-These four are the whole domain. Pass `delivery_strategy` to `sdd-tasks` and `sdd-apply`.
+These four are the whole domain **of the workflow's own `delivery_strategy`**. Pass `delivery_strategy` to `sdd-tasks` and `sdd-apply`.
+
+#### Delivery and Chain Vocabulary Map (MANDATORY)
+
+Four separate vocabularies describe delivery and chaining across this system. They are not synonyms and they do not have equal domains. Never assume a token means the same thing on another surface; map it here first.
+
+**Delivery — caller intent to resolved outcome.** `requested_pr_strategy` is what the caller asked for; `delivery_strategy` is what that resolved to after the review budget was applied. Only the resolved value is stored in the entry contract, and only the resolved value reaches `sdd-tasks` and `sdd-apply`.
+
+| `requested_pr_strategy` (schema, caller intent) | Resolves to `delivery_strategy` (schema, resolved)                                          | Workflow branch used by the Review Workload Guard |
+| ----------------------------------------------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| `auto`                                          | `single-pr` when every slice is within budget; `auto-chain` when chaining is required; `exception-ok` only with an approved size exception | the resolved token, one of the three                |
+| `force-chained`                                 | `auto-chain`, with `chaining_required: true` and a non-`none` `chain_strategy`                 | `auto-chain`                                        |
+| `force-single`                                  | `single-pr`, or `exception-ok` only with an approved size exception                            | `single-pr` or `exception-ok`                       |
+| *(no counterpart — see below)*                  | *(never stored)*                                                                               | `ask-on-risk`                                       |
+
+**Why `ask-on-risk` has no schema counterpart.** It is an UNRESOLVED policy, not a delivery outcome. It says "if the tasks forecast flags review-budget risk, stop and ask the user" — it names a question still to be asked, not a shape the PRs will take. The entry contract stores only RESOLVED values: by the time it validates, that question has already been answered, and the answer is one of `single-pr`, `auto-chain`, or `exception-ok`. A contract carrying `ask-on-risk` would assert that a decision it claims to have made is still open. So the schema's three-token domain and the workflow's four-token domain are both correct, and the missing token is not a gap.
+
+Two consequences follow: a `delivery_strategy` arriving from a validated entry contract can never be `ask-on-risk`, and `ask-on-risk` can only ever be a live session choice that must resolve to one of the other three before `sdd-apply` runs.
+
+**Chaining — one concept, five spellings.**
+
+| Surface                                                    | Domain                                                                 | How to read it                                                                                                |
+| ---------------------------------------------------------- | ---------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `chain_strategy` in `entry-contract.schema.json`            | `none` \| `feature-branch-chain` \| `stacked-to-main`                    | Authoritative stored value. `none` is correct and required when `chaining_required: false`.                     |
+| `chain_strategy` in this workflow (Chain Strategy, below)   | `stacked-to-main` \| `feature-branch-chain`                              | The two topologies offered to the user. Never asked when chaining is not required — that case is schema `none`. |
+| `Chain strategy:` literal in the `sdd-tasks` forecast       | `none` \| `stacked-to-main` \| `feature-branch-chain`                    | Emitter. Now byte-for-byte the schema enum; the retired `size-exception` and `pending` tokens are handled by the transitional read below, for artifacts written before that correction. |
+| `Chain strategy` in `sdd-apply` Step 2a prose               | `stacked-to-main` \| `feature-branch-chain` \| `none`                     | **The only consumer that branches on the value.** Its Step 2a routing table gives every stored value a row, the sentinel included, so pass whatever the contract stores straight through. It carries its own unknown-value guard, because the guard in THIS file cannot fire on a token minted inside the phase agent. |
+| `chained-pr` reference prose (`references/chaining-details.md`) | narrative only, no machine tokens                                      | Human guidance. Never parse it and never route from it.                                                          |
+
+`stacked-to-main` is the single token every machine vocabulary above shares, and it is the only reason this map has never produced a routing failure in practice: all three real contracts to date chose it. That is luck, not a guard. The guard is `TestSddTasksChainStrategyEmitDomainMatchesSchema` /
+`TestSddApplyChainStrategyConsumerDomainMatchesSchema` /
+`TestChainingSpellingsTableCountsEverySurface` in `tools/entry-contract-validator/pipeline_vocabulary_pins_test.go`, which derive every domain above from the schema enum and fail when a surface drifts — including when this table's own headline count stops matching its row count.
 
 ### Chain Strategy
 
@@ -154,6 +240,26 @@ When delivery planning yields chained PRs, ask once for chain strategy and cache
 
 - `stacked-to-main` — each PR targets the previous PR branch or main in sequence.
 - `feature-branch-chain` — PR #1 targets the tracker branch; child PRs target the immediate previous PR branch; only the tracker merges to main.
+
+A third value exists but is never asked: `none`, which the entry contract stores when `chaining_required` is `false`. It is a legal `chain_strategy`, so treat `none` as "not chaining" and route by `delivery_strategy` alone. Do NOT ask the user for a topology when the value is `none`. DO pass it to `sdd-apply` unchanged: its Step 2a routing table has a row for the sentinel that routes by `delivery_strategy` alone, and withholding it hands the phase agent an absent value where a legal one existed.
+
+**Unknown-value guard (MANDATORY).** Any `chain_strategy` value outside `stacked-to-main`, `feature-branch-chain`, and `none` is invalid. Do NOT pick the nearest branch, and do NOT default to `stacked-to-main` because it is the common case. Do NOT proceed either: STOP, report the unrecognised value and where it came from (entry contract, tasks forecast, or session cache), and re-collect the chain strategy before launching `sdd-apply`. This mirrors the identical rule for `delivery_strategy` in the Review Workload Guard, which this section previously lacked. The exposure is real and only latent: `sdd-apply` routes exactly the three stored values and nothing else, so a value outside that domain reaches implementation with no route to take.
+
+**Reconciling the `sdd-tasks` forecast literal (transitional, for artifacts written before the emitter was corrected).** `sdd-tasks` no longer emits either token — its template and guard-contract line now advertise the schema enum exactly — but tasks artifacts written earlier still carry them, so the read below stays until those artifacts are gone. The two retired tokens are not chain topologies:
+
+- `size-exception` is a **delivery** fact, not a topology. It means the change ships as one PR with an approved budget overrun — already fully expressed by `delivery_strategy: exception-ok`, `chaining_required: false`, `chain_strategy: none`, and `review_budget.size_exception.state: approved`. Carrying it in the chain field duplicates a delivery decision in a topology slot and makes the field unmappable to the schema.
+- `pending` is a **null state**, not a value. It means the decision has not been made, which is what an absent field already means.
+
+`sdd-tasks` HAS stopped emitting either token in that field: the chain field's job is to answer "which branch does each PR target", and neither token answers it. Apply this transitional read only to artifacts written before that correction — and treat every application of it as a defect to remove, not as a supported mapping:
+
+| Forecast literal  | Read as                                                                         | Action                                                                            |
+| ------------------ | -------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `stacked-to-main`  | `chain_strategy: stacked-to-main`                                                 | Route normally.                                                                       |
+| `feature-branch-chain` | `chain_strategy: feature-branch-chain`                                        | Route normally.                                                                       |
+| `size-exception`   | `chain_strategy: none` + `delivery_strategy: exception-ok`                        | Require the recorded `size:exception` approval before apply; never treat as chaining. |
+| `pending`          | no value                                                                          | Decision outstanding: ask for the chain strategy; never pass `pending` downstream.     |
+
+Never forward `size-exception` or `pending` to `sdd-apply` or into an entry contract. Both fail the schema, and the unknown-value guard above will stop the run.
 
 When chained PRs are selected, treat `chained-pr` (registry skill `gentle-ai-chained-pr`) as a required skill match. Resolve and forward it by registry path to `sdd-tasks` and `sdd-apply`; do not hardcode its path.
 
@@ -189,6 +295,28 @@ Always pass the resolved `delivery_strategy`, `chain_strategy`, and PR boundary/
 
 When launching `sdd-apply`, always include the resolved `delivery_strategy`, `chain_strategy`, and any chosen PR boundary/exception in the prompt.
 
+#### Plan vs Realized Slice Count (MANDATORY)
+
+The forecast check above compares an estimate against a budget. This check compares the **plan against reality**, which nothing in the engine did before: `review_slices` in the entry contract has a producer (`inception-pipeline`), a validator (`entry-contract-validator`), and a human reader (`openspec/project/roadmap.md`), but until this rule it had zero consumers inside the SDD engine. Nobody noticed a plan diverging from delivery while the work was still running.
+
+Define, for the active change:
+
+- **P** = `len(review_slices)` in the validated entry contract at `sdd/{change-name}/entry`. Use it only when that contract satisfies the validation conditions in SDD Session Preflight. If there is no validated entry contract, P is undefined and this check is skipped — record the skip, because a chained change running without a slice plan is itself worth reporting.
+- **R** = realized slices delivered so far: PRs opened for this change under the chosen `chain_strategy`, or, when not delivering via PRs, `sdd-apply` batches that carry their own review boundary. Count what exists, never what was intended.
+
+Recompute R at every `sdd-apply` batch boundary, and again before `sdd-verify` and before `sdd-archive`.
+
+| Condition                                       | Verdict           | Action                                                                                                                                                                                                                       |
+| ------------------------------------------------ | ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `R <= P + max(1, ceil(0.2 * P))`                 | Within tolerance   | Continue. Record `slices planned=P realized=R` in `apply-progress`.                                                                                                                                                              |
+| Above tolerance and `R <= 2 * P`                 | Drift              | Continue, but record `slice drift: planned=P realized=R` in `apply-progress` at the batch where it crossed, and repeat it in the archive report. Re-check the review budget: more slices than planned usually means slices were split.       |
+| `R > 2 * P`                                      | Plan invalidated   | **STOP before launching the next batch.** Report P, R, and where the crossing happened. Resume only after either (a) `sdd-tasks` re-plans the remaining scope and a re-validated entry contract rewrites `review_slices`, or (b) the user explicitly accepts the new count and that acceptance is recorded in the session. |
+| At `sdd-verify` or `sdd-archive`, `R < P`        | Under-delivery     | Name every planned slice with no realized counterpart in the verify or archive report. A plan whose slices were never delivered is drift in the other direction, not success.                                                     |
+
+The `±20%` band (floored at ±1) exists so the ordinary case — one slice turning out to be two — never interrupts the run, while the 2× line marks the point where the plan has stopped describing the work rather than merely mis-sizing it. A single re-plan is the correct response there; repeatedly widening the tolerance is not.
+
+Worked example — the `longterm-mem` change. Planned P = 18 (`review_slices`, orders 1..18, contiguous). Realized R = 82 PRs (one draft plus 81 in a contiguous range). Tolerance was 22 and the hard-stop line was 36; both were crossed long before the change finished, and the run never paused. The drift **was** recorded — in `tasks.md`, in several places in `apply-progress.md`, and in the archive report — but every one of those was human-authored prose written after the fact. No code, validator, guard, or CI job ever compared the planned slice count to the delivered one. This rule is the first thing that does, and it is prose in a file with no test coverage: it holds only as long as the orchestrator honors it.
+
 ### Sub-Agent Launch Deduplication (MANDATORY)
 
 Maintain a session-scoped launch log of `(phase, task-fingerprint)` pairs. If the same pair already exists, do NOT launch again. Emit exactly one launch per distinct task and append the pair after launch.
@@ -213,16 +341,19 @@ For non-SDD delegation:
 
 For SDD phases, sub-agents read/write the active backend directly using artifact references, not copied artifact bodies.
 
-| Phase         | Reads                                                  | Writes           |
-| ------------- | ------------------------------------------------------ | ---------------- |
-| `sdd-explore` | nothing                                                | `explore`        |
-| `sdd-propose` | exploration (optional)                                 | `proposal`       |
-| `sdd-spec`    | proposal (required)                                    | `spec`           |
-| `sdd-design`  | proposal (required)                                    | `design`         |
-| `sdd-tasks`   | spec + design (required)                               | `tasks`          |
-| `sdd-apply`   | tasks + spec + design + apply-progress if present      | `apply-progress` |
-| `sdd-verify`  | spec + tasks + apply-progress                          | `verify-report`  |
-| `sdd-archive` | all artifacts                                          | `archive-report` |
+| Phase          | Reads                                                                 | Writes           |
+| -------------- | --------------------------------------------------------------------- | ---------------- |
+| orchestrator   | `entry` (validated, optional) — preflight and routing, never written   | nothing          |
+| `sdd-explore`  | nothing                                                               | `explore`        |
+| `sdd-propose`  | exploration (optional)                                                | `proposal`       |
+| `sdd-spec`     | proposal (required)                                                   | `spec`           |
+| `sdd-design`   | proposal (required)                                                   | `design`         |
+| `sdd-tasks`    | spec + design (required) + `entry` (optional)                         | `tasks`          |
+| `sdd-apply`    | tasks + spec + design + apply-progress if present + `entry` (optional)| `apply-progress` |
+| `sdd-verify`   | spec + tasks + apply-progress + `entry` (optional)                    | `verify-report`  |
+| `sdd-archive`  | all artifacts + `entry` (optional)                                    | `archive-report` |
+
+The `entry` contract is written by `inception-pipeline`, never by an SDD phase — the engine is a reader only, and must not create, edit, or re-validate it in place. Read it for the four cached preflight values, `review_slices` (Plan vs Realized Slice Count), and `chain_strategy`; treat it as absent unless it satisfies the validation conditions in SDD Session Preflight. `actuals` is likewise engine-external: it is written after archive by `inception-pipeline` closure-feedback, which is its only writer, so no SDD phase reads or writes it.
 
 ### Strict TDD Forwarding (MANDATORY)
 
@@ -250,8 +381,12 @@ When launching `sdd-archive`, forward explicit final-state facts for any work co
 | Verify report   | `sdd/{change-name}/verify-report`  |
 | Archive report  | `sdd/{change-name}/archive-report` |
 | DAG state       | `sdd/{change-name}/state`          |
+| Entry contract  | `sdd/{change-name}/entry`          |
+| Closure actuals | `sdd/{change-name}/actuals`        |
 
 Sub-agents retrieve full Engram content in two steps: `mem_search(query: "{topic_key}", project: "{project}")`, then `mem_get_observation(id)`.
+
+The last two keys are **engine-external**: every other key in this table is written by the SDD phase that owns it, but `entry` is written by `inception-pipeline` before handoff and `actuals` by `inception-pipeline` closure-feedback after archive. The engine reads `entry` (preflight values, `review_slices`, `chain_strategy`) and neither reads nor writes `actuals`. Never write either key from an SDD phase, and never re-derive one from the other artifacts. They are listed here because they are addressed by this workflow — a key the orchestrator resolves but the table omits is a key nobody maintains, which is how both stayed invisible to the engine.
 
 ### State and Conventions
 
