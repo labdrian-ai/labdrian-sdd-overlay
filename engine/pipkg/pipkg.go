@@ -570,10 +570,15 @@ func exportGitTree(overlayRoot, rev string) (string, func(), error) {
 	return tmp, cleanup, nil
 }
 
-// extractTar writes r's tar stream into dest, refusing any entry (symlink
-// or otherwise) whose name would resolve outside dest -- git archive never
-// produces such entries for a normal repository, but this is defense in
-// depth against a corrupted or crafted archive stream.
+// extractTar writes r's tar stream into dest, refusing any entry whose name
+// would resolve outside dest -- git archive never produces such entries for
+// a normal repository, but this is defense in depth against a corrupted or
+// crafted archive stream. A symlink entry is recreated as a real symlink on
+// disk when its link target resolves inside dest (a tracked symlink like
+// skills/archify -> ../.agents/skills/archify is legitimate git-archive
+// output); a symlink whose target would resolve outside dest is refused, as
+// is any hard-link entry -- there is no legitimate use case for one in a
+// git archive of tracked content.
 func extractTar(r io.Reader, dest string) error {
 	tr := tar.NewReader(r)
 	for {
@@ -608,8 +613,20 @@ func extractTar(r io.Reader, dest string) error {
 			if err := f.Close(); err != nil {
 				return err
 			}
-		case tar.TypeSymlink, tar.TypeLink:
-			return fmt.Errorf("refusing symlink in git archive: %s", hdr.Name)
+		case tar.TypeSymlink:
+			linkTarget := filepath.FromSlash(hdr.Linkname)
+			resolved := filepath.Join(filepath.Dir(target), linkTarget)
+			if rel, relErr := filepath.Rel(dest, resolved); relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+				return fmt.Errorf("refusing symlink outside destination: %s -> %s", hdr.Name, hdr.Linkname)
+			}
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
+				return err
+			}
+			if err := os.Symlink(linkTarget, target); err != nil {
+				return err
+			}
+		case tar.TypeLink:
+			return fmt.Errorf("refusing hard link in git archive: %s", hdr.Name)
 		}
 	}
 }
