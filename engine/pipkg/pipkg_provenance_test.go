@@ -347,11 +347,13 @@ func TestExportGitTree_DrainsPipeOnExtractionError(t *testing.T) {
 		t.Fatalf("Build: %v", err)
 	}
 
-	// A symlink (sorts before the large file, so extractTar hits the
-	// refusal before the large entry is read off the stream) plus a
-	// >64KB file, so the unread tar remainder exceeds a pipe's kernel
-	// buffer.
-	if err := os.Symlink("other-skill", filepath.Join(overlayRoot, "skills", "a-symlink")); err != nil {
+	// A symlink whose target escapes the exported dest (sorts before the
+	// large file, so extractTar hits the refusal before the large entry
+	// is read off the stream) plus a >64KB file, so the unread tar
+	// remainder exceeds a pipe's kernel buffer. A symlink that stays
+	// inside dest is no longer refused (extractTar recreates it), so this
+	// fixture must escape dest to still trigger extraction's error path.
+	if err := os.Symlink("../../../../../outside-dest", filepath.Join(overlayRoot, "skills", "a-symlink")); err != nil {
 		t.Fatalf("create symlink fixture: %v", err)
 	}
 	writeFile(t, filepath.Join(overlayRoot, "skills", "z-large.bin"), strings.Repeat("x", 256*1024))
