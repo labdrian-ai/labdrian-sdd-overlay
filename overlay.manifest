@@ -130,6 +130,7 @@ _shared/oo-quality-contract.md custom
 _shared/anti-generic-design.md custom
 _shared/entry-contract.schema.json custom
 _shared/actuals-record.schema.json custom
+_shared/procedural-candidate-detection.md custom
 project-manifest/references/phase-templates.md custom
 project-manifest/references/universal-base-rules.md custom
 project-architect/references/architecture-template.md custom
