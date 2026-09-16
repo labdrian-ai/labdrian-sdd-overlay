@@ -570,32 +570,16 @@ func exportGitTree(overlayRoot, rev string) (string, func(), error) {
 	return tmp, cleanup, nil
 }
 
-// resolveSymlinkTarget computes where a symlink at parentDir naming
-// linkTarget (already verified relative) would really resolve, walking
-// linkTarget one path component at a time from parentDir and re-resolving
-// through any further real symlink a component names along the way --
-// mirroring what the OS does when something later dereferences the
-// finished link. A purely lexical filepath.Join+Clean is not a containment
-// guarantee: an earlier "looks contained" symlink (e.g. one pointing at
-// ".") makes a later entry's lexical path and its physical location
-// diverge, letting a crafted archive walk back out of dest one alias at a
-// time (R1/R3-symlink-chain-escape). Once a component along the walk does
-// not exist, nothing further down that path can exist either, so the
-// remaining components are only joined and re-checked for a "`.." escape,
-// never Lstat'd -- this is what makes a legitimately dangling symlink like
-// skills/archify (its target is never part of this export's path set)
-// still resolve correctly. The walk still refuses any step that escapes
-// realDest, or a hop count past a small bound (cycle guard).
+// resolveSymlinkTarget walks linkTarget from base, re-resolving any real
+// symlink a component names, so a chain like "b" -> "." can't fool a
+// lexical Join+Clean into looking contained while physically escaping
+// (R1/R3-chain-escape). A missing component is only join-checked after.
 func resolveSymlinkTarget(realDest, base, linkTarget string) (string, error) {
-	parts := strings.Split(filepath.ToSlash(linkTarget), "/")
-	return resolveSymlinkParts(realDest, base, parts, 0)
-}
-
-func resolveSymlinkParts(realDest, base string, parts []string, hops int) (string, error) {
-	const maxHops = 40
-	current := base
-	pastExisting := false
-	for _, part := range parts {
+	current, missing, hops := base, false, 0
+	queue := strings.Split(filepath.ToSlash(linkTarget), "/")
+	for len(queue) > 0 {
+		part := queue[0]
+		queue = queue[1:]
 		switch part {
 		case "", ".":
 			continue
@@ -604,38 +588,34 @@ func resolveSymlinkParts(realDest, base string, parts []string, hops int) (strin
 		default:
 			current = filepath.Join(current, part)
 		}
-		if rel, relErr := filepath.Rel(realDest, current); relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+		if rel, err := filepath.Rel(realDest, current); err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 			return "", fmt.Errorf("resolved path escapes destination")
 		}
-		if pastExisting {
+		if missing {
 			continue
 		}
 		info, err := os.Lstat(current)
-		if err != nil {
-			if os.IsNotExist(err) {
-				pastExisting = true
-				continue
-			}
+		if os.IsNotExist(err) {
+			missing = true
+			continue
+		} else if err != nil {
 			return "", err
 		}
-		if info.Mode()&os.ModeSymlink != 0 {
-			hops++
-			if hops > maxHops {
-				return "", fmt.Errorf("too many symlink hops resolving %s", filepath.Join(parts...))
-			}
-			link, err := os.Readlink(current)
-			if err != nil {
-				return "", err
-			}
-			if filepath.IsAbs(link) || filepath.VolumeName(link) != "" {
-				return "", fmt.Errorf("intermediate symlink has absolute target: %s", current)
-			}
-			resolved, err := resolveSymlinkParts(realDest, filepath.Dir(current), strings.Split(filepath.ToSlash(link), "/"), hops)
-			if err != nil {
-				return "", err
-			}
-			current = resolved
+		if info.Mode()&os.ModeSymlink == 0 {
+			continue
 		}
+		if hops++; hops > 40 {
+			return "", fmt.Errorf("too many symlink hops resolving %s", linkTarget)
+		}
+		link, err := os.Readlink(current)
+		if err != nil {
+			return "", err
+		}
+		if filepath.IsAbs(link) || filepath.VolumeName(link) != "" {
+			return "", fmt.Errorf("intermediate symlink has absolute target: %s", current)
+		}
+		current = filepath.Dir(current)
+		queue = append(strings.Split(filepath.ToSlash(link), "/"), queue...)
 	}
 	return current, nil
 }
@@ -644,11 +624,11 @@ func resolveSymlinkParts(realDest, base string, parts []string, hops int) (strin
 // would resolve outside dest -- git archive never produces such entries for
 // a normal repository, but this is defense in depth against a corrupted or
 // crafted archive stream. A symlink entry is recreated as a real symlink on
-// disk only when its target is relative (never absolute, never carrying a
-// volume name) AND resolveSymlinkTarget proves it, and every real symlink
-// it transits, stays inside dest. Any hard-link entry is refused
-// unconditionally -- there is no legitimate use case for one in a git
-// archive of tracked content.
+// disk when its link target resolves inside dest (a tracked symlink like
+// skills/archify -> ../.agents/skills/archify is legitimate git-archive
+// output); a symlink whose target would resolve outside dest is refused, as
+// is any hard-link entry -- there is no legitimate use case for one in a
+// git archive of tracked content.
 func extractTar(r io.Reader, dest string) error {
 	tr := tar.NewReader(r)
 	for {
@@ -688,22 +668,14 @@ func extractTar(r io.Reader, dest string) error {
 			if filepath.IsAbs(linkTarget) || filepath.VolumeName(linkTarget) != "" {
 				return fmt.Errorf("refusing symlink with absolute target: %s -> %s", hdr.Name, hdr.Linkname)
 			}
-			parentDir := filepath.Dir(target)
-			if err := os.MkdirAll(parentDir, 0755); err != nil {
+			if err := os.MkdirAll(filepath.Dir(target), 0755); err != nil {
 				return err
 			}
-			realDest, err := filepath.EvalSymlinks(dest)
+			realParent, err := resolveSymlinkTarget(dest, dest, filepath.Dir(filepath.FromSlash(hdr.Name)))
 			if err != nil {
-				return fmt.Errorf("pipkg: resolving destination: %w", err)
+				return fmt.Errorf("refusing symlink whose parent escaped destination: %s: %w", hdr.Name, err)
 			}
-			realParent, err := filepath.EvalSymlinks(parentDir)
-			if err != nil {
-				return fmt.Errorf("refusing symlink whose parent cannot be resolved: %s: %w", hdr.Name, err)
-			}
-			if rel, relErr := filepath.Rel(realDest, realParent); relErr != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-				return fmt.Errorf("refusing symlink whose parent escaped destination: %s", hdr.Name)
-			}
-			if _, err := resolveSymlinkTarget(realDest, realParent, linkTarget); err != nil {
+			if _, err := resolveSymlinkTarget(dest, realParent, linkTarget); err != nil {
 				return fmt.Errorf("refusing symlink outside destination: %s -> %s: %w", hdr.Name, hdr.Linkname, err)
 			}
 			if err := os.Symlink(linkTarget, target); err != nil {
