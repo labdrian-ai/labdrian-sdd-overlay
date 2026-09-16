@@ -83,44 +83,10 @@ The PR canonical values are exactly the `delivery_strategy` domain `sdd-tasks` a
 
 Hard gate rules:
 
-- `openspec/config.yaml`, existing SDD artifacts, previous `sdd-init` results, or installed SDD assets do NOT satisfy session preflight. That exclusion is unchanged and absolute: none of them records a user decision, so none of them can stand in for one.
-- A **validated entry contract** DOES satisfy session preflight — but only for the four values it caches, and only under the operational definition of "validated" below. It is the single exception to the bullet above.
-- If the session has no preflight block and no validated entry contract, ask the single grouped `AskUserQuestion` preflight above. Do not run init, delegate phases, edit files, or apply tasks until all four choices are collected.
+- `openspec/config.yaml`, existing SDD artifacts, previous `sdd-init` results, or installed SDD assets do NOT satisfy session preflight. None of them records a user decision, so none of them can stand in for one.
+- If the session has no preflight block, ask the single grouped `AskUserQuestion` preflight above. Do not run init, delegate phases, edit files, or apply tasks until all four choices are collected.
 - Cache the choices for this session and include them in later phase prompts.
 - If the user explicitly provided all four choices in the current conversation, summarize them as the session preflight block and continue.
-
-#### Validated Entry Contract as Preflight Evidence
-
-`inception-pipeline` already collects these four values, normalizes them, and persists them at `sdd/{change-name}/entry`. Asking again is not extra safety — it invites the user to answer differently from the contract the change was validated against, and leaves the engine running on a value the artifacts do not record.
-
-"Validated" is a mechanical result, never a reading of the file. An entry contract satisfies preflight only when ALL of these hold:
-
-1. The object is the one persisted at topic key `sdd/{change-name}/entry` (writer: `inception-pipeline`; see Topic Keys), or the exact candidate bytes that were persisted there.
-2. Its `contract_version` is one the installed contract bundle supports. The bundle is a compatibility set, not an exact-match lock: the installed `skills/_shared/entry-contract.schema.json` accepts any supported version and new contracts declare the current one. An unsupported version fails closed; an older but supported one does not. `skills/_shared/pre-sdd-contracts.md` is the authority on which versions are currently supported — read it rather than assuming.
-3. `labdrian validate-entry-contract --schema skills/_shared/entry-contract.schema.json --instance <candidate-path>` exited `0` for those exact bytes — in this session, or as an inception-pipeline result carried into this session with the exit code stated. Non-zero exit, a missing validator, or an unstated exit code all fail closed.
-
-Reading the JSON, checking that the fields look present, or accepting a claim that inception validated it is NOT validation. If no exit-0 result is available for the persisted bytes, re-run the validator against them before using the contract as preflight evidence. Schema shape alone is also not enough: the validator enforces the ordering, path, range, and delivery invariants the schema cannot express.
-
-**`--exists-root` belongs to inception, not to preflight.** `inception-pipeline` passes `--exists-root {project-root}` when it validates the candidate, while the change directory is still live, so a contract naming a path that was never written fails at the one moment the check can succeed. The root is the PROJECT ROOT and not the change directory, because every `openspec_path` is repository-root-relative and already begins `openspec/changes/{change}/…` — pointing the flag at the change directory makes the validator look for that prefix twice and fails every declared artifact. Do NOT add the flag when re-running the validator here: archiving consumes the change directory, so an archived contract's declared paths are legitimately gone, and re-checking them later would invalidate a contract that was truthful when written.
-
-When all three hold, map the contract to the preflight block instead of asking:
-
-| Preflight choice     | Entry contract field                       | Canonical value                                    |
-| -------------------- | ------------------------------------------ | -------------------------------------------------- |
-| Execution mode       | `interaction_mode`                         | `interactive` \| `auto`                             |
-| Artifact store       | `artifact_store_mode`                      | `openspec` \| `engram` \| `hybrid` \| `none`        |
-| Chained PR strategy  | `delivery_strategy`                        | `single-pr` \| `auto-chain` \| `exception-ok`       |
-| Review budget        | `review_budget.max_changed_lines_per_slice`| integer, lines                                      |
-
-Then summarize them as the `SDD Session Preflight` decision block exactly as if the user had answered, and add one provenance line so the source is auditable: `source: sdd/{change-name}/entry, contract_version <version>, validator exit 0`. Continue with the init guard / requested phase.
-
-Scope limits on this exception:
-
-- It satisfies **only** those four rows. Every other preflight or scope decision is still asked.
-- `delivery_strategy` from the contract is already resolved, so `ask-on-risk` can never arrive this way — see Delivery Strategy for why that is correct and not a missing value.
-- `chain_strategy` is cached by the same contract and satisfies the Chain Strategy ask under the identical validation rule.
-- One change's entry contract satisfies preflight for that change only. Switching to a different change re-runs this gate against that change's own entry contract.
-- If the contract is present but fails any of the three conditions, fall through to the `AskUserQuestion` preflight and report why the contract was rejected. Do NOT silently prefer the contract, and do NOT silently prefer the user's answer over a valid contract without saying the two disagree.
 
 ### SDD Entry Routing (MANDATORY)
 
@@ -301,7 +267,7 @@ The forecast check above compares an estimate against a budget. This check compa
 
 Define, for the active change:
 
-- **P** = `len(review_slices)` in the validated entry contract at `sdd/{change-name}/entry`. Use it only when that contract satisfies the validation conditions in SDD Session Preflight. If there is no validated entry contract, P is undefined and this check is skipped — record the skip, because a chained change running without a slice plan is itself worth reporting.
+- **P** = `len(review_slices)` in the validated entry contract at `sdd/{change-name}/entry`. Use it only when `bin/labdrian-overlay validate-entry-contract` accepts that contract. If there is no validated entry contract, P is undefined and this check is skipped — record the skip, because a chained change running without a slice plan is itself worth reporting.
 - **R** = realized slices delivered so far: PRs opened for this change under the chosen `chain_strategy`, or, when not delivering via PRs, `sdd-apply` batches that carry their own review boundary. Count what exists, never what was intended.
 
 Recompute R at every `sdd-apply` batch boundary, and again before `sdd-verify` and before `sdd-archive`.
@@ -353,7 +319,7 @@ For SDD phases, sub-agents read/write the active backend directly using artifact
 | `sdd-verify`   | spec + tasks + apply-progress + `entry` (optional)                    | `verify-report`  |
 | `sdd-archive`  | all artifacts + `entry` (optional)                                    | `archive-report` |
 
-The `entry` contract is written by `inception-pipeline`, never by an SDD phase — the engine is a reader only, and must not create, edit, or re-validate it in place. Read it for the four cached preflight values, `review_slices` (Plan vs Realized Slice Count), and `chain_strategy`; treat it as absent unless it satisfies the validation conditions in SDD Session Preflight. `actuals` is likewise engine-external: it is written after archive by `inception-pipeline` closure-feedback, which is its only writer, so no SDD phase reads or writes it.
+The `entry` contract is written by `inception-pipeline`, never by an SDD phase — the engine is a reader only, and must not create, edit, or re-validate it in place. Read it for `review_slices` (Plan vs Realized Slice Count) and `chain_strategy`; treat it as absent unless `bin/labdrian-overlay validate-entry-contract` accepts it. `actuals` is likewise engine-external: it is written after archive by `inception-pipeline` closure-feedback, which is its only writer, so no SDD phase reads or writes it.
 
 ### Strict TDD Forwarding (MANDATORY)
 
