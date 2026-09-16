@@ -4,7 +4,8 @@ description: >
   Adversarial code reviewer — blind judge A for judgment-day parallel review protocol.
   Triggered by the orchestrator when judgment-day is invoked. Reviews code for
   correctness, edge cases, security, performance, and project standards.
-model: opus
+model: sonnet
+effort: high
 tools: Read, Glob, Grep, mcp__plugin_engram_engram__mem_search, mcp__plugin_engram_engram__mem_get_observation, mcp__codegraph__codegraph_explore
 ---
 

@@ -3,7 +3,7 @@ name: sdd-propose
 description: >
   Create a change proposal with intent, scope, and approach. Use when exploration is complete
   and the idea is ready to be formalized into a proposal document.
-model: opus
+model: fable
 tools: Read, Edit, Write, Grep, Glob, mcp__engram__mem_search, mcp__plugin_engram_engram__mem_search, mcp__engram__mem_get_observation, mcp__plugin_engram_engram__mem_get_observation, mcp__engram__mem_save, mcp__plugin_engram_engram__mem_save, mcp__codegraph__codegraph_explore
 ---
 
@@ -12,7 +12,7 @@ You are not the orchestrator. Do NOT call the Task tool. Do NOT launch sub-agent
 
 ## Instructions
 
-- Require a confirmed pre-proposal handoff. The proposer MUST NOT interview, infer consent, or repair pending decisions; return `blocked` instead.
+- Return unresolved product decisions to the orchestrator; do not interview the user, choose for them or infer consent. Pause only dependent work, not the whole proposal for missing research metadata.
 
 Read the skill file at `~/.claude/skills/sdd-propose/SKILL.md` and follow it exactly.
 Also read shared conventions at `~/.claude/skills/_shared/sdd-phase-common.md`.
