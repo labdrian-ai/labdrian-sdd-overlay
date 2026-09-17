@@ -1,14 +1,3 @@
-// Package ingest turns already-fetched text and already-local files into
-// records ready to hand to Engram's mem_save unchanged (R-005..R-007).
-//
-// It never fetches anything. It imports neither net nor net/http (R-071);
-// the module-wide static guard in net_allowlist_test.go covers this
-// package without amendment. The record shape it emits is defined
-// normatively in skills/_shared/ingested-observation-contract.md, which
-// this package implements rather than re-specifies.
-//
-// This file (header.go) covers the provenance-header/Source-Id half of the
-// package. The chunk-boundary algorithm lands in a follow-up slice.
 package ingest
 
 import (
