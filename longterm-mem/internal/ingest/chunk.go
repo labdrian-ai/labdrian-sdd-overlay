@@ -1,6 +1,8 @@
 package ingest
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"unicode/utf8"
 )
@@ -169,6 +171,24 @@ func segmentBlocks(text string) []block {
 			blocks = append(blocks, block{kind: blockParagraph, start: start, end: offset})
 		}
 	}
+	return closeBlockGaps(blocks, len(text))
+}
+
+// closeBlockGaps absorbs every inter-block gap (a blank-line run the
+// segmentation switch above assigns to no block) into the following
+// block, and the doc bounds into the first/last block, BEFORE any size
+// decision runs -- the accumulation/force-split bounds below only see
+// block lengths, so a gap still open at that point grows a chunk past
+// maxBytes with nothing left to catch it.
+func closeBlockGaps(blocks []block, textLen int) []block {
+	if len(blocks) == 0 {
+		return blocks
+	}
+	blocks[0].start = 0
+	for i := 1; i < len(blocks); i++ {
+		blocks[i].start = blocks[i-1].end
+	}
+	blocks[len(blocks)-1].end = textLen
 	return blocks
 }
 
@@ -195,12 +215,18 @@ func pathOf(stack []string) string {
 	return strings.Join(parts, " > ")
 }
 
+// ErrTooManyChunks is returned when a source would produce more than
+// MaxChunks chunks; per doc.go, such a source is refused rather than
+// silently renumbered past the four-digit ordinal space.
+var ErrTooManyChunks = errors.New("ingest: source would exceed MaxChunks")
+
 // ChunkText splits normalized source text into deterministically-bounded
 // chunks per the boundary algorithm: CRLF normalization, block
 // segmentation, greedy accumulation respecting minBytes/maxBytes, and a
 // forced split (sentence -> line -> byte, moved to the nearest rune
-// boundary) for any block that alone exceeds maxBytes.
-func ChunkText(text string, maxBytes, minBytes int) []Chunk {
+// boundary) for any block that alone exceeds maxBytes. It returns
+// ErrTooManyChunks if the result would exceed MaxChunks.
+func ChunkText(text string, maxBytes, minBytes int) ([]Chunk, error) {
 	if maxBytes <= 0 {
 		maxBytes = DefaultMaxChunkBytes
 	}
@@ -209,13 +235,17 @@ func ChunkText(text string, maxBytes, minBytes int) []Chunk {
 	}
 	text = normalizeCRLF(text)
 	if strings.TrimSpace(text) == "" {
-		return nil
+		return nil, nil
 	}
 
 	blocks := segmentBlocks(text)
 	var pieces []rawChunk
 	headingStack := []string{}
 	currentPath := ""
+	// Recomputed only when a heading changes headingStack -- pathOf
+	// Joins the whole (untrusted, unbounded) breadcrumb, so calling it
+	// per-block made total work blocks x breadcrumb length.
+	headingPath := ""
 
 	curStart, curEnd := -1, -1
 	flush := func() {
@@ -230,13 +260,14 @@ func ChunkText(text string, maxBytes, minBytes int) []Chunk {
 	for _, b := range blocks {
 		if b.kind == blockHeading {
 			headingStack = updateHeadingStack(headingStack, b.level, b.heading)
+			headingPath = pathOf(headingStack)
 		}
-		blockPath := pathOf(headingStack)
+		blockPath := headingPath
 		blockLen := b.end - b.start
 		if blockLen > maxBytes {
 			flush()
 			currentPath = blockPath
-			for _, fc := range forceSplit(text, b.start, b.end, maxBytes) {
+			for _, fc := range forceSplit(text, b.start, b.end, maxBytes, minBytes) {
 				fc.path = blockPath
 				pieces = append(pieces, fc)
 			}
@@ -262,8 +293,10 @@ func ChunkText(text string, maxBytes, minBytes int) []Chunk {
 	}
 	flush()
 
-	pieces = mergeUndersizedTrailing(pieces, minBytes)
-	pieces = closeGaps(pieces, len(text))
+	pieces = mergeUndersizedTrailing(pieces, minBytes, maxBytes)
+	if len(pieces) > MaxChunks {
+		return nil, fmt.Errorf("%w: %d chunks", ErrTooManyChunks, len(pieces))
+	}
 
 	chunks := make([]Chunk, len(pieces))
 	for i, p := range pieces {
@@ -277,28 +310,7 @@ func ChunkText(text string, maxBytes, minBytes int) []Chunk {
 			Split: p.split,
 		}
 	}
-	return chunks
-}
-
-// closeGaps extends each piece's span to the next piece's start (and the
-// first/last pieces to the document's bounds), so segmentation artifacts
-// such as blank-line separators between blocks -- bytes that belong to no
-// block -- are still covered by exactly one chunk, with no gap or overlap.
-func closeGaps(pieces []rawChunk, textLen int) []rawChunk {
-	if len(pieces) == 0 {
-		return pieces
-	}
-	// Gap bytes belong to whichever neighbor is nearest an empty chunk, so
-	// attaching them never pushes a chunk that is already near maxBytes
-	// over the bound: extend the following chunk's start backward to
-	// absorb the gap, since a chunk that has just been opened has the
-	// most headroom.
-	pieces[0].start = 0
-	for i := 1; i < len(pieces); i++ {
-		pieces[i].start = pieces[i-1].end
-	}
-	pieces[len(pieces)-1].end = textLen
-	return pieces
+	return chunks, nil
 }
 
 type rawChunk struct {
@@ -308,11 +320,10 @@ type rawChunk struct {
 }
 
 // mergeUndersizedTrailing merges a final chunk under minBytes into the
-// previous chunk when doing so does not itself exceed no explicit max
-// (the boundary algorithm only forbids closing a chunk below minBytes
-// before the input is exhausted; a short trailing remainder is merged back
-// rather than left as its own sub-floor chunk).
-func mergeUndersizedTrailing(pieces []rawChunk, minBytes int) []rawChunk {
+// previous one, only when that stays at or under maxBytes -- the max
+// bound is the harder invariant (doc.go), so an unmergeable remainder is
+// left as its own short final chunk instead.
+func mergeUndersizedTrailing(pieces []rawChunk, minBytes, maxBytes int) []rawChunk {
 	if len(pieces) < 2 {
 		return pieces
 	}
@@ -321,12 +332,10 @@ func mergeUndersizedTrailing(pieces []rawChunk, minBytes int) []rawChunk {
 		return pieces
 	}
 	prev := pieces[len(pieces)-2]
-	if prev.split != SplitNone || last.split != SplitNone {
-		// Never merge across a forced split; the pieces were forced apart
-		// because they could not fit together.
+	merged := rawChunk{start: prev.start, end: last.end, path: prev.path, split: prev.split}
+	if merged.end-merged.start > maxBytes {
 		return pieces
 	}
-	merged := rawChunk{start: prev.start, end: last.end, path: prev.path, split: SplitNone}
 	out := make([]rawChunk, len(pieces)-1)
 	copy(out, pieces[:len(pieces)-2])
 	out[len(out)-1] = merged
@@ -337,7 +346,9 @@ func mergeUndersizedTrailing(pieces []rawChunk, minBytes int) []rawChunk {
 // into pieces at or under maxBytes, in the documented fallback order: last
 // sentence boundary at or before max, else last line boundary at or before
 // max, else a hard byte cut moved back to the nearest UTF-8 rune boundary.
-func forceSplit(text string, start, end, maxBytes int) []rawChunk {
+// A sub-minBytes trailing remainder is rebalanced into its predecessor
+// (routine for a hard byte-count split), as long as that stays <= maxBytes.
+func forceSplit(text string, start, end, maxBytes, minBytes int) []rawChunk {
 	var out []rawChunk
 	for start < end {
 		remaining := end - start
@@ -346,6 +357,12 @@ func forceSplit(text string, start, end, maxBytes int) []rawChunk {
 			break
 		}
 		cut := start + maxBytes
+		if remaining <= maxBytes+minBytes {
+			// A full maxBytes cut leaves a sub-minBytes orphan remainder;
+			// merging back isn't an option (remaining > maxBytes by
+			// definition here), so balance the last two pieces instead.
+			cut = start + (remaining - minBytes)
+		}
 		splitAt, kind := findSplitPoint(text, start, cut)
 		if splitAt <= start {
 			splitAt = cut
@@ -353,6 +370,15 @@ func forceSplit(text string, start, end, maxBytes int) []rawChunk {
 		}
 		out = append(out, rawChunk{start: start, end: splitAt, split: kind})
 		start = splitAt
+	}
+	// Safety net: a natural sentence/line boundary can still leave a
+	// sub-minBytes trailing fragment; merge it back within maxBytes.
+	if n := len(out); n >= 2 && out[n-1].end-out[n-1].start < minBytes {
+		merged := rawChunk{start: out[n-2].start, end: out[n-1].end, split: out[n-2].split}
+		if merged.end-merged.start <= maxBytes {
+			out[n-2] = merged
+			out = out[:n-1]
+		}
 	}
 	return out
 }
