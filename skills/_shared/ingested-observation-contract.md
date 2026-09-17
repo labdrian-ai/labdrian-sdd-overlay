@@ -74,8 +74,12 @@ element of `content`, after the body, never before it.
 **Chunk-Span**: 4096-5312
 **Chunk-Path**: Configuration > Environment variables
 **Split**: none | forced-sentence | forced-line | forced-byte
-**Status**: complete
+**Status**: complete | retired
 ```
+
+A chunk record's `**Status**` is `complete` while its content is live, or
+`retired` once it has become a tombstone per the shrink rule below — no
+other value is valid for a non-manifest record.
 
 Manifest-only additions (a manifest carries no source body):
 
@@ -133,9 +137,16 @@ second parallel memory, and never an automatic supersession.
 | none | — | Create every record, promote each, manifest `**Status**: complete` |
 | exists | **equal** | **Hard no-op.** No `mem_save`, no `promote`. Report "unchanged". |
 | exists | **differ** | Upsert every chunk whose `Content-SHA256` changed (same key → same `engram_id` → `findPromotedPage`'s `(project, engram_id)` resolves the same page, updated in place); leave byte-identical chunks untouched; upsert the manifest with the new digest and inventory |
-| exists, **new N < old N** | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
+| exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone (`**Status**: retired`, trailer preserved, body removed) and are promoted so the vault page updates in place. **Never hand-deleted.** |
+| exists, **new N == 1** (was > 1) | — | The record moves to the manifest key (rule 2: a single-chunk source has no separate chunk observation). Every prior chunk key `c0001…` — including `c0001` — retires to a tombstone the same way; none of them becomes the live record. |
 | exists, **new N > old N** | — | New chunk keys are created and promoted |
 | **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key. The old record is NOT touched automatically; `mem_compare(new, old, "supersedes")` is a documented operator step, after which promotion propagates `status: superseded` and the related-link on the next `sync`. |
+
+The N-change rows (shrink, grow, N==1) apply on top of the **differ** row,
+never instead of it: a re-ingestion with a different chunk count always has
+a different `Source-SHA256`, so the **differ** row's per-chunk-digest upsert
+still governs every retained chunk's content; the N-change rows only add
+what happens to the keys the new count no longer has (or newly has).
 
 The unchanged case is a HARD no-op, not an idempotent re-save: an upsert
 increments `revision_count` and rewrites the page, which would make a

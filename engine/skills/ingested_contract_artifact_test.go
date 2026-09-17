@@ -58,31 +58,62 @@ func TestIngestedObservationContractArtifact(t *testing.T) {
 	})
 
 	t.Run("SourceId_derivation_rule_table_present", func(t *testing.T) {
-		for _, required := range []string{
-			"url",
-			"file",
-			"directory",
-			"pasted",
-			"Canonical origin",
-			"Human part",
+		if !strings.Contains(contract, "| Source-Kind | Canonical origin | Human part |") {
+			t.Fatal("contract must contain the Source-Id derivation table header verbatim")
+		}
+		for _, row := range []string{
+			"| `url` | lowercase scheme+host",
+			"| `file` | cleaned absolute path",
+			"| `directory` | as `file`, applied per contained file",
+			"| `pasted` | `pasted:` + the operator-supplied label",
 		} {
-			if !strings.Contains(contract, required) {
-				t.Fatalf("contract must contain Source-Id derivation table token %q", required)
+			if !strings.Contains(contract, row) {
+				t.Fatalf("contract must contain Source-Id derivation row %q verbatim", row)
 			}
 		}
 	})
 
 	t.Run("OQ5_reingestion_decision_table_present", func(t *testing.T) {
+		if !strings.Contains(contract, "| Prior state at the key | `Source-SHA256` vs stored | Action |") {
+			t.Fatal("contract must contain the OQ-5 decision table header verbatim")
+		}
+		for _, row := range []string{
+			"| none | — | Create every record, promote each",
+			"| exists | **equal** | **Hard no-op.**",
+			"| exists | **differ** | Upsert every chunk whose `Content-SHA256` changed",
+			"| exists, **new N < old N**, new N ≥ 1 | — | Surplus keys `c{N+1}…` upsert to a retired tombstone",
+			"| exists, **new N == 1** (was > 1) | — | The record moves to the manifest key",
+			"| exists, **new N > old N** | — | New chunk keys are created and promoted |",
+			"| **origin changed** (new URI ⇒ new `Source-Id`) | — | A different topic key.",
+		} {
+			if !strings.Contains(contract, row) {
+				t.Fatalf("contract must contain OQ-5 decision table row %q verbatim", row)
+			}
+		}
+	})
+
+	t.Run("hard_no_op_and_tombstone_rules_present", func(t *testing.T) {
 		for _, required := range []string{
-			"none",
-			"equal",
-			"differ",
-			"new N < old N",
-			"new N > old N",
-			"origin changed",
+			"**Hard no-op.** No `mem_save`, no `promote`.",
+			"**Never hand-deleted.**",
 		} {
 			if !strings.Contains(contract, required) {
-				t.Fatalf("contract must contain OQ-5 decision table row token %q", required)
+				t.Fatalf("contract must state rule %q verbatim", required)
+			}
+		}
+	})
+
+	t.Run("SkipCode_vocabulary_table_present", func(t *testing.T) {
+		if !strings.Contains(contract, "| `Skip.Code` | Meaning |") {
+			t.Fatal("contract must contain the Skip.Code table header verbatim")
+		}
+		for _, code := range []string{
+			"unreadable", "binary", "unsupported_extension",
+			"too_large", "empty", "symlink", "outside_root",
+		} {
+			row := "| `" + code + "` |"
+			if !strings.Contains(contract, row) {
+				t.Fatalf("contract must contain Skip.Code row %q verbatim", row)
 			}
 		}
 	})
