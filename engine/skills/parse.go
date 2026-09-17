@@ -5,6 +5,7 @@ import (
 	"bufio"
 	"fmt"
 	"io"
+	"path/filepath"
 	"strings"
 )
 
@@ -587,13 +588,32 @@ func (p *tokParser) parseScalarSequence(indent, lineNum int) ([]string, error) {
 // --- schema validation ---
 
 var validSourceTypes = map[string]bool{"core": true, "custom": true, "external": true}
-var validTargets = map[string]bool{"claude": true, "opencode": true, "codex": true}
+var validTargets = map[string]bool{"claude": true, "opencode": true, "codex": true, "pi": true}
 var validUpdateStrategies = map[string]bool{"vendor-merge": true, "overlay-only": true}
 
 // validateEntry enforces the schema-level constraints on a single Entry.
 func validateEntry(e *Entry) error {
 	if e.ID == "" {
 		return fmt.Errorf("skills: entry is missing required field 'id'")
+	}
+	// R-003: path must be non-empty, relative, contain no ".." component,
+	// and already be Clean — this is the shared containment boundary
+	// pipkg relies on for both the source (overlayRoot/skills/<path>) and
+	// destination (skillsDir/<path>) joins; validateEntry stays
+	// filesystem-free by design (D4), so this check is pure string logic.
+	if e.Path == "" {
+		return fmt.Errorf("skills: entry %q: path must not be empty", e.ID)
+	}
+	if filepath.IsAbs(e.Path) {
+		return fmt.Errorf("skills: entry %q: path %q must be relative, not absolute", e.ID, e.Path)
+	}
+	if filepath.Clean(e.Path) != e.Path {
+		return fmt.Errorf("skills: entry %q: path %q must already be a clean relative path", e.ID, e.Path)
+	}
+	for _, part := range strings.Split(e.Path, "/") {
+		if part == ".." {
+			return fmt.Errorf("skills: entry %q: path %q must not contain a %q component", e.ID, e.Path, "..")
+		}
 	}
 	if !validSourceTypes[e.Source.Type] {
 		return fmt.Errorf("skills: entry %q: source.type %q is not valid; must be 'core', 'custom', or 'external'", e.ID, e.Source.Type)
@@ -618,7 +638,7 @@ func validateEntry(e *Entry) error {
 	}
 	for _, target := range e.Install.Targets {
 		if !validTargets[target] {
-			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: claude, opencode, codex", e.ID, target)
+			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: claude, opencode, codex, pi", e.ID, target)
 		}
 	}
 	if !validUpdateStrategies[e.Lifecycle.UpdateStrategy] {

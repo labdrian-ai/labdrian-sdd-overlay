@@ -16,6 +16,7 @@ const (
 	TargetClaude   Target = "claude"
 	TargetOpenCode Target = "opencode"
 	TargetCodex    Target = "codex"
+	TargetPi       Target = "pi"
 	TargetAll      Target = "all"
 )
 
@@ -187,6 +188,8 @@ func ParseTarget(raw string) (Target, error) {
 		return TargetOpenCode, nil
 	case TargetCodex:
 		return TargetCodex, nil
+	case TargetPi:
+		return TargetPi, nil
 	case TargetAll:
 		return TargetAll, nil
 	default:
@@ -198,7 +201,7 @@ func ExpandTarget(target Target) []Target {
 	if target != TargetAll {
 		return []Target{target}
 	}
-	return []Target{TargetClaude, TargetOpenCode, TargetCodex}
+	return []Target{TargetClaude, TargetOpenCode, TargetCodex, TargetPi}
 }
 
 func NewFoundationAdapter(target Target) Adapter {
@@ -210,6 +213,9 @@ func NewFoundationAdapter(target Target) Adapter {
 	}
 	if target == TargetCodex {
 		return NewCodexAdapter(DefaultCodexConfigRoot())
+	}
+	if target == TargetPi {
+		return NewPiAdapter()
 	}
 	return foundationAdapter{target: target}
 }

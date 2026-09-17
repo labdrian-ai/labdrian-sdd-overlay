@@ -59,6 +59,10 @@ const (
 	// argument itself distinguishes it from every other entry sharing our
 	// binary path.
 	LabdrianSyncTriggerIdentity = "sync-trigger"
+	// LabdrianReviewReceiptIdentity is both the review-receipt verb name and
+	// the dedup/uninstall identity token for the PreToolUse/Bash review-receipt
+	// hook entry, mirroring LabdrianSyncTriggerIdentity's role for its family.
+	LabdrianReviewReceiptIdentity = "review-receipt"
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -118,15 +122,22 @@ func HasLabdrianSyncTriggerHook(root map[string]interface{}, key, hookCommand st
 	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianSyncTriggerIdentity)
 }
 
+// HasLabdrianReviewReceiptHook reports whether key has our review-receipt hook.
+func HasLabdrianReviewReceiptHook(root map[string]interface{}, key, hookCommand string) bool {
+	return HasLabdrianOwnedHook(root, key, hookCommand, LabdrianReviewReceiptIdentity)
+}
+
 // HasSupportedClaudeLifecycleState reports whether settings contain all known
 // Labdrian-owned Claude hook families: the minimalism pair, the
-// anti-generic-design pair, and the SessionEnd sync-trigger entry.
+// anti-generic-design pair, the SessionEnd sync-trigger entry, and the
+// PreToolUse/Bash review-receipt entry.
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianDesignHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianDesignHook(root, "PreToolUse", hookCommand) &&
-		HasLabdrianSyncTriggerHook(root, "SessionEnd", hookCommand)
+		HasLabdrianSyncTriggerHook(root, "SessionEnd", hookCommand) &&
+		HasLabdrianReviewReceiptHook(root, "PreToolUse", hookCommand)
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -257,6 +268,14 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
+	// PreToolUse/Bash review-receipt entry (identity: binary path +
+	// review-receipt token). Fail-closed hook: captures approved review
+	// receipts before an acknowledge-approved invocation burns them.
+	if !hasEntryMatching(hooks, "PreToolUse", m.isReviewReceiptEntry) {
+		appendHook(hooks, "PreToolUse", m.buildReviewReceiptPreToolUseEntry())
+		changed = true
+	}
+
 	root["hooks"] = hooks
 	return changed
 }
@@ -283,6 +302,13 @@ func (m *Merger) isDesignEntry(e interface{}) bool {
 // sync-trigger entry: it references our binary AND the sync-trigger token.
 func (m *Merger) isSyncTriggerEntry(e interface{}) bool {
 	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianSyncTriggerIdentity)
+}
+
+// isReviewReceiptEntry reports whether a hook entry is our PreToolUse/Bash
+// review-receipt entry: it references our binary AND the review-receipt
+// identity token.
+func (m *Merger) isReviewReceiptEntry(e interface{}) bool {
+	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianReviewReceiptIdentity)
 }
 
 // legacyIdentities are the --embedded-contract identity tokens of hook pairs
@@ -337,7 +363,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isLegacyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}
@@ -592,6 +618,36 @@ func (m *Merger) buildSyncTriggerSessionEndEntry() map[string]interface{} {
 		m.hookCommand, m.hookCommand, LabdrianSyncTriggerIdentity,
 	)
 	return map[string]interface{}{
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildReviewReceiptPreToolUseEntry returns the PreToolUse/Bash entry that
+// runs the fail-closed review-receipt capture hook before every Bash tool
+// call.
+//
+// FAIL-CLOSED DEVIATION FROM THE OTHER HOOK ENTRIES: every other builder in
+// this file guards the missing-binary case with
+// "command -v X && X ... || true", which forces the shell command to exit 0
+// no matter what the hook itself returns — appropriate for the fail-SAFE
+// gate-task/propagate/sync-trigger hooks, which must never block a call.
+// The review-receipt hook is the opposite: it must fail CLOSED, so a
+// capture error blocks the acknowledge-approved Bash call (PreToolUse deny
+// on non-zero exit). The command below only short-circuits to exit 0 when
+// the binary itself is missing (the same "don't block on an absent
+// installation" guard as every other entry); once the binary is found, its
+// own exit code — 0 (allow) or 2 (deny) from reviewreceipt.RunHook — is the
+// command's exit code, unmasked by "|| true".
+func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s >/dev/null 2>&1 || exit 0; %s %s hook --cwd "${CLAUDE_PROJECT_DIR:-$PWD}"`,
+		m.hookCommand, m.hookCommand, LabdrianReviewReceiptIdentity,
+	)
+	return map[string]interface{}{
+		"matcher": "Bash",
 		"hooks": []interface{}{map[string]interface{}{
 			"type":    "command",
 			"command": cmd,

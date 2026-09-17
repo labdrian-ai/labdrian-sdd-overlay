@@ -60,8 +60,10 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -126,10 +128,14 @@ func main() {
 		runRuntime(os.Args[2:])
 	case "gadu-generate":
 		runGaduGenerate(os.Args[2:])
+	case "pipkg":
+		runPipkg(os.Args[2:])
 	case "skills":
 		runSkills(os.Args[2:])
 	case "sync-trigger":
 		runSyncTrigger(os.Args[2:])
+	case "review-receipt":
+		runReviewReceipt(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -145,14 +151,17 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine uninstall-hooks --settings <path> --hook-command <binary-path>")
 	fmt.Fprintln(os.Stderr, "  engine status")
 	fmt.Fprintln(os.Stderr, "  engine prespec <verb>  (verbs: rank, lint, readiness, brief)")
-	fmt.Fprintln(os.Stderr, "  engine runtime <action> [--target claude|opencode|codex|all] [--config-root <path>]")
+	fmt.Fprintln(os.Stderr, "  engine runtime <action> [--target claude|opencode|codex|pi|all] [--config-root <path>]")
 	fmt.Fprintln(os.Stderr, "                          [--component runtime-parity|longterm-mem] [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    action: status | install | update | uninstall")
-	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, or all (--component runtime-parity only)")
+	fmt.Fprintln(os.Stderr, "    --target: opencode (default), claude, codex, pi, or all (--component runtime-parity only)")
 	fmt.Fprintln(os.Stderr, "    --component: runtime-parity (default, the --target adapters above), or longterm-mem")
 	fmt.Fprintln(os.Stderr, "      (a single component spanning claude+opencode+codex; no update/rollback action)")
 	fmt.Fprintln(os.Stderr, "    --state-dir: registration.json directory for --component longterm-mem (default ~/.labdrian-overlay)")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
+	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
+	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
+	fmt.Fprintln(os.Stderr, "    check: reports drift between --dest-dir and the current manifest; exit 1 on drift")
 	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status        [--registry <path>]                                                      print count summary (total/core/custom)")
@@ -163,6 +172,12 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
 	fmt.Fprintln(os.Stderr, "  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome")
+	fmt.Fprintln(os.Stderr, "  engine review-receipt capture --cwd <repo> [--change <name>]")
+	fmt.Fprintln(os.Stderr, "    persists every surviving approved review receipt to openspec/changes/<change>/review-receipts/")
+	fmt.Fprintln(os.Stderr, "    --change resolves ambiguity when more than one active change exists; omit it to auto-detect")
+	fmt.Fprintln(os.Stderr, "  engine review-receipt hook --cwd <repo>")
+	fmt.Fprintln(os.Stderr, "    fail-closed PreToolUse Bash hook: reads tool_input JSON from stdin, captures before")
+	fmt.Fprintln(os.Stderr, "    'gentle-ai review acknowledge-approved', denies (exit 2) on ambiguity or capture failure")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
@@ -213,6 +228,91 @@ func runGaduGenerate(args []string) {
 		os.Exit(1)
 	}
 	fmt.Fprintln(os.Stdout, "gadu-generate: agents/GADU.md, opencode/agents/GADU.md, and skills/gadu-operator/SKILL.md written")
+}
+
+// runPipkg implements the 'pipkg build|check' subcommand.
+func runPipkg(args []string) {
+	runPipkgCore(args, os.Stdout, os.Stderr, os.Exit)
+}
+
+// runPipkgCore is the testable core of the pipkg subcommand: 'build' writes
+// the labdrian-pi package tree, 'check' reports drift against it. Requires
+// --overlay-root, --registry, and --dest-dir. Fails LOUD on a missing verb
+// or missing flag (ADR-4).
+func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
+	if len(args) == 0 {
+		fmt.Fprintln(stderr, "error: pipkg requires a verb: build, check")
+		exit(1)
+		return
+	}
+	verb := args[0]
+	if verb != "build" && verb != "check" {
+		fmt.Fprintf(stderr, "error: unknown pipkg verb %q; expected build or check\n", verb)
+		exit(1)
+		return
+	}
+
+	var overlayRoot, registryPath, destDir string
+	for i := 1; i < len(args); i++ {
+		switch args[i] {
+		case "--overlay-root":
+			i++
+			if i >= len(args) {
+				fmt.Fprintln(stderr, "error: --overlay-root requires a value")
+				exit(1)
+				return
+			}
+			overlayRoot = args[i]
+		case "--registry":
+			i++
+			if i >= len(args) {
+				fmt.Fprintln(stderr, "error: --registry requires a value")
+				exit(1)
+				return
+			}
+			registryPath = args[i]
+		case "--dest-dir":
+			i++
+			if i >= len(args) {
+				fmt.Fprintln(stderr, "error: --dest-dir requires a value")
+				exit(1)
+				return
+			}
+			destDir = args[i]
+		default:
+			fmt.Fprintf(stderr, "error: unknown option %q\n", args[i])
+			exit(1)
+			return
+		}
+	}
+	if overlayRoot == "" || registryPath == "" || destDir == "" {
+		fmt.Fprintln(stderr, "error: pipkg requires --overlay-root, --registry, and --dest-dir")
+		exit(1)
+		return
+	}
+
+	if verb == "build" {
+		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+			fmt.Fprintf(stderr, "pipkg build: %v\n", err)
+			exit(1)
+			return
+		}
+		fmt.Fprintf(stdout, "pipkg build: labdrian-pi package written to %s\n", destDir)
+		exit(0)
+		return
+	}
+
+	report, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	if d := report.Disclosure(); d != "" {
+		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
+	}
+	if err != nil {
+		fmt.Fprintf(stderr, "pipkg check: %v\n", err)
+		exit(1)
+		return
+	}
+	fmt.Fprintln(stdout, "pipkg check: OK (built package matches the current manifest)")
+	exit(0)
 }
 
 // runPrespec implements the 'prespec <verb>' subcommand.
@@ -312,18 +412,27 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		adapter := runtimeAdapterForTarget(current, targetRoot)
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
+		// Pi now has a real Status() implementation (pi-lifecycle, slice
+		// 5), so it is reported and aggregated exactly like every other
+		// target: an honestly unsupported Pi fails `status --target all`
+		// just as an honestly unsupported claude/opencode/codex would
+		// (W-03 — there is no more "Pi is exempt" status-only carve-out).
 		actionFailed := false
 		switch action {
 		case "status":
 			switch {
-			case result.Status == runtimepkg.CapabilityUnsupported,
-				result.Status == runtimepkg.CapabilityRestartRequired:
+			case result.Status == runtimepkg.CapabilityRestartRequired:
+				actionFailed = true
+			case result.Status == runtimepkg.CapabilityUnsupported:
 				actionFailed = true
 			case result.Status == runtimepkg.CapabilityPartial && !(allTargets && current == runtimepkg.TargetCodex):
 				actionFailed = true
 			}
 		default:
-			if result.Status == runtimepkg.CapabilityUnsupported || result.Status == runtimepkg.CapabilityPartial {
+			switch result.Status {
+			case runtimepkg.CapabilityPartial:
+				actionFailed = true
+			case runtimepkg.CapabilityUnsupported:
 				actionFailed = true
 			}
 		}
@@ -482,6 +591,107 @@ func parseSyncTriggerArgs(args []string) (synctrigger.Options, bool) {
 		}
 	}
 	return o, child
+}
+
+// ---------------------------------------------------------------------------
+// review-receipt subcommand
+// ---------------------------------------------------------------------------
+
+// runReviewReceipt implements the 'review-receipt <verb>' subcommand.
+// Verbs: capture, hook.
+func runReviewReceipt(args []string) {
+	if len(args) < 1 {
+		fmt.Fprintln(os.Stderr, "error: review-receipt requires a verb: capture, hook")
+		os.Exit(1)
+	}
+	switch args[0] {
+	case "capture":
+		runReviewReceiptCapture(args[1:])
+	case "hook":
+		runReviewReceiptHook(args[1:])
+	default:
+		fmt.Fprintf(os.Stderr, "error: review-receipt: unknown verb %q (expected capture or hook)\n", args[0])
+		os.Exit(1)
+	}
+}
+
+// parseReviewReceiptArgs extracts --cwd and --change from args.
+func parseReviewReceiptArgs(args []string) (cwd, change string) {
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--cwd":
+			i++
+			if i < len(args) {
+				cwd = args[i]
+			}
+		case "--change":
+			i++
+			if i < len(args) {
+				change = args[i]
+			}
+		}
+	}
+	return
+}
+
+// runReviewReceiptCapture implements 'review-receipt capture --cwd <repo>
+// [--change <name>]'. With --change, captures directly into that change.
+// Without it, auto-detects the single active change: zero active changes is
+// a no-op (exit 0); more than one is a loud failure (exit 1) naming
+// --change as the remedy.
+func runReviewReceiptCapture(args []string) {
+	cwd, change := parseReviewReceiptArgs(args)
+	if cwd == "" {
+		fmt.Fprintln(os.Stderr, "error: --cwd is required")
+		os.Exit(1)
+	}
+
+	if change == "" {
+		detected, err := reviewreceipt.DetectActiveChange(cwd)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: %v\n", err)
+			os.Exit(1)
+		}
+		if detected == "" {
+			fmt.Fprintln(os.Stdout, "review-receipt capture: no active change; nothing to capture")
+			return
+		}
+		change = detected
+	}
+
+	captured, err := reviewreceipt.Capture(cwd, change)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
+		os.Exit(1)
+	}
+	fmt.Fprintf(os.Stdout, "review-receipt capture: %d receipt(s) captured for %q\n", len(captured), change)
+}
+
+// runReviewReceiptHook implements 'review-receipt hook --cwd <repo>': the
+// fail-closed PreToolUse Bash hook entry point. Reads the raw hook input
+// JSON from stdin and exits with reviewreceipt.RunHook's exit code, printing
+// its message (if any) to stderr.
+func runReviewReceiptHook(args []string) {
+	cwd, _ := parseReviewReceiptArgs(args)
+	if cwd == "" {
+		fmt.Fprintln(os.Stderr, "error: --cwd is required")
+		os.Exit(2)
+	}
+
+	raw, err := io.ReadAll(os.Stdin)
+	if err != nil {
+		// Fail closed: an unreadable hook input is treated the same as any
+		// other capture-resolution failure -- deny rather than silently
+		// allow an acknowledgement this hook could not even inspect.
+		fmt.Fprintf(os.Stderr, "review-receipt hook: read stdin: %v\n", err)
+		os.Exit(2)
+	}
+
+	exitCode, message := reviewreceipt.RunHook(raw, cwd)
+	if message != "" {
+		fmt.Fprintln(os.Stderr, message)
+	}
+	os.Exit(exitCode)
 }
 
 func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {
@@ -1403,6 +1613,11 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	// hasn't run the upgrade path yet, not a broken installation.
 	checks = append(checks, checkSessionEndHook(settingsRoot, settingsErr, settingsPath))
 
+	// Check 3c: PreToolUse/Bash review-receipt hook wired. Same WARN/degraded
+	// tier as SessionEnd — a machine that hasn't run the upgrade path yet is
+	// pre-#3a, not broken.
+	checks = append(checks, checkReviewReceiptHook(settingsRoot, settingsErr, settingsPath))
+
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))
 
@@ -1531,6 +1746,34 @@ func checkSessionEndHook(root map[string]interface{}, settingsErr error, setting
 		}
 	}
 	return checkResult{label: label, ok: true, degraded: true, note: "no SessionEnd entry referencing " + binaryIdentity + "; " + remediationNote}
+}
+
+// checkReviewReceiptHook verifies the PreToolUse/Bash review-receipt entry
+// references our binary and the review-receipt identity token. Unreadable
+// settings is a hard FAIL like the other hook checks; a missing entry is
+// WARN/degraded, not FAIL — same remediation as checkSessionEndHook.
+func checkReviewReceiptHook(root map[string]interface{}, settingsErr error, settingsPath string) checkResult {
+	label := `hook: PreToolUse matcher="Bash" (review-receipt)`
+	if settingsErr != nil {
+		return checkResult{label: label, ok: false, note: "cannot read " + settingsPath + ": " + settingsErr.Error()}
+	}
+	if root == nil {
+		return checkResult{label: label, ok: true, degraded: true, note: settingsPath + " absent or empty; " + remediationNote}
+	}
+	hooks, _ := root["hooks"].(map[string]interface{})
+	if hooks != nil {
+		entries, _ := hooks["PreToolUse"].([]interface{})
+		for _, e := range entries {
+			em, ok := e.(map[string]interface{})
+			if !ok || em["matcher"] != "Bash" {
+				continue
+			}
+			if innerHookContainsBinary(e, binaryIdentity) && innerHookContainsBinary(e, settings.LabdrianReviewReceiptIdentity) {
+				return checkResult{label: label, ok: true}
+			}
+		}
+	}
+	return checkResult{label: label, ok: true, degraded: true, note: "no PreToolUse entry with matcher=\"Bash\" referencing " + binaryIdentity + "; " + remediationNote}
 }
 
 // innerHookContainsBinary returns true if the hook entry (outer object) contains

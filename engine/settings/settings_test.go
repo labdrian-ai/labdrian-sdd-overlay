@@ -271,8 +271,8 @@ func TestMerge_Idempotent(t *testing.T) {
 	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
 		t.Errorf("UserPromptSubmit: expected exactly 2 entries (minimalism + design), got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
-		t.Errorf("PreToolUse: expected exactly 2 entries (minimalism + design), got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 3 {
+		t.Errorf("PreToolUse: expected exactly 3 entries (minimalism + design + review-receipt), got %d", n)
 	}
 	// Both pairs must be distinguishable: exactly one entry per identity per key.
 	if n := countOurHooks(root, "UserPromptSubmit", settings.LabdrianDesignIdentity); n != 1 {
@@ -280,6 +280,11 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 	if n := countOurHooks(root, "PreToolUse", settings.LabdrianDesignIdentity); n != 1 {
 		t.Errorf("PreToolUse: expected exactly 1 design entry, got %d", n)
+	}
+	// PreToolUse carries exactly one review-receipt entry; a second Install
+	// adds no more.
+	if n := countOurHooks(root, "PreToolUse", settings.LabdrianReviewReceiptIdentity); n != 1 {
+		t.Errorf("PreToolUse: expected exactly 1 review-receipt entry, got %d", n)
 	}
 	// SessionEnd carries exactly one sync-trigger entry; a second Install adds
 	// no more.
@@ -759,8 +764,8 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 2 {
 		t.Fatalf("precondition: expected 2 UserPromptSubmit entries after Install, got %d", n)
 	}
-	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 2 {
-		t.Fatalf("precondition: expected 2 PreToolUse entries after Install, got %d", n)
+	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 3 {
+		t.Fatalf("precondition: expected 3 PreToolUse entries after Install, got %d", n)
 	}
 
 	if err := m.Uninstall(); err != nil {
@@ -1007,8 +1012,8 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
 		t.Errorf("Install×2: UserPromptSubmit should have exactly 2 entries; got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 2 {
-		t.Errorf("Install×2: PreToolUse should have exactly 2 entries; got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 3 {
+		t.Errorf("Install×2: PreToolUse should have exactly 3 entries; got %d", n)
 	}
 	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
 		t.Errorf("Install×2: SessionEnd should have exactly 1 entry; got %d", n)
@@ -1144,18 +1149,48 @@ func withSyncTriggerFamily(root map[string]interface{}, hookCommand string) map[
 	return root
 }
 
+// withReviewReceiptFamily adds a PreToolUse/Bash review-receipt entry,
+// shaped like Merger's real builder output, to root's hooks map and returns
+// root. Used to compose a root with the fourth owned family.
+func withReviewReceiptFamily(root map[string]interface{}, hookCommand string) map[string]interface{} {
+	hooks, ok := root["hooks"].(map[string]interface{})
+	if !ok {
+		hooks = map[string]interface{}{}
+		root["hooks"] = hooks
+	}
+	command := fmt.Sprintf(
+		`command -v %s >/dev/null 2>&1 || exit 0; %s %s hook --cwd "${CLAUDE_PROJECT_DIR:-$PWD}"`,
+		hookCommand, hookCommand, settings.LabdrianReviewReceiptIdentity,
+	)
+	existing, _ := hooks["PreToolUse"].([]interface{})
+	hooks["PreToolUse"] = append(existing, map[string]interface{}{
+		"matcher": "Bash",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": command,
+		}},
+	})
+	return root
+}
+
 // TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily asserts the
-// lifecycle-state check returns true only once all three owned families
-// (minimalism pair, design pair, SessionEnd sync-trigger) are present.
+// lifecycle-state check returns true only once all four owned families
+// (minimalism pair, design pair, SessionEnd sync-trigger, PreToolUse/Bash
+// review-receipt) are present.
 func TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily(t *testing.T) {
 	twoFamilies := buildRootWithPairs(testHookCommand, true, true)
 	if settings.HasSupportedClaudeLifecycleState(twoFamilies, testHookCommand) {
 		t.Error("HasSupportedClaudeLifecycleState: expected false with only two families")
 	}
 
-	allThree := withSyncTriggerFamily(buildRootWithPairs(testHookCommand, true, true), testHookCommand)
-	if !settings.HasSupportedClaudeLifecycleState(allThree, testHookCommand) {
-		t.Error("HasSupportedClaudeLifecycleState: expected true once all three families exist")
+	threeFamilies := withSyncTriggerFamily(buildRootWithPairs(testHookCommand, true, true), testHookCommand)
+	if settings.HasSupportedClaudeLifecycleState(threeFamilies, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false with only three families (review-receipt missing)")
+	}
+
+	allFour := withReviewReceiptFamily(threeFamilies, testHookCommand)
+	if !settings.HasSupportedClaudeLifecycleState(allFour, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true once all four families exist")
 	}
 }
 

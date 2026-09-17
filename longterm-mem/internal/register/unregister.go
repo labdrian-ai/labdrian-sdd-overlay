@@ -75,6 +75,9 @@ func Unregister(target, configRoot, stateDir string) (UnregisterOutcome, error) 
 	case codexTarget:
 		configPath := filepath.Join(configRoot, codexConfigFileName)
 		return tomlUninstall(codexTarget, configPath, stateDir, codexTableKey, "longterm-mem")
+	case piTarget:
+		configPath := filepath.Join(configRoot, piConfigFileName)
+		return jsonUninstall(piTarget, configPath, stateDir, piContainerKey, "longterm-mem")
 	default:
 		return 0, fmt.Errorf("unregister: %s: unknown target", target)
 	}

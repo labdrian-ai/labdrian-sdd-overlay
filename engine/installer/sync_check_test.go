@@ -130,7 +130,7 @@ func TestSyncCheck_ReportsRepoBehindOrigin_CachedRef(t *testing.T) {
 	home := t.TempDir()
 	_, env, originPath := setupSandboxOverlayWithOrigin(t, home, 3, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -164,7 +164,7 @@ func TestSyncCheck_BehindOriginOnly_ActionHintsGitPull(t *testing.T) {
 	home := t.TempDir()
 	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 3, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -191,7 +191,7 @@ func TestSyncCheck_EvenWithOrigin_ReportsZero(t *testing.T) {
 	home := t.TempDir()
 	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 0, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -216,7 +216,7 @@ func TestSyncCheck_NoOriginRemote_ReportsNA(t *testing.T) {
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home) // no origin remote configured
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -252,7 +252,7 @@ func TestSyncCheck_CheckOriginFlag_NoOriginRemote_ReportsNA(t *testing.T) {
 	home := t.TempDir()
 	_, env := setupSandboxOverlay(t, home) // no origin remote configured
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -282,7 +282,7 @@ func TestSyncCheck_NoCachedRef_ReportsNA(t *testing.T) {
 	home := t.TempDir()
 	_, env, _ := setupSandboxOverlayWithOrigin(t, home, 3, false) // configured, never fetched
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -312,7 +312,7 @@ func TestSyncCheck_CheckOriginFlag_FetchesLive(t *testing.T) {
 	home := t.TempDir()
 	_, env, originPath := setupSandboxOverlayWithOrigin(t, home, 3, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 
@@ -340,7 +340,7 @@ func TestSyncCheck_CheckOriginFlag_FetchFailure_DegradesToNA(t *testing.T) {
 	home := t.TempDir()
 	overlayDir, env, _ := setupSandboxOverlayWithOrigin(t, home, 0, true)
 
-	if _, err := runOverlay(t, overlay, env, "apply", "--target", "all"); err != nil {
+	if _, err := runOverlay(t, overlay, env, "apply", "--target", "claude"); err != nil {
 		t.Fatalf("overlay apply: %v", err)
 	}
 

@@ -1,0 +1,6 @@
+{
+  "schema": "labdrian.review-receipt-override/v1",
+  "owner": "labdrian (maintainer)",
+  "reason": "Archive authorized with sdd-verify verdict fail-by-completeness (0 CRITICAL in three passes; 35/41 scenarios compliant). The six open scenarios are unverifiable on this machine: GADU (R-014) and every gentle-pi subagent fail subagent_run with 'provider auth error' because the parent session runs through the Claude bridge without a provider key (issue #327), and four closure-feedback prose scenarios have no test harness. Persisted receipts exist for every reviewed lineage; the final receipt tree predates the receipt-persisting commit, so the landing anchor is self-asserted.",
+  "recorded_at": "2026-09-13T04:40:00-03:00"
+}

@@ -1,0 +1,829 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:cbe7df06b67645149a386f264b9afa5aa4827dceeec50cc601883cf73b736f4b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-379797b7cdc29594",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "644cf7649fc608b343bd62fd1319138484b526ad",
+      "candidate_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+      "paths_digest": "sha256:a4c2cc52e4a22d0c6f26f911257fa826e53a88bb4ca2426c3026a3e21d47ebec",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/main.go",
+        "engine/cmd/main_test.go",
+        "engine/reviewreceipt/hook.go",
+        "engine/reviewreceipt/hook_test.go",
+        "engine/reviewreceipt/reviewreceipt.go",
+        "engine/reviewreceipt/reviewreceipt_test.go",
+        "engine/settings/settings.go",
+        "engine/settings/settings_test.go",
+        "openspec/changes/pi-package-hardening/apply-progress.md",
+        "openspec/changes/pi-package-hardening/entry.json",
+        "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+        "openspec/changes/pi-package-hardening/tasks.md"
+      ],
+      "identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "644cf7649fc608b343bd62fd1319138484b526ad",
+      "candidate_tree": "6aa2c03dcbe7351a793fe792e612d31fd624d030",
+      "paths_digest": "sha256:a4c2cc52e4a22d0c6f26f911257fa826e53a88bb4ca2426c3026a3e21d47ebec",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/cmd/main.go",
+        "engine/cmd/main_test.go",
+        "engine/reviewreceipt/hook.go",
+        "engine/reviewreceipt/hook_test.go",
+        "engine/reviewreceipt/reviewreceipt.go",
+        "engine/reviewreceipt/reviewreceipt_test.go",
+        "engine/settings/settings.go",
+        "engine/settings/settings_test.go",
+        "openspec/changes/pi-package-hardening/apply-progress.md",
+        "openspec/changes/pi-package-hardening/entry.json",
+        "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+        "openspec/changes/pi-package-hardening/tasks.md"
+      ],
+      "identity": "sha256:7180f657c7b9b901c6fb27a6cea2c653d8437f71b680541cc5b3d794c8901697"
+    },
+    "genesis_paths": [
+      "engine/cmd/main.go",
+      "engine/cmd/main_test.go",
+      "engine/reviewreceipt/hook.go",
+      "engine/reviewreceipt/hook_test.go",
+      "engine/reviewreceipt/reviewreceipt.go",
+      "engine/reviewreceipt/reviewreceipt_test.go",
+      "engine/settings/settings.go",
+      "engine/settings/settings_test.go",
+      "openspec/changes/pi-package-hardening/apply-progress.md",
+      "openspec/changes/pi-package-hardening/entry.json",
+      "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+      "openspec/changes/pi-package-hardening/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1320,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [
+      "R3-multi-change-deny-loop",
+      "R4-multi-change-deny-unrecoverable"
+    ],
+    "proposed_correction_lines": 120,
+    "actual_correction_lines": 168,
+    "fix_delta_hash": "sha256:4a8aa370e5419ca6c2313700810897d7aff70473d6c1acaadf792dba1d080880",
+    "original_criteria": {
+      "evidence_hash": "sha256:e08777efd6926604cdb2414b4a149353c2ced1965831bf46d12fd7fc6f472f8b",
+      "fix_delta_hash": "sha256:4a8aa370e5419ca6c2313700810897d7aff70473d6c1acaadf792dba1d080880",
+      "passed": true
+    },
+    "correction_regression": {
+      "evidence_hash": "sha256:2be13764f97b9d49c1e0494d300b3214bd33c26ede00adf692cc05b7120587ae",
+      "fix_delta_hash": "sha256:4a8aa370e5419ca6c2313700810897d7aff70473d6c1acaadf792dba1d080880",
+      "passed": true
+    },
+    "correction_attempts": [
+      {
+        "snapshot": {
+          "kind": "fix-diff",
+          "base_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+          "candidate_tree": "6aa2c03dcbe7351a793fe792e612d31fd624d030",
+          "paths_digest": "sha256:178c73ebc519ff8a94a00c375eca6362ab68842492212b01061ff229f1e240dd",
+          "intended_untracked": [],
+          "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+          "ledger_ids": [
+            "R3-multi-change-deny-loop",
+            "R4-multi-change-deny-unrecoverable"
+          ],
+          "paths": [
+            "engine/reviewreceipt/hook.go",
+            "engine/reviewreceipt/hook_test.go",
+            "engine/reviewreceipt/reviewreceipt.go"
+          ],
+          "identity": "sha256:2f99457d4032a3fabef93b7e347c41d4370db5f0dd99e4cecfedd96234a7dc67"
+        },
+        "proposed_lines": 120,
+        "actual_lines": 168,
+        "fix_delta_hash": "sha256:4a8aa370e5419ca6c2313700810897d7aff70473d6c1acaadf792dba1d080880",
+        "original_criteria": {
+          "evidence_hash": "sha256:e08777efd6926604cdb2414b4a149353c2ced1965831bf46d12fd7fc6f472f8b",
+          "fix_delta_hash": "sha256:4a8aa370e5419ca6c2313700810897d7aff70473d6c1acaadf792dba1d080880",
+          "passed": true
+        },
+        "correction_regression": {
+          "evidence_hash": "sha256:2be13764f97b9d49c1e0494d300b3214bd33c26ede00adf692cc05b7120587ae",
+          "fix_delta_hash": "sha256:4a8aa370e5419ca6c2313700810897d7aff70473d6c1acaadf792dba1d080880",
+          "passed": true
+        },
+        "targeted_validation_request_hash": "sha256:959496b4d08fa4577afaa91bcb0bf0d84c3f7bf1950fd8b12382e321449bd058",
+        "correction_target_identity": "sha256:2f99457d4032a3fabef93b7e347c41d4370db5f0dd99e4cecfedd96234a7dc67"
+      }
+    ],
+    "cumulative_correction_lines": 168,
+    "capture_phase_revision": "sha256:2a74f1e19b5884584ebfe76f46fd78c04b43d59385318b750b8ea0b467807881",
+    "capture_phase_epoch": 2,
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+        "capture_phase_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+        "artifact_digest": "sha256:c44f26fc9f08511cd305abf9a6da84ad19ab5386cd2853afcc0d278da77a14dd",
+        "result_hash": "sha256:3d9e911b26d9f25d9dc0d903fa9e205bd90cb8e26958d914f7f33542c029b9d3",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:3eb2d4f9d773ad725ff225107c5326e744ea0916af139351e13d6ec0f2d3a81a",
+            "lineage_id": "review-379797b7cdc29594",
+            "authority_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+            "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+            "base_tree": "644cf7649fc608b343bd62fd1319138484b526ad",
+            "candidate_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+            "changed_path_manifest_sha256": "sha256:df619ce10f44bad9c1c5b703ffb3f653a3bc18d8456b490f11f09129675af7df",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:3eb2d4f9d773ad725ff225107c5326e744ea0916af139351e13d6ec0f2d3a81a",
+            "raw_sha256": "sha256:6bdd8f6598c4b2207e6b19ba98a3a5016848f38aa185c69fab0e1903b7a2657f",
+            "canonical_sha256": "sha256:e03bfebeb5bb662c5fd0706ac24f8775aeff5a9dede7ddea5e89f772d4d0f2b6",
+            "result_hash": "sha256:3d9e911b26d9f25d9dc0d903fa9e205bd90cb8e26958d914f7f33542c029b9d3",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:3eb2d4f9d773ad725ff225107c5326e744ea0916af139351e13d6ec0f2d3a81a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/main.go",
+                "engine/cmd/main_test.go",
+                "engine/reviewreceipt/hook.go",
+                "engine/reviewreceipt/hook_test.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/reviewreceipt_test.go",
+                "engine/settings/settings.go",
+                "engine/settings/settings_test.go",
+                "openspec/changes/pi-package-hardening/apply-progress.md",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-001",
+                "lens": "risk",
+                "location": "engine/reviewreceipt/hook.go:54",
+                "severity": "WARNING",
+                "claim": "The fail-closed PreToolUse gate only runs when tool_input.command contains the exact literal 'gentle-ai review acknowledge-approved'. Any variant skips capture and returns allow: doubled whitespace between tokens, a quoted subcommand token, shell-variable or alias indirection, or calling the acknowledgement from a wrapper script. In each case the acknowledgement burns the approved lineage with no persisted receipt. That is the R-008 integrity failure this control exists to prevent. The doc comment argues only that false positives are harmless and does not address how easy false negatives are. Zero detected active changes also returns allow before any capture. Suggested fix: tokenize the command and normalize whitespace and quotes before matching, or have gentle-ai itself refuse acknowledgement without a persisted receipt. Server-side enforcement is the only non-bypassable option.",
+                "proof_refs": [
+                  "engine/reviewreceipt/hook.go:19",
+                  "engine/reviewreceipt/hook.go:54",
+                  "engine/reviewreceipt/hook.go:66-68",
+                  "engine/reviewreceipt/hook.go:10-18"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R1-002",
+                "lens": "risk",
+                "location": "engine/reviewreceipt/reviewreceipt.go:149-172",
+                "severity": "SUGGESTION",
+                "claim": "The destination filename comes from the lineage_id string inside the parsed JSON. It is not taken from the scanned directory entry name, and it is never checked to be a single clean path component. A lineage_id containing parent-directory segments would join to a destination outside the change's review-receipts directory. The write path also follows symlinks: MkdirAll, CreateTemp and Rename are used with no containment check, so a committed symlink standing in for the review-receipts directory redirects writes. Reachability today is limited. Forging a lineage_id needs write access to the git-dir transaction store, which already allows code execution through git hooks. Written content is receipt bytes, not attacker-chosen, and an existing file with different content is refused, apart from a check-then-rename race. Recommend rejecting lineage IDs that are not a clean base name equal to the lineage directory name.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:154",
+                  "engine/reviewreceipt/reviewreceipt.go:166",
+                  "engine/reviewreceipt/reviewreceipt.go:222-242"
+                ]
+              },
+              {
+                "id": "R1-003",
+                "lens": "risk",
+                "location": "engine/reviewreceipt/reviewreceipt.go:196-206",
+                "severity": "SUGGESTION",
+                "claim": "ApprovedSummary accepts any JSON object whose nested state has a non-empty lineage_id and state equal to approved. It checks neither the outer nor the nested review-state schema, and it has no provenance binding to the git transaction store. The captured files live in the committed working tree, so a hand-authored file there would be returned as an approved anchor. That contradicts the package doc's 'never self-asserted' guarantee. The Capture review-state branch likewise skips the schema check. No caller exists in this candidate (the Phase 4 anchor gate is future work), so there is no reachable impact yet. Add schema validation and a cross-check against the transaction store before the anchor gate relies on this function.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:163-164",
+                  "engine/reviewreceipt/reviewreceipt.go:196-206",
+                  "engine/reviewreceipt/reviewreceipt.go:1-4"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 12 manifest paths in full from the supplied patch sections only; no working tree, index, or command was used.",
+              "engine/reviewreceipt/hook.go: malformed hook JSON passes through as allow, and a stdin read failure in engine/cmd/main.go denies with exit 2. Claude Code always supplies well-formed JSON, so the malformed-input pass-through has no reachable bypass.",
+              "engine/settings/settings.go buildReviewReceiptPreToolUseEntry leaves the hook binary path unquoted inside the shell command. This mirrors the pre-existing builders in the same file, and the path comes from the installer's own binary location, not attacker input. Pre-existing pattern, no new exposure.",
+              "The missing-binary short-circuit to exit 0 in engine/settings/settings.go is documented and matches the other hook families' behavior when the installation is absent.",
+              "engine/cmd/main.go parseReviewReceiptArgs takes the change name from the local CLI caller without validation. The operator already controls that input, so there is no privilege boundary crossing.",
+              "The Capture flow shells out only to git rev-parse with fixed flags via exec.Command argument vectors, so no shell injection surface is introduced.",
+              "Captured review-state files are copied byte-for-byte into the committed tree, which may carry local review metadata. The spec in openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md requires this, and no secret material is shown in any fixture, so no data-exposure finding is raised.",
+              "Non-risk observation: openspec/changes/pi-package-hardening/apply-progress.md says Phase 3 checkboxes are intentionally left unchecked pending a size decision. In the same candidate, openspec/changes/pi-package-hardening/tasks.md marks them done and openspec/changes/pi-package-hardening/entry.json records a granted size exception. The grant cannot be verified from the candidate; this is noted as a process inconsistency, not a security finding.",
+              "No BLOCKER or CRITICAL issues found; no dependency changes are present in the candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+        "capture_phase_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+        "artifact_digest": "sha256:a0f1b8699922d7e8b38a370562a7c595d1f0b21929396c36bee7b129d04c24c9",
+        "result_hash": "sha256:6d4d1c0770b4e04ace69d1a78dd0b51c596de06c383d84692ff15ed2ca4dc12d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f158624c15b8f59007b4b2d5a989cd0de8e9a25efa803ced064b1b07fed5833c",
+            "lineage_id": "review-379797b7cdc29594",
+            "authority_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+            "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+            "base_tree": "644cf7649fc608b343bd62fd1319138484b526ad",
+            "candidate_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+            "changed_path_manifest_sha256": "sha256:df619ce10f44bad9c1c5b703ffb3f653a3bc18d8456b490f11f09129675af7df",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f158624c15b8f59007b4b2d5a989cd0de8e9a25efa803ced064b1b07fed5833c",
+            "raw_sha256": "sha256:6fc8734fa6238bd02e6daadab2ebcf01c3dddb39422709fdc91cd804df4a9496",
+            "canonical_sha256": "sha256:07c8122a1b186b5a48a6526b375256d019ca3d870be032236f3251d0a6959558",
+            "result_hash": "sha256:6d4d1c0770b4e04ace69d1a78dd0b51c596de06c383d84692ff15ed2ca4dc12d",
+            "candidate_causal_finding_ids": [
+              "R4-multi-change-deny-unrecoverable"
+            ]
+          },
+          "result": {
+            "subject_hash": "sha256:f158624c15b8f59007b4b2d5a989cd0de8e9a25efa803ced064b1b07fed5833c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/main.go",
+                "engine/cmd/main_test.go",
+                "engine/reviewreceipt/hook.go",
+                "engine/reviewreceipt/hook_test.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/reviewreceipt_test.go",
+                "engine/settings/settings.go",
+                "engine/settings/settings_test.go",
+                "openspec/changes/pi-package-hardening/apply-progress.md",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-multi-change-deny-unrecoverable",
+                "lens": "resilience",
+                "location": "engine/reviewreceipt/hook.go:58-63",
+                "severity": "CRITICAL",
+                "claim": "The fail-closed hook's deny on more than one active change can never be cleared by the remediation it prints. With two or more active change directories, RunHook calls DetectActiveChange and returns exit 2 unconditionally. It never checks whether the approved receipts were already persisted. The error text in MultipleActiveChangesError tells the operator to run `review-receipt capture --change \u003cname\u003e` before acknowledging. Doing that captures the receipts, but the retried `gentle-ai review acknowledge-approved` Bash call hits the same hook, detects the same multiple active changes, and is denied again. In any repository with two or more in-flight SDD changes, acknowledge-approved is therefore blocked on every retry. The only ways out are uninstalling the hook, deleting or archiving another change's marker files, or rewording the command so the substring marker does not match, and each of these defeats the gate. There is no fix-forward path.",
+                "proof_refs": [
+                  "engine/reviewreceipt/hook.go:58-63",
+                  "engine/reviewreceipt/reviewreceipt.go:344",
+                  "engine/reviewreceipt/hook_test.go:39-52",
+                  "engine/settings/settings.go:644-660"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-capture-conflict-permanent-deny",
+                "lens": "resilience",
+                "location": "engine/reviewreceipt/reviewreceipt.go:212-217",
+                "severity": "WARNING",
+                "claim": "Idempotency, and therefore retry safety, holds only while every approved source file in the store stays byte-identical. The hook relies on that when it treats a false-positive marker match as harmless. writeReceiptFile rejects a destination that exists with different content. Capture scans every lineage in both stores and returns on the first write error, which aborts capture of the remaining lineages, including the one actually being acknowledged. RunHook turns that error into exit 2. The captured review-state.json carries mutable revision and generation fields. If a still-approved lineage's state file is rewritten after an earlier capture, the next matching Bash call is denied, and so is every later one. That earlier capture could come from a failed acknowledge attempt, an echo or log line containing the marker, or a re-approval at a later generation under the same lineage id. A conflict in an unrelated stale lineage blocks too. The deny message names no remediation, and the `capture --change` CLI fails the same way, so recovery requires manually deleting files under review-receipts/.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:161-172",
+                  "engine/reviewreceipt/reviewreceipt.go:212-217",
+                  "engine/reviewreceipt/hook.go:14-18",
+                  "engine/reviewreceipt/hook.go:70-72",
+                  "engine/reviewreceipt/reviewreceipt_test.go:120-129"
+                ]
+              },
+              {
+                "id": "R4-silent-allow-no-signal",
+                "lens": "resilience",
+                "location": "engine/reviewreceipt/hook.go:66-68",
+                "severity": "SUGGESTION",
+                "claim": "The hook allows a matched acknowledge-approved call silently in two cases: when no active change is detected, and when stdin is malformed JSON (hook.go lines 51-53). In both cases it returns exit 0 with an empty message. An approved receipt that is burned without capture, which is exactly the R-008 failure this change exists to prevent, then leaves no stderr trace. A misdetection would go unnoticed until the anchor gate later finds no receipt, for example a change directory that has not yet gained a tasks.md, design.md, proposal.md or entry.json marker. A non-blocking warning on stderr when the marker matched but nothing was captured would make this observable without changing allow semantics.",
+                "proof_refs": [
+                  "engine/reviewreceipt/hook.go:51-53",
+                  "engine/reviewreceipt/hook.go:66-68",
+                  "engine/reviewreceipt/reviewreceipt.go:78"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 12 manifest paths from the provided patch sections only; no working tree, index or HEAD content was read.",
+              "engine/reviewreceipt/hook.go:58-63 returns exit 2 on MultipleActiveChangesError before any check of already-captured receipts. engine/reviewreceipt/reviewreceipt.go:344 tells the operator to run capture --change and then acknowledge, but that retry re-enters the same unconditional deny.",
+              "engine/settings/settings.go:644-660 builds the PreToolUse/Bash command without `|| true`, so the binary's exit 2 propagates as a Claude Code deny. The deviation is intentional and documented in the same doc comment.",
+              "engine/reviewreceipt/reviewreceipt.go:135-175: Capture iterates every lineage directory in both stores and returns on the first writeReceiptFile error. engine/reviewreceipt/reviewreceipt.go:212-217 refuses any differing existing destination, so one conflicting lineage blocks capture of all others.",
+              "engine/reviewreceipt/reviewreceipt_test.go:120-129 shows the review-state.json fixture carries revision and generation fields, which indicates the captured source is a mutable lifecycle document rather than an immutable terminal receipt.",
+              "engine/cmd/main.go status check checkReviewReceiptHook degrades to WARN, not FAIL, when the entry is absent, consistent with the SessionEnd precedent. No resilience issue was found there.",
+              "engine/cmd/main.go runReviewReceiptHook fails closed on a stdin read error (exit 2) and on a missing --cwd. The installed wrapper always supplies --cwd via CLAUDE_PROJECT_DIR or PWD, so non-matching Bash calls take the cheap unmarshal-and-return path.",
+              "The openspec documentation changes (apply-progress.md, entry.json, spec.md, tasks.md) introduce no runtime behavior."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+        "capture_phase_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+        "artifact_digest": "sha256:b8c46adadc8b84f076de9a0f6abb851b0e0679eb52e8fe411c6961156306910e",
+        "result_hash": "sha256:32a61c5229b428d15ad352d6e213ccbc5b64d995969511c3675229bd903068e0",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:0026f8ac68610e64e1e2372d9b3f7f3bcd6d97478fd3536d39f84b62c3009d0a",
+            "lineage_id": "review-379797b7cdc29594",
+            "authority_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+            "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+            "base_tree": "644cf7649fc608b343bd62fd1319138484b526ad",
+            "candidate_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+            "changed_path_manifest_sha256": "sha256:df619ce10f44bad9c1c5b703ffb3f653a3bc18d8456b490f11f09129675af7df",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:0026f8ac68610e64e1e2372d9b3f7f3bcd6d97478fd3536d39f84b62c3009d0a",
+            "raw_sha256": "sha256:0068e0b900fe9830132abf19e2dea41932ad4f4ebb926fb44ea30c2ec89c20a8",
+            "canonical_sha256": "sha256:daa32404733dc1bf017a2561679f0e868a841de9262bce9be4891b01682a1c8f",
+            "result_hash": "sha256:32a61c5229b428d15ad352d6e213ccbc5b64d995969511c3675229bd903068e0",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:0026f8ac68610e64e1e2372d9b3f7f3bcd6d97478fd3536d39f84b62c3009d0a",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/main.go",
+                "engine/cmd/main_test.go",
+                "engine/reviewreceipt/hook.go",
+                "engine/reviewreceipt/hook_test.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/reviewreceipt_test.go",
+                "engine/settings/settings.go",
+                "engine/settings/settings_test.go",
+                "openspec/changes/pi-package-hardening/apply-progress.md",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/settings/settings.go:637-643",
+                "severity": "WARNING",
+                "claim": "The fail-closed rationale says the hook blocks the Bash call via 'PreToolUse deny on non-zero exit'. Claude Code PreToolUse hooks only block on exit 2. Any other non-zero exit is a non-blocking error that lets the tool call proceed. Examples are the exit-1 paths in the review-receipt verb dispatcher, or a shell 126/127 when the binary is found but cannot execute. The comment misstates the security contract. A maintainer who trusts it could add an exit-1 error path to the hook and silently turn fail-closed into fail-open. The comment should say that only exit 2 denies.",
+                "proof_refs": [
+                  "engine/settings/settings.go:639",
+                  "engine/cmd/main.go:603-614",
+                  "engine/reviewreceipt/hook.go:41-44"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/reviewreceipt/hook.go:46-53",
+                "severity": "WARNING",
+                "claim": "The fail-closed story contradicts itself across two adjacent layers. The CLI wrapper denies (exit 2) when stdin is unreadable and explicitly refuses to 'silently allow an acknowledgement this hook could not even inspect'. RunHook does the opposite for readable but malformed or truncated JSON: it returns allow (0) with a rationale that a hook that cannot see a command is not looking at an acknowledgement. Both call themselves fail-closed. A maintainer cannot tell which policy is intended, and the allow path is exactly the uninspected-acknowledgement case the wrapper claims to prevent. The two layers should agree on one policy, and the doc should state it.",
+                "proof_refs": [
+                  "engine/cmd/main.go:681-688",
+                  "engine/reviewreceipt/hook.go:51-53"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-003",
+                "lens": "readability",
+                "location": "openspec/changes/pi-package-hardening/tasks.md:57-58",
+                "severity": "WARNING",
+                "claim": "Tasks 3.5 and 3.6 are now checked off, but their text still describes something other than what landed. Task 3.5 names the overlay shell wrapper script and a 'gentle-ai-overlay review-receipt hook' command. The hook is actually implemented as the 'engine review-receipt hook' subcommand, and the apply record says that shell script was not modified. Task 3.6 says 'third settings identity', but LabdrianReviewReceiptIdentity is the fourth owned family. Checked tasks that describe the wrong location and identity count mislead anyone tracing R-008 delivery.",
+                "proof_refs": [
+                  "engine/cmd/main.go:674-695",
+                  "engine/settings/settings.go:125-140",
+                  "openspec/changes/pi-package-hardening/apply-progress.md:205"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-004",
+                "lens": "readability",
+                "location": "openspec/changes/pi-package-hardening/apply-progress.md:194-198",
+                "severity": "WARNING",
+                "claim": "The Slice 3 record contradicts the rest of this same candidate. It says Phase 3 is NOT committed, that the tasks checkboxes are intentionally left unchecked, and (at lines 237-243) that the work is blocked on the budget pending a size exception. In the same candidate, all 3.1-3.7 checkboxes are flipped to checked and entry.json records a granted exception covering review-receipt-capture. Slice 2 received a reconciling note for the same situation; Slice 3 did not. The figures are also stale or inconsistent: '6 tests incl. 2 real-git fixtures' predates the amendment's added tests, and entry.json's 1278 lines for slice 3 does not match the record's 960 plus 261. The change context no longer tells a reader what state this slice is in.",
+                "proof_refs": [
+                  "openspec/changes/pi-package-hardening/apply-progress.md:187",
+                  "openspec/changes/pi-package-hardening/apply-progress.md:217",
+                  "openspec/changes/pi-package-hardening/apply-progress.md:237-243",
+                  "openspec/changes/pi-package-hardening/tasks.md:53-59",
+                  "openspec/changes/pi-package-hardening/entry.json:66",
+                  "openspec/changes/pi-package-hardening/entry.json:68"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-005",
+                "lens": "readability",
+                "location": "engine/cmd/main.go:642-668",
+                "severity": "WARNING",
+                "claim": "runReviewReceiptCapture calls os.Exit(1) on every error path, yet the new CLI tests invoke it directly in-process with no testable core. Other subcommands in the test file do have a core, such as runSyncTriggerCore. Any regression on these paths terminates the whole cmd test binary instead of producing an attributable test failure. Examples are a DetectActiveChange read error, a Capture error such as a git rev-parse failure, or a differing destination. The error branches are also untestable.",
+                "proof_refs": [
+                  "engine/cmd/main_test.go:3470",
+                  "engine/cmd/main_test.go:3509"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-006",
+                "lens": "readability",
+                "location": "engine/reviewreceipt/reviewreceipt.go:116-119",
+                "severity": "SUGGESTION",
+                "claim": "Capture's doc comment still says every approved receipt is persisted into the lineage-id .json destination. After the gentle-ai 2.7.0 amendment, the lifecycle state shape is written to a distinct lineage-id .review-state.json destination, and one lineage can yield two Captured entries. The approvedState doc also still says it governs only terminal_state, though it now also gates the nested state field. The package doc is correct, but these function-level docs are stale.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:50-54",
+                  "engine/reviewreceipt/reviewreceipt.go:161-172"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-007",
+                "lens": "readability",
+                "location": "engine/reviewreceipt/reviewreceipt.go:182",
+                "severity": "SUGGESTION",
+                "claim": "ApprovedSummary returns six positional values, four of them same-typed strings. Two of those, finalCandidateTree and baseTree, are both tree hashes and silently swappable at a call site. This API exists specifically to feed the slice-4 approved_tree anchor gate, where a transposed return would verify the wrong tree without a compile error. A named struct result would make that misuse visible.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt_test.go:210-217"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-008",
+                "lens": "readability",
+                "location": "engine/reviewreceipt/hook.go:58-65",
+                "severity": "SUGGESTION",
+                "claim": "The errors.As branch is redundant: it returns multi.Error(), which equals err.Error() for the unwrapped error DetectActiveChange returns. The generic branch prefixes 'review-receipt:' onto errors that already carry the 'reviewreceipt:' prefix. The return-contract doc (lines 41-44) lists deny only for multiple changes or a Capture failure, but this branch also denies on any openspec changes-directory read error. That deny path is undocumented.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:120-122",
+                  "engine/reviewreceipt/hook.go:41-44"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-009",
+                "lens": "readability",
+                "location": "engine/cmd/main.go:1616-1618",
+                "severity": "SUGGESTION",
+                "claim": "The status-check comment calls a machine missing the entry 'pre-#3a'. No '#3a' identifier exists anywhere in the change: the tasks use 3.1-3.7 and the slice is 'Slice 3 / PR 3'. This is an unexplained reference in the rationale for why the check is only degraded.",
+                "proof_refs": [
+                  "openspec/changes/pi-package-hardening/tasks.md:53-59"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-010",
+                "lens": "readability",
+                "location": "engine/cmd/main.go:1766-1776",
+                "severity": "SUGGESTION",
+                "claim": "checkReviewReceiptHook uses a different identity rule from settings.Merger for the same entry. Status requires matcher == Bash, while isReviewReceiptEntry and HasLabdrianReviewReceiptHook match on binary plus token regardless of matcher. The two definitions can disagree about whether the hook is installed. The WARN note also mentions only the binary, not the review-receipt token, so a Bash entry that references the binary but is not the review-receipt hook yields a misleading message.",
+                "proof_refs": [
+                  "engine/settings/settings.go:307-312",
+                  "engine/settings/settings.go:125-128"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-011",
+                "lens": "readability",
+                "location": "engine/settings/settings_test.go:1177-1179",
+                "severity": "SUGGESTION",
+                "claim": "The test doc now describes a four-family requirement, and the body's final assertion is about the review-receipt family. The unchanged function name still reads RequiresSyncTriggerFamily, so the name no longer describes what the test pins.",
+                "proof_refs": [
+                  "engine/settings/settings_test.go:1186-1194"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-012",
+                "lens": "readability",
+                "location": "engine/cmd/main_test.go:3485-3507",
+                "severity": "SUGGESTION",
+                "claim": "The CLI end-to-end test re-implements the git fixture and the transaction-store layout inline instead of sharing the reviewreceipt test helpers. It also discards the error returns of every os.WriteFile and os.MkdirAll call. A fixture setup failure would surface later as a misleading 'expected receipt captured' failure rather than at its cause.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt_test.go:18-41"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all 12 manifest paths in full from the provided patch sections only; no working tree, index, or commands were used.",
+              "Line numbers for modified files were derived from hunk headers: engine/cmd/main.go hunks at 593, 1613 and 1748; engine/cmd/main_test.go hunk at 3452; engine/settings/settings.go hunk at 625; engine/settings/settings_test.go hunk at 1149; openspec/changes/pi-package-hardening/tasks.md hunk at 49; openspec/changes/pi-package-hardening/apply-progress.md hunk at 183; openspec/changes/pi-package-hardening/entry.json hunk at 62.",
+              "All findings concern lines this candidate added; no BLOCKER or CRITICAL readability defects were identified.",
+              "The fail-closed hook semantics are the main maintainability risk: comments in engine/settings/settings.go and the input-handling policy in engine/reviewreceipt/hook.go versus engine/cmd/main.go misdescribe or contradict each other.",
+              "The spec.md rewording in openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md is consistent with the dual-shape implementation in engine/reviewreceipt/reviewreceipt.go; no finding there."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+        "capture_phase_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+        "artifact_digest": "sha256:c1a6315de109cac5180b5142f041a77ef0ea7951035c581bf226e7a5e84040a6",
+        "result_hash": "sha256:80e71c4973dab684ae7372228a597216d30000e45707b4bc41878b87f6dad373",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:111beb2f9256cb82c7ab638dddc19337e0401767ab18c02b1d13d82dc5eb05f2",
+            "lineage_id": "review-379797b7cdc29594",
+            "authority_revision": "sha256:0b48fb455c73bdef4aac207fea01ca04d98e83c93f008c8c3b901da556903f83",
+            "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+            "base_tree": "644cf7649fc608b343bd62fd1319138484b526ad",
+            "candidate_tree": "e0163e32d3b2f70a88372f2ca201606608d4fa32",
+            "changed_path_manifest_sha256": "sha256:df619ce10f44bad9c1c5b703ffb3f653a3bc18d8456b490f11f09129675af7df",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:111beb2f9256cb82c7ab638dddc19337e0401767ab18c02b1d13d82dc5eb05f2",
+            "raw_sha256": "sha256:4ebaefeb11f1a1224c551adffafc4da5b9a6d8c18ddd579efeffb2a74147a727",
+            "canonical_sha256": "sha256:f7ae47f0135c039da37e4b01c7e9d4f468f31b3b5fc6fc5d05515ba577c54731",
+            "result_hash": "sha256:80e71c4973dab684ae7372228a597216d30000e45707b4bc41878b87f6dad373",
+            "candidate_causal_finding_ids": [
+              "R3-multi-change-deny-loop"
+            ]
+          },
+          "result": {
+            "subject_hash": "sha256:111beb2f9256cb82c7ab638dddc19337e0401767ab18c02b1d13d82dc5eb05f2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/cmd/main.go",
+                "engine/cmd/main_test.go",
+                "engine/reviewreceipt/hook.go",
+                "engine/reviewreceipt/hook_test.go",
+                "engine/reviewreceipt/reviewreceipt.go",
+                "engine/reviewreceipt/reviewreceipt_test.go",
+                "engine/settings/settings.go",
+                "engine/settings/settings_test.go",
+                "openspec/changes/pi-package-hardening/apply-progress.md",
+                "openspec/changes/pi-package-hardening/entry.json",
+                "openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md",
+                "openspec/changes/pi-package-hardening/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-multi-change-deny-loop",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/hook.go:58-65",
+                "severity": "CRITICAL",
+                "claim": "When more than one active change exists, RunHook denies every acknowledge-approved Bash call, and following the remedy its message names cannot clear the denial. The message tells the user to run review-receipt capture --change \u003cname\u003e before acknowledging. RunHook never checks whether receipts were already captured, reads no --change or override from the command or environment, and re-runs DetectActiveChange on every invocation. It returns exit 2 again after a successful explicit capture. In any repository with two or more marker-bearing change directories, acknowledge-approved through the agent's Bash tool is blocked for good. The only escape is editing or archiving unrelated changes. The deny test asserts only the exit code and message, never that the documented remedy unblocks the acknowledgement.",
+                "proof_refs": [
+                  "engine/reviewreceipt/hook.go:58-65",
+                  "engine/reviewreceipt/reviewreceipt.go:313-321",
+                  "engine/reviewreceipt/reviewreceipt.go:342-347",
+                  "engine/reviewreceipt/hook_test.go:39-52",
+                  "engine/cmd/main.go:649-667"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-allow-without-capture",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/hook.go:66-73",
+                "severity": "WARNING",
+                "claim": "The fail-closed hook allows the acknowledgement (exit 0) without proving any receipt was persisted, in three cases. First, when no active change is detected. Second, when Capture succeeds with zero captured artifacts. Third, when the hook is rooted at the wrong directory: its --cwd defaults to CLAUDE_PROJECT_DIR or PWD, which can be a subdirectory or a different worktree than the one the acknowledge command targets. In each case the approved artifact is burned uncaptured, which is exactly the failure R-008 exists to prevent. The candidate's own doc calls a false negative the harmful case. The captured slice is never checked against the lineage being acknowledged.",
+                "proof_refs": [
+                  "engine/reviewreceipt/hook.go:66-73",
+                  "engine/reviewreceipt/reviewreceipt.go:293-315",
+                  "engine/reviewreceipt/reviewreceipt.go:130-175",
+                  "engine/settings/settings.go:645-648"
+                ]
+              },
+              {
+                "id": "R3-mutable-state-poisons-capture",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/reviewreceipt.go:212-220",
+                "severity": "WARNING",
+                "claim": "The lifecycle state file is captured byte-for-byte and treated as immutable, but that file is mutable. It carries revision and generation fields that the reviewState struct ignores. If gentle-ai rewrites an approved lineage's state (revision bump, re-approval) after a first capture, the next Capture hits a different-content conflict and returns an error. Capture scans every lineage in the store on every marker match. One stale, conflicting lineage therefore makes RunHook deny every later acknowledge-approved, including for unrelated lineages, until someone manually deletes the captured file. No test covers a changed-but-still-approved state file.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:161-171",
+                  "engine/reviewreceipt/reviewreceipt.go:101-114",
+                  "engine/reviewreceipt/hook.go:70-72",
+                  "engine/reviewreceipt/reviewreceipt_test.go:233-267"
+                ]
+              },
+              {
+                "id": "R3-store-wide-misattribution",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/reviewreceipt.go:135-175",
+                "severity": "WARNING",
+                "claim": "Capture copies every approved lineage found in the worktree-private and shared transaction stores into the single detected change. Receipts are not scoped to the lineage being acknowledged or to the change that produced them. Stale approved-but-unacknowledged lineages, and lineages from other linked worktrees in the shared store, get attached to whichever change is active. This gives the downstream approved_tree anchor gate wrong or ambiguous evidence. The dual-store resolution this depends on has no linked-worktree test; every fixture writes only into a plain repository's git dir.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:254-268",
+                  "engine/reviewreceipt/reviewreceipt.go:143-172",
+                  "engine/reviewreceipt/reviewreceipt_test.go:44-64"
+                ]
+              },
+              {
+                "id": "R3-lineage-id-unsanitized-filename",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/reviewreceipt.go:151-166",
+                "severity": "WARNING",
+                "claim": "The destination filename comes straight from the lineage_id inside the parsed JSON. It is never validated against the lineage directory name, and path separators or parent-directory segments are not rejected. A malformed or hostile artifact can make writeReceiptFile write outside the change's review-receipts directory, or collide across lineages. The --change CLI value is used unvalidated in the same way. No test covers invalid lineage ids.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:151-158",
+                  "engine/reviewreceipt/reviewreceipt.go:163-170",
+                  "engine/reviewreceipt/reviewreceipt.go:130",
+                  "engine/cmd/main.go:619-635"
+                ]
+              },
+              {
+                "id": "R3-marker-false-negatives",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/hook.go:49-56",
+                "severity": "WARNING",
+                "claim": "Recognition relies on one exact substring, and malformed hook JSON silently allows. Any acknowledge invocation that is not byte-identical to the marker skips capture entirely: global flags between gentle-ai and review, repeated whitespace, a wrapper script or alias, or a variable-expanded binary name. Unparsable stdin is also allowed rather than denied. Both are fail-open paths in a hook documented as fail-closed, and no test covers either.",
+                "proof_refs": [
+                  "engine/reviewreceipt/hook.go:19",
+                  "engine/reviewreceipt/hook.go:51-56",
+                  "engine/reviewreceipt/hook_test.go:74-89"
+                ]
+              },
+              {
+                "id": "R3-silent-skip-unreadable-artifact",
+                "lens": "reliability",
+                "location": "engine/reviewreceipt/reviewreceipt.go:149-164",
+                "severity": "SUGGESTION",
+                "claim": "Capture silently skips any lineage artifact whose read fails for a reason other than not-exist (for example, permission denied), or whose JSON fails to parse (for example, a partially written state file during a concurrent gentle-ai write). The hook then allows the acknowledgement. Consider surfacing read and parse errors on existing artifact files as capture errors so the hook actually fails closed.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:149-152",
+                  "engine/reviewreceipt/reviewreceipt.go:161-164",
+                  "engine/reviewreceipt/hook.go:70-72"
+                ]
+              },
+              {
+                "id": "R3-fail-closed-wiring-untested",
+                "lens": "reliability",
+                "location": "engine/settings/settings.go:644-656",
+                "severity": "SUGGESTION",
+                "claim": "The central fail-closed deviation has no externally observable test. Nothing proves that the shell command exits 0 when the binary is absent and propagates exit 2 unmasked when it is present. The hook CLI verb, including its stdin reading and os.Exit wiring, is never exercised. RunHook's capture-error deny branch is untested. Tests only compare the command string's identity tokens and call RunHook directly.",
+                "proof_refs": [
+                  "engine/settings/settings.go:645-648",
+                  "engine/cmd/main.go:674-695",
+                  "engine/reviewreceipt/hook.go:70-72",
+                  "engine/settings/settings_test.go:1152-1174"
+                ]
+              },
+              {
+                "id": "R3-cli-test-unchecked-setup",
+                "lens": "reliability",
+                "location": "engine/cmd/main_test.go:3496-3509",
+                "severity": "SUGGESTION",
+                "claim": "The CLI end-to-end test ignores the errors returned by os.WriteFile and os.MkdirAll during fixture setup. It also calls runReviewReceiptCapture directly, and that function calls os.Exit(1) on any error. A capture regression therefore kills the whole cmd test binary instead of producing a localized test failure. Separating a testable core that returns an exit code, as with the sync-trigger core, would make failures diagnosable.",
+                "proof_refs": [
+                  "engine/cmd/main_test.go:3496-3509",
+                  "engine/cmd/main.go:662-666"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 12 manifest paths in full from the supplied patch sections, without reading any other file.",
+              "RunHook's deny branch for multiple active changes has no capture-state check, so the remediation its message names cannot clear the exit-2 denial; see engine/reviewreceipt/hook.go:58-65 and engine/reviewreceipt/reviewreceipt.go:342-347.",
+              "The hook allows on zero active changes and on a successful zero-artifact capture, and it treats malformed input as a pass-through; see engine/reviewreceipt/hook.go:49-73.",
+              "writeReceiptFile refuses to replace a different existing file, while Capture scans the whole store on every marker match, so one conflicting lineage blocks all later acknowledgements; see engine/reviewreceipt/reviewreceipt.go:212-220.",
+              "Destination filenames are built from unvalidated lineage_id values; see engine/reviewreceipt/reviewreceipt.go:151-166.",
+              "The settings merge, uninstall and status wiring for the fourth hook family is consistent and covered by count and lifecycle tests; see engine/settings/settings_test.go:1152-1195 and engine/cmd/main_test.go:1112-1153.",
+              "Documentation-only changes in openspec/changes/pi-package-hardening/tasks.md, openspec/changes/pi-package-hardening/entry.json, openspec/changes/pi-package-hardening/apply-progress.md and openspec/changes/pi-package-hardening/specs/review-receipt-capture/spec.md carry no runtime behavior for this lens."
+            ]
+          }
+        }
+      },
+      {
+        "role": "targeted_validator",
+        "target_identity": "sha256:2f99457d4032a3fabef93b7e347c41d4370db5f0dd99e4cecfedd96234a7dc67",
+        "capture_phase_revision": "sha256:2a74f1e19b5884584ebfe76f46fd78c04b43d59385318b750b8ea0b467807881",
+        "request_hash": "sha256:959496b4d08fa4577afaa91bcb0bf0d84c3f7bf1950fd8b12382e321449bd058",
+        "artifact_digest": "sha256:80c5d100ccf4434f1da62c23dad26bb983532e67bc969773de928b5e6678e832",
+        "value": {
+          "outcome": "passed",
+          "evidence": {
+            "targeted_validation_request_hash": "sha256:959496b4d08fa4577afaa91bcb0bf0d84c3f7bf1950fd8b12382e321449bd058",
+            "correction_target_identity": "sha256:2f99457d4032a3fabef93b7e347c41d4370db5f0dd99e4cecfedd96234a7dc67",
+            "original_criteria": {
+              "passed": true,
+              "evidence": [
+                "R3-multi-change-deny-loop and R4-multi-change-deny-unrecoverable: the old hook returned exit 2 every time DetectActiveChange yielded MultipleActiveChangesError. In the corrected engine/reviewreceipt/hook.go, RunHook first calls AllSurvivingApprovedPersisted(repoRoot, multi.Changes) on that branch. It returns (0, \"\") when every surviving approved receipt is already persisted, and multi.Error() only while one is still unpersisted. The documented remedy `review-receipt capture --change \u003cname\u003e` now clears the denial on a retried acknowledge-approved, so a fix-forward path exists.",
+                "engine/reviewreceipt/reviewreceipt.go adds AllSurvivingApprovedPersisted. It resolves transactionStores and lists every approved receipt through scanSurvivingApproved, covering both the receipt shape (receiptFileName, schema receiptSchema, TerminalState approved) and the state shape (stateFileName, State.State approved), deduped by lineage. Each receipt must exist byte-for-byte at openspec/changes/\u003cchange\u003e/review-receipts/\u003cFileName\u003e under at least one active change. It uses isPersistedByteForByte, the same idempotency check writeReceiptFile applies when Capture persists, so the check agrees with what Capture writes.",
+                "engine/reviewreceipt/hook_test.go adds TestHook_MultiChange_PassesAfterExplicitCapture. It seeds two active changes and one approved receipt, asserts the first RunHook denies with exit 2, runs Capture(repo, \"change-a\"), and asserts the retried RunHook returns exit 0. This is the remedy-unblocks-acknowledgement assertion the findings said was missing.",
+                "The fail-closed intent is kept. TestHook_MultiChange_DeniesWhenAnyUncaptured captures two lineages, removes one persisted file, and asserts exit 2 with a message naming `review-receipt capture --change \u003cname\u003e`. The existing TestHook_Deny_MultipleActiveChanges still asserts a deny before any capture."
+              ]
+            },
+            "correction_regression": {
+              "passed": true,
+              "evidence": [
+                "writeReceiptFile now delegates to isPersistedByteForByte, and its behavior is unchanged. Identical existing content is still a no-op. Differing content still errors with 'already exists with different content'. A read error other than not-exist is still wrapped as 'reviewreceipt: read \u003cdest\u003e'. A missing file still proceeds to MkdirAll and the atomic write.",
+                "The single-active-change path and the non-multi error path in RunHook are unchanged. The new branch runs only when errors.As matches MultipleActiveChangesError. If AllSurvivingApprovedPersisted itself fails, the hook still denies with exit 2 ('review-receipt: \u003cerr\u003e'), so it stays fail-closed.",
+                "The allow condition requires a byte-for-byte match against each surviving approved receipt's current transaction-store content. A stale or divergent persisted copy therefore does not satisfy it, and the gate cannot be bypassed by an unrelated file.",
+                "The patch hunks for all three correction paths add no new exported surface beyond AllSurvivingApprovedPersisted. They change no other callers. Reading them shows no behavior change outside the multi-active-change branch."
+              ]
+            },
+            "follow_ups": [
+              {
+                "observation": "scanSurvivingApproved re-implements Capture's receipt-selection and dedup rules instead of sharing them. If the two drift, the hook could loop again (scan stricter than Capture) or allow early (scan looser than Capture). The new tests cover only the receipt shape; the state-shape (stateFileName/stateSuffix) path of the multi-change allow has no test. Consider having Capture and the persisted check use one shared selector, and add a state-shape multi-change test.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:178-252",
+                  "engine/reviewreceipt/hook_test.go:55-101"
+                ]
+              },
+              {
+                "observation": "With more than one active change and zero surviving approved receipts, AllSurvivingApprovedPersisted returns true and the hook now allows. The old code denied in this case. This matches the documented 'zero surviving receipts is true' contract and is presumably the same as the single-change capture-nothing path. It would be worth an explicit test so the intended behavior is pinned.",
+                "proof_refs": [
+                  "engine/reviewreceipt/reviewreceipt.go:225-252",
+                  "engine/reviewreceipt/hook.go:62-74"
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c4f7b55e2de478218422ccbe8f40b8b2e7e5b5644a78463b8cc95deb910f7f74",
+    "initial_atomic_start": {
+      "lineage_id": "review-379797b7cdc29594",
+      "worktree_identity": "sha256:9eeefa5e3cf957da734c010b8508978d0c509a0c0c1a09a8635e788c8bcb31cc",
+      "target_identity": "sha256:d733e92dae9d8816bb57907c048a1c7398955ad738d440c44c1bed29bebbf626",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "644cf7649fc608b343bd62fd1319138484b526ad",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1320,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

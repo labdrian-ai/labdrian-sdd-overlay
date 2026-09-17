@@ -74,6 +74,9 @@ type Report struct {
 	Date    string
 	Outcome AnchorOutcome
 	Anchor  *RecordedAnchor
+	// Override is set when the receipt requirement (R-011) was satisfied by
+	// a recorded, disclosed owner override rather than a persisted receipt.
+	Override *receiptOverride
 }
 
 // ScanArchive walks every archived change's archive-report.md, keeps the ones
@@ -218,6 +221,41 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 	claimsRejected := claimsOutcome(section, rejectedClaimPattern)
 	claimsVerified := claimsOutcome(section, verifiedClaimPattern)
 
+	// R-009/R-011: on or after ReceiptConventionDate, approved_tree is
+	// sourced SOLELY from a persisted review receipt -- never from prose --
+	// and archive blocks outright when neither a receipt nor a recorded,
+	// disclosed owner override exists.
+	if requiresReceipt(date) {
+		receiptsDir := receiptsDirFor(repoRoot, relPath)
+		receiptTree, _, foundReceipt, receiptErr := loadApprovedTreeFromReceipts(receiptsDir)
+		if receiptErr != nil {
+			return report, []Finding{{relPath, fmt.Sprintf("reading persisted review receipt: %v", receiptErr)}}
+		}
+		if foundReceipt {
+			anchor.ApprovedTree = receiptTree
+		} else {
+			override, hasOverride, overrideErr := loadReceiptOverride(receiptsDir)
+			if overrideErr != nil {
+				return report, []Finding{{relPath, fmt.Sprintf("reading recorded owner override: %v", overrideErr)}}
+			}
+			if !hasOverride || !strings.Contains(strings.ToLower(section), "override") {
+				return report, []Finding{{relPath, fmt.Sprintf(
+					"archived %s, on or after the %s review-receipt convention, records landing commit `%s` but no "+
+						"persisted review-receipts/<lineage>.json or <lineage>.review-state.json exists for this "+
+						"change: no verified receipt. Capture the review receipt before archiving, or record an "+
+						"explicit owner override at %s/override.json AND state \"override\" in this section",
+					date, ReceiptConventionDate, commit,
+					filepath.ToSlash(filepath.Join(filepath.Dir(relPath), "review-receipts")))}}
+			}
+			// A recorded, disclosed override forces the self-asserted branch
+			// below: t1 still resolves from landing_commit alone, but never
+			// as verified -- there is no independent authority to check it
+			// against, receipt or otherwise.
+			anchor.ApprovedTree = ""
+			report.Override = &override
+		}
+	}
+
 	_, outcome, err := ResolveT1(repoRoot, anchor)
 	if err != nil {
 		return report, []Finding{{relPath, fmt.Sprintf(
@@ -236,7 +274,7 @@ func checkReport(repoRoot, relPath, date, body string) (Report, []Finding) {
 		return report, []Finding{{relPath, fmt.Sprintf(
 			"records landing commit `%s` and tree `%s`, but `git show -s --format=%%T %s` disagrees. "+
 				"A mis-recorded anchor is rejected, not trusted: omit t1 and disclose the mismatch",
-			commit, tree, commit)}}
+			commit, anchor.ApprovedTree, commit)}}
 	case AnchorSelfAsserted:
 		// A tree the gate cannot read is UNKNOWN, not absent, and accusing a
 		// report of fabricating an assurance on evidence the gate declined to

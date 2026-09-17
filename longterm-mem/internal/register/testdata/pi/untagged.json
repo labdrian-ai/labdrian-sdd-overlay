@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "longterm-mem": {
+      "type": "stdio",
+      "command": "/some/hand/written/path"
+    },
+    "other-tool": {
+      "type": "stdio",
+      "command": "/usr/local/bin/other-tool"
+    }
+  }
+}

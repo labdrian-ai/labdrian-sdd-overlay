@@ -30,12 +30,53 @@ func TestGenerate_AllFilesEmitted(t *testing.T) {
 
 	agentPath := filepath.Join(dir, "agents", "GADU.md")
 	opencodeAgentPath := filepath.Join(dir, "opencode", "agents", "GADU.md")
+	piAgentPath := filepath.Join(dir, "pi", "agents", "GADU.md")
 	skillPath := filepath.Join(dir, "skills", "gadu-operator", "SKILL.md")
 
-	for _, p := range []string{agentPath, opencodeAgentPath, skillPath} {
+	for _, p := range []string{agentPath, opencodeAgentPath, piAgentPath, skillPath} {
 		if _, err := os.Stat(p); err != nil {
 			t.Errorf("expected file to exist: %s — %v", p, err)
 		}
+	}
+}
+
+// TestGenerate_WritesPiAgentVariant verifies pi/agents/GADU.md carries the
+// pi-claude-cli model id, stays under the bridge-safe size budget, mentions
+// the gadu-operator skill, and carries the generated-file header.
+func TestGenerate_WritesPiAgentVariant(t *testing.T) {
+	dir := t.TempDir()
+	if err := gadu.Generate(dir); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	path := filepath.Join(dir, "pi", "agents", "GADU.md")
+	content, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read pi agent: %v", err)
+	}
+	s := string(content)
+
+	fm := extractFrontmatter(s)
+	if fm["model"] != gadu.PiAgentModel {
+		t.Errorf("pi agent frontmatter model = %q, want %q", fm["model"], gadu.PiAgentModel)
+	}
+	if fm["name"] != "GADU" {
+		t.Errorf("pi agent frontmatter name = %q, want GADU", fm["name"])
+	}
+	if fm["tools"] != "'*'" {
+		t.Errorf("pi agent frontmatter tools = %q, want '*'", fm["tools"])
+	}
+	if fm["description"] == "" {
+		t.Error("pi agent frontmatter description must be non-empty")
+	}
+	if !strings.Contains(s, "GENERATED — DO NOT EDIT") {
+		t.Error("pi agent file must contain the generated-file header")
+	}
+	if !strings.Contains(s, "gadu-operator") {
+		t.Error("pi agent file must instruct loading the gadu-operator skill")
+	}
+	if len(content) >= 1500 {
+		t.Errorf("pi agent file is %d bytes, want < 1500 (bridge prompt-size limit)", len(content))
 	}
 }
 
@@ -245,6 +286,7 @@ func TestGenerate_DoNotEditHeader(t *testing.T) {
 	files := map[string]string{
 		"claude agent":   filepath.Join(dir, "agents", "GADU.md"),
 		"opencode agent": filepath.Join(dir, "opencode", "agents", "GADU.md"),
+		"pi agent":       filepath.Join(dir, "pi", "agents", "GADU.md"),
 		"skill":          filepath.Join(dir, "skills", "gadu-operator", "SKILL.md"),
 	}
 	for label, path := range files {
@@ -257,6 +299,42 @@ func TestGenerate_DoNotEditHeader(t *testing.T) {
 				t.Errorf("%s must contain 'GENERATED — DO NOT EDIT'; got:\n%s", label, content)
 			}
 		})
+	}
+}
+
+// TestFrontmatter_InlineToolsScalar (task 5.5, R-014): the generated Claude
+// agent frontmatter's `tools` field stays a single inline scalar line
+// (`tools: '*'`), never a YAML list -- pi-subagents-j0k3r@1.5.15 blocks
+// loading a subagent whose frontmatter declares `tools` both ways (D12).
+func TestFrontmatter_InlineToolsScalar(t *testing.T) {
+	dir := t.TempDir()
+	if err := gadu.Generate(dir); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+	content, err := os.ReadFile(filepath.Join(dir, "agents", "GADU.md"))
+	if err != nil {
+		t.Fatalf("read agent: %v", err)
+	}
+	s := string(content)
+
+	var toolsLineCount, listItemLines int
+	for _, line := range strings.Split(s, "\n") {
+		trimmed := strings.TrimSpace(line)
+		if trimmed == "tools: '*'" {
+			toolsLineCount++
+		}
+		if strings.HasPrefix(trimmed, "- ") {
+			listItemLines++
+		}
+		if trimmed == "---" && toolsLineCount > 0 {
+			break // reached the end of frontmatter
+		}
+	}
+	if toolsLineCount != 1 {
+		t.Fatalf("expected exactly one inline `tools: '*'` line, got %d in:\n%s", toolsLineCount, s)
+	}
+	if listItemLines != 0 {
+		t.Fatalf("frontmatter must never carry YAML list items alongside the inline tools scalar, got %d list lines in:\n%s", listItemLines, s)
 	}
 }
 
@@ -299,6 +377,33 @@ func TestCheck_FailsWhenStale(t *testing.T) {
 	}
 }
 
+// TestCheck_DetectsStalePiVariant verifies Check returns an error when
+// pi/agents/GADU.md has been hand-edited after generation.
+func TestCheck_DetectsStalePiVariant(t *testing.T) {
+	dir := t.TempDir()
+	if err := gadu.Generate(dir); err != nil {
+		t.Fatalf("Generate: %v", err)
+	}
+
+	piAgentPath := filepath.Join(dir, "pi", "agents", "GADU.md")
+	content, err := os.ReadFile(piAgentPath)
+	if err != nil {
+		t.Fatalf("read pi agent: %v", err)
+	}
+	modified := string(content) + "\n<!-- hand-edited line -->\n"
+	if err := os.WriteFile(piAgentPath, []byte(modified), 0644); err != nil {
+		t.Fatalf("write pi agent: %v", err)
+	}
+
+	err = gadu.Check(dir)
+	if err == nil {
+		t.Fatal("Check must return non-nil error when pi/agents/GADU.md is stale")
+	}
+	if !strings.Contains(err.Error(), "pi/agents/GADU.md") {
+		t.Errorf("Check error should name pi/agents/GADU.md, got: %v", err)
+	}
+}
+
 // TestCheck_PassesWhenInSync verifies Check returns nil against the real
 // committed generated files. Skipped until A5 (generated files must exist on disk).
 func TestCheck_PassesWhenInSync(t *testing.T) {
@@ -307,12 +412,16 @@ func TestCheck_PassesWhenInSync(t *testing.T) {
 	// Skip if the generated files are not yet on disk (pre-A5).
 	agentPath := filepath.Join(root, "agents", "GADU.md")
 	opencodeAgentPath := filepath.Join(root, "opencode", "agents", "GADU.md")
+	piAgentPath := filepath.Join(root, "pi", "agents", "GADU.md")
 	skillPath := filepath.Join(root, "skills", "gadu-operator", "SKILL.md")
 	if _, err := os.Stat(agentPath); os.IsNotExist(err) {
 		t.Skip("agents/GADU.md not yet generated (pre-A5) — skipping staleness check")
 	}
 	if _, err := os.Stat(opencodeAgentPath); os.IsNotExist(err) {
 		t.Skip("opencode/agents/GADU.md not yet generated — skipping staleness check")
+	}
+	if _, err := os.Stat(piAgentPath); os.IsNotExist(err) {
+		t.Skip("pi/agents/GADU.md not yet generated — skipping staleness check")
 	}
 	if _, err := os.Stat(skillPath); os.IsNotExist(err) {
 		t.Skip("skills/gadu-operator/SKILL.md not yet generated (pre-A5) — skipping staleness check")
