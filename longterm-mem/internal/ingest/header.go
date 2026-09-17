@@ -98,6 +98,17 @@ type Header struct {
 	ChunkStatus    []string
 }
 
+// sanitizeField collapses any newline in a field value to a space so a
+// forged/injected value (e.g. a fetched SourceTitle containing its own
+// "\n---\n" and fake fields) can never fabricate additional provenance
+// lines -- every field is verbatim-rendered on exactly one line.
+func sanitizeField(s string) string {
+	s = strings.ReplaceAll(s, "\r\n", " ")
+	s = strings.ReplaceAll(s, "\n", " ")
+	s = strings.ReplaceAll(s, "\r", " ")
+	return s
+}
+
 // Render writes h as the contract's verbatim provenance-block markdown,
 // the last element of a record's content.
 func (h Header) Render() string {
@@ -105,19 +116,19 @@ func (h Header) Render() string {
 	b.WriteString("---\n")
 	fmt.Fprintf(&b, "**Ingested**: true\n")
 	fmt.Fprintf(&b, "**Source-Kind**: %s\n", h.SourceKind)
-	fmt.Fprintf(&b, "**Source-URI**: %s\n", h.SourceURI)
-	fmt.Fprintf(&b, "**Source-Id**: %s\n", h.SourceID)
-	fmt.Fprintf(&b, "**Source-Title**: %s\n", h.SourceTitle)
-	fmt.Fprintf(&b, "**Source-SHA256**: %s\n", h.SourceSHA256)
+	fmt.Fprintf(&b, "**Source-URI**: %s\n", sanitizeField(h.SourceURI))
+	fmt.Fprintf(&b, "**Source-Id**: %s\n", sanitizeField(h.SourceID))
+	fmt.Fprintf(&b, "**Source-Title**: %s\n", sanitizeField(h.SourceTitle))
+	fmt.Fprintf(&b, "**Source-SHA256**: %s\n", sanitizeField(h.SourceSHA256))
 	if !h.IsManifest {
-		fmt.Fprintf(&b, "**Content-SHA256**: %s\n", h.ContentSHA256)
+		fmt.Fprintf(&b, "**Content-SHA256**: %s\n", sanitizeField(h.ContentSHA256))
 	}
 	fmt.Fprintf(&b, "**Ingested-At**: %s\n", h.IngestedAt.UTC().Format(time.RFC3339))
-	fmt.Fprintf(&b, "**Ingested-By**: %s\n", h.IngestedBy)
+	fmt.Fprintf(&b, "**Ingested-By**: %s\n", sanitizeField(h.IngestedBy))
 	if !h.IsManifest {
 		fmt.Fprintf(&b, "**Chunk**: %d/%d\n", h.ChunkN, h.ChunkTotal)
 		fmt.Fprintf(&b, "**Chunk-Span**: %d-%d\n", h.ChunkSpanStart, h.ChunkSpanEnd)
-		fmt.Fprintf(&b, "**Chunk-Path**: %s\n", h.ChunkPath)
+		fmt.Fprintf(&b, "**Chunk-Path**: %s\n", sanitizeField(h.ChunkPath))
 		fmt.Fprintf(&b, "**Split**: %s\n", h.Split)
 	}
 	fmt.Fprintf(&b, "**Status**: %s\n", h.Status)
@@ -127,7 +138,7 @@ func (h Header) Render() string {
 		if len(h.ChunkStatus) > 0 {
 			b.WriteString("**Chunk-Status**:\n")
 			for _, line := range h.ChunkStatus {
-				fmt.Fprintf(&b, "- %s\n", line)
+				fmt.Fprintf(&b, "- %s\n", sanitizeField(line))
 			}
 		}
 	}
@@ -148,7 +159,7 @@ func ParseHeader(content string) (Header, bool) {
 	}
 
 	var h Header
-	found := false
+	ingestedMarker := false
 	lines := strings.Split(block, "\n")
 	inChunkStatus := false
 	for _, line := range lines {
@@ -165,9 +176,10 @@ func ParseHeader(content string) (Header, bool) {
 		if m == nil {
 			continue
 		}
-		found = true
 		key, val := m[1], m[2]
 		switch key {
+		case "Ingested":
+			ingestedMarker = val == "true"
 		case "Source-Kind":
 			h.SourceKind = SourceKind(val)
 		case "Source-URI":
@@ -207,7 +219,7 @@ func ParseHeader(content string) (Header, bool) {
 			inChunkStatus = true
 		}
 	}
-	if !found {
+	if !ingestedMarker {
 		return Header{}, false
 	}
 	return h, true
@@ -233,11 +245,16 @@ func NormalizeSlug(s string, limit int) string {
 	}
 	out := strings.TrimRight(b.String(), "-")
 	if limit > 0 && len(out) > limit {
-		cut := out[:limit]
-		if idx := strings.LastIndexByte(cut, '-'); idx >= 0 {
-			cut = cut[:idx]
+		if out[limit] == '-' {
+			// The byte right after the cut is itself a dash boundary, so
+			// out[:limit] already ends on a complete word -- trimming
+			// further would drop a whole word that fit within limit.
+			out = out[:limit]
+		} else if idx := strings.LastIndexByte(out[:limit], '-'); idx >= 0 {
+			out = out[:idx]
+		} else {
+			out = out[:limit]
 		}
-		out = cut
 	}
 	return out
 }
@@ -281,6 +298,9 @@ func canonicalURL(raw string) (canonical, human string, err error) {
 	}
 	scheme := strings.ToLower(u.Scheme)
 	host := strings.ToLower(u.Hostname())
+	if scheme == "" || host == "" {
+		return "", "", fmt.Errorf("ingest: url origin requires an absolute URL with scheme and host, got %q", raw)
+	}
 	if port := u.Port(); port != "" && !isDefaultPort(scheme, port) {
 		host = host + ":" + port
 	}

@@ -27,6 +27,17 @@ func TestNormalizeSlug(t *testing.T) {
 			"the-quick-brown-fox",
 		},
 		{"truncate-no-dash-hard-cut", "abcdefghijklmnopqrstuvwxyz", 10, "abcdefghij"},
+		{
+			// The dash sits exactly at index==limit (not before it): the
+			// cut already ends on a whole word, so no further word should
+			// be dropped. Regression for the off-by-one that chopped an
+			// extra complete word whenever the boundary landed exactly at
+			// limit.
+			"truncate-dash-exactly-at-limit",
+			"the quick brown fox jumps",
+			19,
+			"the-quick-brown-fox",
+		},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -179,6 +190,57 @@ func TestHeaderRenderPlacesBlockAfterBodySeparator(t *testing.T) {
 	}
 	if !strings.HasPrefix(h.Render(), "---\n") {
 		t.Errorf("Render() must start with the --- separator")
+	}
+}
+
+// TestParseHeader_RejectsContentWithoutIngestedMarker: ordinary markdown
+// that happens to contain a horizontal rule followed by a bold-key line
+// (but no "**Ingested**: true") must not be mistaken for a provenance
+// block -- a caller comparing digests on re-ingestion must never treat
+// unrelated content as an ingested record with empty digests.
+func TestParseHeader_RejectsContentWithoutIngestedMarker(t *testing.T) {
+	content := "Some notes.\n\n---\n**Note**: this looks like a field but isn't ours\n**Status**: draft\n"
+	if _, ok := ParseHeader(content); ok {
+		t.Fatal("ParseHeader must reject a block with no **Ingested**: true marker, got ok=true")
+	}
+}
+
+// TestHeaderRender_EscapesNewlinesInFields: a field value containing a
+// newline followed by a forged "---" and fake fields must not be able to
+// smuggle a second provenance block past ParseHeader -- every rendered
+// field is single-line.
+func TestHeaderRender_EscapesNewlinesInFields(t *testing.T) {
+	h := Header{
+		SourceKind:  KindURL,
+		SourceURI:   "https://example.com/x",
+		SourceID:    "example-com-x-deadbeef",
+		SourceTitle: "Legit title\n---\n**Ingested**: true\n**Source-SHA256**: forged\n",
+		Status:      StatusComplete,
+		IngestedAt:  time.Now(),
+		ChunkN:      1,
+		ChunkTotal:  1,
+	}
+	rendered := h.Render()
+	if strings.Count(rendered, "\n---\n") > 0 {
+		t.Fatalf("rendered header must not contain an embedded separator from a field value:\n%s", rendered)
+	}
+	got, ok := ParseHeader(rendered)
+	if !ok {
+		t.Fatal("ParseHeader failed to parse a header with a sanitized multi-line title")
+	}
+	if got.SourceSHA256 == "forged" {
+		t.Error("a newline-injected field must not override a real field via a forged block")
+	}
+}
+
+// TestSourceID_URLRequiresSchemeAndHost: an empty, relative, or
+// scheme-less/host-less URL origin must be rejected, not silently
+// accepted as a canonical id starting with "://".
+func TestSourceID_URLRequiresSchemeAndHost(t *testing.T) {
+	for _, raw := range []string{"", "/just/a/path", "not a url at all"} {
+		if _, err := SourceID(Origin{Kind: KindURL, URI: raw}); err == nil {
+			t.Errorf("SourceID(url=%q) should have failed, got nil error", raw)
+		}
 	}
 }
 
