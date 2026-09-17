@@ -492,3 +492,16 @@ skills:
         - pi
     lifecycle:
       updateStrategy: overlay-only
+  - id: knowledge-ingestion
+    path: knowledge-ingestion
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only

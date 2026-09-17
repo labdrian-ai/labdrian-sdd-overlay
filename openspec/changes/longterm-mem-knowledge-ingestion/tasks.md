@@ -86,14 +86,14 @@ table.
 
 ## Phase 1b: ingestion-convention — procedure and registration (PR 1b, R-001, R-003)
 
-- [ ] 1b.1 RED (extend or add an `engine/skills` registry-parse test): assert `ParseRegistry` over
+- [x] 1b.1 RED (extend or add an `engine/skills` registry-parse test): assert `ParseRegistry` over
   the real `skills.registry.yaml` returns a `knowledge-ingestion` entry with `source.type: custom`,
   `install.defaultScope: global`, `install.targets` containing exactly `claude`, `opencode`, `codex`,
   `pi`, and `lifecycle.updateStrategy: overlay-only`
-- [ ] 1b.2 GREEN `skills.registry.yaml` (modify): add the `knowledge-ingestion` row matching the
+- [x] 1b.2 GREEN `skills.registry.yaml` (modify): add the `knowledge-ingestion` row matching the
   `anti-generic-design` precedent shape (id, path, `source.type: custom`, the four install targets,
   `lifecycle.updateStrategy: overlay-only`)
-- [ ] 1b.3 GREEN `skills/knowledge-ingestion/SKILL.md` (new): write the procedure — activation
+- [x] 1b.3 GREEN `skills/knowledge-ingestion/SKILL.md` (new): write the procedure — activation
   contract (when an agent is asked to ingest external knowledge); the mandatory three-step path
   (agent fetch/read → Engram `mem_save` → `longterm-mem promote`) stated as the only intake path
   (R-001); the manifest-first ordering for a multi-chunk source (save manifest at `Status: pending`,
@@ -104,7 +104,7 @@ table.
   ingestion); the explicit "no other intake path exists" statement (R-001 scenario); and the
   secret/credential warning from the design's Threat Matrix risk row (ingested content is stored and
   promoted verbatim, never scrubbed)
-- [ ] 1b.4 Acceptance checklist addition (non-Go, executed during `sdd-verify`, add to `SKILL.md`):
+- [x] 1b.4 Acceptance checklist addition (non-Go, executed during `sdd-verify`, add to `SKILL.md`):
   numbered scenarios — (a) R-003 end-to-end: ingest one real external source, show the resulting
   observation via `mem_search` + `mem_get_observation` and the promoted page via
   `longterm-mem query --sources vault,engram-fts`, with the provenance block present in the page
@@ -113,7 +113,7 @@ table.
   changed re-ingestion: re-ingest after an edit, confirm same key, incremented revision, same vault
   page path; (d) OQ-4 sync-eligibility: an `ingested/`-keyed observation that was never explicitly
   promoted is promoted by the next `sync`
-- [ ] 1b.5 Verify: `cd engine && go test ./skills/...`
+- [x] 1b.5 Verify: `cd engine && go test ./skills/...`
 
 ## Phase 2a: ingest-extraction — header, slug, and chunk boundary (PR 2a, R-006, part of R-007)
 
