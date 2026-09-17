@@ -83,13 +83,23 @@ the rest exists. Report the partial state honestly.
 Before saving anything for a source, derive its `Source-Id` (per the contract's derivation
 rule — a function of the origin only, never the content) and search its topic key:
 `mem_search("ingested/{source-kind}/{source-id}")`, then `mem_get_observation` to read the
-stored `**Source-SHA256**`.
+stored `**Source-SHA256**` and, for a manifest record, `**Status**`.
 
-- If it matches the newly computed digest of the whole normalized source: this is a **hard
-  no-op**. Make no `mem_save` call and no `promote` call. Report "unchanged".
-- If it differs, or no record exists yet: proceed through the manifest-first ordering above.
-  The full re-ingestion decision table (including the shrink/grow/origin-changed rows) lives
-  in the contract document — consult it before writing, do not improvise the shrink or
+The hard no-op only applies to a manifest whose `**Status**` is already `complete` — a
+matching digest never short-circuits a `pending` or `partial` manifest, since an unchanged
+source can still have unfinished chunks and a no-op there would silently report "unchanged"
+for a document that is not fully ingested, breaking the "never report success for a partial
+document" rule above.
+
+- If the digest matches AND `**Status**: complete` (or the record is a single-chunk,
+  non-manifest record, which has no `Status` field): this is a **hard no-op**. Make no
+  `mem_save` call and no `promote` call. Report "unchanged".
+- If the digest matches but `**Status**` is `pending` or `partial`: this is a **resume**, not
+  a no-op. Re-run the manifest-first ordering above starting from step 3, using
+  `**Chunk-Status**` to skip chunks already `saved promoted` and land only the missing ones.
+- If the digest differs, or no record exists yet: proceed through the manifest-first ordering
+  above. The full re-ingestion decision table (including the shrink/grow/origin-changed rows)
+  lives in the contract document — consult it before writing, do not improvise the shrink or
   origin-changed cases.
 
 ## Secret and credential warning
