@@ -530,6 +530,57 @@ skills:
 	})
 }
 
+// TestParseRegistry_RealRegistryHasKnowledgeIngestionEntry pins slice 1b's
+// registration (R-001, R-003 of longterm-mem-knowledge-ingestion): parsing
+// the real committed skills.registry.yaml must return a `knowledge-ingestion`
+// entry shaped exactly like the `anti-generic-design` precedent — custom
+// source, global scope, all four install targets, overlay-only lifecycle.
+func TestParseRegistry_RealRegistryHasKnowledgeIngestionEntry(t *testing.T) {
+	registryPath := filepath.Join("..", "..", "skills.registry.yaml")
+
+	data, err := os.ReadFile(registryPath)
+	if err != nil {
+		t.Fatalf("reading real registry %s: %v", registryPath, err)
+	}
+	reg, err := ParseRegistry(strings.NewReader(string(data)))
+	if err != nil {
+		t.Fatalf("parsing real registry: %v", err)
+	}
+
+	var entry *Entry
+	for i := range reg.Skills {
+		if reg.Skills[i].ID == "knowledge-ingestion" {
+			entry = &reg.Skills[i]
+			break
+		}
+	}
+	if entry == nil {
+		t.Fatal("real skills.registry.yaml has no \"knowledge-ingestion\" entry")
+	}
+
+	if entry.Path != "knowledge-ingestion" {
+		t.Errorf("Path = %q, want %q", entry.Path, "knowledge-ingestion")
+	}
+	if entry.Source.Type != "custom" {
+		t.Errorf("Source.Type = %q, want %q", entry.Source.Type, "custom")
+	}
+	if entry.Install.DefaultScope != "global" {
+		t.Errorf("Install.DefaultScope = %q, want %q", entry.Install.DefaultScope, "global")
+	}
+	wantTargets := []string{"claude", "opencode", "codex", "pi"}
+	if len(entry.Install.Targets) != len(wantTargets) {
+		t.Fatalf("Install.Targets = %v, want %v", entry.Install.Targets, wantTargets)
+	}
+	for i, want := range wantTargets {
+		if entry.Install.Targets[i] != want {
+			t.Errorf("Install.Targets[%d] = %q, want %q", i, entry.Install.Targets[i], want)
+		}
+	}
+	if entry.Lifecycle.UpdateStrategy != "overlay-only" {
+		t.Errorf("Lifecycle.UpdateStrategy = %q, want %q", entry.Lifecycle.UpdateStrategy, "overlay-only")
+	}
+}
+
 // escapeYAMLPath renders path as an inline-YAML-safe scalar for the
 // path_traversal_rejected table, quoting an empty value so the parser sees
 // an explicit empty string rather than a missing key.
