@@ -119,54 +119,54 @@ table.
 
 Depends on Phase 1a (the contract document `header.go`'s doc comment cites as normative).
 
-- [ ] 2a.1 RED `longterm-mem/internal/ingest/header_test.go`: `NormalizeSlug(s string, limit int)`
+- [x] 2a.1 RED `longterm-mem/internal/ingest/header_test.go`: `NormalizeSlug(s string, limit int)`
   table — lowercase ASCII, runs of non-`[a-z0-9]` collapsed to one `-`, leading/trailing `-` trimmed,
   truncation at the last `-` boundary at or before `limit`, empty string, all-punctuation string,
   unicode input, idempotence (`NormalizeSlug(NormalizeSlug(x, n), n) == NormalizeSlug(x, n)`)
-- [ ] 2a.2 GREEN `longterm-mem/internal/ingest/header.go` (new): implement `NormalizeSlug`
-- [ ] 2a.3 RED `header_test.go`: `SourceID(o Origin) string` determinism table — same origin returns
+- [x] 2a.2 GREEN `longterm-mem/internal/ingest/header.go` (new): implement `NormalizeSlug`
+- [x] 2a.3 RED `header_test.go`: `SourceID(o Origin) string` determinism table — same origin returns
   the same id across repeated calls; URL canonicalization (lowercase scheme+host, default port
   stripped, fragment stripped, query kept, trailing `/` stripped unless path is `/`); two origins
   with identical human parts (slug collision) get distinct ids via the 8-hex suffix; `KindPasted`
   with an empty `Label` errors; changing only `Text`/file content (not the origin) does NOT change
   the id
-- [ ] 2a.4 GREEN `header.go`: implement `Origin`, `SourceKind` constants, and `SourceID` per the
+- [x] 2a.4 GREEN `header.go`: implement `Origin`, `SourceKind` constants, and `SourceID` per the
   per-kind canonical-origin table in the design (url/file/directory/pasted)
-- [ ] 2a.5 RED `header_test.go`: `Header`/`Render`/`ParseHeader` round-trip — for every
+- [x] 2a.5 RED `header_test.go`: `Header`/`Render`/`ParseHeader` round-trip — for every
   `SourceKind` and every `Status` value (`complete`, `partial`, `retired`), assert
   `ParseHeader(h.Render()) == h`; assert `Render()` places the provenance block after the body
   separator `---`; assert manifest-only fields (`Chunks-Expected`, `Chunks-Saved`, `Chunk-Status`)
   round-trip only when present
-- [ ] 2a.6 GREEN `header.go`: implement `Header` struct (one field per contract line from 1a.2),
+- [x] 2a.6 GREEN `header.go`: implement `Header` struct (one field per contract line from 1a.2),
   `Render()`, and `ParseHeader()`
-- [ ] 2a.7 RED `longterm-mem/internal/ingest/chunk_test.go`: chunk boundary table at and around the
+- [x] 2a.7 RED `longterm-mem/internal/ingest/chunk_test.go`: chunk boundary table at and around the
   480/1600-byte bounds — sizes 479, 480, 481, 1599, 1600, 1601 bytes; an atomic fenced code block
   larger than `DefaultMaxChunkBytes`; a markdown table larger than `DefaultMaxChunkBytes`; a document
   with no blank lines; CRLF input (normalized to LF, verbatim body otherwise); a multibyte UTF-8 rune
   straddling a forced-byte cut point (must move back to the nearest rune boundary); empty input;
   whitespace-only input; a single heading followed by 40 KB of prose (must still respect
   `MaxChunkBytes`, not collapse to one oversized unit)
-- [ ] 2a.8 GREEN `longterm-mem/internal/ingest/chunk.go` (new): implement block segmentation (ATX
+- [x] 2a.8 GREEN `longterm-mem/internal/ingest/chunk.go` (new): implement block segmentation (ATX
   heading, fenced code block, table run, paragraph) and the boundary algorithm — CRLF normalization,
   greedy accumulation respecting `MinChunkBytes`/`MaxChunkBytes`, forced split in the documented
   order (sentence boundary → line boundary → hard byte cut moved to the nearest rune boundary), and
   the `Split` field (`none | forced-sentence | forced-line | forced-byte`) recorded per chunk
-- [ ] 2a.9 RED `chunk_test.go`: chunk metadata table — `Chunk: n/N` monotonically increasing; `Chunk-
+- [x] 2a.9 RED `chunk_test.go`: chunk metadata table — `Chunk: n/N` monotonically increasing; `Chunk-
   Span` ranges contiguous and together covering the whole normalized source with no gap or overlap;
   all chunks of one document share the same `Source-Id` and `Source-SHA256`; `Chunk-Path` reflects
   the heading breadcrumb in effect at each chunk's first byte
-- [ ] 2a.10 GREEN `chunk.go`: wire chunk metadata emission into `header.go`'s `Header` fields, so
+- [x] 2a.10 GREEN `chunk.go`: wire chunk metadata emission into `header.go`'s `Header` fields, so
   `chunk.go`'s output is ready for `Header.Render()`
-- [ ] 2a.11 Create `longterm-mem/internal/ingest/doc.go` (new): package doc comment stating the
+- [x] 2a.11 Create `longterm-mem/internal/ingest/doc.go` (new): package doc comment stating the
   zero-egress guarantee, citing `skills/_shared/ingested-observation-contract.md` as the normative
   contract this package implements (not re-specifies), and declaring
   `DefaultMaxChunkBytes = 1600`, `DefaultMinChunkBytes = 480`, `DefaultMaxSourceBytes = 4 << 20`,
   `MaxChunks = 9999` with the derivation comments from the design (`ResponseByteCeiling /
   DefaultTopN`, `engram.SnippetBudget`)
-- [ ] 2a.12 REFACTOR: confirm `header.go`, `chunk.go`, and `doc.go` import neither `net` nor
+- [x] 2a.12 REFACTOR: confirm `header.go`, `chunk.go`, and `doc.go` import neither `net` nor
   `net/http` nor `os/exec`
-- [ ] 2a.13 Verify: `cd longterm-mem && go vet ./internal/ingest/... && go test ./internal/ingest/...`
-- [ ] 2a.14 Verify the module-wide network guard is unaffected by the new package before it has any
+- [x] 2a.13 Verify: `cd longterm-mem && go vet ./internal/ingest/... && go test ./internal/ingest/...`
+- [x] 2a.14 Verify the module-wide network guard is unaffected by the new package before it has any
   caller: `cd longterm-mem && go test -run 'TestNetImportAllowlist|TestNetImportAllowlistStillRefusesOthers' ./...`
   — both pass unmodified, confirming the guard's existing whole-module AST walk already covers
   `internal/ingest` without any edit to `net_allowlist_test.go` in this slice
