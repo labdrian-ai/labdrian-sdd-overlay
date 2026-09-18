@@ -63,4 +63,23 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			t.Fatalf("contract must contain %q verbatim", "Threshold: 3")
 		}
 	})
+
+	t.Run("R004_rejection_record_fields_present", func(t *testing.T) {
+		for _, required := range []string{
+			"**RejectionReason**",
+			"**MatchedSkillPath**",
+			"present only when Status=rejected",
+			"present only when RejectionReason=duplicate",
+		} {
+			if !strings.Contains(contract, required) {
+				t.Fatalf("contract must contain rejection field marker %q verbatim", required)
+			}
+		}
+	})
+
+	t.Run("R004_match_candidate_call_site_present", func(t *testing.T) {
+		if !strings.Contains(contract, "MatchCandidate(registry, slug)") {
+			t.Fatalf("contract must contain the MatchCandidate call-site description %q verbatim", "MatchCandidate(registry, slug)")
+		}
+	})
 }

@@ -1,6 +1,9 @@
 package skills
 
-import "testing"
+import (
+	"strings"
+	"testing"
+)
 
 func TestNormalizeSlug(t *testing.T) {
 	cases := []struct {
@@ -80,4 +83,164 @@ func TestNormalizeSlugCharsetInvariant(t *testing.T) {
 			t.Fatalf("NormalizeSlug(%q) = %q has leading/trailing '-'", in, got)
 		}
 	}
+}
+
+// literalMatchRegistry builds a Registry directly (not via ParseRegistry) with
+// entries whose ID and Path are deliberately distinct, so exact-ID hits,
+// exact-Path hits, and path.Base hits can be tested independently.
+func literalMatchRegistry() Registry {
+	return Registry{
+		Version: "1",
+		Skills: []Entry{
+			{ID: "sdd-spec", Path: "sdd-spec"},
+			{ID: "internal-nested-alias", Path: "tools/actual-skill-name"},
+		},
+	}
+}
+
+func TestMatchCandidate(t *testing.T) {
+	t.Run("exact ID hit", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "sdd-spec")
+		if !matched || path != "sdd-spec" {
+			t.Fatalf("MatchCandidate(sdd-spec) = (%v, %q), want (true, %q)", matched, path, "sdd-spec")
+		}
+	})
+
+	t.Run("exact Path hit", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "tools/actual-skill-name")
+		if !matched || path != "tools/actual-skill-name" {
+			t.Fatalf("MatchCandidate(tools/actual-skill-name) = (%v, %q), want (true, %q)", matched, path, "tools/actual-skill-name")
+		}
+	})
+
+	t.Run("path.Base hit", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "actual-skill-name")
+		if !matched || path != "tools/actual-skill-name" {
+			t.Fatalf("MatchCandidate(actual-skill-name) = (%v, %q), want (true, %q)", matched, path, "tools/actual-skill-name")
+		}
+	})
+
+	t.Run("case underscore space variant normalizes to a hit", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "SDD Spec")
+		if !matched || path != "sdd-spec" {
+			t.Fatalf("MatchCandidate(SDD Spec) = (%v, %q), want (true, %q)", matched, path, "sdd-spec")
+		}
+	})
+
+	t.Run("no match on unrelated candidate", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "totally-unrelated-thing")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(totally-unrelated-thing) = (%v, %q), want (false, \"\")", matched, path)
+		}
+	})
+
+	t.Run("no match on substring near-miss", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "sdd-spec-review")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(sdd-spec-review) = (%v, %q), want (false, \"\") — substring near-miss must not match", matched, path)
+		}
+	})
+
+	t.Run("empty candidate string", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(\"\") = (%v, %q), want (false, \"\")", matched, path)
+		}
+	})
+
+	t.Run("all-punctuation candidate string", func(t *testing.T) {
+		matched, path := MatchCandidate(literalMatchRegistry(), "!!!___...")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(!!!___...) = (%v, %q), want (false, \"\")", matched, path)
+		}
+	})
+
+	t.Run("empty registry", func(t *testing.T) {
+		matched, path := MatchCandidate(Registry{}, "sdd-spec")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate over empty registry = (%v, %q), want (false, \"\")", matched, path)
+		}
+	})
+
+	t.Run("deterministic first-match-wins when two entries both match", func(t *testing.T) {
+		reg := Registry{Skills: []Entry{
+			{ID: "shared-slug", Path: "first-entry"},
+			{ID: "shared-slug", Path: "second-entry"},
+		}}
+		matched, path := MatchCandidate(reg, "shared-slug")
+		if !matched || path != "first-entry" {
+			t.Fatalf("MatchCandidate(shared-slug) = (%v, %q), want (true, %q) — first registry entry must win", matched, path, "first-entry")
+		}
+	})
+
+	t.Run("no match when two long identities share only a truncated-prefix", func(t *testing.T) {
+		prefix := strings.Repeat("a", maxSlugBytes)
+		reg := Registry{Skills: []Entry{
+			{ID: prefix + "-one", Path: prefix + "-one"},
+		}}
+		matched, path := MatchCandidate(reg, prefix+"-two")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(%s-two) = (%v, %q), want (false, \"\") — sharing only the truncated prefix must not match", prefix, matched, path)
+		}
+	})
+
+	t.Run("identical long identity beyond maxSlugBytes still matches", func(t *testing.T) {
+		prefix := strings.Repeat("a", maxSlugBytes)
+		long := prefix + "-one"
+		reg := Registry{Skills: []Entry{
+			{ID: long, Path: long},
+		}}
+		matched, path := MatchCandidate(reg, long)
+		if !matched || path != long {
+			t.Fatalf("MatchCandidate(%s) = (%v, %q), want (true, %q)", long, matched, path, long)
+		}
+	})
+
+	t.Run("candidate already truncated does not match a longer registry id that starts with it", func(t *testing.T) {
+		prefix := strings.Repeat("a", maxSlugBytes)
+		reg := Registry{Skills: []Entry{
+			{ID: prefix + "-one", Path: prefix + "-one"},
+		}}
+		matched, path := MatchCandidate(reg, prefix)
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(%s) = (%v, %q), want (false, \"\") — a truncated candidate must not match a longer registry id it merely prefixes", prefix, matched, path)
+		}
+	})
+
+	t.Run("registry entries with empty ID and Path never match a non-empty candidate", func(t *testing.T) {
+		reg := Registry{Skills: []Entry{
+			{ID: "", Path: ""},
+		}}
+		matched, path := MatchCandidate(reg, "some-real-candidate")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(some-real-candidate) over empty-ID/Path entry = (%v, %q), want (false, \"\")", matched, path)
+		}
+	})
+
+	t.Run("path-derived normalization matches a hyphenated candidate", func(t *testing.T) {
+		reg := Registry{Skills: []Entry{
+			{ID: "internal-nested-alias", Path: "skills/foo-bar"},
+		}}
+		matched, path := MatchCandidate(reg, "foo bar")
+		if !matched || path != "skills/foo-bar" {
+			t.Fatalf("MatchCandidate(foo bar) = (%v, %q), want (true, %q)", matched, path, "skills/foo-bar")
+		}
+	})
+
+	t.Run("built via ParseRegistry over a fixture YAML", func(t *testing.T) {
+		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "valid_core_and_custom")))
+		if err != nil {
+			t.Fatalf("ParseRegistry: %v", err)
+		}
+
+		matched, path := MatchCandidate(reg, "sdd-spec")
+		if !matched || path != "sdd-spec" {
+			t.Fatalf("MatchCandidate(sdd-spec) over parsed registry = (%v, %q), want (true, %q)", matched, path, "sdd-spec")
+		}
+
+		matched, path = MatchCandidate(reg, "sdd-spec-review")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(sdd-spec-review) over parsed registry = (%v, %q), want (false, \"\") — substring near-miss must not match", matched, path)
+		}
+	})
 }
