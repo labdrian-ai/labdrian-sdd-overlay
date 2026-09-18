@@ -4,6 +4,12 @@
 **Archived**: 2026-09-18
 **Archive Path**: `openspec/changes/archive/2026-09-18-procedural-candidate-detection/`
 
+## Cycle Timestamps
+
+| Phase | Timestamp | Notes |
+|-------|-----------|-------|
+| t1 (landing commit) | n/a | `landing_commit` is absent: this change is not yet merged. The archive commit ships inside the final stacked PR #351 (after #333, #347, #349), so no landing commit exists when this report is written. The four review lineages (review-1c5f059a2e4f88bf, review-dc6b86d85945737b, review-1cdba131c496cc29, review-c2926c5a9630236c) were approved and acknowledged, but their receipts were not persisted under `review-receipts/` before acknowledgement, so this report records no `approved_tree`. |
+
 ## Promotion and Archive Summary
 
 This change introduced the procedural promotion-candidate detection capability: detection and durable storage of repeated-success patterns and failure-recovery patterns as the first slice of the umbrella procedural-memory-skill-promotion effort. The implementation is complete across all four phases (candidate store, repeat/recovery detection, duplicate rejection, full verification).
