@@ -216,6 +216,7 @@ the form `NormalizeSlug` truncates to 48 bytes, so two distinct identities
 that happen to share the same truncated prefix are never treated as
 duplicates. Rejection is decided purely on registry contents at check time;
 the registry itself is never mutated by this capability.
+Comparison always uses the untruncated normalized form, never the truncated form `NormalizeSlug` returns.
 
 ### Rejection record fields
 
@@ -247,6 +248,7 @@ before it was ever a real candidate, and calling it on every occurrence would
 cost more MCP/registry-read round trips for no additional determinism, since
 the registry's answer for the same normalized slug cannot change between one
 occurrence and the next within a single detection sweep.
+Any per-sweep reuse or memoization of a `MatchCandidate` answer MUST be keyed by the untruncated normalized form, never by the truncated `NormalizeSlug` topic-key slug, because two long candidates sharing a truncated prefix would otherwise share one cached answer and reintroduce the false duplicate this section exists to prevent.
 
 `skills.MatchCandidate(reg Registry, candidate string) (matched bool, skillPath string)`
 compares the untruncated normalized form of `candidate` against, for each
