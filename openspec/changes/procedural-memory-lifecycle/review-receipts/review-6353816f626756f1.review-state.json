@@ -1,0 +1,383 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:279d56792c87f1df5e4faf4de356ecfa04314fe064176dd847d867dcaa65a33c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6353816f626756f1",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "e73655771cdf0796013dc2f82699f5298df0c92c",
+      "candidate_tree": "16470002d041a154ae7b27bc24202fe49c59d3e3",
+      "paths_digest": "sha256:9509dfa45e3763d102862009091d26e61df18202a64a359be22bde4a8669f1cb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_test.go",
+        "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "e73655771cdf0796013dc2f82699f5298df0c92c",
+      "candidate_tree": "16470002d041a154ae7b27bc24202fe49c59d3e3",
+      "paths_digest": "sha256:9509dfa45e3763d102862009091d26e61df18202a64a359be22bde4a8669f1cb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_test.go",
+        "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9"
+    },
+    "genesis_paths": [
+      "engine/skills/lint.go",
+      "engine/skills/lint_test.go",
+      "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 318,
+    "correction_budget": 159,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:66e4aaf0b6fc4d4a5e26f733b1e309424d84f92ad5a0499afe4a054df8004392",
+    "capture_phase_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+        "capture_phase_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+        "artifact_digest": "sha256:09e0b34b29dd9c83c75f2a269ab4a02b92e16021bac3f9ef2e64906716ba02e1",
+        "result_hash": "sha256:4fbb65ba0571dbcaeca7fae3360156ecebf4dc7a55001eb93b4865778445e1d8",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f9f931fa9ad40e04a9ff91c864b1cbb120bb21c0ae66df888855bff1975b1aed",
+            "lineage_id": "review-6353816f626756f1",
+            "authority_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+            "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+            "base_tree": "e73655771cdf0796013dc2f82699f5298df0c92c",
+            "candidate_tree": "16470002d041a154ae7b27bc24202fe49c59d3e3",
+            "changed_path_manifest_sha256": "sha256:ec1dac88a8c1188cfd3592bf88208fe7f535edd32e0fa869b348519e58ec07a3",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f9f931fa9ad40e04a9ff91c864b1cbb120bb21c0ae66df888855bff1975b1aed",
+            "raw_sha256": "sha256:78a710a7d5a7321322f2bd999ef571ee05cd806f230a78edb6e86fcb30f33a72",
+            "canonical_sha256": "sha256:78a710a7d5a7321322f2bd999ef571ee05cd806f230a78edb6e86fcb30f33a72",
+            "result_hash": "sha256:4fbb65ba0571dbcaeca7fae3360156ecebf4dc7a55001eb93b4865778445e1d8",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f9f931fa9ad40e04a9ff91c864b1cbb120bb21c0ae66df888855bff1975b1aed",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/skills/lint.go: the changes are pure in-memory string handling. They strip a leading UTF-8 BOM with bytes.TrimPrefix, tolerate trailing space, tab, or CR on fence lines via isFenceLine, add a DescriptionEmpty flag, derive rule summaries from the blockScalarIndicators and canonicalSections data, and escape pipes in rendered table cells. The only new import is bytes from the standard library. There is no filesystem, network, os/exec, or secret handling, so there is no new reachable attack surface.",
+              "engine/skills/lint.go: escapeTableCell only processes Summary strings that are built from compile-time constants in lintRules. No untrusted input reaches RenderLintRules, so there is no reachable Markdown or table injection.",
+              "engine/skills/lint.go: accepting a BOM and trailing whitespace on fences only makes frontmatter-fence parsing more permissive, and the linter is advisory tooling. Every required-field hard rule still runs on the parsed frontmatter, so no authorization or validation gate is bypassed.",
+              "engine/skills/lint_test.go: the additions are test-only fixtures and helpers. They contain no credentials or secrets. The home-path fixtures use a placeholder user name.",
+              "openspec/changes/procedural-memory-lifecycle/codex-smoke.md and openspec/changes/procedural-memory-lifecycle/tasks.md: the changes are documentation only. They narrow the smoke-test verdict and correct the size figures, and they expose no secrets, tokens, or unredacted home paths.",
+              "No dependency manifest changed, so there is no new dependency vulnerability surface."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+        "capture_phase_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+        "artifact_digest": "sha256:532db88eba7d1ecdf14d39164a17b391209abddc2ba7b0f7e59be3eb91ea167f",
+        "result_hash": "sha256:c13aa202824acc6bea2a53e33b5e575000bce2274448fc6aa3683e6ebdceffe9",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8dfbd816059b6492dc89e9f860a331afed4a4e1132b83014027428028816b30d",
+            "lineage_id": "review-6353816f626756f1",
+            "authority_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+            "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+            "base_tree": "e73655771cdf0796013dc2f82699f5298df0c92c",
+            "candidate_tree": "16470002d041a154ae7b27bc24202fe49c59d3e3",
+            "changed_path_manifest_sha256": "sha256:ec1dac88a8c1188cfd3592bf88208fe7f535edd32e0fa869b348519e58ec07a3",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8dfbd816059b6492dc89e9f860a331afed4a4e1132b83014027428028816b30d",
+            "raw_sha256": "sha256:f5d13e2fbeef99e90aad92b2e982c489b8bad04536e21acaee34b6aa9c7b2a80",
+            "canonical_sha256": "sha256:f5d13e2fbeef99e90aad92b2e982c489b8bad04536e21acaee34b6aa9c7b2a80",
+            "result_hash": "sha256:c13aa202824acc6bea2a53e33b5e575000bce2274448fc6aa3683e6ebdceffe9",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8dfbd816059b6492dc89e9f860a331afed4a4e1132b83014027428028816b30d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "engine/skills/lint.go:530 strips a leading UTF-8 BOM before splitting. The fence comparisons at engine/skills/lint.go:533 and engine/skills/lint.go:539 now use isFenceLine, defined at engine/skills/lint.go:17-19, which trims trailing spaces, tabs and CR. This removes a false hard-error failure mode for BOM-prefixed or whitespace-trailed fences. The fence-missing and fence-unclosed error paths still return a LintError, so no error is swallowed.",
+              "engine/skills/lint.go:147-154 splits an empty description into DescriptionEmpty and skips it. That value is still unset for the required-fields hard rule, so the file is still rejected. Only the misleading duplicate description-one-line error is removed. The candidate test at engine/skills/lint_test.go:175-190 covers this.",
+              "The package-level Summary values at engine/skills/lint.go:281 and engine/skills/lint.go:321 are computed by pure stdlib string functions over package-level slices. Go's package initialization order resolves these references. There is no I/O, panic path, or per-call cost, because each summary is computed once at init.",
+              "engine/skills/lint.go:598 and engine/skills/lint.go:604-611 add escapeTableCell. It is a pure string replacement on rendered docs output with bounded input from the static rule table. There is no latency or load impact.",
+              "The engine/skills/lint_test.go changes are test-only. The openspec/changes/procedural-memory-lifecycle/codex-smoke.md and openspec/changes/procedural-memory-lifecycle/tasks.md changes are documentation. The reported 295 insertions and 23 deletions match the candidate numstat totals. These files have no runtime failure-handling surface.",
+              "No retry, rollback, observability, latency, or load regression attributable to this candidate was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+        "capture_phase_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+        "artifact_digest": "sha256:546aeb2e9e253f663d5ab1a484dac899bc13a5f7042175f6b2c976ea08b15868",
+        "result_hash": "sha256:c337e0db1b4ca27aeb58a87b303ad549065cc68e287a2f7f36a881b530ff9e94",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8b1089d21bda2407bc1f7e97ce74dfde8a9dc1702c3358f260624405e4bf0150",
+            "lineage_id": "review-6353816f626756f1",
+            "authority_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+            "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+            "base_tree": "e73655771cdf0796013dc2f82699f5298df0c92c",
+            "candidate_tree": "16470002d041a154ae7b27bc24202fe49c59d3e3",
+            "changed_path_manifest_sha256": "sha256:ec1dac88a8c1188cfd3592bf88208fe7f535edd32e0fa869b348519e58ec07a3",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8b1089d21bda2407bc1f7e97ce74dfde8a9dc1702c3358f260624405e4bf0150",
+            "raw_sha256": "sha256:e24ad49918be57b6628829d5109c7646cfccfc3fbe1e7938153f99647fd0d161",
+            "canonical_sha256": "sha256:9822ecd84aa48a347a60965072153da1523eaac7ffc1d60445162cc3c4f23e9c",
+            "result_hash": "sha256:c337e0db1b4ca27aeb58a87b303ad549065cc68e287a2f7f36a881b530ff9e94",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8b1089d21bda2407bc1f7e97ce74dfde8a9dc1702c3358f260624405e4bf0150",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-description-empty-dead-field",
+                "lens": "readability",
+                "location": "engine/skills/lint.go:87",
+                "severity": "WARNING",
+                "claim": "The new parsedFrontmatter.DescriptionEmpty field is written but never read. Because it is a new field, any reader would have to be a changed line, and no changed line reads it. The actual behavior fix is the early `continue` that stops setting DescriptionMultiLine; required-fields presumably still detects emptiness from the Description string. A maintainer will assume some rule consults DescriptionEmpty. Either use it in the required-fields check or remove it and keep only the `continue`.",
+                "proof_refs": [
+                  "engine/skills/lint.go:87",
+                  "engine/skills/lint.go:147-150"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-indicator-test-vacuous",
+                "lens": "readability",
+                "location": "engine/skills/lint_test.go:630-634",
+                "severity": "WARNING",
+                "claim": "TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator claims every block-scalar indicator is listed, but it uses a plain substring check on a Markdown table row. The row always contains `|` as a cell separator, and `\u003e` is a substring of `\u003e-`. So dropping the bare `|` or `\u003e` indicator from blockScalarIndicators would still pass. The test name overstates what it verifies. Match the backtick-quoted, escaped form of each indicator instead.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:630-634",
+                  "engine/skills/lint.go:215-222",
+                  "engine/skills/lint.go:598"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-stray-indent-comment-overclaims",
+                "lens": "readability",
+                "location": "engine/skills/lint.go:120-129",
+                "severity": "SUGGESTION",
+                "claim": "The rewritten comment says 'Nothing is silently lost from the caller's perspective'. That only holds for the five required fields. Any stray-indented line carrying a non-required key is dropped without a diagnostic, and so is any later 2-space metadata pair that is not author/version. The comment should narrow the guarantee to the required fields.",
+                "proof_refs": [
+                  "engine/skills/lint.go:120-129"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-transient-review-ids-in-comments",
+                "lens": "readability",
+                "location": "engine/skills/lint_test.go:138-139",
+                "severity": "SUGGESTION",
+                "claim": "Several new test comments explain their purpose by citing transient review finding IDs, such as the stray-indent, empty-description, BOM, render-untested and rendered-summaries findings. These IDs carry no meaning for future maintainers outside the review tooling. Describe the invariant being protected instead of the review ticket.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:138-139",
+                  "engine/skills/lint_test.go:545-546",
+                  "engine/skills/lint_test.go:581",
+                  "engine/skills/lint_test.go:623-624"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all four manifest paths from the supplied patch sections only.",
+              "Checked that the insertion/deletion totals claimed in openspec/changes/procedural-memory-lifecycle/tasks.md (295/23) match the candidate numstat (77+214+1+3 insertions, 11+9+1+2 deletions); they agree.",
+              "The summaries rendered from blockScalarIndicators and canonicalSections, escapeTableCell, isFenceLine and utf8BOM in engine/skills/lint.go remove duplicated literals and are documented; no readability defect was found beyond the listed findings.",
+              "The narrowed verdict wording in openspec/changes/procedural-memory-lifecycle/codex-smoke.md is consistent with the scoped claim added to openspec/changes/procedural-memory-lifecycle/tasks.md."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+        "capture_phase_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+        "artifact_digest": "sha256:26e63345b73d406650f26e9a31cc9c7968c224d6ca79653dd922ac23eef349e8",
+        "result_hash": "sha256:cf41299bfeb02c8d580398850d1d6c54b4920adf73ed079eaf588920866ec3cc",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8ceecc7bbe4383944e00e2ca08adb69fd7ea3725d46bf035eba3aa96e7df872f",
+            "lineage_id": "review-6353816f626756f1",
+            "authority_revision": "sha256:f27bf9b4ab29513637a38cbd2ca9ef67977818aa8d46460997ed2c5f4b90f502",
+            "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+            "base_tree": "e73655771cdf0796013dc2f82699f5298df0c92c",
+            "candidate_tree": "16470002d041a154ae7b27bc24202fe49c59d3e3",
+            "changed_path_manifest_sha256": "sha256:ec1dac88a8c1188cfd3592bf88208fe7f535edd32e0fa869b348519e58ec07a3",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8ceecc7bbe4383944e00e2ca08adb69fd7ea3725d46bf035eba3aa96e7df872f",
+            "raw_sha256": "sha256:ec4397a4bce5396a6117d8d90ab2bef36f2cc083e71f880b7cd08ebb22d337ca",
+            "canonical_sha256": "sha256:19800e2956e2aceece3e3d13e9f9db7cfb64ecb26fae9ef0d9a4f32e130fb960",
+            "result_hash": "sha256:cf41299bfeb02c8d580398850d1d6c54b4920adf73ed079eaf588920866ec3cc",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8ceecc7bbe4383944e00e2ca08adb69fd7ea3725d46bf035eba3aa96e7df872f",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-desc-indicator-test-vacuous",
+                "lens": "reliability",
+                "location": "engine/skills/lint_test.go:630-634",
+                "severity": "SUGGESTION",
+                "claim": "The description-one-line indicator test only checks that each raw indicator appears somewhere in the rendered row. For the pipe and greater-than indicators, this is always true, because every rendered table row contains the pipe cell separators and several indicators contain the greater-than character. The assertion therefore does not prove the list is derived from blockScalarIndicators, and it does not prove the pipe indicators are escaped. Asserting the exact backticked, escaped forms (or the exact Summary string built from blockScalarIndicators) would make the test able to catch drift.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:630-634",
+                  "engine/skills/lint.go:217-224"
+                ]
+              },
+              {
+                "id": "R3-empty-desc-continuation-reclassified",
+                "lens": "reliability",
+                "location": "engine/skills/lint.go:147-151",
+                "severity": "SUGGESTION",
+                "claim": "An empty `description:` value no longer sets DescriptionMultiLine. The newly added DescriptionEmpty field is set but never read in the visible code. A YAML plain multi-line description, meaning an empty `description:` followed by indented continuation lines, now appears to be reported only as a missing required field instead of as a description-one-line violation. The file still gets a hard error, so nothing passes that should fail. However, the error message changed, and no test pins the empty-key-plus-continuation case. Adding a test for that case would lock down the intended diagnostic.",
+                "proof_refs": [
+                  "engine/skills/lint.go:147-151",
+                  "engine/skills/lint_test.go:171-190"
+                ]
+              }
+            ],
+            "evidence": [
+              "Checked the SplitSkillFile changes: the leading UTF-8 BOM is stripped, and isFenceLine trims trailing spaces, tabs and CR on both fences. Tests cover the BOM case, trailing spaces on the opening fence, and a trailing tab on the closing fence (engine/skills/lint_test.go:548-579).",
+              "Checked escapeTableCell and the row-count test: countUnescapedPipes checks that every rule row has the same number of cell-splitting pipes as the header, which gives an observable guard against the table-pipe regression (engine/skills/lint_test.go:583-621).",
+              "Body-budget boundary tests now derive their byte counts from BodyHardTokens/BodyRecommendedTokens times BytesPerTokenProxy, so they stay deterministic and aligned with the constants.",
+              "The Windows home-path fixture now uses a real newline; before this change the raw string contained a literal backslash-n.",
+              "tasks.md correction figures match this candidate's numstat: 77+214+1+3=295 insertions and 11+9+1+2=23 deletions. The restated original figures sum consistently (544+470+40+17=1071).",
+              "The codex-smoke.md change only narrows the verdict scope in prose; it has no behavioral impact.",
+              "No BLOCKER or CRITICAL regressions were found. The new behaviors have externally observable test assertions, apart from the two weak spots reported as suggestions."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "03db0e5593f87cd3b553c84bbf8ee3ef040752dafa922eae64b484c966c64f0f",
+    "initial_atomic_start": {
+      "lineage_id": "review-6353816f626756f1",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:9c302ec068344a6e0904be1ab9c49718575dde69606bd2f64fe29d94c67bf1d9",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "e73655771cdf0796013dc2f82699f5298df0c92c",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 318,
+      "correction_budget": 159,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
