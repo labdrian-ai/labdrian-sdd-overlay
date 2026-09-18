@@ -1,0 +1,347 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:761f1d447a825018585615890c3be0eeda558d4e0c06304940a844e73dcac1ae",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-b375153aa152604e",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "90cad9ced54c89aa27d807beebddb725651220ef",
+      "candidate_tree": "774a006823fd25fe93d36e5bee9d232b38014374",
+      "paths_digest": "sha256:9719e7e2265fb9ecac4a4683fde2b3e2b9604751581ad4fe0b48ca7735239170",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "90cad9ced54c89aa27d807beebddb725651220ef",
+      "candidate_tree": "774a006823fd25fe93d36e5bee9d232b38014374",
+      "paths_digest": "sha256:9719e7e2265fb9ecac4a4683fde2b3e2b9604751581ad4fe0b48ca7735239170",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50"
+    },
+    "genesis_paths": [
+      "engine/skills/lint.go",
+      "engine/skills/lint_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 201,
+    "correction_budget": 101,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:57dd6faff90294d3c05c2d901f720824d1d3160e0540396ebaf83c57fd13b5b9",
+    "capture_phase_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+        "capture_phase_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+        "artifact_digest": "sha256:4af0c612cf1915fb5fa3bc7d1a27129186aebff495bd60cdd343fedd91e878e6",
+        "result_hash": "sha256:d548c3c4b3c441a3bdb3f2da6863d33aabc2a0a071733487d0af1175259d8f92",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:89d2b2296645671ebcd293215aa182621fcb4dc58d72ac5c2ee21f8064f704e0",
+            "lineage_id": "review-b375153aa152604e",
+            "authority_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+            "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+            "base_tree": "90cad9ced54c89aa27d807beebddb725651220ef",
+            "candidate_tree": "774a006823fd25fe93d36e5bee9d232b38014374",
+            "changed_path_manifest_sha256": "sha256:eda5a9f3fa009f4aa56f549987d8a4a3906e9739167930d654b8236b41599d3e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:89d2b2296645671ebcd293215aa182621fcb4dc58d72ac5c2ee21f8064f704e0",
+            "raw_sha256": "sha256:7c6f87f8ff958600d246fe762b8561ac75ac5d3d57f4d3833b92beba3725aec2",
+            "canonical_sha256": "sha256:4b445587695084f29e829f9093abc6d5d8145aa89ca7dc213cdccf844b0b1937",
+            "result_hash": "sha256:d548c3c4b3c441a3bdb3f2da6863d33aabc2a0a071733487d0af1175259d8f92",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:89d2b2296645671ebcd293215aa182621fcb4dc58d72ac5c2ee21f8064f704e0",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/skills/lint.go: the change removes the unused DescriptionEmpty field. It adds the pure helper hasIndentedContinuation, which checks bounds (i+1 \u003e= len(lines) returns false) before indexing, so an empty description at the end of the frontmatter cannot cause an out-of-range panic. checkRequiredFields now compares presence booleans instead of string values. These are string-only changes to how lint results are classified. They add no filesystem, network, exec, deserialization, secret handling, authorization logic or new imports.",
+              "engine/skills/lint_test.go: only tests changed. The new helpers splitTableRowCells, parenthesizedContent and codeSpanTokenSet parse output from RenderLintRules. parenthesizedContent checks that both parentheses exist and are in order before slicing. None of these helpers is reachable from production code.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md: adds one checklist line that records the advisory fixes. It contains no secrets, credentials or executable content.",
+              "No new dependencies were added, and no data-exposure, data-loss or unsafe-input path that could actually be reached was found in the candidate."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+        "capture_phase_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+        "artifact_digest": "sha256:a7c1d3900998564752ca6203ac70adc88095b271348af73102deea40f50b8573",
+        "result_hash": "sha256:5e122ed85ac0b863235f2f07867939d758294460dc25f2c07088bb0576e66d64",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:80976f9bb9c49b3de81ac653bdd67ea1ec9b5eead1188b90a547dee9eae4eaa6",
+            "lineage_id": "review-b375153aa152604e",
+            "authority_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+            "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+            "base_tree": "90cad9ced54c89aa27d807beebddb725651220ef",
+            "candidate_tree": "774a006823fd25fe93d36e5bee9d232b38014374",
+            "changed_path_manifest_sha256": "sha256:eda5a9f3fa009f4aa56f549987d8a4a3906e9739167930d654b8236b41599d3e",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:80976f9bb9c49b3de81ac653bdd67ea1ec9b5eead1188b90a547dee9eae4eaa6",
+            "raw_sha256": "sha256:470cdc3f18a12b046a94a42aa028ba17d03ec63a98f36cb98d3734c0036c0bd1",
+            "canonical_sha256": "sha256:470cdc3f18a12b046a94a42aa028ba17d03ec63a98f36cb98d3734c0036c0bd1",
+            "result_hash": "sha256:5e122ed85ac0b863235f2f07867939d758294460dc25f2c07088bb0576e66d64",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:80976f9bb9c49b3de81ac653bdd67ea1ec9b5eead1188b90a547dee9eae4eaa6",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "engine/skills/lint.go: the new hasIndentedContinuation helper checks bounds before indexing (it returns false when the next index is at or past the end of lines), so an empty description tag on the last frontmatter line cannot panic. This keeps the same bounds guard the replaced inline check had, and the non-empty description path behaves exactly as before.",
+              "engine/skills/lint.go: removing DescriptionEmpty and switching checkRequiredFields to present-booleans is a pure in-memory classification change. There is no I/O, retry, network, filesystem or concurrency surface. The change only moves an empty description tag followed by an indented continuation from required-fields to description-one-line. Both are hard errors, so a malformed skill is still rejected and nothing is silently accepted.",
+              "engine/skills/lint.go: an empty description tag with no continuation still leaves both fm.Description and fm.DescriptionMultiLine unset, so required-fields still fires. Detection is not weakened for truly absent content.",
+              "engine/skills/lint.go: the reworded stray-indent comment has no runtime effect. The silent drop of non-required stray-indented keys that it now documents is existing parser behavior this candidate did not change, and it only affects optional keys the linter ignores anyway, so it causes no concrete production failure.",
+              "engine/skills/lint_test.go: the changes are test-only helpers (splitTableRowCells, parenthesizedContent, codeSpanTokenSet) and one new test, with bounded loops over in-memory strings. They add no latency, load or flakiness risk.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md: a documentation-only checklist entry with no operational impact.",
+              "This candidate introduces no concrete production failure mode, degradation path, or measurable latency or load impact."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+        "capture_phase_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+        "artifact_digest": "sha256:d10ac6793e448ea5249dbc50be550668b68158151fae5539ea7b924330050cb8",
+        "result_hash": "sha256:b9d64337e43b22be758cb191f47cd5e1554be182de306d12cf7fbb8c08e13971",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:9381bc740bb4e2a806a4a5255667dcd671a8f67e283529641f7e9405a9855848",
+            "lineage_id": "review-b375153aa152604e",
+            "authority_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+            "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+            "base_tree": "90cad9ced54c89aa27d807beebddb725651220ef",
+            "candidate_tree": "774a006823fd25fe93d36e5bee9d232b38014374",
+            "changed_path_manifest_sha256": "sha256:eda5a9f3fa009f4aa56f549987d8a4a3906e9739167930d654b8236b41599d3e",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:9381bc740bb4e2a806a4a5255667dcd671a8f67e283529641f7e9405a9855848",
+            "raw_sha256": "sha256:047cbdd81851c7b1832ffc9e3f3bd350182a9907420d54c862dc9b5217935924",
+            "canonical_sha256": "sha256:edbecad218f7cd470024e3bf4396a04fc08fc8fb263954c639b2b6c6a2edf90e",
+            "result_hash": "sha256:b9d64337e43b22be758cb191f47cd5e1554be182de306d12cf7fbb8c08e13971",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:9381bc740bb4e2a806a4a5255667dcd671a8f67e283529641f7e9405a9855848",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-indicator-test-doc-contradicts-oracle",
+                "lens": "readability",
+                "location": "engine/skills/lint_test.go:659-660",
+                "severity": "WARNING",
+                "claim": "The new doc comment on TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator says the test compares the extracted token set against blockScalarIndicators. The test body does the opposite. It compares against a literal want set, and the inline comment next to want explicitly says the set is kept independent of blockScalarIndicators so the check cannot be vacuous. The doc comment contradicts the fix it describes. A maintainer who trusts it could 'align' the code with the comment by deriving want from blockScalarIndicators, which would bring back the vacuous test this candidate was meant to remove.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:659-660",
+                  "engine/skills/lint_test.go:672-676",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:41"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-split-cells-comment-understates-drop",
+                "lens": "readability",
+                "location": "engine/skills/lint_test.go:683-686",
+                "severity": "SUGGESTION",
+                "claim": "The splitTableRowCells doc comment says the helper drops only the empty leading and trailing cells from a row that starts and ends with a pipe. The loop that follows drops every empty cell after trimming, including empty cells in the middle of the row. If a middle cell were ever empty, the remaining cells would shift left, and the caller's fixed index (the third cell as the summary) and its three-cell count check would look at the wrong column without any clear sign why. Either make the comment say that all empty cells are dropped, or drop only the first and last cells.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:683-686",
+                  "engine/skills/lint_test.go:700-704",
+                  "engine/skills/lint_test.go:664-668"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all three manifest paths in full from the supplied patch sections.",
+              "engine/skills/lint.go: removing the dead DescriptionEmpty field and adding the shared hasIndentedContinuation helper removes duplicated logic. The switch of checkRequiredFields to a present boolean comes with a comment explaining why DescriptionMultiLine counts as presence. The rewritten stray-indent comment now correctly says that non-required stray keys are dropped silently. No readability defect was found in this file.",
+              "engine/skills/lint_test.go: comments that referenced transient review IDs were replaced with descriptions of the invariants they protect. The new empty-description-with-continuation test is named and documented clearly. One doc comment contradicts the test oracle (lines 659-660), and one helper comment understates what the helper drops (lines 683-686).",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md: task 1a.7 accurately lists the changes, including that want is a literal set independent of blockScalarIndicators, and this confirms that the test doc comment is the stale side."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+        "capture_phase_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+        "artifact_digest": "sha256:7868aedb499a950c44014ffc31e3cc6bd5ad14eb4b0d27bf0d7bca2efab2ece2",
+        "result_hash": "sha256:db072f2cff0495be7f5e9628595a454c85b5ce20511567328fd0d74d087be671",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:418349842f0ee61f7babd46cddd592ed4adccae76355322825f8aecdb8b78bd3",
+            "lineage_id": "review-b375153aa152604e",
+            "authority_revision": "sha256:e9b3617767916f70df25f154039c5f44e2f404e08e3420ddae4cd8d64b6bf997",
+            "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+            "base_tree": "90cad9ced54c89aa27d807beebddb725651220ef",
+            "candidate_tree": "774a006823fd25fe93d36e5bee9d232b38014374",
+            "changed_path_manifest_sha256": "sha256:eda5a9f3fa009f4aa56f549987d8a4a3906e9739167930d654b8236b41599d3e",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:418349842f0ee61f7babd46cddd592ed4adccae76355322825f8aecdb8b78bd3",
+            "raw_sha256": "sha256:c025e9115537f55de25eb37edccd01600b311157f83fdb31bfaf94d3999a9464",
+            "canonical_sha256": "sha256:e75ff69253d9beee7e21fe9f3d2a80fa3b6838ee455f34d5fba44091896ea851",
+            "result_hash": "sha256:db072f2cff0495be7f5e9628595a454c85b5ce20511567328fd0d74d087be671",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:418349842f0ee61f7babd46cddd592ed4adccae76355322825f8aecdb8b78bd3",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-whitespace-only-continuation-masks-missing-description",
+                "lens": "reliability",
+                "location": "engine/skills/lint.go:183",
+                "severity": "WARNING",
+                "claim": "hasIndentedContinuation counts any line that is non-empty and starts with a space or tab as a continuation, including a line made only of whitespace. The empty-description branch now calls this check. So an empty `description:` tag followed by a whitespace-only line is classified as DescriptionMultiLine. This case has no content at all: in YAML the value is null. The linter reports description-one-line instead of required-fields, and it no longer says that description is missing. Linting still fails with a hard error, but it names the wrong rule for a field that is actually absent. Before this change, an empty tag always reported required-fields.",
+                "proof_refs": [
+                  "engine/skills/lint.go:155-157",
+                  "engine/skills/lint.go:178-184",
+                  "engine/skills/lint.go:381"
+                ]
+              },
+              {
+                "id": "R3-empty-desc-continuation-edge-coverage",
+                "lens": "reliability",
+                "location": "engine/skills/lint_test.go:199-215",
+                "severity": "SUGGESTION",
+                "claim": "The new test covers only one case: an empty tag followed by space-indented, non-blank continuation lines. No test covers a tab-indented continuation, a whitespace-only line after an empty tag, or an empty tag as the last frontmatter line. These are the edge cases where the shared hasIndentedContinuation check decides between required-fields and description-one-line. The candidate's behavior for them is currently untested.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:199-215",
+                  "engine/skills/lint.go:178-184"
+                ]
+              }
+            ],
+            "evidence": [
+              "I read all three changed paths in full from the supplied patch sections. I did not read the working tree and did not run any command.",
+              "The main behavior change is in engine/skills/lint.go:155-157 and engine/skills/lint.go:381. When an empty description tag is followed by an indented continuation, the linter now reports description-one-line instead of required-fields. With no continuation, it still reports required-fields. The existing test EmptyDescriptionYieldsRequiredFieldsOnly and the new test in engine/skills/lint_test.go:199-215 check both outcomes through LintSkill's hard-rule output.",
+              "The DescriptionEmpty field was removed. The patch shows no remaining reference to it, and checkRequiredFields now tracks presence with a boolean. The other four required fields behave the same as before.",
+              "The rewritten indicator test compares an exact set of code-span tokens taken from the parenthesized list in the summary cell against a literal expected set. This fixes the vacuous substring check. The patch does not show an import hunk for reflect or a definition of inlineCodeRe, so both must already be in the unchanged part of engine/skills/lint_test.go. I could not check this from the visible candidate.",
+              "The change to openspec/changes/procedural-memory-lifecycle/tasks.md only adds a checklist entry. It has no runtime effect.",
+              "The new helpers read only their input slices and strings, so they are deterministic and have no I/O."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ff6091f64a02d0e5dfc60db8a3aac9b193b9ed33e5b776d4f5167aed914a8519",
+    "initial_atomic_start": {
+      "lineage_id": "review-b375153aa152604e",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:f7e09def76469013495bfac4c30073bbe05aadb4ddd4fc752893d6b28ec7fb50",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "90cad9ced54c89aa27d807beebddb725651220ef",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 201,
+      "correction_budget": 101,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
