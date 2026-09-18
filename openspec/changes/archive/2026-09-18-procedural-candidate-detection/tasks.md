@@ -57,7 +57,9 @@ Chain strategy: stacked-to-main
 
 ## Phase 4: Full Verification
 
-- [ ] 4.1 `cd engine && go vet ./... && go test ./...`
-- [ ] 4.2 Confirm no file under `skills/` other than `skills/_shared/procedural-candidate-detection.md` was written, and no `skills.registry.yaml`/manifest mutation occurred (`git diff --stat` review)
-- [ ] 4.3 Confirm no Go source path in this change opens Engram's database in a writable mode (grep for new `sql.Open`/DSN construction touching Engram; none expected — this change adds no Go-Engram code path at all)
-- [ ] 4.4 Run the full R-001/R-002/R-003/R-004 acceptance checklist (sections added in 1.6, 2.4, 2.5, 3.6) against real Engram records during `sdd-verify`; record results honestly in the verify report, including any scenario that could not be exercised
+- [x] 4.1 `cd engine && go vet ./... && go test ./...`
+- [x] 4.2 Confirm no file under `skills/` other than `skills/_shared/procedural-candidate-detection.md` was written, and no `skills.registry.yaml`/manifest mutation occurred (`git diff --stat` review)
+- [x] 4.3 Confirm no Go source path in this change opens Engram's database in a writable mode (grep for new `sql.Open`/DSN construction touching Engram; none expected — this change adds no Go-Engram code path at all)
+- [x] 4.4 Run the full R-001/R-002/R-003/R-004 acceptance checklist (sections added in 1.6, 2.4, 2.5, 3.6) against real Engram records during `sdd-verify`; record results honestly in the verify report, including any scenario that could not be exercised
+- [x] 4.5 (R3-contract-test-unasserted-new-rule, accepted non-blocking review follow-up from review-1cdba131c496cc29): RED-first, extend `engine/skills/procedural_candidate_contract_test.go` to assert section 6 states comparison uses the untruncated normalized form and never `NormalizeSlug`'s truncated output
+- [x] 4.6 (R3-sweep-memo-key-truncated, accepted non-blocking review follow-up from review-1cdba131c496cc29): reword the per-sweep reuse sentence in section 6 so any memoization of a `MatchCandidate` answer is keyed by the untruncated normalized form, never the truncated `NormalizeSlug` topic-key slug, with the reason why; RED-first contract-test marker

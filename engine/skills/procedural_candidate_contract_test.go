@@ -82,4 +82,18 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			t.Fatalf("contract must contain the MatchCandidate call-site description %q verbatim", "MatchCandidate(registry, slug)")
 		}
 	})
+
+	t.Run("R004_untruncated_comparison_rule_present", func(t *testing.T) {
+		required := "Comparison always uses the untruncated normalized form, never the truncated form `NormalizeSlug` returns."
+		if !strings.Contains(contract, required) {
+			t.Fatalf("contract must state the untruncated-comparison rule verbatim: %q", required)
+		}
+	})
+
+	t.Run("R004_sweep_memo_key_untruncated_present", func(t *testing.T) {
+		required := "Any per-sweep reuse or memoization of a `MatchCandidate` answer MUST be keyed by the untruncated normalized form, never by the truncated `NormalizeSlug` topic-key slug, because two long candidates sharing a truncated prefix would otherwise share one cached answer and reintroduce the false duplicate this section exists to prevent."
+		if !strings.Contains(contract, required) {
+			t.Fatalf("contract must state the sweep-memoization key rule verbatim: %q", required)
+		}
+	})
 }
