@@ -173,6 +173,60 @@ func TestMatchCandidate(t *testing.T) {
 		}
 	})
 
+	t.Run("no match when two long identities share only a truncated-prefix", func(t *testing.T) {
+		prefix := strings.Repeat("a", maxSlugBytes)
+		reg := Registry{Skills: []Entry{
+			{ID: prefix + "-one", Path: prefix + "-one"},
+		}}
+		matched, path := MatchCandidate(reg, prefix+"-two")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(%s-two) = (%v, %q), want (false, \"\") — sharing only the truncated prefix must not match", prefix, matched, path)
+		}
+	})
+
+	t.Run("identical long identity beyond maxSlugBytes still matches", func(t *testing.T) {
+		prefix := strings.Repeat("a", maxSlugBytes)
+		long := prefix + "-one"
+		reg := Registry{Skills: []Entry{
+			{ID: long, Path: long},
+		}}
+		matched, path := MatchCandidate(reg, long)
+		if !matched || path != long {
+			t.Fatalf("MatchCandidate(%s) = (%v, %q), want (true, %q)", long, matched, path, long)
+		}
+	})
+
+	t.Run("candidate already truncated does not match a longer registry id that starts with it", func(t *testing.T) {
+		prefix := strings.Repeat("a", maxSlugBytes)
+		reg := Registry{Skills: []Entry{
+			{ID: prefix + "-one", Path: prefix + "-one"},
+		}}
+		matched, path := MatchCandidate(reg, prefix)
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(%s) = (%v, %q), want (false, \"\") — a truncated candidate must not match a longer registry id it merely prefixes", prefix, matched, path)
+		}
+	})
+
+	t.Run("registry entries with empty ID and Path never match a non-empty candidate", func(t *testing.T) {
+		reg := Registry{Skills: []Entry{
+			{ID: "", Path: ""},
+		}}
+		matched, path := MatchCandidate(reg, "some-real-candidate")
+		if matched || path != "" {
+			t.Fatalf("MatchCandidate(some-real-candidate) over empty-ID/Path entry = (%v, %q), want (false, \"\")", matched, path)
+		}
+	})
+
+	t.Run("path-derived normalization matches a hyphenated candidate", func(t *testing.T) {
+		reg := Registry{Skills: []Entry{
+			{ID: "internal-nested-alias", Path: "skills/foo-bar"},
+		}}
+		matched, path := MatchCandidate(reg, "foo bar")
+		if !matched || path != "skills/foo-bar" {
+			t.Fatalf("MatchCandidate(foo bar) = (%v, %q), want (true, %q)", matched, path, "skills/foo-bar")
+		}
+	})
+
 	t.Run("built via ParseRegistry over a fixture YAML", func(t *testing.T) {
 		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "valid_core_and_custom")))
 		if err != nil {

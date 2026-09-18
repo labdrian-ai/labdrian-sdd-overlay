@@ -68,7 +68,8 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 		for _, required := range []string{
 			"**RejectionReason**",
 			"**MatchedSkillPath**",
-			"duplicate",
+			"present only when Status=rejected",
+			"present only when RejectionReason=duplicate",
 		} {
 			if !strings.Contains(contract, required) {
 				t.Fatalf("contract must contain rejection field marker %q verbatim", required)

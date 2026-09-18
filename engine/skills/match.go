@@ -17,6 +17,15 @@ const maxSlugBytes = 48
 // cites it rather than restating the rule. NormalizeSlug performs no
 // filesystem or network access.
 func NormalizeSlug(s string) string {
+	return truncateSlug(normalizeSlugUntruncated(s), maxSlugBytes)
+}
+
+// normalizeSlugUntruncated applies NormalizeSlug's lowercase/collapse/trim
+// rule without the 48-byte truncation step. MatchCandidate compares this
+// untruncated form so that two distinct identities longer than maxSlugBytes
+// which merely share the same truncated prefix are never treated as the
+// same identity (see MatchCandidate's doc comment).
+func normalizeSlugUntruncated(s string) string {
 	var b strings.Builder
 	inRun := false
 
@@ -45,8 +54,7 @@ func NormalizeSlug(s string) string {
 		}
 	}
 
-	out := strings.Trim(b.String(), "-")
-	return truncateSlug(out, maxSlugBytes)
+	return strings.Trim(b.String(), "-")
 }
 
 // truncateSlug truncates s to at most maxLen bytes, backtracking to the last
@@ -68,13 +76,17 @@ func truncateSlug(s string, maxLen int) string {
 
 // MatchCandidate reports whether a registered skill already covers candidate,
 // and returns that skill's path when it does. Matching is exact identity
-// match after NormalizeSlug, against each entry's ID, Path, and the base
-// segment of Path, in registry order; the first match wins. There is no
-// substring, prefix, or similarity matching: a false duplicate silently
-// discards knowledge, a miss only defers it. An empty or all-punctuation
-// candidate never matches. MatchCandidate performs no filesystem or Engram
-// access and reuses reg as already parsed by ParseRegistry rather than
-// re-parsing any YAML itself.
+// match on the UNTRUNCATED normalized form (normalizeSlugUntruncated), never
+// on NormalizeSlug's 48-byte-truncated output, against each entry's ID, Path,
+// and the base segment of Path, in registry order; the first match wins.
+// Comparing the untruncated form matters because two distinct identities
+// longer than maxSlugBytes can share the same truncated prefix without being
+// the same identity; truncated comparison would treat them as a false
+// duplicate. There is no substring, prefix, or similarity matching: a false
+// duplicate silently discards knowledge, a miss only defers it. An empty or
+// all-punctuation candidate never matches. MatchCandidate performs no
+// filesystem or Engram access; the caller parses skills.registry.yaml with
+// ParseRegistry and passes the resulting Registry in.
 //
 // Extension point (documented, not built): when the registry schema grows a
 // trigger/keyword field, add MatchCandidateBy(reg, candidate, fields
@@ -82,15 +94,15 @@ func truncateSlug(s string, maxLen int) string {
 // "exact identity match after normalization" forever, so existing rejection
 // records keep their meaning.
 func MatchCandidate(reg Registry, candidate string) (matched bool, skillPath string) {
-	normalizedCandidate := NormalizeSlug(candidate)
+	normalizedCandidate := normalizeSlugUntruncated(candidate)
 	if normalizedCandidate == "" {
 		return false, ""
 	}
 
 	for _, entry := range reg.Skills {
-		if normalizedCandidate == NormalizeSlug(entry.ID) ||
-			normalizedCandidate == NormalizeSlug(entry.Path) ||
-			normalizedCandidate == NormalizeSlug(path.Base(entry.Path)) {
+		if normalizedCandidate == normalizeSlugUntruncated(entry.ID) ||
+			normalizedCandidate == normalizeSlugUntruncated(entry.Path) ||
+			normalizedCandidate == normalizeSlugUntruncated(path.Base(entry.Path)) {
 			return true, entry.Path
 		}
 	}

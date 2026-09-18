@@ -206,11 +206,16 @@ duplicate emission or a miscounted `OccurrenceCount`.
 This capability MUST reject a promotion candidate whose identity is already
 covered by an existing entry in the registered skill registry
 (`skills.registry.yaml`). Rejection is backed by a new read-only Go
-entrypoint, `skills.MatchCandidate` (`engine/skills/match.go`), which reuses
-the already-exported `ParseRegistry` function and performs no write to the
+entrypoint, `skills.MatchCandidate` (`engine/skills/match.go`). The caller
+parses `skills.registry.yaml` with the already-exported `ParseRegistry`
+function and passes the resulting `Registry` value in; `MatchCandidate`
+itself performs no file, network, or other I/O and makes no write to the
 registry, to any file under `skills/`, or to any other persisted state.
-Rejection is decided purely on registry contents at check time; the registry
-itself is never mutated by this capability.
+Matching compares the untruncated normalized form of each identity, never
+the form `NormalizeSlug` truncates to 48 bytes, so two distinct identities
+that happen to share the same truncated prefix are never treated as
+duplicates. Rejection is decided purely on registry contents at check time;
+the registry itself is never mutated by this capability.
 
 ### Rejection record fields
 
@@ -244,9 +249,12 @@ the registry's answer for the same normalized slug cannot change between one
 occurrence and the next within a single detection sweep.
 
 `skills.MatchCandidate(reg Registry, candidate string) (matched bool, skillPath string)`
-compares `NormalizeSlug(candidate)` against, for each registry entry in
-registry order: `NormalizeSlug(entry.ID)`, `NormalizeSlug(entry.Path)`, and
-`NormalizeSlug(path.Base(entry.Path))`. The first match wins (deterministic).
+compares the untruncated normalized form of `candidate` against, for each
+registry entry in registry order: the untruncated normalized form of
+`entry.ID`, of `entry.Path`, and of `path.Base(entry.Path)`. The comparison
+never uses `NormalizeSlug`'s 48-byte-truncated output, because two distinct
+identities longer than 48 bytes can share the same truncated prefix without
+being the same identity. The first match wins (deterministic).
 An empty or all-punctuation candidate never matches. There is **no
 substring, prefix, or fuzzy matching** — a candidate like `sdd-spec-review`
 never matches a registered skill `sdd-spec`, because under-detection (a
