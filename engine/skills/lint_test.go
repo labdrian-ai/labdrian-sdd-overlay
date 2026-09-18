@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -134,6 +135,60 @@ func TestLintSkill_RequiredFields_MissingOrEmpty(t *testing.T) {
 	}
 }
 
+// TestLintSkill_OneSpaceIndentedMetadataEntryIsSurfacedAsMissing documents
+// the decided behavior for finding R2-stray-indent-comment-misleading. The
+// design's frontmatter subset (design.md, "LintSkill API shape") specifies a
+// `metadata:` block with 2-space-indented pairs; a one-space-indented entry
+// does not match that shape. Rather than being silently consumed, it is
+// treated as a stray line that ends the metadata block. This is not a
+// silent drop: any metadata field left unset by the truncated block
+// (including a later, correctly 2-space-indented entry that never gets
+// parsed because the block already ended) is reported by the required-fields
+// hard rule, which names the missing field explicitly.
+func TestLintSkill_OneSpaceIndentedMetadataEntryIsSurfacedAsMissing(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description: A short, single-line description.\n" +
+		"license: MIT\n" +
+		"metadata:\n" +
+		" author: tester\n" + // malformed: one space, not the documented two
+		"  version: \"1.0\"\n" // well-formed, but unreachable once the block ended
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	for _, field := range []string{"metadata.author", "metadata.version"} {
+		found := false
+		for _, e := range hard {
+			if le, ok := e.(*LintError); ok && le.Rule == "required-fields" && strings.Contains(le.Msg, field) {
+				found = true
+			}
+		}
+		if !found {
+			t.Errorf("expected required-fields to name %q as missing after the metadata block ends on a one-space-indented entry, got %v", field, hard)
+		}
+	}
+}
+
+// TestLintSkill_EmptyDescriptionYieldsRequiredFieldsOnly proves an empty
+// `description:` line is reported only via required-fields (finding
+// R2-empty-description-flagged-multiline): it must not also raise a
+// misleading description-one-line hard error, since an empty value is not a
+// block scalar or a multi-line continuation.
+func TestLintSkill_EmptyDescriptionYieldsRequiredFieldsOnly(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description:\n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "required-fields") {
+		t.Errorf("expected required-fields hard error for empty description, got %v", hard)
+	}
+	if hasHardRule(hard, "description-one-line") {
+		t.Errorf("empty description must not also trigger description-one-line, got %v", hard)
+	}
+}
+
 func TestLintSkill_WellFormedProducesZeroHardErrors(t *testing.T) {
 	hard, _ := LintSkill(validFrontmatter(), validBody())
 	if len(hard) != 0 {
@@ -236,32 +291,34 @@ func TestLintSkill_DescriptionShouldBoundary(t *testing.T) {
 // --- Hard rule: body-hard-budget ---
 
 func TestLintSkill_BodyHardBudgetBoundary(t *testing.T) {
-	at := strings.Repeat("x", 4000)
-	over := strings.Repeat("x", 4001)
+	atBytes := BodyHardTokens * BytesPerTokenProxy
+	at := strings.Repeat("x", atBytes)
+	over := strings.Repeat("x", atBytes+1)
 
 	hard, _ := LintSkill(validFrontmatter(), at)
 	if hasHardRule(hard, "body-hard-budget") {
-		t.Errorf("body at exactly 4000 bytes must not trigger body-hard-budget, got %v", hard)
+		t.Errorf("body at exactly %d bytes must not trigger body-hard-budget, got %v", atBytes, hard)
 	}
 
 	hard, _ = LintSkill(validFrontmatter(), over)
 	if !hasHardRule(hard, "body-hard-budget") {
-		t.Errorf("body at 4001 bytes must trigger body-hard-budget, got %v", hard)
+		t.Errorf("body at %d bytes must trigger body-hard-budget, got %v", atBytes+1, hard)
 	}
 }
 
 // --- Advisory: body-recommended ---
 
 func TestLintSkill_BodyRecommendedBoundary(t *testing.T) {
-	at := strings.Repeat("x", 2800)
-	over := strings.Repeat("x", 2801)
+	atBytes := BodyRecommendedTokens * BytesPerTokenProxy
+	at := strings.Repeat("x", atBytes)
+	over := strings.Repeat("x", atBytes+1)
 
 	hard, warnings := LintSkill(validFrontmatter(), at)
 	if len(hard) != 0 {
 		t.Fatalf("unexpected hard errors at recommended boundary: %v", hard)
 	}
 	if hasWarningRule(warnings, "body-recommended") {
-		t.Errorf("body at exactly 2800 bytes must not trigger body-recommended, got %v", warnings)
+		t.Errorf("body at exactly %d bytes must not trigger body-recommended, got %v", atBytes, warnings)
 	}
 
 	hard, warnings = LintSkill(validFrontmatter(), over)
@@ -269,7 +326,7 @@ func TestLintSkill_BodyRecommendedBoundary(t *testing.T) {
 		t.Fatalf("unexpected hard errors just over recommended boundary: %v", hard)
 	}
 	if !hasWarningRule(warnings, "body-recommended") {
-		t.Errorf("body at 2801 bytes must trigger body-recommended, got %v", warnings)
+		t.Errorf("body at %d bytes must trigger body-recommended, got %v", atBytes+1, warnings)
 	}
 }
 
@@ -354,6 +411,22 @@ func TestLintSkill_BannedShellUtility(t *testing.T) {
 			t.Errorf("catalog must not be treated as the banned utility cat, got %v", warnings)
 		}
 	})
+
+	t.Run("near miss inside fenced block does not match", func(t *testing.T) {
+		body := validBody() + "\n```\ncatalog list\n```\n"
+		_, warnings := LintSkill(validFrontmatter(), body)
+		if hasWarningRule(warnings, "banned-shell-utility") {
+			t.Errorf("catalog inside a fenced block must not be treated as the banned utility cat, got %v", warnings)
+		}
+	})
+
+	t.Run("banned word in plain prose outside code is ignored", func(t *testing.T) {
+		body := validBody() + "\nDo not cat the file; use the approved replacement instead.\n"
+		_, warnings := LintSkill(validFrontmatter(), body)
+		if hasWarningRule(warnings, "banned-shell-utility") {
+			t.Errorf("a banned word in plain prose (outside a code span or fence) must be ignored, got %v", warnings)
+		}
+	})
 }
 
 // --- Advisory: home-path-leak ---
@@ -365,7 +438,7 @@ func TestLintSkill_HomePathLeak(t *testing.T) {
 	}{
 		{name: "linux", body: validBody() + "\nSee /home/alice/notes.md for details.\n"},
 		{name: "macos", body: validBody() + "\nSee /Users/alice/notes.md for details.\n"},
-		{name: "windows", body: validBody() + `\nSee C:\Users\alice\notes.md for details.` + "\n"},
+		{name: "windows", body: validBody() + "\n" + `See C:\Users\alice\notes.md for details.` + "\n"},
 	}
 
 	for _, tc := range cases {
@@ -466,5 +539,137 @@ func TestSplitSkillFile_RoundTrip(t *testing.T) {
 	}
 	if body != validBody() {
 		t.Errorf("body mismatch:\ngot:  %q\nwant: %q", body, validBody())
+	}
+}
+
+// --- SplitSkillFile tolerates a leading BOM and trailing fence whitespace
+// (finding R4-bom-fence-false-hard-error) ---
+
+func TestSplitSkillFile_LeadingBOMDoesNotFalselyFailFence(t *testing.T) {
+	data := append([]byte{0xEF, 0xBB, 0xBF}, []byte("---\n"+validFrontmatter()+"---\n"+validBody())...)
+
+	frontmatter, body, err := SplitSkillFile(data)
+	if err != nil {
+		t.Fatalf("expected a leading UTF-8 BOM not to cause a fence error, got: %v", err)
+	}
+	if frontmatter != strings.TrimRight(validFrontmatter(), "\n") {
+		t.Errorf("frontmatter mismatch:\ngot:  %q\nwant: %q", frontmatter, strings.TrimRight(validFrontmatter(), "\n"))
+	}
+	if body != validBody() {
+		t.Errorf("body mismatch:\ngot:  %q\nwant: %q", body, validBody())
+	}
+}
+
+func TestSplitSkillFile_TrailingSpacesOnOpeningFence(t *testing.T) {
+	data := []byte("---   \n" + validFrontmatter() + "---\n" + validBody())
+
+	_, _, err := SplitSkillFile(data)
+	if err != nil {
+		t.Fatalf("expected trailing spaces on the opening fence not to cause a fence error, got: %v", err)
+	}
+}
+
+func TestSplitSkillFile_TrailingTabOnClosingFence(t *testing.T) {
+	data := []byte("---\n" + validFrontmatter() + "---\t\n" + validBody())
+
+	_, _, err := SplitSkillFile(data)
+	if err != nil {
+		t.Fatalf("expected trailing whitespace on the closing fence not to cause a fence error, got: %v", err)
+	}
+}
+
+// --- RenderLintRules (finding R3-render-untested) ---
+
+func TestRenderLintRules_HeaderAndRowCount(t *testing.T) {
+	out := RenderLintRules()
+	lines := strings.Split(strings.TrimRight(out, "\n"), "\n")
+
+	if len(lines) != len(lintRules)+2 {
+		t.Fatalf("expected header + separator + %d rule rows, got %d lines:\n%s", len(lintRules), len(lines), out)
+	}
+	if lines[0] != "| ID | Severity | Check |" {
+		t.Errorf("unexpected header line: %q", lines[0])
+	}
+	if lines[1] != "|---|---|---|" {
+		t.Errorf("unexpected separator line: %q", lines[1])
+	}
+
+	headerCells := countUnescapedPipes(lines[0])
+	for i, r := range lintRules {
+		row := lines[i+2]
+		if !strings.Contains(row, "`"+r.ID+"`") {
+			t.Errorf("row %d does not name rule id %q: %q", i, r.ID, row)
+		}
+		if got := countUnescapedPipes(row); got != headerCells {
+			t.Errorf("row %d has %d unescaped (cell-splitting) pipes, header has %d: %q", i, got, headerCells, row)
+		}
+	}
+}
+
+// countUnescapedPipes counts `|` characters that are NOT preceded by a
+// backslash, i.e. the pipes that actually split a GFM table row into cells.
+// An escaped `\|` renders as a literal pipe inside one cell and must not be
+// counted as a separator.
+func countUnescapedPipes(s string) int {
+	n := 0
+	for i := 0; i < len(s); i++ {
+		if s[i] == '|' && (i == 0 || s[i-1] != '\\') {
+			n++
+		}
+	}
+	return n
+}
+
+// --- RenderLintRules derives summaries from source data (finding
+// R2-rendered-summaries-duplicate-data) ---
+
+func TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator(t *testing.T) {
+	out := RenderLintRules()
+	row := lintRuleRow(t, out, "description-one-line")
+
+	for _, indicator := range []string{">", "|", ">-", "|-", ">+", "|+"} {
+		if !strings.Contains(row, indicator) {
+			t.Errorf("description-one-line row must list block-scalar indicator %q, got: %q", indicator, row)
+		}
+	}
+}
+
+func TestRenderLintRules_SectionOrderListsEveryCanonicalSection(t *testing.T) {
+	out := RenderLintRules()
+	row := lintRuleRow(t, out, "section-order")
+
+	for _, section := range canonicalSections {
+		if !strings.Contains(row, section) {
+			t.Errorf("section-order row must list canonical section %q, got: %q", section, row)
+		}
+	}
+}
+
+// lintRuleRow returns the rendered row for the given rule id, failing the
+// test if the id is not present.
+func lintRuleRow(t *testing.T, rendered, ruleID string) string {
+	t.Helper()
+	for _, line := range strings.Split(rendered, "\n") {
+		if strings.Contains(line, "`"+ruleID+"`") {
+			return line
+		}
+	}
+	t.Fatalf("no rendered row found for rule %q in:\n%s", ruleID, rendered)
+	return ""
+}
+
+func TestRenderLintRules_RendersNumericConstants(t *testing.T) {
+	out := RenderLintRules()
+
+	wantSubstrings := []string{
+		fmt.Sprintf("%d", DescriptionMaxRunes),
+		fmt.Sprintf("%d", DescriptionShouldRunes),
+		fmt.Sprintf("%d", BodyHardTokens),
+		fmt.Sprintf("%d", BodyRecommendedTokens),
+	}
+	for _, want := range wantSubstrings {
+		if !strings.Contains(out, want) {
+			t.Errorf("expected rendered rule table to contain %q, got:\n%s", want, out)
+		}
 	}
 }

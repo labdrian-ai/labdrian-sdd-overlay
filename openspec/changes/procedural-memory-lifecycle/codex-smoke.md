@@ -4,7 +4,7 @@
 - **Codex version**: `codex-cli 0.148.0` (expected 0.148.0)
 - **Authorization**: explicitly granted by the owner on 2026-09-18 for the destination (Codex model provider), the operation (at most 2 probe prompts plus 1 control, no repository content sent) and the credential (existing Codex login session). Used: 2 probes + 1 control.
 - **Local skill-listing command**: none found in `codex --help` / `codex exec --help`, so the remote variant was used.
-- **Verdict**: **PASS** for discovery of project skills under `.agents/skills/<id>/`, via probe 2 (see deviation below). Codex support may be claimed.
+- **Verdict**: **PASS** for discovery of project skills under `.agents/skills/<id>/`, via probe 2 (see deviation below). Scoped claim: Codex discovery of `.agents/skills/<id>/` (name and description exposed in its skill list) is verified; loading the skill body is unverified on this host, because probe 1's body-read attempt was blocked by a host filesystem-sandbox limitation (INCONCLUSIVE, not a discovery failure).
 
 ## Setup
 

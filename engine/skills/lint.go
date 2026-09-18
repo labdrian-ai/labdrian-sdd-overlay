@@ -1,10 +1,22 @@
 package skills
 
 import (
+	"bytes"
 	"fmt"
 	"regexp"
 	"strings"
 )
+
+// utf8BOM is the UTF-8 byte-order mark some editors write at the start of a
+// file. A leading BOM must not falsely trip the frontmatter-fence hard rule.
+var utf8BOM = []byte{0xEF, 0xBB, 0xBF}
+
+// isFenceLine reports whether line is a `---` frontmatter fence, tolerating
+// a trailing `\r` (CRLF line endings) and trailing horizontal whitespace
+// (spaces or tabs) after the fence.
+func isFenceLine(line string) bool {
+	return strings.TrimRight(line, " \t\r") == "---"
+}
 
 // Severity classifies a lint rule as blocking (hard) or non-blocking
 // (advisory). See the "Skill Lint Specification" (spec.md) and design.md's
@@ -72,6 +84,7 @@ type parsedFrontmatter struct {
 	License              string
 	MetaAuthor           string
 	MetaVersion          string
+	DescriptionEmpty     bool
 	DescriptionMultiLine bool
 }
 
@@ -104,8 +117,16 @@ func parseFrontmatterFields(raw string) parsedFrontmatter {
 		inMetadata = false
 
 		if strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
-			// Stray indented line outside metadata and not consumed as a
-			// description continuation below; ignore it.
+			// A line indented by less than the documented 2-space metadata
+			// pair (for example, a one-space-indented `author:`/`version:`
+			// entry), or any other stray indented line. This line's own
+			// key: value is NOT parsed, and it ends the metadata block: a
+			// well-formed 2-space entry appearing after it is also not
+			// reached, because inMetadata was already reset to false above.
+			// Nothing is silently lost from the caller's perspective: any
+			// required field left unset this way (name, description,
+			// license, metadata.author, metadata.version) is reported by
+			// the required-fields hard rule, which names the missing field.
 			continue
 		}
 
@@ -123,7 +144,11 @@ func parseFrontmatterFields(raw string) parsedFrontmatter {
 			inMetadata = true
 		case "description":
 			val = strings.TrimSpace(val)
-			if val == "" || isBlockScalarIndicator(val) {
+			if val == "" {
+				fm.DescriptionEmpty = true
+				continue
+			}
+			if isBlockScalarIndicator(val) {
 				fm.DescriptionMultiLine = true
 				continue
 			}
@@ -165,14 +190,35 @@ func unquote(s string) string {
 	return s
 }
 
+// blockScalarIndicators is the authoritative list of YAML block-scalar
+// indicators (folded or literal, with optional chomping). It is the single
+// source of data for both isBlockScalarIndicator and the rendered
+// description-one-line rule summary, so the two can never drift apart.
+var blockScalarIndicators = []string{">", "|", ">-", "|-", ">+", "|+"}
+
 // isBlockScalarIndicator reports whether val is a YAML block-scalar
 // indicator (folded or literal, with optional chomping).
 func isBlockScalarIndicator(val string) bool {
-	switch val {
-	case ">", "|", ">-", "|-", ">+", "|+":
-		return true
+	for _, ind := range blockScalarIndicators {
+		if val == ind {
+			return true
+		}
 	}
 	return false
+}
+
+// descriptionOneLineSummary renders the description-one-line rule's Summary
+// from blockScalarIndicators so the list of rejected indicators can never
+// drift from the data isBlockScalarIndicator actually checks against.
+func descriptionOneLineSummary() string {
+	quoted := make([]string, len(blockScalarIndicators))
+	for i, ind := range blockScalarIndicators {
+		quoted[i] = "`" + ind + "`"
+	}
+	return fmt.Sprintf(
+		"`description` is a single physical line: no block scalar (%s) and no indented continuation line.",
+		strings.Join(quoted, ", "),
+	)
 }
 
 // lintRule is one entry in the authoritative rule table. check is nil for
@@ -232,7 +278,7 @@ var lintRules = []lintRule{
 	{
 		ID:       "description-one-line",
 		Severity: SeverityHard,
-		Summary:  "`description` is a single physical line: no block scalar (`>`, `|`, `>-`, `|-`) and no indented continuation line.",
+		Summary:  descriptionOneLineSummary(),
 		check: func(fm parsedFrontmatter, body string) []string {
 			return checkDescriptionOneLine(fm)
 		},
@@ -272,7 +318,7 @@ var lintRules = []lintRule{
 	{
 		ID:       "section-order",
 		Severity: SeverityAdvisory,
-		Summary:  "The canonical H2 headings that are present (Activation Contract, Hard Rules, Decision Gates, Execution Steps, Output Contract, References) appear in canonical order.",
+		Summary:  sectionOrderSummary(),
 		check: func(fm parsedFrontmatter, body string) []string {
 			return checkSectionOrder(body)
 		},
@@ -395,6 +441,16 @@ func checkSectionOrder(body string) []string {
 	return nil
 }
 
+// sectionOrderSummary renders the section-order rule's Summary from
+// canonicalSections so the documented section list can never drift from
+// the data checkSectionOrder actually enforces.
+func sectionOrderSummary() string {
+	return fmt.Sprintf(
+		"The canonical H2 headings that are present (%s) appear in canonical order.",
+		strings.Join(canonicalSections, ", "),
+	)
+}
+
 func indexOfSection(name string) int {
 	for i, s := range canonicalSections {
 		if s == name {
@@ -471,15 +527,16 @@ func checkHomePathLeak(fm parsedFrontmatter, body string) []string {
 // opening or closing `---` fence fails here, before LintSkill is ever
 // called (see LintSkillFile).
 func SplitSkillFile(data []byte) (frontmatter, body string, err error) {
+	data = bytes.TrimPrefix(data, utf8BOM)
 	lines := strings.Split(string(data), "\n")
 
-	if len(lines) == 0 || strings.TrimRight(lines[0], "\r") != "---" {
+	if len(lines) == 0 || !isFenceLine(lines[0]) {
 		return "", "", &LintError{Rule: "frontmatter-fence", Msg: "file does not start with a `---` frontmatter fence"}
 	}
 
 	closeIdx := -1
 	for i := 1; i < len(lines); i++ {
-		if strings.TrimRight(lines[i], "\r") == "---" {
+		if isFenceLine(lines[i]) {
 			closeIdx = i
 			break
 		}
@@ -538,7 +595,16 @@ func RenderLintRules() string {
 	b.WriteString("| ID | Severity | Check |\n")
 	b.WriteString("|---|---|---|\n")
 	for _, r := range lintRules {
-		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", r.ID, r.Severity, r.Summary)
+		fmt.Fprintf(&b, "| `%s` | %s | %s |\n", r.ID, r.Severity, escapeTableCell(r.Summary))
 	}
 	return b.String()
+}
+
+// escapeTableCell escapes GFM table-breaking pipe characters in s so a
+// Summary containing a literal `|` (for example, to document YAML block
+// scalar indicators) still renders as a single table cell, even inside a
+// code span, since a raw `|` splits a Markdown table row regardless of
+// backticks around it.
+func escapeTableCell(s string) string {
+	return strings.ReplaceAll(s, "|", "\\|")
 }
