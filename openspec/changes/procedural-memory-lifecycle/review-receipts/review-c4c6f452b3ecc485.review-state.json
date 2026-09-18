@@ -1,0 +1,391 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:24b80f95d1971ea67f43c9fce30423fc9b30a706428623ece686f663653a93d4",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-c4c6f452b3ecc485",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "662c7fa11865522a19401b6d7db7efea17b822f8",
+      "candidate_tree": "47bf4aa948aad764c215c429994f0803f57148d2",
+      "paths_digest": "sha256:6f8e8080d14c0670fcc3189231c8984bffe9817a5e438f956bc528954288468d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_cli.go",
+        "engine/skills/lint_cli_test.go",
+        "engine/skills/lint_test.go",
+        "engine/skills/skills_test.go",
+        "engine/skills/style_guide_contract_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md",
+        "skills/skill-creator/SKILL.md",
+        "skills/skill-improver/SKILL.md"
+      ],
+      "identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "662c7fa11865522a19401b6d7db7efea17b822f8",
+      "candidate_tree": "47bf4aa948aad764c215c429994f0803f57148d2",
+      "paths_digest": "sha256:6f8e8080d14c0670fcc3189231c8984bffe9817a5e438f956bc528954288468d",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_cli.go",
+        "engine/skills/lint_cli_test.go",
+        "engine/skills/lint_test.go",
+        "engine/skills/skills_test.go",
+        "engine/skills/style_guide_contract_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md",
+        "skills/skill-creator/SKILL.md",
+        "skills/skill-improver/SKILL.md"
+      ],
+      "identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4"
+    },
+    "genesis_paths": [
+      "engine/skills/lint.go",
+      "engine/skills/lint_cli.go",
+      "engine/skills/lint_cli_test.go",
+      "engine/skills/lint_test.go",
+      "engine/skills/skills_test.go",
+      "engine/skills/style_guide_contract_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md",
+      "skills/skill-creator/SKILL.md",
+      "skills/skill-improver/SKILL.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 267,
+    "correction_budget": 134,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:536ed7b2c5fc87d5b1b2047beeae7e193a5b603524c3836b0d5d22382aac68de",
+    "capture_phase_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+        "capture_phase_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+        "artifact_digest": "sha256:f7e933d7a2804fdf262426188499245533c15e055491fb5d340485a01b96df70",
+        "result_hash": "sha256:b73532029a5b8f0753bf751e5fe46d4a4e7f46fb97b38cbf750d27a0b7a5b6b2",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:01cf47c610579fd10c2467c8acbfda88b0c78c2d3e41a79f4a8d2c8f56809049",
+            "lineage_id": "review-c4c6f452b3ecc485",
+            "authority_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+            "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+            "base_tree": "662c7fa11865522a19401b6d7db7efea17b822f8",
+            "candidate_tree": "47bf4aa948aad764c215c429994f0803f57148d2",
+            "changed_path_manifest_sha256": "sha256:51169ff7d21e4b91ab37b7720f02421f32ccdd8b4e15ae09b6966b2fb6ae7544",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:01cf47c610579fd10c2467c8acbfda88b0c78c2d3e41a79f4a8d2c8f56809049",
+            "raw_sha256": "sha256:a36e0ba23db4af6cf02cde02f0834514ae13f6faf4c401538831a14fb4aa7085",
+            "canonical_sha256": "sha256:a36e0ba23db4af6cf02cde02f0834514ae13f6faf4c401538831a14fb4aa7085",
+            "result_hash": "sha256:b73532029a5b8f0753bf751e5fe46d4a4e7f46fb97b38cbf750d27a0b7a5b6b2",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:01cf47c610579fd10c2467c8acbfda88b0c78c2d3e41a79f4a8d2c8f56809049",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_cli.go",
+                "engine/skills/lint_cli_test.go",
+                "engine/skills/lint_test.go",
+                "engine/skills/skills_test.go",
+                "engine/skills/style_guide_contract_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md",
+                "skills/skill-creator/SKILL.md",
+                "skills/skill-improver/SKILL.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "I reviewed all 9 changed paths in the manifest in full, using only the supplied patch sections, and found no reachable security, authorization, data-exposure, data-loss, secret-handling or dependency risk introduced by this candidate.",
+              "engine/skills/lint.go:183-193: the new version of hasIndentedContinuation only skips blank lines inside the already-split frontmatter slice. The loop stops at len(lines), so it cannot index out of bounds. It does not read files, touch the network or run commands.",
+              "engine/skills/lint_cli.go:44-55: RenderLintCore is now stricter about arguments. It rejects unknown flags and a second path with exit 1, before readFile is called. The error message quotes the bad argument with %q and writes it to local stderr, which only echoes what the caller typed. This fail-closed change prevents a false-clean lint result and does not widen what input is accepted.",
+              "engine/skills/lint_cli_test.go, engine/skills/lint_test.go, engine/skills/skills_test.go and engine/skills/style_guide_contract_test.go only change tests. Their readFile stubs and fixtures are in-memory, they contain no credentials, and they add no new dependencies (the only import added in production code is strings, from the standard library).",
+              "skills/skill-creator/SKILL.md:23 and skills/skill-improver/SKILL.md:17 add a documented fallback: if the binary is missing, apply the local style-guide rule table by hand. This is prose guidance only, with no executable effect or external reference.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md:58 adds one task-tracking checklist line and has no runtime effect."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+        "capture_phase_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+        "artifact_digest": "sha256:42cb7a45afc84de26c4d377219e9981c16c967a430282544e7c1517af4fea695",
+        "result_hash": "sha256:43891c089696ead348f95a92cb9657963ff9ddb57987590641b1704bf0137dd4",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d210ec295092a9b40c6d70150f2511b2fd34325dfad06ea52f44736b09feaddc",
+            "lineage_id": "review-c4c6f452b3ecc485",
+            "authority_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+            "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+            "base_tree": "662c7fa11865522a19401b6d7db7efea17b822f8",
+            "candidate_tree": "47bf4aa948aad764c215c429994f0803f57148d2",
+            "changed_path_manifest_sha256": "sha256:51169ff7d21e4b91ab37b7720f02421f32ccdd8b4e15ae09b6966b2fb6ae7544",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d210ec295092a9b40c6d70150f2511b2fd34325dfad06ea52f44736b09feaddc",
+            "raw_sha256": "sha256:f3b9f9466ff4021e07b9b508c61a1177432677a765e4a8219fdb1850250513f9",
+            "canonical_sha256": "sha256:f3b9f9466ff4021e07b9b508c61a1177432677a765e4a8219fdb1850250513f9",
+            "result_hash": "sha256:43891c089696ead348f95a92cb9657963ff9ddb57987590641b1704bf0137dd4",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d210ec295092a9b40c6d70150f2511b2fd34325dfad06ea52f44736b09feaddc",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_cli.go",
+                "engine/skills/lint_cli_test.go",
+                "engine/skills/lint_test.go",
+                "engine/skills/skills_test.go",
+                "engine/skills/style_guide_contract_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md",
+                "skills/skill-creator/SKILL.md",
+                "skills/skill-improver/SKILL.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [],
+            "evidence": [
+              "engine/skills/lint_cli.go:44-55 now fails closed. An unknown flag or a second path argument makes the command exit with code 1 and print a usage error that names the bad argument. Before this change, the extra argument was silently dropped, so a lint gate could pass when it should have failed. Recognized wrapper flags are still consumed by the unchanged case branch. The existing trailing-flag tolerance tests in engine/skills/lint_cli_test.go still cover that path, and new tests at engine/skills/lint_cli_test.go:189-233 cover the rejection paths.",
+              "Possible gap, not confirmed: if a wrapper passes flags that are not on the recognized list (for example, a flag written with an equals sign), lint would now exit with code 1 instead of running. The recognized-flag list is unchanged context and does not appear in this candidate, so no concrete failure can be shown. The manual fallback added at skills/skill-creator/SKILL.md:23 and skills/skill-improver/SKILL.md:17 would soften the impact if it happened, so this is not reported as a finding.",
+              "engine/skills/lint.go:183-193: the loop that skips whitespace-only lines stops at the end of the slice. The loop is linear and cannot go out of bounds. Blank frontmatter lines followed by an unindented key still return false, so nothing new can crash and there is no new latency or load cost.",
+              "engine/skills/style_guide_contract_test.go:32-45: the shared marker-lookup helper fails the test when the BEGIN or END marker is missing or out of order. The old prose-scan check found the END marker from the start of the file, not after BEGIN; this makes that check stricter and makes the sync check fail in the right cases. The test also depends on the fmt package, and that import is outside the diff, so compile correctness cannot be confirmed from this candidate. This is a reliability question, not a resilience one.",
+              "engine/skills/lint_cli_test.go:46-53 now derives the size of the warnings-only test input from the lint constants, so the test stays valid if the budgets change. The changes to openspec/changes/procedural-memory-lifecycle/tasks.md and the two SKILL.md files are documentation only and have no effect at runtime.",
+              "No new retry, rollback, observability, latency or load failure mode caused by this candidate was found."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+        "capture_phase_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+        "artifact_digest": "sha256:6330a63a352729ccf55c871ea606124832907274dead9e5fcc99f80b22cb3d8b",
+        "result_hash": "sha256:ac996e55169b85317f3e5e979cc20a1c13817bca6ac64369704c2eea4795c737",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1e492a92bc2efb800e5fa85b011eb032c85d1977bdfa9b5d5e5b13088f94b9c5",
+            "lineage_id": "review-c4c6f452b3ecc485",
+            "authority_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+            "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+            "base_tree": "662c7fa11865522a19401b6d7db7efea17b822f8",
+            "candidate_tree": "47bf4aa948aad764c215c429994f0803f57148d2",
+            "changed_path_manifest_sha256": "sha256:51169ff7d21e4b91ab37b7720f02421f32ccdd8b4e15ae09b6966b2fb6ae7544",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1e492a92bc2efb800e5fa85b011eb032c85d1977bdfa9b5d5e5b13088f94b9c5",
+            "raw_sha256": "sha256:af2185d31085069e3beeb4900c5f8f39de33931a5fad3fce1ef69af6221c80fb",
+            "canonical_sha256": "sha256:128e5356e53879e7062580c412433ff2e997109b68b1ecd606e3e4e9e21cc54b",
+            "result_hash": "sha256:ac996e55169b85317f3e5e979cc20a1c13817bca6ac64369704c2eea4795c737",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1e492a92bc2efb800e5fa85b011eb032c85d1977bdfa9b5d5e5b13088f94b9c5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_cli.go",
+                "engine/skills/lint_cli_test.go",
+                "engine/skills/lint_test.go",
+                "engine/skills/skills_test.go",
+                "engine/skills/style_guide_contract_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md",
+                "skills/skill-creator/SKILL.md",
+                "skills/skill-improver/SKILL.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-001",
+                "lens": "readability",
+                "location": "engine/skills/lint_cli_test.go:213-215",
+                "severity": "SUGGESTION",
+                "claim": "The doc comment for TestRenderLintCore_UnknownFlagExitsOneWithUsageError says the test guards against an unknown flag being 'silently treated as the lint path'. The fixture passes the unknown flag after an existing path. So the old behavior it guards against was the flag being silently dropped, not being treated as the path. The comment therefore misstates the regression this test covers. Either reword it, or add a case where the unknown flag comes first.",
+                "proof_refs": [
+                  "engine/skills/lint_cli_test.go:213-215",
+                  "engine/skills/lint_cli_test.go:220",
+                  "engine/skills/lint_cli.go:44-55"
+                ]
+              },
+              {
+                "id": "R2-002",
+                "lens": "readability",
+                "location": "engine/skills/style_guide_contract_test.go:28",
+                "severity": "SUGGESTION",
+                "claim": "The generatedBlockMarkerLocation doc says the helper fails the test when END precedes or overlaps BEGIN. It only looks for END after BEGIN, so an END marker placed before BEGIN is ignored whenever another END follows BEGIN. The test only fails when there is no END after BEGIN at all. The comment overstates what the ordering check covers.",
+                "proof_refs": [
+                  "engine/skills/style_guide_contract_test.go:28",
+                  "engine/skills/style_guide_contract_test.go:37-42"
+                ]
+              }
+            ],
+            "evidence": [
+              "Read all 9 changed paths in full from the supplied patch sections.",
+              "engine/skills/lint.go: the hasIndentedContinuation rewrite matches its updated doc comment. The skip-whitespace loop and the indentation check both read clearly.",
+              "engine/skills/lint_cli.go: the new rejection paths for extra positional arguments and unknown flags are documented in the RenderLintCore comment, and each error message names the offending argument.",
+              "engine/skills/lint_cli_test.go: warningsOnlyBodyWordRepeat replaces unexplained byte literals with a value derived from the named budget constants. This removes the magic-number hazard.",
+              "engine/skills/style_guide_contract_test.go: the shared marker-location helper removes the duplicated marker search. The restated-number regex is now built from the lint constants, so the bounds are no longer duplicated.",
+              "engine/skills/lint_test.go and engine/skills/skills_test.go: the new tests are named and commented clearly and match their assertions.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md and both SKILL.md files: the change context and the manual fallback guidance are stated clearly. No readability defects found there.",
+              "No BLOCKER or CRITICAL readability defects found. Both findings are advisory comment-accuracy issues in candidate-changed lines."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+        "capture_phase_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+        "artifact_digest": "sha256:e7492b8bd7005c3a2867a501c0673c99073be3d635bf684490833c5846c45fe3",
+        "result_hash": "sha256:64a55350b46c7f8c24003ba47006ed6b1f4292b2bacc6bf53007c07b6e0b6e3a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:95780101ba8c66086a706a03e9fe9fa06bfb917d0e43771820bb4becad0a82b4",
+            "lineage_id": "review-c4c6f452b3ecc485",
+            "authority_revision": "sha256:f94f5acbfc9cccdbe6567d08006e34ce33df87729b82a0628ea61d1ef2be43c6",
+            "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+            "base_tree": "662c7fa11865522a19401b6d7db7efea17b822f8",
+            "candidate_tree": "47bf4aa948aad764c215c429994f0803f57148d2",
+            "changed_path_manifest_sha256": "sha256:51169ff7d21e4b91ab37b7720f02421f32ccdd8b4e15ae09b6966b2fb6ae7544",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:95780101ba8c66086a706a03e9fe9fa06bfb917d0e43771820bb4becad0a82b4",
+            "raw_sha256": "sha256:3b2c9d22b1a07a591e04e98887b6ddc5aba97fde85c467c139f7fdfc094a811b",
+            "canonical_sha256": "sha256:d28cfc206d593cf696b191a3afb2095829fc8cafef643a67d17470e77b5e8544",
+            "result_hash": "sha256:64a55350b46c7f8c24003ba47006ed6b1f4292b2bacc6bf53007c07b6e0b6e3a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:95780101ba8c66086a706a03e9fe9fa06bfb917d0e43771820bb4becad0a82b4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_cli.go",
+                "engine/skills/lint_cli_test.go",
+                "engine/skills/lint_test.go",
+                "engine/skills/skills_test.go",
+                "engine/skills/style_guide_contract_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md",
+                "skills/skill-creator/SKILL.md",
+                "skills/skill-improver/SKILL.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-dash-prefixed-path-unlintable",
+                "lens": "reliability",
+                "location": "engine/skills/lint_cli.go:44-48",
+                "severity": "SUGGESTION",
+                "claim": "Any argument that starts with '-' and is not a recognized flag is now rejected as an unknown flag. There is no '--' end-of-options escape, so a lint target path that starts with '-' can no longer be linted. Before this change it was accepted as the path. This fails safe (exit 1 with a diagnostic, not a false-clean exit 0), so it is only a usability regression. No test pins the intended behavior either way.",
+                "proof_refs": [
+                  "engine/skills/lint_cli.go:44-48",
+                  "engine/skills/lint_cli_test.go:214-233"
+                ]
+              },
+              {
+                "id": "R3-unknown-flag-position-coverage",
+                "lens": "reliability",
+                "location": "engine/skills/lint_cli_test.go:214-233",
+                "severity": "SUGGESTION",
+                "claim": "The unknown-flag test only covers an unknown flag after the path. It does not cover an unknown flag before the path, or '--rules' combined with an extra positional argument. The implementation handles these in the same switch branch, so the risk is low, but those argument orderings are not proven by a test.",
+                "proof_refs": [
+                  "engine/skills/lint_cli_test.go:214-233",
+                  "engine/skills/lint_cli.go:44-55"
+                ]
+              }
+            ],
+            "evidence": [
+              "engine/skills/lint_cli.go:44-55: an unknown '-' prefixed argument or a second positional argument now makes the command exit 1 and return before any file is read. This closes the false-clean exit 0 for multi-path calls. The new tests in engine/skills/lint_cli_test.go:189-233 check the exit code and that stderr names the offending argument.",
+              "engine/skills/lint.go:183-193: hasIndentedContinuation now skips whitespace-only lines and decides on the next non-blank line. It returns false when the frontmatter ends first. It still returns false when the next non-blank line is not indented, so the plain case of a blank line followed by the next key keeps working. New tests in engine/skills/lint_test.go:261-302 cover both the empty and the non-empty description tag with a blank line between.",
+              "engine/skills/lint_cli_test.go:39-58: the warnings-only fixture is now sized from the constants. Assuming the old comment's 2800 and 4000 byte bounds, the midpoint is 3400 bytes, or 680 repeats of 'word '. That is strictly between the two budgets, so the fixture still produces warnings only.",
+              "engine/skills/style_guide_contract_test.go:24-81: extractGeneratedBlock now trims exactly one newline at each end. The self-test's expected value (a single newline left at each end) matches what TrimPrefix and TrimSuffix return. The shared generatedBlockMarkerLocation helper looks for END only after BEGIN, which makes the drift test stricter than the old independent index lookups.",
+              "engine/skills/style_guide_contract_test.go:145-147 adds a fmt.Sprintf call. The file's import block is not part of the patch, so I could not tell from the candidate whether fmt is already imported. If it is not, the package tests would fail to compile. Worth confirming.",
+              "engine/skills/skills_test.go:562-585 adds a test that 'lint' dispatches through SkillsCore to RenderLintCore. It checks exit 0 and empty stdout and stderr for a clean file.",
+              "The documentation and task-list changes in skills/skill-creator/SKILL.md:23, skills/skill-improver/SKILL.md:17 and openspec/changes/procedural-memory-lifecycle/tasks.md:58 do not change runtime behavior."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "b1470e8e883d4654f6ea598074b40cc05ef4f5618c230e13331cc24a09b8a427",
+    "initial_atomic_start": {
+      "lineage_id": "review-c4c6f452b3ecc485",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:d31203421548309c5e0f09186549ce187ad49ef2a3a81db70ceb90e001b2f1f4",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "662c7fa11865522a19401b6d7db7efea17b822f8",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 267,
+      "correction_budget": 134,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
