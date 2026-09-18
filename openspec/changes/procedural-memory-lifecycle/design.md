@@ -141,7 +141,7 @@ Only `PASS` lets the contract and the registration output claim Codex support. `
 - **Execution** (`ExecuteProjectPlan`, over an injected `projectFS` interface so tests can inject failures):
   - Stage: `MkdirAll` each target directory, recording which directories this run created. Write every SKILL.md and the new lock to same-directory temp files (the `writeFileAtomic` pattern). Mode 0644, never executable.
   - Commit phase: rename the SKILL.md temps in `projectTargets` order, then rename the lock last. The lock is the commit marker, like registry-last in ADR-9.
-  - Rollback on any failure: remove renamed new files (on revision, restore the backup bytes captured at plan time through temp plus rename), remove leftover temps, then remove directories this run created, deepest first and only if empty. Any rollback failure is printed as `error: rollback incomplete: <rel-path>` and exits 1.
+  - Rollback on any failure: for each planned write, if it captured backup bytes at plan time (the destination already existed — including a pre-existing lock file that already carries other skills' entries), restore those backup bytes through temp plus rename; if it has no backup (a genuinely new file, including a lock file created for the very first registration in this project), remove it. Then remove leftover temps, then remove directories this run created, deepest first and only if empty. Any rollback failure is printed as `error: rollback incomplete: <rel-path>` and exits 1.
 - **Crash window**: a process kill between renames can leave untracked SKILL.md files with no lock entry. The next run refuses them as foreign. The contract's recovery step lets the agent delete only paths that `git status --porcelain -- <paths>` reports as `??` **and** whose bytes hash to the sha256 the failed run printed. Anything else goes to the human.
 
 **Alternatives considered**:
@@ -207,7 +207,7 @@ Rules:
 - Every recorded target file exists and hashes to `sha256`.
 - Every target skill directory contains exactly one entry, `SKILL.md`.
 
-Anything else makes it **human-owned**, reported with the first failing reason: `hash-mismatch <path>`, `missing <path>` or `extra-entry <path>`. The check reads the lock's hash and no other stored hash. The candidate record's `Registered` hash line is an informational mirror for humans.
+Anything else makes it **human-owned**, reported with the first failing reason: `hash-mismatch <path>`, `missing <path>` or `extra-entry <path>`. The check reads only the lock's hash; it never reads or compares against the candidate record's `Registered`/`Promoted` hash line. That record line is an informational mirror for humans, kept in sync by the same write that updates the lock, but is not a second source the ownership check consults.
 
 **Alternatives considered**: normalizing CRLF and trailing whitespace before hashing. Rejected: any byte change means someone other than the agent touched the file, and normalization would hide real edits. The false-positive direction (a `core.autocrlf` checkout reads as human-owned) is the safe direction: the agent stops.
 
@@ -226,7 +226,7 @@ Anything else makes it **human-owned**, reported with the first failing reason: 
 9. `labdrian skills project-status --project-root R <id>` must report `owner:agent`. A hook that rewrote the bytes makes the skill human-owned, and that is reported rather than fixed.
 10. Record `git -C R rev-parse --short HEAD` in the record's `Registered` line and in `History`.
 
-On failure after step 6 and before the commit, a new registration deletes exactly the wrote paths, which are untracked and hash-verified. A revision or retirement runs `git -C R restore --source=HEAD --staged --worktree -- <wrote paths>`. `git clean` and `git reset --hard` are never used.
+On failure after step 6 and before the commit: the newly written SKILL.md files are always untracked (each lives under a brand-new skill directory), and are deleted only when their bytes hash to the sha256 the failed run printed. The lock file needs separate handling because it may already be tracked with other skills' entries: when it existed in `HEAD` before this run, restore it byte-for-byte with `git -C R restore --source=HEAD -- <lock path>`; when this run created it for the first time in the repository (so it is untracked), delete it instead, after the same hash check. A revision or retirement runs `git -C R restore --source=HEAD --staged --worktree -- <wrote paths>`. `git clean` and `git reset --hard` are never used.
 
 **Alternatives considered**:
 - *An engine verb that runs git through `os/exec` in a new package.* Rejected: it opens a subprocess and process-integration boundary (repository selection, hooks, credential prompts, timeouts) in a component designed to be pure. The agent already runs git under the `work-unit-commits` conventions.
@@ -247,11 +247,11 @@ On failure after step 6 and before the commit, a new registration deletes exactl
 | `emitted` | `drafted` | agent | project | draft record written, `LintSkill` hard = 0 (new) or diff applies cleanly (extend) | draft topic key, `Disposition`, lint counts |
 | `drafted` | `registered` | agent | project | `project-register` and commit (new), or `project-revise` of an agent-owned target (extend) | skill id, `sha256`, commit, rev |
 | `registered` | `registered` | agent | project | revision (ownership OK, trigger reached) | `sha256`, commit, rev |
-| `drafted` or `registered` | `promoted` | human | global | `engine skills add` merged in the overlay, then project copies retired | overlay commit, `sha256` |
+| `drafted` or `registered` | `promoted` | human | global | `engine skills add` merged in the overlay | overlay commit, `sha256` |
 | `registered` | `retired` | agent | project | `project-retire` and commit | `RetirementReason`, commit |
 | `promoted` | `retired` | human | global | `engine skills remove` merged | `RetirementReason`, overlay commit |
 
-Non-transition events append a same-state line (`registered -> registered`). These events are: ownership lost, disposition computed, a revision draft opened, and a recurrence after retirement. Retirement never reopens automatically.
+Non-transition events append a same-state line (`registered -> registered`, or `promoted -> promoted`). These events are: ownership lost, disposition computed, a revision draft opened, a recurrence after retirement, and the agent's post-promotion removal of the now-redundant project-tier copies. That last one deserves its own note: once a human sets `promoted`, the agent may run `project-retire --reason promoted`, which deletes the project-tier files and their project lock entry and commits, but it is not the `registered -> retired` transition in the table above — it never changes `Status`, which stays `promoted`, and it only appends a `promoted -> promoted` `History` line recording the removal. Retirement never reopens automatically.
 
 Only a human sets `promoted`. No engine verb writes `Status`, and every project-tier procedure in the contract ends at `registered` or `retired`.
 
@@ -373,8 +373,8 @@ Full lifecycle, from an emitted candidate to its end states:
     candidate Status=registered, Registered line, History (commit)
          │
          ├── recurrences after `at:` ≥ 2 ─▶ revision draft ─▶ project-revise (ownership gate) ─▶ commit
-         ├── human promotion: copy ─▶ labdrian skills add (lint gate) ─▶ overlay PR merged
-         │        └─▶ agent project-retire (reason promoted) ─▶ Status=promoted
+         ├── human promotion: copy ─▶ labdrian skills add (lint gate) ─▶ overlay PR merged ─▶ Status=promoted (human-set)
+         │        └─▶ agent project-retire (reason promoted) ─▶ deletes project files+lock entry; Status stays promoted; History appended
          └── longterm-mem skills-stale / project-status report ─▶ decision ─▶ project-retire ─▶ commit
 
 Trust boundaries: Go never writes Engram. Go never runs git. The only Go writer into a consumer repository is the planned registry path set.

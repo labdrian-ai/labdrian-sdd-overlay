@@ -197,6 +197,16 @@ record and in its `History`.
 - THEN it reads `promoted`
 - AND no automated project-tier code path ever sets `promoted`
 
+#### Scenario: Post-promotion project-tier retirement does not change Status
+
+- GIVEN a skill whose `Status` already reads `promoted`
+- WHEN the agent afterward removes the now-redundant project-tier copies
+  with `project-retire --reason promoted`
+- THEN the project-tier files and their project lock entry are deleted
+- AND the record's `Status` continues to read `promoted`
+- AND a `History` line records the removal without recording a status
+  transition
+
 ### Requirement: Registration Produces Exactly One Scoped Commit
 
 The system MUST perform the registration write as exactly one git commit

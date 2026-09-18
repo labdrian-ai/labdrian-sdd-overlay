@@ -33,12 +33,21 @@ of any warnings `LintSkill` reports.
 - AND the registry entry for `foo` is written exactly as it would be
   without this change
 
-#### Scenario: AddCore behavior for a lint-clean SKILL.md is unchanged
+#### Scenario: AddCore assertions for a lint-clean SKILL.md are unchanged
 
 - GIVEN the existing `AddCore` test suite (SC-65 through SC-68 and prior
-  cases) exercised against SKILL.md fixtures with zero hard lint errors
+  cases), whose SKILL.md fixtures are updated to be lint-clean (zero hard
+  lint errors) while every test assertion stays exactly as written
 - WHEN this capability's `LintSkill` gate is added
-- THEN every existing `AddCore` test still passes unmodified
+- THEN every existing `AddCore` test still passes, with only its SKILL.md
+  fixtures changed and none of its assertions changed
+
+#### Scenario: A previously-passing fixture that is not lint-clean is now refused
+
+- GIVEN a SKILL.md fixture that passed `AddCore` before this change but has
+  a hard lint error (for example a missing `metadata.version`)
+- WHEN `AddCore` is run against it after this capability's gate is added
+- THEN the add is refused, proving the gate rejects what it used to accept
 
 #### Scenario: The lint gate runs before any manifest or registry write
 

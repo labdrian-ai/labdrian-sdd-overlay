@@ -107,9 +107,11 @@ upsert behavior without losing prior transitions.
 Upon project-tier registration or global-tier promotion, the candidate
 record MUST record the sha256 hash of the exact content written to disk at
 that tier, labeled to distinguish a `Registered` hash from a `Promoted`
-hash. This hash line is the value the ownership-by-hash check
-(`procedural-skill-maintenance`) reads back for comparison against the
-current on-disk content.
+hash. This hash line is an informational mirror for humans reading the
+record; it is never the value the ownership-by-hash check
+(`procedural-skill-maintenance`) reads. That check reads only the project
+lock file's recorded hash, which is the single source of truth for
+ownership.
 
 #### Scenario: Registration writes a Registered hash line
 

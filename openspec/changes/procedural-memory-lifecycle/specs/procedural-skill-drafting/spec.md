@@ -54,7 +54,13 @@ candidate that already passed the emission-time check.
 When drafting produces or updates a skill's summary content, the system
 MUST phrase it as an imperative rule followed by exactly one clause
 explaining why, and MUST NOT include observation ids, dates, or PR/issue
-numbers in that summary text.
+numbers in that summary text. This is a procedure-level rule: it is
+enforced by the agent-driven drafting procedure itself, before any draft
+record is saved, not by Go code, and it is verified by the drafting slice's
+acceptance checklist rather than a unit test. It is independent of the
+separate, non-blocking `incident-log-shape` advisory lint warning defined by
+`skill-lint`, which flags a different, later-stage signal on the rendered
+SKILL.md body and never blocks drafting or registration.
 
 #### Scenario: Drafted summary is an imperative rule plus one why-clause
 

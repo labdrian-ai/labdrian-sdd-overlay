@@ -36,19 +36,17 @@ every time, MUST perform no filesystem I/O, no network I/O, and no
 
 ### Requirement: Hard Rules Block on Structural and Required-Field Defects
 
-`LintSkill` MUST return at least one hard error, and MUST NOT return zero
-hard errors, when any of the following holds: the frontmatter fence is
-missing or malformed; any of `name`, `description`, `license`,
+`LintSkill` operates on already-split frontmatter and body text: the
+frontmatter fence itself is handled earlier, by `SplitSkillFile` inside
+`LintSkillFile` (see the `LintSkillFile Composes SplitSkillFile and
+LintSkill` requirement below), and `LintSkill` never sees fence markers or
+evaluates fence well-formedness. Given that already-split input, `LintSkill`
+MUST return at least one hard error, and MUST NOT return zero hard errors,
+when any of the following holds: any of `name`, `description`, `license`,
 `metadata.author`, or `metadata.version` is absent or empty; `description`
 spans more than one line; `description` exceeds the documented hard length
 bound; or the body exceeds the documented hard body-size budget (a
 documented deterministic proxy, since `engine/` carries no tokenizer).
-
-#### Scenario: Missing frontmatter fence is a hard error
-
-- GIVEN a SKILL.md body with no `---` frontmatter fence
-- WHEN `LintSkill` evaluates it
-- THEN `hard` contains at least one error naming the missing fence
 
 #### Scenario: Missing required field is a hard error
 
@@ -85,6 +83,23 @@ documented deterministic proxy, since `engine/` carries no tokenizer).
   description within the hard bound, and a body within the hard budget
 - WHEN `LintSkill` evaluates it
 - THEN `hard` is empty
+
+### Requirement: LintSkillFile Composes SplitSkillFile and LintSkill
+
+`LintSkillFile(data []byte)` MUST first call `SplitSkillFile`, which is
+where the frontmatter-fence check is evaluated, and MUST only call
+`LintSkill(frontmatter, body)` on the successfully split result. When the
+frontmatter fence is missing or malformed, `SplitSkillFile` MUST fail before
+`LintSkill` ever runs, and `LintSkillFile` MUST surface that failure as a
+hard error in its own returned result.
+
+#### Scenario: Missing frontmatter fence is a hard error from LintSkillFile
+
+- GIVEN a SKILL.md file with no `---` frontmatter fence
+- WHEN `LintSkillFile` evaluates it
+- THEN `SplitSkillFile` fails before `LintSkill` is called
+- AND `LintSkillFile`'s returned `hard` contains at least one error naming
+  the missing fence
 
 ### Requirement: Advisory Warnings Never Block
 
