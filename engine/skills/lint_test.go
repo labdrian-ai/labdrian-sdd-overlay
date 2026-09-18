@@ -214,6 +214,70 @@ func TestLintSkill_EmptyDescriptionWithContinuationYieldsDescriptionOneLine(t *t
 	}
 }
 
+// TestLintSkill_EmptyDescriptionWithWhitespaceOnlyLineYieldsRequiredFieldsOnly
+// proves a whitespace-only line following an empty `description:` tag line
+// is NOT a YAML continuation: a line with no non-whitespace content carries
+// no actual value, so the description is genuinely absent and must be
+// reported only via required-fields, never as a misleading
+// description-one-line hard error (review-b375153aa152604e carry-forward).
+func TestLintSkill_EmptyDescriptionWithWhitespaceOnlyLineYieldsRequiredFieldsOnly(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description:\n" +
+		"   \n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "required-fields") {
+		t.Errorf("expected required-fields hard error for empty description followed by a whitespace-only line, got %v", hard)
+	}
+	if hasHardRule(hard, "description-one-line") {
+		t.Errorf("a whitespace-only line must not count as a continuation and must not trigger description-one-line, got %v", hard)
+	}
+}
+
+// TestLintSkill_EmptyDescriptionWithTabContinuationYieldsDescriptionOneLine
+// proves a tab-indented (not just space-indented) continuation line after an
+// empty `description:` tag line is still classified as a genuine
+// description-one-line continuation.
+func TestLintSkill_EmptyDescriptionWithTabContinuationYieldsDescriptionOneLine(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description:\n" +
+		"\tthis continues on a tab-indented physical line\n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "description-one-line") {
+		t.Errorf("expected description-one-line hard error for a tab-indented continuation, got %v", hard)
+	}
+	if hasHardRule(hard, "required-fields") {
+		t.Errorf("a tab-indented continuation must not also raise required-fields naming description as missing, got %v", hard)
+	}
+}
+
+// TestLintSkill_EmptyDescriptionAsLastFrontmatterLineYieldsRequiredFieldsOnly
+// proves an empty `description:` tag line that is the very last physical
+// line of the frontmatter (no following line at all) is reported only via
+// required-fields, exercising the i+1 >= len(lines) boundary directly.
+func TestLintSkill_EmptyDescriptionAsLastFrontmatterLineYieldsRequiredFieldsOnly(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n" +
+		"description:"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "required-fields") {
+		t.Errorf("expected required-fields hard error for an empty description as the last frontmatter line, got %v", hard)
+	}
+	if hasHardRule(hard, "description-one-line") {
+		t.Errorf("an empty description with no following line must not trigger description-one-line, got %v", hard)
+	}
+}
+
 func TestLintSkill_WellFormedProducesZeroHardErrors(t *testing.T) {
 	hard, _ := LintSkill(validFrontmatter(), validBody())
 	if len(hard) != 0 {
@@ -657,7 +721,8 @@ func countUnescapedPipes(s string) int {
 // raw substring search, which would pass trivially for "|" because the row's
 // own table-column separators are literal `|` characters, and for ">"
 // because it is a substring of the rendered ">-" token) and compares that
-// exact set against blockScalarIndicators.
+// exact set against a literal expected set that is deliberately independent
+// of blockScalarIndicators (see the "want" comment below for why).
 func TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator(t *testing.T) {
 	out := RenderLintRules()
 	row := lintRuleRow(t, out, "description-one-line")
@@ -682,8 +747,10 @@ func TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator(t *tes
 
 // splitTableRowCells splits a rendered GFM table row into its cells on
 // unescaped `|` separators (an escaped `\|` stays inside its cell), trimming
-// surrounding whitespace and dropping the empty leading/trailing cells
-// produced by a row that starts and ends with `|`.
+// surrounding whitespace and dropping only the empty leading and trailing
+// cells produced by a row that starts and ends with `|`. A genuinely empty
+// cell in the middle of the row is kept, since dropping it would silently
+// shift every later cell's index.
 func splitTableRowCells(s string) []string {
 	var cells []string
 	var cur strings.Builder
@@ -697,15 +764,28 @@ func splitTableRowCells(s string) []string {
 	}
 	cells = append(cells, cur.String())
 
-	var trimmed []string
-	for _, c := range cells {
-		c = strings.TrimSpace(c)
-		if c == "" {
-			continue
-		}
-		trimmed = append(trimmed, c)
+	for i := range cells {
+		cells[i] = strings.TrimSpace(cells[i])
 	}
-	return trimmed
+	if len(cells) > 0 && cells[0] == "" {
+		cells = cells[1:]
+	}
+	if len(cells) > 0 && cells[len(cells)-1] == "" {
+		cells = cells[:len(cells)-1]
+	}
+	return cells
+}
+
+// TestSplitTableRowCells_KeepsMiddleEmptyCell proves splitTableRowCells
+// drops only the leading and trailing empty cells produced by a row that
+// starts and ends with `|`, never a genuinely empty cell in the middle of
+// the row (review-b375153aa152604e carry-forward).
+func TestSplitTableRowCells_KeepsMiddleEmptyCell(t *testing.T) {
+	got := splitTableRowCells("| a | | c |")
+	want := []string{"a", "", "c"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("splitTableRowCells(%q) = %v, want %v", "| a | | c |", got, want)
+	}
 }
 
 // parenthesizedContent returns the content of the first `(...)` group in s,

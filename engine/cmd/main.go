@@ -5,7 +5,7 @@
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status
-//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest)
+//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest, lint)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -45,6 +45,8 @@
 // install: copy project-scoped skills into <cwd>/.claude/skills.
 // add: register a skill (custom or vendored). remove: unregister from registry + manifest.
 // sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
+// lint: lint a SKILL.md file against the authoritative rule table, or print
+// that table with --rules; exit 1 on any hard error.
 package main
 
 import (
@@ -162,7 +164,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
 	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
 	fmt.Fprintln(os.Stderr, "    check: reports drift between --dest-dir and the current manifest; exit 1 on drift")
-	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest)")
+	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest, lint)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status        [--registry <path>]                                                      print count summary (total/core/custom)")
 	fmt.Fprintln(os.Stderr, "    validate      [--registry <path>] [--manifest <path>] --source-root <path>              cross-check registry vs manifest and skills/ on disk; exit 1 on divergence")
@@ -170,6 +172,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    add           <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill")
 	fmt.Fprintln(os.Stderr, "    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest")
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
+	fmt.Fprintln(os.Stderr, "    lint          <path> | --rules                                                         lint a SKILL.md file, or print the rule table; exit 1 on any hard error")
 	fmt.Fprintln(os.Stderr, "  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome")
 	fmt.Fprintln(os.Stderr, "  engine review-receipt capture --cwd <repo> [--change <name>]")
@@ -718,7 +721,7 @@ func runSkills(args []string) {
 // runSkillsCore is the testable core of the skills subcommand.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint")
 		exit(1)
 		return
 	}
