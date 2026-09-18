@@ -84,7 +84,6 @@ type parsedFrontmatter struct {
 	License              string
 	MetaAuthor           string
 	MetaVersion          string
-	DescriptionEmpty     bool
 	DescriptionMultiLine bool
 }
 
@@ -123,10 +122,12 @@ func parseFrontmatterFields(raw string) parsedFrontmatter {
 			// key: value is NOT parsed, and it ends the metadata block: a
 			// well-formed 2-space entry appearing after it is also not
 			// reached, because inMetadata was already reset to false above.
-			// Nothing is silently lost from the caller's perspective: any
-			// required field left unset this way (name, description,
-			// license, metadata.author, metadata.version) is reported by
-			// the required-fields hard rule, which names the missing field.
+			// Only the five required fields (name, description, license,
+			// metadata.author, metadata.version) left unset this way are
+			// reported, by the required-fields hard rule, which names the
+			// missing field. Any other stray-indented key/value pair (for
+			// example, a mis-indented, non-required top-level key) is
+			// dropped silently, with no diagnostic at all.
 			continue
 		}
 
@@ -145,7 +146,15 @@ func parseFrontmatterFields(raw string) parsedFrontmatter {
 		case "description":
 			val = strings.TrimSpace(val)
 			if val == "" {
-				fm.DescriptionEmpty = true
+				// An empty tag line followed by an indented continuation is
+				// YAML plain multi-line scalar syntax: content is genuinely
+				// present, just in the wrong shape, so it is classified as
+				// DescriptionMultiLine (a description-one-line hard error),
+				// never as a missing required field. Only an empty tag line
+				// with nothing following it is genuinely absent.
+				if hasIndentedContinuation(lines, i) {
+					fm.DescriptionMultiLine = true
+				}
 				continue
 			}
 			if isBlockScalarIndicator(val) {
@@ -153,16 +162,25 @@ func parseFrontmatterFields(raw string) parsedFrontmatter {
 				continue
 			}
 			fm.Description = unquote(val)
-			if i+1 < len(lines) {
-				next := lines[i+1]
-				if next != "" && (strings.HasPrefix(next, " ") || strings.HasPrefix(next, "\t")) {
-					fm.DescriptionMultiLine = true
-				}
+			if hasIndentedContinuation(lines, i) {
+				fm.DescriptionMultiLine = true
 			}
 		}
 	}
 
 	return fm
+}
+
+// hasIndentedContinuation reports whether the line following lines[i] exists,
+// is non-empty, and is indented with a leading space or tab. This is the
+// shared test for YAML plain multi-line scalar continuation, used by both an
+// empty and a non-empty description tag line.
+func hasIndentedContinuation(lines []string, i int) bool {
+	if i+1 >= len(lines) {
+		return false
+	}
+	next := lines[i+1]
+	return next != "" && (strings.HasPrefix(next, " ") || strings.HasPrefix(next, "\t"))
 }
 
 // splitKeyValue splits a "key: value" or "key:" line into its parts. It
@@ -351,18 +369,22 @@ var lintRules = []lintRule{
 
 func checkRequiredFields(fm parsedFrontmatter) []string {
 	var msgs []string
+	// description's presence is not fm.Description alone: a block scalar or
+	// an indented continuation (fm.DescriptionMultiLine) means content is
+	// genuinely present, just in the wrong shape, and is reported by
+	// description-one-line instead — never as a missing required field.
 	required := []struct {
-		field string
-		value string
+		field   string
+		present bool
 	}{
-		{"name", fm.Name},
-		{"description", fm.Description},
-		{"license", fm.License},
-		{"metadata.author", fm.MetaAuthor},
-		{"metadata.version", fm.MetaVersion},
+		{"name", fm.Name != ""},
+		{"description", fm.Description != "" || fm.DescriptionMultiLine},
+		{"license", fm.License != ""},
+		{"metadata.author", fm.MetaAuthor != ""},
+		{"metadata.version", fm.MetaVersion != ""},
 	}
 	for _, r := range required {
-		if r.value == "" {
+		if !r.present {
 			msgs = append(msgs, fmt.Sprintf("required field %q is missing or empty", r.field))
 		}
 	}

@@ -136,8 +136,8 @@ func TestLintSkill_RequiredFields_MissingOrEmpty(t *testing.T) {
 }
 
 // TestLintSkill_OneSpaceIndentedMetadataEntryIsSurfacedAsMissing documents
-// the decided behavior for finding R2-stray-indent-comment-misleading. The
-// design's frontmatter subset (design.md, "LintSkill API shape") specifies a
+// the decided behavior for a malformed metadata indentation: the design's
+// frontmatter subset (design.md, "LintSkill API shape") specifies a
 // `metadata:` block with 2-space-indented pairs; a one-space-indented entry
 // does not match that shape. Rather than being silently consumed, it is
 // treated as a stray line that ends the metadata block. This is not a
@@ -169,10 +169,10 @@ func TestLintSkill_OneSpaceIndentedMetadataEntryIsSurfacedAsMissing(t *testing.T
 }
 
 // TestLintSkill_EmptyDescriptionYieldsRequiredFieldsOnly proves an empty
-// `description:` line is reported only via required-fields (finding
-// R2-empty-description-flagged-multiline): it must not also raise a
-// misleading description-one-line hard error, since an empty value is not a
-// block scalar or a multi-line continuation.
+// `description:` line with no continuation line is reported only via
+// required-fields: it must not also raise a misleading description-one-line
+// hard error, since an empty value with nothing following it is genuinely
+// absent, not a block scalar or a multi-line continuation.
 func TestLintSkill_EmptyDescriptionYieldsRequiredFieldsOnly(t *testing.T) {
 	frontmatter := "name: test-skill\n" +
 		"description:\n" +
@@ -185,7 +185,32 @@ func TestLintSkill_EmptyDescriptionYieldsRequiredFieldsOnly(t *testing.T) {
 		t.Errorf("expected required-fields hard error for empty description, got %v", hard)
 	}
 	if hasHardRule(hard, "description-one-line") {
-		t.Errorf("empty description must not also trigger description-one-line, got %v", hard)
+		t.Errorf("empty description with no continuation must not also trigger description-one-line, got %v", hard)
+	}
+}
+
+// TestLintSkill_EmptyDescriptionWithContinuationYieldsDescriptionOneLine
+// proves an empty `description:` tag line followed by one or more indented
+// continuation lines (YAML plain multi-line scalar syntax) is genuinely
+// present content in the wrong shape, not an absent field: it must raise the
+// description-one-line hard error, and must NOT also raise a required-fields
+// error naming description as missing, since that would be misleading about
+// content that is actually present.
+func TestLintSkill_EmptyDescriptionWithContinuationYieldsDescriptionOneLine(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description:\n" +
+		"  this continues onto an indented physical line even though the tag\n" +
+		"  line itself was empty\n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "description-one-line") {
+		t.Errorf("expected description-one-line hard error for empty description with an indented continuation, got %v", hard)
+	}
+	if hasHardRule(hard, "required-fields") {
+		t.Errorf("empty description with an indented continuation must not also raise required-fields naming description as missing, got %v", hard)
 	}
 }
 
@@ -468,11 +493,11 @@ func TestLintSkill_Deterministic(t *testing.T) {
 	}
 }
 
-// --- LintSkillFile composes SplitSkillFile and LintSkill (1a.2a) ---
+// --- LintSkillFile composes SplitSkillFile and LintSkill ---
 //
-// Carry-forward from review-42be59cf3243a7ff advisory R3-lintskillfile-coverage:
-// the missing/unclosed-fence scenario belongs to the "LintSkillFile Composes
-// SplitSkillFile and LintSkill" requirement, not to LintSkill itself.
+// The missing/unclosed-fence scenario belongs to the "LintSkillFile Composes
+// SplitSkillFile and LintSkill" requirement, not to LintSkill itself: a split
+// failure must short-circuit before LintSkill ever runs on the body.
 
 func TestLintSkillFile_MissingFrontmatterFence(t *testing.T) {
 	data := []byte("no frontmatter fence here\njust body text\n")
@@ -542,8 +567,9 @@ func TestSplitSkillFile_RoundTrip(t *testing.T) {
 	}
 }
 
-// --- SplitSkillFile tolerates a leading BOM and trailing fence whitespace
-// (finding R4-bom-fence-false-hard-error) ---
+// --- SplitSkillFile tolerates a leading BOM and trailing fence whitespace:
+// an editor-inserted UTF-8 BOM or trailing horizontal whitespace on a fence
+// line must never falsely trip the frontmatter-fence hard rule ---
 
 func TestSplitSkillFile_LeadingBOMDoesNotFalselyFailFence(t *testing.T) {
 	data := append([]byte{0xEF, 0xBB, 0xBF}, []byte("---\n"+validFrontmatter()+"---\n"+validBody())...)
@@ -578,7 +604,9 @@ func TestSplitSkillFile_TrailingTabOnClosingFence(t *testing.T) {
 	}
 }
 
-// --- RenderLintRules (finding R3-render-untested) ---
+// --- RenderLintRules: the rendered rule table has a stable header and row
+// shape, and every row names its rule id and stays within the header's
+// column count even when a Summary itself contains an escaped `|` ---
 
 func TestRenderLintRules_HeaderAndRowCount(t *testing.T) {
 	out := RenderLintRules()
@@ -620,18 +648,90 @@ func countUnescapedPipes(s string) int {
 	return n
 }
 
-// --- RenderLintRules derives summaries from source data (finding
-// R2-rendered-summaries-duplicate-data) ---
-
+// --- RenderLintRules derives summaries from source data ---
+//
+// TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator proves
+// the rendered description-one-line summary names exactly the indicator set
+// isBlockScalarIndicator checks against, and does so non-vacuously: it
+// extracts the delimited code-span tokens from the row's summary cell (not a
+// raw substring search, which would pass trivially for "|" because the row's
+// own table-column separators are literal `|` characters, and for ">"
+// because it is a substring of the rendered ">-" token) and compares that
+// exact set against blockScalarIndicators.
 func TestRenderLintRules_DescriptionOneLineListsEveryBlockScalarIndicator(t *testing.T) {
 	out := RenderLintRules()
 	row := lintRuleRow(t, out, "description-one-line")
-
-	for _, indicator := range []string{">", "|", ">-", "|-", ">+", "|+"} {
-		if !strings.Contains(row, indicator) {
-			t.Errorf("description-one-line row must list block-scalar indicator %q, got: %q", indicator, row)
-		}
+	cells := splitTableRowCells(row)
+	if len(cells) != 3 {
+		t.Fatalf("expected 3 table cells in the description-one-line row, got %d: %v", len(cells), cells)
 	}
+	summaryCell := cells[2]
+	indicatorList := parenthesizedContent(t, summaryCell)
+
+	got := codeSpanTokenSet(indicatorList)
+	// want is a literal set, independent of blockScalarIndicators: deriving
+	// it from that same production variable would make this assertion
+	// compare the source data against itself, which can never fail no
+	// matter what the variable's contents are.
+	want := map[string]bool{">": true, "|": true, ">-": true, "|-": true, ">+": true, "|+": true}
+
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("description-one-line summary cell code-span tokens = %v, want exactly %v", got, want)
+	}
+}
+
+// splitTableRowCells splits a rendered GFM table row into its cells on
+// unescaped `|` separators (an escaped `\|` stays inside its cell), trimming
+// surrounding whitespace and dropping the empty leading/trailing cells
+// produced by a row that starts and ends with `|`.
+func splitTableRowCells(s string) []string {
+	var cells []string
+	var cur strings.Builder
+	for i := 0; i < len(s); i++ {
+		if s[i] == '|' && (i == 0 || s[i-1] != '\\') {
+			cells = append(cells, cur.String())
+			cur.Reset()
+			continue
+		}
+		cur.WriteByte(s[i])
+	}
+	cells = append(cells, cur.String())
+
+	var trimmed []string
+	for _, c := range cells {
+		c = strings.TrimSpace(c)
+		if c == "" {
+			continue
+		}
+		trimmed = append(trimmed, c)
+	}
+	return trimmed
+}
+
+// parenthesizedContent returns the content of the first `(...)` group in s,
+// failing the test if none is found. The description-one-line summary lists
+// its rejected block-scalar indicators inside exactly one such group, so
+// extracting it isolates the indicator list from the rest of the sentence
+// (which also names `description` as an unrelated code span).
+func parenthesizedContent(t *testing.T, s string) string {
+	t.Helper()
+	open := strings.Index(s, "(")
+	closeIdx := strings.Index(s, ")")
+	if open < 0 || closeIdx < 0 || closeIdx < open {
+		t.Fatalf("expected a parenthesized indicator list in %q", s)
+	}
+	return s[open+1 : closeIdx]
+}
+
+// codeSpanTokenSet returns the set of backtick-delimited token contents in
+// s, unescaping a table-escaped `\|` back to a literal `|` so a rendered
+// pipe indicator compares equal to the indicator data itself.
+func codeSpanTokenSet(s string) map[string]bool {
+	tokens := map[string]bool{}
+	for _, m := range inlineCodeRe.FindAllStringSubmatch(s, -1) {
+		tokens[strings.ReplaceAll(m[1], `\|`, "|")] = true
+	}
+	return tokens
 }
 
 func TestRenderLintRules_SectionOrderListsEveryCanonicalSection(t *testing.T) {
