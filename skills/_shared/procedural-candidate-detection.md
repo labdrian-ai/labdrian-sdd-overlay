@@ -9,9 +9,9 @@ durability store for this capability; no second SQLite store and no Go-side
 write path into Engram's database exist anywhere in this contract.
 
 This document is delivered across three review slices. Sections 1-3 shipped
-in slice 1 (`candidate-store`, R-001). Sections 4-5 below ship in slice 2
-(`repeat-and-recovery-detection`, R-002, R-003). Section 6 (duplicate
-rejection) ships in slice 3.
+in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice 2
+(`repeat-and-recovery-detection`, R-002, R-003). Section 6 below (duplicate
+rejection) ships in slice 3 (`duplicate-rejection`, R-004).
 
 ## 1. Candidate identity and topic-key contract
 
@@ -201,6 +201,59 @@ An irregularly-firing detector is late, never wrong: the `Status` latch
 (section 4) means a missed T1/T2 firing costs a delayed candidate, not a
 duplicate emission or a miscounted `OccurrenceCount`.
 
+## 6. Duplicate candidate rejection (R-004)
+
+This capability MUST reject a promotion candidate whose identity is already
+covered by an existing entry in the registered skill registry
+(`skills.registry.yaml`). Rejection is backed by a new read-only Go
+entrypoint, `skills.MatchCandidate` (`engine/skills/match.go`), which reuses
+the already-exported `ParseRegistry` function and performs no write to the
+registry, to any file under `skills/`, or to any other persisted state.
+Rejection is decided purely on registry contents at check time; the registry
+itself is never mutated by this capability.
+
+### Rejection record fields
+
+Both fields are defined fully here; section 2 introduces them only as
+placeholders because in slice 1 and slice 2 no record ever reaches
+`Status: rejected`.
+
+- **`RejectionReason`**: present only when `Status: rejected`. In this slice
+  the only value is `duplicate` — the candidate's normalized identity exactly
+  matches an already-registered skill.
+- **`MatchedSkillPath`**: present only when `RejectionReason: duplicate`. It
+  holds the `Path` of the registry entry that `MatchCandidate` matched,
+  exactly as returned by `MatchCandidate`, so the audit trail names the
+  specific registered skill that caused the rejection.
+
+A rejected record is **kept, never discarded**. Because
+`skills.MatchCandidate` performs no filesystem or registry write, a rejection
+is purely diagnostic: the record documents that a pattern was observed and
+recognized as already covered, so every miss and every match stays
+auditable.
+
+### `MatchCandidate` call site
+
+`MatchCandidate(registry, slug)` is called at exactly one point in the
+emission decision table (section 4): the row where `OccurrenceCount` first
+reaches `Threshold`. It is never called per-occurrence, and never before the
+threshold is reached — calling it earlier would mark a record `rejected`
+before it was ever a real candidate, and calling it on every occurrence would
+cost more MCP/registry-read round trips for no additional determinism, since
+the registry's answer for the same normalized slug cannot change between one
+occurrence and the next within a single detection sweep.
+
+`skills.MatchCandidate(reg Registry, candidate string) (matched bool, skillPath string)`
+compares `NormalizeSlug(candidate)` against, for each registry entry in
+registry order: `NormalizeSlug(entry.ID)`, `NormalizeSlug(entry.Path)`, and
+`NormalizeSlug(path.Base(entry.Path))`. The first match wins (deterministic).
+An empty or all-punctuation candidate never matches. There is **no
+substring, prefix, or fuzzy matching** — a candidate like `sdd-spec-review`
+never matches a registered skill `sdd-spec`, because under-detection (a
+missed duplicate, deferred to a human reviewer) is the accepted, auditable
+failure mode, while over-detection (a false duplicate that silently discards
+a real candidate before anyone reviews it) is not.
+
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
@@ -242,6 +295,30 @@ decision table and `Threshold: 3` above) is still Go-testable and covered by
    `failure-recovery` candidate is emitted referencing only the matching
    subset of N occurrences, and the divergent occurrences are excluded from
    that candidate's `OccurrenceCount`.
+
+## Acceptance checklist (R-004, executed during `sdd-verify`)
+
+This section is agent-driven prose paired with a Go-testable entrypoint: the
+`skills.MatchCandidate` function itself is covered by table tests in
+`engine/skills/match_test.go` (exact ID/Path/`path.Base` hits, the substring
+near-miss guard, empty/all-punctuation candidates, and deterministic
+first-match-wins). The two scenarios below are the acceptance-level checks,
+run against real Engram records and a real `skills.registry.yaml` during
+`sdd-verify`, not by `go test`.
+
+1. **Candidate slug equal to a registered skill id/path is rejected**: GIVEN
+   a candidate's normalized slug exactly matches a registered skill's `ID`,
+   `Path`, or `path.Base(Path)` in `skills.registry.yaml`, WHEN the candidate
+   reaches `OccurrenceCount: Threshold` and `MatchCandidate` runs, THEN the
+   record's `Status` becomes `rejected`, `RejectionReason: duplicate` is set,
+   `MatchedSkillPath` is set to the matched entry's `Path`, and no candidate
+   is emitted.
+2. **Uncovered candidate emits normally**: GIVEN a candidate's normalized
+   slug matches no entry in `skills.registry.yaml`, WHEN the candidate
+   reaches `OccurrenceCount: Threshold` and `MatchCandidate` runs, THEN the
+   record's `Status` becomes `emitted` as in the ordinary emission decision
+   table (section 4), and neither `RejectionReason` nor `MatchedSkillPath`
+   is set.
 
 ## Acceptance checklist (R-001, executed during `sdd-verify`)
 

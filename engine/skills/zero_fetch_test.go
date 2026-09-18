@@ -24,6 +24,7 @@ var allowedImports = map[string]bool{
 	"io":            true,
 	"io/fs":         true,
 	"os":            true,
+	"path":          true,
 	"path/filepath": true,
 	"reflect":       true,
 	"regexp":        true,
