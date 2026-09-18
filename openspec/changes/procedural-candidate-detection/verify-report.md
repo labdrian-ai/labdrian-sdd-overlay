@@ -41,7 +41,9 @@
 | 6 | Same failure, divergent recoveries x N → nothing emitted, each sibling key stays below threshold | **PASS** | Three sibling topic keys under `procedural/candidates/failure-recovery/port-already-in-use/{kill-existing-process,change-listen-port,wait-for-release}` each independently at `OccurrenceCount: 1`, `Status: observing` — confirms the two-segment key shape produces the clustering (or non-clustering) purely from key identity, with no separate algorithm needed. |
 | 7 | Mixed cluster: failure occurs 4x, 3 share one recovery, 1 diverges → candidate emitted referencing only the matching subset (3), divergent occurrence excluded | **PASS** | `procedural/candidates/failure-recovery/build-cache-stale/clear-cache-dir` emitted at `OccurrenceCount: 3` (matching subset only); sibling `.../full-reinstall` independently `observing` at count 1 (the divergent occurrence), confirming it is excluded from the emitted candidate's count. |
 
-**Minor scripting note (non-blocking)**: in scenarios 5 and 6, three of the underlying `mem_save` occurrence-anchor calls hit the CLI's "observation content is required" guard because I passed an empty string, so those three occurrence ids do not correspond to a real anchor observation in the isolated store (scenario 7 was corrected and used real content throughout). This affects only the auxiliary occurrence-anchor realism in 2 of 7 scenarios, not the mechanic under test (clustering by topic-key shape and threshold counting), which is independently and fully verified by scenario 7 and by the R-001 cold-start scenario (which does use real, resolvable occurrence anchors).
+**Correction (orchestrator re-run, 2026-09-18, after review `review-c2926c5a9630236c` finding R3-verify-report-r003-unresolvable-occurrences-marked-pass)**: the first pass of scenarios 5 and 6 used occurrence ids whose anchor saves had failed on the CLI's empty-content guard, so "references all N occurrences" was not proven with resolvable ids. Both scenarios were re-run in the same isolation-proven store (isolation re-proven first with a fresh marker: found under the isolated HOME, `No memories found` under the default HOME) with real anchors:
+- Scenario 5: anchors #30, #31, #32 each resolve (`engram timeline <id> --project labdrian-sdd-overlay` shows the focal anchor observation); candidate `procedural/candidates/failure-recovery/sqlite-attempt-to-write-readonly-rerun/override-home-not-database-url` upserted three times on one record (#33), ending `Status: emitted`, `OccurrenceCount: 3`, `Occurrences: engram:30,engram:31,engram:32`. **PASS** with resolvable ids.
+- Scenario 6: anchors #34, #36, #38 each resolve; sibling keys `procedural/candidates/failure-recovery/port-already-in-use-rerun/{kill-existing-process-rerun,change-listen-port-rerun,wait-for-release-rerun}` are three separate records (#35, #37, #39), each `Status: observing`, `OccurrenceCount: 1`. **PASS** with resolvable ids.
 
 ### R-004 (duplicate rejection) acceptance checklist
 
@@ -52,11 +54,11 @@
 
 ### Task 4.4 summary
 
-All 12 acceptance-checklist scenarios (1 R-001 + 4 R-002 + 3 R-003 + 2 R-004 = 10 numbered scenarios in the doc, plus the R-001 cold-start scenario counted as its own row = 11 total distinct checks across the three checklist sections) were exercised and **PASS**. Zero scenarios were skipped as "not exercised" — the isolation proof succeeded on the first attempt, so no fallback to "isolation unproven" was needed. One non-blocking scripting slip (empty-content occurrence anchors in 2 of 7 R-002/R-003 sub-scenarios) is disclosed above; it does not affect the validity of the clustering/threshold/rejection mechanics actually under test.
+All 10 acceptance-checklist scenarios (1 R-001 + 4 R-002 + 3 R-003 + 2 R-004, one table row each) were exercised and **PASS**. None was skipped as "not exercised"; isolation was proven before any write. R-003 scenarios 5 and 6 PASS only after the correction re-run above; their first-pass evidence did not prove resolvable occurrence ids.
 
 ## Other Phase 4 tasks (4.1, 4.2, 4.3, 4.5, 4.6) — spot re-confirmation
 
-Per apply-progress (Engram #3408), these were already completed and verified during apply. Re-ran 4.1 myself as part of this verify pass (see table above) — still green. Did not re-derive 4.2/4.3 independently since they are `git diff --stat`/`rg` static checks already reported with exact commands and honest results in #3408, and no code has changed since that batch (HEAD is unchanged at dd08eb4).
+Per apply-progress (Engram #3408), these were already completed and verified during apply. Re-ran 4.1 myself as part of this verify pass (see table above) — still green. 4.2 re-derived on the final tree by the orchestrator (after review finding R3-verify-report-4.2-not-rederived): the union of files touched by the change's commits (011b169, befe5c1, be10a00) and this branch, filtered to `skills/`, `skills.registry.yaml` and `overlay.manifest`, is exactly `skills/_shared/procedural-candidate-detection.md` and `overlay.manifest`; the manifest diff is the single expected row `+_shared/procedural-candidate-detection.md custom` from phase 1; no `skills.registry.yaml` change. 4.3 accepted from the apply-time evidence in #3408 (static `rg` check; this candidate adds no Go source outside a test).
 
 ## Spec compliance (R-001..R-004) — overall
 
@@ -74,4 +76,4 @@ Per apply-progress (Engram #3408), these were already completed and verified dur
 
 ## Verdict
 
-**0 CRITICAL, 0 WARNING, 1 SUGGESTION** (the empty-content occurrence-anchor scripting slip in 2 of 7 R-002/R-003 scenarios — cosmetic, does not affect the mechanic under test). Implementation is complete and spec-compliant. Recommend proceeding to `sdd-archive`.
+**0 CRITICAL, 0 WARNING, 0 SUGGESTION** after correction. The first pass contained two reporting defects found by review (inconsistent scenario totals; R-003 scenarios 5-6 marked PASS without resolvable occurrence ids); both are corrected above with re-run evidence. Implementation is complete and spec-compliant. Recommend proceeding to `sdd-archive`.
