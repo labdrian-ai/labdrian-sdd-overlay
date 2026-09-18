@@ -21,23 +21,63 @@ const (
 const skillCreatorStyleGuidePath = "skills/skill-creator/references/skill-style-guide.md"
 const skillImproverStyleGuidePath = "skills/skill-improver/references/skill-style-guide.md"
 
-// extractGeneratedBlock returns the text strictly between the BEGIN/END
-// generated-block markers in content, trimmed of the single leading and
-// trailing newline the markers themselves introduce. It fails the test if
-// either marker is absent or out of order.
-func extractGeneratedBlock(t *testing.T, content string) string {
+// generatedBlockMarkerLocation returns the byte offsets of the BEGIN and END
+// generated-block markers in content: beginIdx is the start of the BEGIN
+// marker text, and endIdx is the start of the END marker text, found after
+// the BEGIN marker so the two markers cannot be matched out of order. It
+// fails the test if either marker is absent or END precedes/overlaps BEGIN.
+// This is the single marker-location definition shared by every contract
+// test that needs to find or exclude the generated block, so they cannot
+// disagree with each other about how the block is found.
+func generatedBlockMarkerLocation(t *testing.T, content string) (beginIdx, endIdx int) {
 	t.Helper()
-	begin := strings.Index(content, generatedBlockBeginMarker)
-	if begin < 0 {
+	beginIdx = strings.Index(content, generatedBlockBeginMarker)
+	if beginIdx < 0 {
 		t.Fatalf("missing generated-block BEGIN marker %q", generatedBlockBeginMarker)
 	}
-	afterBegin := begin + len(generatedBlockBeginMarker)
-	end := strings.Index(content[afterBegin:], generatedBlockEndMarker)
-	if end < 0 {
-		t.Fatalf("missing generated-block END marker %q", generatedBlockEndMarker)
+	afterBegin := beginIdx + len(generatedBlockBeginMarker)
+	relEnd := strings.Index(content[afterBegin:], generatedBlockEndMarker)
+	if relEnd < 0 {
+		t.Fatalf("missing generated-block END marker %q after BEGIN marker", generatedBlockEndMarker)
 	}
-	block := content[afterBegin : afterBegin+end]
-	return strings.Trim(block, "\n")
+	endIdx = afterBegin + relEnd
+	return beginIdx, endIdx
+}
+
+// extractGeneratedBlock returns the text strictly between the BEGIN/END
+// generated-block markers in content, trimmed of exactly one leading and one
+// trailing newline — the newlines the markers themselves introduce when each
+// sits on its own line. Extra blank lines pasted inside the markers are
+// preserved rather than silently trimmed away, so they surface as a
+// byte-identity mismatch instead of passing the sync check.
+func extractGeneratedBlock(t *testing.T, content string) string {
+	t.Helper()
+	beginIdx, endIdx := generatedBlockMarkerLocation(t, content)
+	block := content[beginIdx+len(generatedBlockBeginMarker) : endIdx]
+	block = strings.TrimPrefix(block, "\n")
+	block = strings.TrimSuffix(block, "\n")
+	return block
+}
+
+// TestExtractGeneratedBlock_ExtraInternalBlankLinesAreNotSilentlyTrimmed
+// proves extractGeneratedBlock trims exactly one leading and one trailing
+// newline, not every leading/trailing newline. An extra blank line pasted
+// just inside either marker must therefore survive into the extracted block
+// and make a byte-identity sync check fail instead of silently passing
+// (review-b75e4a27b9494ff8 R3-extract-block-trims-all-newlines).
+func TestExtractGeneratedBlock_ExtraInternalBlankLinesAreNotSilentlyTrimmed(t *testing.T) {
+	clean := generatedBlockBeginMarker + "\nrule table content\n" + generatedBlockEndMarker
+	withExtraBlankLines := generatedBlockBeginMarker + "\n\nrule table content\n\n" + generatedBlockEndMarker
+
+	got := extractGeneratedBlock(t, withExtraBlankLines)
+	want := extractGeneratedBlock(t, clean)
+
+	if got == want {
+		t.Fatalf("expected extra internal blank lines to change the extracted block, both were %q", got)
+	}
+	if got != "\nrule table content\n" {
+		t.Errorf("expected exactly the outer newlines trimmed, got %q", got)
+	}
 }
 
 // TestSkillStyleGuideLintRulesInSync proves the generated block in
@@ -97,8 +137,14 @@ func TestSkillFilesDoNotReferenceRemovedStyleGuideDoc(t *testing.T) {
 // that must appear nowhere in skill-creator's style guide prose outside the
 // generated block (design.md: "The prose sections 'Frontmatter Rules' and
 // 'Body Budget' ... lose their numeric restatements (250, 160, 700, 1000).
-// The generated block is the only place those numbers appear.").
-var styleGuideRestatedNumberRe = regexp.MustCompile(`\b(250|160|700|1000)\b`)
+// The generated block is the only place those numbers appear."). Built from
+// the same lint.go constants RenderLintRules() renders, instead of a second
+// literal source: if a bound changes, this guard changes with it rather than
+// silently passing a stale restatement of the new value
+// (review-b75e4a27b9494ff8 R2-duplicated-numeric-bounds).
+var styleGuideRestatedNumberRe = regexp.MustCompile(
+	fmt.Sprintf(`\b(%d|%d|%d|%d)\b`, DescriptionMaxRunes, DescriptionShouldRunes, BodyRecommendedTokens, BodyHardTokens),
+)
 
 // TestSkillStyleGuideProseHasNoSecondNumericSource proves the "Frontmatter
 // Rules" and "Body Budget" prose sections contain no restatement of the
@@ -110,12 +156,11 @@ func TestSkillStyleGuideProseHasNoSecondNumericSource(t *testing.T) {
 	content := readRepoFile(t, repoRoot, skillCreatorStyleGuidePath)
 
 	// Strip the generated block itself before scanning prose: the rule
-	// table is the one legitimate place these numbers appear.
-	beginIdx := strings.Index(content, generatedBlockBeginMarker)
-	endIdx := strings.Index(content, generatedBlockEndMarker)
-	if beginIdx < 0 || endIdx < 0 || endIdx < beginIdx {
-		t.Fatalf("missing or misordered generated-block markers in %s", skillCreatorStyleGuidePath)
-	}
+	// table is the one legitimate place these numbers appear. Reuses the
+	// same marker-location helper as extractGeneratedBlock so the two
+	// contract checks cannot disagree about how the block is found
+	// (review-b75e4a27b9494ff8 R2-extract-block-comment-mismatch).
+	beginIdx, endIdx := generatedBlockMarkerLocation(t, content)
 	withoutGenerated := content[:beginIdx] + content[endIdx+len(generatedBlockEndMarker):]
 
 	for _, section := range []string{"Frontmatter Rules", "Body Budget"} {

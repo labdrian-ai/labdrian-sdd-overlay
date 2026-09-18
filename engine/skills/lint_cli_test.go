@@ -36,10 +36,26 @@ func TestRenderLintCore_CleanFileExitsZeroWithNoOutput(t *testing.T) {
 	}
 }
 
+// warningsOnlyBodyWordRepeat returns the repeat count for
+// strings.Repeat("word ", n) that lands the body's byte length strictly
+// between the body-recommended and body-hard token budgets (converted to
+// bytes via BytesPerTokenProxy, the same estimator LintSkill uses). This
+// keeps the warnings-only fixture derived from the named lint constants
+// instead of unexplained literal byte thresholds that would silently turn
+// into a no-warning or hard-error case if the estimator or the budgets
+// change (review-b75e4a27b9494ff8 R2-unexplained-test-constants).
+func warningsOnlyBodyWordRepeat() int {
+	const word = "word "
+	recommendedBytes := BodyRecommendedTokens * BytesPerTokenProxy
+	hardBytes := BodyHardTokens * BytesPerTokenProxy
+	midpointBytes := (recommendedBytes + hardBytes) / 2
+	return midpointBytes / len(word)
+}
+
 func TestRenderLintCore_WarningsOnlyExitsZeroAndPrintsWarnings(t *testing.T) {
 	// A body over the advisory (but not hard) token budget triggers exactly
 	// the body-recommended advisory, with zero hard errors.
-	longBody := strings.Repeat("word ", 750) // ~3750 bytes, over 2800, under 4000
+	longBody := strings.Repeat("word ", warningsOnlyBodyWordRepeat())
 	file := "---\n" + validFrontmatter() + "---\n" + longBody
 
 	var out, errBuf bytes.Buffer
@@ -101,6 +117,9 @@ func TestRenderLintCore_MissingPathExitsOne(t *testing.T) {
 
 	if exitCode != 1 {
 		t.Fatalf("expected exit 1 for a missing path, got %d", exitCode)
+	}
+	if !strings.Contains(errBuf.String(), "requires a path or --rules") {
+		t.Errorf("expected stderr to carry the missing-path diagnostic, got %q", errBuf.String())
 	}
 }
 
@@ -164,6 +183,52 @@ func TestRenderLintCore_TolerantOfWrapperInjectedTrailingFlags(t *testing.T) {
 
 	if exitCode != 0 {
 		t.Fatalf("exit code = %d, stderr: %q", exitCode, errBuf.String())
+	}
+}
+
+// TestRenderLintCore_ExtraPositionalArgumentExitsOneWithUsageError proves
+// RenderLintCore rejects a second positional argument instead of silently
+// linting only the first path and exiting 0 (review-b75e4a27b9494ff8
+// R4-001/R2-silent-extra-args/R3-lint-extra-positional-ignored: a multi-path
+// call like `lint a.md b.md` must not become a false-clean gate).
+func TestRenderLintCore_ExtraPositionalArgumentExitsOneWithUsageError(t *testing.T) {
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+
+	RenderLintCore(
+		[]string{"a.md", "b.md"},
+		func(string) ([]byte, error) { return nil, errors.New("should not be called") },
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("expected exit 1 for a second positional argument, got %d, stderr: %q", exitCode, errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "b.md") {
+		t.Errorf("expected stderr to name the offending extra argument %q, got %q", "b.md", errBuf.String())
+	}
+}
+
+// TestRenderLintCore_UnknownFlagExitsOneWithUsageError proves RenderLintCore
+// rejects an unrecognized flag instead of silently treating it as the lint
+// path.
+func TestRenderLintCore_UnknownFlagExitsOneWithUsageError(t *testing.T) {
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+
+	RenderLintCore(
+		[]string{"skill.md", "--rule"},
+		func(string) ([]byte, error) { return []byte(validSkillFile()), nil },
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 1 {
+		t.Fatalf("expected exit 1 for an unknown flag, got %d, stderr: %q", exitCode, errBuf.String())
+	}
+	if !strings.Contains(errBuf.String(), "--rule") {
+		t.Errorf("expected stderr to name the offending unknown flag %q, got %q", "--rule", errBuf.String())
 	}
 }
 

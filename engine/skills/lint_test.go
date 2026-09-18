@@ -258,6 +258,49 @@ func TestLintSkill_EmptyDescriptionWithTabContinuationYieldsDescriptionOneLine(t
 	}
 }
 
+// TestLintSkill_NonEmptyDescriptionWithWhitespaceLineThenIndentedContinuation
+// proves that a whitespace-only line between a non-empty `description:` tag
+// value and a following indented continuation line does not end the YAML
+// plain scalar: hasIndentedContinuation must skip whitespace-only lines and
+// decide on the next non-blank line (review-b75e4a27b9494ff8
+// R3-whitespace-continuation-false-negative).
+func TestLintSkill_NonEmptyDescriptionWithWhitespaceLineThenIndentedContinuation(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description: some text\n" +
+		"   \n" +
+		"  more text on an indented line\n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "description-one-line") {
+		t.Errorf("expected description-one-line hard error for a non-empty description followed by a whitespace-only line then an indented continuation, got %v", hard)
+	}
+}
+
+// TestLintSkill_EmptyDescriptionWithWhitespaceLineThenIndentedContinuation
+// proves the same skip-and-look-ahead behavior for an empty `description:`
+// tag line: a whitespace-only line followed by an indented continuation
+// line is still a genuine YAML continuation.
+func TestLintSkill_EmptyDescriptionWithWhitespaceLineThenIndentedContinuation(t *testing.T) {
+	frontmatter := "name: test-skill\n" +
+		"description:\n" +
+		"   \n" +
+		"  this continues on an indented physical line\n" +
+		"license: MIT\n" +
+		"metadata:\n  author: tester\n  version: \"1.0\"\n"
+
+	hard, _ := LintSkill(frontmatter, validBody())
+
+	if !hasHardRule(hard, "description-one-line") {
+		t.Errorf("expected description-one-line hard error for an empty description followed by a whitespace-only line then an indented continuation, got %v", hard)
+	}
+	if hasHardRule(hard, "required-fields") {
+		t.Errorf("empty description with a whitespace-only line then an indented continuation must not also raise required-fields, got %v", hard)
+	}
+}
+
 // TestLintSkill_EmptyDescriptionAsLastFrontmatterLineYieldsRequiredFieldsOnly
 // proves an empty `description:` tag line that is the very last physical
 // line of the frontmatter (no following line at all) is reported only via

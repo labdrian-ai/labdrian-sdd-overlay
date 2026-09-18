@@ -3,6 +3,7 @@ package skills
 import (
 	"fmt"
 	"io"
+	"strings"
 )
 
 // RenderLintCore is the testable CLI core for `engine skills lint`. Two
@@ -19,6 +20,14 @@ import (
 // design.md's CLI section). lint needs none of them, so it consumes and
 // ignores each recognized flag and its value rather than misparsing the
 // value as the lint target path.
+//
+// `lint` accepts exactly one positional argument (the path). A second
+// positional argument, or any unrecognized flag (anything else starting
+// with "-"), is rejected with exit 1 and a usage error naming the
+// offending argument, instead of being silently dropped: dropping it would
+// let a multi-path call like `lint a.md b.md` lint only the first file and
+// exit 0 even if a later file has hard errors, which is a false-clean gate
+// result (review-b75e4a27b9494ff8 R4-001).
 func RenderLintCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
 	var path string
 	rules := false
@@ -32,9 +41,18 @@ func RenderLintCore(args []string, readFile readFileFn, stdout, stderr io.Writer
 				i++
 			}
 		default:
+			if strings.HasPrefix(args[i], "-") {
+				fmt.Fprintf(stderr, "error: skills lint: unknown flag %q\n", args[i])
+				exit(1)
+				return
+			}
 			if path == "" {
 				path = args[i]
+				continue
 			}
+			fmt.Fprintf(stderr, "error: skills lint: unexpected extra argument %q (lint accepts exactly one path)\n", args[i])
+			exit(1)
+			return
 		}
 	}
 

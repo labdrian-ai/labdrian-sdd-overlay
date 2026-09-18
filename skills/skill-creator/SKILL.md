@@ -20,7 +20,7 @@ Do not create a skill when the pattern is trivial, one-off, or better served by 
 ## Hard Rules
 
 - Follow `references/skill-style-guide.md` as the normative source before creating or updating skills.
-- Run `labdrian skills lint <path>` on the new or updated `SKILL.md`; a hard error blocks the skill, and a warning should be resolved before finishing.
+- Run `labdrian skills lint <path>` on the new or updated `SKILL.md`; a hard error blocks the skill, and a warning should be resolved before finishing. If the `labdrian` binary is unavailable, apply the rule table in `references/skill-style-guide.md` (the generated block) manually instead.
 - A skill is a runtime instruction contract for an LLM, not human documentation.
 - Do not add a `Keywords` section; preserve essential trigger words in `description`.
 - References must point to local files.

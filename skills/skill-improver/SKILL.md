@@ -14,7 +14,7 @@ Use this skill when asked to audit, refactor, normalize, or improve existing `SK
 ## Hard Rules
 
 - Treat `references/skill-style-guide.md` as the normative style contract.
-- Run `labdrian skills lint <path>` on every audited skill and treat any hard error as a required fix.
+- Run `labdrian skills lint <path>` on every audited skill and treat any hard error as a required fix. If the `labdrian` binary is unavailable, apply the rule table in `references/skill-style-guide.md` (the generated block) manually instead.
 - Treat `SKILL.md` as the source of truth; preserve author intent, critical rules, activation semantics, and output requirements.
 - Use `.atl/skill-registry.md` as an index of skill names, triggers, scopes, and exact paths; do not expect generated summaries.
 - Default to audit-only. Modify files only when the user explicitly asks to apply improvements.
