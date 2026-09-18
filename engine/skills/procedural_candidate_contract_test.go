@@ -41,4 +41,26 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			}
 		}
 	})
+
+	t.Run("R002_R003_emission_decision_table_present", func(t *testing.T) {
+		for _, row := range []string{
+			"| — (no record) | — | 1 | not called | `observing` | No |",
+			"| `observing` | yes | unchanged | not called | `observing` | No |",
+			"| `observing` | no | < N | not called | `observing` | No |",
+			"| `observing` | no | = N | no match | `emitted` | **Yes, once** |",
+			"| `observing` | no | = N | match | `rejected` | No |",
+			"| `emitted` | no | > N | not called | `emitted` | No |",
+			"| `rejected` | no | > N | not called | `rejected` | No |",
+		} {
+			if !strings.Contains(contract, row) {
+				t.Fatalf("contract must contain emission decision table row %q verbatim", row)
+			}
+		}
+	})
+
+	t.Run("R002_R003_threshold_default_present", func(t *testing.T) {
+		if !strings.Contains(contract, "Threshold: 3") {
+			t.Fatalf("contract must contain %q verbatim", "Threshold: 3")
+		}
+	})
 }
