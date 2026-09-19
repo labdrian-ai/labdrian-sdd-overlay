@@ -88,10 +88,10 @@ Item-30 symbols/sections consumed: sec 1 topic-key shapes, sec 2 record block, s
 
 Item-30 symbols consumed: none directly — this sub-slice covers only the lock file format (parse/serialize/provenance stamping); `NormalizeSlug` and sec 1 key shapes are consumed in project-lock-ownership below.
 
-- [ ] 3a-i.1 RED `engine/skills/project_lock_test.go`: `ParseProjectLock`/`SerializeProjectLock` round-trip and `id`-sort determinism; unknown-field refusal (`DisallowUnknownFields`); `version != 1` refusal; missing file handled as empty by the caller (documented, not implemented here); `StampProvenance` table — insert into an existing `metadata:` block, replace an existing `author`/`provenance`/`candidate` line, preserve other metadata lines (e.g. `version`) byte-for-byte in original order, refusal on a missing `metadata:` block
-- [ ] 3a-i.2 GREEN `engine/skills/project_lock.go`: `ProceduralAuthor` constant (`"labdrian-overlay procedural"`), `ProjectLockRelPath = ".labdrian/procedural-skills.lock.json"`, `ProjectLock`/`ProjectLockEntry` types, `ParseProjectLock`, `SerializeProjectLock` (2-space indent, trailing newline, sorted by `id`), `StampProvenance`
-- [ ] 3a-i.3 GREEN `engine/skills/zero_fetch_test.go`: widen `allowedImports` by `encoding/json` (first needed here for `ParseProjectLock`/`SerializeProjectLock`; `crypto/sha256` and `encoding/hex` are widened in project-lock-ownership below, where `HashSkill` first needs them)
-- [ ] 3a-i.4 Verify: `cd engine && go vet ./... && go test ./skills/...`
+- [x] 3a-i.1 RED `engine/skills/project_lock_test.go`: `ParseProjectLock`/`SerializeProjectLock` round-trip and `id`-sort determinism; unknown-field refusal (`DisallowUnknownFields`); `version != 1` refusal; missing file handled as empty by the caller (documented, not implemented here); `StampProvenance` table — insert into an existing `metadata:` block, replace an existing `author`/`provenance`/`candidate` line, preserve other metadata lines (e.g. `version`) byte-for-byte in original order, refusal on a missing `metadata:` block
+- [x] 3a-i.2 GREEN `engine/skills/project_lock.go`: `ProceduralAuthor` constant (`"labdrian-overlay procedural"`), `ProjectLockRelPath = ".labdrian/procedural-skills.lock.json"`, `ProjectLock`/`ProjectLockEntry` types, `ParseProjectLock`, `SerializeProjectLock` (2-space indent, trailing newline, sorted by `id`), `StampProvenance`
+- [x] 3a-i.3 GREEN `engine/skills/zero_fetch_test.go`: widen `allowedImports` by `encoding/json` (first needed here for `ParseProjectLock`/`SerializeProjectLock`; `crypto/sha256` and `encoding/hex` are widened in project-lock-ownership below, where `HashSkill` first needs them)
+- [x] 3a-i.4 Verify: `cd engine && go vet ./... && go test ./skills/...`
 
 ## Phase 3a-ii: `project-lock-ownership` (PR 5, ~435 lines, split owner-decided 2026-09-19)
 
