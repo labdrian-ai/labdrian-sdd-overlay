@@ -171,16 +171,25 @@ func parseFrontmatterFields(raw string) parsedFrontmatter {
 	return fm
 }
 
-// hasIndentedContinuation reports whether the line following lines[i] exists,
-// is non-empty, and is indented with a leading space or tab. This is the
-// shared test for YAML plain multi-line scalar continuation, used by both an
-// empty and a non-empty description tag line.
+// hasIndentedContinuation reports whether, after skipping any whitespace-only
+// lines following lines[i], the next non-blank line exists and is indented
+// with a leading space or tab. This is the shared test for YAML plain
+// multi-line scalar continuation, used by both an empty and a non-empty
+// description tag line. A whitespace-only line carries no actual value on
+// its own, but in YAML a plain scalar can continue across one: it does not
+// end the scalar, so it must not by itself decide the outcome. The decision
+// is made on the next non-blank line: indented means a genuine continuation;
+// unindented, or no such line before the frontmatter ends, means none.
 func hasIndentedContinuation(lines []string, i int) bool {
-	if i+1 >= len(lines) {
+	j := i + 1
+	for j < len(lines) && strings.TrimSpace(lines[j]) == "" {
+		j++
+	}
+	if j >= len(lines) {
 		return false
 	}
-	next := lines[i+1]
-	return next != "" && (strings.HasPrefix(next, " ") || strings.HasPrefix(next, "\t"))
+	next := lines[j]
+	return strings.HasPrefix(next, " ") || strings.HasPrefix(next, "\t")
 }
 
 // splitKeyValue splits a "key: value" or "key:" line into its parts. It
