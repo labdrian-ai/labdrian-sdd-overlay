@@ -264,6 +264,213 @@ missed duplicate, deferred to a human reviewer) is the accepted, auditable
 failure mode, while over-detection (a false duplicate that silently discards
 a real candidate before anyone reviews it) is not.
 
+## 7. Do-not-capture list (gates candidate quality and drafting)
+
+This is the single do-not-capture list for this contract. It is defined exactly once, here, and enforced at two independent points in the lifecycle: at emission (this document's own section 4, before a candidate that reaches `Threshold` is allowed to advance past `emitted`) and at draft time (`procedural-skill-drafting`, before any draft record is saved). Neither enforcement point supersedes the other: a candidate that slips past emission-time enforcement is still refused at draft time.
+
+A candidate whose contributing evidence matches any of the following
+categories MUST be refused rather than advanced or drafted, and the refusal
+MUST be recorded (never silently dropped):
+
+1. **Environment-dependent failure**: a failure that reproduces only under
+   one occurrence's local misconfiguration, not a general lesson.
+2. **Negative claim about a tool with no independent verification**: an
+   assertion that a tool does not work or lacks a capability, with no
+   independent confirmation beyond the one occurrence.
+3. **Transient error**: a network blip, rate limit, or timeout with no
+   recurring cause.
+4. **One-off narrative**: a one-off narrative with no repeatable procedural
+   content.
+5. **Unresolved failure presented as workflow**: a failure narrated as if a
+   workflow completed, when the failure was never actually resolved.
+
+A candidate refused by this list transitions to `Status: rejected` with
+`RejectionReason: do-not-capture:<class>`, where `<class>` is one of
+`environment-dependent`, `unverified-negative-claim`, `transient-error`,
+`one-off-narrative`, or `unresolved-presented-as-workflow`. The refusal is
+kept, never discarded, exactly like a duplicate rejection (section 6): every
+miss and every match stays auditable.
+
+The advisory `incident-log-shape` lint warning (`skill-lint`) is a separate,
+non-blocking signal on the rendered SKILL.md body. It never gates emission
+or drafting; it only flags a later-stage authoring smell after a draft
+already exists.
+
+## 8. Lesson shape, Disposition, and draft records
+
+### Lesson shape for Summary
+
+When drafting produces or updates a skill's summary content, the summary MUST be phrased as an imperative rule followed by exactly one clause explaining why, and MUST NOT include observation ids, dates, or PR/issue numbers. This is enforced by the agent-driven drafting procedure itself,
+before any draft record is saved — not by Go code — and is verified by the
+acceptance checklist at the end of this document, not a unit test. It is
+independent of the advisory `incident-log-shape` lint warning (section 7),
+which flags a different, later-stage signal and never blocks drafting.
+
+Example: "Override `HOME`, not `ENGRAM_DATABASE_URL`, because the Engram CLI
+and its MCP server never read the latter." is an acceptable summary shape:
+one imperative clause, one why-clause, no ids, no dates, no PR/issue
+numbers.
+
+### Disposition: new | extend:<skill-id>
+
+Every candidate MUST have a `Disposition` of exactly `new` or `extend:<skill-id>`, computed before drafting. `extend:<skill-id>` MUST be
+preferred over `new` whenever an existing registered or promoted skill
+already covers materially the same procedural ground as the candidate
+(extend-before-create). When `Disposition` is `extend:<skill-id>`, the draft
+MUST be a unified diff against the named skill's current content, not an
+unrelated new SKILL.md. `Disposition` persists on the candidate record
+(section 9) so registration, revision, and retirement can read it without
+recomputing the extend-vs-create decision.
+
+### Draft records live only in Engram
+
+Every draft is stored as an Engram observation under the topic-key shape:
+
+    procedural/drafts/{kind}/{slug}
+
+where `{kind}` and `{slug...}` mirror the candidate's own kind and slug tail
+(section 1). `type: pattern`, `capture_prompt: false`. No draft file is ever written under `skills/` at any point in the drafting lifecycle — a draft
+that reached the `skills/` tree would fail the ondisk gate's
+`UNREGISTERED_ON_DISK` check, and registration (section 11) is the only path
+that ever writes there.
+
+The draft record's field block:
+
+`````
+**Candidate**: <candidate topic key>
+**Disposition**: new | extend:<skill-id>
+**Status**: open | registered | abandoned
+**ForRevision**: <n>
+**Lint**: hard 0, warnings <k> (<rule-ids>)
+**History**:
+- ...
+**Body**:
+````markdown
+<complete SKILL.md text>      (Disposition new)
+````
+`````
+
+or a ` ```diff ` fenced unified diff when `Disposition` is
+`extend:<skill-id>`. A five-backtick outer fence wraps a four-backtick body
+fence so the inner fence closes before the outer one does, and an
+embedded SKILL.md's own triple-backtick fences do not terminate it early.
+`ForRevision` is the latch: at most one open draft exists per revision
+number.
+
+## 9. Extended Status vocabulary, transition table, and History
+
+### Status vocabulary
+
+The candidate record's `Status` field takes exactly one value from:
+
+    observing | emitted | rejected | drafted | registered | promoted | retired
+
+The draft record (section 8) has its own, separate `Status` field with its
+own vocabulary, `open | registered | abandoned`, defined in section 8's
+field block. A draft reaching `registered` moves its candidate record's
+`Status` to `registered`; an `abandoned` draft leaves the candidate
+record's `Status` at `drafted` until a new draft is opened or the candidate
+is retired.
+
+Every value beyond `observing | emitted | rejected` (item 30, sections 4-6)
+is reachable only through the corresponding lifecycle transition defined by
+this document and by `procedural-skill-registration` /
+`procedural-skill-maintenance`; none is ever set directly.
+
+### Transition table (normative)
+
+| From | To | Actor | Tier | Event | Required `History` evidence |
+|---|---|---|---|---|---|
+| none | `observing` | agent | none | first occurrence (item 30) | `engram:<id>` |
+| `observing` | `emitted` | agent | none | count reaches `Threshold`, no `MatchCandidate` match (item 30) | count |
+| `observing` | `rejected` | agent | none | `MatchCandidate` match (item 30) | `MatchedSkillPath` |
+| `observing` or `emitted` | `rejected` | agent | none | do-not-capture class matched at emission or at draft time | `RejectionReason: do-not-capture:<class>` |
+| `emitted` | `drafted` | agent | project | draft record written, `LintSkill` hard = 0 (new) or diff applies cleanly (extend) | draft topic key, `Disposition`, lint counts |
+| `drafted` | `registered` | agent | project | `project-register` and commit (new), or `project-revise` of an agent-owned target (extend) | skill id, `sha256`, commit, rev |
+| `registered` | `registered` | agent | project | revision (ownership OK, trigger reached) | `sha256`, commit, rev |
+| `drafted` or `registered` | `promoted` | human | global | `engine skills add` merged in the overlay | overlay commit, `sha256` |
+| `registered` | `retired` | agent | project | `project-retire` and commit | `RetirementReason`, commit |
+| `promoted` | `retired` | human | global | `engine skills remove` merged | `RetirementReason`, overlay commit |
+
+Non-transition events append a same-state `History` line (for example
+`registered -> registered`, or `promoted -> promoted`) without changing
+`Status`: ownership lost, disposition computed, a revision draft opened, a
+recurrence after retirement, and the agent's post-promotion removal of the
+now-redundant project-tier copies. That last case deserves its own note:
+once a human sets `Status: promoted`, the agent MAY run
+`project-retire --reason promoted`, which deletes the project-tier files and
+their project lock entry and commits, but it is NOT the `registered -> retired` transition in the table above — `Status` stays `promoted`, and only a `promoted -> promoted` `History` line records the removal. Retirement never reopens automatically.
+
+Only a human sets `Status: promoted`. No engine verb ever writes `Status`,
+and every project-tier procedure in this document ends at `registered` or
+`retired`.
+
+### History format and write rule
+
+One line per entry, append-only, always the last field in the record block:
+
+```
+**History**:
+- 2026-09-20T10:00:00Z | observing -> emitted | agent | count 3/3, no registry match
+- 2026-09-20T10:05:00Z | emitted -> drafted | agent | draft procedural/drafts/repeated-success/probe-engram-with-home-override; Disposition new; lint hard 0 warnings 1 (body-recommended)
+- 2026-09-20T10:09:00Z | drafted -> registered | agent | skill probe-engram-with-home-override rev 1 sha256:3f2a...c1 commit a1b2c3d
+```
+
+**Write rule**: read the current record with `mem_get_observation`, copy the
+existing `History` lines byte-for-byte, append one or more new lines, and
+upsert (`mem_save`/`mem_update`). After the write, the old lines MUST be a prefix of the new ones — a subsequent read MUST NOT remove, reorder, or
+overwrite any existing `History` entry. This is how a `History` field
+survives Engram's overwrite-on-upsert behavior. Records that item 30 created
+with no `History` get a backfilled first line on their first write under
+this document: `<FirstObserved> | none -> observing | agent | backfilled
+from FirstObserved`.
+
+### New candidate-record fields
+
+Appended to item 30's field block (section 2):
+
+- `**Disposition**: new | extend:<skill-id>`
+- `**Draft**: procedural/drafts/...`
+- `**Registered**: <id> rev:<n> sha256:<hex> commit:<sha> at:<RFC3339>` —
+  replaced on revision; the old values survive in `History`.
+- `**Promoted**: <id> path:skills/<id>/SKILL.md sha256:<hex> commit:<sha> at:<RFC3339>`
+- `**OccurrencesSincePromotion**: <n>` — derived, never a stored,
+  independently incremented counter. It counts `Occurrences` entries whose
+  timestamp is strictly after the `at:` of the most recent `Registered` or
+  `Promoted` line, and applies at either tier (registered project-tier or
+  promoted global-tier).
+- `**RetirementReason**: stale-reference | superseded | absorbed | promoted | quiet | human-request`
+- `**AbsorbedInto**: <skill-id>` — set only after the retirement/
+  consolidation path verifies the named id exists (in the overlay registry
+  for a global target, or in the project lock file for a project-tier
+  target), never by `MatchCandidate` coverage of the retired candidate's own
+  identity.
+
+The `Registered`/`Promoted` hash line above is an informational mirror for
+humans reading the record. It is never the value the ownership-by-hash check
+(`procedural-skill-maintenance`) reads — that check reads only the project
+lock file's recorded hash, which is the single source of truth for
+ownership.
+
+## 10. Runtime targets
+
+Project-tier registration (`procedural-skill-registration`) writes exactly
+two fixed target directories, one `SKILL.md` per directory, and never a
+third. `.pi/skills/` is never written by this capability.
+
+| Directory | Runtime(s) | Status | Evidence |
+|---|---|---|---|
+| `.claude/skills/` | Claude Code | verified | Claude Code loads project skills from `.claude/skills/<id>/SKILL.md` directly; no trust prompt applies. |
+| `.agents/skills/` | Pi (always, after project trust); Codex (discovery only, on this host) | verified | Pi: installed Pi docs (`docs/security.md`, `docs/skills.md`) list project `.agents/skills` as a trust-requiring resource; project skills load only after trust. Codex: `codex-smoke.md` (2026-09-18, Codex 0.148.0) recorded verdict `PASS`, scoped to discovery of `.agents/skills/<id>/` (name and description exposed in Codex's skill list); loading the skill body is unverified on this host, because the body-read probe hit a host filesystem-sandbox limitation, not a discovery failure. |
+
+**Pi trust note**: writing to `.agents/skills/` in a project Pi has not yet
+trusted makes Pi prompt for project trust once, on its next start, under the
+default `defaultProjectTrust: ask`; a non-interactive Pi run ignores the
+skill until the project is trusted. This is the accepted, disclosed cost of
+writing one Pi-visible copy (revised decision (e)); it also means Pi never
+sees a duplicate skill name for the same procedural skill. Every successful
+`project-register` run prints a `note:` line disclosing this (section 11).
+
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
@@ -350,3 +557,34 @@ verbatim text) is still Go-testable and covered by
      resolve via `mem_get_observation`
    - AND the topic-key shape used in session B is byte-identical to the one
      used in session A
+
+## Acceptance checklist (procedural-skill-drafting, executed during `sdd-verify`)
+
+This section is agent-driven prose, not Go code; it is verified by a
+fixture-driven procedure run against real Engram records during
+`sdd-verify`, not by `go test`. Contract-artifact content (sections 7-10
+above) is still Go-testable and covered by
+`engine/skills/procedural_candidate_contract_test.go`.
+
+1. **Summary with an observation id is rejected**: GIVEN a candidate
+   summary draft that embeds a literal `engram:<id>` reference, WHEN the
+   draft is validated against the lesson-shape rule (section 8), THEN the
+   draft is rejected before any draft record is saved.
+2. **Summary with a literal date is rejected**: GIVEN a candidate summary
+   draft that embeds a literal date, WHEN the draft is validated against the
+   lesson-shape rule, THEN the draft is rejected before any draft record is
+   saved.
+3. **Summary with a PR/issue number is rejected**: GIVEN a candidate summary
+   draft that embeds a PR or issue number, WHEN the draft is validated
+   against the lesson-shape rule, THEN the draft is rejected before any
+   draft record is saved.
+4. **A clean lesson-shaped summary passes**: GIVEN a candidate summary draft
+   phrased as an imperative rule followed by exactly one why-clause, with no
+   observation id, date, or PR/issue number, WHEN the draft is validated,
+   THEN validation passes and its draft record is saved under
+   `procedural/drafts/{kind}/{slug}`.
+5. **`incident-log-shape` never gates drafting**: GIVEN a rendered SKILL.md
+   body that triggers the advisory `incident-log-shape` lint warning
+   (`skill-lint`), WHEN drafting or registration is attempted, THEN the
+   warning is reported as a separate, non-blocking signal and never refuses
+   the draft or the registration.

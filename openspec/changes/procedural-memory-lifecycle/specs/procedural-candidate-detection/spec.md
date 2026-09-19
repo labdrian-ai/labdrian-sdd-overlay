@@ -46,14 +46,20 @@ other; a candidate that slips past emission is still refused at draft time.
 
 ### Requirement: Extended Status Vocabulary
 
-The candidate/draft record's `Status` field MUST support a vocabulary
-extended beyond `observing | emitted | rejected` to include every state
-introduced by this change's lifecycle: at minimum a drafted state, a
-project-tier `registered` state, a global-tier `promoted` state distinct
-from `registered`, and a `retired` state. Every value in the extended
-vocabulary MUST be reachable only through the corresponding lifecycle
-transition defined by the drafting, registration, and maintenance
-capabilities, never set directly.
+The candidate record's `Status` field MUST support a vocabulary extended
+beyond `observing | emitted | rejected` to include every state introduced
+by this change's lifecycle: at minimum a drafted state, a project-tier
+`registered` state, a global-tier `promoted` state distinct from
+`registered`, and a `retired` state. Every value in the extended vocabulary
+MUST be reachable only through the corresponding lifecycle transition
+defined by the drafting, registration, and maintenance capabilities, never
+set directly.
+
+The draft record MUST have its own, separate `Status` field with its own
+vocabulary (`open | registered | abandoned`); a draft reaching `registered`
+MUST move its candidate record's `Status` to `registered`, and an
+`abandoned` draft MUST leave the candidate record's `Status` at `drafted`
+until a new draft is opened or the candidate is retired.
 
 #### Scenario: Status values are mutually exclusive at a point in time
 
