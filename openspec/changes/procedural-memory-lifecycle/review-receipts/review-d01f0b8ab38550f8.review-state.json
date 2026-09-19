@@ -1,0 +1,199 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:93e85941b1509672d1e07d2071a0f09abb91d1eb05513dbfbd558656f441c956",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-d01f0b8ab38550f8",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c67f213c44ba74a3991a9bb9a53cd7337957a62f",
+      "candidate_tree": "d8efb362497d79f97211302d445ef7c58c5a93bb",
+      "paths_digest": "sha256:961eeca58752e7170e3c7fa9819766cf7226bfa5bd435ef6adcc15bc05b7b2e5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/procedural_candidate_contract_test.go",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md",
+        "skills/_shared/procedural-candidate-detection.md"
+      ],
+      "identity": "sha256:f7a6c145c23b132d65debd9663a79acbf5724b2180a26d90602a9d9e75b408ca"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "c67f213c44ba74a3991a9bb9a53cd7337957a62f",
+      "candidate_tree": "d8efb362497d79f97211302d445ef7c58c5a93bb",
+      "paths_digest": "sha256:961eeca58752e7170e3c7fa9819766cf7226bfa5bd435ef6adcc15bc05b7b2e5",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/procedural_candidate_contract_test.go",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md",
+        "skills/_shared/procedural-candidate-detection.md"
+      ],
+      "identity": "sha256:f7a6c145c23b132d65debd9663a79acbf5724b2180a26d90602a9d9e75b408ca"
+    },
+    "genesis_paths": [
+      "engine/skills/procedural_candidate_contract_test.go",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md",
+      "skills/_shared/procedural-candidate-detection.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 188,
+    "correction_budget": 94,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:a90cb21275cbdc267110b390a1029f2c1b94ee4f8c0982a758ea1328b711ea96",
+    "capture_phase_revision": "sha256:2c242bf292a0529eb0fdc76aab87aab4059eab3b5e123434dcd76830ec7e71c7",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:f7a6c145c23b132d65debd9663a79acbf5724b2180a26d90602a9d9e75b408ca",
+        "capture_phase_revision": "sha256:2c242bf292a0529eb0fdc76aab87aab4059eab3b5e123434dcd76830ec7e71c7",
+        "artifact_digest": "sha256:66ed3b43c1f60528c939b745ff30a2aa36f59d825783cde0e126bcf162849096",
+        "result_hash": "sha256:d36aa0327bca50cbcdc49c7ed193b78fde4203f881ca2c5052550621ee9cd207",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:572e0eadc9850c29a63986a3e89be40a24e7ca135f5f60b06ddb72fd79ca421c",
+            "lineage_id": "review-d01f0b8ab38550f8",
+            "authority_revision": "sha256:2c242bf292a0529eb0fdc76aab87aab4059eab3b5e123434dcd76830ec7e71c7",
+            "target_identity": "sha256:f7a6c145c23b132d65debd9663a79acbf5724b2180a26d90602a9d9e75b408ca",
+            "base_tree": "c67f213c44ba74a3991a9bb9a53cd7337957a62f",
+            "candidate_tree": "d8efb362497d79f97211302d445ef7c58c5a93bb",
+            "changed_path_manifest_sha256": "sha256:352807fbd6c69ee264ef5b1ee4cae285cb9f9301c024af003f7a709861304bd9",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:572e0eadc9850c29a63986a3e89be40a24e7ca135f5f60b06ddb72fd79ca421c",
+            "raw_sha256": "sha256:96827a80909977ca85695d72a496e07103b2a226685414d49e750abb7fb72bda",
+            "canonical_sha256": "sha256:b196bd8bcde852099655792fa8d76d633436bd5641ffcf2a0a07bca9e30b3487",
+            "result_hash": "sha256:d36aa0327bca50cbcdc49c7ed193b78fde4203f881ca2c5052550621ee9cd207",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:572e0eadc9850c29a63986a3e89be40a24e7ca135f5f60b06ddb72fd79ca421c",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/procedural_candidate_contract_test.go",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md",
+                "skills/_shared/procedural-candidate-detection.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-scanfences-no-negative-fixture",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:18-53",
+                "severity": "WARNING",
+                "claim": "The new scanFences helper is only ever run against the live contract. No fixture test shows that it rejects the known-bad shape: an outer three-backtick fence that is closed early by an inner four-backtick fence. The helper also reports only a fence that is still open at end of document. It does not detect an early close directly; it catches one only through fence-count parity, so two compensating fence defects would pass. The subtest is named NestedFencesCloseInOrder and tasks.md item 2.6 says the fix is verified, but that property is not proven at the cheapest test level. A small table-driven test would close the gap: old nested shape fails, five-backtick outer shape passes, balanced plain fences pass.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:18-53",
+                  "engine/skills/procedural_candidate_contract_test.go:213-217",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:85"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-fence-close-rule-deviates-from-commonmark",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:34-46",
+                "severity": "SUGGESTION",
+                "claim": "The closing-fence check does not follow the CommonMark rule that its doc comment claims. strings.TrimLeft strips any amount of leading space instead of at most 3. It also requires every remaining byte to be the fence character, so a closing fence with trailing spaces, which CommonMark accepts, is not treated as closing. As a result the helper could falsely report an unterminated fence, or treat a line that is really indented code as a closing fence. Either way it can diverge from what renderers do.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:13-17",
+                  "engine/skills/procedural_candidate_contract_test.go:34-46"
+                ]
+              },
+              {
+                "id": "R3-fence-error-drops-line-number",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:57-59",
+                "severity": "SUGGESTION",
+                "claim": "fenceUnterminatedError stores the opening line but Error() never prints it: the message ends with the words 'starting at line' and no number. The t.Fatalf in the Section8_NestedFencesCloseInOrder subtest therefore gives no location to someone debugging a failure, even though the helper's doc comment promises an error naming the first unterminated fence.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:55-62",
+                  "engine/skills/procedural_candidate_contract_test.go:215"
+                ]
+              },
+              {
+                "id": "R3-field-block-slice-not-bounded-to-fence",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:237",
+                "severity": "WARNING",
+                "claim": "fieldBlock runs from the anchor to the end of section 8, not to the end of the fenced field-block example. The ordered field search can therefore match later field names, such as History or Body, in section 8 prose after the example's closing fence. If the example itself lost a field, the test could still pass. The slice should be bounded to the fenced block that follows the anchor, for example with the five-backtick close, so the assertion is actually anchored to the example.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:230-239",
+                  "skills/_shared/procedural-candidate-detection.md:339",
+                  "skills/_shared/procedural-candidate-detection.md:351"
+                ]
+              },
+              {
+                "id": "R3-pi-skills-check-scope-narrowed",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:385-400",
+                "severity": "SUGGESTION",
+                "claim": "The negative check now scans every cell, but only in the runtime-targets table (the rows under the Directory | Runtime(s) | Status | Evidence header). The old check matched a row starting with the Pi skills directory anywhere in the document. If that directory were added as a row of another table, the old check would catch it and the new one would not. Consider keeping a document-wide first-cell guard alongside the new per-table scan.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:385-400"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all 5 manifest paths from the supplied patch sections only.",
+              "engine/skills/procedural_candidate_contract_test.go: I traced scanFences by hand against the old document. In the old shape, the inner four-backtick close line terminates the outer three-backtick fence early, and the stray three-backtick line then opens a new fence. So the old document is caught only through end-of-document parity, which the WARNING finding covers.",
+              "skills/_shared/procedural-candidate-detection.md:339 and :351: the outer fence is now five backticks and the inner body fence is four, so under CommonMark the inner fence closes before the outer one does.",
+              "engine/skills/procedural_candidate_contract_test.go:264-274: the new Status-vocabulary subtest normalizes whitespace before matching, so the wrapped sentence in skills/_shared/procedural-candidate-detection.md:368-373 still matches deterministically.",
+              "engine/skills/procedural_candidate_contract_test.go:295-315: the row-count subtest stops at the first line that does not start with a pipe, pins the count at 10, and fails loudly if the header is missing.",
+              "The spec wording in openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md and openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md matches the contract's section 9 scoping; no contradiction was introduced.",
+              "No BLOCKER or CRITICAL issues were found: this candidate changes only documentation and test assertions."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "45ebbd06c525fdf1d9be663677b29e0b99f20219740729666b3a2e095755e8f3",
+    "initial_atomic_start": {
+      "lineage_id": "review-d01f0b8ab38550f8",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:f7a6c145c23b132d65debd9663a79acbf5724b2180a26d90602a9d9e75b408ca",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "c67f213c44ba74a3991a9bb9a53cd7337957a62f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 188,
+      "correction_budget": 94,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
