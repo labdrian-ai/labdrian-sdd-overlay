@@ -336,7 +336,7 @@ that ever writes there.
 
 The draft record's field block:
 
-```
+`````
 **Candidate**: <candidate topic key>
 **Disposition**: new | extend:<skill-id>
 **Status**: open | registered | abandoned
@@ -348,10 +348,11 @@ The draft record's field block:
 ````markdown
 <complete SKILL.md text>      (Disposition new)
 ````
-```
+`````
 
 or a ` ```diff ` fenced unified diff when `Disposition` is
-`extend:<skill-id>`. A four-backtick fence is used for the body so an
+`extend:<skill-id>`. A five-backtick outer fence wraps a four-backtick body
+fence so the inner fence closes before the outer one does, and an
 embedded SKILL.md's own triple-backtick fences do not terminate it early.
 `ForRevision` is the latch: at most one open draft exists per revision
 number.
@@ -360,9 +361,16 @@ number.
 
 ### Status vocabulary
 
-The candidate/draft record's `Status` field takes exactly one value from:
+The candidate record's `Status` field takes exactly one value from:
 
     observing | emitted | rejected | drafted | registered | promoted | retired
+
+The draft record (section 8) has its own, separate `Status` field with its
+own vocabulary, `open | registered | abandoned`, defined in section 8's
+field block. A draft reaching `registered` moves its candidate record's
+`Status` to `registered`; an `abandoned` draft leaves the candidate
+record's `Status` at `drafted` until a new draft is opened or the candidate
+is retired.
 
 Every value beyond `observing | emitted | rejected` (item 30, sections 4-6)
 is reachable only through the corresponding lifecycle transition defined by

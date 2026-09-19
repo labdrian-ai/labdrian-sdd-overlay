@@ -131,13 +131,20 @@ extend:<skill-id>`). The system MUST NOT write any draft file under
 
 ### Requirement: Extended Status Vocabulary Reflects Drafting Progress
 
-The system MUST extend the candidate/draft `Status` vocabulary beyond
+The system MUST extend the candidate record's `Status` vocabulary beyond
 `observing | emitted | rejected` to include the drafting-and-beyond states
 needed by this change (at minimum a drafted state distinct from emitted,
 and the registration/promotion/retirement states defined by the
 registration and maintenance capabilities). A `Status` transition MUST only
 move a record forward through this vocabulary in response to an actual
 lifecycle event; it MUST NOT be set arbitrarily.
+
+The draft record introduced by this capability has its own, separate
+`Status` field with its own vocabulary (`open | registered | abandoned`); a
+draft reaching `registered` moves its candidate record's `Status` to
+`registered`, and an `abandoned` draft leaves the candidate record's
+`Status` at `drafted` until a new draft is opened or the candidate is
+retired.
 
 #### Scenario: A drafted candidate reaches drafted status
 

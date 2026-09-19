@@ -1,9 +1,66 @@
 package skills
 
 import (
+	"regexp"
 	"strings"
 	"testing"
 )
+
+// fenceOpenRE matches a CommonMark fence line: leading indent up to 3 spaces,
+// three or more backticks or tildes, then an optional info string.
+var fenceOpenRE = regexp.MustCompile("^ {0,3}(`{3,}|~{3,})[^`~]*$")
+
+// scanFences walks the document line by line applying CommonMark fenced-code
+// rules: a fence closes on the first later line consisting only of the same
+// fence character, at least as long as the opening fence, with no info
+// string. It returns an error naming the first fence that is still open at
+// end of document (unterminated) or nil when every opened fence closed.
+func scanFences(doc string) error {
+	lines := strings.Split(doc, "\n")
+	var openChar byte
+	var openLen int
+	var openLineNum int
+	for i, line := range lines {
+		if openChar == 0 {
+			m := fenceOpenRE.FindStringSubmatch(line)
+			if m != nil {
+				openChar = m[1][0]
+				openLen = len(m[1])
+				openLineNum = i + 1
+			}
+			continue
+		}
+		// Inside a fence: check whether this line is a valid closing fence.
+		trimmed := strings.TrimLeft(line, " ")
+		if len(trimmed) >= openLen {
+			allSame := true
+			for j := 0; j < len(trimmed); j++ {
+				if trimmed[j] != openChar {
+					allSame = false
+					break
+				}
+			}
+			if allSame {
+				openChar = 0
+				openLen = 0
+			}
+		}
+	}
+	if openChar != 0 {
+		return errFenceUnterminated(openLineNum)
+	}
+	return nil
+}
+
+type fenceUnterminatedError struct{ line int }
+
+func (e fenceUnterminatedError) Error() string {
+	return "fence opened but never closed, starting at line"
+}
+
+func errFenceUnterminated(line int) error {
+	return fenceUnterminatedError{line: line}
+}
 
 func TestProceduralCandidateContractArtifact(t *testing.T) {
 	repoRoot := ooQualityContractRepoRoot(t)
@@ -153,7 +210,33 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 		}
 	})
 
+	t.Run("Section8_NestedFencesCloseInOrder", func(t *testing.T) {
+		if err := scanFences(contract); err != nil {
+			t.Fatalf("contract has an unterminated or early-closing fenced block: %v", err)
+		}
+	})
+
 	t.Run("Section8_DraftRecordFieldBlockPresent", func(t *testing.T) {
+		const sec8Heading = "## 8. Lesson shape, Disposition, and draft records"
+		const sec9Heading = "## 9. Extended Status vocabulary, transition table, and History"
+		start := strings.Index(contract, sec8Heading)
+		if start < 0 {
+			t.Fatalf("contract must contain section 8 heading %q", sec8Heading)
+		}
+		end := strings.Index(contract, sec9Heading)
+		if end < 0 || end <= start {
+			t.Fatalf("contract must contain section 9 heading %q after section 8", sec9Heading)
+		}
+		section8 := contract[start:end]
+
+		const anchor = "The draft record's field block:"
+		anchorIdx := strings.Index(section8, anchor)
+		if anchorIdx < 0 {
+			t.Fatalf("section 8 must introduce the draft record's field block with %q", anchor)
+		}
+		fieldBlock := section8[anchorIdx:]
+
+		pos := 0
 		for _, field := range []string{
 			"**Candidate**",
 			"**Disposition**",
@@ -163,9 +246,11 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			"**History**",
 			"**Body**",
 		} {
-			if !strings.Contains(contract, field) {
-				t.Fatalf("contract must contain draft record field %q verbatim", field)
+			idx := strings.Index(fieldBlock[pos:], field)
+			if idx < 0 {
+				t.Fatalf("section 8's draft field block must contain field %q, in order, after position %d", field, pos)
 			}
+			pos += idx + len(field)
 		}
 	})
 
@@ -173,6 +258,18 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 		required := "observing | emitted | rejected | drafted | registered | promoted | retired"
 		if !strings.Contains(contract, required) {
 			t.Fatalf("contract must contain the extended Status vocabulary %q verbatim", required)
+		}
+	})
+
+	t.Run("Section9_StatusVocabularyScopedToCandidateRecord", func(t *testing.T) {
+		required := "The candidate record's `Status` field takes exactly one value from:"
+		if !strings.Contains(contract, required) {
+			t.Fatalf("contract must scope the extended Status vocabulary to the candidate record verbatim: %q", required)
+		}
+		normalized := strings.Join(strings.Fields(contract), " ")
+		draftVocab := "The draft record (section 8) has its own, separate `Status` field with its own vocabulary, `open | registered | abandoned`"
+		if !strings.Contains(normalized, draftVocab) {
+			t.Fatalf("contract must state the draft record's own separate Status vocabulary verbatim: %q", draftVocab)
 		}
 	})
 
@@ -192,6 +289,28 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			if !strings.Contains(contract, row) {
 				t.Fatalf("contract must contain transition table row %q verbatim", row)
 			}
+		}
+	})
+
+	t.Run("Section9_TransitionTableRowCountPinned", func(t *testing.T) {
+		const header = "| From | To | Actor | Tier | Event | Required `History` evidence |"
+		idx := strings.Index(contract, header)
+		if idx < 0 {
+			t.Fatalf("contract must contain transition table header %q", header)
+		}
+		lines := strings.Split(contract[idx:], "\n")
+		// lines[0] is the header row, lines[1] is the separator row.
+		rowCount := 0
+		for _, line := range lines[2:] {
+			trimmed := strings.TrimSpace(line)
+			if !strings.HasPrefix(trimmed, "|") {
+				break
+			}
+			rowCount++
+		}
+		const expectedRows = 10 // task 2.1: "the full transition table (10 rows)"
+		if rowCount != expectedRows {
+			t.Fatalf("transition table must have exactly %d data rows per task 2.1, found %d", expectedRows, rowCount)
 		}
 	})
 
@@ -263,8 +382,21 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 	})
 
 	t.Run("Section10_NeverWritesPiSkillsDirectory", func(t *testing.T) {
-		if strings.Contains(contract, "| `.pi/skills") {
-			t.Fatalf("contract must never name .pi/skills/ as a runtime targets table row")
+		const header = "| Directory | Runtime(s) | Status | Evidence |"
+		idx := strings.Index(contract, header)
+		if idx < 0 {
+			t.Fatalf("contract must contain runtime targets table header %q", header)
+		}
+		lines := strings.Split(contract[idx:], "\n")
+		// lines[0] is the header row, lines[1] is the separator row.
+		for _, line := range lines[2:] {
+			trimmed := strings.TrimSpace(line)
+			if !strings.HasPrefix(trimmed, "|") {
+				break
+			}
+			if strings.Contains(trimmed, ".pi/skills") {
+				t.Fatalf("runtime targets table must never name .pi/skills/ in any cell of any row, found: %q", trimmed)
+			}
 		}
 		required := "`.pi/skills/` is never written by this capability."
 		if !strings.Contains(contract, required) {
