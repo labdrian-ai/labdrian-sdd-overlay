@@ -647,10 +647,12 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 	}
 
 	s := &projectStager{
-		fsys:  fsys,
-		root:  root,
-		order: order,
-		temps: make([]string, len(order)),
+		fsys:      fsys,
+		root:      root,
+		order:     order,
+		temps:     make([]string, len(order)),
+		attempted: make([]bool, len(order)),
+		preMode:   make([]fs.FileMode, len(order)),
 	}
 
 	// Stage: create each target directory, recording which ones this run
@@ -670,6 +672,25 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 
 	// Commit: rename the SKILL.md temps in projectTargets order, the lock last.
 	for i, w := range order {
+		// The destination's REAL mode, read immediately before it is renamed
+		// over, is the only thing that can put it back the way it was. The
+		// planned Mode cannot: it is always ProjectFileMode, so a lock the
+		// project keeps at 0600 came back at 0644 after a failed run and the
+		// headline guarantee — byte-identical, including file modes — was false
+		// (review round 4, D1).
+		if w.Backup != nil {
+			info, err := fsys.Stat(w.Abs)
+			if err != nil {
+				return s.rollback(stderr, fmt.Errorf("project-register: inspecting %q before committing over it: %w", w.Rel, err))
+			}
+			s.preMode[i] = info.Mode().Perm()
+		}
+		// Recorded BEFORE the call, not after it: a rename that reports an error
+		// may still have landed, and rollback must sweep the destinations this
+		// run reached for. It must equally leave alone the ones it never reached
+		// — restoring identical bytes over an untouched file still replaces it,
+		// with a new inode and the planned mode (review round 4, D1).
+		s.attempted[i] = true
 		if err := fsys.Rename(s.temps[i], w.Abs); err != nil {
 			return s.rollback(stderr, fmt.Errorf("project-register: committing %q: %w", w.Rel, err))
 		}
@@ -695,16 +716,30 @@ var ErrRollbackIncomplete = fmt.Errorf("project-register: rollback incomplete")
 // what rollback needs: the directories this run created and the temps it
 // staged. The planned writes themselves are already in order.
 type projectStager struct {
-	fsys    projectFS
-	root    string
-	order   []ProjectWrite
-	temps   []string // "" once renamed away or never staged
-	created []string // directories this run created
+	fsys      projectFS
+	root      string
+	order     []ProjectWrite
+	temps     []string // "" once renamed away or never staged
+	created   []string // directories this run created
+	attempted []bool   // a rename over order[i].Abs was reached for
+	// preMode[i] is the destination's ACTUAL mode, read immediately before this
+	// run renamed over it. It is meaningful only where order[i].Backup != nil,
+	// because only those destinations are restored rather than removed.
+	preMode []fs.FileMode
 }
 
-// mkdirAll creates dir, first recording every ancestor strictly below the root
-// that does not exist yet — os.MkdirAll cannot report which directories it
-// created, and rollback must not remove one that was already there.
+// mkdirAll creates every ancestor of dir strictly below the root that does not
+// exist yet, ONE LEVEL AT A TIME, recording each level as soon as it is made.
+//
+// A single MkdirAll for the whole path cannot be made safe: os.MkdirAll creates
+// the ancestors it can and only then fails on a deeper component, and it never
+// reports which ones it created. Recording the whole list only after it returns
+// nil therefore leaked every directory a partial failure left behind — rollback
+// never learned they existed, so a failed run could leave a `.claude/skills/`
+// in a project that had never had one (review round 4, D2). Creating one level
+// at a time makes "it was created" and "it was recorded" the same event: each
+// call has its parent already in place, so it creates exactly that level or
+// nothing at all.
 func (s *projectStager) mkdirAll(dir string) error {
 	var missing []string
 	for cur := filepath.Clean(dir); withinRoot(s.root, cur); cur = filepath.Dir(cur) {
@@ -715,13 +750,13 @@ func (s *projectStager) mkdirAll(dir string) error {
 		}
 		missing = append(missing, cur) // deepest first
 	}
-	if len(missing) == 0 {
-		return nil
+	// Shallowest first, so every call's parent already exists.
+	for i := len(missing) - 1; i >= 0; i-- {
+		if err := s.fsys.MkdirAll(missing[i], projectDirMode); err != nil {
+			return err
+		}
+		s.created = append(s.created, missing[i])
 	}
-	if err := s.fsys.MkdirAll(dir, projectDirMode); err != nil {
-		return err
-	}
-	s.created = append(s.created, missing...)
 	return nil
 }
 
@@ -735,9 +770,20 @@ func (s *projectStager) mkdirAll(dir string) error {
 func (s *projectStager) rollback(stderr io.Writer, cause error) error {
 	var bad []string
 
-	// 1. Every planned write, newest first: restore the bytes it captured at
-	// plan time, or remove it when it is a genuinely new file.
+	// 1. Every destination this run reached the rename for, newest first:
+	// restore the bytes it captured at plan time AT THE MODE IT REALLY HAD, or
+	// remove it when it is a genuinely new file.
+	//
+	// It sweeps every write whose rename was ATTEMPTED rather than only those
+	// that succeeded, because a rename that reports an error may still have
+	// landed (an NFS or wrapper reality). It stops at the ones that were never
+	// attempted, because those were never touched: rewriting them restored
+	// nothing and changed two things it had no business changing, the inode and
+	// the mode (review round 4, D1).
 	for i := len(s.order) - 1; i >= 0; i-- {
+		if !s.attempted[i] {
+			continue
+		}
 		w := s.order[i]
 		if w.Backup == nil {
 			if err := s.remove(w.Abs); err != nil {
@@ -745,7 +791,15 @@ func (s *projectStager) rollback(stderr io.Writer, cause error) error {
 			}
 			continue
 		}
-		tmp, err := s.fsys.WriteTemp(filepath.Dir(w.Abs), w.Backup, w.Mode)
+		mode := s.preMode[i]
+		if mode == 0 {
+			// Unreachable while the commit loop records preMode before every
+			// attempted rename of a backed-up write; kept so a future caller
+			// that sets attempted without it degrades to the planned mode
+			// instead of creating a file nobody can read.
+			mode = w.Mode
+		}
+		tmp, err := s.fsys.WriteTemp(filepath.Dir(w.Abs), w.Backup, mode)
 		if err != nil {
 			bad = append(bad, w.Rel)
 			continue
@@ -820,8 +874,14 @@ func (s *projectStager) rel(p string) string {
 // checkProjectDestinations re-proves, at execution time, what
 // PlanProjectRegister proved when the plan was built: every destination is the
 // root joined with its own repo-relative path, lies strictly below the root
-// lexically AND after symlink resolution, and no two destinations resolve to
-// the SAME physical path.
+// lexically AND after symlink resolution, no destination lies or LANDS under
+// the project's own skills/ tree (decision (f)), no two destinations resolve to
+// the SAME physical path, and each destination still exists exactly as the plan
+// found it.
+//
+// Every one of those is point-in-time in the plan, which is the whole reason
+// this function exists; re-proving only some of them was the gap D4 and D3
+// named (review round 4).
 func checkProjectDestinations(fsys projectFS, root string, order []ProjectWrite) error {
 	resolvedRoot, err := fsys.ResolvePath(root)
 	if err != nil {
@@ -831,6 +891,20 @@ func checkProjectDestinations(fsys projectFS, root string, order []ProjectWrite)
 		return fmt.Errorf("project-register: the resolver returned an empty path for the project root %q", root)
 	}
 	resolvedRoot = filepath.Clean(resolvedRoot)
+
+	// Decision (f), resolved once for the whole set (review round 4, D4). The
+	// planner re-applies it to the RESOLVED destination precisely because the
+	// repo-relative string cannot see a `.claude/skills` symlinked at the
+	// project's own source tree; the executor's re-proof dropped that half, so a
+	// symlink created after planning was written straight through.
+	resolvedSkills, err := fsys.ResolvePath(filepath.Join(root, projectSourceSkillsDir))
+	if err != nil {
+		return fmt.Errorf("project-register: resolving the project's own %s/ directory: %w", projectSourceSkillsDir, err)
+	}
+	if resolvedSkills == "" {
+		return fmt.Errorf("project-register: the resolver returned an empty path for the project's own %s/ directory", projectSourceSkillsDir)
+	}
+	resolvedSkills = filepath.Clean(resolvedSkills)
 
 	seen := make(map[string]string, len(order))
 	for _, w := range order {
@@ -855,10 +929,43 @@ func checkProjectDestinations(fsys projectFS, root string, order []ProjectWrite)
 		if !withinRoot(resolvedRoot, resolved) {
 			return fmt.Errorf("project-register: destination %q escapes the project root through a symlink", w.Rel)
 		}
+		if underSkillsDir(w.Rel) {
+			return fmt.Errorf("project-register: destination %q %v", w.Rel, errDestUnderSkillsDir)
+		}
+		if withinRoot(resolvedSkills, resolved) || resolved == resolvedSkills {
+			return fmt.Errorf("project-register: destination %q %v", w.Rel, errDestResolvesUnderSkillsDir)
+		}
 		if other, ok := seen[resolved]; ok {
 			return fmt.Errorf("project-register: destinations %q and %q resolve to the same file, so one would silently overwrite the other", other, w.Rel)
 		}
 		seen[resolved] = w.Rel
+
+		// The plan recorded, per write, whether the destination existed: Backup
+		// holds its bytes when it did and is nil when it did not. That fact
+		// decides rollback's restore-vs-remove, and it is as point-in-time as
+		// the containment proof, so it is re-established here too.
+		//
+		// A destination the planner found ABSENT that is now present is the
+		// planner's "foreign skill" arriving late: writing over it would destroy
+		// a file this run did not create, and rolling back would DELETE it
+		// (review round 4, D3). It is refused rather than backed up, because
+		// answering a race more permissively than the look-first path would mean
+		// the tool overwrites on a race exactly what it refuses to overwrite
+		// when it checks in time. Refusing costs nothing: nothing has been
+		// written yet, so there is nothing to undo.
+		//
+		// A destination the planner found PRESENT that is now absent is the
+		// mirror image: its backup bytes would be laid down as a brand-new file
+		// nobody asked this run to create.
+		_, statErr := fsys.Stat(abs)
+		switch {
+		case statErr == nil && w.Backup == nil:
+			return fmt.Errorf("project-register: destination %q already exists although the plan found it absent; it was created after the plan was built and this run will not overwrite it", w.Rel)
+		case statErr != nil && os.IsNotExist(statErr) && w.Backup != nil:
+			return fmt.Errorf("project-register: destination %q no longer exists although the plan captured its contents; it was removed after the plan was built", w.Rel)
+		case statErr != nil && !os.IsNotExist(statErr):
+			return fmt.Errorf("project-register: inspecting destination %q: %w", w.Rel, statErr)
+		}
 	}
 	return nil
 }

@@ -6,9 +6,11 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strings"
+	"syscall"
 	"testing"
 )
 
@@ -1196,7 +1198,14 @@ func (f *fakeProjectFS) ReadDir(name string) ([]fs.DirEntry, error) {
 }
 
 func (f *fakeProjectFS) MkdirAll(dir string, perm fs.FileMode) error {
+	f.after = false
 	if err := f.check("mkdirall", dir); err != nil {
+		if f.after {
+			// Model os.MkdirAll faithfully: it creates every ancestor it can
+			// before failing on a deeper component, and it cannot report which
+			// ones it created (review round 4, D2).
+			_ = f.real.MkdirAll(filepath.Dir(dir), perm)
+		}
 		return err
 	}
 	return f.real.MkdirAll(dir, perm)
@@ -1235,14 +1244,33 @@ func (f *fakeProjectFS) ResolvePath(name string) (string, error) {
 	return f.real.ResolvePath(name)
 }
 
-// failAt returns a `fail` func that fails the n-th (1-based) call of op whose
-// path equals want.
+// failAt returns a `fail` func that fails EVERY call of op whose path equals
+// want. It keeps no counter: the previous doc comment claimed it failed "the
+// n-th (1-based) call", which nothing here ever implemented or needed — the
+// injection points each name a path that the executor touches once, and where
+// a single failure is wanted (the commit rename but not the restoring rename)
+// failAfterRename owns its own `fired` latch (review round 4, D6).
 func failAt(op, want string, err error) func(*fakeProjectFS, string, string) error {
 	return func(f *fakeProjectFS, gotOp, gotPath string) error {
 		if gotOp == op && gotPath == want {
 			return err
 		}
 		return nil
+	}
+}
+
+// failPartialMkdir fails the MkdirAll of `want` AFTER letting its ancestors be
+// created, which is what os.MkdirAll does on a real filesystem: it walks down
+// creating what it can and only then reports the component it could not make.
+// Nothing weaker can witness D2, because a fake that refuses the call outright
+// leaves a clean tree the buggy code also leaves clean.
+func failPartialMkdir(want string, err error) func(*fakeProjectFS, string, string) error {
+	return func(f *fakeProjectFS, gotOp, gotPath string) error {
+		if gotOp != "mkdirall" || gotPath != want {
+			return nil
+		}
+		f.after = true
+		return err
 	}
 }
 
@@ -1446,7 +1474,12 @@ func TestExecuteProjectPlan_RollbackRestoresAPreExistingLock(t *testing.T) {
 	if err := os.MkdirAll(filepath.Dir(lockAbs), 0o755); err != nil {
 		t.Fatalf("mkdir lock dir: %v", err)
 	}
-	if err := os.WriteFile(lockAbs, existing, 0o644); err != nil {
+	// Deliberately NOT ProjectFileMode. The rollback guarantee is that the
+	// pre-run tree comes back byte-identical "including file modes", and a
+	// pre-existing lock written at 0644 cannot witness that: rollback restored
+	// through the planned write's Mode, which is always 0644, so a tree that had
+	// been widened from 0600 to 0644 compared equal (review round 4, D1).
+	if err := os.WriteFile(lockAbs, existing, 0o600); err != nil {
 		t.Fatalf("write existing lock: %v", err)
 	}
 	in.LockData, in.LockExists = existing, true
@@ -1476,7 +1509,84 @@ func TestExecuteProjectPlan_RollbackRestoresAPreExistingLock(t *testing.T) {
 	if !bytes.Equal(got, existing) {
 		t.Errorf("lock after rollback = %q, want the pre-existing bytes %q", got, existing)
 	}
+	info, err := os.Stat(lockAbs)
+	if err != nil {
+		t.Fatalf("stat the restored lock: %v", err)
+	}
+	if perm := info.Mode().Perm(); perm != 0o600 {
+		t.Errorf("the restored lock has mode %04o, want the pre-run mode %04o", perm, 0o600)
+	}
 	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// TestExecuteProjectPlan_RollbackLeavesAnUntouchedDestinationAlone is the other
+// half of D1 (review round 4): rollback walks the PLANNED writes, so a
+// destination this run never renamed over was being rewritten anyway — a fresh
+// inode, and (for a pre-existing lock) a fresh mode — on every failure that
+// happened before its rename. Restoring identical bytes still replaces the
+// file, and "byte-identical" is a claim about the tree, not only its contents.
+//
+// The failure is injected at rename index 0, so the lock's rename is never
+// reached: the lock must come back with its own mode AND its own inode.
+func TestExecuteProjectPlan_RollbackLeavesAnUntouchedDestinationAlone(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	root := filepath.Clean(in.ProjectRoot)
+	existing, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+		ID:         "zzz-other",
+		Provenance: "procedural",
+		Candidate:  "procedural/candidates/repeated-success/zzz-other",
+		SHA256:     "abc",
+		Revision:   2,
+		Targets:    []string{".claude/skills/zzz-other/SKILL.md"},
+	}}})
+	if err != nil {
+		t.Fatalf("building the existing lock: %v", err)
+	}
+	lockAbs := filepath.Join(root, filepath.FromSlash(ProjectLockRelPath))
+	if err := os.MkdirAll(filepath.Dir(lockAbs), 0o755); err != nil {
+		t.Fatalf("mkdir lock dir: %v", err)
+	}
+	if err := os.WriteFile(lockAbs, existing, 0o600); err != nil {
+		t.Fatalf("write existing lock: %v", err)
+	}
+	in.LockData, in.LockExists = existing, true
+
+	p, err := PlanProjectRegister(in)
+	if err != nil {
+		t.Fatalf("unexpected refusal: %v", err)
+	}
+	before := snapshotTree(t, root)
+	beforeIno := inodeOf(t, lockAbs)
+
+	order := planOrder(p)
+	fsys := newFakeProjectFS(failAt("rename", order[0].Abs, errInjected))
+	var stdout, stderr bytes.Buffer
+	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err == nil {
+		t.Fatal("an injected rename failure must fail the execution")
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("a successful rollback prints nothing to stderr, got %q", stderr.String())
+	}
+	if got := inodeOf(t, lockAbs); got != beforeIno {
+		t.Errorf("the lock was rewritten (inode %d -> %d) although this run never renamed over it", beforeIno, got)
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// inodeOf reports the file's inode number, so a test can tell "the same file is
+// still there" from "an identical file was written in its place". It skips on a
+// platform whose Stat does not expose one.
+func inodeOf(t *testing.T, p string) uint64 {
+	t.Helper()
+	info, err := os.Stat(p)
+	if err != nil {
+		t.Fatalf("stat %q: %v", p, err)
+	}
+	st, ok := info.Sys().(*syscall.Stat_t)
+	if !ok {
+		t.Skip("this platform does not expose an inode number")
+	}
+	return uint64(st.Ino)
 }
 
 // TestExecuteProjectPlan_RollbackRemovesALockItCreated is the other half of
@@ -1605,4 +1715,188 @@ func TestExecuteProjectPlan_RefusesAliasedDestinations(t *testing.T) {
 		t.Errorf("refusal %q does not name the aliasing reason", err.Error())
 	}
 	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// --- review round 4: the rollback guarantee, made true ---------------------
+
+// TestExecuteProjectPlan_RollbackRemovesDirectoriesAPartialMkdirCreated is D2.
+// `s.created` was appended to only AFTER MkdirAll returned nil, but
+// os.MkdirAll creates the ancestors it can before failing on a deeper
+// component. Those ancestors stayed behind forever: rollback never learned
+// about them, so a failed run left `.claude/skills/` in a project that had
+// never had one.
+func TestExecuteProjectPlan_RollbackRemovesDirectoriesAPartialMkdirCreated(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	leaf := filepath.Dir(planOrder(p)[0].Abs)
+	before := snapshotTree(t, root)
+
+	fsys := newFakeProjectFS(failPartialMkdir(leaf, errInjected))
+	var stdout, stderr bytes.Buffer
+	err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("an injected mkdir failure must fail the execution")
+	}
+	if !errors.Is(err, errInjected) {
+		t.Errorf("error %v does not carry the injected cause", err)
+	}
+	if errors.Is(err, ErrRollbackIncomplete) {
+		t.Errorf("rollback itself must succeed here, got %v (stderr %q)", err, stderr.String())
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("a failed run must report no `wrote:` line, got %q", stdout.String())
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// TestExecuteProjectPlan_RefusesADestinationThatAppearedAfterPlanning is D3.
+// Restore-vs-remove was decided purely from the plan-time Backup, and every
+// SKILL.md write has Backup == nil, so a destination that did not exist when
+// the plan was built but DOES exist when it runs was deleted by rollback — a
+// file this run never created. On the success path the same gap silently
+// overwrote it, which is exactly the "foreign skill" the planner refuses.
+//
+// The decision is to REFUSE, not to back the file up and restore it. The
+// planner already refuses a destination that exists and is not in the lock; a
+// destination that appears between plan and write is the same fact arriving
+// late, and answering it differently would mean the tool overwrites on a race
+// what it refuses to overwrite when it looks first. Refusing also keeps the
+// promise cheap: nothing is written, so there is nothing to roll back.
+func TestExecuteProjectPlan_RefusesADestinationThatAppearedAfterPlanning(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	victim := planOrder(p)[0]
+	if victim.Backup != nil {
+		t.Fatal("precondition: a SKILL.md write is planned with no backup")
+	}
+	if err := os.MkdirAll(filepath.Dir(victim.Abs), 0o755); err != nil {
+		t.Fatalf("mkdir destination dir: %v", err)
+	}
+	if err := os.WriteFile(victim.Abs, []byte("someone else's skill\n"), 0o600); err != nil {
+		t.Fatalf("write the intruding file: %v", err)
+	}
+	before := snapshotTree(t, root)
+
+	var stdout, stderr bytes.Buffer
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected a refusal for a destination that appeared after planning")
+	}
+	if !strings.Contains(err.Error(), "already exists") {
+		t.Errorf("refusal %q does not name the reason", err.Error())
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("a refused run must report no `wrote:` line, got %q", stdout.String())
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// TestExecuteProjectPlan_RefusesADestinationResolvingIntoTheSkillsTree is D4.
+// checkProjectDestinations re-proved root containment and the alias rule but
+// dropped decision (f): no destination may resolve under <root>/skills/. A
+// `.claude/skills` that becomes a symlink into the project's own source tree
+// between plan and write was therefore written anyway, landing the registration
+// physically in the tree the design forbids as a destination.
+func TestExecuteProjectPlan_RefusesADestinationResolvingIntoTheSkillsTree(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	if err := os.MkdirAll(filepath.Join(root, projectSourceSkillsDir), 0o755); err != nil {
+		t.Fatalf("mkdir the project's own skills tree: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, ".claude"), 0o755); err != nil {
+		t.Fatalf("mkdir .claude: %v", err)
+	}
+	// The symlink appears AFTER the plan was built — the whole point.
+	if err := os.Symlink(filepath.Join(root, projectSourceSkillsDir), filepath.Join(root, ".claude", "skills")); err != nil {
+		t.Fatalf("symlink .claude/skills -> skills: %v", err)
+	}
+	before := snapshotTree(t, root)
+
+	var stdout, stderr bytes.Buffer
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected a refusal for a destination resolving into the project's own skills/ tree")
+	}
+	if !strings.Contains(err.Error(), "skills/ tree") {
+		t.Errorf("refusal %q does not name decision (f)", err.Error())
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("a refused run must report no `wrote:` line, got %q", stdout.String())
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// TestExecuteProjectPlan_RollbackIncompleteReportsRepoRelativePaths is D5.
+// (*projectStager).rel sat at 0.0% coverage: the path formatting used in every
+// `error: rollback incomplete: <rel-path>` line for a leftover temp or a
+// created directory was never once executed by a test, so the operator-facing
+// pointer — which is meant to be usable as a git pathspec — was unproven.
+func TestExecuteProjectPlan_RollbackIncompleteReportsRepoRelativePaths(t *testing.T) {
+	t.Run("created_directory", func(t *testing.T) {
+		p, root := executablePlan(t, "tidy-worktree")
+		order := planOrder(p)
+		stuck := filepath.Dir(order[1].Abs)
+
+		fsys := newFakeProjectFS(func(f *fakeProjectFS, op, path string) error {
+			if op == "rename" && path == order[0].Abs {
+				return errInjected
+			}
+			if op == "remove" && path == stuck {
+				return errInjected
+			}
+			return nil
+		})
+		var stdout, stderr bytes.Buffer
+		err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+		if !errors.Is(err, ErrRollbackIncomplete) {
+			t.Fatalf("error %v must be recognisable as an incomplete rollback (stderr %q)", err, stderr.String())
+		}
+		want := "error: rollback incomplete: " + path.Dir(order[1].Rel) + "\n"
+		if !strings.Contains(stderr.String(), want) {
+			t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
+		}
+		if strings.Contains(stderr.String(), root) {
+			t.Errorf("stderr = %q, want a repo-relative path, not one carrying the absolute root", stderr.String())
+		}
+		if _, statErr := os.Stat(stuck); statErr != nil {
+			t.Errorf("the reported directory must be the one actually left behind: %v", statErr)
+		}
+	})
+
+	t.Run("leftover_temp", func(t *testing.T) {
+		p, root := executablePlan(t, "tidy-worktree")
+		order := planOrder(p)
+
+		var leftover string
+		fsys := newFakeProjectFS(func(f *fakeProjectFS, op, path string) error {
+			if op == "rename" && path == order[0].Abs {
+				return errInjected
+			}
+			if op == "remove" && strings.Contains(filepath.Base(path), ".tmp-skills-") &&
+				filepath.Dir(path) == filepath.Dir(order[1].Abs) {
+				leftover = path
+				return errInjected
+			}
+			return nil
+		})
+		var stdout, stderr bytes.Buffer
+		err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+		if !errors.Is(err, ErrRollbackIncomplete) {
+			t.Fatalf("error %v must be recognisable as an incomplete rollback (stderr %q)", err, stderr.String())
+		}
+		if leftover == "" {
+			t.Fatal("no leftover temp removal was ever attempted, so this test proves nothing")
+		}
+		rel, rerr := filepath.Rel(root, leftover)
+		if rerr != nil {
+			t.Fatalf("rel %q: %v", leftover, rerr)
+		}
+		want := "error: rollback incomplete: " + filepath.ToSlash(rel) + "\n"
+		if !strings.Contains(stderr.String(), want) {
+			t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
+		}
+		if strings.Contains(stderr.String(), root) {
+			t.Errorf("stderr = %q, want a repo-relative path, not one carrying the absolute root", stderr.String())
+		}
+		if _, statErr := os.Stat(leftover); statErr != nil {
+			t.Errorf("the reported temp must be the one actually left behind: %v", statErr)
+		}
+	})
 }
