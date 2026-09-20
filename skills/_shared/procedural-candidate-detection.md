@@ -8,10 +8,12 @@ writes under `skills/`. Candidate records persist in Engram, the sole
 durability store for this capability; no second SQLite store and no Go-side
 write path into Engram's database exist anywhere in this contract.
 
-This document is delivered across three review slices. Sections 1-3 shipped
-in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice 2
-(`repeat-and-recovery-detection`, R-002, R-003). Section 6 below (duplicate
-rejection) ships in slice 3 (`duplicate-rejection`, R-004).
+This document is delivered across several review slices. Sections 1-3
+shipped in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice
+2 (`repeat-and-recovery-detection`, R-002, R-003). Section 6 (duplicate
+rejection) shipped in slice 3 (`duplicate-rejection`, R-004). Sections 7-10
+shipped with the procedural drafting contract, and section 11 (registration
+and commit procedure) ships with `project-register-cli`.
 
 ## 1. Candidate identity and topic-key contract
 
@@ -470,6 +472,137 @@ skill until the project is trusted. This is the accepted, disclosed cost of
 writing one Pi-visible copy (revised decision (e)); it also means Pi never
 sees a duplicate skill name for the same procedural skill. Every successful
 `project-register` run prints a `note:` line disclosing this (section 11).
+
+## 11. Registration and commit procedure
+
+Registration is a two-actor procedure with a hard boundary between them.
+The engine prints the exact path set and never runs git; the agent runs every git command as `git -C <project-root>`.
+`R` below is that absolute project root, the same value passed as
+`--project-root`. The agent performs the ten steps in this order and stops
+at the first refusal.
+
+1. **Prove the root.** `git -C R rev-parse --show-toplevel` must equal `R`.
+   Anything else means the command was aimed at a subdirectory, a nested
+   repository or a submodule, and registering there would write into the
+   wrong repository.
+2. **Prove the branch.** `git -C R symbolic-ref -q HEAD` must succeed, so a
+   detached `HEAD` refuses. Refuse as well if any of `MERGE_HEAD`,
+   `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge` or `rebase-apply`
+   exists under `git -C R rev-parse --git-dir`: a commit made during one of
+   those operations is not the single revertable commit this procedure
+   promises.
+3. **Prove the index is empty.** `git -C R diff --cached --name-only` must
+   print nothing. Any staged path refuses, is named in the refusal, and the
+   index is left exactly as it was.
+4. **Plan.** `labdrian skills project-register --dry-run --project-root R --candidate <key> <draft-file>`
+   prints one `plan: <rel>` line per planned path and writes nothing.
+5. **Prove the targets are not ignored.** `git -C R check-ignore -- <plan paths>`
+   must print nothing. An ignored target refuses, and `git add -f` is
+   forbidden: a skill git cannot see is a skill no reviewer can see.
+6. **Write.** The same command without `--dry-run` prints `wrote: <rel>` per
+   path, then `sha256: <hex>`, then `revision: <n>`, and finally the Pi
+   trust `note:` line. The `wrote:` set is the pathspec for every step
+   below.
+7. **Stage with an explicit pathspec.** `git -C R add -- <wrote paths>`, then `git -C R diff --cached --name-only` must equal the wrote set exactly. On a mismatch, run `git -C R restore --staged -- <wrote paths>` and refuse.
+8. **Commit with an explicit pathspec.** `git -C R commit -m "<conventional message>" -- <wrote paths>`.
+   Messages: `feat(skills): register project skill <id>`, `feat(skills): revise project skill <id>` or `chore(skills): retire project skill <id>`.
+   No AI attribution, no `-a`, no `--no-verify`, no amend, no push.
+9. **Confirm ownership.** `labdrian skills project-status --project-root R <id>`
+   must report `owner:agent`. A commit hook that rewrote the committed bytes
+   makes the skill human-owned; that is reported to the user, never
+   auto-corrected.
+10. **Record the commit.** Record `git -C R rev-parse --short HEAD` in the
+    candidate record's `Registered` line and in `History`.
+
+The pathspec on steps 7 and 8, together with the empty-index precondition of
+step 3, are two independent protections against sweeping unrelated work into
+this commit. Neither one is dropped when the other holds.
+
+### Refusals (normative)
+
+Every row refuses without writing anything and without leaving the
+repository in a state the operator did not ask for.
+
+| Refusal condition | Detected by | What the agent does |
+|---|---|---|
+| The command runs from a subdirectory, a nested repository or a submodule | `git -C R rev-parse --show-toplevel` does not equal `R` | Refuse before step 4; nothing is planned, read or written |
+| `HEAD` is detached | `git -C R symbolic-ref -q HEAD` fails | Refuse before step 4 |
+| A merge, cherry-pick, revert or rebase is in progress | `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge` or `rebase-apply` exists under `git -C R rev-parse --git-dir` | Refuse before step 4 |
+| Unrelated changes are already staged | `git -C R diff --cached --name-only` is non-empty | Refuse, naming every staged path, and leave the index untouched |
+| A planned target is gitignored | `git -C R check-ignore -- <plan paths>` prints a path | Refuse; `git add -f` is forbidden |
+| The staged set does not equal the wrote set | `git -C R diff --cached --name-only` after `git -C R add` differs | Unstage with `git -C R restore --staged -- <wrote paths>` and refuse |
+
+### Crash-window recovery
+
+There is one window the engine cannot close for the agent: after step 6 has
+printed and before the commit of step 8 lands. Recovery in that window is
+deliberately narrow, because the repository may hold work that has nothing
+to do with this registration.
+
+The newly written SKILL.md files are always untracked (each lives under a brand-new skill directory), and are deleted only when their bytes hash to the sha256 the failed run printed.
+A file whose hash differs was touched by someone else and is left alone for
+a human. The lock file needs separate handling because it may already be
+tracked with other skills' entries: when it existed in `HEAD` before this run, restore it byte-for-byte with `git -C R restore --source=HEAD -- <lock path>`; when this run created it for the first time in the repository (so it is untracked), delete it instead, after the same hash check.
+A revision or retirement runs `git -C R restore --source=HEAD --staged --worktree -- <wrote paths>`. `git clean` and `git reset --hard` are never used.
+
+### The Pi trust note
+
+Every successful run prints `note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.` as its last line,
+the disclosure section 10 requires. The agent relays every `note:` line to the user and never uses one as a pathspec.
+A refusal and a `--dry-run` both print no `note:` line, because neither one
+creates the consequence it discloses.
+
+## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)
+
+This section is agent-driven prose, not Go code; it is verified by a
+fixture-driven procedure run in a temporary git repository with real Engram
+records during `sdd-verify`, not by `go test`. Contract-artifact content
+(section 11 above) is still Go-testable and covered by
+`engine/skills/procedural_candidate_contract_test.go`.
+
+1. **Clean repository gives exactly one commit**: GIVEN a clean project
+   repository on a branch, WHEN the ten steps run for a valid draft, THEN
+   exactly one commit is created and its changed paths equal the `wrote:`
+   set exactly.
+2. **An unrelated staged file refuses with the index untouched**: GIVEN an
+   unrelated path is already staged, WHEN step 3 runs, THEN the procedure
+   refuses naming that path, and `git diff --cached --name-only` afterwards
+   is byte-identical to what it was before.
+3. **An ignored target refuses**: GIVEN `.claude/skills/` is gitignored,
+   WHEN step 5 runs, THEN the procedure refuses and no `git add -f` is
+   attempted.
+4. **Detached `HEAD` refuses**: GIVEN the repository is on a detached
+   `HEAD`, WHEN step 2 runs, THEN the procedure refuses before anything is
+   planned.
+5. **A merge or rebase in progress refuses**: GIVEN `MERGE_HEAD` or
+   `rebase-merge`/`rebase-apply` exists, WHEN step 2 runs, THEN the
+   procedure refuses before anything is planned.
+6. **A subdirectory or nested repository never registers against the wrong
+   root**: GIVEN the procedure is invoked from a subdirectory of the project
+   or from a nested repository root, WHEN step 1 runs, THEN the root is
+   either resolved to `R` or refused, and never silently registered against
+   another repository.
+7. **A staged-set mismatch unstages and refuses**: GIVEN an unexpected path
+   is staged alongside the wrote set after step 7's `git add`, WHEN the
+   staged set is compared, THEN the procedure runs
+   `git restore --staged -- <wrote paths>` and refuses.
+8. **`git revert` restores the files and the lock**: GIVEN the registration
+   commit exists, WHEN it is reverted, THEN every written `SKILL.md` is gone
+   and the lock file is byte-identical to its pre-registration state.
+9. **A hook that rewrites the bytes is reported, not fixed**: GIVEN a commit
+   hook rewrites the committed `SKILL.md`, WHEN step 9 runs, THEN
+   `project-status` reports the skill human-owned and the procedure reports
+   that rather than re-registering.
+10. **A crash between `wrote:` and the commit deletes only this run's
+    files**: GIVEN a second registration fails after its `wrote:`/`sha256:`
+    output but before its own commit, WHEN crash-window recovery runs, THEN
+    only that run's untracked, hash-verified `SKILL.md` files are deleted,
+    the lock is restored from `HEAD`, and a previously registered skill's
+    lock entry and committed files survive unchanged.
+11. **`History` only grows**: GIVEN a candidate record that moved
+    `drafted -> registered`, WHEN the record is read back, THEN the
+    pre-registration `History` lines are a prefix of the post-registration
+    ones.
 
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 

@@ -21,6 +21,11 @@ import (
 // ignores each recognized flag and its value rather than misparsing the
 // value as the lint target path.
 //
+// `--` ends option parsing: every argument after it is a positional, so a
+// SKILL.md path that legitimately begins with a dash can still be linted
+// instead of being refused by the unknown-flag rule below
+// (review-c4c6f452b3ecc485, carried to tasks.md 4.0).
+//
 // `lint` accepts exactly one positional argument (the path). A second
 // positional argument, or any unrecognized flag (anything else starting
 // with "-"), is rejected with exit 1 and a usage error naming the
@@ -31,29 +36,36 @@ import (
 func RenderLintCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
 	var path string
 	rules := false
+	endOfOptions := false
 
 	for i := 0; i < len(args); i++ {
-		switch args[i] {
-		case "--rules":
-			rules = true
-		case "--registry", "--manifest", "--source-root":
-			if i+1 < len(args) {
-				i++
+		if !endOfOptions {
+			switch args[i] {
+			case "--":
+				endOfOptions = true
+				continue
+			case "--rules":
+				rules = true
+				continue
+			case "--registry", "--manifest", "--source-root":
+				if i+1 < len(args) {
+					i++
+				}
+				continue
 			}
-		default:
 			if strings.HasPrefix(args[i], "-") {
 				fmt.Fprintf(stderr, "error: skills lint: unknown flag %q\n", args[i])
 				exit(1)
 				return
 			}
-			if path == "" {
-				path = args[i]
-				continue
-			}
-			fmt.Fprintf(stderr, "error: skills lint: unexpected extra argument %q (lint accepts exactly one path)\n", args[i])
-			exit(1)
-			return
 		}
+		if path == "" {
+			path = args[i]
+			continue
+		}
+		fmt.Fprintf(stderr, "error: skills lint: unexpected extra argument %q (lint accepts exactly one path)\n", args[i])
+		exit(1)
+		return
 	}
 
 	if rules {

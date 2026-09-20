@@ -28,7 +28,16 @@ const skillImproverStyleGuidePath = "skills/skill-improver/references/skill-styl
 // fails the test if either marker is absent or END precedes/overlaps BEGIN.
 // This is the single marker-location definition shared by every contract
 // test that needs to find or exclude the generated block, so they cannot
-// disagree with each other about how the block is found.
+// disagree with each other about how the block is found. Two callers share
+// it, and they use it for OPPOSITE purposes on the same offsets:
+// extractGeneratedBlock keeps the span BETWEEN the markers (the generated
+// rule table, compared byte-for-byte against RenderLintRules()), while
+// TestSkillStyleGuideProseHasNoSecondNumericSource discards that same span
+// and scans only the prose AROUND it, because the rule table is the one
+// legitimate place those numeric bounds may appear. A divergent second definition would let
+// the drift scan exclude a different span than the sync check compares, so
+// a number restated just outside the block would be invisible to both
+// (review-b75e4a27b9494ff8 R2-extract-block-comment-mismatch).
 func generatedBlockMarkerLocation(t *testing.T, content string) (beginIdx, endIdx int) {
 	t.Helper()
 	beginIdx = strings.Index(content, generatedBlockBeginMarker)
