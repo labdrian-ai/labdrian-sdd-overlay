@@ -565,11 +565,7 @@ func resolveTarget(root, target string) (string, bool) {
 	return abs, true
 }
 
-// withinRoot reports whether the cleaned absolute path p sits STRICTLY below
-// the cleaned root: p equal to root is not within it. Both the lexical guard
-// in resolveTarget and the resolved-path check in EvaluateOwnership use this
-// one definition, so the two steps can never disagree about what containment
-// means.
-func withinRoot(cleanRoot, p string) bool {
-	return strings.HasPrefix(p+string(filepath.Separator), cleanRoot+string(filepath.Separator)) && p != cleanRoot
-}
+// withinRoot moved to pathguard.go in slice 3b-i so PlanInstall's R-055
+// guard, resolveTarget's lexical guard, EvaluateOwnership's resolved check
+// and the project-register write path all share one definition. It keeps its
+// strictly-below semantics unchanged.
