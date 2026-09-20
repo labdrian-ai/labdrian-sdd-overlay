@@ -1795,6 +1795,36 @@ func TestExecuteProjectPlan_RefusesADestinationThatAppearedAfterPlanning(t *test
 // `.claude/skills` that becomes a symlink into the project's own source tree
 // between plan and write was therefore written anyway, landing the registration
 // physically in the tree the design forbids as a destination.
+// The executor also refuses a destination that names the project's own
+// skills/ tree LEXICALLY, without any symlink. PlanProjectRegister can never
+// emit such a write, but ExecuteProjectPlan takes a ProjectPlan value: a plan
+// built anywhere else must still meet decision (f). The symlink test above
+// exercises the resolved half only, so this guard needs its own witness.
+func TestExecuteProjectPlan_RefusesALexicalSkillsTreeDestination(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	rel := filepath.ToSlash(filepath.Join(projectSourceSkillsDir, "tidy-worktree", projectSkillFileName))
+	p.Writes[0].Rel = rel
+	p.Writes[0].Abs = filepath.Join(root, filepath.FromSlash(rel))
+	before := snapshotTree(t, root)
+
+	var stdout, stderr bytes.Buffer
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected a refusal for a destination lexically under the project's skills/ tree")
+	}
+	// The lexical pre-pass owns this message. The resolved check below it also
+	// refuses the same write ("resolves into the project's own skills/ tree"),
+	// so decision (f) is not fail-open without the pre-pass — but the cheaper,
+	// more precise wording is what this test pins.
+	if !strings.Contains(err.Error(), "lies under skills/") {
+		t.Errorf("refusal %q is not the lexical decision-(f) refusal", err.Error())
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("a refused run must report no `wrote:` line, got %q", stdout.String())
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
 func TestExecuteProjectPlan_RefusesADestinationResolvingIntoTheSkillsTree(t *testing.T) {
 	p, root := executablePlan(t, "tidy-worktree")
 	if err := os.MkdirAll(filepath.Join(root, projectSourceSkillsDir), 0o755); err != nil {
