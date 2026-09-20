@@ -919,8 +919,17 @@ func (f fakeDirEntry) Type() fs.FileMode          { return 0 }
 func (f fakeDirEntry) Info() (fs.FileInfo, error) { return nil, fs.ErrNotExist }
 
 // fakeFS builds in-memory readFile/readDir funcs over an absolute-path map.
-// No test in this group touches a real filesystem: the root is a t.TempDir()
-// path used purely as a string prefix, and nothing is ever created under it.
+// Every EvaluateOwnership call in this group reads only through these
+// injected funcs, and for all but one test the t.TempDir() root is a pure
+// string prefix with nothing created under it.
+//
+// The exception is TestEvaluateOwnership_ReadsOnlyThroughInjectedReaders,
+// which deliberately does os.MkdirAll/os.WriteFile under its own t.TempDir()
+// so that a real file exists where the injected map has none — that is what
+// proves EvaluateOwnership never falls back to os.ReadFile/os.ReadDir. Those
+// writes are safe because t.TempDir() is a fresh per-test directory the
+// testing package removes afterwards: never $HOME, never .claude/skills,
+// .agents/skills, .pi or skills-lock.json.
 func fakeFS(files map[string]string) (func(string) ([]byte, error), func(string) ([]fs.DirEntry, error)) {
 	readFile := func(p string) ([]byte, error) {
 		content, ok := files[p]
@@ -1100,5 +1109,77 @@ func TestEvaluateOwnership_UnreadableTargetDirectoryIsHumanOwned(t *testing.T) {
 	}
 	if got.Reason != "missing .claude/skills/probe-skill" {
 		t.Errorf("Reason = %q, want %q", got.Reason, "missing .claude/skills/probe-skill")
+	}
+}
+
+func TestEvaluateOwnership_EntryInLockWithNoTargetsIsMalformed(t *testing.T) {
+	// An entry that IS in the lock but records no targets is malformed, not
+	// unregistered: reporting "not-in-lock" would conflate a broken entry
+	// with a skill the agent never wrote.
+	root := t.TempDir()
+	readFile, readDir := fakeFS(ownershipFiles(root, map[string]string{
+		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+	}))
+	e := ownershipEntry(HashSkill([]byte(ownershipSkillBody)))
+	e.Targets = nil
+	got := EvaluateOwnership(root, e, readFile, readDir)
+	if got.AgentOwned {
+		t.Errorf("expected human-owned for an entry with no targets, got %+v", got)
+	}
+	if got.Reason != "no-targets probe-skill" {
+		t.Errorf("Reason = %q, want %q", got.Reason, "no-targets probe-skill")
+	}
+}
+
+// recordingFS wraps fakeFS and records every path handed to readFile/readDir,
+// so a test can prove no read was attempted outside the project root.
+func recordingFS(files map[string]string) (func(string) ([]byte, error), func(string) ([]fs.DirEntry, error), *[]string) {
+	inner, innerDir := fakeFS(files)
+	var seen []string
+	readFile := func(p string) ([]byte, error) {
+		seen = append(seen, p)
+		return inner(p)
+	}
+	readDir := func(p string) ([]fs.DirEntry, error) {
+		seen = append(seen, p)
+		return innerDir(p)
+	}
+	return readFile, readDir, &seen
+}
+
+func TestEvaluateOwnership_RejectsTargetsOutsideRoot(t *testing.T) {
+	root := t.TempDir()
+	cases := []struct {
+		name   string
+		target string
+	}{
+		{"parent traversal", "../../etc/passwd"},
+		{"absolute path", "/etc/passwd"},
+		{"empty target", ""},
+		{"escapes after cleaning", ".claude/skills/../../../../etc/passwd"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			readFile, readDir, seen := recordingFS(ownershipFiles(root, map[string]string{
+				".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+			}))
+			e := ownershipEntry(HashSkill([]byte(ownershipSkillBody)))
+			e.Targets = []string{tc.target}
+			got := EvaluateOwnership(root, e, readFile, readDir)
+			if got.AgentOwned {
+				t.Errorf("target %q was reported agent-owned: %+v", tc.target, got)
+			}
+			if got.Reason != "invalid-target "+tc.target {
+				t.Errorf("Reason = %q, want %q", got.Reason, "invalid-target "+tc.target)
+			}
+			for _, p := range *seen {
+				if !strings.HasPrefix(filepath.Clean(p)+string(filepath.Separator), filepath.Clean(root)+string(filepath.Separator)) {
+					t.Errorf("read attempted outside the project root: %q", p)
+				}
+			}
+			if len(*seen) != 0 {
+				t.Errorf("a rejected target must be refused before any read, got reads: %v", *seen)
+			}
+		})
 	}
 }

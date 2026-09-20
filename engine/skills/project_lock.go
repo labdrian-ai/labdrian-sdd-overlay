@@ -378,10 +378,15 @@ func ValidateCandidateKey(key string) error {
 // Ownership is the verdict of the ownership-by-hash check for one skill.
 // Reason is "" when AgentOwned is true, and otherwise the FIRST failing
 // reason — never a list — in one of these forms: "hash-mismatch <path>",
-// "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md:210).
+// "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md:210),
+// plus two malformed-lock reasons this code adds to that vocabulary:
+// "invalid-target <target>" for a recorded target that does not resolve
+// strictly inside the project root, and "no-targets <id>" for an entry that
+// is present in the lock but records no targets at all.
 // Each <path> is the repo-relative, slash-separated path as recorded in the
 // lock, so a status line stays independent of where the project is checked
-// out.
+// out. <target> is likewise the raw recorded string, quoted verbatim so the
+// offending lock line is identifiable.
 type Ownership struct {
 	AgentOwned bool
 	Reason     string
@@ -408,16 +413,24 @@ const projectSkillFileName = "SKILL.md"
 // callers (and tests) fully control what is read; EvaluateOwnership itself
 // never touches os, git or Engram. A caller whose lock lookup missed passes
 // the zero ProjectLockEntry, which reports "not-in-lock".
+//
+// Every target is resolved and containment-checked BEFORE any read, so a
+// lock entry carrying "../../etc/passwd" or an absolute path can never cause
+// a read outside root, nor report AgentOwned for a file the project does not
+// own.
 func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error)) Ownership {
 	if e.ID == "" {
 		return Ownership{Reason: "not-in-lock"}
 	}
 	if len(e.Targets) == 0 {
-		return Ownership{Reason: "not-in-lock"}
+		return Ownership{Reason: "no-targets " + e.ID}
 	}
 
 	for _, target := range e.Targets {
-		abs := filepath.Join(root, filepath.FromSlash(target))
+		abs, ok := resolveTarget(root, target)
+		if !ok {
+			return Ownership{Reason: "invalid-target " + target}
+		}
 		data, err := readFile(abs)
 		if err != nil {
 			return Ownership{Reason: "missing " + target}
@@ -441,4 +454,38 @@ func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([
 	}
 
 	return Ownership{AgentOwned: true}
+}
+
+// resolveTarget turns one lock-recorded, slash-separated target into an
+// absolute path under root, reporting false when the target may not be read
+// at all. It mirrors the R-055 containment guard in PlanInstall
+// (install.go:43-49): clean the joined path, then require the cleaned form to
+// still sit under the cleaned root plus a separator. A local helper rather
+// than a shared one because PlanInstall's guard is inlined there and returns
+// an error, while ownership must fold the refusal into an Ownership reason;
+// the containment test itself is byte-for-byte the same shape.
+//
+// Refused: an empty target, an absolute target, a target carrying a ".."
+// component, and any target whose cleaned form escapes root. The ".." check
+// is explicit and precedes the containment test because filepath.Join cleans
+// "../.." away, so a target could resolve back inside root while still
+// meaning something the lock never recorded.
+func resolveTarget(root, target string) (string, bool) {
+	if target == "" {
+		return "", false
+	}
+	if path.IsAbs(target) || filepath.IsAbs(filepath.FromSlash(target)) {
+		return "", false
+	}
+	for _, seg := range strings.Split(target, "/") {
+		if seg == ".." {
+			return "", false
+		}
+	}
+	cleanRoot := filepath.Clean(root)
+	abs := filepath.Clean(filepath.Join(cleanRoot, filepath.FromSlash(target)))
+	if !strings.HasPrefix(abs+string(filepath.Separator), cleanRoot+string(filepath.Separator)) {
+		return "", false
+	}
+	return abs, true
 }
