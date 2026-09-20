@@ -221,6 +221,7 @@ Anything else makes it **human-owned**, reported with the first failing reason. 
 | `no-targets <id>` | The entry is in the lock but records no targets (malformed) |
 | `invalid-target <target>` | The target is empty, absolute, carries a `..` component, or names `root` itself rather than a path strictly below it |
 | `invalid-root <root>` | `root` is not absolute, so containment cannot be decided at all |
+| `escapes-root <target>` | The target resolves, through a symlink, to a path outside `root` |
 | `no-resolver <id>` | No symlink resolver was injected, so resolved containment cannot be proved |
 | `unresolved-root <root>` | The injected resolver failed on `root` |
 | `unresolved-target <target>` | The injected resolver failed on that target |
@@ -491,7 +492,7 @@ func SerializeProjectLock(l ProjectLock) ([]byte, error)  // sorted, 2-space ind
 func HashSkill(data []byte) string                        // lowercase hex sha256
 func ValidateCandidateKey(key string) error
 func StampProvenance(draft []byte, candidateKey string) ([]byte, error)
-type Ownership struct{ AgentOwned bool; Reason string } // Reason: "" or one of the 10 reasons in the amended vocabulary above
+type Ownership struct{ AgentOwned bool; Reason string } // Reason: "" or one of the 11 reasons in the amended vocabulary above
 func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error), resolvePath func(string) (string, error)) Ownership // amended 2026-09-20: resolvePath closes the symlink escape (SEC-2)
 
 // project_register.go

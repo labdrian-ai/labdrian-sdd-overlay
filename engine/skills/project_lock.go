@@ -544,9 +544,6 @@ func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([
 // (review-slice-3a-ii-round-2, SEC-2); a caller reusing resolveTarget for a
 // write path owes itself the same second step.
 func resolveTarget(root, target string) (string, bool) {
-	if target == "" {
-		return "", false
-	}
 	if path.IsAbs(target) || filepath.IsAbs(filepath.FromSlash(target)) {
 		return "", false
 	}
