@@ -1,10 +1,13 @@
 package skills
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"testing"
 )
@@ -1055,4 +1058,551 @@ func TestPlanProjectRegister_RefusesLockTargetWithDotDotSegments(t *testing.T) {
 	if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
 		t.Errorf("a refusal must return the zero plan, got %+v", plan)
 	}
+}
+
+// --- ExecuteProjectPlan: fixtures -----------------------------------------
+
+// executablePlan produces a real, validated plan over a real (empty) t.TempDir
+// project root and returns it with that root. Nothing here touches $HOME, the
+// live .claude/skills, .agents/skills, .pi or skills-lock.json.
+func executablePlan(t *testing.T, id string) (ProjectPlan, string) {
+	t.Helper()
+	in := registerInput(t, id)
+	p, err := PlanProjectRegister(in)
+	if err != nil {
+		t.Fatalf("unexpected refusal while building the fixture plan: %v", err)
+	}
+	return p, filepath.Clean(in.ProjectRoot)
+}
+
+// planOrder is the executor's own commit order: the Writes in projectTargets
+// order, then the lock LAST.
+func planOrder(p ProjectPlan) []ProjectWrite {
+	return append(append([]ProjectWrite{}, p.Writes...), p.Lock)
+}
+
+// snapshotTree records every path under root with its bytes and permission
+// bits, so "the pre-run tree is byte-identical" is a single comparison rather
+// than a handful of spot checks. Directories are recorded too, because a
+// rollback that leaves an empty `.claude/skills/<id>/` behind has not restored
+// the tree.
+func snapshotTree(t *testing.T, root string) map[string]string {
+	t.Helper()
+	out := map[string]string{}
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		rel, rerr := filepath.Rel(root, p)
+		if rerr != nil {
+			return rerr
+		}
+		rel = filepath.ToSlash(rel)
+		info, ierr := d.Info()
+		if ierr != nil {
+			return ierr
+		}
+		if info.Mode()&fs.ModeSymlink != 0 {
+			target, lerr := os.Readlink(p)
+			if lerr != nil {
+				return lerr
+			}
+			out[rel+"@"] = "symlink " + target
+			return nil
+		}
+		if d.IsDir() {
+			out[rel+"/"] = fmt.Sprintf("dir %04o", info.Mode().Perm())
+			return nil
+		}
+		b, rerr := os.ReadFile(p)
+		if rerr != nil {
+			return rerr
+		}
+		out[rel] = fmt.Sprintf("file %04o %s", info.Mode().Perm(), b)
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("snapshot %q: %v", root, err)
+	}
+	return out
+}
+
+func sortedKeys(m map[string]string) []string {
+	keys := make([]string, 0, len(m))
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+	return keys
+}
+
+// assertSameTree reports every difference rather than the first, because a
+// rollback usually leaves several traces at once (a file, its directory, a
+// leftover temp) and seeing one at a time hides the shape of the bug.
+func assertSameTree(t *testing.T, want, got map[string]string) {
+	t.Helper()
+	for _, k := range sortedKeys(want) {
+		if g, ok := got[k]; !ok {
+			t.Errorf("rollback lost %q (was %q)", k, want[k])
+		} else if g != want[k] {
+			t.Errorf("rollback changed %q: got %q, want %q", k, g, want[k])
+		}
+	}
+	for _, k := range sortedKeys(got) {
+		if _, ok := want[k]; !ok {
+			t.Errorf("rollback left %q behind (%q)", k, got[k])
+		}
+	}
+}
+
+// fakeProjectFS is the injected projectFS of tasks.md 3b-ii.1/3b-ii.3: every
+// call is delegated to the real filesystem over a t.TempDir, and `fail` may
+// turn any single call into an error. Delegating rather than simulating is
+// deliberate — the rollback claim is about the real tree, so the fake injects
+// failures and nothing else.
+type fakeProjectFS struct {
+	real  osProjectFS
+	after bool // set by the injector: perform the call, THEN report failure
+	fail  func(f *fakeProjectFS, op, path string) error
+	n     map[string]int
+	log   []string
+}
+
+func newFakeProjectFS(fail func(f *fakeProjectFS, op, path string) error) *fakeProjectFS {
+	return &fakeProjectFS{fail: fail, n: map[string]int{}}
+}
+
+func (f *fakeProjectFS) check(op, path string) error {
+	f.n[op]++
+	f.log = append(f.log, op+" "+path)
+	if f.fail == nil {
+		return nil
+	}
+	return f.fail(f, op, path)
+}
+
+func (f *fakeProjectFS) Stat(name string) (fs.FileInfo, error) {
+	if err := f.check("stat", name); err != nil {
+		return nil, err
+	}
+	return f.real.Stat(name)
+}
+
+func (f *fakeProjectFS) ReadDir(name string) ([]fs.DirEntry, error) {
+	if err := f.check("readdir", name); err != nil {
+		return nil, err
+	}
+	return f.real.ReadDir(name)
+}
+
+func (f *fakeProjectFS) MkdirAll(dir string, perm fs.FileMode) error {
+	if err := f.check("mkdirall", dir); err != nil {
+		return err
+	}
+	return f.real.MkdirAll(dir, perm)
+}
+
+func (f *fakeProjectFS) WriteTemp(dir string, data []byte, perm fs.FileMode) (string, error) {
+	if err := f.check("writetemp", dir); err != nil {
+		return "", err
+	}
+	return f.real.WriteTemp(dir, data, perm)
+}
+
+func (f *fakeProjectFS) Rename(oldPath, newPath string) error {
+	f.after = false
+	if err := f.check("rename", newPath); err != nil {
+		if f.after {
+			// The rename lands and still reports failure.
+			_ = f.real.Rename(oldPath, newPath)
+		}
+		return err
+	}
+	return f.real.Rename(oldPath, newPath)
+}
+
+func (f *fakeProjectFS) Remove(name string) error {
+	if err := f.check("remove", name); err != nil {
+		return err
+	}
+	return f.real.Remove(name)
+}
+
+func (f *fakeProjectFS) ResolvePath(name string) (string, error) {
+	if err := f.check("resolvepath", name); err != nil {
+		return "", err
+	}
+	return f.real.ResolvePath(name)
+}
+
+// failAt returns a `fail` func that fails the n-th (1-based) call of op whose
+// path equals want.
+func failAt(op, want string, err error) func(*fakeProjectFS, string, string) error {
+	return func(f *fakeProjectFS, gotOp, gotPath string) error {
+		if gotOp == op && gotPath == want {
+			return err
+		}
+		return nil
+	}
+}
+
+// --- ExecuteProjectPlan: the happy path -----------------------------------
+
+// TestExecuteProjectPlan_WritesEveryTargetAndLockLast is the positive case:
+// every planned SKILL.md and the lock land with the exact planned bytes at
+// mode 0644, the lock is renamed LAST (it is the commit marker), and the
+// executor reports one `wrote: <rel>` line per file in that order.
+func TestExecuteProjectPlan_WritesEveryTargetAndLockLast(t *testing.T) {
+	p, _ := executablePlan(t, "tidy-worktree")
+	fsys := newFakeProjectFS(nil)
+	var stdout, stderr bytes.Buffer
+
+	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err != nil {
+		t.Fatalf("unexpected execution failure: %v (stderr %q)", err, stderr.String())
+	}
+
+	order := planOrder(p)
+	for _, w := range order {
+		info, err := os.Stat(w.Abs)
+		if err != nil {
+			t.Fatalf("planned write %q was not created: %v", w.Rel, err)
+		}
+		if got := info.Mode().Perm(); got != ProjectFileMode {
+			t.Errorf("%q has mode %04o, want %04o", w.Rel, got, ProjectFileMode)
+		}
+		got, err := os.ReadFile(w.Abs)
+		if err != nil {
+			t.Fatalf("read back %q: %v", w.Rel, err)
+		}
+		if !bytes.Equal(got, w.Data) {
+			t.Errorf("%q holds %q, want %q", w.Rel, got, w.Data)
+		}
+		if strings.Contains(w.Rel, ".pi/") || strings.Contains(w.Rel, "skills-lock.json") {
+			t.Errorf("executed write %q names a forbidden path", w.Rel)
+		}
+	}
+
+	// The lock is the commit marker: its rename is the LAST rename performed.
+	var renames []string
+	for _, entry := range fsys.log {
+		if strings.HasPrefix(entry, "rename ") {
+			renames = append(renames, strings.TrimPrefix(entry, "rename "))
+		}
+	}
+	if len(renames) != len(order) {
+		t.Fatalf("got %d renames, want %d: %v", len(renames), len(order), renames)
+	}
+	for i, w := range order {
+		if renames[i] != w.Abs {
+			t.Errorf("rename %d targets %q, want %q", i, renames[i], w.Abs)
+		}
+	}
+
+	var wantOut strings.Builder
+	for _, w := range order {
+		fmt.Fprintf(&wantOut, "wrote: %s\n", w.Rel)
+	}
+	if stdout.String() != wantOut.String() {
+		t.Errorf("stdout = %q, want %q", stdout.String(), wantOut.String())
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("a successful run must print nothing to stderr, got %q", stderr.String())
+	}
+}
+
+// failAfter returns a `fail` func for a call that LANDS and then reports
+// failure: fakeProjectFS consults it before delegating, so the caller pairs it
+// with delegation by hand. It exists because the only way the lock's Backup
+// restore is ever reached is a lock rename that already happened and still
+// reported an error — an NFS or wrapper reality, and the one shape that makes
+// the "a pre-existing lock is RESTORED, never deleted" rule observable, since
+// the lock is renamed last and nothing else follows it.
+func failAfterRename(want string, err error) func(*fakeProjectFS, string, string) error {
+	fired := false
+	return func(f *fakeProjectFS, gotOp, gotPath string) error {
+		if gotOp != "rename" || gotPath != want || fired {
+			return nil
+		}
+		// Only the COMMIT rename fails; the rollback's restoring rename to the
+		// same path must be allowed through, or the test would prove nothing
+		// about the restore.
+		fired = true
+		// Let the rename land first, then report the failure.
+		f.after = true
+		return err
+	}
+}
+
+var errInjected = errors.New("injected failure")
+
+// injectionPoints enumerates every stage/commit call a failure can be injected
+// at for one plan, as tasks.md 3b-ii.1 requires ("an injected failure at each
+// rename index and during staging").
+func injectionPoints(p ProjectPlan, root string) []struct {
+	name string
+	op   string
+	path string
+} {
+	order := planOrder(p)
+	points := []struct {
+		name string
+		op   string
+		path string
+	}{
+		{"mkdir_first_target", "mkdirall", filepath.Dir(order[0].Abs)},
+		{"mkdir_lock_dir", "mkdirall", filepath.Dir(order[2].Abs)},
+		{"stage_first_target", "writetemp", filepath.Dir(order[0].Abs)},
+		{"stage_second_target", "writetemp", filepath.Dir(order[1].Abs)},
+		{"stage_lock", "writetemp", filepath.Dir(order[2].Abs)},
+	}
+	for i, w := range order {
+		points = append(points, struct {
+			name string
+			op   string
+			path string
+		}{fmt.Sprintf("rename_index_%d", i), "rename", w.Abs})
+	}
+	_ = root
+	return points
+}
+
+// TestExecuteProjectPlan_RollbackLeavesThePreRunTreeUnchanged is tasks.md
+// 3b-ii.1: with a failure injected at each rename index and during staging,
+// the tree is byte-identical to its pre-run snapshot — no committed file, no
+// leftover temp, and no directory this run created.
+func TestExecuteProjectPlan_RollbackLeavesThePreRunTreeUnchanged(t *testing.T) {
+	for _, point := range injectionPoints(mustPlanFor(t, "tidy-worktree")) {
+		t.Run(point.name, func(t *testing.T) {
+			p, root := executablePlan(t, "tidy-worktree")
+			// The fixture plan above is a fresh root, so rebuild the injection
+			// point against THIS root.
+			pt := matchingPoint(t, p, point.name)
+			before := snapshotTree(t, root)
+
+			fsys := newFakeProjectFS(failAt(pt.op, pt.path, errInjected))
+			var stdout, stderr bytes.Buffer
+			err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+			if err == nil {
+				t.Fatalf("an injected %s failure must fail the execution", pt.op)
+			}
+			if !errors.Is(err, errInjected) {
+				t.Errorf("error %v does not carry the injected cause", err)
+			}
+			if errors.Is(err, ErrRollbackIncomplete) {
+				t.Errorf("rollback itself must succeed here, got %v (stderr %q)", err, stderr.String())
+			}
+			if stderr.Len() != 0 {
+				t.Errorf("a successful rollback prints nothing to stderr, got %q", stderr.String())
+			}
+			if stdout.Len() != 0 {
+				t.Errorf("a failed run must report no `wrote:` line, got %q", stdout.String())
+			}
+			assertSameTree(t, before, snapshotTree(t, root))
+		})
+	}
+}
+
+// mustPlanFor builds one throwaway plan purely to enumerate the injection
+// point NAMES; each subtest then rebuilds its own plan over its own root.
+func mustPlanFor(t *testing.T, id string) (ProjectPlan, string) {
+	t.Helper()
+	return executablePlan(t, id)
+}
+
+func matchingPoint(t *testing.T, p ProjectPlan, name string) struct {
+	name string
+	op   string
+	path string
+} {
+	t.Helper()
+	for _, pt := range injectionPoints(p, "") {
+		if pt.name == name {
+			return pt
+		}
+	}
+	t.Fatalf("no injection point named %q", name)
+	panic("unreachable")
+}
+
+// TestExecuteProjectPlan_RollbackRestoresAPreExistingLock proves the rule the
+// design states in as many words: a lock file that already existed at plan
+// time carries backup bytes and is RESTORED byte-for-byte, never deleted,
+// precisely because it may already carry other skills' entries.
+func TestExecuteProjectPlan_RollbackRestoresAPreExistingLock(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	root := filepath.Clean(in.ProjectRoot)
+	existing, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+		ID:         "zzz-other",
+		Provenance: "procedural",
+		Candidate:  "procedural/candidates/repeated-success/zzz-other",
+		SHA256:     "abc",
+		Revision:   2,
+		Targets:    []string{".claude/skills/zzz-other/SKILL.md"},
+	}}})
+	if err != nil {
+		t.Fatalf("building the existing lock: %v", err)
+	}
+	lockAbs := filepath.Join(root, filepath.FromSlash(ProjectLockRelPath))
+	if err := os.MkdirAll(filepath.Dir(lockAbs), 0o755); err != nil {
+		t.Fatalf("mkdir lock dir: %v", err)
+	}
+	if err := os.WriteFile(lockAbs, existing, 0o644); err != nil {
+		t.Fatalf("write existing lock: %v", err)
+	}
+	in.LockData, in.LockExists = existing, true
+
+	p, err := PlanProjectRegister(in)
+	if err != nil {
+		t.Fatalf("unexpected refusal: %v", err)
+	}
+	if p.Lock.Backup == nil {
+		t.Fatal("precondition: the plan must have captured the pre-existing lock bytes as a backup")
+	}
+	before := snapshotTree(t, root)
+
+	fsys := newFakeProjectFS(failAfterRename(p.Lock.Abs, errInjected))
+	var stdout, stderr bytes.Buffer
+	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err == nil {
+		t.Fatal("a rename that reports failure must fail the execution")
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("a successful rollback prints nothing to stderr, got %q", stderr.String())
+	}
+
+	got, err := os.ReadFile(lockAbs)
+	if err != nil {
+		t.Fatalf("the pre-existing lock must survive rollback: %v", err)
+	}
+	if !bytes.Equal(got, existing) {
+		t.Errorf("lock after rollback = %q, want the pre-existing bytes %q", got, existing)
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// TestExecuteProjectPlan_RollbackRemovesALockItCreated is the other half of
+// the same rule: a lock created for the very first registration in a project
+// has no backup and is REMOVED, taking its directory with it.
+func TestExecuteProjectPlan_RollbackRemovesALockItCreated(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	if p.Lock.Backup != nil {
+		t.Fatal("precondition: a first registration plans a lock with no backup")
+	}
+	before := snapshotTree(t, root)
+
+	fsys := newFakeProjectFS(failAfterRename(p.Lock.Abs, errInjected))
+	var stdout, stderr bytes.Buffer
+	if err := ExecuteProjectPlan(p, fsys, &stdout, &stderr); err == nil {
+		t.Fatal("a rename that reports failure must fail the execution")
+	}
+	if _, err := os.Stat(p.Lock.Abs); !os.IsNotExist(err) {
+		t.Errorf("a lock this run created must be removed on rollback, Stat gave %v", err)
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
+}
+
+// TestExecuteProjectPlan_RollbackOfRollback is tasks.md 3b-ii.3: when the
+// rollback itself fails, the operator gets a precise pointer —
+// `error: rollback incomplete: <rel-path>` — and the run fails, distinct from
+// the ordinary rollback-succeeds cases above.
+func TestExecuteProjectPlan_RollbackOfRollback(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	order := planOrder(p)
+
+	// Commit the first SKILL.md, then fail the second rename so rollback must
+	// remove the first — and fail that removal.
+	fsys := newFakeProjectFS(func(f *fakeProjectFS, op, path string) error {
+		if op == "rename" && path == order[1].Abs {
+			return errInjected
+		}
+		if op == "remove" && path == order[0].Abs {
+			return errInjected
+		}
+		return nil
+	})
+	var stdout, stderr bytes.Buffer
+	err := ExecuteProjectPlan(p, fsys, &stdout, &stderr)
+	if err == nil {
+		t.Fatal("a failed rollback must fail the execution")
+	}
+	if !errors.Is(err, ErrRollbackIncomplete) {
+		t.Errorf("error %v must be recognisable as an incomplete rollback", err)
+	}
+	want := "error: rollback incomplete: " + order[0].Rel + "\n"
+	if !strings.Contains(stderr.String(), want) {
+		t.Errorf("stderr = %q, want it to contain %q", stderr.String(), want)
+	}
+	if stdout.Len() != 0 {
+		t.Errorf("a failed run must report no `wrote:` line, got %q", stdout.String())
+	}
+	// The pointer must be honest: that path really is still there.
+	if _, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(order[0].Rel))); statErr != nil {
+		t.Errorf("the reported path must be the one actually left behind: %v", statErr)
+	}
+}
+
+// TestPlanProjectRegister_RefusesAliasedTargets closes ALIAS-1 (review round
+// 2, carried to slice 3b-ii): the two FIXED targets are distinct strings, but
+// nothing stopped them resolving to the SAME physical directory — with
+// `<root>/.agents` a symlink to `<root>/.claude`, both destinations name one
+// file on disk.
+//
+// The registration is REFUSED rather than collapsed to a single write. Two
+// reasons decide it: (1) the lock would record two targets for one file, so
+// EvaluateOwnership would later read the same bytes twice and a human deleting
+// "one" copy would appear to have deleted both; (2) rollback's headline
+// guarantee — the pre-run tree comes back byte-identical — becomes
+// conditionally false, because the second planned write would silently
+// overwrite the first and only one of the two removals can succeed. A refusal
+// keeps both properties unconditional, and an aliased `.agents` is an unusual
+// project layout the human can undo, not a state the tool should guess at.
+func TestPlanProjectRegister_RefusesAliasedTargets(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	root := filepath.Clean(in.ProjectRoot)
+	if err := os.MkdirAll(filepath.Join(root, ".claude"), 0o755); err != nil {
+		t.Fatalf("mkdir .claude: %v", err)
+	}
+	// Precondition: without the alias this exact input plans cleanly, so the
+	// refusal below can only be about the alias.
+	if _, err := PlanProjectRegister(in); err != nil {
+		t.Fatalf("precondition: the un-aliased input must plan cleanly, got %v", err)
+	}
+	if err := os.Symlink(filepath.Join(root, ".claude"), filepath.Join(root, ".agents")); err != nil {
+		t.Fatalf("symlink .agents -> .claude: %v", err)
+	}
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal for two targets resolving to one file, got a plan with %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "resolve to the same file") {
+		t.Errorf("refusal %q does not name the aliasing reason", err.Error())
+	}
+	if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+		t.Errorf("a refusal must return the zero plan, got %+v", plan)
+	}
+}
+
+// TestExecuteProjectPlan_RefusesAliasedDestinations is the check-then-act half
+// of ALIAS-1: the planner's proof is point-in-time, so a plan whose two
+// destinations were distinct when it was built must still be refused if they
+// have since come to name one file. Nothing is written.
+func TestExecuteProjectPlan_RefusesAliasedDestinations(t *testing.T) {
+	p, root := executablePlan(t, "tidy-worktree")
+	if err := os.MkdirAll(filepath.Join(root, ".claude"), 0o755); err != nil {
+		t.Fatalf("mkdir .claude: %v", err)
+	}
+	if err := os.Symlink(filepath.Join(root, ".claude"), filepath.Join(root, ".agents")); err != nil {
+		t.Fatalf("symlink .agents -> .claude: %v", err)
+	}
+	before := snapshotTree(t, root)
+
+	var stdout, stderr bytes.Buffer
+	err := ExecuteProjectPlan(p, newFakeProjectFS(nil), &stdout, &stderr)
+	if err == nil {
+		t.Fatal("expected a refusal for two destinations resolving to one file")
+	}
+	if !strings.Contains(err.Error(), "resolve to the same file") {
+		t.Errorf("refusal %q does not name the aliasing reason", err.Error())
+	}
+	assertSameTree(t, before, snapshotTree(t, root))
 }

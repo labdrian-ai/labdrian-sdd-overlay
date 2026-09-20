@@ -306,20 +306,15 @@ func TestPlanInstallRefusesDestinationEqualToSkillsRoot(t *testing.T) {
 // the containment proof built on that answer says "inside" for a symlink that
 // escapes the root.
 func TestResolvePathKeepingMissing_PermissionDenialIsAGenuineFailure(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("running as root: mode 0000 does not deny access")
-	}
-
 	t.Run("unreadable_parent_is_an_error_not_a_literal_tail", func(t *testing.T) {
 		tmp := t.TempDir()
 		blocked := filepath.Join(tmp, "blocked")
 		if err := os.MkdirAll(filepath.Join(blocked, "child"), 0o755); err != nil {
 			t.Fatalf("mkdir: %v", err)
 		}
-		if err := os.Chmod(blocked, 0o000); err != nil {
-			t.Fatalf("chmod: %v", err)
+		if !chmodDeniesReading(t, blocked) {
+			t.Skip("mode 0000 does not deny reading here; the premise of this case does not hold")
 		}
-		t.Cleanup(func() { _ = os.Chmod(blocked, 0o755) })
 
 		got, err := resolvePathKeepingMissing(filepath.Join(blocked, "child"))
 		if err == nil {
@@ -346,10 +341,9 @@ func TestResolvePathKeepingMissing_PermissionDenialIsAGenuineFailure(t *testing.
 		if err := os.Symlink(outside, filepath.Join(blocked, "esc")); err != nil {
 			t.Fatalf("symlink: %v", err)
 		}
-		if err := os.Chmod(blocked, 0o000); err != nil {
-			t.Fatalf("chmod: %v", err)
+		if !chmodDeniesReading(t, blocked) {
+			t.Skip("mode 0000 does not deny reading here; the premise of this case does not hold")
 		}
-		t.Cleanup(func() { _ = os.Chmod(blocked, 0o755) })
 
 		inside, err := resolvedWithinRoot(root, filepath.Join(blocked, "esc", "x", "SKILL.md"))
 		if err == nil && inside {
@@ -424,4 +418,53 @@ func TestResolvedWithinRootUsing_EmptyResolutionIsRefused(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestResolvedWithinRootUsing_PathResolutionFailureFailsClosed is COV-B
+// (review round 2, carried to slice 3b-ii). COV-4 witnessed the ROOT
+// resolution branch with a resolver that fails on the root only; the
+// DESTINATION branch had no witness at all. Both must propagate rather than
+// fall through to a containment verdict computed from a zero value.
+func TestResolvedWithinRootUsing_PathResolutionFailureFailsClosed(t *testing.T) {
+	sentinel := errors.New("the destination could not be resolved")
+	const root = "/project"
+	resolve := func(p string) (string, error) {
+		if p == root {
+			return root, nil
+		}
+		return "", sentinel
+	}
+
+	inside, err := resolvedWithinRootUsing(resolve, root, "/project/.claude/skills/x/SKILL.md")
+	if err == nil {
+		t.Fatalf("a destination that cannot be resolved must fail closed, got inside=%v and no error", inside)
+	}
+	if !errors.Is(err, sentinel) {
+		t.Errorf("error %v does not carry the resolver's own failure", err)
+	}
+	if inside {
+		t.Error("a failed resolution must never report containment")
+	}
+}
+
+// chmodDeniesReading chmods dir to 0000 (restoring it at cleanup) and reports
+// whether that actually denies reading it here.
+//
+// It replaces the `os.Geteuid() == 0` probe the two cases above used to share
+// (portability advisory, slice 3b-ii). A non-root euid does NOT imply mode
+// 0000 denies: CAP_DAC_OVERRIDE on an ordinary user, several container and CI
+// user setups, and filesystems that ignore mode bits all read the directory
+// anyway. In those environments the first case failed spuriously and the
+// second — whose assertion is the lenient `err == nil && inside` — passed
+// vacuously. Only the behaviour itself can tell the two apart.
+func chmodDeniesReading(t *testing.T, dir string) bool {
+	t.Helper()
+	if err := os.Chmod(dir, 0o000); err != nil {
+		t.Fatalf("chmod: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	if _, err := os.ReadDir(dir); err == nil {
+		return false
+	}
+	return true
 }
