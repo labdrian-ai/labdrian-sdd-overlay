@@ -692,8 +692,11 @@ func TestPlanProjectRegister_RefusesLockTargetUnderSkillsDir(t *testing.T) {
 	if err == nil {
 		t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
 	}
-	if !strings.Contains(err.Error(), "never a registration destination") {
-		t.Errorf("refusal %q does not name the skills/ reason", err.Error())
+	if !strings.Contains(err.Error(), "under the project's own skills/ directory") {
+		t.Errorf("refusal %q is not the lexical decision-(f) refusal", err.Error())
+	}
+	if strings.Contains(err.Error(), "resolves into") {
+		t.Errorf("refusal %q was decided by the resolved pass, not the lexical one", err.Error())
 	}
 	if strings.Contains(err.Error(), "outside the project root") {
 		t.Errorf("refusal %q calls a target inside the root 'outside the project root'", err.Error())
@@ -809,5 +812,223 @@ func TestPlanProjectRegister_IdentityBranchesThroughThePlanner(t *testing.T) {
 				t.Errorf("refusal %q does not carry %q", err.Error(), tc.want)
 			}
 		})
+	}
+}
+
+// TestPlanProjectRegister_RefusesDestinationResolvingIntoSkillsTree is SEC-1.
+// Decision (f) — "the overlay's source tree is never a registration
+// destination" — was enforced LEXICALLY only: underSkillsDir inspects the
+// repo-relative string, and the resolved containment check only proves the
+// destination is inside the root, never that it is outside <root>/skills. So
+// with `.claude/skills` (or `.agents/skills`) a symlink to the project's own
+// `skills/` tree, the registration was ACCEPTED and its bytes would have
+// physically landed in the source tree decision (f) protects.
+func TestPlanProjectRegister_RefusesDestinationResolvingIntoSkillsTree(t *testing.T) {
+	// linkSkills points <root>/<dir> at <root>/skills, creating both the
+	// parent of the link and the real skills/ tree (a DANGLING link is a
+	// different, already-covered refusal).
+	linkSkills := func(t *testing.T, root, dir string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Join(root, "skills"), 0o755); err != nil {
+			t.Fatalf("mkdir skills: %v", err)
+		}
+		if err := os.MkdirAll(filepath.Dir(filepath.Join(root, filepath.FromSlash(dir))), 0o755); err != nil {
+			t.Fatalf("mkdir link parent: %v", err)
+		}
+		if err := os.Symlink(filepath.Join(root, "skills"), filepath.Join(root, filepath.FromSlash(dir))); err != nil {
+			t.Fatalf("symlink %s: %v", dir, err)
+		}
+	}
+
+	t.Run("symlinked_claude_skills", func(t *testing.T) {
+		in := registerInput(t, "tidy-worktree")
+		linkSkills(t, in.ProjectRoot, ".claude/skills")
+
+		// Precondition: the lexical decision-(f) guard admits this destination.
+		if underSkillsDir(".claude/skills/tidy-worktree/SKILL.md") {
+			t.Fatal("precondition: the lexical guard was expected to admit the destination")
+		}
+
+		plan, err := PlanProjectRegister(in)
+		if err == nil {
+			t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+		}
+		if !strings.Contains(err.Error(), "resolves into the project's own skills/ tree") {
+			t.Errorf("refusal %q does not name the resolved skills/ tree reason", err.Error())
+		}
+		if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+			t.Errorf("a refusal must return the zero plan, got %+v", plan)
+		}
+	})
+
+	t.Run("symlinked_agents_skills", func(t *testing.T) {
+		in := registerInput(t, "tidy-worktree")
+		linkSkills(t, in.ProjectRoot, ".agents/skills")
+
+		plan, err := PlanProjectRegister(in)
+		if err == nil {
+			t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+		}
+		if !strings.Contains(err.Error(), "resolves into the project's own skills/ tree") {
+			t.Errorf("refusal %q does not name the resolved skills/ tree reason", err.Error())
+		}
+		if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+			t.Errorf("a refusal must return the zero plan, got %+v", plan)
+		}
+	})
+
+	t.Run("lock_recorded_target_reaching_skills_through_a_symlink", func(t *testing.T) {
+		in := registerInput(t, "tidy-worktree")
+		linkSkills(t, in.ProjectRoot, ".claude/skills")
+		data, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+			ID:      "sneaky",
+			SHA256:  "abc",
+			Targets: []string{".claude/skills/sneaky/SKILL.md"},
+		}}})
+		if err != nil {
+			t.Fatalf("serialize: %v", err)
+		}
+		in.LockData, in.LockExists = data, true
+
+		plan, err := PlanProjectRegister(in)
+		if err == nil {
+			t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+		}
+		if !strings.Contains(err.Error(), "resolves into the project's own skills/ tree") {
+			t.Errorf("refusal %q does not name the resolved skills/ tree reason", err.Error())
+		}
+		if !strings.Contains(err.Error(), `lock entry "sneaky"`) {
+			t.Errorf("refusal %q does not name the offending lock entry", err.Error())
+		}
+		if strings.Contains(err.Error(), "outside the project root") {
+			t.Errorf("refusal %q calls a target inside the root 'outside the project root'", err.Error())
+		}
+	})
+
+	t.Run("lock_recorded_target_resolving_to_skills_itself", func(t *testing.T) {
+		// The resolved containment helper is strictly-below, so a target that
+		// resolves to <root>/skills ITSELF slips past it; decision (f) forbids
+		// that path too, and a lock-recorded target is the way to reach it
+		// (the fixed table always appends <id>/SKILL.md).
+		in := registerInput(t, "tidy-worktree")
+		if err := os.MkdirAll(filepath.Join(in.ProjectRoot, "skills"), 0o755); err != nil {
+			t.Fatalf("mkdir skills: %v", err)
+		}
+		if err := os.Symlink(filepath.Join(in.ProjectRoot, "skills"), filepath.Join(in.ProjectRoot, "legacy-link")); err != nil {
+			t.Fatalf("symlink: %v", err)
+		}
+		data, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+			ID:      "sneaky",
+			SHA256:  "abc",
+			Targets: []string{"legacy-link"},
+		}}})
+		if err != nil {
+			t.Fatalf("serialize: %v", err)
+		}
+		in.LockData, in.LockExists = data, true
+
+		plan, err := PlanProjectRegister(in)
+		if err == nil {
+			t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+		}
+		if !strings.Contains(err.Error(), "resolves into the project's own skills/ tree") {
+			t.Errorf("refusal %q does not name the resolved skills/ tree reason", err.Error())
+		}
+	})
+
+	t.Run("an_ordinary_registration_still_plans_every_target", func(t *testing.T) {
+		// The resolved decision-(f) check must not refuse the normal case,
+		// where <root>/skills does not exist at all.
+		in := registerInput(t, "tidy-worktree")
+		plan, err := PlanProjectRegister(in)
+		if err != nil {
+			t.Fatalf("unexpected refusal: %v", err)
+		}
+		if len(plan.Writes) != len(projectTargets) {
+			t.Errorf("plan.Writes = %d, want %d", len(plan.Writes), len(projectTargets))
+		}
+	})
+}
+
+// TestPlanProjectRegister_RefusesLockTargetEqualToSkillsDir is COV-3: the
+// `clean == "skills"` disjunct of underSkillsDir had no test at all — every
+// existing case carried a `skills/` prefix — so a lock-recorded target naming
+// exactly `skills` could not witness it.
+func TestPlanProjectRegister_RefusesLockTargetEqualToSkillsDir(t *testing.T) {
+	if !underSkillsDir("skills") {
+		t.Error("underSkillsDir must refuse a destination equal to skills")
+	}
+	if !underSkillsDir("./skills") {
+		t.Error("underSkillsDir must refuse a destination cleaning to skills")
+	}
+
+	in := registerInput(t, "tidy-worktree")
+	data, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+		ID:      "sneaky",
+		SHA256:  "abc",
+		Targets: []string{"skills"},
+	}}})
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+	in.LockData, in.LockExists = data, true
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+	}
+	// The LEXICAL wording, specifically: the resolved decision-(f) pass added
+	// for SEC-1 refuses this target too, so asserting only "never a
+	// registration destination" would let the cheap first pass be deleted with
+	// the suite green (review round 2, COV-5).
+	if !strings.Contains(err.Error(), "under the project's own skills/ directory") {
+		t.Errorf("refusal %q is not the lexical decision-(f) refusal", err.Error())
+	}
+	if strings.Contains(err.Error(), "resolves into") {
+		t.Errorf("refusal %q was decided by the resolved pass, not the lexical one", err.Error())
+	}
+}
+
+// TestPlanProjectRegister_RefusesLockTargetWithDotDotSegments is COV-2: the
+// LEXICAL half of the shared write guard (resolveTarget plus the "escapes the
+// project root" refusal) had no witness — deleting it left the suite green,
+// because the resolved check silently substituted for it. This target is the
+// case the resolved check CANNOT see: its ".." segments normalize back inside
+// the project root, so containment holds after resolution and only
+// resolveTarget's per-segment refusal rejects it.
+func TestPlanProjectRegister_RefusesLockTargetWithDotDotSegments(t *testing.T) {
+	const target = ".claude/skills/../../.claude/skills/x/SKILL.md"
+
+	// Precondition: this target is NOT visible to either later check — it
+	// cleans to a path plainly inside the root and outside skills/.
+	if underSkillsDir(target) {
+		t.Fatal("precondition: the decision-(f) guard was expected to admit the target")
+	}
+	in := registerInput(t, "tidy-worktree")
+	root := filepath.Clean(in.ProjectRoot)
+	joined := filepath.Clean(filepath.Join(root, filepath.FromSlash(target)))
+	if !withinRoot(root, joined) {
+		t.Fatalf("precondition: %q was expected to normalize back inside the root", joined)
+	}
+
+	data, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+		ID:      "sneaky",
+		SHA256:  "abc",
+		Targets: []string{target},
+	}}})
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+	in.LockData, in.LockExists = data, true
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal for a target carrying .. segments, got a plan with %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "outside the project root") {
+		t.Errorf("refusal %q does not name the lexical containment reason", err.Error())
+	}
+	if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+		t.Errorf("a refusal must return the zero plan, got %+v", plan)
 	}
 }

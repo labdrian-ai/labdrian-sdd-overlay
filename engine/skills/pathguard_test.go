@@ -295,3 +295,133 @@ func TestPlanInstallRefusesDestinationEqualToSkillsRoot(t *testing.T) {
 		t.Errorf("a refusal must return no ops, got %v", ops)
 	}
 }
+
+// TestResolvePathKeepingMissing_PermissionDenialIsAGenuineFailure is COV-1:
+// the `if !os.IsNotExist(err)` branch of resolvePathKeepingMissing had no
+// witness. The symlink-loop case does NOT reach it — with that branch deleted,
+// the Lstat probe below still catches the loop — so only a non-ENOENT failure
+// that Lstat ALSO cannot see proves it. An unreadable (mode 0000) parent
+// directory is exactly that: EvalSymlinks and Lstat both fail with EACCES, the
+// walk then climbs to the readable parent and answers with a literal tail, and
+// the containment proof built on that answer says "inside" for a symlink that
+// escapes the root.
+func TestResolvePathKeepingMissing_PermissionDenialIsAGenuineFailure(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("running as root: mode 0000 does not deny access")
+	}
+
+	t.Run("unreadable_parent_is_an_error_not_a_literal_tail", func(t *testing.T) {
+		tmp := t.TempDir()
+		blocked := filepath.Join(tmp, "blocked")
+		if err := os.MkdirAll(filepath.Join(blocked, "child"), 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		if err := os.Chmod(blocked, 0o000); err != nil {
+			t.Fatalf("chmod: %v", err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(blocked, 0o755) })
+
+		got, err := resolvePathKeepingMissing(filepath.Join(blocked, "child"))
+		if err == nil {
+			t.Fatalf("a permission denial must be a genuine failure, got %q and no error", got)
+		}
+		if errors.Is(err, fs.ErrNotExist) {
+			t.Errorf("a permission denial must not be reported as ErrNotExist, got %v", err)
+		}
+	})
+
+	t.Run("containment_is_refused_not_silently_granted", func(t *testing.T) {
+		base := t.TempDir()
+		root := filepath.Join(base, "project")
+		outside := filepath.Join(base, "outside")
+		blocked := filepath.Join(root, "blocked")
+		if err := os.MkdirAll(blocked, 0o755); err != nil {
+			t.Fatalf("mkdir blocked: %v", err)
+		}
+		if err := os.MkdirAll(outside, 0o755); err != nil {
+			t.Fatalf("mkdir outside: %v", err)
+		}
+		// The escape lives BEHIND the unreadable directory, so nothing can see
+		// it once the walk is allowed to degrade into a literal tail.
+		if err := os.Symlink(outside, filepath.Join(blocked, "esc")); err != nil {
+			t.Fatalf("symlink: %v", err)
+		}
+		if err := os.Chmod(blocked, 0o000); err != nil {
+			t.Fatalf("chmod: %v", err)
+		}
+		t.Cleanup(func() { _ = os.Chmod(blocked, 0o755) })
+
+		inside, err := resolvedWithinRoot(root, filepath.Join(blocked, "esc", "x", "SKILL.md"))
+		if err == nil && inside {
+			t.Fatal("a symlink escaping the root behind an unreadable directory must never be reported as contained")
+		}
+	})
+}
+
+// TestResolvedWithinRootUsing_RootResolutionFailureFailsClosed is COV-4. The
+// root-resolution error branch had no witness, and removing it is FAIL-OPEN:
+// resolvedRoot is left as "" and withinRoot("", p) is true for every absolute
+// path, so every destination on earth would be reported as contained. The
+// resolver's own error must reach the caller unchanged (errors.Is), which the
+// belt-and-braces empty-path guard alone would not satisfy.
+func TestResolvedWithinRootUsing_RootResolutionFailureFailsClosed(t *testing.T) {
+	boom := errors.New("resolver refused the root")
+	const root = "/project"
+
+	resolve := func(p string) (string, error) {
+		if p == root {
+			return "", boom
+		}
+		return p, nil
+	}
+
+	// Precondition: with resolvedRoot left empty, the lexical helper admits
+	// everything — that is what the branch prevents.
+	if !withinRoot("", "/anywhere/at/all") {
+		t.Fatal("precondition: withinRoot(\"\", p) was expected to be fail-open")
+	}
+
+	inside, err := resolvedWithinRootUsing(resolve, root, "/anywhere/at/all")
+	if err == nil {
+		t.Fatal("a root that cannot be resolved must be an error, not a containment verdict")
+	}
+	if !errors.Is(err, boom) {
+		t.Errorf("error = %v, want the resolver's own failure propagated", err)
+	}
+	if inside {
+		t.Error("a failed root resolution must never report the path as contained")
+	}
+}
+
+// TestResolvedWithinRootUsing_EmptyResolutionIsRefused pins the belt-and-braces
+// half of the same COV-4 finding: even if a resolver returns an empty path with
+// no error, the guard must not degrade into withinRoot("", p), which is true for
+// every absolute path.
+func TestResolvedWithinRootUsing_EmptyResolutionIsRefused(t *testing.T) {
+	cases := map[string]func(string) (string, error){
+		"empty_root": func(p string) (string, error) {
+			if p == "/project" {
+				return "", nil
+			}
+			return p, nil
+		},
+		"empty_path": func(p string) (string, error) {
+			if p == "/project" {
+				return p, nil
+			}
+			return "", nil
+		},
+	}
+
+	for name, resolve := range cases {
+		t.Run(name, func(t *testing.T) {
+			inside, err := resolvedWithinRootUsing(resolve, "/project", "/anywhere/at/all")
+			if err == nil {
+				t.Fatal("an empty resolution must be refused, not treated as a path")
+			}
+			if inside {
+				t.Error("an empty resolution must never report the path as contained")
+			}
+		})
+	}
+}

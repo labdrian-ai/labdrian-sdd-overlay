@@ -110,13 +110,27 @@ type RegisterInput struct {
 	ResolvePath func(string) (string, error)
 }
 
+// projectSourceSkillsDir is the project's own skill source tree, relative to
+// the project root: the one directory decision (f) forbids as a registration
+// destination. It is named once because BOTH halves of that guard —
+// underSkillsDir's lexical pass and resolveWritePath's resolved pass — must
+// mean the same directory.
+const projectSourceSkillsDir = "skills"
+
 // underSkillsDir reports whether a repo-relative, slash-separated destination
 // lies under the project's own `skills/` directory (design decision (f)): the
 // overlay's source tree is never a registration destination. A merely
 // skills-prefixed sibling such as `skills-other/` is not under it.
+//
+// This is the LEXICAL half of decision (f) and it is not sufficient on its
+// own: it inspects the repo-relative string only, so a `.claude/skills`
+// symlinked at the project's own `skills/` tree reads as an ordinary
+// destination here (review round 2, SEC-1). resolveWritePath re-applies the
+// decision to the RESOLVED destination for that reason; this stays as the
+// cheap first pass.
 func underSkillsDir(rel string) bool {
 	clean := path.Clean(rel)
-	return clean == "skills" || strings.HasPrefix(clean, "skills/")
+	return clean == projectSourceSkillsDir || strings.HasPrefix(clean, projectSourceSkillsDir+"/")
 }
 
 // PlanProjectRegister validates a registration completely and returns the
@@ -181,9 +195,13 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 	// symlink resolution, so a draft reached through a link into the project
 	// is refused too.
 	draft := filepath.Clean(in.DraftPath)
-	if draft == "" || draft == "." {
-		return ProjectPlan{}, fmt.Errorf("project-register: no draft file was given")
-	}
+	// There is deliberately no separate empty-draft branch here: filepath.Clean
+	// turns "" into ".", and neither "" nor "." is absolute, so the refusal
+	// below already owns both. The branch that used to sit here became
+	// unreachable the moment that absolute-path refusal was added, and an
+	// unreachable guard nothing can witness is worse than none (review round 2,
+	// COV-5).
+	//
 	// A RELATIVE draft path defeats both halves of the guard below:
 	// filepath.Clean does not absolutize, so the lexical comparison against an
 	// absolute root is always false and the resolver hands back an equally
@@ -267,6 +285,9 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 					// "outside the project root" contradicts itself (review
 					// round 3, PLAN-3).
 					return ProjectPlan{}, fmt.Errorf("project-register: lock entry %q records target %q under the project's own skills/ directory, which is never a registration destination", e.ID, target)
+				}
+				if err == errDestResolvesUnderSkillsDir {
+					return ProjectPlan{}, fmt.Errorf("project-register: lock entry %q records target %q, which resolves into the project's own skills/ tree and is never a registration destination", e.ID, target)
 				}
 				return ProjectPlan{}, fmt.Errorf("project-register: lock entry %q records target %q outside the project root: %v", e.ID, target, err)
 			}
@@ -361,6 +382,33 @@ func resolveWritePath(in RegisterInput, root, rel string) (string, error) {
 	if !inside {
 		return "", fmt.Errorf("escapes the project root through a symlink")
 	}
+	// Decision (f), applied to the RESOLVED destination. Proving the
+	// destination is inside the root never proves it is OUTSIDE <root>/skills,
+	// and underSkillsDir above only ever saw the repo-relative string: with
+	// `<root>/.claude/skills` a symlink to `<root>/skills`, the registration
+	// was accepted and its bytes would have landed physically in the project's
+	// own source tree (review round 2, SEC-1). Resolving both sides through the
+	// same injected resolver is the only check that sees it.
+	underSkills, err := resolvedWithinRootUsing(in.ResolvePath, filepath.Join(root, projectSourceSkillsDir), abs)
+	if err != nil {
+		return "", fmt.Errorf("could not be resolved: %v", err)
+	}
+	if underSkills {
+		return "", errDestResolvesUnderSkillsDir
+	}
+	// resolvedWithinRootUsing is strictly-below, so the destination resolving
+	// to skills/ ITSELF would slip past it; decision (f) forbids that path too.
+	resolvedSkills, err := in.ResolvePath(filepath.Join(root, projectSourceSkillsDir))
+	if err != nil {
+		return "", fmt.Errorf("could not be resolved: %v", err)
+	}
+	resolvedDest, err := in.ResolvePath(abs)
+	if err != nil {
+		return "", fmt.Errorf("could not be resolved: %v", err)
+	}
+	if filepath.Clean(resolvedDest) == filepath.Clean(resolvedSkills) {
+		return "", errDestResolvesUnderSkillsDir
+	}
 	return abs, nil
 }
 
@@ -371,12 +419,24 @@ func resolveWritePath(in RegisterInput, root, rel string) (string, error) {
 // outside it.
 var errDestUnderSkillsDir = fmt.Errorf("lies under skills/, which is never a registration destination")
 
+// errDestResolvesUnderSkillsDir is the RESOLVED half of the same decision-(f)
+// refusal (review round 2, SEC-1). It is a distinct value from
+// errDestUnderSkillsDir because the two say different things to a human: the
+// lexical one names a destination that spells skills/, this one names a
+// destination that spells something else and lands there anyway.
+var errDestResolvesUnderSkillsDir = fmt.Errorf("resolves into the project's own skills/ tree, which is never a registration destination")
+
 // checkFrontmatterAllowlist refuses any top-level frontmatter key outside
 // allowedFrontmatterKeys (validate step 4). Indented lines are children of a
 // block (metadata's author/version, a folded description) and are not
 // top-level keys.
 func checkFrontmatterAllowlist(frontmatter string) error {
 	for _, line := range strings.Split(frontmatter, "\n") {
+		// Defence in depth, shadowed by the splitKeyValue check below: a blank
+		// line carries no "key:" and is dropped there anyway, so deleting this
+		// changes no verdict and no test can witness it (review round 2,
+		// COV-5). It is kept because it states the intent — blank lines are not
+		// keys — at the top of the loop rather than as a side effect of parsing.
 		if strings.TrimSpace(line) == "" {
 			continue
 		}

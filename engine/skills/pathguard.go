@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -78,8 +79,17 @@ func resolvePathKeepingMissing(p string) (string, error) {
 
 		parent := filepath.Dir(cur)
 		if parent == cur {
-			// Walked to the filesystem root without finding anything that
+			// Walked to the topmost component without finding anything that
 			// exists; there is nothing left to resolve against.
+			//
+			// Defence in depth, shadowed by the EvalSymlinks call at the top of
+			// the loop: the topmost component is "/" for an absolute path and
+			// "." for a relative one, and both always resolve, so this is
+			// unreachable on any filesystem that has a root — no test can
+			// witness it (review round 2, COV-5). It is kept because it is the
+			// loop's termination proof: without it the walk would spin forever
+			// rather than answer, and that is not a failure mode worth trading
+			// for a covered line.
 			return "", err
 		}
 		tail = append([]string{filepath.Base(cur)}, tail...)
@@ -111,6 +121,13 @@ func resolvedWithinRoot(root, p string) (bool, error) {
 // PlanProjectRegister, which is pure by contract, and any test that needs to
 // control every path the guard sees. resolvedWithinRoot is the production
 // binding of the same single implementation.
+//
+// Both failure modes here are FAIL-OPEN if left implicit, which is why each
+// one is refused explicitly rather than allowed to fall through to withinRoot:
+// withinRoot("", p) is true for EVERY absolute path, so a root that resolves to
+// nothing — because the resolver errored and its zero value was used, or
+// because it handed back an empty string with no error at all — would report
+// every destination on earth as contained (review round 2, COV-4).
 func resolvedWithinRootUsing(resolve func(string) (string, error), root, p string) (bool, error) {
 	resolvedRoot, err := resolve(root)
 	if err != nil {
@@ -119,6 +136,9 @@ func resolvedWithinRootUsing(resolve func(string) (string, error), root, p strin
 	resolvedPath, err := resolve(p)
 	if err != nil {
 		return false, err
+	}
+	if resolvedRoot == "" || resolvedPath == "" {
+		return false, fmt.Errorf("resolver returned an empty path for root %q / path %q", root, p)
 	}
 	return withinRoot(filepath.Clean(resolvedRoot), filepath.Clean(resolvedPath)), nil
 }
