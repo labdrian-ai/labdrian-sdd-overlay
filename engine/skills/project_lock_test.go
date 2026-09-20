@@ -76,15 +76,132 @@ func TestSerializeProjectLock_DeterministicIndentAndTrailingNewline(t *testing.T
 	if strings.HasSuffix(string(first), "\n\n") {
 		t.Errorf("expected exactly one trailing newline, got: %q", first)
 	}
-	for _, line := range strings.Split(strings.TrimRight(string(first), "\n"), "\n") {
-		if line == "" {
-			continue
-		}
-		trimmed := strings.TrimLeft(line, " ")
-		indentLen := len(line) - len(trimmed)
-		if indentLen%2 != 0 {
-			t.Errorf("expected 2-space indentation, got indent of %d on line %q", indentLen, line)
-		}
+	// Exact indentation, key order and field names are pinned precisely by
+	// TestSerializeProjectLock_GoldenBytes below (a modulo-2 length check
+	// here would also pass for 4-space or tab indentation).
+}
+
+func TestSerializeProjectLock_GoldenBytes(t *testing.T) {
+	l := ProjectLock{
+		Version: 1,
+		Skills: []ProjectLockEntry{
+			{
+				ID:         "alpha-skill",
+				Provenance: "procedural",
+				Candidate:  "procedural/candidates/repeated-success/alpha-skill",
+				SHA256:     strings.Repeat("b", 64),
+				Revision:   1,
+				Targets:    []string{".claude/skills/alpha-skill/SKILL.md"},
+			},
+		},
+	}
+	want := `{
+  "version": 1,
+  "skills": [
+    {
+      "id": "alpha-skill",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/alpha-skill",
+      "sha256": "` + strings.Repeat("b", 64) + `",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/alpha-skill/SKILL.md"
+      ]
+    }
+  ]
+}
+`
+	got, err := SerializeProjectLock(l)
+	if err != nil {
+		t.Fatalf("SerializeProjectLock: %v", err)
+	}
+	if string(got) != want {
+		t.Errorf("SerializeProjectLock golden mismatch:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
+func TestSerializeProjectLock_StableForDuplicateIDs(t *testing.T) {
+	l := ProjectLock{Version: 1, Skills: []ProjectLockEntry{
+		{ID: "dup", Provenance: "procedural", Candidate: "first", SHA256: strings.Repeat("a", 64), Revision: 1, Targets: []string{"t1"}},
+		{ID: "dup", Provenance: "procedural", Candidate: "second", SHA256: strings.Repeat("b", 64), Revision: 2, Targets: []string{"t2"}},
+	}}
+	data, err := SerializeProjectLock(l)
+	if err != nil {
+		t.Fatalf("SerializeProjectLock: %v", err)
+	}
+	idxFirst := strings.Index(string(data), `"first"`)
+	idxSecond := strings.Index(string(data), `"second"`)
+	if idxFirst < 0 || idxSecond < 0 {
+		t.Fatalf("serialized output missing an expected candidate: %s", data)
+	}
+	if idxFirst > idxSecond {
+		t.Errorf("expected original relative order preserved for equal-id entries (stable sort), got:\n%s", data)
+	}
+
+	l2 := ProjectLock{Version: 1, Skills: []ProjectLockEntry{
+		{ID: "dup", Provenance: "procedural", Candidate: "second", SHA256: strings.Repeat("b", 64), Revision: 2, Targets: []string{"t2"}},
+		{ID: "dup", Provenance: "procedural", Candidate: "first", SHA256: strings.Repeat("a", 64), Revision: 1, Targets: []string{"t1"}},
+	}}
+	data2, err := SerializeProjectLock(l2)
+	if err != nil {
+		t.Fatalf("SerializeProjectLock: %v", err)
+	}
+	idxFirst2 := strings.Index(string(data2), `"first"`)
+	idxSecond2 := strings.Index(string(data2), `"second"`)
+	if idxSecond2 > idxFirst2 {
+		t.Errorf("expected reversed input order preserved for equal-id entries (stable sort), got:\n%s", data2)
+	}
+}
+
+func TestParseProjectLock_DuplicateIDRefused(t *testing.T) {
+	data := []byte(`{"version": 1, "skills": [
+		{"id": "dup", "provenance": "procedural", "candidate": "c1", "sha256": "` + strings.Repeat("a", 64) + `", "revision": 1, "targets": []},
+		{"id": "dup", "provenance": "procedural", "candidate": "c2", "sha256": "` + strings.Repeat("b", 64) + `", "revision": 2, "targets": []}
+	]}`)
+	if _, err := ParseProjectLock(data); err == nil {
+		t.Error("ParseProjectLock: expected refusal on duplicate skill ids, got nil error")
+	}
+}
+
+func TestParseProjectLock_TrailingObjectRefused(t *testing.T) {
+	data := []byte(`{"version": 1, "skills": []}{"version": 1, "skills": []}`)
+	if _, err := ParseProjectLock(data); err == nil {
+		t.Error("ParseProjectLock: expected refusal on a second JSON value trailing the lock, got nil error")
+	}
+}
+
+func TestParseProjectLock_TrailingBytesRefused(t *testing.T) {
+	data := []byte(`{"version": 1, "skills": []}` + "\ngarbage")
+	if _, err := ParseProjectLock(data); err == nil {
+		t.Error("ParseProjectLock: expected refusal on trailing non-JSON bytes after the lock, got nil error")
+	}
+}
+
+func TestSerializeProjectLock_NormalizesZeroVersion(t *testing.T) {
+	data, err := SerializeProjectLock(ProjectLock{})
+	if err != nil {
+		t.Fatalf("SerializeProjectLock: %v", err)
+	}
+	if !strings.Contains(string(data), `"version": 1`) {
+		t.Errorf("expected zero-value Version normalized to 1, got:\n%s", data)
+	}
+}
+
+func TestSerializeProjectLock_RefusesUnsupportedVersion(t *testing.T) {
+	if _, err := SerializeProjectLock(ProjectLock{Version: 2}); err == nil {
+		t.Error("SerializeProjectLock: expected refusal for version 2, got nil error")
+	}
+}
+
+func TestProceduralAuthor_ExactValue(t *testing.T) {
+	if ProceduralAuthor != "labdrian-overlay procedural" {
+		t.Errorf("ProceduralAuthor = %q, want %q", ProceduralAuthor, "labdrian-overlay procedural")
+	}
+}
+
+func TestProjectLockRelPath_ExactValue(t *testing.T) {
+	if ProjectLockRelPath != ".labdrian/procedural-skills.lock.json" {
+		t.Errorf("ProjectLockRelPath = %q, want %q", ProjectLockRelPath, ".labdrian/procedural-skills.lock.json")
 	}
 }
 
@@ -196,7 +313,7 @@ func TestStampProvenance_InsertsIntoExistingMetadataBlock(t *testing.T) {
 	if !strings.Contains(s, "  provenance: procedural") {
 		t.Errorf("expected stamped provenance line, got:\n%s", s)
 	}
-	if !strings.Contains(s, "  candidate: procedural/candidates/repeated-success/probe-skill") {
+	if !strings.Contains(s, `  candidate: "procedural/candidates/repeated-success/probe-skill"`) {
 		t.Errorf("expected stamped candidate line, got:\n%s", s)
 	}
 	// Preserves other metadata lines byte-for-byte.
@@ -224,30 +341,60 @@ Trigger: probe event.
 Always do X.
 `
 
+// extractMetadataBlock returns the lines of the top-level metadata: block in
+// s (the lines strictly between the metadata: line and the next top-level
+// line or closing fence), so assertions can anchor to the block itself
+// instead of scanning the whole document (R2-unanchored-test-assertions).
+func extractMetadataBlock(t *testing.T, s string) string {
+	t.Helper()
+	lines := strings.Split(s, "\n")
+	metaIdx := -1
+	for i, line := range lines {
+		if strings.TrimSpace(line) == "metadata:" {
+			metaIdx = i
+			break
+		}
+	}
+	if metaIdx == -1 {
+		t.Fatalf("no top-level metadata: block found in:\n%s", s)
+	}
+	end := metaIdx + 1
+	for end < len(lines) {
+		line := lines[end]
+		if strings.TrimSpace(line) == "" || strings.HasPrefix(line, " ") || strings.HasPrefix(line, "\t") {
+			end++
+			continue
+		}
+		break
+	}
+	return strings.Join(lines[metaIdx+1:end], "\n")
+}
+
 func TestStampProvenance_ReplacesExistingProvenanceLines(t *testing.T) {
 	out, err := StampProvenance([]byte(provenanceFixtureWithExisting), "procedural/candidates/repeated-success/probe-skill")
 	if err != nil {
 		t.Fatalf("StampProvenance: %v", err)
 	}
 	s := string(out)
+	block := extractMetadataBlock(t, s)
 
-	if strings.Contains(s, "someone-else") {
-		t.Errorf("expected old author line replaced, got:\n%s", s)
+	if strings.Contains(block, "someone-else") {
+		t.Errorf("expected old author value replaced within the metadata block, got:\n%s", block)
 	}
-	if strings.Contains(s, "manual") {
-		t.Errorf("expected old provenance value replaced, got:\n%s", s)
+	if strings.Contains(block, "manual") {
+		t.Errorf("expected old provenance value replaced within the metadata block, got:\n%s", block)
 	}
-	if strings.Contains(s, "old-key") {
-		t.Errorf("expected old candidate value replaced, got:\n%s", s)
+	if strings.Contains(block, "old-key") {
+		t.Errorf("expected old candidate value replaced within the metadata block, got:\n%s", block)
 	}
-	if strings.Count(s, "author:") != 1 {
-		t.Errorf("expected exactly one author: line, got:\n%s", s)
+	if strings.Count(block, "author:") != 1 {
+		t.Errorf("expected exactly one author: line within the metadata block, got:\n%s", block)
 	}
-	if strings.Count(s, "provenance:") != 1 {
-		t.Errorf("expected exactly one provenance: line, got:\n%s", s)
+	if strings.Count(block, "provenance:") != 1 {
+		t.Errorf("expected exactly one provenance: line within the metadata block, got:\n%s", block)
 	}
-	if strings.Count(s, "candidate:") != 1 {
-		t.Errorf("expected exactly one candidate: line, got:\n%s", s)
+	if strings.Count(block, "candidate:") != 1 {
+		t.Errorf("expected exactly one candidate: line within the metadata block, got:\n%s", block)
 	}
 	if !strings.Contains(s, `  author: "`+ProceduralAuthor+`"`) {
 		t.Errorf("expected new author line, got:\n%s", s)
@@ -255,7 +402,7 @@ func TestStampProvenance_ReplacesExistingProvenanceLines(t *testing.T) {
 	if !strings.Contains(s, "  provenance: procedural") {
 		t.Errorf("expected new provenance line, got:\n%s", s)
 	}
-	if !strings.Contains(s, "  candidate: procedural/candidates/repeated-success/probe-skill") {
+	if !strings.Contains(s, `  candidate: "procedural/candidates/repeated-success/probe-skill"`) {
 		t.Errorf("expected new candidate line, got:\n%s", s)
 	}
 	// Preserves other metadata lines (version) byte-for-byte in original order.
@@ -337,5 +484,135 @@ func TestStampProvenance_OutputPassesLintSkillFile(t *testing.T) {
 	hard, _ := LintSkillFile(out)
 	if len(hard) != 0 {
 		t.Errorf("expected zero hard lint errors on stamped output, got: %v\noutput:\n%s", hard, out)
+	}
+}
+
+// --- StampProvenance candidateKey validation (review-70263a4dee1c98b7) ---
+
+func TestStampProvenance_RefusesEmptyCandidateKey(t *testing.T) {
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), ""); err == nil {
+		t.Error("StampProvenance: expected refusal on empty candidateKey, got nil error")
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithNewline(t *testing.T) {
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), "procedural/candidates/repeated-success/probe\nskill"); err == nil {
+		t.Error("StampProvenance: expected refusal on candidateKey containing a newline, got nil error")
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithControlChar(t *testing.T) {
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), "probe\x01skill"); err == nil {
+		t.Error("StampProvenance: expected refusal on candidateKey containing a control character, got nil error")
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithColonSpace(t *testing.T) {
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), ": probe-skill"); err == nil {
+		t.Error("StampProvenance: expected refusal on candidateKey starting with a colon indicator, got nil error")
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithLeadingQuote(t *testing.T) {
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), `"probe-skill`); err == nil {
+		t.Error("StampProvenance: expected refusal on candidateKey starting with a quote, got nil error")
+	}
+}
+
+func TestStampProvenance_QuotesAndEscapesCandidateValue(t *testing.T) {
+	out, err := StampProvenance([]byte(provenanceFixtureNoExisting), "procedural/candidates/repeated-success/probe-skill")
+	if err != nil {
+		t.Fatalf("StampProvenance: %v", err)
+	}
+	if !strings.Contains(string(out), `candidate: "procedural/candidates/repeated-success/probe-skill"`) {
+		t.Errorf("expected double-quoted candidate value, got:\n%s", out)
+	}
+}
+
+// --- StampProvenance inline metadata refusal (review-70263a4dee1c98b7) ---
+
+func TestStampProvenance_RefusesInlineMetadataFlowMapping(t *testing.T) {
+	fixture := `---
+name: probe-skill
+description: "Trigger: probe event. Reply with the probe result."
+license: MIT
+metadata: {}
+---
+## Activation Contract
+
+Trigger: probe event.
+`
+	if _, err := StampProvenance([]byte(fixture), "procedural/candidates/repeated-success/probe-skill"); err == nil {
+		t.Error("StampProvenance: expected refusal on inline flow-mapping metadata value, got nil error")
+	}
+}
+
+func TestStampProvenance_RefusesInlineMetadataNull(t *testing.T) {
+	fixture := `---
+name: probe-skill
+description: "Trigger: probe event. Reply with the probe result."
+license: MIT
+metadata: null
+---
+## Activation Contract
+
+Trigger: probe event.
+`
+	if _, err := StampProvenance([]byte(fixture), "procedural/candidates/repeated-success/probe-skill"); err == nil {
+		t.Error("StampProvenance: expected refusal on inline null metadata value, got nil error")
+	}
+}
+
+// --- StampProvenance stamp indentation (review-70263a4dee1c98b7) ---
+
+func TestStampProvenance_PreservesExistingFourSpaceIndent(t *testing.T) {
+	fixture := `---
+name: probe-skill
+description: "Trigger: probe event. Reply with the probe result."
+license: MIT
+metadata:
+    version: "1.0"
+---
+## Activation Contract
+
+Trigger: probe event.
+`
+	out, err := StampProvenance([]byte(fixture), "procedural/candidates/repeated-success/probe-skill")
+	if err != nil {
+		t.Fatalf("StampProvenance: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, "    version: \"1.0\"") {
+		t.Fatalf("expected preserved four-space version line, got:\n%s", s)
+	}
+	if !strings.Contains(s, `    author: "`+ProceduralAuthor+`"`) {
+		t.Errorf("expected stamped author line to reuse the block's four-space indent, got:\n%s", s)
+	}
+	if !strings.Contains(s, "    provenance: procedural") {
+		t.Errorf("expected stamped provenance line to reuse the block's four-space indent, got:\n%s", s)
+	}
+	if !strings.Contains(s, `    candidate: "procedural/candidates/repeated-success/probe-skill"`) {
+		t.Errorf("expected stamped candidate line to reuse the block's four-space indent, got:\n%s", s)
+	}
+}
+
+func TestStampProvenance_FallsBackToTwoSpaceIndentForEmptyBlock(t *testing.T) {
+	fixture := `---
+name: probe-skill
+description: "Trigger: probe event. Reply with the probe result."
+license: MIT
+metadata:
+---
+## Activation Contract
+
+Trigger: probe event.
+`
+	out, err := StampProvenance([]byte(fixture), "procedural/candidates/repeated-success/probe-skill")
+	if err != nil {
+		t.Fatalf("StampProvenance: %v", err)
+	}
+	s := string(out)
+	if !strings.Contains(s, `  author: "`+ProceduralAuthor+`"`) {
+		t.Errorf("expected two-space fallback indent for an empty metadata block, got:\n%s", s)
 	}
 }
