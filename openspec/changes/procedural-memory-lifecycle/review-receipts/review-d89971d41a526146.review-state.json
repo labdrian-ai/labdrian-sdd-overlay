@@ -1,0 +1,194 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:8034a099e27766fe9729d77de31e5529bd38427650f29b0e352606e90cd3b7b2",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-d89971d41a526146",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a85f529487739082e01456227743e06cf7648dfc",
+      "candidate_tree": "a29d88b05fe86d17495e75c8e852a5042feb668f",
+      "paths_digest": "sha256:c7b5ad7b114263f81ca8951a182f0dcbb5bccf3965338c241afa5c6d966d34c1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:3ea112a4b9705528e38edd4698c2b61a025ee991509920d9314a9221b9d92539"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "a85f529487739082e01456227743e06cf7648dfc",
+      "candidate_tree": "a29d88b05fe86d17495e75c8e852a5042feb668f",
+      "paths_digest": "sha256:c7b5ad7b114263f81ca8951a182f0dcbb5bccf3965338c241afa5c6d966d34c1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:3ea112a4b9705528e38edd4698c2b61a025ee991509920d9314a9221b9d92539"
+    },
+    "genesis_paths": [
+      "engine/skills/project_lock.go",
+      "engine/skills/project_lock_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 128,
+    "correction_budget": 64,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:c85f27336e7f454b9229fe6fc000722e09379ba096da96bba37ef235d8539863",
+    "capture_phase_revision": "sha256:09578ba0e59cb0635cfbe2fc630483745ef892b1d3dc3af0d23c928823ad1777",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:3ea112a4b9705528e38edd4698c2b61a025ee991509920d9314a9221b9d92539",
+        "capture_phase_revision": "sha256:09578ba0e59cb0635cfbe2fc630483745ef892b1d3dc3af0d23c928823ad1777",
+        "artifact_digest": "sha256:2057c4ce9ce33bfee0b5704bae8b583df8929e77101f4976612d653b8c47da6c",
+        "result_hash": "sha256:ce07926ebfd221d2c46b146963fde665ecdc65fefaaf15766158aceb1e49bb71",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:8382512bbbdea2483cd5a53b7a296dbb7ef2e1d461363e3228b0ca9c6df7fb03",
+            "lineage_id": "review-d89971d41a526146",
+            "authority_revision": "sha256:09578ba0e59cb0635cfbe2fc630483745ef892b1d3dc3af0d23c928823ad1777",
+            "target_identity": "sha256:3ea112a4b9705528e38edd4698c2b61a025ee991509920d9314a9221b9d92539",
+            "base_tree": "a85f529487739082e01456227743e06cf7648dfc",
+            "candidate_tree": "a29d88b05fe86d17495e75c8e852a5042feb668f",
+            "changed_path_manifest_sha256": "sha256:97372743583dfe6e610e399864c48b24a7730f7bc8b90d110ee9294b37a4ca80",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:8382512bbbdea2483cd5a53b7a296dbb7ef2e1d461363e3228b0ca9c6df7fb03",
+            "raw_sha256": "sha256:a32b5e23881127e5cb2c2f971d8d95bb049ccd4a15347503b1d8454ee6be7b33",
+            "canonical_sha256": "sha256:2749290e910be924ce3141b8a6b8a74019ea36cc34579c0b24f010d7a89611d2",
+            "result_hash": "sha256:ce07926ebfd221d2c46b146963fde665ecdc65fefaaf15766158aceb1e49bb71",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:8382512bbbdea2483cd5a53b7a296dbb7ef2e1d461363e3228b0ca9c6df7fb03",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-sort-order-independence-no-longer-proved",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:123-127",
+                "severity": "WARNING",
+                "claim": "The renamed stability test claims to prove order-independent serialization, but it no longer does: the candidate deleted the second half of the base test (which re-serialized the same entries in reversed input order and asserted the output ordering was unchanged) and the surviving case feeds entries whose ids are already in ascending order. The single remaining assertion (`idxFirst \u003e idxSecond` fails the test) would still pass if the sort in SerializeProjectLock were removed entirely, so within this candidate nothing exercises the reordering path that the sort exists to provide.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:123-127 — the added doc comment asserts the test covers a \"deterministic, order-independent way\", naming order independence as the property under test",
+                  "engine/skills/project_lock_test.go:129-130 — the only inputs are one entry whose id sorts first and one whose id sorts second, supplied in that same ascending order, so the input is pre-sorted",
+                  "engine/skills/project_lock_test.go:142 — the sole ordering assertion only checks that the first candidate value precedes the second in the output, which holds for pre-sorted input with or without a sort step",
+                  "engine/skills/project_lock.go:94-101 — the newly added duplicate-id refusal is what made the deleted equal-id stability cases unrunnable, so the lost coverage is a direct consequence of this candidate"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "worsened"
+              },
+              {
+                "id": "R3-new-refusal-branch-not-pinned-to-its-error",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:574-590",
+                "severity": "SUGGESTION",
+                "claim": "The two tests covering the newly added interior double-quote and interior backslash refusals assert only that the returned error is non-nil; unlike the four sibling refusal tests added in the same hunk, they do not assert the message the new branch produces. They therefore prove that some refusal happens but not that the new branch is the one that fired, which is exactly the branch-distinguishability property the added header comment states these tests are meant to establish.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:525-530 — the added header comment states each refusal branch's test \"reaches exactly that branch (not an earlier one) and asserts the specific error it returns, so the branches stay distinguishable\"",
+                  "engine/skills/project_lock_test.go:537-538 and engine/skills/project_lock_test.go:559-560 — the leading-space and interior-colon-space tests do assert on the error text, establishing the pattern the two new tests depart from",
+                  "engine/skills/project_lock_test.go:578-579 and engine/skills/project_lock_test.go:587-588 — both new tests stop at `err == nil` with no assertion on the error text",
+                  "engine/skills/project_lock.go:158-159 — the new branch returns a distinct message naming the two forbidden characters, which is available to assert on"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-escaper-branches-now-unreachable",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:153-160",
+                "severity": "SUGGESTION",
+                "claim": "By refusing any candidate key containing a double quote or backslash, the candidate makes the corresponding escaping branches of escapeYAMLDoubleQuoted unreachable through StampProvenance, as the added comment itself acknowledges. Defense-in-depth code that no input can reach is also code no end-to-end test can prove, so it can silently rot; if the escaper is intended to stay, it needs a direct unit test at its own level, otherwise its behavior is unproved from this candidate onward.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:155-157 — the added comment states escapeYAMLDoubleQuoted \"still escapes both below as defense in depth, but no candidateKey reaching it may contain either\"",
+                  "engine/skills/project_lock.go:158 — the added ContainsAny guard rejects both characters before any call site can reach the escaper",
+                  "engine/skills/project_lock_test.go:574-590 — the only new tests for these characters assert refusal, so no test in this candidate drives escaped output through the escaper"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-serialize-refusal-assertion-narrow",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:154-155",
+                "severity": "SUGGESTION",
+                "claim": "The duplicate-id refusal test checks only that the error is non-nil and discards the returned byte slice. It does not assert the error identifies a duplicate skill id, nor that the returned bytes are nil, so a future refusal for an unrelated reason (or a partial write returned alongside an error) would keep this test green while the stated invariant regressed.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:154-155 — the assertion is `if _, err := SerializeProjectLock(l); err == nil`, discarding the data return and never inspecting the error",
+                  "engine/skills/project_lock.go:97 — the production path returns a specific message naming the duplicate id that the test could pin"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all three manifest paths from the supplied patches only; no working tree, index, or command output was consulted.",
+              "engine/skills/project_lock.go:94-101 adds a pre-sort duplicate-id scan over l.Skills that returns an error naming the offending id, closing the write/read asymmetry against ParseProjectLock's duplicate refusal. The check runs after the version validation, so a lock that is both mis-versioned and duplicated reports the version error first — deterministic and acceptable.",
+              "engine/skills/project_lock.go:153-160 adds an interior double-quote/backslash refusal to validateCandidateKey. It is placed after the existing colon-space and hash-space checks and before the final `return nil`, so it cannot mask an earlier, more specific branch. It does newly reject inputs that the base accepted and escaped; no caller evidence is visible within this candidate's scope to confirm that no producer of candidate keys emits a backslash, so the blast radius of the tightened contract is unproved here rather than disproved.",
+              "engine/skills/project_lock_test.go:146-157 replaces the base's duplicate-tolerant serialize expectation with a refusal expectation, which is the correct externally observable assertion for the new behavior at the cheapest level.",
+              "engine/skills/project_lock_test.go:525-590 adds six per-branch refusal tests for validateCandidateKey; four pin the exact error text, two (interior quote, interior backslash) assert only non-nil error.",
+              "engine/skills/project_lock_test.go:123-142 keeps only the pre-sorted half of the former stable-sort test, so the reordering behavior of the sort is no longer exercised by this test; whether the golden-bytes test elsewhere in the file covers it is outside the visible hunks, which is why this is reported as a weakened proof rather than a blocker.",
+              "engine/skills/project_lock_test.go:687-693 strengthens the empty-metadata-block fallback test to assert the two-space indent on all three stamped lines instead of only the author line, which is a genuine coverage improvement.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md:96 is a documentation-only record of this correction commit with no runtime or test behavior.",
+              "No BLOCKER or CRITICAL reliability defect was found: every production change is a strictly narrowing refusal with an accompanying failing-path test, and no failure path added here can produce a silent success."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "4c17fc52cdd8b37db77b7b6739b295d505c1a888b450d93d989e48bcdece9787",
+    "initial_atomic_start": {
+      "lineage_id": "review-d89971d41a526146",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:3ea112a4b9705528e38edd4698c2b61a025ee991509920d9314a9221b9d92539",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "a85f529487739082e01456227743e06cf7648dfc",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 128,
+      "correction_budget": 64,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

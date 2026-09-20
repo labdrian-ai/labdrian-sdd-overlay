@@ -20,6 +20,7 @@ import (
 var allowedImports = map[string]bool{
 	"bufio":         true,
 	"bytes":         true,
+	"encoding/json": true,
 	"fmt":           true,
 	"io":            true,
 	"io/fs":         true,
