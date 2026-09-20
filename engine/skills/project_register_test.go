@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"fmt"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -709,6 +710,29 @@ func TestPlanProjectRegister_RefusesLockTargetUnderSkillsDir(t *testing.T) {
 // TestPlanProjectRegister_RefusesWithoutStatProbe covers TQ-4: the
 // nil-ResolvePath fail-closed guard was tested while its nil-Stat twin was
 // not.
+// A destination whose Stat fails for a reason other than "does not exist" —
+// a permission denial, say — must refuse the plan. Reading such an error as
+// "absent" would fail open: the planner would decide nothing is in the way
+// while it simply could not look.
+func TestPlanProjectRegister_RefusesUninspectableDestination(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	realStat := in.Stat
+	in.Stat = func(p string) (fs.FileInfo, error) {
+		if strings.Contains(p, filepath.Join(".claude", "skills", "tidy-worktree")) {
+			return nil, fmt.Errorf("stat %s: %w", p, fs.ErrPermission)
+		}
+		return realStat(p)
+	}
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("an uninspectable destination must refuse the plan, got %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "inspecting destination") {
+		t.Fatalf("refusal %q does not name the failed inspection", err)
+	}
+}
+
 func TestPlanProjectRegister_RefusesWithoutStatProbe(t *testing.T) {
 	in := registerInput(t, "tidy-worktree")
 	in.Stat = nil
