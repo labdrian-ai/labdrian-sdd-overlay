@@ -202,12 +202,31 @@ Rules:
 
 **Choice**: `sha256` is the lowercase hex SHA-256 of the exact bytes written to each target `SKILL.md`, that is, the stamped draft. All targets receive identical bytes, so the lock holds one hash per skill. There is no normalization: no line-ending conversion, no whitespace trim and no frontmatter canonicalization. Only `SKILL.md` is hashed, because project-tier skills are single-file by construction (the input is one draft file, and `assets/`, `references/` and `scripts/` are never written).
 
-**Ownership-by-hash** is computed by `EvaluateOwnership(lockEntry, readFile, readDir)`. A skill is **agent-owned** only when all of the following hold:
+**Ownership-by-hash** is computed by `EvaluateOwnership(root, lockEntry, readFile, readDir, resolvePath)`. A skill is **agent-owned** only when all of the following hold:
 - The lock entry exists.
+- `root` is absolute, and every recorded target resolves — lexically AND after symlink resolution — strictly below it.
 - Every recorded target file exists and hashes to `sha256`.
 - Every target skill directory contains exactly one entry, `SKILL.md`.
 
-Anything else makes it **human-owned**, reported with the first failing reason: `hash-mismatch <path>`, `missing <path>` or `extra-entry <path>`. The check reads only the lock's hash; it never reads or compares against the candidate record's `Registered`/`Promoted` hash line. That record line is an informational mirror for humans, kept in sync by the same write that updates the lock, but is not a second source the ownership check consults.
+Anything else makes it **human-owned**, reported with the first failing reason. The check reads only the lock's hash; it never reads or compares against the candidate record's `Registered`/`Promoted` hash line. That record line is an informational mirror for humans, kept in sync by the same write that updates the lock, but is not a second source the ownership check consults.
+
+**Amendment 2026-09-20 (reason vocabulary), driven by the workflow review of slice 3a-ii (SEC-1, in round 1) and its round-2 review (SEC-2, SEC-3, ROOT-1, COV-1, DOC-1).** The original vocabulary was `hash-mismatch <path>`, `missing <path>`, `extra-entry <path>` and `not-in-lock`. The full set is now:
+
+| Reason | Meaning |
+|---|---|
+| `hash-mismatch <path>` | The target exists but its bytes differ from the lock's `sha256` |
+| `missing <path>` | The target file could not be read, or its directory could not be listed |
+| `extra-entry <path>` | The target skill directory holds something besides `SKILL.md` |
+| `not-in-lock` | The zero entry — the caller's lock lookup missed |
+| `no-targets <id>` | The entry is in the lock but records no targets (malformed) |
+| `invalid-target <target>` | The target is empty, absolute, carries a `..` component, or names `root` itself rather than a path strictly below it |
+| `invalid-root <root>` | `root` is not absolute, so containment cannot be decided at all |
+| `escapes-root <target>` | The target resolves, through a symlink, to a path outside `root` |
+| `no-resolver <id>` | No symlink resolver was injected, so resolved containment cannot be proved |
+| `unresolved-root <root>` | The injected resolver failed on `root` |
+| `unresolved-target <target>` | The injected resolver failed on that target |
+
+`invalid-root`, `no-resolver`, `unresolved-root` and `unresolved-target` are "ownership cannot be proved", while `invalid-target` and `escapes-root` are proven refusals; both fold into human-owned — the safe direction, because the agent then stops. Containment is proved in two steps because the first is purely lexical: a target such as `link/SKILL.md`, where `root/link` is a symlink out of the project, names no `..` and therefore passes every lexical guard; only comparing the RESOLVED target against the RESOLVED root refuses it. `resolvePath` is injected rather than reached through `path/filepath` so `EvaluateOwnership` keeps its defining property — it performs no filesystem access of its own — and its contract is: resolve every symlink in the path's EXISTING ancestry, keep non-existent components literal (so an ordinary absent target still reports `missing <path>`), and error only on a genuine resolution failure. `filepath.EvalSymlinks` alone does not satisfy that contract (it fails on a missing final component), so the caller wraps it: tasks.md 3b-i.5b.
 
 **Alternatives considered**: normalizing CRLF and trailing whitespace before hashing. Rejected: any byte change means someone other than the agent touched the file, and normalization would hide real edits. The false-positive direction (a `core.autocrlf` checkout reads as human-owned) is the safe direction: the agent stops.
 
@@ -473,8 +492,8 @@ func SerializeProjectLock(l ProjectLock) ([]byte, error)  // sorted, 2-space ind
 func HashSkill(data []byte) string                        // lowercase hex sha256
 func ValidateCandidateKey(key string) error
 func StampProvenance(draft []byte, candidateKey string) ([]byte, error)
-type Ownership struct{ AgentOwned bool; Reason string } // Reason: "", "hash-mismatch <p>", "missing <p>", "extra-entry <p>", "not-in-lock"
-func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error)) Ownership
+type Ownership struct{ AgentOwned bool; Reason string } // Reason: "" or one of the 11 reasons in the amended vocabulary above
+func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error), resolvePath func(string) (string, error)) Ownership // amended 2026-09-20: resolvePath closes the symlink escape (SEC-2)
 
 // project_register.go
 type ProjectTarget struct{ Name, Dir string }

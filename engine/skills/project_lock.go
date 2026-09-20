@@ -2,9 +2,14 @@ package skills
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -155,8 +160,15 @@ func validateCandidateKey(candidateKey string) error {
 	// R3-candidate-escape-unproved, decision (a)). escapeYAMLDoubleQuoted still
 	// escapes both below as defense in depth, but no candidateKey reaching it
 	// may contain either.
-	if strings.ContainsAny(candidateKey, `"\`) {
-		return fmt.Errorf("stamp provenance: candidateKey must not contain %q or %q", `"`, `\`)
+	//
+	// The two characters get one branch and one message each
+	// (review-d89971d41a526146): a shared message left the two refusals
+	// indistinguishable, so neither test could prove which branch it reached.
+	if strings.Contains(candidateKey, `"`) {
+		return fmt.Errorf("stamp provenance: candidateKey must not contain a double quote %q", `"`)
+	}
+	if strings.Contains(candidateKey, `\`) {
+		return fmt.Errorf("stamp provenance: candidateKey must not contain a backslash %q", `\`)
 	}
 	return nil
 }
@@ -295,4 +307,269 @@ func StampProvenance(draft []byte, candidateKey string) ([]byte, error) {
 	out = append(out, lines[blockEnd:]...)
 
 	return []byte(strings.Join(out, "\n")), nil
+}
+
+// HashSkill returns the lowercase hex SHA-256 of data, which for a registered
+// skill is the exact stamped bytes written to every target SKILL.md
+// (design.md, "Ownership by hash"). There is deliberately no normalization first: no
+// line-ending conversion, no whitespace trim and no frontmatter
+// canonicalization. Any byte change means someone other than the agent
+// touched the file, and normalizing would hide a real edit; the
+// false-positive direction (a core.autocrlf checkout reading as human-owned)
+// is the safe one, because the agent then stops.
+func HashSkill(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// candidateKeyPrefix is the fixed item-30 prefix every candidate topic key
+// carries (design.md:163).
+const candidateKeyPrefix = "procedural/candidates/"
+
+// candidateKindSlugs maps each accepted candidate kind to the exact number of
+// slug segments that must follow it: repeated-success/<s> and
+// failure-recovery/<s>/<s> (design.md:163).
+var candidateKindSlugs = map[string]int{
+	"repeated-success": 1,
+	"failure-recovery": 2,
+}
+
+// ValidateCandidateKey reports whether key is one of the two item-30
+// candidate topic-key shapes — procedural/candidates/repeated-success/<s> and
+// procedural/candidates/failure-recovery/<s>/<s> — where every <s> is
+// non-empty and already normalized (NormalizeSlug(<s>) == <s>).
+//
+// This is a SHAPE check and is distinct from the unexported
+// validateCandidateKey, which checks whether a key is SAFE to stamp into YAML
+// frontmatter and therefore carries a "stamp provenance: " prefix on its
+// errors. The two cannot disagree: a shape-valid key is the literal prefix
+// plus NormalizeSlug output joined by '/', so it is drawn from [a-z0-9/-],
+// which the stamp-safety validator accepts — the shape-valid set is a strict
+// subset of the stamp-safe set. TestValidateCandidateKey_ShapeValidKeysAreAlsoStampSafe
+// pins that relation.
+func ValidateCandidateKey(key string) error {
+	if key == "" {
+		return fmt.Errorf("validate candidate key: must not be empty")
+	}
+	if !strings.HasPrefix(key, candidateKeyPrefix) {
+		return fmt.Errorf("validate candidate key: %q must start with %q", key, candidateKeyPrefix)
+	}
+	rest := strings.Split(strings.TrimPrefix(key, candidateKeyPrefix), "/")
+	kind := rest[0]
+	wantSlugs, ok := candidateKindSlugs[kind]
+	if !ok {
+		return fmt.Errorf("validate candidate key: unknown candidate kind %q, want %q or %q", kind, "repeated-success", "failure-recovery")
+	}
+	slugs := rest[1:]
+	if len(slugs) != wantSlugs {
+		return fmt.Errorf("validate candidate key: %q must have exactly %d slug segments after %q, got %d", key, wantSlugs, kind, len(slugs))
+	}
+	for i, s := range slugs {
+		if s == "" {
+			return fmt.Errorf("validate candidate key: slug segment %d of %q must not be empty", i+1, key)
+		}
+		if got := NormalizeSlug(s); got != s {
+			return fmt.Errorf("validate candidate key: slug segment %q of %q is not normalized, want %q", s, key, got)
+		}
+	}
+	return nil
+}
+
+// Ownership is the verdict of the ownership-by-hash check for one skill.
+// Reason is "" when AgentOwned is true, and otherwise the FIRST failing
+// reason — never a list — in one of these forms: "hash-mismatch <path>",
+// "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md, "Ownership by hash"),
+// plus the malformed-lock and unprovable-containment reasons this code adds
+// to that vocabulary (all seven carried into design.md's amended reason list):
+//   - "invalid-target <target>" — a recorded target that does not lexically
+//     resolve strictly inside the project root (empty, absolute, carrying a
+//     ".." component, or naming the root itself).
+//   - "no-targets <id>" — an entry present in the lock recording no targets.
+//   - "invalid-root <root>" — root is not absolute, so containment cannot be
+//     decided at all.
+//   - "no-resolver <id>" — no symlink resolver was injected, so resolved
+//     containment cannot be proved.
+//   - "unresolved-root <root>" / "unresolved-target <target>" — the injected
+//     resolver failed on root, or on that target.
+//   - "escapes-root <target>" — the target resolves, through a symlink, to a
+//     path outside the resolved root.
+//
+// "invalid-root", "no-resolver", "unresolved-root" and "unresolved-target"
+// mean "ownership cannot be proved"; "invalid-target" and "escapes-root" are
+// proven refusals. Both fold into human-owned: the safe direction, because
+// the agent then stops.
+// Each <path> is the repo-relative, slash-separated path as recorded in the
+// lock, so a status line stays independent of where the project is checked
+// out. <target> is likewise the raw recorded string, quoted verbatim so the
+// offending lock line is identifiable.
+type Ownership struct {
+	AgentOwned bool
+	Reason     string
+}
+
+// projectSkillFileName is the only file a project-tier procedural skill
+// directory may contain: project-tier skills are single-file by construction,
+// so assets/, references/ and scripts/ are never written (design.md, "Ownership by hash").
+const projectSkillFileName = "SKILL.md"
+
+// EvaluateOwnership decides whether the skill recorded by e is still
+// agent-owned under root. It is agent-owned only when all four conditions
+// hold (design.md, "Ownership by hash"): root is absolute, the lock entry
+// exists, every recorded target file resolves inside root and hashes to
+// e.SHA256, and every target skill directory contains exactly one entry,
+// SKILL.md. Anything else is human-owned, reported with the first failing
+// reason.
+//
+// The lock's sha256 is the single source of truth: this never reads or
+// compares against the candidate record's Registered/Promoted hash line,
+// which is an informational mirror for humans, not a second source
+// (design.md, "Ownership by hash").
+//
+// All filesystem access goes through the injected readFile and readDir, so
+// callers (and tests) fully control what is read; EvaluateOwnership itself
+// never touches os, git or Engram. A caller whose lock lookup missed passes
+// the zero ProjectLockEntry, which reports "not-in-lock".
+//
+// Every target is resolved and containment-checked BEFORE any read, so a
+// lock entry carrying "../../etc/passwd", an absolute path, or a path whose
+// directory components are symlinks pointing out of the project can never
+// cause a read outside root, nor report AgentOwned for a file the project
+// does not own.
+//
+// Containment is proved in two steps, because the first is purely lexical:
+//
+//  1. resolveTarget applies the lexical guards (no empty target, no absolute
+//     target, no ".." component, no target naming root itself, cleaned form
+//     under root).
+//  2. resolvePath, the injected symlink resolver, then resolves both root and
+//     the target, and containment is re-checked between the RESOLVED paths.
+//
+// Step 2 is what closes the symlink hole: "link/SKILL.md", where root/link is
+// a symlink to a sibling of root, passes every lexical guard (it names no
+// ".."), so only the resolved comparison refuses it
+// (review-slice-3a-ii-round-2, SEC-2). The resolver is injected rather than
+// called through path/filepath so EvaluateOwnership keeps its defining
+// property: it performs no filesystem access of its own, and a caller (or a
+// test) fully controls every path it sees.
+//
+// resolvePath's contract: return the argument with every symlink in its
+// EXISTING ancestry resolved, keeping components that do not exist literal
+// (filepath.EvalSymlinks alone does not satisfy this — it fails on a missing
+// final component — so the caller wraps it; see tasks.md 3b-i.5b), and return
+// an error only when resolution genuinely failed. That contract is what keeps
+// an ordinary absent target reporting "missing <path>" rather than a
+// resolution failure.
+//
+// A nil resolvePath fails closed with "no-resolver <id>": ownership never
+// silently degrades to the lexical check alone, because that check is exactly
+// what a symlinked component defeats.
+func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error), resolvePath func(string) (string, error)) Ownership {
+	if e.ID == "" {
+		return Ownership{Reason: "not-in-lock"}
+	}
+	// A non-absolute root makes every containment test meaningless (a relative
+	// or empty root silently turns every project skill human-owned), so it is
+	// one loud failure naming the bad root, never a per-target refusal.
+	if !filepath.IsAbs(root) {
+		return Ownership{Reason: "invalid-root " + root}
+	}
+	if len(e.Targets) == 0 {
+		return Ownership{Reason: "no-targets " + e.ID}
+	}
+	if resolvePath == nil {
+		return Ownership{Reason: "no-resolver " + e.ID}
+	}
+
+	cleanRoot := filepath.Clean(root)
+	resolvedRoot, err := resolvePath(cleanRoot)
+	if err != nil {
+		// Without a resolved root there is nothing to compare targets against
+		// (a root reached through a symlink would otherwise read as an escape).
+		return Ownership{Reason: "unresolved-root " + root}
+	}
+
+	for _, target := range e.Targets {
+		abs, ok := resolveTarget(root, target)
+		if !ok {
+			return Ownership{Reason: "invalid-target " + target}
+		}
+		resolved, err := resolvePath(abs)
+		if err != nil {
+			return Ownership{Reason: "unresolved-target " + target}
+		}
+		if !withinRoot(filepath.Clean(resolvedRoot), filepath.Clean(resolved)) {
+			return Ownership{Reason: "escapes-root " + target}
+		}
+		data, err := readFile(abs)
+		if err != nil {
+			return Ownership{Reason: "missing " + target}
+		}
+		if HashSkill(data) != e.SHA256 {
+			return Ownership{Reason: "hash-mismatch " + target}
+		}
+
+		dirRel := path.Dir(target)
+		entries, err := readDir(filepath.Dir(abs))
+		if err != nil {
+			// The exactly-one-entry condition cannot be proved, so the safe
+			// direction is human-owned.
+			return Ownership{Reason: "missing " + dirRel}
+		}
+		for _, entry := range entries {
+			if entry.Name() != projectSkillFileName {
+				return Ownership{Reason: "extra-entry " + path.Join(dirRel, entry.Name())}
+			}
+		}
+	}
+
+	return Ownership{AgentOwned: true}
+}
+
+// resolveTarget turns one lock-recorded, slash-separated target into an
+// absolute path under root, reporting false when the target may not be read
+// at all. It mirrors the R-055 containment guard in PlanInstall
+// (install.go:43-49): clean the joined path, then require the cleaned form to
+// still sit under the cleaned root plus a separator. A local helper rather
+// than a shared one because PlanInstall's guard is inlined there and returns
+// an error, while ownership must fold the refusal into an Ownership reason;
+// the containment test itself is byte-for-byte the same shape.
+//
+// Refused: an empty target, an absolute target, a target carrying a ".."
+// component, any target whose cleaned form escapes root, and a target that
+// names root itself rather than a path strictly below it (".", "./" and
+// "././" all clean to ".", which resolves to root and would hand a directory
+// to readFile — review-slice-3a-ii-round-2, SEC-3). That last case needs no
+// branch of its own: withinRoot is strictly-below, so it refuses root itself. The ".." check is explicit and precedes the containment
+// test because filepath.Join cleans "../.." away, so a target could resolve
+// back inside root while still meaning something the lock never recorded.
+//
+// This guard is LEXICAL ONLY: it cannot see a symlink, so a target whose
+// directory components leave root through one still passes here. Resolved
+// containment is EvaluateOwnership's second step
+// (review-slice-3a-ii-round-2, SEC-2); a caller reusing resolveTarget for a
+// write path owes itself the same second step.
+func resolveTarget(root, target string) (string, bool) {
+	if path.IsAbs(target) || filepath.IsAbs(filepath.FromSlash(target)) {
+		return "", false
+	}
+	for _, seg := range strings.Split(target, "/") {
+		if seg == ".." {
+			return "", false
+		}
+	}
+	cleanRoot := filepath.Clean(root)
+	abs := filepath.Clean(filepath.Join(cleanRoot, filepath.FromSlash(target)))
+	if !withinRoot(cleanRoot, abs) {
+		return "", false
+	}
+	return abs, true
+}
+
+// withinRoot reports whether the cleaned absolute path p sits STRICTLY below
+// the cleaned root: p equal to root is not within it. Both the lexical guard
+// in resolveTarget and the resolved-path check in EvaluateOwnership use this
+// one definition, so the two steps can never disagree about what containment
+// means.
+func withinRoot(cleanRoot, p string) bool {
+	return strings.HasPrefix(p+string(filepath.Separator), cleanRoot+string(filepath.Separator)) && p != cleanRoot
 }
