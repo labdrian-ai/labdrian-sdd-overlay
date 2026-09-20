@@ -1,0 +1,629 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ff07551b72abb7eca00073ae0ab579447ef372a9f5e402157148f2291c3c31c0",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-70263a4dee1c98b7",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+      "candidate_tree": "5be8929e03835840927c8be4680e76058ef77c88",
+      "paths_digest": "sha256:e5fd80961accba2e3b18850a17f5331be7d4e55503b79ca6bb901ff8aa6d5bf4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "engine/skills/zero_fetch_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+      "candidate_tree": "5be8929e03835840927c8be4680e76058ef77c88",
+      "paths_digest": "sha256:e5fd80961accba2e3b18850a17f5331be7d4e55503b79ca6bb901ff8aa6d5bf4",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "engine/skills/zero_fetch_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617"
+    },
+    "genesis_paths": [
+      "engine/skills/project_lock.go",
+      "engine/skills/project_lock_test.go",
+      "engine/skills/zero_fetch_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 514,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:308709a89267b129167bbc063c8173185f388dba6885d3e118f43438a74b8d75",
+    "capture_phase_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+        "capture_phase_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+        "artifact_digest": "sha256:f0ba93e9afd054558a91777d8c668e7b2311c3b249c6693b8ba0a13e17ce4f56",
+        "result_hash": "sha256:53c5123132117e1b6d007e01f8f825de89eb4903fceede810ac82e6d918f16bb",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:5f20be0764098aec0c61c9221ecfef8d29a8e066842f58e1c98af23e9365d4cf",
+            "lineage_id": "review-70263a4dee1c98b7",
+            "authority_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+            "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+            "base_tree": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+            "candidate_tree": "5be8929e03835840927c8be4680e76058ef77c88",
+            "changed_path_manifest_sha256": "sha256:78dbb79a740d115409469cad544bfc3c7fc73ab7ed2c88ed355be64dab05ef27",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:5f20be0764098aec0c61c9221ecfef8d29a8e066842f58e1c98af23e9365d4cf",
+            "raw_sha256": "sha256:d9ec59dd882466feb9ce36db20fa877ae9e1c0de0d00a10b7e89f7bac059b930",
+            "canonical_sha256": "sha256:74644aa9c55b8c3b127033d7c0d69304fbfc98c9ef8aa70502e921400df0b847",
+            "result_hash": "sha256:53c5123132117e1b6d007e01f8f825de89eb4903fceede810ac82e6d918f16bb",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:5f20be0764098aec0c61c9221ecfef8d29a8e066842f58e1c98af23e9365d4cf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-candidate-key-unescaped",
+                "lens": "risk",
+                "location": "engine/skills/project_lock.go:154",
+                "severity": "WARNING",
+                "claim": "StampProvenance concatenates the caller-supplied candidateKey into a YAML frontmatter line without escaping or validating it. A candidateKey containing a newline (or a line-leading fence/unindented key) would emit additional top-level frontmatter lines, or terminate the frontmatter early, letting untrusted candidate identifiers rewrite skill metadata (including the author/provenance fields this function is meant to own) or inject body content. The sibling author value is a fixed constant and the provenance value is a literal, so candidateKey is the only attacker-influenced field on this line. No caller exists in this candidate, so reachability from untrusted input is not demonstrated here; validating candidateKey (reject newlines/control characters, or quote it) before the write path lands would close the gap deterministically.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:151-155 builds the three stamp lines; only the candidate line interpolates caller input, while author uses the ProceduralAuthor constant",
+                  "engine/skills/project_lock.go:157-163 splices the stamp lines verbatim into the frontmatter and joins with newlines, so any newline inside candidateKey becomes real extra frontmatter lines",
+                  "engine/skills/project_lock.go:86 documents the candidate value as written 'verbatim', confirming the absence of escaping is intended rather than accidental"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R1-lock-targets-unvalidated",
+                "lens": "risk",
+                "location": "engine/skills/project_lock.go:42-53",
+                "severity": "SUGGESTION",
+                "claim": "ParseProjectLock enforces strict JSON (unknown fields refused) and a version pin, but performs no validation of entry fields: the targets list is accepted as arbitrary strings, so a lock file could carry absolute or parent-traversal target strings. No writer consumes those targets in this candidate, so there is no reachable write-outside-root impact yet; the containment check belongs on the path that turns a parsed target into a file write.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:42-53 decodes and version-checks only, returning entries unvalidated",
+                  "engine/skills/project_lock.go:29-36 declares Targets as a plain []string with no containment constraint"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all four manifest paths in full: the new parser/serializer/stamper, its new unit tests, the one-line allowlist widening, and the task checklist update.",
+              "engine/skills/project_lock.go:43-52 uses json.Decoder with DisallowUnknownFields and rejects any version other than 1, so the lock parser is strict against unexpected or downgraded input; the tests at engine/skills/project_lock_test.go:133-183 exercise unknown top-level fields, unknown entry fields, version mismatch, missing version and malformed JSON refusals.",
+              "No secrets, credentials, network calls, subprocess execution, filesystem access or new third-party dependencies appear anywhere in engine/skills/project_lock.go; the only imports added are standard-library bytes, encoding/json, fmt, sort and strings.",
+              "engine/skills/zero_fetch_test.go:23 widens the import allowlist by exactly one standard-library JSON package; the allowlist still excludes network-capable packages, so the zero-fetch guarantee is not weakened.",
+              "engine/skills/project_lock.go:60-62 copies before sorting, so the caller's slice is not mutated and no cross-caller state is shared; serialization is deterministic, which prevents lock-file churn but has no security impact either way.",
+              "engine/skills/project_lock.go:95-122 refuses drafts with a missing opening fence, a missing closing fence or no top-level metadata block rather than guessing, so malformed frontmatter cannot be silently rewritten.",
+              "engine/skills/project_lock_test.go contains fixture strings that look like paths (candidate keys and skill target locations) but are test literals, not repository paths; they are described here rather than reproduced.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md:91-94 only flips four checklist boxes from unchecked to checked; it carries no executable content and no risk surface."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+        "capture_phase_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+        "artifact_digest": "sha256:4c97abac258c973353ca33202bd837ca2688b7601e93bc1b388af8c4eb88923b",
+        "result_hash": "sha256:c12ea1e88a6254a6a9afc538f4bca02f60020f24f025b0ab0d026699bacfac6f",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:82744328cbdcc194579c078100c7fc0f178256f7c3f231693fb4cef1c0564914",
+            "lineage_id": "review-70263a4dee1c98b7",
+            "authority_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+            "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+            "base_tree": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+            "candidate_tree": "5be8929e03835840927c8be4680e76058ef77c88",
+            "changed_path_manifest_sha256": "sha256:78dbb79a740d115409469cad544bfc3c7fc73ab7ed2c88ed355be64dab05ef27",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:82744328cbdcc194579c078100c7fc0f178256f7c3f231693fb4cef1c0564914",
+            "raw_sha256": "sha256:a848db6fbc2a27409a12c097f34f0eaeb8e5f71c0ec54dd6b989cf8ff00b4c4a",
+            "canonical_sha256": "sha256:91c1eaf370403ade3f2163cc35af38de6d887c2f5f06876eaddba58f707930b9",
+            "result_hash": "sha256:c12ea1e88a6254a6a9afc538f4bca02f60020f24f025b0ab0d026699bacfac6f",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:82744328cbdcc194579c078100c7fc0f178256f7c3f231693fb4cef1c0564914",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-lock-trailing-data-silently-dropped",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:43-49",
+                "severity": "WARNING",
+                "claim": "ParseProjectLock decodes only the first JSON value from the buffer and never asserts that the stream is exhausted, so a lock file whose bytes are followed by any extra content (the classic residue of a non-truncating or interrupted rewrite of an on-disk lock) parses as a success. The subsequent SerializeProjectLock rewrite then emits only the entries from the first document, silently discarding the residue and any skill entries it described — a strict parser that advertises refusal of malformed content instead performs silent recovery with data loss. Checking dec.More() (or a second Decode returning io.EOF) after the successful decode turns this into the explicit refusal the doc comment at engine/skills/project_lock.go:38-41 promises.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:43-49",
+                  "engine/skills/project_lock.go:38-41",
+                  "engine/skills/project_lock_test.go:127-159"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-serialize-emits-unreadable-version",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:64",
+                "severity": "WARNING",
+                "claim": "SerializeProjectLock copies l.Version through verbatim while ParseProjectLock hard-refuses any version other than 1 (engine/skills/project_lock.go:50-52). A caller that builds the lock from a zero-value ProjectLock — precisely the documented 'missing file is handled as an empty lock by the caller' path described at engine/skills/project_lock.go:38-41 — writes \"version\": 0 to disk, and every later read of that file fails permanently with no fallback and no fix-forward path other than a human hand-editing the file. Pinning the emitted version to the supported constant (or refusing to serialize an unsupported version) keeps the write/read pair closed.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:64",
+                  "engine/skills/project_lock.go:50-52",
+                  "engine/skills/project_lock.go:38-41"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-unstable-sort-breaks-determinism",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:62",
+                "severity": "WARNING",
+                "claim": "The determinism guarantee documented at engine/skills/project_lock.go:56-58 is implemented with sort.Slice, which is not stable, and ParseProjectLock never rejects duplicate id values. A lock file that acquires two entries with the same id (for example a re-stamped skill written under both target trees by a partially completed reconcile) therefore serializes to different byte orders across runs, so each reconcile rewrites the lock file with no semantic change: perpetual write churn and an unstable diff that hides which run actually changed state. sort.SliceStable plus an explicit duplicate-id refusal in ParseProjectLock removes both the churn and the ambiguity.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:62",
+                  "engine/skills/project_lock.go:56-58",
+                  "engine/skills/project_lock_test.go:58-91"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-candidate-key-unvalidated-yaml",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:151-155",
+                "severity": "WARNING",
+                "claim": "The author value is emitted quoted but candidateKey is concatenated raw into the frontmatter, and StampProvenance performs no validation of it. A candidateKey containing a newline, a leading YAML indicator character, or an unquoted ': ' sequence produces frontmatter that no longer parses, yet the function returns a nil error, so the corrupted skill file is handed to the writer and lands in every project target; the failure surfaces later as an unloadable skill for every agent in that project rather than as a refusal at the point of corruption. This directly contradicts the contract at engine/skills/project_lock.go:88-91 that the function never guesses at malformed frontmatter. Quoting the value (as the author line already does) or refusing keys with newline/quote/control characters localizes the failure. No test in engine/skills/project_lock_test.go exercises a candidate key that is not a plain slug path.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:151-155",
+                  "engine/skills/project_lock.go:88-91",
+                  "engine/skills/project_lock_test.go:200-215"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-metadata-inline-mapping-corrupts-output",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:114-118",
+                "severity": "WARNING",
+                "claim": "The metadata block is located by key alone — splitKeyValue's value is discarded with _ — so a frontmatter line of the form 'metadata: {}' or 'metadata: null' or any inline flow mapping is accepted as a block opener. blockEnd then equals metaIdx+1 (engine/skills/project_lock.go:124-136), kept is empty, and the three indented stamp lines are appended directly beneath a key that already carries a scalar or flow value (engine/skills/project_lock.go:157-161), emitting structurally invalid YAML with a nil error. The stamped skill file is written to disk and fails to load downstream, again bypassing the 'never guesses at malformed frontmatter' refusal contract. Requiring the metadata value to be empty before treating the line as a block opener, and refusing otherwise, converts a silent corruption into a caught draft rejection.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:114-118",
+                  "engine/skills/project_lock.go:124-136",
+                  "engine/skills/project_lock.go:157-161"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-dead-empty-lines-guard",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:95",
+                "severity": "SUGGESTION",
+                "claim": "strings.Split never returns an empty slice, so the len(lines) == 0 guard is unreachable; an empty draft yields a single empty element and is already refused by the isFenceLine check. The dead disjunct suggests a defensive case that does not exist and can mislead a future reader into believing empty input takes a distinct path.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:93-97"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all four manifest paths as supplied in the patch sections; engine/skills/project_lock.go is a new 164-line file whose line numbering I verified against the hunk (last line 164 closes StampProvenance), so every finding location falls inside candidate-added lines.",
+              "engine/skills/project_lock.go:42-54 defines ParseProjectLock with DisallowUnknownFields and a version==1 gate; a single dec.Decode call with no exhaustion check is the basis of the trailing-data finding, and the asymmetry with SerializeProjectLock's pass-through of l.Version at engine/skills/project_lock.go:64 is the basis of the unreadable-version finding.",
+              "engine/skills/project_lock.go:59-70 documents order-independent determinism but uses sort.Slice (unstable) at engine/skills/project_lock.go:62; engine/skills/project_lock_test.go:58-91 only exercises two distinct ids, so the duplicate-id ordering case is untested.",
+              "engine/skills/project_lock.go:92-164 implements StampProvenance purely in string operations: it locates the block by key only (engine/skills/project_lock.go:114-118), scans the indented run (engine/skills/project_lock.go:124-136), and appends three fixed lines (engine/skills/project_lock.go:151-155) with the candidate value unquoted while author is quoted.",
+              "engine/skills/project_lock_test.go covers sorting, round-trip, unknown-field and version refusals, provenance insertion/replacement/order/idempotency and a lint check of the stamped output; its fixtures use only well-formed block-style metadata and plain slug-shaped candidate keys, so the malformed-value paths described above are unexercised.",
+              "engine/skills/zero_fetch_test.go:23 adds encoding/json to the allowed-import set, which is required by the new parser and introduces no network capability; openspec/changes/procedural-memory-lifecycle/tasks.md:91-94 only flips four checkboxes to done and carries no runtime behavior.",
+              "No BLOCKER or CRITICAL is warranted: the new functions have no caller anywhere in this candidate, so each failure mode above is latent until the reconcile writer lands, and all of them are introduced by this candidate rather than pre-existing."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+        "capture_phase_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+        "artifact_digest": "sha256:7b026775a64254d37b75db859ee238047902fd1377a32412bb5224180d166725",
+        "result_hash": "sha256:73f12122b17fdbb94abd00283fe515e332225eb8c09acc7d87ad541d9c70a60d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:36d57ba0f4ffa1b302d3e179e7e2d8e0b14b6156d3d9c15dfc5f660a0647ed76",
+            "lineage_id": "review-70263a4dee1c98b7",
+            "authority_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+            "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+            "base_tree": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+            "candidate_tree": "5be8929e03835840927c8be4680e76058ef77c88",
+            "changed_path_manifest_sha256": "sha256:78dbb79a740d115409469cad544bfc3c7fc73ab7ed2c88ed355be64dab05ef27",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:36d57ba0f4ffa1b302d3e179e7e2d8e0b14b6156d3d9c15dfc5f660a0647ed76",
+            "raw_sha256": "sha256:d06fe56756cca587ad921a6bbc3986dde086df47f839f573b3bd910db93c9981",
+            "canonical_sha256": "sha256:751ca0862f9ab0587ae707b3985916721c3a3716b6bbd285a04162d26f0ed5e2",
+            "result_hash": "sha256:73f12122b17fdbb94abd00283fe515e332225eb8c09acc7d87ad541d9c70a60d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:36d57ba0f4ffa1b302d3e179e7e2d8e0b14b6156d3d9c15dfc5f660a0647ed76",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-hardcoded-stamp-indent",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:151-155",
+                "severity": "WARNING",
+                "claim": "The three stamped lines are emitted with a hardcoded two-space indent, while the removal pass one block above classifies existing entries with strings.TrimSpace and therefore tolerates any indentation. A draft whose metadata: entries are indented with four spaces or a tab keeps those lines byte-for-byte and then receives siblings at two spaces, producing a mixed-indent mapping that is no longer the same YAML block. The doc comment promises byte-for-byte preservation of other metadata lines but never states the two-space precondition that makes that promise safe, so the assumption is invisible to the next maintainer and untested (every fixture in the test file uses two spaces).",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:151-155 builds the stamp lines with a literal two-space prefix",
+                  "engine/skills/project_lock.go:144 strips leading whitespace before key matching, so reading accepts any indent while writing assumes one",
+                  "engine/skills/project_lock.go:83-84 documents byte-for-byte preservation of other metadata lines without naming the indent assumption",
+                  "engine/skills/project_lock_test.go:171-185 and engine/skills/project_lock_test.go:208-225 are the only stamping fixtures and both use two-space metadata indentation"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-candidate-value-unescaped",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:154",
+                "severity": "WARNING",
+                "claim": "The candidate value is concatenated into the YAML line unquoted, while the author value one line above is wrapped in double quotes. Neither the code nor the doc comment explains the asymmetry, and the caller-supplied key receives no quoting, escaping or validation: a key containing a colon-space, a leading quote or a hash turns the stamped frontmatter into a different mapping or into unparseable YAML. The doc comment says the key is written verbatim, which reads as an intent rather than a documented constraint on what callers may pass.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:152 quotes the author value",
+                  "engine/skills/project_lock.go:154 concatenates the caller-supplied key with no quoting or escaping",
+                  "engine/skills/project_lock.go:86 describes the candidate value only as written verbatim, stating no constraint on the key",
+                  "engine/skills/project_lock_test.go:188 passes only a slug-shaped key, so no fixture exercises a value needing quoting"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-serialize-version-passthrough",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:64",
+                "severity": "WARNING",
+                "claim": "SerializeProjectLock copies l.Version through unchecked, so a zero-value or future-version ProjectLock serializes happily into a file that ParseProjectLock then refuses. The two halves of the same format disagree about what version 1 means: the parser treats it as an invariant, the serializer treats it as caller data. The doc comment lists sorting, indentation and the trailing newline as the determinism contract but says nothing about the version field, so a caller that forgets to set it gets a silently unreadable lock file rather than an error at write time.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:64 passes l.Version through without assertion or defaulting",
+                  "engine/skills/project_lock.go:50-52 refuses any version other than 1 on read",
+                  "engine/skills/project_lock.go:56-58 documents the serialize contract without mentioning version handling",
+                  "engine/skills/project_lock_test.go:91-113 round-trips only a version-1 fixture, so the asymmetry is unexercised"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-dead-length-guard",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:95",
+                "severity": "SUGGESTION",
+                "claim": "The len(lines) == 0 half of the opening-fence guard is unreachable: strings.Split always returns at least one element, so for empty input lines is a one-element slice holding the empty string and the fence check alone rejects it. The dead disjunct suggests a case the reader must reason about that cannot occur, and slightly obscures the single real precondition (first line is a fence).",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:93 splits the draft, which cannot yield an empty slice",
+                  "engine/skills/project_lock.go:95 guards on that impossible empty slice before the fence check",
+                  "engine/skills/project_lock_test.go:311-316 covers the missing-fence path only, never an empty-slice path"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-duplicated-line-classification",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:125-149",
+                "severity": "SUGGESTION",
+                "claim": "The block-end scan and the keep/drop filter each re-implement the same three-way line classification (blank, indented, other) with separate inlined predicates, so the definition of what belongs to the metadata block lives in two places that can drift. The duplication also hides a consequence that neither comment states: trailing blank lines before the closing fence are absorbed into the block and preserved, so the stamped lines land after them rather than adjacent to the entries they accompany.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:127-134 classifies blank and indented lines to find the block end",
+                  "engine/skills/project_lock.go:140-148 repeats the same blank/indented classification to build the kept slice",
+                  "engine/skills/project_lock.go:159-160 appends the stamp after the kept lines, including any absorbed trailing blanks"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-unanchored-test-assertions",
+                "lens": "readability",
+                "location": "engine/skills/project_lock_test.go:234-251",
+                "severity": "SUGGESTION",
+                "claim": "The replacement test asserts on the whole stamped document with bare substring checks and counts rather than on the metadata block, so it cannot distinguish a correct stamp from a stamp written outside the block or into the body. It also over-matches: the check that the old provenance value is gone would fire on any occurrence of that word anywhere in the skill body, and the counts of the three key names would fire on prose in the body that happens to mention them. The assertions pass today only because the fixture body is short and free of those words, which makes the test fragile against fixture edits for reasons unrelated to the behavior under test.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:237-239 asserts the absence of a bare word anywhere in the document",
+                  "engine/skills/project_lock_test.go:243-251 counts key-name occurrences across the whole document rather than within the metadata block",
+                  "engine/skills/project_lock_test.go:208-225 is the fixture whose body incidentally avoids those tokens"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-unsourced-decision-refs",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:11-18",
+                "severity": "SUGGESTION",
+                "claim": "Both exported constants justify their fixed values by citing decision (g) and decision (b) with no pointer to the document those letters index. The lettered references are the only recorded rationale for a hardcoded author string and a hardcoded lock path, so a maintainer asking whether either may change has no traceable source. The change-context file touched by this candidate records the tasks but not the decision letters either.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:11-14 cites decision (g) as the sole justification for the fixed author value",
+                  "engine/skills/project_lock.go:16-18 cites decision (b) as the sole justification for the lock path",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:92 restates both constant values as task text without resolving the decision letters"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all four manifest paths from the supplied immutable patches only: two new authored Go files, one one-line test allowlist edit, and one task-checklist edit.",
+              "engine/skills/project_lock.go is 164 lines and self-consistent with the numstat; parse, serialize and stamp are each documented with an explicit contract comment, which made contract-versus-code mismatches checkable.",
+              "ParseProjectLock at engine/skills/project_lock.go:42-54 is strict and readable: DisallowUnknownFields plus an explicit version check, each error wrapped with a stable prefix.",
+              "StampProvenance at engine/skills/project_lock.go:92-164 is pure and its refusal paths are explicit, but three of its promises (byte-for-byte preservation, verbatim candidate, idempotence) rest on unstated preconditions about indentation and value shape.",
+              "engine/skills/project_lock_test.go:41-167 covers the lock format well, including order independence, single trailing newline, even indentation and four refusal cases; the stamping tests below are broader in intent but weaker in anchoring.",
+              "engine/skills/zero_fetch_test.go:23 adds exactly one allowlist entry for the JSON encoder that the new parser and serializer require; the addition is minimal and matches the stated scope.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md:91-94 only flips four checkboxes to done and leaves the task prose unchanged, so the change context stays aligned with the code.",
+              "No BLOCKER- or CRITICAL-severity readability defect was found; every finding is a maintainability concern introduced by this candidate, and none required reading anything outside the supplied patches."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+        "capture_phase_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+        "artifact_digest": "sha256:de2f6bcfe5a514f9871897854cc0b5fc98845542992e076862321ccabbd389f1",
+        "result_hash": "sha256:1d1bec3416ea95324f5a74cecf4685996cafbb2bd34317bf6cddd4f7d5d58f8b",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:ba7764ad04cc38333abf2858432235da77f562720751d118ecc73e4e77cb5ba9",
+            "lineage_id": "review-70263a4dee1c98b7",
+            "authority_revision": "sha256:62ab0f71f36f3461e09220a6f48d15711cf23d59ef9e4c1cf563827fd201f04c",
+            "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+            "base_tree": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+            "candidate_tree": "5be8929e03835840927c8be4680e76058ef77c88",
+            "changed_path_manifest_sha256": "sha256:78dbb79a740d115409469cad544bfc3c7fc73ab7ed2c88ed355be64dab05ef27",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:ba7764ad04cc38333abf2858432235da77f562720751d118ecc73e4e77cb5ba9",
+            "raw_sha256": "sha256:fd26c77b0c5de3fc6baae5864095398322cbc2a3e830e7dec9a415d1452acec4",
+            "canonical_sha256": "sha256:82bf06eeb34bcdffc1cb76bdbab8b21d980c9d32ff0763775327a9ec1aa3ea1c",
+            "result_hash": "sha256:1d1bec3416ea95324f5a74cecf4685996cafbb2bd34317bf6cddd4f7d5d58f8b",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:ba7764ad04cc38333abf2858432235da77f562720751d118ecc73e4e77cb5ba9",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ],
+              "reason": "inspected all four manifest paths from the immutable patch sections"
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-unstable-sort-duplicate-ids",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:62",
+                "severity": "WARNING",
+                "claim": "SerializeProjectLock documents \"deterministic, stable JSON\" but orders entries with sort.Slice, which is not a stable sort. Two lock entries sharing the same id (nothing in ParseProjectLock or SerializeProjectLock rejects or de-duplicates duplicate ids) can therefore serialize in either relative order across runs or Go versions, producing spurious lock-file churn. Use sort.SliceStable, or reject duplicate ids explicitly, and add a test with two same-id entries that differ in another field.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:62 uses sort.Slice, whose documentation states the sort is not stable",
+                  "engine/skills/project_lock.go:56-58 claims deterministic, stable output",
+                  "engine/skills/project_lock.go:42-54 ParseProjectLock performs no duplicate-id validation",
+                  "engine/skills/project_lock_test.go:57-89 the determinism test only reorders two distinct ids, so the equal-key path is never exercised"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-trailing-data-accepted",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:43-49",
+                "severity": "WARNING",
+                "claim": "ParseProjectLock calls Decode once on a streaming json.Decoder, which consumes only the first JSON value and ignores everything after it. A truncated-then-reappended or concatenated lock file (for example a valid object followed by a second object or arbitrary bytes) parses as valid instead of being refused, which contradicts the \"parses lock file bytes strictly\" contract for an overlay-owned file that drives writes. Follow Decode with a check that the stream is exhausted (a second Decode returning io.EOF), and cover it with a trailing-garbage test.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:43-49 decodes a single value and never checks for remaining input",
+                  "engine/skills/project_lock.go:38-41 documents strict parsing",
+                  "engine/skills/project_lock_test.go:163-167 covers wholly malformed JSON but no case with valid JSON followed by trailing bytes"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-candidate-key-unquoted",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:154",
+                "severity": "WARNING",
+                "claim": "The stamped candidate line concatenates candidateKey verbatim and unquoted, while the sibling author line is quoted. StampProvenance validates nothing about candidateKey, so a key containing a newline injects arbitrary frontmatter lines (including a line that would be read as a fence on a later pass, breaking the documented idempotency), and a key containing a colon-space, a leading quote, or a comment marker yields malformed or silently altered YAML. Quote and escape the value, or reject keys that are not a safe plain scalar, and add a negative test for an embedded newline and for a colon-bearing key.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:154 builds the candidate line by raw concatenation",
+                  "engine/skills/project_lock.go:152 quotes the author value, showing the inconsistency",
+                  "engine/skills/project_lock.go:88-91 claims purity and idempotency with no stated precondition on candidateKey",
+                  "engine/skills/project_lock_test.go:187-206 only ever passes a well-formed slash-separated key, so no invalid-key path is proved"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-version-passthrough",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:64",
+                "severity": "WARNING",
+                "claim": "SerializeProjectLock copies l.Version through unvalidated while ParseProjectLock refuses anything other than 1. A caller that builds a ProjectLock without explicitly setting Version (the Go zero value) writes a lock file containing version 0 that every subsequent ParseProjectLock call rejects, so the writer silently self-corrupts the overlay-owned lock. Either pin the serialized version to 1 or return an error for a non-1 version, and assert it with a test.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:64 propagates l.Version without checking it",
+                  "engine/skills/project_lock.go:50-52 refuses any version other than 1 on read",
+                  "engine/skills/project_lock_test.go:91-113 the only round-trip test starts from a fixture that hard-codes Version 1, so the asymmetry is unproved"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-constant-values-unproved",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:193",
+                "severity": "WARNING",
+                "claim": "The literal values of the two exported constants this slice delivers are never asserted. The author assertion is self-referential: it concatenates ProceduralAuthor into the expected substring, so it still passes if the constant is changed to any other string, and ProjectLockRelPath is not referenced by any test at all. Since both literals are cross-component contracts, add direct equality assertions against the spelled-out expected strings.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:193 compares against a substring built from ProceduralAuthor itself rather than the expected literal",
+                  "engine/skills/project_lock.go:14 defines ProceduralAuthor",
+                  "engine/skills/project_lock.go:18 defines ProjectLockRelPath, which no assertion in engine/skills/project_lock_test.go references",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:92 marks the task delivering both literal values as complete"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-inline-metadata-mis-stamped",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:114-118",
+                "severity": "SUGGESTION",
+                "claim": "The metadata block is located by key only; the value on the same line is discarded, and no depth tracking is performed. A frontmatter that writes metadata as an inline mapping on one line, or that nests a sub-map under one of the three owned keys, is not refused: the stamp lines are appended as if a block header had been found, and in the nested case the orphaned deeper-indented child lines of the removed key survive. Both produce malformed frontmatter despite the contract that the function never guesses at malformed frontmatter. Refuse a metadata line that carries an inline value, and drop child lines of a removed key.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:114-118 ignores the parsed value of the metadata line",
+                  "engine/skills/project_lock.go:144-148 removes only the matching line, not its indented children",
+                  "engine/skills/project_lock.go:90-91 states the function refuses rather than guesses at malformed frontmatter",
+                  "engine/skills/project_lock_test.go:243-268 the only metadata fixtures use flat scalar sub-keys under a bare block header"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-weak-indent-assertion",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:79-88",
+                "severity": "SUGGESTION",
+                "claim": "The indentation check only asserts that each line's leading-space count is even, so a switch to four-space or tab indentation would still pass, and the test name promises more than it proves. A single golden-bytes comparison against the expected serialized document would pin indentation, key order, field names and the trailing newline at once, at the same cost.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:83-87 asserts only indentLen%2 == 0",
+                  "engine/skills/project_lock.go:65 is the MarshalIndent call whose two-space argument the test is meant to pin"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed all four manifest paths as supplied in the immutable patch sections; no working tree, index or other file was consulted.",
+              "engine/skills/project_lock.go is a new 164-line file adding ProceduralAuthor, ProjectLockRelPath, ProjectLock/ProjectLockEntry, ParseProjectLock, SerializeProjectLock and StampProvenance; the added-line count matches the 164 lines in the patch body, which confirms the line numbering used in the findings.",
+              "Failure paths that are proved: unknown field at top level and inside a skills entry, version 2, absent version, and wholly malformed JSON all assert a non-nil error (engine/skills/project_lock_test.go:115-167); StampProvenance refusals for a missing metadata block and a missing opening fence are asserted, as is idempotency across two stamping passes and a zero-hard-error LintSkillFile result on the stamped output.",
+              "Failure paths that remain unproved: valid JSON followed by trailing bytes, duplicate ids in the sort, a non-1 version on the serialize side, and any invalid candidateKey; these are the basis of the reliability findings above.",
+              "The documented non-mutation invariant of SerializeProjectLock (engine/skills/project_lock.go:58) is not directly asserted, because each test builds a fresh fixture via the helper at engine/skills/project_lock_test.go:11-39; the copy at engine/skills/project_lock.go:60-61 makes an in-place mutation regression detectable only by inspection.",
+              "Entry-level content validation (empty id, sha256 shape, target path shape, negative revision) is absent from ParseProjectLock, but openspec/changes/procedural-memory-lifecycle/tasks.md:89 explicitly defers slug and key-shape handling to the following slice, so this is scoped-out rather than a defect of this candidate.",
+              "engine/skills/zero_fetch_test.go adds exactly one allow-list entry for encoding/json, aligned with the surrounding gofmt column and required by the new ParseProjectLock/SerializeProjectLock imports; no other guard is relaxed.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md flips 3a-i.1 through 3a-i.4 to checked; the code and tests in this candidate substantiate 3a-i.1 through 3a-i.3, while the 3a-i.4 verification command is not observable from the patch."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "be1a9a49663b3725e44687fbc3a2d09ea4ecd1cec8ada4503b421363076bdaf4",
+    "initial_atomic_start": {
+      "lineage_id": "review-70263a4dee1c98b7",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:b2a4cd452ce30e7300859789e2af0b298afeaab8a4140f33d7314950b8770617",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "9f0ce369d8b3cd29c903247ac250d55498f45025",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 514,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}
