@@ -120,10 +120,14 @@ func TestSerializeProjectLock_GoldenBytes(t *testing.T) {
 	}
 }
 
-func TestSerializeProjectLock_StableForDuplicateIDs(t *testing.T) {
+func TestSerializeProjectLock_StableForNonDuplicateEntries(t *testing.T) {
+	// Regression guard for the stable-sort behavior once duplicate ids are
+	// refused outright (review-24fc80ac3513305c, R3-duplicate-id-write-asymmetry):
+	// two distinct ids that happen to sort adjacently still serialize in a
+	// deterministic, order-independent way.
 	l := ProjectLock{Version: 1, Skills: []ProjectLockEntry{
-		{ID: "dup", Provenance: "procedural", Candidate: "first", SHA256: strings.Repeat("a", 64), Revision: 1, Targets: []string{"t1"}},
-		{ID: "dup", Provenance: "procedural", Candidate: "second", SHA256: strings.Repeat("b", 64), Revision: 2, Targets: []string{"t2"}},
+		{ID: "dup-a", Provenance: "procedural", Candidate: "first", SHA256: strings.Repeat("a", 64), Revision: 1, Targets: []string{"t1"}},
+		{ID: "dup-b", Provenance: "procedural", Candidate: "second", SHA256: strings.Repeat("b", 64), Revision: 2, Targets: []string{"t2"}},
 	}}
 	data, err := SerializeProjectLock(l)
 	if err != nil {
@@ -135,21 +139,20 @@ func TestSerializeProjectLock_StableForDuplicateIDs(t *testing.T) {
 		t.Fatalf("serialized output missing an expected candidate: %s", data)
 	}
 	if idxFirst > idxSecond {
-		t.Errorf("expected original relative order preserved for equal-id entries (stable sort), got:\n%s", data)
+		t.Errorf("expected dup-a before dup-b in serialized (sorted) output, got:\n%s", data)
 	}
+}
 
-	l2 := ProjectLock{Version: 1, Skills: []ProjectLockEntry{
-		{ID: "dup", Provenance: "procedural", Candidate: "second", SHA256: strings.Repeat("b", 64), Revision: 2, Targets: []string{"t2"}},
+func TestSerializeProjectLock_RefusesDuplicateIDs(t *testing.T) {
+	// R3-duplicate-id-write-asymmetry (review-24fc80ac3513305c): ParseProjectLock
+	// refuses duplicate skill ids, so SerializeProjectLock must refuse them too —
+	// a writer must never be able to emit a lock nobody can read back.
+	l := ProjectLock{Version: 1, Skills: []ProjectLockEntry{
 		{ID: "dup", Provenance: "procedural", Candidate: "first", SHA256: strings.Repeat("a", 64), Revision: 1, Targets: []string{"t1"}},
+		{ID: "dup", Provenance: "procedural", Candidate: "second", SHA256: strings.Repeat("b", 64), Revision: 2, Targets: []string{"t2"}},
 	}}
-	data2, err := SerializeProjectLock(l2)
-	if err != nil {
-		t.Fatalf("SerializeProjectLock: %v", err)
-	}
-	idxFirst2 := strings.Index(string(data2), `"first"`)
-	idxSecond2 := strings.Index(string(data2), `"second"`)
-	if idxSecond2 > idxFirst2 {
-		t.Errorf("expected reversed input order preserved for equal-id entries (stable sort), got:\n%s", data2)
+	if _, err := SerializeProjectLock(l); err == nil {
+		t.Error("SerializeProjectLock: expected refusal on duplicate skill ids, got nil error")
 	}
 }
 
@@ -519,6 +522,73 @@ func TestStampProvenance_RefusesCandidateKeyWithLeadingQuote(t *testing.T) {
 	}
 }
 
+// R3-validation-branches-unexercised (review-24fc80ac3513305c): each of
+// validateCandidateKey's five refusal branches gets its own test that
+// reaches exactly that branch (not an earlier one) and asserts the specific
+// error it returns, so the branches stay distinguishable. This is a
+// test-only addition proving already-correct behavior — no production code
+// changes for this finding, so RED is not expected.
+
+func TestStampProvenance_RefusesCandidateKeyWithLeadingSpace(t *testing.T) {
+	_, err := StampProvenance([]byte(provenanceFixtureNoExisting), " probe-skill")
+	if err == nil {
+		t.Fatal("StampProvenance: expected refusal on candidateKey with a leading space, got nil error")
+	}
+	if !strings.Contains(err.Error(), "leading or trailing spaces") {
+		t.Errorf("expected leading/trailing-spaces error, got: %v", err)
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithTrailingSpace(t *testing.T) {
+	_, err := StampProvenance([]byte(provenanceFixtureNoExisting), "probe-skill ")
+	if err == nil {
+		t.Fatal("StampProvenance: expected refusal on candidateKey with a trailing space, got nil error")
+	}
+	if !strings.Contains(err.Error(), "leading or trailing spaces") {
+		t.Errorf("expected leading/trailing-spaces error, got: %v", err)
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithInteriorColonSpace(t *testing.T) {
+	// Distinct from TestStampProvenance_RefusesCandidateKeyWithColonSpace,
+	// which starts with ":" and hits the leading-indicator branch instead.
+	_, err := StampProvenance([]byte(provenanceFixtureNoExisting), "procedural/candidates: repeated-success")
+	if err == nil {
+		t.Fatal("StampProvenance: expected refusal on candidateKey with an interior \": \", got nil error")
+	}
+	if !strings.Contains(err.Error(), `": "`) {
+		t.Errorf("expected the interior-sequence error naming %q, got: %v", ": ", err)
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithInteriorHash(t *testing.T) {
+	_, err := StampProvenance([]byte(provenanceFixtureNoExisting), "procedural/candidates #repeated-success")
+	if err == nil {
+		t.Fatal("StampProvenance: expected refusal on candidateKey with an interior \" #\", got nil error")
+	}
+	if !strings.Contains(err.Error(), `" #"`) {
+		t.Errorf("expected the interior-sequence error naming %q, got: %v", " #", err)
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithInteriorDoubleQuote(t *testing.T) {
+	// R3-candidate-escape-unproved (review-24fc80ac3513305c), decision (a):
+	// an interior double quote is refused outright rather than relying on
+	// the escaper, which stays as defense in depth only.
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), `probe"skill`); err == nil {
+		t.Error("StampProvenance: expected refusal on candidateKey containing an interior double quote, got nil error")
+	}
+}
+
+func TestStampProvenance_RefusesCandidateKeyWithInteriorBackslash(t *testing.T) {
+	// R3-candidate-escape-unproved (review-24fc80ac3513305c), decision (a):
+	// an interior backslash is refused outright rather than relying on the
+	// escaper, which stays as defense in depth only.
+	if _, err := StampProvenance([]byte(provenanceFixtureNoExisting), `probe\skill`); err == nil {
+		t.Error("StampProvenance: expected refusal on candidateKey containing an interior backslash, got nil error")
+	}
+}
+
 func TestStampProvenance_QuotesAndEscapesCandidateValue(t *testing.T) {
 	out, err := StampProvenance([]byte(provenanceFixtureNoExisting), "procedural/candidates/repeated-success/probe-skill")
 	if err != nil {
@@ -613,6 +683,12 @@ Trigger: probe event.
 	}
 	s := string(out)
 	if !strings.Contains(s, `  author: "`+ProceduralAuthor+`"`) {
-		t.Errorf("expected two-space fallback indent for an empty metadata block, got:\n%s", s)
+		t.Errorf("expected two-space fallback indent on the author line for an empty metadata block, got:\n%s", s)
+	}
+	if !strings.Contains(s, "  provenance: procedural") {
+		t.Errorf("expected two-space fallback indent on the provenance line for an empty metadata block, got:\n%s", s)
+	}
+	if !strings.Contains(s, `  candidate: "procedural/candidates/repeated-success/probe-skill"`) {
+		t.Errorf("expected two-space fallback indent on the candidate line for an empty metadata block, got:\n%s", s)
 	}
 }

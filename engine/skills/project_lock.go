@@ -77,6 +77,11 @@ func ParseProjectLock(data []byte) (ProjectLock, error) {
 // ProjectLock from scratch without setting Version) is normalized to 1. Any
 // other version that is not 1 is refused, so a write can never silently
 // produce a lock file that ParseProjectLock's version pin then rejects.
+//
+// No two entries may share the same id, mirroring ParseProjectLock's
+// duplicate-id refusal (review-24fc80ac3513305c,
+// R3-duplicate-id-write-asymmetry): a writer must never be able to emit a
+// lock that ParseProjectLock then refuses to read back.
 func SerializeProjectLock(l ProjectLock) ([]byte, error) {
 	version := l.Version
 	if version == 0 {
@@ -84,6 +89,14 @@ func SerializeProjectLock(l ProjectLock) ([]byte, error) {
 	}
 	if version != 1 {
 		return nil, fmt.Errorf("serialize project lock: unsupported version %d, want 1", version)
+	}
+
+	seen := make(map[string]bool, len(l.Skills))
+	for _, e := range l.Skills {
+		if seen[e.ID] {
+			return nil, fmt.Errorf("serialize project lock: duplicate skill id %q", e.ID)
+		}
+		seen[e.ID] = true
 	}
 
 	sorted := make([]ProjectLockEntry, len(l.Skills))
@@ -136,6 +149,14 @@ func validateCandidateKey(candidateKey string) error {
 	}
 	if strings.Contains(candidateKey, ": ") || strings.Contains(candidateKey, " #") {
 		return fmt.Errorf("stamp provenance: candidateKey must not contain %q or %q", ": ", " #")
+	}
+	// A leading '"' or '\' is already refused above as a plain-scalar
+	// indicator; this catches an interior occurrence (review-24fc80ac3513305c,
+	// R3-candidate-escape-unproved, decision (a)). escapeYAMLDoubleQuoted still
+	// escapes both below as defense in depth, but no candidateKey reaching it
+	// may contain either.
+	if strings.ContainsAny(candidateKey, `"\`) {
+		return fmt.Errorf("stamp provenance: candidateKey must not contain %q or %q", `"`, `\`)
 	}
 	return nil
 }
