@@ -311,7 +311,7 @@ func StampProvenance(draft []byte, candidateKey string) ([]byte, error) {
 
 // HashSkill returns the lowercase hex SHA-256 of data, which for a registered
 // skill is the exact stamped bytes written to every target SKILL.md
-// (design.md:203). There is deliberately no normalization first: no
+// (design.md, "Ownership by hash"). There is deliberately no normalization first: no
 // line-ending conversion, no whitespace trim and no frontmatter
 // canonicalization. Any byte change means someone other than the agent
 // touched the file, and normalizing would hide a real edit; the
@@ -378,9 +378,9 @@ func ValidateCandidateKey(key string) error {
 // Ownership is the verdict of the ownership-by-hash check for one skill.
 // Reason is "" when AgentOwned is true, and otherwise the FIRST failing
 // reason — never a list — in one of these forms: "hash-mismatch <path>",
-// "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md:210),
+// "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md, "Ownership by hash"),
 // plus the malformed-lock and unprovable-containment reasons this code adds
-// to that vocabulary (all six carried into design.md's amended reason list):
+// to that vocabulary (all seven carried into design.md's amended reason list):
 //   - "invalid-target <target>" — a recorded target that does not lexically
 //     resolve strictly inside the project root (empty, absolute, carrying a
 //     ".." component, or naming the root itself).
@@ -391,9 +391,13 @@ func ValidateCandidateKey(key string) error {
 //     containment cannot be proved.
 //   - "unresolved-root <root>" / "unresolved-target <target>" — the injected
 //     resolver failed on root, or on that target.
+//   - "escapes-root <target>" — the target resolves, through a symlink, to a
+//     path outside the resolved root.
 //
-// The last four mean "ownership cannot be proved", which folds into
-// human-owned: the safe direction, because the agent then stops.
+// "invalid-root", "no-resolver", "unresolved-root" and "unresolved-target"
+// mean "ownership cannot be proved"; "invalid-target" and "escapes-root" are
+// proven refusals. Both fold into human-owned: the safe direction, because
+// the agent then stops.
 // Each <path> is the repo-relative, slash-separated path as recorded in the
 // lock, so a status line stays independent of where the project is checked
 // out. <target> is likewise the raw recorded string, quoted verbatim so the
@@ -405,20 +409,21 @@ type Ownership struct {
 
 // projectSkillFileName is the only file a project-tier procedural skill
 // directory may contain: project-tier skills are single-file by construction,
-// so assets/, references/ and scripts/ are never written (design.md:203).
+// so assets/, references/ and scripts/ are never written (design.md, "Ownership by hash").
 const projectSkillFileName = "SKILL.md"
 
 // EvaluateOwnership decides whether the skill recorded by e is still
-// agent-owned under root. It is agent-owned only when all three conditions
-// hold (design.md:205-208): the lock entry exists, every recorded target file
-// exists and hashes to e.SHA256, and every target skill directory contains
-// exactly one entry, SKILL.md. Anything else is human-owned, reported with
-// the first failing reason.
+// agent-owned under root. It is agent-owned only when all four conditions
+// hold (design.md, "Ownership by hash"): root is absolute, the lock entry
+// exists, every recorded target file resolves inside root and hashes to
+// e.SHA256, and every target skill directory contains exactly one entry,
+// SKILL.md. Anything else is human-owned, reported with the first failing
+// reason.
 //
 // The lock's sha256 is the single source of truth: this never reads or
 // compares against the candidate record's Registered/Promoted hash line,
 // which is an informational mirror for humans, not a second source
-// (design.md:210).
+// (design.md, "Ownership by hash").
 //
 // All filesystem access goes through the injected readFile and readDir, so
 // callers (and tests) fully control what is read; EvaluateOwnership itself

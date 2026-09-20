@@ -791,7 +791,7 @@ func TestHashSkill_KnownVectors(t *testing.T) {
 }
 
 func TestHashSkill_DoesNotNormalizeBytes(t *testing.T) {
-	// design.md:203 — no line-ending conversion, no whitespace trim, no
+	// design.md, "Ownership by hash" — no line-ending conversion, no whitespace trim, no
 	// frontmatter canonicalization. Each variant must hash differently, so a
 	// human edit of any single byte is detectable.
 	variants := []string{"a: 1\n", "a: 1\r\n", "a: 1\n\n", "a: 1 \n"}
@@ -1059,7 +1059,7 @@ func TestEvaluateOwnership_NotInLock(t *testing.T) {
 
 func TestEvaluateOwnership_ReportsFirstFailingReasonOnly(t *testing.T) {
 	// The first target is missing and the second mismatches; only the first
-	// failing reason is reported (design.md:210), never a list.
+	// failing reason is reported (design.md, "Ownership by hash"), never a list.
 	root := t.TempDir()
 	readFile, readDir := fakeFS(ownershipFiles(root, map[string]string{
 		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody + "drift\n",
