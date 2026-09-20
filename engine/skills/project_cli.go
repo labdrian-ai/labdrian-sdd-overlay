@@ -52,6 +52,12 @@ import (
 // while the identity check cannot run is exactly the shadowing that check
 // exists to prevent.
 //
+// Every value-taking flag requires a following non-flag token. A missing value
+// or a value that starts with `-` is a usage refusal rather than an
+// opportunity to reinterpret the next flag as data; this is what keeps a
+// safety flag such as --dry-run from being swallowed. The wrapper's valid
+// trailing --manifest and --source-root pairs remain accepted.
+//
 // Argument discipline matches RenderLintCore's: an unrecognized dash-argument
 // and a second positional are both usage errors naming the offending token,
 // never silently dropped (review-b75e4a27b9494ff8 R4-001). A mistyped
@@ -76,8 +82,24 @@ func RenderProjectRegisterCore(
 	draftPath := ""
 	dryRun := false
 	endOfOptions := false
+	i := 0
+	consumeValue := func(flag string) (string, bool) {
+		if i+1 >= len(args) {
+			fmt.Fprintf(stderr, "error: skills project-register: flag %q requires a value\n", flag)
+			exit(1)
+			return "", false
+		}
+		value := args[i+1]
+		if strings.HasPrefix(value, "-") {
+			fmt.Fprintf(stderr, "error: skills project-register: flag %q requires a value; got flag token %q\n", flag, value)
+			exit(1)
+			return "", false
+		}
+		i++
+		return value, true
+	}
 
-	for i := 0; i < len(args); i++ {
+	for ; i < len(args); i++ {
 		arg := args[i]
 		if !endOfOptions {
 			switch arg {
@@ -88,28 +110,31 @@ func RenderProjectRegisterCore(
 				dryRun = true
 				continue
 			case "--project-root":
-				if i+1 < len(args) {
-					projectRoot = args[i+1]
-					i++
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
 				}
+				projectRoot = value
 				continue
 			case "--candidate":
-				if i+1 < len(args) {
-					candidate = args[i+1]
-					i++
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
 				}
+				candidate = value
 				continue
 			case "--registry":
-				if i+1 < len(args) {
-					registryPath = args[i+1]
-					i++
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
 				}
+				registryPath = value
 				continue
 			case "--manifest", "--source-root":
 				// Wrapper-injected and unused here: consume the value so it
 				// is never misread as the draft positional.
-				if i+1 < len(args) {
-					i++
+				if _, ok := consumeValue(arg); !ok {
+					return
 				}
 				continue
 			}

@@ -539,11 +539,14 @@ printed and before the commit of step 8 lands. Recovery in that window is
 deliberately narrow, because the repository may hold work that has nothing
 to do with this registration.
 
-The newly written SKILL.md files are always untracked (each lives under a brand-new skill directory), and are deleted only when their bytes hash to the sha256 the failed run printed.
-A file whose hash differs was touched by someone else and is left alone for
-a human. The lock file needs separate handling because it may already be
-tracked with other skills' entries: when it existed in `HEAD` before this run, restore it byte-for-byte with `git -C R restore --source=HEAD -- <lock path>`; when this run created it for the first time in the repository (so it is untracked), delete it instead, after the same hash check.
-A revision or retirement runs `git -C R restore --source=HEAD --staged --worktree -- <wrote paths>`. `git clean` and `git reset --hard` are never used.
+Recovery must restore both the index and worktree for the wrote set without touching unrelated changes. Do not assume newly written `SKILL.md` files are untracked: after step 7 they may be staged as new files (`A`), leaving a dirty index.
+
+First classify every wrote path by whether it existed in `HEAD` before this run (for example, `git -C R cat-file -e HEAD:<path>`), rather than by its post-crash index status.
+For every wrote path that existed in `HEAD`, run `git -C R restore --source=HEAD --staged --worktree -- <tracked paths>`.
+For every wrote path absent from `HEAD` (including newly staged `SKILL.md` files and a first-run lock), run `git -C R restore --staged -- <new paths>` to remove the failed run's staged entries. Then delete a worktree file only after its bytes hash to the sha256 the failed run printed; if the hash differs, leave it for a human.
+The lock follows the same classification: an existing lock is restored with the tracked-path command; a first-run lock is unstaged and hash-verified before deletion.
+After these operations, `git -C R diff --cached --name-only` must show no wrote path, and every wrote path that existed in `HEAD` must match `HEAD` in both the index and worktree. The recovery must leave unrelated staged or worktree changes untouched.
+`git clean` and `git reset --hard` are never used.
 
 ### The Pi trust note
 
@@ -593,12 +596,7 @@ records during `sdd-verify`, not by `go test`. Contract-artifact content
    hook rewrites the committed `SKILL.md`, WHEN step 9 runs, THEN
    `project-status` reports the skill human-owned and the procedure reports
    that rather than re-registering.
-10. **A crash between `wrote:` and the commit deletes only this run's
-    files**: GIVEN a second registration fails after its `wrote:`/`sha256:`
-    output but before its own commit, WHEN crash-window recovery runs, THEN
-    only that run's untracked, hash-verified `SKILL.md` files are deleted,
-    the lock is restored from `HEAD`, and a previously registered skill's
-    lock entry and committed files survive unchanged.
+10. **A crash after staging recovers both index and worktree without reset**: GIVEN a second registration fails after its `wrote:`/`sha256:` output and after step 7's `git add`, WHEN crash-window recovery runs, THEN it recognizes new staged `SKILL.md` files (`A`) rather than assuming they are untracked, unstages the failed run's new paths, hash-verifies before deleting them, restores any pre-existing wrote paths (including the lock) with `git restore --source=HEAD --staged --worktree`, verifies `git diff --cached --name-only` has no failed-run path, leaves a previously registered skill's lock entry and committed files byte-identical to their pre-registration state plus unrelated worktree changes unchanged, and uses neither `git clean` nor `git reset --hard`.
 11. **`History` only grows**: GIVEN a candidate record that moved
     `drafted -> registered`, WHEN the record is read back, THEN the
     pre-registration `History` lines are a prefix of the post-registration

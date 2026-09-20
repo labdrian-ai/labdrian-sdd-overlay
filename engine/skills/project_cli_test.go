@@ -301,6 +301,70 @@ func TestRenderProjectRegisterCore_MissingDraftArgumentRefusedWithoutReading(t *
 	}
 }
 
+func TestRenderProjectRegisterCore_ValueFlagsRequireNonFlagValues(t *testing.T) {
+	valueFlags := []string{"--project-root", "--candidate", "--registry", "--manifest", "--source-root"}
+	prefixFor := func(flag string) []string {
+		switch flag {
+		case "--project-root":
+			return nil
+		case "--candidate":
+			return []string{"--project-root", "/abs/project"}
+		case "--registry":
+			return []string{"--project-root", "/abs/project", "--candidate", testCandidateKey}
+		default:
+			return []string{"--project-root", "/abs/project", "--candidate", testCandidateKey, "--registry", "registry.yaml"}
+		}
+	}
+
+	for _, flag := range valueFlags {
+		flag := flag
+		t.Run(flag+" missing", func(t *testing.T) {
+			args := append(prefixFor(flag), flag)
+			_, errOut, code := runProjectRegisterNoIO(t, args)
+			if code != 1 {
+				t.Fatalf("expected exit 1 for %s without a value, got %d, stderr: %q", flag, code, errOut)
+			}
+			if !strings.Contains(errOut, flag) {
+				t.Errorf("stderr must name the value-taking flag %q, got %q", flag, errOut)
+			}
+		})
+
+		t.Run(flag+" followed by flag", func(t *testing.T) {
+			args := append(prefixFor(flag), flag, "--dry-run")
+			_, errOut, code := runProjectRegisterNoIO(t, args)
+			if code != 1 {
+				t.Fatalf("expected exit 1 for %s followed by a flag token, got %d, stderr: %q", flag, code, errOut)
+			}
+			if !strings.Contains(errOut, flag) {
+				t.Errorf("stderr must name the value-taking flag %q, got %q", flag, errOut)
+			}
+		})
+	}
+}
+
+func TestRenderProjectRegisterCore_MissingManifestValueCannotSwallowDryRun(t *testing.T) {
+	const id = "tidy-worktree"
+	e := newProjectCLIEnv(t, id, projectCLIRegistry)
+
+	args := []string{
+		"--project-root", e.root,
+		"--candidate", testCandidateKey,
+		"--registry", e.registryPath,
+		"--manifest", "--dry-run", e.draftPath,
+	}
+	out, errOut, code := runProjectRegister(t, args)
+	if code != 1 {
+		t.Fatalf("expected exit 1 when --manifest has no value, got %d, stdout: %q, stderr: %q", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "--manifest") {
+		t.Errorf("stderr must identify the missing --manifest value, got %q", errOut)
+	}
+	if out != "" {
+		t.Errorf("a value-taking flag refusal must print nothing to stdout, got %q", out)
+	}
+	e.assertNothingWritten(t)
+}
+
 // TestRenderProjectRegisterCore_UnknownFlagAfterPathRefused and its
 // before-path sibling protect the same property RenderLintCore's
 // unknown-flag rejection protects (review-b75e4a27b9494ff8 R4-001): an

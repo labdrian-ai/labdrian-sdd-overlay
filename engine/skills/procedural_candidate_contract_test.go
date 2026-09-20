@@ -505,12 +505,62 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 	t.Run("Section11_CrashRecoveryRulePresentVerbatim", func(t *testing.T) {
 		slice := section11(t)
 		for _, required := range []string{
-			"The newly written SKILL.md files are always untracked (each lives under a brand-new skill directory), and are deleted only when their bytes hash to the sha256 the failed run printed.",
-			"when it existed in `HEAD` before this run, restore it byte-for-byte with `git -C R restore --source=HEAD -- <lock path>`; when this run created it for the first time in the repository (so it is untracked), delete it instead, after the same hash check.",
-			"A revision or retirement runs `git -C R restore --source=HEAD --staged --worktree -- <wrote paths>`. `git clean` and `git reset --hard` are never used.",
+			"Do not assume newly written `SKILL.md` files are untracked: after step 7 they may be staged as new files (`A`), leaving a dirty index.",
+			"First classify every wrote path by whether it existed in `HEAD` before this run (for example, `git -C R cat-file -e HEAD:<path>`), rather than by its post-crash index status.",
+			"For every wrote path that existed in `HEAD`, run",
+			"`git -C R restore --source=HEAD --staged --worktree -- <tracked paths>`.",
+			"For every wrote path absent from `HEAD` (including newly staged `SKILL.md` files and a first-run lock), run `git -C R restore --staged -- <new paths>` to remove the failed run's staged entries. Then delete a worktree file only after its bytes hash to the sha256 the failed run printed; if the hash differs, leave it for a human.",
+			"The lock follows the same classification: an existing lock is restored with the tracked-path command; a first-run lock is unstaged and hash-verified before deletion.",
+			"After these operations, `git -C R diff --cached --name-only` must show no wrote path, and every wrote path that existed in `HEAD` must match `HEAD` in both the index and worktree.",
+			"The recovery must leave unrelated staged or worktree changes untouched.",
+			"`git clean` and `git reset --hard` are never used.",
 		} {
 			if !strings.Contains(slice, required) {
 				t.Fatalf("section 11 must state the crash-recovery rule verbatim: %q", required)
+			}
+		}
+		for _, forbidden := range []string{
+			"The newly written SKILL.md files are always untracked",
+			"restore it byte-for-byte with `git -C R restore --source=HEAD -- <lock path>`",
+		} {
+			if strings.Contains(slice, forbidden) {
+				t.Fatalf("section 11 must not retain the unsafe crash-recovery claim %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("Section11_AcceptanceChecklistPinsStagedCrashRecovery", func(t *testing.T) {
+		const head = "## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)"
+		const tail = "## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)"
+		start := strings.Index(contract, head)
+		if start < 0 {
+			t.Fatalf("contract must contain registration acceptance checklist heading %q", head)
+		}
+		end := strings.Index(contract, tail)
+		if end <= start {
+			t.Fatalf("registration acceptance checklist must precede %q", tail)
+		}
+		checklist := contract[start:end]
+		itemStart := strings.Index(checklist, "10. **A crash after staging")
+		if itemStart < 0 {
+			t.Fatalf("registration acceptance checklist must contain the staged crash-recovery scenario")
+		}
+		itemEnd := strings.Index(checklist[itemStart:], "\n11. **`History`")
+		if itemEnd < 0 {
+			t.Fatalf("staged crash-recovery scenario must be bounded before the History scenario")
+		}
+		item := checklist[itemStart : itemStart+itemEnd]
+		for _, required := range []string{
+			"after step 7's `git add`",
+			"recognizes new staged `SKILL.md` files (`A`) rather than assuming they are untracked",
+			"unstages the failed run's new paths",
+			"hash-verifies before deleting them",
+			"restores any pre-existing wrote paths (including the lock) with `git restore --source=HEAD --staged --worktree`",
+			"`git diff --cached --name-only` has no failed-run path",
+			"neither `git clean` nor `git reset --hard`",
+		} {
+			if !strings.Contains(item, required) {
+				t.Fatalf("crash-recovery acceptance item must state %q", required)
 			}
 		}
 	})
