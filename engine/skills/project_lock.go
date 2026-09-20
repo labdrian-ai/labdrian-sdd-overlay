@@ -2,9 +2,14 @@ package skills
 
 import (
 	"bytes"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/fs"
+	"path"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -155,8 +160,15 @@ func validateCandidateKey(candidateKey string) error {
 	// R3-candidate-escape-unproved, decision (a)). escapeYAMLDoubleQuoted still
 	// escapes both below as defense in depth, but no candidateKey reaching it
 	// may contain either.
-	if strings.ContainsAny(candidateKey, `"\`) {
-		return fmt.Errorf("stamp provenance: candidateKey must not contain %q or %q", `"`, `\`)
+	//
+	// The two characters get one branch and one message each
+	// (review-d89971d41a526146): a shared message left the two refusals
+	// indistinguishable, so neither test could prove which branch it reached.
+	if strings.Contains(candidateKey, `"`) {
+		return fmt.Errorf("stamp provenance: candidateKey must not contain a double quote %q", `"`)
+	}
+	if strings.Contains(candidateKey, `\`) {
+		return fmt.Errorf("stamp provenance: candidateKey must not contain a backslash %q", `\`)
 	}
 	return nil
 }
@@ -295,4 +307,138 @@ func StampProvenance(draft []byte, candidateKey string) ([]byte, error) {
 	out = append(out, lines[blockEnd:]...)
 
 	return []byte(strings.Join(out, "\n")), nil
+}
+
+// HashSkill returns the lowercase hex SHA-256 of data, which for a registered
+// skill is the exact stamped bytes written to every target SKILL.md
+// (design.md:203). There is deliberately no normalization first: no
+// line-ending conversion, no whitespace trim and no frontmatter
+// canonicalization. Any byte change means someone other than the agent
+// touched the file, and normalizing would hide a real edit; the
+// false-positive direction (a core.autocrlf checkout reading as human-owned)
+// is the safe one, because the agent then stops.
+func HashSkill(data []byte) string {
+	sum := sha256.Sum256(data)
+	return hex.EncodeToString(sum[:])
+}
+
+// candidateKeyPrefix is the fixed item-30 prefix every candidate topic key
+// carries (design.md:163).
+const candidateKeyPrefix = "procedural/candidates/"
+
+// candidateKindSlugs maps each accepted candidate kind to the exact number of
+// slug segments that must follow it: repeated-success/<s> and
+// failure-recovery/<s>/<s> (design.md:163).
+var candidateKindSlugs = map[string]int{
+	"repeated-success": 1,
+	"failure-recovery": 2,
+}
+
+// ValidateCandidateKey reports whether key is one of the two item-30
+// candidate topic-key shapes — procedural/candidates/repeated-success/<s> and
+// procedural/candidates/failure-recovery/<s>/<s> — where every <s> is
+// non-empty and already normalized (NormalizeSlug(<s>) == <s>).
+//
+// This is a SHAPE check and is distinct from the unexported
+// validateCandidateKey, which checks whether a key is SAFE to stamp into YAML
+// frontmatter and therefore carries a "stamp provenance: " prefix on its
+// errors. The two cannot disagree: a shape-valid key is the literal prefix
+// plus NormalizeSlug output joined by '/', so it is drawn from [a-z0-9/-],
+// which the stamp-safety validator accepts — the shape-valid set is a strict
+// subset of the stamp-safe set. TestValidateCandidateKey_ShapeValidKeysAreAlsoStampSafe
+// pins that relation.
+func ValidateCandidateKey(key string) error {
+	if key == "" {
+		return fmt.Errorf("validate candidate key: must not be empty")
+	}
+	if !strings.HasPrefix(key, candidateKeyPrefix) {
+		return fmt.Errorf("validate candidate key: %q must start with %q", key, candidateKeyPrefix)
+	}
+	rest := strings.Split(strings.TrimPrefix(key, candidateKeyPrefix), "/")
+	kind := rest[0]
+	wantSlugs, ok := candidateKindSlugs[kind]
+	if !ok {
+		return fmt.Errorf("validate candidate key: unknown candidate kind %q, want %q or %q", kind, "repeated-success", "failure-recovery")
+	}
+	slugs := rest[1:]
+	if len(slugs) != wantSlugs {
+		return fmt.Errorf("validate candidate key: %q must have exactly %d slug segments after %q, got %d", key, wantSlugs, kind, len(slugs))
+	}
+	for i, s := range slugs {
+		if s == "" {
+			return fmt.Errorf("validate candidate key: slug segment %d of %q must not be empty", i+1, key)
+		}
+		if got := NormalizeSlug(s); got != s {
+			return fmt.Errorf("validate candidate key: slug segment %q of %q is not normalized, want %q", s, key, got)
+		}
+	}
+	return nil
+}
+
+// Ownership is the verdict of the ownership-by-hash check for one skill.
+// Reason is "" when AgentOwned is true, and otherwise the FIRST failing
+// reason — never a list — in one of these forms: "hash-mismatch <path>",
+// "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md:210).
+// Each <path> is the repo-relative, slash-separated path as recorded in the
+// lock, so a status line stays independent of where the project is checked
+// out.
+type Ownership struct {
+	AgentOwned bool
+	Reason     string
+}
+
+// projectSkillFileName is the only file a project-tier procedural skill
+// directory may contain: project-tier skills are single-file by construction,
+// so assets/, references/ and scripts/ are never written (design.md:203).
+const projectSkillFileName = "SKILL.md"
+
+// EvaluateOwnership decides whether the skill recorded by e is still
+// agent-owned under root. It is agent-owned only when all three conditions
+// hold (design.md:205-208): the lock entry exists, every recorded target file
+// exists and hashes to e.SHA256, and every target skill directory contains
+// exactly one entry, SKILL.md. Anything else is human-owned, reported with
+// the first failing reason.
+//
+// The lock's sha256 is the single source of truth: this never reads or
+// compares against the candidate record's Registered/Promoted hash line,
+// which is an informational mirror for humans, not a second source
+// (design.md:210).
+//
+// All filesystem access goes through the injected readFile and readDir, so
+// callers (and tests) fully control what is read; EvaluateOwnership itself
+// never touches os, git or Engram. A caller whose lock lookup missed passes
+// the zero ProjectLockEntry, which reports "not-in-lock".
+func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error)) Ownership {
+	if e.ID == "" {
+		return Ownership{Reason: "not-in-lock"}
+	}
+	if len(e.Targets) == 0 {
+		return Ownership{Reason: "not-in-lock"}
+	}
+
+	for _, target := range e.Targets {
+		abs := filepath.Join(root, filepath.FromSlash(target))
+		data, err := readFile(abs)
+		if err != nil {
+			return Ownership{Reason: "missing " + target}
+		}
+		if HashSkill(data) != e.SHA256 {
+			return Ownership{Reason: "hash-mismatch " + target}
+		}
+
+		dirRel := path.Dir(target)
+		entries, err := readDir(filepath.Dir(abs))
+		if err != nil {
+			// The exactly-one-entry condition cannot be proved, so the safe
+			// direction is human-owned.
+			return Ownership{Reason: "missing " + dirRel}
+		}
+		for _, entry := range entries {
+			if entry.Name() != projectSkillFileName {
+				return Ownership{Reason: "extra-entry " + path.Join(dirRel, entry.Name())}
+			}
+		}
+	}
+
+	return Ownership{AgentOwned: true}
 }
