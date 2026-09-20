@@ -379,10 +379,21 @@ func ValidateCandidateKey(key string) error {
 // Reason is "" when AgentOwned is true, and otherwise the FIRST failing
 // reason — never a list — in one of these forms: "hash-mismatch <path>",
 // "missing <path>", "extra-entry <path>" or "not-in-lock" (design.md:210),
-// plus two malformed-lock reasons this code adds to that vocabulary:
-// "invalid-target <target>" for a recorded target that does not resolve
-// strictly inside the project root, and "no-targets <id>" for an entry that
-// is present in the lock but records no targets at all.
+// plus the malformed-lock and unprovable-containment reasons this code adds
+// to that vocabulary (all six carried into design.md's amended reason list):
+//   - "invalid-target <target>" — a recorded target that does not lexically
+//     resolve strictly inside the project root (empty, absolute, carrying a
+//     ".." component, or naming the root itself).
+//   - "no-targets <id>" — an entry present in the lock recording no targets.
+//   - "invalid-root <root>" — root is not absolute, so containment cannot be
+//     decided at all.
+//   - "no-resolver <id>" — no symlink resolver was injected, so resolved
+//     containment cannot be proved.
+//   - "unresolved-root <root>" / "unresolved-target <target>" — the injected
+//     resolver failed on root, or on that target.
+//
+// The last four mean "ownership cannot be proved", which folds into
+// human-owned: the safe direction, because the agent then stops.
 // Each <path> is the repo-relative, slash-separated path as recorded in the
 // lock, so a status line stays independent of where the project is checked
 // out. <target> is likewise the raw recorded string, quoted verbatim so the
@@ -415,21 +426,74 @@ const projectSkillFileName = "SKILL.md"
 // the zero ProjectLockEntry, which reports "not-in-lock".
 //
 // Every target is resolved and containment-checked BEFORE any read, so a
-// lock entry carrying "../../etc/passwd" or an absolute path can never cause
-// a read outside root, nor report AgentOwned for a file the project does not
-// own.
-func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error)) Ownership {
+// lock entry carrying "../../etc/passwd", an absolute path, or a path whose
+// directory components are symlinks pointing out of the project can never
+// cause a read outside root, nor report AgentOwned for a file the project
+// does not own.
+//
+// Containment is proved in two steps, because the first is purely lexical:
+//
+//  1. resolveTarget applies the lexical guards (no empty target, no absolute
+//     target, no ".." component, no target naming root itself, cleaned form
+//     under root).
+//  2. resolvePath, the injected symlink resolver, then resolves both root and
+//     the target, and containment is re-checked between the RESOLVED paths.
+//
+// Step 2 is what closes the symlink hole: "link/SKILL.md", where root/link is
+// a symlink to a sibling of root, passes every lexical guard (it names no
+// ".."), so only the resolved comparison refuses it
+// (review-slice-3a-ii-round-2, SEC-2). The resolver is injected rather than
+// called through path/filepath so EvaluateOwnership keeps its defining
+// property: it performs no filesystem access of its own, and a caller (or a
+// test) fully controls every path it sees.
+//
+// resolvePath's contract: return the argument with every symlink in its
+// EXISTING ancestry resolved, keeping components that do not exist literal
+// (filepath.EvalSymlinks alone does not satisfy this — it fails on a missing
+// final component — so the caller wraps it; see tasks.md 3b-i.5b), and return
+// an error only when resolution genuinely failed. That contract is what keeps
+// an ordinary absent target reporting "missing <path>" rather than a
+// resolution failure.
+//
+// A nil resolvePath fails closed with "no-resolver <id>": ownership never
+// silently degrades to the lexical check alone, because that check is exactly
+// what a symlinked component defeats.
+func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([]byte, error), readDir func(string) ([]fs.DirEntry, error), resolvePath func(string) (string, error)) Ownership {
 	if e.ID == "" {
 		return Ownership{Reason: "not-in-lock"}
 	}
+	// A non-absolute root makes every containment test meaningless (a relative
+	// or empty root silently turns every project skill human-owned), so it is
+	// one loud failure naming the bad root, never a per-target refusal.
+	if !filepath.IsAbs(root) {
+		return Ownership{Reason: "invalid-root " + root}
+	}
 	if len(e.Targets) == 0 {
 		return Ownership{Reason: "no-targets " + e.ID}
+	}
+	if resolvePath == nil {
+		return Ownership{Reason: "no-resolver " + e.ID}
+	}
+
+	cleanRoot := filepath.Clean(root)
+	resolvedRoot, err := resolvePath(cleanRoot)
+	if err != nil {
+		// Without a resolved root there is nothing to compare targets against
+		// (a root reached through a symlink would otherwise read as an escape).
+		return Ownership{Reason: "unresolved-root " + root}
 	}
 
 	for _, target := range e.Targets {
 		abs, ok := resolveTarget(root, target)
 		if !ok {
 			return Ownership{Reason: "invalid-target " + target}
+		}
+		resolved, err := resolvePath(abs)
+		if err != nil {
+			return Ownership{Reason: "unresolved-target " + target}
+		}
+		if !withinRoot(filepath.Clean(resolvedRoot), filepath.Clean(resolved)) {
+			return Ownership{Reason: "escapes-root " + target}
 		}
 		data, err := readFile(abs)
 		if err != nil {
@@ -466,10 +530,19 @@ func EvaluateOwnership(root string, e ProjectLockEntry, readFile func(string) ([
 // the containment test itself is byte-for-byte the same shape.
 //
 // Refused: an empty target, an absolute target, a target carrying a ".."
-// component, and any target whose cleaned form escapes root. The ".." check
-// is explicit and precedes the containment test because filepath.Join cleans
-// "../.." away, so a target could resolve back inside root while still
-// meaning something the lock never recorded.
+// component, any target whose cleaned form escapes root, and a target that
+// names root itself rather than a path strictly below it (".", "./" and
+// "././" all clean to ".", which resolves to root and would hand a directory
+// to readFile — review-slice-3a-ii-round-2, SEC-3). That last case needs no
+// branch of its own: withinRoot is strictly-below, so it refuses root itself. The ".." check is explicit and precedes the containment
+// test because filepath.Join cleans "../.." away, so a target could resolve
+// back inside root while still meaning something the lock never recorded.
+//
+// This guard is LEXICAL ONLY: it cannot see a symlink, so a target whose
+// directory components leave root through one still passes here. Resolved
+// containment is EvaluateOwnership's second step
+// (review-slice-3a-ii-round-2, SEC-2); a caller reusing resolveTarget for a
+// write path owes itself the same second step.
 func resolveTarget(root, target string) (string, bool) {
 	if target == "" {
 		return "", false
@@ -484,8 +557,17 @@ func resolveTarget(root, target string) (string, bool) {
 	}
 	cleanRoot := filepath.Clean(root)
 	abs := filepath.Clean(filepath.Join(cleanRoot, filepath.FromSlash(target)))
-	if !strings.HasPrefix(abs+string(filepath.Separator), cleanRoot+string(filepath.Separator)) {
+	if !withinRoot(cleanRoot, abs) {
 		return "", false
 	}
 	return abs, true
+}
+
+// withinRoot reports whether the cleaned absolute path p sits STRICTLY below
+// the cleaned root: p equal to root is not within it. Both the lexical guard
+// in resolveTarget and the resolved-path check in EvaluateOwnership use this
+// one definition, so the two steps can never disagree about what containment
+// means.
+func withinRoot(cleanRoot, p string) bool {
+	return strings.HasPrefix(p+string(filepath.Separator), cleanRoot+string(filepath.Separator)) && p != cleanRoot
 }

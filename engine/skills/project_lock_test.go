@@ -988,7 +988,7 @@ func TestEvaluateOwnership_AgentOwnedWhenEveryTargetMatches(t *testing.T) {
 		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
 		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody,
 	}))
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if !got.AgentOwned {
 		t.Errorf("expected agent-owned, got %+v", got)
 	}
@@ -1003,7 +1003,7 @@ func TestEvaluateOwnership_HashMismatch(t *testing.T) {
 		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody + "human edit\n",
 		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody,
 	}))
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if got.AgentOwned {
 		t.Errorf("expected human-owned on a hash mismatch, got %+v", got)
 	}
@@ -1017,7 +1017,7 @@ func TestEvaluateOwnership_Missing(t *testing.T) {
 	readFile, readDir := fakeFS(ownershipFiles(root, map[string]string{
 		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody,
 	}))
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if got.AgentOwned {
 		t.Errorf("expected human-owned on a missing target, got %+v", got)
 	}
@@ -1033,7 +1033,7 @@ func TestEvaluateOwnership_ExtraEntry(t *testing.T) {
 		".claude/skills/probe-skill/README.md": "human note\n",
 		".agents/skills/probe-skill/SKILL.md":  ownershipSkillBody,
 	}))
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if got.AgentOwned {
 		t.Errorf("expected human-owned on an extra directory entry, got %+v", got)
 	}
@@ -1048,7 +1048,7 @@ func TestEvaluateOwnership_NotInLock(t *testing.T) {
 		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
 	}))
 	// The zero entry is what a caller passes when the lock lookup missed.
-	got := EvaluateOwnership(root, ProjectLockEntry{}, readFile, readDir)
+	got := EvaluateOwnership(root, ProjectLockEntry{}, readFile, readDir, identityResolver)
 	if got.AgentOwned {
 		t.Errorf("expected human-owned for a skill absent from the lock, got %+v", got)
 	}
@@ -1064,7 +1064,7 @@ func TestEvaluateOwnership_ReportsFirstFailingReasonOnly(t *testing.T) {
 	readFile, readDir := fakeFS(ownershipFiles(root, map[string]string{
 		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody + "drift\n",
 	}))
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if got.Reason != "missing .claude/skills/probe-skill/SKILL.md" {
 		t.Errorf("Reason = %q, want only the first failing reason %q", got.Reason, "missing .claude/skills/probe-skill/SKILL.md")
 	}
@@ -1086,7 +1086,7 @@ func TestEvaluateOwnership_ReadsOnlyThroughInjectedReaders(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 	readFile, readDir := fakeFS(map[string]string{})
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if got.AgentOwned || got.Reason != "missing .claude/skills/probe-skill/SKILL.md" {
 		t.Errorf("EvaluateOwnership consulted something other than its injected readers: %+v", got)
 	}
@@ -1103,7 +1103,7 @@ func TestEvaluateOwnership_UnreadableTargetDirectoryIsHumanOwned(t *testing.T) {
 	})
 	readFile, _ := fakeFS(files)
 	readDir := func(string) ([]fs.DirEntry, error) { return nil, fs.ErrPermission }
-	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir)
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
 	if got.AgentOwned {
 		t.Errorf("expected human-owned when a target directory cannot be listed, got %+v", got)
 	}
@@ -1122,7 +1122,7 @@ func TestEvaluateOwnership_EntryInLockWithNoTargetsIsMalformed(t *testing.T) {
 	}))
 	e := ownershipEntry(HashSkill([]byte(ownershipSkillBody)))
 	e.Targets = nil
-	got := EvaluateOwnership(root, e, readFile, readDir)
+	got := EvaluateOwnership(root, e, readFile, readDir, identityResolver)
 	if got.AgentOwned {
 		t.Errorf("expected human-owned for an entry with no targets, got %+v", got)
 	}
@@ -1165,7 +1165,7 @@ func TestEvaluateOwnership_RejectsTargetsOutsideRoot(t *testing.T) {
 			}))
 			e := ownershipEntry(HashSkill([]byte(ownershipSkillBody)))
 			e.Targets = []string{tc.target}
-			got := EvaluateOwnership(root, e, readFile, readDir)
+			got := EvaluateOwnership(root, e, readFile, readDir, identityResolver)
 			if got.AgentOwned {
 				t.Errorf("target %q was reported agent-owned: %+v", tc.target, got)
 			}
@@ -1181,5 +1181,245 @@ func TestEvaluateOwnership_RejectsTargetsOutsideRoot(t *testing.T) {
 				t.Errorf("a rejected target must be refused before any read, got reads: %v", *seen)
 			}
 		})
+	}
+}
+
+// identityResolver is the injected symlink resolver for every test whose
+// paths contain no symlinks at all: it returns the path unchanged, which is
+// exactly what a real resolver returns for a symlink-free path.
+func identityResolver(p string) (string, error) { return p, nil }
+
+// mappingResolver builds a resolver that rewrites any path whose prefix is a
+// key of links to the mapped destination, mirroring what a real
+// symlink-resolving caller returns for a symlinked component. Paths matching
+// no key come back unchanged.
+func mappingResolver(links map[string]string) func(string) (string, error) {
+	return func(p string) (string, error) {
+		for from, to := range links {
+			if p == from {
+				return to, nil
+			}
+			if strings.HasPrefix(p, from+string(filepath.Separator)) {
+				return to + p[len(from):], nil
+			}
+		}
+		return p, nil
+	}
+}
+
+// --- SEC-2: a symlinked component must not let a read escape the root ---
+
+func TestEvaluateOwnership_SymlinkedComponentEscapingRootIsRefused(t *testing.T) {
+	// root/link is a symlink to a sibling directory outside root. The lexical
+	// containment check alone accepts "link/SKILL.md" (it names no ".."), so
+	// without symlink resolution the bytes under <base>/secret would be hashed
+	// and reported agent-owned.
+	base := t.TempDir()
+	root := filepath.Join(base, "proj")
+	secret := filepath.Join(base, "secret")
+
+	resolve := mappingResolver(map[string]string{filepath.Join(root, "link"): secret})
+	// The injected readers follow the link exactly as os.ReadFile/os.ReadDir
+	// would, so this reproduces the finding: without symlink resolution the
+	// bytes under <base>/secret hash clean and the entry reads agent-owned.
+	inner, innerDir, seen := recordingFS(map[string]string{
+		filepath.Join(secret, "SKILL.md"): ownershipSkillBody,
+	})
+	readFile := func(p string) ([]byte, error) { q, _ := resolve(p); return inner(q) }
+	readDir := func(p string) ([]fs.DirEntry, error) { q, _ := resolve(p); return innerDir(q) }
+
+	e := ownershipEntry(HashSkill([]byte(ownershipSkillBody)))
+	e.Targets = []string{"link/SKILL.md"}
+
+	got := EvaluateOwnership(root, e, readFile, readDir, resolve)
+	if got.AgentOwned {
+		t.Errorf("a symlink out of the root was reported agent-owned: %+v", got)
+	}
+	if got.Reason != "escapes-root link/SKILL.md" {
+		t.Errorf("Reason = %q, want %q", got.Reason, "escapes-root link/SKILL.md")
+	}
+	if len(*seen) != 0 {
+		t.Errorf("a target resolving outside the root must be refused before any read, got reads: %v", *seen)
+	}
+}
+
+func TestEvaluateOwnership_SymlinkedRootStaysAgentOwned(t *testing.T) {
+	// The root itself is reached through a symlink (the /tmp -> /private/tmp
+	// shape). Containment is checked between RESOLVED paths, so the entry is
+	// still agent-owned.
+	base := t.TempDir()
+	root := filepath.Join(base, "link-to-proj")
+	realRoot := filepath.Join(base, "real-proj")
+
+	readFile, readDir := fakeFS(ownershipFiles(realRoot, map[string]string{
+		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody,
+	}))
+	// Reads still go to the lexical path under root; the fake FS is keyed on
+	// the real root, so map both through the resolver for the read side too.
+	resolve := mappingResolver(map[string]string{root: realRoot})
+	readFileVia := func(p string) ([]byte, error) {
+		q, _ := resolve(p)
+		return readFile(q)
+	}
+	readDirVia := func(p string) ([]fs.DirEntry, error) {
+		q, _ := resolve(p)
+		return readDir(q)
+	}
+
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFileVia, readDirVia, resolve)
+	if !got.AgentOwned {
+		t.Errorf("a symlinked root must not flip the verdict, got %+v", got)
+	}
+}
+
+func TestEvaluateOwnership_ResolverFailureIsHumanOwned(t *testing.T) {
+	root := t.TempDir()
+	readFile, readDir, seen := recordingFS(ownershipFiles(root, map[string]string{
+		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+	}))
+	resolve := func(p string) (string, error) {
+		if p == filepath.Clean(root) {
+			return p, nil
+		}
+		return "", fs.ErrInvalid
+	}
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, resolve)
+	if got.AgentOwned {
+		t.Errorf("an unresolvable target must be human-owned, got %+v", got)
+	}
+	if got.Reason != "unresolved-target .claude/skills/probe-skill/SKILL.md" {
+		t.Errorf("Reason = %q, want %q", got.Reason, "unresolved-target .claude/skills/probe-skill/SKILL.md")
+	}
+	if len(*seen) != 0 {
+		t.Errorf("an unresolvable target must be refused before any read, got reads: %v", *seen)
+	}
+}
+
+func TestEvaluateOwnership_RootResolverFailureIsHumanOwned(t *testing.T) {
+	root := t.TempDir()
+	readFile, readDir, seen := recordingFS(ownershipFiles(root, map[string]string{
+		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+	}))
+	resolve := func(string) (string, error) { return "", fs.ErrPermission }
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, resolve)
+	if got.AgentOwned {
+		t.Errorf("an unresolvable root must be human-owned, got %+v", got)
+	}
+	if got.Reason != "unresolved-root "+root {
+		t.Errorf("Reason = %q, want %q", got.Reason, "unresolved-root "+root)
+	}
+	if len(*seen) != 0 {
+		t.Errorf("an unresolvable root must be refused before any read, got reads: %v", *seen)
+	}
+}
+
+func TestEvaluateOwnership_NilResolverIsHumanOwned(t *testing.T) {
+	// A caller that passes no resolver cannot prove containment, so ownership
+	// fails closed instead of silently falling back to the lexical check.
+	root := t.TempDir()
+	readFile, readDir, seen := recordingFS(ownershipFiles(root, map[string]string{
+		".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+		".agents/skills/probe-skill/SKILL.md": ownershipSkillBody,
+	}))
+	got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, nil)
+	if got.AgentOwned {
+		t.Errorf("a missing resolver must be human-owned, got %+v", got)
+	}
+	if got.Reason != "no-resolver probe-skill" {
+		t.Errorf("Reason = %q, want %q", got.Reason, "no-resolver probe-skill")
+	}
+	if len(*seen) != 0 {
+		t.Errorf("a missing resolver must be refused before any read, got reads: %v", *seen)
+	}
+}
+
+// --- SEC-3: a target that names the root itself is not a target ---
+
+func TestEvaluateOwnership_RejectsTargetNamingTheRoot(t *testing.T) {
+	root := t.TempDir()
+	for _, target := range []string{".", "./", "././"} {
+		t.Run(target, func(t *testing.T) {
+			readFile, readDir, seen := recordingFS(ownershipFiles(root, map[string]string{
+				".claude/skills/probe-skill/SKILL.md": ownershipSkillBody,
+			}))
+			e := ownershipEntry(HashSkill([]byte(ownershipSkillBody)))
+			e.Targets = []string{target}
+			got := EvaluateOwnership(root, e, readFile, readDir, identityResolver)
+			if got.AgentOwned {
+				t.Errorf("target %q was reported agent-owned: %+v", target, got)
+			}
+			if got.Reason != "invalid-target "+target {
+				t.Errorf("Reason = %q, want %q", got.Reason, "invalid-target "+target)
+			}
+			if len(*seen) != 0 {
+				t.Errorf("a target naming the root must be refused before any read, got reads: %v", *seen)
+			}
+		})
+	}
+}
+
+// --- ROOT-1: a non-absolute root is a distinct, loud failure ---
+
+func TestEvaluateOwnership_NonAbsoluteRootIsRefused(t *testing.T) {
+	for _, root := range []string{"", "rel", "rel/sub"} {
+		t.Run("root="+root, func(t *testing.T) {
+			readFile, readDir, seen := recordingFS(map[string]string{})
+			got := EvaluateOwnership(root, ownershipEntry(HashSkill([]byte(ownershipSkillBody))), readFile, readDir, identityResolver)
+			if got.AgentOwned {
+				t.Errorf("a non-absolute root must never be agent-owned, got %+v", got)
+			}
+			if got.Reason != "invalid-root "+root {
+				t.Errorf("Reason = %q, want %q", got.Reason, "invalid-root "+root)
+			}
+			if len(*seen) != 0 {
+				t.Errorf("a non-absolute root must be refused before any read, got reads: %v", *seen)
+			}
+		})
+	}
+}
+
+// --- COV-1: one test per resolveTarget sub-guard ---
+
+// TestResolveTarget_DotDotComponentGuard is the witness for the explicit
+// ".."-component scan: "a/../b/SKILL.md" CLEANS BACK INSIDE root, so the
+// containment check accepts it and only the scan refuses it. Deleting the
+// scan alone turns this test red.
+func TestResolveTarget_DotDotComponentGuard(t *testing.T) {
+	root := t.TempDir()
+	for _, target := range []string{"a/../b/SKILL.md", ".claude/skills/x/../x/SKILL.md"} {
+		if abs, ok := resolveTarget(root, target); ok {
+			t.Errorf("resolveTarget(%q, %q) = %q, true; want refused (a %q component is never recorded by the writer)", root, target, abs, "..")
+		}
+	}
+}
+
+// TestResolveTarget_ContainmentGuard is the witness for the containment
+// (HasPrefix) check: none of these targets carries a ".." component and none
+// is absolute, so the scan and the absolute check both pass them; only the
+// containment check refuses them. Deleting that check alone turns this test
+// red.
+func TestResolveTarget_ContainmentGuard(t *testing.T) {
+	cases := []struct{ root, target string }{
+		{"", "SKILL.md"}, // cleans to "." — the joined path has no cleanRoot+separator prefix
+		{string(filepath.Separator), "x/SKILL.md"}, // root "/" — cleanRoot+sep is "//", which nothing has as a prefix
+	}
+	for _, tc := range cases {
+		if abs, ok := resolveTarget(tc.root, tc.target); ok {
+			t.Errorf("resolveTarget(%q, %q) = %q, true; want refused by the containment check", tc.root, tc.target, abs)
+		}
+	}
+}
+
+// TestResolveTarget_DotTargetGuard is the witness for the strictly-below half
+// of the containment check (SEC-3): ".", "./" and "././" all clean to ".",
+// which resolves to root itself. Deleting withinRoot's `p != cleanRoot`
+// clause alone turns this test (and its EvaluateOwnership counterpart) red.
+func TestResolveTarget_DotTargetGuard(t *testing.T) {
+	root := t.TempDir()
+	for _, target := range []string{".", "./", "././"} {
+		if abs, ok := resolveTarget(root, target); ok {
+			t.Errorf("resolveTarget(%q, %q) = %q, true; want refused (a target must name a path strictly below root)", root, target, abs)
+		}
 	}
 }
