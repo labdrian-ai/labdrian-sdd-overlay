@@ -5,6 +5,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -195,4 +196,102 @@ func TestResolvedWithinRoot(t *testing.T) {
 			t.Error("root itself is not strictly below root")
 		}
 	})
+}
+
+// TestResolvePathKeepingMissing_DanglingSymlinkIsAFailure pins the F1 fix.
+// A component that is itself a symlink whose target does not exist yet is NOT
+// a "merely missing" component: keeping it literal silently un-follows the
+// link, and every containment proof built on the result is decided on a path
+// that only looks contained. It must be reported as a genuine resolution
+// failure, while an ORDINARY absent component stays literal — EvaluateOwnership
+// depends on that second half to report "missing <path>".
+func TestResolvePathKeepingMissing_DanglingSymlinkIsAFailure(t *testing.T) {
+	t.Run("dangling_symlink_component_fails", func(t *testing.T) {
+		tmp := t.TempDir()
+		link := filepath.Join(tmp, "link")
+		if err := os.Symlink(filepath.Join(tmp, "never-created"), link); err != nil {
+			t.Fatalf("symlink: %v", err)
+		}
+
+		if _, err := resolvePathKeepingMissing(filepath.Join(link, "skills", "x", "SKILL.md")); err == nil {
+			t.Fatal("expected an error for a dangling symlink component, got nil")
+		}
+	})
+
+	t.Run("dangling_symlink_as_the_final_component_fails", func(t *testing.T) {
+		tmp := t.TempDir()
+		link := filepath.Join(tmp, "link")
+		if err := os.Symlink(filepath.Join(tmp, "never-created"), link); err != nil {
+			t.Fatalf("symlink: %v", err)
+		}
+
+		if _, err := resolvePathKeepingMissing(link); err == nil {
+			t.Fatal("expected an error for a dangling symlink, got nil")
+		}
+	})
+
+	t.Run("ordinary_absent_component_still_stays_literal", func(t *testing.T) {
+		tmp := t.TempDir()
+		got, err := resolvePathKeepingMissing(filepath.Join(tmp, "absent", "SKILL.md"))
+		if err != nil {
+			t.Fatalf("an ordinary absent component must stay literal, got %v", err)
+		}
+		resolvedTmp, err := filepath.EvalSymlinks(tmp)
+		if err != nil {
+			t.Fatalf("EvalSymlinks: %v", err)
+		}
+		if want := filepath.Join(resolvedTmp, "absent", "SKILL.md"); got != want {
+			t.Errorf("resolved = %q, want %q", got, want)
+		}
+	})
+}
+
+// TestResolvedWithinRootRefusesDanglingSymlink is the guard-level consequence
+// of the F1 fix: a destination reached through a DANGLING symlinked `.claude`
+// used to be admitted, because the unfollowed literal path compared as
+// contained.
+func TestResolvedWithinRootRefusesDanglingSymlink(t *testing.T) {
+	base := t.TempDir()
+	root := filepath.Join(base, "project")
+	if err := os.MkdirAll(root, 0o755); err != nil {
+		t.Fatalf("mkdir root: %v", err)
+	}
+	// The link target is outside the root and does not exist yet.
+	if err := os.Symlink(filepath.Join(base, "outside"), filepath.Join(root, ".claude")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+
+	dest := filepath.Join(root, ".claude", "skills", "x", "SKILL.md")
+	ok, err := resolvedWithinRoot(root, dest)
+	if err == nil && ok {
+		t.Fatal("a destination reached through a dangling symlinked .claude must not be admitted")
+	}
+}
+
+// TestPlanInstallRefusesDestinationEqualToSkillsRoot is TQ-3: the deliberate
+// tightening the withinRoot extraction carried (a dst EQUAL to the skills root
+// was admitted by the old inline prefix check and is refused by the shared
+// strictly-below helper) had no test at the PlanInstall level, only at the
+// helper level. install_test.go is the untouched regression net, so this lives
+// here.
+func TestPlanInstallRefusesDestinationEqualToSkillsRoot(t *testing.T) {
+	reg := Registry{Version: "1", Skills: []Entry{{
+		ID:   ".",
+		Path: "skills/whatever",
+		Install: Install{
+			DefaultScope:    "project",
+			AllowedProjects: []string{"proj"},
+		},
+	}}}
+
+	ops, err := PlanInstall(reg, "proj", "/overlay", "/target-repo")
+	if err == nil {
+		t.Fatalf("expected a refusal for a destination equal to the skills root, got %d ops", len(ops))
+	}
+	if !strings.Contains(err.Error(), "escapes target skills root") {
+		t.Errorf("refusal %q does not name the target-root branch", err.Error())
+	}
+	if ops != nil {
+		t.Errorf("a refusal must return no ops, got %v", ops)
+	}
 }

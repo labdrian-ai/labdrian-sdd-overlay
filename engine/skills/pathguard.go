@@ -61,6 +61,20 @@ func resolvePathKeepingMissing(p string) (string, error) {
 			// literal-tail answer.
 			return "", err
 		}
+		// ENOENT is ambiguous: the component may not exist at all, or it may
+		// exist as a symlink whose TARGET does not exist yet. Keeping a
+		// dangling symlink literal un-follows it, and every containment proof
+		// built on the result is then decided on a path that only looks
+		// contained — `<root>/.claude` linked to a not-yet-created directory
+		// outside the project passed the guard (review round 3, F1). Lstat
+		// does not follow the link, so it tells the two cases apart.
+		// This is a filesystem probe, but so is EvalSymlinks above: the purity
+		// that matters belongs to PlanProjectRegister, which touches the disk
+		// only through the injected ResolvePath. "os" is already on the
+		// TestZeroFetchImportAllowlist list, so no widening was needed.
+		if fi, lerr := os.Lstat(cur); lerr == nil && fi.Mode()&os.ModeSymlink != 0 {
+			return "", err
+		}
 
 		parent := filepath.Dir(cur)
 		if parent == cur {

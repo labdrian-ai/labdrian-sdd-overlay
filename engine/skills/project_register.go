@@ -54,10 +54,16 @@ var allowedFrontmatterKeys = map[string]bool{
 // destination's current bytes when it already existed, and is nil for a
 // genuinely new file — the distinction rollback needs to decide between
 // restoring and removing (3b-ii).
+//
+// Mode is the mode the executor creates the file with. It is always
+// ProjectFileMode: carrying it on the write is what BINDS the constant the
+// design mandates to the bytes that will actually be created, instead of
+// leaving it declared but unused (review round 3, PLAN-2).
 type ProjectWrite struct {
 	Rel    string
 	Abs    string
 	Data   []byte
+	Mode   fs.FileMode
 	Backup []byte
 }
 
@@ -178,6 +184,17 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 	if draft == "" || draft == "." {
 		return ProjectPlan{}, fmt.Errorf("project-register: no draft file was given")
 	}
+	// A RELATIVE draft path defeats both halves of the guard below:
+	// filepath.Clean does not absolutize, so the lexical comparison against an
+	// absolute root is always false and the resolver hands back an equally
+	// relative path that compares false too — a draft sitting INSIDE the
+	// project root was accepted (review round 3, F2/PLAN-1/SPEC-1). The
+	// planner is pure and must never resolve against the process working
+	// directory, so a non-absolute draft is refused outright, exactly as
+	// --project-root is (step 1 above).
+	if !filepath.IsAbs(draft) {
+		return ProjectPlan{}, fmt.Errorf("project-register: the <draft-file> argument %q must be an absolute path", in.DraftPath)
+	}
 	if withinRoot(root, draft) {
 		return ProjectPlan{}, fmt.Errorf("project-register: draft %q must lie outside the project root %q", in.DraftPath, root)
 	}
@@ -245,6 +262,12 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 	for _, e := range lock.Skills {
 		for _, target := range e.Targets {
 			if _, err := resolveWritePath(in, root, target); err != nil {
+				if err == errDestUnderSkillsDir {
+					// Such a target is plainly INSIDE the root; calling it
+					// "outside the project root" contradicts itself (review
+					// round 3, PLAN-3).
+					return ProjectPlan{}, fmt.Errorf("project-register: lock entry %q records target %q under the project's own skills/ directory, which is never a registration destination", e.ID, target)
+				}
 				return ProjectPlan{}, fmt.Errorf("project-register: lock entry %q records target %q outside the project root: %v", e.ID, target, err)
 			}
 		}
@@ -276,7 +299,7 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 		}
 
 		rels = append(rels, rel)
-		writes = append(writes, ProjectWrite{Rel: rel, Abs: abs, Data: stamped})
+		writes = append(writes, ProjectWrite{Rel: rel, Abs: abs, Data: stamped, Mode: ProjectFileMode})
 	}
 
 	// The lock is a destination like any other.
@@ -299,7 +322,7 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 		return ProjectPlan{}, fmt.Errorf("project-register: %v", err)
 	}
 
-	lockWrite := ProjectWrite{Rel: ProjectLockRelPath, Abs: lockAbs, Data: lockData}
+	lockWrite := ProjectWrite{Rel: ProjectLockRelPath, Abs: lockAbs, Data: lockData, Mode: ProjectFileMode}
 	if in.LockExists {
 		lockWrite.Backup = in.LockData
 	}
@@ -325,7 +348,7 @@ func PlanProjectRegister(in RegisterInput) (ProjectPlan, error) {
 // destinations and lock-recorded targets both go through it.
 func resolveWritePath(in RegisterInput, root, rel string) (string, error) {
 	if underSkillsDir(rel) {
-		return "", fmt.Errorf("lies under %s/, which is never a registration destination", "skills")
+		return "", errDestUnderSkillsDir
 	}
 	abs, ok := resolveTarget(root, rel)
 	if !ok {
@@ -340,6 +363,13 @@ func resolveWritePath(in RegisterInput, root, rel string) (string, error) {
 	}
 	return abs, nil
 }
+
+// errDestUnderSkillsDir is the decision-(f) refusal resolveWritePath returns,
+// as a single comparable value so a caller can tell it apart from a
+// containment failure and word its own message honestly (review round 3,
+// PLAN-3): a destination under <root>/skills/ is inside the project root, not
+// outside it.
+var errDestUnderSkillsDir = fmt.Errorf("lies under skills/, which is never a registration destination")
 
 // checkFrontmatterAllowlist refuses any top-level frontmatter key outside
 // allowedFrontmatterKeys (validate step 4). Indented lines are children of a
@@ -376,11 +406,19 @@ func checkRegisterIdentity(id string, reg Registry) error {
 	if id == "" {
 		return fmt.Errorf("project-register: the draft frontmatter declares no name, so the skill id is empty")
 	}
-	if got := NormalizeSlug(id); got != id {
-		return fmt.Errorf("project-register: id %q is not normalized, want %q", id, got)
-	}
+	// The pattern check runs BEFORE the normalization check. Behind the
+	// normalization check it was unreachable — NormalizeSlug's output always
+	// matches slugRe — so the two guards were indistinguishable and one of
+	// them had no case at all (review round 3, TQ-5). Ahead of it, a
+	// malformed id (an uppercase letter, a dot, a slash, a leading hyphen) is
+	// named for what it is, and the normalization refusal is left for ids
+	// that match the pattern yet still differ from their normal form
+	// ("a--b", "a-").
 	if !slugRe.MatchString(id) {
 		return fmt.Errorf("project-register: id %q does not match the skill identifier pattern", id)
+	}
+	if got := NormalizeSlug(id); got != id {
+		return fmt.Errorf("project-register: id %q is not normalized, want %q", id, got)
 	}
 	if matched, skillPath := MatchCandidate(reg, id); matched {
 		return fmt.Errorf("project-register: id %q matches the overlay registry skill %q; extend it on the human path instead of shadowing it", id, skillPath)

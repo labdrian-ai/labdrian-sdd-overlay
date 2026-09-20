@@ -536,3 +536,278 @@ func TestProjectTargetsMatchContractTable(t *testing.T) {
 		}
 	}
 }
+
+// TestPlanProjectRegister_RefusesRelativeDraftPath is the write-path half of
+// the "draft must lie outside the project root" guard (review round 3, F2 /
+// PLAN-1 / SPEC-1). A RELATIVE draft path defeated that guard entirely:
+// filepath.Clean does not absolutize, so the lexical withinRoot comparison
+// against an absolute root was always false and the resolver returned an
+// equally relative path that compared false too — a draft physically sitting
+// inside the project root was ACCEPTED and planned. The planner is pure and
+// must not consult the process working directory, so the only sound answer is
+// to refuse a non-absolute draft outright, exactly as --project-root is
+// already required to be absolute.
+func TestPlanProjectRegister_RefusesRelativeDraftPath(t *testing.T) {
+	cases := []struct {
+		name  string
+		setup func(t *testing.T, in *RegisterInput) string
+	}{
+		{
+			name: "relative_draft_physically_inside_the_root",
+			setup: func(t *testing.T, in *RegisterInput) string {
+				if err := os.WriteFile(filepath.Join(in.ProjectRoot, "draft.md"), in.DraftData, 0o644); err != nil {
+					t.Fatalf("write: %v", err)
+				}
+				return "draft.md"
+			},
+		},
+		{
+			name: "relative_draft_outside_the_root",
+			setup: func(t *testing.T, in *RegisterInput) string {
+				return filepath.Join("..", "drafts", "SKILL.md")
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := registerInput(t, "tidy-worktree")
+			in.DraftPath = tc.setup(t, &in)
+
+			plan, err := PlanProjectRegister(in)
+			if err == nil {
+				t.Fatalf("expected a refusal for relative draft %q, got a plan with %d writes", in.DraftPath, len(plan.Writes))
+			}
+			if !strings.Contains(err.Error(), "must be an absolute path") {
+				t.Errorf("refusal %q does not name the absolute-path requirement", err.Error())
+			}
+			if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+				t.Errorf("a refusal must return the zero plan, got %+v", plan)
+			}
+		})
+	}
+}
+
+// TestPlanProjectRegister_RefusesDraftResolvingInsideRoot is the SYMLINK half
+// of the same guard (review round 3, TQ-2). The only draft case in the
+// refusal table is caught lexically, so the resolved check had no covering
+// test: here the draft path lies outside the root lexically and reaches a
+// file inside it through a symlinked directory.
+func TestPlanProjectRegister_RefusesDraftResolvingInsideRoot(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	base := filepath.Dir(in.ProjectRoot)
+	link := filepath.Join(base, "link-to-project")
+	if err := os.Symlink(in.ProjectRoot, link); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	draft := filepath.Join(link, "draft-SKILL.md")
+	if err := os.WriteFile(draft, in.DraftData, 0o644); err != nil {
+		t.Fatalf("write draft: %v", err)
+	}
+	in.DraftPath = draft
+
+	// Precondition: the lexical guard alone admits this draft.
+	if withinRoot(filepath.Clean(in.ProjectRoot), filepath.Clean(draft)) {
+		t.Fatal("precondition: the lexical guard was expected to admit the symlinked draft")
+	}
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "resolves inside the project root") {
+		t.Errorf("refusal %q does not name the resolved-containment reason", err.Error())
+	}
+}
+
+// TestPlanProjectRegister_RefusesDanglingSymlinkedTargetDir covers F1: a
+// DANGLING symlink at <root>/.claude defeated the resolved containment guard.
+// resolvePathKeepingMissing read the ENOENT from filepath.EvalSymlinks as
+// "this component merely does not exist yet" and kept it literal, so the link
+// was never followed and containment was decided on a path that only LOOKED
+// contained. The live-symlink case (in the refusal table) was refused
+// correctly; only the dangling one slipped through.
+func TestPlanProjectRegister_RefusesDanglingSymlinkedTargetDir(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	outside := filepath.Join(filepath.Dir(in.ProjectRoot), "outside-not-created-yet")
+	if err := os.Symlink(outside, filepath.Join(in.ProjectRoot, ".claude")); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	if _, err := os.Stat(outside); !os.IsNotExist(err) {
+		t.Fatalf("precondition: the symlink target must not exist, got %v", err)
+	}
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal for a dangling symlinked .claude, got a plan with %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "could not be resolved") {
+		t.Errorf("refusal %q does not name the resolution failure", err.Error())
+	}
+	if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+		t.Errorf("a refusal must return the zero plan, got %+v", plan)
+	}
+}
+
+// TestPlanProjectRegister_PlannedWritesCarryFileMode covers PLAN-2:
+// ProjectFileMode was declared but no planned write carried it, so nothing
+// bound the mode the design requires to what the executor will actually
+// create.
+func TestPlanProjectRegister_PlannedWritesCarryFileMode(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	plan, err := PlanProjectRegister(in)
+	if err != nil {
+		t.Fatalf("unexpected refusal: %v", err)
+	}
+	for i, w := range plan.Writes {
+		if w.Mode != ProjectFileMode {
+			t.Errorf("Writes[%d].Mode = %v, want %v", i, w.Mode, ProjectFileMode)
+		}
+	}
+	if plan.Lock.Mode != ProjectFileMode {
+		t.Errorf("plan.Lock.Mode = %v, want %v", plan.Lock.Mode, ProjectFileMode)
+	}
+}
+
+// TestPlanProjectRegister_RefusesLockTargetUnderSkillsDir covers PLAN-3 and
+// TQ-1 together. The underSkillsDir guard inside resolveWritePath had NO
+// covering test — deleting it left the suite green — although tasks.md 3b-i.4
+// claims a refusal case for "any destination under <root>/skills/". Reaching
+// it through a lock-recorded target also proves PLAN-3: such a refusal used to
+// be reported as "outside the project root", which is self-contradicting for a
+// target that is plainly inside it.
+func TestPlanProjectRegister_RefusesLockTargetUnderSkillsDir(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	data, err := SerializeProjectLock(ProjectLock{Version: 1, Skills: []ProjectLockEntry{{
+		ID:      "sneaky",
+		SHA256:  "abc",
+		Targets: []string{"skills/sneaky/SKILL.md"},
+	}}})
+	if err != nil {
+		t.Fatalf("serialize: %v", err)
+	}
+	in.LockData, in.LockExists = data, true
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "never a registration destination") {
+		t.Errorf("refusal %q does not name the skills/ reason", err.Error())
+	}
+	if strings.Contains(err.Error(), "outside the project root") {
+		t.Errorf("refusal %q calls a target inside the root 'outside the project root'", err.Error())
+	}
+	if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+		t.Errorf("a refusal must return the zero plan, got %+v", plan)
+	}
+}
+
+// TestPlanProjectRegister_RefusesWithoutStatProbe covers TQ-4: the
+// nil-ResolvePath fail-closed guard was tested while its nil-Stat twin was
+// not.
+func TestPlanProjectRegister_RefusesWithoutStatProbe(t *testing.T) {
+	in := registerInput(t, "tidy-worktree")
+	in.Stat = nil
+
+	plan, err := PlanProjectRegister(in)
+	if err == nil {
+		t.Fatalf("expected a refusal, got a plan with %d writes", len(plan.Writes))
+	}
+	if !strings.Contains(err.Error(), "stat probe") {
+		t.Errorf("refusal %q does not name the missing stat probe", err.Error())
+	}
+	if len(plan.Writes) != 0 || plan.Lock.Rel != "" {
+		t.Errorf("a refusal must return the zero plan, got %+v", plan)
+	}
+}
+
+// TestCheckRegisterIdentity_BranchMessagesAreDistinct covers TQ-5. The
+// refusal table asserted only the substring "id", which every identity
+// refusal contains, so `traversal_id` and `id_not_normalized` were
+// indistinguishable and the slugRe branch was never reached at all. The
+// pattern check now runs FIRST, which makes it reachable, and each branch
+// owns one message asserted here in full.
+func TestCheckRegisterIdentity_BranchMessagesAreDistinct(t *testing.T) {
+	cases := []struct {
+		name    string
+		id      string
+		want    string
+		notWant string
+	}{
+		{
+			name:    "empty_id",
+			id:      "",
+			want:    "the draft frontmatter declares no name",
+			notWant: "identifier pattern",
+		},
+		{
+			name:    "traversal_id_fails_the_pattern",
+			id:      "../../etc",
+			want:    `id "../../etc" does not match the skill identifier pattern`,
+			notWant: "is not normalized",
+		},
+		{
+			name:    "uppercase_id_fails_the_pattern",
+			id:      "Tidy--Worktree-",
+			want:    `id "Tidy--Worktree-" does not match the skill identifier pattern`,
+			notWant: "is not normalized",
+		},
+		{
+			name:    "pattern_valid_but_not_normalized",
+			id:      "a--b",
+			want:    `id "a--b" is not normalized, want "a-b"`,
+			notWant: "identifier pattern",
+		},
+		{
+			name:    "trailing_hyphen_is_a_pattern_match_but_not_normalized",
+			id:      "a-",
+			want:    `id "a-" is not normalized, want "a"`,
+			notWant: "identifier pattern",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			err := checkRegisterIdentity(tc.id, Registry{Version: "1"})
+			if err == nil {
+				t.Fatalf("expected a refusal for id %q", tc.id)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("refusal %q does not carry %q", err.Error(), tc.want)
+			}
+			if strings.Contains(err.Error(), tc.notWant) {
+				t.Errorf("refusal %q also carries the other branch's wording %q", err.Error(), tc.notWant)
+			}
+		})
+	}
+}
+
+// TestPlanProjectRegister_IdentityBranchesThroughThePlanner proves both
+// identity branches are reachable end-to-end through PlanProjectRegister with
+// the SAME distinct messages, so the planner and the helper cannot drift
+// (TQ-5).
+func TestPlanProjectRegister_IdentityBranchesThroughThePlanner(t *testing.T) {
+	cases := []struct {
+		name, id, want string
+	}{
+		{"traversal_id", "../../etc", "does not match the skill identifier pattern"},
+		{"not_normalized_id", "a--b", `is not normalized, want "a-b"`},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			in := registerInput(t, "tidy-worktree")
+			in.DraftData = []byte(strings.Replace(string(in.DraftData),
+				"name: tidy-worktree", "name: "+tc.id, 1))
+
+			_, err := PlanProjectRegister(in)
+			if err == nil {
+				t.Fatalf("expected a refusal for id %q", tc.id)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("refusal %q does not carry %q", err.Error(), tc.want)
+			}
+		})
+	}
+}
