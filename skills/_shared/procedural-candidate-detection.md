@@ -12,8 +12,10 @@ This document is delivered across several review slices. Sections 1-3
 shipped in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice
 2 (`repeat-and-recovery-detection`, R-002, R-003). Section 6 (duplicate
 rejection) shipped in slice 3 (`duplicate-rejection`, R-004). Sections 7-10
-shipped with the procedural drafting contract, and section 11 (registration
-and commit procedure) ships with `project-register-cli`.
+shipped with the procedural drafting contract, section 11 (registration
+and commit procedure) ships with `project-register-cli`, and section 13
+(revision trigger and qualifying post-registration occurrences) ships with
+`revision`.
 
 ## 1. Candidate identity and topic-key contract
 
@@ -664,6 +666,73 @@ unchanged. The agent MUST NOT retry by changing the content or by treating
 silence as approval. After promotion, removal of redundant project-tier
 copies remains a separate, explicitly invoked project-retire decision and
 must append a same-state `promoted -> promoted` `History` line.
+
+## 13. Revision trigger and qualifying post-registration occurrences
+
+Revision is a maintenance transition, not a new candidate emission. It is
+opened only for a candidate whose latest lifecycle state is `registered`
+(project tier) or `promoted` (global tier), and it follows the same drafting
+rules in section 8 and the ownership/registration rules in section 11. A
+promoted skill never receives an automated write under `skills/`; its revision
+draft is a human handoff through section 12.
+
+### Derived trigger
+
+`OccurrencesSincePromotion` is **derived, never stored**. Count the
+`Occurrences` entries whose timestamp is strictly after the `at:` timestamp on
+the most recent `Registered` or `Promoted` transition line in `History`.
+`Registered` is the project-tier baseline and `Promoted` is the global-tier
+baseline; the same derivation applies at either tier. Do not increment a
+counter field, and do not count observations from before that latest
+transition. A successful revision appends a new `Registered` or `Promoted`
+line, so the derived count resets to zero.
+
+The value is a proxy for skill effectiveness, not load telemetry: no runtime
+in this capability reports whether a skill was loaded or followed. The agent
+must disclose that limitation when it opens a revision draft.
+
+### Post-registration emission rows (normative)
+
+These rows extend the section 4 emission decision table for occurrences after
+project registration or global promotion. They append evidence to the same
+candidate record; they never create a second candidate identity.
+
+| Current `Status` | Qualifying occurrence after latest transition | `OccurrencesSincePromotion` after append | Open draft for `rev+1` | Result | Revision path |
+|---|---|---:|---|---|---|
+| `registered` or `promoted` | No | any | any | Keep the current status; append the occurrence only | None |
+| `registered` or `promoted` | Yes | 0 or 1 | No | Keep the current status; append the occurrence | None |
+| `registered` | Yes | 2 or more | Yes | Keep `registered`; append the occurrence; do not duplicate the draft | Existing project draft |
+| `registered` | Yes | 2 or more | No | Keep `registered`; append the occurrence and open one revision draft | Project `project-revise` after the draft is lint-clean |
+| `promoted` | Yes | 2 or more | Yes | Keep `promoted`; append the occurrence; do not duplicate the draft | Existing human-path draft |
+| `promoted` | Yes | 2 or more | No | Keep `promoted`; append the occurrence and open one revision draft | Human review and section 12 promotion path |
+
+The threshold is `>= 2`, not an independently persisted counter. `ForRevision`
+is the latch: at most one open draft may exist for the next revision number.
+A revision draft is opened only after the qualifying-occurrence count reaches
+the threshold and after the do-not-capture and lesson-shape checks in section
+8 pass. Opening a draft is a same-state history event until the draft is
+applied; it does not itself change `registered` to `promoted`, and it never
+changes `promoted` automatically.
+
+### Qualifying occurrence rule
+
+A post-registration occurrence counts only when it shows the existing skill
+failed to teach the recurring lesson:
+
+1. **`failure-recovery`** counts when the same failure recurs because the
+   registered or promoted instruction did not prevent it. The recovery must
+   still describe a repeatable procedural lesson, not merely a transient
+   incident.
+2. **`repeated-success`** counts when the observation records that the skill's
+   instruction was missing, wrong, or had to be rediscovered before the
+   successful procedure could be completed.
+
+Simply following the skill and succeeding does **not** count: that is evidence
+the skill worked, not evidence that it needs revision. A qualifying occurrence
+must still pass the single do-not-capture list in section 7 and the lesson
+shape rule in section 8. The agent appends the occurrence first, derives the
+count from the record, and then opens the revision draft when the count and
+`ForRevision` latch permit it.
 
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 
