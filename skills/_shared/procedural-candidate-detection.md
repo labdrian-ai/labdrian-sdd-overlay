@@ -602,6 +602,69 @@ records during `sdd-verify`, not by `go test`. Contract-artifact content
     pre-registration `History` lines are a prefix of the post-registration
     ones.
 
+## 12. Human promotion procedure
+
+Global promotion is a human-gated decision. The project-tier agent may
+prepare a candidate handoff and a linted project skill, but it MUST NOT write
+under the overlay's global `skills/` tree and it MUST NOT set the candidate's
+`Status` to `promoted`. The only global promotion path is the existing human
+`engine skills add` / `AddCore` path; this procedure adds no new CLI surface,
+no new approval machinery, no TTL, and no implicit consent from silence.
+
+**Silence is not consent.** No response, elapsed time, an unreviewed draft, or
+an absent objection promotes a skill. Until a human explicitly reviews and
+acts, the candidate remains `registered` (or `drafted` when registration has
+not completed), and no `Promoted` line, overlay file, registry entry, or
+manifest row is written.
+
+### Promotion steps
+
+1. **Prepare the handoff.** The agent identifies the candidate topic key, the
+   project skill id, the exact project-tier `SKILL.md` bytes, the recorded
+   `Registered` sha256, the current lint result, and the candidate record's
+   `History`. It presents these facts without modifying `skills/<id>/`.
+2. **Review the exact content.** A human decides whether to promote the
+   proposed skill and reviews its complete `SKILL.md` content. A human, not
+   the agent, copies the approved bytes into the overlay source path
+   `skills/<id>/SKILL.md`; this is the only promotion-time write under
+   `skills/`.
+3. **Run the existing add path.** From the overlay repository, the human
+   invokes the unmodified `engine skills add <id>` command (or the established
+   wrapper invocation with the same `add` verb and explicit registry,
+   manifest, and source-root paths). No promotion-specific command is
+   introduced. `AddCore` first verifies that `skills/<id>/SKILL.md` exists,
+   then runs `LintSkillFile` before serializing either the manifest or the
+   registry. A hard finding prints its `[lint:<rule>]` error and refuses the
+   add without changing either file; warnings are non-blocking.
+4. **Record the human transition.** Only after the human's add operation and
+   overlay commit succeed does the agent read the exact promoted file bytes
+   and append, without rewriting prior entries:
+
+   ```markdown
+   **Promoted**: <id> path:skills/<id>/SKILL.md sha256:<hex> commit:<sha> at:<RFC3339>
+   ```
+
+   The candidate record's `Status` changes to `promoted`, and its `History`
+   receives a new line such as:
+
+   ```text
+   - 2026-09-20T10:15:00Z | registered -> promoted | human | overlay commit a1b2c3d sha256:3f2a...c1
+   ```
+
+   The agent MUST first read the current record, copy every existing
+   `History` line byte-for-byte, append the promotion line, and upsert the
+   complete record. The old lines MUST remain a prefix of the new `History`.
+   The `Promoted` hash is the hash of the exact bytes at `skills/<id>/SKILL.md`
+   after the human operation; it is informational and does not replace the
+   project lock's ownership hash.
+
+A failed hard lint, a validation failure, or a human decision not to promote
+leaves the candidate at its prior status and leaves the registry and manifest
+unchanged. The agent MUST NOT retry by changing the content or by treating
+silence as approval. After promotion, removal of redundant project-tier
+copies remains a separate, explicitly invoked project-retire decision and
+must append a same-state `promoted -> promoted` `History` line.
+
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
