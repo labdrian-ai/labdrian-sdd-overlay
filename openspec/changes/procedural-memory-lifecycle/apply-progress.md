@@ -3,11 +3,11 @@
 ## Slice
 
 - Change: `procedural-memory-lifecycle`
-- Phase: 5 — `global-promotion`
-- Assigned tasks: 5.1 through 5.5 only
-- Branch: `feat/procedural-memory-lifecycle-5-global-promotion`
+- Phase: 6 — `revision`
+- Assigned tasks: 6.1 through 6.6 only
+- Branch: `feat/procedural-memory-lifecycle-6-revision`
 - Artifact store: OpenSpec
-- Previous apply-progress: none; this is the initial apply-progress artifact.
+- Previous apply-progress: Phase 5 `global-promotion`; this Phase 6 entry is cumulative and preserves the prior evidence.
 
 ## Completed tasks and persisted checkboxes
 
@@ -16,8 +16,14 @@
 - [x] 5.3 — Added contract section 12 documenting human-only promotion through the existing `engine skills add`/`AddCore` path, silence-is-not-consent, the `Promoted` hash line, and append-only `History` wiring.
 - [x] 5.4 — Confirmed by the hard-lint regression that refusal returns before registry serialization, manifest processing, or either atomic write.
 - [x] 5.5 — Completed focused and broad engine verification.
+- [x] 6.1 — Added RED coverage for project-revise ownership refusals (`hash-mismatch`, `missing`, `extra-entry`), successful revision metadata, rollback restoration, and project-status owner output.
+- [x] 6.2 — Added PlanProjectRevise ownership gating, revision bump/hash update, target and lock backup capture, and execution through the existing atomic temp/rename rollback executor.
+- [x] 6.3 — Added project-revise and project-status CLI cores, dispatch, argument handling, and usage output.
+- [x] 6.4 — Added contract section 13 covering derived `OccurrencesSincePromotion`, post-registration revision rows, and qualifying-occurrence rules.
+- [x] 6.5 — Refactored registration and revision to share `prepareProjectSkill`, preserving stamp → lint → hash → write ordering.
+- [x] 6.6 — Completed focused, vet, and full engine verification.
 
-`openspec/changes/procedural-memory-lifecycle/tasks.md` visibly marks 5.1–5.5 as `[x]`; later tasks remain unchecked.
+`openspec/changes/procedural-memory-lifecycle/tasks.md` visibly marks 5.1–5.5 and 6.1–6.6 as `[x]`; later tasks remain unchecked.
 
 ## TDD cycle evidence
 
@@ -27,30 +33,41 @@
 | GREEN | Implemented the `LintSkillFile` gate and ran `cd engine && go test ./skills/...`; the package passed, including existing AddCore and dispatch tests after their fixtures were made lint-clean. |
 | TRIANGULATE | Ran `cd engine && go vet ./... && go test ./...`; all engine packages passed. |
 | REFACTOR | Corrected AddCore step comments and verified the hard refusal returns before `Serialize`, manifest read/append, and atomic writes; reran focused tests successfully. |
+| RED (Phase 6) | Added revision/status tests first; `cd engine && go test ./skills/...` failed to build with undefined `ReviseInput`, `PlanProjectRevise`, `ExecuteProjectRevisePlan`, `RenderProjectReviseCore`, and `RenderProjectStatusCore`. |
+| GREEN (Phase 6) | Implemented the revision planner/executor reuse, CLI cores, dispatch, and status rendering; `cd engine && go test ./skills/...` passed. |
+| TRIANGULATE (Phase 6) | Ran `cd engine && go vet ./... && go test ./...`; every engine package passed. |
+| REFACTOR (Phase 6) | Shared `prepareProjectSkill` between registration and revision and reran focused and full tests; revision rollback restored the pre-run tree byte-for-byte under injected mid-rename failure. |
 
 ## Files changed
 
 - `engine/skills/lifecycle.go` — hard lint gate in `AddCore` and updated precondition/step comments.
 - `engine/skills/lifecycle_test.go` — lint-clean fixture helper, hard-refusal test, warnings-only test, and existing fixture updates.
 - `engine/skills/skills_test.go` — updated the existing AddCore dispatch fixture from invalid Markdown to lint-clean SKILL.md content.
-- `skills/_shared/procedural-candidate-detection.md` — section 12 human promotion procedure.
-- `openspec/changes/procedural-memory-lifecycle/tasks.md` — checked off 5.1–5.5 with evidence.
+- `skills/_shared/procedural-candidate-detection.md` — section 12 human promotion procedure and section 13 revision trigger/occurrence rules.
+- `engine/skills/project_register.go` — shared stamp/lint/hash preparation, revision planning, ownership gate, revision backups, and executor wrapper.
+- `engine/skills/project_cli.go` — project-revise and project-status CLI cores.
+- `engine/skills/skills.go` — project-revise/project-status dispatch and verb enumeration.
+- `engine/cmd/main.go` — project-revise/project-status usage and command documentation.
+- `engine/skills/project_register_test.go` — RED/GREEN revision ownership, hash/revision, and rollback tests.
+- `engine/skills/project_cli_test.go` — CLI refusal/status/dispatch tests.
+- `openspec/changes/procedural-memory-lifecycle/tasks.md` — checked off 5.1–5.5 and 6.1–6.6 with evidence.
 - `openspec/changes/procedural-memory-lifecycle/apply-progress.md` — this cumulative progress record.
 
 Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json` were preserved and not modified.
 
 ## Verification evidence
 
-- `cd engine && go test ./skills/...` — PASS.
+- `cd engine && go test ./skills/...` — PASS after GREEN and REFACTOR.
 - `cd engine && go vet ./... && go test ./...` — PASS; all engine packages passed.
-- `git diff --check` — PASS.
-- `git status --short` — expected five modified slice files plus the pre-existing unrelated untracked paths listed above; no commit, push, or PR was performed.
+- `git diff --check` — PASS after Phase 6 edits.
+- `git status --short` — nine expected modified slice/artifact files plus the pre-existing unrelated untracked paths listed above; no commit, push, or PR was performed.
 
 ## Deviations and warnings
 
 - Updating `engine/skills/skills_test.go` was required because its existing AddCore dispatch fixture used `# new-skill`, which is now correctly rejected by the new gate; no dispatch assertions changed.
 - CodeGraph was present, but `gentle-ai codegraph explore` was unavailable in this environment and returned the init-only usage error. Targeted file reads were used after that failed CodeGraph attempt.
-- No design or scope deviation was introduced. The review forecast's owner-granted `size:exception` for Phase 5 remains the recorded delivery boundary; this worker implemented only 5.1–5.5 and did not commit or publish.
+- No design or scope deviation was introduced. The review forecast's owner-granted `size:exception` for Phase 6 remains the recorded delivery boundary; this worker implemented only 6.1–6.6 and did not commit, push, or publish.
+- `project-status` currently reports `superseded-by:-`; supersession matching and retirement remain explicitly deferred to Phase 7a.
 
 ## Structured native status
 
@@ -60,24 +77,18 @@ Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json
 - Change: `procedural-memory-lifecycle`.
 - Native state at apply start: `applyState: ready`, `nextRecommended: apply`, `blockedReasons: []`.
 - Artifact store: `openspec`; proposal, specs, design, and tasks were read from the native-resolved paths.
-- Task progress at apply start: 85/118 complete, 33 pending.
+- Task progress at the previous Phase 5 apply start: 85/118 complete, 33 pending; Phase 6 native preflight reported 90/118 complete and 28 pending.
 - Action context: `mode: repo-local`, workspace `/home/labdrian/labdrian-sdd-overlay`, allowed edit root `/home/labdrian/labdrian-sdd-overlay`.
 
 ### Produced
 
-- Persisted OpenSpec task checkboxes: 5.1–5.5 are checked; task progress is now 90/118 complete and 28 pending.
+- Persisted OpenSpec task checkboxes: 5.1–5.5 and 6.1–6.6 are checked; task progress is now 96/118 complete and 22 pending.
 - Persisted apply-progress artifact at `openspec/changes/procedural-memory-lifecycle/apply-progress.md`.
-- No native lifecycle mutation, PR, commit, push, or archive action was performed. Fresh native status after apply reports `applyState: ready`, `nextRecommended: apply`, `blockedReasons: []`, and 90/118 tasks complete; the next unchecked slice begins at task 6.1.
+- No native lifecycle mutation, PR, commit, push, or archive action was performed. Native status consumed at apply start was `applyState: ready`, `nextRecommended: apply`, `blockedReasons: []`; after this worker the next unchecked slice begins at task 7a-i.1.
 
 ## Remaining tasks (exact unchecked lines)
 
 ```text
-- [ ] 6.1 RED `engine/skills/project_register_test.go`, `project_cli_test.go` (extend): `project-revise` refused per each `EvaluateOwnership` reason (`hash-mismatch`, `missing`, `extra-entry`) with the reason named in output and nothing written; a hash-matching revision bumps `revision`, recomputes `sha256`, and restores backup bytes on an injected mid-revision failure (rollback); `project-status` reports `owner:agent|human (<reason>)`
-- [ ] 6.2 GREEN `engine/skills/project_register.go`: `project-revise` planning/execution path — ownership gate via `EvaluateOwnership`, revision-number bump, backup-capture-then-restore-on-failure (temp+rename pattern, same as new registration)
-- [ ] 6.3 GREEN `engine/skills/project_cli.go`: `project-status` (ownership reporting) and `project-revise` CLI wiring
-- [ ] 6.4 GREEN `skills/_shared/procedural-candidate-detection.md`: section 13 — revision trigger (`OccurrencesSincePromotion >= 2`, derived not stored), new emission-table rows for post-registration occurrences, the "qualifying occurrence" rule (failure-recovery recurrence, or repeated-success where the instruction was missing/wrong/rediscovered — simply following the skill does not count)
-- [ ] 6.5 REFACTOR: confirm `project-revise` reuses the exact same stamp→lint→hash→write ordering as new registration (no divergent code path)
-- [ ] 6.6 Verify: `cd engine && go vet ./... && go test ./skills/...`
 - [ ] 7a-i.1 RED `engine/skills/project_register_test.go` (extend): `project-retire` removes target files and the lock entry in one operation for an agent-owned skill; refused for a human-owned skill (reason named); `AbsorbedInto` write succeeds only when the named id exists (global: `MatchCandidate` against the overlay registry as an existence lookup, not coverage proof; project: an entry in the project lock) and is refused with the unverified target named otherwise; a failure injected mid-retirement (via the `projectFS` fake) triggers rollback of the partial delete, leaving the pre-retirement tree byte-identical, and a failure during that rollback itself prints `error: rollback incomplete: <rel-path>` and exits 1
 - [ ] 7a-i.2 GREEN `engine/skills/project_register.go`: `project-retire` planning/execution (delete targets + lock entry, ownership-gated); `AbsorbedInto` existence verification helper
 - [ ] 7a-i.3 Verify: `cd engine && go vet ./... && go test ./skills/...`

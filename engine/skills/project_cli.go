@@ -246,3 +246,282 @@ func RenderProjectRegisterCore(
 	fmt.Fprintln(stdout, PiTrustNote)
 	exit(0)
 }
+
+// RenderProjectReviseCore is the testable CLI core for
+// `labdrian skills project-revise --project-root <abs> --candidate <key>
+// [--dry-run] <draft-file>`. It reads the existing project lock, derives the
+// skill id from the draft frontmatter, proves ownership, and routes the plan
+// through the same staged executor as project-register.
+func RenderProjectReviseCore(
+	args []string,
+	readFile readFileFn,
+	readDir func(string) ([]fs.DirEntry, error),
+	statFile func(string) (fs.FileInfo, error),
+	resolvePath func(string) (string, error),
+	fsys projectFS,
+	stdout, stderr io.Writer,
+	exit func(int),
+) {
+	projectRoot := ""
+	candidate := ""
+	registryPath := "skills.registry.yaml"
+	draftPath := ""
+	dryRun := false
+	endOfOptions := false
+	i := 0
+	consumeValue := func(flag string) (string, bool) {
+		if i+1 >= len(args) {
+			fmt.Fprintf(stderr, "error: skills project-revise: flag %q requires a value\n", flag)
+			exit(1)
+			return "", false
+		}
+		value := args[i+1]
+		if strings.HasPrefix(value, "-") {
+			fmt.Fprintf(stderr, "error: skills project-revise: flag %q requires a value; got flag token %q\n", flag, value)
+			exit(1)
+			return "", false
+		}
+		i++
+		return value, true
+	}
+
+	for ; i < len(args); i++ {
+		arg := args[i]
+		if !endOfOptions {
+			switch arg {
+			case "--":
+				endOfOptions = true
+				continue
+			case "--dry-run":
+				dryRun = true
+				continue
+			case "--project-root":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				projectRoot = value
+				continue
+			case "--candidate":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				candidate = value
+				continue
+			case "--registry":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				registryPath = value
+				_ = registryPath
+				continue
+			case "--manifest", "--source-root":
+				if _, ok := consumeValue(arg); !ok {
+					return
+				}
+				continue
+			}
+			if strings.HasPrefix(arg, "-") {
+				fmt.Fprintf(stderr, "error: skills project-revise: unknown flag %q\n", arg)
+				exit(1)
+				return
+			}
+		}
+		if draftPath == "" {
+			draftPath = arg
+			continue
+		}
+		fmt.Fprintf(stderr, "error: skills project-revise: unexpected extra argument %q (project-revise accepts exactly one <draft-file>)\n", arg)
+		exit(1)
+		return
+	}
+
+	if projectRoot == "" {
+		fmt.Fprintln(stderr, "error: skills project-revise requires --project-root <abs> (there is no working-directory fallback)")
+		exit(1)
+		return
+	}
+	if !filepath.IsAbs(projectRoot) {
+		fmt.Fprintf(stderr, "error: skills project-revise: --project-root %q must be an absolute path\n", projectRoot)
+		exit(1)
+		return
+	}
+	if candidate == "" {
+		fmt.Fprintln(stderr, "error: skills project-revise requires --candidate <key>")
+		exit(1)
+		return
+	}
+	if draftPath == "" {
+		fmt.Fprintln(stderr, "error: skills project-revise requires a <draft-file> argument")
+		exit(1)
+		return
+	}
+
+	draftData, err := readFile(draftPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading draft %q: %v\n", draftPath, err)
+		exit(1)
+		return
+	}
+	lockPath := filepath.Join(filepath.Clean(projectRoot), filepath.FromSlash(ProjectLockRelPath))
+	lockData, err := readFile(lockPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
+		exit(1)
+		return
+	}
+
+	plan, err := PlanProjectRevise(ReviseInput{
+		ProjectRoot:  projectRoot,
+		DraftPath:    draftPath,
+		DraftData:    draftData,
+		CandidateKey: candidate,
+		LockData:     lockData,
+		LockExists:   true,
+		ReadFile:     readFile,
+		ReadDir:      readDir,
+		Stat:         statFile,
+		ResolvePath:  resolvePath,
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+
+	if dryRun {
+		for _, w := range projectCommitOrder(plan) {
+			fmt.Fprintf(stdout, "plan: %s\n", w.Rel)
+		}
+		exit(0)
+		return
+	}
+	if err := ExecuteProjectRevisePlan(plan, fsys, stdout, stderr); err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+	fmt.Fprintf(stdout, "sha256: %s\n", plan.SHA256)
+	fmt.Fprintf(stdout, "revision: %d\n", plan.Revision)
+	exit(0)
+}
+
+// RenderProjectStatusCore is the testable CLI core for
+// `labdrian skills project-status --project-root <abs> [<id>]`. It reports
+// ownership for one requested lock entry or every entry when no id is given.
+// The overlay registry flag is accepted for wrapper compatibility; global
+// supersession reporting is added by the later retirement slice.
+func RenderProjectStatusCore(
+	args []string,
+	readFile readFileFn,
+	readDir func(string) ([]fs.DirEntry, error),
+	resolvePath func(string) (string, error),
+	stdout, stderr io.Writer,
+	exit func(int),
+) {
+	projectRoot := ""
+	id := ""
+	endOfOptions := false
+	i := 0
+	consumeValue := func(flag string) (string, bool) {
+		if i+1 >= len(args) {
+			fmt.Fprintf(stderr, "error: skills project-status: flag %q requires a value\n", flag)
+			exit(1)
+			return "", false
+		}
+		value := args[i+1]
+		if strings.HasPrefix(value, "-") {
+			fmt.Fprintf(stderr, "error: skills project-status: flag %q requires a value; got flag token %q\n", flag, value)
+			exit(1)
+			return "", false
+		}
+		i++
+		return value, true
+	}
+	for ; i < len(args); i++ {
+		arg := args[i]
+		if !endOfOptions {
+			switch arg {
+			case "--":
+				endOfOptions = true
+				continue
+			case "--project-root":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				projectRoot = value
+				continue
+			case "--registry", "--manifest", "--source-root":
+				if _, ok := consumeValue(arg); !ok {
+					return
+				}
+				continue
+			}
+			if strings.HasPrefix(arg, "-") {
+				fmt.Fprintf(stderr, "error: skills project-status: unknown flag %q\n", arg)
+				exit(1)
+				return
+			}
+		}
+		if id == "" {
+			id = arg
+			continue
+		}
+		fmt.Fprintf(stderr, "error: skills project-status: unexpected extra argument %q\n", arg)
+		exit(1)
+		return
+	}
+	if projectRoot == "" {
+		fmt.Fprintln(stderr, "error: skills project-status requires --project-root <abs> (there is no working-directory fallback)")
+		exit(1)
+		return
+	}
+	if !filepath.IsAbs(projectRoot) {
+		fmt.Fprintf(stderr, "error: skills project-status: --project-root %q must be an absolute path\n", projectRoot)
+		exit(1)
+		return
+	}
+
+	root := filepath.Clean(projectRoot)
+	lockData, err := readFile(filepath.Join(root, filepath.FromSlash(ProjectLockRelPath)))
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
+		exit(1)
+		return
+	}
+	lock, err := ParseProjectLock(lockData)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+
+	entries := lock.Skills
+	if id != "" {
+		entries = nil
+		for _, entry := range lock.Skills {
+			if entry.ID == id {
+				entries = []ProjectLockEntry{entry}
+				break
+			}
+		}
+		if len(entries) == 0 {
+			fmt.Fprintf(stderr, "error: project-status: skill %q is not in the project lock\n", id)
+			exit(1)
+			return
+		}
+	}
+
+	for _, entry := range entries {
+		ownership := EvaluateOwnership(root, entry, readFile, readDir, resolvePath)
+		if ownership.AgentOwned {
+			fmt.Fprintf(stdout, "%s rev:%d owner:agent superseded-by:-\n", entry.ID, entry.Revision)
+			continue
+		}
+		fmt.Fprintf(stdout, "%s rev:%d owner:human (%s) superseded-by:-\n", entry.ID, entry.Revision, ownership.Reason)
+	}
+	exit(0)
+}

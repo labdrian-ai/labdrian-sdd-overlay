@@ -627,3 +627,180 @@ func TestSkillsCore_VerbEnumerationsNameProjectRegister(t *testing.T) {
 		}
 	}
 }
+
+func runProjectRevise(t *testing.T, args []string, fsys projectFS) (stdout, stderr string, exitCode int) {
+	t.Helper()
+	var out, errBuf bytes.Buffer
+	exitCode = -1
+	RenderProjectReviseCore(args, os.ReadFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, fsys, &out, &errBuf, func(c int) { exitCode = c })
+	return out.String(), errBuf.String(), exitCode
+}
+
+func runProjectStatus(t *testing.T, args []string) (stdout, stderr string, exitCode int) {
+	t.Helper()
+	var out, errBuf bytes.Buffer
+	exitCode = -1
+	RenderProjectStatusCore(args, os.ReadFile, os.ReadDir, resolvePathKeepingMissing, &out, &errBuf, func(c int) { exitCode = c })
+	return out.String(), errBuf.String(), exitCode
+}
+
+func newRegisteredCLIRevisionEnv(t *testing.T, id string) projectCLIEnv {
+	t.Helper()
+	e := newProjectCLIEnv(t, id, projectCLIRegistry)
+	if _, errOut, code := runProjectRegister(t, registerArgs(e)); code != 0 {
+		t.Fatalf("initial project-register failed with %d: %s", code, errOut)
+	}
+	revised := []byte(strings.Replace(string(validDraft(id)),
+		"Use when a worktree must be handed over clean.",
+		"Recheck a worktree before handing it to a reviewer.", 1))
+	if err := os.WriteFile(e.draftPath, revised, 0o644); err != nil {
+		t.Fatalf("write revised draft: %v", err)
+	}
+	return e
+}
+
+func projectStatusArgs(e projectCLIEnv, id string) []string {
+	return []string{"--project-root", e.root, "--registry", e.registryPath, id}
+}
+
+func TestRenderProjectReviseCoreRefusesHumanOwnedReasonsAndWritesNothing(t *testing.T) {
+	cases := []struct {
+		name   string
+		reason string
+		mutate func(t *testing.T, e projectCLIEnv)
+	}{
+		{
+			name:   "hash-mismatch",
+			reason: "hash-mismatch",
+			mutate: func(t *testing.T, e projectCLIEnv) {
+				p := filepath.Join(e.root, ".claude", "skills", "tidy-worktree", "SKILL.md")
+				data, err := os.ReadFile(p)
+				if err != nil {
+					t.Fatalf("read target: %v", err)
+				}
+				if err := os.WriteFile(p, append(data, []byte("human edit\n")...), 0o644); err != nil {
+					t.Fatalf("human edit: %v", err)
+				}
+			},
+		},
+		{
+			name:   "missing",
+			reason: "missing",
+			mutate: func(t *testing.T, e projectCLIEnv) {
+				p := filepath.Join(e.root, ".claude", "skills", "tidy-worktree", "SKILL.md")
+				if err := os.Remove(p); err != nil {
+					t.Fatalf("remove target: %v", err)
+				}
+			},
+		},
+		{
+			name:   "extra-entry",
+			reason: "extra-entry",
+			mutate: func(t *testing.T, e projectCLIEnv) {
+				p := filepath.Join(e.root, ".claude", "skills", "tidy-worktree", "README.md")
+				if err := os.WriteFile(p, []byte("human note\n"), 0o644); err != nil {
+					t.Fatalf("write extra entry: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newRegisteredCLIRevisionEnv(t, "tidy-worktree")
+			tc.mutate(t, e)
+			before := snapshotTree(t, e.root)
+			args := registerArgs(e)
+			out, errOut, code := runProjectRevise(t, args, osProjectFS{})
+			if code != 1 {
+				t.Fatalf("expected exit 1 for %s, got %d (stdout %q, stderr %q)", tc.reason, code, out, errOut)
+			}
+			if !strings.Contains(errOut, tc.reason) || !strings.Contains(errOut, "human-owned") {
+				t.Errorf("stderr %q must name %s and human ownership", errOut, tc.reason)
+			}
+			if out != "" {
+				t.Errorf("refusal must print nothing to stdout, got %q", out)
+			}
+			assertSameTree(t, before, snapshotTree(t, e.root))
+		})
+	}
+}
+
+func TestRenderProjectStatusCoreReportsOwnershipReason(t *testing.T) {
+	cases := []struct {
+		name   string
+		want   string
+		mutate func(t *testing.T, e projectCLIEnv)
+	}{
+		{name: "agent", want: "owner:agent"},
+		{
+			name: "hash-mismatch", want: "owner:human (hash-mismatch",
+			mutate: func(t *testing.T, e projectCLIEnv) {
+				p := filepath.Join(e.root, ".claude", "skills", "tidy-worktree", "SKILL.md")
+				data, err := os.ReadFile(p)
+				if err != nil {
+					t.Fatalf("read target: %v", err)
+				}
+				if err := os.WriteFile(p, append(data, []byte("human edit\n")...), 0o644); err != nil {
+					t.Fatalf("human edit: %v", err)
+				}
+			},
+		},
+		{
+			name: "missing", want: "owner:human (missing",
+			mutate: func(t *testing.T, e projectCLIEnv) {
+				if err := os.Remove(filepath.Join(e.root, ".claude", "skills", "tidy-worktree", "SKILL.md")); err != nil {
+					t.Fatalf("remove target: %v", err)
+				}
+			},
+		},
+		{
+			name: "extra-entry", want: "owner:human (extra-entry",
+			mutate: func(t *testing.T, e projectCLIEnv) {
+				if err := os.WriteFile(filepath.Join(e.root, ".claude", "skills", "tidy-worktree", "README.md"), []byte("human note\n"), 0o644); err != nil {
+					t.Fatalf("write extra entry: %v", err)
+				}
+			},
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newRegisteredCLIRevisionEnv(t, "tidy-worktree")
+			if tc.mutate != nil {
+				tc.mutate(t, e)
+			}
+			out, errOut, code := runProjectStatus(t, projectStatusArgs(e, "tidy-worktree"))
+			if code != 0 {
+				t.Fatalf("project-status exit = %d, stderr %q", code, errOut)
+			}
+			if !strings.Contains(out, "tidy-worktree rev:1") || !strings.Contains(out, tc.want) {
+				t.Errorf("status output %q must contain revision and %q", out, tc.want)
+			}
+		})
+	}
+}
+
+func TestSkillsCore_DispatchesProjectReviseAndStatus(t *testing.T) {
+	e := newRegisteredCLIRevisionEnv(t, "tidy-worktree")
+
+	var reviseOut, reviseErr bytes.Buffer
+	reviseExit := -1
+	SkillsCore("project-revise", append([]string{"project-revise"}, registerArgs(e, "--dry-run")...), os.ReadFile, &reviseOut, &reviseErr, func(c int) { reviseExit = c })
+	if reviseExit != 0 {
+		t.Fatalf("project-revise dispatch exit = %d, stderr %q", reviseExit, reviseErr.String())
+	}
+	if !strings.Contains(reviseOut.String(), "plan: "+ProjectLockRelPath) {
+		t.Errorf("project-revise dispatch output = %q", reviseOut.String())
+	}
+
+	var statusOut, statusErr bytes.Buffer
+	statusExit := -1
+	SkillsCore("project-status", projectStatusArgs(e, "tidy-worktree"), os.ReadFile, &statusOut, &statusErr, func(c int) { statusExit = c })
+	if statusExit != 0 {
+		t.Fatalf("project-status dispatch exit = %d, stderr %q", statusExit, statusErr.String())
+	}
+	if !strings.Contains(statusOut.String(), "owner:agent") {
+		t.Errorf("project-status dispatch output = %q", statusOut.String())
+	}
+}

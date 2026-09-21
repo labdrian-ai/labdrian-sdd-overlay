@@ -181,12 +181,12 @@ Item-30 symbols consumed: sec 2 record block (`Promoted` line, prose only).
 
 Item-30 symbols consumed: sec 3 occurrence rules, sec 4 emission table (new rows, prose only).
 
-- [ ] 6.1 RED `engine/skills/project_register_test.go`, `project_cli_test.go` (extend): `project-revise` refused per each `EvaluateOwnership` reason (`hash-mismatch`, `missing`, `extra-entry`) with the reason named in output and nothing written; a hash-matching revision bumps `revision`, recomputes `sha256`, and restores backup bytes on an injected mid-revision failure (rollback); `project-status` reports `owner:agent|human (<reason>)`
-- [ ] 6.2 GREEN `engine/skills/project_register.go`: `project-revise` planning/execution path — ownership gate via `EvaluateOwnership`, revision-number bump, backup-capture-then-restore-on-failure (temp+rename pattern, same as new registration)
-- [ ] 6.3 GREEN `engine/skills/project_cli.go`: `project-status` (ownership reporting) and `project-revise` CLI wiring
-- [ ] 6.4 GREEN `skills/_shared/procedural-candidate-detection.md`: section 13 — revision trigger (`OccurrencesSincePromotion >= 2`, derived not stored), new emission-table rows for post-registration occurrences, the "qualifying occurrence" rule (failure-recovery recurrence, or repeated-success where the instruction was missing/wrong/rediscovered — simply following the skill does not count)
-- [ ] 6.5 REFACTOR: confirm `project-revise` reuses the exact same stamp→lint→hash→write ordering as new registration (no divergent code path)
-- [ ] 6.6 Verify: `cd engine && go vet ./... && go test ./skills/...`
+- [x] 6.1 RED `engine/skills/project_register_test.go`, `project_cli_test.go` (extend): `project-revise` refused per each `EvaluateOwnership` reason (`hash-mismatch`, `missing`, `extra-entry`) with the reason named in output and nothing written; a hash-matching revision bumps `revision`, recomputes `sha256`, and restores backup bytes on an injected mid-revision failure (rollback); `project-status` reports `owner:agent|human (<reason>)`
+- [x] 6.2 GREEN `engine/skills/project_register.go`: `project-revise` planning/execution path — ownership gate via `EvaluateOwnership`, revision-number bump, backup-capture-then-restore-on-failure (temp+rename pattern, same as new registration)
+- [x] 6.3 GREEN `engine/skills/project_cli.go`: `project-status` (ownership reporting) and `project-revise` CLI wiring
+- [x] 6.4 GREEN `skills/_shared/procedural-candidate-detection.md`: section 13 — revision trigger (`OccurrencesSincePromotion >= 2`, derived not stored), new emission-table rows for post-registration occurrences, the "qualifying occurrence" rule (failure-recovery recurrence, or repeated-success where the instruction was missing/wrong/rediscovered — simply following the skill does not count)
+- [x] 6.5 REFACTOR: confirm `project-revise` reuses the exact same stamp→lint→hash→write ordering as new registration (no divergent code path)
+- [x] 6.6 Verify: `cd engine && go vet ./... && go test ./skills/...`
 
 ## Phase 7a-i: `retirement-engine-core` (PR 11, ~490 lines, split owner-decided 2026-09-19)
 
