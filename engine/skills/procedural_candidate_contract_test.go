@@ -403,4 +403,237 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			t.Fatalf("contract must state the never-write-.pi/skills rule verbatim: %q", required)
 		}
 	})
+
+	// --- section 11: registration and commit procedure --------------------
+
+	// section11 is the slice between section 11's heading and the heading
+	// that follows it, so every assertion below proves its subject appears
+	// INSIDE section 11 rather than anywhere in the document. A whole-file
+	// Contains would still pass with section 11 deleted, because most of
+	// these strings also occur in design.md's own prose — not here, but the
+	// habit is what makes the check vacuous.
+	section11 := func(t *testing.T) string {
+		t.Helper()
+		const head = "## 11. Registration and commit procedure"
+		const tail = "## Acceptance checklist (procedural-skill-registration"
+		start := strings.Index(contract, head)
+		if start < 0 {
+			t.Fatalf("contract must contain section 11 heading %q", head)
+		}
+		end := strings.Index(contract, tail)
+		if end <= start {
+			t.Fatalf("section 11 must be followed by its acceptance checklist %q (start=%d, end=%d)", tail, start, end)
+		}
+		return contract[start:end]
+	}
+
+	// orderedMarkers walks markers with a moving cursor, so they are proven
+	// to appear IN ORDER inside the slice, not merely to be present.
+	orderedMarkers := func(t *testing.T, slice, what string, markers []string) {
+		t.Helper()
+		pos := 0
+		for _, marker := range markers {
+			idx := strings.Index(slice[pos:], marker)
+			if idx < 0 {
+				t.Fatalf("%s must contain %q, in order, after position %d", what, marker, pos)
+			}
+			pos += idx + len(marker)
+		}
+	}
+
+	t.Run("Section11_TenGitStepsPresentInOrder", func(t *testing.T) {
+		orderedMarkers(t, section11(t), "section 11", []string{
+			"`git -C R rev-parse --show-toplevel`",
+			"`git -C R symbolic-ref -q HEAD`",
+			"`git -C R diff --cached --name-only`",
+			"`labdrian skills project-register --dry-run",
+			"`git -C R check-ignore -- <plan paths>`",
+			"`wrote: <rel>`",
+			"`git -C R add -- <wrote paths>`",
+			"`git -C R commit -m \"<conventional message>\" -- <wrote paths>`",
+			"`labdrian skills project-status --project-root R <id>`",
+			"`git -C R rev-parse --short HEAD`",
+		})
+	})
+
+	t.Run("Section11_StepCountPinnedAtTen", func(t *testing.T) {
+		slice := section11(t)
+		steps := 0
+		for _, line := range strings.Split(slice, "\n") {
+			trimmed := strings.TrimSpace(line)
+			if len(trimmed) < 3 {
+				continue
+			}
+			// An ordered-list item: one or two digits, then ". ".
+			digits := 0
+			for digits < len(trimmed) && trimmed[digits] >= '0' && trimmed[digits] <= '9' {
+				digits++
+			}
+			if digits == 0 || digits > 2 {
+				continue
+			}
+			if strings.HasPrefix(trimmed[digits:], ". ") {
+				steps++
+			}
+		}
+		const expectedSteps = 10 // design.md decision (c): the ten ordered agent git steps
+		if steps != expectedSteps {
+			t.Fatalf("section 11 must carry exactly %d numbered steps per design decision (c), found %d", expectedSteps, steps)
+		}
+	})
+
+	t.Run("Section11_CommitMessagesPresentVerbatimInOrder", func(t *testing.T) {
+		slice := section11(t)
+		const stepEight = "`git -C R commit -m \"<conventional message>\" -- <wrote paths>`"
+		const stepNine = "`labdrian skills project-status --project-root R <id>`"
+		start := strings.Index(slice, stepEight)
+		if start < 0 {
+			t.Fatalf("section 11 must contain the commit step %q", stepEight)
+		}
+		end := strings.Index(slice, stepNine)
+		if end <= start {
+			t.Fatalf("the commit step must precede the ownership-confirmation step")
+		}
+		orderedMarkers(t, slice[start:end], "section 11's commit step", []string{
+			"`feat(skills): register project skill <id>`",
+			"`feat(skills): revise project skill <id>`",
+			"`chore(skills): retire project skill <id>`",
+			"No AI attribution, no `-a`, no `--no-verify`, no amend, no push.",
+		})
+	})
+
+	t.Run("Section11_CrashRecoveryRulePresentVerbatim", func(t *testing.T) {
+		slice := section11(t)
+		for _, required := range []string{
+			"Do not assume newly written `SKILL.md` files are untracked: after step 7 they may be staged as new files (`A`), leaving a dirty index.",
+			"First classify every wrote path by whether it existed in `HEAD` before this run (for example, `git -C R cat-file -e HEAD:<path>`), rather than by its post-crash index status.",
+			"For every wrote path that existed in `HEAD`, run",
+			"`git -C R restore --source=HEAD --staged --worktree -- <tracked paths>`.",
+			"For every wrote path absent from `HEAD` (including newly staged `SKILL.md` files and a first-run lock), run `git -C R restore --staged -- <new paths>` to remove the failed run's staged entries. Then delete a worktree file only after its bytes hash to the sha256 the failed run printed; if the hash differs, leave it for a human.",
+			"The lock follows the same classification: an existing lock is restored with the tracked-path command; a first-run lock is unstaged and hash-verified before deletion.",
+			"After these operations, `git -C R diff --cached --name-only` must show no wrote path, and every wrote path that existed in `HEAD` must match `HEAD` in both the index and worktree.",
+			"The recovery must leave unrelated staged or worktree changes untouched.",
+			"`git clean` and `git reset --hard` are never used.",
+		} {
+			if !strings.Contains(slice, required) {
+				t.Fatalf("section 11 must state the crash-recovery rule verbatim: %q", required)
+			}
+		}
+		for _, forbidden := range []string{
+			"The newly written SKILL.md files are always untracked",
+			"restore it byte-for-byte with `git -C R restore --source=HEAD -- <lock path>`",
+		} {
+			if strings.Contains(slice, forbidden) {
+				t.Fatalf("section 11 must not retain the unsafe crash-recovery claim %q", forbidden)
+			}
+		}
+	})
+
+	t.Run("Section11_AcceptanceChecklistPinsStagedCrashRecovery", func(t *testing.T) {
+		const head = "## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)"
+		const tail = "## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)"
+		start := strings.Index(contract, head)
+		if start < 0 {
+			t.Fatalf("contract must contain registration acceptance checklist heading %q", head)
+		}
+		end := strings.Index(contract, tail)
+		if end <= start {
+			t.Fatalf("registration acceptance checklist must precede %q", tail)
+		}
+		checklist := contract[start:end]
+		itemStart := strings.Index(checklist, "10. **A crash after staging")
+		if itemStart < 0 {
+			t.Fatalf("registration acceptance checklist must contain the staged crash-recovery scenario")
+		}
+		itemEnd := strings.Index(checklist[itemStart:], "\n11. **`History`")
+		if itemEnd < 0 {
+			t.Fatalf("staged crash-recovery scenario must be bounded before the History scenario")
+		}
+		item := checklist[itemStart : itemStart+itemEnd]
+		for _, required := range []string{
+			"after step 7's `git add`",
+			"recognizes new staged `SKILL.md` files (`A`) rather than assuming they are untracked",
+			"unstages the failed run's new paths",
+			"hash-verifies before deleting them",
+			"restores any pre-existing wrote paths (including the lock) with `git restore --source=HEAD --staged --worktree`",
+			"`git diff --cached --name-only` has no failed-run path",
+			"neither `git clean` nor `git reset --hard`",
+		} {
+			if !strings.Contains(item, required) {
+				t.Fatalf("crash-recovery acceptance item must state %q", required)
+			}
+		}
+	})
+
+	t.Run("Section11_StagedSetMismatchUnstagesAndRefuses", func(t *testing.T) {
+		required := "On a mismatch, run `git -C R restore --staged -- <wrote paths>` and refuse."
+		if !strings.Contains(section11(t), required) {
+			t.Fatalf("section 11 must state the staged-set mismatch rule verbatim: %q", required)
+		}
+	})
+
+	t.Run("Section11_RefusalTableRowsPresentVerbatim", func(t *testing.T) {
+		slice := section11(t)
+		for _, row := range []string{
+			"| The command runs from a subdirectory, a nested repository or a submodule | `git -C R rev-parse --show-toplevel` does not equal `R` | Refuse before step 4; nothing is planned, read or written |",
+			"| `HEAD` is detached | `git -C R symbolic-ref -q HEAD` fails | Refuse before step 4 |",
+			"| A merge, cherry-pick, revert or rebase is in progress | `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge` or `rebase-apply` exists under `git -C R rev-parse --git-dir` | Refuse before step 4 |",
+			"| Unrelated changes are already staged | `git -C R diff --cached --name-only` is non-empty | Refuse, naming every staged path, and leave the index untouched |",
+			"| A planned target is gitignored | `git -C R check-ignore -- <plan paths>` prints a path | Refuse; `git add -f` is forbidden |",
+			"| The staged set does not equal the wrote set | `git -C R diff --cached --name-only` after `git -C R add` differs | Unstage with `git -C R restore --staged -- <wrote paths>` and refuse |",
+		} {
+			if !strings.Contains(slice, row) {
+				t.Fatalf("section 11 must contain refusal table row %q verbatim", row)
+			}
+		}
+	})
+
+	t.Run("Section11_RefusalTableRowCountPinned", func(t *testing.T) {
+		slice := section11(t)
+		const header = "| Refusal condition | Detected by | What the agent does |"
+		idx := strings.Index(slice, header)
+		if idx < 0 {
+			t.Fatalf("section 11 must contain refusal table header %q", header)
+		}
+		lines := strings.Split(slice[idx:], "\n")
+		// lines[0] is the header row, lines[1] is the separator row.
+		rowCount := 0
+		for _, line := range lines[2:] {
+			trimmed := strings.TrimSpace(line)
+			if !strings.HasPrefix(trimmed, "|") {
+				break
+			}
+			rowCount++
+		}
+		const expectedRows = 6
+		if rowCount != expectedRows {
+			t.Fatalf("section 11's refusal table must have exactly %d data rows, found %d", expectedRows, rowCount)
+		}
+	})
+
+	t.Run("Section11_TrustNotePrintedOnSuccessOnlyAndNeverAPathspec", func(t *testing.T) {
+		slice := section11(t)
+		for _, required := range []string{
+			"note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.",
+			"The agent relays every `note:` line to the user and never uses one as a pathspec.",
+		} {
+			if !strings.Contains(slice, required) {
+				t.Fatalf("section 11 must state the Pi trust note rule verbatim: %q", required)
+			}
+		}
+	})
+
+	t.Run("Section11_EngineNeverRunsGit", func(t *testing.T) {
+		required := "The engine prints the exact path set and never runs git; the agent runs every git command as `git -C <project-root>`."
+		if !strings.Contains(section11(t), required) {
+			t.Fatalf("section 11 must state the trust boundary verbatim: %q", required)
+		}
+	})
+
+	t.Run("Section11_AcceptanceChecklistPresent", func(t *testing.T) {
+		const head = "## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)"
+		if !strings.Contains(contract, head) {
+			t.Fatalf("contract must contain the registration acceptance checklist heading %q", head)
+		}
+	})
 }
