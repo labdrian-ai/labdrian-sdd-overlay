@@ -6,6 +6,7 @@ import (
 	"io"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 )
@@ -408,11 +409,195 @@ func RenderProjectReviseCore(
 	exit(0)
 }
 
+// RenderProjectRetireCore is the testable CLI core for
+// `labdrian skills project-retire --project-root <abs> [--dry-run] <id>`.
+// It reads the project lock and overlay registry, delegates ownership-gated
+// planning/execution to the retirement engine, and never infers retirement
+// from a detector result. The command is an explicit operator/agent action.
+//
+// --reason and --absorbed-into are optional metadata carried into the
+// retirement plan. The candidate record procedure validates and persists the
+// reason; the engine only needs the values needed to gate AbsorbedInto's
+// existence check before it mutates the project tree.
+func RenderProjectRetireCore(
+	args []string,
+	readFile readFileFn,
+	readDir func(string) ([]fs.DirEntry, error),
+	statFile func(string) (fs.FileInfo, error),
+	resolvePath func(string) (string, error),
+	fsys projectFS,
+	stdout, stderr io.Writer,
+	exit func(int),
+) {
+	projectRoot := ""
+	registryPath := "skills.registry.yaml"
+	reason := ""
+	absorbedInto := ""
+	id := ""
+	dryRun := false
+	endOfOptions := false
+	i := 0
+	consumeValue := func(flag string) (string, bool) {
+		if i+1 >= len(args) {
+			fmt.Fprintf(stderr, "error: skills project-retire: flag %q requires a value\n", flag)
+			exit(1)
+			return "", false
+		}
+		value := args[i+1]
+		if strings.HasPrefix(value, "-") {
+			fmt.Fprintf(stderr, "error: skills project-retire: flag %q requires a value; got flag token %q\n", flag, value)
+			exit(1)
+			return "", false
+		}
+		i++
+		return value, true
+	}
+
+	for ; i < len(args); i++ {
+		arg := args[i]
+		if !endOfOptions {
+			switch arg {
+			case "--":
+				endOfOptions = true
+				continue
+			case "--dry-run":
+				dryRun = true
+				continue
+			case "--project-root":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				projectRoot = value
+				continue
+			case "--registry":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				registryPath = value
+				continue
+			case "--reason":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				reason = value
+				continue
+			case "--absorbed-into":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				absorbedInto = value
+				continue
+			case "--manifest", "--source-root":
+				// Wrapper-injected and unused here. Consume their values so a
+				// value cannot be mistaken for the skill id.
+				if _, ok := consumeValue(arg); !ok {
+					return
+				}
+				continue
+			}
+			if strings.HasPrefix(arg, "-") {
+				fmt.Fprintf(stderr, "error: skills project-retire: unknown flag %q\n", arg)
+				exit(1)
+				return
+			}
+		}
+		if id == "" {
+			id = arg
+			continue
+		}
+		fmt.Fprintf(stderr, "error: skills project-retire: unexpected extra argument %q (project-retire accepts exactly one <id>)\n", arg)
+		exit(1)
+		return
+	}
+
+	if projectRoot == "" {
+		fmt.Fprintln(stderr, "error: skills project-retire requires --project-root <abs> (there is no working-directory fallback)")
+		exit(1)
+		return
+	}
+	if !filepath.IsAbs(projectRoot) {
+		fmt.Fprintf(stderr, "error: skills project-retire: --project-root %q must be an absolute path\n", projectRoot)
+		exit(1)
+		return
+	}
+	if id == "" {
+		fmt.Fprintln(stderr, "error: skills project-retire requires a <id> argument")
+		exit(1)
+		return
+	}
+
+	registryData, err := readFile(registryPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
+		exit(1)
+		return
+	}
+	registry, err := ParseRegistry(bytes.NewReader(registryData))
+	if err != nil {
+		fmt.Fprintf(stderr, "error: parsing registry %q: %v\n", registryPath, err)
+		exit(1)
+		return
+	}
+
+	root := filepath.Clean(projectRoot)
+	lockPath := filepath.Join(root, filepath.FromSlash(ProjectLockRelPath))
+	lockData, err := readFile(lockPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
+		exit(1)
+		return
+	}
+	plan, err := PlanProjectRetire(RetireInput{
+		ProjectRoot:  root,
+		ID:           id,
+		Reason:       reason,
+		AbsorbedInto: absorbedInto,
+		Registry:     registry,
+		LockData:     lockData,
+		LockExists:   true,
+		ReadFile:     readFile,
+		ReadDir:      readDir,
+		Stat:         statFile,
+		ResolvePath:  resolvePath,
+	})
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+
+	if dryRun {
+		for _, write := range projectRetireCommitOrder(plan) {
+			fmt.Fprintf(stdout, "plan: %s\n", write.Rel)
+		}
+		exit(0)
+		return
+	}
+	if err := ExecuteProjectRetirePlan(plan, fsys, stdout, stderr); err != nil {
+		// This includes ErrRollbackIncomplete. The executor has already
+		// printed repo-relative recovery pointers for that sentinel; every
+		// non-nil execution result is an exit-1 refusal/failure.
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+	exit(0)
+}
+
+func projectRetireCommitOrder(plan ProjectPlan) []ProjectWrite {
+	order := append([]ProjectWrite(nil), plan.DeleteWrites...)
+	return append(order, plan.Lock)
+}
+
 // RenderProjectStatusCore is the testable CLI core for
 // `labdrian skills project-status --project-root <abs> [<id>]`. It reports
-// ownership for one requested lock entry or every entry when no id is given.
-// The overlay registry flag is accepted for wrapper compatibility; global
-// supersession reporting is added by the later retirement slice.
+// ownership for one requested lock entry or every entry when no id is given,
+// and reports global supersession using both the project id and the final
+// candidate-key slug.
 func RenderProjectStatusCore(
 	args []string,
 	readFile readFileFn,
@@ -422,6 +607,7 @@ func RenderProjectStatusCore(
 	exit func(int),
 ) {
 	projectRoot := ""
+	registryPath := "skills.registry.yaml"
 	id := ""
 	endOfOptions := false
 	i := 0
@@ -454,7 +640,14 @@ func RenderProjectStatusCore(
 				}
 				projectRoot = value
 				continue
-			case "--registry", "--manifest", "--source-root":
+			case "--registry":
+				value, ok := consumeValue(arg)
+				if !ok {
+					return
+				}
+				registryPath = value
+				continue
+			case "--manifest", "--source-root":
 				if _, ok := consumeValue(arg); !ok {
 					return
 				}
@@ -486,6 +679,19 @@ func RenderProjectStatusCore(
 	}
 
 	root := filepath.Clean(projectRoot)
+	registryData, err := readFile(registryPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
+		exit(1)
+		return
+	}
+	registry, err := ParseRegistry(bytes.NewReader(registryData))
+	if err != nil {
+		fmt.Fprintf(stderr, "error: parsing registry %q: %v\n", registryPath, err)
+		exit(1)
+		return
+	}
+
 	lockData, err := readFile(filepath.Join(root, filepath.FromSlash(ProjectLockRelPath)))
 	if err != nil {
 		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
@@ -517,11 +723,30 @@ func RenderProjectStatusCore(
 
 	for _, entry := range entries {
 		ownership := EvaluateOwnership(root, entry, readFile, readDir, resolvePath)
+		supersededBy := projectStatusSupersededBy(registry, entry)
+		if supersededBy == "" {
+			supersededBy = "-"
+		}
 		if ownership.AgentOwned {
-			fmt.Fprintf(stdout, "%s rev:%d owner:agent superseded-by:-\n", entry.ID, entry.Revision)
+			fmt.Fprintf(stdout, "%s rev:%d owner:agent superseded-by:%s\n", entry.ID, entry.Revision, supersededBy)
 			continue
 		}
-		fmt.Fprintf(stdout, "%s rev:%d owner:human (%s) superseded-by:-\n", entry.ID, entry.Revision, ownership.Reason)
+		fmt.Fprintf(stdout, "%s rev:%d owner:human (%s) superseded-by:%s\n", entry.ID, entry.Revision, ownership.Reason, supersededBy)
 	}
 	exit(0)
+}
+
+// projectStatusSupersededBy reports the first global registry path matching
+// the project entry's id or the last slug of its candidate key. MatchCandidate
+// is an existence/identity lookup here: it does not claim that the global
+// skill covers the project skill's content.
+func projectStatusSupersededBy(registry Registry, entry ProjectLockEntry) string {
+	if matched, skillPath := MatchCandidate(registry, entry.ID); matched {
+		return skillPath
+	}
+	candidateSlug := path.Base(entry.Candidate)
+	if matched, skillPath := MatchCandidate(registry, candidateSlug); matched {
+		return skillPath
+	}
+	return ""
 }

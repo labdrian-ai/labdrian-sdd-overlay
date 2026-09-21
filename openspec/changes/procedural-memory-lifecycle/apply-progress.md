@@ -202,3 +202,100 @@ Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json
 - [ ] F.5 Run the full acceptance checklist from sections 11 (Phase 4), and the sdd-verify checklists implied by Phases 2, 6, 7a-i, 7a-ii against real Engram records and a temp git repo; record results honestly, including any scenario that could not be exercised (e.g. the rollback-failure print path, or the Codex smoke test if `UNVERIFIED`)
 - [ ] F.6 Confirm every Success Criteria checkbox in `proposal.md` is satisfied or explicitly recorded as a known gap (in particular the Codex-support claim, gated strictly by the recorded smoke-test verdict)
 ```
+
+
+---
+
+## Phase 7a-ii: `retirement-cli-and-docs`
+
+- Change: `procedural-memory-lifecycle`
+- Assigned tasks: 7a-ii.1 through 7a-ii.5 only
+- Branch: `feat/procedural-memory-lifecycle-7a-ii-retirement-cli-docs`
+- Artifact store: OpenSpec
+- Previous progress: Phase 7a-i `retirement-engine-core`; this entry is cumulative and preserves all prior evidence.
+
+## Completed tasks and persisted checkboxes
+
+- [x] 7a-ii.1 — Added CLI RED coverage for explicit `project-retire` dispatch and execution, plus `project-status` supersession reporting through both the project id and the final candidate slug.
+- [x] 7a-ii.2 — Added `RenderProjectRetireCore`, `project-retire` dispatch/usage wiring, dry-run plan output, ownership-gated execution and exit-1 failure handling; extended `project-status` to parse the overlay registry and print `superseded-by:<path>`.
+- [x] 7a-ii.3 — Added contract section 14 documenting report-then-decision retirement, the six `RetirementReason` values, existence-only `AbsorbedInto` verification, project-tier cleanup, and the human/unmodified global `RemoveCore` path; pinned the section with contract assertions.
+- [x] 7a-ii.4 — Confirmed retirement has no detector import or automatic trigger: only the explicit `project-retire` verb reaches the retirement planner/executor, while section 14 makes detector output report-only.
+- [x] 7a-ii.5 — Completed focused, vet, full-engine and diff-integrity verification.
+
+`openspec/changes/procedural-memory-lifecycle/tasks.md` visibly marks 7a-ii.1–7a-ii.5 as `[x]`; Phase 7b and final verification tasks remain unchecked.
+
+## TDD cycle evidence
+
+| Task | Test file | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 7a-ii.1 | `engine/skills/project_cli_test.go` | Unit/FS CLI | `cd engine && go test ./skills/...` passed before edits | Added dispatch, id-match, candidate-slug-match and rollback-exit tests; the first focused run failed to compile with undefined `RenderProjectRetireCore` | Implemented the CLI core and dispatch; focused tests passed | Ran two supersession match cases plus successful and rollback-incomplete retirement paths | Ran gofmt, full focused package tests, and diff checks with no behavior change |
+| 7a-ii.2 | `engine/skills/project_cli.go`, `engine/skills/skills.go`, `engine/cmd/main.go` | Unit/CLI | Existing skills package passed before edits | Covered by the same RED CLI tests | `cd engine && go test ./skills/...` passed | Exercised explicit dispatch, actual target/lock removal, and nonzero rollback failure | Consolidated supersession formatting in `projectStatusSupersededBy`; retained injected I/O and executor seams |
+| 7a-ii.3 | `skills/_shared/procedural-candidate-detection.md`, `engine/skills/procedural_candidate_contract_test.go` | Contract/document | Existing contract tests passed before edits | Added section-14 assertions; the first focused assertion run failed on literal matching across wrapped prose | Normalized contract whitespace and pinned the complete ordered section; focused contract test passed | Checked both project and global retirement branches, all six reason values, and the detector boundary | Ran gofmt and the full skills package after the contract assertion refactor |
+| 7a-ii.4 | `engine/skills/project_cli.go`, contract section 14 | Structural | Existing source behavior passed before edits | N/A — refactor/inspection task | Explicit-only command path and report-only documentation verified | Covered successful explicit invocation and detector-independent code path | No additional production behavior required; existing tests remained green |
+| 7a-ii.5 | `engine/skills/...` | Verification | Focused baseline passed | N/A — verification task | Vet and tests passed | Full engine suite passed | `git diff --check` passed |
+
+## Files changed in this phase
+
+- `engine/skills/project_cli.go` — explicit retirement CLI parser/core, dry-run ordering, executor failure mapping, registry-backed supersession output.
+- `engine/skills/project_cli_test.go` — retirement dispatch/removal, supersession-by-id/slug, and rollback-incomplete exit tests.
+- `engine/skills/procedural_candidate_contract_test.go` — section 14 heading, ordering, reason vocabulary, and ownership-boundary assertions.
+- `engine/skills/skills.go` — project-retire dispatch and supported-verb enumeration.
+- `engine/cmd/main.go` — project-retire usage/help and supported-verb text.
+- `skills/_shared/procedural-candidate-detection.md` — section 14 retirement procedure and top-level slice index update.
+- `openspec/changes/procedural-memory-lifecycle/tasks.md` — checked only 7a-ii.1–7a-ii.5.
+- `openspec/changes/procedural-memory-lifecycle/apply-progress.md` — appended this cumulative phase entry.
+
+Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json` were preserved and not modified.
+
+## Verification evidence
+
+- `cd engine && go test ./skills -run 'Test(SkillsCore_DispatchesProjectRetireAndRemovesRegisteredSkill|RenderProjectStatusCoreReportsSupersededByIDOrCandidateSlug|RenderProjectRetireCoreMapsRollbackIncompleteToExitOne)$'` — PASS after GREEN.
+- `cd engine && go test ./skills -run 'Project(Register|Revise|Status|Retire)|SkillsCore|RenderProject'` — PASS.
+- `cd engine && go test ./skills -run TestProceduralCandidateContractArtifact` — PASS after the contract assertion refactor.
+- `cd engine && go test ./skills/...` — PASS.
+- `cd engine && go vet ./...` — PASS.
+- `cd engine && go test ./...` — PASS; all engine packages passed.
+- `git diff --check` — PASS.
+- `git status --short` — eight expected modified files plus pre-existing unrelated untracked paths; no commit, push, or PR was performed.
+
+## Deviations, workload, and risks
+
+- The authored Phase 7a-ii implementation/documentation diff is 519 additions plus 17 deletions (536 authored changed lines, excluding OpenSpec bookkeeping) across the CLI, tests, help text, contract assertions, and section 14. It is above the nominal 400-line review budget but remains the owner-decided cohesive PR 12 slice on the `feature-branch-chain`; no comments, tests, docs, or safety handling were compressed to reduce the count. A `size:exception` should be recorded if the maintainer requires an explicit budget acknowledgement.
+- `project-retire` accepts optional `--reason` and `--absorbed-into` metadata flags in addition to the design's short command form; the engine still performs existence verification only for `AbsorbedInto`, and candidate-record persistence remains agent-driven as specified.
+- No Phase 7b detector, commit, push, PR, archive, or native lifecycle mutation was performed.
+
+## Structured native status
+
+### Consumed
+
+- Schema: `gentle-ai.sdd-status` v2.
+- Change: `procedural-memory-lifecycle`.
+- Native state at apply start: `applyState: ready`, `nextRecommended: apply`, `blockedReasons: []`.
+- Artifact store: `openspec`; proposal, all six specs, design, tasks, and cumulative apply-progress were read from native-resolved paths.
+- Action context: `mode: repo-local`, workspace `/home/labdrian/labdrian-sdd-overlay`, allowed edit root `/home/labdrian/labdrian-sdd-overlay`.
+- Review workload: `auto-chain` with `feature-branch-chain`; Phase 7a-ii was the assigned slice, so no new delivery decision was needed.
+
+### Produced
+
+- Persisted OpenSpec task checkboxes: 7a-ii.1–7a-ii.5 are checked; task progress is now 104/118 complete and 14 pending.
+- Persisted cumulative apply-progress at `openspec/changes/procedural-memory-lifecycle/apply-progress.md`.
+- No native lifecycle mutation, commit, push, PR, or archive action was performed. The next unchecked slice begins at 7b.1.
+
+## Remaining tasks (exact unchecked lines after this phase)
+
+```text
+- [ ] 7b.1 RED `longterm-mem/internal/staleness/staleness_test.go` (extend): `ReferencedPaths(text)` extracts repo-shaped tokens from inline code spans and fenced blocks using the existing strict `filePath` pattern; `ClassifyPaths(repoRoot, paths)` reuses `indexTree`/`repohistory.Inspect` to classify each as removed-in-history vs still-present vs moved; `Detect`'s existing behavior and tests are unchanged
+- [ ] 7b.2 GREEN `longterm-mem/internal/staleness/staleness.go`: export `ReferencedPaths`, `ClassifyPaths`, sitting beside `Detect` and sharing its private helpers, with no change to `Detect` itself
+- [ ] 7b.3 RED `longterm-mem/internal/skillstale/skillstale_test.go` (new), fixture `longterm-mem/internal/skillstale/testdata/procedural-skills.lock.json`: detector over a temp git repo + fixture Engram DB — a skill naming a git-removed path is flagged `REMOVED <path> (by <commit>)` regardless of ordering; a renamed path yields `MOVED <path> -> <new>` only, never `REMOVED`; a clean skill (all paths present, all commands resolvable, `LastObserved` recent, no supersession) is not flagged; an unresolvable fenced command's first word yields `UNRESOLVED-COMMAND <name>` (resolved via `os.Stat` scan of `$PATH`, no `os/exec`); `LastObserved` older than 180 days yields `QUIET since <LastObserved>`; the detector performs zero file/record mutation (tree snapshot identical before/after, Engram store opened read-only); the fixture lock parses and `engine/skills/project_lock_test.go`'s `SerializeProjectLock` reproduces the shared fixture byte-for-byte (cross-module pinning, verified in 7b.6)
+- [ ] 7b.4 GREEN `longterm-mem/internal/skillstale/skillstale.go`: the detector over the lock, the first target SKILL.md of each entry, `staleness.ReferencedPaths`/`ClassifyPaths`, `os.Stat`-based `$PATH` command resolution, and `engram.Store.ListObservations` filtered by `TopicKey` for `LastObserved`/`Status` (read-only)
+- [ ] 7b.5 GREEN `longterm-mem/cmd/longterm-mem/cmd_skills_stale.go`, `main.go`: `longterm-mem skills-stale --project-root <abs> [--project <P>]`, report-only subcommand
+- [ ] 7b.6 GREEN `engine/skills/project_lock_test.go`: add the pinning test asserting `SerializeProjectLock` reproduces `longterm-mem/internal/skillstale/testdata/procedural-skills.lock.json` byte-for-byte
+- [ ] 7b.7 REFACTOR: confirm no new `os/exec`-importing package was introduced in `longterm-mem` (the module's existing `allowedExecImporters`/equivalent guard, if any, is unchanged) and that `skillstale` and `cmd_skills_stale.go` perform no write to the lock, the SKILL.md files, or Engram
+- [ ] 7b.8 Verify: `cd longterm-mem && go vet ./... && go test ./internal/staleness/... ./internal/skillstale/... ./cmd/...`
+- [ ] F.1 `cd engine && go vet ./... && go test ./...`
+- [ ] F.2 `cd longterm-mem && go vet ./... && go test ./...`
+- [ ] F.3 Confirm no file was written under `skills/` by any project-tier code path outside `AddCore`'s own tests (`git diff --stat` review across all 13 merged PRs)
+- [ ] F.4 Confirm no test in either module touched a live `.claude/skills/`, `.agents/skills/`, `.pi/`, `skills-lock.json`, the user's home directory, or spawned a live runtime binary (temp-dir-only rule)
+- [ ] F.5 Run the full acceptance checklist from sections 11 (Phase 4), and the sdd-verify checklists implied by Phases 2, 6, 7a-i, 7a-ii against real Engram records and a temp git repo; record results honestly, including any scenario that could not be exercised (e.g. the rollback-failure print path, or the Codex smoke test if `UNVERIFIED`)
+- [ ] F.6 Confirm every Success Criteria checkbox in `proposal.md` is satisfied or explicitly recorded as a known gap (in particular the Codex-support claim, gated strictly by the recorded smoke-test verdict)
+```

@@ -13,9 +13,10 @@ shipped in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice
 2 (`repeat-and-recovery-detection`, R-002, R-003). Section 6 (duplicate
 rejection) shipped in slice 3 (`duplicate-rejection`, R-004). Sections 7-10
 shipped with the procedural drafting contract, section 11 (registration
-and commit procedure) ships with `project-register-cli`, and section 13
-(revision trigger and qualifying post-registration occurrences) ships with
-`revision`.
+and commit procedure) ships with `project-register-cli`, section 13 (revision
+trigger and qualifying post-registration occurrences) ships with `revision`,
+and section 14 (the explicit retirement decision procedure) ships with
+`retirement-cli-and-docs`.
 
 ## 1. Candidate identity and topic-key contract
 
@@ -733,6 +734,107 @@ must still pass the single do-not-capture list in section 7 and the lesson
 shape rule in section 8. The agent appends the occurrence first, derives the
 count from the record, and then opens the revision draft when the count and
 `ForRevision` latch permit it.
+
+## 14. Retirement decision procedure
+
+Retirement is a report-then-decision workflow. The retirement detector in
+`longterm-mem` is report-only: it may identify stale references, quiet skills,
+unresolved commands, or a newer global match, but it MUST NOT invoke a
+removal command, delete a target, alter the project lock, alter the overlay
+registry or manifest, commit, or write an Engram record. A report is evidence
+for a separate, explicit retirement decision; it is never consent.
+
+`project-status` is an additional report surface. It prints
+`superseded-by:<path>` when `MatchCandidate(registry, id)` or
+`MatchCandidate(registry, <last candidate slug>)` finds a global registry
+entry. That match is an identity/existence signal only. It does not prove that
+the global skill covers the project skill's content, and it never triggers
+retirement by itself.
+
+### RetirementReason vocabulary
+
+Every retirement decision records exactly one `RetirementReason` from this
+vocabulary on the candidate record before the agent appends the retirement
+`History` line:
+
+| `RetirementReason` | Decision meaning |
+|---|---|
+| `stale-reference` | The skill names a path, command, or other operational fact that the report shows is no longer valid. |
+| `superseded` | A newer global skill identity makes the project skill redundant, subject to human review of actual coverage. |
+| `absorbed` | The skill's procedural content was deliberately consolidated into a verified target skill. |
+| `promoted` | A human promoted the skill globally, so its redundant project-tier copies may be removed without changing global status. |
+| `quiet` | The candidate has remained unobserved beyond the documented quiet interval and a removal decision was made. |
+| `human-request` | A human explicitly requested removal, independently of detector output. |
+
+The vocabulary is a decision record, not a detector classification. A detector
+may provide evidence for one of these reasons, but the agent or human still
+chooses the reason and confirms the target tier.
+
+### Project-tier retirement (agent-owned)
+
+For a `registered` project-tier skill, the agent performs retirement only
+after reviewing the report and deciding to remove the skill. It runs the
+explicit command below; it never derives this invocation from detector output
+without the separate decision:
+
+```text
+labdrian skills project-retire --project-root R --registry <registry> \
+  --reason <RetirementReason> [--absorbed-into B] [--dry-run] <id>
+```
+
+The agent MUST first run `--dry-run` and inspect the `plan: <rel>` lines. The
+real command is ownership-gated: the project lock hash and target shape must
+still prove `owner:agent`. It removes the target `SKILL.md` files and the
+selected project-lock entry, keeps the empty lock file when it is the last
+entry, and prints `removed: <rel>` only after the complete operation succeeds.
+A failure, including `ErrRollbackIncomplete`, exits 1 and names the recovery
+paths; it never reports a successful removal. The agent then performs the
+single scoped git commit described in section 11, with message
+`chore(skills): retire project skill <id>`, and records the commit and reason
+in the candidate's append-only `History`.
+
+A human edit, missing target, malformed lock, symlink escape, or any other
+failed ownership proof refuses the operation as human-owned. The refusal does
+not delete a target or rewrite the lock; the agent stops and hands the path to
+the human instead.
+
+### AbsorbedInto verification
+
+For `RetirementReason: absorbed`, `AbsorbedInto: B` MUST be verified before
+any retirement write. If B is a global target, `MatchCandidate(registry, B)`
+MUST find an entry and the returned registry path is the existence evidence.
+If B is a project-tier target, B MUST be an exact id in the current project
+lock. `MatchCandidate` is used only as the global identity lookup; it is not
+a coverage proof and must not be used to infer that B contains A's lesson. If
+neither tier verifies B, the command refuses and names the unverified target;
+`AbsorbedInto` is not written to the candidate record.
+
+### Post-promotion project cleanup
+
+After a human has set a candidate's `Status` to `promoted` through section 12,
+the agent MAY run `project-retire --reason promoted` to remove only the
+redundant project-tier copies and their project-lock entry. This is a
+same-state `promoted -> promoted` event: the candidate remains `promoted`, the
+overlay `skills/<id>/SKILL.md` is untouched, and the agent appends the removal
+and commit evidence to `History`. It is not an automated global removal path.
+
+### Global-tier retirement (human-owned)
+
+A promoted/global skill is removed only by a human through the existing,
+unmodified `engine skills remove <id>` / `RemoveCore` path. The human reviews
+the report and the exact overlay skill, runs that existing command, and
+updates the candidate record only after the overlay removal commit succeeds.
+No project-tier `project-retire` invocation may delete a file under the
+overlay's global `skills/` tree, and no agent or detector may substitute a
+new global-retirement command for `RemoveCore`.
+
+### Explicit-decision boundary
+
+A retirement report never causes a removal, a commit, or a record transition
+as a direct effect. Silence, age, a `superseded-by` line, and a detector exit
+status are not approval. The only mutation paths are the explicitly invoked
+project-tier `project-retire` command after its ownership gate, or the human
+existing `engine skills remove` / `RemoveCore` path at the global tier.
 
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 

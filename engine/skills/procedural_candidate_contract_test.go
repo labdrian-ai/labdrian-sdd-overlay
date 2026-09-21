@@ -636,4 +636,51 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 			t.Fatalf("contract must contain the registration acceptance checklist heading %q", head)
 		}
 	})
+
+	// Section 14 is a decision boundary, not an implementation detail: pin the
+	// whole procedure inside its heading so future edits cannot silently move
+	// the report-only or human-owned rules into another section.
+	t.Run("Section14_RetirementProcedurePresentInOrder", func(t *testing.T) {
+		const head = "## 14. Retirement decision procedure"
+		const tail = "## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)"
+		start := strings.Index(contract, head)
+		if start < 0 {
+			t.Fatalf("contract must contain section 14 heading %q", head)
+		}
+		end := strings.Index(contract[start:], tail)
+		if end < 0 {
+			t.Fatalf("section 14 must be followed by acceptance checklist %q", tail)
+		}
+		section14 := contract[start : start+end]
+		normalizedSection14 := strings.Join(strings.Fields(section14), " ")
+		orderedMarkers(t, normalizedSection14, "section 14", []string{
+			"The retirement detector in `longterm-mem` is report-only",
+			"### RetirementReason vocabulary",
+			"`stale-reference`",
+			"`superseded`",
+			"`absorbed`",
+			"`promoted`",
+			"`quiet`",
+			"`human-request`",
+			"### Project-tier retirement (agent-owned)",
+			"labdrian skills project-retire --project-root R",
+			"### AbsorbedInto verification",
+			"`AbsorbedInto: B` MUST be verified",
+			"### Post-promotion project cleanup",
+			"### Global-tier retirement (human-owned)",
+			"unmodified `engine skills remove <id>` / `RemoveCore` path",
+			"### Explicit-decision boundary",
+			"A retirement report never causes a removal",
+		})
+		for _, required := range []string{
+			"MatchCandidate(registry, B)",
+			"`MatchCandidate` is used only as the global identity lookup; it is not",
+			"No project-tier `project-retire` invocation may delete a file under the",
+			"the overlay's global `skills/` tree",
+		} {
+			if !strings.Contains(normalizedSection14, required) {
+				t.Fatalf("section 14 must contain %q", required)
+			}
+		}
+	})
 }

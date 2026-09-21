@@ -200,11 +200,11 @@ Item-30 symbols consumed: `MatchCandidate` (for `AbsorbedInto` existence verific
 
 Item-30 symbols consumed: sec 6 (`project-status` supersession reporting via `MatchCandidate`).
 
-- [ ] 7a-ii.1 RED `engine/skills/project_cli_test.go` (extend): `project-retire` CLI dispatch over the core planning/execution from retirement-engine-core; `project-status` reports `superseded-by:<path>` when `MatchCandidate(registry, id)` or `MatchCandidate(registry, <last candidate slug>)` matches a global skill
-- [ ] 7a-ii.2 GREEN `engine/skills/project_cli.go`: `project-retire` CLI wiring; `project-status` supersession reporting via `MatchCandidate`
-- [ ] 7a-ii.3 GREEN `skills/_shared/procedural-candidate-detection.md`: section 14 — retirement decision procedure, `RetirementReason` vocabulary (`stale-reference | superseded | absorbed | promoted | quiet | human-request`), `AbsorbedInto` verification rule, global-tier `RemoveCore` path (human, unmodified)
-- [ ] 7a-ii.4 REFACTOR: confirm `project-retire` never invokes removal automatically from a detector result — it is always a separate, explicitly invoked command
-- [ ] 7a-ii.5 Verify: `cd engine && go vet ./... && go test ./skills/...`
+- [x] 7a-ii.1 RED `engine/skills/project_cli_test.go` (extend): `project-retire` CLI dispatch over the core planning/execution from retirement-engine-core; `project-status` reports `superseded-by:<path>` when `MatchCandidate(registry, id)` or `MatchCandidate(registry, <last candidate slug>)` matches a global skill
+- [x] 7a-ii.2 GREEN `engine/skills/project_cli.go`: `project-retire` CLI wiring; `project-status` supersession reporting via `MatchCandidate`
+- [x] 7a-ii.3 GREEN `skills/_shared/procedural-candidate-detection.md`: section 14 — retirement decision procedure, `RetirementReason` vocabulary (`stale-reference | superseded | absorbed | promoted | quiet | human-request`), `AbsorbedInto` verification rule, global-tier `RemoveCore` path (human, unmodified)
+- [x] 7a-ii.4 REFACTOR: confirm `project-retire` never invokes removal automatically from a detector result — it is always a separate, explicitly invoked command
+- [x] 7a-ii.5 Verify: `cd engine && go vet ./... && go test ./skills/...`
 
 ## Phase 7b: `retirement-detector` (PR 13, ~350 lines, size:exception owner-granted 2026-09-19)
 
