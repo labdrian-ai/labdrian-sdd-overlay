@@ -299,3 +299,101 @@ Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json
 - [ ] F.5 Run the full acceptance checklist from sections 11 (Phase 4), and the sdd-verify checklists implied by Phases 2, 6, 7a-i, 7a-ii against real Engram records and a temp git repo; record results honestly, including any scenario that could not be exercised (e.g. the rollback-failure print path, or the Codex smoke test if `UNVERIFIED`)
 - [ ] F.6 Confirm every Success Criteria checkbox in `proposal.md` is satisfied or explicitly recorded as a known gap (in particular the Codex-support claim, gated strictly by the recorded smoke-test verdict)
 ```
+
+## Phase 7b: `retirement-detector`
+
+- Change: `procedural-memory-lifecycle`
+- Phase: 7b — `retirement-detector`
+- Assigned tasks: 7b.1 through 7b.8 only
+- Branch: `feat/procedural-memory-lifecycle-7b-retirement-detector`
+- Artifact store: OpenSpec
+- Previous apply-progress: Phase 7a-ii `retirement-cli-and-docs`; this entry is cumulative and preserves all prior evidence.
+
+## Completed tasks and persisted checkboxes
+
+- [x] 7b.1 — Added RED coverage for code-span and fenced-block path extraction plus RED/GREEN coverage for present, deleted, renamed, and unknown path classification; existing `Detect` tests remain unchanged.
+- [x] 7b.2 — Exported `staleness.ReferencedPaths` and `staleness.ClassifyPaths`, sharing the strict path matcher, tree index, and `repohistory.Inspect` without changing `Detect`.
+- [x] 7b.3 — Added a temporary-git-repository and fixture-Engram test matrix for removed, moved, clean, unresolved-command, quiet, ordering-independent removal, lock parsing, and zero-mutation behavior.
+- [x] 7b.4 — Implemented the read-only detector over the project lock, first target `SKILL.md`, staleness classifications, PATH `os.Stat` command scans, and TopicKey-filtered candidate records.
+- [x] 7b.5 — Added `longterm-mem skills-stale --project-root <abs> [--project <P>]` and main dispatch; findings are report-only and exit successfully.
+- [x] 7b.6 — Added the engine cross-module byte-for-byte pinning test against the shared lock fixture.
+- [x] 7b.7 — Confirmed the production additions do not import `os/exec` and perform no writes to project skill files, the lock, or Engram; the existing two-entry allowlist remains unchanged.
+- [x] 7b.8 — Ran the required focused vet/test verification successfully.
+
+`openspec/changes/procedural-memory-lifecycle/tasks.md` visibly marks 7b.1–7b.8 as `[x]`; final verification tasks F.1–F.6 remain unchecked.
+
+## TDD cycle evidence
+
+| Cycle | Evidence |
+|---|---|
+| RED (7b.1) | Added `ReferencedPaths`/`ClassifyPaths` tests first; `cd longterm-mem && go test ./internal/staleness/...` failed to compile with undefined exported functions. |
+| GREEN (7b.1–7b.2) | Implemented the two staleness exports; the focused staleness suite passed. |
+| RED (7b.3) | Added the new detector tests and fixture before production code; `cd longterm-mem && go test ./internal/skillstale/...` failed because the package had no non-test Go files. |
+| GREEN (7b.3–7b.4) | Implemented lock parsing, detector signals, read-only Engram lookup, path safety, and PATH scanning; the skillstale package passed. |
+| RED (7b.5) | Added dispatch and absolute-root tests; before wiring, the focused command tests returned the unknown-subcommand usage path and failed their expected dispatch/error assertions. |
+| GREEN (7b.5) | Added `cmd_skills_stale.go` and main dispatch; focused command tests passed. |
+| TRIANGULATE | Ran `cd longterm-mem && go test ./internal/staleness/... ./internal/skillstale/... ./cmd/...`, `cd longterm-mem && go vet ./...`, and `cd engine && go vet ./...`; all passed. |
+| REFACTOR | Ran gofmt, full module tests, engine focused tests, `git diff --check`, and reviewed the unchanged `Detect` path, read-only calls, and import allowlist. |
+
+## Files changed in this phase
+
+- `longterm-mem/internal/staleness/staleness.go` — exported code-span path extraction and tree/history classification.
+- `longterm-mem/internal/staleness/staleness_test.go` — RED/GREEN path extraction and classification coverage.
+- `longterm-mem/internal/skillstale/skillstale.go` — report-only lock, skill, command, quietness, and candidate detector.
+- `longterm-mem/internal/skillstale/skillstale_test.go` — temporary git/Engram fixture matrix and mutation checks.
+- `longterm-mem/internal/skillstale/testdata/procedural-skills.lock.json` — shared lock fixture.
+- `longterm-mem/cmd/longterm-mem/cmd_skills_stale.go` — report-only CLI implementation.
+- `longterm-mem/cmd/longterm-mem/cmd_skills_stale_test.go` — dispatch and absolute-root tests.
+- `longterm-mem/cmd/longterm-mem/main.go` — `skills-stale` dispatch.
+- `engine/skills/project_lock_test.go` — shared fixture serialization pin.
+- `openspec/changes/procedural-memory-lifecycle/tasks.md` — checked only 7b.1–7b.8.
+- `openspec/changes/procedural-memory-lifecycle/apply-progress.md` — appended this cumulative phase entry.
+
+Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json` were preserved and not modified.
+
+## Verification evidence
+
+- `cd longterm-mem && go test ./internal/staleness/... ./internal/skillstale/... ./cmd/...` — PASS.
+- `cd longterm-mem && go vet ./...` — PASS.
+- `cd longterm-mem && go test ./...` — PASS.
+- `cd engine && go vet ./...` — PASS.
+- `cd engine && go test ./skills/... ./cmd/...` — PASS.
+- `cd engine && go test ./...` — PASS.
+- `cd engine && go test ./skills -run TestSerializeProjectLock_MatchesSharedSkillstaleFixture` — PASS.
+- `git diff --check` — PASS.
+- `git status --short` — expected Phase 7b source/test/artifact changes plus preserved unrelated untracked paths; no commit, push, or PR was performed.
+
+## Deviations, workload, and risks
+
+- CodeGraph was present, but `gentle-ai codegraph explore` was unavailable and returned the init-only usage error; targeted reads were used after that failed CodeGraph attempt.
+- The Phase 7b implementation and test/fixture matrix is the owner-granted `size:exception` PR 13 boundary on the feature-branch chain; no comments or tests were compressed to reduce the diff.
+- Supersession evidence is accepted through the detector `Config.SupersededBy` read-only input; the CLI has no registry argument and therefore does not invent a global registry lookup for arbitrary consumer roots. Existing engine `project-status` remains the registry-backed supersession surface.
+- Final F.1/F.2 checkboxes remain intentionally unchecked because this worker owns only 7b; their equivalent vet/full-test commands were run as triangulation. F.3–F.6, commit, push, PR, native lifecycle mutation, and archive action were not performed.
+
+## Structured native status
+
+### Consumed
+
+- Schema: `gentle-ai.sdd-status` v2.
+- Change: `procedural-memory-lifecycle`.
+- Native state at apply start: `applyState: ready`, `nextRecommended: apply`, `blockedReasons: []`.
+- Artifact store: `openspec`; proposal, all six specs, design, tasks, and cumulative apply-progress were read from native-resolved paths.
+- Action context: `mode: repo-local`, workspace `/home/labdrian/labdrian-sdd-overlay`, allowed edit root `/home/labdrian/labdrian-sdd-overlay`.
+- Workload context: 7b has an owner-granted `size:exception` and remains the assigned PR 13 boundary; no new delivery decision was required.
+
+### Produced
+
+- Persisted OpenSpec task checkboxes: 7b.1–7b.8 are checked; task progress is now 112/118 complete and 6 pending.
+- Persisted cumulative apply-progress at `openspec/changes/procedural-memory-lifecycle/apply-progress.md`.
+- No native lifecycle mutation, commit, push, PR, or archive action was performed. The next native implementation work is final verification / later lifecycle handling.
+
+## Remaining tasks (exact unchecked lines)
+
+```text
+- [ ] F.1 `cd engine && go vet ./... && go test ./...`
+- [ ] F.2 `cd longterm-mem && go vet ./... && go test ./...`
+- [ ] F.3 Confirm no file was written under `skills/` by any project-tier code path outside `AddCore`'s own tests (`git diff --stat` review across all 13 merged PRs)
+- [ ] F.4 Confirm no test in either module touched a live `.claude/skills/`, `.agents/skills/`, `.pi/`, `skills-lock.json`, the user's home directory, or spawned a live runtime binary (temp-dir-only rule)
+- [ ] F.5 Run the full acceptance checklist from sections 11 (Phase 4), and the sdd-verify checklists implied by Phases 2, 6, 7a-i, 7a-ii against real Engram records and a temp git repo; record results honestly, including any scenario that could not be exercised (e.g. the rollback-failure print path, or the Codex smoke test if `UNVERIFIED`)
+- [ ] F.6 Confirm every Success Criteria checkbox in `proposal.md` is satisfied or explicitly recorded as a known gap (in particular the Codex-support claim, gated strictly by the recorded smoke-test verdict)
+```

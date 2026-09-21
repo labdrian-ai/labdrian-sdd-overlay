@@ -32,6 +32,8 @@ func run(args []string) int {
 		return cmdStatus(args[1:])
 	case "stale":
 		return cmdStale(args[1:])
+	case "skills-stale":
+		return cmdSkillsStale(args[1:])
 	case "doctor":
 		return cmdDoctor(args[1:])
 	case "promote":

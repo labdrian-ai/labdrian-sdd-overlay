@@ -4,10 +4,12 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/engram"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/repohistory"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/staleness"
 )
 
@@ -40,6 +42,51 @@ func TestPaths_TakesFilesAndNothingElse(t *testing.T) {
 // The finding the whole feature exists for: a memory describing something
 // that was removed from the project AFTER the memory was written. Left
 // unreported, an agent reads it and reintroduces what was extirpated.
+func TestReferencedPaths_ExtractsOnlyCodeSpansAndFencedBlocks(t *testing.T) {
+	text := "prose internal/not-code.go and https://example.test/nope.go\n" +
+		"inline `internal/inline.go`, `internal/inline.go`\n" +
+		"```sh\ncat internal/fenced.sh\nkeep internal/fenced.json\n```\n"
+
+	got := staleness.ReferencedPaths(text)
+	want := []string{"internal/inline.go", "internal/fenced.sh", "internal/fenced.json"}
+	if !reflect.DeepEqual(got, want) {
+		t.Fatalf("ReferencedPaths() = %#v, want %#v", got, want)
+	}
+}
+
+func TestClassifyPaths_UsesTreeAndHistory(t *testing.T) {
+	repo := fixture(t)
+	got, err := staleness.ClassifyPaths(repo, []string{
+		"kept.go",
+		"gone.go",
+		"pkg/moved.go",
+		"never-was.go",
+	})
+	if err != nil {
+		t.Fatalf("ClassifyPaths: %v", err)
+	}
+
+	cases := map[string]repohistory.State{
+		"kept.go":      repohistory.StatePresent,
+		"gone.go":      repohistory.StateDeleted,
+		"pkg/moved.go": repohistory.StateRenamed,
+		"never-was.go": repohistory.StateUnknown,
+	}
+	for path, want := range cases {
+		fact, ok := got[path]
+		if !ok {
+			t.Errorf("ClassifyPaths omitted %q", path)
+			continue
+		}
+		if fact.State != want {
+			t.Errorf("ClassifyPaths[%q].State = %q, want %q (fact=%+v)", path, fact.State, want, fact)
+		}
+	}
+	if got["pkg/moved.go"].NewPath != "pkg/renamed.go" {
+		t.Errorf("ClassifyPaths[pkg/moved.go].NewPath = %q, want pkg/renamed.go", got["pkg/moved.go"].NewPath)
+	}
+}
+
 func TestDetect_APathRemovedAfterTheMemoryWasWritten(t *testing.T) {
 	repo := fixture(t)
 
