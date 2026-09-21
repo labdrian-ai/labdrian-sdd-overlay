@@ -1,0 +1,55 @@
+name: Feature
+description: Propose an approved feature slice for implementation and review
+title: "feat: "
+labels:
+  - type:feature
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use one issue per implementation slice. Keep the scope narrow and link the issue from the pull request.
+  - type: input
+    id: slice
+    attributes:
+      label: Slice
+      description: Name the feature slice and its position in the delivery chain.
+      placeholder: "procedural-memory-lifecycle slice 4"
+    validations:
+      required: true
+  - type: textarea
+    id: summary
+    attributes:
+      label: Summary
+      description: State the behavior this slice adds or changes.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: List the files, interfaces, and boundaries included; state explicit non-goals.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: List observable acceptance criteria and refusal/error behavior.
+    validations:
+      required: true
+  - type: textarea
+    id: verification
+    attributes:
+      label: Verification plan
+      description: List tests, checks, and review evidence required before merge.
+    validations:
+      required: true
+  - type: checkboxes
+    id: acknowledgements
+    attributes:
+      label: Acknowledgements
+      options:
+        - label: This issue is one narrow, independently reviewable slice.
+          required: true
+        - label: The implementation will not expand beyond the stated scope without a new decision.
+          required: true
