@@ -5,7 +5,7 @@
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status
-//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status)
+//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -166,7 +166,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
 	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
 	fmt.Fprintln(os.Stderr, "    check: reports drift between --dest-dir and the current manifest; exit 1 on drift")
-	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status)")
+	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status        [--registry <path>]                                                      print count summary (total/core/custom)")
 	fmt.Fprintln(os.Stderr, "    validate      [--registry <path>] [--manifest <path>] --source-root <path>              cross-check registry vs manifest and skills/ on disk; exit 1 on divergence")
@@ -180,7 +180,9 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    project-revise   --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>")
 	fmt.Fprintln(os.Stderr, "                                                                                           revise an agent-owned project skill; --dry-run prints the plan and writes nothing")
 	fmt.Fprintln(os.Stderr, "    project-status   --project-root <abs> [--registry <path>] [<id>]")
-	fmt.Fprintln(os.Stderr, "                                                                                           report project-tier ownership")
+	fmt.Fprintln(os.Stderr, "                                                                                           report project-tier ownership and global supersession")
+	fmt.Fprintln(os.Stderr, "    project-retire   --project-root <abs> [--dry-run] [--reason <reason>] [--absorbed-into <id>] [--registry <path>] <id>")
+	fmt.Fprintln(os.Stderr, "                                                                                           retire an agent-owned project skill; --dry-run prints the removal plan")
 	fmt.Fprintln(os.Stderr, "  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome")
 	fmt.Fprintln(os.Stderr, "  engine review-receipt capture --cwd <repo> [--change <name>]")
@@ -729,7 +731,7 @@ func runSkills(args []string) {
 // runSkillsCore is the testable core of the skills subcommand.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire")
 		exit(1)
 		return
 	}

@@ -804,3 +804,127 @@ func TestSkillsCore_DispatchesProjectReviseAndStatus(t *testing.T) {
 		t.Errorf("project-status dispatch output = %q", statusOut.String())
 	}
 }
+
+func runProjectRetire(t *testing.T, args []string, fsys projectFS) (stdout, stderr string, exitCode int) {
+	t.Helper()
+	var out, errBuf bytes.Buffer
+	exitCode = -1
+	RenderProjectRetireCore(args, os.ReadFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, fsys, &out, &errBuf, func(c int) { exitCode = c })
+	return out.String(), errBuf.String(), exitCode
+}
+
+func projectRetireArgs(e projectCLIEnv, id string, extra ...string) []string {
+	args := []string{"--project-root", e.root, "--registry", e.registryPath}
+	args = append(args, extra...)
+	return append(args, id)
+}
+
+func TestSkillsCore_DispatchesProjectRetireAndRemovesRegisteredSkill(t *testing.T) {
+	const id = "tidy-worktree"
+	e := newProjectCLIEnv(t, id, projectCLIRegistry)
+	if _, errOut, code := runProjectRegister(t, registerArgs(e)); code != 0 {
+		t.Fatalf("initial project-register failed with %d: %s", code, errOut)
+	}
+
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+	args := append([]string{"project-retire"}, projectRetireArgs(e, id, "--reason", "human-request")...)
+	SkillsCore("project-retire", args, os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
+	if exitCode != 0 {
+		t.Fatalf("project-retire dispatch exit = %d, stderr %q", exitCode, errBuf.String())
+	}
+	for _, rel := range []string{
+		".claude/skills/" + id + "/SKILL.md",
+		".agents/skills/" + id + "/SKILL.md",
+	} {
+		if _, err := os.Stat(filepath.Join(e.root, filepath.FromSlash(rel))); !os.IsNotExist(err) {
+			t.Errorf("retirement must remove %s, stat err = %v", rel, err)
+		}
+		if !strings.Contains(out.String(), "removed: "+rel) {
+			t.Errorf("retirement output %q must name removed path %q", out.String(), rel)
+		}
+	}
+	lockData, err := os.ReadFile(filepath.Join(e.root, filepath.FromSlash(ProjectLockRelPath)))
+	if err != nil {
+		t.Fatalf("read post-retirement lock: %v", err)
+	}
+	lock, err := ParseProjectLock(lockData)
+	if err != nil {
+		t.Fatalf("parse post-retirement lock: %v", err)
+	}
+	if len(lock.Skills) != 0 {
+		t.Fatalf("post-retirement lock has %d entries, want empty", len(lock.Skills))
+	}
+	e.assertDecoyUntouched(t)
+}
+
+func registryWithEntry(id, skillPath string) string {
+	registry := strings.Replace(projectCLIRegistry, "id: unrelated-skill", "id: "+id, 1)
+	return strings.Replace(registry, "path: unrelated-skill", "path: "+skillPath, 1)
+}
+
+func TestRenderProjectStatusCoreReportsSupersededByIDOrCandidateSlug(t *testing.T) {
+	cases := []struct {
+		name       string
+		registry   string
+		wantTarget string
+	}{
+		{
+			name:       "registry_id_matches_project_id",
+			registry:   registryWithEntry("tidy-worktree", "skills/replacement"),
+			wantTarget: "skills/replacement",
+		},
+		{
+			name:       "registry_path_base_matches_last_candidate_slug",
+			registry:   registryWithEntry("replacement", "skills/tidy-worktree"),
+			wantTarget: "skills/tidy-worktree",
+		},
+	}
+
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			e := newRegisteredCLIRevisionEnv(t, "tidy-worktree")
+			if err := os.WriteFile(e.registryPath, []byte(tc.registry), 0o644); err != nil {
+				t.Fatalf("replace registry: %v", err)
+			}
+
+			out, errOut, code := runProjectStatus(t, projectStatusArgs(e, "tidy-worktree"))
+			if code != 0 {
+				t.Fatalf("project-status exit = %d, stderr %q", code, errOut)
+			}
+			want := "superseded-by:" + tc.wantTarget
+			if !strings.Contains(out, want) {
+				t.Errorf("status output %q must contain %q", out, want)
+			}
+		})
+	}
+}
+
+func TestRenderProjectRetireCoreMapsRollbackIncompleteToExitOne(t *testing.T) {
+	const id = "tidy-worktree"
+	e := newProjectCLIEnv(t, id, projectCLIRegistry)
+	if _, errOut, code := runProjectRegister(t, registerArgs(e)); code != 0 {
+		t.Fatalf("initial project-register failed with %d: %s", code, errOut)
+	}
+	firstTarget := filepath.Join(e.root, ".claude", "skills", id, "SKILL.md")
+	fsys := newFakeProjectFS(func(f *fakeProjectFS, op, name string) error {
+		if op == "remove" && name == firstTarget {
+			return errInjected
+		}
+		if op == "rename" && name == firstTarget {
+			return errInjected
+		}
+		return nil
+	})
+
+	out, errOut, code := runProjectRetire(t, projectRetireArgs(e, id), fsys)
+	if code != 1 {
+		t.Fatalf("rollback-incomplete retirement must exit 1, got %d (stdout %q, stderr %q)", code, out, errOut)
+	}
+	if !strings.Contains(errOut, "rollback incomplete") {
+		t.Errorf("stderr %q must name the incomplete rollback", errOut)
+	}
+	if out != "" {
+		t.Errorf("failed retirement must not report removed paths, got %q", out)
+	}
+}
