@@ -1,0 +1,209 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d61049a1893b6035c81cb1c376a9a224d88c589072a866c7b6631a4f72c77f1a",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-42be59cf3243a7ff",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "caa9ded937d71e4c6fb8bb3ff00efd31a148f137",
+      "candidate_tree": "691911bba7641fc658b422122b4844f21b51002b",
+      "paths_digest": "sha256:92d75a5325421419cb383ff6ed6a2b865734d57f87ceef009fe47892aab76ecf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/procedural-memory-lifecycle/design.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:01cd21ad39978700ea1cbce8d6ae0c954710d0e36ab4d405061fb398d06ccb69"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "caa9ded937d71e4c6fb8bb3ff00efd31a148f137",
+      "candidate_tree": "691911bba7641fc658b422122b4844f21b51002b",
+      "paths_digest": "sha256:92d75a5325421419cb383ff6ed6a2b865734d57f87ceef009fe47892aab76ecf",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/procedural-memory-lifecycle/design.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:01cd21ad39978700ea1cbce8d6ae0c954710d0e36ab4d405061fb398d06ccb69"
+    },
+    "genesis_paths": [
+      "openspec/changes/procedural-memory-lifecycle/design.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 99,
+    "correction_budget": 50,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:ca0e00b0854f2373b0eb4615780b6434e2fd37442fbe9ce46b9c32388e682dbd",
+    "capture_phase_revision": "sha256:044983834da6064c68203a15151a98857573fa454956673ff5c68f117b9f62e5",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:01cd21ad39978700ea1cbce8d6ae0c954710d0e36ab4d405061fb398d06ccb69",
+        "capture_phase_revision": "sha256:044983834da6064c68203a15151a98857573fa454956673ff5c68f117b9f62e5",
+        "artifact_digest": "sha256:eaf2d5ca2bc96ce6ffdb3a9c4e70c460958dd4e764bf74637d8e1d198c3469b9",
+        "result_hash": "sha256:9b67d08b763ada4e79b0ab1210ae76237e4b9dabd71e7dc04f38a55ac71a72b1",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1a82de9d743fbd53104c7743709b506bcfb82189949466b246760e9b5be87d25",
+            "lineage_id": "review-42be59cf3243a7ff",
+            "authority_revision": "sha256:044983834da6064c68203a15151a98857573fa454956673ff5c68f117b9f62e5",
+            "target_identity": "sha256:01cd21ad39978700ea1cbce8d6ae0c954710d0e36ab4d405061fb398d06ccb69",
+            "base_tree": "caa9ded937d71e4c6fb8bb3ff00efd31a148f137",
+            "candidate_tree": "691911bba7641fc658b422122b4844f21b51002b",
+            "changed_path_manifest_sha256": "sha256:018f743e615389303605c1174f40ec941d348e31256a94a05d83dcce38240dbe",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1a82de9d743fbd53104c7743709b506bcfb82189949466b246760e9b5be87d25",
+            "raw_sha256": "sha256:b9d6a41c46141b502c92b1d26e0af518e1343c66d1aa085638370ba62928ee1d",
+            "canonical_sha256": "sha256:fec173a0f8696e2b48460c28abb5ac98e02ec7298286f0fd0e755d1561bbeb89",
+            "result_hash": "sha256:9b67d08b763ada4e79b0ab1210ae76237e4b9dabd71e7dc04f38a55ac71a72b1",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1a82de9d743fbd53104c7743709b506bcfb82189949466b246760e9b5be87d25",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "openspec/changes/procedural-memory-lifecycle/design.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-staged-recovery-gap",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:229",
+                "severity": "WARNING",
+                "claim": "The rewritten recovery rule says the new SKILL.md files are 'always untracked' and restores the lock with `git restore --source=HEAD -- \u003clock path\u003e`, which restores only the worktree. The window 'after step 6 and before the commit' includes the time after `git add -- \u003cwrote paths\u003e`. At that point the SKILL.md files show as staged additions, not `??`. The crash-window deletion rule only accepts `??` paths, so it refuses them. The lock restore also leaves the new lock bytes staged in the index, and a later commit could pick up a partial registration. The rule needs `--staged --worktree` for the lock, like the revision path, plus an explicit unstage step for staged new files.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:229",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:145",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:98"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-lock-restore-untested",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:144",
+                "severity": "WARNING",
+                "claim": "Engine rollback now has a separate branch: it restores a lock file that already existed and carries other skills' entries from its backup bytes, instead of removing it. No changed task adds a RED case for this. The rollback tests added in 3b.5a and 7a.1 cover rollback-of-rollback and retirement, not a second registration over an existing multi-entry lock. So nothing proves that a failed second registration keeps the prior skills' lock entries byte-identical.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:144",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:83",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:12"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-promoted-retire-contradiction",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:254",
+                "severity": "WARNING",
+                "claim": "The new post-promotion `project-retire --reason promoted` path ends with Status still at `promoted`. That contradicts the unchanged design statement that every project-tier procedure ends at `registered` or `retired`. The new registration-spec scenario (Status stays `promoted`, History gets a `promoted -\u003e promoted` line) has no matching test or acceptance-checklist item: the updated 7a.1 covers only ordinary retirement and rollback. This leaves open whether the contract procedure wrongly writes `retired`.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:254",
+                  "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md:200-208",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:125"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-exit-code-level",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:83",
+                "severity": "SUGGESTION",
+                "claim": "Task 3b.5a asserts 'exits 1' from a test in the engine-level ExecuteProjectPlan test file, but that function returns an error and writes to stderr. It does not own the process exit code. Either assert the returned error plus the stderr line at this level, or add the exit-code assertion to the CLI test. Otherwise the stated observable is not directly checkable at the test level the task names.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:83",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:82"
+                ]
+              },
+              {
+                "id": "R3-lintskillfile-coverage",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md:87-102",
+                "severity": "SUGGESTION",
+                "claim": "The missing-fence scenario moved from LintSkill to a new LintSkillFile requirement, but none of the changed task lines adds a RED test for it. If the existing task list still maps the old LintSkill fence scenario, that test would now contradict the spec, and the new LintSkillFile scenario (split failure surfaced as a hard error, LintSkill not called) would go unproved. Re-map the task explicitly.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md:39-45",
+                  "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md:87-102"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 7 manifest paths from the supplied patch sections only.",
+              "Checked the changes to rollback (design.md line 144), crash recovery (design.md line 229), and the post-promotion lifecycle (design.md lines 250-254) against the updated tasks in tasks.md at lines 61-62, 83-84, 98 and 125.",
+              "The spec edits to procedural-candidate-detection (hash line is now informational only), procedural-skill-drafting (lesson-shape is enforced by procedure and checked by acceptance checklist 2.4) and skill-lifecycle (fixtures updated, assertions unchanged, plus a new refusal scenario) are internally consistent and each has an observable assertion."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "950f64c09c2a5c0f44d94f1194565152a7dcb3afccc9c2e74a23afee6a7c73bc",
+    "initial_atomic_start": {
+      "lineage_id": "review-42be59cf3243a7ff",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:01cd21ad39978700ea1cbce8d6ae0c954710d0e36ab4d405061fb398d06ccb69",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "caa9ded937d71e4c6fb8bb3ff00efd31a148f137",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 99,
+      "correction_budget": 50,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

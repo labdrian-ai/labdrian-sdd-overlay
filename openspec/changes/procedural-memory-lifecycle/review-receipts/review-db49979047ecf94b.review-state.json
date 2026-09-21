@@ -1,0 +1,179 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:200050bdd8011e0110f2bccfa5d19c95166dd79309f1e1678c53f7e0d446b9ac",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-db49979047ecf94b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "98437a44a324983b8fb8884956d85cad09edb73a",
+      "candidate_tree": "80358570049cec3cd8d4a478868dc023b510b8ff",
+      "paths_digest": "sha256:7d23d088de43e340119b323a76f4d787dc3f2ea28aac2910bfb30486d347694c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/install.go",
+        "engine/skills/pathguard.go",
+        "engine/skills/pathguard_test.go",
+        "engine/skills/project_lock.go",
+        "engine/skills/project_register.go",
+        "engine/skills/project_register_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:05271708a3b241291e047665d1408d920b823ed43d0f998b67514c31ae9e0885"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "98437a44a324983b8fb8884956d85cad09edb73a",
+      "candidate_tree": "80358570049cec3cd8d4a478868dc023b510b8ff",
+      "paths_digest": "sha256:7d23d088de43e340119b323a76f4d787dc3f2ea28aac2910bfb30486d347694c",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/install.go",
+        "engine/skills/pathguard.go",
+        "engine/skills/pathguard_test.go",
+        "engine/skills/project_lock.go",
+        "engine/skills/project_register.go",
+        "engine/skills/project_register_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:05271708a3b241291e047665d1408d920b823ed43d0f998b67514c31ae9e0885"
+    },
+    "genesis_paths": [
+      "engine/skills/install.go",
+      "engine/skills/pathguard.go",
+      "engine/skills/pathguard_test.go",
+      "engine/skills/project_lock.go",
+      "engine/skills/project_register.go",
+      "engine/skills/project_register_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 2168,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:6d5ad69454b6e82a9b811564fb72bc03fb7acdf5677797f8647f634d8bd35d4d",
+    "capture_phase_revision": "sha256:a49e0b3b1145d2903c48dd252c8fac50e5213310d5ab6fb2f3942b4944d39382",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:05271708a3b241291e047665d1408d920b823ed43d0f998b67514c31ae9e0885",
+        "capture_phase_revision": "sha256:a49e0b3b1145d2903c48dd252c8fac50e5213310d5ab6fb2f3942b4944d39382",
+        "artifact_digest": "sha256:ee427c75df681129f0f09a483a653b0b95f06d73f7b71433483d7d6ac92ed917",
+        "result_hash": "sha256:ba163dba682be4a5361f61b7d7ded359823deee651b7f22f9baf8ff175a25431",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1aaac9214b3b5d94f8a8e55830f6a093ff7c4439ae2614a51127f2df1c7a79a7",
+            "lineage_id": "review-db49979047ecf94b",
+            "authority_revision": "sha256:a49e0b3b1145d2903c48dd252c8fac50e5213310d5ab6fb2f3942b4944d39382",
+            "target_identity": "sha256:05271708a3b241291e047665d1408d920b823ed43d0f998b67514c31ae9e0885",
+            "base_tree": "98437a44a324983b8fb8884956d85cad09edb73a",
+            "candidate_tree": "80358570049cec3cd8d4a478868dc023b510b8ff",
+            "changed_path_manifest_sha256": "sha256:a1399db002dd4323ea2512123915b914c8f4ee011e9a1f90842a98cf24d8d7a8",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1aaac9214b3b5d94f8a8e55830f6a093ff7c4439ae2614a51127f2df1c7a79a7",
+            "raw_sha256": "sha256:86b30e85c057a144b9e0ee1f6ada21dd40fbf3bc0176de1f71d1837b646623e7",
+            "canonical_sha256": "sha256:b31fc90b032650181b7ae8f994d2fccbeff8989399b6fd980626995d0ce8e1e4",
+            "result_hash": "sha256:ba163dba682be4a5361f61b7d7ded359823deee651b7f22f9baf8ff175a25431",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1aaac9214b3b5d94f8a8e55830f6a093ff7c4439ae2614a51127f2df1c7a79a7",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/install.go",
+                "engine/skills/pathguard.go",
+                "engine/skills/pathguard_test.go",
+                "engine/skills/project_lock.go",
+                "engine/skills/project_register.go",
+                "engine/skills/project_register_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-win-permission-test-portability",
+                "lens": "reliability",
+                "location": "engine/skills/pathguard_test.go:308-322",
+                "severity": "WARNING",
+                "claim": "TestResolvePathKeepingMissing_PermissionDenialIsAGenuineFailure skips only when os.Geteuid()==0 and otherwise relies on os.Chmod(dir, 0o000) to deny directory access so that resolvePathKeepingMissing's genuine-failure branch is exercised. os.Geteuid() returns -1 (never 0) on Windows, so the skip never fires there, and Go's os.Chmod does not enforce POSIX-style permission bits on Windows (it only toggles the read-only attribute), so the 'blocked' directory would remain traversable. On a Windows runner this test would not skip and would instead fail outright ('a permission denial must be a genuine failure, got ... and no error'), and its companion subtest 'containment_is_refused_not_silently_granted' would fail the same way — this is new test code introduced by this candidate that is not deterministic across the OSes Go itself targets.",
+                "proof_refs": [
+                  "engine/skills/pathguard_test.go:308-310",
+                  "engine/skills/pathguard_test.go:319-322",
+                  "engine/skills/pathguard_test.go:349-352"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-alias-target-untested",
+                "lens": "reliability",
+                "location": "engine/skills/project_register.go:23-26",
+                "severity": "SUGGESTION",
+                "claim": "projectTargets is a fixed two-row table (.claude/skills, .agents/skills) and PlanProjectRegister plans one independent ProjectWrite per row with no check that the two resolve to distinct physical directories. If a project symlinks .agents to .claude (or similar aliasing), the planner would happily produce two writes and two lock targets that land on the same physical file, and no test in this candidate exercises that shape — the authors' own change log names this gap (as 'ALIAS-1') and explicitly defers it to a later slice rather than proving it here, so this externally observable behavior remains unproved by the candidate as shipped.",
+                "proof_refs": [
+                  "engine/skills/project_register.go:23-26",
+                  "engine/skills/project_register_test.go:1-40",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "engine/skills/pathguard.go is a new, internally consistent extraction: withinRoot's strictly-below semantics are unchanged from the prior project_lock.go definition (project_lock.go:565-571 now points to it), and the deliberate tightening (path == root now refused) is documented on the function and exercised by a dedicated PlanInstall-level test (engine/skills/pathguard_test.go 'TestPlanInstallRefusesDestinationEqualToSkillsRoot').",
+              "resolvePathKeepingMissing (engine/skills/pathguard.go) correctly distinguishes 'component does not exist yet' (kept literal, no error) from 'component is a dangling symlink' (os.Lstat probe, reported as a genuine failure) and from 'genuine resolution failure' (symlink loop / non-ENOENT errors returned immediately); each of these three paths has a corresponding test in engine/skills/pathguard_test.go that fails when the guarding branch is removed, per the code comments' own mutation-testing claims.",
+              "resolvedWithinRootUsing (engine/skills/pathguard.go:131-144) fails closed on every observed failure mode: a resolver error on either root or path propagates via errors.Is, and an empty resolved string from either side is refused explicitly rather than silently degrading to withinRoot(\"\", p), which would otherwise admit every absolute path; both branches have dedicated tests.",
+              "engine/skills/project_register.go's PlanProjectRegister is a pure function gated on non-nil Stat/ResolvePath probes, refuses non-absolute --project-root and non-absolute draft paths outright (avoiding any implicit dependency on process cwd), and applies containment in both a lexical pass (resolveTarget/withinRoot) and a resolved pass (resolvedWithinRootUsing) to every fresh destination and to every lock-recorded target string, closing the read/write symlink-escape and lexical-..-normalizing-inward gaps that the embedded review history (F1/F2/SEC-1/SEC-2/COV-1..5) records as having been found and fixed in prior rounds.",
+              "engine/skills/project_register_test.go proves each of the documented refusal branches (root shape, draft placement lexical and resolved, \\r bytes, frontmatter allowlist per forbidden key, lint failure, candidate-key shape, lock parse/version, duplicate id, foreign existing directory, dangling/live symlinked .claude, lock-target traversal via .. segments, lock-target equal to or under skills/, lock-target resolving into skills/ via a symlink, uninspectable destination, missing Stat/ResolvePath probes, and both identity-branch messages) independently, each mutating exactly one field of an otherwise-valid fixture — this is the cheap, externally observable assertion level the lens asks for, and it is present for essentially every branch I could trace through the two new production files.",
+              "The two flagged gaps are the residue that is genuinely unproved by this candidate as submitted: OS-portability of the new mode-0000 permission tests (no runtime.GOOS guard, only a root-euid skip) and the untested two-target aliasing case, which the authors' own tasks.md commentary independently names as still open and defers to the next slice rather than proving here.",
+              "install.go's mechanical switch to the shared withinRoot and project_lock.go's deletion of the now-duplicated withinRoot definition are behavior-preserving except for the single documented equality tightening, which is itself covered by a new test; I could not independently verify engine/skills/install_test.go (asserted 'unmodified' in commit commentary) because it is not part of this candidate's changed-path manifest and therefore outside the bound scope of this review."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "8b26858c5e4aea94715aa3296f9873aef8149dabc7d71c036ee617670b11bc4c",
+    "initial_atomic_start": {
+      "lineage_id": "review-db49979047ecf94b",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:05271708a3b241291e047665d1408d920b823ed43d0f998b67514c31ae9e0885",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "98437a44a324983b8fb8884956d85cad09edb73a",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 2168,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

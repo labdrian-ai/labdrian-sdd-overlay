@@ -1,0 +1,623 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:d8451148dd7d7426fd31fde674fc4fd07eabfaa986d4c933d389f96b5d03534c",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-cafb047b78880102",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+      "candidate_tree": "8afbe691158f1c16a0236e7a2fc349620de85efb",
+      "paths_digest": "sha256:9e1082ef96bff69bf82018e3fa52cda2698edcccb4940cf1949bf50ffa58c324",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "engine/skills/zero_fetch_test.go",
+        "openspec/changes/procedural-memory-lifecycle/design.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+      "candidate_tree": "8afbe691158f1c16a0236e7a2fc349620de85efb",
+      "paths_digest": "sha256:9e1082ef96bff69bf82018e3fa52cda2698edcccb4940cf1949bf50ffa58c324",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "engine/skills/zero_fetch_test.go",
+        "openspec/changes/procedural-memory-lifecycle/design.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59"
+    },
+    "genesis_paths": [
+      "engine/skills/project_lock.go",
+      "engine/skills/project_lock_test.go",
+      "engine/skills/zero_fetch_test.go",
+      "openspec/changes/procedural-memory-lifecycle/design.md",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1101,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:bdd68e1e490941b8cc094287f316064e8dda6604aa08519e4e38e90873b03a80",
+    "capture_phase_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+        "capture_phase_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+        "artifact_digest": "sha256:e27db8335f7525b74aabb0bcc489b4ecab75b6e021149c58be02408776dc19c8",
+        "result_hash": "sha256:f622e8a134abe9b3df5243dcbe149b838e30739795a666010df2200f1eab1b8a",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f2299fca78362a3d783b8693ac2c6553f898362e9832825636176b5203b5b010",
+            "lineage_id": "review-cafb047b78880102",
+            "authority_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+            "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+            "base_tree": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+            "candidate_tree": "8afbe691158f1c16a0236e7a2fc349620de85efb",
+            "changed_path_manifest_sha256": "sha256:9d989c5a27bd1037749ca1769b91e1603390d24131e7489b7595909e28ef72aa",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f2299fca78362a3d783b8693ac2c6553f898362e9832825636176b5203b5b010",
+            "raw_sha256": "sha256:f89fd8ae59d4d2717b2ae7971361b3147f0889c9aebd3e9a6012d619828ddac0",
+            "canonical_sha256": "sha256:3f0ea9a2e02bd364de83e0fee7ed1e64b8b3e29c16388a7d7a19a99d1ca85059",
+            "result_hash": "sha256:f622e8a134abe9b3df5243dcbe149b838e30739795a666010df2200f1eab1b8a",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f2299fca78362a3d783b8693ac2c6553f898362e9832825636176b5203b5b010",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/design.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [
+              {
+                "id": "R1-ownership-resolve-read-toctou",
+                "lens": "risk",
+                "location": "engine/skills/project_lock.go:491-499",
+                "severity": "WARNING",
+                "claim": "EvaluateOwnership proves containment against the resolver's output but then performs the read against the unresolved lexical path: resolvePath(abs) plus the resolved withinRoot comparison decide the verdict, and the very next statement calls readFile(abs), and further down readDir is handed the lexical parent of abs. Nothing binds the path that was proved contained to the path that is actually opened, so the guarantee holds only if the injected resolver and the injected reader observe the same filesystem state at the same instant. An attacker with write access inside the project tree (the same actor the ownership check exists to detect) can replace a directory component with a symlink pointing outside root between the resolve call and the read, at which point bytes from outside the project are hashed and, if they match the lock's sha256, reported AgentOwned. The narrowing fix is cheap and local: read through the already-resolved path rather than the lexical one, so the only remaining window is inside the resolver itself. Reachability is currently bounded because no production caller exists yet - tasks.md 3b-i.5b is where the real os-backed resolver and readers get wired - so this is filed as a WARNING against the guard's design rather than as a live exploit.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:491-496",
+                  "engine/skills/project_lock.go:498",
+                  "engine/skills/project_lock.go:507",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R1-ownership-reason-untrusted-echo",
+                "lens": "risk",
+                "location": "engine/skills/project_lock.go:489-503",
+                "severity": "WARNING",
+                "claim": "Every Ownership.Reason interpolates a string taken verbatim from the on-disk lock file - the recorded target for invalid-target, unresolved-target, escapes-root, missing and hash-mismatch, and the recorded id for no-targets and no-resolver - and the doc comment on the Ownership type states explicitly that the target is the raw recorded string quoted verbatim so the offending lock line is identifiable. The lock is a repository-tracked JSON file, so its contents are attacker-supplied for any checked-out repository, and nothing on the parse or evaluate path rejects control characters, ANSI escape sequences or embedded newlines in a target string: the candidate's own validation of control characters covers only candidateKey in the stamping path, not Targets, and tasks.md records that target validation for the write side is still open work. A Reason is designed to reach an operator status line, so a crafted lock can inject terminal escape sequences or forge additional status lines in that output. Impact is bounded to operator-facing display rather than code execution or file access, and no consumer that prints Reason exists inside this candidate, so this is a WARNING: sanitize or quote the recorded string with %q at the point of interpolation instead of concatenating it raw.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:396-399",
+                  "engine/skills/project_lock.go:489",
+                  "engine/skills/project_lock.go:500-503",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all five manifest paths from the immutable patch sections only; the two openspec paths are documentation and the three Go paths carry the behavioral change.",
+              "Net security direction of this candidate is positive: EvaluateOwnership refuses non-absolute roots, entries with no targets, and a nil resolver before any read, and resolveTarget applies an absolute-path check, an explicit parent-component scan over the slash-split target, and a cleaned-form containment test before the joined path is handed to any reader (engine/skills/project_lock.go:461-475, engine/skills/project_lock.go:546-560).",
+              "withinRoot is a single shared strictly-below definition used by both the lexical guard and the resolved-path comparison, so the two containment steps cannot diverge, and a target cleaning to the root itself is refused rather than handed to readFile as a directory (engine/skills/project_lock.go:568-570).",
+              "Failure modes all fold toward human-owned - unresolvable root, unresolvable target, unlistable directory and missing resolver each return a non-owned verdict - which is the fail-closed direction for a check whose false negative would let the agent overwrite human-edited files (engine/skills/project_lock.go:479-483, engine/skills/project_lock.go:507-511).",
+              "HashSkill is plain SHA-256 over the exact bytes with no normalization, which preserves single-byte edit detection; no weak digest, no truncation, and hex output is lowercase (engine/skills/project_lock.go:320-323).",
+              "No secrets, credentials, tokens or endpoints appear anywhere in the changed content; the only new dependencies are two standard-library packages, crypto/sha256 and encoding/hex, added to the import allowlist (engine/skills/zero_fetch_test.go:23-24).",
+              "The added allowlist test actively blocks the dangerous-import classes rather than merely documenting them: it fails if the allowlist ever gains os/exec, net or any net subpackage or a git-related path, and pins the allowlist size so a silent widening turns the suite red (engine/skills/zero_fetch_test.go:87-96).",
+              "The traversal, absolute-path, empty-target and clean-back-inside-root refusals are each pinned by tests that also assert zero reads were attempted, so a regression that reads before refusing is detectable rather than silent (engine/skills/project_lock_test.go:1092-1123).",
+              "Test-side filesystem writes are confined to a per-test t.TempDir with 0o755 and 0o644 modes and no writes to any user or project configuration path, so the suite itself introduces no data-loss risk (engine/skills/project_lock_test.go:986-999).",
+              "The two documentation paths only amend the reason vocabulary and the EvaluateOwnership signature to match the code; they introduce no executable surface and no risk of their own.",
+              "The lock-file target strings whose verbatim interpolation the second finding is about are reproduced nowhere in this result; the offending construction is cited by file and line instead."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+        "capture_phase_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+        "artifact_digest": "sha256:aa242113dc7573995b95428f1289a706e100e4ced78ae389975a8486e3cac085",
+        "result_hash": "sha256:0f40126cb24c2ffc561fb2f4c68c5ecc17408d196f48901aba7d27bf94be0a82",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:71e475193b332254045d00399ac6599b12ae393f2fa52776c38e671cd4b47fcf",
+            "lineage_id": "review-cafb047b78880102",
+            "authority_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+            "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+            "base_tree": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+            "candidate_tree": "8afbe691158f1c16a0236e7a2fc349620de85efb",
+            "changed_path_manifest_sha256": "sha256:9d989c5a27bd1037749ca1769b91e1603390d24131e7489b7595909e28ef72aa",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:71e475193b332254045d00399ac6599b12ae393f2fa52776c38e671cd4b47fcf",
+            "raw_sha256": "sha256:23a7f82bbf1e7ad1d85834646a93ec667eda2785be8b1ce4536269c773515cf2",
+            "canonical_sha256": "sha256:014f54a1621163b57e7e20d859ac0f8f1603460210e05abdc1389eadba31593f",
+            "result_hash": "sha256:0f40126cb24c2ffc561fb2f4c68c5ecc17408d196f48901aba7d27bf94be0a82",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:71e475193b332254045d00399ac6599b12ae393f2fa52776c38e671cd4b47fcf",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/design.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-ownership-error-class-conflation",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:498-511",
+                "severity": "WARNING",
+                "claim": "The new EvaluateOwnership function collapses every readFile and readDir error into the single generic reason \"missing \u003cpath\u003e\", with no branch on error type (e.g. fs.ErrNotExist vs fs.ErrPermission vs a transient I/O error such as EIO/EBUSY on a flaky or network-backed filesystem). A permission misconfiguration or a transient storage hiccup during a project's ownership check is therefore indistinguishable in the returned Reason from a genuinely deleted file, and the design's own test (TestEvaluateOwnership_UnreadableTargetDirectoryIsHumanOwned) confirms fs.ErrPermission is deliberately folded into \"missing\". Because Ownership.Reason is the only signal a caller or operator sees, a transient production read failure on one target flips a legitimately agent-owned skill to human-owned with no observability trail distinguishing \"retry-worthy transient failure\" from \"file is actually gone\", and no retry is attempted before the verdict is returned.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:498-501 reduces every readFile error, regardless of underlying cause, to Ownership{Reason: \"missing \" + target}",
+                  "engine/skills/project_lock.go:507-511 does the same for every readDir error on the target's containing directory",
+                  "engine/skills/project_lock_test.go's TestEvaluateOwnership_UnreadableTargetDirectoryIsHumanOwned asserts fs.ErrPermission on readDir is reported as the generic \"missing \u003cdir\u003e\" reason rather than a permission-specific one, confirming the conflation is intentional and exercised, not accidental dead code"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R4-ownership-reason-doc-undercount",
+                "lens": "resilience",
+                "location": "engine/skills/project_lock.go:380-393",
+                "severity": "WARNING",
+                "claim": "The exported Ownership type's doc comment enumerates the original four reasons plus what it calls \"all six\" additions (invalid-target, no-targets, invalid-root, no-resolver, unresolved-root, unresolved-target), but EvaluateOwnership's own body also returns a seventh new reason, \"escapes-root \u003ctarget\u003e\", that this enumeration never mentions. A caller or on-call engineer who builds reason-classification, alerting, or a switch/default handler from the Ownership type's own godoc (the only place on the exported symbol that lists valid Reason values) will not know \"escapes-root\" — precisely the symlink-escape security signal SEC-2 was written to surface — is a possible value, and any such handler risks silently routing it through an \"unknown reason\" default path instead of the security-relevant handling it deserves. design.md's parallel table (openspec/changes/procedural-memory-lifecycle/design.md, the Amendment 2026-09-20 section) does list escapes-root correctly, so the inconsistency is confined to the in-code doc comment on the exported type, which is the artifact developers actually read from their editor/IDE.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:380-381 lists only the four original reasons",
+                  "engine/skills/project_lock.go:382-383 claims the additions are \"all six\" and enumerates exactly six in the bullet list that follows",
+                  "engine/skills/project_lock.go:384-393 bullets invalid-target, no-targets, invalid-root, no-resolver, unresolved-root and unresolved-target — omitting escapes-root entirely",
+                  "engine/skills/project_lock.go:496 shows EvaluateOwnership actually returning Ownership{Reason: \"escapes-root \" + target}, a value absent from the type's own doc-comment enumeration"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Reviewed the complete candidate scope: engine/skills/project_lock.go (new HashSkill, ValidateCandidateKey, Ownership, EvaluateOwnership, resolveTarget, withinRoot, plus the validateCandidateKey message split), engine/skills/project_lock_test.go (matching test additions), engine/skills/zero_fetch_test.go (import-allowlist widening and its exclusion test), and the two openspec docs describing the same change.",
+              "EvaluateOwnership is deliberately fail-closed throughout (nil resolver, unresolved root/target, non-absolute root, empty targets list, unreadable directory all fold to human-owned before any further read), which is the correct resilience direction for an ownership-by-hash gate and is not itself a defect.",
+              "SerializeProjectLock's duplicate-id refusal path was strengthened in this candidate to return nil bytes alongside the error (engine/skills/project_lock_test.go's new assertions on the refusal path), removing a prior partial-result risk; this is a resilience improvement, not a finding.",
+              "Every target in EvaluateOwnership is lexically containment-checked (resolveTarget) and then containment-checked again against the injected resolver's output before any filesystem read is attempted, closing the prior read-outside-root failure mode described in tasks.md's SEC-1/SEC-2 history for this same file; no new traversal was found in this candidate's added code.",
+              "No BLOCKER or CRITICAL resilience defect was found: the two WARNING findings above are observability/diagnosability gaps (error-cause conflation and an incomplete doc-comment enumeration of a security-relevant reason string), not functional failures — the function still returns a correct, safe verdict in every case exercised by its extensive new test suite.",
+              "The two documentation-only manifest paths (design.md, tasks.md) were inspected and are internally consistent with each other (design.md's Amendment 2026-09-20 table matches the code's actual reason set); the inconsistency identified is between the code's own doc comment and the code's own body, not between the code and the design docs."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+        "capture_phase_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+        "artifact_digest": "sha256:e6d3046b3a14b5a573d350ebe56fa3f32a6ad835df82c88109fb8e2b4be89eae",
+        "result_hash": "sha256:ab47da01507e18c84aa2f4c15aad61a0cc8136a8bcf002e72e4c6ffbfa5333d4",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:19795ccc420072857baacc0039f198c0d9ad29136382e0dd75ccd5fc1582ceb4",
+            "lineage_id": "review-cafb047b78880102",
+            "authority_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+            "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+            "base_tree": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+            "candidate_tree": "8afbe691158f1c16a0236e7a2fc349620de85efb",
+            "changed_path_manifest_sha256": "sha256:9d989c5a27bd1037749ca1769b91e1603390d24131e7489b7595909e28ef72aa",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:19795ccc420072857baacc0039f198c0d9ad29136382e0dd75ccd5fc1582ceb4",
+            "raw_sha256": "sha256:8363011288782c6030c66d90c11ac71edb644a2de6d95991e07c1c7959a80163",
+            "canonical_sha256": "sha256:f5c4efb74db476fa0815d5edfddac3b3d4e2050b766e06b6741bc47c825fa2b4",
+            "result_hash": "sha256:ab47da01507e18c84aa2f4c15aad61a0cc8136a8bcf002e72e4c6ffbfa5333d4",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:19795ccc420072857baacc0039f198c0d9ad29136382e0dd75ccd5fc1582ceb4",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/design.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-ownership-reason-doc-incomplete",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:380-393",
+                "severity": "WARNING",
+                "claim": "The Ownership type's doc comment enumerates the full reason vocabulary but omits the escapes-root reason, which EvaluateOwnership returns when a resolved target lands outside the resolved root, and it summarises its additions as \"all six\" when the candidate's own amended reason table lists seven reasons beyond the original four. Reason is the only field a caller renders, so a status line reading escapes-root sends a maintainer to a type comment that does not mention it.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:380-393",
+                  "engine/skills/project_lock.go:495-497",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:218-227"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-stale-three-conditions-citation",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:411-416",
+                "severity": "WARNING",
+                "claim": "EvaluateOwnership's doc comment states agent-ownership holds when \"all three conditions\" hold and cites the design document by the line range 205-208, but the same candidate adds a fourth condition — root must be absolute — which the function enforces before any target is examined and which the design document gains as a new bullet in that very region. Both the count and the cited range are stale the moment the change lands, so the comment understates the contract it documents.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:411-416",
+                  "engine/skills/project_lock.go:465-470",
+                  "openspec/changes/procedural-memory-lifecycle/design.md"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-reason-count-mismatch",
+                "lens": "readability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:110",
+                "severity": "WARNING",
+                "claim": "The task entry recording the DOC-1 correction says the design document's reason vocabulary is amended \"from the original four reasons to the full ten\", but the amended table it refers to lists eleven reasons and the design document's own API sketch comment says \"one of the 11 reasons\". Three copies of the same vocabulary now exist (type comment, design table, task log) and they already disagree on its size, which is exactly the drift a reader uses the task log to rule out.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:110",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:218-227",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:496"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-last-four-phrase-ambiguous",
+                "lens": "readability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:218-227",
+                "severity": "SUGGESTION",
+                "claim": "The sentence following the amended reason table says \"the last four\" reasons mean ownership cannot be proved, but read against the table's own ordering the last four rows begin with escapes-root, which denotes a containment violation the code positively proved, not an unprovable one. The identical phrase in the Ownership type comment resolves to a different set, because that comment lists the reasons in a different order. Naming the four reasons explicitly would remove a reader's need to count rows to learn which verdicts are \"unproved\".",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:218-227",
+                  "engine/skills/project_lock.go:388-396"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-missing-reason-overloaded",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:506-511",
+                "severity": "WARNING",
+                "claim": "A failure to list a target's directory is reported with the same reason word used for an unreadable target file, and with a directory rather than a file as its operand. A permission denial, a directory replaced by a file, and a genuinely deleted skill therefore all surface as the same word in operator-facing status output, and the accompanying test deliberately drives this branch with a permission error while asserting the \"missing\" wording. A distinct reason (for example unlistable-dir) would keep the vocabulary's one-word-one-cause property that the rest of the reason set has.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:506-511",
+                  "engine/skills/project_lock.go:498-501",
+                  "engine/skills/project_lock_test.go"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-withinroot-separator-quirk",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:563-569",
+                "severity": "SUGGESTION",
+                "claim": "withinRoot decides containment by appending the path separator to both operands, so when the cleaned root is the filesystem root the comparison prefix becomes a doubled separator and no path is ever reported inside it — under such a root every target would be refused. The candidate's containment witness test asserts exactly that refusal, for a filesystem-root root and for an empty root, and its inline comment explains the doubled-separator effect as if it were the intended rule; both of those roots are rejected earlier by EvaluateOwnership as non-absolute or invalid, so the prefix half of the helper has no demonstrated failure mode reachable through its only production caller. A reader cannot tell from this pair whether the doubled-separator behaviour is a deliberate invariant or an accident nobody can trigger.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:563-569",
+                  "engine/skills/project_lock.go:555-559",
+                  "engine/skills/project_lock_test.go"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-kind-names-duplicated-in-message",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:360-362",
+                "severity": "SUGGESTION",
+                "claim": "The unknown-kind refusal hardcodes the two accepted kind names as string literals in its message, duplicating the keys of the candidateKindSlugs map declared a few lines above that is otherwise the single source of accepted kinds. Adding a third kind to the map leaves the message advertising only two, and nothing in the package ties the two lists together. Deriving the list from the map's sorted keys keeps the message true by construction.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:360-362",
+                  "engine/skills/project_lock.go:332-335"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-case-only-validator-names",
+                "lens": "readability",
+                "location": "engine/skills/project_lock.go:337-350",
+                "severity": "SUGGESTION",
+                "claim": "The candidate introduces an exported ValidateCandidateKey alongside the pre-existing unexported validateCandidateKey; the two names differ only in the case of the first letter yet answer different questions (topic-key shape versus safety of stamping the key into YAML frontmatter) and return errors with different prefixes. The doc comment spends a paragraph and a dedicated test explaining that the two are not the same function, which is direct evidence the names are confusable at a call site. Names such as ValidateCandidateKeyShape and validateCandidateKeyStampSafe would make each call self-describing and shrink the comment that currently compensates.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:337-350",
+                  "engine/skills/project_lock.go:342-349"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-allowlist-size-magic-number",
+                "lens": "readability",
+                "location": "engine/skills/zero_fetch_test.go:96-105",
+                "severity": "SUGGESTION",
+                "claim": "The new guard test pins the allowlist's size to the bare literal 15, which silently duplicates the length of the map literal declared earlier in the same file; any legitimate future widening fails with a message that reports only two numbers and never says which entry appeared. The preceding comment asserts the two new entries \"are the only ones this slice added\", but nothing in the test checks membership beyond those two — the size literal is standing in for a claim it cannot express. Comparing against a sorted expected key set would both carry the intent and name the offending entry when it fires.",
+                "proof_refs": [
+                  "engine/skills/zero_fetch_test.go:96-105",
+                  "engine/skills/zero_fetch_test.go:20-27"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all five manifest paths from the immutable patch sections only: the Go implementation, both Go test files, and the two openspec documents; no working tree, index or command was consulted.",
+              "The implementation hunk appends one contiguous added block (hash helper, candidate-key shape validator, Ownership type, EvaluateOwnership, resolveTarget, withinRoot) plus a split of the pre-existing quote/backslash refusal into two branches with distinct messages; every finding location above sits inside lines this candidate added.",
+              "Readability defects reported cluster in the reason vocabulary, which the candidate now states four times (Ownership type comment, EvaluateOwnership comment, design table, task log) and which already disagrees on both the membership (escapes-root missing from the type comment) and the count (ten versus eleven).",
+              "Two documentation citations went stale within the candidate itself: the \"all three conditions\" comment against a contract the same change made four conditions, and the \"last four\" phrase whose referent differs between the code comment ordering and the design table ordering.",
+              "No BLOCKER- or CRITICAL-class maintainability defect was found: the new code paths are covered by tests, the guards are individually documented, and the remaining items are naming, duplication and magic-constant concerns that obscure intent rather than break it."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+        "capture_phase_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+        "artifact_digest": "sha256:d26faa331ed63bf3ba49d5899d121178c6a1a5556f6a14d56582936e9853ad18",
+        "result_hash": "sha256:3cd124eac41723bc233b76da0bbd27fee273ad68e8a95d9624b2bef44b22d0c1",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7b95188d408a6158d0d867d2d66e9cba380299ef830ac83ec72a8ec57e966309",
+            "lineage_id": "review-cafb047b78880102",
+            "authority_revision": "sha256:52c53077202bc0c420ecd150a4ca84d6bab944ff53a7026d3410711e6eb86804",
+            "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+            "base_tree": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+            "candidate_tree": "8afbe691158f1c16a0236e7a2fc349620de85efb",
+            "changed_path_manifest_sha256": "sha256:9d989c5a27bd1037749ca1769b91e1603390d24131e7489b7595909e28ef72aa",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7b95188d408a6158d0d867d2d66e9cba380299ef830ac83ec72a8ec57e966309",
+            "raw_sha256": "sha256:9c66c0f7ccd27856b2a8eccfce184d0b6cb2d673794b146eeb03c010f804243e",
+            "canonical_sha256": "sha256:5d9e2052b3570f96aeb6a264a9f3fa480afd6bd7adf368653e9c08f6b75b7a36",
+            "result_hash": "sha256:3cd124eac41723bc233b76da0bbd27fee273ad68e8a95d9624b2bef44b22d0c1",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7b95188d408a6158d0d867d2d66e9cba380299ef830ac83ec72a8ec57e966309",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "engine/skills/zero_fetch_test.go",
+                "openspec/changes/procedural-memory-lifecycle/design.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-exactly-one-entry-vacuous",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:513-517",
+                "severity": "WARNING",
+                "claim": "The third ownership condition is documented as \"every target skill directory contains exactly one entry\", but the loop only refuses entries whose name differs from the single permitted skill file name. An error-free listing that is empty, or that simply does not contain the permitted file, executes no loop body and falls through to the agent-owned return. Because every filesystem read is injected (the real readers arrive in a later slice), nothing in this candidate asserts the exactly-one invariant: no test supplies a readDir that returns an empty slice with a nil error, and the in-memory readDir helper converts that case into an error instead, so the vacuous path is never exercised in either direction.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:513-517",
+                  "engine/skills/project_lock.go:411-416",
+                  "engine/skills/project_lock_test.go:948-950",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:209"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-escapes-root-undocumented-reason",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:380-393",
+                "severity": "WARNING",
+                "claim": "The Ownership type's reason vocabulary omits the escapes-root reason that EvaluateOwnership actually returns for a target resolving outside the root, and miscounts its own additions as \"all six\" when the amended design table records eleven reasons (the four originals plus seven additions). A caller or status renderer that switches on the vocabulary documented here silently misses a reachable verdict, even though the behaviour itself is proved by a test pinning the exact string.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:383",
+                  "engine/skills/project_lock.go:496",
+                  "engine/skills/project_lock_test.go:1238",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:224"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-last-four-mislabels-escapes-root",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:229",
+                "severity": "SUGGESTION",
+                "claim": "The sentence says \"the last four are 'ownership cannot be proved'\", but the last four rows of the table immediately above it begin with escapes-root, which is a proven escape rather than an unprovable one; the code's parallel sentence counts a different four because its own list omits escapes-root. The classification a future reader relies on to decide which reasons are soft failures is therefore ambiguous between the two documents.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:224-227",
+                  "engine/skills/project_lock.go:395-396"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-stale-design-line-citations",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:411-421",
+                "severity": "SUGGESTION",
+                "claim": "The new doc comments pin themselves to design line numbers that this same candidate moved: the three ownership conditions are cited as lines 205-208 while the amended bullets now occupy 206-209, and the reason vocabulary is cited as line 210 three times (also from the test file) while that line is now blank and the vocabulary lives in the table at 215-227. Provenance citations that no longer resolve to the cited text weaken the only link between the implementation and the spec a later reader can check.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:413",
+                  "engine/skills/project_lock.go:421",
+                  "engine/skills/project_lock_test.go:1062",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:207",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:210",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:211"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-task-records-stale-signature",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:104",
+                "severity": "SUGGESTION",
+                "claim": "The GREEN task line is marked done while still recording the four-parameter ownership signature, although the correction task two entries below and the shipped function both carry the fifth resolver parameter. A completed task that describes an API the candidate does not expose makes the task ledger unusable as a check on what actually landed.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:461",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:110",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:496"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-allowlist-test-scope-overstated",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:106",
+                "severity": "SUGGESTION",
+                "claim": "The task records the reachable-import-set confirmation as \"made executable\", but the new test only iterates the allowlist map literal declared in the same file and pins its length; it never inspects the package's own import specs, let alone anything transitive. The guard it really provides is \"the allowlist literal gains no forbidden entry\", which is narrower than the claim and leaves a transitively reachable process- or network-capable dependency unproved.",
+                "proof_refs": [
+                  "engine/skills/zero_fetch_test.go:86-95",
+                  "engine/skills/zero_fetch_test.go:103-105",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:106"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-mapping-resolver-map-order",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:1196-1208",
+                "severity": "SUGGESTION",
+                "claim": "The fixture resolver picks the first matching entry while ranging over a map, so as soon as two link entries share a prefix relationship the resolved path depends on Go's randomized map iteration order and the symlink tests become order-dependent. Today each call site passes a single-entry map, so the flake is latent rather than live, but the helper is the seam every future symlink case will reuse; ranging over a deterministically sorted key list (longest prefix first) removes the hazard.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:1198-1205",
+                  "engine/skills/project_lock_test.go:1221",
+                  "engine/skills/project_lock_test.go:1260"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-within-root-degenerate-at-fs-root",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:568-570",
+                "severity": "SUGGESTION",
+                "claim": "Containment is decided by appending a separator to the cleaned root, so when the cleaned root is itself a single separator the comparison prefix becomes a doubled separator that no cleaned path can carry, and every target under such a root is refused. The new containment-guard witness test depends on exactly that degeneracy for one of its two cases, pinning the quirk as intended behaviour instead of exercising a realistic escape; since this helper is slated to become the shared guard for the install planner, the special case deserves an explicit branch and an assertion rather than an accidental one.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:557",
+                  "engine/skills/project_lock.go:569",
+                  "engine/skills/project_lock_test.go:1402-1412"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected all five manifest paths from the supplied patch sections only; no working tree, index or command was consulted.",
+              "Ownership behaviour coverage is otherwise strong: every reachable verdict of the new ownership evaluator has an externally observable assertion on the exact reason string — agent-owned, hash mismatch, missing file, missing directory listing, extra directory entry, absent lock entry, entry with no targets, non-absolute root, absent resolver, root resolution failure, target resolution failure, lexically invalid target and resolved-escape — see engine/skills/project_lock_test.go:985-1185 and engine/skills/project_lock_test.go:1212-1380.",
+              "Read ordering is proved, not merely asserted in prose: the recording fixture at engine/skills/project_lock_test.go:1134-1148 lets each refusal test assert that zero reads were attempted, so the guards at engine/skills/project_lock.go:486-497 are shown to run before any read.",
+              "The symlink pair is genuinely discriminating: one test proves a component resolving outside the root is refused with the escape reason (engine/skills/project_lock_test.go:1212-1244) while its sibling proves a root reached through a link still evaluates agent-owned (engine/skills/project_lock_test.go:1246-1274), so the resolved-containment check cannot be satisfied by simply refusing everything.",
+              "Each lexical sub-guard has a deletion witness: the parent-component scan is pinned by targets that clean back inside the root (engine/skills/project_lock_test.go:1388-1395), and the strictly-below clause by the three spellings that clean to the current directory (engine/skills/project_lock_test.go:1418-1425). Neither test reproduces those literals as repository paths; they are fixture strings inside the test.",
+              "Hashing determinism is pinned by published vectors and by a four-variant collision check proving no line-ending, trailing-whitespace or blank-line normalization occurs (engine/skills/project_lock_test.go:780-809), matching the no-normalization decision recorded at openspec/changes/procedural-memory-lifecycle/design.md:203.",
+              "The candidate-key shape validator has one test per refusal branch plus a non-contradiction test against the stamp-safety validator (engine/skills/project_lock_test.go:813-908); all branches of engine/skills/project_lock.go:350-376 are reachable and exercised.",
+              "The carried-forward corrections close real proof gaps: serialization order-independence is now proved by comparing two serializations byte for byte rather than by an index check (engine/skills/project_lock_test.go:148-160 region of the first hunk), duplicate-id refusals now assert nil bytes and a message naming the duplicated id on both the parse and serialize sides, and the quote and backslash refusals were split into distinct messages so each test proves which branch it reached (engine/skills/project_lock.go:163-172 region of the second hunk).",
+              "No blocker or critical defect was found: the behavioural surface this candidate adds fails closed in every unprovable case, and the residual findings are a weaker-than-documented directory predicate plus documentation and fixture-determinism issues."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "ae350b5062c53fb6e573872b0af2ab1245090b1c32439555d22da31b23289807",
+    "initial_atomic_start": {
+      "lineage_id": "review-cafb047b78880102",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:4c95da043a57de2bbb7d21c63ce263787bb4f5f49a2c6aab63acedb4d8f01a59",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "94c700dc8e85e1cdcbc41b09733cd266fa35ffaf",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1101,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

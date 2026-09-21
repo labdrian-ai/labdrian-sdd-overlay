@@ -521,7 +521,7 @@ skills:
 	if err := os.MkdirAll(filepath.Join(skillsRoot, "new-skill"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(skillsRoot, "new-skill", "SKILL.md"), []byte("# new-skill\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(skillsRoot, "new-skill", "SKILL.md"), []byte(lintCleanSkillMD("new-skill")), 0644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -557,6 +557,31 @@ skills:
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}
 	})
+}
+
+// TestSkillsCoreLintRoutesToRenderLintCore proves the "lint" verb reaches
+// RenderLintCore through SkillsCore's dispatch, including stripVerb removing
+// the "lint" token itself so the remaining args are parsed as RenderLintCore
+// expects (review-b75e4a27b9494ff8 R3-lint-dispatch-untested: every prior
+// test called RenderLintCore directly, leaving verb routing unexercised).
+func TestSkillsCoreLintRoutesToRenderLintCore(t *testing.T) {
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+
+	SkillsCore(
+		"lint",
+		[]string{"lint", "skill.md"},
+		func(string) ([]byte, error) { return []byte(validSkillFile()), nil },
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("expected exit 0 for a clean skill file routed through SkillsCore, got %d, stderr: %q", exitCode, errBuf.String())
+	}
+	if out.String() != "" || errBuf.String() != "" {
+		t.Errorf("expected no output for a clean file, got stdout=%q stderr=%q", out.String(), errBuf.String())
+	}
 }
 
 // TestSkillsCoreUnknownVerbMessage verifies SC-37: an unknown verb exits 1 and

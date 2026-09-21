@@ -1,0 +1,60 @@
+{
+  "version": 1,
+  "skills": [
+    {
+      "id": "clean-skill",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/clean-skill",
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/clean-skill/SKILL.md",
+        ".agents/skills/clean-skill/SKILL.md"
+      ]
+    },
+    {
+      "id": "moved-path-skill",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/moved-path-skill",
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/moved-path-skill/SKILL.md",
+        ".agents/skills/moved-path-skill/SKILL.md"
+      ]
+    },
+    {
+      "id": "quiet-skill",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/quiet-skill",
+      "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/quiet-skill/SKILL.md",
+        ".agents/skills/quiet-skill/SKILL.md"
+      ]
+    },
+    {
+      "id": "removed-path-skill",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/removed-path-skill",
+      "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/removed-path-skill/SKILL.md",
+        ".agents/skills/removed-path-skill/SKILL.md"
+      ]
+    },
+    {
+      "id": "unresolved-command-skill",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/unresolved-command-skill",
+      "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/unresolved-command-skill/SKILL.md",
+        ".agents/skills/unresolved-command-skill/SKILL.md"
+      ]
+    }
+  ]
+}

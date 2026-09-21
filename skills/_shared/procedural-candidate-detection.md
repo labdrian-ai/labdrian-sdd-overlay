@@ -8,10 +8,15 @@ writes under `skills/`. Candidate records persist in Engram, the sole
 durability store for this capability; no second SQLite store and no Go-side
 write path into Engram's database exist anywhere in this contract.
 
-This document is delivered across three review slices. Sections 1-3 shipped
-in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice 2
-(`repeat-and-recovery-detection`, R-002, R-003). Section 6 below (duplicate
-rejection) ships in slice 3 (`duplicate-rejection`, R-004).
+This document is delivered across several review slices. Sections 1-3
+shipped in slice 1 (`candidate-store`, R-001). Sections 4-5 shipped in slice
+2 (`repeat-and-recovery-detection`, R-002, R-003). Section 6 (duplicate
+rejection) shipped in slice 3 (`duplicate-rejection`, R-004). Sections 7-10
+shipped with the procedural drafting contract, section 11 (registration
+and commit procedure) ships with `project-register-cli`, section 13 (revision
+trigger and qualifying post-registration occurrences) ships with `revision`,
+and section 14 (the explicit retirement decision procedure) ships with
+`retirement-cli-and-docs`.
 
 ## 1. Candidate identity and topic-key contract
 
@@ -264,6 +269,573 @@ missed duplicate, deferred to a human reviewer) is the accepted, auditable
 failure mode, while over-detection (a false duplicate that silently discards
 a real candidate before anyone reviews it) is not.
 
+## 7. Do-not-capture list (gates candidate quality and drafting)
+
+This is the single do-not-capture list for this contract. It is defined exactly once, here, and enforced at two independent points in the lifecycle: at emission (this document's own section 4, before a candidate that reaches `Threshold` is allowed to advance past `emitted`) and at draft time (`procedural-skill-drafting`, before any draft record is saved). Neither enforcement point supersedes the other: a candidate that slips past emission-time enforcement is still refused at draft time.
+
+A candidate whose contributing evidence matches any of the following
+categories MUST be refused rather than advanced or drafted, and the refusal
+MUST be recorded (never silently dropped):
+
+1. **Environment-dependent failure**: a failure that reproduces only under
+   one occurrence's local misconfiguration, not a general lesson.
+2. **Negative claim about a tool with no independent verification**: an
+   assertion that a tool does not work or lacks a capability, with no
+   independent confirmation beyond the one occurrence.
+3. **Transient error**: a network blip, rate limit, or timeout with no
+   recurring cause.
+4. **One-off narrative**: a one-off narrative with no repeatable procedural
+   content.
+5. **Unresolved failure presented as workflow**: a failure narrated as if a
+   workflow completed, when the failure was never actually resolved.
+
+A candidate refused by this list transitions to `Status: rejected` with
+`RejectionReason: do-not-capture:<class>`, where `<class>` is one of
+`environment-dependent`, `unverified-negative-claim`, `transient-error`,
+`one-off-narrative`, or `unresolved-presented-as-workflow`. The refusal is
+kept, never discarded, exactly like a duplicate rejection (section 6): every
+miss and every match stays auditable.
+
+The advisory `incident-log-shape` lint warning (`skill-lint`) is a separate,
+non-blocking signal on the rendered SKILL.md body. It never gates emission
+or drafting; it only flags a later-stage authoring smell after a draft
+already exists.
+
+## 8. Lesson shape, Disposition, and draft records
+
+### Lesson shape for Summary
+
+When drafting produces or updates a skill's summary content, the summary MUST be phrased as an imperative rule followed by exactly one clause explaining why, and MUST NOT include observation ids, dates, or PR/issue numbers. This is enforced by the agent-driven drafting procedure itself,
+before any draft record is saved — not by Go code — and is verified by the
+acceptance checklist at the end of this document, not a unit test. It is
+independent of the advisory `incident-log-shape` lint warning (section 7),
+which flags a different, later-stage signal and never blocks drafting.
+
+Example: "Override `HOME`, not `ENGRAM_DATABASE_URL`, because the Engram CLI
+and its MCP server never read the latter." is an acceptable summary shape:
+one imperative clause, one why-clause, no ids, no dates, no PR/issue
+numbers.
+
+### Disposition: new | extend:<skill-id>
+
+Every candidate MUST have a `Disposition` of exactly `new` or `extend:<skill-id>`, computed before drafting. `extend:<skill-id>` MUST be
+preferred over `new` whenever an existing registered or promoted skill
+already covers materially the same procedural ground as the candidate
+(extend-before-create). When `Disposition` is `extend:<skill-id>`, the draft
+MUST be a unified diff against the named skill's current content, not an
+unrelated new SKILL.md. `Disposition` persists on the candidate record
+(section 9) so registration, revision, and retirement can read it without
+recomputing the extend-vs-create decision.
+
+### Draft records live only in Engram
+
+Every draft is stored as an Engram observation under the topic-key shape:
+
+    procedural/drafts/{kind}/{slug}
+
+where `{kind}` and `{slug...}` mirror the candidate's own kind and slug tail
+(section 1). `type: pattern`, `capture_prompt: false`. No draft file is ever written under `skills/` at any point in the drafting lifecycle — a draft
+that reached the `skills/` tree would fail the ondisk gate's
+`UNREGISTERED_ON_DISK` check, and registration (section 11) is the only path
+that ever writes there.
+
+The draft record's field block:
+
+`````
+**Candidate**: <candidate topic key>
+**Disposition**: new | extend:<skill-id>
+**Status**: open | registered | abandoned
+**ForRevision**: <n>
+**Lint**: hard 0, warnings <k> (<rule-ids>)
+**History**:
+- ...
+**Body**:
+````markdown
+<complete SKILL.md text>      (Disposition new)
+````
+`````
+
+or a ` ```diff ` fenced unified diff when `Disposition` is
+`extend:<skill-id>`. A five-backtick outer fence wraps a four-backtick body
+fence so the inner fence closes before the outer one does, and an
+embedded SKILL.md's own triple-backtick fences do not terminate it early.
+`ForRevision` is the latch: at most one open draft exists per revision
+number.
+
+## 9. Extended Status vocabulary, transition table, and History
+
+### Status vocabulary
+
+The candidate record's `Status` field takes exactly one value from:
+
+    observing | emitted | rejected | drafted | registered | promoted | retired
+
+The draft record (section 8) has its own, separate `Status` field with its
+own vocabulary, `open | registered | abandoned`, defined in section 8's
+field block. A draft reaching `registered` moves its candidate record's
+`Status` to `registered`; an `abandoned` draft leaves the candidate
+record's `Status` at `drafted` until a new draft is opened or the candidate
+is retired.
+
+Every value beyond `observing | emitted | rejected` (item 30, sections 4-6)
+is reachable only through the corresponding lifecycle transition defined by
+this document and by `procedural-skill-registration` /
+`procedural-skill-maintenance`; none is ever set directly.
+
+### Transition table (normative)
+
+| From | To | Actor | Tier | Event | Required `History` evidence |
+|---|---|---|---|---|---|
+| none | `observing` | agent | none | first occurrence (item 30) | `engram:<id>` |
+| `observing` | `emitted` | agent | none | count reaches `Threshold`, no `MatchCandidate` match (item 30) | count |
+| `observing` | `rejected` | agent | none | `MatchCandidate` match (item 30) | `MatchedSkillPath` |
+| `observing` or `emitted` | `rejected` | agent | none | do-not-capture class matched at emission or at draft time | `RejectionReason: do-not-capture:<class>` |
+| `emitted` | `drafted` | agent | project | draft record written, `LintSkill` hard = 0 (new) or diff applies cleanly (extend) | draft topic key, `Disposition`, lint counts |
+| `drafted` | `registered` | agent | project | `project-register` and commit (new), or `project-revise` of an agent-owned target (extend) | skill id, `sha256`, commit, rev |
+| `registered` | `registered` | agent | project | revision (ownership OK, trigger reached) | `sha256`, commit, rev |
+| `drafted` or `registered` | `promoted` | human | global | `engine skills add` merged in the overlay | overlay commit, `sha256` |
+| `registered` | `retired` | agent | project | `project-retire` and commit | `RetirementReason`, commit |
+| `promoted` | `retired` | human | global | `engine skills remove` merged | `RetirementReason`, overlay commit |
+
+Non-transition events append a same-state `History` line (for example
+`registered -> registered`, or `promoted -> promoted`) without changing
+`Status`: ownership lost, disposition computed, a revision draft opened, a
+recurrence after retirement, and the agent's post-promotion removal of the
+now-redundant project-tier copies. That last case deserves its own note:
+once a human sets `Status: promoted`, the agent MAY run
+`project-retire --reason promoted`, which deletes the project-tier files and
+their project lock entry and commits, but it is NOT the `registered -> retired` transition in the table above — `Status` stays `promoted`, and only a `promoted -> promoted` `History` line records the removal. Retirement never reopens automatically.
+
+Only a human sets `Status: promoted`. No engine verb ever writes `Status`,
+and every project-tier procedure in this document ends at `registered` or
+`retired`.
+
+### History format and write rule
+
+One line per entry, append-only, always the last field in the record block:
+
+```
+**History**:
+- 2026-09-20T10:00:00Z | observing -> emitted | agent | count 3/3, no registry match
+- 2026-09-20T10:05:00Z | emitted -> drafted | agent | draft procedural/drafts/repeated-success/probe-engram-with-home-override; Disposition new; lint hard 0 warnings 1 (body-recommended)
+- 2026-09-20T10:09:00Z | drafted -> registered | agent | skill probe-engram-with-home-override rev 1 sha256:3f2a...c1 commit a1b2c3d
+```
+
+**Write rule**: read the current record with `mem_get_observation`, copy the
+existing `History` lines byte-for-byte, append one or more new lines, and
+upsert (`mem_save`/`mem_update`). After the write, the old lines MUST be a prefix of the new ones — a subsequent read MUST NOT remove, reorder, or
+overwrite any existing `History` entry. This is how a `History` field
+survives Engram's overwrite-on-upsert behavior. Records that item 30 created
+with no `History` get a backfilled first line on their first write under
+this document: `<FirstObserved> | none -> observing | agent | backfilled
+from FirstObserved`.
+
+### New candidate-record fields
+
+Appended to item 30's field block (section 2):
+
+- `**Disposition**: new | extend:<skill-id>`
+- `**Draft**: procedural/drafts/...`
+- `**Registered**: <id> rev:<n> sha256:<hex> commit:<sha> at:<RFC3339>` —
+  replaced on revision; the old values survive in `History`.
+- `**Promoted**: <id> path:skills/<id>/SKILL.md sha256:<hex> commit:<sha> at:<RFC3339>`
+- `**OccurrencesSincePromotion**: <n>` — derived, never a stored,
+  independently incremented counter. It counts `Occurrences` entries whose
+  timestamp is strictly after the `at:` of the most recent `Registered` or
+  `Promoted` line, and applies at either tier (registered project-tier or
+  promoted global-tier).
+- `**RetirementReason**: stale-reference | superseded | absorbed | promoted | quiet | human-request`
+- `**AbsorbedInto**: <skill-id>` — set only after the retirement/
+  consolidation path verifies the named id exists (in the overlay registry
+  for a global target, or in the project lock file for a project-tier
+  target), never by `MatchCandidate` coverage of the retired candidate's own
+  identity.
+
+The `Registered`/`Promoted` hash line above is an informational mirror for
+humans reading the record. It is never the value the ownership-by-hash check
+(`procedural-skill-maintenance`) reads — that check reads only the project
+lock file's recorded hash, which is the single source of truth for
+ownership.
+
+## 10. Runtime targets
+
+Project-tier registration (`procedural-skill-registration`) writes exactly
+two fixed target directories, one `SKILL.md` per directory, and never a
+third. `.pi/skills/` is never written by this capability.
+
+| Directory | Runtime(s) | Status | Evidence |
+|---|---|---|---|
+| `.claude/skills/` | Claude Code | verified | Claude Code loads project skills from `.claude/skills/<id>/SKILL.md` directly; no trust prompt applies. |
+| `.agents/skills/` | Pi (always, after project trust); Codex (discovery only, on this host) | verified | Pi: installed Pi docs (`docs/security.md`, `docs/skills.md`) list project `.agents/skills` as a trust-requiring resource; project skills load only after trust. Codex: `codex-smoke.md` (2026-09-18, Codex 0.148.0) recorded verdict `PASS`, scoped to discovery of `.agents/skills/<id>/` (name and description exposed in Codex's skill list); loading the skill body is unverified on this host, because the body-read probe hit a host filesystem-sandbox limitation, not a discovery failure. |
+
+**Pi trust note**: writing to `.agents/skills/` in a project Pi has not yet
+trusted makes Pi prompt for project trust once, on its next start, under the
+default `defaultProjectTrust: ask`; a non-interactive Pi run ignores the
+skill until the project is trusted. This is the accepted, disclosed cost of
+writing one Pi-visible copy (revised decision (e)); it also means Pi never
+sees a duplicate skill name for the same procedural skill. Every successful
+`project-register` run prints a `note:` line disclosing this (section 11).
+
+## 11. Registration and commit procedure
+
+Registration is a two-actor procedure with a hard boundary between them.
+The engine prints the exact path set and never runs git; the agent runs every git command as `git -C <project-root>`.
+`R` below is that absolute project root, the same value passed as
+`--project-root`. The agent performs the ten steps in this order and stops
+at the first refusal.
+
+1. **Prove the root.** `git -C R rev-parse --show-toplevel` must equal `R`.
+   Anything else means the command was aimed at a subdirectory, a nested
+   repository or a submodule, and registering there would write into the
+   wrong repository.
+2. **Prove the branch.** `git -C R symbolic-ref -q HEAD` must succeed, so a
+   detached `HEAD` refuses. Refuse as well if any of `MERGE_HEAD`,
+   `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge` or `rebase-apply`
+   exists under `git -C R rev-parse --git-dir`: a commit made during one of
+   those operations is not the single revertable commit this procedure
+   promises.
+3. **Prove the index is empty.** `git -C R diff --cached --name-only` must
+   print nothing. Any staged path refuses, is named in the refusal, and the
+   index is left exactly as it was.
+4. **Plan.** `labdrian skills project-register --dry-run --project-root R --candidate <key> <draft-file>`
+   prints one `plan: <rel>` line per planned path and writes nothing.
+5. **Prove the targets are not ignored.** `git -C R check-ignore -- <plan paths>`
+   must print nothing. An ignored target refuses, and `git add -f` is
+   forbidden: a skill git cannot see is a skill no reviewer can see.
+6. **Write.** The same command without `--dry-run` prints `wrote: <rel>` per
+   path, then `sha256: <hex>`, then `revision: <n>`, and finally the Pi
+   trust `note:` line. The `wrote:` set is the pathspec for every step
+   below.
+7. **Stage with an explicit pathspec.** `git -C R add -- <wrote paths>`, then `git -C R diff --cached --name-only` must equal the wrote set exactly. On a mismatch, run `git -C R restore --staged -- <wrote paths>` and refuse.
+8. **Commit with an explicit pathspec.** `git -C R commit -m "<conventional message>" -- <wrote paths>`.
+   Messages: `feat(skills): register project skill <id>`, `feat(skills): revise project skill <id>` or `chore(skills): retire project skill <id>`.
+   No AI attribution, no `-a`, no `--no-verify`, no amend, no push.
+9. **Confirm ownership.** `labdrian skills project-status --project-root R <id>`
+   must report `owner:agent`. A commit hook that rewrote the committed bytes
+   makes the skill human-owned; that is reported to the user, never
+   auto-corrected.
+10. **Record the commit.** Record `git -C R rev-parse --short HEAD` in the
+    candidate record's `Registered` line and in `History`.
+
+The pathspec on steps 7 and 8, together with the empty-index precondition of
+step 3, are two independent protections against sweeping unrelated work into
+this commit. Neither one is dropped when the other holds.
+
+### Refusals (normative)
+
+Every row refuses without writing anything and without leaving the
+repository in a state the operator did not ask for.
+
+| Refusal condition | Detected by | What the agent does |
+|---|---|---|
+| The command runs from a subdirectory, a nested repository or a submodule | `git -C R rev-parse --show-toplevel` does not equal `R` | Refuse before step 4; nothing is planned, read or written |
+| `HEAD` is detached | `git -C R symbolic-ref -q HEAD` fails | Refuse before step 4 |
+| A merge, cherry-pick, revert or rebase is in progress | `MERGE_HEAD`, `CHERRY_PICK_HEAD`, `REVERT_HEAD`, `rebase-merge` or `rebase-apply` exists under `git -C R rev-parse --git-dir` | Refuse before step 4 |
+| Unrelated changes are already staged | `git -C R diff --cached --name-only` is non-empty | Refuse, naming every staged path, and leave the index untouched |
+| A planned target is gitignored | `git -C R check-ignore -- <plan paths>` prints a path | Refuse; `git add -f` is forbidden |
+| The staged set does not equal the wrote set | `git -C R diff --cached --name-only` after `git -C R add` differs | Unstage with `git -C R restore --staged -- <wrote paths>` and refuse |
+
+### Crash-window recovery
+
+There is one window the engine cannot close for the agent: after step 6 has
+printed and before the commit of step 8 lands. Recovery in that window is
+deliberately narrow, because the repository may hold work that has nothing
+to do with this registration.
+
+Recovery must restore both the index and worktree for the wrote set without touching unrelated changes. Do not assume newly written `SKILL.md` files are untracked: after step 7 they may be staged as new files (`A`), leaving a dirty index.
+
+First classify every wrote path by whether it existed in `HEAD` before this run (for example, `git -C R cat-file -e HEAD:<path>`), rather than by its post-crash index status.
+For every wrote path that existed in `HEAD`, run `git -C R restore --source=HEAD --staged --worktree -- <tracked paths>`.
+For every wrote path absent from `HEAD` (including newly staged `SKILL.md` files and a first-run lock), run `git -C R restore --staged -- <new paths>` to remove the failed run's staged entries. Then delete a worktree file only after its bytes hash to the sha256 the failed run printed; if the hash differs, leave it for a human.
+The lock follows the same classification: an existing lock is restored with the tracked-path command; a first-run lock is unstaged and hash-verified before deletion.
+After these operations, `git -C R diff --cached --name-only` must show no wrote path, and every wrote path that existed in `HEAD` must match `HEAD` in both the index and worktree. The recovery must leave unrelated staged or worktree changes untouched.
+`git clean` and `git reset --hard` are never used.
+
+### The Pi trust note
+
+Every successful run prints `note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.` as its last line,
+the disclosure section 10 requires. The agent relays every `note:` line to the user and never uses one as a pathspec.
+A refusal and a `--dry-run` both print no `note:` line, because neither one
+creates the consequence it discloses.
+
+## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)
+
+This section is agent-driven prose, not Go code; it is verified by a
+fixture-driven procedure run in a temporary git repository with real Engram
+records during `sdd-verify`, not by `go test`. Contract-artifact content
+(section 11 above) is still Go-testable and covered by
+`engine/skills/procedural_candidate_contract_test.go`.
+
+1. **Clean repository gives exactly one commit**: GIVEN a clean project
+   repository on a branch, WHEN the ten steps run for a valid draft, THEN
+   exactly one commit is created and its changed paths equal the `wrote:`
+   set exactly.
+2. **An unrelated staged file refuses with the index untouched**: GIVEN an
+   unrelated path is already staged, WHEN step 3 runs, THEN the procedure
+   refuses naming that path, and `git diff --cached --name-only` afterwards
+   is byte-identical to what it was before.
+3. **An ignored target refuses**: GIVEN `.claude/skills/` is gitignored,
+   WHEN step 5 runs, THEN the procedure refuses and no `git add -f` is
+   attempted.
+4. **Detached `HEAD` refuses**: GIVEN the repository is on a detached
+   `HEAD`, WHEN step 2 runs, THEN the procedure refuses before anything is
+   planned.
+5. **A merge or rebase in progress refuses**: GIVEN `MERGE_HEAD` or
+   `rebase-merge`/`rebase-apply` exists, WHEN step 2 runs, THEN the
+   procedure refuses before anything is planned.
+6. **A subdirectory or nested repository never registers against the wrong
+   root**: GIVEN the procedure is invoked from a subdirectory of the project
+   or from a nested repository root, WHEN step 1 runs, THEN the root is
+   either resolved to `R` or refused, and never silently registered against
+   another repository.
+7. **A staged-set mismatch unstages and refuses**: GIVEN an unexpected path
+   is staged alongside the wrote set after step 7's `git add`, WHEN the
+   staged set is compared, THEN the procedure runs
+   `git restore --staged -- <wrote paths>` and refuses.
+8. **`git revert` restores the files and the lock**: GIVEN the registration
+   commit exists, WHEN it is reverted, THEN every written `SKILL.md` is gone
+   and the lock file is byte-identical to its pre-registration state.
+9. **A hook that rewrites the bytes is reported, not fixed**: GIVEN a commit
+   hook rewrites the committed `SKILL.md`, WHEN step 9 runs, THEN
+   `project-status` reports the skill human-owned and the procedure reports
+   that rather than re-registering.
+10. **A crash after staging recovers both index and worktree without reset**: GIVEN a second registration fails after its `wrote:`/`sha256:` output and after step 7's `git add`, WHEN crash-window recovery runs, THEN it recognizes new staged `SKILL.md` files (`A`) rather than assuming they are untracked, unstages the failed run's new paths, hash-verifies before deleting them, restores any pre-existing wrote paths (including the lock) with `git restore --source=HEAD --staged --worktree`, verifies `git diff --cached --name-only` has no failed-run path, leaves a previously registered skill's lock entry and committed files byte-identical to their pre-registration state plus unrelated worktree changes unchanged, and uses neither `git clean` nor `git reset --hard`.
+11. **`History` only grows**: GIVEN a candidate record that moved
+    `drafted -> registered`, WHEN the record is read back, THEN the
+    pre-registration `History` lines are a prefix of the post-registration
+    ones.
+
+## 12. Human promotion procedure
+
+Global promotion is a human-gated decision. The project-tier agent may
+prepare a candidate handoff and a linted project skill, but it MUST NOT write
+under the overlay's global `skills/` tree and it MUST NOT set the candidate's
+`Status` to `promoted`. The only global promotion path is the existing human
+`engine skills add` / `AddCore` path; this procedure adds no new CLI surface,
+no new approval machinery, no TTL, and no implicit consent from silence.
+
+**Silence is not consent.** No response, elapsed time, an unreviewed draft, or
+an absent objection promotes a skill. Until a human explicitly reviews and
+acts, the candidate remains `registered` (or `drafted` when registration has
+not completed), and no `Promoted` line, overlay file, registry entry, or
+manifest row is written.
+
+### Promotion steps
+
+1. **Prepare the handoff.** The agent identifies the candidate topic key, the
+   project skill id, the exact project-tier `SKILL.md` bytes, the recorded
+   `Registered` sha256, the current lint result, and the candidate record's
+   `History`. It presents these facts without modifying `skills/<id>/`.
+2. **Review the exact content.** A human decides whether to promote the
+   proposed skill and reviews its complete `SKILL.md` content. A human, not
+   the agent, copies the approved bytes into the overlay source path
+   `skills/<id>/SKILL.md`; this is the only promotion-time write under
+   `skills/`.
+3. **Run the existing add path.** From the overlay repository, the human
+   invokes the unmodified `engine skills add <id>` command (or the established
+   wrapper invocation with the same `add` verb and explicit registry,
+   manifest, and source-root paths). No promotion-specific command is
+   introduced. `AddCore` first verifies that `skills/<id>/SKILL.md` exists,
+   then runs `LintSkillFile` before serializing either the manifest or the
+   registry. A hard finding prints its `[lint:<rule>]` error and refuses the
+   add without changing either file; warnings are non-blocking.
+4. **Record the human transition.** Only after the human's add operation and
+   overlay commit succeed does the agent read the exact promoted file bytes
+   and append, without rewriting prior entries:
+
+   ```markdown
+   **Promoted**: <id> path:skills/<id>/SKILL.md sha256:<hex> commit:<sha> at:<RFC3339>
+   ```
+
+   The candidate record's `Status` changes to `promoted`, and its `History`
+   receives a new line such as:
+
+   ```text
+   - 2026-09-20T10:15:00Z | registered -> promoted | human | overlay commit a1b2c3d sha256:3f2a...c1
+   ```
+
+   The agent MUST first read the current record, copy every existing
+   `History` line byte-for-byte, append the promotion line, and upsert the
+   complete record. The old lines MUST remain a prefix of the new `History`.
+   The `Promoted` hash is the hash of the exact bytes at `skills/<id>/SKILL.md`
+   after the human operation; it is informational and does not replace the
+   project lock's ownership hash.
+
+A failed hard lint, a validation failure, or a human decision not to promote
+leaves the candidate at its prior status and leaves the registry and manifest
+unchanged. The agent MUST NOT retry by changing the content or by treating
+silence as approval. After promotion, removal of redundant project-tier
+copies remains a separate, explicitly invoked project-retire decision and
+must append a same-state `promoted -> promoted` `History` line.
+
+## 13. Revision trigger and qualifying post-registration occurrences
+
+Revision is a maintenance transition, not a new candidate emission. It is
+opened only for a candidate whose latest lifecycle state is `registered`
+(project tier) or `promoted` (global tier), and it follows the same drafting
+rules in section 8 and the ownership/registration rules in section 11. A
+promoted skill never receives an automated write under `skills/`; its revision
+draft is a human handoff through section 12.
+
+### Derived trigger
+
+`OccurrencesSincePromotion` is **derived, never stored**. Count the
+`Occurrences` entries whose timestamp is strictly after the `at:` timestamp on
+the most recent `Registered` or `Promoted` transition line in `History`.
+`Registered` is the project-tier baseline and `Promoted` is the global-tier
+baseline; the same derivation applies at either tier. Do not increment a
+counter field, and do not count observations from before that latest
+transition. A successful revision appends a new `Registered` or `Promoted`
+line, so the derived count resets to zero.
+
+The value is a proxy for skill effectiveness, not load telemetry: no runtime
+in this capability reports whether a skill was loaded or followed. The agent
+must disclose that limitation when it opens a revision draft.
+
+### Post-registration emission rows (normative)
+
+These rows extend the section 4 emission decision table for occurrences after
+project registration or global promotion. They append evidence to the same
+candidate record; they never create a second candidate identity.
+
+| Current `Status` | Qualifying occurrence after latest transition | `OccurrencesSincePromotion` after append | Open draft for `rev+1` | Result | Revision path |
+|---|---|---:|---|---|---|
+| `registered` or `promoted` | No | any | any | Keep the current status; append the occurrence only | None |
+| `registered` or `promoted` | Yes | 0 or 1 | No | Keep the current status; append the occurrence | None |
+| `registered` | Yes | 2 or more | Yes | Keep `registered`; append the occurrence; do not duplicate the draft | Existing project draft |
+| `registered` | Yes | 2 or more | No | Keep `registered`; append the occurrence and open one revision draft | Project `project-revise` after the draft is lint-clean |
+| `promoted` | Yes | 2 or more | Yes | Keep `promoted`; append the occurrence; do not duplicate the draft | Existing human-path draft |
+| `promoted` | Yes | 2 or more | No | Keep `promoted`; append the occurrence and open one revision draft | Human review and section 12 promotion path |
+
+The threshold is `>= 2`, not an independently persisted counter. `ForRevision`
+is the latch: at most one open draft may exist for the next revision number.
+A revision draft is opened only after the qualifying-occurrence count reaches
+the threshold and after the do-not-capture and lesson-shape checks in section
+8 pass. Opening a draft is a same-state history event until the draft is
+applied; it does not itself change `registered` to `promoted`, and it never
+changes `promoted` automatically.
+
+### Qualifying occurrence rule
+
+A post-registration occurrence counts only when it shows the existing skill
+failed to teach the recurring lesson:
+
+1. **`failure-recovery`** counts when the same failure recurs because the
+   registered or promoted instruction did not prevent it. The recovery must
+   still describe a repeatable procedural lesson, not merely a transient
+   incident.
+2. **`repeated-success`** counts when the observation records that the skill's
+   instruction was missing, wrong, or had to be rediscovered before the
+   successful procedure could be completed.
+
+Simply following the skill and succeeding does **not** count: that is evidence
+the skill worked, not evidence that it needs revision. A qualifying occurrence
+must still pass the single do-not-capture list in section 7 and the lesson
+shape rule in section 8. The agent appends the occurrence first, derives the
+count from the record, and then opens the revision draft when the count and
+`ForRevision` latch permit it.
+
+## 14. Retirement decision procedure
+
+Retirement is a report-then-decision workflow. The retirement detector in
+`longterm-mem` is report-only: it may identify stale references, quiet skills,
+unresolved commands, or a newer global match, but it MUST NOT invoke a
+removal command, delete a target, alter the project lock, alter the overlay
+registry or manifest, commit, or write an Engram record. A report is evidence
+for a separate, explicit retirement decision; it is never consent.
+
+`project-status` is an additional report surface. It prints
+`superseded-by:<path>` when `MatchCandidate(registry, id)` or
+`MatchCandidate(registry, <last candidate slug>)` finds a global registry
+entry. That match is an identity/existence signal only. It does not prove that
+the global skill covers the project skill's content, and it never triggers
+retirement by itself.
+
+### RetirementReason vocabulary
+
+Every retirement decision records exactly one `RetirementReason` from this
+vocabulary on the candidate record before the agent appends the retirement
+`History` line:
+
+| `RetirementReason` | Decision meaning |
+|---|---|
+| `stale-reference` | The skill names a path, command, or other operational fact that the report shows is no longer valid. |
+| `superseded` | A newer global skill identity makes the project skill redundant, subject to human review of actual coverage. |
+| `absorbed` | The skill's procedural content was deliberately consolidated into a verified target skill. |
+| `promoted` | A human promoted the skill globally, so its redundant project-tier copies may be removed without changing global status. |
+| `quiet` | The candidate has remained unobserved beyond the documented quiet interval and a removal decision was made. |
+| `human-request` | A human explicitly requested removal, independently of detector output. |
+
+The vocabulary is a decision record, not a detector classification. A detector
+may provide evidence for one of these reasons, but the agent or human still
+chooses the reason and confirms the target tier.
+
+### Project-tier retirement (agent-owned)
+
+For a `registered` project-tier skill, the agent performs retirement only
+after reviewing the report and deciding to remove the skill. It runs the
+explicit command below; it never derives this invocation from detector output
+without the separate decision:
+
+```text
+labdrian skills project-retire --project-root R --registry <registry> \
+  --reason <RetirementReason> [--absorbed-into B] [--dry-run] <id>
+```
+
+The agent MUST first run `--dry-run` and inspect the `plan: <rel>` lines. The
+real command is ownership-gated: the project lock hash and target shape must
+still prove `owner:agent`. It removes the target `SKILL.md` files and the
+selected project-lock entry, keeps the empty lock file when it is the last
+entry, and prints `removed: <rel>` only after the complete operation succeeds.
+A failure, including `ErrRollbackIncomplete`, exits 1 and names the recovery
+paths; it never reports a successful removal. The agent then performs the
+single scoped git commit described in section 11, with message
+`chore(skills): retire project skill <id>`, and records the commit and reason
+in the candidate's append-only `History`.
+
+A human edit, missing target, malformed lock, symlink escape, or any other
+failed ownership proof refuses the operation as human-owned. The refusal does
+not delete a target or rewrite the lock; the agent stops and hands the path to
+the human instead.
+
+### AbsorbedInto verification
+
+For `RetirementReason: absorbed`, `AbsorbedInto: B` MUST be verified before
+any retirement write. If B is a global target, `MatchCandidate(registry, B)`
+MUST find an entry and the returned registry path is the existence evidence.
+If B is a project-tier target, B MUST be an exact id in the current project
+lock. `MatchCandidate` is used only as the global identity lookup; it is not
+a coverage proof and must not be used to infer that B contains A's lesson. If
+neither tier verifies B, the command refuses and names the unverified target;
+`AbsorbedInto` is not written to the candidate record.
+
+### Post-promotion project cleanup
+
+After a human has set a candidate's `Status` to `promoted` through section 12,
+the agent MAY run `project-retire --reason promoted` to remove only the
+redundant project-tier copies and their project-lock entry. This is a
+same-state `promoted -> promoted` event: the candidate remains `promoted`, the
+overlay `skills/<id>/SKILL.md` is untouched, and the agent appends the removal
+and commit evidence to `History`. It is not an automated global removal path.
+
+### Global-tier retirement (human-owned)
+
+A promoted/global skill is removed only by a human through the existing,
+unmodified `engine skills remove <id>` / `RemoveCore` path. The human reviews
+the report and the exact overlay skill, runs that existing command, and
+updates the candidate record only after the overlay removal commit succeeds.
+No project-tier `project-retire` invocation may delete a file under the
+overlay's global `skills/` tree, and no agent or detector may substitute a
+new global-retirement command for `RemoveCore`.
+
+### Explicit-decision boundary
+
+A retirement report never causes a removal, a commit, or a record transition
+as a direct effect. Silence, age, a `superseded-by` line, and a detector exit
+status are not approval. The only mutation paths are the explicitly invoked
+project-tier `project-retire` command after its ownership gate, or the human
+existing `engine skills remove` / `RemoveCore` path at the global tier.
+
 ## Acceptance checklist (R-002, R-003, executed during `sdd-verify`)
 
 This section is agent-driven prose, not Go code; it is verified by a
@@ -350,3 +922,34 @@ verbatim text) is still Go-testable and covered by
      resolve via `mem_get_observation`
    - AND the topic-key shape used in session B is byte-identical to the one
      used in session A
+
+## Acceptance checklist (procedural-skill-drafting, executed during `sdd-verify`)
+
+This section is agent-driven prose, not Go code; it is verified by a
+fixture-driven procedure run against real Engram records during
+`sdd-verify`, not by `go test`. Contract-artifact content (sections 7-10
+above) is still Go-testable and covered by
+`engine/skills/procedural_candidate_contract_test.go`.
+
+1. **Summary with an observation id is rejected**: GIVEN a candidate
+   summary draft that embeds a literal `engram:<id>` reference, WHEN the
+   draft is validated against the lesson-shape rule (section 8), THEN the
+   draft is rejected before any draft record is saved.
+2. **Summary with a literal date is rejected**: GIVEN a candidate summary
+   draft that embeds a literal date, WHEN the draft is validated against the
+   lesson-shape rule, THEN the draft is rejected before any draft record is
+   saved.
+3. **Summary with a PR/issue number is rejected**: GIVEN a candidate summary
+   draft that embeds a PR or issue number, WHEN the draft is validated
+   against the lesson-shape rule, THEN the draft is rejected before any
+   draft record is saved.
+4. **A clean lesson-shaped summary passes**: GIVEN a candidate summary draft
+   phrased as an imperative rule followed by exactly one why-clause, with no
+   observation id, date, or PR/issue number, WHEN the draft is validated,
+   THEN validation passes and its draft record is saved under
+   `procedural/drafts/{kind}/{slug}`.
+5. **`incident-log-shape` never gates drafting**: GIVEN a rendered SKILL.md
+   body that triggers the advisory `incident-log-shape` lint warning
+   (`skill-lint`), WHEN drafting or registration is attempted, THEN the
+   warning is reported as a separate, non-blocking signal and never refuses
+   the draft or the registration.

@@ -1,0 +1,440 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:c08c068cd3a27ce44943a44a1fdb68b0e28cedc710ef1829fefdf94e17192b81",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-9ea42239d8e2080b",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "45997fe190751bca22029b0e6a521959cee99ac8",
+      "candidate_tree": "57b59708750d7d5b50ba146700cb4318e112eec5",
+      "paths_digest": "sha256:9509dfa45e3763d102862009091d26e61df18202a64a359be22bde4a8669f1cb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_test.go",
+        "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "45997fe190751bca22029b0e6a521959cee99ac8",
+      "candidate_tree": "57b59708750d7d5b50ba146700cb4318e112eec5",
+      "paths_digest": "sha256:9509dfa45e3763d102862009091d26e61df18202a64a359be22bde4a8669f1cb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/lint.go",
+        "engine/skills/lint_test.go",
+        "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2"
+    },
+    "genesis_paths": [
+      "engine/skills/lint.go",
+      "engine/skills/lint_test.go",
+      "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "high",
+    "selected_lenses": [
+      "review-risk",
+      "review-resilience",
+      "review-readability",
+      "review-reliability"
+    ],
+    "original_changed_lines": 1086,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:3dbd64582082fe84dec673f03d8ef29b49d4d2d12e64acc7ea1c19732a6554bb",
+    "capture_phase_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-risk",
+        "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+        "capture_phase_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+        "artifact_digest": "sha256:bdeda60e93ba4239044fb4dd92d8ec915e6a28a28cf644eeaa9777cb4b666fd5",
+        "result_hash": "sha256:5faec8bb25233012cb54b8dc899ff9df03ba47ddedc18c871f5acbc2af213268",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:841da9f85102f81b5fb3ab7836f5d105f08fd79049122c5595417790c98f4232",
+            "lineage_id": "review-9ea42239d8e2080b",
+            "authority_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+            "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+            "base_tree": "45997fe190751bca22029b0e6a521959cee99ac8",
+            "candidate_tree": "57b59708750d7d5b50ba146700cb4318e112eec5",
+            "changed_path_manifest_sha256": "sha256:9244a95bc5e6fd6d0c8f3a260bd4092e9bff76c97d04791853e794ee87a6be1e",
+            "lens": "review-risk",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:841da9f85102f81b5fb3ab7836f5d105f08fd79049122c5595417790c98f4232",
+            "raw_sha256": "sha256:a9d9e2069c52b71d401a4b2094a5c410125392343c7f764d9ddafe9f7d398644",
+            "canonical_sha256": "sha256:a9d9e2069c52b71d401a4b2094a5c410125392343c7f764d9ddafe9f7d398644",
+            "result_hash": "sha256:5faec8bb25233012cb54b8dc899ff9df03ba47ddedc18c871f5acbc2af213268",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:841da9f85102f81b5fb3ab7836f5d105f08fd79049122c5595417790c98f4232",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-risk",
+            "findings": [],
+            "evidence": [
+              "engine/skills/lint.go imports only fmt, regexp and strings. It does no filesystem, network or os/exec access. LintSkill, LintSkillFile, SplitSkillFile and RenderLintRules are pure functions over caller-supplied strings or bytes, so this candidate adds no new I/O or authorization surface.",
+              "All regular expressions in engine/skills/lint.go:189-193 are compiled with Go's RE2-based regexp package, which runs in linear time. Adversarial skill content cannot cause catastrophic backtracking (ReDoS).",
+              "In engine/skills/lint.go, parseFrontmatterFields, splitKeyValue and unquote guard every slice access with length and index checks. SplitSkillFile always has at least one line from strings.Split and bounds its closing-fence search. No malformed input causes an out-of-range panic.",
+              "The home-path-leak rule in engine/skills/lint.go only raises an advisory warning, and it is documented as advisory by design in the rule table. It is a hygiene check, not a security control, so its scope does not create an exploitable gap.",
+              "The test fixtures in engine/skills/lint_test.go use synthetic user names and example home-directory prefixes. They contain no real credentials, tokens or personal paths.",
+              "openspec/changes/procedural-memory-lifecycle/codex-smoke.md records the owner's authorization, uses placeholder tokens for the temporary and scratch directories, and contains only throwaway probe nonces. It has no credentials, session tokens or unredacted absolute home paths. It openly discloses that global hooks and read-only memory-server calls fired during the probes, and states that no repository content was sent.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md only changes checkbox states and adds a size-exception note. It has no security-relevant content.",
+              "No new dependencies are added: go.mod and go.sum are not in the changed-path manifest, and the imports are standard-library only."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-resilience",
+        "selected_order": 1,
+        "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+        "capture_phase_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+        "artifact_digest": "sha256:115e65210e58364b7b13267beac8f0c539f0f84f7ad572cb671ce838d3635f9a",
+        "result_hash": "sha256:732ee0ca3fd4c355e3424158426b656260536d5e683d5c41f09286ee666a634d",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:d97c2e3a7b09bb1319c4d4dc303e6fd172fcafce7f7dcdf801b543e444e18234",
+            "lineage_id": "review-9ea42239d8e2080b",
+            "authority_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+            "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+            "base_tree": "45997fe190751bca22029b0e6a521959cee99ac8",
+            "candidate_tree": "57b59708750d7d5b50ba146700cb4318e112eec5",
+            "changed_path_manifest_sha256": "sha256:9244a95bc5e6fd6d0c8f3a260bd4092e9bff76c97d04791853e794ee87a6be1e",
+            "lens": "review-resilience",
+            "selected_order": 1
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:d97c2e3a7b09bb1319c4d4dc303e6fd172fcafce7f7dcdf801b543e444e18234",
+            "raw_sha256": "sha256:a0f5445b47fc5dd50f22961af3efb926f7ed1178c6670d5f5ffab7d72340fa2a",
+            "canonical_sha256": "sha256:54d99b8f784b464971f7aa64325f32b2dcf88e962619152ff26f4f222ce7d0fc",
+            "result_hash": "sha256:732ee0ca3fd4c355e3424158426b656260536d5e683d5c41f09286ee666a634d",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:d97c2e3a7b09bb1319c4d4dc303e6fd172fcafce7f7dcdf801b543e444e18234",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-resilience",
+            "findings": [
+              {
+                "id": "R4-bom-fence-false-hard-error",
+                "lens": "resilience",
+                "location": "engine/skills/lint.go:476",
+                "severity": "SUGGESTION",
+                "claim": "SplitSkillFile only strips a trailing carriage return before comparing the first line to the fence marker. A SKILL.md saved with a UTF-8 byte-order mark, or with trailing spaces after the opening or closing fence, fails the hard frontmatter-fence rule. That error blocks registration and promotion, and its message says the file has no fence, even though the fence is visibly there. The author gets an error that does not point to the actual cause. Stripping a leading BOM and trimming trailing whitespace on fence lines would stop these false hard failures.",
+                "proof_refs": [
+                  "engine/skills/lint.go:476",
+                  "engine/skills/lint.go:482",
+                  "engine/skills/lint.go:524-530"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Read all four manifest paths in full: engine/skills/lint.go, engine/skills/lint_test.go, openspec/changes/procedural-memory-lifecycle/codex-smoke.md and openspec/changes/procedural-memory-lifecycle/tasks.md.",
+              "engine/skills/lint.go is a pure, stdlib-only, in-memory linter. It does no I/O, has no retries, no shared mutable state (only package-level regex and table values that are never modified after init), and no panic paths: index access is length-guarded and the firstWord helper handles empty input. Because all regexes are Go RE2, runtime stays linear in input size, so there is no catastrophic-backtracking risk on large skill bodies.",
+              "Checked CRLF input: SplitSkillFile strips the carriage return on fence lines, and the frontmatter parser trims whitespace around keys and values in engine/skills/lint.go:143-155, so Windows line endings do not create false required-fields errors.",
+              "LintSkillFile at engine/skills/lint.go:524-530 short-circuits on a split failure and returns a single typed LintError. The fail-closed behavior is tested in engine/skills/lint_test.go.",
+              "The openspec documents only record a completed smoke run and task state. They add no runtime behavior, rollback surface or load path."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-readability",
+        "selected_order": 2,
+        "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+        "capture_phase_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+        "artifact_digest": "sha256:f538dfeac39d833bde2a2ff58205ef01c6aa12265066bbcfa20ef5189edd2413",
+        "result_hash": "sha256:d2d600d25db0175d74fc61222c368d847ad3a8072f50ca3bde281b530f63d6e1",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:a195eb163c32f08139e46dba7432b3dbba1b1312c1688d100f119448c9e1896b",
+            "lineage_id": "review-9ea42239d8e2080b",
+            "authority_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+            "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+            "base_tree": "45997fe190751bca22029b0e6a521959cee99ac8",
+            "candidate_tree": "57b59708750d7d5b50ba146700cb4318e112eec5",
+            "changed_path_manifest_sha256": "sha256:9244a95bc5e6fd6d0c8f3a260bd4092e9bff76c97d04791853e794ee87a6be1e",
+            "lens": "review-readability",
+            "selected_order": 2
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:a195eb163c32f08139e46dba7432b3dbba1b1312c1688d100f119448c9e1896b",
+            "raw_sha256": "sha256:9566c74d42279122153cf791fb67a389109ef189a108352a3555e3bdb166ef60",
+            "canonical_sha256": "sha256:432ee9e574a8d31b53ce0637861acb378481be2a3b9936fcca3cffc2712ce641",
+            "result_hash": "sha256:d2d600d25db0175d74fc61222c368d847ad3a8072f50ca3bde281b530f63d6e1",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:a195eb163c32f08139e46dba7432b3dbba1b1312c1688d100f119448c9e1896b",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-readability",
+            "findings": [
+              {
+                "id": "R2-body-budget-test-literals",
+                "lens": "readability",
+                "location": "engine/skills/lint_test.go:239-257",
+                "severity": "WARNING",
+                "claim": "The body-budget boundary tests hardcode 4000/4001 and 2800/2801 bytes. They do not derive these values from BodyHardTokens*BytesPerTokenProxy and BodyRecommendedTokens*BytesPerTokenProxy. The description boundary tests do derive their values from DescriptionMaxRunes and DescriptionShouldRunes. If a budget constant or the bytes-per-token proxy changes, these tests become wrong or stop testing the actual boundary. That undercuts the change's stated goal of sourcing every numeric bound from named constants.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:239-240",
+                  "engine/skills/lint_test.go:256-257",
+                  "engine/skills/lint.go:31-36",
+                  "engine/skills/lint_test.go:193-194"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R2-rendered-summaries-duplicate-data",
+                "lens": "readability",
+                "location": "engine/skills/lint.go:235",
+                "severity": "SUGGESTION",
+                "claim": "RenderLintRules is documented as the single generator for the style guide's rule table, but several Summary strings hand-copy data kept elsewhere in the code. The description-one-line summary lists only four block-scalar indicators, while isBlockScalarIndicator also accepts the two keep-chomping forms ('\u003e+' and '|+'). The section-order summary repeats the canonicalSections list, and the banned-shell-utility summary repeats the bannedShellUtilities map. The rendered docs can drift from how the linter actually behaves; the first case already has.",
+                "proof_refs": [
+                  "engine/skills/lint.go:172",
+                  "engine/skills/lint.go:275",
+                  "engine/skills/lint.go:291",
+                  "engine/skills/lint.go:198-215"
+                ]
+              },
+              {
+                "id": "R2-empty-description-flagged-multiline",
+                "lens": "readability",
+                "location": "engine/skills/lint.go:126-127",
+                "severity": "SUGGESTION",
+                "claim": "An empty 'description:' value is handled the same as a block-scalar indicator and sets DescriptionMultiLine. An empty description therefore produces a misleading description-one-line hard error ('block scalars and indented continuation lines are not allowed') in addition to the correct required-fields error. The flag name and message hide the fact that 'empty' and 'multi-line' are merged here.",
+                "proof_refs": [
+                  "engine/skills/lint.go:126-128",
+                  "engine/skills/lint.go:124-128"
+                ]
+              },
+              {
+                "id": "R2-stray-indent-comment-misleading",
+                "lens": "readability",
+                "location": "engine/skills/lint.go:107-108",
+                "severity": "SUGGESTION",
+                "claim": "The comment says indented lines are ignored when 'not consumed as a description continuation below'. Nothing consumes continuation lines: the description case only looks ahead one line to set a flag. Also, the metadata branch requires a two-space prefix while this branch matches a single space, so a one-space-indented metadata entry quietly ends the metadata block and is then dropped here. The comment points maintainers at control flow that doesn't exist.",
+                "proof_refs": [
+                  "engine/skills/lint.go:92",
+                  "engine/skills/lint.go:106-109",
+                  "engine/skills/lint.go:131-135"
+                ]
+              },
+              {
+                "id": "R2-windows-fixture-literal-backslash-n",
+                "lens": "readability",
+                "location": "engine/skills/lint_test.go:368",
+                "severity": "SUGGESTION",
+                "claim": "The Windows home-path fixture is a raw string that starts with a literal backslash-n, not a newline, unlike the Linux and macOS cases. The test still passes because the regex matches anywhere in the text, but the fixture does not mean what it appears to mean.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:366-368"
+                ]
+              }
+            ],
+            "evidence": [
+              "Reviewed all four manifest paths in full from the provided patch sections.",
+              "engine/skills/lint.go: the named constants and the rule table are clear. Readability issues are limited to hand-copied Summary data, a misleading comment in the frontmatter reader, and empty descriptions being merged with multi-line ones. None blocks the change.",
+              "engine/skills/lint_test.go: coverage matches task 1a.2 and 1a.2a. The main maintainability issue is the hardcoded byte boundaries for the body budgets.",
+              "openspec/changes/procedural-memory-lifecycle/codex-smoke.md: discloses the deviation from the design procedure, the probe-1 INCONCLUSIVE result and the side effects. No readability defects.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md: checkbox updates and the size-exception row add clear context for the change. No defects."
+            ]
+          }
+        }
+      },
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "selected_order": 3,
+        "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+        "capture_phase_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+        "artifact_digest": "sha256:b374e91ccf212d27a59770a17c544ad0a2e6d50d3f398200b6061aae60d42a87",
+        "result_hash": "sha256:56affca47f3d2468b2f24fa577e2be6726012f663154ea4911cb9cab2d3147cb",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:7a193b8bb0200fc1e9af3ef0803a0647a64638b3938965e5056d2f404e750fd5",
+            "lineage_id": "review-9ea42239d8e2080b",
+            "authority_revision": "sha256:bff57ad155352faafa4c6102517242034306f1f4ff3a07db6d02380d5dbe5159",
+            "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+            "base_tree": "45997fe190751bca22029b0e6a521959cee99ac8",
+            "candidate_tree": "57b59708750d7d5b50ba146700cb4318e112eec5",
+            "changed_path_manifest_sha256": "sha256:9244a95bc5e6fd6d0c8f3a260bd4092e9bff76c97d04791853e794ee87a6be1e",
+            "lens": "review-reliability",
+            "selected_order": 3
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:7a193b8bb0200fc1e9af3ef0803a0647a64638b3938965e5056d2f404e750fd5",
+            "raw_sha256": "sha256:3871ac4d86ab145e7c3caa43903d887cc6f5ccb8019633374d8014b002f53919",
+            "canonical_sha256": "sha256:d0ac76b0e0643eae727e00606f36fb5da2fc1f6dd8dac0146d0cbfbdad1f57de",
+            "result_hash": "sha256:56affca47f3d2468b2f24fa577e2be6726012f663154ea4911cb9cab2d3147cb",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:7a193b8bb0200fc1e9af3ef0803a0647a64638b3938965e5056d2f404e750fd5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/lint.go",
+                "engine/skills/lint_test.go",
+                "openspec/changes/procedural-memory-lifecycle/codex-smoke.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-render-table-pipe",
+                "lens": "reliability",
+                "location": "engine/skills/lint.go:235",
+                "severity": "WARNING",
+                "claim": "The Summary for the description-one-line rule contains unescaped pipe characters inside code spans (the literal and literal-strip block-scalar indicators). RenderLintRules writes each Summary straight into a Markdown table cell without escaping. In GFM tables, a pipe splits the cell even inside a code span, so that row renders with the wrong number of cells. The rendered text is not a correct machine-checkable table, and RenderLintRules is described as the only generator for the style guide section in slice 1b.",
+                "proof_refs": [
+                  "engine/skills/lint.go:235",
+                  "engine/skills/lint.go:536-544"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-render-untested",
+                "lens": "reliability",
+                "location": "engine/skills/lint.go:536-544",
+                "severity": "WARNING",
+                "claim": "No test exercises RenderLintRules, but task 1a.4 is checked as confirming that every numeric bound renders from the named constants. No test asserts the header, the row count (11 rules), that each row contains the value of its constant, or that the table has a valid shape. This is why the pipe-escaping defect in the description-one-line row goes undetected.",
+                "proof_refs": [
+                  "engine/skills/lint_test.go:1-470",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:38"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-fenced-near-miss",
+                "lens": "reliability",
+                "location": "engine/skills/lint_test.go:351-358",
+                "severity": "SUGGESTION",
+                "claim": "The near-miss case for banned-shell-utility (catalog must not match cat) is only tested in an inline code span. The fenced-code path has no negative test, and no test checks that a banned command outside a fence is ignored. Fenced matching on whole words is therefore only proved by positive cases.",
+                "proof_refs": [
+                  "engine/skills/lint.go:1-544",
+                  "engine/skills/lint_test.go:333-359"
+                ]
+              },
+              {
+                "id": "R3-size-exception-count",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:11",
+                "severity": "SUGGESTION",
+                "claim": "The size-exception row reports 1024 insertions and 9 deletions, with lint.go at 544 and lint_test.go at 470. Those two files add up to 1014, and the candidate numstat shows 15 deletions, not 9. The recorded figures do not match the candidate.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:11"
+                ]
+              },
+              {
+                "id": "R3-smoke-verdict-scope",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/codex-smoke.md:7",
+                "severity": "SUGGESTION",
+                "claim": "The PASS verdict depends on a disclosed variant of probe 2 that only shows the skill description reaching the skill index. Probe 1, the procedure in the design where the nonce is in the body, was INCONCLUSIVE. Saying 'Codex support may be claimed' goes further than what was proved: skill discovery is shown, but loading the skill body is not. The verdict should be narrowed to discovery only, or record that the design rule was changed.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/codex-smoke.md:7",
+                  "openspec/changes/procedural-memory-lifecycle/codex-smoke.md:12-24"
+                ]
+              }
+            ],
+            "evidence": [
+              "All four manifest paths were inspected in full from the provided patch sections.",
+              "In engine/skills/lint.go, the frontmatter subset reader, SplitSkillFile, LintSkill, and LintSkillFile are deterministic, stdlib-only, and have no I/O. The boundary checks (strictly greater than the constants) match the at/over tests in engine/skills/lint_test.go.",
+              "engine/skills/lint_test.go covers every hard and advisory rule from task 1a.2, and the composition and short-circuit behaviour of LintSkillFile from task 1a.2a. RenderLintRules is not covered by any test.",
+              "No BLOCKER or CRITICAL issues were found. The findings are limited to how the rendered table is formatted, missing coverage, and accuracy of the docs."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "2c7f3505f30cc9ad199f51cddbe902b716666c36efe8af320e9705fff45f8aaa",
+    "initial_atomic_start": {
+      "lineage_id": "review-9ea42239d8e2080b",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:7d7a308d93cb812ba5b25ba3cdbcad5bdd08614c874325657160ce7e4af4ece2",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "45997fe190751bca22029b0e6a521959cee99ac8",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "high",
+      "selected_lenses": [
+        "review-risk",
+        "review-resilience",
+        "review-readability",
+        "review-reliability"
+      ],
+      "original_changed_lines": 1086,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

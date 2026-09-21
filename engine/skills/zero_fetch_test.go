@@ -20,6 +20,9 @@ import (
 var allowedImports = map[string]bool{
 	"bufio":         true,
 	"bytes":         true,
+	"crypto/sha256": true,
+	"encoding/hex":  true,
+	"encoding/json": true,
 	"fmt":           true,
 	"io":            true,
 	"io/fs":         true,
@@ -71,4 +74,33 @@ func TestZeroFetchImportAllowlist(t *testing.T) {
 
 	// Sanity: confirm the AST import type is what we expect.
 	var _ *ast.ImportSpec
+}
+
+// TestZeroFetchAllowlistExcludesExecAndNet makes task 3a-ii.4's confirmation
+// executable rather than a one-time reading: after the project-lock-format
+// widening (encoding/json) and the project-lock-ownership widening
+// (crypto/sha256, encoding/hex), os/exec, every net package and anything
+// git-related must still be absent from the allowlist itself — so no future
+// widening can smuggle one in without turning this test RED.
+func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
+	for imp := range allowedImports {
+		switch {
+		case imp == "os/exec":
+			t.Errorf("allowedImports must never contain %q", imp)
+		case imp == "net" || strings.HasPrefix(imp, "net/"):
+			t.Errorf("allowedImports must never contain the net package %q", imp)
+		case strings.Contains(imp, "git"):
+			t.Errorf("allowedImports must never contain a git-related package %q", imp)
+		}
+	}
+	// The two ownership widenings are present and are the only ones this
+	// slice added.
+	for _, want := range []string{"crypto/sha256", "encoding/hex"} {
+		if !allowedImports[want] {
+			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
+		}
+	}
+	if len(allowedImports) != 15 {
+		t.Errorf("len(allowedImports) = %d, want 15 — widen it only after reviewer approval", len(allowedImports))
+	}
 }

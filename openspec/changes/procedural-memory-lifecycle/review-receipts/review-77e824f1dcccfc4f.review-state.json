@@ -1,0 +1,186 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:f144c1eeca9cb23841a1f5c821794a825866091d0bb2096f6610e7665551a2eb",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-77e824f1dcccfc4f",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "357d2c6307654331eaab80d037653e491d954b8f",
+      "candidate_tree": "9f787a44c96ef643e5d1bdc82c061c5b4ff8fc61",
+      "paths_digest": "sha256:17d4c56bc88c91906ba7deafb95f3be0fc100412debecaad37fc6ba5356793bb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/procedural_candidate_contract_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md",
+        "skills/_shared/procedural-candidate-detection.md"
+      ],
+      "identity": "sha256:6e5bcd3f14f28bf511acd121150d952edf6ceaa17ef03ea4d6542eb5b723b0af"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "357d2c6307654331eaab80d037653e491d954b8f",
+      "candidate_tree": "9f787a44c96ef643e5d1bdc82c061c5b4ff8fc61",
+      "paths_digest": "sha256:17d4c56bc88c91906ba7deafb95f3be0fc100412debecaad37fc6ba5356793bb",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/procedural_candidate_contract_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md",
+        "skills/_shared/procedural-candidate-detection.md"
+      ],
+      "identity": "sha256:6e5bcd3f14f28bf511acd121150d952edf6ceaa17ef03ea4d6542eb5b723b0af"
+    },
+    "genesis_paths": [
+      "engine/skills/procedural_candidate_contract_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md",
+      "skills/_shared/procedural-candidate-detection.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 536,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:5b52f362f6543f3c20175b2509841ade5f56bd5a43a8c0aedec0f477cefdd764",
+    "capture_phase_revision": "sha256:0325d95fbda7b828b44f2e484ce91a7fcacef354bc9cd9930537f7391721fea4",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:6e5bcd3f14f28bf511acd121150d952edf6ceaa17ef03ea4d6542eb5b723b0af",
+        "capture_phase_revision": "sha256:0325d95fbda7b828b44f2e484ce91a7fcacef354bc9cd9930537f7391721fea4",
+        "artifact_digest": "sha256:2ab63b3e1059c4855e7d8bd76cc2e1158f72ab4028c9dbbc0fbc90913d4be38a",
+        "result_hash": "sha256:5ad854604c659863117a88423ba425550be3b23bc7d0df487bd67837cddc1054",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:57fb5dcfae175b7d4601d11d30a355e448350d20aab15c0df42d00035d44386d",
+            "lineage_id": "review-77e824f1dcccfc4f",
+            "authority_revision": "sha256:0325d95fbda7b828b44f2e484ce91a7fcacef354bc9cd9930537f7391721fea4",
+            "target_identity": "sha256:6e5bcd3f14f28bf511acd121150d952edf6ceaa17ef03ea4d6542eb5b723b0af",
+            "base_tree": "357d2c6307654331eaab80d037653e491d954b8f",
+            "candidate_tree": "9f787a44c96ef643e5d1bdc82c061c5b4ff8fc61",
+            "changed_path_manifest_sha256": "sha256:bcb2e3ebe2bca9d46f7d8cdc0821ff49d183cd935782e19ff2939444b3909ab1",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:57fb5dcfae175b7d4601d11d30a355e448350d20aab15c0df42d00035d44386d",
+            "raw_sha256": "sha256:e0eb2d1d144a863a6d88689ade269c5b9ce789ba68f9560b7c9fcbf3b972b0af",
+            "canonical_sha256": "sha256:3a1a6d210049d6f70207406cc469ca0cfb38e17aacd3fc3361531412afaade2b",
+            "result_hash": "sha256:5ad854604c659863117a88423ba425550be3b23bc7d0df487bd67837cddc1054",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:57fb5dcfae175b7d4601d11d30a355e448350d20aab15c0df42d00035d44386d",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/procedural_candidate_contract_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md",
+                "skills/_shared/procedural-candidate-detection.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-draft-status-vocabulary-contradiction",
+                "lens": "reliability",
+                "location": "skills/_shared/procedural-candidate-detection.md:364",
+                "severity": "WARNING",
+                "claim": "This change gives the draft record's Status field two different vocabularies. Section 8's draft field block uses `open | registered | abandoned`. Section 9 says the candidate/draft record's Status takes exactly one value from `observing | emitted | rejected | drafted | registered | promoted | retired`. An agent following this contract cannot tell which values are valid on a draft record. The contract test checks each string on its own, so it does not catch the conflict.",
+                "proof_refs": [
+                  "skills/_shared/procedural-candidate-detection.md:343",
+                  "skills/_shared/procedural-candidate-detection.md:364",
+                  "engine/skills/procedural_candidate_contract_test.go:172-177"
+                ]
+              },
+              {
+                "id": "R3-draft-field-block-assertion-unanchored",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:156-170",
+                "severity": "WARNING",
+                "claim": "The draft-record field-block subtest checks each bare token (such as `**Disposition**`, `**Status**` or `**History**`) anywhere in the whole contract. Some of these tokens already appear elsewhere in the text, for example in the section 9 new-field list and the History example. So the test still passes if the draft field block is deleted or loses those fields. It does not prove that the draft record's field block exists. The test should assert the block's text, or check the order of the fields inside the draft block.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:158-164",
+                  "skills/_shared/procedural-candidate-detection.md:340-352"
+                ]
+              },
+              {
+                "id": "R3-nested-fence-terminates-early",
+                "lens": "reliability",
+                "location": "skills/_shared/procedural-candidate-detection.md:340-352",
+                "severity": "WARNING",
+                "claim": "The field-block example opens with a three-backtick fence. The bare four-backtick line that closes the inner markdown body also counts as a valid closing fence for the outer block, so the outer block ends early. The final three-backtick line then opens a stray code block that swallows the prose that follows it. This contradicts the doc's own statement that the four-backtick fence keeps an embedded fence from ending the block early, and it breaks the rendered contract. The outer fence should use five or more backticks, or be an indented block.",
+                "proof_refs": [
+                  "skills/_shared/procedural-candidate-detection.md:349-352",
+                  "skills/_shared/procedural-candidate-detection.md:355-356"
+                ]
+              },
+              {
+                "id": "R3-transition-table-row-count-unasserted",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:179-196",
+                "severity": "SUGGESTION",
+                "claim": "Task 2.1 requires the full 10-row transition table, but the test only checks that each expected row is present. An extra or conflicting row added later (for example a second rule for leaving `promoted`) would still pass. Consider also checking the number of table rows between the header and the next section.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:181-190",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:80"
+                ]
+              },
+              {
+                "id": "R3-pi-skills-negative-check-first-column-only",
+                "lens": "reliability",
+                "location": "engine/skills/procedural_candidate_contract_test.go:266",
+                "severity": "SUGGESTION",
+                "claim": "The check that no table row names the Pi skills directory only matches that directory as the first cell. A row that listed it in a later cell, or next to another directory in the same cell, would pass. Task 2.1 says no row may name it at all. Consider scanning every line of the runtime-targets table.",
+                "proof_refs": [
+                  "engine/skills/procedural_candidate_contract_test.go:265-273",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:80"
+                ]
+              }
+            ],
+            "evidence": [
+              "Checked every verbatim string in the new contract subtests against the added sections 7-10 of skills/_shared/procedural-candidate-detection.md. All required strings are present as contiguous text on one line, including the 10 transition rows, the three History lines, the seven new record fields, the scoped Codex verdict and the rule that the Pi skills directory is never written. So the tests should pass on this candidate.",
+              "The draft field block in skills/_shared/procedural-candidate-detection.md:340-352 conflicts with the section 9 Status vocabulary at skills/_shared/procedural-candidate-detection.md:364, and its nested fence ends early in CommonMark.",
+              "openspec/changes/procedural-memory-lifecycle/tasks.md is a planning-only change: it marks tasks 2.1-2.5 complete and reorganizes slices 3a/3b/7a into sub-slices with renumbered PRs. PR numbering is consistent from 4 to 13 and the final-phase references were updated. No behavior changes there.",
+              "The lesson-shape acceptance checklist is agent-driven prose. It is not Go-tested by design, as the document itself states."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "3361d4c55c9fd2242fed5411afd492b7dd699bf5845f8f6befe6f6d5eacb3db7",
+    "initial_atomic_start": {
+      "lineage_id": "review-77e824f1dcccfc4f",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:6e5bcd3f14f28bf511acd121150d952edf6ceaa17ef03ea4d6542eb5b723b0af",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "357d2c6307654331eaab80d037653e491d954b8f",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 536,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

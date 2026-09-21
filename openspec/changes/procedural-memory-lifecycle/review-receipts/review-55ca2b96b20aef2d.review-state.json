@@ -1,0 +1,198 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:fe338e2565f98424969c0eeb562ed60760962c5231024e8142ef4d6bccada8ba",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-55ca2b96b20aef2d",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "81df6d6fba920ffdf2c4e744e9a4e8cdaea06117",
+      "candidate_tree": "9812e0fbea8f66f996caee582aa5396458080606",
+      "paths_digest": "sha256:d6b7894b1cab3d2934d900edb3178d963832305926ddc0a6324da16f11625ee0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/pathguard_test.go",
+        "engine/skills/project_register.go",
+        "engine/skills/project_register_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:710968f4a5e0e4de5c2287156093cf8b0e7c2880e795070e1af7b7025172d187"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "81df6d6fba920ffdf2c4e744e9a4e8cdaea06117",
+      "candidate_tree": "9812e0fbea8f66f996caee582aa5396458080606",
+      "paths_digest": "sha256:d6b7894b1cab3d2934d900edb3178d963832305926ddc0a6324da16f11625ee0",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/pathguard_test.go",
+        "engine/skills/project_register.go",
+        "engine/skills/project_register_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:710968f4a5e0e4de5c2287156093cf8b0e7c2880e795070e1af7b7025172d187"
+    },
+    "genesis_paths": [
+      "engine/skills/pathguard_test.go",
+      "engine/skills/project_register.go",
+      "engine/skills/project_register_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 1486,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:0b2506d474d6c3fc114ad1811317f4568c7175f1d4945f875f10324c1fe0c5bd",
+    "capture_phase_revision": "sha256:01980413aa81200f8f9fd73cd4f23d1f92bd3d8eb142f9b2e087d1269dbaa234",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:710968f4a5e0e4de5c2287156093cf8b0e7c2880e795070e1af7b7025172d187",
+        "capture_phase_revision": "sha256:01980413aa81200f8f9fd73cd4f23d1f92bd3d8eb142f9b2e087d1269dbaa234",
+        "artifact_digest": "sha256:7ba89eead1d43b9da67acc8a4240ae5109d7b86480284c0009c368f485d5f520",
+        "result_hash": "sha256:f428062c6030d59166e146dedd466225745ad0c290ac188beb40962bb4ea1380",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:1afd9607eb5e4e61228426750736e14cb04afd2ba54a420bce8f4652d6391ac2",
+            "lineage_id": "review-55ca2b96b20aef2d",
+            "authority_revision": "sha256:01980413aa81200f8f9fd73cd4f23d1f92bd3d8eb142f9b2e087d1269dbaa234",
+            "target_identity": "sha256:710968f4a5e0e4de5c2287156093cf8b0e7c2880e795070e1af7b7025172d187",
+            "base_tree": "81df6d6fba920ffdf2c4e744e9a4e8cdaea06117",
+            "candidate_tree": "9812e0fbea8f66f996caee582aa5396458080606",
+            "changed_path_manifest_sha256": "sha256:adb58dfdb647776236a899e9701cbe8aff014146f6e29b51ee697adf66b52701",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:1afd9607eb5e4e61228426750736e14cb04afd2ba54a420bce8f4652d6391ac2",
+            "raw_sha256": "sha256:4c34bd5b562fa248c67e3a29446fe65fe92bacf62aaff9aab5504732b832673d",
+            "canonical_sha256": "sha256:7154c8bdd5c629ef666399d7946b778c36f13909d81fb83ec4c53f644b362939",
+            "result_hash": "sha256:f428062c6030d59166e146dedd466225745ad0c290ac188beb40962bb4ea1380",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:1afd9607eb5e4e61228426750736e14cb04afd2ba54a420bce8f4652d6391ac2",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/pathguard_test.go",
+                "engine/skills/project_register.go",
+                "engine/skills/project_register_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-ModeSentinelUnsetVsZero",
+                "lens": "reliability",
+                "location": "engine/skills/project_register.go:793-799",
+                "severity": "SUGGESTION",
+                "claim": "Rollback's restore path uses `mode := s.preMode[i]; if mode == 0 { mode = w.Mode }` to fall back when preMode was never recorded. A destination whose real, captured mode legitimately IS 0000 is indistinguishable from 'unrecorded' and would be restored at the planned ProjectFileMode (0644) instead of its true original mode, silently breaking the 'byte-identical, including file modes' guarantee for that edge case. This is self-disclosed as a carried-forward item in the same commit (openspec/changes/procedural-memory-lifecycle/tasks.md:151, item 3b-ii.12, 'the mode==0 sentinel conflating unrecorded with really 0000'), which is why this is filed as a suggestion rather than a higher severity: the gap is real but already tracked and deliberately deferred to slice 4 by the author.",
+                "proof_refs": [
+                  "engine/skills/project_register.go:793-799 shows the `if mode == 0 { mode = w.Mode }` fallback with no separate boolean tracking whether preMode was actually captured",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:151 names this exact gap as carried to slice 4"
+                ]
+              },
+              {
+                "id": "R3-RestoreDropsSpecialBits",
+                "lens": "reliability",
+                "location": "engine/skills/project_register.go:684-685",
+                "severity": "SUGGESTION",
+                "claim": "The commit loop captures the pre-rename mode via `info.Mode().Perm()`, which strips setuid/setgid/sticky bits. Rollback's restore then reapplies only that captured value via WriteTemp+Chmod, so a backed-up destination that originally carried one of those bits would not come back byte/mode-identical. Also self-disclosed in the same commit's tasks.md as a carried-forward item ('Perm() dropping setuid/setgid/sticky on restore'), so this is a known, deliberately scoped gap rather than a hidden regression.",
+                "proof_refs": [
+                  "engine/skills/project_register.go:684-685 captures `s.preMode[i] = info.Mode().Perm()`, which by definition excludes fs.ModeSetuid/ModeSetgid/ModeSticky",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:151 names 'Perm() dropping setuid/setgid/sticky on restore' as carried to slice 4"
+                ]
+              },
+              {
+                "id": "R3-StatBeforeRenameUncovered",
+                "lens": "reliability",
+                "location": "engine/skills/project_register.go:680-686",
+                "severity": "SUGGESTION",
+                "claim": "The commit loop's `fsys.Stat(w.Abs)` call, taken only when `w.Backup != nil` to capture the real pre-rename mode, has no failure-injection test: `injectionPoints` in the test file enumerates only mkdirall, writetemp and rename operations, never a 'stat' op. The rollback path triggered by this specific Stat failing (line 683's `return s.rollback(...)`) is therefore unproven by an externally observable assertion, even though the code path exists and is reachable whenever a registration overwrites an existing, lock-recorded target. Self-disclosed in the same commit's tasks.md ('the Stat-before-rename failure branch ... uncovered').",
+                "proof_refs": [
+                  "engine/skills/project_register.go:680-686 shows the guarded Stat call and its rollback-on-error branch",
+                  "engine/skills/project_register_test.go's injectionPoints helper (the struct literal building mkdir_first_target/mkdir_lock_dir/stage_*/rename_index_* entries) contains no 'stat' op entry",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:151 names this branch as uncovered and carried to slice 4"
+                ]
+              },
+              {
+                "id": "R3-GenericStatErrorUncovered",
+                "lens": "reliability",
+                "location": "engine/skills/project_register.go:963-966",
+                "severity": "SUGGESTION",
+                "claim": "checkProjectDestinations' re-check has a third switch case for a Stat error that is neither nil nor os.IsNotExist (e.g. a permission-denied style failure on the destination immediately before staging begins). No test drives fsys.Stat into returning such an error, so the wrapped-error message and refusal-before-any-write behavior on this branch is unproven. Self-disclosed in the same commit's tasks.md as carried to slice 4 ('the generic stat-error branch of the re-check ... uncovered').",
+                "proof_refs": [
+                  "engine/skills/project_register.go:963-966, the `case statErr != nil \u0026\u0026 !os.IsNotExist(statErr):` branch",
+                  "no test in engine/skills/project_register_test.go configures fakeProjectFS to fail a 'stat' op with a non-NotExist error during checkProjectDestinations",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:151 names this branch as uncovered and carried to slice 4"
+                ]
+              },
+              {
+                "id": "R3-RestorePhaseRollbackOfRollbackUncovered",
+                "lens": "reliability",
+                "location": "engine/skills/project_register.go:801-809",
+                "severity": "WARNING",
+                "claim": "Rollback's restore branch (taken when w.Backup != nil, e.g. a pre-existing lock or an aliased destination) can itself fail two ways during rollback-of-rollback: fsys.WriteTemp can fail (line 801-804), or the restoring fsys.Rename can fail after WriteTemp succeeded (line 806-809, whose temp-cleanup error is also silently discarded via `_ = s.remove(tmp)`). Neither failure is exercised by any test: TestExecuteProjectPlan_RollbackOfRollback only injects a 'remove' failure on the Backup==nil (newly-created file) path, never a 'writetemp' or 'rename' failure on the Backup!=nil (restore) path. Unlike the four items above, this gap is not named in tasks.md's own carried-forward list (which cites 'stale-backup-overwrites-a-concurrent-edit', the mode==0 sentinel, Perm() bit-dropping, and the two Stat branches, but not this). Since the restore branch is exactly the code path that makes the headline 'a pre-existing lock is restored, never deleted' guarantee true, its own ErrRollbackIncomplete reporting on failure is left unproven by an externally observable assertion.",
+                "proof_refs": [
+                  "engine/skills/project_register.go:801-809, the WriteTemp/Rename restore branch reachable only when w.Backup != nil",
+                  "engine/skills/project_register_test.go's TestExecuteProjectPlan_RollbackOfRollback injects failures only at op=='rename' for order[1].Abs and op=='remove' for order[0].Abs, both on writes with no backup, never on the lock's restore path",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:151 lists carried-forward gaps for this slice and does not include this one"
+                ]
+              }
+            ],
+            "evidence": [
+              "engine/skills/pathguard_test.go replaces an os.Geteuid()==0 skip with a behavioural chmodDeniesReading probe that chmods then actually attempts os.ReadDir before deciding to skip, closing a real CI-portability gap (spurious failure under CAP_DAC_OVERRIDE/non-POSIX-mode filesystems) without weakening the assertion; the new TestResolvedWithinRootUsing_PathResolutionFailureFailsClosed correctly witnesses the previously-unwitnessed DESTINATION-resolution-failure branch of resolvedWithinRootUsing with errors.Is and an explicit inside==false check",
+              "engine/skills/project_register.go's resolveWritePath refactor (EFF-1) is behaviourally equivalent to the prior four-resolution version: it now resolves the skills-dir and destination once each and combines strictly-below containment (withinRoot) with explicit self-equality, matching the documented decision (f) semantics, and additionally threads the cleaned resolved destination back to callers for the new ALIAS-1 aliasing check with no extra resolver calls",
+              "the new ALIAS-1 guard in PlanProjectRegister (aliased map keyed by resolveWritePath's resolved destination) and its execution-time counterpart in checkProjectDestinations (seen map) are consistent with each other and both proved by tests that construct a real `.agents` -\u003e `.claude` symlink with an explicit precondition that the un-aliased input plans cleanly first, isolating the refusal to the aliasing itself",
+              "ExecuteProjectPlan's control flow was traced end to end: checkProjectDestinations runs before any staging so a refused re-check leaves the tree untouched and emits no stdout; the commit loop records `attempted[i]=true` before calling Rename (not after), which correctly handles a rename that lands but still reports an error; rollback sweeps by `attempted` rather than by 'rename returned nil', matching the documented D1 fix and its own test (RollbackLeavesAnUntouchedDestinationAlone) which asserts inode stability for an unreached destination",
+              "the directory-creation refactor (mkdirAll walking one level at a time and recording each level as it is created, `withinRoot(s.root, cur)` bounding the walk) correctly avoids the D2 leak where a partial os.MkdirAll creates ancestors the stager never learns about; the accompanying failPartialMkdir fake specifically models real os.MkdirAll's partial-creation behaviour rather than refusing outright, which is the only fake shape capable of witnessing D2",
+              "checkProjectDestinations' foreign-file race handling (D3: refuse rather than back up/restore a destination that appeared or vanished between planning and execution) and its decision-(f) re-application (D4: both the lexical underSkillsDir(w.Rel) pre-pass and the resolved-path check) are each covered by a dedicated test with a real filesystem race (file written after planning, symlink created after planning), and each test asserts both the specific refusal wording and that the pre-run tree snapshot is unchanged",
+              "five of the five newly-identified reliability gaps found during this review are edge-case failure-path or mode-fidelity gaps in the new rollback/restore machinery; four of them are already named verbatim as known, deliberately-deferred items in this same commit's own tasks.md (3b-ii.12), which is why they are filed at SUGGESTION rather than higher severity, while the fifth (restore-phase rollback-of-rollback failure injection) is a real, currently-undisclosed coverage gap in the exact code path that backs the 'pre-existing lock is restored, never deleted' guarantee",
+              "no findings rise to BLOCKER or CRITICAL: no path was found where ExecuteProjectPlan returns nil (success) after a partial write, and no path was found where a validated invariant from PlanProjectRegister is silently skipped at execution time"
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "5a38191edc6768403dcda4b043dc8fc73b0b01b8d24218203a6f8bf77388ea81",
+    "initial_atomic_start": {
+      "lineage_id": "review-55ca2b96b20aef2d",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:710968f4a5e0e4de5c2287156093cf8b0e7c2880e795070e1af7b7025172d187",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "81df6d6fba920ffdf2c4e744e9a4e8cdaea06117",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 1486,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

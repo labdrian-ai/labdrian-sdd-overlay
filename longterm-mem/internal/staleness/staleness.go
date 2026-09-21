@@ -83,9 +83,84 @@ func Paths(content string) []string {
 		return nil
 	}
 
+	return extractPaths(m[1])
+}
+
+// ReferencedPaths returns repository-shaped paths found only in Markdown code
+// spans: inline backticks and fenced code blocks. Unlike Paths, which reads
+// the structured **Where** field of an Engram observation, this function is
+// for instruction bodies such as SKILL.md. Both callers share the same strict
+// filePath pattern so prose, URLs, issue references and diff statistics do
+// not become invented repository references.
+func ReferencedPaths(text string) []string {
+	var segments []string
+	for i := 0; i < len(text); {
+		if text[i] != '`' {
+			i++
+			continue
+		}
+
+		run := 1
+		for i+run < len(text) && text[i+run] == '`' {
+			run++
+		}
+		if run >= 3 {
+			end := findBacktickRun(text, i+run, run)
+			if end < 0 {
+				segments = append(segments, text[i+run:])
+				break
+			}
+			segments = append(segments, text[i+run:end])
+			i = end + run
+			continue
+		}
+
+		end := findBacktickRun(text, i+run, run)
+		if end >= 0 {
+			segments = append(segments, text[i+run:end])
+			i = end + run
+			continue
+		}
+		i += run
+	}
+
 	seen := map[string]bool{}
 	var out []string
-	for _, tok := range regexp.MustCompile(`[,\s]+`).Split(m[1], -1) {
+	for _, segment := range segments {
+		for _, path := range extractPaths(segment) {
+			if seen[path] {
+				continue
+			}
+			seen[path] = true
+			out = append(out, path)
+		}
+	}
+	return out
+}
+
+func findBacktickRun(text string, start, run int) int {
+	for i := start; i+run <= len(text); i++ {
+		if text[i] != '`' {
+			continue
+		}
+		matched := true
+		for j := 1; j < run; j++ {
+			if text[i+j] != '`' {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return i
+		}
+	}
+	return -1
+}
+
+func extractPaths(text string) []string {
+	seen := map[string]bool{}
+	var out []string
+	for _, tok := range regexp.MustCompile(`[,\s]+`).Split(text, -1) {
 		tok = strings.Trim(tok, "`*,;:()[]\"'")
 		tok = strings.TrimRight(tok, ".")
 		if strings.Contains(tok, "://") || strings.ContainsAny(tok, "#+") {
@@ -98,6 +173,43 @@ func Paths(content string) []string {
 		out = append(out, tok)
 	}
 	return out
+}
+
+// ClassifyPaths returns the repository's best evidence for every recorded
+// path. Present paths are resolved by the working-tree suffix index without a
+// git subprocess; absent paths are delegated to repohistory.Inspect so a
+// deletion, rename, or path this repository never held remains distinguishable.
+// The returned map contains one fact for every distinct input path.
+func ClassifyPaths(repoRoot string, paths []string) (map[string]repohistory.PathFact, error) {
+	tree, err := indexTree(repoRoot)
+	if err != nil {
+		return nil, err
+	}
+
+	facts := make(map[string]repohistory.PathFact, len(paths))
+	unresolved := make(map[string]bool)
+	for _, path := range paths {
+		if _, seen := facts[path]; seen {
+			continue
+		}
+		if tree.holds(path) {
+			facts[path] = repohistory.PathFact{Path: path, State: repohistory.StatePresent}
+			continue
+		}
+		unresolved[path] = true
+	}
+	if len(unresolved) == 0 {
+		return facts, nil
+	}
+
+	history, err := repohistory.Inspect(repoRoot, sortedKeys(unresolved))
+	if err != nil {
+		return nil, err
+	}
+	for path, fact := range history {
+		facts[path] = fact
+	}
+	return facts, nil
 }
 
 // Detect reports which of observations the repository at repoRoot

@@ -1,0 +1,192 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:ace482166e78a933aac93f7faa11dd98130a93bbce2b024d54da93d92990d9ea",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-24fc80ac3513305c",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "1e961fee53d9113ce700f3f68968e3acea0eefef",
+      "candidate_tree": "8dbe2c2fca530df4acdb41ca079f72c0ac3172dc",
+      "paths_digest": "sha256:c7b5ad7b114263f81ca8951a182f0dcbb5bccf3965338c241afa5c6d966d34c1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:55dd586337dd5156cb71aaf7a47a99ddb96290cbc69ad7bdd5907b5afe88f961"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "generated_path_interpretation": "generated-summary/v1",
+      "base_tree": "1e961fee53d9113ce700f3f68968e3acea0eefef",
+      "candidate_tree": "8dbe2c2fca530df4acdb41ca079f72c0ac3172dc",
+      "paths_digest": "sha256:c7b5ad7b114263f81ca8951a182f0dcbb5bccf3965338c241afa5c6d966d34c1",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "engine/skills/project_lock.go",
+        "engine/skills/project_lock_test.go",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:55dd586337dd5156cb71aaf7a47a99ddb96290cbc69ad7bdd5907b5afe88f961"
+    },
+    "genesis_paths": [
+      "engine/skills/project_lock.go",
+      "engine/skills/project_lock_test.go",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 482,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:acd20c759b1870e22c84c03f495face6d5ecd7af381310e02bfa7d759341d632",
+    "capture_phase_revision": "sha256:2b67a8f9c2ac9ace9aaa8eb5fe95500434160eb9c7933a016a75ab20f0738ee2",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:55dd586337dd5156cb71aaf7a47a99ddb96290cbc69ad7bdd5907b5afe88f961",
+        "capture_phase_revision": "sha256:2b67a8f9c2ac9ace9aaa8eb5fe95500434160eb9c7933a016a75ab20f0738ee2",
+        "artifact_digest": "sha256:fe4efc879fef91f08db9fdec38879288036fd0c73032fc582ba467b965f150ba",
+        "result_hash": "sha256:ea42c5dc1bc4840d0088ed11299219a2f9999d155fedcebc9bce912cad0813fe",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:109748131e7b0a159d9c3caaa356938cbc0277a30b20ae16b9677fad744ce678",
+            "lineage_id": "review-24fc80ac3513305c",
+            "authority_revision": "sha256:2b67a8f9c2ac9ace9aaa8eb5fe95500434160eb9c7933a016a75ab20f0738ee2",
+            "target_identity": "sha256:55dd586337dd5156cb71aaf7a47a99ddb96290cbc69ad7bdd5907b5afe88f961",
+            "base_tree": "1e961fee53d9113ce700f3f68968e3acea0eefef",
+            "candidate_tree": "8dbe2c2fca530df4acdb41ca079f72c0ac3172dc",
+            "changed_path_manifest_sha256": "sha256:97372743583dfe6e610e399864c48b24a7730f7bc8b90d110ee9294b37a4ca80",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:109748131e7b0a159d9c3caaa356938cbc0277a30b20ae16b9677fad744ce678",
+            "raw_sha256": "sha256:fd716f2fa6c784e3f9fdbc380de5414dec85b9ecd441aa1f3a1840f633097dbe",
+            "canonical_sha256": "sha256:0cfe7f73162367dffa0c5ce3ebe5e805bdf01969cc9d9746a644a867971b6068",
+            "result_hash": "sha256:ea42c5dc1bc4840d0088ed11299219a2f9999d155fedcebc9bce912cad0813fe",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:109748131e7b0a159d9c3caaa356938cbc0277a30b20ae16b9677fad744ce678",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "engine/skills/project_lock.go",
+                "engine/skills/project_lock_test.go",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-duplicate-id-write-asymmetry",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:61-67",
+                "severity": "WARNING",
+                "claim": "ParseProjectLock now refuses a lock whose entries share a skill id, but SerializeProjectLock gained no matching guard and a newly added test asserts that two entries with the same id serialize successfully. Any caller that builds such a ProjectLock therefore writes a lock file that ParseProjectLock can never read back, which is precisely the write/read asymmetry the sibling version guard was added to prevent (its own doc comment states a write must never silently produce a lock the parser rejects). No test proves the serialize-\u003eparse round trip holds for the inputs SerializeProjectLock accepts.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:61-67",
+                  "engine/skills/project_lock.go:76-79",
+                  "engine/skills/project_lock.go:81-88",
+                  "engine/skills/project_lock_test.go:123-154"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-candidate-escape-unproved",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:145-149",
+                "severity": "WARNING",
+                "claim": "The newly introduced double-quote/backslash escaper for the stamped candidate value has no externally observable assertion. validateCandidateKey only refuses an indicator character in the first byte, so a key with an interior double quote or backslash passes validation and reaches the escaper, yet every added test supplies a plain slug key containing neither character. Removing both replacement calls would leave the suite green while emitting frontmatter that closes the double-quoted scalar early.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:145-149",
+                  "engine/skills/project_lock.go:131-133",
+                  "engine/skills/project_lock_test.go:522-530"
+                ],
+                "evidence_class": "inferential",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-validation-branches-unexercised",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock.go:134-139",
+                "severity": "WARNING",
+                "claim": "Two of the five refusal rules added to validateCandidateKey (leading/trailing space, and an embedded colon-space or space-hash sequence) are never reached by any added test. The test named for a colon-space key passes a key whose first byte is a colon, which the earlier leading-indicator branch refuses first, and every refusal assertion is a bare non-nil-error check that cannot distinguish which rule fired. Both branches could be deleted without any test failing, so their behavior on invalid input is unproved.",
+                "proof_refs": [
+                  "engine/skills/project_lock.go:131-133",
+                  "engine/skills/project_lock.go:134-139",
+                  "engine/skills/project_lock_test.go:510-514"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              },
+              {
+                "id": "R3-fallback-indent-partially-asserted",
+                "lens": "reliability",
+                "location": "engine/skills/project_lock_test.go:615-617",
+                "severity": "SUGGESTION",
+                "claim": "The empty-metadata-block fallback test asserts only the stamped author line's two-space indent, leaving the provenance and candidate lines' fallback indentation unproved for that path; the four-space test pins all three stamped lines, so the asymmetry is an avoidable coverage gap in the newly added indent-selection behavior.",
+                "proof_refs": [
+                  "engine/skills/project_lock_test.go:599-618",
+                  "engine/skills/project_lock_test.go:568-597"
+                ],
+                "evidence_class": "deterministic",
+                "causal_disposition": "introduced"
+              }
+            ],
+            "evidence": [
+              "Inspected the complete candidate as presented: the full patches for engine/skills/project_lock.go and engine/skills/project_lock_test.go, and the two added task lines in openspec/changes/procedural-memory-lifecycle/tasks.md.",
+              "Trailing-data refusal in ParseProjectLock is correct and proved: a second decode into a raw message is compared against end-of-file, so a second JSON value and trailing non-JSON bytes both refuse, and both cases have added tests (engine/skills/project_lock_test.go:166-178).",
+              "Version normalization in SerializeProjectLock is proved in both directions: zero normalizes to 1 and any other non-1 version refuses, each with an added test (engine/skills/project_lock_test.go:180-194).",
+              "Determinism of SerializeProjectLock is now pinned by exact bytes rather than a modulo-2 indent heuristic, and equal-id ordering stability is asserted in both input orders (engine/skills/project_lock_test.go:84-154).",
+              "Removal of the zero-length slice guard before the opening-fence check in engine/skills/project_lock.go:200 is safe: splitting a string on newline always yields at least one element, so the first-element index cannot panic.",
+              "The shared line-classification helper preserves the previous block-end and keep/drop semantics exactly (blank or indented lines belong to the block, any other line ends it), so the refactor in engine/skills/project_lock.go introduces no behavior change on that path.",
+              "Inline metadata refusal and indentation reuse are each covered by added fixtures (engine/skills/project_lock_test.go:532-597), and the constants are now pinned by direct-literal tests (engine/skills/project_lock_test.go:196-201).",
+              "The tasks.md change is documentation only: it records the correction commit and defers target-path validation to the later writer slice; it has no runtime behavior and no test obligation of its own."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "9773b723af1351b6a749da06ae1b8c88ce3d866000eadc0ef1b8614067093214",
+    "initial_atomic_start": {
+      "lineage_id": "review-24fc80ac3513305c",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:55dd586337dd5156cb71aaf7a47a99ddb96290cbc69ad7bdd5907b5afe88f961",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "1e961fee53d9113ce700f3f68968e3acea0eefef",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 482,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

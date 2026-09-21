@@ -1,0 +1,250 @@
+{
+  "schema": "gentle-ai.review-state-record/v2",
+  "revision": "sha256:0105fde7d352f0627a9c3cc680bfb3ab6f67cc6da443a9b492054821615a4c7b",
+  "state": {
+    "schema": "gentle-ai.review-state/v2",
+    "lineage_id": "review-6d89070e3ba2bbbd",
+    "generation": 1,
+    "state": "approved",
+    "initial_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "15d222ce21b4d22b44bf49740676a6d62a84dca6",
+      "candidate_tree": "a4f6d55f838937da0ff612019431c0ac65541506",
+      "paths_digest": "sha256:05745df0f77ae224f37133915029273804903bac1201183bebd400a088a441c3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/procedural-memory-lifecycle/design.md",
+        "openspec/changes/procedural-memory-lifecycle/exploration.md",
+        "openspec/changes/procedural-memory-lifecycle/proposal.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-maintenance/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:5a645cebdbc7dd419fa72fe4f2054ebd1836baab28411c0d55540fff5210f1a1"
+    },
+    "current_snapshot": {
+      "kind": "base-diff",
+      "base_tree": "15d222ce21b4d22b44bf49740676a6d62a84dca6",
+      "candidate_tree": "a4f6d55f838937da0ff612019431c0ac65541506",
+      "paths_digest": "sha256:05745df0f77ae224f37133915029273804903bac1201183bebd400a088a441c3",
+      "intended_untracked": [],
+      "intended_untracked_proof": "sha256:b97229718d4c7fe50a8892eb474ae5aa6491697bccb400e3e31dbaca4894d2f3",
+      "paths": [
+        "openspec/changes/procedural-memory-lifecycle/design.md",
+        "openspec/changes/procedural-memory-lifecycle/exploration.md",
+        "openspec/changes/procedural-memory-lifecycle/proposal.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-maintenance/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+        "openspec/changes/procedural-memory-lifecycle/tasks.md"
+      ],
+      "identity": "sha256:5a645cebdbc7dd419fa72fe4f2054ebd1836baab28411c0d55540fff5210f1a1"
+    },
+    "genesis_paths": [
+      "openspec/changes/procedural-memory-lifecycle/design.md",
+      "openspec/changes/procedural-memory-lifecycle/exploration.md",
+      "openspec/changes/procedural-memory-lifecycle/proposal.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-maintenance/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+      "openspec/changes/procedural-memory-lifecycle/tasks.md"
+    ],
+    "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+    "frozen_policy_content": "Gentle AI native bounded review policy.\n\nOnly candidate-caused BLOCKER or CRITICAL findings may require correction. Pre-existing and base-only findings are follow-ups. One correction is bounded by the frozen original scope. Gates are informational and unmanaged; ordinary repository policy decides delivery.\n",
+    "risk_level": "medium",
+    "selected_lenses": [
+      "review-reliability"
+    ],
+    "original_changed_lines": 2018,
+    "correction_budget": 200,
+    "correction_budget_policy": "floor_two",
+    "fix_finding_ids": [],
+    "fix_delta_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "evidence_hash": "sha256:7c22bb8f102b68a3c796a4a9aed6aa8de346295e0d14b084880e9d07cfa9069b",
+    "capture_phase_revision": "sha256:a621bf2e63abbb6249b8fd7358c7f288f80258eff4d2a7c268927dbc3c45c5d5",
+    "admitted_role_results": [
+      {
+        "role": "lens",
+        "lens": "review-reliability",
+        "target_identity": "sha256:5a645cebdbc7dd419fa72fe4f2054ebd1836baab28411c0d55540fff5210f1a1",
+        "capture_phase_revision": "sha256:a621bf2e63abbb6249b8fd7358c7f288f80258eff4d2a7c268927dbc3c45c5d5",
+        "artifact_digest": "sha256:2725b935ffd847109b2de191ce411caa8cdd2a9558ec24ddf47625d7af8480c7",
+        "result_hash": "sha256:f6984490575d0ac3edbd7127cd7e0b3af9d97c007fe13db44a5f1a96139f6add",
+        "value": {
+          "schema": "gentle-ai.review-admitted-result/v2",
+          "subject": {
+            "schema": "gentle-ai.review-artifact-subject/v2",
+            "subject_hash": "sha256:f8a22f02ec007c5bd7745124b3f1cd3dcdbaa9853137e3e4b988a0930f4bc0e5",
+            "lineage_id": "review-6d89070e3ba2bbbd",
+            "authority_revision": "sha256:a621bf2e63abbb6249b8fd7358c7f288f80258eff4d2a7c268927dbc3c45c5d5",
+            "target_identity": "sha256:5a645cebdbc7dd419fa72fe4f2054ebd1836baab28411c0d55540fff5210f1a1",
+            "base_tree": "15d222ce21b4d22b44bf49740676a6d62a84dca6",
+            "candidate_tree": "a4f6d55f838937da0ff612019431c0ac65541506",
+            "changed_path_manifest_sha256": "sha256:412cea704e7024100b4d9d8eb38d88a41769494cf1c6985dde6bd2d58078ae75",
+            "lens": "review-reliability",
+            "selected_order": 0
+          },
+          "admission": {
+            "schema": "gentle-ai.review-artifact-admission/v1",
+            "decision": "completed",
+            "subject_hash": "sha256:f8a22f02ec007c5bd7745124b3f1cd3dcdbaa9853137e3e4b988a0930f4bc0e5",
+            "raw_sha256": "sha256:0dc458ccdaea73d4da64351e48a74453ca8611008a03f0e2ac1893ec4c688fed",
+            "canonical_sha256": "sha256:5a0bc16f473cf801bc20e83465b593c4285b243b035aaeb230e1003a77266b3a",
+            "result_hash": "sha256:f6984490575d0ac3edbd7127cd7e0b3af9d97c007fe13db44a5f1a96139f6add",
+            "candidate_causal_finding_ids": []
+          },
+          "result": {
+            "subject_hash": "sha256:f8a22f02ec007c5bd7745124b3f1cd3dcdbaa9853137e3e4b988a0930f4bc0e5",
+            "inspection": {
+              "status": "completed",
+              "paths": [
+                "openspec/changes/procedural-memory-lifecycle/design.md",
+                "openspec/changes/procedural-memory-lifecycle/exploration.md",
+                "openspec/changes/procedural-memory-lifecycle/proposal.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-maintenance/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md",
+                "openspec/changes/procedural-memory-lifecycle/tasks.md"
+              ]
+            },
+            "lens": "review-reliability",
+            "findings": [
+              {
+                "id": "R3-ownership-hash-source-conflict",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md:105-112",
+                "severity": "WARNING",
+                "claim": "The candidate-detection delta says the candidate record's Registered/Promoted hash line is the value the ownership-by-hash check reads back. The design says the check reads only the lock-file hash and treats the record line as an informational mirror. The maintenance spec also says the lock hash is the only source. An implementation or acceptance test that follows this delta would compare against a second, Engram-held hash. The spec therefore contradicts the behavior the Go tests will assert.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/specs/procedural-candidate-detection/spec.md:110-112",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:201-210",
+                  "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-maintenance/spec.md:38-43"
+                ]
+              },
+              {
+                "id": "R3-failed-commit-cleanup-deletes-lock",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:229",
+                "severity": "WARNING",
+                "claim": "The failure recovery after the real run but before the commit says a new registration deletes exactly the wrote paths, which are untracked and hash-verified. The wrote set also includes the lock file. From the second registration onward, the lock is a tracked, modified file that holds other skills' entries. It is neither untracked nor verifiable against the printed SKILL.md sha256. The procedure is therefore either inapplicable, or it deletes the tracked lock and drops every other skill's ownership record. The lock should be restored from HEAD, not deleted. No acceptance case covers a second registration that fails before its commit.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:141-145",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:190-195",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:95"
+                ]
+              },
+              {
+                "id": "R3-promoted-status-actor-conflict",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/design.md:250-256",
+                "severity": "WARNING",
+                "claim": "The transition table says only a human sets promoted, and that project-retire moves registered to retired. The data-flow diagram has an agent project-retire with reason promoted ending at Status=promoted. For the promotion path, this leaves undefined both the actor and the final state after project copies are retired. A contract test or acceptance run cannot assert one deterministic outcome.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:377",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:251",
+                  "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-registration/spec.md:201-206"
+                ]
+              },
+              {
+                "id": "R3-addcore-tests-unmodified-conflict",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md:36-41",
+                "severity": "WARNING",
+                "claim": "The spec requires every existing AddCore test to pass unmodified. The design and tasks modify lifecycle_test.go so that its fixtures serve lint-clean SKILL.md files, because the current fixtures would fail the new hard gate. The scenario cannot hold as written, and the regression claim would then rest on edited fixtures.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:101",
+                  "openspec/changes/procedural-memory-lifecycle/design.md:250"
+                ]
+              },
+              {
+                "id": "R3-fence-scenario-unobservable",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md:47-51",
+                "severity": "WARNING",
+                "claim": "The spec requires LintSkill to report a missing frontmatter fence. The design has LintSkill take already-split frontmatter and body strings, and evaluates frontmatter-fence only in SplitSkillFile/LintSkillFile. The scenario is not observable at the API it names, so the test level is ambiguous.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:83-85",
+                  "openspec/changes/procedural-memory-lifecycle/specs/skill-lint/spec.md:37-45"
+                ]
+              },
+              {
+                "id": "R3-lesson-shape-rejection-unenforced",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/specs/procedural-skill-drafting/spec.md:67-71",
+                "severity": "WARNING",
+                "claim": "The spec says a summary that embeds an observation id is rejected before the draft record is persisted. The only deterministic check is the advisory incident-log-shape lint, which never blocks. Neither the design testing table nor the tasks acceptance checklists include a lesson-shape rejection case, so this MUST behavior has no test.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:68",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:95"
+                ]
+              },
+              {
+                "id": "R3-acceptance-checklist-gaps",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:95",
+                "severity": "WARNING",
+                "claim": "The design threat matrix commits to acceptance tests for these cases: staged-set mismatch after git add, merge or rebase in progress, subdirectory or nested-repo root, and a hook that rewrites bytes and is reported as human-owned. The task 4.8 checklist covers only a clean repo, an unrelated staged file, an ignored target, detached HEAD and revert. The listed refusal paths in the commit procedure therefore stay unproved.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:218-227"
+                ]
+              },
+              {
+                "id": "R3-rollback-incomplete-untested",
+                "lens": "reliability",
+                "location": "openspec/changes/procedural-memory-lifecycle/tasks.md:81",
+                "severity": "SUGGESTION",
+                "claim": "The rollback-failure path, which prints 'error: rollback incomplete' and exits 1, is marked as not necessarily test-triggerable. The design injects a projectFS interface precisely so that failures can be injected. A fake that also fails during rollback would prove this exit contract cheaply. The retirement delete path in 7a.1 also has no failure or rollback case.",
+                "proof_refs": [
+                  "openspec/changes/procedural-memory-lifecycle/design.md:141-144",
+                  "openspec/changes/procedural-memory-lifecycle/tasks.md:122"
+                ]
+              }
+            ],
+            "evidence": [
+              "Inspected all 10 added documentation paths. The candidate is planning and spec text only, with no executable code, so the findings concern behavioral contradictions and test-coverage gaps that would leave candidate behavior unproved at apply time.",
+              "The ownership-hash source conflicts between the procedural-candidate-detection delta and the design and maintenance spec.",
+              "The failure-cleanup rule at openspec/changes/procedural-memory-lifecycle/design.md:229 treats the tracked, shared lock file as an untracked, deletable path.",
+              "The promoted-status actor and final state conflict between the transition table and the data-flow diagram in openspec/changes/procedural-memory-lifecycle/design.md.",
+              "The 'unmodified tests' requirement in openspec/changes/procedural-memory-lifecycle/specs/skill-lifecycle/spec.md conflicts with the fixture edits planned in openspec/changes/procedural-memory-lifecycle/tasks.md.",
+              "All findings are introduced by this candidate, since every file is newly added. None is a BLOCKER, because each is a document-level defect that can be fixed before apply."
+            ]
+          }
+        }
+      }
+    ],
+    "approved_ack_token": "c152aa341d43e0b5661b8ceeb03f2c03e6948fd8c730e331ab4de08503130a38",
+    "initial_atomic_start": {
+      "lineage_id": "review-6d89070e3ba2bbbd",
+      "worktree_identity": "sha256:8455002f227f033663d0e7d8b8ff6a885e1c85b482ec52e34017c303452eed87",
+      "target_identity": "sha256:5a645cebdbc7dd419fa72fe4f2054ebd1836baab28411c0d55540fff5210f1a1",
+      "selector": {
+        "kind": "base-diff",
+        "base_ref": "15d222ce21b4d22b44bf49740676a6d62a84dca6",
+        "intended_untracked": null
+      },
+      "policy_hash": "sha256:36e477a871ace064f20f06aa9c669315dad46b9732a0a3092cf740f78ced3434",
+      "tier": "medium",
+      "selected_lenses": [
+        "review-reliability"
+      ],
+      "original_changed_lines": 2018,
+      "correction_budget": 200,
+      "correction_budget_policy": "floor_two"
+    },
+    "runtime_agent": "claude-code"
+  }
+}

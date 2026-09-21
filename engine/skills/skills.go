@@ -8,7 +8,10 @@ import (
 )
 
 // SkillsCore is the testable CLI core for `engine skills <verb>`.
-// Dispatches to RenderListCore, RenderStatusCore, or RenderValidateCore.
+// Dispatches to RenderListCore, RenderStatusCore, RenderValidateCore,
+// RenderInstallCore, AddCore, RemoveCore, SyncCore, RenderLintCore,
+// RenderProjectRegisterCore, RenderProjectReviseCore, RenderProjectStatusCore,
+// or RenderProjectRetireCore.
 // Unknown or empty verbs fail loud (exit 1), mirroring the prespec pattern (ADR-2).
 // No global state; all I/O is injected.
 func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
@@ -27,11 +30,21 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 		RemoveCore(stripVerb(args, "remove"), readFile, stdout, stderr, exit)
 	case "sync-manifest":
 		SyncCore(stripVerb(args, "sync-manifest"), readFile, stdout, stderr, exit)
+	case "lint":
+		RenderLintCore(stripVerb(args, "lint"), readFile, stdout, stderr, exit)
+	case "project-register":
+		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+	case "project-revise":
+		RenderProjectReviseCore(stripVerb(args, "project-revise"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+	case "project-status":
+		RenderProjectStatusCore(stripVerb(args, "project-status"), readFile, os.ReadDir, resolvePathKeepingMissing, stdout, stderr, exit)
+	case "project-retire":
+		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "":
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire")
 		exit(1)
 	default:
-		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove, sync-manifest)\n", verb)
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire)\n", verb)
 		exit(1)
 	}
 }
