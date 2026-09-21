@@ -69,17 +69,19 @@ type ProjectWrite struct {
 	Backup []byte
 }
 
-// ProjectPlan is the complete, validated description of one registration,
-// produced before any filesystem mutation. Lock is kept apart from Writes
-// because it is the commit marker: ExecuteProjectPlan renames the Writes in
-// projectTargets order and the lock LAST (3b-ii).
+// ProjectPlan is the complete, validated description of one project-tier
+// operation, produced before any filesystem mutation. Registration and
+// revision use Writes; retirement uses DeleteWrites. Lock is kept apart from
+// both because it is the commit marker and is always updated last.
 type ProjectPlan struct {
-	ID       string
-	SHA256   string
-	Revision int
-	Writes   []ProjectWrite
-	Deletes  []string
-	Lock     ProjectWrite
+	ID           string
+	SHA256       string
+	Revision     int
+	AbsorbedInto string
+	Writes       []ProjectWrite
+	DeleteWrites []ProjectWrite
+	Deletes      []string
+	Lock         ProjectWrite
 }
 
 // RegisterInput carries the pre-read state PlanProjectRegister needs, so the
@@ -123,6 +125,26 @@ type ReviseInput struct {
 	DraftPath    string
 	DraftData    []byte
 	CandidateKey string
+	LockData     []byte
+	LockExists   bool
+
+	ReadFile    func(string) ([]byte, error)
+	ReadDir     func(string) ([]fs.DirEntry, error)
+	Stat        func(string) (fs.FileInfo, error)
+	ResolvePath func(string) (string, error)
+}
+
+// RetireInput carries the pre-read state PlanProjectRetire needs. The
+// planner verifies ownership against the project lock before it plans any
+// deletion. Registry is used only when AbsorbedInto names a global target;
+// project-lock existence is checked from the same parsed lock for a project
+// target. All filesystem probes are injected so the planner stays pure.
+type RetireInput struct {
+	ProjectRoot  string
+	ID           string
+	Reason       string
+	AbsorbedInto string
+	Registry     Registry
 	LockData     []byte
 	LockExists   bool
 
@@ -571,6 +593,284 @@ func PlanProjectRevise(in ReviseInput) (ProjectPlan, error) {
 	}, nil
 }
 
+// VerifyAbsorbedInto verifies only that a consolidation target exists at one
+// of the two supported tiers. A global target is looked up through
+// MatchCandidate, which is deliberately used here as an existence lookup; it
+// does not prove that the target covers the retiring skill's content. A
+// project target is an exact project-lock entry. An empty target means that
+// this retirement is not a consolidation and therefore needs no lookup.
+func VerifyAbsorbedInto(target string, registry Registry, lock ProjectLock) error {
+	if target == "" {
+		return nil
+	}
+	if matched, _ := MatchCandidate(registry, target); matched {
+		return nil
+	}
+	for _, entry := range lock.Skills {
+		if entry.ID == target {
+			return nil
+		}
+	}
+	return fmt.Errorf("absorbed-into target %q is not verified in overlay registry or project lock", target)
+}
+
+// PlanProjectRetire plans removal of one agent-owned project-tier skill. It
+// proves ownership from the lock hash and target directory shape before
+// capturing deletion backups, removes only the selected lock entry, and keeps
+// the empty lock file in the plan so a later git revert can restore it
+// symmetrically. The plan is pure: all filesystem facts arrive through the
+// injected probes.
+func PlanProjectRetire(in RetireInput) (ProjectPlan, error) {
+	if in.ReadFile == nil || in.ReadDir == nil || in.Stat == nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: read, directory, and stat probes are required")
+	}
+	if in.ResolvePath == nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: no symlink resolver was injected")
+	}
+	if !filepath.IsAbs(in.ProjectRoot) {
+		return ProjectPlan{}, fmt.Errorf("project-retire: --project-root %q must be absolute", in.ProjectRoot)
+	}
+	root := filepath.Clean(in.ProjectRoot)
+	info, err := in.Stat(root)
+	if err != nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: --project-root %q must exist: %v", in.ProjectRoot, err)
+	}
+	if !info.IsDir() {
+		return ProjectPlan{}, fmt.Errorf("project-retire: --project-root %q must be a directory", in.ProjectRoot)
+	}
+	if in.ID == "" {
+		return ProjectPlan{}, fmt.Errorf("project-retire: skill id must not be empty")
+	}
+	if !in.LockExists {
+		return ProjectPlan{}, fmt.Errorf("project-retire: skill %q is human-owned (not-in-lock)", in.ID)
+	}
+
+	lock, err := ParseProjectLock(in.LockData)
+	if err != nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: %v", err)
+	}
+	entryIndex := -1
+	var entry ProjectLockEntry
+	for i, candidate := range lock.Skills {
+		if candidate.ID == in.ID {
+			entryIndex = i
+			entry = candidate
+			break
+		}
+	}
+	if entryIndex < 0 {
+		return ProjectPlan{}, fmt.Errorf("project-retire: skill %q is human-owned (not-in-lock)", in.ID)
+	}
+
+	ownership := EvaluateOwnership(root, entry, in.ReadFile, in.ReadDir, in.ResolvePath)
+	if !ownership.AgentOwned {
+		return ProjectPlan{}, fmt.Errorf("project-retire: skill %q is human-owned (%s)", in.ID, ownership.Reason)
+	}
+	if err := VerifyAbsorbedInto(in.AbsorbedInto, in.Registry, lock); err != nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: %v", err)
+	}
+
+	registerInput := RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}
+	seen := make(map[string]string, len(entry.Targets)+1)
+	deleteWrites := make([]ProjectWrite, 0, len(entry.Targets))
+	deletes := make([]string, 0, len(entry.Targets))
+	for _, target := range entry.Targets {
+		abs, resolved, err := resolveWritePath(registerInput, root, target)
+		if err != nil {
+			return ProjectPlan{}, fmt.Errorf("project-retire: target %q: %v", target, err)
+		}
+		if other, ok := seen[resolved]; ok {
+			return ProjectPlan{}, fmt.Errorf("project-retire: targets %q and %q resolve to the same file", other, target)
+		}
+		seen[resolved] = target
+
+		data, err := in.ReadFile(abs)
+		if err != nil {
+			return ProjectPlan{}, fmt.Errorf("project-retire: reading target %q: %v", target, err)
+		}
+		info, err := in.Stat(abs)
+		if err != nil {
+			return ProjectPlan{}, fmt.Errorf("project-retire: inspecting target %q: %v", target, err)
+		}
+		if info.IsDir() {
+			return ProjectPlan{}, fmt.Errorf("project-retire: target %q is a directory", target)
+		}
+		rel := filepath.ToSlash(target)
+		deletes = append(deletes, rel)
+		deleteWrites = append(deleteWrites, ProjectWrite{
+			Rel:    rel,
+			Abs:    abs,
+			Mode:   info.Mode().Perm(),
+			Backup: cloneProjectBytes(data),
+		})
+	}
+
+	lockAbs, resolvedLock, err := resolveWritePath(registerInput, root, ProjectLockRelPath)
+	if err != nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: lock destination: %v", err)
+	}
+	if other, ok := seen[resolvedLock]; ok {
+		return ProjectPlan{}, fmt.Errorf("project-retire: targets %q and %q resolve to the same file", other, ProjectLockRelPath)
+	}
+	lockInfo, err := in.Stat(lockAbs)
+	if err != nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: inspecting project lock: %v", err)
+	}
+
+	remaining := make([]ProjectLockEntry, 0, len(lock.Skills)-1)
+	remaining = append(remaining, lock.Skills[:entryIndex]...)
+	remaining = append(remaining, lock.Skills[entryIndex+1:]...)
+	lock.Skills = remaining
+	lockData, err := SerializeProjectLock(lock)
+	if err != nil {
+		return ProjectPlan{}, fmt.Errorf("project-retire: %v", err)
+	}
+
+	return ProjectPlan{
+		ID:           in.ID,
+		Revision:     entry.Revision,
+		AbsorbedInto: in.AbsorbedInto,
+		Deletes:      deletes,
+		DeleteWrites: deleteWrites,
+		Lock: ProjectWrite{
+			Rel:    ProjectLockRelPath,
+			Abs:    lockAbs,
+			Data:   lockData,
+			Mode:   lockInfo.Mode().Perm(),
+			Backup: cloneProjectBytes(in.LockData),
+		},
+	}, nil
+}
+
+// ExecuteProjectRetirePlan removes the planned target files and commits the
+// lock update last. A failure after any target removal restores every target
+// already reached from its captured bytes before returning the original cause;
+// a failure during that rollback returns ErrRollbackIncomplete and emits one
+// repo-relative pointer per path it could not restore. The lock temp is staged
+// before the first delete, so no deletion can become visible without a lock
+// update that can either be committed or rolled back.
+func ExecuteProjectRetirePlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer) error {
+	if fsys == nil {
+		return fmt.Errorf("project-retire: no filesystem was injected")
+	}
+	root, err := projectPlanRoot(p)
+	if err != nil {
+		return err
+	}
+	if len(p.DeleteWrites) == 0 {
+		return fmt.Errorf("project-retire: the plan carries no target deletions")
+	}
+	if p.Lock.Backup == nil {
+		return fmt.Errorf("project-retire: the plan carries no existing lock backup")
+	}
+	order := append([]ProjectWrite(nil), p.DeleteWrites...)
+	order = append(order, p.Lock)
+	if err := checkProjectDestinations(fsys, root, order); err != nil {
+		return err
+	}
+
+	s := &projectRetireStager{
+		fsys:      fsys,
+		root:      root,
+		deletes:   p.DeleteWrites,
+		lock:      p.Lock,
+		attempted: make([]bool, len(p.DeleteWrites)),
+	}
+
+	tmp, err := fsys.WriteTemp(filepath.Dir(p.Lock.Abs), p.Lock.Data, p.Lock.Mode)
+	s.lockTemp = tmp
+	if err != nil {
+		return s.rollback(stderr, fmt.Errorf("project-retire: staging lock: %w", err))
+	}
+
+	for i, w := range p.DeleteWrites {
+		// A remove wrapper may delete the file and still report an error. Mark
+		// the call before invoking it so rollback covers that check-then-act
+		// window as well as ordinary successful removals.
+		s.attempted[i] = true
+		if err := fsys.Remove(w.Abs); err != nil {
+			return s.rollback(stderr, fmt.Errorf("project-retire: removing %q: %w", w.Rel, err))
+		}
+	}
+
+	// The lock is the commit marker. Record the attempt before Rename because
+	// a filesystem wrapper can report an error after the rename landed.
+	s.lockAttempted = true
+	if err := fsys.Rename(s.lockTemp, p.Lock.Abs); err != nil {
+		return s.rollback(stderr, fmt.Errorf("project-retire: committing lock: %w", err))
+	}
+	s.lockTemp = ""
+
+	for _, w := range p.DeleteWrites {
+		fmt.Fprintf(stdout, "removed: %s\n", w.Rel)
+	}
+	return nil
+}
+
+// projectRetireStager holds the state needed to undo a retirement. Delete
+// backups use ProjectWrite.Backup for the old target bytes and Mode for its
+// original permission bits; the lock uses the same representation but is
+// restored only if its rename was attempted.
+type projectRetireStager struct {
+	fsys          projectFS
+	root          string
+	deletes       []ProjectWrite
+	lock          ProjectWrite
+	lockTemp      string
+	lockAttempted bool
+	attempted     []bool
+}
+
+func (s *projectRetireStager) rollback(stderr io.Writer, cause error) error {
+	var bad []string
+
+	// Restore target files in reverse order so a partially completed delete
+	// sequence is unwound from its newest mutation back toward its first one.
+	for i := len(s.deletes) - 1; i >= 0; i-- {
+		if !s.attempted[i] {
+			continue
+		}
+		w := s.deletes[i]
+		if err := s.restore(w); err != nil {
+			bad = append(bad, w.Rel)
+		}
+	}
+
+	// If the lock rename was reached, restore the old lock even when the
+	// injected rename failed before landing. Rewriting the captured bytes is
+	// the safe choice because the wrapper may have landed the new lock already.
+	if s.lockAttempted {
+		if err := s.restore(s.lock); err != nil {
+			bad = append(bad, s.lock.Rel)
+		}
+	}
+	if s.lockTemp != "" {
+		if err := s.fsys.Remove(s.lockTemp); err != nil && !os.IsNotExist(err) {
+			bad = append(bad, s.lock.Rel)
+		}
+	}
+
+	if len(bad) != 0 {
+		for _, rel := range bad {
+			fmt.Fprintf(stderr, "error: rollback incomplete: %s\n", rel)
+		}
+		return fmt.Errorf("%w: %s (after %v)", ErrRollbackIncomplete, strings.Join(bad, ", "), cause)
+	}
+	return cause
+}
+
+func (s *projectRetireStager) restore(w ProjectWrite) error {
+	tmp, err := s.fsys.WriteTemp(filepath.Dir(w.Abs), w.Backup, w.Mode)
+	if err != nil {
+		return err
+	}
+	if err := s.fsys.Rename(tmp, w.Abs); err != nil {
+		_ = s.fsys.Remove(tmp)
+		return err
+	}
+	return nil
+}
+
 // ExecuteProjectRevisePlan intentionally delegates to the registration
 // executor. Revision writes carry backups for every target and the lock, so
 // the existing temp -> ordered rename -> rollback implementation already
@@ -841,6 +1141,15 @@ func projectCommitOrder(p ProjectPlan) []ProjectWrite {
 // alternatives). The git commit is the real atomic unit; this function's job
 // is to leave either the full planned set or the pre-run state behind.
 func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer) error {
+	// Retirement uses the same public executor seam as registration and
+	// revision when called by a future CLI, but needs delete-specific rollback
+	// state. Keep the dedicated implementation behind this dispatch so callers
+	// that already know only ExecuteProjectPlan still receive atomic retirement
+	// behavior.
+	if len(p.DeleteWrites) > 0 || len(p.Deletes) > 0 {
+		return ExecuteProjectRetirePlan(p, fsys, stdout, stderr)
+	}
+
 	root, err := projectPlanRoot(p)
 	if err != nil {
 		return err

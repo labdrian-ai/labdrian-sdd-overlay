@@ -192,9 +192,9 @@ Item-30 symbols consumed: sec 3 occurrence rules, sec 4 emission table (new rows
 
 Item-30 symbols consumed: `MatchCandidate` (for `AbsorbedInto` existence verification), sec 6.
 
-- [ ] 7a-i.1 RED `engine/skills/project_register_test.go` (extend): `project-retire` removes target files and the lock entry in one operation for an agent-owned skill; refused for a human-owned skill (reason named); `AbsorbedInto` write succeeds only when the named id exists (global: `MatchCandidate` against the overlay registry as an existence lookup, not coverage proof; project: an entry in the project lock) and is refused with the unverified target named otherwise; a failure injected mid-retirement (via the `projectFS` fake) triggers rollback of the partial delete, leaving the pre-retirement tree byte-identical, and a failure during that rollback itself prints `error: rollback incomplete: <rel-path>` and exits 1
-- [ ] 7a-i.2 GREEN `engine/skills/project_register.go`: `project-retire` planning/execution (delete targets + lock entry, ownership-gated); `AbsorbedInto` existence verification helper
-- [ ] 7a-i.3 Verify: `cd engine && go vet ./... && go test ./skills/...`
+- [x] 7a-i.1 RED `engine/skills/project_register_test.go` (extend): `project-retire` removes target files and the lock entry in one operation for an agent-owned skill; refused for a human-owned skill (reason named); `AbsorbedInto` write succeeds only when the named id exists (global: `MatchCandidate` against the overlay registry as an existence lookup, not coverage proof; project: an entry in the project lock) and is refused with the unverified target named otherwise; a failure injected mid-retirement (via the `projectFS` fake) triggers rollback of the partial delete, leaving the pre-retirement tree byte-identical, and a failure during that rollback itself prints `error: rollback incomplete: <rel-path>` and exits 1
+- [x] 7a-i.2 GREEN `engine/skills/project_register.go`: `project-retire` planning/execution (delete targets + lock entry, ownership-gated); `AbsorbedInto` existence verification helper
+- [x] 7a-i.3 Verify: `cd engine && go vet ./... && go test ./skills/...`
 
 ## Phase 7a-ii: `retirement-cli-and-docs` (PR 12, ~415 lines, split owner-decided 2026-09-19)
 
