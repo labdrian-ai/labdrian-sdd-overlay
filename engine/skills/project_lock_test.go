@@ -247,6 +247,29 @@ func TestProjectLockRelPath_ExactValue(t *testing.T) {
 	}
 }
 
+func TestSerializeProjectLock_MatchesSharedSkillstaleFixture(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatalf("resolve repository root: %v", err)
+	}
+	fixturePath := filepath.Join(repoRoot, "longterm-mem", "internal", "skillstale", "testdata", "procedural-skills.lock.json")
+	want, err := os.ReadFile(fixturePath)
+	if err != nil {
+		t.Fatalf("read shared lock fixture %s: %v", fixturePath, err)
+	}
+	lock, err := ParseProjectLock(want)
+	if err != nil {
+		t.Fatalf("ParseProjectLock(shared fixture): %v", err)
+	}
+	got, err := SerializeProjectLock(lock)
+	if err != nil {
+		t.Fatalf("SerializeProjectLock(shared fixture): %v", err)
+	}
+	if string(got) != string(want) {
+		t.Fatalf("SerializeProjectLock does not reproduce the shared fixture byte-for-byte:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+}
+
 func TestParseSerializeProjectLock_RoundTrip(t *testing.T) {
 	l := sampleLockUnsorted()
 	data, err := SerializeProjectLock(l)
