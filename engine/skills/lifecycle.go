@@ -206,6 +206,7 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo
 //   - id slug is valid (delegated to AddEntry)
 //   - id is not already registered (delegated to AddEntry)
 //   - <sourceRoot>/<id>/SKILL.md exists (R-060)
+//   - LintSkillFile reports no hard findings for the source skill
 //   - Serialize + re-parse of new registry is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
 func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
@@ -255,7 +256,24 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 4. Serialize the new registry.
+	// 4. Lint the source SKILL.md before serializing or writing either
+	// lifecycle file. Warnings are advisory; hard findings refuse the add.
+	skillData, err := readFile(skillMDPath)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: reading skill %q: %v\n", skillMDPath, err)
+		exit(1)
+		return
+	}
+	hardLint, _ := LintSkillFile(skillData)
+	if len(hardLint) > 0 {
+		for _, finding := range hardLint {
+			fmt.Fprintln(stderr, finding)
+		}
+		exit(1)
+		return
+	}
+
+	// 5. Serialize the new registry.
 	regBytes, err := Serialize(newReg)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: serializing registry: %v\n", err)
@@ -263,7 +281,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 5. Validate-before-write: re-parse must equal in-memory state (R-063).
+	// 6. Validate-before-write: re-parse must equal in-memory state (R-063).
 	reg2, err := ParseRegistry(bytes.NewReader(regBytes))
 	if err != nil {
 		fmt.Fprintf(stderr, "error: validate-before-write re-parse failed: %v\n", err)
@@ -276,7 +294,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 6. Build updated manifest bytes and cross-check registry ↔ manifest (ADR-9 step 7).
+	// 7. Build updated manifest bytes and cross-check registry ↔ manifest (ADR-9 step 7).
 	manData, err := readFile(manifestPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: reading manifest %q: %v\n", manifestPath, err)
@@ -298,7 +316,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 7. Dual-temp atomic write: manifest first, then registry (ADR-9).
+	// 8. Dual-temp atomic write: manifest first, then registry (ADR-9).
 	manTemp, err := writeFileAtomic(manifestPath, manBytes)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
@@ -313,7 +331,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 8. Rename: manifest first, then registry.
+	// 9. Rename: manifest first, then registry.
 	if err := os.Rename(manTemp, manifestPath); err != nil {
 		os.Remove(manTemp)
 		os.Remove(regTemp)

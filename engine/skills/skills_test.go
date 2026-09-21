@@ -521,7 +521,7 @@ skills:
 	if err := os.MkdirAll(filepath.Join(skillsRoot, "new-skill"), 0755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(skillsRoot, "new-skill", "SKILL.md"), []byte("# new-skill\n"), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(skillsRoot, "new-skill", "SKILL.md"), []byte(lintCleanSkillMD("new-skill")), 0644); err != nil {
 		t.Fatal(err)
 	}
 

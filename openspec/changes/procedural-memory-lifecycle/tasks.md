@@ -171,11 +171,11 @@ Item-30 symbols consumed: sec 2 record block (`Registered` line wiring in the pr
 
 Item-30 symbols consumed: sec 2 record block (`Promoted` line, prose only).
 
-- [ ] 5.1 RED `engine/skills/lifecycle_test.go`: extend — `AddCore` given a `t.TempDir()` fixture whose `skills/foo/SKILL.md` has a hard lint error (missing `metadata.version`) exits non-zero, names the hard error, and leaves registry/manifest bytes byte-for-byte unchanged; `AddCore` given a lint-clean-but-warnings-only fixture exits 0 and writes the registry entry exactly as before; every existing `AddCore` test (SC-65 through SC-68 and prior) still passes once fixtures are made lint-clean
-- [ ] 5.2 GREEN `engine/skills/lifecycle.go`: `AddCore` reads `<src>/<id>/SKILL.md`, runs `LintSkillFile`, prints `[lint:<id>]` for each hard error and exits 1 before any `Serialize` call, runs after the existing SKILL.md-existence precondition and before both the manifest append and the registry serialize
-- [ ] 5.3 GREEN `skills/_shared/procedural-candidate-detection.md`: section 12 — human promotion procedure over unmodified `engine skills add`, no new CLI, silence-is-not-consent statement, `Promoted` hash-line and `History` wiring
-- [ ] 5.4 REFACTOR: confirm no partial write (manifest-only or registry-only) can occur on a lint refusal
-- [ ] 5.5 Verify: `cd engine && go vet ./... && go test ./skills/...`
+- [x] 5.1 RED `engine/skills/lifecycle_test.go`: extended `AddCore` coverage with a missing-`metadata.version` hard-lint fixture that exits non-zero, names the finding, and preserves registry/manifest bytes; added a warnings-only fixture that still registers; updated AddCore fixtures to be lint-clean and retained the existing SC-65 through SC-68 assertions. RED evidence: `cd engine && go test ./skills/...` failed only at `TestAddCoreRejectsHardLintErrorBeforeWrites` because the gate was absent.
+- [x] 5.2 GREEN `engine/skills/lifecycle.go`: `AddCore` now reads `<src>/<id>/SKILL.md` after the existence check, runs `LintSkillFile`, prints each hard finding, and exits before registry serialization or manifest processing; warnings do not block. GREEN evidence: `cd engine && go test ./skills/...` passed.
+- [x] 5.3 GREEN `skills/_shared/procedural-candidate-detection.md`: added section 12 documenting human-only promotion through `engine skills add`/`AddCore`, silence-is-not-consent, the exact `Promoted` hash line, and append-only `History` wiring.
+- [x] 5.4 REFACTOR: the hard-lint refusal returns before `Serialize`, manifest read/append, or either atomic write; the byte-preservation regression test passes.
+- [x] 5.5 Verify: `cd engine && go vet ./... && go test ./...` and focused `cd engine && go test ./skills/...` passed.
 
 ## Phase 6: `revision` (PR 10, ~300 lines, size:exception owner-granted 2026-09-19)
 

@@ -329,8 +329,29 @@ func minimalManifest(ids ...string) string {
 	return sb.String()
 }
 
-// setupFixture creates registry, manifest, and optional SKILL.md file under
-// dir/skills/<id>/SKILL.md when createSKILLMD is true.
+// lintCleanSkillMD returns the smallest valid SKILL.md fixture for AddCore
+// tests. The lifecycle gate applies to every existing fixture, so these
+// helpers keep unrelated lifecycle assertions focused on their original
+// behavior rather than on lint failures.
+func lintCleanSkillMD(id string) string {
+	return "---\n" +
+		"name: " + id + "\n" +
+		"description: A concise procedural skill for " + id + ".\n" +
+		"license: MIT\n" +
+		"metadata:\n" +
+		"  author: tester\n" +
+		"  version: \"1.0\"\n" +
+		"---\n" +
+		"## Activation Contract\n" +
+		"Load this skill for its documented procedure.\n\n" +
+		"## Hard Rules\n" +
+		"- Keep the procedure explicit.\n\n" +
+		"## Execution Steps\n" +
+		"1. Follow the procedure.\n"
+}
+
+// setupFixture creates registry, manifest, and lint-clean SKILL.md files under
+// dir/skills/<id>/SKILL.md for the requested skill IDs.
 func setupFixture(t *testing.T, dir string, regContent, mfContent string, skillIDs []string) (regPath, mfPath, skillsRoot string) {
 	t.Helper()
 	regPath = filepath.Join(dir, "registry.yaml")
@@ -351,7 +372,7 @@ func setupFixture(t *testing.T, dir string, regContent, mfContent string, skillI
 		if err := os.MkdirAll(skillDir, 0755); err != nil {
 			t.Fatal(err)
 		}
-		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte("# "+id+"\n"), 0644); err != nil {
+		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(lintCleanSkillMD(id)), 0644); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -419,6 +440,115 @@ func TestAddCoreSuccess(t *testing.T) {
 
 // TestAddCoreMissingSkillMD verifies SC-27: if the skills/<id>/SKILL.md file does
 // not exist, AddCore fails loud and leaves both files byte-unchanged.
+func TestAddCoreRejectsHardLintErrorBeforeWrites(t *testing.T) {
+	dir := t.TempDir()
+	regContent := minimalRegistry("existing")
+	mfContent := minimalManifest("existing")
+	regPath, mfPath, skillsRoot := setupFixture(t, dir, regContent, mfContent, []string{"existing", "foo"})
+
+	skillPath := filepath.Join(skillsRoot, "foo", "SKILL.md")
+	hardLintSkill := strings.Replace(lintCleanSkillMD("foo"), "  version: \"1.0\"\n", "", 1)
+	if err := os.WriteFile(skillPath, []byte(hardLintSkill), 0644); err != nil {
+		t.Fatal(err)
+	}
+	beforeReg, err := os.ReadFile(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	beforeManifest, err := os.ReadFile(mfPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errBuf bytes.Buffer
+	exitCode := 0
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode == 0 {
+		t.Fatal("AddCore: expected non-zero exit for a hard lint error")
+	}
+	if !strings.Contains(errBuf.String(), "[lint:required-fields]") || !strings.Contains(errBuf.String(), "metadata.version") {
+		t.Errorf("stderr %q should name the metadata.version lint error", errBuf.String())
+	}
+	gotReg, err := os.ReadFile(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(gotReg, beforeReg) {
+		t.Error("registry changed despite hard lint refusal")
+	}
+	gotManifest, err := os.ReadFile(mfPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Equal(gotManifest, beforeManifest) {
+		t.Error("manifest changed despite hard lint refusal")
+	}
+}
+
+func TestAddCoreWarningsOnlyProceeds(t *testing.T) {
+	dir := t.TempDir()
+	regPath, mfPath, skillsRoot := setupFixture(t, dir,
+		minimalRegistry("existing"),
+		minimalManifest("existing"),
+		[]string{"existing", "foo"},
+	)
+
+	skillPath := filepath.Join(skillsRoot, "foo", "SKILL.md")
+	warningsOnlySkill := strings.Replace(
+		lintCleanSkillMD("foo"),
+		"Load this skill for its documented procedure.",
+		"Load this skill from /home/example/fixture for its documented procedure.",
+		1,
+	)
+	if err := os.WriteFile(skillPath, []byte(warningsOnlySkill), 0644); err != nil {
+		t.Fatal(err)
+	}
+	hard, warnings := LintSkillFile([]byte(warningsOnlySkill))
+	if len(hard) != 0 {
+		t.Fatalf("warnings-only fixture has hard lint errors: %v", hard)
+	}
+	if !hasWarningRule(warnings, "home-path-leak") {
+		t.Fatalf("warnings-only fixture did not produce the expected warning: %v", warnings)
+	}
+
+	var out, errBuf bytes.Buffer
+	exitCode := -1
+	AddCore(
+		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
+		os.ReadFile, os.Stat,
+		&out, &errBuf,
+		func(c int) { exitCode = c },
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("AddCore rejected warnings-only skill: exit %d; stderr=%q", exitCode, errBuf.String())
+	}
+	regBytes, err := os.ReadFile(regPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	if err != nil {
+		t.Fatalf("re-parse after warnings-only add: %v", err)
+	}
+	found := false
+	for _, entry := range reg.Skills {
+		if entry.ID == "foo" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Error("warnings-only AddCore run did not add foo to the registry")
+	}
+}
+
 func TestAddCoreMissingSkillMD(t *testing.T) {
 	dir := t.TempDir()
 	regContent := minimalRegistry("existing")
