@@ -1,11 +1,6 @@
 package goal
 
-import (
-	"encoding/json"
-	"testing"
-)
-
-const validGoalJSON = `{"version":1,"project_id":"standalone-goal-contract","objective":"Represent user intent before workflow shaping.","scope":"One explicitly identified project.","constraints":["Use only structural deterministic validation."],"non_goals":["Grant execution authority."],"acceptance_criteria":["The contract is versioned and can be parsed strictly."],"memory_scope":"Project-scoped memory may be consulted later.","runtime_scope":"Runtime integration is decided later.","delivery_boundary":"No delivery operation is authorized."}`
+import "testing"
 
 func sampleGoal() Goal {
 	return Goal{
@@ -20,36 +15,6 @@ func sampleGoal() Goal {
 		RuntimeScope:       "Runtime integration is decided later.",
 		DeliveryBoundary:   "No delivery operation is authorized.",
 	}
-}
-
-func documentWith(t *testing.T, changes map[string]any) []byte {
-	t.Helper()
-	var fields map[string]any
-	if err := json.Unmarshal([]byte(validGoalJSON), &fields); err != nil {
-		t.Fatalf("decode valid test document: %v", err)
-	}
-	for key, value := range changes {
-		fields[key] = value
-	}
-	data, err := json.Marshal(fields)
-	if err != nil {
-		t.Fatalf("encode test document: %v", err)
-	}
-	return data
-}
-
-func documentWithout(t *testing.T, field string) []byte {
-	t.Helper()
-	var fields map[string]any
-	if err := json.Unmarshal([]byte(validGoalJSON), &fields); err != nil {
-		t.Fatalf("decode valid test document: %v", err)
-	}
-	delete(fields, field)
-	data, err := json.Marshal(fields)
-	if err != nil {
-		t.Fatalf("encode test document: %v", err)
-	}
-	return data
 }
 
 func TestValidateRejectsInvalidGoalValues(t *testing.T) {
