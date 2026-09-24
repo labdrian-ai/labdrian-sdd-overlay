@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "project_id": "standalone-goal-contract",
+  "objective": "Represent user intent before workflow shaping.",
+  "scope": "One explicitly identified project.",
+  "constraints": [
+    "Use only structural deterministic validation."
+  ],
+  "non_goals": [
+    "Grant execution authority."
+  ],
+  "acceptance_criteria": [
+    "The contract is versioned and can be parsed strictly."
+  ],
+  "memory_scope": "Project-scoped memory may be consulted later.",
+  "runtime_scope": "Runtime integration is decided later.",
+  "delivery_boundary": "No delivery operation is authorized."
+}

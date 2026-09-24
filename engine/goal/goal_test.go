@@ -2,6 +2,7 @@ package goal
 
 import (
 	"encoding/json"
+	"os"
 	"reflect"
 	"strings"
 	"testing"
@@ -166,5 +167,60 @@ func TestValidateAcceptsEmptyConstraintsAndNonGoals(t *testing.T) {
 	g.NonGoals = []string{}
 	if err := g.Validate(); err != nil {
 		t.Errorf("Validate rejected permitted empty arrays: %v", err)
+	}
+}
+
+func TestMarshalCanonicalBytesMatchVersionOneFixture(t *testing.T) {
+	want, err := os.ReadFile("testdata/v1.json")
+	if err != nil {
+		t.Fatalf("read v1 fixture: %v", err)
+	}
+	got, err := sampleGoal().Marshal()
+	if err != nil {
+		t.Fatalf("Marshal: %v", err)
+	}
+	if !reflect.DeepEqual(got, want) {
+		t.Errorf("Marshal bytes differ from v1 fixture:\ngot:\n%s\nwant:\n%s", got, want)
+	}
+	if len(got) == 0 || got[len(got)-1] != '\n' || (len(got) > 1 && got[len(got)-2] == '\n') {
+		t.Errorf("Marshal must end in exactly one newline; got %q", got)
+	}
+	orderedFields := []string{`"version"`, `"project_id"`, `"objective"`, `"scope"`, `"constraints"`, `"non_goals"`, `"acceptance_criteria"`, `"memory_scope"`, `"runtime_scope"`, `"delivery_boundary"`}
+	previous := -1
+	for _, field := range orderedFields {
+		index := strings.Index(string(got), field)
+		if index <= previous {
+			t.Errorf("canonical output field %s is missing or out of order in:\n%s", field, got)
+		}
+		previous = index
+	}
+}
+
+func TestVersionOneGoldenFixtureParsesAndRoundTrips(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/v1.json")
+	if err != nil {
+		t.Fatalf("read v1 fixture: %v", err)
+	}
+	got, err := Parse(fixture)
+	if err != nil {
+		t.Fatalf("Parse(v1 fixture): %v", err)
+	}
+	if !reflect.DeepEqual(got, sampleGoal()) {
+		t.Errorf("Parse(v1 fixture) = %#v, want %#v", got, sampleGoal())
+	}
+	encoded, err := got.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal(parsed fixture): %v", err)
+	}
+	if !reflect.DeepEqual(encoded, fixture) {
+		t.Errorf("v1 fixture did not round-trip byte-for-byte:\ngot:\n%s\nwant:\n%s", encoded, fixture)
+	}
+}
+
+func TestMarshalRejectsInvalidGoal(t *testing.T) {
+	g := sampleGoal()
+	g.Version = 0
+	if data, err := g.Marshal(); err == nil || data != nil {
+		t.Errorf("Marshal(invalid goal) = (%q, %v), want (nil, error)", data, err)
 	}
 }
