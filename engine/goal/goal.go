@@ -186,6 +186,19 @@ func (g Goal) Validate() error {
 	return nil
 }
 
+// Marshal returns the canonical JSON representation of a valid Goal: fields
+// in contract order, two-space indentation, and exactly one trailing newline.
+func (g Goal) Marshal() ([]byte, error) {
+	if err := g.Validate(); err != nil {
+		return nil, fmt.Errorf("marshal goal: %w", err)
+	}
+	data, err := json.MarshalIndent(g, "", "  ")
+	if err != nil {
+		return nil, fmt.Errorf("marshal goal: %w", err)
+	}
+	return append(data, '\n'), nil
+}
+
 func validateStringArray(name string, values []string, minItems int) error {
 	if values == nil {
 		return fmt.Errorf("%s must be a non-null string array", name)
