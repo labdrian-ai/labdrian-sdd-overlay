@@ -4,8 +4,12 @@
 package goal
 
 import (
+	"bytes"
+	"encoding/json"
 	"fmt"
+	"io"
 	"strings"
+	"unicode/utf8"
 )
 
 // Goal is the versioned declarative intent contract. Its field order is also
@@ -21,6 +25,128 @@ type Goal struct {
 	MemoryScope        string   `json:"memory_scope"`
 	RuntimeScope       string   `json:"runtime_scope"`
 	DeliveryBoundary   string   `json:"delivery_boundary"`
+}
+
+// Parse parses and validates one strict version-1 Goal JSON document. It
+// rejects duplicate or unknown fields, trailing input, and structurally
+// invalid Goal values without rewriting authored strings.
+func Parse(data []byte) (Goal, error) {
+	if !utf8.Valid(data) {
+		return Goal{}, fmt.Errorf("parse goal: input is not valid UTF-8")
+	}
+	if err := checkDuplicateJSONKeys(data); err != nil {
+		return Goal{}, fmt.Errorf("parse goal: %w", err)
+	}
+	if err := checkGoalFieldNames(data); err != nil {
+		return Goal{}, fmt.Errorf("parse goal: %w", err)
+	}
+
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.DisallowUnknownFields()
+
+	var g Goal
+	if err := dec.Decode(&g); err != nil {
+		return Goal{}, fmt.Errorf("parse goal: %w", err)
+	}
+	if err := dec.Decode(new(json.RawMessage)); err != io.EOF {
+		return Goal{}, fmt.Errorf("parse goal: trailing data after the Goal value")
+	}
+	if err := g.Validate(); err != nil {
+		return Goal{}, fmt.Errorf("parse goal: %w", err)
+	}
+	return g, nil
+}
+
+func checkGoalFieldNames(data []byte) error {
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	for field := range fields {
+		switch field {
+		case "version", "project_id", "objective", "scope", "constraints", "non_goals", "acceptance_criteria", "memory_scope", "runtime_scope", "delivery_boundary":
+		default:
+			return fmt.Errorf("unknown Goal field %q", field)
+		}
+	}
+	return nil
+}
+
+// checkDuplicateJSONKeys validates the JSON token structure while rejecting
+// duplicate keys in every object, before decoding into a Go struct can discard
+// duplicate member values.
+func checkDuplicateJSONKeys(data []byte) error {
+	dec := json.NewDecoder(bytes.NewReader(data))
+	dec.UseNumber()
+	if err := scanJSONValue(dec); err != nil {
+		if err == io.EOF {
+			return fmt.Errorf("empty JSON document")
+		}
+		return err
+	}
+	if _, err := dec.Token(); err != io.EOF {
+		if err == nil {
+			return fmt.Errorf("trailing data after JSON value")
+		}
+		return fmt.Errorf("trailing data after JSON value: %w", err)
+	}
+	return nil
+}
+
+func scanJSONValue(dec *json.Decoder) error {
+	token, err := dec.Token()
+	if err != nil {
+		return err
+	}
+	delim, ok := token.(json.Delim)
+	if !ok {
+		return nil
+	}
+
+	switch delim {
+	case '{':
+		seen := make(map[string]struct{})
+		for dec.More() {
+			keyToken, err := dec.Token()
+			if err != nil {
+				return err
+			}
+			key, ok := keyToken.(string)
+			if !ok {
+				return fmt.Errorf("object member name is not a string")
+			}
+			if _, exists := seen[key]; exists {
+				return fmt.Errorf("duplicate JSON object key %q", key)
+			}
+			seen[key] = struct{}{}
+			if err := scanJSONValue(dec); err != nil {
+				return err
+			}
+		}
+		end, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		if end != json.Delim('}') {
+			return fmt.Errorf("invalid JSON object termination")
+		}
+	case '[':
+		for dec.More() {
+			if err := scanJSONValue(dec); err != nil {
+				return err
+			}
+		}
+		end, err := dec.Token()
+		if err != nil {
+			return err
+		}
+		if end != json.Delim(']') {
+			return fmt.Errorf("invalid JSON array termination")
+		}
+	default:
+		return fmt.Errorf("unexpected JSON delimiter %q", delim)
+	}
+	return nil
 }
 
 // Validate checks the version and deterministic structural requirements of a
