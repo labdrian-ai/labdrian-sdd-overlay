@@ -55,6 +55,13 @@ func sampleGoal() Goal {
 	}
 }
 
+func sampleGoalV2() Goal {
+	g := sampleGoal()
+	g.Version = 2
+	g.GoalID = "goal-alpha"
+	return g
+}
+
 func TestParseValidGoalPreservesAuthoredValues(t *testing.T) {
 	data := documentWith(t, map[string]any{
 		"project_id":  "  project-x  ",
@@ -135,7 +142,9 @@ func TestValidateRejectsInvalidGoalValues(t *testing.T) {
 		name   string
 		mutate func(*Goal)
 	}{
-		{name: "unsupported version", mutate: func(g *Goal) { g.Version = 2 }},
+		{name: "unsupported version", mutate: func(g *Goal) { g.Version = 3 }},
+		{name: "goal id forbidden in version one", mutate: func(g *Goal) { g.GoalID = "goal-alpha" }},
+		{name: "blank version two goal id", mutate: func(g *Goal) { g.Version = 2 }},
 		{name: "blank project id", mutate: func(g *Goal) { g.ProjectID = " \t " }},
 		{name: "blank objective", mutate: func(g *Goal) { g.Objective = "" }},
 		{name: "blank scope", mutate: func(g *Goal) { g.Scope = " " }},
@@ -222,5 +231,131 @@ func TestMarshalRejectsInvalidGoal(t *testing.T) {
 	g.Version = 0
 	if data, err := g.Marshal(); err == nil || data != nil {
 		t.Errorf("Marshal(invalid goal) = (%q, %v), want (nil, error)", data, err)
+	}
+}
+
+func TestVersionTwoFixtureParsesAndMarshalsCanonically(t *testing.T) {
+	fixture, err := os.ReadFile("testdata/v2.json")
+	if err != nil {
+		t.Fatalf("read v2 fixture: %v", err)
+	}
+	got, err := Parse(fixture)
+	if err != nil {
+		t.Fatalf("Parse(v2 fixture): %v", err)
+	}
+	if !reflect.DeepEqual(got, sampleGoalV2()) {
+		t.Errorf("Parse(v2 fixture) = %#v, want %#v", got, sampleGoalV2())
+	}
+	encoded, err := got.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal(parsed v2 fixture): %v", err)
+	}
+	if !reflect.DeepEqual(encoded, fixture) {
+		t.Errorf("v2 fixture did not round-trip byte-for-byte:\ngot:\n%s\nwant:\n%s", encoded, fixture)
+	}
+}
+
+func TestVersionTwoPreservesAuthoredGoalID(t *testing.T) {
+	data := documentWith(t, map[string]any{"version": 2, "goal_id": "  goal-alpha  "})
+	got, err := Parse(data)
+	if err != nil {
+		t.Fatalf("Parse(v2 goal): %v", err)
+	}
+	if got.GoalID != "  goal-alpha  " {
+		t.Errorf("Parse rewrote authored goal_id: %q", got.GoalID)
+	}
+}
+
+func TestVersionTwoRequiresCallerSuppliedGoalID(t *testing.T) {
+	cases := []struct {
+		name    string
+		changes map[string]any
+		remove  string
+	}{
+		{name: "missing", remove: "goal_id"},
+		{name: "null", changes: map[string]any{"goal_id": nil}},
+		{name: "blank", changes: map[string]any{"goal_id": " \t "}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			data := documentWith(t, map[string]any{"version": 2, "goal_id": "goal-alpha"})
+			var fields map[string]any
+			if err := json.Unmarshal(data, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if tc.remove != "" {
+				delete(fields, tc.remove)
+			}
+			for key, value := range tc.changes {
+				fields[key] = value
+			}
+			data, err := json.Marshal(fields)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Parse(data); err == nil {
+				t.Errorf("Parse accepted %s goal_id", tc.name)
+			}
+		})
+	}
+}
+
+func TestVersionTwoIdentityAndStrictFieldValidation(t *testing.T) {
+	duplicateGoalID := strings.Replace(validGoalJSON, `"version":1`, `"version":2`, 1)
+	duplicateGoalID = strings.TrimSuffix(duplicateGoalID, "}") + `,"goal_id":"goal-alpha","goal_id":"goal-beta"}`
+	cases := []struct {
+		name string
+		data []byte
+	}{
+		{name: "unknown field", data: documentWith(t, map[string]any{"version": 2, "goal_id": "goal-alpha", "unexpected": true})},
+		{name: "duplicate goal_id", data: []byte(duplicateGoalID)},
+		{name: "malformed goal_id", data: documentWith(t, map[string]any{"version": 2, "goal_id": 17})},
+		{name: "wrong-case goal field", data: documentWith(t, map[string]any{"version": 2, "goal_id": "goal-alpha", "GOAL_ID": "goal-beta"})},
+		{name: "unsupported version", data: documentWith(t, map[string]any{"version": 3, "goal_id": "goal-alpha"})},
+		{name: "v1 rejects goal_id", data: documentWith(t, map[string]any{"goal_id": "goal-alpha"})},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			if _, err := Parse(tc.data); err == nil {
+				t.Errorf("Parse accepted %s", tc.name)
+			}
+		})
+	}
+
+	first := sampleGoalV2()
+	second := sampleGoalV2()
+	second.GoalID = "goal-beta"
+	firstJSON, err := first.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal(first): %v", err)
+	}
+	secondJSON, err := second.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal(second): %v", err)
+	}
+	parsedFirst, err := Parse(firstJSON)
+	if err != nil {
+		t.Fatalf("Parse(first): %v", err)
+	}
+	parsedSecond, err := Parse(secondJSON)
+	if err != nil {
+		t.Fatalf("Parse(second): %v", err)
+	}
+	if parsedFirst.ProjectID != parsedSecond.ProjectID || parsedFirst.GoalID == parsedSecond.GoalID {
+		t.Errorf("same-project Goals are not distinctly identified: first=%#v second=%#v", parsedFirst, parsedSecond)
+	}
+}
+
+func TestVersionOneDirectGoalAPIRemainsValid(t *testing.T) {
+	g := sampleGoal()
+	if err := g.Validate(); err != nil {
+		t.Fatalf("Validate(v1 Goal): %v", err)
+	}
+	data, err := g.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal(v1 Goal): %v", err)
+	}
+	if strings.Contains(string(data), "goal_id") {
+		t.Errorf("v1 Marshal unexpectedly includes goal_id: %s", data)
 	}
 }
