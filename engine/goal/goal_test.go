@@ -300,6 +300,66 @@ func TestVersionTwoRequiresCallerSuppliedGoalID(t *testing.T) {
 	}
 }
 
+func TestVersionTwoGoalIDWhitespaceBoundary(t *testing.T) {
+	accepted := []struct {
+		name  string
+		value string
+	}{
+		{name: "single ascii rune", value: "g"},
+		{name: "non-ascii rune", value: "g\u03a9"},
+		{name: "relative path-like", value: "../x"},
+		{name: "slash separated", value: "a/b"},
+		{name: "surrounding whitespace kept verbatim", value: " g\t"},
+	}
+	for _, tc := range accepted {
+		t.Run("accepts "+tc.name, func(t *testing.T) {
+			got, err := Parse(documentWith(t, map[string]any{"version": 2, "goal_id": tc.value}))
+			if err != nil {
+				t.Fatalf("Parse(goal_id %q): %v", tc.value, err)
+			}
+			if got.GoalID != tc.value {
+				t.Fatalf("Parse rewrote goal_id: got %q, want %q", got.GoalID, tc.value)
+			}
+			encoded, err := got.Marshal()
+			if err != nil {
+				t.Fatalf("Marshal(goal_id %q): %v", tc.value, err)
+			}
+			reparsed, err := Parse(encoded)
+			if err != nil {
+				t.Fatalf("Parse(Marshal(goal_id %q)): %v", tc.value, err)
+			}
+			if reparsed.GoalID != tc.value {
+				t.Errorf("goal_id did not round-trip: got %q, want %q", reparsed.GoalID, tc.value)
+			}
+		})
+	}
+
+	rejected := []struct {
+		name  string
+		value string
+	}{
+		{name: "no-break space", value: "\u00a0"},
+		{name: "ideographic space", value: "\u3000"},
+		{name: "line separator", value: "\u2028"},
+		{name: "next line", value: "\u0085"},
+		{name: "ascii spaces and tab", value: "  \t"},
+	}
+	for _, tc := range rejected {
+		t.Run("Parse rejects "+tc.name, func(t *testing.T) {
+			if _, err := Parse(documentWith(t, map[string]any{"version": 2, "goal_id": tc.value})); err == nil {
+				t.Errorf("Parse accepted whitespace-only goal_id %q", tc.value)
+			}
+		})
+		t.Run("Validate rejects "+tc.name, func(t *testing.T) {
+			g := sampleGoalV2()
+			g.GoalID = tc.value
+			if err := g.Validate(); err == nil {
+				t.Errorf("Validate accepted whitespace-only goal_id %q", tc.value)
+			}
+		})
+	}
+}
+
 func TestVersionTwoIdentityAndStrictFieldValidation(t *testing.T) {
 	duplicateGoalID := strings.Replace(validGoalJSON, `"version":1`, `"version":2`, 1)
 	duplicateGoalID = strings.TrimSuffix(duplicateGoalID, "}") + `,"goal_id":"goal-alpha","goal_id":"goal-beta"}`
@@ -313,6 +373,8 @@ func TestVersionTwoIdentityAndStrictFieldValidation(t *testing.T) {
 		{name: "wrong-case goal field", data: documentWith(t, map[string]any{"version": 2, "goal_id": "goal-alpha", "GOAL_ID": "goal-beta"})},
 		{name: "unsupported version", data: documentWith(t, map[string]any{"version": 3, "goal_id": "goal-alpha"})},
 		{name: "v1 rejects goal_id", data: documentWith(t, map[string]any{"goal_id": "goal-alpha"})},
+		{name: "v1 rejects empty goal_id", data: documentWith(t, map[string]any{"goal_id": ""})},
+		{name: "v1 rejects null goal_id", data: documentWith(t, map[string]any{"goal_id": nil})},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
