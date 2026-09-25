@@ -1,6 +1,8 @@
 package shaper
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -216,4 +218,41 @@ func TestBindGoalRejectsEmptyGoalPath(t *testing.T) {
 	h := sampleHandoff()
 	got, err := BindGoal(h, root, "")
 	assertRejectedWithoutPartialBinding(t, got, err, "an empty goalPath")
+}
+
+func TestBindGoalExposesSHA256OfExactEvaluatedBytes(t *testing.T) {
+	root := t.TempDir()
+	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
+	writeGoalFile(t, root, "goal.json", data)
+
+	got, err := BindGoal(sampleHandoff(), root, "goal.json")
+	if err != nil {
+		t.Fatalf("BindGoal: %v", err)
+	}
+	sum := sha256.Sum256(data)
+	if want := hex.EncodeToString(sum[:]); got.GoalSHA256 != want {
+		t.Errorf("GoalSHA256 = %q, want %q", got.GoalSHA256, want)
+	}
+}
+
+func TestBindGoalSHA256ChangesOnWhitespaceOnlyEdit(t *testing.T) {
+	root := t.TempDir()
+	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
+	writeGoalFile(t, root, "goal.json", data)
+	before, err := BindGoal(sampleHandoff(), root, "goal.json")
+	if err != nil {
+		t.Fatalf("BindGoal before edit: %v", err)
+	}
+
+	writeGoalFile(t, root, "goal.json", append(append([]byte{}, data...), '\n'))
+	after, err := BindGoal(sampleHandoff(), root, "goal.json")
+	if err != nil {
+		t.Fatalf("BindGoal after edit: %v", err)
+	}
+	if before.Goal.Objective != after.Goal.Objective {
+		t.Fatalf("whitespace-only edit changed the parsed Goal")
+	}
+	if before.GoalSHA256 == after.GoalSHA256 {
+		t.Errorf("GoalSHA256 did not change on a whitespace-only edit: %q", before.GoalSHA256)
+	}
 }
