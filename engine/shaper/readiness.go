@@ -75,6 +75,14 @@ const (
 	// different subject, presented view, or flag set than this evaluation
 	// derives, so it no longer describes this content.
 	ReasonClearanceMismatch Reason = "clearance_mismatch"
+	// ReasonViewUnpresentable (refused): the view the host would present
+	// holds a C0 control other than LF and TAB, DEL, a C1 control, a Unicode
+	// format control (bidirectional or invisible), or invalid UTF-8, any of
+	// which can hide or disguise text from the human while the view digest
+	// still binds it. The view is refused, never rewritten, so no Subject or
+	// View is produced and nothing about this content can be cleared. The
+	// detail names the section and rune offset.
+	ReasonViewUnpresentable Reason = "view_unpresentable"
 
 	// ReasonSourceUnrecorded (unprovable): a handoff or Goal source path is
 	// missing, so the subject's provenance is incomplete.
@@ -110,6 +118,7 @@ var reasonKinds = map[Reason]ReasonKind{
 	ReasonGoalIdentityMismatch:                  ReasonKindRefused,
 	ReasonWorktreeProvenanceMismatch:            ReasonKindRefused,
 	ReasonClearanceMismatch:                     ReasonKindRefused,
+	ReasonViewUnpresentable:                     ReasonKindRefused,
 	ReasonSourceUnrecorded:                      ReasonKindUnprovable,
 	ReasonGoalUnbound:                           ReasonKindUnprovable,
 	ReasonWorktreeProvenanceUnobserved:          ReasonKindUnprovable,
@@ -131,6 +140,7 @@ func Reasons() []Reason {
 		ReasonGoalIdentityMismatch,
 		ReasonWorktreeProvenanceMismatch,
 		ReasonClearanceMismatch,
+		ReasonViewUnpresentable,
 		ReasonSourceUnrecorded,
 		ReasonGoalUnbound,
 		ReasonWorktreeProvenanceUnobserved,
@@ -260,7 +270,7 @@ type ReadinessInput struct {
 // blocker in a fixed order, the flags raised for human review, the Subject a
 // clearance would have to bind, and the rendered view the host must present.
 // Subject and View are nil unless every piece of subject evidence is present
-// and consistent.
+// and consistent and the view is presentable (see ReasonViewUnpresentable).
 type Assessment struct {
 	State    State
 	Blockers []Blocker
@@ -276,7 +286,10 @@ type Assessment struct {
 //
 // A handoff whose bytes fail strict Parse is StateInvalid with the single
 // blocker ReasonHandoffInvalid. Otherwise every blocker is collected, and the
-// state is StateDraft while any blocker remains. A clearance counts only when
+// state is StateDraft while any blocker remains. A view holding a terminal
+// control or invisible formatting rune is refused with
+// ReasonViewUnpresentable and leaves Subject and View nil, so it is never
+// displayed and never cleared. A clearance counts only when
 // Verify produced it for exactly the Subject, view, and flags derived here;
 // it then resolves the flags and satisfies the clearance requirement. Handoff
 // version 1 always keeps ReasonAcceptanceVerificationUnrepresentable, so
@@ -371,14 +384,22 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 			GoalSHA256:        goalSHA,
 			Worktree:          worktree,
 		}
-		view = RenderView(PresentedView{
+		presented := PresentedView{
 			GoalBytes:    in.Goal.GoalBytes,
 			PlanBytes:    in.Handoff.Bytes,
 			GoalScope:    g.Scope,
 			GoalNonGoals: g.NonGoals,
 			OutOfScope:   h.OutOfScope,
 			Flags:        flags,
-		})
+		}
+		if err := checkPresentable(presented); err != nil {
+			// Refuse, never rewrite: withholding Subject and View means no
+			// caller can display this view and no clearance can match it.
+			block(ReasonViewUnpresentable, "%v", err)
+			subject = nil
+		} else {
+			view = RenderView(presented)
+		}
 	}
 
 	var clearanceBlocker *Blocker

@@ -276,7 +276,10 @@ func assessExitCode(s shaper.State) int {
 }
 
 // writeShaperAssessment prints a as JSON, or with view exactly its rendered
-// view bytes, and returns the exit code. Whenever the state is ready it also
+// view bytes, and returns the exit code. A view refused as unpresentable
+// (it holds a terminal control or invisible formatting rune) is never
+// printed: stdout stays empty, stderr names the blocker, and the exit code is
+// the non-zero draft code. Whenever the state is ready it also
 // prints shaper.ForgeryDisclosure: in the JSON, or on stderr with view so the
 // view bytes stay exact.
 func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report clearanceReport, view bool) int {
@@ -284,6 +287,11 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 	if view {
 		if a.View == nil {
 			fmt.Fprintf(stderr, "shaper assess: no presented view: subject evidence is incomplete or refused (state %s)\n", a.State)
+			for _, b := range a.Blockers {
+				if b.Reason == shaper.ReasonViewUnpresentable {
+					fmt.Fprintf(stderr, "shaper assess: refusing to print the view: %s: %s\n", b.Reason, b.Detail)
+				}
+			}
 		} else if _, err := stdout.Write(a.View); err != nil {
 			fmt.Fprintf(stderr, "error: shaper assess: write view: %v\n", err)
 			return 1

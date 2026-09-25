@@ -530,3 +530,39 @@ func TestShaperTestSha(t *testing.T) {
 		t.Fatal("SourceSHA256 is not lowercase hex SHA-256")
 	}
 }
+
+// TestShaperAssess_RefusesUnpresentableView proves a Goal scope that decodes
+// to a terminal control sequence is refused on every path: assess reports the
+// refused blocker, --view prints nothing and exits non-zero naming it, and
+// clearance record refuses before writing the store.
+func TestShaperAssess_RefusesUnpresentableView(t *testing.T) {
+	goal := strings.Replace(shaperTestGoal("standalone-shaper-handoff", `[]`), `"scope":"One project."`, `"scope":"One\u001b[8m hidden project."`, 1)
+	root, stateHome := shaperWorktree(t, shaperTestHandoff, goal)
+
+	a := decodeAssess(t, runShaperTest(assessArgs(root), ""))
+	if !containsString(assessReasons(a), "view_unpresentable") {
+		t.Fatalf("blockers %v lack view_unpresentable", assessReasons(a))
+	}
+	if a.Subject != nil {
+		t.Errorf("subject %+v present for an unpresentable view", a.Subject)
+	}
+
+	v := runShaperTest(assessArgs(root, "--view"), "")
+	if v.code == 0 {
+		t.Errorf("--view exit 0, want non-zero")
+	}
+	if v.stdout != "" {
+		t.Errorf("--view printed %q for an unpresentable view", v.stdout)
+	}
+	if !strings.Contains(v.stderr, "view_unpresentable") || !strings.Contains(v.stderr, "goal_scope") {
+		t.Errorf("--view stderr %q does not name view_unpresentable and the section", v.stderr)
+	}
+
+	r := runShaperTest(recordArgs(root, "--stdin"), `{"version":1}`)
+	if r.code != 1 || !strings.Contains(r.stderr, "view_unpresentable") {
+		t.Errorf("record exit %d stderr %q, want 1 naming view_unpresentable", r.code, r.stderr)
+	}
+	if files := listFiles(t, stateHome); len(files) != 0 {
+		t.Errorf("refused record wrote %v", files)
+	}
+}
