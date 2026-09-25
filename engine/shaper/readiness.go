@@ -13,10 +13,15 @@ import (
 // authority: even a ready handoff does not authorize, permit, or dispatch any
 // work, and it is not RDD review, Goal fulfillment, or Goal closure.
 //
-// In this version readiness is hard-capped at draft. Evaluate cannot return
-// StateReady, because VerifiedClearance has no constructor yet and because
-// handoff version 1 cannot represent a verification method or adjudication
-// path for each acceptance criterion.
+// In this version readiness is hard-capped at draft. A verified clearance is
+// accepted, but handoff version 1 cannot represent a verification method or
+// adjudication path for each acceptance criterion, so Evaluate still cannot
+// return StateReady for any handoff this package parses.
+//
+// A ready outcome is not a signature: any process running as the same OS
+// user can forge a clearance record, so ready rests only on content
+// digests and the runtime deny guards that keep the model from writing
+// records.
 type State string
 
 const (
@@ -28,7 +33,8 @@ const (
 	StateDraft State = "draft"
 	// StateReady means no blocker remains. It is unreachable in this
 	// version, and when reachable it will still grant no execution
-	// authority.
+	// authority. A ready outcome is not a signature: any process running
+	// as the same OS user can forge a clearance record.
 	StateReady State = "ready"
 )
 
@@ -65,6 +71,10 @@ const (
 	// ReasonWorktreeProvenanceMismatch (refused): the worktree root is not
 	// absolute and clean, or differs from the observed toplevel.
 	ReasonWorktreeProvenanceMismatch Reason = "worktree_provenance_mismatch"
+	// ReasonClearanceMismatch (refused): a verified clearance was bound to a
+	// different subject, presented view, or flag set than this evaluation
+	// derives, so it no longer describes this content.
+	ReasonClearanceMismatch Reason = "clearance_mismatch"
 
 	// ReasonSourceUnrecorded (unprovable): a handoff or Goal source path is
 	// missing, so the subject's provenance is incomplete.
@@ -83,7 +93,8 @@ const (
 	// ReasonClearanceMissing (unprovable): no clearance was supplied.
 	ReasonClearanceMissing Reason = "clearance_missing"
 	// ReasonClearanceUnverified (unprovable): a clearance value was supplied
-	// but this version has no verifier, so it is never accepted.
+	// that Verify did not produce, or the subject evidence is incomplete or
+	// refused, so the clearance cannot be matched to it.
 	ReasonClearanceUnverified Reason = "clearance_unverified"
 	// ReasonAcceptanceVerificationUnrepresentable (unprovable): handoff
 	// version 1 carries no verification method or adjudication path per
@@ -98,6 +109,7 @@ var reasonKinds = map[Reason]ReasonKind{
 	ReasonGoalDigestMismatch:                    ReasonKindRefused,
 	ReasonGoalIdentityMismatch:                  ReasonKindRefused,
 	ReasonWorktreeProvenanceMismatch:            ReasonKindRefused,
+	ReasonClearanceMismatch:                     ReasonKindRefused,
 	ReasonSourceUnrecorded:                      ReasonKindUnprovable,
 	ReasonGoalUnbound:                           ReasonKindUnprovable,
 	ReasonWorktreeProvenanceUnobserved:          ReasonKindUnprovable,
@@ -118,6 +130,7 @@ func Reasons() []Reason {
 		ReasonGoalDigestMismatch,
 		ReasonGoalIdentityMismatch,
 		ReasonWorktreeProvenanceMismatch,
+		ReasonClearanceMismatch,
 		ReasonSourceUnrecorded,
 		ReasonGoalUnbound,
 		ReasonWorktreeProvenanceUnobserved,
@@ -176,9 +189,9 @@ type Flag struct {
 // Flag and appears only inside a host-owned clearance record, never in
 // Shaper-authored JSON.
 type FlagResolution struct {
-	FlagID   string
-	Reason   string
-	Evidence string
+	FlagID   string `json:"flag_id"`
+	Reason   string `json:"reason"`
+	Evidence string `json:"evidence"`
 }
 
 // WorktreeProvenance is the bound part of a gitprov.Observation. HEAD is
@@ -196,6 +209,8 @@ type WorktreeProvenance struct {
 // the clearance record, never inside the handoff it binds, so there is no
 // circular digest.
 type Subject struct {
+	ProjectID         string
+	GoalID            string
 	HandoffSourcePath string
 	HandoffSHA256     string
 	GoalSourcePath    string
@@ -204,14 +219,26 @@ type Subject struct {
 }
 
 // VerifiedClearance is a host-owned human semantic clearance that has been
-// verified against a freshly observed Subject. It is opaque and sealed: it
-// has no exported fields, and this package has no constructor for it yet, so
-// the only values a caller can hold are nil and the zero value, and Evaluate
-// accepts neither. Shaper-authored JSON can never supply clearance, and a
-// clearance, once verifiable, will still grant no execution authority.
+// verified against a freshly evaluated Subject, flag set, and presented view.
+// It is opaque and sealed: it has no exported fields, and Verify is its only
+// constructor. Evaluate refuses the zero value and re-checks the binding
+// against its own fresh evaluation. Shaper-authored JSON can never supply
+// clearance, and a clearance grants no execution authority.
+//
+// It helps reach ready only as evidence of a claimed host capture. It is not
+// a signature: any process running as the same OS user can forge the record
+// it was verified from.
 type VerifiedClearance struct {
+	verified    bool
 	subject     Subject
+	viewSHA256  string
 	resolutions []FlagResolution
+}
+
+// matches reports whether c was verified against exactly this subject,
+// view digest, and flag set.
+func (c *VerifiedClearance) matches(subject Subject, viewSHA256 string, flags []Flag) bool {
+	return c.subject == subject && c.viewSHA256 == viewSHA256 && checkResolutionsExact(c.resolutions, flags) == nil
 }
 
 // ReadinessInput is the evidence one readiness evaluation considers. Evaluate
@@ -230,14 +257,18 @@ type ReadinessInput struct {
 }
 
 // Assessment is the result of one readiness evaluation: its state, every
-// blocker in a fixed order, the flags raised for human review, and the
-// Subject a clearance would have to bind. Subject is nil unless every piece
-// of subject evidence is present and consistent.
+// blocker in a fixed order, the flags raised for human review, the Subject a
+// clearance would have to bind, and the rendered view the host must present.
+// Subject and View are nil unless every piece of subject evidence is present
+// and consistent.
 type Assessment struct {
 	State    State
 	Blockers []Blocker
 	Flags    []Flag
 	Subject  *Subject
+	// View is RenderView of the evaluated content; the host displays these
+	// bytes verbatim and a clearance binds their ViewDigest.
+	View []byte
 }
 
 // Evaluate assesses readiness of in, given an optional clearance. It is pure:
@@ -245,10 +276,16 @@ type Assessment struct {
 //
 // A handoff whose bytes fail strict Parse is StateInvalid with the single
 // blocker ReasonHandoffInvalid. Otherwise every blocker is collected, and the
-// state is StateDraft while any blocker remains. In this version a blocker
-// always remains, so Evaluate never returns StateReady. Readiness grants no
+// state is StateDraft while any blocker remains. A clearance counts only when
+// Verify produced it for exactly the Subject, view, and flags derived here;
+// it then resolves the flags and satisfies the clearance requirement. Handoff
+// version 1 always keeps ReasonAcceptanceVerificationUnrepresentable, so
+// Evaluate never returns StateReady in this version. Readiness grants no
 // execution authority in any case, and Shaper-authored JSON can never supply
 // clearance or flag resolutions.
+//
+// A ready outcome, once reachable, is not a signature: any process running
+// as the same OS user can forge a clearance record.
 func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 	h, err := Parse(in.Handoff.Bytes)
 	if err != nil {
@@ -276,6 +313,7 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 
 	var flags []Flag
 	var goalSHA string
+	var g goal.Goal
 	if in.Goal == nil {
 		block(ReasonGoalUnbound, "no Goal binding supplied")
 		subjectOK = false
@@ -289,7 +327,8 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 			block(ReasonSourceUnrecorded, "goal source path is empty")
 			subjectOK = false
 		}
-		g, err := goal.Parse(in.Goal.GoalBytes)
+		parsed, err := goal.Parse(in.Goal.GoalBytes)
+		g = parsed
 		switch {
 		case err != nil:
 			block(ReasonGoalInvalid, "%v", err)
@@ -320,28 +359,54 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 		worktree = WorktreeProvenance{Toplevel: p.Toplevel, GitDir: p.GitDir, CommonDir: p.CommonDir}
 	}
 
-	if len(flags) > 0 {
-		block(ReasonFlagsUnresolved, "%d flag(s) await a host-captured human resolution", len(flags))
-	}
-	if clearance == nil {
-		block(ReasonClearanceMissing, "no host-owned clearance supplied")
-	} else {
-		block(ReasonClearanceUnverified, "no clearance verifier exists in this version")
-	}
-	if h.Version == 1 {
-		block(ReasonAcceptanceVerificationUnrepresentable, "handoff version 1 has no per-criterion verification method or adjudication path")
-	}
-
-	a := Assessment{State: StateDraft, Blockers: blockers, Flags: flags}
+	var subject *Subject
+	var view []byte
 	if subjectOK {
-		a.Subject = &Subject{
+		subject = &Subject{
+			ProjectID:         h.ProjectID,
+			GoalID:            h.GoalID,
 			HandoffSourcePath: in.Handoff.SourcePath,
 			HandoffSHA256:     handoffSHA,
 			GoalSourcePath:    in.Goal.SourcePath,
 			GoalSHA256:        goalSHA,
 			Worktree:          worktree,
 		}
+		view = RenderView(PresentedView{
+			GoalBytes:    in.Goal.GoalBytes,
+			PlanBytes:    in.Handoff.Bytes,
+			GoalScope:    g.Scope,
+			GoalNonGoals: g.NonGoals,
+			OutOfScope:   h.OutOfScope,
+			Flags:        flags,
+		})
 	}
+
+	var clearanceBlocker *Blocker
+	cleared := false
+	switch {
+	case clearance == nil:
+		clearanceBlocker = &Blocker{Reason: ReasonClearanceMissing, Detail: "no host-owned clearance supplied"}
+	case !clearance.verified:
+		clearanceBlocker = &Blocker{Reason: ReasonClearanceUnverified, Detail: "clearance was not produced by Verify"}
+	case subject == nil:
+		clearanceBlocker = &Blocker{Reason: ReasonClearanceUnverified, Detail: "subject evidence is incomplete or refused, so the clearance cannot be matched"}
+	case !clearance.matches(*subject, ViewDigest(view), flags):
+		clearanceBlocker = &Blocker{Reason: ReasonClearanceMismatch, Detail: "clearance was verified against a different subject, view, or flag set"}
+	default:
+		cleared = true
+	}
+
+	if len(flags) > 0 && !cleared {
+		block(ReasonFlagsUnresolved, "%d flag(s) await a host-captured human resolution", len(flags))
+	}
+	if clearanceBlocker != nil {
+		blockers = append(blockers, *clearanceBlocker)
+	}
+	if h.Version == 1 {
+		block(ReasonAcceptanceVerificationUnrepresentable, "handoff version 1 has no per-criterion verification method or adjudication path")
+	}
+
+	a := Assessment{State: StateDraft, Blockers: blockers, Flags: flags, Subject: subject, View: view}
 	if len(blockers) == 0 {
 		a.State = StateReady
 	}

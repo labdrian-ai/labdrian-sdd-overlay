@@ -89,6 +89,8 @@ func TestEvaluateCompleteEvidenceWithNilClearanceStaysDraft(t *testing.T) {
 		t.Fatalf("Subject = nil, want the bound subject")
 	}
 	wantSubject := Subject{
+		ProjectID:         "standalone-shaper-handoff",
+		GoalID:            "goal-alpha",
 		HandoffSourcePath: "handoff.json",
 		HandoffSHA256:     sha256Hex([]byte(validHandoffJSON)),
 		GoalSourcePath:    "goal.json",
@@ -385,10 +387,11 @@ func TestVerifiedClearanceHasNoExportedFields(t *testing.T) {
 }
 
 // TestPackageExposesNoVerifiedClearanceConstructor parses every non-test
-// source file of this package and fails if any function returns a
-// VerifiedClearance, or if any code builds one with a non-empty composite
-// literal. Until a verifier lands, the only obtainable values are nil and
-// the zero value, and Evaluate refuses both.
+// source file of this package and fails if any function other than Verify
+// returns a VerifiedClearance, or if any code outside Verify builds one with
+// a non-empty composite literal. Verify is the only constructor, so a
+// clearance can be obtained only by verifying a record against a freshly
+// evaluated Subject and view.
 func TestPackageExposesNoVerifiedClearanceConstructor(t *testing.T) {
 	files, err := filepath.Glob("*.go")
 	if err != nil {
@@ -396,6 +399,7 @@ func TestPackageExposesNoVerifiedClearanceConstructor(t *testing.T) {
 	}
 	fset := token.NewFileSet()
 	checked := 0
+	constructors := 0
 	for _, name := range files {
 		if strings.HasSuffix(name, "_test.go") {
 			continue
@@ -409,38 +413,50 @@ func TestPackageExposesNoVerifiedClearanceConstructor(t *testing.T) {
 			t.Fatalf("parse %s: %v", name, err)
 		}
 		checked++
-		ast.Inspect(file, func(n ast.Node) bool {
-			switch node := n.(type) {
-			case *ast.FuncDecl:
-				if node.Type.Results == nil {
-					return true
-				}
-				for _, field := range node.Type.Results.List {
-					if mentionsVerifiedClearance(field.Type) {
+		for _, decl := range file.Decls {
+			fn, isFunc := decl.(*ast.FuncDecl)
+			inVerify := isFunc && fn.Recv == nil && fn.Name.Name == "Verify"
+			ast.Inspect(decl, func(n ast.Node) bool {
+				switch node := n.(type) {
+				case *ast.FuncDecl:
+					if node.Type.Results == nil {
+						return true
+					}
+					for _, field := range node.Type.Results.List {
+						if !mentionsVerifiedClearance(field.Type) {
+							continue
+						}
+						if inVerify {
+							constructors++
+							continue
+						}
 						t.Errorf("%s: func %s returns a VerifiedClearance", fset.Position(node.Pos()), node.Name.Name)
 					}
-				}
-			case *ast.FuncLit:
-				if node.Type.Results == nil {
-					return true
-				}
-				for _, field := range node.Type.Results.List {
-					if mentionsVerifiedClearance(field.Type) {
-						t.Errorf("%s: function literal returns a VerifiedClearance", fset.Position(node.Pos()))
+				case *ast.FuncLit:
+					if node.Type.Results == nil {
+						return true
+					}
+					for _, field := range node.Type.Results.List {
+						if mentionsVerifiedClearance(field.Type) {
+							t.Errorf("%s: function literal returns a VerifiedClearance", fset.Position(node.Pos()))
+						}
+					}
+				case *ast.CompositeLit:
+					// An elided element type (inside a slice or map literal) has
+					// a nil Type.
+					if !inVerify && node.Type != nil && mentionsVerifiedClearance(node.Type) && len(node.Elts) > 0 {
+						t.Errorf("%s: non-empty VerifiedClearance composite literal outside Verify", fset.Position(node.Pos()))
 					}
 				}
-			case *ast.CompositeLit:
-				// An elided element type (inside a slice or map literal) has
-				// a nil Type.
-				if node.Type != nil && mentionsVerifiedClearance(node.Type) && len(node.Elts) > 0 {
-					t.Errorf("%s: non-empty VerifiedClearance composite literal", fset.Position(node.Pos()))
-				}
-			}
-			return true
-		})
+				return true
+			})
+		}
 	}
 	if checked == 0 {
 		t.Fatalf("no package sources checked")
+	}
+	if constructors != 1 {
+		t.Errorf("found %d Verify results of type VerifiedClearance, want exactly 1", constructors)
 	}
 }
 
