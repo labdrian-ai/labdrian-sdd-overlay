@@ -280,8 +280,9 @@ func assessExitCode(s shaper.State) int {
 // (it holds a terminal control or invisible formatting rune) is never
 // printed: stdout stays empty, stderr names the blocker, and the exit code is
 // the non-zero draft code. Whenever the state is ready it also
-// prints shaper.ForgeryDisclosure: in the JSON, or on stderr with view so the
-// view bytes stay exact.
+// prints shaper.ReadyDisclosure (the forgery limit, then the statement that
+// the full Phase 3 plan outcome is not yet met): in the JSON, or on stderr
+// with view so the view bytes stay exact.
 func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report clearanceReport, view bool) int {
 	code := assessExitCode(a.State)
 	if view {
@@ -297,7 +298,7 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 			return 1
 		}
 		if a.State == shaper.StateReady {
-			fmt.Fprintln(stderr, shaper.ForgeryDisclosure)
+			fmt.Fprintln(stderr, shaper.ReadyDisclosure)
 		}
 		return code
 	}
@@ -329,7 +330,7 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 		}
 	}
 	if a.State == shaper.StateReady {
-		out.Disclosure = shaper.ForgeryDisclosure
+		out.Disclosure = shaper.ReadyDisclosure
 	}
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
