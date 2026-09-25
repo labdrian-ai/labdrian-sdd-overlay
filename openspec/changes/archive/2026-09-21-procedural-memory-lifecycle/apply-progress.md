@@ -397,3 +397,65 @@ Unrelated untracked `.agents/`, `.claude/skills/`, `.pi/`, and `skills-lock.json
 - [ ] F.5 Run the full acceptance checklist from sections 11 (Phase 4), and the sdd-verify checklists implied by Phases 2, 6, 7a-i, 7a-ii against real Engram records and a temp git repo; record results honestly, including any scenario that could not be exercised (e.g. the rollback-failure print path, or the Codex smoke test if `UNVERIFIED`)
 - [ ] F.6 Confirm every Success Criteria checkbox in `proposal.md` is satisfied or explicitly recorded as a known gap (in particular the Codex-support claim, gated strictly by the recorded smoke-test verdict)
 ```
+
+## Final verification reconciliation (read-only)
+
+- **Phase:** Final verification after Phase 7b; no source, commit, or unrelated-tree mutation was performed.
+- **Native status consumed before reconciliation:** `gentle-ai.sdd-status` v2; `artifactStore: openspec`; `applyState: ready`; `nextRecommended: apply`; `blockedReasons: []`; workspace and allowed edit root `/home/labdrian/labdrian-sdd-overlay`.
+- **Task authority:** the six final verification tasks were completed as procedures and are now checked in `tasks.md`. F.5 and F.6 remain partial-result tasks because their wording requires honest recording of unavailable or inconclusive scenarios; a checked task does not turn those scenarios into passes.
+
+### Completed final verification tasks and checkbox updates
+
+- [x] F.1 — `cd engine && go vet ./... && go test ./...` exited 0.
+- [x] F.2 — `cd longterm-mem && go vet ./... && go test ./...` exited 0.
+- [x] F.3 — `git diff --stat main...HEAD -- skills` showed only the shared contract and expected style/skill documentation; no project-tier runtime target write was introduced.
+- [x] F.4 — Changed tests and acceptance fixtures use temporary repositories/directories; no live runtime, home directory, `.claude/skills/`, `.agents/`, `.pi/`, `skills-lock.json`, or unrelated untracked tree was used by the verified scenarios.
+- [x] F.5 — The sections 11, 2, 6, 7a-i, and 7a-ii acceptance evidence was reconciled against real Engram records and isolated temporary repositories. Result is **PARTIAL**: the retirement rollback-of-rollback diagnostic branch was not exercised; Codex body loading remains host-inconclusive.
+- [x] F.6 — Every proposal success criterion was mapped to passing evidence or an explicit known gap. Result is **PARTIAL**: Codex support is scoped to project-skill discovery; body loading is unverified.
+
+### Canonical strict-TDD evidence reconciliation (slices 5–7b)
+
+The following table supplies the required task-level `Safety Net`, `RED`, `GREEN`, `TRIANGULATE`, and `REFACTOR` columns for the implementation slices. Historical apply entries are the evidence source; no implementation was reverted merely to recreate RED. Where the historical record did not preserve a numeric baseline count, the table says so rather than inventing one. Structural documentation and verification-only tasks use an explicit `N/A` or `➖` entry.
+
+| Task | Test file / evidence surface | Layer | Safety Net | RED | GREEN | TRIANGULATE | REFACTOR |
+|---|---|---|---|---|---|---|---|
+| 5.1 | `engine/skills/lifecycle_test.go` | Unit/FS | ✅ Focused existing skills suite passed (count not captured) | ✅ Written; focused run failed only at the absent AddCore gate | ✅ `cd engine && go test ./skills/...` passed | ✅ Hard-refusal, warnings-only, and retained SC-65–SC-68 cases | ✅ Byte preservation and write-order refusal rerun |
+| 5.2 | `engine/skills/lifecycle_test.go` | Unit/FS | ✅ Existing focused suite (count not captured) | ✅ Written in 5.1 before production edits | ✅ Lint gate passed focused tests | ✅ Hard findings block; warnings continue | ✅ Refusal returns before serialization and writes |
+| 5.3 | `skills/_shared/procedural-candidate-detection.md` | Contract/document | N/A (document task) | ➖ Structural prose task; no separate RED run recorded | ✅ Section 12 added and read against AddCore behavior | ➖ One human-promotion branch; no new runtime branch | ✅ Promotion wording and History fields reviewed |
+| 5.4 | `engine/skills/lifecycle_test.go` | Unit/FS refactor | ✅ Lifecycle regression suite (count not captured) | ➖ Refactor task; reused 5.1 RED | ✅ Existing hard-refusal test passed | ✅ Serialization, manifest, and atomic-write boundaries checked | ✅ Ordering comments and behavior rerun |
+| 5.5 | Engine verification commands | Verification | N/A (verification-only) | ➖ Verification-only | ✅ Vet and focused/full engine tests passed | ✅ Focused plus full package coverage | ➖ No source refactor |
+| 6.1 | `engine/skills/project_register_test.go`; `project_cli_test.go` | Unit/FS/CLI | ✅ Existing skills/CLI suites passed (counts not captured) | ✅ Written; focused run failed on undefined revision symbols | ✅ Focused revision/status tests passed after GREEN | ✅ Three ownership reasons, success metadata, rollback, and status owner output | ✅ Focused and full reruns passed |
+| 6.2 | `engine/skills/project_register_test.go` | Unit/FS | ✅ Existing registration suite (count not captured) | ✅ Written in 6.1 before planner edits | ✅ Planner/executor tests passed | ✅ Hash/revision bump and injected mid-run rollback | ✅ Shared backup/restore executor seam retained |
+| 6.3 | `engine/skills/project_cli_test.go` | CLI | ✅ Existing CLI suite (count not captured) | ✅ Written in 6.1 before CLI edits | ✅ Status/revise dispatch tests passed | ✅ Refusals, dispatch, and output variants | ✅ Parser and dispatch wiring consolidated |
+| 6.4 | `skills/_shared/procedural-candidate-detection.md` | Contract/document | N/A (document task) | ➖ Structural prose task; no separate RED run recorded | ✅ Section 13 added | ➖ Derived occurrence rule has one documented decision path | ✅ Trigger wording aligned with implementation |
+| 6.5 | `engine/skills/project_register_test.go` | Unit/FS refactor | ✅ Registration/revision suite (count not captured) | ✅ Existing revision tests preceded helper sharing | ✅ Shared preparation behavior passed | ✅ Registration and revision both exercise stamp/lint/hash/write | ✅ `prepareProjectSkill` is the single ordering path |
+| 6.6 | Engine verification commands | Verification | N/A (verification-only) | ➖ Verification-only | ✅ Vet and focused/full engine tests passed | ✅ Full engine suite triangulated the package tests | ➖ No source refactor |
+| 7a-i.1 | `engine/skills/project_register_test.go` | Unit/FS | ✅ Existing registration/rollback suite (count not captured) | ✅ Written; focused run failed on undefined retirement symbols | ✅ Retirement test matrix passed | ✅ Agent/human ownership, both consolidation targets, and partial rollback cases were covered; the rollback-of-rollback diagnostic scenario remains unavailable for final acceptance | ✅ Gofmt, focused/full tests, and diff checks passed |
+| 7a-i.2 | `engine/skills/project_register.go` | Unit/FS | ✅ Existing registration suite (count not captured) | ✅ Written in 7a-i.1 before production edits | ✅ Planner/executor retirement tests passed | ✅ Delete ordering, lock-last commit, ownership, and rollback behavior | ✅ Existing plan/executor seams reused |
+| 7a-i.3 | Engine verification commands | Verification | N/A (verification-only) | ➖ Verification-only | ✅ `go vet ./...` and `go test ./skills/...` passed | ✅ Full engine suite also passed | ➖ No source refactor |
+| 7a-ii.1 | `engine/skills/project_cli_test.go` | CLI | ✅ Existing CLI suite (count not captured) | ✅ Written; focused run failed on undefined `RenderProjectRetireCore` | ✅ Retirement/supersession tests passed | ✅ Dispatch, id match, candidate-slug match, and rollback exit behavior | ✅ Gofmt and focused package rerun |
+| 7a-ii.2 | `engine/skills/project_cli.go`; `skills.go`; `cmd/main.go` | CLI | ✅ Existing skills/CLI suite (count not captured) | ✅ Written in 7a-ii.1 before wiring edits | ✅ Explicit retirement and status output passed | ✅ Successful removal, refusal, dry-run, and supersession variants | ✅ Supersession formatting kept in one helper |
+| 7a-ii.3 | Contract document and `procedural_candidate_contract_test.go` | Contract/document | ✅ Existing contract suite (count not captured) | ✅ Written; first assertion run failed on wrapped literal matching | ✅ Section-14 contract assertions passed | ✅ Project/global paths, six reasons, AbsorbedInto, and detector boundary | ✅ Whitespace normalization made assertions non-vacuous |
+| 7a-ii.4 | CLI path and section-14 contract | Structural | ✅ Focused CLI/contract suites (counts not captured) | ➖ Structural refactor task | ✅ Explicit-only invocation and report-only boundary confirmed | ✅ Successful explicit invocation plus detector-independent path | ✅ No additional production behavior introduced |
+| 7a-ii.5 | Engine verification commands | Verification | N/A (verification-only) | ➖ Verification-only | ✅ Focused, vet, and full engine tests passed | ✅ Full engine suite passed | ➖ No source refactor |
+| 7b.1 | `longterm-mem/internal/staleness/staleness_test.go` | Unit/history | ✅ Existing staleness suite (count not captured) | ✅ Written; focused run failed on undefined exported functions | ✅ Focused staleness suite passed | ✅ Inline/fenced extraction and present/deleted/renamed/unknown classification | ✅ Existing `Detect` behavior remained unchanged |
+| 7b.2 | `longterm-mem/internal/staleness/staleness.go` | Unit/history | ✅ Existing staleness suite (count not captured) | ✅ Written in 7b.1 before export edits | ✅ Exported helpers passed focused tests | ✅ Multiple path classes and strict matcher cases | ✅ Shared private helpers retained |
+| 7b.3 | `longterm-mem/internal/skillstale/skillstale_test.go`; lock fixture | Integration/temp Git/Engram | N/A (new test package and fixture) | ✅ Written; package failed because no non-test Go files existed | ✅ Detector test matrix passed after GREEN | ✅ Removed, moved, clean, command, quiet, ordering, lock, and zero-mutation cases | ✅ Temporary Git/Engram fixtures and snapshots reviewed |
+| 7b.4 | `longterm-mem/internal/skillstale/skillstale_test.go` | Integration/read-only | N/A (new detector file) | ✅ Written in 7b.3 before detector implementation | ✅ Lock, staleness, PATH, and Engram read-only tests passed | ✅ All detector signals and mutation snapshot cases | ✅ No `os/exec`; no writes to skills, lock, or Engram |
+| 7b.5 | `longterm-mem/cmd/longterm-mem/cmd_skills_stale_test.go` | CLI/integration | ✅ Existing command suite (count not captured) | ✅ Written; pre-wiring command tests returned unknown-subcommand usage | ✅ Focused command tests passed | ✅ Absolute-root, dispatch, and report-only output cases | ✅ Gofmt and full command/module rerun |
+| 7b.6 | `engine/skills/project_lock_test.go`; shared fixture | Cross-module contract | ✅ Existing engine skills suite (count not captured) | ✅ Written as part of the 7b fixture matrix before the pinning implementation | ✅ Byte-for-byte serialization pin passed | ✅ Lock parse plus engine/longterm-mem fixture agreement | ✅ Cross-module focused test rerun |
+| 7b.7 | Import/write review and detector tests | Static/read-only | ✅ Existing longterm-mem tests (count not captured) | ➖ Static/refactor task; no new behavior test required | ✅ Import allowlist and zero-mutation review passed | ✅ `os/exec` scan, tree snapshot, lock/Engram read-only checks | ✅ No production write path or allowlist widening |
+| 7b.8 | Module verification commands | Verification | N/A (verification-only) | ➖ Verification-only | ✅ Focused vet/test command passed | ✅ Full longterm-mem and engine suites also passed | ➖ No source refactor |
+
+### Verification caveats retained explicitly
+
+- Exact historical safety-net test counts were not captured in the earlier apply entries. The canonical table records the observed baseline command/result where available and does not manufacture counts.
+- The retirement rollback-of-rollback diagnostic branch (`error: rollback incomplete: <rel-path>`) was not independently exercised during final acceptance. Existing unit/CLI coverage and implementation inspection were retained, but no pass is claimed for that unexecuted scenario.
+- Codex 0.148.0 project-skill discovery is verified only for `.agents/skills/<id>/` name/description exposure. Body loading remains **UNVERIFIED/INCONCLUSIVE** because the host sandbox failed with `bwrap: loopback: Operation not permitted`; the sandbox was not weakened.
+
+### Final files and status
+
+- Updated: `openspec/changes/procedural-memory-lifecycle/tasks.md` and this cumulative `apply-progress.md`.
+- Preserved and reconciled: `openspec/changes/procedural-memory-lifecycle/verify-report.md`.
+- No source, commit, push, PR, archive, or native lifecycle mutation was performed.
+- No implementation tasks remain unchecked. Fresh native status after persistence reports `taskProgress: 118/118`, `applyState: all_done`, `nextRecommended: archive`, and `blockedReasons: []`.
