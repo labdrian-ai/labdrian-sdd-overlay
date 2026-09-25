@@ -13,11 +13,24 @@ import (
 // can hide, reorder, or disguise text on the human's terminal or editor while
 // the view digest still binds the hidden bytes. Such content is refused, never
 // rewritten: rewriting would present something other than the bound bytes.
+// Invisible runes outside Cf that render no glyph are refused too: variation
+// selectors (a known hidden-text channel), the combining grapheme joiner,
+// Hangul fillers, line and paragraph separators, and the Khmer and Mongolian
+// invisibles. The cost is that text carrying them, such as an emoji with a
+// variation selector, cannot be cleared.
 func unpresentableRune(r rune) bool {
 	switch {
 	case r == '\n' || r == '\t':
 		return false
 	case r < 0x20, r == 0x7f, r >= 0x80 && r <= 0x9f:
+		return true
+	case r >= 0xFE00 && r <= 0xFE0F, r >= 0xE0100 && r <= 0xE01EF:
+		return true
+	case r == 0x034F, r == 0x115F, r == 0x1160, r == 0x3164, r == 0xFFA0:
+		return true
+	case r == 0x2028, r == 0x2029, r == 0x17B4, r == 0x17B5:
+		return true
+	case r >= 0x180B && r <= 0x180F:
 		return true
 	}
 	return unicode.Is(unicode.Cf, r)

@@ -208,3 +208,24 @@ func TestVerifyAndCheckRecordBindingRefuseUnpresentableView(t *testing.T) {
 		})
 	}
 }
+
+// TestUnpresentableRuneRefusesInvisibleNonFormatRunes pins the invisible
+// runes outside category Cf that render no glyph and can smuggle hidden text:
+// variation selectors (both blocks), the combining grapheme joiner, Hangul
+// fillers, line and paragraph separators, and the Khmer and Mongolian
+// invisibles. Visible neighbours stay presentable.
+func TestUnpresentableRuneRefusesInvisibleNonFormatRunes(t *testing.T) {
+	for _, r := range []rune{0xFE00, 0xFE0F, 0xE0100, 0xE01EF, 0x034F, 0x115F, 0x1160, 0x3164, 0xFFA0, 0x2028, 0x2029, 0x17B4, 0x17B5, 0x180B, 0x180C, 0x180D, 0x180F} {
+		if !unpresentableRune(r) {
+			t.Errorf("%U is accepted; want refused", r)
+		}
+		if err := checkPresentableText("plan", []byte("ok"+string(r)+"ok")); err == nil {
+			t.Errorf("checkPresentableText accepted %U", r)
+		}
+	}
+	for _, r := range []rune{'a', 0x00E9, 0x2764, 0xFE10, 0x0301, 0x1161} {
+		if unpresentableRune(r) {
+			t.Errorf("%U is refused; want presentable", r)
+		}
+	}
+}
