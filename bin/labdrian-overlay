@@ -591,7 +591,6 @@ Commands:
                                    from stdin, writes JSON to stdout. Used by the
                                    prespec-malandra skill.
   skills <verb>                    Forward to the engine's skills registry core
-  shaper <verb>                    Forward Shaper handoff verbs (assess, clearance record) to the engine
                                    list      print sorted registry entries
                                    status    print count summary
                                    validate  cross-check registry vs overlay.manifest,
@@ -605,6 +604,9 @@ Commands:
                                              inert labels for a file you already committed.
                                    remove <id> unregister a skill from registry + manifest
                                    sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
+  shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
+                                   assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
+                                   clearance record --stdin  store a human decision (Pi /shaper-clear)
   validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator

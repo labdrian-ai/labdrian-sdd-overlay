@@ -77,6 +77,17 @@ case_refuses_when_engine_missing() {
   fi
 }
 
+case_help_lists_shaper_with_its_own_verbs() {
+  local line
+  line="$(HOME="$work_root" bash "$OVERLAY" --help 2>&1 | grep -A1 '^  shaper <verb>' | tail -1)"
+  if [[ "$line" == *assess* ]]; then
+    pass "--help lists shaper with its own verbs, not the skills sub-verbs"
+  else
+    fail "--help attaches the wrong sub-verbs to shaper" "next line: $line"
+  fi
+}
+
+case_help_lists_shaper_with_its_own_verbs
 case_forwards_verb_and_args_verbatim
 case_preserves_engine_exit_status
 case_refuses_when_engine_missing
