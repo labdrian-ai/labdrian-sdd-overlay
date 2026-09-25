@@ -591,6 +591,7 @@ Commands:
                                    from stdin, writes JSON to stdout. Used by the
                                    prespec-malandra skill.
   skills <verb>                    Forward to the engine's skills registry core
+  shaper <verb>                    Forward Shaper handoff verbs (assess, clearance record) to the engine
                                    list      print sorted registry entries
                                    status    print count summary
                                    validate  cross-check registry vs overlay.manifest,
@@ -3331,6 +3332,19 @@ cmd_skills() {
 }
 
 # ---------------------------------------------------------------------------
+# shaper
+# ---------------------------------------------------------------------------
+
+# cmd_shaper forwards `labdrian shaper <verb>` to the engine unchanged, so the
+# engine's exit codes (0 ready, 3 draft, 2 invalid, 1 error) reach the caller.
+cmd_shaper() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" shaper "$@"
+}
+
+# ---------------------------------------------------------------------------
 # validate-entry-contract
 # ---------------------------------------------------------------------------
 
@@ -4376,6 +4390,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     install-alias)   cmd_install_alias "$@" ;;
     prespec)         cmd_prespec "$@" ;;
     skills)          cmd_skills "$@" ;;
+    shaper)          cmd_shaper "$@" ;;
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;
     deterministic-checks) cmd_deterministic_checks "$@" ;;
     archive-reconcile) cmd_archive_reconcile "$@" ;;
