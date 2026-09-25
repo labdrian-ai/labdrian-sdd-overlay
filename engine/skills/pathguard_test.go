@@ -353,11 +353,13 @@ func TestResolvePathKeepingMissing_PermissionDenialIsAGenuineFailure(t *testing.
 }
 
 // TestResolvedWithinRootUsing_RootResolutionFailureFailsClosed is COV-4. The
-// root-resolution error branch had no witness, and removing it is FAIL-OPEN:
-// resolvedRoot is left as "" and withinRoot("", p) is true for every absolute
-// path, so every destination on earth would be reported as contained. The
-// resolver's own error must reach the caller unchanged (errors.Is), which the
-// belt-and-braces empty-path guard alone would not satisfy.
+// root-resolution error branch had no witness. It was once the only thing
+// keeping a failed resolution from reaching withinRoot("", p), which used to
+// be true for every absolute path. withinRoot now refuses an empty root on its
+// own, so the branch is defence in depth: it turns the failure into the
+// resolver's own error instead of a bare false verdict. That error must reach
+// the caller unchanged (errors.Is), which the belt-and-braces empty-path guard
+// alone would not satisfy.
 func TestResolvedWithinRootUsing_RootResolutionFailureFailsClosed(t *testing.T) {
 	boom := errors.New("resolver refused the root")
 	const root = "/project"
@@ -369,10 +371,10 @@ func TestResolvedWithinRootUsing_RootResolutionFailureFailsClosed(t *testing.T) 
 		return p, nil
 	}
 
-	// Precondition: with resolvedRoot left empty, the lexical helper admits
-	// everything — that is what the branch prevents.
-	if !withinRoot("", "/anywhere/at/all") {
-		t.Fatal("precondition: withinRoot(\"\", p) was expected to be fail-open")
+	// Precondition: the lexical helper refuses an empty root by itself, so
+	// the explicit branch below is defence in depth, not the only guard.
+	if withinRoot("", "/anywhere/at/all") {
+		t.Fatal("withinRoot(\"\", p) must refuse an empty root")
 	}
 
 	inside, err := resolvedWithinRootUsing(resolve, root, "/anywhere/at/all")
