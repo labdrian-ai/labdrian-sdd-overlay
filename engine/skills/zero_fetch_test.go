@@ -17,6 +17,11 @@ import (
 // a reviewer to consciously widen this list — making a stealth network/exec
 // dependency impossible to land silently. Notably absent: net, net/http, os/exec,
 // and any package whose path contains "git".
+//
+// The single module-internal exception is pathguardImport, a pure
+// path-containment helper. Its own imports are held to this same allowlist by
+// TestZeroFetchCoversPathguardImports, so the exception cannot widen the
+// transitive surface of engine/skills.
 var allowedImports = map[string]bool{
 	"bufio":         true,
 	"bytes":         true,
@@ -33,7 +38,13 @@ var allowedImports = map[string]bool{
 	"regexp":        true,
 	"sort":          true,
 	"strings":       true,
+	pathguardImport: true,
 }
+
+// pathguardImport is the only module-internal package engine/skills may import.
+// Its path contains "git" only through the github.com module host, so it is
+// exempted from the git-package ban by exact match, never by prefix.
+const pathguardImport = "github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 
 // TestZeroFetchImportAllowlist statically parses every non-test .go file in
 // engine/skills/ and asserts that each import path is a member of allowedImports
@@ -89,7 +100,7 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("allowedImports must never contain %q", imp)
 		case imp == "net" || strings.HasPrefix(imp, "net/"):
 			t.Errorf("allowedImports must never contain the net package %q", imp)
-		case strings.Contains(imp, "git"):
+		case imp != pathguardImport && strings.Contains(imp, "git"):
 			t.Errorf("allowedImports must never contain a git-related package %q", imp)
 		}
 	}
@@ -100,7 +111,40 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
 		}
 	}
-	if len(allowedImports) != 15 {
-		t.Errorf("len(allowedImports) = %d, want 15 — widen it only after reviewer approval", len(allowedImports))
+	// 15 stdlib packages plus the reviewer-approved pathguardImport exception.
+	if len(allowedImports) != 16 {
+		t.Errorf("len(allowedImports) = %d, want 16 — widen it only after reviewer approval", len(allowedImports))
+	}
+}
+
+// TestZeroFetchCoversPathguardImports extends the zero-fetch guarantee through
+// the pathguardImport exception: every import in the production files of
+// engine/pathguard must itself be an allowlisted stdlib package, so no
+// network, exec, git, or further internal dependency can reach engine/skills
+// transitively through it.
+func TestZeroFetchCoversPathguardImports(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, filepath.Join("..", "pathguard"), func(fi fs.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("go/parser.ParseDir(../pathguard): %v", err)
+	}
+
+	totalFiles := 0
+	for _, pkg := range pkgs {
+		for filename, file := range pkg.Files {
+			totalFiles++
+			base := filepath.Base(filename)
+			for _, imp := range file.Imports {
+				path := strings.Trim(imp.Path.Value, `"`)
+				if path == pathguardImport || !allowedImports[path] {
+					t.Errorf("engine/pathguard imports %q in %s; it may import only allowlisted stdlib packages", path, base)
+				}
+			}
+		}
+	}
+	if totalFiles == 0 {
+		t.Fatal("no production .go files found under ../pathguard; the transitive guard walk may be broken")
 	}
 }
