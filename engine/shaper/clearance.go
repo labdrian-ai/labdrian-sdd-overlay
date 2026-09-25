@@ -66,7 +66,9 @@ type ClearanceSubject struct {
 type ChannelProvenance struct {
 	// Runtime is the host runtime; only "pi" is supported.
 	Runtime string `json:"runtime"`
-	// Mode is the runtime's interactive mode: "tui" or "rpc".
+	// Mode is the runtime's interactive mode. Only "tui" is accepted: an RPC
+	// dialog is answered by the driving process, not a human, so ParseRecord,
+	// and with it Verify and FileStore.Put, refuse every other mode.
 	Mode string `json:"mode"`
 	// Verified must be present and false.
 	Verified *bool `json:"verified"`
@@ -220,8 +222,8 @@ func (r ClearanceRecord) Validate() error {
 	if c.Runtime != "pi" {
 		return fmt.Errorf("channel.runtime must be %q, got %q", "pi", c.Runtime)
 	}
-	if c.Mode != "tui" && c.Mode != "rpc" {
-		return fmt.Errorf("channel.mode must be %q or %q, got %q", "tui", "rpc", c.Mode)
+	if c.Mode != "tui" {
+		return fmt.Errorf("channel.mode must be %q: an RPC or non-interactive dialog is answered by a process, not a human, got %q", "tui", c.Mode)
 	}
 	if c.Verified == nil || *c.Verified {
 		return fmt.Errorf("channel.verified must be present and false")
@@ -328,6 +330,35 @@ func Verify(recordBytes []byte, subject Subject, flags []Flag, view []byte) (*Ve
 	if r.Decision != DecisionAffirm {
 		return nil, fmt.Errorf("verify clearance: decision is %q; a decline never clears", r.Decision)
 	}
+	if err := checkRecordBinding(r, subject, flags, view); err != nil {
+		return nil, fmt.Errorf("verify clearance: %w", err)
+	}
+	return &VerifiedClearance{
+		verified:    true,
+		subject:     subject,
+		viewSHA256:  ViewDigest(view),
+		resolutions: append([]FlagResolution(nil), r.FlagResolutions...),
+	}, nil
+}
+
+// CheckRecordBinding applies Verify's parse, subject digest, view digest, and
+// flag resolution checks to recordBytes, but accepts either decision, so a
+// host can store a decline as evidence under the same binding rules. It
+// returns the parsed record and never a clearance: only Verify clears.
+func CheckRecordBinding(recordBytes []byte, subject Subject, flags []Flag, view []byte) (ClearanceRecord, error) {
+	r, err := ParseRecord(recordBytes)
+	if err != nil {
+		return ClearanceRecord{}, fmt.Errorf("check clearance binding: %w", err)
+	}
+	if err := checkRecordBinding(r, subject, flags, view); err != nil {
+		return ClearanceRecord{}, fmt.Errorf("check clearance binding: %w", err)
+	}
+	return r, nil
+}
+
+// checkRecordBinding requires every recorded subject digest and the view
+// digest to equal the fresh values, and exactly one resolution per flag.
+func checkRecordBinding(r ClearanceRecord, subject Subject, flags []Flag, view []byte) error {
 	viewSHA := ViewDigest(view)
 	for _, f := range []struct{ name, recorded, fresh string }{
 		{"project_id", r.Subject.ProjectID, subject.ProjectID},
@@ -338,18 +369,10 @@ func Verify(recordBytes []byte, subject Subject, flags []Flag, view []byte) (*Ve
 		{"view_sha256", r.Subject.ViewSHA256, viewSHA},
 	} {
 		if f.recorded != f.fresh {
-			return nil, fmt.Errorf("verify clearance: subject.%s mismatch: record %q, fresh %q", f.name, f.recorded, f.fresh)
+			return fmt.Errorf("subject.%s mismatch: record %q, fresh %q", f.name, f.recorded, f.fresh)
 		}
 	}
-	if err := checkResolutionsExact(r.FlagResolutions, flags); err != nil {
-		return nil, fmt.Errorf("verify clearance: %w", err)
-	}
-	return &VerifiedClearance{
-		verified:    true,
-		subject:     subject,
-		viewSHA256:  viewSHA,
-		resolutions: append([]FlagResolution(nil), r.FlagResolutions...),
-	}, nil
+	return checkResolutionsExact(r.FlagResolutions, flags)
 }
 
 // checkResolutionsExact requires exactly one resolution per flag and no
