@@ -405,8 +405,13 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 
 // runShaperGuardHook implements 'shaper guard-hook', the Claude Code
 // PreToolUse deny guard. It fails closed: unreadable input is denied.
+//
+// It reads the whole payload with no size cap. The guard runs on every Bash
+// and Write/Edit call, so a capped read would truncate large unrelated
+// payloads into undecodable JSON and deny them without judging them. The
+// payload already lives in the calling runtime's memory.
 func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
-	raw, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit))
+	raw, err := io.ReadAll(stdin)
 	if err != nil {
 		fmt.Fprintf(stderr, "shaper guard-hook: read stdin: %v\n", err)
 		exit(2)

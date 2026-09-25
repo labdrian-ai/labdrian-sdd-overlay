@@ -491,6 +491,23 @@ func TestShaperGuardHook_DeniesRecordAndAllowsOthers(t *testing.T) {
 	}
 }
 
+// TestShaperGuardHook_JudgesPayloadsLargerThanTheStdinLimit pins that the
+// guard reads the whole PreToolUse payload. The guard runs on every Bash and
+// Write/Edit call, so truncating a large unrelated payload would deny it on a
+// JSON decode failure instead of judging it; a large payload that does carry
+// the marker must still be denied.
+func TestShaperGuardHook_JudgesPayloadsLargerThanTheStdinLimit(t *testing.T) {
+	big := strings.Repeat("a", stdinSizeLimit+1024)
+	allow := runShaperTest([]string{"guard-hook"}, `{"tool_name":"Write","tool_input":{"file_path":"/tmp/big.txt","content":"`+big+`"}}`)
+	if allow.code != 0 || allow.stderr != "" {
+		t.Errorf("large unrelated write: exit %d stderr %q", allow.code, allow.stderr)
+	}
+	deny := runShaperTest([]string{"guard-hook"}, `{"tool_name":"Bash","tool_input":{"command":"echo `+big+` && labdrian shaper clearance record --stdin"}}`)
+	if deny.code != 2 {
+		t.Errorf("large payload carrying the marker: exit %d, want 2", deny.code)
+	}
+}
+
 func TestCheckShaperClearanceGuard(t *testing.T) {
 	full := buildSettingsWithHooks("/x/gentle-ai-overlay")
 	if c := checkShaperClearanceGuard(full, nil, "s.json"); !c.ok || c.degraded {
