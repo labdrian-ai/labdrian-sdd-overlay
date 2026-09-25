@@ -322,8 +322,17 @@ func checkLinked(toplevel, gitDir, commonDir string) error {
 }
 
 // readPointer reads a one-line pointer file, strips the required prefix, and
-// resolves a relative target against base.
+// resolves a relative target against base. It refuses anything that is not a
+// regular file before opening it, so a symlink or a FIFO with no writer
+// cannot make it block forever instead of failing closed.
 func readPointer(path, prefix, base string) (string, error) {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return "", fmt.Errorf("inspect %s: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return "", fmt.Errorf("%s is not a regular file", path)
+	}
 	data, err := os.ReadFile(path)
 	if err != nil {
 		return "", fmt.Errorf("read %s: %w", path, err)

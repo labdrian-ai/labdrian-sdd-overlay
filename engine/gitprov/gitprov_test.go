@@ -7,7 +7,9 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 )
 
 const testHead = "0123456789abcdef0123456789abcdef01234567"
@@ -636,4 +638,31 @@ func TestObserveMatchesRealGitRepository(t *testing.T) {
 			t.Fatalf("Observe(bare) = %+v; want refusal", got)
 		}
 	})
+}
+
+func TestObserveFailsClosedOnFifoBackPointer(t *testing.T) {
+	repo, _, wtGitDir := newLinkedRepo(t)
+	backFile := filepath.Join(wtGitDir, "gitdir")
+	if err := os.Remove(backFile); err != nil {
+		t.Fatalf("remove %s: %v", backFile, err)
+	}
+	if err := syscall.Mkfifo(backFile, 0o600); err != nil {
+		t.Skipf("Mkfifo unsupported: %v", err)
+	}
+
+	done := make(chan struct{})
+	var err error
+	go func() {
+		_, err = repo.observer().Observe(repo.root)
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		if err == nil {
+			t.Fatalf("Observe: want error for non-regular back-pointer file, got nil")
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("Observe did not return within 2s; it blocked reading a non-regular back-pointer file")
+	}
 }
