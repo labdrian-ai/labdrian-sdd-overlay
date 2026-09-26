@@ -793,8 +793,8 @@ func TestPiGateShaperClearRechecksViewRunesInTheGate(t *testing.T) {
 		"esc":         {"\x1b[8m", "unpresentable"},
 		"cr":          {"\r", "unpresentable"},
 		"c1csi":       {"\u009b", "unpresentable"},
-		"bidi":        {"‮", "unpresentable"},
-		"zeroWidth":   {"​", "unpresentable"},
+		"bidi":        {"\u202e", "unpresentable"},
+		"zeroWidth":   {"\u200b", "unpresentable"},
 		"del":         {"\x7f", "unpresentable"},
 		"invalidUTF8": {"\xff\xfe", "not valid UTF-8"},
 	} {
