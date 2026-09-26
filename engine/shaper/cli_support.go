@@ -11,6 +11,21 @@ const ForgeryDisclosure = "Trust limit: this clearance is bound to exact content
 	"and the Claude Code and Pi deny guards are speed bumps, not a security boundary. " +
 	"Readiness grants no execution authority, and the roadmap's full Phase 3 plan outcome is not yet met."
 
+// PlanIncompleteDisclosure states what a ready claim does not cover. Ready is
+// claimed on the approved handoff core plus per-criterion planned acceptance
+// verification only; planned checks are not executed, and their results are
+// downstream fulfillment evidence. Ready is not a signature: any process
+// running as the same OS user can forge a clearance record.
+const PlanIncompleteDisclosure = "Plan completeness: ready covers the approved handoff core and the planned verification of each acceptance criterion only. " +
+	"The roadmap's full Phase 3 plan outcome is not yet met: roles, tests, risks, estimates, memory_scope, and delivery_limit are absent. " +
+	"Planned checks were not executed; their results are downstream fulfillment evidence, not proof that any criterion was met."
+
+// ReadyDisclosure is what every output reporting the ready state must print:
+// the forgery limit first (ready is not a signature: any process running as
+// the same OS user, including any installed Pi extension, can forge a
+// clearance record), then the plan completeness limit.
+const ReadyDisclosure = ForgeryDisclosure + " " + PlanIncompleteDisclosure
+
 // ReadContainedSource reads relPath strictly inside worktreeRoot under the
 // same containment rules as LoadHandoff and BindGoal, without parsing it. It
 // returns the cleaned root-relative path and the exact bytes read. A caller

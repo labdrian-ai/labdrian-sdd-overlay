@@ -241,14 +241,20 @@ func (r ClearanceRecord) Validate() error {
 
 // PresentedView is exactly what the host shows the human before a clearance
 // decision: the Goal bytes, the plan bytes, the Goal scope and non_goals, the
-// handoff out_of_scope limits, and the flags raised for review.
+// handoff out_of_scope limits, for handoff version 2 each acceptance
+// criterion with its planned check or adjudication, and the flags raised for
+// review.
 type PresentedView struct {
 	GoalBytes    []byte
 	PlanBytes    []byte
 	GoalScope    string
 	GoalNonGoals []string
 	OutOfScope   []string
-	Flags        []Flag
+	// Acceptance is nil for handoff version 1, whose view is rendered
+	// exactly as before version 2 existed. When non-nil the view is
+	// rendered as view version 2 with an acceptance section.
+	Acceptance []AcceptanceItem
+	Flags      []Flag
 }
 
 // RenderView renders v as deterministic bytes. Every value is length
@@ -258,14 +264,35 @@ type PresentedView struct {
 // rewrites content: Evaluate refuses a view holding a terminal control or
 // invisible formatting rune (ReasonViewUnpresentable) before rendering it,
 // and Verify and CheckRecordBinding refuse such view bytes.
+//
+// A view with a non-nil Acceptance is headed view version 2 and adds, after
+// out_of_scope, one criterion per item followed by its verification_check or
+// verification_adjudication, so the human sees exactly which verification is
+// planned. Planned verification is shown, never executed.
 func RenderView(v PresentedView) []byte {
 	var b bytes.Buffer
-	b.WriteString("labdrian shaper clearance view 1\n")
+	if v.Acceptance == nil {
+		b.WriteString("labdrian shaper clearance view 1\n")
+	} else {
+		b.WriteString("labdrian shaper clearance view 2\n")
+	}
 	writeViewValue(&b, "goal", v.GoalBytes)
 	writeViewValue(&b, "plan", v.PlanBytes)
 	writeViewValue(&b, "goal_scope", []byte(v.GoalScope))
 	writeViewList(&b, "goal_non_goals", v.GoalNonGoals)
 	writeViewList(&b, "out_of_scope", v.OutOfScope)
+	if v.Acceptance != nil {
+		fmt.Fprintf(&b, "acceptance %d\n", len(v.Acceptance))
+		for _, item := range v.Acceptance {
+			writeViewValue(&b, "criterion", []byte(item.Criterion))
+			if item.Verification.Check != "" {
+				writeViewValue(&b, "verification_check", []byte(item.Verification.Check))
+			}
+			if item.Verification.Adjudication != "" {
+				writeViewValue(&b, "verification_adjudication", []byte(item.Verification.Adjudication))
+			}
+		}
+	}
 	fmt.Fprintf(&b, "flags %d\n", len(v.Flags))
 	for _, f := range v.Flags {
 		writeViewValue(&b, "flag_id", []byte(f.ID))

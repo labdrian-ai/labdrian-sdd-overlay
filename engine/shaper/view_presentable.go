@@ -56,7 +56,8 @@ func checkPresentableText(section string, value []byte) error {
 
 // checkPresentable refuses v when any section it presents holds an
 // unpresentable rune, first section in render order wins. Sections are named
-// goal, plan, goal_scope, goal_non_goals[i], out_of_scope[i], and
+// goal, plan, goal_scope, goal_non_goals[i], out_of_scope[i],
+// acceptance[i].criterion, .check, or .adjudication (handoff version 2), and
 // flags[i].id, .kind, .field, or .item, with 0-based indexes.
 func checkPresentable(v PresentedView) error {
 	type section struct {
@@ -73,6 +74,13 @@ func checkPresentable(v PresentedView) error {
 	}
 	for i, s := range v.OutOfScope {
 		sections = append(sections, section{fmt.Sprintf("out_of_scope[%d]", i), []byte(s)})
+	}
+	for i, item := range v.Acceptance {
+		sections = append(sections,
+			section{fmt.Sprintf("acceptance[%d].criterion", i), []byte(item.Criterion)},
+			section{fmt.Sprintf("acceptance[%d].check", i), []byte(item.Verification.Check)},
+			section{fmt.Sprintf("acceptance[%d].adjudication", i), []byte(item.Verification.Adjudication)},
+		)
 	}
 	for i, f := range v.Flags {
 		sections = append(sections,

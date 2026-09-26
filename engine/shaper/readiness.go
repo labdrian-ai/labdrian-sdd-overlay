@@ -13,10 +13,18 @@ import (
 // authority: even a ready handoff does not authorize, permit, or dispatch any
 // work, and it is not RDD review, Goal fulfillment, or Goal closure.
 //
-// In this version readiness is hard-capped at draft. A verified clearance is
-// accepted, but handoff version 1 cannot represent a verification method or
-// adjudication path for each acceptance criterion, so Evaluate still cannot
-// return StateReady for any handoff this package parses.
+// A handoff version 1 is hard-capped at draft: it cannot represent a
+// verification method or adjudication path for each acceptance criterion, so
+// ReasonAcceptanceVerificationUnrepresentable always remains. A handoff
+// version 2 carries that plan per criterion and can reach StateReady once
+// every other blocker is gone. The plan is not executed: check and
+// adjudication results are downstream fulfillment evidence, not a readiness
+// prerequisite.
+//
+// Ready is claimed on the approved core plus per-criterion acceptance
+// verification only. The roadmap's full Phase 3 plan outcome is not yet met:
+// roles, tests, risks, estimates, memory_scope, and delivery_limit are
+// absent (see ReadyDisclosure).
 //
 // A ready outcome is not a signature: any process running as the same OS
 // user can forge a clearance record, so ready rests only on content
@@ -31,10 +39,11 @@ const (
 	// StateDraft means the handoff is structurally valid but at least one
 	// blocker prevents readiness.
 	StateDraft State = "draft"
-	// StateReady means no blocker remains. It is unreachable in this
-	// version, and when reachable it will still grant no execution
-	// authority. A ready outcome is not a signature: any process running
-	// as the same OS user can forge a clearance record.
+	// StateReady means no blocker remains. Only a handoff version 2 can
+	// reach it, and it grants no execution authority. A ready outcome is
+	// not a signature: any process running as the same OS user, including
+	// any installed Pi extension, can forge a clearance record. Every
+	// output reporting it must print ReadyDisclosure.
 	StateReady State = "ready"
 )
 
@@ -174,8 +183,9 @@ type Blocker struct {
 // FlagKind is the category of a flag raised for human review.
 type FlagKind string
 
-// FlagGoalNonGoalOverlap marks a handoff stages or acceptance item that is
-// byte-identical to a bound Goal non_goals item. It is raised for human
+// FlagGoalNonGoalOverlap marks a handoff stages or acceptance item (for
+// version 2, its criterion text) that is byte-identical to a bound Goal
+// non_goals item. It is raised for human
 // review, not rejected: whether such overlap is a deterministic violation is
 // an open product decision (OD6). Like the out_of_scope rule it detects
 // literal overlap only and proves nothing about semantic scope.
@@ -292,13 +302,14 @@ type Assessment struct {
 // displayed and never cleared. A clearance counts only when
 // Verify produced it for exactly the Subject, view, and flags derived here;
 // it then resolves the flags and satisfies the clearance requirement. Handoff
-// version 1 always keeps ReasonAcceptanceVerificationUnrepresentable, so
-// Evaluate never returns StateReady in this version. Readiness grants no
+// version 1 always keeps ReasonAcceptanceVerificationUnrepresentable, so it
+// never reaches StateReady; handoff version 2 reaches it when no blocker
+// remains. Planned checks are never executed here. Readiness grants no
 // execution authority in any case, and Shaper-authored JSON can never supply
 // clearance or flag resolutions.
 //
-// A ready outcome, once reachable, is not a signature: any process running
-// as the same OS user can forge a clearance record.
+// A ready outcome is not a signature: any process running as the same OS
+// user, including any installed Pi extension, can forge a clearance record.
 func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 	h, err := Parse(in.Handoff.Bytes)
 	if err != nil {
@@ -390,6 +401,7 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 			GoalScope:    g.Scope,
 			GoalNonGoals: g.NonGoals,
 			OutOfScope:   h.OutOfScope,
+			Acceptance:   h.AcceptanceItems,
 			Flags:        flags,
 		}
 		if err := checkPresentable(presented); err != nil {
@@ -435,16 +447,22 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 }
 
 // nonGoalOverlapFlags raises a FlagGoalNonGoalOverlap for every stages or
-// acceptance item byte-identical to a Goal non_goals item. No trimming, case
-// folding, substring, or other normalization is applied.
+// acceptance item byte-identical to a Goal non_goals item; for handoff
+// version 2 the acceptance item is its criterion text, never its check or
+// adjudication. No trimming, case folding, substring, or other normalization
+// is applied.
 func nonGoalOverlapFlags(h Handoff, nonGoals []string) []Flag {
+	acceptance := h.Acceptance
+	if h.AcceptanceItems != nil {
+		acceptance = acceptanceCriteria(h.AcceptanceItems)
+	}
 	var flags []Flag
 	for _, field := range []struct {
 		name   string
 		values []string
 	}{
 		{name: "stages", values: h.Stages},
-		{name: "acceptance", values: h.Acceptance},
+		{name: "acceptance", values: acceptance},
 	} {
 		for i, value := range field.values {
 			for _, nonGoal := range nonGoals {

@@ -397,6 +397,13 @@ overlay shaper <verb>
                                                                                    the Pi /shaper-clear dialog; deny guards block model-run invocations)
     A ready result is not a signature: any process running as the same OS user, including any installed
     Pi extension, can forge a clearance record. Readiness grants no execution authority.
+    Only a handoff version 2 can reach ready: each acceptance item is {"criterion": ..., "verification":
+    {"check": ...} or {"adjudication": ...}}, and the presented view shows every criterion with its planned
+    check or adjudication. Checks are planned verification only; nothing runs them, and their results are
+    downstream fulfillment evidence, not a readiness prerequisite. Handoff version 1 stays draft
+    (acceptance_verification_unrepresentable). Every ready output also states that the roadmap's full
+    Phase 3 plan outcome is not yet met: roles, tests, risks, estimates, memory_scope, and delivery_limit
+    are absent.
 
 overlay --help
     Show this help.
