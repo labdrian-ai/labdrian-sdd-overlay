@@ -404,8 +404,9 @@ overlay shaper <verb>
     (acceptance_verification_unrepresentable).
     Version 3 adds the full bounded plan: roles [{role, responsibility}], tests, risks [{risk, mitigation}],
     estimates [{stage, low_minutes, high_minutes}] (agent effort to execute each stage), memory_scope, and
-    delivery_limit. Contradictions are rejected deterministically (estimates missing or out of order,
-    duplicate roles), and any item byte-identical to a Goal non_goal is refused. The presented view shows
+    delivery_limit. Parsing rejects contradictions deterministically: duplicate roles, and estimates that are
+    missing, duplicated, name an unknown stage, are not positive, or have low_minutes above high_minutes;
+    such a handoff is invalid and never ready. Any item byte-identical to a Goal non_goal is refused. The presented view shows
     memory_scope and delivery_limit beside the Goal's memory_scope and delivery_boundary for human judgment.
     A version 2 ready output states that those plan fields are absent; a version 3 one states they are present.
 

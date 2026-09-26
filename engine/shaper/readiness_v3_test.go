@@ -234,3 +234,25 @@ func TestReadyDisclosureForSelectsByVersion(t *testing.T) {
 		t.Errorf("ReadyDisclosureFor(3) = %q, want ReadyDisclosureV3", got)
 	}
 }
+
+// TestEvaluateV3ContradictoryPlanNeverReachesReady pins end to end that the
+// deterministic contradiction rejections hold at readiness: even with a
+// verified clearance for the complete plan, a contradictory v3 handoff is
+// invalid, never ready.
+func TestEvaluateV3ContradictoryPlanNeverReachesReady(t *testing.T) {
+	c := verifiedFor(t, completeV3Input(t))
+	goalBytes := []byte(goalV2JSONWithNonGoals(`[]`))
+	for name, data := range map[string][]byte{
+		"duplicate role":   v3WithRaw(t, "roles", `[{"role":"implementer","responsibility":"A."},{"role":"implementer","responsibility":"B."}]`),
+		"inverted range":   v3WithRaw(t, "estimates", `[{"stage":"Extract jsonstrict.","low_minutes":30,"high_minutes":20},{"stage":"Refactor goal.Parse onto jsonstrict.","low_minutes":15,"high_minutes":30}]`),
+		"missing estimate": v3WithRaw(t, "estimates", `[{"stage":"Extract jsonstrict.","low_minutes":10,"high_minutes":20}]`),
+		"unknown stage":    v3WithRaw(t, "estimates", `[{"stage":"Extract jsonstrict.","low_minutes":10,"high_minutes":20},{"stage":"Ship it.","low_minutes":15,"high_minutes":30}]`),
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := Evaluate(inputWith(t, data, goalBytes), c)
+			if got.State != StateInvalid {
+				t.Fatalf("State = %q, want invalid (blockers %v)", got.State, blockerReasons(got))
+			}
+		})
+	}
+}
