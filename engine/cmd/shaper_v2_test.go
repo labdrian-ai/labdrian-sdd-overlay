@@ -26,7 +26,7 @@ func TestShaperAssessOutput_ReadyStatesPlanIncompleteness(t *testing.T) {
 	ready := shaper.Assessment{State: shaper.StateReady}
 	for _, view := range []bool{false, true} {
 		var out, errBuf bytes.Buffer
-		writeShaperAssessment(&out, &errBuf, ready, clearanceReport{Status: "verified"}, view)
+		writeShaperAssessment(&out, &errBuf, ready, clearanceReport{Status: "verified"}, view, 2)
 		text := out.String() + errBuf.String()
 		for _, want := range append([]string{"not a signature", "same OS user", "any installed Pi extension"}, planIncompleteWants...) {
 			if !strings.Contains(text, want) {
@@ -38,7 +38,7 @@ func TestShaperAssessOutput_ReadyStatesPlanIncompleteness(t *testing.T) {
 
 func TestShaperAssessOutput_DraftOmitsReadyDisclosure(t *testing.T) {
 	var out, errBuf bytes.Buffer
-	writeShaperAssessment(&out, &errBuf, shaper.Assessment{State: shaper.StateDraft}, clearanceReport{Status: "missing"}, false)
+	writeShaperAssessment(&out, &errBuf, shaper.Assessment{State: shaper.StateDraft}, clearanceReport{Status: "missing"}, false, 2)
 	if strings.Contains(out.String(), "delivery_limit") {
 		t.Errorf("draft output claims the ready disclosure:\n%s", out.String())
 	}

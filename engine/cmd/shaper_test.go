@@ -315,7 +315,7 @@ func TestShaperAssessOutput_ReadyStatesForgeryDisclosure(t *testing.T) {
 	ready := shaper.Assessment{State: shaper.StateReady}
 	for _, view := range []bool{false, true} {
 		var out, errBuf bytes.Buffer
-		code := writeShaperAssessment(&out, &errBuf, ready, clearanceReport{Status: "verified"}, view)
+		code := writeShaperAssessment(&out, &errBuf, ready, clearanceReport{Status: "verified"}, view, 1)
 		if code != 0 {
 			t.Errorf("view=%v: exit %d, want 0 for ready", view, code)
 		}
