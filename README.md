@@ -390,6 +390,14 @@ overlay skills <verb>
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
 
+overlay shaper <verb>
+    Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.
+    assess           --root <worktree> --handoff <path> --goal <path> [--view]     read-only readiness assessment; --view prints the exact presented view
+    clearance record --root <worktree> --handoff <path> --goal <path> --stdin      store a human clearance decision read only from stdin (normally driven by
+                                                                                   the Pi /shaper-clear dialog; deny guards block model-run invocations)
+    A ready result is not a signature: any process running as the same OS user, including any installed
+    Pi extension, can forge a clearance record. Readiness grants no execution authority.
+
 overlay --help
     Show this help.
 ```
