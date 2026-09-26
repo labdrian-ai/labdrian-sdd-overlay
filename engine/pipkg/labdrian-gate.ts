@@ -211,6 +211,50 @@ export function injectContractsForEvent(event, packageRoot) {
   return { systemPrompt: prompt };
 }
 
+// Shaper clearance deny guard. Mirrors engine/shaper/guard.go exactly
+// (GuardCommandMarker, GuardStoreMarker, GuardMatches): a bash tool call
+// that names the clearance record entry point or the clearance store path is
+// blocked, so the model cannot record a clearance for the human. It matches
+// command and path text only, so it is a speed bump, not a security boundary: any
+// process running as the same OS user, including any installed Pi
+// extension, can still forge a clearance record, and a clearance is not a
+// signature. Covered: bash input.command, and write/edit input.path inside
+// the store (like the Claude Write|Edit guard). Other tools, and relative
+// paths that do not spell the store segment, are not inspected.
+const SHAPER_GUARD_COMMAND_MARKER = "shaper clearance record";
+const SHAPER_GUARD_STORE_MARKER = "labdrian/shaper-clearance";
+const SHAPER_GUARD_REASON =
+  "labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human " +
+  "through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, " +
+  "not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.";
+
+// matchesShaperClearanceGuard reports whether text names the clearance
+// record entry point (after collapsing whitespace and shell line
+// continuations) or the clearance store path.
+export function matchesShaperClearanceGuard(text) {
+  if (typeof text !== "string") return false;
+  const normalized = text.split("\\\n").join(" ").split(/\s+/).filter((part) => part.length > 0).join(" ");
+  return normalized.includes(SHAPER_GUARD_COMMAND_MARKER) || text.includes(SHAPER_GUARD_STORE_MARKER);
+}
+
+// shaperClearanceToolCall is the tool_call handler: {block, reason} for a
+// guarded bash call or a write/edit whose path is inside the clearance
+// store, undefined otherwise.
+export function shaperClearanceToolCall(event) {
+  if (!isRecord(event)) return undefined;
+  if (event.toolName === "bash") {
+    const command = readStringPath(event, ["input", "command"]);
+    if (command === undefined || !matchesShaperClearanceGuard(command)) return undefined;
+    return { block: true, reason: SHAPER_GUARD_REASON };
+  }
+  if (event.toolName === "write" || event.toolName === "edit") {
+    const path = readStringPath(event, ["input", "path"]);
+    if (path === undefined || !path.includes(SHAPER_GUARD_STORE_MARKER)) return undefined;
+    return { block: true, reason: SHAPER_GUARD_REASON };
+  }
+  return undefined;
+}
+
 export default function (pi) {
   pi.on("before_agent_start", async (event) => {
     try {
@@ -219,4 +263,7 @@ export default function (pi) {
       return {};
     }
   });
+  // No try/catch here: a thrown tool_call handler blocks execution, which is
+  // the fail-closed outcome this guard wants.
+  pi.on("tool_call", async (event) => shaperClearanceToolCall(event));
 }

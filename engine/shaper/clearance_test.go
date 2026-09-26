@@ -183,6 +183,7 @@ func TestParseRecordRejectsInvalidRecords(t *testing.T) {
 		{name: "channel verified missing", edit: func(m map[string]any) { delete(channel(m), "verified") }},
 		{name: "channel runtime claude", edit: func(m map[string]any) { channel(m)["runtime"] = "claude-code" }},
 		{name: "channel mode print", edit: func(m map[string]any) { channel(m)["mode"] = "print" }},
+		{name: "channel mode rpc", edit: func(m map[string]any) { channel(m)["mode"] = "rpc" }},
 		{name: "host_time null", edit: func(m map[string]any) { m["host_time"] = nil }},
 		{name: "host_time not informational", edit: func(m map[string]any) {
 			m["host_time"] = map[string]any{"value": "2026-09-25T10:00:00Z", "informational": false}
@@ -472,6 +473,10 @@ func TestVerifyRefusesDeclineMissingResolutionAndUnknownField(t *testing.T) {
 	unresolved.FlagResolutions = []FlagResolution{}
 	withUnknown := recordMap(t, recordFor(t, a))
 	withUnknown["cleared_by"] = "alice"
+	// An RPC dialog is answered by a driving process, not a human, so an
+	// RPC-captured affirm must never verify (decided TUI-only premise).
+	overRPC := recordMap(t, recordFor(t, a))
+	overRPC["channel"].(map[string]any)["mode"] = "rpc"
 	for _, tc := range []struct {
 		name  string
 		data  []byte
@@ -480,6 +485,7 @@ func TestVerifyRefusesDeclineMissingResolutionAndUnknownField(t *testing.T) {
 		{name: "decline", data: marshalRecord(t, declined), match: "decline"},
 		{name: "missing flag resolution", data: marshalRecord(t, unresolved), match: "unresolved"},
 		{name: "unknown field", data: marshalAny(t, withUnknown), match: "unknown"},
+		{name: "rpc channel", data: marshalAny(t, overRPC), match: "tui"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			c, err := Verify(tc.data, *a.Subject, a.Flags, a.View)

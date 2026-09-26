@@ -34,6 +34,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
 // ClaudeRuntimeConfigRoot is the default root validator for Claude runtime path
@@ -63,6 +65,18 @@ const (
 	// the dedup/uninstall identity token for the PreToolUse/Bash review-receipt
 	// hook entry, mirroring LabdrianSyncTriggerIdentity's role for its family.
 	LabdrianReviewReceiptIdentity = "review-receipt"
+	// LabdrianShaperGuardIdentity is the shaper clearance guard verb and the
+	// dedup/uninstall identity token for its PreToolUse entries.
+	LabdrianShaperGuardIdentity = "shaper guard-hook"
+	// ShaperGuardFileToolMatcher is the PreToolUse matcher of the guard entry
+	// that refuses file tools writing into the clearance store.
+	ShaperGuardFileToolMatcher = "Write|Edit|MultiEdit|NotebookEdit"
+	// ShaperClearanceDenyRule is the permissions.deny backstop for the
+	// clearance record entry point. Claude Code documents deny rules as
+	// holding in every permission mode, including bypassPermissions. Like
+	// the hook, it matches command text only: it is a speed bump, not a
+	// security boundary.
+	ShaperClearanceDenyRule = "Bash(*" + shaper.GuardCommandMarker + "*)"
 )
 
 // ValidateClaudeConfigRoot validates that root is non-empty and absolute.
@@ -137,7 +151,56 @@ func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand s
 		HasLabdrianDesignHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianDesignHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianSyncTriggerHook(root, "SessionEnd", hookCommand) &&
-		HasLabdrianReviewReceiptHook(root, "PreToolUse", hookCommand)
+		HasLabdrianReviewReceiptHook(root, "PreToolUse", hookCommand) &&
+		HasShaperClearanceGuard(root, hookCommand)
+}
+
+// HasShaperClearanceGuard reports whether the shaper clearance deny guard is
+// fully in place: the PreToolUse guard entries for Bash and for the file
+// tools, the permissions.deny backstop, and hooks not globally disabled.
+// Even fully in place the guard is a speed bump, not a security boundary.
+func HasShaperClearanceGuard(root map[string]interface{}, hookCommand string) bool {
+	return len(MissingShaperClearanceGuardParts(root, hookCommand)) == 0
+}
+
+// MissingShaperClearanceGuardParts names every missing part of the shaper
+// clearance deny guard in root, in a fixed order. It returns nil when the
+// guard is fully in place.
+func MissingShaperClearanceGuardParts(root map[string]interface{}, hookCommand string) []string {
+	var missing []string
+	hooks, _ := root["hooks"].(map[string]interface{})
+	for _, matcher := range []string{"Bash", ShaperGuardFileToolMatcher} {
+		if hooks == nil || !hasEntryMatching(hooks, "PreToolUse", shaperGuardMatcher(hookCommand, matcher)) {
+			missing = append(missing, `PreToolUse matcher="`+matcher+`" guard hook`)
+		}
+	}
+	if !hasDenyRule(root, ShaperClearanceDenyRule) {
+		missing = append(missing, "permissions.deny "+ShaperClearanceDenyRule)
+	}
+	if disabled, _ := root["disableAllHooks"].(bool); disabled {
+		missing = append(missing, "hooks enabled (disableAllHooks is true)")
+	}
+	return missing
+}
+
+// shaperGuardMatcher matches our shaper guard entry for one matcher.
+func shaperGuardMatcher(hookCommand, matcher string) func(interface{}) bool {
+	return func(e interface{}) bool {
+		em, ok := e.(map[string]interface{})
+		return ok && em["matcher"] == matcher &&
+			entryContainsBinary(e, hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
+	}
+}
+
+func hasDenyRule(root map[string]interface{}, rule string) bool {
+	perms, _ := root["permissions"].(map[string]interface{})
+	deny, _ := perms["deny"].([]interface{})
+	for _, r := range deny {
+		if r == rule {
+			return true
+		}
+	}
+	return false
 }
 
 // NewMerger returns a Merger that will merge hooks into settingsPath using
@@ -276,8 +339,34 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
+	// PreToolUse shaper clearance guard entries (identity: binary path +
+	// shaper guard token), one for Bash and one for the file tools, plus the
+	// permissions.deny backstop. A speed bump, not a security boundary.
+	for _, matcher := range []string{"Bash", ShaperGuardFileToolMatcher} {
+		if !hasEntryMatching(hooks, "PreToolUse", shaperGuardMatcher(m.hookCommand, matcher)) {
+			appendHook(hooks, "PreToolUse", m.buildShaperGuardPreToolUseEntry(matcher))
+			changed = true
+		}
+	}
+	if !hasDenyRule(root, ShaperClearanceDenyRule) {
+		perms, ok := root["permissions"].(map[string]interface{})
+		if !ok {
+			perms = map[string]interface{}{}
+			root["permissions"] = perms
+		}
+		deny, _ := perms["deny"].([]interface{})
+		perms["deny"] = append(deny, ShaperClearanceDenyRule)
+		changed = true
+	}
+
 	root["hooks"] = hooks
 	return changed
+}
+
+// isShaperGuardEntry reports whether a hook entry is one of our shaper
+// clearance guard entries.
+func (m *Merger) isShaperGuardEntry(e interface{}) bool {
+	return entryContainsBinary(e, m.hookCommand) && entryContainsBinary(e, LabdrianShaperGuardIdentity)
 }
 
 // minimalismIdentity is the distinguishing token for the minimalism-contract
@@ -363,7 +452,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isLegacyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}
@@ -375,6 +464,27 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 			delete(hooks, key)
 		} else {
 			hooks[key] = filtered
+		}
+	}
+
+	if perms, ok := root["permissions"].(map[string]interface{}); ok {
+		if deny, ok := perms["deny"].([]interface{}); ok {
+			var kept []interface{}
+			for _, r := range deny {
+				if r == ShaperClearanceDenyRule {
+					changed = true
+					continue
+				}
+				kept = append(kept, r)
+			}
+			if len(kept) == 0 {
+				delete(perms, "deny")
+			} else {
+				perms["deny"] = kept
+			}
+			if len(perms) == 0 {
+				delete(root, "permissions")
+			}
 		}
 	}
 
@@ -648,6 +758,31 @@ func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
 	)
 	return map[string]interface{}{
 		"matcher": "Bash",
+		"hooks": []interface{}{map[string]interface{}{
+			"type":    "command",
+			"command": cmd,
+		}},
+	}
+}
+
+// buildShaperGuardPreToolUseEntry returns one PreToolUse entry of the shaper
+// clearance deny guard. Once the binary is found, its own exit code, 0
+// (allow) or 2 (deny) from shaper.RunGuardHook, is the command's exit code.
+//
+// FAIL-CLOSED FOR THE GUARDED MARKERS: unlike the review-receipt entry, a
+// missing binary does not simply exit 0. The command falls back to a POSIX
+// case match over the raw hook input and still denies (exit 2) when it names
+// the record entry point or the store path, and allows everything else, so a
+// removed binary neither disables the guard nor blocks every tool call. The
+// fallback does not collapse whitespace. Both paths match text only: this
+// guard is a speed bump, not a security boundary.
+func (m *Merger) buildShaperGuardPreToolUseEntry(matcher string) map[string]interface{} {
+	cmd := fmt.Sprintf(
+		`command -v %s >/dev/null 2>&1 || { case "$(cat)" in *'%s'*|*'%s'*) echo 'labdrian shaper clearance guard: gentle-ai-overlay is missing; denying a clearance record or store access (a speed bump, not a security boundary)' >&2; exit 2;; esac; exit 0; }; %s %s`,
+		m.hookCommand, shaper.GuardCommandMarker, shaper.GuardStoreMarker, m.hookCommand, LabdrianShaperGuardIdentity,
+	)
+	return map[string]interface{}{
+		"matcher": matcher,
 		"hooks": []interface{}{map[string]interface{}{
 			"type":    "command",
 			"command": cmd,

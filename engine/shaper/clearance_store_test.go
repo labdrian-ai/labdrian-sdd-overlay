@@ -217,6 +217,20 @@ func TestFileStorePutRefusesInvalidRecord(t *testing.T) {
 	}
 }
 
+// TestFileStorePutRefusesRPCRecord keeps an RPC-captured record, which a
+// process rather than a human answered, out of the store entirely.
+func TestFileStorePutRefusesRPCRecord(t *testing.T) {
+	s, state := isolatedStore(t)
+	r, _ := storedRecord(t)
+	r.Channel.Mode = "rpc"
+	if _, err := s.Put(marshalRecord(t, r)); err == nil || !strings.Contains(err.Error(), "tui") {
+		t.Fatalf("Put(rpc record) err = %v, want a refusal naming tui", err)
+	}
+	if _, err := os.Lstat(filepath.Join(state, "labdrian")); !os.IsNotExist(err) {
+		t.Errorf("Put created store directories for an rpc record (err %v)", err)
+	}
+}
+
 func TestFileStoreGetMissingRecordFails(t *testing.T) {
 	s, _ := isolatedStore(t)
 	if _, err := s.Get("proj", "goal-alpha", strings.Repeat("c", 64)); err == nil {

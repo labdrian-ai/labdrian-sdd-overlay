@@ -15,6 +15,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
 // contractFrontmatter is a minimal valid contract used by tests.
@@ -684,12 +685,13 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 	}
 	// Two pairs install (minimalism + anti-generic-design) → 2 entries under
 	// UserPromptSubmit; PreToolUse additionally carries the review-receipt
-	// entry → 3. merge-settings run twice stays at these counts (idempotent).
+	// entry and the two shaper clearance guard entries → 5. merge-settings
+	// run twice stays at these counts (idempotent).
 	if n := countEntries("UserPromptSubmit"); n != 2 {
 		t.Errorf("UserPromptSubmit: expected 2 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 3 {
-		t.Errorf("PreToolUse: expected 3 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 5 {
+		t.Errorf("PreToolUse: expected 5 entries, got %d", n)
 	}
 }
 
@@ -959,11 +961,24 @@ func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
 		}},
 	}
 
+	shaperGuard := func(matcher string) map[string]interface{} {
+		return map[string]interface{}{
+			"matcher": matcher,
+			"hooks": []interface{}{map[string]interface{}{
+				"type":    "command",
+				"command": hookCmd + " " + settings.LabdrianShaperGuardIdentity,
+			}},
+		}
+	}
+
 	return map[string]interface{}{
 		"hooks": map[string]interface{}{
-			"PreToolUse":       []interface{}{preToolUse, reviewReceipt},
+			"PreToolUse":       []interface{}{preToolUse, reviewReceipt, shaperGuard("Bash"), shaperGuard(settings.ShaperGuardFileToolMatcher)},
 			"UserPromptSubmit": []interface{}{userPromptSubmit},
 			"SessionEnd":       []interface{}{sessionEnd},
+		},
+		"permissions": map[string]interface{}{
+			"deny": []interface{}{settings.ShaperClearanceDenyRule},
 		},
 	}
 }
@@ -1149,6 +1164,48 @@ func TestStatusCore_ReviewReceiptMissing_Degraded(t *testing.T) {
 	}
 	if !strings.Contains(out, "labdrian uninstall-hooks") || !strings.Contains(out, "labdrian install-hooks") {
 		t.Errorf("statusCore: WARN note must name both remediation commands; output:\n%s", out)
+	}
+}
+
+// TestStatusCore_ShaperClearanceGuardMissing_Degraded pins the statusCore
+// wiring of the shaper clearance guard check: dropping either PreToolUse
+// guard entry or the permissions.deny backstop is WARN/degraded, never FAIL.
+func TestStatusCore_ShaperClearanceGuardMissing_Degraded(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		strip func(root map[string]interface{})
+		want  string
+	}{
+		{name: "guard hooks", strip: func(root map[string]interface{}) {
+			hooks := root["hooks"].(map[string]interface{})
+			hooks["PreToolUse"] = hooks["PreToolUse"].([]interface{})[:2]
+		}, want: "PreToolUse matcher=\"Bash\" guard hook"},
+		{name: "deny rule", strip: func(root map[string]interface{}) {
+			delete(root, "permissions")
+		}, want: "permissions.deny " + settings.ShaperClearanceDenyRule},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			homeDir, binaryPath := buildFakeHomeWithBinary(t)
+			buildFakeContract(t, homeDir)
+			settingsData := buildSettingsWithHooks(binaryPath)
+			tc.strip(settingsData)
+			deps := statusDeps{
+				stat:         os.Stat,
+				readFile:     os.ReadFile,
+				loadSettings: func(_ string) (map[string]interface{}, error) { return settingsData, nil },
+				home:         func() string { return homeDir },
+				cwd:          func() string { return "" },
+			}
+			var outBuf bytes.Buffer
+			allOK, degraded := statusCore(&outBuf, deps)
+			out := outBuf.String()
+			if !allOK || !degraded {
+				t.Errorf("statusCore = (allOK %v, degraded %v), want (true, true); output:\n%s", allOK, degraded, out)
+			}
+			if !strings.Contains(out, "[WARN] guard: shaper clearance record") || !strings.Contains(out, tc.want) {
+				t.Errorf("statusCore: expected [WARN] shaper guard line naming %q; output:\n%s", tc.want, out)
+			}
+		})
 	}
 }
 

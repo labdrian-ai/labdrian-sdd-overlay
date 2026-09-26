@@ -140,6 +140,8 @@ func main() {
 		runSyncTrigger(os.Args[2:])
 	case "review-receipt":
 		runReviewReceipt(os.Args[2:])
+	case "shaper":
+		runShaper(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -191,6 +193,14 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine review-receipt hook --cwd <repo>")
 	fmt.Fprintln(os.Stderr, "    fail-closed PreToolUse Bash hook: reads tool_input JSON from stdin, captures before")
 	fmt.Fprintln(os.Stderr, "    'gentle-ai review acknowledge-approved', denies (exit 2) on ambiguity or capture failure")
+	fmt.Fprintln(os.Stderr, "  engine shaper assess --root <abs> --handoff <rel> --goal <rel> [--view]")
+	fmt.Fprintln(os.Stderr, "    read-only readiness assessment; exit 0 ready, 3 draft, 2 invalid, 1 usage or internal error")
+	fmt.Fprintln(os.Stderr, "    --view prints exactly the rendered clearance view bytes the Pi dialog displays")
+	fmt.Fprintln(os.Stderr, "  engine shaper clearance record --root <abs> --handoff <rel> --goal <rel> --stdin")
+	fmt.Fprintln(os.Stderr, "    stores a human clearance decision read only from stdin after re-deriving and checking its binding")
+	fmt.Fprintln(os.Stderr, "    not a signature: any process running as the same OS user, including any installed Pi extension, can forge one")
+	fmt.Fprintln(os.Stderr, "  engine shaper guard-hook")
+	fmt.Fprintln(os.Stderr, "    Claude Code PreToolUse deny guard for clearance recording and the clearance store (exit 2 denies; a speed bump)")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")
@@ -1630,6 +1640,10 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	// tier as SessionEnd — a machine that hasn't run the upgrade path yet is
 	// pre-#3a, not broken.
 	checks = append(checks, checkReviewReceiptHook(settingsRoot, settingsErr, settingsPath))
+
+	// Check 3d: shaper clearance deny guard (both PreToolUse entries and the
+	// permissions.deny backstop). Missing parts are WARN/degraded.
+	checks = append(checks, checkShaperClearanceGuard(settingsRoot, settingsErr, settingsPath))
 
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))
