@@ -254,7 +254,10 @@ type PresentedView struct {
 // RenderView renders v as deterministic bytes. Every value is length
 // prefixed, so no two distinct views render identically. The host displays
 // these bytes verbatim and never re-renders them, so the view digest binds
-// the decision to what was shown.
+// the decision to what was shown. RenderView itself neither checks nor
+// rewrites content: Evaluate refuses a view holding a terminal control or
+// invisible formatting rune (ReasonViewUnpresentable) before rendering it,
+// and Verify and CheckRecordBinding refuse such view bytes.
 func RenderView(v PresentedView) []byte {
 	var b bytes.Buffer
 	b.WriteString("labdrian shaper clearance view 1\n")
@@ -314,8 +317,9 @@ func (s Subject) ProvenanceSHA256() string {
 // Verify is the only constructor of VerifiedClearance. It strictly parses
 // recordBytes and checks it against a freshly evaluated subject, its flags,
 // and the exact view bytes presented to the human. It refuses, first error
-// wins, on any parse failure or unknown field, a decline, any subject or view
-// digest mismatch, a flag without a resolution, or a resolution for a flag
+// wins, on any parse failure or unknown field, a decline, view bytes holding
+// a terminal control or invisible formatting rune (unpresentable), any
+// subject or view digest mismatch, a flag without a resolution, or a resolution for a flag
 // that was not raised. It never returns a clearance together with an error.
 //
 // A clearance built here can let Evaluate reach ready only when no other
@@ -341,8 +345,8 @@ func Verify(recordBytes []byte, subject Subject, flags []Flag, view []byte) (*Ve
 	}, nil
 }
 
-// CheckRecordBinding applies Verify's parse, subject digest, view digest, and
-// flag resolution checks to recordBytes, but accepts either decision, so a
+// CheckRecordBinding applies Verify's parse, presentable view, subject
+// digest, view digest, and flag resolution checks to recordBytes, but accepts either decision, so a
 // host can store a decline as evidence under the same binding rules. It
 // returns the parsed record and never a clearance: only Verify clears.
 func CheckRecordBinding(recordBytes []byte, subject Subject, flags []Flag, view []byte) (ClearanceRecord, error) {
@@ -356,9 +360,13 @@ func CheckRecordBinding(recordBytes []byte, subject Subject, flags []Flag, view 
 	return r, nil
 }
 
-// checkRecordBinding requires every recorded subject digest and the view
-// digest to equal the fresh values, and exactly one resolution per flag.
+// checkRecordBinding refuses an unpresentable view, then requires every
+// recorded subject digest and the view digest to equal the fresh values, and
+// exactly one resolution per flag.
 func checkRecordBinding(r ClearanceRecord, subject Subject, flags []Flag, view []byte) error {
+	if err := checkViewBytesPresentable(view); err != nil {
+		return err
+	}
 	viewSHA := ViewDigest(view)
 	for _, f := range []struct{ name, recorded, fresh string }{
 		{"project_id", r.Subject.ProjectID, subject.ProjectID},
