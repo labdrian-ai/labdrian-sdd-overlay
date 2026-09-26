@@ -410,6 +410,20 @@ overlay shaper <verb>
     memory_scope and delivery_limit beside the Goal's memory_scope and delivery_boundary for human judgment.
     A version 2 ready output states that those plan fields are absent; a version 3 one states they are present.
 
+overlay roles <verb>
+    Forward reusable-role handoff verbs to the engine unchanged. Roles are data only: a closed
+    vocabulary (prototyper, shaper, estimator, builder, sweeper, polisher, reviewer, delivery,
+    with sweeper and polisher optional) and a typed RoleHandoff v1 record chained by SHA-256 to
+    the previous record. No verb launches an agent, dispatches work, or grants execution
+    authority.
+    validate --file <path>                                                       read-only: strictly parse and validate one RoleHandoff record
+    next    --project <id> --goal <id> --chain <id>                              read-only: allowed next roles from the chain's current position
+    resume  --project <id> --goal <id> --chain <id>                              read-only: current role, whether it is interrupted, and why
+    append  --project <id> --goal <id> --chain <id> --stdin                      append one record read only from stdin; refused on identity mismatch,
+                                                                                  a broken hash chain, a seq gap, or an invalid role transition
+    match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
+                                                                                  member of the reusable-role vocabulary, without changing v3 semantics
+
 overlay --help
     Show this help.
 ```

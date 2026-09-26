@@ -142,6 +142,8 @@ func main() {
 		runReviewReceipt(os.Args[2:])
 	case "shaper":
 		runShaper(os.Args[2:])
+	case "roles":
+		runRoles(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
