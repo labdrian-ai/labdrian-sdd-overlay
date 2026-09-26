@@ -53,9 +53,14 @@ func TestCheckRecordBindingAcceptsBothDecisionsAndRefusesMismatch(t *testing.T) 
 }
 
 func TestForgeryDisclosureNamesTheTrustLimits(t *testing.T) {
-	for _, want := range []string{"not a signature", "same OS user", "any installed Pi extension", "Phase 3", "no execution authority"} {
+	for _, want := range []string{"not a signature", "same OS user", "any installed Pi extension", "no execution authority"} {
 		if !strings.Contains(ForgeryDisclosure, want) {
 			t.Errorf("ForgeryDisclosure does not state %q:\n%s", want, ForgeryDisclosure)
 		}
+	}
+	// The unmet Phase 3 plan outcome is a version 2 fact, not a trust limit:
+	// only the version 2 ready disclosure states it.
+	if !strings.Contains(ReadyDisclosureFor(2), "Phase 3 plan outcome is not yet met") {
+		t.Errorf("version 2 ready disclosure must state the unmet Phase 3 plan outcome:\n%s", ReadyDisclosureFor(2))
 	}
 }

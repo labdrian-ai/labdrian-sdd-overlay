@@ -9,7 +9,7 @@ import "fmt"
 const ForgeryDisclosure = "Trust limit: this clearance is bound to exact content by SHA-256 digests only; it is not a signature. " +
 	"Any process running as the same OS user, including any installed Pi extension, can forge a clearance record, " +
 	"and the Claude Code and Pi deny guards are speed bumps, not a security boundary. " +
-	"Readiness grants no execution authority, and the roadmap's full Phase 3 plan outcome is not yet met."
+	"Readiness grants no execution authority."
 
 // PlanIncompleteDisclosure states what a ready claim does not cover. Ready is
 // claimed on the approved handoff core plus per-criterion planned acceptance

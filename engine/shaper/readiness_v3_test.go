@@ -215,6 +215,9 @@ func TestReadyDisclosureV3StatesCompletenessNotAbsence(t *testing.T) {
 			t.Errorf("ReadyDisclosureV3 does not state %q:\n%s", want, ReadyDisclosureV3)
 		}
 	}
+	if strings.Contains(ReadyDisclosureV3, "not yet met") {
+		t.Errorf("ReadyDisclosureV3 must not say the Phase 3 plan outcome is unmet:\n%s", ReadyDisclosureV3)
+	}
 	if strings.Contains(ReadyDisclosureV3, "are absent") {
 		t.Errorf("ReadyDisclosureV3 must not claim missing plan fields:\n%s", ReadyDisclosureV3)
 	}
