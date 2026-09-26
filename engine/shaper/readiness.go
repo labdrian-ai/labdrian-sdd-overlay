@@ -117,6 +117,14 @@ const (
 	// version 1 carries no verification method or adjudication path per
 	// acceptance criterion, so readiness is capped at draft.
 	ReasonAcceptanceVerificationUnrepresentable Reason = "acceptance_verification_unrepresentable"
+	// ReasonGoalNonGoalOverlap (refused): a handoff version 3 stage,
+	// acceptance criterion, test, or role responsibility is byte-identical to
+	// a bound Goal non_goals item (OD6). Handoff version 1 and 2 keep the
+	// existing FlagGoalNonGoalOverlap human-review flag instead: for version
+	// 3 the same literal overlap is a deterministic rejection, not a matter
+	// left to human judgment. Like the flag, this detects literal overlap
+	// only and proves nothing about semantic scope.
+	ReasonGoalNonGoalOverlap Reason = "goal_non_goal_overlap"
 )
 
 var reasonKinds = map[Reason]ReasonKind{
@@ -136,6 +144,7 @@ var reasonKinds = map[Reason]ReasonKind{
 	ReasonClearanceMissing:                      ReasonKindUnprovable,
 	ReasonClearanceUnverified:                   ReasonKindUnprovable,
 	ReasonAcceptanceVerificationUnrepresentable: ReasonKindUnprovable,
+	ReasonGoalNonGoalOverlap:                    ReasonKindRefused,
 }
 
 // Reasons returns every member of the closed Reason vocabulary, refused
@@ -150,6 +159,7 @@ func Reasons() []Reason {
 		ReasonWorktreeProvenanceMismatch,
 		ReasonClearanceMismatch,
 		ReasonViewUnpresentable,
+		ReasonGoalNonGoalOverlap,
 		ReasonSourceUnrecorded,
 		ReasonGoalUnbound,
 		ReasonWorktreeProvenanceUnobserved,
@@ -364,7 +374,11 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 			block(ReasonGoalIdentityMismatch, "handoff (%q, %q), goal (%q, %q)", h.ProjectID, h.GoalID, g.ProjectID, g.GoalID)
 			subjectOK = false
 		default:
-			flags = nonGoalOverlapFlags(h, g.NonGoals)
+			if h.Version == 3 {
+				blockers = append(blockers, od6Overlaps(h, g.NonGoals)...)
+			} else {
+				flags = nonGoalOverlapFlags(h, g.NonGoals)
+			}
 		}
 	}
 
@@ -403,6 +417,18 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 			OutOfScope:   h.OutOfScope,
 			Acceptance:   h.AcceptanceItems,
 			Flags:        flags,
+		}
+		if h.Version == 3 {
+			presented.V3 = &PresentedViewV3{
+				Roles:                h.Roles,
+				Tests:                h.Tests,
+				Risks:                h.Risks,
+				Estimates:            h.Estimates,
+				MemoryScope:          h.MemoryScope,
+				GoalMemoryScope:      g.MemoryScope,
+				DeliveryLimit:        h.DeliveryLimit,
+				GoalDeliveryBoundary: g.DeliveryBoundary,
+			}
 		}
 		if err := checkPresentable(presented); err != nil {
 			// Refuse, never rewrite: withholding Subject and View means no
@@ -480,4 +506,36 @@ func nonGoalOverlapFlags(h Handoff, nonGoals []string) []Flag {
 		}
 	}
 	return flags
+}
+
+// od6Overlaps returns one refused Blocker, reason ReasonGoalNonGoalOverlap,
+// for every handoff version 3 stage, acceptance criterion, test, or role
+// responsibility that is byte-identical to a Goal non_goals item (OD6). No
+// trimming, case folding, substring, or other normalization is applied; this
+// detects literal overlap only and proves nothing about semantic scope.
+func od6Overlaps(h Handoff, nonGoals []string) []Blocker {
+	acceptance := acceptanceCriteria(h.AcceptanceItems)
+	var blockers []Blocker
+	for _, field := range []struct {
+		name   string
+		values []string
+	}{
+		{name: "stages", values: h.Stages},
+		{name: "acceptance", values: acceptance},
+		{name: "tests", values: h.Tests},
+		{name: "roles responsibility", values: roleResponsibilities(h.Roles)},
+	} {
+		for i, value := range field.values {
+			for _, nonGoal := range nonGoals {
+				if value == nonGoal {
+					blockers = append(blockers, Blocker{
+						Reason: ReasonGoalNonGoalOverlap,
+						Detail: fmt.Sprintf("%s item %d %q is byte-identical to a Goal non_goals item (OD6)", field.name, i+1, value),
+					})
+					break
+				}
+			}
+		}
+	}
+	return blockers
 }

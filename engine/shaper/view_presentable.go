@@ -57,8 +57,9 @@ func checkPresentableText(section string, value []byte) error {
 // checkPresentable refuses v when any section it presents holds an
 // unpresentable rune, first section in render order wins. Sections are named
 // goal, plan, goal_scope, goal_non_goals[i], out_of_scope[i],
-// acceptance[i].criterion, .check, or .adjudication (handoff version 2), and
-// flags[i].id, .kind, .field, or .item, with 0-based indexes.
+// acceptance[i].criterion, .check, or .adjudication (handoff version 2), the
+// version 3 sections named below, and flags[i].id, .kind, .field, or .item,
+// with 0-based indexes.
 func checkPresentable(v PresentedView) error {
 	type section struct {
 		name  string
@@ -81,6 +82,32 @@ func checkPresentable(v PresentedView) error {
 			section{fmt.Sprintf("acceptance[%d].check", i), []byte(item.Verification.Check)},
 			section{fmt.Sprintf("acceptance[%d].adjudication", i), []byte(item.Verification.Adjudication)},
 		)
+	}
+	if v3 := v.V3; v3 != nil {
+		sections = append(sections,
+			section{"memory_scope", []byte(v3.MemoryScope)},
+			section{"goal_memory_scope", []byte(v3.GoalMemoryScope)},
+			section{"delivery_limit", []byte(v3.DeliveryLimit)},
+			section{"goal_delivery_boundary", []byte(v3.GoalDeliveryBoundary)},
+		)
+		for i, r := range v3.Roles {
+			sections = append(sections,
+				section{fmt.Sprintf("roles[%d].role", i), []byte(r.Role)},
+				section{fmt.Sprintf("roles[%d].responsibility", i), []byte(r.Responsibility)},
+			)
+		}
+		for i, s := range v3.Tests {
+			sections = append(sections, section{fmt.Sprintf("tests[%d]", i), []byte(s)})
+		}
+		for i, r := range v3.Risks {
+			sections = append(sections,
+				section{fmt.Sprintf("risks[%d].risk", i), []byte(r.Risk)},
+				section{fmt.Sprintf("risks[%d].mitigation", i), []byte(r.Mitigation)},
+			)
+		}
+		for i, e := range v3.Estimates {
+			sections = append(sections, section{fmt.Sprintf("estimates[%d].stage", i), []byte(e.Stage)})
+		}
 	}
 	for i, f := range v.Flags {
 		sections = append(sections,

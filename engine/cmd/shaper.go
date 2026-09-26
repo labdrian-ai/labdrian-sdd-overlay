@@ -215,7 +215,7 @@ func runShaperAssess(args []string, stdout, stderr io.Writer, exit func(int)) {
 			report.Detail = strings.TrimPrefix(report.Detail+"; "+n, "; ")
 		}
 	}
-	exit(writeShaperAssessment(stdout, stderr, a, report, o.view))
+	exit(writeShaperAssessment(stdout, stderr, a, report, o.view, in.Handoff.Handoff.Version))
 }
 
 type assessBlockerJSON struct {
@@ -279,12 +279,13 @@ func assessExitCode(s shaper.State) int {
 // view bytes, and returns the exit code. A view refused as unpresentable
 // (it holds a terminal control or invisible formatting rune) is never
 // printed: stdout stays empty, stderr names the blocker, and the exit code is
-// the non-zero draft code. Whenever the state is ready it also
-// prints shaper.ReadyDisclosure (the forgery limit, then the statement that
-// the full Phase 3 plan outcome is not yet met): in the JSON, or on stderr
+// the non-zero draft code. Whenever the state is ready it also prints
+// shaper.ReadyDisclosureFor(handoffVersion) (the forgery limit, then the
+// version-specific plan completeness statement): in the JSON, or on stderr
 // with view so the view bytes stay exact.
-func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report clearanceReport, view bool) int {
+func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report clearanceReport, view bool, handoffVersion int) int {
 	code := assessExitCode(a.State)
+	disclosure := shaper.ReadyDisclosureFor(handoffVersion)
 	if view {
 		if a.View == nil {
 			fmt.Fprintf(stderr, "shaper assess: no presented view: subject evidence is incomplete or refused (state %s)\n", a.State)
@@ -298,7 +299,7 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 			return 1
 		}
 		if a.State == shaper.StateReady {
-			fmt.Fprintln(stderr, shaper.ReadyDisclosure)
+			fmt.Fprintln(stderr, disclosure)
 		}
 		return code
 	}
@@ -330,7 +331,7 @@ func writeShaperAssessment(stdout, stderr io.Writer, a shaper.Assessment, report
 		}
 	}
 	if a.State == shaper.StateReady {
-		out.Disclosure = shaper.ReadyDisclosure
+		out.Disclosure = disclosure
 	}
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {

@@ -255,6 +255,29 @@ type PresentedView struct {
 	// rendered as view version 2 with an acceptance section.
 	Acceptance []AcceptanceItem
 	Flags      []Flag
+	// V3 holds the version 3 plan fields, paired with their corresponding
+	// Goal fields; it is nil for version 1 and 2, whose view stays
+	// byte-identical. When non-nil the view is headed view version 3 and
+	// adds the six fields after the acceptance section.
+	V3 *PresentedViewV3
+}
+
+// PresentedViewV3 is the version 3 addition to PresentedView: the plan's
+// roles, tests, risks, estimates, memory_scope, and delivery_limit, shown
+// beside the Goal's memory_scope and delivery_boundary for human judgment.
+type PresentedViewV3 struct {
+	Roles     []Role
+	Tests     []string
+	Risks     []Risk
+	Estimates []Estimate
+	// MemoryScope is the handoff's memory_scope, shown next to
+	// GoalMemoryScope.
+	MemoryScope     string
+	GoalMemoryScope string
+	// DeliveryLimit is the handoff's delivery_limit, shown next to
+	// GoalDeliveryBoundary.
+	DeliveryLimit        string
+	GoalDeliveryBoundary string
 }
 
 // RenderView renders v as deterministic bytes. Every value is length
@@ -269,12 +292,21 @@ type PresentedView struct {
 // out_of_scope, one criterion per item followed by its verification_check or
 // verification_adjudication, so the human sees exactly which verification is
 // planned. Planned verification is shown, never executed.
+//
+// A view with a non-nil V3 is headed view version 3 instead, and adds, after
+// the acceptance section, the six version 3 fields: memory_scope paired with
+// goal_memory_scope, delivery_limit paired with goal_delivery_boundary, then
+// roles, tests, risks, and estimates. Planned tests and estimates are shown,
+// never executed or treated as a calendar commitment.
 func RenderView(v PresentedView) []byte {
 	var b bytes.Buffer
-	if v.Acceptance == nil {
-		b.WriteString("labdrian shaper clearance view 1\n")
-	} else {
+	switch {
+	case v.V3 != nil:
+		b.WriteString("labdrian shaper clearance view 3\n")
+	case v.Acceptance != nil:
 		b.WriteString("labdrian shaper clearance view 2\n")
+	default:
+		b.WriteString("labdrian shaper clearance view 1\n")
 	}
 	writeViewValue(&b, "goal", v.GoalBytes)
 	writeViewValue(&b, "plan", v.PlanBytes)
@@ -292,6 +324,9 @@ func RenderView(v PresentedView) []byte {
 				writeViewValue(&b, "verification_adjudication", []byte(item.Verification.Adjudication))
 			}
 		}
+	}
+	if v.V3 != nil {
+		writeViewV3(&b, v.V3)
 	}
 	fmt.Fprintf(&b, "flags %d\n", len(v.Flags))
 	for _, f := range v.Flags {
@@ -314,6 +349,33 @@ func writeViewList(b *bytes.Buffer, name string, values []string) {
 	fmt.Fprintf(b, "%s %d\n", name, len(values))
 	for _, value := range values {
 		writeViewValue(b, "item", []byte(value))
+	}
+}
+
+// writeViewV3 renders the six version 3 fields: memory_scope paired with
+// goal_memory_scope, delivery_limit paired with goal_delivery_boundary, then
+// roles, tests, risks, and estimates, every string value length-prefixed.
+func writeViewV3(b *bytes.Buffer, v *PresentedViewV3) {
+	writeViewValue(b, "memory_scope", []byte(v.MemoryScope))
+	writeViewValue(b, "goal_memory_scope", []byte(v.GoalMemoryScope))
+	writeViewValue(b, "delivery_limit", []byte(v.DeliveryLimit))
+	writeViewValue(b, "goal_delivery_boundary", []byte(v.GoalDeliveryBoundary))
+	fmt.Fprintf(b, "roles %d\n", len(v.Roles))
+	for _, r := range v.Roles {
+		writeViewValue(b, "role", []byte(r.Role))
+		writeViewValue(b, "responsibility", []byte(r.Responsibility))
+	}
+	writeViewList(b, "tests", v.Tests)
+	fmt.Fprintf(b, "risks %d\n", len(v.Risks))
+	for _, r := range v.Risks {
+		writeViewValue(b, "risk", []byte(r.Risk))
+		writeViewValue(b, "mitigation", []byte(r.Mitigation))
+	}
+	fmt.Fprintf(b, "estimates %d\n", len(v.Estimates))
+	for _, e := range v.Estimates {
+		writeViewValue(b, "stage", []byte(e.Stage))
+		fmt.Fprintf(b, "low_minutes %d\n", e.LowMinutes)
+		fmt.Fprintf(b, "high_minutes %d\n", e.HighMinutes)
 	}
 }
 
