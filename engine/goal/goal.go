@@ -15,8 +15,10 @@ import (
 // Goal is the versioned declarative intent contract. Its field order is also
 // the canonical JSON serialization order.
 type Goal struct {
-	Version            int      `json:"version"`
-	ProjectID          string   `json:"project_id"`
+	Version   int    `json:"version"`
+	ProjectID string `json:"project_id"`
+	// GoalID distinguishes Goals within ProjectID in version 2; it is not globally unique.
+	GoalID             string   `json:"goal_id,omitempty"`
 	Objective          string   `json:"objective"`
 	Scope              string   `json:"scope"`
 	Constraints        []string `json:"constraints"`
@@ -27,7 +29,7 @@ type Goal struct {
 	DeliveryBoundary   string   `json:"delivery_boundary"`
 }
 
-// Parse parses and validates one strict version-1 Goal JSON document. It
+// Parse parses and validates one strict versioned Goal JSON document. It
 // rejects duplicate or unknown fields, trailing input, and structurally
 // invalid Goal values without rewriting authored strings.
 func Parse(data []byte) (Goal, error) {
@@ -62,9 +64,17 @@ func checkGoalFieldNames(data []byte) error {
 	if err := json.Unmarshal(data, &fields); err != nil {
 		return err
 	}
+	version := 0
+	if rawVersion, ok := fields["version"]; ok {
+		_ = json.Unmarshal(rawVersion, &version)
+	}
 	for field := range fields {
 		switch field {
 		case "version", "project_id", "objective", "scope", "constraints", "non_goals", "acceptance_criteria", "memory_scope", "runtime_scope", "delivery_boundary":
+		case "goal_id":
+			if version != 2 {
+				return fmt.Errorf("unknown Goal field %q", field)
+			}
 		default:
 			return fmt.Errorf("unknown Goal field %q", field)
 		}
@@ -152,8 +162,14 @@ func scanJSONValue(dec *json.Decoder) error {
 // Validate checks the version and deterministic structural requirements of a
 // Goal. It does not interpret natural-language meaning or infer permissions.
 func (g Goal) Validate() error {
-	if g.Version != 1 {
-		return fmt.Errorf("unsupported version %d, want 1", g.Version)
+	if g.Version != 1 && g.Version != 2 {
+		return fmt.Errorf("unsupported version %d, want 1 or 2", g.Version)
+	}
+	if g.Version == 1 && g.GoalID != "" {
+		return fmt.Errorf("goal_id is only valid in version 2")
+	}
+	if g.Version == 2 && strings.TrimSpace(g.GoalID) == "" {
+		return fmt.Errorf("goal_id must be a non-blank string")
 	}
 	for _, field := range []struct {
 		name  string
