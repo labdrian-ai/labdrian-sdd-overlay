@@ -3,6 +3,7 @@ package shaper
 import (
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -14,6 +15,18 @@ func writeGoalFile(t *testing.T, dir, name string, data []byte) string {
 		t.Fatalf("write goal file %s: %v", path, err)
 	}
 	return path
+}
+
+// assertRejectedWithoutPartialBinding fails unless BindGoal returned an error
+// together with the zero GoalBinding, so no rejection leaks partial state.
+func assertRejectedWithoutPartialBinding(t *testing.T, got GoalBinding, err error, what string) {
+	t.Helper()
+	if err == nil {
+		t.Fatalf("BindGoal accepted %s", what)
+	}
+	if !reflect.DeepEqual(got, GoalBinding{}) {
+		t.Errorf("BindGoal returned a partial GoalBinding alongside error %v: %#v", err, got)
+	}
 }
 
 func goalV2JSON(projectID, goalID string) string {
@@ -68,9 +81,8 @@ func TestBindGoalRejectsAbsoluteGoalPath(t *testing.T) {
 	absPath := writeGoalFile(t, root, "goal.json", data)
 	h := sampleHandoff()
 
-	if _, err := BindGoal(h, root, absPath); err == nil {
-		t.Fatal("BindGoal accepted an absolute goalPath")
-	}
+	got, err := BindGoal(h, root, absPath)
+	assertRejectedWithoutPartialBinding(t, got, err, "an absolute goalPath")
 }
 
 func TestBindGoalRejectsTraversal(t *testing.T) {
@@ -81,25 +93,22 @@ func TestBindGoalRejectsTraversal(t *testing.T) {
 	h := sampleHandoff()
 
 	traversal := filepath.Join("..", filepath.Base(outside), "goal.json")
-	if _, err := BindGoal(h, root, traversal); err == nil {
-		t.Fatal("BindGoal accepted a traversing goalPath")
-	}
+	got, err := BindGoal(h, root, traversal)
+	assertRejectedWithoutPartialBinding(t, got, err, "a traversing goalPath")
 }
 
 func TestBindGoalRejectsCleanedDotPath(t *testing.T) {
 	root := t.TempDir()
 	h := sampleHandoff()
-	if _, err := BindGoal(h, root, "."); err == nil {
-		t.Fatal("BindGoal accepted goalPath that cleans to \".\"")
-	}
+	got, err := BindGoal(h, root, ".")
+	assertRejectedWithoutPartialBinding(t, got, err, "goalPath that cleans to \".\"")
 }
 
 func TestBindGoalRejectsMissingFile(t *testing.T) {
 	root := t.TempDir()
 	h := sampleHandoff()
-	if _, err := BindGoal(h, root, "absent.json"); err == nil {
-		t.Fatal("BindGoal accepted a missing goal file")
-	}
+	got, err := BindGoal(h, root, "absent.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a missing goal file")
 }
 
 func TestBindGoalRejectsSymlinkFileInsideRoot(t *testing.T) {
@@ -114,9 +123,8 @@ func TestBindGoalRejectsSymlinkFileInsideRoot(t *testing.T) {
 	}
 	h := sampleHandoff()
 
-	if _, err := BindGoal(h, root, "goal.json"); err == nil {
-		t.Fatal("BindGoal accepted a symlinked goal source pointing inside root")
-	}
+	got, err := BindGoal(h, root, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a symlinked goal source pointing inside root")
 }
 
 func TestBindGoalRejectsSymlinkedAncestorDirectoryEscapingRoot(t *testing.T) {
@@ -131,9 +139,8 @@ func TestBindGoalRejectsSymlinkedAncestorDirectoryEscapingRoot(t *testing.T) {
 	}
 	h := sampleHandoff()
 
-	if _, err := BindGoal(h, root, "escape/goal.json"); err == nil {
-		t.Fatal("BindGoal accepted a source reached through a symlinked ancestor directory escaping root")
-	}
+	got, err := BindGoal(h, root, "escape/goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a source reached through a symlinked ancestor directory escaping root")
 }
 
 func TestBindGoalRejectsDirectoryInsteadOfFile(t *testing.T) {
@@ -143,9 +150,8 @@ func TestBindGoalRejectsDirectoryInsteadOfFile(t *testing.T) {
 	}
 	h := sampleHandoff()
 
-	if _, err := BindGoal(h, root, "goal.json"); err == nil {
-		t.Fatal("BindGoal accepted a directory in place of a file")
-	}
+	got, err := BindGoal(h, root, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a directory in place of a file")
 }
 
 func TestBindGoalRejectsInvalidGoalJSON(t *testing.T) {
@@ -153,9 +159,8 @@ func TestBindGoalRejectsInvalidGoalJSON(t *testing.T) {
 	writeGoalFile(t, root, "goal.json", []byte(`{"version":`))
 	h := sampleHandoff()
 
-	if _, err := BindGoal(h, root, "goal.json"); err == nil {
-		t.Fatal("BindGoal accepted invalid Goal JSON")
-	}
+	got, err := BindGoal(h, root, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "invalid Goal JSON")
 }
 
 func TestBindGoalRejectsGoalVersionOne(t *testing.T) {
@@ -166,9 +171,8 @@ func TestBindGoalRejectsGoalVersionOne(t *testing.T) {
 	writeGoalFile(t, root, "goal.json", []byte(v1))
 	h := sampleHandoff()
 
-	if _, err := BindGoal(h, root, "goal.json"); err == nil {
-		t.Fatal("BindGoal accepted a version 1 Goal")
-	}
+	got, err := BindGoal(h, root, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a version 1 Goal")
 }
 
 func TestBindGoalRejectsProjectIDMismatch(t *testing.T) {
@@ -176,10 +180,8 @@ func TestBindGoalRejectsProjectIDMismatch(t *testing.T) {
 	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("other-project", "goal-alpha")))
 	h := sampleHandoff()
 
-	_, err := BindGoal(h, root, "goal.json")
-	if err == nil {
-		t.Fatal("BindGoal accepted a project_id mismatch")
-	}
+	got, err := BindGoal(h, root, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a project_id mismatch")
 	if !strings.Contains(err.Error(), "project_id") {
 		t.Errorf("BindGoal error = %v, want it to name project_id", err)
 	}
@@ -190,10 +192,8 @@ func TestBindGoalRejectsGoalIDMismatch(t *testing.T) {
 	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("standalone-shaper-handoff", "goal-beta")))
 	h := sampleHandoff()
 
-	_, err := BindGoal(h, root, "goal.json")
-	if err == nil {
-		t.Fatal("BindGoal accepted a goal_id mismatch")
-	}
+	got, err := BindGoal(h, root, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a goal_id mismatch")
 	if !strings.Contains(err.Error(), "goal_id") {
 		t.Errorf("BindGoal error = %v, want it to name goal_id", err)
 	}
@@ -201,22 +201,19 @@ func TestBindGoalRejectsGoalIDMismatch(t *testing.T) {
 
 func TestBindGoalRejectsEmptyWorktreeRoot(t *testing.T) {
 	h := sampleHandoff()
-	if _, err := BindGoal(h, "", "goal.json"); err == nil {
-		t.Fatal("BindGoal accepted an empty worktreeRoot")
-	}
+	got, err := BindGoal(h, "", "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "an empty worktreeRoot")
 }
 
 func TestBindGoalRejectsRelativeWorktreeRoot(t *testing.T) {
 	h := sampleHandoff()
-	if _, err := BindGoal(h, "relative/root", "goal.json"); err == nil {
-		t.Fatal("BindGoal accepted a relative worktreeRoot")
-	}
+	got, err := BindGoal(h, "relative/root", "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a relative worktreeRoot")
 }
 
 func TestBindGoalRejectsEmptyGoalPath(t *testing.T) {
 	root := t.TempDir()
 	h := sampleHandoff()
-	if _, err := BindGoal(h, root, ""); err == nil {
-		t.Fatal("BindGoal accepted an empty goalPath")
-	}
+	got, err := BindGoal(h, root, "")
+	assertRejectedWithoutPartialBinding(t, got, err, "an empty goalPath")
 }

@@ -15,9 +15,16 @@ import (
 // the cleaned root: p equal to root is not within it. It is the single
 // definition of lexical containment for callers that need it.
 //
-// Both arguments must already be cleaned; feeding it a raw root changes the
-// semantics.
+// It fails closed on its own precondition: an empty argument, or one that is
+// not already cleaned (filepath.Clean(x) != x), is refused (false) rather than
+// trusted, so a caller that forgets to clean cannot turn "/a/../etc" into a
+// child of "/a" or an empty root into a container of every absolute path. A
+// filesystem root ("/") is still never a containing root; that existing
+// fail-closed behaviour is deliberately unchanged.
 func WithinRoot(cleanRoot, p string) bool {
+	if cleanRoot == "" || p == "" || filepath.Clean(cleanRoot) != cleanRoot || filepath.Clean(p) != p {
+		return false
+	}
 	return strings.HasPrefix(p+string(filepath.Separator), cleanRoot+string(filepath.Separator)) && p != cleanRoot
 }
 
@@ -105,12 +112,14 @@ func ResolvedWithinRoot(root, p string) (bool, error) {
 // test that needs to control every path the guard sees. ResolvedWithinRoot is
 // the production binding of the same single implementation.
 //
-// Both failure modes here are FAIL-OPEN if left implicit, which is why each
-// one is refused explicitly rather than allowed to fall through to
-// WithinRoot: WithinRoot("", p) is true for EVERY absolute path, so a root
-// that resolves to nothing — because the resolver errored and its zero value
-// was used, or because it handed back an empty string with no error at all —
-// would report every destination on earth as contained.
+// Both failure modes here are refused explicitly rather than allowed to fall
+// through to WithinRoot: a root that resolves to nothing — because the
+// resolver errored and its zero value was used, or because it handed back an
+// empty string with no error at all — yields an error, not a verdict.
+// WithinRoot itself refuses an empty root, so these checks are defence in
+// depth: they no longer stand alone between the caller and a fail-open
+// containment answer, but they keep the failure visible as an error instead
+// of a bare false.
 func ResolvedWithinRootUsing(resolve func(string) (string, error), root, p string) (bool, error) {
 	resolvedRoot, err := resolve(root)
 	if err != nil {

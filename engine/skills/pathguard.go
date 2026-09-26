@@ -9,8 +9,8 @@ import "github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 // check in EvaluateOwnership and resolvedWithinRoot below all call it, so no
 // two of them can disagree about what containment means.
 //
-// Both arguments must already be cleaned; feeding it a raw root changes the
-// semantics.
+// An empty or uncleaned argument is refused (false) rather than trusted; see
+// pathguard.WithinRoot.
 //
 // The algorithm lives in the shared package engine/pathguard
 // (pathguard.WithinRoot) so containment is never implemented twice; this is a
@@ -73,12 +73,13 @@ func resolvedWithinRoot(root, p string) (bool, error) {
 // control every path the guard sees. resolvedWithinRoot is the production
 // binding of the same single implementation.
 //
-// Both failure modes here are FAIL-OPEN if left implicit, which is why each
-// one is refused explicitly rather than allowed to fall through to withinRoot:
-// withinRoot("", p) is true for EVERY absolute path, so a root that resolves to
-// nothing — because the resolver errored and its zero value was used, or
-// because it handed back an empty string with no error at all — would report
-// every destination on earth as contained (review round 2, COV-4).
+// Both failure modes here are refused explicitly rather than allowed to fall
+// through to withinRoot: a root that resolves to nothing — because the
+// resolver errored and its zero value was used, or because it handed back an
+// empty string with no error at all — yields an error, not a verdict (review
+// round 2, COV-4). withinRoot("", p) used to be true for EVERY absolute path;
+// it now refuses an empty root itself, so these checks are defence in depth
+// that keep the failure visible as an error instead of a bare false.
 //
 // The algorithm lives in engine/pathguard (pathguard.ResolvedWithinRootUsing);
 // this is a thin wrapper kept so every existing call site in this package

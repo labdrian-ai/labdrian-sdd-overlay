@@ -16,7 +16,11 @@ import (
 type Goal struct {
 	Version   int    `json:"version"`
 	ProjectID string `json:"project_id"`
-	// GoalID distinguishes Goals within ProjectID in version 2; it is not globally unique.
+	// GoalID distinguishes Goals within ProjectID in version 2; it is not
+	// globally unique. It is an opaque caller-supplied string: Validate requires
+	// at least one rune that is not Unicode whitespace (unicode.IsSpace) and
+	// imposes no character-set or path format. Values decoded by Parse are valid
+	// UTF-8 and are kept verbatim; consumers must compare GoalID exactly.
 	GoalID             string   `json:"goal_id,omitempty"`
 	Objective          string   `json:"objective"`
 	Scope              string   `json:"scope"`
@@ -46,6 +50,15 @@ func Parse(data []byte) (Goal, error) {
 	if err := jsonstrict.DecodeStrict(data, "Goal", &g); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
+	if g.Version == 1 {
+		var raw map[string]json.RawMessage
+		if err := json.Unmarshal(data, &raw); err != nil {
+			return Goal{}, fmt.Errorf("parse goal: %w", err)
+		}
+		if _, present := raw["goal_id"]; present {
+			return Goal{}, fmt.Errorf("parse goal: goal_id is only valid in version 2")
+		}
+	}
 	if err := g.Validate(); err != nil {
 		return Goal{}, fmt.Errorf("parse goal: %w", err)
 	}
@@ -53,8 +66,9 @@ func Parse(data []byte) (Goal, error) {
 }
 
 // goalAllowedFields lists every known Goal wire field across supported
-// versions. goal_id is only meaningful in version 2; Validate rejects it when
-// present alongside version 1.
+// versions. goal_id is only meaningful in version 2; Parse rejects the key in
+// any form (including "" or null) alongside version 1, and Validate rejects a
+// non-empty GoalID on a version-1 Goal.
 var goalAllowedFields = []string{
 	"version", "project_id", "goal_id", "objective", "scope", "constraints",
 	"non_goals", "acceptance_criteria", "memory_scope", "runtime_scope",

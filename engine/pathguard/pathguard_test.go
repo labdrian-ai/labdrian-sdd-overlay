@@ -10,7 +10,9 @@ import (
 
 // TestWithinRoot covers the containment helper's core semantics: p equal to
 // root is not within it, a plain child is, and a sibling that merely shares a
-// prefix is refused.
+// prefix is refused. It also pins the fail-closed precondition: an empty or
+// uncleaned argument is refused rather than trusted, and a filesystem root
+// ("/") is still never a containing root.
 func TestWithinRoot(t *testing.T) {
 	const skillsRoot = "/target-repo/.claude/skills"
 
@@ -27,6 +29,11 @@ func TestWithinRoot(t *testing.T) {
 		{"equals_root_refused", skillsRoot, skillsRoot, false},
 		{"parent_of_root_refused", skillsRoot, "/target-repo/.claude", false},
 		{"sibling_prefix_not_a_child", skillsRoot, skillsRoot + "-evil/x", false},
+		{"uncleaned_dotdot_refused", "/a", "/a/../etc", false},
+		{"empty_root_refused", "", "/anywhere", false},
+		{"empty_path_refused", "/a", "", false},
+		{"uncleaned_root_refused", "/a/./b", "/a/./b/c", false},
+		{"filesystem_root_stays_fail_closed", "/", "/etc", false},
 	}
 
 	for _, tc := range cases {
@@ -302,8 +309,9 @@ func TestResolvePathKeepingMissingPermissionDenialIsAGenuineFailure(t *testing.T
 }
 
 // TestResolvedWithinRootUsingRootResolutionFailureFailsClosed proves the
-// root-resolution error branch: leaving resolvedRoot empty is FAIL-OPEN,
-// since WithinRoot("", p) is true for every absolute path. The resolver's own
+// root-resolution error branch. WithinRoot now refuses an empty root on its
+// own, so this branch is defence in depth: it turns a failed resolution into
+// the resolver's own error instead of a bare false verdict. The resolver's
 // error must reach the caller unchanged.
 func TestResolvedWithinRootUsingRootResolutionFailureFailsClosed(t *testing.T) {
 	boom := errors.New("resolver refused the root")
@@ -316,8 +324,10 @@ func TestResolvedWithinRootUsingRootResolutionFailureFailsClosed(t *testing.T) {
 		return p, nil
 	}
 
-	if !WithinRoot("", "/anywhere/at/all") {
-		t.Fatal("precondition: WithinRoot(\"\", p) was expected to be fail-open")
+	// Precondition: WithinRoot refuses an empty root by itself, so the
+	// explicit branch below is defence in depth, not the only guard.
+	if WithinRoot("", "/anywhere/at/all") {
+		t.Fatal("WithinRoot(\"\", p) must refuse an empty root")
 	}
 
 	inside, err := ResolvedWithinRootUsing(resolve, root, "/anywhere/at/all")
