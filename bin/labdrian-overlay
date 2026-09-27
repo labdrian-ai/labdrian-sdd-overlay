@@ -607,6 +607,14 @@ Commands:
   shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
                                    assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
                                    clearance record --stdin  store a human decision (Pi /shaper-clear)
+  roles <verb>                     Forward reusable-role handoff verbs to the engine unchanged.
+                                   Roles are data only; no verb launches an agent or grants authority.
+                                   validate --file PATH                       read-only: parse and validate one record
+                                   next --project ID --goal ID --chain ID     read-only: allowed next roles
+                                   resume --project ID --goal ID --chain ID   read-only: current role, interrupted?, reason
+                                   append --project ID --goal ID --chain ID --stdin
+                                             append one record, read only from stdin
+                                   match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
   validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator
@@ -3347,6 +3355,20 @@ cmd_shaper() {
 }
 
 # ---------------------------------------------------------------------------
+# roles
+# ---------------------------------------------------------------------------
+
+# cmd_roles forwards `labdrian roles <verb>` to the engine unchanged. Roles
+# are data only: no verb launches an agent, dispatches work, or grants
+# execution authority.
+cmd_roles() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" roles "$@"
+}
+
+# ---------------------------------------------------------------------------
 # validate-entry-contract
 # ---------------------------------------------------------------------------
 
@@ -4393,6 +4415,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     prespec)         cmd_prespec "$@" ;;
     skills)          cmd_skills "$@" ;;
     shaper)          cmd_shaper "$@" ;;
+    roles)           cmd_roles "$@" ;;
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;
     deterministic-checks) cmd_deterministic_checks "$@" ;;
     archive-reconcile) cmd_archive_reconcile "$@" ;;
