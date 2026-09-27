@@ -117,17 +117,44 @@ func TestParseDirectiveRejectsInvalidRecords(t *testing.T) {
 	}
 }
 
+// Narrowers can only narrow, so a source or scope absent from every
+// profile default is unreachable from any request. Every member of the
+// closed set must be granted by at least one default.
+func TestEverySourceAndScopeIsReachableFromSomeDefault(t *testing.T) {
+	reachedSources := map[Source]bool{}
+	reachedScopes := map[Scope]bool{}
+	for name, d := range profileDefaults {
+		if _, err := DefaultFor(name); err != nil {
+			t.Fatalf("DefaultFor(%q) error = %v, want nil", name, err)
+		}
+		reachedScopes[d.Scope] = true
+		for _, s := range d.Sources {
+			reachedSources[s] = true
+		}
+	}
+	for s := range knownSources {
+		if !reachedSources[s] {
+			t.Errorf("source %q is not granted by any profile default, so no request can reach it", s)
+		}
+	}
+	for _, sc := range []Scope{ScopeNone, ScopeGoal, ScopeProject} {
+		if !reachedScopes[sc] {
+			t.Errorf("scope %q is not granted by any profile default, so no request can reach it", sc)
+		}
+	}
+}
+
 func TestDefaultForKnownProfiles(t *testing.T) {
 	tests := []struct {
 		profile     string
 		wantScope   Scope
 		wantSources []Source
 	}{
-		{"odd", ScopeGoal, []Source{SourceEngram}},
-		{"sdd", ScopeProject, []Source{SourceEngram}},
+		{"odd", ScopeProject, []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}},
+		{"sdd", ScopeProject, []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}},
 		{"standalone-minimal", ScopeNone, nil},
-		{"maintenance", ScopeGoal, []Source{SourceEngram}},
-		{"incident-recovery", ScopeGoal, []Source{SourceEngram}},
+		{"maintenance", ScopeProject, []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}},
+		{"incident-recovery", ScopeGoal, []Source{SourceEngram, SourceProceduralSkills}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.profile, func(t *testing.T) {
@@ -139,7 +166,7 @@ func TestDefaultForKnownProfiles(t *testing.T) {
 				t.Errorf("DefaultFor(%q).Scope = %q, want %q", tt.profile, d.Scope, tt.wantScope)
 			}
 			if len(d.Sources) != len(tt.wantSources) {
-				t.Errorf("DefaultFor(%q).Sources = %v, want %v", tt.profile, d.Sources, tt.wantSources)
+				t.Fatalf("DefaultFor(%q).Sources = %v, want %v", tt.profile, d.Sources, tt.wantSources)
 			}
 			for i, s := range tt.wantSources {
 				if d.Sources[i] != s {

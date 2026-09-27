@@ -431,7 +431,9 @@ overlay memory <verb>
     (Phase 7).
     plan --profile <name> [--goal <path>] [--goal-directive <path>] [--handoff-directive <path>]
         Resolve <name>'s default MemoryDirective (derived from that workflow profile's
-        memory_policy), optionally narrow it with a directive read from --goal-directive and
+        memory_policy; it is the ceiling of what that profile can read, so every source is
+        granted by at least one profile), optionally narrow it with a directive read from
+        --goal-directive and
         then --handoff-directive (each narrower may only shrink scope and reuse a subset of the
         running sources; any widening is refused with a named reason), and print the resulting
         query plan as JSON. --goal, when given, is parsed with the Goal v2 schema and supplies

@@ -118,18 +118,26 @@ func (d Directive) Validate() error {
 	return nil
 }
 
+// A profile default is the CEILING of what a request under that profile can
+// read: goal and handoff directives may only narrow it (Resolve refuses any
+// widening). A source or scope left out of every default is therefore
+// unreachable from any request, so each default grants the widest read its
+// memory_policy prose allows, and requests narrow from there. Write is
+// always "none": these policies govern what is recorded, which is a write
+// concern outside this package.
+
 // odd's memory_policy (engine/workflowprofile.go): "durable task ledger and
 // Engram mirror for substantial work; store evidence as well as status" —
-// the task ledger and its Engram mirror are scoped to one feature (a goal),
-// not the whole project.
-var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+// substantial work reads the project's prior evidence, long-term memory, and
+// reusable procedures; a single feature narrows to scope goal.
+var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // sdd's memory_policy: "use only the store declared/resolved for the
 // change; do not infer or mix stores" — a change's artifacts are
 // project-scoped (topic keys are sdd/{change-name}/..., not tied to one
-// Goal), and Engram is the store SDD resolves to by default when a backend
-// is available.
-var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
+// Goal). The ceiling lists every store a change can resolve to; the change's
+// resolved store narrows it to exactly one, so stores are never mixed.
+var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // standalone-minimal's memory_policy: "no persistence required; allow only
 // a store explicitly configured by the caller" — no default source is
@@ -137,15 +145,16 @@ var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sourc
 var standaloneMinimalDefault = Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
 
 // maintenance's memory_policy: "record substantial work units; do not
-// promote transient incidents to reusable memory" — one bounded unit is a
-// goal, recorded through Engram only; "do not promote ... to reusable
-// memory" excludes procedural-skills.
-var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+// promote transient incidents to reusable memory" — the promotion clause
+// restricts writes, not reads: maintenance may consult the project's
+// memory and existing procedures, and one bounded unit narrows to scope goal.
+var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // incident-recovery's memory_policy: "case-bounded evidence; exclude
 // secrets/raw logs; preserve verifiable references" — "case-bounded" means
-// one goal (the incident case), through Engram only.
-var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+// one goal (the incident case): that case's Engram evidence plus reusable
+// recovery procedures, but not the project's broad long-term memory.
+var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram, SourceProceduralSkills}, Write: "none"}
 
 var profileDefaults = map[string]Directive{
 	"odd":                oddDefault,

@@ -110,11 +110,11 @@ func TestMemoryPlanStandaloneMinimalDefaultIsNoneWithoutGoal(t *testing.T) {
 	}
 }
 
-func TestMemoryPlanOddDefaultRequiresGoalForFilters(t *testing.T) {
+func TestMemoryPlanIncidentRecoveryDefaultRequiresGoalForFilters(t *testing.T) {
 	dir := t.TempDir()
 	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
 
-	r := runMemoryTest([]string{"plan", "--profile", "odd", "--goal", goalPath})
+	r := runMemoryTest([]string{"plan", "--profile", "incident-recovery", "--goal", goalPath})
 	if r.code != 0 {
 		t.Fatalf("code=%d stderr=%q, want exit 0", r.code, r.stderr)
 	}
@@ -173,12 +173,42 @@ func TestMemoryPlanRefusesWideningNarrower(t *testing.T) {
 	wideningDirectivePath := writeMemoryTestFile(t, dir, "widening.json", memoryTestDirectiveJSON("project"))
 
 	r := runMemoryTest([]string{
-		"plan", "--profile", "odd",
+		"plan", "--profile", "incident-recovery",
 		"--goal", goalPath,
 		"--goal-directive", wideningDirectivePath,
 	})
 	if r.code != 2 || !strings.Contains(r.stderr, "widens scope") {
 		t.Fatalf("code=%d stderr=%q, want exit 2 naming the widening", r.code, r.stderr)
+	}
+}
+
+func TestMemoryPlanOddReachesProceduralSkillsThroughANarrower(t *testing.T) {
+	dir := t.TempDir()
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
+	goalDirectivePath := writeMemoryTestFile(t, dir, "goal-directive.json", memoryTestDirectiveJSON("goal", "procedural-skills"))
+
+	r := runMemoryTest([]string{
+		"plan", "--profile", "odd",
+		"--goal", goalPath,
+		"--goal-directive", goalDirectivePath,
+	})
+	if r.code != 0 {
+		t.Fatalf("code=%d stderr=%q, want exit 0", r.code, r.stderr)
+	}
+	var plan struct {
+		Scope   string   `json:"scope"`
+		Sources []string `json:"sources"`
+		Filters struct {
+			ProjectID string `json:"project_id"`
+			GoalID    string `json:"goal_id"`
+		} `json:"filters"`
+	}
+	if err := json.Unmarshal([]byte(r.stdout), &plan); err != nil {
+		t.Fatalf("unmarshal stdout: %v\nstdout=%s", err, r.stdout)
+	}
+	if plan.Scope != "goal" || len(plan.Sources) != 1 || plan.Sources[0] != "procedural-skills" ||
+		plan.Filters.ProjectID != "proj-1" || plan.Filters.GoalID != "goal-1" {
+		t.Errorf("plan = %+v, want scope=goal, sources=[procedural-skills], proj-1/goal-1 filters", plan)
 	}
 }
 
