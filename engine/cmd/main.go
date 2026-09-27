@@ -144,6 +144,8 @@ func main() {
 		runShaper(os.Args[2:])
 	case "roles":
 		runRoles(os.Args[2:])
+	case "memory":
+		runMemory(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -203,6 +205,10 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    not a signature: any process running as the same OS user, including any installed Pi extension, can forge one")
 	fmt.Fprintln(os.Stderr, "  engine shaper guard-hook")
 	fmt.Fprintln(os.Stderr, "    Claude Code PreToolUse deny guard for clearance recording and the clearance store (exit 2 denies; a speed bump)")
+	fmt.Fprintln(os.Stderr, "  engine memory plan --profile <name> [--goal <path>] [--goal-directive <path>] [--handoff-directive <path>]")
+	fmt.Fprintln(os.Stderr, "    read-only: resolves a workflow profile's default memory directive, narrows it with an optional")
+	fmt.Fprintln(os.Stderr, "    Goal-supplied then handoff-supplied directive, and prints the resulting query plan as JSON")
+	fmt.Fprintln(os.Stderr, "    exit 0 plan resolved, 2 refused/invalid input, 1 usage error; it never queries or writes memory")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")

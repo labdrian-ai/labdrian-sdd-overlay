@@ -1,6 +1,7 @@
 package memoryscope
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 )
@@ -195,6 +196,24 @@ func TestResolveWithNoNarrowersUsesBase(t *testing.T) {
 	}
 }
 
+func TestResolvePlanSourcesIsNonNilEvenWhenEmpty(t *testing.T) {
+	noneScope := Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
+	plan, err := Resolve(noneScope, "", "")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if plan.Sources == nil {
+		t.Error("plan.Sources must be a non-nil empty slice so it serializes as [] instead of null")
+	}
+	data, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatalf("json.Marshal error = %v, want nil", err)
+	}
+	if strings.Contains(string(data), `"sources":null`) {
+		t.Errorf("plan JSON = %s, want sources to serialize as []", data)
+	}
+}
+
 func TestResolveRefusesWideningScope(t *testing.T) {
 	base := Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
 	widerNarrower := Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
@@ -260,22 +279,31 @@ func TestResolveRequiresProjectIDForGoalAndProjectScope(t *testing.T) {
 	}
 }
 
-func TestResolveRejectsGoalIDForProjectScope(t *testing.T) {
+func TestResolveOmitsGoalIDForProjectScope(t *testing.T) {
 	projectScope := Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
-	if _, err := Resolve(projectScope, "proj-1", "goal-1"); err == nil {
-		t.Fatal("Resolve with goal_id and scope project error = nil, want an error")
+	plan, err := Resolve(projectScope, "proj-1", "goal-1")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if plan.Filters.ProjectID != "proj-1" {
+		t.Errorf("plan.Filters.ProjectID = %q, want proj-1", plan.Filters.ProjectID)
+	}
+	if plan.Filters.GoalID != "" {
+		t.Errorf("plan.Filters.GoalID = %q, want empty: goal_id is only for scope goal", plan.Filters.GoalID)
 	}
 }
 
-func TestResolveRejectsFiltersForNoneScope(t *testing.T) {
+func TestResolveOmitsFiltersForNoneScopeEvenWhenSupplied(t *testing.T) {
 	noneScope := Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
-	if _, err := Resolve(noneScope, "proj-1", ""); err == nil {
-		t.Fatal("Resolve with project_id and scope none error = nil, want an error")
+	plan, err := Resolve(noneScope, "proj-1", "goal-1")
+	if err != nil {
+		t.Fatalf("Resolve(none, proj-1, goal-1) error = %v, want nil: a caller-supplied identifier for an unused scope is not an error", err)
 	}
-	if _, err := Resolve(noneScope, "", "goal-1"); err == nil {
-		t.Fatal("Resolve with goal_id and scope none error = nil, want an error")
+	if plan.Filters.ProjectID != "" || plan.Filters.GoalID != "" {
+		t.Errorf("plan.Filters = %+v, want empty for scope none", plan.Filters)
 	}
-	plan, err := Resolve(noneScope, "", "")
+
+	plan, err = Resolve(noneScope, "", "")
 	if err != nil {
 		t.Fatalf("Resolve(none, \"\", \"\") error = %v, want nil", err)
 	}

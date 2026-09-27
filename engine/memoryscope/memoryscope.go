@@ -226,16 +226,19 @@ func Resolve(base Directive, projectID, goalID string, narrowers ...Directive) (
 	return newPlan(running, projectID, goalID)
 }
 
+// newPlan builds a Plan's Filters from the caller-supplied projectID and
+// goalID for the effective, already-narrowed scope. A scope that does not
+// use an identifier simply omits it from Filters rather than refusing: the
+// caller (typically the CLI) resolves projectID/goalID once from an
+// optional Goal file before narrowing completes, and cannot know the final
+// effective scope in advance. Only a genuinely missing required identifier
+// refuses.
 func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 	var filters Filters
 	switch effective.Scope {
 	case ScopeNone:
-		if projectID != "" {
-			return Plan{}, fmt.Errorf("project_id must not be supplied for scope %q", ScopeNone)
-		}
-		if goalID != "" {
-			return Plan{}, fmt.Errorf("goal_id must not be supplied for scope %q", ScopeNone)
-		}
+		// No identifier is used at scope none; any supplied projectID or
+		// goalID is simply not carried into Filters.
 	case ScopeGoal:
 		if strings.TrimSpace(projectID) == "" {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeGoal)
@@ -249,14 +252,16 @@ func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 		if strings.TrimSpace(projectID) == "" {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeProject)
 		}
-		if goalID != "" {
-			return Plan{}, fmt.Errorf("goal_id must not be supplied for scope %q", ScopeProject)
-		}
 		filters.ProjectID = projectID
 	default:
 		return Plan{}, fmt.Errorf("unknown scope %q", effective.Scope)
 	}
-	sources := append([]Source(nil), effective.Sources...)
+	// Always non-nil, even when empty, so a Plan's sources serialize as []
+	// rather than null: this package's own Directive.Validate refuses a
+	// null sources array, and the Plan should hold itself to the same
+	// standard.
+	sources := make([]Source, 0, len(effective.Sources))
+	sources = append(sources, effective.Sources...)
 	return Plan{
 		Scope:     effective.Scope,
 		Sources:   sources,
