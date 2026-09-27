@@ -240,6 +240,9 @@ func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 		if strings.TrimSpace(projectID) == "" {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeGoal)
 		}
+		if strings.TrimSpace(goalID) == "" {
+			return Plan{}, fmt.Errorf("goal_id is required for scope %q", ScopeGoal)
+		}
 		filters.ProjectID = projectID
 		filters.GoalID = goalID
 	case ScopeProject:

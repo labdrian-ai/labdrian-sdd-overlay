@@ -233,6 +233,22 @@ func TestResolveRejectsInvalidBaseOrNarrower(t *testing.T) {
 	}
 }
 
+// A goal-scoped plan without a goal_id would advertise single-goal reads
+// while its filters cover the whole project, so a blank goal_id is refused.
+func TestResolveRequiresGoalIDForGoalScope(t *testing.T) {
+	goalScope := Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+	for _, goalID := range []string{"", "   "} {
+		if plan, err := Resolve(goalScope, "proj-1", goalID); err == nil {
+			t.Errorf("Resolve(scope goal, goal_id %q) = %+v, nil; want an error", goalID, plan)
+		}
+	}
+	projectScope := Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
+	narrowToGoal := Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+	if plan, err := Resolve(projectScope, "proj-1", "", narrowToGoal); err == nil {
+		t.Errorf("Resolve narrowed to scope goal with blank goal_id = %+v, nil; want an error", plan)
+	}
+}
+
 func TestResolveRequiresProjectIDForGoalAndProjectScope(t *testing.T) {
 	goalScope := Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
 	if _, err := Resolve(goalScope, "", "goal-1"); err == nil {
