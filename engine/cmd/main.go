@@ -208,7 +208,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine memory plan --profile <name> [--goal <path>] [--goal-directive <path>] [--handoff-directive <path>]")
 	fmt.Fprintln(os.Stderr, "    read-only: resolves a workflow profile's default memory directive, narrows it with an optional")
 	fmt.Fprintln(os.Stderr, "    Goal-supplied then handoff-supplied directive, and prints the resulting query plan as JSON")
-	fmt.Fprintln(os.Stderr, "    exit 0 plan resolved, 2 refused/invalid input, 1 usage error; it never queries or writes memory")
+	fmt.Fprintln(os.Stderr, "    exit 0 plan resolved, 2 refused/invalid input, 1 usage or output error; it never queries or writes memory")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")

@@ -438,7 +438,7 @@ overlay memory <verb>
         running sources; any widening is refused with a named reason), and print the resulting
         query plan as JSON. --goal, when given, is parsed with the Goal v2 schema and supplies
         the plan's project_id (and goal_id, for scope goal) filters. Exit 0 on a resolved plan,
-        2 on a refused or invalid input, 1 on a usage error.
+        2 on a refused or invalid input, 1 on a usage error or a failed write of the plan.
 
 overlay --help
     Show this help.

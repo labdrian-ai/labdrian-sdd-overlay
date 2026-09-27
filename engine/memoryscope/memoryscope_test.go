@@ -151,7 +151,7 @@ func TestDefaultForKnownProfiles(t *testing.T) {
 		wantSources []Source
 	}{
 		{"odd", ScopeProject, []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}},
-		{"sdd", ScopeProject, []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}},
+		{"sdd", ScopeProject, []Source{SourceEngram}},
 		{"standalone-minimal", ScopeNone, nil},
 		{"maintenance", ScopeProject, []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}},
 		{"incident-recovery", ScopeGoal, []Source{SourceEngram, SourceProceduralSkills}},

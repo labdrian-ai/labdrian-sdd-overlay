@@ -85,7 +85,8 @@ func parseMemoryPlanArgs(args []string) (memoryPlanOpts, error) {
 
 // runMemoryPlan implements 'memory plan'. Exit 0 on a resolved plan, exit 2
 // on a refused or invalid input (unknown profile, unparseable Goal or
-// directive file, or a narrowing refusal), exit 1 on a usage error.
+// directive file, or a narrowing refusal), exit 1 on a usage error or a failed
+// write of the plan.
 func runMemoryPlan(args []string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseMemoryPlanArgs(args)
 	if err != nil {
@@ -139,7 +140,11 @@ func runMemoryPlan(args []string, stdout, stderr io.Writer, exit func(int)) {
 		exit(2)
 		return
 	}
-	stdout.Write(append(data, '\n'))
+	if _, err := stdout.Write(append(data, '\n')); err != nil {
+		fmt.Fprintf(stderr, "error: memory plan: writing plan: %v\n", err)
+		exit(1)
+		return
+	}
 	exit(0)
 }
 

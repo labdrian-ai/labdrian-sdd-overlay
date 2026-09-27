@@ -135,9 +135,9 @@ var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sourc
 // sdd's memory_policy: "use only the store declared/resolved for the
 // change; do not infer or mix stores" — a change's artifacts are
 // project-scoped (topic keys are sdd/{change-name}/..., not tied to one
-// Goal). The ceiling lists every store a change can resolve to; the change's
-// resolved store narrows it to exactly one, so stores are never mixed.
-var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
+// Goal), and the ceiling is the single store SDD resolves to by default,
+// Engram, so the unnarrowed plan never mixes stores.
+var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
 
 // standalone-minimal's memory_policy: "no persistence required; allow only
 // a store explicitly configured by the caller" — no default source is

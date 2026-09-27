@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -209,6 +210,25 @@ func TestMemoryPlanOddReachesProceduralSkillsThroughANarrower(t *testing.T) {
 	if plan.Scope != "goal" || len(plan.Sources) != 1 || plan.Sources[0] != "procedural-skills" ||
 		plan.Filters.ProjectID != "proj-1" || plan.Filters.GoalID != "goal-1" {
 		t.Errorf("plan = %+v, want scope=goal, sources=[procedural-skills], proj-1/goal-1 filters", plan)
+	}
+}
+
+type failingMemoryWriter struct{}
+
+func (failingMemoryWriter) Write([]byte) (int, error) {
+	return 0, errors.New("broken pipe")
+}
+
+func TestMemoryPlanReportsFailedStdoutWrite(t *testing.T) {
+	var errBuf bytes.Buffer
+	code := -1
+	runMemoryCore([]string{"plan", "--profile", "standalone-minimal"}, failingMemoryWriter{}, &errBuf, func(c int) {
+		if code == -1 {
+			code = c
+		}
+	})
+	if code != 1 || !strings.Contains(errBuf.String(), "broken pipe") {
+		t.Fatalf("code=%d stderr=%q, want exit 1 naming the failed write", code, errBuf.String())
 	}
 }
 
