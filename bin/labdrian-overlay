@@ -615,6 +615,13 @@ Commands:
                                    append --project ID --goal ID --chain ID --stdin
                                              append one record, read only from stdin
                                    match-shaper --root PATH --handoff PATH    report which Shaper v3 roles match the vocabulary
+  memory <verb>                    Forward memory-directive verbs to the engine unchanged.
+                                   Read-only: no verb queries or writes memory; query execution
+                                   belongs to a runtime adapter outside this overlay (Phase 7).
+                                   plan --profile NAME [--goal PATH] [--goal-directive PATH] [--handoff-directive PATH]
+                                             resolve a workflow profile's default memory directive,
+                                             narrow it with an optional Goal-supplied then
+                                             handoff-supplied directive, and print the plan as JSON
   validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator
@@ -3369,6 +3376,20 @@ cmd_roles() {
 }
 
 # ---------------------------------------------------------------------------
+# memory
+# ---------------------------------------------------------------------------
+
+# cmd_memory forwards `labdrian memory <verb>` to the engine unchanged.
+# Memory plans are read-only data: no verb queries or writes memory; query
+# execution belongs to a runtime adapter outside this overlay (Phase 7).
+cmd_memory() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" memory "$@"
+}
+
+# ---------------------------------------------------------------------------
 # validate-entry-contract
 # ---------------------------------------------------------------------------
 
@@ -4416,6 +4437,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     skills)          cmd_skills "$@" ;;
     shaper)          cmd_shaper "$@" ;;
     roles)           cmd_roles "$@" ;;
+    memory)          cmd_memory "$@" ;;
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;
     deterministic-checks) cmd_deterministic_checks "$@" ;;
     archive-reconcile) cmd_archive_reconcile "$@" ;;

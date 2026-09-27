@@ -118,17 +118,25 @@ func (d Directive) Validate() error {
 	return nil
 }
 
+// A profile default is the CEILING of what a request under that profile can
+// read: goal and handoff directives may only narrow it (Resolve refuses any
+// widening). A source or scope left out of every default is therefore
+// unreachable from any request, so each default grants the widest read its
+// memory_policy prose allows, and requests narrow from there. Write is
+// always "none": these policies govern what is recorded, which is a write
+// concern outside this package.
+
 // odd's memory_policy (engine/workflowprofile.go): "durable task ledger and
 // Engram mirror for substantial work; store evidence as well as status" —
-// the task ledger and its Engram mirror are scoped to one feature (a goal),
-// not the whole project.
-var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+// substantial work reads the project's prior evidence, long-term memory, and
+// reusable procedures; a single feature narrows to scope goal.
+var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // sdd's memory_policy: "use only the store declared/resolved for the
 // change; do not infer or mix stores" — a change's artifacts are
 // project-scoped (topic keys are sdd/{change-name}/..., not tied to one
-// Goal), and Engram is the store SDD resolves to by default when a backend
-// is available.
+// Goal), and the ceiling is the single store SDD resolves to by default,
+// Engram, so the unnarrowed plan never mixes stores.
 var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
 
 // standalone-minimal's memory_policy: "no persistence required; allow only
@@ -137,15 +145,16 @@ var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sourc
 var standaloneMinimalDefault = Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
 
 // maintenance's memory_policy: "record substantial work units; do not
-// promote transient incidents to reusable memory" — one bounded unit is a
-// goal, recorded through Engram only; "do not promote ... to reusable
-// memory" excludes procedural-skills.
-var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+// promote transient incidents to reusable memory" — the promotion clause
+// restricts writes, not reads: maintenance may consult the project's
+// memory and existing procedures, and one bounded unit narrows to scope goal.
+var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // incident-recovery's memory_policy: "case-bounded evidence; exclude
 // secrets/raw logs; preserve verifiable references" — "case-bounded" means
-// one goal (the incident case), through Engram only.
-var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+// one goal (the incident case): that case's Engram evidence plus reusable
+// recovery procedures, but not the project's broad long-term memory.
+var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram, SourceProceduralSkills}, Write: "none"}
 
 var profileDefaults = map[string]Directive{
 	"odd":                oddDefault,
@@ -226,16 +235,19 @@ func Resolve(base Directive, projectID, goalID string, narrowers ...Directive) (
 	return newPlan(running, projectID, goalID)
 }
 
+// newPlan builds a Plan's Filters from the caller-supplied projectID and
+// goalID for the effective, already-narrowed scope. A scope that does not
+// use an identifier simply omits it from Filters rather than refusing: the
+// caller (typically the CLI) resolves projectID/goalID once from an
+// optional Goal file before narrowing completes, and cannot know the final
+// effective scope in advance. Only a genuinely missing required identifier
+// refuses.
 func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 	var filters Filters
 	switch effective.Scope {
 	case ScopeNone:
-		if projectID != "" {
-			return Plan{}, fmt.Errorf("project_id must not be supplied for scope %q", ScopeNone)
-		}
-		if goalID != "" {
-			return Plan{}, fmt.Errorf("goal_id must not be supplied for scope %q", ScopeNone)
-		}
+		// No identifier is used at scope none; any supplied projectID or
+		// goalID is simply not carried into Filters.
 	case ScopeGoal:
 		if strings.TrimSpace(projectID) == "" {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeGoal)
@@ -249,14 +261,16 @@ func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 		if strings.TrimSpace(projectID) == "" {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeProject)
 		}
-		if goalID != "" {
-			return Plan{}, fmt.Errorf("goal_id must not be supplied for scope %q", ScopeProject)
-		}
 		filters.ProjectID = projectID
 	default:
 		return Plan{}, fmt.Errorf("unknown scope %q", effective.Scope)
 	}
-	sources := append([]Source(nil), effective.Sources...)
+	// Always non-nil, even when empty, so a Plan's sources serialize as []
+	// rather than null: this package's own Directive.Validate refuses a
+	// null sources array, and the Plan should hold itself to the same
+	// standard.
+	sources := make([]Source, 0, len(effective.Sources))
+	sources = append(sources, effective.Sources...)
 	return Plan{
 		Scope:     effective.Scope,
 		Sources:   sources,

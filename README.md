@@ -424,6 +424,22 @@ overlay roles <verb>
     match-shaper --root <worktree> --handoff <path>                              report which of a Shaper handoff v3's free-form roles equal a
                                                                                   member of the reusable-role vocabulary, without changing v3 semantics
 
+overlay memory <verb>
+    Forward memory-directive verbs to the engine unchanged. Read-only: it only plans what memory
+    a caller may read (scope, sources, and identifying filters) and never queries or writes
+    memory itself; executing a plan is a runtime adapter's responsibility outside this overlay
+    (Phase 7).
+    plan --profile <name> [--goal <path>] [--goal-directive <path>] [--handoff-directive <path>]
+        Resolve <name>'s default MemoryDirective (derived from that workflow profile's
+        memory_policy; it is the ceiling of what that profile can read, so every source is
+        granted by at least one profile), optionally narrow it with a directive read from
+        --goal-directive and
+        then --handoff-directive (each narrower may only shrink scope and reuse a subset of the
+        running sources; any widening is refused with a named reason), and print the resulting
+        query plan as JSON. --goal, when given, is parsed with the Goal v2 schema and supplies
+        the plan's project_id (and goal_id, for scope goal) filters. Exit 0 on a resolved plan,
+        2 on a refused or invalid input, 1 on a usage error or a failed write of the plan.
+
 overlay --help
     Show this help.
 ```
