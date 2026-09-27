@@ -5,6 +5,12 @@
 - **Archive status**: PASS — canonical composition completed and the change folder was archived.
 - **Verification status**: PARTIAL — the historical verification limitations below remain explicit and unchanged.
 
+## Cycle Timestamps
+
+| Phase | Timestamp | Notes |
+|-------|-----------|-------|
+| t1 (landing commit) | n/a | landing_commit is absent, so there is no landing commit to anchor on: the implementation slices merged to `main` through separate pull requests over several days, and this archive reaches `main` only through PR #434, which does not exist as a merge when this record is written. None is inferred from tree matching or position. |
+
 ## Executive Summary
 
 Native `gentle-ai.sdd-status` v2 authorized archive: `artifactStore: openspec`,
