@@ -34,7 +34,12 @@ var (
 	ErrTooManyStages           = errors.New("workflow: stage limit exceeded")
 )
 
-// MaxStages bounds how many stages a single workflow may record.
+// MaxStages bounds how many stages a single workflow may record. The
+// largest built-in Workflow Profile (engine/workflowprofile) declares seven
+// stages; 256 gives generous headroom for a future profile with a much
+// longer stage chain while still bounding the per-event copy cost in
+// applyEvent (see State's doc comment) to a small, predictable amount of
+// work.
 const MaxStages = 256
 
 // State is the pure state derived by replaying a workflow's event log: its

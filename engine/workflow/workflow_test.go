@@ -342,7 +342,7 @@ func TestVerifyEventsRejectsInvalidEvent(t *testing.T) {
 	}
 }
 
-// --- R1-1: ValidateIdentifier allowlist ---
+// ValidateIdentifier rejects characters outside its allowlist.
 
 func TestValidateIdentifierRejectsUnsafeCharacters(t *testing.T) {
 	tests := []struct {
@@ -375,7 +375,7 @@ func TestValidateIdentifierAcceptsAllowlist(t *testing.T) {
 	}
 }
 
-// --- R1-2: bounded free-text fields and overall event size cap ---
+// Free-text fields and the overall event document are size-bounded.
 
 func TestWorkflowEventValidateRejectsOversizedFreeTextFields(t *testing.T) {
 	tests := []struct {
@@ -435,7 +435,8 @@ func TestParseWorkflowEventRejectsOversizedDocument(t *testing.T) {
 	}
 }
 
-// --- R2-004: canonical compact encoding vs. human-readable encoding ---
+// MarshalLine's compact single-line encoding is exactly EventDigest's input,
+// distinct from Marshal's indented, human-readable encoding.
 
 func TestMarshalLineIsCompactSingleLineMatchingDigestInput(t *testing.T) {
 	e := validCreatedEvent()
@@ -466,7 +467,7 @@ func TestMarshalLineIsCompactSingleLineMatchingDigestInput(t *testing.T) {
 	}
 }
 
-// --- R3-001: malformed checked.role_chain_digest ---
+// A malformed checked.role_chain_digest is rejected.
 
 func TestWorkflowEventValidateRejectsMalformedRoleChainDigest(t *testing.T) {
 	e := validStartedEvent()
@@ -482,7 +483,7 @@ func TestWorkflowEventValidateRejectsMalformedRoleChainDigest(t *testing.T) {
 	}
 }
 
-// --- R3-002: unknown nested fields in checked and observations[i] ---
+// Unknown nested fields inside checked and observations[i] are rejected.
 
 func TestParseWorkflowEventRejectsUnknownFieldInChecked(t *testing.T) {
 	e := validStartedEvent()
@@ -526,7 +527,7 @@ func TestParseWorkflowEventRejectsUnknownFieldInObservation(t *testing.T) {
 	}
 }
 
-// --- R3-003: completed close with a non-blank reason ---
+// A completed close must not carry a reason.
 
 func TestWorkflowEventValidateRejectsCompletedCloseWithReason(t *testing.T) {
 	e := validStartedEvent()
@@ -538,7 +539,8 @@ func TestWorkflowEventValidateRejectsCompletedCloseWithReason(t *testing.T) {
 	}
 }
 
-// --- R4-git-head-weak: full commit id required ---
+// provenance.git_head must be a full commit id (or empty), never an
+// abbreviated one.
 
 func TestProvenanceValidateRequiresFullCommitID(t *testing.T) {
 	tests := []struct {

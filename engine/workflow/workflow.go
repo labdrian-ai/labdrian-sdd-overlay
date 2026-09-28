@@ -30,13 +30,28 @@ const EventVersion = 1
 // (engine/workflow's on-disk JSONL log) uses workflow_id and project_id as
 // file path components — <state home>/labdrian/workflows/<project_id>/
 // <workflow_id>.jsonl — so identifiers must be safe single path components on
-// every supported platform: see ValidateIdentifier.
+// every supported platform: see ValidateIdentifier. 128 runes is far beyond
+// any realistic slug, UUID, or content-addressed id (a UUID is 36
+// characters, a SHA-256 hex digest 64) while still keeping every path this
+// package builds well under common filesystem path-length limits (typically
+// 255 bytes per component).
 const MaxIdentifierLength = 128
 
 // Maximum lengths for the free-text fields this package validates. These
 // bound resource exhaustion from an untrusted event source (see Replay's
 // doc comment): a caller decoding events from disk or from another process
 // must not accept unbounded free text before these limits are enforced.
+//
+// GoalID and Stage are short caller-chosen names (a Goal's own goal_id, or
+// one of a Workflow Profile's declared stage names), so 256 runes is
+// generous headroom over any realistic name while still catching a
+// runaway value. Capability names are shorter still (a handful of fixed
+// strings this package and its callers define, such as "gentle-ai-review"),
+// so 128 runes is ample. Reason and Detail are free-form human explanation
+// (a close reason, a classification detail, an observation detail) that may
+// legitimately run to a few sentences or short paragraph, so 4096 runes (a
+// few paragraphs of text) leaves room for a genuine explanation without
+// accepting an unbounded document.
 const (
 	MaxGoalIDLength                = 256
 	MaxStageLength                 = 256
@@ -49,7 +64,11 @@ const (
 // that ParseWorkflowEvent will decode, independent of the field-level
 // bounds above. It protects a caller that parses events from an untrusted
 // source (disk, network, another process) from an arbitrarily large
-// document before any field is even inspected.
+// document before any field is even inspected. 64 KiB is a large multiple of
+// the sum of every field-level bound above (well under 16 KiB even with
+// every free-text field and every allowed observation populated at its
+// maximum), so a legitimate event never approaches this ceiling; it exists
+// purely to reject a hostile or corrupted document cheaply, before decoding.
 const MaxEventBytes = 64 * 1024
 
 // ErrEventTooLarge is returned by ParseWorkflowEvent when the input exceeds

@@ -242,7 +242,8 @@ func TestReplayEmptyEventsErrors(t *testing.T) {
 	}
 }
 
-// --- R3-004: CheckTransition defensive branches, exercised directly ---
+// CheckTransition's defensive branches (an unknown close outcome, an unknown
+// event kind) are exercised directly.
 
 func TestCheckTransitionRejectsUnknownCloseOutcome(t *testing.T) {
 	events := withDigestChain([]WorkflowEvent{

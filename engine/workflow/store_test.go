@@ -229,6 +229,66 @@ func writeRawLog(t *testing.T, root, projectID, workflowID, content string) {
 	}
 }
 
+// A rejected first append against an absent workflow must be validated the
+// same way the store validates every later append against an owned
+// workflow: identifiers must match the requested workflow, and the linkage
+// fields (here, prev_digest at seq 0) must be legal for the state being
+// appended to (here, the zero state before any event exists).
+func TestStoreAppendRejectsMismatchedIdentifiersOnFirstEvent(t *testing.T) {
+	s := newTestStore(t)
+	created := validCreatedEvent()
+	created.ProjectID = "other-project"
+	if err := s.Append("proj-1", "wf-1", created); err == nil {
+		t.Fatalf("Append() = nil, want error for a first event whose project_id does not match the requested workflow")
+	}
+	loaded, err := s.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if loaded.Classification != ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	}
+}
+
+func TestStoreAppendRejectsNonEmptyPrevDigestOnFirstEvent(t *testing.T) {
+	s := newTestStore(t)
+	created := validCreatedEvent()
+	created.PrevDigest = strings.Repeat("a", 64)
+	if err := s.Append(created.ProjectID, created.WorkflowID, created); err == nil {
+		t.Fatalf("Append() = nil, want error for a first event with a non-empty prev_digest")
+	}
+	loaded, err := s.Load(created.ProjectID, created.WorkflowID)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if loaded.Classification != ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	}
+}
+
+// classifyWorkflowLog's Detail messages report 1-based line numbers, matching
+// how a human reading the file (or an editor's line gutter) would count
+// lines; the previous 0-based index made "line 0" point at the file's first
+// line, which is confusing to a person debugging a malformed log by hand.
+func TestStoreLoadMalformedDetailUsesOneBasedLineNumbers(t *testing.T) {
+	root := setStoreEnv(t)
+	s, err := NewStore()
+	if err != nil {
+		t.Fatalf("NewStore() = %v, want nil", err)
+	}
+	writeRawLog(t, root, "proj-1", "wf-1", "not json at all\n")
+	loaded, err := s.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if loaded.Classification != ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	}
+	if !strings.Contains(loaded.Detail, "line 1 ") {
+		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 1")
+	}
+}
+
 func TestStoreLoadForeignWhenValidJSONNotOurs(t *testing.T) {
 	root := setStoreEnv(t)
 	s, err := NewStore()
