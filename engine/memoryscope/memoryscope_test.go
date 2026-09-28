@@ -248,19 +248,42 @@ func TestDefaultForUnknownProfileRefuses(t *testing.T) {
 // deleting a real, workflowprofile-accepted entry.
 func TestDefaultForRefusesWhenProfileDefaultsDrifts(t *testing.T) {
 	const profile = "sdd"
-	saved, ok := profileDefaults[profile]
-	if !ok {
-		t.Fatalf("setup: profileDefaults[%q] must exist before the drift can be simulated", profile)
+	// A local copy keeps the package-level table untouched, so this test
+	// stays safe if sibling tests ever run in parallel.
+	drifted := make(map[string]Directive, len(profileDefaults))
+	for name, d := range profileDefaults {
+		drifted[name] = d
 	}
-	delete(profileDefaults, profile)
-	t.Cleanup(func() { profileDefaults[profile] = saved })
+	delete(drifted, profile)
 
-	_, err := DefaultFor(profile)
+	_, err := defaultFrom(drifted, profile)
 	if err == nil {
-		t.Fatal("DefaultFor error = nil, want an error naming the drifted profile")
+		t.Fatal("defaultFrom error = nil, want an error naming the drifted profile")
 	}
 	if !strings.Contains(err.Error(), profile) {
-		t.Errorf("DefaultFor error = %q, want it to name profile %q", err.Error(), profile)
+		t.Errorf("defaultFrom error = %q, want it to name profile %q", err.Error(), profile)
+	}
+	if _, ok := profileDefaults[profile]; !ok {
+		t.Errorf("profileDefaults[%q] was mutated by the drift simulation", profile)
+	}
+}
+
+func TestResolveDoesNotListWhitespaceOnlyIdentifiersAsOmitted(t *testing.T) {
+	none := Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
+	plan, err := Resolve(none, "  ", "\t")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 0 {
+		t.Errorf("plan.OmittedFilters = %v, want none for whitespace-only identifiers", plan.OmittedFilters)
+	}
+	project := Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
+	plan, err = Resolve(project, "proj-1", " ")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 0 {
+		t.Errorf("plan.OmittedFilters = %v, want none for a whitespace-only goal_id", plan.OmittedFilters)
 	}
 }
 
