@@ -11,6 +11,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"regexp"
@@ -25,10 +26,35 @@ import (
 const EventVersion = 1
 
 // MaxIdentifierLength bounds every identifier this package validates
-// (workflow_id, project_id, role_chain_id). W2 uses workflow_id and
-// project_id as file path components, so identifiers must never contain a
-// path separator or a ".." segment.
+// (workflow_id, project_id, role_chain_id). The workflow store
+// (engine/workflow's on-disk JSONL log) uses workflow_id and project_id as
+// file path components — <state home>/labdrian/workflows/<project_id>/
+// <workflow_id>.jsonl — so identifiers must be safe single path components on
+// every supported platform: see ValidateIdentifier.
 const MaxIdentifierLength = 128
+
+// Maximum lengths for the free-text fields this package validates. These
+// bound resource exhaustion from an untrusted event source (see Replay's
+// doc comment): a caller decoding events from disk or from another process
+// must not accept unbounded free text before these limits are enforced.
+const (
+	MaxGoalIDLength                = 256
+	MaxStageLength                 = 256
+	MaxReasonLength                = 4096
+	MaxObservationCapabilityLength = 128
+	MaxObservationDetailLength     = 4096
+)
+
+// MaxEventBytes bounds the overall size of one WorkflowEvent JSON document
+// that ParseWorkflowEvent will decode, independent of the field-level
+// bounds above. It protects a caller that parses events from an untrusted
+// source (disk, network, another process) from an arbitrarily large
+// document before any field is even inspected.
+const MaxEventBytes = 64 * 1024
+
+// ErrEventTooLarge is returned by ParseWorkflowEvent when the input exceeds
+// MaxEventBytes.
+var ErrEventTooLarge = errors.New("workflow: event document exceeds the maximum size")
 
 // Kind is one member of the closed WorkflowEvent kind vocabulary.
 type Kind string
@@ -151,14 +177,29 @@ var (
 )
 
 var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
-var gitHeadPattern = regexp.MustCompile(`^[0-9a-f]{4,64}$`)
-var identifierUnsafe = regexp.MustCompile(`[/\\\x00]`)
 
-// ParseWorkflowEvent strictly parses one WorkflowEvent record: valid UTF-8,
-// no duplicate keys at any depth, no unknown fields at any depth (exact
-// case), no trailing data, the pinned version, and every field shape via
-// Validate.
+// gitHeadPattern requires a full commit id: exactly 40 lowercase hex
+// characters (a full SHA-1 object id) or exactly 64 (a full SHA-256 object
+// id). Provenance.git_head exists specifically so a post-incident
+// investigation can pin down the exact commit an event was produced from;
+// an abbreviated id is not reliably unique and defeats that purpose.
+var gitHeadPattern = regexp.MustCompile(`^([0-9a-f]{40}|[0-9a-f]{64})$`)
+
+// identifierAllowed is the closed allowlist ValidateIdentifier enforces:
+// ASCII letters, digits, '.', '_', and '-'. Every character outside this
+// set is rejected, including control characters (e.g. CR/LF), ':' (which on
+// Windows NTFS introduces an alternate data stream), path separators, and
+// spaces.
+var identifierAllowed = regexp.MustCompile(`^[A-Za-z0-9._-]+$`)
+
+// ParseWorkflowEvent strictly parses one WorkflowEvent record: bounded
+// overall size, valid UTF-8, no duplicate keys at any depth, no unknown
+// fields at any depth (exact case), no trailing data, the pinned version,
+// and every field shape via Validate.
 func ParseWorkflowEvent(data []byte) (WorkflowEvent, error) {
+	if len(data) > MaxEventBytes {
+		return WorkflowEvent{}, fmt.Errorf("parse workflow event: %w: %d bytes exceeds the maximum of %d", ErrEventTooLarge, len(data), MaxEventBytes)
+	}
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return WorkflowEvent{}, fmt.Errorf("parse workflow event: %w", err)
 	}
@@ -220,9 +261,13 @@ func checkNestedWorkflowFields(raw map[string]json.RawMessage) error {
 	return nil
 }
 
-// Marshal returns the canonical JSON representation of a valid event: fields
-// in contract order, two-space indentation, and exactly one trailing
-// newline.
+// Marshal returns the indented, human-readable JSON representation of a
+// valid event: fields in contract order, two-space indentation, and exactly
+// one trailing newline. This is a separate encoding from the canonical
+// digest encoding: it is not the input EventDigest hashes, and the on-disk
+// JSONL workflow store never writes this form (it writes MarshalLine's
+// compact single-line form instead). Use Marshal only when a human will read
+// the output directly.
 func (e WorkflowEvent) Marshal() ([]byte, error) {
 	if err := e.Validate(); err != nil {
 		return nil, fmt.Errorf("marshal workflow event: %w", err)
@@ -234,19 +279,41 @@ func (e WorkflowEvent) Marshal() ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
+// MarshalLine returns the canonical digest encoding of a valid event as one
+// compact JSON line plus exactly one trailing newline: this is the form the
+// on-disk JSONL workflow store writes, and the bytes before the trailing
+// newline are exactly what EventDigest hashes. It is distinct from Marshal's
+// indented, human-readable encoding, which is not the digest input and is
+// never written to the store.
+func (e WorkflowEvent) MarshalLine() ([]byte, error) {
+	if err := e.Validate(); err != nil {
+		return nil, fmt.Errorf("marshal workflow event line: %w", err)
+	}
+	data, err := json.Marshal(e)
+	if err != nil {
+		return nil, fmt.Errorf("marshal workflow event line: %w", err)
+	}
+	return append(data, '\n'), nil
+}
+
 // ValidateIdentifier checks that value is safe to use as a single file path
-// component and as a stable lookup key: non-blank, no path separator or NUL
-// byte, no "." or ".." segment, and bounded to MaxIdentifierLength runes.
+// component on every supported platform and as a stable lookup key: non-
+// blank, at most MaxIdentifierLength runes, composed only of the characters
+// in identifierAllowed (ASCII letters, digits, '.', '_', '-'), and not
+// starting with '.' (which also excludes the "." and ".." segments). This
+// allowlist additionally excludes control characters (e.g. CR/LF), ':'
+// (which on Windows NTFS introduces an alternate data stream), spaces, and
+// every path separator.
 func ValidateIdentifier(name, value string) error {
 	switch {
 	case value == "":
 		return fmt.Errorf("%s must not be blank", name)
-	case value == ".", value == "..":
-		return fmt.Errorf("%s %q is not a usable identifier", name, value)
-	case identifierUnsafe.MatchString(value):
-		return fmt.Errorf("%s %q contains a path separator or NUL byte", name, value)
 	case len([]rune(value)) > MaxIdentifierLength:
 		return fmt.Errorf("%s exceeds the maximum identifier length of %d runes", name, MaxIdentifierLength)
+	case !identifierAllowed.MatchString(value):
+		return fmt.Errorf("%s %q contains a character outside the allowed set [A-Za-z0-9._-]", name, value)
+	case strings.HasPrefix(value, "."):
+		return fmt.Errorf("%s %q must not start with '.'", name, value)
 	}
 	return nil
 }
@@ -307,8 +374,14 @@ func validateObservations(observations []Observation) error {
 		if strings.TrimSpace(o.Capability) == "" {
 			return fmt.Errorf("observations[%d].capability must not be blank", i)
 		}
+		if len([]rune(o.Capability)) > MaxObservationCapabilityLength {
+			return fmt.Errorf("observations[%d].capability exceeds the maximum length of %d runes", i, MaxObservationCapabilityLength)
+		}
 		if o.Status != ObservationAvailable && o.Status != ObservationUnavailable {
 			return fmt.Errorf("observations[%d].status must be %q or %q, got %q", i, ObservationAvailable, ObservationUnavailable, o.Status)
+		}
+		if len([]rune(o.Detail)) > MaxObservationDetailLength {
+			return fmt.Errorf("observations[%d].detail exceeds the maximum length of %d runes", i, MaxObservationDetailLength)
 		}
 	}
 	return nil
@@ -335,6 +408,9 @@ func (e WorkflowEvent) validatePayload() error {
 		if strings.TrimSpace(e.Stage) == "" {
 			return fmt.Errorf("stage must not be blank")
 		}
+		if len([]rune(e.Stage)) > MaxStageLength {
+			return fmt.Errorf("stage exceeds the maximum length of %d runes", MaxStageLength)
+		}
 		return nil
 	case KindVerified:
 		if !blankCreated || !blankStage || !blankClosed {
@@ -357,6 +433,9 @@ func (e WorkflowEvent) validatePayload() error {
 func (e WorkflowEvent) validateCreatedPayload() error {
 	if strings.TrimSpace(e.GoalID) == "" {
 		return fmt.Errorf("goal_id must not be blank")
+	}
+	if len([]rune(e.GoalID)) > MaxGoalIDLength {
+		return fmt.Errorf("goal_id exceeds the maximum length of %d runes", MaxGoalIDLength)
 	}
 	if !sha256HexPattern.MatchString(e.GoalDigest) {
 		return fmt.Errorf("goal_digest must be 64 lowercase hex characters, got %q", e.GoalDigest)
@@ -402,6 +481,9 @@ func (e WorkflowEvent) validateClosedPayload() error {
 		if strings.TrimSpace(e.Reason) == "" {
 			return fmt.Errorf("reason must not be blank when outcome is %q", OutcomeAbandoned)
 		}
+		if len([]rune(e.Reason)) > MaxReasonLength {
+			return fmt.Errorf("reason exceeds the maximum length of %d runes", MaxReasonLength)
+		}
 	default:
 		return fmt.Errorf("outcome must be %q or %q, got %q", OutcomeCompleted, OutcomeAbandoned, e.Outcome)
 	}
@@ -421,7 +503,11 @@ func validateUTCTimestamp(value string) error {
 	return nil
 }
 
-// EventDigest returns the SHA-256 hex digest of e's canonical JSON encoding.
+// EventDigest returns the SHA-256 hex digest of e's canonical digest
+// encoding: the compact (non-indented) JSON bytes of e with no trailing
+// newline, exactly the bytes MarshalLine writes before its own trailing
+// newline. This is the one canonical encoding used for hashing; Marshal's
+// indented form is a separate, human-readable encoding and is never hashed.
 // The digest is what the next record's prev_digest chains to (see
 // VerifyEvents). It is deterministic: the same event always produces the
 // same digest, and changing any field changes the digest.

@@ -9,7 +9,12 @@ import (
 type Status string
 
 const (
-	// StatusNone is the zero value: no event has been applied yet.
+	// StatusNone is the zero value: no event has been applied yet. It is the
+	// single signal CheckTransition consults to decide whether next must be
+	// the workflow's created event; there is no separate "has an event"
+	// flag, since Status can only ever be StatusNone before the first event
+	// is applied (the first applied event is always created, which sets
+	// Status to StatusCreated) and never reverts to StatusNone afterward.
 	StatusNone    Status = ""
 	StatusCreated Status = "created"
 	StatusRunning Status = "running"
@@ -32,6 +37,18 @@ var (
 // current status, the profile and goal it was created against, its recorded
 // stages in order, the seq of the last verified event (-1 if none), and its
 // close outcome once closed.
+//
+// Replay invariant: Replay produces State values as a single linear
+// left-fold over the event log — each State is derived from exactly the
+// previous State plus one event, is used to derive exactly one successor,
+// and is then discarded. applyEvent relies on this: it grows Stages with a
+// plain append and maintains stageSet in place rather than defensively
+// copying on every call, which keeps stage recording linear (O(1)
+// amortized per stage_recorded event) instead of quadratic in the number of
+// recorded stages. Do not reuse one State value to derive two different
+// successor States (a "branch"): Stages and stageSet may alias their
+// backing storage across such branches, and mutating one branch's State can
+// then be observed by the other.
 type State struct {
 	Status          Status
 	Profile         string
@@ -47,17 +64,19 @@ type State struct {
 	// used only to enforce that a completed close immediately follows a
 	// verified event.
 	lastEventKind Kind
-	hasEvent      bool
+
+	// stageSet mirrors Stages as a set, giving hasStage an O(1) duplicate
+	// check instead of an O(len(Stages)) scan. See the Replay invariant
+	// above: it is grown in place, not copied, on the assumption that State
+	// is used linearly.
+	stageSet map[string]bool
 }
 
-// hasStage reports whether stage was already recorded.
+// hasStage reports whether stage was already recorded, in O(1) via
+// stageSet. A zero-value State (stageSet == nil) safely reports false for
+// every stage, since reading from a nil map is valid Go.
 func (s State) hasStage(stage string) bool {
-	for _, existing := range s.Stages {
-		if existing == stage {
-			return true
-		}
-	}
-	return false
+	return s.stageSet[stage]
 }
 
 // CheckTransition reports whether next is a legal event to append after
@@ -79,7 +98,7 @@ func (s State) hasStage(stage string) bool {
 // It assumes next already passed WorkflowEvent.Validate; it does not
 // re-validate field shapes.
 func CheckTransition(state State, next WorkflowEvent) error {
-	if !state.hasEvent {
+	if state.Status == StatusNone {
 		if next.Kind != KindCreated || next.Seq != 0 {
 			return fmt.Errorf("%w, got kind %q at seq %d", ErrNotCreatedFirst, next.Kind, next.Seq)
 		}
@@ -172,7 +191,14 @@ func applyEvent(state State, e WorkflowEvent) State {
 	case KindPaused:
 		state.Status = StatusPaused
 	case KindStageRecorded:
-		state.Stages = append(append([]string(nil), state.Stages...), e.Stage)
+		// See the Replay invariant on State: growing Stages and stageSet in
+		// place (no defensive copy) is safe under Replay's single linear
+		// fold and keeps this O(1) amortized instead of O(len(Stages)).
+		state.Stages = append(state.Stages, e.Stage)
+		if state.stageSet == nil {
+			state.stageSet = make(map[string]bool, 1)
+		}
+		state.stageSet[e.Stage] = true
 	case KindVerified:
 		state.LastVerifiedSeq = e.Seq
 	case KindClosed:
@@ -181,6 +207,5 @@ func applyEvent(state State, e WorkflowEvent) State {
 		state.CloseReason = e.Reason
 	}
 	state.lastEventKind = e.Kind
-	state.hasEvent = true
 	return state
 }

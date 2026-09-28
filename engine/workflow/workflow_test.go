@@ -1,7 +1,10 @@
 package workflow
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"strings"
 	"testing"
 )
@@ -336,5 +339,233 @@ func TestVerifyEventsRejectsInvalidEvent(t *testing.T) {
 	events[1].At = "not-a-time"
 	if err := VerifyEvents(events); err == nil {
 		t.Fatalf("VerifyEvents() = nil, want error for invalid event")
+	}
+}
+
+// --- R1-1: ValidateIdentifier allowlist ---
+
+func TestValidateIdentifierRejectsUnsafeCharacters(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+	}{
+		{"colon", "a:b"},
+		{"space", "a b"},
+		{"control char", "a\nb"},
+		{"backslash", "a\\b"},
+		{"leading dot", ".hidden"},
+		{"just dot", "."},
+		{"dotdot", ".."},
+		{"unicode", "café"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if err := ValidateIdentifier("id", tt.value); err == nil {
+				t.Fatalf("ValidateIdentifier(%q) = nil, want error", tt.value)
+			}
+		})
+	}
+}
+
+func TestValidateIdentifierAcceptsAllowlist(t *testing.T) {
+	for _, value := range []string{"a", "wf-1", "proj_1", "a.b-c_1", "A1"} {
+		if err := ValidateIdentifier("id", value); err != nil {
+			t.Fatalf("ValidateIdentifier(%q) = %v, want nil", value, err)
+		}
+	}
+}
+
+// --- R1-2: bounded free-text fields and overall event size cap ---
+
+func TestWorkflowEventValidateRejectsOversizedFreeTextFields(t *testing.T) {
+	tests := []struct {
+		name   string
+		mutate func(e *WorkflowEvent)
+	}{
+		{"goal_id too long", func(e *WorkflowEvent) { e.GoalID = strings.Repeat("g", MaxGoalIDLength+1) }},
+		{"observation capability too long", func(e *WorkflowEvent) {
+			e.Observations = []Observation{{Capability: strings.Repeat("c", MaxObservationCapabilityLength+1), Status: ObservationAvailable}}
+		}},
+		{"observation detail too long", func(e *WorkflowEvent) {
+			e.Observations = []Observation{{Capability: "memory", Status: ObservationAvailable, Detail: strings.Repeat("d", MaxObservationDetailLength+1)}}
+		}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := validCreatedEvent()
+			tt.mutate(&e)
+			if err := e.Validate(); err == nil {
+				t.Fatalf("Validate() = nil, want error")
+			}
+		})
+	}
+}
+
+func TestWorkflowEventValidateRejectsOversizedStageAndReason(t *testing.T) {
+	e := validStartedEvent()
+	e.Kind = KindStageRecorded
+	e.Stage = strings.Repeat("s", MaxStageLength+1)
+	if err := e.Validate(); err == nil {
+		t.Fatalf("Validate() = nil, want error for oversized stage")
+	}
+
+	e = validStartedEvent()
+	e.Kind = KindClosed
+	e.Outcome = string(OutcomeAbandoned)
+	e.Reason = strings.Repeat("r", MaxReasonLength+1)
+	if err := e.Validate(); err == nil {
+		t.Fatalf("Validate() = nil, want error for oversized reason")
+	}
+}
+
+func TestParseWorkflowEventRejectsOversizedDocument(t *testing.T) {
+	e := validCreatedEvent()
+	data, err := e.MarshalLine()
+	if err != nil {
+		t.Fatalf("MarshalLine() = %v, want nil", err)
+	}
+	padding := make([]byte, MaxEventBytes)
+	for i := range padding {
+		padding[i] = ' '
+	}
+	oversized := append(data[:len(data)-1], padding...)
+	oversized = append(oversized, '}')
+	if _, err := ParseWorkflowEvent(oversized); !errors.Is(err, ErrEventTooLarge) {
+		t.Fatalf("ParseWorkflowEvent() err = %v, want ErrEventTooLarge", err)
+	}
+}
+
+// --- R2-004: canonical compact encoding vs. human-readable encoding ---
+
+func TestMarshalLineIsCompactSingleLineMatchingDigestInput(t *testing.T) {
+	e := validCreatedEvent()
+	line, err := e.MarshalLine()
+	if err != nil {
+		t.Fatalf("MarshalLine() = %v, want nil", err)
+	}
+	if strings.Count(string(line), "\n") != 1 || !strings.HasSuffix(string(line), "\n") {
+		t.Fatalf("MarshalLine() = %q, want exactly one trailing newline", line)
+	}
+	if strings.Contains(string(line[:len(line)-1]), "\n") {
+		t.Fatalf("MarshalLine() = %q, want a single compact line", line)
+	}
+	compact, err := json.Marshal(e)
+	if err != nil {
+		t.Fatalf("json.Marshal() = %v, want nil", err)
+	}
+	if string(line[:len(line)-1]) != string(compact) {
+		t.Fatalf("MarshalLine() body = %s, want %s (the exact EventDigest input)", line, compact)
+	}
+	digest, err := EventDigest(e)
+	if err != nil {
+		t.Fatalf("EventDigest() = %v, want nil", err)
+	}
+	sum := sha256.Sum256(compact)
+	if digest != hex.EncodeToString(sum[:]) {
+		t.Fatalf("EventDigest() does not match the hash of MarshalLine's body")
+	}
+}
+
+// --- R3-001: malformed checked.role_chain_digest ---
+
+func TestWorkflowEventValidateRejectsMalformedRoleChainDigest(t *testing.T) {
+	e := validStartedEvent()
+	e.Kind = KindVerified
+	e.Checked = &Checked{
+		ChainDigest:     strings.Repeat("b", 64),
+		GoalDigest:      strings.Repeat("a", 64),
+		Profile:         "odd",
+		RoleChainDigest: "not-hex",
+	}
+	if err := e.Validate(); err == nil {
+		t.Fatalf("Validate() = nil, want error for malformed checked.role_chain_digest")
+	}
+}
+
+// --- R3-002: unknown nested fields in checked and observations[i] ---
+
+func TestParseWorkflowEventRejectsUnknownFieldInChecked(t *testing.T) {
+	e := validStartedEvent()
+	e.Kind = KindVerified
+	e.Checked = &Checked{ChainDigest: strings.Repeat("b", 64), GoalDigest: strings.Repeat("a", 64), Profile: "odd"}
+	data, err := e.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal() = %v, want nil", err)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("json.Unmarshal() = %v, want nil", err)
+	}
+	raw["checked"] = json.RawMessage(`{"chain_digest":"` + strings.Repeat("b", 64) + `","goal_digest":"` + strings.Repeat("a", 64) + `","profile":"odd","bogus":"x"}`)
+	mutated, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatalf("json.Marshal() = %v, want nil", err)
+	}
+	if _, err := ParseWorkflowEvent(mutated); err == nil {
+		t.Fatalf("ParseWorkflowEvent() = nil, want error for unknown field in checked")
+	}
+}
+
+func TestParseWorkflowEventRejectsUnknownFieldInObservation(t *testing.T) {
+	e := validCreatedEvent()
+	data, err := e.Marshal()
+	if err != nil {
+		t.Fatalf("Marshal() = %v, want nil", err)
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		t.Fatalf("json.Unmarshal() = %v, want nil", err)
+	}
+	raw["observations"] = json.RawMessage(`[{"capability":"memory","status":"available","bogus":"x"}]`)
+	mutated, err := json.Marshal(raw)
+	if err != nil {
+		t.Fatalf("json.Marshal() = %v, want nil", err)
+	}
+	if _, err := ParseWorkflowEvent(mutated); err == nil {
+		t.Fatalf("ParseWorkflowEvent() = nil, want error for unknown field in observations[i]")
+	}
+}
+
+// --- R3-003: completed close with a non-blank reason ---
+
+func TestWorkflowEventValidateRejectsCompletedCloseWithReason(t *testing.T) {
+	e := validStartedEvent()
+	e.Kind = KindClosed
+	e.Outcome = string(OutcomeCompleted)
+	e.Reason = "should not be here"
+	if err := e.Validate(); err == nil {
+		t.Fatalf("Validate() = nil, want error for completed close carrying a reason")
+	}
+}
+
+// --- R4-git-head-weak: full commit id required ---
+
+func TestProvenanceValidateRequiresFullCommitID(t *testing.T) {
+	tests := []struct {
+		name    string
+		head    string
+		wantErr bool
+	}{
+		{"empty", "", false},
+		{"sha1 full", strings.Repeat("a", 40), false},
+		{"sha256 full", strings.Repeat("a", 64), false},
+		{"abbreviated 4", "abcd", true},
+		{"abbreviated 8", strings.Repeat("a", 8), true},
+		{"abbreviated 39", strings.Repeat("a", 39), true},
+		{"between 40 and 64", strings.Repeat("a", 50), true},
+		{"uppercase", strings.Repeat("A", 40), true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			e := validCreatedEvent()
+			e.Provenance.GitHead = tt.head
+			err := e.Validate()
+			if tt.wantErr && err == nil {
+				t.Fatalf("Validate() = nil, want error for git_head %q", tt.head)
+			}
+			if !tt.wantErr && err != nil {
+				t.Fatalf("Validate() = %v, want nil for git_head %q", err, tt.head)
+			}
+		})
 	}
 }
