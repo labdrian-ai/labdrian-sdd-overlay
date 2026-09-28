@@ -127,9 +127,10 @@ func (d Directive) Validate() error {
 // concern outside this package.
 
 // odd's memory_policy (engine/workflowprofile.go): "durable task ledger and
-// Engram mirror for substantial work; store evidence as well as status" —
-// substantial work reads the project's prior evidence, long-term memory, and
-// reusable procedures; a single feature narrows to scope goal.
+// Engram mirror for substantial work; store evidence as well as status; may
+// read project evidence from Engram, long-term memory, and procedural
+// skills" — the policy names all three stores directly; a single feature
+// narrows to scope goal.
 var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // sdd's memory_policy: "use only the store declared/resolved for the
@@ -145,15 +146,16 @@ var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sourc
 var standaloneMinimalDefault = Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
 
 // maintenance's memory_policy: "record substantial work units; do not
-// promote transient incidents to reusable memory" — the promotion clause
-// restricts writes, not reads: maintenance may consult the project's
-// memory and existing procedures, and one bounded unit narrows to scope goal.
+// promote transient incidents to reusable memory; may read project evidence
+// from Engram, long-term memory, and procedural skills" — the policy names
+// all three stores directly; one bounded unit narrows to scope goal.
 var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // incident-recovery's memory_policy: "case-bounded evidence; exclude
-// secrets/raw logs; preserve verifiable references" — "case-bounded" means
-// one goal (the incident case): that case's Engram evidence plus reusable
-// recovery procedures, but not the project's broad long-term memory.
+// secrets/raw logs; preserve verifiable references; may read the case's
+// Engram evidence and procedural skills" — "case-bounded" means one goal
+// (the incident case), and the policy names exactly those two stores, not
+// the project's broad long-term memory.
 var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram, SourceProceduralSkills}, Write: "none"}
 
 var profileDefaults = map[string]Directive{

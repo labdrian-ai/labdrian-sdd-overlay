@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 func TestParseDirectiveAcceptsValidRecords(t *testing.T) {
@@ -201,6 +203,34 @@ func TestDefaultForKnownProfiles(t *testing.T) {
 			}
 			if err := d.Validate(); err != nil {
 				t.Errorf("DefaultFor(%q) produced an invalid directive: %v", tt.profile, err)
+			}
+		})
+	}
+}
+
+// Every non-Engram source a profile's default grants must be named by that
+// profile's own workflowprofile.MemoryPolicy prose, so a default's read
+// ceiling is derived from the policy text rather than independently
+// interpreted.
+func TestDefaultSourcesAreNamedByProfileMemoryPolicy(t *testing.T) {
+	sourceAliases := map[Source]string{
+		SourceLongtermMem:      "long-term memory",
+		SourceProceduralSkills: "procedural skills",
+	}
+	for name, d := range profileDefaults {
+		t.Run(name, func(t *testing.T) {
+			profile, err := workflowprofile.Resolve(name)
+			if err != nil {
+				t.Fatalf("workflowprofile.Resolve(%q) error = %v, want nil", name, err)
+			}
+			for _, s := range d.Sources {
+				alias, ok := sourceAliases[s]
+				if !ok {
+					continue // SourceEngram needs no alias check.
+				}
+				if !strings.Contains(profile.MemoryPolicy, alias) {
+					t.Errorf("profile %q grants source %q by default, but its memory_policy %q does not name %q", name, s, profile.MemoryPolicy, alias)
+				}
 			}
 		})
 	}
