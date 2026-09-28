@@ -4,24 +4,38 @@ import (
 	"encoding/json"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 func TestParseDirectiveAcceptsValidRecords(t *testing.T) {
 	tests := []struct {
-		name string
-		json string
+		name        string
+		json        string
+		wantScope   Scope
+		wantSources []Source
+		wantWrite   string
 	}{
 		{
-			name: "scope none with empty sources",
-			json: `{"version":1,"scope":"none","sources":[],"write":"none"}`,
+			name:        "scope none with empty sources",
+			json:        `{"version":1,"scope":"none","sources":[],"write":"none"}`,
+			wantScope:   ScopeNone,
+			wantSources: []Source{},
+			wantWrite:   "none",
 		},
 		{
-			name: "scope goal with one source",
-			json: `{"version":1,"scope":"goal","sources":["engram"],"write":"none"}`,
+			name:        "scope goal with one source",
+			json:        `{"version":1,"scope":"goal","sources":["engram"],"write":"none"}`,
+			wantScope:   ScopeGoal,
+			wantSources: []Source{SourceEngram},
+			wantWrite:   "none",
 		},
 		{
-			name: "scope project with every source",
-			json: `{"version":1,"scope":"project","sources":["engram","longterm-mem","procedural-skills"],"write":"none"}`,
+			name:        "scope project with every source",
+			json:        `{"version":1,"scope":"project","sources":["engram","longterm-mem","procedural-skills"],"write":"none"}`,
+			wantScope:   ScopeProject,
+			wantSources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills},
+			wantWrite:   "none",
 		},
 	}
 	for _, tt := range tests {
@@ -32,6 +46,20 @@ func TestParseDirectiveAcceptsValidRecords(t *testing.T) {
 			}
 			if d.Version != DirectiveVersion {
 				t.Errorf("Version = %d, want %d", d.Version, DirectiveVersion)
+			}
+			if d.Scope != tt.wantScope {
+				t.Errorf("Scope = %q, want %q", d.Scope, tt.wantScope)
+			}
+			if len(d.Sources) != len(tt.wantSources) {
+				t.Fatalf("Sources = %v, want %v", d.Sources, tt.wantSources)
+			}
+			for i, s := range tt.wantSources {
+				if d.Sources[i] != s {
+					t.Errorf("Sources[%d] = %q, want %q", i, d.Sources[i], s)
+				}
+			}
+			if d.Write != tt.wantWrite {
+				t.Errorf("Write = %q, want %q", d.Write, tt.wantWrite)
 			}
 		})
 	}
@@ -180,9 +208,59 @@ func TestDefaultForKnownProfiles(t *testing.T) {
 	}
 }
 
+// Every non-Engram source a profile's default grants must be named by that
+// profile's own workflowprofile.MemoryPolicy prose, so a default's read
+// ceiling is derived from the policy text rather than independently
+// interpreted.
+func TestDefaultSourcesAreNamedByProfileMemoryPolicy(t *testing.T) {
+	sourceAliases := map[Source]string{
+		SourceLongtermMem:      "long-term memory",
+		SourceProceduralSkills: "procedural skills",
+	}
+	for name, d := range profileDefaults {
+		t.Run(name, func(t *testing.T) {
+			profile, err := workflowprofile.Resolve(name)
+			if err != nil {
+				t.Fatalf("workflowprofile.Resolve(%q) error = %v, want nil", name, err)
+			}
+			for _, s := range d.Sources {
+				alias, ok := sourceAliases[s]
+				if !ok {
+					continue // SourceEngram needs no alias check.
+				}
+				if !strings.Contains(profile.MemoryPolicy, alias) {
+					t.Errorf("profile %q grants source %q by default, but its memory_policy %q does not name %q", name, s, profile.MemoryPolicy, alias)
+				}
+			}
+		})
+	}
+}
+
 func TestDefaultForUnknownProfileRefuses(t *testing.T) {
 	if _, err := DefaultFor("nonexistent-profile"); err == nil {
 		t.Fatal("DefaultFor(nonexistent-profile) error = nil, want an error")
+	}
+}
+
+// DefaultFor's second refusal branch fires when workflowprofile.Resolve
+// accepts a profile name but profileDefaults has drifted and no longer
+// registers a default for it. Simulate the drift in-package by temporarily
+// deleting a real, workflowprofile-accepted entry.
+func TestDefaultForRefusesWhenProfileDefaultsDrifts(t *testing.T) {
+	const profile = "sdd"
+	saved, ok := profileDefaults[profile]
+	if !ok {
+		t.Fatalf("setup: profileDefaults[%q] must exist before the drift can be simulated", profile)
+	}
+	delete(profileDefaults, profile)
+	t.Cleanup(func() { profileDefaults[profile] = saved })
+
+	_, err := DefaultFor(profile)
+	if err == nil {
+		t.Fatal("DefaultFor error = nil, want an error naming the drifted profile")
+	}
+	if !strings.Contains(err.Error(), profile) {
+		t.Errorf("DefaultFor error = %q, want it to name profile %q", err.Error(), profile)
 	}
 }
 
@@ -336,5 +414,158 @@ func TestResolveOmitsFiltersForNoneScopeEvenWhenSupplied(t *testing.T) {
 	}
 	if plan.Filters.ProjectID != "" || plan.Filters.GoalID != "" {
 		t.Errorf("plan.Filters = %+v, want empty", plan.Filters)
+	}
+}
+
+// A supplied identifier the effective scope does not use is never silently
+// dropped: it is named in OmittedFilters, in the fixed order project_id then
+// goal_id, so a caller pointing --goal at the wrong record for the effective
+// scope gets a diagnostic instead of a plan that quietly differs from what
+// they expected.
+func TestResolveOmittedFiltersNamesEveryUnusedSuppliedIdentifier(t *testing.T) {
+	noneScope := Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
+	plan, err := Resolve(noneScope, "proj-1", "goal-1")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 2 || plan.OmittedFilters[0] != "project_id" || plan.OmittedFilters[1] != "goal_id" {
+		t.Errorf("plan.OmittedFilters = %v, want [project_id goal_id]", plan.OmittedFilters)
+	}
+
+	plan, err = Resolve(noneScope, "", "")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 0 {
+		t.Errorf("plan.OmittedFilters = %v, want empty: no blank identifier is listed", plan.OmittedFilters)
+	}
+
+	projectScope := Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram}, Write: "none"}
+	plan, err = Resolve(projectScope, "proj-1", "goal-1")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 1 || plan.OmittedFilters[0] != "goal_id" {
+		t.Errorf("plan.OmittedFilters = %v, want [goal_id]: project_id is used at scope project", plan.OmittedFilters)
+	}
+
+	plan, err = Resolve(projectScope, "proj-1", "")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 0 {
+		t.Errorf("plan.OmittedFilters = %v, want empty: a blank goal_id is not listed", plan.OmittedFilters)
+	}
+
+	goalScope := Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+	plan, err = Resolve(goalScope, "proj-1", "goal-1")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if len(plan.OmittedFilters) != 0 {
+		t.Errorf("plan.OmittedFilters = %v, want empty: both identifiers are used at scope goal", plan.OmittedFilters)
+	}
+}
+
+// OmittedFilters must serialize as [] rather than null when empty, matching
+// Sources's own non-nil-when-empty discipline.
+func TestResolveOmittedFiltersSerializesAsEmptyArrayNotNull(t *testing.T) {
+	goalScope := Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"}
+	plan, err := Resolve(goalScope, "proj-1", "goal-1")
+	if err != nil {
+		t.Fatalf("Resolve error = %v, want nil", err)
+	}
+	if plan.OmittedFilters == nil {
+		t.Error("plan.OmittedFilters must be a non-nil empty slice so it serializes as [] instead of null")
+	}
+	data, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatalf("json.Marshal error = %v, want nil", err)
+	}
+	if strings.Contains(string(data), `"omitted_filters":null`) {
+		t.Errorf("plan JSON = %s, want omitted_filters to serialize as []", data)
+	}
+}
+
+// The Plan wire shape is the external contract toward the Phase 7 runtime
+// adapter: assert it directly on the serialized JSON, not just via Go struct
+// field comparisons.
+func TestPlanJSONWireShape(t *testing.T) {
+	tests := []struct {
+		name     string
+		base     Directive
+		project  string
+		goal     string
+		wantJSON string
+	}{
+		{
+			name:    "scope none",
+			base:    Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"},
+			project: "",
+			goal:    "",
+			wantJSON: `{
+  "scope": "none",
+  "sources": [],
+  "filters": {},
+  "write": "none",
+  "authority": "this plan executes no query and grants no memory write; executing it is a runtime adapter's responsibility outside this package (Phase 7)",
+  "omitted_filters": []
+}`,
+		},
+		{
+			name:    "scope goal",
+			base:    Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram}, Write: "none"},
+			project: "proj-1",
+			goal:    "goal-1",
+			wantJSON: `{
+  "scope": "goal",
+  "sources": [
+    "engram"
+  ],
+  "filters": {
+    "project_id": "proj-1",
+    "goal_id": "goal-1"
+  },
+  "write": "none",
+  "authority": "this plan executes no query and grants no memory write; executing it is a runtime adapter's responsibility outside this package (Phase 7)",
+  "omitted_filters": []
+}`,
+		},
+		{
+			name:    "scope project",
+			base:    Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem}, Write: "none"},
+			project: "proj-1",
+			goal:    "goal-1",
+			wantJSON: `{
+  "scope": "project",
+  "sources": [
+    "engram",
+    "longterm-mem"
+  ],
+  "filters": {
+    "project_id": "proj-1"
+  },
+  "write": "none",
+  "authority": "this plan executes no query and grants no memory write; executing it is a runtime adapter's responsibility outside this package (Phase 7)",
+  "omitted_filters": [
+    "goal_id"
+  ]
+}`,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			plan, err := Resolve(tt.base, tt.project, tt.goal)
+			if err != nil {
+				t.Fatalf("Resolve error = %v, want nil", err)
+			}
+			data, err := json.MarshalIndent(plan, "", "  ")
+			if err != nil {
+				t.Fatalf("json.MarshalIndent error = %v, want nil", err)
+			}
+			if string(data) != tt.wantJSON {
+				t.Errorf("plan JSON = %s, want %s", data, tt.wantJSON)
+			}
+		})
 	}
 }

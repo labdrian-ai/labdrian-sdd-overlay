@@ -246,6 +246,90 @@ func TestMemoryPlanRejectsMissingGoalFile(t *testing.T) {
 	}
 }
 
+// A --goal file that reads fine but fails Goal v2 schema/semantic parsing
+// (here: a blank objective) must be refused with exit 2, distinct from a
+// missing file.
+func TestMemoryPlanRejectsGoalFileFailingParse(t *testing.T) {
+	dir := t.TempDir()
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", `{
+  "version": 2,
+  "project_id": "proj-1",
+  "goal_id": "goal-1",
+  "objective": "",
+  "scope": "scope",
+  "constraints": [],
+  "non_goals": [],
+  "acceptance_criteria": ["done"],
+  "memory_scope": "goal",
+  "runtime_scope": "local",
+  "delivery_boundary": "local"
+}`)
+
+	r := runMemoryTest([]string{"plan", "--profile", "odd", "--goal", goalPath})
+	if r.code != 2 || !strings.Contains(r.stderr, "parse --goal") {
+		t.Fatalf("code=%d stderr=%q, want exit 2 naming a --goal parse failure", r.code, r.stderr)
+	}
+}
+
+func TestMemoryPlanRejectsMissingGoalDirectiveFile(t *testing.T) {
+	r := runMemoryTest([]string{
+		"plan", "--profile", "incident-recovery",
+		"--goal-directive", "/nonexistent/goal-directive.json",
+	})
+	if r.code != 2 || !strings.Contains(r.stderr, "read --goal-directive") {
+		t.Fatalf("code=%d stderr=%q, want exit 2 naming a --goal-directive read failure", r.code, r.stderr)
+	}
+}
+
+func TestMemoryPlanRejectsMissingHandoffDirectiveFile(t *testing.T) {
+	r := runMemoryTest([]string{
+		"plan", "--profile", "incident-recovery",
+		"--handoff-directive", "/nonexistent/handoff-directive.json",
+	})
+	if r.code != 2 || !strings.Contains(r.stderr, "read --handoff-directive") {
+		t.Fatalf("code=%d stderr=%q, want exit 2 naming a --handoff-directive read failure", r.code, r.stderr)
+	}
+}
+
+func TestMemoryPlanRejectsGoalDirectiveFileFailingParse(t *testing.T) {
+	dir := t.TempDir()
+	malformedPath := writeMemoryTestFile(t, dir, "goal-directive.json", `{"version":1,"scope":"bogus","sources":[],"write":"none"}`)
+
+	r := runMemoryTest([]string{
+		"plan", "--profile", "incident-recovery",
+		"--goal-directive", malformedPath,
+	})
+	if r.code != 2 || !strings.Contains(r.stderr, "parse --goal-directive") {
+		t.Fatalf("code=%d stderr=%q, want exit 2 naming a --goal-directive parse failure", r.code, r.stderr)
+	}
+}
+
+func TestMemoryPlanRejectsHandoffDirectiveFileFailingParse(t *testing.T) {
+	dir := t.TempDir()
+	malformedPath := writeMemoryTestFile(t, dir, "handoff-directive.json", `{"version":1,"scope":"bogus","sources":[],"write":"none"}`)
+
+	r := runMemoryTest([]string{
+		"plan", "--profile", "incident-recovery",
+		"--handoff-directive", malformedPath,
+	})
+	if r.code != 2 || !strings.Contains(r.stderr, "parse --handoff-directive") {
+		t.Fatalf("code=%d stderr=%q, want exit 2 naming a --handoff-directive parse failure", r.code, r.stderr)
+	}
+}
+
+// A value flag given as the last, valueless argument must be refused with
+// exit 1, for every flag that takes a value.
+func TestMemoryPlanRejectsValueFlagWithoutValue(t *testing.T) {
+	for _, flag := range []string{"--profile", "--goal", "--goal-directive", "--handoff-directive"} {
+		t.Run(flag, func(t *testing.T) {
+			r := runMemoryTest([]string{"plan", flag})
+			if r.code != 1 || !strings.Contains(r.stderr, flag+" requires a value") {
+				t.Fatalf("code=%d stderr=%q, want exit 1 naming %q requires a value", r.code, r.stderr, flag)
+			}
+		})
+	}
+}
+
 func TestMemoryPlanOutputNeverMentionsAQuery(t *testing.T) {
 	r := runMemoryTest([]string{"plan", "--profile", "standalone-minimal"})
 	if r.code != 0 {

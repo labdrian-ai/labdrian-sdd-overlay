@@ -127,9 +127,10 @@ func (d Directive) Validate() error {
 // concern outside this package.
 
 // odd's memory_policy (engine/workflowprofile.go): "durable task ledger and
-// Engram mirror for substantial work; store evidence as well as status" —
-// substantial work reads the project's prior evidence, long-term memory, and
-// reusable procedures; a single feature narrows to scope goal.
+// Engram mirror for substantial work; store evidence as well as status; may
+// read project evidence from Engram, long-term memory, and procedural
+// skills" — the policy names all three stores directly; a single feature
+// narrows to scope goal.
 var oddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // sdd's memory_policy: "use only the store declared/resolved for the
@@ -145,15 +146,16 @@ var sddDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sourc
 var standaloneMinimalDefault = Directive{Version: DirectiveVersion, Scope: ScopeNone, Sources: []Source{}, Write: "none"}
 
 // maintenance's memory_policy: "record substantial work units; do not
-// promote transient incidents to reusable memory" — the promotion clause
-// restricts writes, not reads: maintenance may consult the project's
-// memory and existing procedures, and one bounded unit narrows to scope goal.
+// promote transient incidents to reusable memory; may read project evidence
+// from Engram, long-term memory, and procedural skills" — the policy names
+// all three stores directly; one bounded unit narrows to scope goal.
 var maintenanceDefault = Directive{Version: DirectiveVersion, Scope: ScopeProject, Sources: []Source{SourceEngram, SourceLongtermMem, SourceProceduralSkills}, Write: "none"}
 
 // incident-recovery's memory_policy: "case-bounded evidence; exclude
-// secrets/raw logs; preserve verifiable references" — "case-bounded" means
-// one goal (the incident case): that case's Engram evidence plus reusable
-// recovery procedures, but not the project's broad long-term memory.
+// secrets/raw logs; preserve verifiable references; may read the case's
+// Engram evidence and procedural skills" — "case-bounded" means one goal
+// (the incident case), and the policy names exactly those two stores, not
+// the project's broad long-term memory.
 var incidentRecoveryDefault = Directive{Version: DirectiveVersion, Scope: ScopeGoal, Sources: []Source{SourceEngram, SourceProceduralSkills}, Write: "none"}
 
 var profileDefaults = map[string]Directive{
@@ -193,13 +195,15 @@ const planAuthority = "this plan executes no query and grants no memory write; e
 
 // Plan is the effective, executable-nothing description of what memory a
 // caller may read: scope, sources, identifying filters, a write mode that
-// is always "none", and a no-authority statement.
+// is always "none", a no-authority statement, and every non-blank supplied
+// identifier the effective scope did not use.
 type Plan struct {
-	Scope     Scope    `json:"scope"`
-	Sources   []Source `json:"sources"`
-	Filters   Filters  `json:"filters"`
-	Write     string   `json:"write"`
-	Authority string   `json:"authority"`
+	Scope          Scope    `json:"scope"`
+	Sources        []Source `json:"sources"`
+	Filters        Filters  `json:"filters"`
+	Write          string   `json:"write"`
+	Authority      string   `json:"authority"`
+	OmittedFilters []string `json:"omitted_filters"`
 }
 
 // Resolve narrows base by narrowers, applied in order, into one query Plan.
@@ -237,17 +241,27 @@ func Resolve(base Directive, projectID, goalID string, narrowers ...Directive) (
 
 // newPlan builds a Plan's Filters from the caller-supplied projectID and
 // goalID for the effective, already-narrowed scope. A scope that does not
-// use an identifier simply omits it from Filters rather than refusing: the
-// caller (typically the CLI) resolves projectID/goalID once from an
-// optional Goal file before narrowing completes, and cannot know the final
-// effective scope in advance. Only a genuinely missing required identifier
-// refuses.
+// use an identifier does not refuse it: the caller (typically the CLI)
+// resolves projectID/goalID once from an optional Goal file before narrowing
+// completes, and cannot know the final effective scope in advance. Instead,
+// every non-blank supplied identifier the effective scope does not use is
+// named in the returned Plan's OmittedFilters (fixed order: project_id, then
+// goal_id), so nothing a caller supplied disappears from the plan silently.
+// Only a genuinely missing required identifier refuses.
 func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 	var filters Filters
+	var omitted []string
 	switch effective.Scope {
 	case ScopeNone:
-		// No identifier is used at scope none; any supplied projectID or
-		// goalID is simply not carried into Filters.
+		// Neither identifier is used at scope none; any non-blank supplied
+		// projectID or goalID is not carried into Filters but is named in
+		// OmittedFilters instead.
+		if strings.TrimSpace(projectID) != "" {
+			omitted = append(omitted, "project_id")
+		}
+		if strings.TrimSpace(goalID) != "" {
+			omitted = append(omitted, "goal_id")
+		}
 	case ScopeGoal:
 		if strings.TrimSpace(projectID) == "" {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeGoal)
@@ -262,6 +276,11 @@ func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 			return Plan{}, fmt.Errorf("project_id is required for scope %q", ScopeProject)
 		}
 		filters.ProjectID = projectID
+		// goal_id is not used at scope project; a non-blank supplied one is
+		// named in OmittedFilters instead of being silently dropped.
+		if strings.TrimSpace(goalID) != "" {
+			omitted = append(omitted, "goal_id")
+		}
 	default:
 		return Plan{}, fmt.Errorf("unknown scope %q", effective.Scope)
 	}
@@ -271,12 +290,15 @@ func newPlan(effective Directive, projectID, goalID string) (Plan, error) {
 	// standard.
 	sources := make([]Source, 0, len(effective.Sources))
 	sources = append(sources, effective.Sources...)
+	omittedFilters := make([]string, 0, len(omitted))
+	omittedFilters = append(omittedFilters, omitted...)
 	return Plan{
-		Scope:     effective.Scope,
-		Sources:   sources,
-		Filters:   filters,
-		Write:     "none",
-		Authority: planAuthority,
+		Scope:          effective.Scope,
+		Sources:        sources,
+		Filters:        filters,
+		Write:          "none",
+		Authority:      planAuthority,
+		OmittedFilters: omittedFilters,
 	}, nil
 }
 
