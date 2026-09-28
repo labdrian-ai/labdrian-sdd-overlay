@@ -171,10 +171,17 @@ var profileDefaults = map[string]Directive{
 // prose (see the comments above each default). An unknown profile name is
 // refused.
 func DefaultFor(profileName string) (Directive, error) {
+	return defaultFrom(profileDefaults, profileName)
+}
+
+// defaultFrom looks profileName up in defaults after checking that it names
+// a known workflow profile. Taking the table as a parameter lets tests
+// simulate a drifted table without mutating the package-level one.
+func defaultFrom(defaults map[string]Directive, profileName string) (Directive, error) {
 	if _, err := workflowprofile.Resolve(profileName); err != nil {
 		return Directive{}, err
 	}
-	d, ok := profileDefaults[profileName]
+	d, ok := defaults[profileName]
 	if !ok {
 		return Directive{}, fmt.Errorf("no memory directive default registered for profile %q", profileName)
 	}
