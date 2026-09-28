@@ -2,17 +2,20 @@ package skills
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
+	"time"
 )
 
 // This file closes the acceptance gap recorded in the archived change
 // 2026-09-21-procedural-memory-lifecycle: the retirement rollback-of-rollback
 // diagnostic branch (ExecuteProjectRetirePlan's `error: rollback incomplete:
-// <rel-path>`, project_register.go:855) was covered only by unit tests that
+// <rel-path>`, project_register.go) was covered only by unit tests that
 // inject failures through the fakeProjectFS fake (project_register_test.go,
 // TestExecuteProjectRetireRollbackFailureReportsRelativePath), never through
 // the real `engine skills project-retire` binary against a real filesystem.
@@ -20,7 +23,7 @@ import (
 //
 // Both tests use real directory permissions (chmod 0555, no write bit) as
 // the fault, because the ordering of ExecuteProjectRetirePlan
-// (project_register.go:752-808) makes a decoupled "delete fails but its own
+// (project_register.go) makes a decoupled "delete fails but its own
 // restore later succeeds" fault impossible to construct with permissions
 // alone in one synchronous CLI run:
 //
@@ -29,14 +32,14 @@ import (
 //     directory, so a static permission that blocks the commit also blocks
 //     the initial stage -- no deletes are ever attempted (see
 //     TestProjectRetireRealCLI_RollbackSucceedsWhenLockStagingIsDenied);
-//   - rollback's restore() (project_register.go:862-872) retries the exact
+//   - rollback's restore() (project_register.go) retries the exact
 //     same (WriteTemp, Rename) pair, in the exact same directory, that the
 //     forward delete just used. Whatever static condition made a target's
 //     Remove fail will therefore also make that target's own restore fail
 //     (see TestProjectRetireRealCLI_RollbackOfRollbackReportsIncompletePath).
 //
 // No env-var or hook seam exists in production for injecting a transient
-// fault (skills/skills.go:42 hardcodes osProjectFS{} for the real CLI), and
+// fault (skills/skills.go hardcodes osProjectFS{} for the real CLI), and
 // adding one would be a production-only backdoor, so these two real-fs
 // shapes are the complete, honest coverage available: a fault before any
 // mutation (full rollback, nothing to restore, tree untouched) and a fault
@@ -47,22 +50,82 @@ import (
 // A read-only bind mount would decouple delete-fails-but-restore-succeeds
 // for a single target, but is not available in this environment.
 
-// buildRetireEngineBinary compiles the real engine binary once per test into
-// an isolated temp directory, the same way
+// retireE2EBuildTimeout and retireE2ERunTimeout bound every child process
+// these tests spawn, so a stalled build or a CLI that hangs on an induced
+// filesystem fault fails the test instead of blocking the whole package run.
+const (
+	retireE2EBuildTimeout = 5 * time.Minute
+	retireE2ERunTimeout   = time.Minute
+)
+
+// retireE2EBinary holds the engine binary shared by every test in this file:
+// it is built at most once per package run (lazily, so a -run filter that
+// skips these tests never compiles it) and removed by TestMain.
+var retireE2EBinary struct {
+	once sync.Once
+	dir  string
+	path string
+	err  error
+	out  []byte
+}
+
+// TestMain removes the shared engine binary after the package's tests run.
+func TestMain(m *testing.M) {
+	code := m.Run()
+	if retireE2EBinary.dir != "" {
+		_ = os.RemoveAll(retireE2EBinary.dir)
+	}
+	os.Exit(code)
+}
+
+// buildRetireEngineBinary compiles the real engine binary once per package
+// run into an isolated temp directory, the same way
 // shelltest/overlay_pi_package_build_test.go builds it for its own e2e runs.
 func buildRetireEngineBinary(t *testing.T) string {
 	t.Helper()
-	engineRoot, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatalf("resolve engine module root: %v", err)
+	retireE2EBinary.once.Do(func() {
+		engineRoot, err := filepath.Abs("..")
+		if err != nil {
+			retireE2EBinary.err = err
+			return
+		}
+		dir, err := os.MkdirTemp("", "engine-retire-e2e-")
+		if err != nil {
+			retireE2EBinary.err = err
+			return
+		}
+		retireE2EBinary.dir = dir
+		binPath := filepath.Join(dir, "engine-retire-e2e")
+		ctx, cancel := context.WithTimeout(context.Background(), retireE2EBuildTimeout)
+		defer cancel()
+		build := exec.CommandContext(ctx, "go", "build", "-o", binPath, "./cmd")
+		build.Dir = engineRoot
+		retireE2EBinary.out, retireE2EBinary.err = build.CombinedOutput()
+		retireE2EBinary.path = binPath
+	})
+	if retireE2EBinary.err != nil {
+		t.Fatalf("build engine binary: %v\n%s", retireE2EBinary.err, retireE2EBinary.out)
 	}
-	binPath := filepath.Join(t.TempDir(), "engine-retire-e2e")
-	build := exec.Command("go", "build", "-o", binPath, "./cmd")
-	build.Dir = engineRoot
-	if out, err := build.CombinedOutput(); err != nil {
-		t.Fatalf("build engine binary: %v\n%s", err, out)
+	return retireE2EBinary.path
+}
+
+// denyWrites removes the write bit from dir for the rest of the test and
+// proves the fault is real: if this process can still create a file there
+// (root, or an equivalent capability, or a filesystem that ignores mode
+// bits), the fault cannot be injected and the test is skipped with that
+// reason instead of failing on a confusing exit-code mismatch.
+func denyWrites(t *testing.T, dir string) {
+	t.Helper()
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatalf("deny write on %q: %v", dir, err)
 	}
-	return binPath
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+	probe := filepath.Join(dir, ".write-probe")
+	if f, err := os.Create(probe); err == nil {
+		_ = f.Close()
+		_ = os.Remove(probe)
+		t.Skipf("chmod 0555 on %q is not enforced for this process (root or an equivalent capability); the permission fault cannot be injected", dir)
+	}
 }
 
 // retireE2EEnv is one isolated project root plus everything
@@ -107,7 +170,9 @@ func newRetireE2EEnv(t *testing.T, id string) retireE2EEnv {
 // invoking process's real environment.
 func (e retireE2EEnv) run(t *testing.T, args ...string) (stdout, stderr string, exitCode int) {
 	t.Helper()
-	cmd := exec.Command(e.binPath, args...)
+	ctx, cancel := context.WithTimeout(context.Background(), retireE2ERunTimeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, e.binPath, args...)
 	cmd.Env = []string{
 		"HOME=" + e.home,
 		"STATE_DIR=" + filepath.Join(e.home, "state"),
@@ -117,6 +182,9 @@ func (e retireE2EEnv) run(t *testing.T, args ...string) (stdout, stderr string, 
 	cmd.Stdout = &out
 	cmd.Stderr = &errBuf
 	err := cmd.Run()
+	if ctx.Err() != nil {
+		t.Fatalf("run %v: timed out after %s", args, retireE2ERunTimeout)
+	}
 	exitCode = 0
 	if err != nil {
 		if exitErr, ok := err.(*exec.ExitError); ok {
@@ -133,6 +201,11 @@ func (e retireE2EEnv) run(t *testing.T, args ...string) (stdout, stderr string, 
 // agent-owned, lock-recorded registration to retire.
 func (e retireE2EEnv) registerRealSkill(t *testing.T, id string) {
 	t.Helper()
+	// project-register takes the key of the procedural promotion candidate
+	// that justified the draft; "repeated-success" is one of the candidate
+	// categories the detection contract emits, and any well-formed key
+	// works here because these tests only need a real, agent-owned
+	// registration to retire.
 	candidate := "procedural/candidates/repeated-success/" + id
 	out, errOut, code := e.run(t, "skills", "project-register",
 		"--project-root", e.root,
@@ -149,25 +222,19 @@ func (e retireE2EEnv) registerRealSkill(t *testing.T, id string) {
 // very first write (staging the updated lock in .labdrian/, project_
 // register.go:780-784, which always runs before any target delete is
 // attempted) is denied by a real directory-permission fault. Rollback then
-// has nothing attempted to undo (project_register.go:829-837), so it returns
+// has nothing attempted to undo (project_register.go), so it returns
 // the original cause directly rather than ErrRollbackIncomplete, and the
 // project tree is untouched -- the "rollback succeeds" shape of
 // ExecuteProjectRetirePlan's contract, exercised on a real filesystem.
 func TestProjectRetireRealCLI_RollbackSucceedsWhenLockStagingIsDenied(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission-based fault injection has no effect for root")
-	}
 	const id = "retire-rollback-ok"
 	e := newRetireE2EEnv(t, id)
 	e.registerRealSkill(t, id)
 
-	lockDir := filepath.Join(e.root, ".labdrian")
+	lockDir := filepath.Dir(filepath.Join(e.root, filepath.FromSlash(ProjectLockRelPath)))
 	before := snapshotTree(t, e.root)
 
-	if err := os.Chmod(lockDir, 0o555); err != nil {
-		t.Fatalf("deny write on %q: %v", lockDir, err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(lockDir, 0o755) })
+	denyWrites(t, lockDir)
 
 	stdout, stderr, code := e.run(t, "skills", "project-retire",
 		"--project-root", e.root,
@@ -201,19 +268,20 @@ func TestProjectRetireRealCLI_RollbackSucceedsWhenLockStagingIsDenied(t *testing
 // .claude/skills/<id>/ AND one under .agents/skills/<id>/, two independent
 // directories), then a real retirement where the .agents directory has its
 // write bit denied. The .claude target is removed and then genuinely
-// restored by rollback's restore() (project_register.go:862-872, real
+// restored by rollback's restore() (project_register.go, real
 // WriteTemp+Rename recreating the file from its captured backup); the
 // .agents target's removal fails against the denied directory and its own
 // restore attempt -- the exact same WriteTemp+Rename pair, in the exact same
 // still-denied directory -- fails too, so rollback prints `error: rollback
-// incomplete: <rel-path>` (project_register.go:855) naming it and the
+// incomplete: <rel-path>` (project_register.go) naming it and the
 // process exits 1. This is the diagnostic branch the archived change's
 // verification left unexercised against a real binary and a real
 // filesystem.
+//
+// The scenario relies on ExecuteProjectRetirePlan processing the .claude
+// target before the .agents target; the assertions below pin that order,
+// since a reordering would report a different path or restore nothing.
 func TestProjectRetireRealCLI_RollbackOfRollbackReportsIncompletePath(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("permission-based fault injection has no effect for root")
-	}
 	const id = "retire-rollback-incomplete"
 	e := newRetireE2EEnv(t, id)
 	e.registerRealSkill(t, id)
@@ -239,10 +307,7 @@ func TestProjectRetireRealCLI_RollbackOfRollbackReportsIncompletePath(t *testing
 		t.Fatalf("read lock before retirement: %v", err)
 	}
 
-	if err := os.Chmod(agentsDir, 0o555); err != nil {
-		t.Fatalf("deny write on %q: %v", agentsDir, err)
-	}
-	t.Cleanup(func() { _ = os.Chmod(agentsDir, 0o755) })
+	denyWrites(t, agentsDir)
 
 	stdout, stderr, code := e.run(t, "skills", "project-retire",
 		"--project-root", e.root,
