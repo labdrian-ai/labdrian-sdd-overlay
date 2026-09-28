@@ -8,7 +8,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
 
@@ -97,12 +96,6 @@ var workflowStoreComponents = []string{"labdrian", "workflows"}
 // profiles produce (each event is bounded well under 64 KiB by
 // MaxEventBytes), so it is not expected to be reached by normal use.
 const maxWorkflowLogBytes = 16 * 1024 * 1024
-
-// staleLockTTL is how long an append lock file may exist before Append
-// treats it as abandoned by a crashed owner and reclaims it. Append does not
-// wait or poll: a fresh (non-stale) lock held by another writer is reported
-// immediately as ErrAppendConflict.
-const staleLockTTL = 30 * time.Second
 
 // Store holds one workflow's append-only event log at
 // <state home>/labdrian/workflows/<project_id>/<workflow_id>.jsonl, outside
@@ -355,36 +348,10 @@ func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 	return appendWorkflowLog(path, line)
 }
 
-// acquireLock creates a lock file at lockPath exclusively (O_EXCL),
-// serializing concurrent Append calls for one workflow: at most one caller
-// ever holds the lock at a time, and every other concurrent caller fails
-// immediately with ErrAppendConflict rather than waiting. It returns a
-// release function the caller must invoke exactly once (via defer) to
-// remove the lock, even on a later error path.
-//
-// A lock file older than staleLockTTL is assumed to be abandoned by an
-// owner that crashed before removing it (there is no other liveness signal
-// available to a local file lock); acquireLock removes it and retries
-// exactly once before giving up.
-func acquireLock(lockPath string) (func(), error) {
-	if f, err := createLockFile(lockPath); err == nil {
-		return func() { f.Close(); os.Remove(lockPath) }, nil
-	} else if !errors.Is(err, os.ErrExist) {
-		return nil, fmt.Errorf("workflow store: acquire lock: %w", err)
-	}
-
-	if info, statErr := os.Lstat(lockPath); statErr == nil && time.Since(info.ModTime()) > staleLockTTL {
-		_ = os.Remove(lockPath)
-		if f, err := createLockFile(lockPath); err == nil {
-			return func() { f.Close(); os.Remove(lockPath) }, nil
-		}
-	}
-	return nil, fmt.Errorf("%w: %s", ErrAppendConflict, lockPath)
-}
-
-func createLockFile(path string) (*os.File, error) {
-	return os.OpenFile(path, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o600)
-}
+// acquireLock serializes concurrent Append calls for one workflow, failing
+// every other caller immediately with ErrAppendConflict; the returned
+// release func must be called exactly once (via defer). Platform-specific:
+// see store_lock_unix.go and store_lock_other.go.
 
 // appendWorkflowLog rewrites the whole workflow log with line appended to
 // its current content (empty if the file does not exist yet), publishing

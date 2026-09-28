@@ -582,7 +582,10 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 	}
 }
 
-func TestStoreStaleLockIsReclaimed(t *testing.T) {
+// setupStoreWithCreated appends the seq-0 created event and returns the
+// store, its lock file path, and the next legal (seq-1) event.
+func setupStoreWithCreated(t *testing.T) (Store, string, WorkflowEvent) {
+	t.Helper()
 	root := setStoreEnv(t)
 	s, err := NewStore()
 	if err != nil {
@@ -592,16 +595,6 @@ func TestStoreStaleLockIsReclaimed(t *testing.T) {
 	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
 		t.Fatalf("Append(created) = %v, want nil", err)
 	}
-
-	lockPath := filepath.Join(root, "labdrian", "workflows", created.ProjectID, created.WorkflowID+".lock")
-	if err := os.WriteFile(lockPath, []byte("stale"), 0o600); err != nil {
-		t.Fatalf("os.WriteFile() = %v, want nil", err)
-	}
-	stale := time.Now().Add(-2 * staleLockTTL)
-	if err := os.Chtimes(lockPath, stale, stale); err != nil {
-		t.Fatalf("os.Chtimes() = %v, want nil", err)
-	}
-
 	createdDigest, err := EventDigest(created)
 	if err != nil {
 		t.Fatalf("EventDigest() = %v, want nil", err)
@@ -611,7 +604,44 @@ func TestStoreStaleLockIsReclaimed(t *testing.T) {
 	started.PrevDigest = createdDigest
 	started.Kind = KindStarted
 	started.GoalID, started.GoalDigest, started.Profile = "", "", ""
+	lockPath := filepath.Join(root, "labdrian", "workflows", created.ProjectID, created.WorkflowID+".lock")
+	return s, lockPath, started
+}
+
+func TestStoreLiveLockIsNeverStolenRegardlessOfAge(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("flock-based locking is only implemented on linux/darwin")
+	}
+	s, lockPath, started := setupStoreWithCreated(t)
+	release, err := acquireLock(lockPath)
+	if err != nil {
+		t.Fatalf("acquireLock() = %v, want nil", err)
+	}
+	defer release()
+	// Age alone must never reclaim a live lock: only flock ownership matters.
+	old := time.Now().Add(-24 * time.Hour)
+	if err := os.Chtimes(lockPath, old, old); err != nil {
+		t.Fatalf("os.Chtimes() = %v, want nil", err)
+	}
+	if err := s.Append(started.ProjectID, started.WorkflowID, started); !errors.Is(err, ErrAppendConflict) {
+		t.Fatalf("Append() = %v, want ErrAppendConflict (a live lock must never be stolen)", err)
+	}
+}
+
+func TestStoreReleaseNeverDeletesALockItDoesNotHold(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("flock-based locking is only implemented on linux/darwin")
+	}
+	s, lockPath, started := setupStoreWithCreated(t)
+	release, err := acquireLock(lockPath)
+	if err != nil {
+		t.Fatalf("acquireLock() = %v, want nil", err)
+	}
+	release()
+	if _, err := os.Lstat(lockPath); err != nil {
+		t.Fatalf("os.Lstat(lockPath) = %v, want nil (release must not delete the lock file)", err)
+	}
 	if err := s.Append(started.ProjectID, started.WorkflowID, started); err != nil {
-		t.Fatalf("Append() = %v, want nil (a stale lock must be reclaimed)", err)
+		t.Fatalf("Append() = %v, want nil (a released lock must allow the next Append)", err)
 	}
 }
