@@ -553,12 +553,9 @@ func TestLifecycleDependenciesUnavailableNeverBlock(t *testing.T) {
 }
 
 // TestLifecycleReviewCapabilityDerivedFromProfileData checks that the
-// gentle-ai-review capability is probed for profiles whose review_policy
-// names RDD without disclaiming Gentle, and is absent for
-// standalone-minimal, which explicitly disclaims it. See
-// profileReliesOnGentleReview's doc comment for the exact derivation rule
-// and the resulting profile set, which is broader than the two profiles
-// named in this feature's task description.
+// gentle-ai-review capability is probed for every profile listed in
+// gentleReviewProfiles and is absent for standalone-minimal, which
+// explicitly disclaims Gentle review.
 func TestLifecycleReviewCapabilityDerivedFromProfileData(t *testing.T) {
 	tests := []struct {
 		profile  string
@@ -608,5 +605,23 @@ func TestLifecycleLoadOwnedRefusesNonOwnedClassifications(t *testing.T) {
 
 	if _, err := lc.Start("proj-1", "wf-1"); !errors.Is(err, ErrWorkflowNotOwned) {
 		t.Fatalf("Start() on an absent workflow err = %v, want ErrWorkflowNotOwned", err)
+	}
+}
+
+// TestGentleReviewProfilesMatchReviewPolicies guards the explicit
+// gentleReviewProfiles list against drift: every built-in profile whose
+// review_policy inherits RDD without disclaiming Gentle must be listed, and
+// no other profile may be. When a policy's wording changes, this test fails
+// and a person decides whether the list or the policy is wrong.
+func TestGentleReviewProfilesMatchReviewPolicies(t *testing.T) {
+	for _, name := range []string{"odd", "sdd", "standalone-minimal", "maintenance", "incident-recovery"} {
+		profile, err := workflowprofile.Resolve(name)
+		if err != nil {
+			t.Fatalf("Resolve(%q) = %v", name, err)
+		}
+		policyRelies := strings.Contains(profile.ReviewPolicy, "RDD") && !strings.Contains(profile.ReviewPolicy, "no Gentle")
+		if gentleReviewProfiles[name] != policyRelies {
+			t.Errorf("profile %q: listed in gentleReviewProfiles = %v, but its review_policy %q relies on Gentle review = %v", name, gentleReviewProfiles[name], profile.ReviewPolicy, policyRelies)
+		}
 	}
 }

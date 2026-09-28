@@ -5,7 +5,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
@@ -53,7 +52,7 @@ var (
 
 // gentleAIReviewCapability is the capability name recorded when a Workflow
 // Profile's review policy relies on Gentle AI's native review (receipt-
-// driven development, "RDD"). See profileReliesOnGentleReview.
+// driven development, "RDD"). See gentleReviewProfiles.
 const gentleAIReviewCapability = "gentle-ai-review"
 
 // GoalReader loads the current bytes of one Goal, by project and goal id, so
@@ -238,29 +237,25 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	return result, nil
 }
 
-// profileReliesOnGentleReview reports whether profile's declared
-// review_policy (engine/workflowprofile.go) relies on Gentle AI's native
-// review (receipt-driven development, "RDD"), so gentleAIReviewCapability
-// should be probed for it. It is derived from the policy's own text, not a
-// hardcoded profile list: a policy that names "RDD" without explicitly
-// disclaiming Gentle relies on it; standalone-minimal's policy states "no
-// Gentle/RDD dependency" and is excluded.
-//
-// PRODUCT DECISION FLAG: this derivation selects four of the five built-in
-// profiles (odd, sdd, maintenance, incident-recovery all mention "RDD"
-// without disclaiming it; only standalone-minimal disclaims it) rather than
-// just the two profiles (odd, sdd) named as examples in this feature's task
-// description. This was a genuine ambiguity in the task text ("derive from
-// the profile data, do not hardcode") versus its parenthetical example; the
-// derivation-from-data instruction was followed literally. If only odd and
-// sdd should gate this capability, that is a narrower rule than "contains
-// RDD" and should be made explicit (for example, an exact profile allowlist)
-// rather than derived from substring matching.
+// gentleReviewProfiles lists the built-in Workflow Profiles whose
+// review_policy inherits Gentle AI's receipt-driven development (RDD) review:
+// odd, sdd, maintenance, and incident-recovery. standalone-minimal declares
+// "no Gentle/RDD dependency" and is excluded. The list is explicit rather
+// than derived from the policy prose, so rewording a policy cannot silently
+// change which observations a workflow records;
+// TestGentleReviewProfilesMatchReviewPolicies fails when the prose and this
+// list disagree.
+var gentleReviewProfiles = map[string]bool{
+	"odd":               true,
+	"sdd":               true,
+	"maintenance":       true,
+	"incident-recovery": true,
+}
+
+// profileReliesOnGentleReview reports whether profile inherits Gentle AI's
+// RDD review, per gentleReviewProfiles.
 func profileReliesOnGentleReview(profile workflowprofile.WorkflowProfile) bool {
-	if strings.Contains(profile.ReviewPolicy, "no Gentle") {
-		return false
-	}
-	return strings.Contains(profile.ReviewPolicy, "RDD")
+	return gentleReviewProfiles[profile.Name]
 }
 
 // goalDigest returns the SHA-256 hex digest of g's canonical Marshal
