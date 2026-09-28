@@ -38,6 +38,19 @@ func storeFilePath(t *testing.T, root, projectID, workflowID string) string {
 	return filepath.Join(root, "labdrian", "workflows", projectID, workflowID+".jsonl")
 }
 
+func TestCheckPlatformAcceptsOnlySupportedPlatforms(t *testing.T) {
+	supported := map[string]bool{"linux": true, "darwin": true, "windows": false, "freebsd": false}
+	for goos, want := range supported {
+		err := checkPlatform(goos)
+		if want != (err == nil) {
+			t.Fatalf("checkPlatform(%q) = %v, want supported=%v", goos, err, want)
+		}
+		if !want && !errors.Is(err, ErrUnsupportedPlatform) {
+			t.Fatalf("checkPlatform(%q) err = %v, want ErrUnsupportedPlatform", goos, err)
+		}
+	}
+}
+
 func TestNewStoreRejectsRelativeXDGStateHome(t *testing.T) {
 	t.Setenv("XDG_STATE_HOME", "relative/path")
 	if _, err := NewStore(); err == nil {

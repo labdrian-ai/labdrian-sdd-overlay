@@ -2,6 +2,7 @@ package workflow
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -256,6 +257,53 @@ func TestCheckTransitionRejectsUnknownCloseOutcome(t *testing.T) {
 	next.Outcome = "bogus-outcome"
 	if err := CheckTransition(state, next); !errors.Is(err, ErrInvalidTransition) {
 		t.Fatalf("CheckTransition() err = %v, want ErrInvalidTransition", err)
+	}
+}
+
+func TestApplyEventStageRecordedDoesNotAliasAcrossBranches(t *testing.T) {
+	events := withDigestChain([]WorkflowEvent{
+		seq(KindCreated),
+		seq(KindStarted),
+		func() WorkflowEvent { e := seq(KindStageRecorded); e.Stage = "setup"; return e }(),
+	})
+	base, err := Replay(events)
+	if err != nil {
+		t.Fatalf("Replay() = %v, want nil", err)
+	}
+
+	mk := func(stage string) WorkflowEvent { e := seq(KindStageRecorded); e.Stage = stage; return e }
+	branchA := applyEvent(base, mk("explore"))
+	branchB := applyEvent(base, mk("implement"))
+
+	if base.hasStage("explore") || base.hasStage("implement") {
+		t.Fatalf("base mutated by a branch: %+v", base)
+	}
+	if !branchA.hasStage("explore") || branchA.hasStage("implement") || len(branchA.Stages) != 2 {
+		t.Fatalf("branchA = %+v, want only setup+explore", branchA)
+	}
+	if !branchB.hasStage("implement") || branchB.hasStage("explore") || len(branchB.Stages) != 2 {
+		t.Fatalf("branchB = %+v, want only setup+implement", branchB)
+	}
+}
+
+func TestCheckTransitionRejectsStageRecordedBeyondMaxStages(t *testing.T) {
+	events := []WorkflowEvent{seq(KindCreated), seq(KindStarted)}
+	for i := 0; i < MaxStages; i++ {
+		e := seq(KindStageRecorded)
+		e.Stage = fmt.Sprintf("stage-%d", i)
+		events = append(events, e)
+	}
+	state, err := Replay(withDigestChain(events))
+	if err != nil {
+		t.Fatalf("Replay() = %v, want nil", err)
+	}
+	if len(state.Stages) != MaxStages {
+		t.Fatalf("len(state.Stages) = %d, want %d", len(state.Stages), MaxStages)
+	}
+	next := seq(KindStageRecorded)
+	next.Stage = "overflow"
+	if err := CheckTransition(state, next); !errors.Is(err, ErrTooManyStages) {
+		t.Fatalf("CheckTransition() err = %v, want ErrTooManyStages", err)
 	}
 }
 

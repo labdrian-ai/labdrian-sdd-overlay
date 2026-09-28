@@ -31,24 +31,20 @@ var (
 	ErrInvalidTransition       = errors.New("workflow: invalid lifecycle transition")
 	ErrDuplicateStage          = errors.New("workflow: stage already recorded")
 	ErrCompletedRequiresVerify = errors.New("workflow: a completed close requires an immediately preceding verified event")
+	ErrTooManyStages           = errors.New("workflow: stage limit exceeded")
 )
+
+// MaxStages bounds how many stages a single workflow may record.
+const MaxStages = 256
 
 // State is the pure state derived by replaying a workflow's event log: its
 // current status, the profile and goal it was created against, its recorded
 // stages in order, the seq of the last verified event (-1 if none), and its
 // close outcome once closed.
 //
-// Replay invariant: Replay produces State values as a single linear
-// left-fold over the event log — each State is derived from exactly the
-// previous State plus one event, is used to derive exactly one successor,
-// and is then discarded. applyEvent relies on this: it grows Stages with a
-// plain append and maintains stageSet in place rather than defensively
-// copying on every call, which keeps stage recording linear (O(1)
-// amortized per stage_recorded event) instead of quadratic in the number of
-// recorded stages. Do not reuse one State value to derive two different
-// successor States (a "branch"): Stages and stageSet may alias their
-// backing storage across such branches, and mutating one branch's State can
-// then be observed by the other.
+// Branch ownership: applyEvent copies Stages and stageSet fresh per
+// stage_recorded event, so branches from a common ancestor never alias.
+// MaxStages bounds the copy cost.
 type State struct {
 	Status          Status
 	Profile         string
@@ -131,6 +127,9 @@ func CheckTransition(state State, next WorkflowEvent) error {
 		if state.hasStage(next.Stage) {
 			return fmt.Errorf("%w: %q was already recorded", ErrDuplicateStage, next.Stage)
 		}
+		if len(state.Stages) >= MaxStages {
+			return fmt.Errorf("%w: limit is %d", ErrTooManyStages, MaxStages)
+		}
 	case KindVerified:
 		// Legal from any non-closed state; StatusClosed already rejected above.
 	case KindClosed:
@@ -191,14 +190,16 @@ func applyEvent(state State, e WorkflowEvent) State {
 	case KindPaused:
 		state.Status = StatusPaused
 	case KindStageRecorded:
-		// See the Replay invariant on State: growing Stages and stageSet in
-		// place (no defensive copy) is safe under Replay's single linear
-		// fold and keeps this O(1) amortized instead of O(len(Stages)).
-		state.Stages = append(state.Stages, e.Stage)
-		if state.stageSet == nil {
-			state.stageSet = make(map[string]bool, 1)
+		stages := make([]string, len(state.Stages), len(state.Stages)+1)
+		copy(stages, state.Stages)
+		state.Stages = append(stages, e.Stage)
+
+		stageSet := make(map[string]bool, len(state.stageSet)+1)
+		for stage := range state.stageSet {
+			stageSet[stage] = true
 		}
-		state.stageSet[e.Stage] = true
+		stageSet[e.Stage] = true
+		state.stageSet = stageSet
 	case KindVerified:
 		state.LastVerifiedSeq = e.Seq
 	case KindClosed:

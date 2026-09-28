@@ -7,6 +7,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode/utf8"
 )
@@ -113,15 +114,30 @@ const maxWorkflowLogBytes = 16 * 1024 * 1024
 // not: two of their writers race for a name that at most one can ever claim,
 // while two of this store's writers would otherwise both read the same
 // prefix and each publish a "next" event, silently discarding one of them.
+// Store supports linux and darwin only (see checkPlatform).
 type Store struct {
 	stateHome string
+}
+
+// ErrUnsupportedPlatform: the running platform has no store support.
+var ErrUnsupportedPlatform = errors.New("workflow store: unsupported platform")
+
+// checkPlatform accepts only linux and darwin (no-follow read + reclaimable lock).
+func checkPlatform(goos string) error {
+	if goos == "linux" || goos == "darwin" {
+		return nil
+	}
+	return fmt.Errorf("%w: %s (supported: linux, darwin)", ErrUnsupportedPlatform, goos)
 }
 
 // NewStore resolves the store from the environment, exactly as
 // roles.NewChainStore and shaper.NewFileStore do. A set but relative
 // XDG_STATE_HOME, and an unset, empty, or relative HOME fallback, are
-// refused.
+// refused, as is an unsupported platform (see checkPlatform).
 func NewStore() (Store, error) {
+	if err := checkPlatform(runtime.GOOS); err != nil {
+		return Store{}, err
+	}
 	if xdg := os.Getenv("XDG_STATE_HOME"); xdg != "" {
 		if !filepath.IsAbs(xdg) {
 			return Store{}, fmt.Errorf("workflow store: XDG_STATE_HOME %q is not absolute", xdg)

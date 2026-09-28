@@ -2,16 +2,12 @@
 
 package workflow
 
-import (
-	"fmt"
-	"os"
-	"runtime"
-)
+import "os"
 
-// openNoFollow fails closed: this platform has no supported no-follow open,
-// so no workflow log read is attempted.
+// openNoFollow is unreachable: NewStore's checkPlatform already fails closed
+// here. It exists only so this build target compiles.
 func openNoFollow(path string) (*os.File, error) {
-	return nil, fmt.Errorf("contained read is unsupported on %s", runtime.GOOS)
+	return nil, ErrUnsupportedPlatform
 }
 
 // isSymlinkRefusal is never true here because openNoFollow never opens.
