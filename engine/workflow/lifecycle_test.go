@@ -1014,3 +1014,79 @@ func TestLifecycleVerifyRecordsExactLastVerifiedSeq(t *testing.T) {
 		t.Fatalf("Verify() state.LastVerifiedSeq = %d, want exactly %d", state.LastVerifiedSeq, wantSeq)
 	}
 }
+
+// erroringProber always fails: used to drive DegradedHook's error path.
+type erroringProber struct{ err error }
+
+func (p erroringProber) Probe(_ context.Context, capabilities []string) ([]Observation, error) {
+	return nil, p.err
+}
+
+// TestLifecycleDegradedHookNotifiesOnProberError covers R4-1: a caller that
+// wires WithDegradedHook is notified exactly when observationsFor could not
+// get a usable answer from the prober (here, a Probe error), while the
+// operation itself still succeeds (dependency unavailability never blocks a
+// lifecycle operation).
+func TestLifecycleDegradedHookNotifiesOnProberError(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+
+	proberErr := errors.New("boom")
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, erroringProber{err: proberErr})
+	var calls []string
+	lc = lc.WithDegradedHook(func(detail string) { calls = append(calls, detail) })
+
+	state, err := lc.Create("proj-1", "wf-1", g, "odd", "")
+	if err != nil {
+		t.Fatalf("Create() = %v, want nil even when the prober errors", err)
+	}
+	if state.Status != StatusCreated {
+		t.Fatalf("state.Status = %q, want %q", state.Status, StatusCreated)
+	}
+	if len(calls) != 1 {
+		t.Fatalf("DegradedHook calls = %v, want exactly one call", calls)
+	}
+	if !strings.Contains(calls[0], proberErr.Error()) {
+		t.Fatalf("DegradedHook detail = %q, want it to mention %q", calls[0], proberErr.Error())
+	}
+}
+
+// TestLifecycleDegradedHookNotifiesOnMismatchedCount covers the same
+// notification for the mismatched-observation-count degradation shape.
+func TestLifecycleDegradedHookNotifiesOnMismatchedCount(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, mismatchedCountProber{})
+	calls := 0
+	lc = lc.WithDegradedHook(func(string) { calls++ })
+
+	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if calls != 1 {
+		t.Fatalf("DegradedHook calls = %d, want exactly 1", calls)
+	}
+}
+
+// TestLifecycleNilDegradedHookIsNoop proves a Lifecycle built without
+// WithDegradedHook (the default from NewLifecycle) tolerates a degraded
+// probe with no panic and no notification, since l.degraded is nil.
+func TestLifecycleNilDegradedHookIsNoop(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, erroringProber{err: errors.New("boom")})
+	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+}

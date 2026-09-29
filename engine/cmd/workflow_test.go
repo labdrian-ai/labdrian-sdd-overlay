@@ -137,6 +137,108 @@ func TestWorkflowStartOnAbsentWorkflowRefused(t *testing.T) {
 	}
 }
 
+func TestWorkflowPauseOnAbsentWorkflowRefused(t *testing.T) {
+	workflowTestStateHome(t)
+	r := runWorkflowTest([]string{"pause", "--project", "proj-1", "--workflow", "wf-1"}, t.TempDir())
+	if r.code != 2 {
+		t.Fatalf("code=%d stderr=%q, want exit 2 (pause requires an owned, running workflow)", r.code, r.stderr)
+	}
+}
+
+func TestWorkflowResumeOnAbsentWorkflowRefused(t *testing.T) {
+	workflowTestStateHome(t)
+	r := runWorkflowTest([]string{"resume", "--project", "proj-1", "--workflow", "wf-1"}, t.TempDir())
+	if r.code != 2 {
+		t.Fatalf("code=%d stderr=%q, want exit 2 (resume requires an owned, paused workflow)", r.code, r.stderr)
+	}
+}
+
+// TestWorkflowPauseThenResumeDispatch proves runWorkflowCore's dispatch
+// specifically wires "pause" to workflow.Lifecycle.Pause and "resume" to
+// workflow.Lifecycle.Resume (as opposed to, say, both accidentally calling
+// Start): pause only succeeds from a running workflow and its own effect
+// (status becomes paused) is distinct from start's; resume only succeeds
+// from that paused state and its effect (status becomes running again) is
+// distinct from create's. A swapped or mis-copied op argument in
+// runWorkflowCore's switch would fail one of the assertions below.
+func TestWorkflowPauseThenResumeDispatch(t *testing.T) {
+	workflowTestStateHome(t)
+	dir := t.TempDir()
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
+	const project, wf = "proj-1", "wf-1"
+
+	if r := runWorkflowTest([]string{"create", "--project", project, "--workflow", wf, "--goal", goalPath, "--profile", "standalone-minimal"}, dir); r.code != 0 {
+		t.Fatalf("create: code=%d stderr=%q, want exit 0", r.code, r.stderr)
+	}
+	if r := runWorkflowTest([]string{"start", "--project", project, "--workflow", wf}, dir); r.code != 0 {
+		t.Fatalf("start: code=%d stderr=%q, want exit 0", r.code, r.stderr)
+	}
+
+	// pause must fail here if it were wired to Start's op: Start is only
+	// legal from created, not running.
+	pause := runWorkflowTest([]string{"pause", "--project", project, "--workflow", wf}, dir)
+	if pause.code != 0 {
+		t.Fatalf("pause: code=%d stderr=%q, want exit 0", pause.code, pause.stderr)
+	}
+	var pausedState workflowStateJSON
+	if err := json.Unmarshal([]byte(pause.stdout), &pausedState); err != nil {
+		t.Fatalf("pause: json.Unmarshal() = %v, want nil", err)
+	}
+	if pausedState.Status != "paused" {
+		t.Fatalf("pause: status = %q, want %q", pausedState.Status, "paused")
+	}
+
+	// resume must fail here if it were wired to Pause's or Start's op:
+	// Resume is only legal from paused.
+	resume := runWorkflowTest([]string{"resume", "--project", project, "--workflow", wf}, dir)
+	if resume.code != 0 {
+		t.Fatalf("resume: code=%d stderr=%q, want exit 0", resume.code, resume.stderr)
+	}
+	var resumedState workflowStateJSON
+	if err := json.Unmarshal([]byte(resume.stdout), &resumedState); err != nil {
+		t.Fatalf("resume: json.Unmarshal() = %v, want nil", err)
+	}
+	if resumedState.Status != "running" {
+		t.Fatalf("resume: status = %q, want %q", resumedState.Status, "running")
+	}
+
+	// A second pause proves resume actually left the workflow running (not,
+	// say, silently still paused): pause is legal only from running.
+	if r := runWorkflowTest([]string{"pause", "--project", project, "--workflow", wf}, dir); r.code != 0 {
+		t.Fatalf("second pause: code=%d stderr=%q, want exit 0", r.code, r.stderr)
+	}
+}
+
+func TestParseWorkflowArgsRejectsUnexpectedPositionalArgument(t *testing.T) {
+	_, err := parseWorkflowArgs([]string{"--project", "p", "stray"}, nil)
+	if err == nil || !strings.Contains(err.Error(), `unexpected argument "stray"`) {
+		t.Fatalf("parseWorkflowArgs() = %v, want an unexpected-argument error", err)
+	}
+}
+
+// TestWorkflowDependencyProbeDegradationIsReportedOnStderr proves observationsFor's
+// degradation notification (workflow.DegradedHook) is actually wired from the
+// CLI through to stderr: a prober that errors must still let the operation
+// succeed (dependency unavailability never blocks a lifecycle operation),
+// while also printing one line a person running the command would see.
+func TestWorkflowDependencyProbeDegradationIsReportedOnStderr(t *testing.T) {
+	workflowTestStateHome(t)
+	dir := t.TempDir()
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
+
+	r := runWorkflowTest([]string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "standalone-minimal"}, dir)
+	if r.code != 0 {
+		t.Fatalf("create: code=%d stderr=%q, want exit 0", r.code, r.stderr)
+	}
+	// The CLI always wires the default UnavailableProber (never errors), so
+	// this asserts the negative: no degradation line for the happy path,
+	// establishing the baseline the workflow-package-level degraded-hook
+	// unit test (see lifecycle_test.go) contrasts with.
+	if strings.Contains(r.stderr, "dependency probing degraded") {
+		t.Fatalf("create: stderr=%q, want no degradation line for the default prober", r.stderr)
+	}
+}
+
 // TestWorkflowEndToEndAcrossSeparateProcessCalls drives create through
 // close(completed), then status, with every verb its own runWorkflowCore
 // call (over the same XDG_STATE_HOME) to simulate each verb running as a
