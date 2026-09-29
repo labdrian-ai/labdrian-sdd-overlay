@@ -80,14 +80,15 @@ var (
 	// binding to a different workflow and the caller did not ask to replace it.
 	// The message names the workflow it is bound to.
 	ErrAlreadyBound = errors.New("projection store: the repository is already bound to a different workflow")
-	// ErrBindingBusy is returned by Bind, Unbind, and BindIfUnchanged when the
-	// repository's lock stays taken past lockWait. Nothing was changed; the
-	// call can be retried.
+	// ErrBindingBusy is returned by Bind, Unbind, BindIfUnchanged, and
+	// UnbindIfUnchanged when the repository's lock stays taken past lockWait.
+	// Nothing was changed; the call can be retried.
 	ErrBindingBusy = errors.New("projection store: another bind or unbind is in progress for this repository; retry")
-	// ErrBindingChanged is returned by BindIfUnchanged when the stored binding
-	// is no longer the one the caller read: it was replaced, removed, or
-	// became a file that is not ours. The message says what is there now.
-	// Nothing was written.
+	// ErrBindingChanged is returned by BindIfUnchanged and UnbindIfUnchanged
+	// when the stored binding is no longer the one the caller read: it was
+	// replaced, or became a file that is not ours (BindIfUnchanged also reports
+	// a binding that was removed). The message says what is there now. Nothing
+	// was written or removed.
 	ErrBindingChanged = errors.New("projection store: the binding changed since it was read")
 )
 
@@ -123,7 +124,9 @@ var lockWait = 2 * time.Second
 //     bind does) must use BindIfUnchanged instead, which replaces it only if it
 //     is still exactly the binding that was read. The lock spans that
 //     comparison and the write, so a live binding another process made in
-//     between is never overwritten.
+//     between is never overwritten. UnbindIfUnchanged is the same for a caller
+//     that removes a binding it read (as the projection hook does for a closed
+//     workflow): it never removes a binding made after the one it saw.
 //   - Removing a binding does not sync the directory. If the machine crashes
 //     right after Unbind, the binding may reappear, which is a valid state: the
 //     one the repository had a moment ago.
@@ -214,9 +217,21 @@ func (s Store) Load(repoKey string) (Loaded, error) {
 
 	data, err := readBindingFile(path)
 	if err != nil {
-		return unavailable(err.Error()), nil
+		return readFailure(err), nil
 	}
 	return classifyBinding(repoKey, data), nil
+}
+
+// readFailure classifies the failure to read a binding file that Load has just
+// seen exist. Load checks that the file is there and then opens it, and another
+// process can remove it in between (Unbind does): the binding is then gone, which
+// is absent, not a state nothing can be known about. Any other failure (a
+// permission error, a path that stopped being a regular file) is unavailable.
+func readFailure(err error) Loaded {
+	if errors.Is(err, os.ErrNotExist) {
+		return Loaded{Classification: ClassificationAbsent}
+	}
+	return unavailable(err.Error())
 }
 
 // Bind binds the repository to the workflow projectID/workflowID, recording
@@ -352,6 +367,12 @@ func (s Store) checkUnchanged(repoKey string, expected Binding) error {
 	if err != nil {
 		return err
 	}
+	return changedSince(loaded, expected)
+}
+
+// changedSince returns nil when loaded is an owned binding equal to expected,
+// and otherwise ErrBindingChanged, saying what is there now.
+func changedSince(loaded Loaded, expected Binding) error {
 	switch loaded.Classification {
 	case ClassificationOwned:
 		if loaded.Binding == expected {
@@ -407,6 +428,74 @@ func (s Store) Unbind(repoKey string) (removed bool, err error) {
 	default:
 		return false, refusal(loaded)
 	}
+}
+
+// UnbindIfUnchanged removes the repository's binding only if it is still
+// exactly expected: the binding the caller read and acted on. It is Unbind for
+// a caller that decides from a binding and then removes it, as the projection
+// hook does when the bound workflow turns out to be closed: in the gap between
+// reading and removing, another process can bind the next workflow, and that
+// binding is not the caller's to remove.
+//
+//   - An owned binding equal to expected, bound_at included, is removed
+//     (true, nil).
+//   - A binding that is already gone is (false, nil), as for Unbind: the state
+//     the caller wanted holds, and nothing is created to say so.
+//   - Any other state is (false, ErrBindingChanged), whose message says what is
+//     there now (another binding, or a file that is foreign, malformed, or
+//     unavailable), and nothing is removed.
+//
+// As for BindIfUnchanged, the comparison is made once without the lock and
+// again under it, which is held until the file is removed, and a lock that
+// stays taken past lockWait is ErrBindingBusy. Invalid input (a repo key that
+// is not 64 lowercase hex digits, an expected binding that is invalid or names
+// another repository) is refused before anything is read or created, and is
+// not ErrBindingChanged.
+func (s Store) UnbindIfUnchanged(repoKey string, expected Binding) (removed bool, err error) {
+	path, err := s.path(repoKey)
+	if err != nil {
+		return false, err
+	}
+	if err := expected.Validate(); err != nil {
+		return false, fmt.Errorf("projection store: unbind if unchanged: expected binding: %w", err)
+	}
+	if expected.RepoKey != repoKey {
+		return false, fmt.Errorf("projection store: unbind if unchanged: expected binding names repo_key %q, not %q", expected.RepoKey, repoKey)
+	}
+
+	if gone, err := s.goneOrUnchanged(repoKey, expected); gone || err != nil {
+		return false, err
+	}
+	unlock, err := s.lock(path)
+	if err != nil {
+		return false, err
+	}
+	defer unlock()
+	if gone, err := s.goneOrUnchanged(repoKey, expected); gone || err != nil {
+		return false, err
+	}
+	if err := os.Remove(path); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			// Removed by a process that does not take the lock: it is gone.
+			return false, nil
+		}
+		return false, fmt.Errorf("projection store: unbind if unchanged: %w", err)
+	}
+	return true, nil
+}
+
+// goneOrUnchanged reports whether the binding of repoKey is already absent, and
+// otherwise whether it is still exactly expected: any other state is
+// ErrBindingChanged.
+func (s Store) goneOrUnchanged(repoKey string, expected Binding) (gone bool, err error) {
+	loaded, err := s.Load(repoKey)
+	if err != nil {
+		return false, err
+	}
+	if loaded.Classification == ClassificationAbsent {
+		return true, nil
+	}
+	return false, changedSince(loaded, expected)
 }
 
 // refusal maps a classification that must not be written over to its named

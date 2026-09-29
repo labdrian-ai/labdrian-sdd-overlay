@@ -420,6 +420,54 @@ func TestLoadReportsUnavailableWhenTheStateCannotBeRead(t *testing.T) {
 	}
 }
 
+// TestLoadNeverReportsABindingThatIsBeingUnboundAsUnavailable races readers
+// against a writer that binds and unbinds without pause. Every answer a reader
+// gets is a state the binding really had: absent or owned. (Load checks that the
+// file exists and then opens it; a removal between the two must read as absent.)
+func TestLoadNeverReportsABindingThatIsBeingUnboundAsUnavailable(t *testing.T) {
+	s, _ := isolatedStore(t)
+	stop := make(chan struct{})
+	var mu sync.Mutex
+	var problems []string
+	var wg sync.WaitGroup
+	for r := 0; r < 4; r++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for {
+				select {
+				case <-stop:
+					return
+				default:
+				}
+				loaded, err := s.Load(hex64("a"))
+				if err != nil || (loaded.Classification != projection.ClassificationAbsent && loaded.Classification != projection.ClassificationOwned) {
+					mu.Lock()
+					problems = append(problems, fmt.Sprintf("Load() = %+v, %v", loaded, err))
+					mu.Unlock()
+					return
+				}
+			}
+		}()
+	}
+	for i := 0; i < 500; i++ {
+		if err := s.Bind(hex64("a"), "proj-1", "wf-1", t0, false); err != nil {
+			t.Errorf("Bind() #%d = %v, want nil", i, err)
+			break
+		}
+		if _, err := s.Unbind(hex64("a")); err != nil {
+			t.Errorf("Unbind() #%d = %v, want nil", i, err)
+			break
+		}
+	}
+	close(stop)
+	wg.Wait()
+
+	if len(problems) > 0 {
+		t.Fatalf("a reader saw a state the binding never had: %s", problems[0])
+	}
+}
+
 // --- Bind ------------------------------------------------------------------
 
 func TestBindWritesTheBindingMarshalProduces(t *testing.T) {
