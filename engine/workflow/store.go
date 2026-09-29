@@ -95,7 +95,11 @@ var workflowStoreComponents = []string{"labdrian", "workflows"}
 // finite worst case; a file beyond this size is classified malformed rather
 // than read in full. It is far larger than any workflow this phase's
 // profiles produce (each event is bounded well under 64 KiB by
-// MaxEventBytes), so it is not expected to be reached by normal use.
+// MaxEventBytes), so it is not expected to be reached by normal use: even a
+// workflow that recorded MaxStages (256) stages plus every other event kind
+// would use a small fraction of this ceiling. 16 MiB also keeps Append's
+// O(n) full-log rewrite (see Store's doc comment) a fast, bounded, in-memory
+// operation on every supported platform.
 const maxWorkflowLogBytes = 16 * 1024 * 1024
 
 // Store holds one workflow's append-only event log at
@@ -114,6 +118,16 @@ const maxWorkflowLogBytes = 16 * 1024 * 1024
 // not: two of their writers race for a name that at most one can ever claim,
 // while two of this store's writers would otherwise both read the same
 // prefix and each publish a "next" event, silently discarding one of them.
+//
+// Each Append therefore reads the whole existing log and rewrites it plus
+// the new event to a temporary file before renaming it into place (see
+// appendWorkflowLog): that is what makes the publish atomic (a single
+// rename can never leave a reader with a half-written file), at the cost of
+// making one Append's I/O cost O(n) in the number of events already
+// recorded. This is bounded and acceptable: maxWorkflowLogBytes caps a
+// workflow's whole log at 16 MiB, so the worst-case rewrite is a bounded,
+// fast, in-memory copy, never an unbounded scan.
+//
 // Store supports linux and darwin only (see checkPlatform).
 type Store struct {
 	stateHome string
@@ -255,18 +269,21 @@ func classifyWorkflowLog(projectID, workflowID string, data []byte) Loaded {
 
 	events := make([]WorkflowEvent, 0, len(lines))
 	for i, line := range lines {
+		// Detail messages report 1-based line numbers: a person reading the
+		// raw file (or an editor's line gutter) counts lines from 1, not 0.
+		lineNumber := i + 1
 		if line == "" {
-			return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("line %d is blank", i)}
+			return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("line %d is blank", lineNumber)}
 		}
 		if !json.Valid([]byte(line)) {
-			return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("line %d is not valid JSON", i)}
+			return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("line %d is not valid JSON", lineNumber)}
 		}
 		e, err := ParseWorkflowEvent([]byte(line))
 		if err != nil {
-			return Loaded{Classification: ClassificationForeign, Detail: fmt.Sprintf("line %d is not a workflow event we recognize: %v", i, err)}
+			return Loaded{Classification: ClassificationForeign, Detail: fmt.Sprintf("line %d is not a workflow event we recognize: %v", lineNumber, err)}
 		}
 		if e.ProjectID != projectID || e.WorkflowID != workflowID {
-			return Loaded{Classification: ClassificationForeign, Detail: fmt.Sprintf("line %d declares project_id=%q workflow_id=%q, want %q/%q", i, e.ProjectID, e.WorkflowID, projectID, workflowID)}
+			return Loaded{Classification: ClassificationForeign, Detail: fmt.Sprintf("line %d declares project_id=%q workflow_id=%q, want %q/%q", lineNumber, e.ProjectID, e.WorkflowID, projectID, workflowID)}
 		}
 		events = append(events, e)
 	}
@@ -327,8 +344,18 @@ func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 
 	switch loaded.Classification {
 	case ClassificationAbsent:
-		if next.Seq != 0 || next.Kind != KindCreated {
-			return fmt.Errorf("workflow store: append: an absent workflow must be created first (seq 0, kind %q), got seq %d kind %q", KindCreated, next.Seq, next.Kind)
+		// An absent workflow has no prior event, so its first append is
+		// checked against the zero State the same way Replay starts from
+		// it: CheckTransition(State{}, next) enforces that next is a
+		// created event at seq 0. The zero State also has no last stored
+		// digest, so next.PrevDigest must be empty, mirroring the explicit
+		// prev_digest check the ClassificationOwned branch below performs
+		// against its own last stored event's digest.
+		if next.PrevDigest != "" {
+			return fmt.Errorf("workflow store: append: prev_digest must be empty for the first event, got %q", next.PrevDigest)
+		}
+		if err := CheckTransition(State{}, next); err != nil {
+			return fmt.Errorf("workflow store: append: %w", err)
 		}
 	case ClassificationOwned:
 		last := loaded.Events[len(loaded.Events)-1]
