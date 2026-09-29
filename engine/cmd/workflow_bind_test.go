@@ -367,6 +367,44 @@ func TestWorkflowBindReplacesAStaleBinding(t *testing.T) {
 	}
 }
 
+// TestWorkflowBindDoesNotReplaceABindingWhoseWorkflowCannotBeRead pins the
+// safe side of "stale". A bound workflow whose log cannot be read, for example
+// after a transient permission error, may still be active, so bind refuses and
+// asks for an explicit unbind instead of moving the repository's sessions to
+// another workflow. (A log that is corrupt or not ours can never be followed,
+// and is replaced; see TestWorkflowBindReplacesAStaleBinding.)
+func TestWorkflowBindDoesNotReplaceABindingWhoseWorkflowCannotBeRead(t *testing.T) {
+	e := newBindEnv(t)
+	e.workflowInStatus(t, "proj-1", "wf-1", "running")
+	e.workflowInStatus(t, "proj-2", "wf-9", "running")
+	mustBindOK(t, e.repo, "proj-1", "wf-1")
+
+	log := e.workflowLog("proj-1", "wf-1")
+	if err := os.Chmod(log, 0); err != nil {
+		t.Fatalf("make %s unreadable: %v", log, err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(log, 0o600) })
+	if f, err := os.Open(log); err == nil {
+		_ = f.Close()
+		t.Skip("chmod 0 is not enforced for this process (root or an equivalent capability); the unreadable-log fault cannot be injected")
+	}
+
+	before := loadStoredBinding(t, e.repo)
+	r := runWorkflowTest([]string{"bind", "--project", "proj-2", "--workflow", "wf-9"}, e.repo)
+	if r.code != 2 {
+		t.Fatalf("code=%d stderr=%q, want exit 2: the bound workflow cannot be read, so it may still be active", r.code, r.stderr)
+	}
+	for _, want := range []string{"wf-1", "proj-1", "unbind"} {
+		if !strings.Contains(r.stderr, want) {
+			t.Errorf("stderr = %q, want it to mention %q", r.stderr, want)
+		}
+	}
+	after := loadStoredBinding(t, e.repo)
+	if after.Classification != before.Classification || after.Binding != before.Binding {
+		t.Fatalf("stored binding changed from %+v to %+v, want it untouched", before, after)
+	}
+}
+
 // loadStoredBinding reads the stored binding of the repository at cwd through
 // the projection store, independently of the CLI.
 func loadStoredBinding(t *testing.T, cwd string) projection.Loaded {

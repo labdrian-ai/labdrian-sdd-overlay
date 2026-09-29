@@ -143,10 +143,12 @@ func loadWorkflow(projectID, workflowID string) workflow.Loaded {
 // The workflow must exist, be owned, and not be closed. If the repository is
 // already bound to the same workflow, nothing changes. If it is bound to a
 // different one, that binding is replaced only when it is stale: the bound
-// workflow is closed, gone, or not a workflow log of ours, so it can no longer
-// be followed. A binding to a workflow that is still active (created, running,
-// or paused) is never replaced silently: bind refuses, names the bound
-// workflow, and tells the user to unbind first.
+// workflow is closed, gone, or a log that can never be followed again because
+// it is corrupt or not ours (drifted, malformed, foreign). A binding to a
+// workflow that is still active (created, running, or paused), or whose log
+// cannot be read right now (unavailable, so it may be active), is never
+// replaced silently: bind refuses, names the bound workflow, and tells the
+// user to unbind first.
 func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	project, workflowID, err := parseBindingArgs(args, true)
 	if err != nil {
@@ -195,8 +197,12 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 	if current.Classification == projection.ClassificationOwned && (current.Binding.ProjectID != project || current.Binding.WorkflowID != workflowID) {
 		bound := current.Binding
 		previous := loadWorkflow(bound.ProjectID, bound.WorkflowID)
-		if previous.Classification == workflow.ClassificationOwned && previous.State.Status != workflow.StatusClosed {
+		switch {
+		case previous.Classification == workflow.ClassificationOwned && previous.State.Status != workflow.StatusClosed:
 			refuseBinding(stderr, exit, "bind", "this repository is already bound to workflow %q of project %q (status: %s); run 'workflow unbind' first to bind another", bound.WorkflowID, bound.ProjectID, previous.State.Status)
+			return
+		case previous.Classification == workflow.ClassificationUnavailable:
+			refuseBinding(stderr, exit, "bind", "this repository is bound to workflow %q of project %q, whose log cannot be read (%s), so it may still be active; fix the problem, or run 'workflow unbind' first to bind another", bound.WorkflowID, bound.ProjectID, previous.Detail)
 			return
 		}
 		replace = true

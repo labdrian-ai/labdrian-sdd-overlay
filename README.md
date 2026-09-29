@@ -483,9 +483,10 @@ overlay workflow <verb>
         for a .git entry, by hand, without running git; outside a repository bind is refused.
         The workflow must exist, be owned, and not be closed. Binding the workflow the
         repository is already bound to changes nothing. A binding to a workflow that is still
-        active (created, running, or paused) is never replaced silently: bind is refused, names
-        the bound workflow, and asks for unbind first. A binding to a workflow that is closed,
-        gone, or not owned is stale, and bind replaces it. A binding file that is not ours
+        active (created, running, or paused), or whose log cannot be read right now and so may
+        still be active, is never replaced silently: bind is refused, names the bound workflow,
+        and asks for unbind first. A binding to a workflow that is closed, gone, corrupt, or not
+        ours (drifted, malformed, or foreign) is stale, and bind replaces it. A binding file that is not ours
         (foreign or malformed) is never overwritten. Prints the classification and the binding
         as JSON. A binding records the association only; it does not change the workflow.
     unbind
