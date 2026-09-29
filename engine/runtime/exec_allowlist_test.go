@@ -47,6 +47,7 @@ var execImportAllowed = map[string]string{
 // a rename cannot silently drop a file out of the policy.
 var phase7Sources = []string{
 	"capability/*.go",
+	"projection/*.go",
 	"cmd/runtime_capabilities.go",
 }
 

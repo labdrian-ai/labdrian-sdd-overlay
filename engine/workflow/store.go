@@ -144,25 +144,43 @@ func checkPlatform(goos string) error {
 	return fmt.Errorf("%w: %s (supported: linux, darwin)", ErrUnsupportedPlatform, goos)
 }
 
+// StateHome resolves the directory under which labdrian keeps its local
+// state, outside every worktree: $XDG_STATE_HOME when it is set, otherwise
+// $HOME/.local/state. A set but relative XDG_STATE_HOME, and an unset, empty,
+// or relative HOME fallback, are refused. It reads only the environment: it
+// does not check that the directory exists or is usable.
+//
+// It is the one resolution the stores of this module that live under the
+// state home share (Store here and the session binding store in
+// engine/projection), so they can never disagree about where "the state
+// home" is. Its errors carry no store name; each caller adds its own prefix.
+func StateHome() (string, error) {
+	if xdg := os.Getenv("XDG_STATE_HOME"); xdg != "" {
+		if !filepath.IsAbs(xdg) {
+			return "", fmt.Errorf("XDG_STATE_HOME %q is not absolute", xdg)
+		}
+		return filepath.Clean(xdg), nil
+	}
+	home := os.Getenv("HOME")
+	if home == "" || !filepath.IsAbs(home) {
+		return "", fmt.Errorf("XDG_STATE_HOME is unset and HOME %q is not an absolute path", home)
+	}
+	return filepath.Join(home, ".local", "state"), nil
+}
+
 // NewStore resolves the store from the environment, exactly as
-// roles.NewChainStore and shaper.NewFileStore do. A set but relative
-// XDG_STATE_HOME, and an unset, empty, or relative HOME fallback, are
+// roles.NewChainStore and shaper.NewFileStore do (see StateHome). A set but
+// relative XDG_STATE_HOME, and an unset, empty, or relative HOME fallback, are
 // refused, as is an unsupported platform (see checkPlatform).
 func NewStore() (Store, error) {
 	if err := checkPlatform(runtime.GOOS); err != nil {
 		return Store{}, err
 	}
-	if xdg := os.Getenv("XDG_STATE_HOME"); xdg != "" {
-		if !filepath.IsAbs(xdg) {
-			return Store{}, fmt.Errorf("workflow store: XDG_STATE_HOME %q is not absolute", xdg)
-		}
-		return Store{stateHome: filepath.Clean(xdg)}, nil
+	stateHome, err := StateHome()
+	if err != nil {
+		return Store{}, fmt.Errorf("workflow store: %w", err)
 	}
-	home := os.Getenv("HOME")
-	if home == "" || !filepath.IsAbs(home) {
-		return Store{}, fmt.Errorf("workflow store: XDG_STATE_HOME is unset and HOME %q is not an absolute path", home)
-	}
-	return Store{stateHome: filepath.Join(home, ".local", "state")}, nil
+	return Store{stateHome: stateHome}, nil
 }
 
 // dirParts returns the state home followed by every store directory
