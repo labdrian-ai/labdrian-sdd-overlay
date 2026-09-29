@@ -649,7 +649,10 @@ Commands:
                                    binding   read-only: show this repository's binding and the bound
                                              workflow's status
                                    exit 0 success, 2 refused/invalid (illegal transition, verify failure,
-                                   non-owned state), 1 usage error
+                                   non-owned state; for the binding verbs also: no git repository, a
+                                   workflow that cannot be bound, a binding file that is not ours or cannot be used
+                                   (foreign, malformed, unavailable), another bind or unbind in progress (busy),
+                                   a binding another process changed meanwhile), 1 usage error
   validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator

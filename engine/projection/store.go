@@ -80,9 +80,15 @@ var (
 	// binding to a different workflow and the caller did not ask to replace it.
 	// The message names the workflow it is bound to.
 	ErrAlreadyBound = errors.New("projection store: the repository is already bound to a different workflow")
-	// ErrBindingBusy is returned by Bind and Unbind when the repository's lock
-	// stays taken past lockWait. Nothing was changed; the call can be retried.
+	// ErrBindingBusy is returned by Bind, Unbind, and BindIfUnchanged when the
+	// repository's lock stays taken past lockWait. Nothing was changed; the
+	// call can be retried.
 	ErrBindingBusy = errors.New("projection store: another bind or unbind is in progress for this repository; retry")
+	// ErrBindingChanged is returned by BindIfUnchanged when the stored binding
+	// is no longer the one the caller read: it was replaced, removed, or
+	// became a file that is not ours. The message says what is there now.
+	// Nothing was written.
+	ErrBindingChanged = errors.New("projection store: the binding changed since it was read")
 )
 
 // lockWait is how long Bind and Unbind wait for the repository's lock before
@@ -112,10 +118,12 @@ var lockWait = 2 * time.Second
 //     first and renamed over or removed afterwards, so a foreign file created
 //     in between would be replaced. The window is the time between two system
 //     calls, and what is lost is a pointer that can be recreated.
-//   - Bind with replace is not a compare-and-swap. A caller that reads a
-//     binding, judges it stale, and then replaces it (as workflow bind does)
-//     can overwrite a live binding another process made in between: the lock
-//     does not span the caller's decision.
+//   - Bind with replace overwrites whatever owned binding is there. A caller
+//     that reads a binding, judges it stale, and then replaces it (as workflow
+//     bind does) must use BindIfUnchanged instead, which replaces it only if it
+//     is still exactly the binding that was read. The lock spans that
+//     comparison and the write, so a live binding another process made in
+//     between is never overwritten.
 //   - Removing a binding does not sync the directory. If the machine crashes
 //     right after Unbind, the binding may reappear, which is a valid state: the
 //     one the repository had a moment ago.
@@ -268,6 +276,94 @@ func (s Store) Bind(repoKey, projectID, workflowID string, now time.Time, replac
 	}
 
 	return writeBinding(path, data)
+}
+
+// BindIfUnchanged replaces the repository's binding with projectID/workflowID,
+// recording now (converted to UTC, without fractions of a second) as when, only
+// if the stored binding is still exactly expected: the binding the caller read
+// and judged. It is the compare-and-swap for a caller that decides from a
+// binding and then acts on the decision, as workflow bind does when it finds
+// the bound workflow stale; a binding another process made in between is never
+// overwritten.
+//
+//   - The stored file must be an owned binding equal to expected, bound_at
+//     included, so a workflow that was unbound and bound again counts as a
+//     different binding. Otherwise BindIfUnchanged fails with ErrBindingChanged,
+//     whose message says what is there now (another workflow, nothing, or a
+//     file that is foreign, malformed, or unavailable), and writes nothing. A
+//     refusal that finds the binding gone or not ours does not even create the
+//     store.
+//   - When the stored binding is expected and already names projectID and
+//     workflowID, the call is an idempotent no-op, like Bind: nothing is
+//     rewritten and the original bound_at is kept.
+//   - The comparison is made once without the lock, so a stale caller is
+//     refused without touching the disk, and again under the repository's lock,
+//     which is held until the write is done. A lock that stays taken past
+//     lockWait is ErrBindingBusy: nothing was compared or written.
+//
+// Invalid input (a repo key that is not 64 lowercase hex digits, an invalid
+// identifier, an expected binding that is invalid or names another repository)
+// is refused before anything is read or created, and is not ErrBindingChanged.
+func (s Store) BindIfUnchanged(repoKey, projectID, workflowID string, now time.Time, expected Binding) error {
+	b := Binding{
+		Version:    BindingVersion,
+		RepoKey:    repoKey,
+		ProjectID:  projectID,
+		WorkflowID: workflowID,
+		BoundAt:    now.UTC().Format(time.RFC3339),
+	}
+	data, err := b.Marshal()
+	if err != nil {
+		return fmt.Errorf("projection store: bind if unchanged: %w", err)
+	}
+	if err := expected.Validate(); err != nil {
+		return fmt.Errorf("projection store: bind if unchanged: expected binding: %w", err)
+	}
+	if expected.RepoKey != repoKey {
+		return fmt.Errorf("projection store: bind if unchanged: expected binding names repo_key %q, not %q", expected.RepoKey, repoKey)
+	}
+	path, err := s.path(repoKey)
+	if err != nil {
+		return err
+	}
+
+	if err := s.checkUnchanged(repoKey, expected); err != nil {
+		return err
+	}
+	unlock, err := s.lock(path)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	if err := s.checkUnchanged(repoKey, expected); err != nil {
+		return err
+	}
+	if expected.ProjectID == projectID && expected.WorkflowID == workflowID {
+		return nil
+	}
+	return writeBinding(path, data)
+}
+
+// checkUnchanged returns nil only when the stored binding of repoKey is an
+// owned binding equal to expected. Every other state is ErrBindingChanged,
+// saying what is there now.
+func (s Store) checkUnchanged(repoKey string, expected Binding) error {
+	loaded, err := s.Load(repoKey)
+	if err != nil {
+		return err
+	}
+	switch loaded.Classification {
+	case ClassificationOwned:
+		if loaded.Binding == expected {
+			return nil
+		}
+		now := loaded.Binding
+		return fmt.Errorf("%w: it now names workflow %q of project %q, bound at %s", ErrBindingChanged, now.WorkflowID, now.ProjectID, now.BoundAt)
+	case ClassificationAbsent:
+		return fmt.Errorf("%w: it was removed", ErrBindingChanged)
+	default:
+		return fmt.Errorf("%w: it is now %s: %s", ErrBindingChanged, loaded.Classification, loaded.Detail)
+	}
 }
 
 // Unbind removes the repository's binding and reports whether it removed one.

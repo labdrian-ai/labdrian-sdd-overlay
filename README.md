@@ -486,9 +486,12 @@ overlay workflow <verb>
         active (created, running, or paused), or whose log cannot be read right now and so may
         still be active, is never replaced silently: bind is refused, names the bound workflow,
         and asks for unbind first. A binding to a workflow that is closed, gone, corrupt, or not
-        ours (drifted, malformed, or foreign) is stale, and bind replaces it. A binding file that is not ours
-        (foreign or malformed) is never overwritten. Prints the classification and the binding
-        as JSON. A binding records the association only; it does not change the workflow.
+        ours (drifted, malformed, or foreign) is stale, and bind replaces it, but only if the
+        binding is still exactly the one it judged stale: if another process changed it in
+        between, bind exits 2, leaves it alone, and asks you to run binding and retry. A binding
+        file that is not ours (foreign or malformed) is never overwritten. Prints the
+        classification and the binding as JSON. A binding records the association only; it does
+        not change the workflow.
         Bind and unbind take turns per repository: one that cannot get the repository's lock
         within 2 seconds is refused (exit 2) and can be retried. bind prints the binding only if
         it is the one requested; if another process changed it meanwhile, bind exits 2 and says so.
@@ -504,8 +507,10 @@ overlay workflow <verb>
     The lifecycle verbs print the resulting classification and state (or, for status, the
     current one) as JSON on stdout and report errors on stderr. Exit 0 on success, 2 on a
     refused or invalid operation (an illegal transition, a failed verify, non-owned on-disk
-    state; for the binding verbs, no git repository, a workflow that cannot be bound, or a
-    binding file that is not ours), 1 on a usage error (including an unknown flag). Provenance
+    state; for the binding verbs, no git repository, a workflow that cannot be bound, a
+    binding file that is not ours or cannot be used (foreign, malformed, unavailable), another
+    bind or unbind in progress for the repository (busy), or a binding another process changed
+    meanwhile), 1 on a usage error (including an unknown flag). Provenance
     (worktree root, git HEAD) is observed by walking the .git directory by hand; it never runs
     the git binary or any other subprocess, and any part it cannot read is left empty rather
     than failing the operation.

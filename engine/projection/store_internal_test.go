@@ -99,3 +99,40 @@ func TestBindAndUnbindReportBusyWhileTheRepositoryLockIsHeld(t *testing.T) {
 		t.Errorf("Unbind() after the release = %v, %v, want true, nil", removed, err)
 	}
 }
+
+// TestBindIfUnchangedReportsBusyWhileTheRepositoryLockIsHeld: a compare-and-swap
+// that cannot get the lock has compared nothing, so it must neither write nor
+// claim the binding changed. It fails with ErrBindingBusy, and the same call
+// succeeds once the lock is released.
+func TestBindIfUnchangedReportsBusyWhileTheRepositoryLockIsHeld(t *testing.T) {
+	s, key, at := Store{stateHome: t.TempDir()}, strings.Repeat("a", 64), time.Unix(0, 0)
+	if err := s.Bind(key, "proj-1", "wf-1", at, false); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := s.Load(key)
+	if err != nil || loaded.Classification != ClassificationOwned {
+		t.Fatalf("Load() = %+v, %v, want an owned binding", loaded, err)
+	}
+	path := filepath.Join(s.stateHome, "labdrian", "bindings", key+".json")
+	before, _ := os.ReadFile(path)
+	wait := lockWait
+	t.Cleanup(func() { lockWait = wait })
+	lockWait = 20 * time.Millisecond
+
+	unlock, err := s.lock(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = s.BindIfUnchanged(key, "proj-1", "wf-2", at, loaded.Binding)
+	if !errors.Is(err, ErrBindingBusy) || errors.Is(err, ErrBindingChanged) {
+		t.Errorf("BindIfUnchanged() = %v, want ErrBindingBusy and not ErrBindingChanged", err)
+	}
+	if after, _ := os.ReadFile(path); len(before) == 0 || !bytes.Equal(after, before) {
+		t.Errorf("a busy BindIfUnchanged changed the binding: %q, was %q", after, before)
+	}
+
+	unlock()
+	if err := s.BindIfUnchanged(key, "proj-1", "wf-2", at, loaded.Binding); err != nil {
+		t.Errorf("BindIfUnchanged() after the release = %v, want nil", err)
+	}
+}
