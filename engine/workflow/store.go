@@ -344,13 +344,19 @@ func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 
 	switch loaded.Classification {
 	case ClassificationAbsent:
-		// An absent workflow has no prior event, so its first append is
-		// checked against the zero State the same way Replay starts from
-		// it: CheckTransition(State{}, next) enforces that next is a
-		// created event at seq 0. The zero State also has no last stored
-		// digest, so next.PrevDigest must be empty, mirroring the explicit
-		// prev_digest check the ClassificationOwned branch below performs
-		// against its own last stored event's digest.
+		// An absent workflow has no prior event, so its first append must
+		// be the created event at seq 0: checked explicitly and locally
+		// here (not only through CheckTransition(State{}, next) below,
+		// which enforces the same rule against the zero State as a second,
+		// independent line of defense; a future change to CheckTransition
+		// cannot silently drop this invariant without also failing here).
+		// The zero State also has no last stored digest, so next.PrevDigest
+		// must be empty, mirroring the explicit prev_digest check the
+		// ClassificationOwned branch below performs against its own last
+		// stored event's digest.
+		if next.Seq != 0 || next.Kind != KindCreated {
+			return fmt.Errorf("workflow store: append: the first event must be a created event at seq 0, got kind %q at seq %d", next.Kind, next.Seq)
+		}
 		if next.PrevDigest != "" {
 			return fmt.Errorf("workflow store: append: prev_digest must be empty for the first event, got %q", next.PrevDigest)
 		}

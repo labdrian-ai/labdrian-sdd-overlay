@@ -622,6 +622,26 @@ Commands:
                                              resolve a workflow profile's default memory directive,
                                              narrow it with an optional Goal-supplied then
                                              handoff-supplied directive, and print the plan as JSON
+  workflow <verb>                  Forward standalone workflow lifecycle verbs to the engine unchanged.
+                                   Local bookkeeping under $XDG_STATE_HOME/labdrian/workflows/<project>/<workflow>.jsonl;
+                                   no verb requires Gentle AI, gentle-pi, a runtime, memory, or auth (an
+                                   unavailable dependency is recorded on the event, never approved), and no
+                                   verb executes a workflow step or check (that is Phase 7).
+                                   create --project ID --workflow ID --goal PATH --profile NAME [--role-chain ID]
+                                             create a workflow, binding the Goal's digest, the profile, and
+                                             (if given) the role chain's current head digest
+                                   start|pause|resume|status --project ID --workflow ID
+                                             advance or read status; status never appends anything
+                                   stage  --project ID --workflow ID --stage NAME
+                                             record the profile's next declared stage
+                                   verify --project ID --workflow ID --goal PATH
+                                             structural-only re-verification; --goal is re-read fresh, never
+                                             a path recorded at create
+                                   close  --project ID --workflow ID --outcome completed|abandoned [--reason TEXT]
+                                             completed requires an immediately preceding successful verify;
+                                             abandoned is legal from any non-closed state
+                                   exit 0 success, 2 refused/invalid (illegal transition, verify failure,
+                                   non-owned state), 1 usage error
   validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
     --schema PATH --instance PATH  schema and deterministic semantic checks. Relative paths are
                                    resolved from the caller's working directory. Preserves validator
@@ -3390,6 +3410,22 @@ cmd_memory() {
 }
 
 # ---------------------------------------------------------------------------
+# workflow
+# ---------------------------------------------------------------------------
+
+# cmd_workflow forwards `labdrian workflow <verb>` to the engine unchanged.
+# The Phase 6 standalone workflow lifecycle is local bookkeeping under
+# $XDG_STATE_HOME/labdrian/workflows/; no verb requires Gentle AI, gentle-pi,
+# a runtime, memory, or auth, and no verb executes a workflow step or check
+# (that is Phase 7).
+cmd_workflow() {
+  if [[ ! -x "$ENGINE_BINARY" ]]; then
+    die "engine binary not found at $ENGINE_BINARY; run 'labdrian install-hooks' first"
+  fi
+  exec "$ENGINE_BINARY" workflow "$@"
+}
+
+# ---------------------------------------------------------------------------
 # validate-entry-contract
 # ---------------------------------------------------------------------------
 
@@ -4438,6 +4474,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     shaper)          cmd_shaper "$@" ;;
     roles)           cmd_roles "$@" ;;
     memory)          cmd_memory "$@" ;;
+    workflow)        cmd_workflow "$@" ;;
     validate-entry-contract) cmd_validate_entry_contract "$@" ;;
     deterministic-checks) cmd_deterministic_checks "$@" ;;
     archive-reconcile) cmd_archive_reconcile "$@" ;;

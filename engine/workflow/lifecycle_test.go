@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"strings"
@@ -668,5 +669,348 @@ func TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("closed observations = %+v, want a profile observation marked unavailable with a detail", closed.Observations)
+	}
+}
+
+// growRoleChain returns records with one more record appended, chained onto
+// records' current head, transitioning fromRole (the last record's to_role)
+// to toRole. It exists so tests can simulate a role chain that legitimately
+// grows after a workflow's Create bound its head.
+func growRoleChain(records []roles.ChainRecord, fromRole, toRole roles.Role) []roles.ChainRecord {
+	last := records[len(records)-1]
+	next := roles.RoleHandoff{
+		Version:       roles.HandoffVersion,
+		ProjectID:     last.Handoff.ProjectID,
+		GoalID:        last.Handoff.GoalID,
+		ChainID:       last.Handoff.ChainID,
+		Seq:           last.Handoff.Seq + 1,
+		FromRole:      fromRole,
+		ToRole:        toRole,
+		PrevSHA256:    chainRecordDigest(last),
+		PayloadKind:   "plan",
+		PayloadSHA256: strings.Repeat("a", 64),
+		Evidence:      []roles.Evidence{},
+		Context:       roles.Context{Summary: "s", Decisions: []string{}, OpenQuestions: []string{}},
+		Status:        roles.StatusCompleted,
+	}
+	raw, err := json.Marshal(next)
+	if err != nil {
+		panic(err)
+	}
+	return append(records, roles.ChainRecord{Raw: raw, Handoff: next})
+}
+
+// TestLifecycleCreateBindsRoleChainHeadAndVerifyRequiresIt covers R1-001: a
+// workflow's created event binds the role chain's current head digest, and
+// Verify requires that exact record to still be present in the (possibly
+// grown) chain, not merely that some chain with the same id currently
+// verifies.
+func TestLifecycleCreateBindsRoleChainHeadAndVerifyRequiresIt(t *testing.T) {
+	store := newTestStore(t)
+	clock := stepClock()
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	newLC := func() Lifecycle { return newTestLifecycle(t, store, clock, goals, chains, nil) }
+
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	original := validRoleChain("proj-1", "goal-1", "chain-1")
+	chains.set("proj-1", "goal-1", "chain-1", original)
+
+	if _, err := newLC().Create("proj-1", "wf-1", g, "odd", "chain-1"); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+
+	loaded, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	created := loaded.Events[0]
+	wantHead := chainRecordDigest(original[len(original)-1])
+	if created.RoleChainHead != wantHead {
+		t.Fatalf("created.RoleChainHead = %q, want %q (the chain's head digest at creation)", created.RoleChainHead, wantHead)
+	}
+
+	// The chain legitimately grows after Create: Verify must still succeed,
+	// since the record bound at creation is still present.
+	grown := growRoleChain(original, roles.RoleShaper, roles.RoleEstimator)
+	chains.set("proj-1", "goal-1", "chain-1", grown)
+	if _, err := newLC().Verify("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Verify() = %v, want nil when the chain has only grown", err)
+	}
+
+	// The chain is rewritten from scratch: a different, internally
+	// self-consistent chain at the same id no longer contains the record
+	// bound at creation, so Verify must fail.
+	rewritten := validRoleChain("proj-1", "goal-1", "chain-1")
+	rewritten[0].Handoff.PayloadSHA256 = strings.Repeat("b", 64)
+	raw, err := json.Marshal(rewritten[0].Handoff)
+	if err != nil {
+		t.Fatalf("json.Marshal() = %v, want nil", err)
+	}
+	rewritten[0].Raw = raw
+	chains.set("proj-1", "goal-1", "chain-1", rewritten)
+	if _, err := newLC().Verify("proj-1", "wf-1"); !errors.Is(err, ErrRoleChainInvalid) {
+		t.Fatalf("Verify() err = %v, want ErrRoleChainInvalid for a rewritten chain", err)
+	}
+}
+
+// blockingProber is a DependencyProber that never returns on its own: it
+// blocks until ctx is done, then reports ctx's error. It exists to prove
+// observationsFor's own bounded deadline (Lifecycle.probeTimeout), not the
+// prober's cooperation, is what keeps a lifecycle operation from hanging.
+type blockingProber struct{}
+
+func (blockingProber) Probe(ctx context.Context, capabilities []string) ([]Observation, error) {
+	<-ctx.Done()
+	return nil, ctx.Err()
+}
+
+// TestLifecycleObservationsForProbeTimeout covers R4-probe-no-timeout: a
+// prober that blocks past Lifecycle.probeTimeout never blocks the calling
+// operation, and every declared dependency is recorded unavailable with a
+// detail explaining why.
+func TestLifecycleObservationsForProbeTimeout(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, blockingProber{})
+	lc.probeTimeout = 20 * time.Millisecond
+
+	start := time.Now()
+	state, err := lc.Create("proj-1", "wf-1", g, "odd", "")
+	elapsed := time.Since(start)
+	if err != nil {
+		t.Fatalf("Create() = %v, want nil even when the prober blocks past the deadline", err)
+	}
+	if elapsed > 2*time.Second {
+		t.Fatalf("Create() took %s, want it bounded near probeTimeout (20ms), not hung on the prober", elapsed)
+	}
+	if state.Status != StatusCreated {
+		t.Fatalf("state.Status = %q, want %q", state.Status, StatusCreated)
+	}
+
+	loaded, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	created := loaded.Events[0]
+	if len(created.Observations) == 0 {
+		t.Fatalf("created.Observations is empty, want one unavailable observation per declared dependency")
+	}
+	for _, o := range created.Observations {
+		if o.Status != ObservationUnavailable || o.Detail == "" {
+			t.Fatalf("observation %+v, want unavailable with a non-empty detail", o)
+		}
+	}
+}
+
+// mismatchedCountProber always returns fewer observations than requested,
+// without an error: a misbehaving prober that violates DependencyProber's
+// documented contract in a different way than an error or a timeout.
+type mismatchedCountProber struct{}
+
+func (mismatchedCountProber) Probe(_ context.Context, capabilities []string) ([]Observation, error) {
+	if len(capabilities) == 0 {
+		return nil, nil
+	}
+	return []Observation{{Capability: capabilities[0], Status: ObservationAvailable}}, nil
+}
+
+// TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable
+// covers R3-4: a prober returning the wrong number of observations never
+// fails or blocks the operation and is never trusted for
+// ObservationAvailable; every declared dependency is instead recorded
+// unavailable with a detail naming the mismatch.
+func TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, mismatchedCountProber{})
+	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil even when the prober returns the wrong observation count", err)
+	}
+	loaded, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	created := loaded.Events[0]
+	if len(created.Observations) < 2 {
+		t.Fatalf("created.Observations = %+v, want one per declared dependency (odd declares more than one)", created.Observations)
+	}
+	for _, o := range created.Observations {
+		if o.Status != ObservationUnavailable {
+			t.Fatalf("observation %+v status = %q, want %q (a mismatched-count prober is never trusted)", o, o.Status, ObservationUnavailable)
+		}
+	}
+}
+
+// TestLifecycleVerifyFailsWhenProfileNoLongerResolves covers R3-2: Verify's
+// ErrProfileInvalid branch, driven through the injectable resolveProfile the
+// same way TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves drives
+// Close's profile-observation fallback.
+func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
+	store := newTestStore(t)
+	clock := stepClock()
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	newLC := func() Lifecycle { return newTestLifecycle(t, store, clock, goals, chains, nil) }
+
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	if _, err := newLC().Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+	before, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	lc := newLC()
+	lc.resolveProfile = func(name string) (workflowprofile.WorkflowProfile, error) {
+		return workflowprofile.WorkflowProfile{}, errors.New("profile retired")
+	}
+	if _, err := lc.Verify("proj-1", "wf-1"); !errors.Is(err, ErrProfileInvalid) {
+		t.Fatalf("Verify() err = %v, want ErrProfileInvalid", err)
+	}
+
+	after, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if len(after.Events) != len(before.Events) {
+		t.Fatalf("Verify() failure appended events, want none (had %d, now %d)", len(before.Events), len(after.Events))
+	}
+}
+
+// TestLifecycleVerifyFailsWhenStageOrderInvalid covers R3-2's other branch:
+// ErrStageOrderInvalid, driven by an injected resolveProfile that reports a
+// profile whose declared stage order no longer matches what was actually
+// recorded.
+func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
+	store := newTestStore(t)
+	clock := stepClock()
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	newLC := func() Lifecycle { return newTestLifecycle(t, store, clock, goals, chains, nil) }
+
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	profile, err := workflowprofile.Resolve("maintenance")
+	if err != nil {
+		t.Fatalf("workflowprofile.Resolve() = %v, want nil", err)
+	}
+	if _, err := newLC().Create("proj-1", "wf-1", g, profile.Name, ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+	if _, err := newLC().RecordStage("proj-1", "wf-1", profile.Stages[0].Name); err != nil {
+		t.Fatalf("RecordStage() = %v, want nil", err)
+	}
+	before, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	lc := newLC()
+	lc.resolveProfile = func(name string) (workflowprofile.WorkflowProfile, error) {
+		mutated := profile
+		mutated.Stages = append([]workflowprofile.Stage{}, profile.Stages...)
+		mutated.Stages[0].Name = "not-" + profile.Stages[0].Name
+		return mutated, nil
+	}
+	if _, err := lc.Verify("proj-1", "wf-1"); !errors.Is(err, ErrStageOrderInvalid) {
+		t.Fatalf("Verify() err = %v, want ErrStageOrderInvalid", err)
+	}
+
+	after, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if len(after.Events) != len(before.Events) {
+		t.Fatalf("Verify() failure appended events, want none (had %d, now %d)", len(before.Events), len(after.Events))
+	}
+}
+
+// TestLifecycleRecordStageRejectsWhenAllStagesRecorded covers R3-3: once
+// every declared stage is recorded, one more RecordStage call is rejected
+// (there is no "next declared stage" left), distinct from
+// TestLifecycleRecordStageRejectsOutOfOrder's skip-ahead and undeclared-name
+// cases.
+func TestLifecycleRecordStageRejectsWhenAllStagesRecorded(t *testing.T) {
+	store := newTestStore(t)
+	clock := stepClock()
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	newLC := func() Lifecycle { return newTestLifecycle(t, store, clock, goals, chains, nil) }
+
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	profile, err := workflowprofile.Resolve("standalone-minimal")
+	if err != nil {
+		t.Fatalf("workflowprofile.Resolve() = %v, want nil", err)
+	}
+	if _, err := newLC().Create("proj-1", "wf-1", g, profile.Name, ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+	for _, stage := range profile.Stages {
+		if _, err := newLC().RecordStage("proj-1", "wf-1", stage.Name); err != nil {
+			t.Fatalf("RecordStage(%q) = %v, want nil", stage.Name, err)
+		}
+	}
+
+	if _, err := newLC().RecordStage("proj-1", "wf-1", "one-more"); !errors.Is(err, ErrStageOutOfOrder) {
+		t.Fatalf("RecordStage() err = %v, want ErrStageOutOfOrder once every declared stage is recorded", err)
+	}
+}
+
+// TestLifecycleVerifyRecordsExactLastVerifiedSeq covers R3-5:
+// TestLifecycleHappyPathAcrossRestarts only asserts LastVerifiedSeq is
+// non-negative; this test asserts the exact seq of the appended verified
+// event.
+func TestLifecycleVerifyRecordsExactLastVerifiedSeq(t *testing.T) {
+	store := newTestStore(t)
+	clock := stepClock()
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	newLC := func() Lifecycle { return newTestLifecycle(t, store, clock, goals, chains, nil) }
+
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	if _, err := newLC().Create("proj-1", "wf-1", g, "standalone-minimal", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := newLC().Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+	before, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	wantSeq := len(before.Events) // the verified event's own seq, about to be appended.
+
+	state, err := newLC().Verify("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Verify() = %v, want nil", err)
+	}
+	if state.LastVerifiedSeq != wantSeq {
+		t.Fatalf("Verify() state.LastVerifiedSeq = %d, want exactly %d", state.LastVerifiedSeq, wantSeq)
 	}
 }

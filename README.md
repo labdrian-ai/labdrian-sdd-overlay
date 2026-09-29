@@ -440,6 +440,45 @@ overlay memory <verb>
         the plan's project_id (and goal_id, for scope goal) filters. Exit 0 on a resolved plan,
         2 on a refused or invalid input, 1 on a usage error or a failed write of the plan.
 
+overlay workflow <verb>
+    Forward standalone workflow lifecycle verbs (Phase 6) to the engine unchanged: create,
+    start, pause, resume, stage, verify, close, and status. A workflow is its own append-only,
+    hash-chained event log stored outside the repository at
+    $XDG_STATE_HOME/labdrian/workflows/<project_id>/<workflow_id>.jsonl (or
+    $HOME/.local/state/... when XDG_STATE_HOME is unset), keyed by project_id so every git
+    worktree of a project observes the same workflow. Lifecycle operations never need Gentle AI,
+    gentle-pi, a runtime, memory, or auth to be present: a declared dependency that is
+    unavailable is recorded as an "unavailable" observation on the event, never approved or
+    hidden. No verb here executes a workflow step or check; that is a runtime adapter's
+    responsibility outside this overlay (Phase 7).
+    create --project <id> --workflow <id> --goal <path> --profile <name> [--role-chain <id>]
+        Create a workflow: binds the Goal's SHA-256 digest, the named Workflow Profile, and,
+        when --role-chain is given, that role chain's current head digest (the chain may grow
+        afterward, but verify requires this exact record to still be present).
+    start | pause | resume --project <id> --workflow <id>
+        Advance the workflow's status (created -> running -> paused -> running -> ...).
+    stage --project <id> --workflow <id> --stage <name>
+        Record the Workflow Profile's next declared stage; rejected if <name> is not exactly
+        that next stage.
+    verify --project <id> --workflow <id> --goal <path>
+        Structural-only re-verification (no execution): the event hash chain, the Workflow
+        Profile, the recorded stage order, the Goal's digest (re-read from --goal, never from a
+        path recorded at create), and, if referenced, the role chain. --goal is required on
+        every verify call; the CLI never persists a Goal file path.
+    close --project <id> --workflow <id> --outcome completed|abandoned [--reason <text>]
+        Close the workflow. completed requires an immediately preceding successful verify;
+        abandoned is legal from any non-closed state (even if the recorded profile no longer
+        resolves) and requires --reason.
+    status --project <id> --workflow <id>
+        Read-only: the on-disk classification (absent, owned, foreign, malformed, drifted, or
+        unavailable) and, when owned, the replayed state. Never appends anything.
+    Every verb prints the resulting classification and state (or, for status, the current one)
+    as JSON on stdout and reports errors on stderr. Exit 0 on success, 2 on a refused or invalid
+    operation (an illegal transition, a failed verify, non-owned on-disk state), 1 on a usage
+    error. Provenance (worktree root, git HEAD) is observed by walking the .git directory by
+    hand; it never runs the git binary or any other subprocess, and any part it cannot read is
+    left empty rather than failing the operation.
+
 overlay --help
     Show this help.
 ```
