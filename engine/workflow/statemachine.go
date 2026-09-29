@@ -56,6 +56,7 @@ type State struct {
 	GoalID          string
 	GoalDigest      string
 	RoleChainID     string
+	RoleChainHead   string
 	Stages          []string
 	LastVerifiedSeq int
 	CloseOutcome    Outcome
@@ -188,6 +189,7 @@ func applyEvent(state State, e WorkflowEvent) State {
 		state.GoalDigest = e.GoalDigest
 		state.Profile = e.Profile
 		state.RoleChainID = e.RoleChainID
+		state.RoleChainHead = e.RoleChainHead
 		state.Stages = []string{}
 		state.LastVerifiedSeq = -1
 	case KindStarted, KindResumed:

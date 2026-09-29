@@ -1,6 +1,7 @@
 package workflow
 
 import (
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -75,17 +76,40 @@ type RoleChainReader interface {
 }
 
 // DependencyProber reports, for each named capability, whether it is
-// currently available. It must not block on or assume any particular
-// capability; see UnavailableProber for the safe default. A capability name
-// is an opaque string this package defines (memory sources are named
+// currently available. It should return promptly and honor ctx's deadline;
+// see UnavailableProber for the safe default. A capability name is an
+// opaque string this package defines (memory sources are named
 // "memory:<source>"; native review is named by gentleAIReviewCapability).
+//
+// observationsFor applies its own bounded deadline (see
+// dependencyProbeTimeout) around every call, independent of whether the
+// prober itself honors ctx: a prober that ignores ctx and blocks forever
+// still never blocks the calling lifecycle operation past that deadline
+// (see Lifecycle.probe), though its goroutine may leak for the remainder of
+// the process's life. That is an accepted trade-off for a caller-supplied
+// prober that violates its documented contract; Go has no way to force-stop
+// a goroutine that never checks ctx.Done().
 type DependencyProber interface {
 	// Probe returns one Observation per entry in capabilities, in the same
-	// order and the same length. It must not run a subprocess or make a
-	// network call (see UnavailableProber's doc comment for the one
-	// documented exception a future prober may choose to take).
-	Probe(capabilities []string) []Observation
+	// order and the same length, or a non-nil error. It must not run a
+	// subprocess or make a network call (see UnavailableProber's doc
+	// comment for the one documented exception a future prober may choose
+	// to take). A returned error, or ctx's deadline expiring first, is
+	// treated by observationsFor exactly like every capability being
+	// unavailable; Probe need not synthesize Observations for that case
+	// itself.
+	Probe(ctx context.Context, capabilities []string) ([]Observation, error)
 }
+
+// dependencyProbeTimeout is the default bound observationsFor applies to a
+// single DependencyProber.Probe call. 5 seconds is generous for any prober
+// that only inspects local state (a PATH lookup, a socket, a config file)
+// while still keeping every lifecycle-mutating operation (Create, Start,
+// Pause, Resume, RecordStage, Verify, Close) responsive when a prober is
+// slow, hung, or misbehaving. NewLifecycle sets this as Lifecycle.probeTimeout;
+// tests in this package may lower it to keep a deliberately slow prober test
+// fast.
+const dependencyProbeTimeout = 5 * time.Second
 
 // UnavailableProber is the safe default DependencyProber: it reports every
 // requested capability as unavailable, without running a subprocess or
@@ -96,15 +120,23 @@ type DependencyProber interface {
 // as positively confirmed.
 type UnavailableProber struct{}
 
-// Probe implements DependencyProber.
-func (UnavailableProber) Probe(capabilities []string) []Observation {
+// Probe implements DependencyProber. It ignores ctx: it never blocks, so it
+// has no deadline to honor.
+func (UnavailableProber) Probe(_ context.Context, capabilities []string) ([]Observation, error) {
+	return unavailableObservations(capabilities, "default prober: availability cannot be positively confirmed without a subprocess or network call"), nil
+}
+
+// unavailableObservations builds one Observation per capability, every one
+// marked unavailable with detail (truncated to MaxObservationDetailLength
+// runes so a verbose prober error or ctx.Err() can never itself make the
+// resulting event fail Validate).
+func unavailableObservations(capabilities []string, detail string) []Observation {
+	if len([]rune(detail)) > MaxObservationDetailLength {
+		detail = string([]rune(detail)[:MaxObservationDetailLength])
+	}
 	observations := make([]Observation, len(capabilities))
 	for i, capability := range capabilities {
-		observations[i] = Observation{
-			Capability: capability,
-			Status:     ObservationUnavailable,
-			Detail:     "default prober: availability cannot be positively confirmed without a subprocess or network call",
-		}
+		observations[i] = Observation{Capability: capability, Status: ObservationUnavailable, Detail: detail}
 	}
 	return observations
 }
@@ -127,6 +159,9 @@ type Lifecycle struct {
 	// resolveProfile resolves a workflow's recorded profile name; it is
 	// workflowprofile.Resolve outside tests.
 	resolveProfile func(string) (workflowprofile.WorkflowProfile, error)
+	// probeTimeout bounds a single DependencyProber.Probe call; it is
+	// dependencyProbeTimeout outside tests.
+	probeTimeout time.Duration
 }
 
 // NewLifecycle builds a Lifecycle. clock, goals, and chains must not be
@@ -150,7 +185,7 @@ func NewLifecycle(store Store, clock func() time.Time, provenance Provenance, go
 	if prober == nil {
 		prober = UnavailableProber{}
 	}
-	return Lifecycle{store: store, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, resolveProfile: workflowprofile.Resolve}, nil
+	return Lifecycle{store: store, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, resolveProfile: workflowprofile.Resolve, probeTimeout: dependencyProbeTimeout}, nil
 }
 
 // loadOwned loads the workflow and requires it to be ClassificationOwned;
@@ -206,8 +241,10 @@ func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind K
 }
 
 // commit appends event and, on success, returns the State that results from
-// applying it to loaded.State. It appends nothing and returns loaded's
-// unmodified failure path when Append refuses event.
+// applying it to loaded.State. When Append refuses event, nothing is
+// appended and commit returns Append's error alongside a zero-value State;
+// every caller in this file checks the error first and never reads that
+// zero-value State.
 func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event WorkflowEvent) (State, error) {
 	if err := l.store.Append(projectID, workflowID, event); err != nil {
 		return State{}, err
@@ -221,7 +258,11 @@ func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event Wor
 // gentleAIReviewCapability when profileReliesOnGentleReview. Every
 // dependency this Lifecycle does not positively confirm through l.prober is
 // recorded unavailable; it never blocks the operation and is never
-// recorded as available on its own authority (see DependencyProber).
+// recorded as available on its own authority (see DependencyProber). A
+// prober that returns an error, returns the wrong number of observations,
+// or does not return within l.probeTimeout is treated the same way: every
+// requested capability is recorded unavailable, with a detail explaining
+// why (see l.probe).
 func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	profile, err := l.resolveProfile(profileName)
 	if err != nil {
@@ -238,13 +279,47 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 	if profileReliesOnGentleReview(profile) {
 		capabilities = append(capabilities, gentleAIReviewCapability)
 	}
-	observed := l.prober.Probe(capabilities)
+
+	observed, err := l.probe(capabilities)
+	if err != nil {
+		return unavailableObservations(capabilities, err.Error()), nil
+	}
 	if len(observed) != len(capabilities) {
-		return nil, fmt.Errorf("workflow lifecycle: dependency prober returned %d observations for %d capabilities", len(observed), len(capabilities))
+		return unavailableObservations(capabilities, fmt.Sprintf("dependency prober returned %d observations for %d capabilities", len(observed), len(capabilities))), nil
 	}
 	result := make([]Observation, len(observed))
 	copy(result, observed)
 	return result, nil
+}
+
+// probe calls l.prober.Probe with a deadline of l.probeTimeout, in a
+// separate goroutine so that a prober which never checks its context and
+// blocks forever still cannot block the caller past that deadline: probe
+// returns as soon as either the prober's own goroutine finishes or the
+// deadline expires, whichever comes first. A prober that never returns
+// leaks its goroutine for the remainder of the process's life; see
+// DependencyProber's doc comment for why that is an accepted trade-off for
+// a caller-supplied prober violating its documented contract.
+func (l Lifecycle) probe(capabilities []string) ([]Observation, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), l.probeTimeout)
+	defer cancel()
+
+	type result struct {
+		observations []Observation
+		err          error
+	}
+	done := make(chan result, 1)
+	go func() {
+		observations, err := l.prober.Probe(ctx, capabilities)
+		done <- result{observations, err}
+	}()
+
+	select {
+	case r := <-done:
+		return r.observations, r.err
+	case <-ctx.Done():
+		return nil, fmt.Errorf("dependency prober did not return within %s: %w", l.probeTimeout, ctx.Err())
+	}
 }
 
 // gentleReviewProfiles lists the built-in Workflow Profiles whose
@@ -282,14 +357,56 @@ func goalDigest(g goal.Goal) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// roleChainDigest returns the SHA-256 hex digest of records' last record's
-// raw bytes: the same digest the next record in that chain would chain to
-// via prev_sha256 (see roles.VerifyChain), reused here as the stable digest
-// this package's own Checked.role_chain_digest records. records must be
-// non-empty.
-func roleChainDigest(records []roles.ChainRecord) string {
-	sum := sha256.Sum256(records[len(records)-1].Raw)
+// chainRecordDigest returns the SHA-256 hex digest of one role chain
+// record's raw bytes: the same digest the next record in that chain would
+// chain to via prev_sha256 (see roles.VerifyChain).
+func chainRecordDigest(record roles.ChainRecord) string {
+	sum := sha256.Sum256(record.Raw)
 	return hex.EncodeToString(sum[:])
+}
+
+// roleChainDigest returns records' last record's chainRecordDigest: its
+// current head, reused here as the stable digest this package's own
+// Checked.role_chain_digest records and WorkflowEvent.RoleChainHead binds
+// at creation. records must be non-empty.
+func roleChainDigest(records []roles.ChainRecord) string {
+	return chainRecordDigest(records[len(records)-1])
+}
+
+// roleChainContainsDigest reports whether any record in records has
+// chainRecordDigest equal to digest. Verify uses this to require that the
+// exact record chained at Create is still present in the (possibly grown)
+// chain, rather than merely that some chain with the same id currently
+// verifies: an entirely different but internally self-consistent chain
+// placed at the same id would still pass roles.VerifyChain, but it would
+// not contain the recorded head.
+func roleChainContainsDigest(records []roles.ChainRecord, digest string) bool {
+	for _, record := range records {
+		if chainRecordDigest(record) == digest {
+			return true
+		}
+	}
+	return false
+}
+
+// loadVerifiedRoleChain loads the role chain identified by projectID,
+// goalID, and roleChainID through l.chains and requires it to be
+// non-empty and pass roles.VerifyChain; both failure shapes are wrapped in
+// ErrRoleChainInvalid. Create and Verify share this helper so the two
+// operations' doc comments promising "has no records or fails
+// roles.VerifyChain" cannot silently drift apart.
+func (l Lifecycle) loadVerifiedRoleChain(projectID, goalID, roleChainID string) ([]roles.ChainRecord, error) {
+	records, err := l.chains.LoadChain(projectID, goalID, roleChainID)
+	if err != nil {
+		return nil, fmt.Errorf("load role chain: %w", err)
+	}
+	if len(records) == 0 {
+		return nil, fmt.Errorf("%w: role chain %q has no records", ErrRoleChainInvalid, roleChainID)
+	}
+	if err := roles.VerifyChain(records); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrRoleChainInvalid, err)
+	}
+	return records, nil
 }
 
 // stageOrderPrefix checks that stages is exactly a prefix of profile's
@@ -323,20 +440,16 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 	if _, err := workflowprofile.Resolve(profileName); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
+	var roleChainHead string
 	if roleChainID != "" {
 		if err := ValidateIdentifier("role_chain_id", roleChainID); err != nil {
 			return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 		}
-		records, err := l.chains.LoadChain(projectID, g.GoalID, roleChainID)
+		records, err := l.loadVerifiedRoleChain(projectID, g.GoalID, roleChainID)
 		if err != nil {
-			return State{}, fmt.Errorf("workflow lifecycle: create: load role chain: %w", err)
+			return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 		}
-		if len(records) == 0 {
-			return State{}, fmt.Errorf("%w: role chain %q has no records", ErrRoleChainInvalid, roleChainID)
-		}
-		if err := roles.VerifyChain(records); err != nil {
-			return State{}, fmt.Errorf("%w: %v", ErrRoleChainInvalid, err)
-		}
+		roleChainHead = roleChainDigest(records)
 	}
 	digest, err := goalDigest(g)
 	if err != nil {
@@ -359,6 +472,7 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 	event.GoalDigest = digest
 	event.Profile = profileName
 	event.RoleChainID = roleChainID
+	event.RoleChainHead = roleChainHead
 
 	return l.commit(projectID, workflowID, loaded, event)
 }
@@ -435,14 +549,19 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 }
 
 // Verify performs a structural-only verification (no execution): the
-// event hash chain still verifies, the Workflow Profile still resolves, the
-// recorded stages still respect the Profile's declared order, re-reading
-// the Goal (via GoalReader) still produces the digest recorded at creation,
-// and, if a role chain is referenced, it still has records and passes
-// roles.VerifyChain. On success it appends one verified event recording the
-// digests it checked (Checked.ChainDigest is the digest of the last event
-// before this one); on any failure it appends nothing and returns a named
-// error identifying which check failed.
+// event hash chain still verifies, the Workflow Profile still resolves
+// (ErrProfileInvalid), the recorded stages still respect the Profile's
+// declared order (ErrStageOrderInvalid), re-reading the Goal (via
+// GoalReader) still produces the digest recorded at creation
+// (ErrGoalDigestMismatch), and, if a role chain is referenced, it still has
+// records, passes roles.VerifyChain, and still contains the exact record
+// chained at creation (ErrRoleChainInvalid; the chain may legitimately grow
+// since creation, but the record bound at creation must still be present,
+// not merely some record with the same chain id — see
+// roleChainContainsDigest). On success it appends one verified event
+// recording the digests it checked (Checked.ChainDigest is the digest of
+// the last event before this one); on any failure it appends nothing and
+// returns a named error identifying which check failed.
 func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	loaded, err := l.loadOwned(projectID, workflowID)
 	if err != nil {
@@ -453,7 +572,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err := VerifyEvents(loaded.Events); err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrChainInvalid, err)
 	}
-	profile, err := workflowprofile.Resolve(state.Profile)
+	profile, err := l.resolveProfile(state.Profile)
 	if err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrProfileInvalid, err)
 	}
@@ -475,22 +594,19 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 		return State{}, fmt.Errorf("%w: goal %q digest is now %s, recorded %s", ErrGoalDigestMismatch, state.GoalID, digest, state.GoalDigest)
 	}
 
-	var roleChainDigestValue string
+	var roleChainHeadDigest string
 	if state.RoleChainID != "" {
-		records, err := l.chains.LoadChain(projectID, state.GoalID, state.RoleChainID)
+		records, err := l.loadVerifiedRoleChain(projectID, state.GoalID, state.RoleChainID)
 		if err != nil {
-			return State{}, fmt.Errorf("workflow lifecycle: verify: load role chain: %w", err)
+			return State{}, fmt.Errorf("workflow lifecycle: verify: %w", err)
 		}
-		if len(records) == 0 {
-			return State{}, fmt.Errorf("%w: role chain %q has no records", ErrRoleChainInvalid, state.RoleChainID)
+		if !roleChainContainsDigest(records, state.RoleChainHead) {
+			return State{}, fmt.Errorf("%w: role chain %q no longer contains the record bound at creation (%s)", ErrRoleChainInvalid, state.RoleChainID, state.RoleChainHead)
 		}
-		if err := roles.VerifyChain(records); err != nil {
-			return State{}, fmt.Errorf("%w: %v", ErrRoleChainInvalid, err)
-		}
-		roleChainDigestValue = roleChainDigest(records)
+		roleChainHeadDigest = roleChainDigest(records)
 	}
 
-	chainDigestValue, err := EventDigest(loaded.Events[len(loaded.Events)-1])
+	workflowHeadDigest, err := EventDigest(loaded.Events[len(loaded.Events)-1])
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: verify: %w", err)
 	}
@@ -500,10 +616,10 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 		return State{}, err
 	}
 	event.Checked = &Checked{
-		ChainDigest:     chainDigestValue,
+		ChainDigest:     workflowHeadDigest,
 		GoalDigest:      digest,
 		Profile:         profile.Name,
-		RoleChainDigest: roleChainDigestValue,
+		RoleChainDigest: roleChainHeadDigest,
 	}
 	return l.commit(projectID, workflowID, loaded, event)
 }

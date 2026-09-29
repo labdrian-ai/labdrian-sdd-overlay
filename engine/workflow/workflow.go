@@ -163,6 +163,13 @@ type WorkflowEvent struct {
 	GoalDigest  string `json:"goal_digest,omitempty"`
 	Profile     string `json:"profile,omitempty"`
 	RoleChainID string `json:"role_chain_id,omitempty"`
+	// RoleChainHead is the digest of the referenced role chain's last
+	// record at the moment this event was produced (see roleChainDigest).
+	// It is present if and only if RoleChainID is set; Verify uses it to
+	// require that the exact record chained at creation still exists in the
+	// (possibly grown) chain, rather than merely that some chain with the
+	// same id currently verifies.
+	RoleChainHead string `json:"role_chain_head,omitempty"`
 
 	// stage_recorded-only payload.
 	Stage string `json:"stage,omitempty"`
@@ -183,7 +190,7 @@ type WorkflowEvent struct {
 var workflowEventFields = []string{
 	"version", "workflow_id", "project_id", "seq", "prev_digest", "kind", "at",
 	"provenance", "observations",
-	"goal_id", "goal_digest", "profile", "role_chain_id",
+	"goal_id", "goal_digest", "profile", "role_chain_id", "role_chain_head",
 	"stage",
 	"checked",
 	"outcome", "reason",
@@ -409,7 +416,7 @@ func validateObservations(observations []Observation) error {
 // validatePayload checks that e carries exactly the payload fields its Kind
 // requires and that every other kind-specific field is zero-valued.
 func (e WorkflowEvent) validatePayload() error {
-	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.RoleChainID == ""
+	blankCreated := e.GoalID == "" && e.GoalDigest == "" && e.Profile == "" && e.RoleChainID == "" && e.RoleChainHead == ""
 	blankStage := e.Stage == ""
 	blankChecked := e.Checked == nil
 	blankClosed := e.Outcome == "" && e.Reason == ""
@@ -466,6 +473,11 @@ func (e WorkflowEvent) validateCreatedPayload() error {
 		if err := ValidateIdentifier("role_chain_id", e.RoleChainID); err != nil {
 			return err
 		}
+		if !sha256HexPattern.MatchString(e.RoleChainHead) {
+			return fmt.Errorf("role_chain_head must be 64 lowercase hex characters when role_chain_id is set, got %q", e.RoleChainHead)
+		}
+	} else if e.RoleChainHead != "" {
+		return fmt.Errorf("role_chain_head must be empty when role_chain_id is not set")
 	}
 	return nil
 }

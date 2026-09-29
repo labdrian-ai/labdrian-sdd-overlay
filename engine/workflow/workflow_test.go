@@ -149,8 +149,20 @@ func TestWorkflowEventValidate(t *testing.T) {
 		{name: "created unknown profile", mutate: func(e *WorkflowEvent) { e.Profile = "no-such-profile" }, wantErr: true},
 		{name: "created with stray stage field", mutate: func(e *WorkflowEvent) { e.Stage = "explore" }, wantErr: true},
 		{name: "created with stray outcome field", mutate: func(e *WorkflowEvent) { e.Outcome = string(OutcomeCompleted) }, wantErr: true},
-		{name: "created with valid role_chain_id", mutate: func(e *WorkflowEvent) { e.RoleChainID = "chain-1" }, wantErr: false},
-		{name: "created with unsafe role_chain_id", mutate: func(e *WorkflowEvent) { e.RoleChainID = "../etc" }, wantErr: true},
+		{name: "created with valid role_chain_id and head", mutate: func(e *WorkflowEvent) {
+			e.RoleChainID = "chain-1"
+			e.RoleChainHead = strings.Repeat("b", 64)
+		}, wantErr: false},
+		{name: "created with unsafe role_chain_id", mutate: func(e *WorkflowEvent) {
+			e.RoleChainID = "../etc"
+			e.RoleChainHead = strings.Repeat("b", 64)
+		}, wantErr: true},
+		{name: "created role_chain_id without role_chain_head", mutate: func(e *WorkflowEvent) { e.RoleChainID = "chain-1" }, wantErr: true},
+		{name: "created role_chain_head without role_chain_id", mutate: func(e *WorkflowEvent) { e.RoleChainHead = strings.Repeat("b", 64) }, wantErr: true},
+		{name: "created bad role_chain_head", mutate: func(e *WorkflowEvent) {
+			e.RoleChainID = "chain-1"
+			e.RoleChainHead = "short"
+		}, wantErr: true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

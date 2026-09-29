@@ -250,6 +250,28 @@ func TestStoreAppendRejectsMismatchedIdentifiersOnFirstEvent(t *testing.T) {
 	}
 }
 
+// TestStoreAppendRejectsNonZeroSeqOnFirstEvent guards the explicit,
+// non-delegated seq/kind check in Append's absent-classification branch:
+// CheckTransition(State{}, next) enforces the same rule against the zero
+// State, but a first append must be rejected by Append's own local check
+// too, as an independent line of defense.
+func TestStoreAppendRejectsNonZeroSeqOnFirstEvent(t *testing.T) {
+	s := newTestStore(t)
+	created := validCreatedEvent()
+	created.Seq = 1
+	created.PrevDigest = strings.Repeat("a", 64)
+	if err := s.Append(created.ProjectID, created.WorkflowID, created); err == nil {
+		t.Fatalf("Append() = nil, want error for a first event with a non-zero seq")
+	}
+	loaded, err := s.Load(created.ProjectID, created.WorkflowID)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if loaded.Classification != ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	}
+}
+
 func TestStoreAppendRejectsNonEmptyPrevDigestOnFirstEvent(t *testing.T) {
 	s := newTestStore(t)
 	created := validCreatedEvent()
@@ -289,6 +311,35 @@ func TestStoreLoadMalformedDetailUsesOneBasedLineNumbers(t *testing.T) {
 	}
 }
 
+// TestStoreLoadMalformedBlankLineDetailUsesOneBasedLineNumbers covers the
+// blank-line malformed branch specifically: TestStoreLoadMalformedDetailUsesOneBasedLineNumbers
+// above only exercises the "not valid JSON" branch, and the blank-line
+// branch has its own, separate fmt.Sprintf call site.
+func TestStoreLoadMalformedBlankLineDetailUsesOneBasedLineNumbers(t *testing.T) {
+	root := setStoreEnv(t)
+	s, err := NewStore()
+	if err != nil {
+		t.Fatalf("NewStore() = %v, want nil", err)
+	}
+	created := validCreatedEvent()
+	line, err := created.MarshalLine()
+	if err != nil {
+		t.Fatalf("MarshalLine() = %v, want nil", err)
+	}
+	// A blank second line: valid first line, then an empty line.
+	writeRawLog(t, root, created.ProjectID, created.WorkflowID, string(line)+"\n")
+	loaded, err := s.Load(created.ProjectID, created.WorkflowID)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	if loaded.Classification != ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	}
+	if !strings.Contains(loaded.Detail, "line 2 ") {
+		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 2")
+	}
+}
+
 func TestStoreLoadForeignWhenValidJSONNotOurs(t *testing.T) {
 	root := setStoreEnv(t)
 	s, err := NewStore()
@@ -302,6 +353,9 @@ func TestStoreLoadForeignWhenValidJSONNotOurs(t *testing.T) {
 	}
 	if loaded.Classification != ClassificationForeign {
 		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationForeign)
+	}
+	if !strings.Contains(loaded.Detail, "line 1 ") {
+		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 1")
 	}
 }
 
@@ -326,6 +380,9 @@ func TestStoreLoadForeignWhenIDsMismatch(t *testing.T) {
 	}
 	if loaded.Classification != ClassificationForeign {
 		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationForeign)
+	}
+	if !strings.Contains(loaded.Detail, "line 1 ") {
+		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 1")
 	}
 }
 
