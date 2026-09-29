@@ -25,10 +25,11 @@ import (
 const capabilitiesTargetAll = "all"
 
 // runRuntimeCapabilities implements 'runtime capabilities'. Exit 0 prints the
-// report; exit 2 refuses an unknown --target or an unknown flag; exit 1 is a
-// usage error (a --target without its value, or a positional argument) or a
-// failed write of the report. Every exit(n) is followed by a return, because
-// tests inject a non-terminating exit.
+// report; exit 2 refuses an unknown --target value; exit 1 is a usage error
+// (an unknown flag, a --target without its value, or a positional argument,
+// as for the other runtime actions) or a failed write of the report. Every
+// exit(n) is followed by a return, because tests inject a non-terminating
+// exit.
 func runRuntimeCapabilities(args []string, stdout, stderr io.Writer, exit func(int)) {
 	target, code, err := parseCapabilitiesArgs(args)
 	if err != nil {
@@ -60,8 +61,9 @@ func runRuntimeCapabilities(args []string, stdout, stderr io.Writer, exit func(i
 
 // parseCapabilitiesArgs parses --target, whose default is "all", and the last
 // occurrence wins as it does for the other runtime actions. On failure it
-// returns the exit code to use: 2 for an unknown flag, 1 for a usage error.
-// Only --target exists here; the flags of the lifecycle actions
+// returns the exit code to use, always 1: a bad command line is a usage error,
+// as it is for the other runtime actions; an unknown --target value is refused
+// later, with exit 2. Only --target exists here; the flags of the lifecycle actions
 // (--config-root, --component, --state-dir) are unknown flags, because this
 // action reads no configuration.
 func parseCapabilitiesArgs(args []string) (target string, code int, err error) {
@@ -78,7 +80,7 @@ func parseCapabilitiesArgs(args []string) (target string, code int, err error) {
 			// lifecycle actions.
 			target = strings.TrimSpace(args[i])
 		case strings.HasPrefix(a, "-"):
-			return "", 2, fmt.Errorf("unknown flag %q", a)
+			return "", 1, fmt.Errorf("unknown flag %q", a)
 		default:
 			return "", 1, fmt.Errorf("unexpected argument %q", a)
 		}

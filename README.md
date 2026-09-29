@@ -491,7 +491,7 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     that cannot be exercised on this machine (opencode). The output states what the engine's own
     tests prove, never what a runtime happened to do: a capability no test proves is declared
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
-    session. Exit 0 on success, 2 on an unknown --target or an unknown flag, 1 on a usage error.
+    session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
 overlay --help
     Show this help.
