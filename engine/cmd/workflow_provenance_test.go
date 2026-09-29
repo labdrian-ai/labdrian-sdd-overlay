@@ -107,6 +107,32 @@ func TestObserveProvenanceLinkedWorktreeGitfile(t *testing.T) {
 	}
 }
 
+// TestObserveProvenanceLinkedWorktreeSymbolicRefUsesCommonDir mirrors the
+// layout `git worktree add` creates: the worktree's gitdir holds a symbolic
+// HEAD and a commondir file, while the branch ref (loose or packed) lives in
+// the main repository's .git.
+func TestObserveProvenanceLinkedWorktreeSymbolicRefUsesCommonDir(t *testing.T) {
+	for _, packed := range []bool{false, true} {
+		root := t.TempDir()
+		mainGit := filepath.Join(root, "main-repo", ".git")
+		worktreeGitDir := filepath.Join(mainGit, "worktrees", "wt")
+		worktree := filepath.Join(root, "wt")
+		head := strings.Repeat("2", 40)
+		writeFixtureFile(t, filepath.Join(worktreeGitDir, "HEAD"), "ref: refs/heads/feat/x\n")
+		writeFixtureFile(t, filepath.Join(worktreeGitDir, "commondir"), "../..\n")
+		if packed {
+			writeFixtureFile(t, filepath.Join(mainGit, "packed-refs"), "# pack-refs with: peeled\n"+head+" refs/heads/feat/x\n")
+		} else {
+			writeFixtureFile(t, filepath.Join(mainGit, "refs", "heads", "feat", "x"), head+"\n")
+		}
+		writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+worktreeGitDir+"\n")
+
+		if p := observeProvenance(worktree); p.GitHead != head {
+			t.Errorf("packed=%v: GitHead = %q, want %q resolved through commondir", packed, p.GitHead, head)
+		}
+	}
+}
+
 func TestObserveProvenanceMissingGitYieldsEmpty(t *testing.T) {
 	dir := t.TempDir()
 	p := observeProvenance(dir)

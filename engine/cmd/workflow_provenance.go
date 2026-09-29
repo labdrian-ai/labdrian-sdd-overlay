@@ -126,29 +126,54 @@ func resolveHead(gitDir string) string {
 		return ""
 	}
 
-	if data, err := os.ReadFile(filepath.Join(gitDir, filepath.FromSlash(ref))); err == nil {
-		candidate := strings.TrimSpace(string(data))
-		if hexObjectID.MatchString(candidate) {
-			return candidate
+	// A linked worktree's gitdir holds its own HEAD but shares refs with the
+	// main repository, named by the commondir file; look in both.
+	for _, dir := range refDirs(gitDir) {
+		if id, ok := lookupRef(dir, ref); ok {
+			return id
 		}
-		return ""
 	}
+	return ""
+}
 
-	packed, err := os.ReadFile(filepath.Join(gitDir, "packed-refs"))
+// refDirs returns gitDir followed by its common directory when gitDir has a
+// commondir file (as `git worktree add` creates), relative paths resolved
+// against gitDir.
+func refDirs(gitDir string) []string {
+	dirs := []string{gitDir}
+	data, err := os.ReadFile(filepath.Join(gitDir, "commondir"))
 	if err != nil {
-		return ""
+		return dirs
+	}
+	common := strings.TrimSpace(string(data))
+	if common == "" {
+		return dirs
+	}
+	if !filepath.IsAbs(common) {
+		common = filepath.Join(gitDir, common)
+	}
+	return append(dirs, filepath.Clean(common))
+}
+
+// lookupRef resolves ref to an object id from dir's loose ref file or, when
+// no loose file exists, from dir's packed-refs.
+func lookupRef(dir, ref string) (string, bool) {
+	if data, err := os.ReadFile(filepath.Join(dir, filepath.FromSlash(ref))); err == nil {
+		candidate := strings.TrimSpace(string(data))
+		return candidate, hexObjectID.MatchString(candidate)
+	}
+	packed, err := os.ReadFile(filepath.Join(dir, "packed-refs"))
+	if err != nil {
+		return "", false
 	}
 	for _, l := range strings.Split(string(packed), "\n") {
 		if l == "" || l[0] == '#' || l[0] == '^' {
 			continue
 		}
 		id, name, found := strings.Cut(l, " ")
-		if !found || name != ref {
-			continue
-		}
-		if hexObjectID.MatchString(id) {
-			return id
+		if found && name == ref && hexObjectID.MatchString(id) {
+			return id, true
 		}
 	}
-	return ""
+	return "", false
 }
