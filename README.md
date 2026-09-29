@@ -488,7 +488,7 @@ overlay workflow <verb>
         and asks for unbind first. A binding to a workflow that is closed, gone, corrupt, or not
         ours (drifted, malformed, or foreign) is stale, and bind replaces it, but only if the
         binding is still exactly the one it judged stale: if another process changed it in
-        between, bind exits 2, leaves it alone, and asks you to run binding and retry. A binding
+        between, bind exits 2, leaves it alone, and asks you to run 'workflow binding' and retry. A binding
         file that is not ours (foreign or malformed) is never overwritten. Prints the
         classification and the binding as JSON. A binding records the association only; it does
         not change the workflow.
@@ -552,8 +552,12 @@ gentle-ai-overlay projection hook --event UserPromptSubmit
     Silent (no output on either stream) when the repository has no binding, the working directory is
     not in a repository, or the input is not a usable hook input. A binding, or a bound workflow, that
     cannot be followed (foreign, malformed, drifted, unavailable, or gone) gives one warning and
-    projects nothing. A closed workflow is announced in one line and its binding is removed, best
-    effort and only if it is still the binding the hook read.
+    projects nothing; so does a binding store that cannot be opened or read (a real error, not an absent
+    binding) and so does an internal error the hook recovered from (the warning is one short sanitized
+    line; the full text goes to stderr). A closed workflow is announced in one line and its binding is
+    removed, best effort and only if it is still the binding the hook read; the note says whether the
+    binding was removed, left alone (another process had changed it), or the removal failed, in which
+    case it names `labdrian workflow unbind` and repeats on every prompt until the binding is gone.
     Read-only otherwise: it never appends to a workflow log or rewrites a binding, starts no process,
     and makes no network call. Exit 0 always, so it can never block a prompt (it never exits 2), except
     1 on a command line it does not understand.

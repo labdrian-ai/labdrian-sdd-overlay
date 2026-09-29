@@ -496,6 +496,9 @@ func TestProjectionHookAnnouncesAClosedWorkflowAndUnbindsIt(t *testing.T) {
 			if first.Warning != "" || !strings.Contains(first.Context, "closed ("+outcome+")") || strings.Contains(first.Context, "\n") {
 				t.Fatalf("first call: %+v, want a one-line note that the workflow closed (%s)", first, outcome)
 			}
+			if !strings.Contains(first.Context, "was removed") || strings.Contains(first.Context, "failed") {
+				t.Fatalf("first call: %q, want the note to say the binding was removed, because it was", first.Context)
+			}
 			if loaded := loadStoredBinding(t, e.repo); loaded.Classification != projection.ClassificationAbsent {
 				t.Fatalf("the binding to a closed workflow is still there: %+v", loaded)
 			}
@@ -542,6 +545,11 @@ func TestProjectionHookLeavesAFreshBindingAlone(t *testing.T) {
 	if loaded := loadStoredBinding(t, e.repo); loaded.Classification != projection.ClassificationOwned || loaded.Binding.WorkflowID != "wf-2" {
 		t.Fatalf("stored binding = %+v, want the fresh binding to wf-2 left alone", loaded)
 	}
+	// Nothing was removed and nothing failed: the note must claim neither.
+	got := decodeHookOutput(t, r)
+	if !strings.Contains(got.Context, "left alone") || strings.Contains(got.Context, "was removed") || strings.Contains(got.Context, "failed") {
+		t.Errorf("note %q, want it to say the binding was left alone", got.Context)
+	}
 }
 
 // TestProjectionHookStillSpeaksWhenTheBindingCannotBeRemoved: unbinding is best
@@ -565,6 +573,12 @@ func TestProjectionHookStillSpeaksWhenTheBindingCannotBeRemoved(t *testing.T) {
 	got := decodeHookOutput(t, e.hook(t, e.repo))
 	if !strings.Contains(got.Context, "closed (abandoned)") {
 		t.Errorf("context = %q, want the closed note even though the binding could not be removed", got.Context)
+	}
+	// The note must not claim a removal that did not happen, and must name the
+	// command that finishes the job by hand.
+	if strings.Contains(got.Context, "was removed") || strings.Contains(got.Context, "being removed") ||
+		!strings.Contains(got.Context, "failed") || !strings.Contains(got.Context, "labdrian workflow unbind") || strings.Contains(got.Context, "\n") {
+		t.Errorf("context = %q, want a one-line note that says the removal failed and names 'labdrian workflow unbind'", got.Context)
 	}
 	if loaded := loadStoredBinding(t, e.repo); loaded.Classification != projection.ClassificationOwned {
 		t.Errorf("binding = %+v, want it still there: the removal was not possible", loaded)
@@ -842,19 +856,65 @@ func TestProjectionHookOutputIsIdenticalAcrossProcesses(t *testing.T) {
 // TestProjectionHookTurnsAPanicIntoExitZero: a Go panic ends a process with
 // status 2, which Claude Code reads as "block this prompt". The seam panics
 // where a bug in the hook would, and the prompt must still go through: exit 0,
-// nothing on stdout, and the cause on stderr for whoever debugs it.
+// the cause on stderr for whoever debugs it, and one visible, sanitized,
+// bounded systemMessage so the user is not left guessing why nothing was
+// projected. The panic value is hostile on purpose: multi-line, an escape
+// sequence, and very long.
 func TestProjectionHookTurnsAPanicIntoExitZero(t *testing.T) {
 	e := newHookEnv(t)
 	e.running(t, "proj-1", "wf-1", "standalone-minimal")
 	e.step(t, "proj-1", "wf-1", "close", "--outcome", "abandoned", "--reason", "done")
-	beforeHookUnbind = func() { panic("boom") }
+	beforeHookUnbind = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
 	t.Cleanup(func() { beforeHookUnbind = nil })
 
 	r := e.hook(t, e.repo)
-	if !reflect.DeepEqual(r.codes, []int{0}) || r.stdout != "" || !strings.Contains(r.stderr, "internal error: boom") {
-		t.Errorf("exits %v, stdout %q, stderr %q, want exit 0, no stdout, and the panic reported on stderr", r.codes, r.stdout, r.stderr)
+	if !reflect.DeepEqual(r.codes, []int{0}) || !strings.Contains(r.stderr, "internal error: boom") {
+		t.Fatalf("exits %v, stderr %q, want exit 0 and the panic reported on stderr", r.codes, r.stderr)
+	}
+	// decodeHookOutput insists on an empty stderr, so check the stdout half by hand.
+	stdout := hookRun{codes: r.codes, stdout: r.stdout}
+	got := decodeHookOutput(t, stdout)
+	if got.Context != "" || !strings.Contains(got.Warning, "boom second line") || !strings.Contains(got.Warning, "internal error") {
+		t.Fatalf("output %+v, want only a systemMessage naming the internal error", got)
+	}
+	if strings.ContainsAny(got.Warning, "\n\x1b") || len(got.Warning) > 700 {
+		t.Errorf("warning %q (%d bytes) is not one short clean line", got.Warning, len(got.Warning))
 	}
 }
+
+// TestProjectionHookWarnsWhenTheStoreCannotBeOpened: a real Go error from the
+// binding store (here a relative XDG_STATE_HOME, which the store refuses) is not
+// "no binding". The hook cannot know whether the repository is bound, so it says
+// it could not check, once, and projects nothing. It still exits 0.
+func TestProjectionHookWarnsWhenTheStoreCannotBeOpened(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "standalone-minimal")
+	t.Setenv("XDG_STATE_HOME", "relative/state")
+
+	got := decodeHookOutput(t, e.hook(t, e.repo))
+	if got.Context != "" || !strings.Contains(got.Warning, "XDG_STATE_HOME") || !strings.Contains(got.Warning, "no workflow is projected") {
+		t.Fatalf("output %+v, want only a warning that carries the reason and says nothing is projected", got)
+	}
+	if strings.Contains(got.Warning, "\n") || len(got.Warning) > 700 {
+		t.Errorf("warning %q is not one short line", got.Warning)
+	}
+}
+
+// TestProjectionHookStaysSilentWhenTheReaderFails: a stdin that cannot be read
+// gives the hook nothing to decide from and no binding to be loyal to, so it is
+// the same silent exit 0 as input it cannot use.
+func TestProjectionHookStaysSilentWhenTheReaderFails(t *testing.T) {
+	e := newHookEnv(t)
+	e.running(t, "proj-1", "wf-1", "standalone-minimal")
+	var out, errBuf bytes.Buffer
+	var codes []int
+	runProjectionCore(hookArgs, e.dir, failingReader{}, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	assertSilent(t, "a failing stdin", hookRun{codes: codes, stdout: out.String(), stderr: errBuf.String()})
+}
+
+type failingReader struct{}
+
+func (failingReader) Read([]byte) (int, error) { return 0, errors.New("read failed") }
 
 func TestProjectionHookExitsZeroEvenWhenStdoutCannotBeWritten(t *testing.T) {
 	e := newHookEnv(t)

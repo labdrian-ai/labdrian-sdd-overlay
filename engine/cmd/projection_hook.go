@@ -23,11 +23,14 @@ package main
 //     all, on either stream.
 //   - A binding, or a bound workflow, that cannot be followed is one visible
 //     warning (systemMessage) with nothing projected, and is never resolved by
-//     removing anything.
+//     removing anything. So is a binding store that cannot be opened or read
+//     (a real error, not an absent binding), and so is a recovered panic (the
+//     warning is sanitized and short; the full text goes to stderr).
 //
 // The hook only reads, with one exception: when the bound workflow is closed it
-// removes the binding, best effort, only if it is still the binding it read, and
-// ignores a failure to do so. It runs no subprocess and makes no network call:
+// removes the binding, best effort, only if it is still the binding it read. The
+// note it prints says what the removal did: removed, failed (and that
+// 'labdrian workflow unbind' finishes it), or left alone. It runs no subprocess and makes no network call:
 // the repository is found by walking the filesystem, as the binding verbs do.
 
 import (
@@ -82,11 +85,13 @@ func runProjectionHook(args []string, processCwd string, stdin io.Reader, stdout
 	// A Go panic ends the process with status 2, which Claude Code reads as "block
 	// this prompt". The projection is pure and is not expected to panic, but the
 	// cost of being wrong is a session that cannot send a prompt, so it is caught,
-	// reported on stderr (which Claude Code shows only in verbose mode), and turned
-	// into the same exit 0 as every other failure.
+	// reported in full on stderr (which Claude Code shows only in verbose mode),
+	// shown to the user as one short sanitized systemMessage, and turned into the
+	// same exit 0 as every other failure.
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(stderr, "projection hook: internal error: %v\n", r)
+			_, _ = stdout.Write(warningOutput(projection.PanicWarning(r)))
 			exit(0)
 		}
 	}()
@@ -125,9 +130,22 @@ func parseHookArgs(args []string) error {
 	return nil
 }
 
+// warningOutput renders one warning line as the hook's only output, or nothing
+// when it cannot be encoded (a warning must never be able to fail the prompt).
+func warningOutput(warning string) []byte {
+	out, err := projection.ProjectionResult{Warning: warning}.UserPromptSubmitOutput()
+	if err != nil {
+		return nil
+	}
+	return out
+}
+
 // userPromptSubmit does the hook's work and returns what it prints on stdout,
-// which is nothing whenever there is nothing to say. Each step that fails, before
-// there is a binding to be loyal to, ends in silence.
+// which is nothing whenever there is nothing to say. Each step that fails before
+// the binding store is asked (input that cannot be read or used, a directory
+// outside every repository) ends in silence: there is nothing to be loyal to. A
+// store that cannot be opened or read is different, because the repository may
+// well be bound, so it gets one warning.
 func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	// One byte past the cap is enough for ParseHookInput to see the input is over
 	// it, and no more of an endless input is ever read.
@@ -154,11 +172,11 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	}
 	bindings, err := projection.NewStore()
 	if err != nil {
-		return nil
+		return warningOutput(projection.StoreWarning(err))
 	}
 	binding, err := bindings.Load(repoKey)
 	if err != nil {
-		return nil
+		return warningOutput(projection.StoreWarning(err))
 	}
 
 	input := projection.ProjectionInput{Binding: binding}
@@ -174,7 +192,10 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 		// Only the binding that was read, and only best effort: a fresh binding
 		// made since stays, and a failure to remove this one is not the prompt's
 		// problem (the next prompt sees the closed workflow again and retries).
-		_, _ = bindings.UnbindIfUnchanged(repoKey, binding.Binding)
+		// What happened goes into the note, so it never claims a removal that
+		// did not take place.
+		removed, unbindErr := bindings.UnbindIfUnchanged(repoKey, binding.Binding)
+		result = result.AfterUnbind(removed, unbindErr)
 	}
 	out, err := result.UserPromptSubmitOutput()
 	if err != nil {

@@ -50,6 +50,16 @@ const MaxContextBytes = 16384
 // has to stay short.
 const maxDetailRunes = 200
 
+// maxPanicRunes bounds the text of a recovered panic in the warning the user
+// sees. A panic value can be any text, including a long dump, and the full
+// value already goes to stderr; the user needs only enough to report it.
+const maxPanicRunes = 120
+
+// goalDigestRunes is how many leading characters of the goal digest the context
+// shows. The digest is 64 hex digits; twelve are enough to tell two goals apart
+// at a glance and keep the line short. The full digest stays in the workflow log.
+const goalDigestRunes = 12
+
 // ErrHookInputTooLarge is returned by ParseHookInput when the input exceeds
 // MaxHookInputBytes.
 var ErrHookInputTooLarge = errors.New("projection: hook input exceeds the maximum size")
@@ -59,15 +69,16 @@ var ErrHookInputTooLarge = errors.New("projection: hook input exceeds the maximu
 var truncationMarker = "\n[labdrian: projected context truncated at " + strconv.Itoa(MaxContextBytes) + " bytes]"
 
 // HookInput is what the projection keeps of the JSON a Claude Code hook
-// receives on stdin: the event's name and the working directory of the session.
+// receives on stdin: the event's name and the working directory of the session
+// (cleaned, see ParseHookInput).
 // Nothing else is read. In particular the session and the prompt are not: the
 // projection depends on neither, so that every session, and every prompt,
 // gets the same view of the workflow.
 type HookInput struct {
 	// HookEventName is hook_event_name, or empty when the input has none.
 	HookEventName string
-	// Cwd is the session's working directory, or empty when the input has none
-	// or it is not an absolute path.
+	// Cwd is the session's working directory as a cleaned absolute path, or empty
+	// when the input has none or it is not an absolute path.
 	Cwd string
 }
 
@@ -94,7 +105,9 @@ func ParseHookInput(data []byte) (HookInput, error) {
 	}
 	in := HookInput{HookEventName: wire.HookEventName}
 	if filepath.IsAbs(wire.Cwd) {
-		in.Cwd = wire.Cwd
+		// Cleaned, so dot segments, repeated separators, and a trailing slash
+		// never make one directory look like two.
+		in.Cwd = filepath.Clean(wire.Cwd)
 	}
 	return in, nil
 }
@@ -113,11 +126,66 @@ type ProjectionInput struct {
 // Context is text for the session, or empty. Warning is one line for the user,
 // or empty. Unbind asks the caller to remove the repository's binding, which
 // Project does only for a workflow it read and understood to be closed. The
-// three are independent of the session and the prompt.
+// three are independent of the session and the prompt. When Unbind is set the
+// caller tries the removal and then calls AfterUnbind, so the note says what
+// really happened to the binding.
 type ProjectionResult struct {
 	Context string
 	Warning string
 	Unbind  bool
+
+	// closedNote is the part of a closed workflow's Context that does not depend
+	// on the removal, kept so that AfterUnbind can complete it.
+	closedNote string
+}
+
+// AfterUnbind completes the note of a closed workflow with what the caller's
+// removal of the binding did, and returns the result; any other result is
+// returned unchanged. removed and err are what Store.UnbindIfUnchanged returned:
+// the note says the binding was removed only when removed is true and err is
+// nil; when err is ErrBindingChanged, or there is neither an error nor a
+// removal (the binding was already gone), the note says the binding was left
+// alone; any other err is a failure, and the note says so, why, and that
+// 'labdrian workflow unbind' finishes it by hand (the same note would otherwise
+// repeat on every prompt with no way out). It may be
+// called more than once: it always starts from the same note.
+func (r ProjectionResult) AfterUnbind(removed bool, err error) ProjectionResult {
+	if !r.Unbind || r.closedNote == "" {
+		return r
+	}
+	switch {
+	case errors.Is(err, ErrBindingChanged):
+		// Not a failure: another process bound something else, which is not ours
+		// to remove.
+		r.Context = r.closedNote + " This repository's binding to it had already changed, so it was left alone."
+	case err != nil:
+		r.Context = r.closedNote + " Removing this repository's binding to it failed" + detailIn(err.Error()) +
+			", so it is still bound and this note repeats on every prompt until it is removed: run 'labdrian workflow unbind'."
+	case removed:
+		r.Context = r.closedNote + " This repository's binding to it was removed."
+	default:
+		r.Context = r.closedNote + " This repository's binding to it had already changed, so it was left alone."
+	}
+	return r
+}
+
+// StoreWarning is the one line shown to the user when the binding store could
+// not be opened or read: a real Go error, not a binding that is absent or
+// unusable, which Project reports itself. The hook cannot tell whether the
+// repository is bound, so it cannot project anything, and it says so instead of
+// staying silent. The error text is sanitized and bounded like every detail.
+func StoreWarning(err error) string {
+	return "labdrian: the workflow binding store could not be read" + detailIn(err.Error()) +
+		"; no workflow is projected, and if this repository is bound its workflow is not being followed in this session."
+}
+
+// PanicWarning is the one line shown to the user when the hook recovered from
+// an internal panic. The panic value is sanitized and cut to a short length, so
+// it can never spread over lines or fill the screen; the full value goes to
+// stderr, where whoever debugs the hook reads it.
+func PanicWarning(recovered any) string {
+	return "labdrian: the projection hook hit an internal error (" + clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes) +
+		"); nothing was projected this time and the prompt was not affected."
 }
 
 // Project decides what a session is told about the workflow its repository is
@@ -155,7 +223,8 @@ func projectOwned(b Binding, w *workflow.Loaded) ProjectionResult {
 	}
 	switch w.State.Status {
 	case workflow.StatusClosed:
-		return ProjectionResult{Context: closedNote(b, w.State), Unbind: true}
+		note := closedNote(b, w.State)
+		return ProjectionResult{Context: note, Unbind: true, closedNote: note}
 	case workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused:
 		return ProjectionResult{Context: boundContext(buildContext(b, *w))}
 	default:
@@ -206,16 +275,15 @@ func statusWarning(b Binding, status workflow.Status) string {
 		strconv.Quote(sanitizeLine(string(status))) + "; nothing is projected. " + inspectAdvice(b)
 }
 
-// closedNote is the one line a session gets when its workflow has closed. The
-// binding is removed by the caller after this text is built, and the removal is
-// best effort, so the note says it is being removed, not that it was.
+// closedNote is the start of the one line a session gets when its workflow has
+// closed. It claims nothing about the binding: the caller removes it after this
+// text is built, the removal is best effort, and AfterUnbind adds what happened.
 func closedNote(b Binding, s workflow.State) string {
 	outcome := ""
 	if s.CloseOutcome == workflow.OutcomeCompleted || s.CloseOutcome == workflow.OutcomeAbandoned {
 		outcome = " (" + string(s.CloseOutcome) + ")"
 	}
-	return "labdrian workflow projection: " + workflowRef(b) + " is closed" + outcome +
-		". This repository's binding to it is being removed, so no workflow is projected."
+	return "labdrian workflow projection: " + workflowRef(b) + " is closed" + outcome + ". No workflow is projected."
 }
 
 // detailIn renders an explanation as " (text)", or nothing when there is none.
@@ -241,7 +309,7 @@ func buildContext(b Binding, w workflow.Loaded) string {
 	lines := []string{
 		"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.",
 		"workflow: " + wf + " (project: " + project + ")",
-		"profile: " + orBlank(sanitizeLine(state.Profile)),
+		"profile: " + orElse(sanitizeLine(state.Profile), blankField),
 	}
 
 	switch state.Status {
@@ -255,12 +323,12 @@ func buildContext(b Binding, w workflow.Loaded) string {
 		lines = append(lines, "status: "+string(state.Status))
 	}
 
-	lines = append(lines, "goal: "+orBlank(sanitizeLine(state.GoalID))+" (digest "+sanitizeLine(prefixRunes(state.GoalDigest, 12))+")")
+	lines = append(lines, "goal: "+orElse(sanitizeLine(state.GoalID), blankField)+" (digest "+sanitizeLine(prefixRunes(state.GoalDigest, goalDigestRunes))+")")
 
 	recorded := state.Stages
 	current := "none yet"
 	if len(recorded) > 0 {
-		current = orBlank(sanitizeLine(recorded[len(recorded)-1]))
+		current = orElse(sanitizeLine(recorded[len(recorded)-1]), blankField)
 	}
 	lines = append(lines, "current stage: "+current, "next stage: "+nextStage(state.Profile, recorded))
 
@@ -275,7 +343,7 @@ func buildContext(b Binding, w workflow.Loaded) string {
 	}
 	names := make([]string, len(recorded))
 	for i, stage := range recorded {
-		names[i] = orBlank(sanitizeLine(stage))
+		names[i] = orElse(sanitizeLine(stage), blankField)
 	}
 	listed := "none"
 	if len(names) > 0 {
@@ -333,9 +401,9 @@ func memoryPlanLines(profileName, projectID, goalID string) []string {
 	}
 	lines := []string{"memory plan (read-only: it executes no query and grants no memory write): " +
 		"scope=" + string(plan.Scope) +
-		" sources=" + noneIfEmpty(strings.Join(sources, ",")) +
-		" project_id=" + noneIfEmpty(sanitizeLine(plan.Filters.ProjectID)) +
-		" goal_id=" + noneIfEmpty(sanitizeLine(plan.Filters.GoalID)) +
+		" sources=" + orElse(strings.Join(sources, ","), noneField) +
+		" project_id=" + orElse(sanitizeLine(plan.Filters.ProjectID), noneField) +
+		" goal_id=" + orElse(sanitizeLine(plan.Filters.GoalID), noneField) +
 		" write=" + plan.Write}
 	if len(plan.OmittedFilters) > 0 {
 		lines = append(lines, "omitted filters: "+strings.Join(plan.OmittedFilters, ", "))
@@ -380,26 +448,27 @@ func unavailableDependencies(events []workflow.WorkflowEvent) []string {
 	var names []string
 	for _, o := range events[len(events)-1].Observations {
 		if o.Status == workflow.ObservationUnavailable {
-			names = append(names, orBlank(sanitizeLine(o.Capability)))
+			names = append(names, orElse(sanitizeLine(o.Capability), blankField))
 		}
 	}
 	return names
 }
 
-func noneIfEmpty(s string) string {
+// orElse returns s, or placeholder when s is empty, so a line never has a hole.
+// The placeholder says why the field is empty: "(blank)" for a field that
+// should have had a value and lost it in sanitizing, "none" for one that is
+// legitimately absent.
+func orElse(s, placeholder string) string {
 	if s == "" {
-		return "none"
+		return placeholder
 	}
 	return s
 }
 
-// orBlank names a field that sanitizing left empty, so a line never has a hole.
-func orBlank(s string) string {
-	if s == "" {
-		return "(blank)"
-	}
-	return s
-}
+const (
+	blankField = "(blank)"
+	noneField  = "none"
+)
 
 // --- the hook output --------------------------------------------------------
 
