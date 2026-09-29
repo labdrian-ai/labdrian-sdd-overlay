@@ -625,3 +625,48 @@ func TestGentleReviewProfilesMatchReviewPolicies(t *testing.T) {
 		}
 	}
 }
+
+// TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves checks that closing
+// a workflow as abandoned never depends on its profile still resolving: the
+// close is recorded with a "profile" observation marked unavailable instead
+// of failing, while a completed close still requires a successful verify.
+func TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, UnavailableProber{})
+
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := lc.Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+
+	lc.resolveProfile = func(name string) (workflowprofile.WorkflowProfile, error) {
+		return workflowprofile.WorkflowProfile{}, errors.New("profile retired")
+	}
+	state, err := lc.Close("proj-1", "wf-1", OutcomeAbandoned, "profile retired upstream")
+	if err != nil {
+		t.Fatalf("Close(abandoned) = %v, want nil when the profile no longer resolves", err)
+	}
+	if state.Status != StatusClosed {
+		t.Fatalf("state.Status = %q, want %q", state.Status, StatusClosed)
+	}
+	loaded, err := store.Load("proj-1", "wf-1")
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+	closed := loaded.Events[len(loaded.Events)-1]
+	found := false
+	for _, o := range closed.Observations {
+		if o.Capability == "profile" && o.Status == ObservationUnavailable && o.Detail != "" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("closed observations = %+v, want a profile observation marked unavailable with a detail", closed.Observations)
+	}
+}

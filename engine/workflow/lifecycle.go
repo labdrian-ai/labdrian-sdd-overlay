@@ -5,6 +5,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
@@ -123,6 +124,9 @@ type Lifecycle struct {
 	goals      GoalReader
 	chains     RoleChainReader
 	prober     DependencyProber
+	// resolveProfile resolves a workflow's recorded profile name; it is
+	// workflowprofile.Resolve outside tests.
+	resolveProfile func(string) (workflowprofile.WorkflowProfile, error)
 }
 
 // NewLifecycle builds a Lifecycle. clock, goals, and chains must not be
@@ -146,7 +150,7 @@ func NewLifecycle(store Store, clock func() time.Time, provenance Provenance, go
 	if prober == nil {
 		prober = UnavailableProber{}
 	}
-	return Lifecycle{store: store, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober}, nil
+	return Lifecycle{store: store, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, resolveProfile: workflowprofile.Resolve}, nil
 }
 
 // loadOwned loads the workflow and requires it to be ClassificationOwned;
@@ -168,6 +172,16 @@ func (l Lifecycle) loadOwned(projectID, workflowID string) (Loaded, error) {
 // observations for profileName. The caller fills in any kind-specific
 // payload fields before appending.
 func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind Kind, profileName string) (WorkflowEvent, error) {
+	observations, err := l.observationsFor(profileName)
+	if err != nil {
+		return WorkflowEvent{}, err
+	}
+	return l.eventWith(loaded, projectID, workflowID, kind, observations)
+}
+
+// eventWith builds the next event of kind for loaded's chain with the given
+// observations.
+func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind Kind, observations []Observation) (WorkflowEvent, error) {
 	var seq int
 	var prevDigest string
 	if n := len(loaded.Events); n > 0 {
@@ -177,10 +191,6 @@ func (l Lifecycle) baseEvent(loaded Loaded, projectID, workflowID string, kind K
 			return WorkflowEvent{}, fmt.Errorf("workflow lifecycle: %w", err)
 		}
 		prevDigest = digest
-	}
-	observations, err := l.observationsFor(profileName)
-	if err != nil {
-		return WorkflowEvent{}, err
 	}
 	return WorkflowEvent{
 		Version:      EventVersion,
@@ -213,7 +223,7 @@ func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event Wor
 // recorded unavailable; it never blocks the operation and is never
 // recorded as available on its own authority (see DependencyProber).
 func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
-	profile, err := workflowprofile.Resolve(profileName)
+	profile, err := l.resolveProfile(profileName)
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
 	}
@@ -509,6 +519,16 @@ func (l Lifecycle) Close(projectID, workflowID string, outcome Outcome, reason s
 		return State{}, err
 	}
 	event, err := l.baseEvent(loaded, projectID, workflowID, KindClosed, loaded.State.Profile)
+	if err != nil && outcome == OutcomeAbandoned {
+		// Abandoning must stay possible even when the recorded profile no
+		// longer resolves (for example after a profile is retired), so the
+		// failure is recorded as an unavailable profile observation instead.
+		detail := err.Error()
+		if len(detail) > MaxObservationDetailLength {
+			detail = strings.ToValidUTF8(detail[:MaxObservationDetailLength], "")
+		}
+		event, err = l.eventWith(loaded, projectID, workflowID, KindClosed, []Observation{{Capability: "profile", Status: ObservationUnavailable, Detail: detail}})
+	}
 	if err != nil {
 		return State{}, err
 	}
