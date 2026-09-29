@@ -379,21 +379,26 @@ func nextStage(profileName string, recorded []string) string {
 	return sanitizeLine(profile.Stages[len(recorded)].Name)
 }
 
+// resolvePlan is the one place the memory plan of a workflow is computed: the
+// profile's ceiling, resolved for the project and goal. The context states this
+// plan and the PreToolUse gate enforces it, so both call this function, and can
+// never disagree about which project is permitted.
+func resolvePlan(profileName, projectID, goalID string) (memoryscope.Plan, error) {
+	directive, err := memoryscope.DefaultFor(profileName)
+	if err != nil {
+		return memoryscope.Plan{}, err
+	}
+	return memoryscope.Resolve(directive, projectID, goalID)
+}
+
 // memoryPlanLines renders the memory plan of the workflow's profile: the profile
 // ceiling, resolved for the project and goal, exactly as 'memory plan' prints it.
 // The plan is only a description of what may be read. It is stated as such,
 // because nothing here queries or enforces anything.
 func memoryPlanLines(profileName, projectID, goalID string) []string {
-	unavailable := func(err error) []string {
+	plan, err := resolvePlan(profileName, projectID, goalID)
+	if err != nil {
 		return []string{"memory plan: not available: " + clip(sanitizeLine(err.Error()), maxDetailRunes)}
-	}
-	directive, err := memoryscope.DefaultFor(profileName)
-	if err != nil {
-		return unavailable(err)
-	}
-	plan, err := memoryscope.Resolve(directive, projectID, goalID)
-	if err != nil {
-		return unavailable(err)
 	}
 	sources := make([]string, len(plan.Sources))
 	for i, source := range plan.Sources {
