@@ -640,6 +640,14 @@ Commands:
                                    close  --project ID --workflow ID --outcome completed|abandoned [--reason TEXT]
                                              completed requires an immediately preceding successful verify;
                                              abandoned is legal from any non-closed state
+                                   bind   --project ID --workflow ID
+                                             bind this git repository (every worktree of it) to an open
+                                             workflow; a closed or non-owned workflow is refused, and so is
+                                             replacing a binding to a workflow that is still active or
+                                             unreadable (unbind first)
+                                   unbind    remove this repository's binding; idempotent
+                                   binding   read-only: show this repository's binding and the bound
+                                             workflow's status
                                    exit 0 success, 2 refused/invalid (illegal transition, verify failure,
                                    non-owned state), 1 usage error
   validate-entry-contract          Validate a pre-SDD entry candidate with the version-matched
