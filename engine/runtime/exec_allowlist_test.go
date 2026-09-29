@@ -49,6 +49,12 @@ var phase7Sources = []string{
 	"capability/*.go",
 	"projection/*.go",
 	"cmd/runtime_capabilities.go",
+	"cmd/workflow_bind.go",
+	// workflow_provenance.go is a Phase 6 file that now also holds the Phase 7
+	// repository key (observeRepoKey), so it answers to the same policy: it
+	// promises to find the repository by walking the filesystem, never by
+	// running git.
+	"cmd/workflow_provenance.go",
 }
 
 // forbiddenPhase7Import returns why path may not be imported by Phase 7 code,

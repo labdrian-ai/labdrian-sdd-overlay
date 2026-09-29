@@ -1,15 +1,19 @@
 package main
 
 // workflow subcommand: 'workflow create|start|pause|resume|stage|verify|
-// close|status'. This is the Phase 6 standalone workflow lifecycle: it
-// creates, starts, pauses, resumes, records stages on, structurally
-// verifies, and closes one workflow instance, entirely as local bookkeeping
-// under $XDG_STATE_HOME/labdrian/workflows/<project_id>/<workflow_id>.jsonl.
-// No verb here executes a workflow step or check (that is Phase 7), and no
-// verb requires Gentle AI, gentle-pi, a runtime, memory, or auth to be
-// present: an unavailable declared dependency is recorded on the event as
-// an observation, never approved or hidden (see engine/workflow's
-// DependencyProber).
+// close|status|bind|unbind|binding'. This is the Phase 6 standalone workflow
+// lifecycle: it creates, starts, pauses, resumes, records stages on,
+// structurally verifies, and closes one workflow instance, entirely as local
+// bookkeeping under
+// $XDG_STATE_HOME/labdrian/workflows/<project_id>/<workflow_id>.jsonl. No verb
+// here executes a workflow step or check (that is Phase 7), and no verb
+// requires Gentle AI, gentle-pi, a runtime, memory, or auth to be present: an
+// unavailable declared dependency is recorded on the event as an observation,
+// never approved or hidden (see engine/workflow's DependencyProber).
+//
+// bind, unbind, and binding (workflow_bind.go) are the Phase 7 addition: they
+// record which workflow a git repository follows, in a separate store, without
+// touching any workflow's log.
 //
 // Provenance (worktree root, git HEAD) is observed without running git or
 // any other subprocess; see observeProvenance in workflow_provenance.go.
@@ -43,7 +47,7 @@ func runWorkflow(args []string) {
 // directory.
 func runWorkflowCore(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) == 0 {
-		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, status")
+		fmt.Fprintln(stderr, "error: workflow requires a verb: create, start, pause, resume, stage, verify, close, status, bind, unbind, binding")
 		exit(1)
 		return
 	}
@@ -65,8 +69,14 @@ func runWorkflowCore(args []string, cwd string, stdout, stderr io.Writer, exit f
 		runWorkflowClose(rest, cwd, stdout, stderr, exit)
 	case "status":
 		runWorkflowStatus(rest, cwd, stdout, stderr, exit)
+	case "bind":
+		runWorkflowBind(rest, cwd, stdout, stderr, exit)
+	case "unbind":
+		runWorkflowUnbind(rest, cwd, stdout, stderr, exit)
+	case "binding":
+		runWorkflowBinding(rest, cwd, stdout, stderr, exit)
 	default:
-		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, or status)\n", verb)
+		fmt.Fprintf(stderr, "error: workflow: unknown verb %q (expected create, start, pause, resume, stage, verify, close, status, bind, unbind, or binding)\n", verb)
 		exit(1)
 	}
 }

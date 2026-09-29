@@ -1,0 +1,298 @@
+package main
+
+// workflow subcommand verbs 'bind', 'unbind', and 'binding': the session
+// binding. A binding records which workflow the git repository containing the
+// working directory follows. It lives outside the repository, in
+// $XDG_STATE_HOME/labdrian/bindings/<repo-key>.json, where the repo key is the
+// SHA-256 of the repository's git common directory (see observeRepoKey), so
+// every worktree of a repository, and every symlinked spelling of its path,
+// shares one binding. The record and its store are engine/projection's.
+//
+// A binding is a pointer. These verbs never append to the workflow's log, and
+// they run no subprocess: the repository is found by walking the filesystem, as
+// observeProvenance does. binding is strictly read-only.
+//
+// Exit codes are those of the other workflow verbs: 0 success, 2 refused or
+// invalid (no repository to key on, a workflow that cannot be bound, a binding
+// file that is not ours), 1 usage error (including an unknown flag) or a failed
+// write of the output.
+
+import (
+	"encoding/json"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
+)
+
+// errNoRepository is why a binding verb refuses to run outside a repository:
+// the binding is keyed by the repository, so without one there is nothing to
+// key on, and guessing from the working directory would bind the wrong thing.
+const errNoRepository = "binding needs a git repository to key on: no .git was found at or above the working directory"
+
+// bindingReportJSON is the CLI's JSON view of a repository's binding, printed
+// by bind (with the binding just made or kept) and by binding. Detail explains
+// every classification other than absent and owned; Binding is set only when the
+// classification is owned; Workflow, set only by binding, describes the
+// workflow an owned binding names.
+type bindingReportJSON struct {
+	Classification string              `json:"classification"`
+	Detail         string              `json:"detail,omitempty"`
+	Binding        *projection.Binding `json:"binding,omitempty"`
+	Workflow       *boundWorkflowJSON  `json:"workflow,omitempty"`
+}
+
+// boundWorkflowJSON is what binding reports about the bound workflow: its
+// on-disk classification and, when owned, its status. An unreadable workflow
+// store is reported here as data (classification unavailable), never as a
+// failure of the verb.
+type boundWorkflowJSON struct {
+	Classification string `json:"classification"`
+	Status         string `json:"status,omitempty"`
+	Detail         string `json:"detail,omitempty"`
+}
+
+// parseBindingArgs parses the arguments of the binding verbs. bind
+// (takesIDs) takes --project and --workflow, both required; unbind and
+// binding take no arguments at all. Anything else is a usage error: an unknown
+// flag, a positional argument, a flag without its value, or a missing required
+// flag. The last occurrence of a repeated flag wins, as for the other workflow
+// verbs.
+func parseBindingArgs(args []string, takesIDs bool) (project, workflowID string, err error) {
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case takesIDs && (a == "--project" || a == "--workflow"):
+			if i+1 >= len(args) {
+				return "", "", fmt.Errorf("%s requires a value", a)
+			}
+			i++
+			if a == "--project" {
+				project = args[i]
+			} else {
+				workflowID = args[i]
+			}
+		case strings.HasPrefix(a, "-"):
+			return "", "", fmt.Errorf("unknown flag %q", a)
+		default:
+			return "", "", fmt.Errorf("unexpected argument %q", a)
+		}
+	}
+	if takesIDs {
+		if project == "" {
+			return "", "", fmt.Errorf("--project is required")
+		}
+		if workflowID == "" {
+			return "", "", fmt.Errorf("--workflow is required")
+		}
+	}
+	return project, workflowID, nil
+}
+
+// refuseBinding reports a refusal of a binding verb on stderr and exits 2. The
+// caller returns right after it, because tests inject a non-terminating exit.
+func refuseBinding(stderr io.Writer, exit func(int), verb, format string, args ...any) {
+	fmt.Fprintf(stderr, "error: workflow %s: %s\n", verb, fmt.Sprintf(format, args...))
+	exit(2)
+}
+
+// writeBindingJSON prints v as indented JSON on stdout and exits 0, or reports
+// a marshal or write failure on stderr and exits 1, the way writeWorkflowState
+// does for the other verbs.
+func writeBindingJSON(verb string, v any, stdout, stderr io.Writer, exit func(int)) {
+	data, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		fmt.Fprintf(stderr, "error: workflow %s: %v\n", verb, err)
+		exit(1)
+		return
+	}
+	if _, err := stdout.Write(append(data, '\n')); err != nil {
+		fmt.Fprintf(stderr, "error: workflow %s: writing output: %v\n", verb, err)
+		exit(1)
+		return
+	}
+	exit(0)
+}
+
+// loadWorkflow loads one workflow through a store built from the environment.
+// A store that cannot be built or read is reported as an unavailable workflow,
+// with the reason as its detail, rather than as an error: binding must be able
+// to describe a workflow it cannot read, and bind must be able to say why it
+// cannot bind one. The identifiers must already be valid.
+func loadWorkflow(projectID, workflowID string) workflow.Loaded {
+	unavailable := func(err error) workflow.Loaded {
+		return workflow.Loaded{Classification: workflow.ClassificationUnavailable, Detail: err.Error()}
+	}
+	store, err := workflow.NewStore()
+	if err != nil {
+		return unavailable(err)
+	}
+	loaded, err := store.Load(projectID, workflowID)
+	if err != nil {
+		return unavailable(err)
+	}
+	return loaded
+}
+
+// runWorkflowBind implements 'workflow bind --project --workflow'.
+//
+// The workflow must exist, be owned, and not be closed. If the repository is
+// already bound to the same workflow, nothing changes. If it is bound to a
+// different one, that binding is replaced only when it is stale: the bound
+// workflow is closed, gone, or not a workflow log of ours, so it can no longer
+// be followed. A binding to a workflow that is still active (created, running,
+// or paused) is never replaced silently: bind refuses, names the bound
+// workflow, and tells the user to unbind first.
+func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+	project, workflowID, err := parseBindingArgs(args, true)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: workflow bind: %v\n", err)
+		exit(1)
+		return
+	}
+	repoKey, ok := observeRepoKey(cwd)
+	if !ok {
+		refuseBinding(stderr, exit, "bind", "%s", errNoRepository)
+		return
+	}
+	if err := workflow.ValidateIdentifier("project_id", project); err != nil {
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
+	if err := workflow.ValidateIdentifier("workflow_id", workflowID); err != nil {
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
+
+	target := loadWorkflow(project, workflowID)
+	switch {
+	case target.Classification == workflow.ClassificationAbsent:
+		refuseBinding(stderr, exit, "bind", "workflow %q of project %q does not exist; create it first", workflowID, project)
+		return
+	case target.Classification != workflow.ClassificationOwned:
+		refuseBinding(stderr, exit, "bind", "workflow %q of project %q is not owned (%s): %s", workflowID, project, target.Classification, target.Detail)
+		return
+	case target.State.Status == workflow.StatusClosed:
+		refuseBinding(stderr, exit, "bind", "workflow %q of project %q is closed (%s); a closed workflow cannot be followed", workflowID, project, target.State.CloseOutcome)
+		return
+	}
+
+	bindings, err := projection.NewStore()
+	if err != nil {
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
+	replace := false
+	current, err := bindings.Load(repoKey)
+	if err != nil {
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
+	if current.Classification == projection.ClassificationOwned && (current.Binding.ProjectID != project || current.Binding.WorkflowID != workflowID) {
+		bound := current.Binding
+		previous := loadWorkflow(bound.ProjectID, bound.WorkflowID)
+		if previous.Classification == workflow.ClassificationOwned && previous.State.Status != workflow.StatusClosed {
+			refuseBinding(stderr, exit, "bind", "this repository is already bound to workflow %q of project %q (status: %s); run 'workflow unbind' first to bind another", bound.WorkflowID, bound.ProjectID, previous.State.Status)
+			return
+		}
+		replace = true
+	}
+
+	if err := bindings.Bind(repoKey, project, workflowID, time.Now(), replace); err != nil {
+		if errors.Is(err, projection.ErrAlreadyBound) {
+			// The binding changed between the check above and the write.
+			refuseBinding(stderr, exit, "bind", "%v; run 'workflow unbind' first to bind another", err)
+			return
+		}
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
+
+	// Print what is stored, which for an idempotent bind is the original
+	// binding with its original bound_at.
+	stored, err := bindings.Load(repoKey)
+	if err != nil {
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
+	if stored.Classification != projection.ClassificationOwned {
+		refuseBinding(stderr, exit, "bind", "the binding could not be read back (%s): %s", stored.Classification, stored.Detail)
+		return
+	}
+	writeBindingJSON("bind", bindingReportJSON{Classification: string(stored.Classification), Binding: &stored.Binding}, stdout, stderr, exit)
+}
+
+// runWorkflowUnbind implements 'workflow unbind'. It removes the binding of the
+// repository containing cwd and prints {"removed": true|false}. It is
+// idempotent: unbinding a repository that is not bound removes nothing and
+// succeeds. A binding file that is foreign or malformed is refused and left
+// untouched.
+func runWorkflowUnbind(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+	if _, _, err := parseBindingArgs(args, false); err != nil {
+		fmt.Fprintf(stderr, "error: workflow unbind: %v\n", err)
+		exit(1)
+		return
+	}
+	repoKey, ok := observeRepoKey(cwd)
+	if !ok {
+		refuseBinding(stderr, exit, "unbind", "%s", errNoRepository)
+		return
+	}
+	bindings, err := projection.NewStore()
+	if err != nil {
+		refuseBinding(stderr, exit, "unbind", "%v", err)
+		return
+	}
+	removed, err := bindings.Unbind(repoKey)
+	if err != nil {
+		refuseBinding(stderr, exit, "unbind", "%v", err)
+		return
+	}
+	writeBindingJSON("unbind", struct {
+		Removed bool `json:"removed"`
+	}{removed}, stdout, stderr, exit)
+}
+
+// runWorkflowBinding implements 'workflow binding'. It is strictly read-only:
+// it prints the binding's classification and, only when the binding is owned,
+// the binding and the classification and status of the workflow it names. A
+// state that is not ours (foreign, malformed, unavailable) is reported with its
+// detail and exit 0, as 'workflow status' reports a workflow it cannot own.
+func runWorkflowBinding(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
+	if _, _, err := parseBindingArgs(args, false); err != nil {
+		fmt.Fprintf(stderr, "error: workflow binding: %v\n", err)
+		exit(1)
+		return
+	}
+	repoKey, ok := observeRepoKey(cwd)
+	if !ok {
+		refuseBinding(stderr, exit, "binding", "%s", errNoRepository)
+		return
+	}
+	bindings, err := projection.NewStore()
+	if err != nil {
+		refuseBinding(stderr, exit, "binding", "%v", err)
+		return
+	}
+	loaded, err := bindings.Load(repoKey)
+	if err != nil {
+		refuseBinding(stderr, exit, "binding", "%v", err)
+		return
+	}
+
+	report := bindingReportJSON{Classification: string(loaded.Classification), Detail: loaded.Detail}
+	if loaded.Classification == projection.ClassificationOwned {
+		bound := loaded.Binding
+		report.Binding = &bound
+		w := loadWorkflow(bound.ProjectID, bound.WorkflowID)
+		report.Workflow = &boundWorkflowJSON{Classification: string(w.Classification), Detail: w.Detail}
+		if w.Classification == workflow.ClassificationOwned {
+			report.Workflow.Status = string(w.State.Status)
+		}
+	}
+	writeBindingJSON("binding", report, stdout, stderr, exit)
+}

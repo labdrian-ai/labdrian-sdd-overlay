@@ -13,6 +13,8 @@ package main
 // which the workflow lifecycle commands must never do (no subprocesses).
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -176,21 +178,64 @@ func resolveHead(gitDir string) string {
 
 // refDirs returns gitDir followed by its common directory when gitDir has a
 // commondir file (as `git worktree add` creates), relative paths resolved
-// against gitDir.
+// against gitDir. A git directory that is its own common directory yields just
+// itself.
 func refDirs(gitDir string) []string {
 	dirs := []string{gitDir}
+	if common := commonDir(gitDir); common != gitDir {
+		dirs = append(dirs, common)
+	}
+	return dirs
+}
+
+// commonDir returns the git common directory of gitDir, the directory that
+// holds what all worktrees of a repository share: the one gitDir's commondir
+// file names (a relative path is resolved against gitDir, and the result is
+// cleaned), as `git worktree add` writes for a linked worktree. A git
+// directory with no commondir file, or an empty one, is its own common
+// directory, so commonDir returns gitDir itself, as `git rev-parse
+// --git-common-dir` does.
+func commonDir(gitDir string) string {
 	data, err := os.ReadFile(filepath.Join(gitDir, "commondir"))
 	if err != nil {
-		return dirs
+		return gitDir
 	}
 	common := strings.TrimSpace(string(data))
 	if common == "" {
-		return dirs
+		return gitDir
 	}
 	if !filepath.IsAbs(common) {
 		common = filepath.Join(gitDir, common)
 	}
-	return append(dirs, filepath.Clean(common))
+	return filepath.Clean(common)
+}
+
+// observeRepoKey returns the key that identifies the repository containing
+// cwd, and whether there is one: the lowercase hex SHA-256 of the cleaned,
+// symlink-resolved absolute git common directory. That is the .git directory
+// itself for a normal checkout and the directory a linked worktree's commondir
+// file names, so every worktree of one repository, and every symlinked
+// spelling of its path, yields the same key. If the symlinks cannot be
+// resolved (the directory does not exist), the cleaned path is hashed instead,
+// which is still deterministic.
+//
+// Like observeProvenance it walks the filesystem by hand, runs no subprocess,
+// and needs an absolute cwd; a relative or empty cwd, no repository above cwd,
+// or an unusable .git entry yields ("", false).
+func observeRepoKey(cwd string) (string, bool) {
+	if cwd == "" || !filepath.IsAbs(cwd) {
+		return "", false
+	}
+	_, gitDir, ok := findGitDir(filepath.Clean(cwd))
+	if !ok {
+		return "", false
+	}
+	common := commonDir(gitDir)
+	if resolved, err := filepath.EvalSymlinks(common); err == nil {
+		common = resolved
+	}
+	sum := sha256.Sum256([]byte(filepath.Clean(common)))
+	return hex.EncodeToString(sum[:]), true
 }
 
 // lookupRef resolves ref to an object id from dir's loose ref file or, when
