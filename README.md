@@ -489,6 +489,9 @@ overlay workflow <verb>
         ours (drifted, malformed, or foreign) is stale, and bind replaces it. A binding file that is not ours
         (foreign or malformed) is never overwritten. Prints the classification and the binding
         as JSON. A binding records the association only; it does not change the workflow.
+        Bind and unbind take turns per repository: one that cannot get the repository's lock
+        within 2 seconds is refused (exit 2) and can be retried. bind prints the binding only if
+        it is the one requested; if another process changed it meanwhile, bind exits 2 and says so.
     unbind
         Remove the binding of the repository containing the working directory and print
         {"removed": true} or {"removed": false}. Idempotent: unbinding a repository that is not

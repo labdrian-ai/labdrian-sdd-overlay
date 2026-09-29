@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"runtime"
+	"strings"
 	"time"
 	"unicode/utf8"
 
@@ -79,7 +80,14 @@ var (
 	// binding to a different workflow and the caller did not ask to replace it.
 	// The message names the workflow it is bound to.
 	ErrAlreadyBound = errors.New("projection store: the repository is already bound to a different workflow")
+	// ErrBindingBusy is returned by Bind and Unbind when the repository's lock
+	// stays taken past lockWait. Nothing was changed; the call can be retried.
+	ErrBindingBusy = errors.New("projection store: another bind or unbind is in progress for this repository; retry")
 )
+
+// lockWait is how long Bind and Unbind wait for the repository's lock before
+// they give up with ErrBindingBusy. It is a variable so a test can shorten it.
+var lockWait = 2 * time.Second
 
 // Store keeps one binding per repository at
 // <state home>/labdrian/bindings/<repo_key>.json, outside every worktree. The
@@ -89,19 +97,25 @@ var (
 // store does.
 //
 // A binding is a pointer, not a log. Replacing one loses nothing the workflow's
-// own log does not hold, so the store needs no append history and no lock:
+// own log does not hold, so the store needs no append history:
 //
 //   - Every write is an atomic rename of a fully written, synced temporary file
 //     in the same directory, followed by a sync of the directory. A reader sees
 //     the old binding or the new one, never a partial file.
-//   - There is no lock. Two concurrent Bind or Unbind calls for one repository
-//     resolve as last-writer-wins through the rename, and either outcome is a
-//     valid binding.
+//   - Bind and Unbind serialize per repository through an advisory flock on
+//     <repo_key>.lock in the same directory (mode 0600, never removed), held
+//     for their whole load, classify, and write or remove sequence, so neither
+//     acts on a binding another Bind or Unbind has since replaced. They wait for
+//     it up to lockWait, then fail with ErrBindingBusy. Load never takes it.
 //   - The refusal to touch a foreign, malformed, or unavailable file is a
 //     check followed by an action, not one atomic step: the file is classified
 //     first and renamed over or removed afterwards, so a foreign file created
 //     in between would be replaced. The window is the time between two system
 //     calls, and what is lost is a pointer that can be recreated.
+//   - Bind with replace is not a compare-and-swap. A caller that reads a
+//     binding, judges it stale, and then replaces it (as workflow bind does)
+//     can overwrite a live binding another process made in between: the lock
+//     does not span the caller's decision.
 //   - Removing a binding does not sync the directory. If the machine crashes
 //     right after Unbind, the binding may reappear, which is a valid state: the
 //     one the repository had a moment ago.
@@ -141,6 +155,15 @@ func (s Store) path(repoKey string) (string, error) {
 		return "", fmt.Errorf("projection store: %w", err)
 	}
 	return filepath.Join(append(s.dirParts(), repoKey+".json")...), nil
+}
+
+// lock takes the lock of the binding file at path (see Store), creating the
+// store directories and the lock file if missing. It returns the unlock function.
+func (s Store) lock(path string) (func(), error) {
+	if err := ensureDirs(s.dirParts()); err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrBindingUnavailable, err)
+	}
+	return lockFile(strings.TrimSuffix(path, ".json") + ".lock")
 }
 
 // Load classifies the on-disk state of one repository's binding (see
@@ -220,6 +243,11 @@ func (s Store) Bind(repoKey, projectID, workflowID string, now time.Time, replac
 	if err != nil {
 		return err
 	}
+	unlock, err := s.lock(path)
+	if err != nil {
+		return err
+	}
+	defer unlock()
 
 	loaded, err := s.Load(repoKey)
 	if err != nil {
@@ -239,9 +267,6 @@ func (s Store) Bind(repoKey, projectID, workflowID string, now time.Time, replac
 		return refusal(loaded)
 	}
 
-	if err := ensureDirs(s.dirParts()); err != nil {
-		return err
-	}
 	return writeBinding(path, data)
 }
 
@@ -257,6 +282,18 @@ func (s Store) Unbind(repoKey string) (removed bool, err error) {
 	loaded, err := s.Load(repoKey)
 	if err != nil {
 		return false, err
+	}
+	if loaded.Classification == ClassificationOwned {
+		// Only a removal needs the lock (taking it creates directories), and what
+		// is removed is decided again under it: a Bind may have replaced the file.
+		unlock, err := s.lock(path)
+		if err != nil {
+			return false, err
+		}
+		defer unlock()
+		if loaded, err = s.Load(repoKey); err != nil {
+			return false, err
+		}
 	}
 	switch loaded.Classification {
 	case ClassificationAbsent:

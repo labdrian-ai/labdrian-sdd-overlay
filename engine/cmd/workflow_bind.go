@@ -205,6 +205,8 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 			refuseBinding(stderr, exit, "bind", "this repository is bound to workflow %q of project %q, whose log cannot be read (%s), so it may still be active; fix the problem, or run 'workflow unbind' first to bind another", bound.WorkflowID, bound.ProjectID, previous.Detail)
 			return
 		}
+		// The store locks only the replacement below, not this decision: a live
+		// workflow bound by another process in between is overwritten (see projection.Store).
 		replace = true
 	}
 
@@ -229,7 +231,20 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 		refuseBinding(stderr, exit, "bind", "the binding could not be read back (%s): %s", stored.Classification, stored.Detail)
 		return
 	}
+	if err := verifyStored(stored.Binding, project, workflowID); err != nil {
+		refuseBinding(stderr, exit, "bind", "%v", err)
+		return
+	}
 	writeBindingJSON("bind", bindingReportJSON{Classification: string(stored.Classification), Binding: &stored.Binding}, stdout, stderr, exit)
+}
+
+// verifyStored checks the binding read back after Bind: another process may have
+// changed it meanwhile, and reporting that would name a workflow nobody asked for.
+func verifyStored(b projection.Binding, project, workflowID string) error {
+	if b.ProjectID != project || b.WorkflowID != workflowID {
+		return fmt.Errorf("the binding was changed concurrently: it now names workflow %q of project %q, not the requested workflow %q of project %q", b.WorkflowID, b.ProjectID, workflowID, project)
+	}
+	return nil
 }
 
 // runWorkflowUnbind implements 'workflow unbind'. It removes the binding of the

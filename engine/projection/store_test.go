@@ -70,7 +70,9 @@ func names(t *testing.T, dir string) []string {
 	}
 	out := make([]string, 0, len(entries))
 	for _, e := range entries {
-		out = append(out, e.Name())
+		if !strings.HasSuffix(e.Name(), ".lock") { // persistent by design (see Store)
+			out = append(out, e.Name())
+		}
 	}
 	sort.Strings(out)
 	return out
@@ -474,6 +476,10 @@ func TestBindCreatesTheDirectoriesAndFileWithPrivateModes(t *testing.T) {
 	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
 		t.Errorf("binding file: mode %v, err %v, want a regular file with mode 0600", info, err)
 	}
+	info, err = os.Stat(strings.TrimSuffix(bindingPath(root, hex64("a")), ".json") + ".lock")
+	if err != nil || !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+		t.Errorf("lock file: mode %v, err %v, want a regular file with mode 0600", info, err)
+	}
 }
 
 func TestBindLeavesNoTemporaryFileBehind(t *testing.T) {
@@ -782,7 +788,7 @@ func TestAFreshStoreReadsWhatAnotherWrote(t *testing.T) {
 }
 
 // TestConcurrentBindsAreLastWriterWins documents the store's concurrency
-// contract: there is no lock, every write is an atomic rename, and a binding
+// contract: writers take turns on the lock, every write is atomic, and a binding
 // is only a pointer, so whichever writer renames last wins and either outcome
 // is a valid binding.
 func TestConcurrentBindsAreLastWriterWins(t *testing.T) {

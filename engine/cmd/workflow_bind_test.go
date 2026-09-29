@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 
@@ -402,6 +403,47 @@ func TestWorkflowBindDoesNotReplaceABindingWhoseWorkflowCannotBeRead(t *testing.
 	after := loadStoredBinding(t, e.repo)
 	if after.Classification != before.Classification || after.Binding != before.Binding {
 		t.Fatalf("stored binding changed from %+v to %+v, want it untouched", before, after)
+	}
+}
+
+// TestVerifyStoredAcceptsOnlyTheRequestedBinding pins the read-back after Bind,
+// which another process may have followed with a bind of its own.
+func TestVerifyStoredAcceptsOnlyTheRequestedBinding(t *testing.T) {
+	requested := projection.Binding{ProjectID: "proj-1", WorkflowID: "wf-1"}
+	for _, stored := range []projection.Binding{requested, {ProjectID: "proj-1", WorkflowID: "wf-2"}, {ProjectID: "proj-2", WorkflowID: "wf-1"}} {
+		want := fmt.Sprintf("changed concurrently: it now names workflow %q of project %q", stored.WorkflowID, stored.ProjectID)
+		if err := verifyStored(stored, "proj-1", "wf-1"); (err == nil) != (stored == requested) || (err != nil && !strings.Contains(err.Error(), want)) {
+			t.Errorf("verifyStored(%+v) = %v, want an error naming what is stored, and none for the requested binding", stored, err)
+		}
+	}
+}
+
+// TestWorkflowBindAndUnbindAreRefusedWhileTheBindingLockIsHeld holds the lock a
+// concurrent bind or unbind would: both wait, exit 2 with a retry message, and keep the binding.
+func TestWorkflowBindAndUnbindAreRefusedWhileTheBindingLockIsHeld(t *testing.T) {
+	if testing.Short() {
+		t.Skip("each verb waits out the store's 2 s lock timeout")
+	}
+	e := newBindEnv(t)
+	e.workflowInStatus(t, "proj-1", "wf-1", "running")
+	mustBindOK(t, e.repo, "proj-1", "wf-1")
+	lock, err := os.OpenFile(strings.TrimSuffix(e.bindingFile(t, e.repo), ".json")+".lock", os.O_RDWR, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { lock.Close() }) // closing the descriptor releases the flock
+	if err := syscall.Flock(int(lock.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, args := range [][]string{{"bind", "--project", "proj-1", "--workflow", "wf-1"}, {"unbind"}} {
+		r := runWorkflowTest(args, e.repo) // waits out the store's 2 s lock timeout
+		if r.code != 2 || r.stdout != "" || !strings.Contains(r.stderr, "in progress") || !strings.Contains(r.stderr, "retry") {
+			t.Errorf("%v: code=%d stdout=%q stderr=%q, want exit 2, no stdout, and a retry message", args, r.code, r.stdout, r.stderr)
+		}
+	}
+	if loaded := loadStoredBinding(t, e.repo); loaded.Classification != projection.ClassificationOwned {
+		t.Errorf("stored binding = %+v after the refused verbs, want it still owned", loaded)
 	}
 }
 
