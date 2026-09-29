@@ -15,7 +15,7 @@
 // restart_required), while a Status here describes how much of a capability
 // is proven. This package is a leaf over the standard library. It must not
 // import engine/runtime, which would pull the Pi adapter's os/exec
-// dependency into every consumer.
+// dependency into every consumer; a static test in engine/runtime pins this.
 package capability
 
 import "encoding/json"
@@ -79,7 +79,8 @@ const (
 )
 
 // The runtime targets a declaration can describe. They are plain strings, not
-// runtime.Target values, so this package does not depend on engine/runtime.
+// runtime.Target values, so this package does not depend on engine/runtime; a
+// test in engine/runtime pins that the two sets stay equal.
 const (
 	TargetClaude   = "claude"
 	TargetCodex    = "codex"
