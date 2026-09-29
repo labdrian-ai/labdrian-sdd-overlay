@@ -170,6 +170,11 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    --component: runtime-parity (default, the --target adapters above), or longterm-mem")
 	fmt.Fprintln(os.Stderr, "      (a single component spanning claude+opencode+codex; no update/rollback action)")
 	fmt.Fprintln(os.Stderr, "    --state-dir: registration.json directory for --component longterm-mem (default ~/.labdrian-overlay)")
+	fmt.Fprintln(os.Stderr, "  engine runtime capabilities [--target claude|codex|pi|opencode|all]")
+	fmt.Fprintln(os.Stderr, "    read-only: prints, as JSON, what each runtime adapter declares it supports (default --target all);")
+	fmt.Fprintln(os.Stderr, "    every supported or partial claim names the tests that prove it, every partial or unsupported claim")
+	fmt.Fprintln(os.Stderr, "    states its limit, and untested appears only for a runtime that cannot be exercised on this machine")
+	fmt.Fprintln(os.Stderr, "    reads no configuration, HOME, or file; exit 0 success, 2 unknown --target or flag, 1 usage error")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
 	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
 	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
@@ -394,6 +399,15 @@ const (
 
 // runRuntimeCore is the testable core for the 'runtime' subcommand.
 func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func(int)) {
+	// capabilities is declarative and read-only: it never constructs an
+	// adapter, resolves a config root, or reads HOME, so it is dispatched
+	// before the lifecycle flags are parsed and shares none of their
+	// defaults (its --target defaults to all, not opencode).
+	if len(args) > 0 && args[0] == "capabilities" {
+		runRuntimeCapabilities(args[1:], stdout, stderr, exit)
+		return
+	}
+
 	action, target, configRoot, component, stateDir, err := parseRuntimeArgs(args)
 	if err != nil {
 		fmt.Fprintln(stderr, err)
@@ -511,7 +525,7 @@ func parseRuntimeArgs(args []string) (action string, target runtimepkg.Target, c
 	}
 	action = args[0]
 	if strings.HasPrefix(action, "-") {
-		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall")
+		return "", "", "", "", "", fmt.Errorf("error: runtime requires an action: status | install | update | uninstall | capabilities")
 	}
 
 	target = runtimepkg.TargetOpenCode
