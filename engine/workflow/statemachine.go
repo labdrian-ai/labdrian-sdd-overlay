@@ -9,7 +9,12 @@ import (
 type Status string
 
 const (
-	// StatusNone is the zero value: no event has been applied yet.
+	// StatusNone is the zero value: no event has been applied yet. It is the
+	// single signal CheckTransition consults to decide whether next must be
+	// the workflow's created event; there is no separate "has an event"
+	// flag, since Status can only ever be StatusNone before the first event
+	// is applied (the first applied event is always created, which sets
+	// Status to StatusCreated) and never reverts to StatusNone afterward.
 	StatusNone    Status = ""
 	StatusCreated Status = "created"
 	StatusRunning Status = "running"
@@ -26,12 +31,20 @@ var (
 	ErrInvalidTransition       = errors.New("workflow: invalid lifecycle transition")
 	ErrDuplicateStage          = errors.New("workflow: stage already recorded")
 	ErrCompletedRequiresVerify = errors.New("workflow: a completed close requires an immediately preceding verified event")
+	ErrTooManyStages           = errors.New("workflow: stage limit exceeded")
 )
+
+// MaxStages bounds how many stages a single workflow may record.
+const MaxStages = 256
 
 // State is the pure state derived by replaying a workflow's event log: its
 // current status, the profile and goal it was created against, its recorded
 // stages in order, the seq of the last verified event (-1 if none), and its
 // close outcome once closed.
+//
+// Branch ownership: applyEvent copies Stages and stageSet fresh per
+// stage_recorded event, so branches from a common ancestor never alias.
+// MaxStages bounds the copy cost.
 type State struct {
 	Status          Status
 	Profile         string
@@ -47,17 +60,19 @@ type State struct {
 	// used only to enforce that a completed close immediately follows a
 	// verified event.
 	lastEventKind Kind
-	hasEvent      bool
+
+	// stageSet mirrors Stages as a set, giving hasStage an O(1) duplicate
+	// check instead of an O(len(Stages)) scan. See the Replay invariant
+	// above: it is grown in place, not copied, on the assumption that State
+	// is used linearly.
+	stageSet map[string]bool
 }
 
-// hasStage reports whether stage was already recorded.
+// hasStage reports whether stage was already recorded, in O(1) via
+// stageSet. A zero-value State (stageSet == nil) safely reports false for
+// every stage, since reading from a nil map is valid Go.
 func (s State) hasStage(stage string) bool {
-	for _, existing := range s.Stages {
-		if existing == stage {
-			return true
-		}
-	}
-	return false
+	return s.stageSet[stage]
 }
 
 // CheckTransition reports whether next is a legal event to append after
@@ -79,7 +94,7 @@ func (s State) hasStage(stage string) bool {
 // It assumes next already passed WorkflowEvent.Validate; it does not
 // re-validate field shapes.
 func CheckTransition(state State, next WorkflowEvent) error {
-	if !state.hasEvent {
+	if state.Status == StatusNone {
 		if next.Kind != KindCreated || next.Seq != 0 {
 			return fmt.Errorf("%w, got kind %q at seq %d", ErrNotCreatedFirst, next.Kind, next.Seq)
 		}
@@ -111,6 +126,9 @@ func CheckTransition(state State, next WorkflowEvent) error {
 		}
 		if state.hasStage(next.Stage) {
 			return fmt.Errorf("%w: %q was already recorded", ErrDuplicateStage, next.Stage)
+		}
+		if len(state.Stages) >= MaxStages {
+			return fmt.Errorf("%w: limit is %d", ErrTooManyStages, MaxStages)
 		}
 	case KindVerified:
 		// Legal from any non-closed state; StatusClosed already rejected above.
@@ -172,7 +190,16 @@ func applyEvent(state State, e WorkflowEvent) State {
 	case KindPaused:
 		state.Status = StatusPaused
 	case KindStageRecorded:
-		state.Stages = append(append([]string(nil), state.Stages...), e.Stage)
+		stages := make([]string, len(state.Stages), len(state.Stages)+1)
+		copy(stages, state.Stages)
+		state.Stages = append(stages, e.Stage)
+
+		stageSet := make(map[string]bool, len(state.stageSet)+1)
+		for stage := range state.stageSet {
+			stageSet[stage] = true
+		}
+		stageSet[e.Stage] = true
+		state.stageSet = stageSet
 	case KindVerified:
 		state.LastVerifiedSeq = e.Seq
 	case KindClosed:
@@ -181,6 +208,5 @@ func applyEvent(state State, e WorkflowEvent) State {
 		state.CloseReason = e.Reason
 	}
 	state.lastEventKind = e.Kind
-	state.hasEvent = true
 	return state
 }
