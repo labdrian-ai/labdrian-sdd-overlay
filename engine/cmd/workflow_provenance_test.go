@@ -199,3 +199,73 @@ func TestObserveProvenanceUnresolvableSymbolicRefYieldsEmptyHead(t *testing.T) {
 		t.Fatalf("GitHead = %q, want empty when the ref resolves nowhere", p.GitHead)
 	}
 }
+
+// TestObserveProvenanceFollowsSymlinkedGitDirectory covers the decision
+// that a symlinked .git IS followed, matching git's own behavior: git
+// itself does not care whether .git is a plain directory or a symlink to
+// one, so this helper must not either.
+func TestObserveProvenanceFollowsSymlinkedGitDirectory(t *testing.T) {
+	root := t.TempDir()
+	actual := filepath.Join(t.TempDir(), "actual-git-dir")
+	head := strings.Repeat("3", 40)
+	writeFixtureFile(t, filepath.Join(actual, "HEAD"), head+"\n")
+	if err := os.Symlink(actual, filepath.Join(root, ".git")); err != nil {
+		t.Skipf("os.Symlink() = %v, symlinks unsupported here", err)
+	}
+
+	p := observeProvenance(root)
+	if p.WorktreeRoot != root {
+		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
+	}
+	if p.GitHead != head {
+		t.Fatalf("GitHead = %q, want %q (a symlinked .git directory must be followed)", p.GitHead, head)
+	}
+}
+
+// TestObserveProvenanceFollowsSymlinkedGitfile covers a symlink named .git
+// that itself points at a gitdir-pointer FILE (rather than a directory),
+// the shape a hand-rolled or unusual worktree tool might produce.
+func TestObserveProvenanceFollowsSymlinkedGitfile(t *testing.T) {
+	root := t.TempDir()
+	actualGitDir := filepath.Join(t.TempDir(), "main-repo", ".git", "worktrees", "worktree")
+	head := strings.Repeat("4", 40)
+	writeFixtureFile(t, filepath.Join(actualGitDir, "HEAD"), head+"\n")
+	gitfile := filepath.Join(t.TempDir(), "real.gitfile")
+	writeFixtureFile(t, gitfile, "gitdir: "+actualGitDir+"\n")
+	if err := os.Symlink(gitfile, filepath.Join(root, ".git")); err != nil {
+		t.Skipf("os.Symlink() = %v, symlinks unsupported here", err)
+	}
+
+	p := observeProvenance(root)
+	if p.WorktreeRoot != root {
+		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, root)
+	}
+	if p.GitHead != head {
+		t.Fatalf("GitHead = %q, want %q (a symlinked .git pointer file must be followed)", p.GitHead, head)
+	}
+}
+
+// TestObserveProvenanceGitdirPointerRelativeToBase covers readGitdirPointer's
+// relative-target branch: the common on-disk shape `git worktree add`
+// actually produces, where the "gitdir:" line names a path relative to the
+// worktree root rather than an absolute one.
+func TestObserveProvenanceGitdirPointerRelativeToBase(t *testing.T) {
+	root := t.TempDir()
+	worktree := filepath.Join(root, "wt")
+	actualGitDir := filepath.Join(root, "main-repo", ".git", "worktrees", "wt")
+	head := strings.Repeat("5", 40)
+	writeFixtureFile(t, filepath.Join(actualGitDir, "HEAD"), head+"\n")
+	rel, err := filepath.Rel(worktree, actualGitDir)
+	if err != nil {
+		t.Fatalf("filepath.Rel() = %v, want nil", err)
+	}
+	writeFixtureFile(t, filepath.Join(worktree, ".git"), "gitdir: "+rel+"\n")
+
+	p := observeProvenance(worktree)
+	if p.WorktreeRoot != worktree {
+		t.Fatalf("WorktreeRoot = %q, want %q", p.WorktreeRoot, worktree)
+	}
+	if p.GitHead != head {
+		t.Fatalf("GitHead = %q, want %q (resolved from a relative gitdir pointer)", p.GitHead, head)
+	}
+}

@@ -162,6 +162,40 @@ type Lifecycle struct {
 	// probeTimeout bounds a single DependencyProber.Probe call; it is
 	// dependencyProbeTimeout outside tests.
 	probeTimeout time.Duration
+	// degraded is called, if non-nil, exactly when observationsFor could
+	// not get a usable answer from l.prober itself (a Probe error, a
+	// probeTimeout expiry, or a returned-observation count mismatch) -- as
+	// distinct from the prober succeeding and simply reporting a
+	// capability unavailable. See WithDegradedHook.
+	degraded DegradedHook
+}
+
+// DegradedHook is notified, with a short human-readable detail, whenever a
+// dependency probe degrades: the configured DependencyProber returned an
+// error, missed its deadline, or returned the wrong number of
+// observations. The lifecycle operation still succeeds either way (every
+// affected capability is recorded unavailable; see DependencyProber and
+// observationsFor), so this hook exists only so a caller such as the CLI
+// can surface the degradation somewhere a person will see it (for example,
+// one line on stderr) instead of it being visible only by reading the
+// "unavailable" detail back out of the appended event later.
+type DegradedHook func(detail string)
+
+// WithDegradedHook returns a copy of l with hook wired as its
+// DegradedHook (nil clears it). It is a copy-returning setter rather than
+// a NewLifecycle parameter so every existing caller and test that builds a
+// Lifecycle without a hook keeps compiling and behaving unchanged.
+func (l Lifecycle) WithDegradedHook(hook DegradedHook) Lifecycle {
+	l.degraded = hook
+	return l
+}
+
+// notifyDegraded calls l.degraded with detail when a hook is set; it is a
+// no-op otherwise.
+func (l Lifecycle) notifyDegraded(detail string) {
+	if l.degraded != nil {
+		l.degraded(detail)
+	}
 }
 
 // NewLifecycle builds a Lifecycle. clock, goals, and chains must not be
@@ -282,10 +316,13 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 
 	observed, err := l.probe(capabilities)
 	if err != nil {
+		l.notifyDegraded(err.Error())
 		return unavailableObservations(capabilities, err.Error()), nil
 	}
 	if len(observed) != len(capabilities) {
-		return unavailableObservations(capabilities, fmt.Sprintf("dependency prober returned %d observations for %d capabilities", len(observed), len(capabilities))), nil
+		detail := fmt.Sprintf("dependency prober returned %d observations for %d capabilities", len(observed), len(capabilities))
+		l.notifyDegraded(detail)
+		return unavailableObservations(capabilities, detail), nil
 	}
 	result := make([]Observation, len(observed))
 	copy(result, observed)
@@ -296,10 +333,17 @@ func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
 // separate goroutine so that a prober which never checks its context and
 // blocks forever still cannot block the caller past that deadline: probe
 // returns as soon as either the prober's own goroutine finishes or the
-// deadline expires, whichever comes first. A prober that never returns
-// leaks its goroutine for the remainder of the process's life; see
+// deadline expires, whichever comes first. A prober that ignores ctx and
+// never returns leaks exactly one goroutine per such probe call, for the
+// remainder of the process's life (nothing ever collects it, since Go has
+// no way to force-stop a goroutine that never checks ctx.Done()); see
 // DependencyProber's doc comment for why that is an accepted trade-off for
-// a caller-supplied prober violating its documented contract.
+// a caller-supplied prober violating its documented contract. In practice
+// this is bounded and cheap: the CLI (engine/cmd) is a short-lived process
+// that calls probe at most once per invocation and exits immediately after,
+// so any leaked goroutine dies with the process before it could
+// accumulate; only a long-lived embedder of this package driven by a
+// non-compliant prober repeatedly would see them add up.
 func (l Lifecycle) probe(capabilities []string) ([]Observation, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), l.probeTimeout)
 	defer cancel()

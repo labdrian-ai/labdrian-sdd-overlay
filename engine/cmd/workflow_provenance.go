@@ -46,32 +46,70 @@ func observeProvenance(cwd string) workflow.Provenance {
 // this worktree's own root, not the main repository's) and the resolved
 // git directory. ok is false when no .git is found before reaching the
 // filesystem root, or when a .git file cannot be read and resolved.
+//
+// Decision: a symlinked .git IS followed (classifyGitEntry below resolves
+// it with os.Stat), matching real git, which never distinguishes a plain
+// .git directory or gitdir-pointer file from a symlink to one. Nothing
+// about that final target's own reading changes: a resolved directory is
+// returned as gitDir exactly like a plain one (later os.ReadFile calls
+// under it already follow symlinks transparently), and a resolved regular
+// file still goes through readGitdirPointer. A symlink that cannot be
+// resolved (broken, or pointing at neither a directory nor a regular file)
+// fails soft, the same as any other unusable .git entry.
 func findGitDir(start string) (worktreeRoot, gitDir string, ok bool) {
 	dir := start
 	for {
 		candidate := filepath.Join(dir, ".git")
-		info, err := os.Lstat(candidate)
-		if err == nil {
-			switch {
-			case info.IsDir():
-				return dir, candidate, true
-			case info.Mode().IsRegular():
-				target, ok := readGitdirPointer(candidate, dir)
-				if !ok {
-					return "", "", false
-				}
-				return dir, target, true
-			default:
-				// A symlink or other special file named .git is not a shape
-				// this helper trusts; fail soft rather than following it.
+		if info, err := os.Lstat(candidate); err == nil {
+			// A .git entry that exists but does not classify to a usable
+			// git directory (a malformed gitdir-pointer file, an unusable
+			// special file, or a symlink resolving to either) is never
+			// something to keep walking past: .git here is not ours to
+			// interpret, and a parent directory's .git would name a
+			// different, unrelated repository.
+			target, ok := classifyGitEntry(candidate, dir, info)
+			if !ok {
 				return "", "", false
 			}
+			return dir, target, true
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			return "", "", false
 		}
 		dir = parent
+	}
+}
+
+// classifyGitEntry resolves one .git entry (already os.Lstat'd as info) to
+// the git directory it names: a plain directory or a symlink to one is
+// returned as-is (candidate itself, since later reads under it follow
+// symlinks transparently); a plain regular file or a symlink to one is
+// resolved via readGitdirPointer; anything else (a broken symlink, or some
+// other special file) is rejected.
+func classifyGitEntry(candidate, base string, info os.FileInfo) (gitDir string, ok bool) {
+	switch {
+	case info.IsDir():
+		return candidate, true
+	case info.Mode().IsRegular():
+		return readGitdirPointer(candidate, base)
+	case info.Mode()&os.ModeSymlink != 0:
+		resolved, err := os.Stat(candidate)
+		if err != nil {
+			return "", false
+		}
+		switch {
+		case resolved.IsDir():
+			return candidate, true
+		case resolved.Mode().IsRegular():
+			return readGitdirPointer(candidate, base)
+		default:
+			return "", false
+		}
+	default:
+		// Some other special file (device, socket, ...) named .git is not
+		// a shape this helper trusts.
+		return "", false
 	}
 }
 

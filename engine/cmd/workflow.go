@@ -157,8 +157,15 @@ func (r pathGoalReader) LoadGoal(projectID, goalID string) (goal.Goal, error) {
 // and the real role chain store, with provenance observed from cwd (no
 // subprocess) and the default UnavailableProber (no capability is ever
 // approved on its own authority from the CLI). goalFile is used only by
-// verbs that call LoadGoal (verify); it may be empty otherwise.
-func newWorkflowLifecycle(cwd, goalFile string) (workflow.Lifecycle, error) {
+// verbs that call LoadGoal (verify); it must be empty for every other verb,
+// since Create reads and validates its own Goal argument directly (see
+// runWorkflowCreate) rather than through the injected GoalReader, and no
+// other verb needs a Goal at all. When a dependency probe degrades (an
+// error, a timeout, or an unexpected observation count -- see
+// workflow.DegradedHook), one line is printed to stderr so the degradation
+// is visible to whoever ran the command, even though the operation still
+// succeeds.
+func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Lifecycle, error) {
 	store, err := workflow.NewStore()
 	if err != nil {
 		return workflow.Lifecycle{}, err
@@ -167,7 +174,13 @@ func newWorkflowLifecycle(cwd, goalFile string) (workflow.Lifecycle, error) {
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
-	return workflow.NewLifecycle(store, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, nil)
+	lc, err := workflow.NewLifecycle(store, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, nil)
+	if err != nil {
+		return workflow.Lifecycle{}, err
+	}
+	return lc.WithDegradedHook(func(detail string) {
+		fmt.Fprintf(stderr, "warning: workflow: dependency probing degraded: %s\n", detail)
+	}), nil
 }
 
 // runWorkflowCreate implements 'workflow create --project --workflow --goal
@@ -191,7 +204,10 @@ func runWorkflowCreate(args []string, cwd string, stdout, stderr io.Writer, exit
 		exit(2)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, o.goalFile)
+	// "" here, not o.goalFile: Create takes the already-read-and-parsed g
+	// directly and never calls the injected GoalReader (only Verify does),
+	// so wiring o.goalFile in would be dead wiring reading nothing.
+	lc, err := newWorkflowLifecycle(cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow create: %v\n", err)
 		exit(2)
@@ -215,7 +231,7 @@ func runWorkflowTransition(args []string, cwd string, stdout, stderr io.Writer, 
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "")
+	lc, err := newWorkflowLifecycle(cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow %s: %v\n", label, err)
 		exit(2)
@@ -238,7 +254,7 @@ func runWorkflowStage(args []string, cwd string, stdout, stderr io.Writer, exit 
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "")
+	lc, err := newWorkflowLifecycle(cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow stage: %v\n", err)
 		exit(2)
@@ -263,7 +279,7 @@ func runWorkflowVerify(args []string, cwd string, stdout, stderr io.Writer, exit
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, o.goalFile)
+	lc, err := newWorkflowLifecycle(cwd, o.goalFile, stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow verify: %v\n", err)
 		exit(2)
@@ -298,7 +314,7 @@ func runWorkflowClose(args []string, cwd string, stdout, stderr io.Writer, exit 
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "")
+	lc, err := newWorkflowLifecycle(cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow close: %v\n", err)
 		exit(2)
@@ -324,7 +340,7 @@ func runWorkflowStatus(args []string, cwd string, stdout, stderr io.Writer, exit
 		exit(1)
 		return
 	}
-	lc, err := newWorkflowLifecycle(cwd, "")
+	lc, err := newWorkflowLifecycle(cwd, "", stderr)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: workflow status: %v\n", err)
 		exit(2)
