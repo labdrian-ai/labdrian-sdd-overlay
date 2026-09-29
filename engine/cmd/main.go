@@ -174,7 +174,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    read-only: prints, as JSON, what each runtime adapter declares it supports (default --target all);")
 	fmt.Fprintln(os.Stderr, "    every supported or partial claim names the tests that prove it, every partial or unsupported claim")
 	fmt.Fprintln(os.Stderr, "    states its limit, and untested appears only for a runtime that cannot be exercised on this machine")
-	fmt.Fprintln(os.Stderr, "    reads no configuration, HOME, or file; exit 0 success, 2 unknown --target or flag, 1 usage error")
+	fmt.Fprintln(os.Stderr, "    reads no configuration, HOME, or file; exit 0 success, 2 unknown --target value, 1 usage error including an unknown flag")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
 	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
 	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")

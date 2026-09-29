@@ -15,11 +15,13 @@ import (
 // to a test that does not exist. A claim is never upgraded on the strength of
 // a runtime being known to work: only a named, existing test counts.
 //
-// Phase 7 gives Claude Code the full implementation and declares the other
-// three runtimes only, so Codex, Pi, and OpenCode state what is proven today
-// (installation) and an honest unsupported, with the limit written, for the
-// rest. OpenCode is also declared untested: it is not used on this machine
-// and cannot be exercised here.
+// Phase 7 builds the Claude Code implementation task by task, and a Claude
+// Code claim is upgraded in the commit that adds the tests proving it, so the
+// table states only what the tests at that commit prove. Codex, Pi, and
+// OpenCode are declared only: they state what is proven today (installation)
+// and an honest unsupported, with the limit written, for the rest. OpenCode is
+// also declared untested: it is not used on this machine and cannot be
+// exercised here.
 var declarations = []Declaration{
 	{
 		Target: TargetClaude,

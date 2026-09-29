@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"go/parser"
 	"go/token"
+	"io"
 	"os"
 	"reflect"
 	"strconv"
@@ -176,6 +177,75 @@ func TestRuntimeCapabilitiesRefusals(t *testing.T) {
 				t.Errorf("a refused run must print nothing on stdout, got %q", r.stdout)
 			}
 		})
+	}
+}
+
+// TestRuntimeCapabilitiesReportsFailedStdoutWrite covers the branch where the
+// report itself cannot be written (a closed pipe, a full disk). The action must
+// name the failed write, surface its cause, and exit 1 exactly once: a missing
+// return after the exit would let the run fall through to exit 0, which the
+// first-code-wins helpers used elsewhere in this file would hide, so this test
+// records every call. The failing writer is the one the memory plan tests use.
+func TestRuntimeCapabilitiesReportsFailedStdoutWrite(t *testing.T) {
+	var errBuf bytes.Buffer
+	var codes []int
+	runRuntimeCore([]string{"capabilities"}, failingMemoryWriter{}, &errBuf, func(c int) {
+		codes = append(codes, c)
+	})
+	if !reflect.DeepEqual(codes, []int{1}) {
+		t.Errorf("exit calls = %v, want exactly [1]", codes)
+	}
+	for _, want := range []string{"runtime capabilities", "writing report", "broken pipe"} {
+		if !strings.Contains(errBuf.String(), want) {
+			t.Errorf("stderr = %q, want it to contain %q", errBuf.String(), want)
+		}
+	}
+}
+
+// captureUsage returns what usage() prints. usage writes straight to
+// os.Stderr, so the test swaps it for a pipe and drains that pipe
+// concurrently: the help text is several kilobytes, more than some platforms'
+// pipe buffers hold if it were only read afterwards.
+func captureUsage(t *testing.T) string {
+	t.Helper()
+	r, w, err := os.Pipe()
+	if err != nil {
+		t.Fatalf("os.Pipe() = %v", err)
+	}
+	defer r.Close()
+	drained := make(chan string, 1)
+	go func() {
+		data, _ := io.ReadAll(r)
+		drained <- string(data)
+	}()
+	saved := os.Stderr
+	os.Stderr = w
+	func() {
+		defer func() { os.Stderr = saved }()
+		usage()
+	}()
+	w.Close()
+	return <-drained
+}
+
+// TestUsageDocumentsCapabilitiesExitCodes pins the help line for the exit
+// codes of 'runtime capabilities' to what TestRuntimeCapabilitiesRefusals pins
+// the action to do: an unknown flag is a usage error (exit 1), like it is for
+// 'runtime status' and the other runtime actions, and only an unknown --target
+// value exits 2.
+func TestUsageDocumentsCapabilitiesExitCodes(t *testing.T) {
+	const want = "exit 0 success, 2 unknown --target value, 1 usage error including an unknown flag"
+	var line string
+	for _, l := range strings.Split(captureUsage(t), "\n") {
+		if strings.Contains(l, "reads no configuration, HOME, or file") {
+			line = l
+		}
+	}
+	if line == "" {
+		t.Fatal("usage has no line saying what 'runtime capabilities' reads; the test is not looking at the right text")
+	}
+	if !strings.Contains(line, want) {
+		t.Errorf("usage line = %q\nwant it to document the exit codes as %q", line, want)
 	}
 }
 

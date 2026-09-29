@@ -11,11 +11,10 @@ import (
 
 // MaxTextBytes bounds the free text of a declaration: a claim's Detail and a
 // declaration's Untested reason. Both are a sentence or two of human
-// explanation. The projection layer later copies declared evidence limits
-// into a bounded session context, so a declaration must not be able to grow
-// without limit; 512 bytes is generous for a stated limit while keeping the
-// whole table (four targets, eight claims each) far below that context's
-// size.
+// explanation, so 512 bytes is generous for a stated limit. The bound keeps a
+// declaration reviewable at a glance and the printed report small (four
+// targets, eight claims each), and it stops a declaration from growing
+// without limit.
 const MaxTextBytes = 512
 
 // testRefPattern is the format of a test reference: a directory relative to
