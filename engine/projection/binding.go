@@ -4,11 +4,15 @@
 // workflow state of its own, so it never goes stale in a way the workflow's own
 // log does not already reveal.
 //
-// The package is pure Go over the standard library, engine/jsonstrict, and
-// engine/workflow. It starts no process and makes no network call (a static
-// test in engine/runtime pins that), and it keeps nothing in memory between
-// calls: every call reads the disk, so a restarted process sees exactly what
-// the last one wrote.
+// The package also holds the projection itself (context.go): the pure decision
+// of what a session is told about the workflow its repository is bound to, and
+// the parsing and printing of the hook JSON around it.
+//
+// The package is pure Go over the standard library and the engine's own pure
+// packages (jsonstrict, workflow, workflowprofile, memoryscope, capability). It
+// starts no process and makes no network call (a static test in engine/runtime
+// pins that), and it keeps nothing in memory between calls: every call reads the
+// disk, so a restarted process sees exactly what the last one wrote.
 package projection
 
 import (

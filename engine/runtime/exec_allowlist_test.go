@@ -48,6 +48,7 @@ var execImportAllowed = map[string]string{
 var phase7Sources = []string{
 	"capability/*.go",
 	"projection/*.go",
+	"cmd/projection_hook.go",
 	"cmd/runtime_capabilities.go",
 	"cmd/workflow_bind.go",
 	// workflow_provenance.go is a Phase 6 file that now also holds the Phase 7
