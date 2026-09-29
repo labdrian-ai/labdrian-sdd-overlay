@@ -76,6 +76,10 @@
 - **W6** — Phase 6 roadmap row: `implemented; pending user confirmation` with clause evidence and the open profile-retirement policy item; committed with this ledger.
 - **Delivery plan** — about 7,100 authored lines in 15 commits, `stacked-to-main`, one issue and PR per reviewed candidate (each over the ~400-line budget, so `size:exception` each): S1 W1 `357b916`; S2 W2 `68ecef9` `2db4492` `fbc78df` `b783aa9`; S3 W3 `eb21eb5` `be641d6` `c8fa7b6` `6efd643`; S4 W4 `a72249a` `812e835` `1e59c1f`; S5 W5 `db08d52` `34635d7`; S6 docs (roadmap + ledger).
 
+- **Merged** — issues #447–#452 closed; PRs #453 `6fe74fe`, #454 `880ca24`, #455 `17a619c`, #456 `c79915d`, #457 `e62b8c1`, #458 `03e9d24`; post-merge `main` CI success (nine jobs).
+- **Engine redeployed** from `main` `03e9d24` (backup `~/.labdrian-phase6-backup-20260929T135257`); live smoke through the `labdrian` alias: create (profile `odd`) → start → close abandoned; observations recorded `unavailable`; provenance recorded HEAD `03e9d24`.
+- **Phase 6 verified** — user-confirmed 2026-09-29; the roadmap row is flipped in this commit.
+
 ## Next step
 
-Push, issues, stacked PRs, `status:approved` + `size:exception`, and merge on user approval; then the user confirms Phase 6 verified.
+None — feature closed. Open policy item carried forward: a profile retirement policy before any built-in profile is retired. Next roadmap phase: Phase 7 runtime adapters.
