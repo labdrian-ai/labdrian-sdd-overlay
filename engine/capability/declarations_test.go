@@ -159,11 +159,11 @@ func TestClaudeCodeStatuses(t *testing.T) {
 		capability.Installation:      capability.Supported,
 		capability.Projection:        capability.Partial,
 		capability.Dispatch:          capability.Partial,
-		capability.Cancellation:      capability.Unsupported,
+		capability.Cancellation:      capability.Partial,
 		capability.Persistence:       capability.Supported,
 		capability.Restart:           capability.Partial,
 		capability.Authentication:    capability.Unsupported,
-		capability.MemoryEnforcement: capability.Unsupported,
+		capability.MemoryEnforcement: capability.Partial,
 	}
 	d, err := capability.Declare(capability.TargetClaude)
 	if err != nil {
@@ -209,13 +209,36 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 		}
 	}
 
-	// The claims that stay unsupported must not contradict the ones above: the
-	// hook reports a paused or closed workflow and states the memory plan, and
-	// their details say what that is and is not.
-	if detail := claims[capability.Cancellation].Detail; !strings.Contains(detail, "no gate denies any tool") || strings.Contains(detail, "does not change what a session is told") {
-		t.Errorf("cancellation detail %q must say no gate denies a tool, and must not deny that the hook tells a session about a paused or closed workflow", detail)
+	// Cancellation and memory enforcement are partial because the PreToolUse gate
+	// exists and is tested, but the hooks are not installed and the gate is
+	// narrow. Each says what the gate does, and each says where it stops, so a
+	// status alone cannot let the wording drift.
+	for name, want := range map[capability.Capability][]string{
+		capability.Cancellation: {
+			"paused", "PreToolUse gate", "Write, Edit, MultiEdit, and NotebookEdit", "next tool call",
+			"tells the session", "in-flight tool call cannot be interrupted", "Bash is never gated", notInstalled, "restart",
+		},
+		capability.MemoryEnforcement: {
+			"longterm-mem query", "project", "memory plan", "no project",
+			"carries no project", "Engram", "mapping between the plan's sources", "Writes are never blocked", notInstalled, "restart",
+		},
+	} {
+		detail := claims[name].Detail
+		for _, phrase := range want {
+			if !strings.Contains(detail, phrase) {
+				t.Errorf("%s detail %q does not state %q", name, detail, phrase)
+			}
+		}
 	}
-	if detail := claims[capability.MemoryEnforcement].Detail; !strings.Contains(detail, "states the memory plan") || !strings.Contains(detail, "nothing enforces it") || strings.Contains(detail, "nothing projects") {
-		t.Errorf("memory-enforcement detail %q must say the hook states the plan and nothing enforces it", detail)
+	// The old wording, which denied that any gate exists, must be gone.
+	for name, stale := range map[capability.Capability][]string{
+		capability.Cancellation:      {"no gate denies any tool", "Not implemented yet"},
+		capability.MemoryEnforcement: {"nothing enforces it", "Not implemented yet"},
+	} {
+		for _, phrase := range stale {
+			if strings.Contains(claims[name].Detail, phrase) {
+				t.Errorf("%s detail %q still says %q, which the gate contradicts", name, claims[name].Detail, phrase)
+			}
+		}
 	}
 }

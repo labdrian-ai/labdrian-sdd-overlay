@@ -529,14 +529,16 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
     session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
-gentle-ai-overlay projection hook --event UserPromptSubmit
-    Internal hook command (Phase 7): Claude Code is meant to run it before each prompt; a person does
+gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
+    Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit) and before
+    each tool call (PreToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
     ~/.claude/bin/gentle-ai-overlay, and `install-hooks` does not install it into Claude Code
     settings yet, so no session receives its output today: it runs when something feeds it hook JSON,
-    as its tests do. UserPromptSubmit is the only event supported.
-    Purpose: put the workflow the repository is bound to (see `workflow bind`) into the session's
-    context, so a new or restarted session is told the same thing as the last one.
+    as its tests do. UserPromptSubmit and PreToolUse are the events supported.
+    UserPromptSubmit: put the workflow the repository is bound to (see `workflow bind`) into the session's
+    context, so a new or restarted session is told the same thing as the last one. PreToolUse: gate a tool
+    call against that workflow (below).
     Input: the hook JSON on stdin, at most 1 MiB. Only hook_event_name and cwd are read (cwd only when
     absolute, else the process's working directory is used). The session id and the prompt are
     ignored, so the output depends on neither.
@@ -547,8 +549,8 @@ gentle-ai-overlay projection hook --event UserPromptSubmit
     goal id and a short digest, the recorded, current, and next stage, the memory plan (a read-only
     plan: scope, sources, project_id, goal_id, write=none), the dependencies the last event recorded
     as unavailable, and the Claude Code capabilities the engine declares partial or unsupported. A
-    paused workflow is announced as paused, to be advanced only after `workflow resume`; no tool is
-    denied, because nothing gates tools yet. systemMessage is one warning line for the user.
+    paused workflow is announced as paused, to be advanced only after `workflow resume`. systemMessage is
+    one warning line for the user.
     Silent (no output on either stream) when the repository has no binding, the working directory is
     not in a repository, or the input is not a usable hook input. A binding, or a bound workflow, that
     cannot be followed (foreign, malformed, drifted, unavailable, or gone) gives one warning and
@@ -558,9 +560,39 @@ gentle-ai-overlay projection hook --event UserPromptSubmit
     removed, best effort and only if it is still the binding the hook read; the note says whether the
     binding was removed, left alone (another process had changed it), or the removal failed, in which
     case it names `labdrian workflow unbind` and repeats on every prompt until the binding is gone.
-    Read-only otherwise: it never appends to a workflow log or rewrites a binding, starts no process,
-    and makes no network call. Exit 0 always, so it can never block a prompt (it never exits 2), except
-    1 on a command line it does not understand.
+    Read-only otherwise: UserPromptSubmit never appends to a workflow log or rewrites a binding (its one
+    write is removing the binding of a closed workflow, above), starts no process, and makes no network
+    call. Exit 0 always, so it can never block a prompt (it never exits 2), except 1 on a command line
+    it does not understand.
+
+    PreToolUse (the gate): reads the same hook JSON (hook_event_name, cwd, tool_name, and tool_input;
+    everything else is ignored) and is strictly read-only: it never writes or unbinds, not even for a
+    closed workflow (UserPromptSubmit does that). It decides from the binding and the bound workflow:
+      - Paused workflow: Write, Edit, MultiEdit, and NotebookEdit are denied, with a reason that names the
+        workflow and project and the two ways out, `labdrian workflow resume --project <p> --workflow <w>`
+        or `labdrian workflow unbind`. It never denies Bash (a shell command cannot be classified
+        reliably), a read, or any other tool.
+      - Memory gate, for a created, running, or paused workflow: a call to the longterm-mem `query` tool
+        (the MCP name mcp__longterm-mem__query, or a plugin-prefixed mcp__<plugin>_longterm-mem__query) is
+        denied when its `project` argument is missing, not a string, empty, or different from the project
+        of the workflow's memory plan (the profile ceiling the context states; the reason names both
+        projects and says to query the plan's project or unbind). A plan with no project (scope none, the
+        standalone-minimal profile) permits no query at all. It never denies `get`, `promote`, Engram
+        tools, or any write, and it does not check the plan's sources: a plan that omits longterm-mem does
+        not deny a query to its own project.
+      - Everything else is allowed: no binding, a binding or workflow it cannot follow (foreign, malformed,
+        drifted, unavailable, gone), a closed workflow, an unrecognized status, a plan that cannot be
+        computed, or input it cannot use. It never blocks on an unknown state.
+    Output: a denial is exactly one JSON object,
+    {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}},
+    with exit 0 (the JSON decides; exit 2 is never used). An allow prints nothing, or only a
+    {"systemMessage":"..."} warning when the gate had something to check and could not (a memory plan it
+    cannot compute, a query whose input is not an object, a recovered internal error, which also goes to
+    stderr in full); it never prints permissionDecision "allow", which would bypass Claude Code's normal
+    permission flow. It stays silent for a binding or workflow it cannot follow, because it runs on every
+    tool call and UserPromptSubmit already warns once per prompt. An in-flight tool call cannot be
+    interrupted: the gate acts at the next tool call. Like the projection, it does nothing until
+    `install-hooks` installs the hooks and Claude Code is restarted.
 
 overlay --help
     Show this help.
