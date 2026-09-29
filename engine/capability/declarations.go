@@ -86,7 +86,7 @@ var declarations = []Declaration{
 // runtime that Phase 7 declares without implementing: every one unsupported,
 // with the limit written. runtime is the display name used in the sentences.
 func declaredOnlyClaims(runtime string) []Claim {
-	const scope = " Phase 7 implements it for Claude Code only."
+	const scope = " This runtime is declared only: Phase 7 writes no code for it."
 	return []Claim{
 		unsupported(Projection, "No code projects the active workflow (Goal, Profile, stage) into a "+runtime+" session."+scope),
 		unsupported(Dispatch, "Not implemented. The engine never starts sessions by design, and dispatch means projecting the active workflow into an existing session, which does not exist for "+runtime+"."+scope),

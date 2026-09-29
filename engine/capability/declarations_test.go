@@ -138,6 +138,12 @@ func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 			if c.Status != capability.Unsupported {
 				t.Errorf("%s/%s is %s, want unsupported: Phase 7 implements it for Claude Code only", d.Target, c.Capability, c.Status)
 			}
+			// A declaration states only what is true of its own runtime. A
+			// sentence about Claude Code would go stale, or contradict
+			// Claude Code's own claims, whenever those claims change.
+			if strings.Contains(c.Detail, "Claude") {
+				t.Errorf("%s/%s detail mentions another runtime: %q", d.Target, c.Capability, c.Detail)
+			}
 		}
 	}
 }
