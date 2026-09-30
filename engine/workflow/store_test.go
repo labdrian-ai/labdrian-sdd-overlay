@@ -761,14 +761,18 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 		switch {
 		case err == nil:
 			successes++
-		case errors.Is(err, ErrAppendConflict):
+		// The loser is refused one of two ways, depending on timing: it
+		// finds the append lock held (ErrAppendConflict), or it takes the
+		// lock after the winner released it and finds its seq already
+		// stored (ErrStaleSeq). Both leave the log unchanged.
+		case errors.Is(err, ErrAppendConflict), errors.Is(err, ErrStaleSeq):
 			conflicts++
 		default:
-			t.Fatalf("Append() err = %v, want nil or ErrAppendConflict", err)
+			t.Fatalf("Append() err = %v, want nil, ErrAppendConflict, or ErrStaleSeq", err)
 		}
 	}
 	if successes != 1 || conflicts != 1 {
-		t.Fatalf("concurrent Append() successes=%d conflicts=%d, want 1 and 1", successes, conflicts)
+		t.Fatalf("concurrent Append() successes=%d refusals=%d, want 1 and 1", successes, conflicts)
 	}
 
 	loaded, err := s.Load(created.ProjectID, created.WorkflowID)
@@ -844,5 +848,40 @@ func TestStoreReleaseNeverDeletesALockItDoesNotHold(t *testing.T) {
 	}
 	if err := s.Append(started.ProjectID, started.WorkflowID, started); err != nil {
 		t.Fatalf("Append() = %v, want nil (a released lock must allow the next Append)", err)
+	}
+}
+
+// TestStoreAppendOfAnAlreadyStoredSeqIsErrStaleSeq pins the refusal a caller
+// gets when the log advanced past the seq it built its event for: the same
+// outcome the loser of a concurrent append sees once the winner has finished.
+func TestStoreAppendOfAnAlreadyStoredSeqIsErrStaleSeq(t *testing.T) {
+	s := newTestStore(t)
+	created := validCreatedEvent()
+	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
+		t.Fatalf("Append(created) = %v, want nil", err)
+	}
+	createdDigest, err := EventDigest(created)
+	if err != nil {
+		t.Fatalf("EventDigest() = %v, want nil", err)
+	}
+	started := created
+	started.Seq = 1
+	started.PrevDigest = createdDigest
+	started.Kind = KindStarted
+	started.GoalID, started.GoalDigest, started.Profile = "", "", ""
+	if err := s.Append(started.ProjectID, started.WorkflowID, started); err != nil {
+		t.Fatalf("first Append(started) = %v, want nil", err)
+	}
+
+	err = s.Append(started.ProjectID, started.WorkflowID, started)
+	if !errors.Is(err, ErrStaleSeq) {
+		t.Fatalf("second Append(started) err = %v, want ErrStaleSeq", err)
+	}
+	if errors.Is(err, ErrAppendConflict) {
+		t.Fatalf("second Append(started) err = %v, must not be ErrAppendConflict: no append was in progress", err)
+	}
+	loaded, err := s.Load(created.ProjectID, created.WorkflowID)
+	if err != nil || len(loaded.Events) != 2 {
+		t.Fatalf("Load() = %d events, err %v; want 2 events and nil", len(loaded.Events), err)
 	}
 }
