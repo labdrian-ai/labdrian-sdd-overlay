@@ -479,6 +479,20 @@ overlay workflow <verb>
     hand; it never runs the git binary or any other subprocess, and any part it cannot read is
     left empty rather than failing the operation.
 
+gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
+    Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine
+    binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what
+    each runtime adapter declares it supports (default --target all; a single target prints one
+    declaration). A declaration has one claim per capability -- installation, projection, dispatch,
+    cancellation, persistence, restart, authentication, memory-enforcement -- each supported,
+    partial, or unsupported. A supported or partial claim names the tests that prove it as
+    <directory under engine/>:<TestName>, and a guard test verifies every named test exists; a
+    partial or unsupported claim states its limit in "detail". "untested" appears only on a runtime
+    that cannot be exercised on this machine (opencode). The output states what the engine's own
+    tests prove, never what a runtime happened to do: a capability no test proves is declared
+    unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
+    session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
+
 overlay --help
     Show this help.
 ```
