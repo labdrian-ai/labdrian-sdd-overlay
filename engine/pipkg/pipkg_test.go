@@ -228,6 +228,35 @@ func TestPipkgBuild_DoesNotProjectTheApprovalRecord(t *testing.T) {
 	}
 }
 
+// TestPipkgBuild_DoesNotProjectAWritersTemporaryFile pins the second half of the
+// rule pipkg shares with `skills install` (skills.SkipWhenCopying): the temporary file
+// a verb such as `skills approve` leaves in a skill directory while it writes is half
+// of a write, not skill content, and must not be built into the Pi package.
+func TestPipkgBuild_DoesNotProjectAWritersTemporaryFile(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", ".tmp-skills-424242"), "half a record\n")
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "references", ".tmp-skills-7"), "half of another write\n")
+	// A name that is only the prefix is not something a writer makes: it is content.
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "references", ".tmp-skills-"), "content\n")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	built := filepath.Join(destDir, "skills", "pi-skill")
+	for _, gone := range []string{".tmp-skills-424242", filepath.Join("references", ".tmp-skills-7")} {
+		if _, err := os.Stat(filepath.Join(built, gone)); err == nil {
+			t.Errorf("the writer's temporary file %s was built into the Pi package", gone)
+		}
+	}
+	for _, kept := range []string{"SKILL.md", filepath.Join("references", "notes.md"), filepath.Join("references", ".tmp-skills-")} {
+		if _, err := os.Stat(filepath.Join(built, kept)); err != nil {
+			t.Errorf("skill content %q must still be built: %v", kept, err)
+		}
+	}
+}
+
 func TestPipkgBuild_RejectsSymlinks(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")

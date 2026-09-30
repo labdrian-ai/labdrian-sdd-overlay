@@ -268,6 +268,39 @@ func TestSkillsLock_ProjectVerbsHonourARealDirectoryLockAndCreateNoFileForIt(t *
 	}
 }
 
+// project-status is a reader of the project: it runs while another reader holds the
+// directory, and it is refused, exit 2, while a verb that writes the project holds it.
+func TestSkillsLock_ProjectStatusSharesTheProjectWithReadersAndWaitsForWriters(t *testing.T) {
+	shortWait(t)
+	w := newLockWorld(t)
+	root := filepath.Join(t.TempDir(), "project")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if r := w.run("project-register", w.registerArgs(t, root)...); r.code != 0 {
+		t.Fatalf("project-register: exit %d, stderr %q", r.code, r.stderr)
+	}
+	status := []string{"--project-root", root, "tidy-worktree"}
+
+	reader, err := filelock.AcquireDir(root, filelock.Options{Mode: filelock.Shared})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if r := w.run("project-status", status...); r.code != 0 || !strings.Contains(r.stdout, "owner:agent") {
+		t.Errorf("project-status beside another reader: exit %d, stdout %q, stderr %q", r.code, r.stdout, r.stderr)
+	}
+	reader()
+
+	writer, err := filelock.AcquireDir(root, filelock.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer writer()
+	if r := w.run("project-status", status...); r.code != skills.ExitBusy || r.stdout != "" || !strings.Contains(r.stderr, "in progress") {
+		t.Errorf("project-status while a writer holds the project: exit %d, stdout %q, stderr %q, want exit 2 and nothing on stdout", r.code, r.stdout, r.stderr)
+	}
+}
+
 // A working directory reached through a symlink is the same project: the lock is
 // on the directory, whichever way it is named.
 func TestSkillsLock_AProjectRootReachedThroughASymlinkIsTheSameLock(t *testing.T) {

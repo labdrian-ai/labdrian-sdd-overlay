@@ -49,10 +49,23 @@ type InstallInput struct {
 	Skills     []InstallSkill
 	LockData   []byte
 	LockExists bool
+	// Verb names the verb in the refusals: "install", which is the default, or
+	// "adopt".
+	Verb string
 
 	ReadFile    func(string) ([]byte, error)
 	Stat        func(string) (fs.FileInfo, error)
 	ResolvePath func(string) (string, error)
+	// ReadDir lists a directory. Only adopt needs it, to prove that a directory holds
+	// the source and nothing else.
+	ReadDir func(string) ([]fs.DirEntry, error)
+}
+
+func (in InstallInput) verb() string {
+	if in.Verb == "" {
+		return "install"
+	}
+	return in.Verb
 }
 
 // InstallOutcome is what the plan does to one skill.
@@ -74,6 +87,103 @@ type InstallPlan struct {
 	// Dirs are the skill directories the plan touches, absolute: after a removal,
 	// the directories it leaves empty inside them are pruned, and only those.
 	Dirs []string
+	// Notes are things worth telling the person that are not refusals.
+	Notes []string
+}
+
+// planContext is what install and adopt both establish before they look at a skill:
+// the project root, the shared containment rules, and the lock as it is.
+type planContext struct {
+	in          InstallInput
+	root        string
+	resolver    RegisterInput
+	lock        ProjectLock
+	procedural  map[string]bool
+	recordIndex map[string]int
+}
+
+// newPlanContext checks the input and parses the lock. A problem here is a refusal
+// of the whole verb.
+func newPlanContext(in InstallInput) (*planContext, []string) {
+	verb := in.verb()
+	if in.ReadFile == nil || in.Stat == nil || in.ResolvePath == nil {
+		return nil, []string{fmt.Sprintf("skills %s: the planner was given no filesystem probes", verb)}
+	}
+	if !filepath.IsAbs(in.ProjectRoot) {
+		return nil, []string{fmt.Sprintf("skills %s: the project directory %q is not an absolute path", verb, in.ProjectRoot)}
+	}
+	root := filepath.Clean(in.ProjectRoot)
+	c := &planContext{in: in, root: root, resolver: RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}, lock: ProjectLock{Version: 1}}
+	if in.LockExists {
+		parsed, err := ParseProjectLock(in.LockData)
+		if err != nil {
+			return nil, []string{fmt.Sprintf("skills %s: the project lock %s cannot be read, so nothing was changed and the lock was left as it is: %v", verb, ProjectLockRelPath, err)}
+		}
+		c.lock = parsed
+	}
+	c.procedural = make(map[string]bool, len(c.lock.Skills))
+	for _, e := range c.lock.Skills {
+		c.procedural[e.ID] = true
+	}
+	c.recordIndex = make(map[string]int, len(c.lock.Installs))
+	for i, r := range c.lock.Installs {
+		c.recordIndex[r.ID] = i
+	}
+	return c, nil
+}
+
+// record is the install record of id, or nil.
+func (c *planContext) record(id string) *ProjectInstallEntry {
+	if i, ok := c.recordIndex[id]; ok {
+		return &c.lock.Installs[i]
+	}
+	return nil
+}
+
+// checkSkill refuses, on the verb's behalf, a skill neither verb may touch: one the
+// procedural verbs own, or one with nothing to install.
+func (c *planContext) checkSkill(sk InstallSkill, refuse func(string, ...any)) bool {
+	if c.procedural[sk.ID] {
+		refuse("%s is registered in the project lock as a procedural skill, written by project-register; %s does not touch it", sk.ID, c.in.verb())
+		return false
+	}
+	if len(sk.Files) == 0 {
+		refuse("skill %s has no files to install (its source directory holds nothing install copies)", sk.ID)
+		return false
+	}
+	return true
+}
+
+// desiredRecord is the install record the source implies: every file, with the digest
+// of the bytes the source holds.
+func desiredRecord(sk InstallSkill) ProjectInstallEntry {
+	desired := ProjectInstallEntry{ID: sk.ID}
+	for _, f := range sk.Files {
+		desired.Files = append(desired.Files, ProjectInstallFile{Path: f.Rel, SHA256: HashSkill(f.Data)})
+	}
+	sort.Slice(desired.Files, func(i, j int) bool { return desired.Files[i].Path < desired.Files[j].Path })
+	return desired
+}
+
+// lockWrite is the write of the project lock with the given install records, the
+// commit marker of the plan.
+func (c *planContext) lockWrite(installs []ProjectInstallEntry) (ProjectWrite, []string) {
+	verb := c.in.verb()
+	lock := c.lock
+	lock.Installs = installs
+	lockData, err := SerializeProjectLock(lock)
+	if err != nil {
+		return ProjectWrite{}, []string{fmt.Sprintf("skills %s: %v", verb, err)}
+	}
+	lockAbs, _, err := resolveWritePath(c.resolver, c.root, ProjectLockRelPath)
+	if err != nil {
+		return ProjectWrite{}, []string{fmt.Sprintf("skills %s: destination %s: %v", verb, ProjectLockRelPath, err)}
+	}
+	w := ProjectWrite{Rel: ProjectLockRelPath, Abs: lockAbs, Data: lockData, Mode: ProjectFileMode}
+	if c.in.LockExists {
+		w.Backup = cloneProjectBytes(c.in.LockData)
+	}
+	return w, nil
 }
 
 // PlanInstallOwnership decides an install. It returns either a plan, or the reasons
@@ -96,63 +206,27 @@ type InstallPlan struct {
 //   - An id that is a procedural skill in the same lock: refused; project-register
 //     owns it.
 func PlanInstallOwnership(in InstallInput) (InstallPlan, []string) {
+	c, problems := newPlanContext(in)
+	if problems != nil {
+		return InstallPlan{}, problems
+	}
 	var refusals []string
 	refuse := func(format string, a ...any) {
-		refusals = append(refusals, fmt.Sprintf("skills install: "+format, a...))
-	}
-
-	if in.ReadFile == nil || in.Stat == nil || in.ResolvePath == nil {
-		return InstallPlan{}, []string{"skills install: the planner was given no filesystem probes"}
-	}
-	if !filepath.IsAbs(in.ProjectRoot) {
-		return InstallPlan{}, []string{fmt.Sprintf("skills install: the project directory %q is not an absolute path", in.ProjectRoot)}
-	}
-	root := filepath.Clean(in.ProjectRoot)
-	resolver := RegisterInput{ProjectRoot: root, ResolvePath: in.ResolvePath}
-
-	lock := ProjectLock{Version: 1}
-	if in.LockExists {
-		parsed, err := ParseProjectLock(in.LockData)
-		if err != nil {
-			return InstallPlan{}, []string{fmt.Sprintf("skills install: the project lock %s cannot be read, so nothing was installed and the lock was left as it is: %v", ProjectLockRelPath, err)}
-		}
-		lock = parsed
-	}
-	procedural := make(map[string]bool, len(lock.Skills))
-	for _, e := range lock.Skills {
-		procedural[e.ID] = true
-	}
-	recordIndex := make(map[string]int, len(lock.Installs))
-	for i, r := range lock.Installs {
-		recordIndex[r.ID] = i
+		refusals = append(refusals, fmt.Sprintf("skills %s: "+format, append([]any{in.verb()}, a...)...))
 	}
 
 	plan := InstallPlan{}
-	installs := append([]ProjectInstallEntry(nil), lock.Installs...)
+	installs := append([]ProjectInstallEntry(nil), c.lock.Installs...)
 	recordsChanged := false
 
 	for _, sk := range in.Skills {
-		if procedural[sk.ID] {
-			refuse("%s is registered in the project lock as a procedural skill, written by project-register; install does not touch it", sk.ID)
+		if !c.checkSkill(sk, refuse) {
 			continue
 		}
-		if len(sk.Files) == 0 {
-			refuse("skill %s has no files to install (its source directory holds nothing install copies)", sk.ID)
-			continue
-		}
+		desired := desiredRecord(sk)
+		record := c.record(sk.ID)
 
-		desired := ProjectInstallEntry{ID: sk.ID}
-		for _, f := range sk.Files {
-			desired.Files = append(desired.Files, ProjectInstallFile{Path: f.Rel, SHA256: HashSkill(f.Data)})
-		}
-		sort.Slice(desired.Files, func(i, j int) bool { return desired.Files[i].Path < desired.Files[j].Path })
-
-		var record *ProjectInstallEntry
-		if i, ok := recordIndex[sk.ID]; ok {
-			record = &lock.Installs[i]
-		}
-
-		writes, deletes, dirs, ok := planSkill(in, resolver, root, sk, record, &refusals)
+		writes, deletes, dirs, ok := planSkill(c, sk, record, &refusals)
 		if !ok {
 			continue
 		}
@@ -169,7 +243,7 @@ func PlanInstallOwnership(in InstallInput) (InstallPlan, []string) {
 			if record == nil {
 				installs = append(installs, desired)
 			} else {
-				installs[recordIndex[sk.ID]] = desired
+				installs[c.recordIndex[sk.ID]] = desired
 			}
 		}
 		plan.Skills = append(plan.Skills, InstallOutcome{ID: sk.ID, Status: status})
@@ -181,21 +255,12 @@ func PlanInstallOwnership(in InstallInput) (InstallPlan, []string) {
 	if len(refusals) > 0 {
 		return InstallPlan{}, refusals
 	}
-
 	if recordsChanged {
-		lock.Installs = installs
-		lockData, err := SerializeProjectLock(lock)
-		if err != nil {
-			return InstallPlan{}, []string{fmt.Sprintf("skills install: %v", err)}
+		lock, problems := c.lockWrite(installs)
+		if problems != nil {
+			return InstallPlan{}, problems
 		}
-		lockAbs, _, err := resolveWritePath(resolver, root, ProjectLockRelPath)
-		if err != nil {
-			return InstallPlan{}, []string{fmt.Sprintf("skills install: destination %s: %v", ProjectLockRelPath, err)}
-		}
-		plan.Lock = ProjectWrite{Rel: ProjectLockRelPath, Abs: lockAbs, Data: lockData, Mode: ProjectFileMode}
-		if in.LockExists {
-			plan.Lock.Backup = cloneProjectBytes(in.LockData)
-		}
+		plan.Lock = lock
 	}
 	return plan, nil
 }
@@ -220,10 +285,11 @@ func sameRecord(a, b ProjectInstallEntry) bool {
 
 // planSkill plans one skill across the runtime directories. ok is false when it
 // added refusals; its writes and deletes must then be dropped.
-func planSkill(in InstallInput, resolver RegisterInput, root string, sk InstallSkill, record *ProjectInstallEntry, refusals *[]string) (writes, deletes []ProjectWrite, dirs []string, ok bool) {
+func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, refusals *[]string) (writes, deletes []ProjectWrite, dirs []string, ok bool) {
+	in, resolver, root := c.in, c.resolver, c.root
 	before := len(*refusals)
 	refuse := func(format string, a ...any) {
-		*refusals = append(*refusals, fmt.Sprintf("skills install: "+format, a...))
+		*refusals = append(*refusals, fmt.Sprintf("skills %s: "+format, append([]any{in.verb()}, a...)...))
 	}
 
 	recorded := map[string]string{}

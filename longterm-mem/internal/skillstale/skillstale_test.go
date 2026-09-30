@@ -44,6 +44,46 @@ func TestParseProjectLock_ReadsSharedFixture(t *testing.T) {
 	}
 }
 
+// `skills install` records the registry skills it installed in the same lock file,
+// in an "installs" array beside the procedural "skills". The detector looks only at
+// the procedural skills, but it must still read a lock that has the records: a
+// project that ran `skills install` would otherwise lose its staleness report.
+func TestParseProjectLock_ToleratesTheInstallRecordsOfSkillsInstall(t *testing.T) {
+	data := []byte(`{
+  "version": 1,
+  "skills": [
+    {"id": "tidy-worktree", "provenance": "procedural", "candidate": "procedural/candidates/repeated-success/tidy-worktree",
+     "sha256": "` + strings.Repeat("a", 64) + `", "revision": 1,
+     "targets": [".claude/skills/tidy-worktree/SKILL.md", ".agents/skills/tidy-worktree/SKILL.md"]}
+  ],
+  "installs": [
+    {"id": "pdf", "files": [{"path": "SKILL.md", "sha256": "` + strings.Repeat("b", 64) + `"}]}
+  ]
+}`)
+
+	lock, err := skillstale.ParseProjectLock(data)
+	if err != nil {
+		t.Fatalf("ParseProjectLock refused a lock with install records: %v", err)
+	}
+	if len(lock.Skills) != 1 || lock.Skills[0].ID != "tidy-worktree" {
+		t.Errorf("procedural skills = %+v, want tidy-worktree only", lock.Skills)
+	}
+}
+
+// Tolerating the one field install writes does not make the parser lenient: any
+// other unknown field is still refused.
+func TestParseProjectLock_StillRefusesOtherUnknownFields(t *testing.T) {
+	for name, data := range map[string]string{
+		"at the top":   `{"version": 1, "skills": [], "installs": [], "extra": true}`,
+		"in an entry":  `{"version": 1, "skills": [{"id": "a", "provenance": "p", "candidate": "c", "sha256": "s", "revision": 1, "targets": [], "note": "x"}]}`,
+		"a misspelled": `{"version": 1, "skills": [], "install": []}`,
+	} {
+		if _, err := skillstale.ParseProjectLock([]byte(data)); err == nil {
+			t.Errorf("%s: the lock was accepted", name)
+		}
+	}
+}
+
 func TestDetect_ReportsStaleSignalsAndDoesNotMutate(t *testing.T) {
 	fixture := makeFixture(t)
 	beforeTree := snapshotTree(t, fixture.root)
