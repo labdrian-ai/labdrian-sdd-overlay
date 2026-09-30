@@ -37,14 +37,15 @@ func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() st
 	// a second call could return another directory, and a directory that cannot be
 	// named cannot be locked. A verb that cannot name where it writes does not run.
 	installRoot := ""
-	if verb == "install" {
+	if verb == "install" || verb == "adopt" {
 		cwd, err := installCwd()
 		if err != nil || !filepath.IsAbs(cwd) {
 			reason := fmt.Sprintf("%q is not an absolute path", cwd)
 			if err != nil {
 				reason = err.Error()
 			}
-			fmt.Fprintf(stderr, "error: skills install: cannot resolve the project directory to install into (%s); nothing was locked and nothing was installed\n", reason)
+			did := map[string]string{"install": "installed", "adopt": "adopted"}[verb]
+			fmt.Fprintf(stderr, "error: skills %s: cannot resolve the project directory it works in (%s); nothing was locked and nothing was %s\n", verb, reason, did)
 			exit(1)
 			return
 		}
@@ -114,6 +115,10 @@ func dispatchVerb(verb string, args []string, installRoot string, readFile readF
 		env := productionInstallEnv(readFile, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
 		renderInstall(env, args, stdout, stderr, exit)
+	case "adopt":
+		env := productionInstallEnv(readFile, func() (string, error) { return installRoot, nil })
+		env.readProject = readFile
+		renderAdopt(env, args, stdout, stderr, exit)
 	case "add":
 		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
 	case "remove":
@@ -133,10 +138,10 @@ func dispatchVerb(verb string, args []string, installRoot string, readFile readF
 	case "project-retire":
 		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "":
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
 		exit(1)
 	default:
-		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)\n", verb)
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)\n", verb)
 		exit(1)
 	}
 }

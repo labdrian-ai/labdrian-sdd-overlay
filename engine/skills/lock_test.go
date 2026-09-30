@@ -611,7 +611,7 @@ func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
 func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	f := newLockFixture(t).withSkills(t, "newbie")
 	before := snapshotFiles(t, f.reg, f.man)
-	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "install"} {
+	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "install", "adopt"} {
 		r := runAt(verb, append([]string{"newbie"}, f.flags()...), os.ReadFile, fixedClock(approveFixedNow), nil)
 		if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, "no lock is configured") {
 			t.Errorf("%s: exit %d, stdout %q, stderr %q, want exit 1 and a 'no lock is configured' refusal", verb, r.code, r.stdout, r.stderr)

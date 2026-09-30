@@ -175,6 +175,7 @@ func TestLockRequestsAreAlwaysOverlayBeforeProject(t *testing.T) {
 	cases := map[string][]string{
 		"add": nil, "remove": nil, "sync-manifest": nil, "approve": nil, "validate": nil,
 		"install":          f.installArgs(),
+		"adopt":            f.installArgs(),
 		"project-register": {"--project-root", root},
 		"project-revise":   {"--project-root", root},
 		"project-retire":   {"--project-root", root},
@@ -185,7 +186,7 @@ func TestLockRequestsAreAlwaysOverlayBeforeProject(t *testing.T) {
 	for verb, args := range cases {
 		seenDir := false
 		installRoot := ""
-		if verb == "install" {
+		if verb == "install" || verb == "adopt" {
 			installRoot = f.project
 		}
 		requests := lockRequestsFor(verb, args, installRoot)

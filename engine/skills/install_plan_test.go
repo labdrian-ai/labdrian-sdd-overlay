@@ -65,6 +65,7 @@ func (f *ownFixture) input(skills ...InstallSkill) InstallInput {
 		ReadFile:    os.ReadFile,
 		Stat:        os.Stat,
 		ResolvePath: resolvePathKeepingMissing,
+		ReadDir:     os.ReadDir,
 	}
 	data, err := os.ReadFile(filepath.Join(f.root, filepath.FromSlash(ProjectLockRelPath)))
 	if err == nil {

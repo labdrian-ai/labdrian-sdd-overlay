@@ -88,10 +88,11 @@ func isWriterTempFile(d fs.DirEntry) bool {
 // installEnv is everything install and adopt touch outside their own arguments, so
 // that a test can replace any of it. Production wires the real filesystem.
 type installEnv struct {
-	readRegistry readFileFn                         // the registry
-	readProject  readFileFn                         // the project lock, and anything else in the project
-	cwd          func() (string, error)             // the directory to install into
-	stat         func(string) (fs.FileInfo, error)  // the project's paths
+	readRegistry readFileFn                        // the registry
+	readProject  readFileFn                        // the project lock, and anything else in the project
+	cwd          func() (string, error)            // the directory to install into
+	stat         func(string) (fs.FileInfo, error) // the project's paths
+	readDir      func(string) ([]fs.DirEntry, error)
 	resolve      func(string) (string, error)       // symlink resolution, for containment
 	fsys         projectFS                          // the writes
 	readSource   func(string) ([]sourceFile, error) // a skill's source tree
@@ -105,6 +106,7 @@ func productionInstallEnv(readRegistry readFileFn, cwd func() (string, error)) i
 		readProject:  os.ReadFile,
 		cwd:          cwd,
 		stat:         os.Stat,
+		readDir:      os.ReadDir,
 		resolve:      resolvePathKeepingMissing,
 		fsys:         osProjectFS{},
 		readSource:   readSkillSource,
@@ -246,31 +248,50 @@ func (c installContext) input(env installEnv) InstallInput {
 		ReadFile:    env.readProject,
 		Stat:        env.stat,
 		ResolvePath: env.resolve,
+		ReadDir:     env.readDir,
 	}
 }
 
 func renderInstall(env installEnv, args []string, stdout, stderr io.Writer, exit func(int)) {
-	ctx, ok := prepareInstall("install", env, args, stdout, stderr, exit)
+	renderPlanned("install", "installed", PlanInstallOwnership, env, args, stdout, stderr, exit)
+}
+
+// renderAdopt is `skills adopt`: the same arguments as install, and the same
+// ownership rules, used to record what is already there instead of writing it.
+func renderAdopt(env installEnv, args []string, stdout, stderr io.Writer, exit func(int)) {
+	renderPlanned("adopt", "adopted", PlanAdopt, env, args, stdout, stderr, exit)
+}
+
+// renderPlanned runs a verb that is a plan followed by its execution: a refusal
+// prints every reason and writes nothing; otherwise the plan is executed all or
+// nothing and each skill's outcome is printed, then the notes.
+func renderPlanned(verb, did string, plan func(InstallInput) (InstallPlan, []string), env installEnv, args []string, stdout, stderr io.Writer, exit func(int)) {
+	ctx, ok := prepareInstall(verb, env, args, stdout, stderr, exit)
 	if !ok {
 		return
 	}
 
-	plan, refusals := PlanInstallOwnership(ctx.input(env))
+	in := ctx.input(env)
+	in.Verb = verb
+	p, refusals := plan(in)
 	if len(refusals) > 0 {
 		for _, r := range refusals {
 			fmt.Fprintf(stderr, "error: %s\n", r)
 		}
-		fmt.Fprintln(stderr, "error: skills install: refused, so nothing was installed")
+		fmt.Fprintf(stderr, "error: skills %s: refused, so nothing was %s\n", verb, did)
 		exit(1)
 		return
 	}
-	if err := ExecuteInstallPlan(plan, ctx.root, env.fsys, stderr); err != nil {
+	if err := ExecuteInstallPlan(p, ctx.root, env.fsys, stderr); err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
 		return
 	}
-	for _, o := range plan.Skills {
+	for _, o := range p.Skills {
 		fmt.Fprintf(stdout, "%s: %s\n", o.Status, o.ID)
+	}
+	for _, n := range p.Notes {
+		fmt.Fprintf(stdout, "note: %s\n", n)
 	}
 	exit(0)
 }
