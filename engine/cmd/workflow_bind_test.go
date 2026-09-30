@@ -107,6 +107,24 @@ func mustBindOK(t *testing.T, cwd, project, wf string) bindingReportJSON {
 	return decodeBindingReport(t, r)
 }
 
+// driftWorkflowLog changes the first event of the workflow log at path, so the
+// second event's prev_digest no longer matches and the log classifies as
+// drifted. The log must hold at least two events.
+func driftWorkflowLog(t *testing.T, path string) {
+	t.Helper()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tampered := strings.Replace(string(data), `"at":"20`, `"at":"19`, 1)
+	if tampered == string(data) {
+		t.Fatal("test bug: the first event has no timestamp to change")
+	}
+	if err := os.WriteFile(path, []byte(tampered), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
 // --- command line ----------------------------------------------------------
 
 func TestWorkflowVerbErrorsNameTheBindingVerbs(t *testing.T) {
@@ -196,19 +214,7 @@ func TestWorkflowBindRefusesAWorkflowThatCannotBeBound(t *testing.T) {
 		}, []string{"--project", "proj-1", "--workflow", "wf-1"}, "malformed", ""},
 		{"a drifted workflow log", func(t *testing.T, e bindEnv) {
 			e.workflowInStatus(t, "proj-1", "wf-1", "running")
-			path := e.workflowLog("proj-1", "wf-1")
-			data, err := os.ReadFile(path)
-			if err != nil {
-				t.Fatal(err)
-			}
-			// Change the first event, so the second one's prev_digest no longer matches.
-			tampered := strings.Replace(string(data), `"at":"20`, `"at":"19`, 1)
-			if tampered == string(data) {
-				t.Fatal("test bug: the first event has no timestamp to change")
-			}
-			if err := os.WriteFile(path, []byte(tampered), 0o600); err != nil {
-				t.Fatal(err)
-			}
+			driftWorkflowLog(t, e.workflowLog("proj-1", "wf-1"))
 		}, []string{"--project", "proj-1", "--workflow", "wf-1"}, "drifted", ""},
 		{"an unsafe project id", func(t *testing.T, e bindEnv) {}, []string{"--project", "../escape", "--workflow", "wf-1"}, "project_id", "not owned"},
 		{"an unsafe workflow id", func(t *testing.T, e bindEnv) {}, []string{"--project", "proj-1", "--workflow", ".hidden"}, "workflow_id", "not owned"},
@@ -348,6 +354,13 @@ func TestWorkflowBindReplacesAStaleBinding(t *testing.T) {
 		{"the bound workflow log became malformed", func(t *testing.T, e bindEnv) {
 			writeFixtureFile(t, e.workflowLog("proj-1", "wf-1"), "not json\n")
 		}},
+		{"the bound workflow log drifted", func(t *testing.T, e bindEnv) {
+			driftWorkflowLog(t, e.workflowLog("proj-1", "wf-1"))
+			// The case must exercise the drifted classification, not another one.
+			if got := loadWorkflow("proj-1", "wf-1").Classification; got != workflow.ClassificationDrifted {
+				t.Fatalf("test bug: the tampered log classifies as %q, want drifted", got)
+			}
+		}},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -403,6 +416,52 @@ func TestWorkflowBindDoesNotReplaceABindingWhoseWorkflowCannotBeRead(t *testing.
 	after := loadStoredBinding(t, e.repo)
 	if after.Classification != before.Classification || after.Binding != before.Binding {
 		t.Fatalf("stored binding changed from %+v to %+v, want it untouched", before, after)
+	}
+}
+
+// TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale is the
+// race between "the bound workflow is closed, so its binding is stale" and the
+// replacement: another process binds a live workflow in between. The seam runs
+// exactly there. bind must leave that fresh binding alone, exit 2, and tell the
+// user to look at what is bound now and retry, rather than move the repository
+// off a workflow somebody just chose.
+func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *testing.T) {
+	e := newBindEnv(t)
+	e.workflowInStatus(t, "proj-1", "wf-1", "running")
+	e.workflowInStatus(t, "proj-2", "wf-9", "running")
+	e.workflowInStatus(t, "proj-3", "wf-3", "running")
+	mustBindOK(t, e.repo, "proj-1", "wf-1")
+	phase6MustExitZero(t, "close", []string{"close", "--project", "proj-1", "--workflow", "wf-1", "--outcome", "abandoned", "--reason", "done with it"}, e.dir)
+
+	seamRuns := 0
+	beforeStaleReplace = func() {
+		seamRuns++
+		store, err := projection.NewStore()
+		if err != nil {
+			t.Errorf("NewStore() = %v", err)
+			return
+		}
+		// Another process binds a live workflow after the verdict "stale".
+		if err := store.Bind(mustRepoKey(t, e.repo), "proj-3", "wf-3", time.Now(), true); err != nil {
+			t.Errorf("Bind() from the other process = %v", err)
+		}
+	}
+	t.Cleanup(func() { beforeStaleReplace = nil })
+
+	r := runWorkflowTest([]string{"bind", "--project", "proj-2", "--workflow", "wf-9"}, e.repo)
+	if seamRuns != 1 {
+		t.Fatalf("the seam ran %d times, want once: the closed binding was not judged stale", seamRuns)
+	}
+	if r.code != 2 || r.stdout != "" {
+		t.Fatalf("code=%d stdout=%q stderr=%q, want exit 2 and no stdout", r.code, r.stdout, r.stderr)
+	}
+	for _, want := range []string{"changed", "wf-3", "'workflow binding'", "retry"} {
+		if !strings.Contains(r.stderr, want) {
+			t.Errorf("stderr = %q, want it to mention %q", r.stderr, want)
+		}
+	}
+	if loaded := loadStoredBinding(t, e.repo); loaded.Classification != projection.ClassificationOwned || loaded.Binding.WorkflowID != "wf-3" || loaded.Binding.ProjectID != "proj-3" {
+		t.Fatalf("stored binding = %+v, want the fresh binding to proj-3/wf-3 left alone", loaded)
 	}
 }
 
@@ -787,10 +846,20 @@ func TestWorkflowBindingLeavesTheWorkflowLogAlone(t *testing.T) {
 
 // --- help ------------------------------------------------------------------
 
+// bindingExitCodesText is what the engine's help says the binding verbs' exit
+// codes mean. Exit 2 covers every refusal a binding verb can make: it names the
+// binding file states that are refused (not ours, or unusable), and the two
+// refusals that ask the user to retry.
+const bindingExitCodesText = "exit 0 success, 2 refused/invalid (no git repository, a workflow that cannot be bound, " +
+	"a binding file that is not ours or cannot be used (foreign, malformed, unavailable), " +
+	"another bind or unbind in progress (busy), a binding another process changed meanwhile), 1 usage error"
+
 // TestUsageDocumentsTheBindingVerbs pins that the engine's help lists the three
 // binding verbs with their arguments and says what their exit codes mean.
 func TestUsageDocumentsTheBindingVerbs(t *testing.T) {
-	text := captureUsage(t)
+	// Compared with line breaks and indentation collapsed, so the help may wrap
+	// a sentence without breaking the pin.
+	text := strings.Join(strings.Fields(captureUsage(t)), " ")
 	for _, want := range []string{
 		"engine workflow bind --project <id> --workflow <id>",
 		"engine workflow unbind",
@@ -798,7 +867,7 @@ func TestUsageDocumentsTheBindingVerbs(t *testing.T) {
 		"$XDG_STATE_HOME/labdrian/bindings/",
 		"SHA-256 of the git common directory",
 		`prints {"removed": true|false}`,
-		"exit 0 success, 2 refused/invalid (no git repository, a workflow that cannot be bound, a binding file that is not ours), 1 usage error",
+		bindingExitCodesText,
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("usage does not contain %q", want)

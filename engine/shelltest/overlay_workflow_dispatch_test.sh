@@ -107,8 +107,27 @@ case_help_lists_the_binding_verbs() {
   fi
 }
 
+case_help_states_every_binding_refusal() {
+  local block phrase missing=""
+  block="$(HOME="$work_root" bash "$OVERLAY" --help 2>&1 | awk '/^  workflow <verb>/ { on = 1; next } on && /^  [a-z]/ { exit } on { print }')"
+  # Exit 2 covers every refusal of the binding verbs, not only a binding file
+  # that is not ours: an unusable file, a repository whose lock is taken, and a
+  # binding another process changed. Each phrase sits on one help line.
+  for phrase in "not ours or cannot be used" "(foreign, malformed, unavailable)" "in progress (busy)" "another process changed"; do
+    if [[ "$block" != *"$phrase"* ]]; then
+      missing="$missing [$phrase]"
+    fi
+  done
+  if [[ -z "$missing" ]]; then
+    pass "--help states every refusal the binding verbs exit 2 for"
+  else
+    fail "--help leaves out binding refusals from its exit codes" "missing:$missing"
+  fi
+}
+
 case_help_lists_workflow_with_its_own_verbs
 case_help_lists_the_binding_verbs
+case_help_states_every_binding_refusal
 case_forwards_verb_and_args_verbatim
 case_preserves_engine_exit_status
 case_refuses_when_engine_missing

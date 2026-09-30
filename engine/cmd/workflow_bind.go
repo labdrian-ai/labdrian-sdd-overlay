@@ -13,9 +13,16 @@ package main
 // observeProvenance does. binding is strictly read-only.
 //
 // Exit codes are those of the other workflow verbs: 0 success, 2 refused or
-// invalid (no repository to key on, a workflow that cannot be bound, a binding
-// file that is not ours), 1 usage error (including an unknown flag) or a failed
-// write of the output.
+// invalid, 1 usage error (including an unknown flag) or a failed write of the
+// output. Exit 2 covers every refusal a binding verb makes:
+//
+//   - no repository to key on, or a workflow that cannot be bound;
+//   - a binding file that is not ours or cannot be used: foreign, malformed, or
+//     unavailable (never overwritten or removed);
+//   - another bind or unbind in progress for the repository (busy), which can
+//     be retried;
+//   - a binding that another process changed while the verb was running, which
+//     is reported and left alone: run 'workflow binding' and retry.
 
 import (
 	"encoding/json"
@@ -33,6 +40,12 @@ import (
 // the binding is keyed by the repository, so without one there is nothing to
 // key on, and guessing from the working directory would bind the wrong thing.
 const errNoRepository = "binding needs a git repository to key on: no .git was found at or above the working directory"
+
+// beforeStaleReplace is a test seam, nil outside tests. runWorkflowBind calls it
+// after it judged the repository's binding stale and before it replaces it: the
+// window in which another process can bind a live workflow, which
+// projection.Store.BindIfUnchanged must then refuse to overwrite.
+var beforeStaleReplace func()
 
 // bindingReportJSON is the CLI's JSON view of a repository's binding, printed
 // by bind (with the binding just made or kept) and by binding. Detail explains
@@ -148,7 +161,9 @@ func loadWorkflow(projectID, workflowID string) workflow.Loaded {
 // workflow that is still active (created, running, or paused), or whose log
 // cannot be read right now (unavailable, so it may be active), is never
 // replaced silently: bind refuses, names the bound workflow, and tells the
-// user to unbind first.
+// user to unbind first. A stale binding is replaced only if it is still the
+// exact binding that was judged stale (projection.Store.BindIfUnchanged): if
+// another process changed it in between, bind exits 2 and leaves it alone.
 func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit func(int)) {
 	project, workflowID, err := parseBindingArgs(args, true)
 	if err != nil {
@@ -188,7 +203,10 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 		refuseBinding(stderr, exit, "bind", "%v", err)
 		return
 	}
-	replace := false
+	// stale is the binding judged stale below, or nil when there is nothing to
+	// replace. The judgment and the replacement are two steps, and the window
+	// between them is closed by replacing only that exact binding.
+	var stale *projection.Binding
 	current, err := bindings.Load(repoKey)
 	if err != nil {
 		refuseBinding(stderr, exit, "bind", "%v", err)
@@ -205,18 +223,32 @@ func runWorkflowBind(args []string, cwd string, stdout, stderr io.Writer, exit f
 			refuseBinding(stderr, exit, "bind", "this repository is bound to workflow %q of project %q, whose log cannot be read (%s), so it may still be active; fix the problem, or run 'workflow unbind' first to bind another", bound.WorkflowID, bound.ProjectID, previous.Detail)
 			return
 		}
-		// The store locks only the replacement below, not this decision: a live
-		// workflow bound by another process in between is overwritten (see projection.Store).
-		replace = true
+		stale = &bound
 	}
 
-	if err := bindings.Bind(repoKey, project, workflowID, time.Now(), replace); err != nil {
-		if errors.Is(err, projection.ErrAlreadyBound) {
-			// The binding changed between the check above and the write.
-			refuseBinding(stderr, exit, "bind", "%v; run 'workflow unbind' first to bind another", err)
-			return
+	var bindErr error
+	if stale != nil {
+		if beforeStaleReplace != nil {
+			beforeStaleReplace()
 		}
-		refuseBinding(stderr, exit, "bind", "%v", err)
+		// Replaces the binding judged stale only if it is still that exact
+		// binding: a live workflow another process bound since is left alone.
+		bindErr = bindings.BindIfUnchanged(repoKey, project, workflowID, time.Now(), *stale)
+	} else {
+		bindErr = bindings.Bind(repoKey, project, workflowID, time.Now(), false)
+	}
+	if bindErr != nil {
+		switch {
+		case errors.Is(bindErr, projection.ErrBindingChanged):
+			// The binding changed after it was judged stale; what is bound now is
+			// not the caller's to overwrite.
+			refuseBinding(stderr, exit, "bind", "%v; run 'workflow binding' to see what is bound now, then retry", bindErr)
+		case errors.Is(bindErr, projection.ErrAlreadyBound):
+			// The binding changed between the check above and the write.
+			refuseBinding(stderr, exit, "bind", "%v; run 'workflow unbind' first to bind another", bindErr)
+		default:
+			refuseBinding(stderr, exit, "bind", "%v", bindErr)
+		}
 		return
 	}
 

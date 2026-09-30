@@ -216,8 +216,11 @@ func commonDir(gitDir string) string {
 // itself for a normal checkout and the directory a linked worktree's commondir
 // file names, so every worktree of one repository, and every symlinked
 // spelling of its path, yields the same key. If the symlinks cannot be
-// resolved (the directory does not exist), the cleaned path is hashed instead,
-// which is still deterministic.
+// resolved for any reason (the directory does not exist, a permission error,
+// a symlink loop), the cleaned path is hashed instead. That is deterministic
+// for a given spelling of the path, but the key then depends on that spelling:
+// two paths to the same repository, one of which cannot be resolved, would get
+// different keys and so different bindings.
 //
 // Like observeProvenance it walks the filesystem by hand, runs no subprocess,
 // and needs an absolute cwd; a relative or empty cwd, no repository above cwd,
