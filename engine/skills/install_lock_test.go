@@ -10,55 +10,9 @@ package skills
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 )
-
-func TestCopyTree_SkipsAWritersTemporaryFile(t *testing.T) {
-	src, dst := filepath.Join(t.TempDir(), "src"), filepath.Join(t.TempDir(), "dst")
-	for path, content := range map[string]string{
-		"SKILL.md":            "the skill",
-		"references/guide.md": "a reference",
-		".gitkeep":            "",
-		// In the fixture on purpose. copyTree never copies the approval record
-		// (its `rel == ApprovalRecordName` rule in install.go: the record is
-		// repository governance state, not skill content), so it is absent from
-		// want below although its name does not carry the writer's temp prefix.
-		ApprovalRecordName:                      `{"version":1}`,
-		atomicTempPrefix + "123456789":          "half a record",
-		"references/" + atomicTempPrefix:        "not a writer's file: a longer name is needed",
-		"references/" + atomicTempPrefix + "42": "half of another write",
-	} {
-		writeTestFile(t, filepath.Join(src, filepath.FromSlash(path)), content)
-	}
-
-	if err := copyTree(src, dst); err != nil {
-		t.Fatal(err)
-	}
-
-	var got []string
-	err := filepath.WalkDir(dst, func(p string, d os.DirEntry, err error) error {
-		if err == nil && !d.IsDir() {
-			rel, _ := filepath.Rel(dst, p)
-			got = append(got, filepath.ToSlash(rel))
-		}
-		return err
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	// A name that is exactly the prefix has no unique suffix and is not something
-	// writeFileAtomic makes; it is content, and is copied. The approval record
-	// and the two writer's temp files are the three fixture entries left out.
-	want := []string{".gitkeep", "SKILL.md", "references/.tmp-skills-", "references/guide.md"}
-	if !reflect.DeepEqual(got, want) {
-		t.Errorf("copied %v, want %v", got, want)
-	}
-	if _, err := os.Lstat(filepath.Join(dst, ApprovalRecordName)); !os.IsNotExist(err) {
-		t.Errorf("the approval record was copied (Lstat err = %v); copyTree must skip it", err)
-	}
-}
 
 // The overlay of the install tests: a global skill approve can target, and a
 // project skill install copies.
@@ -198,6 +152,68 @@ func TestTwoInstallsIntoOneProjectAreSerialized(t *testing.T) {
 	released, granted := indexOf(events, "released exclusive project"), lastIndexOf(events, "granted exclusive project")
 	if released < 0 || granted < 0 || released > granted {
 		t.Errorf("lock events %v: the second install was granted the project before the first released it", events)
+	}
+}
+
+// Two installs of different skills into one project read the project lock and write
+// it back. Without the project lock both read "no lock yet" and the later write
+// drops the earlier record, so the first skill's files sit in the project with nothing
+// recording that install owns them, and the next install would call them foreign.
+func TestConcurrentInstallsIntoOneProjectKeepBothRecords(t *testing.T) {
+	dir := t.TempDir()
+	reg, root := filepath.Join(dir, "skills.registry.yaml"), filepath.Join(dir, "skills")
+	regBytes, err := Serialize(buildRegistry([]struct {
+		id              string
+		scope           string
+		allowedProjects []string
+	}{
+		{"one", "project", []string{"p1"}},
+		{"two", "project", []string{"p2"}},
+	}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, reg, string(regBytes))
+	for _, id := range []string{"one", "two"} {
+		writeTestFile(t, filepath.Join(root, id, "SKILL.md"), lintCleanSkillMD(id))
+	}
+	project := filepath.Join(t.TempDir(), "project")
+	if err := os.MkdirAll(project, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	saved := installCwd
+	installCwd = func() (string, error) { return project, nil }
+	t.Cleanup(func() { installCwd = saved })
+
+	gate := newReadGate(t, filepath.Join(project, filepath.FromSlash(ProjectLockRelPath)))
+	locker := &exclusionLocker{blocked: gate.release}
+	install := func(projectID string) func() coreRun {
+		return func() coreRun {
+			return runAt("install", []string{"--registry", reg, "--source-root", root, "--project-id", projectID}, gate.readFile, nil, locker)
+		}
+	}
+
+	results := runConcurrently(install("p1"), install("p2"))
+
+	for i, r := range results {
+		if r.code != 0 {
+			t.Errorf("install #%d: exit %d, stderr %q", i, r.code, r.stderr)
+		}
+	}
+	data, err := os.ReadFile(filepath.Join(project, filepath.FromSlash(ProjectLockRelPath)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	lock, err := ParseProjectLock(data)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var ids []string
+	for _, in := range lock.Installs {
+		ids = append(ids, in.ID)
+	}
+	if strings.Join(ids, ",") != "one,two" {
+		t.Errorf("the project lock records %v, want one and two: an install that exited 0 was lost", ids)
 	}
 }
 

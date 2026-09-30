@@ -23,57 +23,69 @@ func writeTestFile(t *testing.T, path, content string) {
 	}
 }
 
-func TestExecuteInstall_DoesNotProjectTheApprovalRecord(t *testing.T) {
-	src := filepath.Join(t.TempDir(), "my-skill")
-	dst := filepath.Join(t.TempDir(), ".claude", "skills", "my-skill")
-	writeTestFile(t, filepath.Join(src, "SKILL.md"), "body\n")
-	writeTestFile(t, filepath.Join(src, "references", "notes.md"), "notes\n")
-	writeTestFile(t, filepath.Join(src, ApprovalRecordName), goodRecordJSON("my-skill", abcDigest))
-
+// installedTree runs `skills install` for one skill whose source holds files and
+// returns the project it installed into. The source tree is written to disk as given,
+// the approval record included.
+func installedTree(t *testing.T, files map[string]string) (project string) {
+	t.Helper()
+	overlay, project := t.TempDir(), t.TempDir()
+	for name, content := range files {
+		writeTestFile(t, filepath.Join(overlay, "my-skill", filepath.FromSlash(name)), content)
+	}
 	var out, errBuf bytes.Buffer
-	plan := []CopyOp{{SkillID: "my-skill", Src: src, Dst: dst}}
-	if err := ExecuteInstall(plan, &out, &errBuf); err != nil {
-		t.Fatalf("ExecuteInstall: %v (stderr %q)", err, errBuf.String())
+	code := -1
+	RenderInstallCore(
+		[]string{"--registry", "reg.yaml", "--source-root", overlay, "--project-id", "target-repo"},
+		func(string) ([]byte, error) {
+			return []byte(makeInstallRegistryYAML("my-skill", []string{"target-repo"})), nil
+		},
+		func() (string, error) { return project, nil },
+		&out, &errBuf, func(c int) { code = c },
+	)
+	if code != 0 {
+		t.Fatalf("install: exit %d, stderr %q", code, errBuf.String())
 	}
+	return project
+}
 
-	for _, want := range []string{"SKILL.md", filepath.Join("references", "notes.md")} {
-		if _, err := os.Stat(filepath.Join(dst, want)); err != nil {
-			t.Errorf("skill content %q must still be projected: %v", want, err)
+func TestInstall_DoesNotProjectTheApprovalRecord(t *testing.T) {
+	project := installedTree(t, map[string]string{
+		"SKILL.md":            "body\n",
+		"references/notes.md": "notes\n",
+		ApprovalRecordName:    string(goodRecordJSON("my-skill", abcDigest)),
+	})
+
+	for _, runtime := range []string{".claude", ".agents"} {
+		dst := filepath.Join(project, runtime, "skills", "my-skill")
+		for _, want := range []string{"SKILL.md", filepath.Join("references", "notes.md")} {
+			if _, err := os.Stat(filepath.Join(dst, want)); err != nil {
+				t.Errorf("skill content %q must still be projected into %s: %v", want, runtime, err)
+			}
 		}
-	}
-	if _, err := os.Stat(filepath.Join(dst, ApprovalRecordName)); err == nil {
-		t.Errorf("the approval record must not be projected into %s", dst)
+		if _, err := os.Stat(filepath.Join(dst, ApprovalRecordName)); err == nil {
+			t.Errorf("the approval record must not be projected into %s", dst)
+		}
 	}
 }
 
-func TestExecuteInstall_OnlyTheRootLevelRecordIsSkipped(t *testing.T) {
+func TestInstall_OnlyTheRootLevelRecordIsSkipped(t *testing.T) {
 	// A file that merely shares the record's name deeper in the tree belongs to
 	// the skill's own content and is copied as usual.
-	src := filepath.Join(t.TempDir(), "my-skill")
-	dst := filepath.Join(t.TempDir(), "out")
-	writeTestFile(t, filepath.Join(src, "SKILL.md"), "body\n")
-	writeTestFile(t, filepath.Join(src, "references", ApprovalRecordName), "skill-owned\n")
-
-	var out, errBuf bytes.Buffer
-	if err := ExecuteInstall([]CopyOp{{SkillID: "my-skill", Src: src, Dst: dst}}, &out, &errBuf); err != nil {
-		t.Fatalf("ExecuteInstall: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dst, "references", ApprovalRecordName)); err != nil {
+	project := installedTree(t, map[string]string{
+		"SKILL.md":                         "body\n",
+		"references/" + ApprovalRecordName: "skill-owned\n",
+	})
+	if _, err := os.Stat(filepath.Join(project, ".claude", "skills", "my-skill", "references", ApprovalRecordName)); err != nil {
 		t.Errorf("a nested file sharing the record name is skill content and must be copied: %v", err)
 	}
 }
 
-func TestExecuteInstall_ADirectoryInTheRecordsPlaceIsNotProjectedEither(t *testing.T) {
-	src := filepath.Join(t.TempDir(), "my-skill")
-	dst := filepath.Join(t.TempDir(), "out")
-	writeTestFile(t, filepath.Join(src, "SKILL.md"), "body\n")
-	writeTestFile(t, filepath.Join(src, ApprovalRecordName, "inner.txt"), "not skill content\n")
-
-	var out, errBuf bytes.Buffer
-	if err := ExecuteInstall([]CopyOp{{SkillID: "my-skill", Src: src, Dst: dst}}, &out, &errBuf); err != nil {
-		t.Fatalf("ExecuteInstall: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dst, ApprovalRecordName)); err == nil {
+func TestInstall_ADirectoryInTheRecordsPlaceIsNotProjectedEither(t *testing.T) {
+	project := installedTree(t, map[string]string{
+		"SKILL.md":                        "body\n",
+		ApprovalRecordName + "/inner.txt": "not skill content\n",
+	})
+	if _, err := os.Stat(filepath.Join(project, ".claude", "skills", "my-skill", ApprovalRecordName)); err == nil {
 		t.Errorf("nothing at the record's path may be projected, directory included")
 	}
 }

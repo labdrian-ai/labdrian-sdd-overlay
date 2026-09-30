@@ -111,7 +111,9 @@ func dispatchVerb(verb string, args []string, installRoot string, readFile readF
 	case "validate":
 		RenderValidateCore(args, readFile, ScanSkillFiles, stdout, stderr, exit)
 	case "install":
-		RenderInstallCore(args, readFile, func() (string, error) { return installRoot, nil }, stdout, stderr, exit)
+		env := productionInstallEnv(readFile, func() (string, error) { return installRoot, nil })
+		env.readProject = readFile
+		renderInstall(env, args, stdout, stderr, exit)
 	case "add":
 		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
 	case "remove":
