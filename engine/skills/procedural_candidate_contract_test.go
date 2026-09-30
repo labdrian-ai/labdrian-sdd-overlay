@@ -359,7 +359,7 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 	t.Run("Section10_RuntimeTargetsTableRowsPresent", func(t *testing.T) {
 		for _, required := range []string{
 			"| `.claude/skills/` | Claude Code | verified |",
-			"| `.agents/skills/` | Pi (always, after project trust); Codex (discovery only, on this host) | verified |",
+			"| `.agents/skills/` | Pi (always, after project trust); Codex (discovery and body loading, on this host) | verified |",
 		} {
 			if !strings.Contains(contract, required) {
 				t.Fatalf("contract must contain runtime targets table row starting %q verbatim", required)
@@ -367,10 +367,23 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 		}
 	})
 
-	t.Run("Section10_CodexStatusCellDiscoveryScopedVerbatim", func(t *testing.T) {
-		required := "recorded verdict `PASS`, scoped to discovery of `.agents/skills/<id>/` (name and description exposed in Codex's skill list); loading the skill body is unverified on this host"
-		if !strings.Contains(contract, required) {
-			t.Fatalf("contract must state the scoped Codex verdict verbatim: %q", required)
+	// Updated deliberately with the Phase 8 documentation corrections: the row used to
+	// say Codex body loading was "unverified on this host". It was verified live on
+	// 2026-09-28 (odd/tasks/phase5-closeout.md, C4), so the contract now says that, and
+	// keeps the original discovery-scoped smoke verdict as the history it still is.
+	t.Run("Section10_CodexStatusCellRecordsTheSmokeVerdictAndTheLiveBodyLoading", func(t *testing.T) {
+		for _, required := range []string{
+			"recorded verdict `PASS`, scoped to discovery of `.agents/skills/<id>/` (name and description exposed in Codex's skill list)",
+			"loading the skill body was inconclusive then",
+			"was verified live on 2026-09-28 (Codex 0.148.0)",
+			"answered the exact nonce",
+		} {
+			if !strings.Contains(contract, required) {
+				t.Fatalf("contract must state the Codex verdict history verbatim: %q", required)
+			}
+		}
+		if strings.Contains(contract, "unverified on this host") {
+			t.Fatal("contract still says the Codex skill body is unverified on this host; it was verified live on 2026-09-28")
 		}
 	})
 
@@ -634,6 +647,41 @@ func TestProceduralCandidateContractArtifact(t *testing.T) {
 		const head = "## Acceptance checklist (procedural-skill-registration, executed during `sdd-verify`)"
 		if !strings.Contains(contract, head) {
 			t.Fatalf("contract must contain the registration acceptance checklist heading %q", head)
+		}
+	})
+
+	// Section 12 used to say the promotion procedure added "no new approval
+	// machinery". Phase 8 added the approval record and `skills approve` for the
+	// global tier, so the section says that, and keeps the project-tier rule: the
+	// project tier stays autonomous. Added deliberately with the Phase 8
+	// documentation corrections.
+	t.Run("Section12_GlobalPromotionNeedsAnApprovalRecordAndTheProjectTierStaysAutonomous", func(t *testing.T) {
+		const head = "## 12. Human promotion procedure"
+		const tail = "## 13. Revision trigger and qualifying post-registration occurrences"
+		start := strings.Index(contract, head)
+		if start < 0 {
+			t.Fatalf("contract must contain section 12 heading %q", head)
+		}
+		end := strings.Index(contract[start:], tail)
+		if end < 0 {
+			t.Fatalf("section 12 must be followed by section 13 %q", tail)
+		}
+		section12 := strings.Join(strings.Fields(contract[start:start+end]), " ")
+		for _, required := range []string{
+			"since Phase 8 also requires a typed human approval",
+			"`labdrian skills approve`, bound to the SHA-256 of the exact `SKILL.md` bytes",
+			"The project tier is unchanged and stays autonomous: no approval record applies to it",
+			"`labdrian skills approve --id <id> --approver <name>` in a terminal",
+			"`skills/<id>/.approval.json`",
+			"then requires a valid approval record for the exact bytes",
+			"a speed bump, not a security boundary",
+		} {
+			if !strings.Contains(section12, required) {
+				t.Fatalf("section 12 must contain %q", required)
+			}
+		}
+		if strings.Contains(section12, "no new approval machinery") {
+			t.Fatal("section 12 still says the promotion procedure adds no approval machinery; the global tier has the approval record since Phase 8")
 		}
 	})
 

@@ -179,7 +179,7 @@ var declarations = []Declaration{
 			),
 		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.",
 			partial(Skills,
-				"labdrian apply copies global skills into OpenCode's skills directory, tested only on a fixture overlay and a sandbox home, never the real skills. OpenCode is not used on this machine, so nothing observes it loading a skill, and no test connects the project tier to OpenCode.",
+				"labdrian apply copies global skills into OpenCode's skills directory, tested only on a fixture overlay and a sandbox home, never the real skills. A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested); the global tier was not observed live, its names also existing in several global directories. OpenCode is not used on this machine, so no test observes it loading a skill, and no test connects the project tier to OpenCode.",
 				"installer:TestApply_AgentsLandInNativeAgentDirs",
 				"installer:TestUnrelatedSkillUnchanged",
 			))...),

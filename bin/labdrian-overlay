@@ -522,7 +522,10 @@ Commands:
                                    Merge upstream and deploy to target(s) (default: all).
                                    Pushes 'main' to origin immediately after the merge, so a
                                    local apply never strands main ahead of origin.
-  self-update                     Fast-forward ONLY local 'main' (never the current branch),
+                                   After a merge, run 'skills validate': each global skill the
+                                   merge changed needs a human approval (see skills approve
+                                   below), which an agent cannot give.
+  self-update                    Fast-forward ONLY local 'main' (never the current branch),
                                    then return to the branch you were on. Converges to the
                                    latest published release tag (never past it, even when
                                    origin/main carries untagged commits beyond that tag); before
@@ -601,7 +604,9 @@ Commands:
                                              and skills/ on disk vs overlay.manifest
                                              (requires --source-root); every global skill
                                              needs a valid approval record, except the
-                                             grandfathered baseline while its bytes are unchanged
+                                             grandfathered baseline (the 37 global skills at the
+                                             Phase 8 base, defined below) while its bytes are
+                                             unchanged
                                    install   install project-scoped skills into <cwd>/.claude/skills and
                                              <cwd>/.agents/skills, replacing only what it installed and left
                                              unmodified. It records each file it writes (with its SHA-256) in the
@@ -637,6 +642,26 @@ Commands:
                                              A PreToolUse hook (install-hooks) denies the agent running
                                              it or writing the record by hand: a speed bump, not a
                                              security boundary. A person runs it in a terminal.
+                                   lint <path> | --rules
+                                             lint a SKILL.md file against the authoritative rule
+                                             table, or print the table; exit 1 on any hard finding
+                                   project-register --project-root <abs> --candidate <key> [--dry-run] <draft-file>
+                                             register an agent-owned, project-tier procedural skill:
+                                             write <root>/.claude/skills and <root>/.agents/skills and
+                                             the project lock; --dry-run prints the plan, writes nothing
+                                   project-revise   --project-root <abs> --candidate <key> [--dry-run] <draft-file>
+                                             revise an agent-owned project skill (same outputs)
+                                   project-status   --project-root <abs> [<id>]
+                                             report project-tier ownership and global supersession
+                                             from the project lock (read-only)
+                                   project-retire   --project-root <abs> [--dry-run] [--reason <text>] [--absorbed-into <id>] <id>
+                                             retire an agent-owned project skill; an explicit decision
+                                             that nothing in the engine takes for you; --dry-run prints
+                                             the removal plan
+                                   Project-tier skills stay autonomous: they need no approval record.
+                                   "The Phase 8 base" (used above and in the README) is main at
+                                   53f545d, the commit the global skill lifecycle was built on; the
+                                   37 global skills present there are the grandfathered baseline.
                                    Locking: add, remove, sync-manifest and approve hold an exclusive lock, and
                                    validate and install a shared one, on .skills.registry.yaml.lock beside the
                                    registry (created by the first write, never removed, git-ignored; shared
