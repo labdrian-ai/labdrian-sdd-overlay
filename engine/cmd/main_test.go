@@ -687,12 +687,13 @@ func TestRunMergeSettings_Idempotent(t *testing.T) {
 	// UserPromptSubmit; PreToolUse additionally carries the review-receipt
 	// entry and the two shaper clearance guard entries → 5. The projection
 	// family adds one UserPromptSubmit entry and two PreToolUse entries →
-	// 3 and 7. merge-settings run twice stays at these counts (idempotent).
+	// 3 and 7, and the approve guard adds two more PreToolUse entries → 9.
+	// merge-settings run twice stays at these counts (idempotent).
 	if n := countEntries("UserPromptSubmit"); n != 3 {
 		t.Errorf("UserPromptSubmit: expected 3 entries, got %d", n)
 	}
-	if n := countEntries("PreToolUse"); n != 7 {
-		t.Errorf("PreToolUse: expected 7 entries, got %d", n)
+	if n := countEntries("PreToolUse"); n != 9 {
+		t.Errorf("PreToolUse: expected 9 entries, got %d", n)
 	}
 }
 
@@ -973,10 +974,11 @@ func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
 	}
 
 	projection := settings.ProjectionHookEntries(hookCmd)
+	approveGuard := settings.ApproveGuardHookEntries(hookCmd)
 
 	return map[string]interface{}{
 		"hooks": map[string]interface{}{
-			"PreToolUse":       append([]interface{}{preToolUse, reviewReceipt, shaperGuard("Bash"), shaperGuard(settings.ShaperGuardFileToolMatcher)}, projection["PreToolUse"]...),
+			"PreToolUse":       append(append([]interface{}{preToolUse, reviewReceipt, shaperGuard("Bash"), shaperGuard(settings.ShaperGuardFileToolMatcher)}, projection["PreToolUse"]...), approveGuard["PreToolUse"]...),
 			"UserPromptSubmit": append([]interface{}{userPromptSubmit}, projection["UserPromptSubmit"]...),
 			"SessionEnd":       []interface{}{sessionEnd},
 		},

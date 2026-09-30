@@ -1750,6 +1750,12 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	// family landed is WARN/degraded, not broken.
 	checks = append(checks, checkProjectionHooks(settingsRoot, settingsErr, settingsPath, binaryPath))
 
+	// Check 3f: skills approve guard (the two PreToolUse entries that deny the
+	// agent running skills approve or writing the approval record). A machine
+	// that has not re-run install-hooks since the guard landed is WARN/degraded,
+	// not broken.
+	checks = append(checks, checkApproveGuard(settingsRoot, settingsErr, settingsPath, binaryPath))
+
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))
 
