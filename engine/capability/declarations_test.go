@@ -220,7 +220,7 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 		},
 		capability.MemoryEnforcement: {
 			"longterm-mem query", "project", "memory plan", "no project",
-			"carries no project", "Engram", "mapping between the plan's sources", "Writes are never blocked", notInstalled, "restart",
+			"Not enforced, because the tool input cannot verify these: ", "a get call (it carries no project)", "Engram tools", "the mapping between the plan's sources and a query's sources", "Writes are never blocked", notInstalled, "restart",
 		},
 	} {
 		detail := claims[name].Detail
@@ -233,7 +233,7 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	// The old wording, which denied that any gate exists, must be gone.
 	for name, stale := range map[capability.Capability][]string{
 		capability.Cancellation:      {"no gate denies any tool", "Not implemented yet"},
-		capability.MemoryEnforcement: {"nothing enforces it", "Not implemented yet"},
+		capability.MemoryEnforcement: {"nothing enforces it", "Not implemented yet", "as the tool input cannot verify it: get carries no project, Engram tools, and"},
 	} {
 		for _, phrase := range stale {
 			if strings.Contains(claims[name].Detail, phrase) {

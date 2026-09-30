@@ -31,7 +31,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -82,14 +81,10 @@ func ParsePreToolUseInput(data []byte) (PreToolUseInput, error) {
 		ToolName      string          `json:"tool_name"`
 		ToolInput     json.RawMessage `json:"tool_input"`
 	}
-	if err := json.Unmarshal(trimmed, &wire); err != nil {
-		return PreToolUseInput{}, fmt.Errorf("parse hook input: %w", err)
+	if err := decodeHookObject(data, &wire); err != nil {
+		return PreToolUseInput{}, err
 	}
-	in := PreToolUseInput{HookEventName: wire.HookEventName, ToolName: wire.ToolName, ToolInput: wire.ToolInput}
-	if filepath.IsAbs(wire.Cwd) {
-		in.Cwd = filepath.Clean(wire.Cwd)
-	}
-	return in, nil
+	return PreToolUseInput{HookEventName: wire.HookEventName, Cwd: cleanHookCwd(wire.Cwd), ToolName: wire.ToolName, ToolInput: wire.ToolInput}, nil
 }
 
 // GateInput is everything Gate decides from: the classification of the
@@ -112,8 +107,32 @@ type GateResult struct {
 	Warning string
 }
 
-// editTools are the tool names the paused edit gate denies, matched exactly.
-var editTools = map[string]bool{"Write": true, "Edit": true, "MultiEdit": true, "NotebookEdit": true}
+// editToolList is the one list of tool names the paused edit gate denies,
+// matched exactly. README, the help text, and the Claude Code cancellation
+// declaration retype it in prose; a test checks each copy against EditTools.
+var editToolList = []string{"Write", "Edit", "MultiEdit", "NotebookEdit"}
+
+// editTools is editToolList as a set.
+var editTools = func() map[string]bool {
+	m := make(map[string]bool, len(editToolList))
+	for _, t := range editToolList {
+		m[t] = true
+	}
+	return m
+}()
+
+// EditTools returns the tool names the paused edit gate denies, in a stable
+// order. The result is a copy: editing it never changes the gate.
+func EditTools() []string { return append([]string(nil), editToolList...) }
+
+// GateRelevant reports whether Gate can ever have an opinion about a tool: a
+// file-edit tool (paused edit gate) or the longterm-mem query tool (memory
+// gate). It is decided from the name alone, so a caller can answer for every
+// other tool without reading the binding or the workflow. Gate itself denies or
+// warns only for tools this reports true for.
+func GateRelevant(toolName string) bool {
+	return editTools[toolName] || longtermQueryTool.MatchString(toolName)
+}
 
 // longtermQueryTool matches the MCP name of the longterm-mem query tool and
 // nothing looser: "mcp__", an optional plugin prefix made of one or more
@@ -128,6 +147,9 @@ var longtermQueryTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*longterm-mem_
 // for the rules. It is total: it never fails and never panics, and anything it
 // does not understand is an allow.
 func Gate(in GateInput) GateResult {
+	if !GateRelevant(in.ToolName) {
+		return GateResult{}
+	}
 	if in.Binding.Classification != ClassificationOwned {
 		return GateResult{}
 	}

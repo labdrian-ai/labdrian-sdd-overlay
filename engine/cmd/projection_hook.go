@@ -32,6 +32,8 @@ package main
 //     all, on either stream. The PreToolUse gate is silent also for a binding or
 //     workflow it cannot follow and for a binding store it cannot open: it runs
 //     on every tool call, and UserPromptSubmit already warns once per prompt.
+//     It also answers, without reading either store, for every tool it never
+//     checks: only a file-edit tool or a longterm-mem query needs the binding.
 //   - A binding, or a bound workflow, that cannot be followed is one visible
 //     warning (systemMessage) with nothing projected, and is never resolved by
 //     removing anything. So is a binding store that cannot be opened or read
@@ -58,6 +60,11 @@ import (
 // window in which another process can bind the next workflow, which
 // projection.Store.UnbindIfUnchanged must then refuse to remove.
 var beforeHookUnbind func()
+
+// onGateStoreAccess is a test seam, nil outside tests. The gate calls it at the
+// moment it goes to the binding and workflow stores, so a test can prove that a
+// tool the gate never checks is answered without touching them.
+var onGateStoreAccess func()
 
 // beforeGateDecision is a test seam, nil outside tests. The gate calls it before
 // it decides, so a test can make the gate panic where a bug in it would.
@@ -109,7 +116,7 @@ func runProjectionHook(args []string, processCwd string, stdin io.Reader, stdout
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(stderr, "projection hook: internal error: %v\n", r)
-			_, _ = stdout.Write(warningOutput(projection.PanicWarning(r)))
+			_, _ = stdout.Write(warningOutput(event, projection.PanicWarning(event, r)))
 			exit(0)
 		}
 	}()
@@ -156,10 +163,18 @@ func parseHookArgs(args []string) (string, error) {
 	return event, nil
 }
 
-// warningOutput renders one warning line as the hook's only output, or nothing
-// when it cannot be encoded (a warning must never be able to fail the prompt).
-func warningOutput(warning string) []byte {
-	out, err := projection.ProjectionResult{Warning: warning}.UserPromptSubmitOutput()
+// warningOutput renders one warning line as the hook's only output, in the shape
+// of event's own output builder, or nothing when it cannot be encoded (a warning
+// must never be able to fail the prompt or the tool call). For PreToolUse it is a
+// systemMessage and never a permission decision.
+func warningOutput(event, warning string) []byte {
+	var out []byte
+	var err error
+	if event == projection.HookEventPreToolUse {
+		out, err = projection.GateResult{Warning: warning}.PreToolUseOutput()
+	} else {
+		out, err = projection.ProjectionResult{Warning: warning}.UserPromptSubmitOutput()
+	}
 	if err != nil {
 		return nil
 	}
@@ -194,11 +209,11 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	}
 	bindings, err := projection.NewStore()
 	if err != nil {
-		return warningOutput(projection.StoreWarning(err))
+		return warningOutput(projection.HookEventUserPromptSubmit, projection.StoreWarning(err))
 	}
 	binding, err := bindings.Load(repoKey)
 	if err != nil {
-		return warningOutput(projection.StoreWarning(err))
+		return warningOutput(projection.HookEventUserPromptSubmit, projection.StoreWarning(err))
 	}
 
 	input := projection.ProjectionInput{Binding: binding}
@@ -255,9 +270,19 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 	if in.HookEventName != "" && in.HookEventName != projection.HookEventPreToolUse {
 		return nil
 	}
+	// Relevance comes first, from the tool name alone: the gate runs on every
+	// tool call, and only a file-edit tool or a longterm-mem query is ever checked
+	// against the workflow. Any other tool is allowed here, without reading the
+	// binding or the workflow log.
+	if !projection.GateRelevant(in.ToolName) {
+		return nil
+	}
 	repoKey, ok := hookRepoKey(in.Cwd, processCwd)
 	if !ok {
 		return nil
+	}
+	if onGateStoreAccess != nil {
+		onGateStoreAccess()
 	}
 	bindings, err := projection.NewStore()
 	if err != nil {

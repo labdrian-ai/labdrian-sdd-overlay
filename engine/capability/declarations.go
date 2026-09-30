@@ -69,7 +69,7 @@ var declarations = []Declaration{
 			),
 			unsupported(Authentication, "Not implemented yet: the engine does not check whether Claude Code has credentials."),
 			partial(MemoryEnforcement,
-				"The PreToolUse gate denies a longterm-mem query whose project differs from the memory plan's project, and every query when the plan has no project. Not enforced, as the tool input cannot verify it: get carries no project, Engram tools, and the mapping between the plan's sources and a query's sources. Writes are never blocked. install-hooks does not install the hooks yet and hook changes need a Claude Code restart, so no session is gated yet.",
+				"The PreToolUse gate denies a longterm-mem query whose project differs from the memory plan's project, and every query when the plan has no project. Not enforced, because the tool input cannot verify these: a get call (it carries no project), Engram tools, and the mapping between the plan's sources and a query's sources. Writes are never blocked. install-hooks does not install the hooks yet and hook changes need a Claude Code restart, so no session is gated yet.",
 				"cmd:TestPreToolUseChecksTheProjectOfALongtermMemQuery",
 				"cmd:TestPreToolUseDeniesEveryQueryWhenThePlanHasNoProject",
 				"cmd:TestPreToolUseHookRunsAsASeparateProcess",

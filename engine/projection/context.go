@@ -89,27 +89,43 @@ type HookInput struct {
 // reads with a value of the wrong type is an error, and so is a document that is
 // not one object.
 func ParseHookInput(data []byte) (HookInput, error) {
-	if len(data) > MaxHookInputBytes {
-		return HookInput{}, fmt.Errorf("parse hook input: %w: %d bytes exceeds the maximum of %d", ErrHookInputTooLarge, len(data), MaxHookInputBytes)
-	}
-	trimmed := bytes.TrimSpace(data)
-	if len(trimmed) == 0 || trimmed[0] != '{' {
-		return HookInput{}, errors.New("parse hook input: the input is not a JSON object")
-	}
 	var wire struct {
 		HookEventName string `json:"hook_event_name"`
 		Cwd           string `json:"cwd"`
 	}
-	if err := json.Unmarshal(trimmed, &wire); err != nil {
-		return HookInput{}, fmt.Errorf("parse hook input: %w", err)
+	if err := decodeHookObject(data, &wire); err != nil {
+		return HookInput{}, err
 	}
-	in := HookInput{HookEventName: wire.HookEventName}
-	if filepath.IsAbs(wire.Cwd) {
-		// Cleaned, so dot segments, repeated separators, and a trailing slash
-		// never make one directory look like two.
-		in.Cwd = filepath.Clean(wire.Cwd)
+	return HookInput{HookEventName: wire.HookEventName, Cwd: cleanHookCwd(wire.Cwd)}, nil
+}
+
+// decodeHookObject is the lenient reading both hook events share: the input is
+// at most MaxHookInputBytes, is exactly one JSON object (after surrounding white
+// space), and is decoded into wire, ignoring the fields wire does not name. Every
+// event's parser goes through it, so the events cannot disagree on what a usable
+// input is.
+func decodeHookObject(data []byte, wire any) error {
+	if len(data) > MaxHookInputBytes {
+		return fmt.Errorf("parse hook input: %w: %d bytes exceeds the maximum of %d", ErrHookInputTooLarge, len(data), MaxHookInputBytes)
 	}
-	return in, nil
+	trimmed := bytes.TrimSpace(data)
+	if len(trimmed) == 0 || trimmed[0] != '{' {
+		return errors.New("parse hook input: the input is not a JSON object")
+	}
+	if err := json.Unmarshal(trimmed, wire); err != nil {
+		return fmt.Errorf("parse hook input: %w", err)
+	}
+	return nil
+}
+
+// cleanHookCwd returns cwd cleaned when it is absolute and "" otherwise, so dot
+// segments, repeated separators, and a trailing slash never make one directory
+// look like two, and a relative path is read as missing.
+func cleanHookCwd(cwd string) string {
+	if filepath.IsAbs(cwd) {
+		return filepath.Clean(cwd)
+	}
+	return ""
 }
 
 // ProjectionInput is everything Project decides from: the classification of the
@@ -180,12 +196,22 @@ func StoreWarning(err error) string {
 }
 
 // PanicWarning is the one line shown to the user when the hook recovered from
-// an internal panic. The panic value is sanitized and cut to a short length, so
-// it can never spread over lines or fill the screen; the full value goes to
-// stderr, where whoever debugs the hook reads it.
-func PanicWarning(recovered any) string {
-	return "labdrian: the projection hook hit an internal error (" + clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes) +
-		"); nothing was projected this time and the prompt was not affected."
+// an internal panic while answering event. The panic value is sanitized and cut
+// to a short length, so it can never spread over lines or fill the screen; the
+// full value goes to stderr, where whoever debugs the hook reads it. The
+// consequence it states is the event's own: a prompt that went through with
+// nothing projected, or a tool call that went ahead unchecked. An event this
+// package does not know gets wording that claims neither.
+func PanicWarning(event string, recovered any) string {
+	head := "labdrian: the projection hook hit an internal error (" + clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes) + "); "
+	switch event {
+	case HookEventUserPromptSubmit:
+		return head + "nothing was projected this time and the prompt was not affected."
+	case HookEventPreToolUse:
+		return head + "this tool call was not checked against the workflow and was not denied."
+	default:
+		return head + "the hook did nothing this time and the session was not affected."
+	}
 }
 
 // Project decides what a session is told about the workflow its repository is

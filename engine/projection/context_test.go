@@ -409,7 +409,7 @@ func TestHookFailureWarningsAreOneShortSanitizedLine(t *testing.T) {
 	hostile := "line one\nline two \x1b[31mred\x1b[0m \u202eevil " + strings.Repeat("é", 5000)
 	for name, got := range map[string]string{
 		"store": projection.StoreWarning(errors.New(hostile)),
-		"panic": projection.PanicWarning(hostile),
+		"panic": projection.PanicWarning(projection.HookEventUserPromptSubmit, hostile),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if strings.ContainsAny(got, "\n\r\x1b") || strings.ContainsRune(got, 0x202e) || !utf8.ValidString(got) {
@@ -429,11 +429,11 @@ func TestHookFailureWarningsAreOneShortSanitizedLine(t *testing.T) {
 	if got := projection.StoreWarning(errors.New("boom")); !strings.Contains(got, "no workflow is projected") {
 		t.Errorf("store warning %q does not say nothing is projected", got)
 	}
-	if got := projection.PanicWarning("boom"); !strings.Contains(got, "boom") || !strings.Contains(got, "internal error") {
+	if got := projection.PanicWarning(projection.HookEventUserPromptSubmit, "boom"); !strings.Contains(got, "boom") || !strings.Contains(got, "internal error") {
 		t.Errorf("panic warning %q does not name the internal error", got)
 	}
 	// Panic values are not always strings.
-	if got := projection.PanicWarning(errors.New("an error value")); !strings.Contains(got, "an error value") {
+	if got := projection.PanicWarning(projection.HookEventUserPromptSubmit, errors.New("an error value")); !strings.Contains(got, "an error value") {
 		t.Errorf("panic warning %q does not carry an error value", got)
 	}
 }

@@ -450,6 +450,60 @@ func TestPreToolUseTurnsAPanicIntoAnAllowWithAWarning(t *testing.T) {
 	}
 }
 
+// TestPreToolUsePanicWarningSpeaksOfTheToolCallNotThePrompt: the warning of a
+// recovered panic in the gate used to say "the prompt was not affected", which
+// is about another event. It names the tool call, is a systemMessage only, and
+// never carries a permission decision: a panic is not a reason to deny.
+func TestPreToolUsePanicWarningSpeaksOfTheToolCallNotThePrompt(t *testing.T) {
+	e := pausedEnv(t, "standalone-minimal")
+	beforeGateDecision = func() { panic("boom") }
+	t.Cleanup(func() { beforeGateDecision = nil })
+
+	r := e.gate(t, e.repo, "Edit", editInput)
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(r.stdout), &top); err != nil || len(top) != 1 || top["systemMessage"] == nil {
+		t.Fatalf("stdout %q (%v), want only a systemMessage", r.stdout, err)
+	}
+	var warning string
+	if err := json.Unmarshal(top["systemMessage"], &warning); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(warning, "tool call") || strings.Contains(warning, "prompt") {
+		t.Errorf("warning %q, want it to speak of the tool call and not of a prompt", warning)
+	}
+	if strings.Contains(r.stdout, "permissionDecision") {
+		t.Errorf("stdout %q carries a permission decision; a panic must never decide", r.stdout)
+	}
+}
+
+// TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck: relevance is decided
+// from the tool name first. Only a file-edit tool or a longterm-mem query needs
+// the binding and the workflow; for every other tool the hook answers before it
+// opens either store, because it runs on every tool call of a bound session. The
+// seam counts the moments the hook goes to the stores.
+func TestPreToolUseTouchesNoStoreForAToolTheGateDoesNotCheck(t *testing.T) {
+	e := pausedEnv(t, "standalone-minimal")
+	accesses := 0
+	onGateStoreAccess = func() { accesses++ }
+	t.Cleanup(func() { onGateStoreAccess = nil })
+
+	for _, tool := range []string{"Bash", "Read", "Grep", "Task", "mcp__longterm-mem__get", "mcp__engram__mem_save", ""} {
+		assertSilent(t, "irrelevant/"+tool, e.gate(t, e.repo, tool, map[string]any{"command": "ls"}))
+	}
+	if accesses != 0 {
+		t.Fatalf("the hook went to the stores %d times for tools the gate never checks, want 0", accesses)
+	}
+
+	// The seam is live: the tools the gate does check do reach the stores.
+	for _, tool := range append([]string{"Write", "Edit", "MultiEdit", "NotebookEdit"}, queryTools...) {
+		before := accesses
+		e.gate(t, e.repo, tool, editInput)
+		if accesses != before+1 {
+			t.Errorf("%s: the hook went to the stores %d times, want exactly once", tool, accesses-before)
+		}
+	}
+}
+
 func TestPreToolUseExitsZeroEvenWhenStdoutCannotBeWritten(t *testing.T) {
 	e := pausedEnv(t, "standalone-minimal")
 	var errBuf bytes.Buffer
