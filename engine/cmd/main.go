@@ -248,7 +248,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    or cannot be used (foreign, malformed, unavailable), another bind or unbind in progress (busy), a binding another")
 	fmt.Fprintln(os.Stderr, "    process changed meanwhile), 1 usage error")
 	fmt.Fprintln(os.Stderr, "  engine projection hook --event UserPromptSubmit|PreToolUse")
-	fmt.Fprintln(os.Stderr, "    internal Claude Code hook command (install-hooks does not install it yet): reads the hook JSON on stdin and prints at most one JSON object.")
+	fmt.Fprintln(os.Stderr, "    internal Claude Code hook command (install-hooks installs it; on an existing install, re-run install-hooks and restart Claude Code to load it): reads the hook JSON on stdin and prints at most one JSON object.")
 	fmt.Fprintln(os.Stderr, "    UserPromptSubmit prints {\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":...},\"systemMessage\":...}, which puts the")
 	fmt.Fprintln(os.Stderr, "    workflow the repository is bound to (see workflow bind) into the session: id, profile, status, stages, and the memory plan;")
 	fmt.Fprintln(os.Stderr, "    the binding to a closed workflow is removed, and the note says whether it was removed, left alone, or the removal failed.")
@@ -1719,6 +1719,11 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	// Check 3d: shaper clearance deny guard (both PreToolUse entries and the
 	// permissions.deny backstop). Missing parts are WARN/degraded.
 	checks = append(checks, checkShaperClearanceGuard(settingsRoot, settingsErr, settingsPath))
+
+	// Check 3e: projection hook family (UserPromptSubmit context and the two
+	// PreToolUse gates). A machine that has not re-run install-hooks since the
+	// family landed is WARN/degraded, not broken.
+	checks = append(checks, checkProjectionHooks(settingsRoot, settingsErr, settingsPath, binaryPath))
 
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))

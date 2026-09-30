@@ -557,14 +557,17 @@ Commands:
                                    'git fetch origin' first for a live count. NA means the
                                    comparison is unavailable (no origin remote, no cached ref,
                                    or a requested fetch failed) -- other checks still complete.
-  install-hooks                    Build + deploy the engine binary, then wire the two
-                                   deterministic-scoping hooks into ~/.claude/settings.json.
+  install-hooks                    Build + deploy the engine binary, then wire the
+                                   deterministic-scoping hooks and the workflow projection
+                                   hooks into ~/.claude/settings.json. Re-run it after an
+                                   upgrade that adds a hook family, then restart Claude Code
+                                   to load the hooks.
                                    DELIBERATE ACTION — not called by 'apply'. Run once to
                                    activate; the hooks are INERT until this command runs.
                                    Also best-effort installs discovery tools (bat rg fd sd
                                    eza) via Homebrew so agents never hit the silent-empty
                                    footgun. Set OVERLAY_SKIP_TOOL_INSTALL=1 to opt out.
-  uninstall-hooks                  Remove our two hook entries from ~/.claude/settings.json,
+  uninstall-hooks                  Remove our hook entries from ~/.claude/settings.json,
                                    leaving all other keys and hooks intact.
   status-hooks                     Read-only check of overlay installation health: binary
                                    present, hooks wired, contract readable. Exits 0 if all

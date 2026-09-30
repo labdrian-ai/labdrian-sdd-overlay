@@ -157,11 +157,11 @@ func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 func TestClaudeCodeStatuses(t *testing.T) {
 	want := map[capability.Capability]capability.Status{
 		capability.Installation:      capability.Supported,
-		capability.Projection:        capability.Partial,
+		capability.Projection:        capability.Supported,
 		capability.Dispatch:          capability.Partial,
 		capability.Cancellation:      capability.Partial,
 		capability.Persistence:       capability.Supported,
-		capability.Restart:           capability.Partial,
+		capability.Restart:           capability.Supported,
 		capability.Authentication:    capability.Partial,
 		capability.MemoryEnforcement: capability.Partial,
 	}
@@ -179,11 +179,11 @@ func TestClaudeCodeStatuses(t *testing.T) {
 // TestClaudeCodeSessionClaimsStateTheirScope pins what the claims that rest on
 // the session binding and the projection hook say about their own reach, because
 // a status alone would let the wording drift away from what the tests prove. The
-// hook exists and is tested by feeding it hook JSON, but install-hooks does not
-// install it into Claude Code settings yet, so no session receives its context;
-// three claims are partial for that reason, and each has to say so. When the hook
-// is installed the wording changes and so does this test, in the same commit that
-// flips the statuses.
+// hook is installed by install-hooks and tested by feeding it hook JSON and by
+// reading the settings file, but no test observes a real Claude Code session
+// receiving its context. Projection and restart are supported and dispatch is
+// partial; each has to say that the hooks load only after a restart and that no
+// real session is observed, and none may still say the hook is not installed.
 func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	d, err := capability.Declare(capability.TargetClaude)
 	if err != nil {
@@ -193,13 +193,13 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	for _, c := range d.Claims {
 		claims[c.Capability] = c
 	}
-	const notInstalled = "install-hooks does not install the hook"
+	const installs = "install-hooks installs"
 
 	for name, want := range map[capability.Capability][]string{
 		capability.Persistence: {"workflow log", "binding", "survive", "transcripts are not managed"},
-		capability.Dispatch:    {"can be bound", "stored", "the hook projects that workflow", notInstalled, "no session is steered"},
-		capability.Projection:  {"UserPromptSubmit hook", "builds the bound workflow's context", "tests feed it hook JSON", notInstalled, "restart", "no session receives the context"},
-		capability.Restart:     {"reads the binding and the workflow log from disk on every prompt", "separate processes", notInstalled, "restart", "no real session re-binds"},
+		capability.Dispatch:    {"can be bound", "stored", "the hook projects that workflow", "explicit workflow bind", "restart", "no test observes a real session being steered"},
+		capability.Projection:  {installs, "UserPromptSubmit hook", "builds the bound workflow's context", "reports partial until install-hooks is re-run", "restart", "Tests feed the hook JSON", "a real session receiving the context is not part of them"},
+		capability.Restart:     {"reads the binding and the workflow log from disk on every prompt", "separate processes", installs, "restart_required", "a real session re-binding is not part of the tests"},
 	} {
 		detail := claims[name].Detail
 		for _, phrase := range want {
@@ -216,11 +216,11 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	for name, want := range map[capability.Capability][]string{
 		capability.Cancellation: {
 			"paused", "PreToolUse gate", "Write, Edit, MultiEdit, and NotebookEdit", "next tool call",
-			"tells the session", "in-flight tool call cannot be interrupted", "Bash is never gated", notInstalled, "restart",
+			"tells the session", installs, "in-flight tool call cannot be interrupted", "Bash is never gated", "restart", "no test observes a real session being denied",
 		},
 		capability.MemoryEnforcement: {
 			"longterm-mem query", "project", "memory plan", "no project",
-			"Not enforced, because the tool input cannot verify these: ", "a get call (it carries no project)", "Engram tools", "the mapping between the plan's sources and a query's sources", "Writes are never blocked", notInstalled, "restart",
+			"Not enforced, because the tool input cannot verify these: ", "a get call (it carries no project)", "Engram tools", "the mapping between the plan's sources and a query's sources", "Writes are never blocked", installs, "no narrower than the gate's tool-name pattern", "restart", "no test observes a real session being denied",
 		},
 	} {
 		detail := claims[name].Detail
@@ -230,6 +230,16 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 			}
 		}
 	}
+	// No Claude Code claim may still say the hooks are not installed: they are,
+	// and a claim that says otherwise would understate what a user can enable.
+	for _, c := range d.Claims {
+		for _, stale := range []string{"does not install", "not installed", "yet"} {
+			if strings.Contains(c.Detail, stale) {
+				t.Errorf("claude %s detail %q still says %q", c.Capability, c.Detail, stale)
+			}
+		}
+	}
+
 	// The old wording, which denied that any gate exists, must be gone.
 	for name, stale := range map[capability.Capability][]string{
 		capability.Cancellation:      {"no gate denies any tool", "Not implemented yet"},
