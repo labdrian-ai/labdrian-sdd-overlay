@@ -83,20 +83,33 @@ func (e *BusyError) Is(target error) bool { return target == ErrBusy }
 // with a plain interface assertion, without importing this package.
 func (e *BusyError) Busy() bool { return true }
 
+// LockPath is the lock that stayed taken, as it was tried: for a directory lock,
+// the path the caller passed to AcquireDir (a caller that resolves symlinks first
+// passes the resolved one). It lets a caller that cannot import this package name,
+// in its own message, the lock that was really contended.
+func (e *BusyError) LockPath() string { return e.Path }
+
 // Mode is how a lock is held.
 type Mode int
 
 const (
 	// Exclusive is the writer's mode: one holder, no Shared holders. The lock
-	// file is created (mode 0666 before the umask) if it does not exist.
+	// file is created (mode 0644 before the umask) if it does not exist.
 	Exclusive Mode = iota
 	// Shared is the reader's mode: any number of holders, none while an Exclusive
 	// one holds. A Shared acquire opens the lock file read-only and never creates
 	// it. A missing file means no Exclusive lock has ever been taken there, so no
-	// writer can be in the middle of anything, and Acquire returns a lock that
+	// writer has been in the middle of anything, and Acquire returns a lock that
 	// holds nothing; that is also what lets a reader run on a tree it cannot write
-	// to. A writer that creates the file at that very moment is the one case this
-	// misses, and it can only be the first write ever made there.
+	// to.
+	//
+	// That lock cannot stop the first writer, who creates the file and writes while
+	// the reader reads. A lock that holds nothing is therefore provisional: the
+	// caller checks, after its read, that the lock file still does not exist (a
+	// writer creates it before it writes anything, so a file that is still absent
+	// proves that no write began during the read) and, when it does exist now,
+	// reads again under a lock that is real. engine/skills does exactly that, for
+	// its reads of the registry pair and of the skill tree.
 	Shared
 )
 

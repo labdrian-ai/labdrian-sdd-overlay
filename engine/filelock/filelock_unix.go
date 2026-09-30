@@ -18,15 +18,15 @@ const platformSupported = true
 
 // openLockFile opens the lock file for mode without following a final-component
 // symlink (the kernel's O_NOFOLLOW refusal comes back as ELOOP). An Exclusive
-// lock creates the file when it is missing, with mode 0666 before the umask, so
-// that a checkout shared by several users can be locked by all of them; a Shared
-// lock opens it read-only and never creates it. flock needs no write access, so
-// a read-only file locks like any other.
+// lock creates the file when it is missing, with mode 0644 before the umask: flock
+// needs no write access, so every user of a checkout shared by several can take the
+// lock (a Shared one only reads the file), and none of them can write into it. A
+// Shared lock opens it read-only and never creates it.
 func openLockFile(path string, mode Mode) (*os.File, error) {
 	if mode == Shared {
 		return os.OpenFile(path, os.O_RDONLY|syscall.O_NOFOLLOW, 0)
 	}
-	return os.OpenFile(path, os.O_CREATE|os.O_RDONLY|syscall.O_NOFOLLOW, 0o666)
+	return os.OpenFile(path, os.O_CREATE|os.O_RDONLY|syscall.O_NOFOLLOW, 0o644)
 }
 
 // openDirLock opens a directory read-only to lock it. It creates nothing, never
