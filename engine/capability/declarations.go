@@ -22,6 +22,11 @@ import (
 // and an honest unsupported, with the limit written, for the rest. OpenCode is
 // also declared untested: it is not used on this machine and cannot be
 // exercised here.
+//
+// Skills, added in Phase 8, is the exception to "declared only": every runtime
+// states what its own tests prove about carrying skills into it, and all four are
+// partial. The global tier is deployed by labdrian apply (the overlay script),
+// not by the engine, so each claim says so and says what that tier's tests are.
 var declarations = []Declaration{
 	{
 		Target: TargetClaude,
@@ -100,6 +105,22 @@ var declarations = []Declaration{
 				"projection:TestInstalledMatchersCoverEveryToolTheGateHasAnOpinionAbout",
 				"settings:TestInstall_AddsTheProjectionFamily",
 			),
+			partial(Skills,
+				"Project tier: skills install and adopt write .claude/skills and .agents/skills, replacing only files they own by hash; project-register, revise, and retire manage agent-written skills; locks serialize writers. Global tier: skills add needs an approval record; labdrian apply deploys global skills, not the engine, tested only on a fixture overlay and a sandbox home, never the real skills. Unused-skill detection is report-only and covers the project tier only. No test observes a session loading a skill.",
+				"installer:TestApply_AgentsLandInNativeAgentDirs",
+				"installer:TestUnrelatedSkillUnchanged",
+				"skills:TestAddCore_AcceptsAGlobalSkillWithAMatchingRecord",
+				"skills:TestAddCore_RefusesAGlobalSkillWithoutAValidApproval",
+				"skills:TestAdoptVerb_TakesOwnershipOfAnExistingInstallAndThenInstallLeavesItBe",
+				"skills:TestInstallCLI_ARunOverAHandEditedFileIsRefusedAndNothingIsWritten",
+				"skills:TestInstallCLI_CopiesTheSkillIntoBothRuntimesAndSaysSo",
+				"skills:TestInstall_AbsentTargetsAreCreatedInBothRuntimesAndRecorded",
+				"skills:TestPlanAndExecuteProjectRetireRemovesTargetsAndLockEntry",
+				"skills:TestPlanProjectRevise_HashMatchBumpsRevisionAndHash",
+				"skills:TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnything",
+				"skills:TestRegistryLockE2E_ConcurrentVerbsNeverLoseAnUpdate",
+				"skills:TestRenderProjectRegisterCore_WritesEveryTargetAndPrintsTrustNote",
+			),
 		},
 	},
 	{
@@ -113,7 +134,15 @@ var declarations = []Declaration{
 				"runtime:TestCodexUninstallRemovesManifestWithoutTouchingUnrelatedFiles",
 				"runtime:TestCodexUpdateRefreshesManagedManifest",
 			),
-		}, declaredOnlyClaims("Codex", presenceProbeDetail("Codex"))...),
+		}, declaredOnlyClaims("Codex", presenceProbeDetail("Codex"),
+			partial(Skills,
+				"skills install, adopt, and project-register write project skills to .agents/skills. A live check on 2026-09-28 recorded Codex reading a project skill's body there; that is recorded evidence, not a test. Global skills are deployed to ~/.codex/skills by labdrian apply, not the engine, tested only on a fixture overlay and a sandbox home, never the real skills. No test observes Codex loading a skill, and the global tier has no unused-skill detector.",
+				"installer:TestApply_AgentsLandInNativeAgentDirs",
+				"installer:TestUnrelatedSkillUnchanged",
+				"skills:TestInstallCLI_CopiesTheSkillIntoBothRuntimesAndSaysSo",
+				"skills:TestInstall_AbsentTargetsAreCreatedInBothRuntimesAndRecorded",
+				"skills:TestRenderProjectRegisterCore_WritesEveryTargetAndPrintsTrustNote",
+			))...),
 	},
 	{
 		Target: TargetPi,
@@ -125,7 +154,16 @@ var declarations = []Declaration{
 				"runtime:TestPiAdapter_StatusTriangulatesAllOwnedEntries",
 				"runtime:TestPiAdapter_UninstallUsesRemoveNotUninstall",
 			),
-		}, declaredOnlyClaims("Pi", presenceProbeDetail("Pi"))...),
+		}, declaredOnlyClaims("Pi", presenceProbeDetail("Pi"),
+			partial(Skills,
+				"Skills reach Pi as the labdrian-pi package: pipkg builds it from the registry's Pi-targeted skills, leaving out approval records and writers' temporary files, and install registers it. The adapter tests replace the pi CLI with a recording stub, so the real pi never loads the package. skills install and project-register never write .pi/skills; project-register says Pi loads .agents/skills only after project trust. No test observes Pi loading a skill.",
+				"pipkg:TestPipkgBuild_DoesNotProjectAWritersTemporaryFile",
+				"pipkg:TestPipkgBuild_DoesNotProjectTheApprovalRecord",
+				"pipkg:TestPipkgBuild_SelectsPiTargetedSkills",
+				"runtime:TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg",
+				"skills:TestProjectTargetsMatchContractTable",
+				"skills:TestRenderProjectRegisterCore_WritesEveryTargetAndPrintsTrustNote",
+			))...),
 	},
 	{
 		Target:   TargetOpenCode,
@@ -139,16 +177,23 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash",
 				"runtime:TestOpenCodeUninstallRemovesPluginAndConfig",
 			),
-		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.")...),
+		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.",
+			partial(Skills,
+				"labdrian apply copies global skills into OpenCode's skills directory, tested only on a fixture overlay and a sandbox home, never the real skills. OpenCode is not used on this machine, so nothing observes it loading a skill, and no test connects the project tier to OpenCode.",
+				"installer:TestApply_AgentsLandInNativeAgentDirs",
+				"installer:TestUnrelatedSkillUnchanged",
+			))...),
 	},
 }
 
-// declaredOnlyClaims returns the seven claims after installation for a
-// runtime that Phase 7 declares without implementing: every one unsupported,
-// with the limit written. runtime is the display name used in the sentences,
-// and authDetail is the authentication limit, which differs by runtime because
-// only some runtimes have a credentials presence check.
-func declaredOnlyClaims(runtime, authDetail string) []Claim {
+// declaredOnlyClaims returns the claims after installation for a runtime that
+// Phase 7 declares without implementing: the seven Phase 7 capabilities, every
+// one unsupported with the limit written, and then the runtime's own skills claim,
+// which is the one capability Phase 8 states from the tests that exist. runtime is
+// the display name used in the sentences, and authDetail is the authentication
+// limit, which differs by runtime because only some runtimes have a credentials
+// presence check.
+func declaredOnlyClaims(runtime, authDetail string, skills Claim) []Claim {
 	const scope = " This runtime is declared only: Phase 7 writes no code for it."
 	return []Claim{
 		unsupported(Projection, "No code projects the active workflow (Goal, Profile, stage) into a "+runtime+" session."+scope),
@@ -158,6 +203,7 @@ func declaredOnlyClaims(runtime, authDetail string) []Claim {
 		unsupported(Restart, "Not implemented: a new "+runtime+" session does not re-bind to an on-disk workflow."+scope),
 		unsupported(Authentication, authDetail+scope),
 		unsupported(MemoryEnforcement, "Not implemented: no memory plan is projected into or enforced in a "+runtime+" session."+scope),
+		skills,
 	}
 }
 

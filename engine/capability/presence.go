@@ -29,7 +29,13 @@ package capability
 //     (longtermMemRegistrationFile and DefaultLongtermMemStateDir), copied here
 //     because engine/runtime must not be imported by Phase 7 code. A registration
 //     recorded under a --state-dir other than the default is not seen.
-//   - memory:procedural-skills: no check exists, so it is always unavailable.
+//   - memory:procedural-skills: no check exists, so it is always unavailable. The
+//     one file that would show them by stat is the project's own lock,
+//     <project root>/.labdrian/procedural-skills.lock.json, and the prober knows
+//     only Home and PATH: a check would need a project-root input it does not have,
+//     and the skills directories under Home hold every kind of skill, not
+//     procedural ones. Phase 8 leaves this as it was; giving the prober a project
+//     root is a decision about its inputs, made by whoever wires it, not here.
 //   - gentle-ai-review: an executable file named gentle-ai in one of the
 //     absolute directories of the PATH value the prober was given.
 //   - credentials:claude-code, credentials:codex, credentials:pi: the files

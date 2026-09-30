@@ -12,6 +12,7 @@ func TestCapabilitiesAreTheClosedSetInFixedOrder(t *testing.T) {
 	want := []string{
 		"installation", "projection", "dispatch", "cancellation",
 		"persistence", "restart", "authentication", "memory-enforcement",
+		"skills",
 	}
 	var got []string
 	for _, c := range capability.Capabilities() {

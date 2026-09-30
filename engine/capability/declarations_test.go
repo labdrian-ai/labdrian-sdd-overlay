@@ -2,6 +2,7 @@ package capability_test
 
 import (
 	"reflect"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -126,13 +127,20 @@ func TestEveryTargetDeclaresInstallationWithEvidence(t *testing.T) {
 // Pi, and OpenCode receive an honest declaration of what is proven today
 // (installation), and every other capability stays unsupported with its
 // limit written, because Phase 7 implements projection for Claude Code only.
+//
+// Skills is the one capability this rule does not cover. Phase 8 adds it, and
+// its claim is stated by each runtime from the tests that prove it, not from
+// Phase 7 scope: the rule about what each runtime may say, and what tests a
+// status needs, is TestSkillsClaimsAreBoundedByTheirEvidence and
+// TestSkillsClaimsStateTheirScope. The rule here stays exact for the eight
+// capabilities Phase 7 defined.
 func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 	for _, d := range capability.All() {
 		if d.Target == capability.TargetClaude {
 			continue
 		}
 		for _, c := range d.Claims {
-			if c.Capability == capability.Installation {
+			if c.Capability == capability.Installation || c.Capability == capability.Skills {
 				continue
 			}
 			if c.Status != capability.Unsupported {
@@ -164,6 +172,7 @@ func TestClaudeCodeStatuses(t *testing.T) {
 		capability.Restart:           capability.Supported,
 		capability.Authentication:    capability.Partial,
 		capability.MemoryEnforcement: capability.Partial,
+		capability.Skills:            capability.Partial,
 	}
 	d, err := capability.Declare(capability.TargetClaude)
 	if err != nil {
@@ -246,6 +255,132 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 		for _, phrase := range stale {
 			if strings.Contains(claims[name].Detail, phrase) {
 				t.Errorf("%s detail %q still says %q, which the gate contradicts", name, claims[name].Detail, phrase)
+			}
+		}
+	}
+}
+
+func skillsClaim(t *testing.T, target string) capability.Claim {
+	t.Helper()
+	d, err := capability.Declare(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range d.Claims {
+		if c.Capability == capability.Skills {
+			return c
+		}
+	}
+	t.Fatalf("%s has no skills claim", target)
+	return capability.Claim{}
+}
+
+// TestSkillsClaimsAreBoundedByTheirEvidence pins the status of every runtime's
+// skills claim, and the kind of test each may rest on, so that neither can move
+// without showing up here. All four are partial and none is supported: the global
+// tier depends on the overlay's apply script and is tested only on a fixture
+// overlay in a sandbox home, no detector covers a global skill nobody uses, and no
+// test observes a runtime loading a skill. A status moves in the commit that adds
+// the tests proving it, and this pin moves with it.
+//
+// Each claim has to be backed by the tests of the tier it speaks about: Claude Code
+// and Codex by the project-tier tests (engine/skills) and the global-tier tests
+// (engine/installer), Pi by the package tests (engine/pipkg), its adapter
+// (engine/runtime), and the register tests that print its trust note, OpenCode by
+// the global-tier tests only. OpenCode's claim says no test connects the project tier
+// to it, so it may cite none that does.
+func TestSkillsClaimsAreBoundedByTheirEvidence(t *testing.T) {
+	for _, tc := range []struct {
+		target    string
+		required  []string // a cited test must come from each of these directories
+		forbidden []string // and none from these
+	}{
+		{capability.TargetClaude, []string{"installer", "skills"}, nil},
+		{capability.TargetCodex, []string{"installer", "skills"}, nil},
+		{capability.TargetPi, []string{"pipkg", "runtime", "skills"}, []string{"installer"}},
+		{capability.TargetOpenCode, []string{"installer"}, []string{"skills", "pipkg", "runtime"}},
+	} {
+		t.Run(tc.target, func(t *testing.T) {
+			c := skillsClaim(t, tc.target)
+			if c.Status != capability.Partial {
+				t.Fatalf("%s skills = %s, want partial", tc.target, c.Status)
+			}
+			dirs := map[string]bool{}
+			for _, ref := range c.Tests {
+				dir, _, _ := strings.Cut(ref, ":")
+				dirs[dir] = true
+			}
+			for _, dir := range tc.required {
+				if !dirs[dir] {
+					t.Errorf("%s skills cites no test from %s/: %v", tc.target, dir, c.Tests)
+				}
+			}
+			for _, dir := range tc.forbidden {
+				if dirs[dir] {
+					t.Errorf("%s skills cites a test from %s/, which does not speak about it: %v", tc.target, dir, c.Tests)
+				}
+			}
+		})
+	}
+}
+
+// TestSkillsClaimsStateTheirScope pins what each skills claim says about its own
+// reach, because a status alone would let the wording drift away from what the
+// tests prove: which tier each test covers, that the global tier comes from
+// labdrian apply and not from the engine, where the evidence is recorded rather than
+// tested, and that no test observes a runtime loading a skill. A claim speaks only of
+// its own runtime: one runtime's name in another's detail would go stale, or
+// contradict, whenever the other changes.
+func TestSkillsClaimsStateTheirScope(t *testing.T) {
+	const fixtureOnly = "fixture overlay and a sandbox home"
+	for target, phrases := range map[string][]string{
+		capability.TargetClaude: {
+			"Project tier", "skills install and adopt", ".claude/skills and .agents/skills", "they own by hash",
+			"project-register, revise, and retire", "locks serialize writers",
+			"Global tier: skills add needs an approval record", "labdrian apply deploys global skills, not the engine", fixtureOnly, "never the real skills",
+			"report-only and covers the project tier only", "No test observes a session loading a skill",
+		},
+		capability.TargetCodex: {
+			"write project skills to .agents/skills", "live check on 2026-09-28", "recorded evidence, not a test",
+			"deployed to ~/.codex/skills by labdrian apply, not the engine", fixtureOnly, "never the real skills",
+			"No test observes Codex loading a skill", "no unused-skill detector",
+		},
+		capability.TargetPi: {
+			"labdrian-pi package", "Pi-targeted skills", "approval records and writers' temporary files",
+			"adapter tests replace the pi CLI with a recording stub", "never write .pi/skills", "only after project trust", "No test observes Pi loading a skill",
+		},
+		capability.TargetOpenCode: {
+			"labdrian apply copies global skills into OpenCode's skills directory", fixtureOnly, "never the real skills",
+			"not used on this machine", "no test connects the project tier to OpenCode",
+		},
+	} {
+		detail := skillsClaim(t, target).Detail
+		for _, phrase := range phrases {
+			if !strings.Contains(detail, phrase) {
+				t.Errorf("%s skills detail %q does not state %q", target, detail, phrase)
+			}
+		}
+	}
+
+	// A claim names no runtime but its own. "Pi" is matched as a word, so that the
+	// prefix of another word cannot trip it.
+	names := map[string]*regexp.Regexp{
+		capability.TargetClaude:   regexp.MustCompile(`Claude|\.claude`),
+		capability.TargetCodex:    regexp.MustCompile(`Codex|\.codex`),
+		capability.TargetPi:       regexp.MustCompile(`\bPi\b|\.pi/`),
+		capability.TargetOpenCode: regexp.MustCompile(`OpenCode|opencode`),
+	}
+	for target := range names {
+		detail := skillsClaim(t, target).Detail
+		for other, re := range names {
+			if other == target {
+				continue
+			}
+			// ~/.codex/skills and .pi/skills are named by the claims that own them, and
+			// the shared .agents/skills is named by several, so only runtime names and
+			// each runtime's own directory count as a mention.
+			if loc := re.FindString(detail); loc != "" {
+				t.Errorf("%s skills detail %q names %s (%q)", target, detail, other, loc)
 			}
 		}
 	}

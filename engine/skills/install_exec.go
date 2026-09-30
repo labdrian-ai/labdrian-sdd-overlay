@@ -3,7 +3,6 @@ package skills
 import (
 	"io"
 	"path/filepath"
-	"strings"
 )
 
 // ExecuteInstallPlan carries out a plan from PlanInstallOwnership, all or nothing.
@@ -38,34 +37,33 @@ func ExecuteInstallPlan(p InstallPlan, root string, fsys projectFS, stderr io.Wr
 		return nil
 	}
 
+	// The executor is shared with project-register and words its failures for the verb
+	// it is given: the plan knows which command built it.
+	verb := "skills " + p.verb()
 	root = filepath.Clean(root)
-	if err := checkProjectDestinations(fsys, root, order); err != nil {
-		return installFailure{err}
+	if err := checkProjectDestinations(verb, fsys, root, order); err != nil {
+		return err
 	}
-	s := newProjectStager(fsys, root, order, deleting)
+	s := newProjectStager(verb, fsys, root, order, deleting)
 	if err := s.stageAndCommit(stderr); err != nil {
-		return installFailure{err}
+		return err
 	}
 	pruneEmptyDirs(fsys, p)
 	return nil
 }
 
-// installFailure is an error from the shared executor, worded for install: the
-// executor's messages are prefixed with the verb it was written for first, and this
-// says "skills install" instead. It still unwraps to the original, so the rollback
-// sentinel is still found.
-type installFailure struct{ err error }
-
-func (e installFailure) Error() string {
-	return strings.ReplaceAll(e.err.Error(), "project-register:", "skills install:")
-}
-
-func (e installFailure) Unwrap() error { return e.err }
-
 // pruneEmptyDirs removes, deepest first, the directories that removing the plan's
 // files left empty inside an installed skill. It never removes a skill directory
 // itself, and never a directory that still holds anything. It is best effort: a
 // directory that cannot be removed is left, which is harmless.
+//
+// "Inside" is strict, and that is what keeps a skill directory: withinRoot is false
+// for the root itself, so a directory equal to a skill directory is not inside any
+// skill and the walk up from a removed file stops there. The function depends on
+// that property of withinRoot (pathguard.WithinRoot's "p != cleanRoot"), not on the
+// plan: a plan never empties a skill directory, because every skill keeps its
+// SKILL.md, but this does not rely on it. TestPruneEmptyDirs_NeverRemovesASkillDirectoryItself
+// builds the plans that would.
 func pruneEmptyDirs(fsys projectFS, p InstallPlan) {
 	insideASkill := func(dir string) bool {
 		for _, skillDir := range p.Dirs {

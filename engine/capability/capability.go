@@ -45,6 +45,14 @@ const (
 	Authentication Capability = "authentication"
 	// MemoryEnforcement is enforcing a memory plan inside a session.
 	MemoryEnforcement Capability = "memory-enforcement"
+	// Skills is carrying the overlay's governed skills into the runtime's skill
+	// directories: the global tier through labdrian apply, and the project tier
+	// through skills install, skills adopt, and the project-register family. Phase
+	// 8 adds it after the Phase 7 set, so the positions of the others do not move.
+	// Its claims are stated per runtime from the tests that prove them; the
+	// engine declares the global tier's dependence on apply as a limit, because it
+	// has no installer of its own for it.
+	Skills Capability = "skills"
 )
 
 // capabilityOrder is the fixed order of the closed set. Declarations store
@@ -53,6 +61,7 @@ const (
 var capabilityOrder = [...]Capability{
 	Installation, Projection, Dispatch, Cancellation,
 	Persistence, Restart, Authentication, MemoryEnforcement,
+	Skills,
 }
 
 // Capabilities returns the closed capability set in its fixed order. The

@@ -8,6 +8,7 @@ package skills
 import (
 	"bytes"
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -205,19 +206,7 @@ func TestExecuteInstallPlan_ReportsARollbackThatCouldNotFinish(t *testing.T) {
 	}
 }
 
-func isRollbackIncomplete(err error) bool {
-	for depth := 0; err != nil && depth < maxErrorChain; depth++ {
-		if err == ErrRollbackIncomplete {
-			return true
-		}
-		u, ok := err.(interface{ Unwrap() error })
-		if !ok {
-			return false
-		}
-		err = u.Unwrap()
-	}
-	return false
-}
+func isRollbackIncomplete(err error) bool { return errors.Is(err, ErrRollbackIncomplete) }
 
 // The plan was built from what was on disk; if a path it meant to create appears
 // before the write, the install stops instead of writing over it.
@@ -239,6 +228,75 @@ func TestExecuteInstallPlan_RefusesAPathThatAppearedAfterThePlanWasBuilt(t *test
 	assertSameTree(t, before, f.snapshot())
 }
 
+// The executor is the one project-register uses. It words its failures for the verb
+// that ran it, from a name it is given, and never names the verb it was written for
+// or the other one of the pair: an adopt that fails says "skills adopt".
+func TestExecuteInstallPlan_WordsEveryFailureForTheVerbThatRanIt(t *testing.T) {
+	boom := errors.New("injected failure")
+	for _, verb := range []string{"install", "adopt"} {
+		// A plan for the verb over a project where its one destination is the lock (adopt
+		// writes only that) or the skill file in the second runtime (install).
+		plan := func(t *testing.T) (*ownFixture, InstallPlan) {
+			f := newOwnFixture(t)
+			if verb == "adopt" {
+				f.preexisting("pdf", pdfV1, ".claude", ".agents")
+				p, refusals := f.adoptPlan(skill("pdf", pdfV1))
+				if len(refusals) != 0 {
+					t.Fatalf("setup refused: %v", refusals)
+				}
+				return f, p
+			}
+			p, refusals := f.plan(skill("pdf", pdfV1))
+			if len(refusals) != 0 {
+				t.Fatalf("setup refused: %v", refusals)
+			}
+			return f, p
+		}
+		mine := "skills " + verb + ": "
+
+		t.Run(verb+"/a destination that appeared after the plan", func(t *testing.T) {
+			f, p := plan(t)
+			appeared := ProjectLockRelPath
+			if verb == "install" {
+				appeared = ".agents/skills/pdf/SKILL.md"
+			}
+			f.write(appeared, "appeared meanwhile\n")
+
+			err := ExecuteInstallPlan(p, f.root, osProjectFS{}, &bytes.Buffer{})
+
+			if err == nil || !strings.HasPrefix(err.Error(), mine) || !strings.Contains(err.Error(), appeared) {
+				t.Fatalf("error = %v, want a refusal that starts %q and names %s", err, mine, appeared)
+			}
+			if strings.Contains(err.Error(), "project-register") {
+				t.Errorf("error %q names the verb the executor was written for", err)
+			}
+		})
+
+		t.Run(verb+"/a rollback that could not finish", func(t *testing.T) {
+			f, p := plan(t)
+			lock := f.abs(ProjectLockRelPath)
+			fsys := newFakeProjectFS(func(_ *fakeProjectFS, op, path string) error {
+				if path == lock && (op == "rename" || op == "remove") {
+					return boom
+				}
+				return nil
+			})
+
+			err := ExecuteInstallPlan(p, f.root, fsys, &bytes.Buffer{})
+
+			if !isRollbackIncomplete(err) {
+				t.Fatalf("error = %v, want a rollback-incomplete error", err)
+			}
+			if !strings.HasPrefix(err.Error(), mine+"rollback incomplete") || strings.Contains(err.Error(), "project-register") {
+				t.Errorf("error = %q, want it to start %q and to name no other verb", err, mine+"rollback incomplete")
+			}
+			if !strings.Contains(err.Error(), mine+"committing") {
+				t.Errorf("error = %q, want the cause worded for %q too", err, verb)
+			}
+		})
+	}
+}
+
 func TestExecuteInstallPlan_AnEmptyPlanTouchesNothing(t *testing.T) {
 	f := newOwnFixture(t)
 	fsys := newFakeProjectFS(nil)
@@ -247,6 +305,42 @@ func TestExecuteInstallPlan_AnEmptyPlanTouchesNothing(t *testing.T) {
 	}
 	if len(fsys.log) != 0 {
 		t.Errorf("an empty plan made calls: %v", fsys.log)
+	}
+}
+
+// A skill's own directory is never pruned, even when removing the plan's files leaves
+// it empty. The function guarantees that by itself, through the strict containment
+// test it asks: the root is not within itself. A plan never empties a skill directory
+// (every skill keeps its SKILL.md), so these plans are built by hand; the guarantee
+// must not depend on that.
+func TestPruneEmptyDirs_NeverRemovesASkillDirectoryItself(t *testing.T) {
+	for name, deleted := range map[string]string{
+		"a file directly in the skill directory": "old.md",
+		"a file two levels down":                 "a/b/old.md",
+	} {
+		t.Run(name, func(t *testing.T) {
+			f := newOwnFixture(t)
+			skillDir := f.abs(".claude/skills/pdf")
+			if err := os.MkdirAll(filepath.Join(skillDir, filepath.Dir(filepath.FromSlash(deleted))), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			plan := InstallPlan{
+				Deletes: []ProjectWrite{{Rel: ".claude/skills/pdf/" + deleted, Abs: filepath.Join(skillDir, filepath.FromSlash(deleted))}},
+				Dirs:    []string{skillDir},
+			}
+
+			pruneEmptyDirs(osProjectFS{}, plan)
+
+			if !f.exists(".claude/skills/pdf") {
+				t.Error("the skill directory itself was removed")
+			}
+			if !f.exists(".claude/skills") {
+				t.Error("the runtime's skills directory was removed")
+			}
+			if strings.Contains(deleted, "/") && f.exists(".claude/skills/pdf/a") {
+				t.Error("the emptied directory inside the skill was not pruned")
+			}
+		})
 	}
 }
 

@@ -62,6 +62,8 @@ func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() st
 // only when the attempt must be made again: the verb read under a shared lock that
 // held nothing, and the lock file appeared while it read (see
 // rereadsWhenTheLockFileAppears). That attempt's output is discarded, not printed.
+// When the lock file cannot be inspected the attempt is discarded too, and the verb
+// refuses with exit 1 instead of trying again.
 func runLocked(attempt int, verb string, args []string, installRoot string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) (done bool) {
 	release, provisional, ok := acquireLocks(verb, args, installRoot, locker, stderr, exit)
 	if !ok {
@@ -83,8 +85,16 @@ func runLocked(attempt int, verb string, args []string, installRoot string, read
 			code, exited = c, true
 		}
 	})
-	raced := rereadsWhenTheLockFileAppears(provisional)
+	raced, statErr := rereadsWhenTheLockFileAppears(provisional)
 	release()
+	if statErr != nil {
+		// Whether a writer began cannot be known, so the read cannot be trusted and is
+		// not printed. This is a refusal that reading again will not clear, not a busy
+		// lock: it is exit 1, with the reason the system gave (which names the path).
+		fmt.Fprintf(stderr, "error: skills %s: cannot tell whether a writer began while it read: %v; nothing was changed\n", verb, statErr)
+		exit(1)
+		return true
+	}
 	if !raced {
 		_, _ = out.WriteTo(stdout)
 		_, _ = errOut.WriteTo(stderr)

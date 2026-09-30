@@ -10,6 +10,7 @@ package skills
 // read seam: the "first writer" runs inside validate's read of the registry.
 
 import (
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -165,6 +166,56 @@ func TestValidateGivesUpWhenTheLockFileKeepsAppearingAndVanishing(t *testing.T) 
 	}
 	if attempts != maxRereadAttempts {
 		t.Errorf("%d attempts, want the bound of %d", attempts, maxRereadAttempts)
+	}
+}
+
+// Only "the file is still absent" proves that no writer began. A stat that fails for
+// any other reason proves nothing either way, and is not evidence that a writer
+// arrived: reading again until the bound and then calling it "busy" would tell the
+// caller to retry a failure that will not clear. validate refuses, with exit 1 and the
+// reason the system gave, after the first read.
+func TestValidateRefusesWithTheRealReasonWhenTheLockFileCannotBeInspected(t *testing.T) {
+	f := newLockFixture(t)
+	loop := filepath.Join(t.TempDir(), "loop")
+	if err := os.Symlink(loop, loop); err != nil {
+		t.Skipf("cannot make a symbolic link that points at itself: %v", err)
+	}
+	_, statErr := os.Stat(loop)
+	pathErr, ok := statErr.(*fs.PathError)
+	if !ok || os.IsNotExist(statErr) {
+		t.Fatalf("a symbolic link that points at itself gave %v, want a stat failure that is not 'does not exist'", statErr)
+	}
+	attempts := 0
+	locker := &vanishingLocker{lockPath: f.lockPath, attempts: &attempts}
+	readFile := func(name string) ([]byte, error) {
+		if filepath.Clean(name) == filepath.Clean(f.reg) {
+			// Something unusable appears where the lock file would be, during the
+			// read; the locker removes it again when the lock is released.
+			_ = os.Remove(f.lockPath)
+			if err := os.Symlink(f.lockPath, f.lockPath); err != nil {
+				t.Errorf("cannot stage the unusable lock path: %v", err)
+			}
+		}
+		return os.ReadFile(name)
+	}
+
+	r := runAt("validate", f.flags(), readFile, nil, locker)
+
+	if r.code != 1 || r.stdout != "" {
+		t.Fatalf("exit %d, stdout %q, stderr %q, want exit 1 and nothing on stdout", r.code, r.stdout, r.stderr)
+	}
+	for _, want := range []string{"skills validate", f.lockPath, pathErr.Err.Error(), "nothing was changed"} {
+		if !strings.Contains(r.stderr, want) {
+			t.Errorf("stderr %q does not contain %q", r.stderr, want)
+		}
+	}
+	for _, unwanted := range []string{"kept changing", "retry"} {
+		if strings.Contains(r.stderr, unwanted) {
+			t.Errorf("stderr %q contains %q: a failure that will not clear was reported as a busy one", r.stderr, unwanted)
+		}
+	}
+	if attempts != 1 {
+		t.Errorf("%d attempts, want 1: the verb read again after a failure that is not a writer arriving", attempts)
 	}
 }
 

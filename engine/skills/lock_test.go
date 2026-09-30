@@ -625,6 +625,31 @@ func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	}
 }
 
+// The project verbs lock the project they work on, and refuse to run when no locker
+// is configured. The three that write would lose updates if two interleaved.
+// project-status only reads, but it reads the project lock file and then the skill
+// files it lists, which a revision's renames leave disagreeing for a moment, so it too
+// refuses to run unserialized.
+func TestSkillsCoreAt_WithoutALockerTheProjectVerbsFailClosed(t *testing.T) {
+	for _, verb := range []string{"project-status", "project-register", "project-revise", "project-retire"} {
+		t.Run(verb, func(t *testing.T) {
+			root := t.TempDir()
+
+			r := runAt(verb, []string{"--project-root", root}, os.ReadFile, nil, nil)
+
+			if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, "no lock is configured") {
+				t.Errorf("exit %d, stdout %q, stderr %q, want exit 1 and a 'no lock is configured' refusal", r.code, r.stdout, r.stderr)
+			}
+			if !strings.Contains(r.stderr, "skills "+verb) {
+				t.Errorf("stderr %q does not name the verb %s", r.stderr, verb)
+			}
+			if entries, _ := os.ReadDir(root); len(entries) != 0 {
+				t.Errorf("a verb without a lock touched the project: %v", entries)
+			}
+		})
+	}
+}
+
 // ---- the interleavings the lock exists to prevent ----------------------------------
 
 // Two adds that both read the registry before either wrote used to leave only one

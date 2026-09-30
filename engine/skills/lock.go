@@ -77,9 +77,11 @@ type lockRequest struct {
 	// registry, when set, is a registry file that must exist before this lock is
 	// asked for, because asking creates the lock file beside it. The exception is a
 	// verb that never reads the registry (approve) and was told which registry's
-	// lock to take: there the path is only the name of the lock.
-	registry         string
-	registryOptional bool
+	// lock to take: there the path is only the name of the lock, and skipRegistryCheck
+	// is set, which leaves out the check that the registry exists before the lock is
+	// taken.
+	registry          string
+	skipRegistryCheck bool
 	// rereads marks a shared lock on a lock file whose holder reads several files
 	// that must agree. When that file does not exist, the lock holds nothing (see
 	// filelock.Shared), so the verb's read is provisional: see
@@ -159,7 +161,7 @@ func lockRequestsFor(verb string, args []string, installRoot string) []lockReque
 			// approve does not read it, so an explicit path is taken as the name of the
 			// lock; the default path, which is only the working directory's, is not.
 			req.registry = registryPath
-			req.registryOptional = verb == "approve" && registryPath != defaultRegistryPath
+			req.skipRegistryCheck = verb == "approve" && registryPath != defaultRegistryPath
 		}
 		requests = append(requests, req)
 	}
@@ -241,7 +243,7 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 	for _, req := range requests {
 		var unlock func()
 		var err error
-		if req.registry != "" && !req.registryOptional {
+		if req.registry != "" && !req.skipRegistryCheck {
 			if _, statErr := os.Stat(req.registry); statErr != nil {
 				releaseAll()
 				fmt.Fprintf(stderr, "error: skills %s: reading registry %q: %v; nothing was locked and nothing was changed\n", verb, req.registry, statErr)
@@ -295,15 +297,24 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 // and this time the file exists, so the lock it takes is real and waits for the
 // writer to finish. The bound is for a file that is removed again between attempts,
 // which nothing in this program does.
-func rereadsWhenTheLockFileAppears(provisional []string) bool {
+//
+// There are three answers, not two. Absent: no write began, the read stands. Present:
+// a writer may have begun, read again. Anything else (a stat that fails for another
+// reason: a permission, a loop of links): the check cannot say either way, and that is
+// neither a writer arriving nor a reason to read again, because the same failure will
+// come back, and the bound would turn it into a busy exit that tells the caller to
+// retry. It is returned, with the path it names, and the caller refuses with it.
+func rereadsWhenTheLockFileAppears(provisional []string) (appeared bool, err error) {
 	for _, path := range provisional {
-		// Anything but "still absent" counts as appeared: a stat that fails for
-		// another reason cannot prove that no writer began.
-		if _, err := os.Stat(path); !os.IsNotExist(err) {
-			return true
+		_, statErr := os.Stat(path)
+		switch {
+		case statErr == nil:
+			appeared = true
+		case !os.IsNotExist(statErr):
+			return false, statErr
 		}
 	}
-	return false
+	return appeared, nil
 }
 
 // maxErrorChain bounds a walk along wrapped errors. A real chain is a few links

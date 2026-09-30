@@ -345,6 +345,20 @@ func phase7Capabilities(t *testing.T, binary string) {
 			}
 		}
 	}
+
+	// Phase 8 adds the skills capability, last in the closed set. Every runtime the
+	// binary prints states it, and none claims more than partial: a written limit, and
+	// named tests (their existence was checked above, with the rest of the claims).
+	for _, d := range all.Declarations {
+		last := d.Claims[len(d.Claims)-1]
+		if last.Capability != capability.Skills {
+			t.Errorf("%s: the last printed claim is %s, want skills", d.Target, last.Capability)
+			continue
+		}
+		if last.Status != capability.Partial || len(last.Tests) == 0 || last.Detail == "" {
+			t.Errorf("%s skills = %s with %d tests and detail %q, want partial, named tests, and a written limit", d.Target, last.Status, len(last.Tests), last.Detail)
+		}
+	}
 }
 
 // --- unbound sessions --------------------------------------------------------

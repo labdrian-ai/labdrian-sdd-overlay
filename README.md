@@ -561,7 +561,7 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     binary, ~/.claude/bin/gentle-ai-overlay. Read-only and declarative: it prints, as JSON, what
     each runtime adapter declares it supports (default --target all; a single target prints one
     declaration). A declaration has one claim per capability -- installation, projection, dispatch,
-    cancellation, persistence, restart, authentication, memory-enforcement -- each supported,
+    cancellation, persistence, restart, authentication, memory-enforcement, skills -- each supported,
     partial, or unsupported. A supported or partial claim names the tests that prove it as
     <directory under engine/>:<TestName>, and a guard test verifies every named test exists; a
     partial or unsupported claim states its limit in "detail". "untested" appears only on a runtime
@@ -569,6 +569,18 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     tests prove, never what a runtime happened to do: a capability no test proves is declared
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
     session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
+    The skills claim (Phase 8) says what carrying the overlay's governed skills into a runtime's skill
+    directories is proven to do, and it is partial for all four runtimes. The project tier -- skills install
+    and skills adopt (.claude/skills and .agents/skills), and project-register, project-revise, and
+    project-retire -- is proven by engine tests: ownership by hash, foreign files kept, locks, the approval
+    record that skills add needs for a global skill. The global tier is deployed by `labdrian apply` (the
+    overlay script), not by the engine, and there is no standalone global installer: its tests run the script
+    on a fixture overlay and a sandbox home, never the real skills tree. Unused-skill detection is report-only
+    and exists for the project tier only (longterm-mem's skillstale check); a global skill is retired by hand.
+    No test observes a runtime loading a skill. Codex reading a project skill at .agents/skills was observed
+    once live (2026-09-28, Codex 0.148.0) and is recorded in odd/tasks/phase5-closeout.md, not tested. A
+    bound Claude Code session's projected context lists every capability that is not supported, so it now
+    lists skills=partial with the others.
 
 gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
     Engine verb (Phase 7), run on the installed engine binary like runtime capabilities. Read-only and
