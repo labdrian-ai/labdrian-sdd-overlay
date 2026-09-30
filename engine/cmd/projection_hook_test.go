@@ -979,7 +979,8 @@ func TestUsageDocumentsTheProjectionHook(t *testing.T) {
 	for _, want := range []string{
 		"engine projection hook --event UserPromptSubmit",
 		"internal Claude Code hook command",
-		"install-hooks does not install it yet",
+		"install-hooks installs it",
+		"re-run install-hooks and restart Claude Code",
 		`"hookSpecificOutput"`,
 		"silent",
 		"exit 0 always",
@@ -987,6 +988,29 @@ func TestUsageDocumentsTheProjectionHook(t *testing.T) {
 	} {
 		if !strings.Contains(text, want) {
 			t.Errorf("usage does not contain %q", want)
+		}
+	}
+}
+
+// The hook family is installed by install-hooks, so no user-facing text may
+// still say it is not, and each says what a user must do to get it: re-run
+// install-hooks on an existing install and restart Claude Code.
+func TestDocsSayInstallHooksInstallsTheProjectionHooks(t *testing.T) {
+	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
+	if err != nil {
+		t.Fatalf("read README.md: %v", err)
+	}
+	for name, raw := range map[string]string{"README": string(readme), "usage()": captureUsage(t)} {
+		text := strings.Join(strings.Fields(strings.ReplaceAll(raw, "`", "")), " ")
+		for _, stale := range []string{"does not install it into Claude Code settings yet", "install-hooks does not install it yet", "no session receives its output today"} {
+			if strings.Contains(text, stale) {
+				t.Errorf("%s still says %q", name, stale)
+			}
+		}
+		for _, want := range []string{"install-hooks installs", "re-run install-hooks", "restart Claude Code"} {
+			if !strings.Contains(text, want) {
+				t.Errorf("%s does not say %q", name, want)
+			}
 		}
 	}
 }

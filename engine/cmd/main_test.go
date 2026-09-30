@@ -972,10 +972,12 @@ func buildSettingsWithHooks(hookCmd string) map[string]interface{} {
 		}
 	}
 
+	projection := settings.ProjectionHookEntries(hookCmd)
+
 	return map[string]interface{}{
 		"hooks": map[string]interface{}{
-			"PreToolUse":       []interface{}{preToolUse, reviewReceipt, shaperGuard("Bash"), shaperGuard(settings.ShaperGuardFileToolMatcher)},
-			"UserPromptSubmit": []interface{}{userPromptSubmit},
+			"PreToolUse":       append([]interface{}{preToolUse, reviewReceipt, shaperGuard("Bash"), shaperGuard(settings.ShaperGuardFileToolMatcher)}, projection["PreToolUse"]...),
+			"UserPromptSubmit": append([]interface{}{userPromptSubmit}, projection["UserPromptSubmit"]...),
 			"SessionEnd":       []interface{}{sessionEnd},
 		},
 		"permissions": map[string]interface{}{

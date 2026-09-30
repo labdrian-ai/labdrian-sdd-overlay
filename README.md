@@ -123,8 +123,8 @@ same confirm→run→result pattern as apply/self-update.
 | `update` | read-only | Report the latest published release version and each target's recorded version (up-to-date / behind / never deployed). Never mutates anything. |
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (three hook families — two pairs + SessionEnd sync-trigger — five entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, and the three projection entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
@@ -550,9 +550,11 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit) and before
     each tool call (PreToolUse); a person does
     not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
-    ~/.claude/bin/gentle-ai-overlay, and `install-hooks` does not install it into Claude Code
-    settings yet, so no session receives its output today: it runs when something feeds it hook JSON,
-    as its tests do. UserPromptSubmit and PreToolUse are the events supported.
+    ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude Code settings.json
+    (one UserPromptSubmit entry and two PreToolUse entries, the file-edit tools and the longterm-mem query tool);
+    on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
+    hooks only at start and `status-hooks` reports degraded until the entries are in place. Its tests feed it hook JSON.
+    UserPromptSubmit and PreToolUse are the events supported.
     UserPromptSubmit: put the workflow the repository is bound to (see `workflow bind`) into the session's
     context, so a new or restarted session is told the same thing as the last one. PreToolUse: gate a tool
     call against that workflow (below).
@@ -608,8 +610,8 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     stderr in full); it never prints permissionDecision "allow", which would bypass Claude Code's normal
     permission flow. It stays silent for a binding or workflow it cannot follow, because it runs on every
     tool call and UserPromptSubmit already warns once per prompt. An in-flight tool call cannot be
-    interrupted: the gate acts at the next tool call. Like the projection, it does nothing until
-    `install-hooks` installs the hooks and Claude Code is restarted.
+    interrupted: the gate acts at the next tool call. Like the projection, it does nothing until you re-run
+    `install-hooks` and restart Claude Code.
 
 overlay --help
     Show this help.

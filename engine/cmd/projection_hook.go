@@ -3,8 +3,9 @@ package main
 // projection subcommand: 'projection hook --event UserPromptSubmit|PreToolUse'.
 // It is an internal Claude Code hook command, not one a person runs: Claude Code
 // starts it, hands it the event as JSON on stdin, and reads what it prints.
-// `install-hooks` does not install it yet, so today it runs only when something
-// feeds it hook JSON, as the tests do.
+// `install-hooks` installs it (the settings projection family); Claude Code loads
+// hook changes only when it starts, so an existing install must re-run
+// install-hooks and restart Claude Code. The tests feed it hook JSON directly.
 //
 // UserPromptSubmit puts into the session the workflow the repository is bound to
 // (see workflow bind): the decision is engine/projection's Project, a pure

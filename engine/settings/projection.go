@@ -184,3 +184,14 @@ func MissingProjectionHookParts(root map[string]interface{}, hookCommand string)
 func HasProjectionHooks(root map[string]interface{}, hookCommand string) bool {
 	return len(MissingProjectionHookParts(root, hookCommand)) == 0
 }
+
+// ProjectionHookEntries returns, per event key, exactly the entries Install
+// writes for the projection family with hookCommand as the binary. Fixtures and
+// status checks use it so they never retype the entry shape.
+func ProjectionHookEntries(hookCommand string) map[string][]interface{} {
+	out := map[string][]interface{}{}
+	for _, s := range projectionSpecs {
+		out[s.event] = append(out[s.event], buildProjectionEntry(hookCommand, s))
+	}
+	return out
+}
