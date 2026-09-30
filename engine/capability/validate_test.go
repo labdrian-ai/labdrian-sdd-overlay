@@ -39,7 +39,7 @@ func TestValidate(t *testing.T) {
 	}{
 		// Declarations that must be accepted.
 		{
-			name:   "a declaration with one supported and seven unsupported claims is valid",
+			name:   "a declaration with one supported and eight unsupported claims is valid",
 			mutate: func(d *capability.Declaration) {},
 		},
 		{
@@ -106,7 +106,7 @@ func TestValidate(t *testing.T) {
 		{
 			name:    "a missing capability is refused",
 			mutate:  func(d *capability.Declaration) { d.Claims = d.Claims[:len(d.Claims)-1] },
-			wantErr: `missing capability "memory-enforcement"`,
+			wantErr: `missing capability "skills"`,
 		},
 		{
 			name:    "a declaration without claims is refused",
@@ -139,7 +139,7 @@ func TestValidate(t *testing.T) {
 			mutate: func(d *capability.Declaration) {
 				d.Claims = append(d.Claims, d.Claims[0])
 			},
-			wantErr: `claims[8]: capability "installation" appears more than once`,
+			wantErr: `claims[9]: capability "installation" appears more than once`,
 		},
 
 		// Status.
