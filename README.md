@@ -389,6 +389,8 @@ overlay skills <verb>
     add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external)
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
+    approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
+                 The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
 
 overlay shaper <verb>
     Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.

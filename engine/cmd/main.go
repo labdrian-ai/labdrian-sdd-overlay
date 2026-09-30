@@ -5,7 +5,7 @@
 //	engine merge-settings --settings <path> --hook-command <binary-path>
 //	engine uninstall-hooks --settings <path> --hook-command <binary-path>
 //	engine status
-//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire)
+//	engine skills <verb>  (verbs: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
@@ -47,6 +47,9 @@
 // sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
 // lint: lint a SKILL.md file against the authoritative rule table, or print
 // that table with --rules; exit 1 on any hard error.
+// approve: record a human approval of skills/<id>/SKILL.md, bound to the digest
+// of its exact bytes, next to the skill (--id, --approver, --source-root). The
+// engine cannot prove a human ran it; the record only proves the bytes match.
 // project-register/revise/status: manage project-tier procedural skills and
 // report ownership from the project lock.
 package main
@@ -60,6 +63,7 @@ import (
 	"path/filepath"
 	"strings"
 	"syscall"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
@@ -187,7 +191,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
 	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
 	fmt.Fprintln(os.Stderr, "    check: reports drift between --dest-dir and the current manifest; exit 1 on drift")
-	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire)")
+	fmt.Fprintln(os.Stderr, "  engine skills <verb>   (verbs: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)")
 	fmt.Fprintln(os.Stderr, "    list          [--registry <path>]                                                      print sorted registry entries")
 	fmt.Fprintln(os.Stderr, "    status        [--registry <path>]                                                      print count summary (total/core/custom)")
 	fmt.Fprintln(os.Stderr, "    validate      [--registry <path>] [--manifest <path>] --source-root <path>              cross-check registry vs manifest and skills/ on disk; exit 1 on divergence")
@@ -816,11 +820,19 @@ func runSkills(args []string) {
 // runSkillsCore is the testable core of the skills subcommand.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
 		exit(1)
 		return
 	}
-	skills.SkillsCore(verb, args, os.ReadFile, stdout, stderr, exit)
+	skills.SkillsCoreAt(verb, args, os.ReadFile, wallClockUTC, stdout, stderr, exit)
+}
+
+// wallClockUTC is the production clock handed to the skills core: the current
+// time as an RFC 3339 UTC timestamp with whole seconds, the only shape an
+// approval record accepts. engine/skills cannot read the time itself because
+// its import allowlist excludes "time", so the wall clock is decided here.
+func wallClockUTC() string {
+	return time.Now().UTC().Format(time.RFC3339)
 }
 
 // verbFromArgs extracts the first positional argument as the verb, empty if absent.
