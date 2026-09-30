@@ -94,6 +94,12 @@ func RemoveEntry(reg Registry, id string) (Registry, error) {
 
 // ── I/O helpers ─────────────────────────────────────────────────────────────
 
+// atomicTempPrefix begins the name of every temporary file writeFileAtomic makes,
+// in the directory of the file it is about to replace. A copier that walks a
+// directory another verb may be writing in skips names that carry it and a unique
+// suffix (see copyTree): such a file is half a write, never skill content.
+const atomicTempPrefix = ".tmp-skills-"
+
 // writeFileAtomic writes data to a temp file in the same directory as path,
 // syncs, and returns the temp file path. The caller is responsible for the
 // final os.Rename. This pattern ensures each file is written atomically
@@ -103,7 +109,7 @@ func writeFileAtomic(path string, data []byte) (string, error) {
 	if dir == "" {
 		dir = "."
 	}
-	tmp, err := os.CreateTemp(dir, ".tmp-skills-*")
+	tmp, err := os.CreateTemp(dir, atomicTempPrefix+"*")
 	if err != nil {
 		return "", fmt.Errorf("writeFileAtomic: create temp: %w", err)
 	}

@@ -7,11 +7,18 @@ import (
 	"os"
 )
 
+// installCwd is the working directory `skills install` installs into. It is a
+// variable only so that a test can point it at a temporary project; nothing else
+// assigns it.
+var installCwd = os.Getwd
+
 // SkillsCore is the testable CLI core for `engine skills <verb>`. It is
-// SkillsCoreAt without a clock: every verb but approve behaves identically,
-// and approve fails closed, because it must not invent an approval time.
+// SkillsCoreAt without a clock and without a locker: the verbs that need neither
+// behave identically, approve fails closed because it must not invent an
+// approval time, and so does every verb that takes the overlay lock, because it
+// must not run unserialized.
 func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, readFile, nil, stdout, stderr, exit)
+	SkillsCoreAt(verb, args, readFile, nil, nil, stdout, stderr, exit)
 }
 
 // SkillsCoreAt is the testable CLI core for `engine skills <verb>`.
@@ -23,7 +30,12 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 // No global state; all I/O is injected. now returns the current time as an
 // RFC 3339 UTC timestamp for the verbs that record one (approve); the
 // production caller passes the wall clock, and nil is legal for every other verb.
-func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() string, stdout, stderr io.Writer, exit func(int)) {
+func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
+	release, ok := acquireLocks(verb, args, locker, stderr, exit)
+	if !ok {
+		return
+	}
+	defer release()
 	switch verb {
 	case "list":
 		RenderListCore(args, readFile, stdout, stderr, exit)
@@ -32,7 +44,7 @@ func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() st
 	case "validate":
 		RenderValidateCore(args, readFile, ScanSkillFiles, stdout, stderr, exit)
 	case "install":
-		RenderInstallCore(args, readFile, os.Getwd, stdout, stderr, exit)
+		RenderInstallCore(args, readFile, installCwd, stdout, stderr, exit)
 	case "add":
 		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
 	case "remove":

@@ -122,10 +122,41 @@ func TestApproveGuardCommand_AllowsEverythingElse(t *testing.T) {
 		"rg between other commands":      "cd repo && rg 'labdrian skills approve' docs | head -5",
 		"rg on a later line":             "cd repo\nrg 'labdrian skills approve' docs",
 		"rg with another flag before it": "rg --no-heading -n 'labdrian skills approve' docs",
+		// Flags that merely start with the letters of a command-running flag are
+		// not command-running flags: --pretty is a real rg output mode, and
+		// --pre-glob only narrows the files a --pre command sees.
+		"rg with --pretty":                   "rg --pretty 'labdrian skills approve' docs",
+		"rg with --pre-glob":                 "rg --pre-glob '*.md' 'labdrian skills approve' docs",
+		"rg with --pre-glob and a value":     "rg --pre-glob=*.md 'labdrian skills approve' docs",
+		"rg with --no-pre":                   "rg --no-pre 'labdrian skills approve' docs",
+		"rg with --hostname-bin-like prefix": "rg --hostname-binary 'labdrian skills approve' docs",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if ApproveGuardCommandMatches(command) {
 				t.Errorf("command %q was matched, want it allowed", command)
+			}
+		})
+	}
+}
+
+// A reader that is handed a program to run is not only reading: rg runs the
+// program named by --pre (once per file) and by --hostname-bin. Each spelling of
+// those two flags takes the segment out of the reader exemption, so the
+// invocation text inside it is judged like any other segment's.
+func TestApproveGuardCommand_ACommandRunningReaderFlagIsNotExempt(t *testing.T) {
+	const needle = "labdrian skills approve"
+	for name, command := range map[string]string{
+		"--pre with a separate value":          "rg --pre ./prep.sh '" + needle + "' docs",
+		"--pre=value":                          "rg --pre=./prep.sh '" + needle + "' docs",
+		"--pre after the pattern":              "rg '" + needle + "' docs --pre ./prep.sh",
+		"--pre with a quoted flag":             `rg "--pre=./prep.sh" '` + needle + `' docs`,
+		"--hostname-bin with a separate value": "rg --hostname-bin ./host.sh '" + needle + "' docs",
+		"--hostname-bin=value":                 "rg --hostname-bin=./host.sh '" + needle + "' docs",
+		"--pre on a path-prefixed rg":          "/usr/bin/rg --pre=./prep.sh '" + needle + "' docs",
+	} {
+		t.Run(name, func(t *testing.T) {
+			if !ApproveGuardCommandMatches(command) {
+				t.Errorf("command %q was exempt as a plain search, want it judged as an invocation", command)
 			}
 		})
 	}

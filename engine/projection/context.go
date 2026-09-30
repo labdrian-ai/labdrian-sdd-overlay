@@ -195,6 +195,15 @@ func StoreWarning(err error) string {
 		"; no workflow is projected, and if this repository is bound its workflow is not being followed in this session."
 }
 
+// PanicText renders a recovered panic value for a warning shown to the user: one
+// sanitized line, cut to a short length (see maxPanicRunes). It is the part of
+// PanicWarning that comes from outside, exported so that another hook that
+// words the rest itself (the skills approve guard) never prints an unbounded or
+// multi-line value.
+func PanicText(recovered any) string {
+	return clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes)
+}
+
 // PanicWarning is the one line shown to the user when the hook recovered from
 // an internal panic while answering event. The panic value is sanitized and cut
 // to a short length, so it can never spread over lines or fill the screen; the
@@ -203,7 +212,7 @@ func StoreWarning(err error) string {
 // nothing projected, or a tool call that went ahead unchecked. An event this
 // package does not know gets wording that claims neither.
 func PanicWarning(event string, recovered any) string {
-	head := "labdrian: the projection hook hit an internal error (" + clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes) + "); "
+	head := "labdrian: the projection hook hit an internal error (" + PanicText(recovered) + "); "
 	switch event {
 	case HookEventUserPromptSubmit:
 		return head + "nothing was projected this time and the prompt was not affected."

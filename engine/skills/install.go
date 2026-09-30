@@ -122,10 +122,16 @@ func copyTree(src, dst string) error {
 		if err != nil {
 			return err
 		}
+		// Never copied, whatever else is skipped below: see the doc comment.
+		// TestCopyTree_SkipsAWritersTemporaryFile relies on this rule for the
+		// approval record in its fixture.
 		if rel == ApprovalRecordName {
 			if d.IsDir() {
 				return filepath.SkipDir
 			}
+			return nil
+		}
+		if isWriterTempFile(d) {
 			return nil
 		}
 		target := filepath.Join(dst, rel)
@@ -140,6 +146,18 @@ func copyTree(src, dst string) error {
 
 		return copyFile(path, target, d)
 	})
+}
+
+// isWriterTempFile reports whether d is a regular file that writeFileAtomic made
+// and has not yet renamed into place: the temporary-file prefix followed by its
+// unique suffix. It is half of a write another verb is doing in the source tree,
+// not skill content. install also holds the overlay lock, which keeps those verbs
+// out while it copies; this is the second defence, for a writer that did not take
+// it. The prefix alone, with no suffix, is not a name writeFileAtomic makes, and
+// a directory with such a name is walked like any other.
+func isWriterTempFile(d fs.DirEntry) bool {
+	name := d.Name()
+	return !d.IsDir() && len(name) > len(atomicTempPrefix) && name[:len(atomicTempPrefix)] == atomicTempPrefix
 }
 
 // copyFile copies a single file from src to dst preserving its mode bits.

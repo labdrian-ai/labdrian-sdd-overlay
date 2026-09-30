@@ -114,7 +114,7 @@ skills:
 
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("validate",
+		skillsCoreUnlocked("validate",
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot},
 			os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
@@ -158,7 +158,7 @@ skills:
 		// The mock registry has only global skills → empty plan → exit 0 with notice.
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		SkillsCore(
+		skillsCoreUnlocked(
 			"install",
 			[]string{"--registry", "reg.yaml", "--source-root", "/nonexistent", "--project-id", "test-project"},
 			skillsMockReadFile,
@@ -532,7 +532,7 @@ skills:
 	t.Run("add_routes_without_unknown_verb_error", func(t *testing.T) {
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		SkillsCore("add",
+		skillsCoreUnlocked("add",
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
 			os.ReadFile, &out, &errBuf,
 			func(c int) { exitCode = c },
@@ -549,7 +549,7 @@ skills:
 		// Registry now has "existing" + "new-skill" (added above); remove "new-skill".
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		SkillsCore("remove",
+		skillsCoreUnlocked("remove",
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
 			os.ReadFile, &out, &errBuf,
 			func(c int) { exitCode = c },
@@ -639,7 +639,7 @@ skills:
 
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		SkillsCore(
+		skillsCoreUnlocked(
 			"sync-manifest",
 			[]string{"--registry", regPath, "--manifest", mfPath},
 			os.ReadFile, &out, &errBuf,

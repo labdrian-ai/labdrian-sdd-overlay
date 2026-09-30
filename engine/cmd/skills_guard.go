@@ -70,11 +70,16 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	// A Go panic ends the process with status 2, which Claude Code reads as "block
 	// this tool call". The decision is pure and is not expected to panic, but the
 	// cost of being wrong is a session that cannot run a command, so it is caught,
-	// reported on stderr (which Claude Code shows only in verbose mode), and turned
-	// into the same silent exit 0 as every other failure.
+	// reported in full on stderr (which Claude Code shows only in verbose mode),
+	// shown to the user as one short sanitized systemMessage (an allow with a
+	// warning, never a denial, so a guard that stopped guarding does not look like
+	// one that allowed), and turned into the same exit 0 as every other failure.
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(stderr, "skills guard-hook: internal error: %v\n", r)
+			if out, err := (projection.GateResult{Warning: guardPanicWarning(r)}).PreToolUseOutput(); err == nil {
+				_, _ = stdout.Write(out) // nothing to do if the write fails: the call goes through.
+			}
 			exit(0)
 		}
 	}()
@@ -96,4 +101,12 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 		}
 	}
 	exit(0)
+}
+
+// guardPanicWarning is the one line the user sees when the guard recovered from a
+// panic: it names the guard and says what happened to the call. The panic value is
+// sanitized and bounded by projection.PanicText, so it can never spread over lines.
+func guardPanicWarning(recovered any) string {
+	return "labdrian: the skills approve guard hit an internal error (" + projection.PanicText(recovered) +
+		"); this tool call was not checked for 'skills approve' and was not denied."
 }

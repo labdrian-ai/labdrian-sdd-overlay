@@ -621,6 +621,13 @@ Commands:
                                              A PreToolUse hook (install-hooks) denies the agent running
                                              it or writing the record by hand: a speed bump, not a
                                              security boundary. A person runs it in a terminal.
+                                   Locking: add, remove, sync-manifest and approve hold an exclusive lock, and
+                                   validate and install a shared one, on .skills.registry.yaml.lock beside the
+                                   registry (created by the first write, never removed, git-ignored; shared
+                                   holders never create it, so both work on a read-only overlay). A lock that stays
+                                   taken for 2 seconds means another skills command is in progress: the verb
+                                   changes nothing and reports it with exit 2 (retry). Exit 1 is unchanged: the
+                                   verb ran or was refused, or the lock could not be created at all.
   shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
                                    assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
                                    clearance record --stdin  store a human decision (Pi /shaper-clear)
