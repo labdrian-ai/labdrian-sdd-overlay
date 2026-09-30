@@ -796,7 +796,7 @@ func TestSkillsCore_DispatchesProjectReviseAndStatus(t *testing.T) {
 
 	var statusOut, statusErr bytes.Buffer
 	statusExit := -1
-	SkillsCore("project-status", projectStatusArgs(e, "tidy-worktree"), os.ReadFile, &statusOut, &statusErr, func(c int) { statusExit = c })
+	skillsCoreUnlocked("project-status", projectStatusArgs(e, "tidy-worktree"), os.ReadFile, &statusOut, &statusErr, func(c int) { statusExit = c })
 	if statusExit != 0 {
 		t.Fatalf("project-status dispatch exit = %d, stderr %q", statusExit, statusErr.String())
 	}

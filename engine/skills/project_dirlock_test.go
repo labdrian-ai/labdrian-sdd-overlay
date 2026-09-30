@@ -98,12 +98,46 @@ func TestSkillsCoreAt_TheLastProjectRootIsTheOneLocked(t *testing.T) {
 	}
 }
 
-// project-status only reads and reports; it takes no lock.
-func TestSkillsCoreAt_ProjectStatusTakesNoLock(t *testing.T) {
+// project-status only reads and reports, so its lock is shared: any number of them
+// run together, and none runs while a verb that writes the project holds the
+// exclusive one. Without it, status can read the skill files between a revision's
+// renames and report "human-owned" for a skill that is about to be consistent.
+func TestSkillsCoreAt_ProjectStatusTakesASharedProjectLock(t *testing.T) {
+	root := t.TempDir()
 	locker := &recordingLocker{}
-	runAt("project-status", []string{"--project-root", t.TempDir()}, os.ReadFile, nil, locker)
-	if got := locker.log(); len(got) != 0 {
-		t.Errorf("project-status took locks %v, want none", got)
+	runAt("project-status", []string{"--project-root", root}, os.ReadFile, nil, locker)
+	want := []string{"lockdir shared " + root, "unlock " + root}
+	if got := locker.log(); !reflect.DeepEqual(got, want) {
+		t.Errorf("lock events = %v, want %v", got, want)
+	}
+}
+
+// A status that starts while a revision is in progress waits for it, and reports the
+// revised skill as the agent's: the writer is parked after it read the project lock,
+// holding the exclusive lock, and the status can only be granted its shared one once
+// the writer has let go.
+func TestAProjectStatusStartedDuringARevisionWaitsForItAndSeesTheRevision(t *testing.T) {
+	e := newRegisteredCLIRevisionEnv(t, "tidy-worktree")
+	gate := newReadGate(t, projectLockFile(e.root))
+	locker := &exclusionLocker{blocked: gate.release}
+
+	revised := make(chan coreRun, 1)
+	go func() { revised <- runAt("project-revise", registerArgs(e), gate.readFile, nil, locker) }()
+	<-gate.arrived
+	status := runAt("project-status", projectStatusArgs(e, "tidy-worktree"), os.ReadFile, nil, locker)
+	gate.release()
+	rev := <-revised
+
+	if rev.code != 0 {
+		t.Fatalf("project-revise: exit %d, stderr %q", rev.code, rev.stderr)
+	}
+	if status.code != 0 || !strings.Contains(status.stdout, "rev:2 owner:agent") {
+		t.Errorf("project-status: exit %d, stdout %q, stderr %q, want revision 2 owned by the agent", status.code, status.stdout, status.stderr)
+	}
+	events := locker.events()
+	released, granted := indexOf(events, "released exclusive project"), indexOf(events, "granted shared project")
+	if released < 0 || granted < 0 || released > granted {
+		t.Errorf("lock events %v: the status was granted its shared lock before the revision released the exclusive one", events)
 	}
 }
 

@@ -113,14 +113,18 @@ type lockRequest struct {
 // Project lock, keyed by the project root directory, taken on the directory itself
 // so that no file appears in the user's repository:
 //
-//   - project-register, project-revise, project-retire, install: exclusive. Each
-//     reads the project's lock file (.labdrian/procedural-skills.lock.json), decides,
-//     and writes it back together with the skill files it stages, so two of them on
-//     one root lose an update, or leave a skill written and unregistered. install is
-//     the same read-decide-write on the project's .claude/skills. A verb that finds
-//     no usable project root (the flag is missing, has no value, or is relative)
-//     takes no lock: it refuses before it reads or writes anything.
-//   - project-status only reads and reports; it takes none.
+//   - project-register, project-revise, project-retire, install, adopt: exclusive.
+//     Each reads the project's lock file (.labdrian/procedural-skills.lock.json),
+//     decides, and writes it back together with the skill files it stages, so two of
+//     them on one root lose an update, or leave a skill written and unregistered.
+//     install is the same read-decide-write on the project's .claude/skills and
+//     .agents/skills, and adopt records what is there. A verb that finds no usable
+//     project root (the flag is missing, has no value, or is relative) takes no
+//     lock: it refuses before it reads or writes anything.
+//   - project-status: shared. It only reads, so any number run together, but it
+//     reads the lock file and then the skill files it lists, and between a revision's
+//     renames those disagree. Waiting for the writer is what keeps it from reporting
+//     a skill as human-owned for the moment it takes the writer to finish.
 //
 // The project root is read once, by the same code the verb reads it with:
 // parseProjectArgs for the project verbs, and for install the working directory,
@@ -159,11 +163,11 @@ func lockRequestsFor(verb string, args []string, installRoot string) []lockReque
 		}
 		requests = append(requests, req)
 	}
-	project := func(root string) {
+	project := func(root string, mode LockMode) {
 		requests = append(requests, lockRequest{
 			path:    filepath.Clean(root),
 			dir:     true,
-			mode:    LockExclusive,
+			mode:    mode,
 			subject: "the project " + filepath.Clean(root),
 		})
 	}
@@ -172,14 +176,18 @@ func lockRequestsFor(verb string, args []string, installRoot string) []lockReque
 		overlay(LockExclusive, false)
 	case "validate":
 		overlay(LockShared, true)
-	case "install":
+	case "install", "adopt":
 		overlay(LockShared, false)
 		if installRoot != "" {
-			project(installRoot)
+			project(installRoot, LockExclusive)
 		}
 	case "project-register", "project-revise", "project-retire":
 		if root, ok := projectRootArg(verb, args); ok {
-			project(root)
+			project(root, LockExclusive)
+		}
+	case "project-status":
+		if root, ok := projectRootArg(verb, args); ok {
+			project(root, LockShared)
 		}
 	}
 	return requests
