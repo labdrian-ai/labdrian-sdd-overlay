@@ -449,8 +449,10 @@ overlay workflow <verb>
     $HOME/.local/state/... when XDG_STATE_HOME is unset), keyed by project_id so every git
     worktree of a project observes the same workflow. Lifecycle operations never need Gentle AI,
     gentle-pi, a runtime, memory, or auth to be present: a declared dependency that is
-    unavailable is recorded as an "unavailable" observation on the event, never approved or
-    hidden. No verb here executes a workflow step or check; that is a runtime adapter's
+    unavailable is recorded as an "unavailable" observation on the event, never hidden; a
+    dependency is recorded "available" only when its file or binary is seen by stat (the Engram
+    database, the longterm-mem registration record, gentle-ai on PATH), never opened, run, or
+    trusted, and the detail says what presence does not prove. No verb here executes a workflow step or check; that is a runtime adapter's
     responsibility outside this overlay (Phase 7).
     create --project <id> --workflow <id> --goal <path> --profile <name> [--role-chain <id>]
         Create a workflow: binds the Goal's SHA-256 digest, the named Workflow Profile, and,
@@ -528,6 +530,21 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     tests prove, never what a runtime happened to do: a capability no test proves is declared
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
     session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
+
+gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
+    Engine verb (Phase 7), run on the installed engine binary like runtime capabilities. Read-only and
+    stat only: it prints, as JSON ({"version":1,"observations":[...]}), one observation per signal, from the
+    real HOME and PATH: whether each selected runtime's credentials file is present (credentials:claude-code,
+    credentials:codex, credentials:pi; default --target all) and, on every run, whether the Engram database
+    (memory:engram), the longterm-mem registration record (memory:longterm-mem), and the gentle-ai binary on
+    PATH (gentle-ai-review) are present; memory:procedural-skills has no check and is always unavailable. It
+    never opens, reads, hashes, or prints the contents of any of those files, never runs gentle-ai, and never
+    names a path in its output, so "available" says a file or binary is present and nothing else: a present
+    credentials file is not proof that the runtime is authenticated, a present database is not a healthy one, and
+    a binary on PATH has not been run (each detail says so, and a test parses the prober's source to forbid opening
+    files). The workflow verbs record the same observations on their events. The longterm-mem record is looked for
+    at the default state directory only (~/.labdrian-overlay), not under a custom --state-dir. Exit 0 on success,
+    2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
 gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     Internal hook command (Phase 7): Claude Code is meant to run it before each prompt (UserPromptSubmit) and before

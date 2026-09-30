@@ -30,6 +30,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
@@ -163,10 +164,23 @@ func (r pathGoalReader) LoadGoal(projectID, goalID string) (goal.Goal, error) {
 	return g, nil
 }
 
+// workflowProber returns the DependencyProber the workflow verbs record
+// observations with: the presence prober, pointed at the process's home and
+// PATH. It looks at paths with stat and at PATH entries by name, and never opens
+// a file, runs a program, or names a path (see engine/capability), so an
+// "available" observation only says something is present and states the limit.
+// It is a variable so a test can install workflow.UnavailableProber, the safe
+// default that confirms nothing.
+var workflowProber = func() workflow.DependencyProber {
+	home, path := runtimeProbeEnv()
+	return capability.PresenceProber{Home: home, Path: path}
+}
+
 // newWorkflowLifecycle builds a Lifecycle over the real XDG-resolved Store
 // and the real role chain store, with provenance observed from cwd (no
-// subprocess) and the default UnavailableProber (no capability is ever
-// approved on its own authority from the CLI). goalFile is used only by
+// subprocess) and the presence prober of workflowProber (a dependency is
+// recorded available only when its presence is seen by stat, never on the
+// CLI's own authority). goalFile is used only by
 // verbs that call LoadGoal (verify); it must be empty for every other verb,
 // since Create reads and validates its own Goal argument directly (see
 // runWorkflowCreate) rather than through the injected GoalReader, and no
@@ -184,7 +198,7 @@ func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Life
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
-	lc, err := workflow.NewLifecycle(store, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, nil)
+	lc, err := workflow.NewLifecycle(store, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, workflowProber())
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}

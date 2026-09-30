@@ -67,9 +67,15 @@ var declarations = []Declaration{
 				"cmd:TestProjectionHookOutputIsIdenticalAcrossProcesses",
 				"cmd:TestProjectionHookSeesTheSameWorkflowFromEveryWorktree",
 			),
-			unsupported(Authentication, "Not implemented yet: the engine does not check whether Claude Code has credentials."),
+			partial(Authentication,
+				"The presence prober reports whether Claude Code's credentials file exists, by stat only (runtime probe --target claude, and the observations a workflow records). It never reads the file and cannot prove the credentials are valid or that a session is authenticated. No lifecycle operation requires authentication.",
+				"capability:TestPresenceProberReportsEachFileSignalFromTheFixtureHome",
+				"capability:TestPresenceProberSourceOnlyStats",
+				"cmd:TestRuntimeProbeDefaultsToAllTargetsAndReportsPresenceOnly",
+				"cmd:TestRuntimeProbeSourceOpensNoFile",
+			),
 			partial(MemoryEnforcement,
-				"The PreToolUse gate denies a longterm-mem query whose project differs from the memory plan's project, and every query when the plan has no project. Not enforced, as the tool input cannot verify it: get carries no project, Engram tools, and the mapping between the plan's sources and a query's sources. Writes are never blocked. install-hooks does not install the hooks yet and hook changes need a Claude Code restart, so no session is gated yet.",
+				"The PreToolUse gate denies a longterm-mem query whose project differs from the memory plan's project, and every query when the plan has no project. Not enforced, because the tool input cannot verify these: a get call (it carries no project), Engram tools, and the mapping between the plan's sources and a query's sources. Writes are never blocked. install-hooks does not install the hooks yet and hook changes need a Claude Code restart, so no session is gated yet.",
 				"cmd:TestPreToolUseChecksTheProjectOfALongtermMemQuery",
 				"cmd:TestPreToolUseDeniesEveryQueryWhenThePlanHasNoProject",
 				"cmd:TestPreToolUseHookRunsAsASeparateProcess",
@@ -90,7 +96,7 @@ var declarations = []Declaration{
 				"runtime:TestCodexUninstallRemovesManifestWithoutTouchingUnrelatedFiles",
 				"runtime:TestCodexUpdateRefreshesManagedManifest",
 			),
-		}, declaredOnlyClaims("Codex")...),
+		}, declaredOnlyClaims("Codex", presenceProbeDetail("Codex"))...),
 	},
 	{
 		Target: TargetPi,
@@ -102,7 +108,7 @@ var declarations = []Declaration{
 				"runtime:TestPiAdapter_StatusTriangulatesAllOwnedEntries",
 				"runtime:TestPiAdapter_UninstallUsesRemoveNotUninstall",
 			),
-		}, declaredOnlyClaims("Pi")...),
+		}, declaredOnlyClaims("Pi", presenceProbeDetail("Pi"))...),
 	},
 	{
 		Target:   TargetOpenCode,
@@ -116,14 +122,16 @@ var declarations = []Declaration{
 				"runtime:TestOpenCodeStatusSupportedWhenActiveMarkerMatchesHash",
 				"runtime:TestOpenCodeUninstallRemovesPluginAndConfig",
 			),
-		}, declaredOnlyClaims("OpenCode")...),
+		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.")...),
 	},
 }
 
 // declaredOnlyClaims returns the seven claims after installation for a
 // runtime that Phase 7 declares without implementing: every one unsupported,
-// with the limit written. runtime is the display name used in the sentences.
-func declaredOnlyClaims(runtime string) []Claim {
+// with the limit written. runtime is the display name used in the sentences,
+// and authDetail is the authentication limit, which differs by runtime because
+// only some runtimes have a credentials presence check.
+func declaredOnlyClaims(runtime, authDetail string) []Claim {
 	const scope = " This runtime is declared only: Phase 7 writes no code for it."
 	return []Claim{
 		unsupported(Projection, "No code projects the active workflow (Goal, Profile, stage) into a "+runtime+" session."+scope),
@@ -131,9 +139,19 @@ func declaredOnlyClaims(runtime string) []Claim {
 		unsupported(Cancellation, "Not implemented: no workflow transition reaches a "+runtime+" session. Hard cancel of an in-flight tool call is out of scope."+scope),
 		unsupported(Persistence, "Not implemented: no binding between a "+runtime+" session and a workflow is stored."+scope),
 		unsupported(Restart, "Not implemented: a new "+runtime+" session does not re-bind to an on-disk workflow."+scope),
-		unsupported(Authentication, "Not implemented: the engine does not check whether "+runtime+" has credentials."+scope),
+		unsupported(Authentication, authDetail+scope),
 		unsupported(MemoryEnforcement, "Not implemented: no memory plan is projected into or enforced in a "+runtime+" session."+scope),
 	}
+}
+
+// presenceProbeDetail is the authentication limit of a declared-only runtime
+// that the presence prober has a credentials signal for. The signal exists, but
+// it is not part of an implementation for the runtime: nothing reads the file,
+// nothing checks the runtime is authenticated, and nothing acts on the result.
+func presenceProbeDetail(runtime string) string {
+	return "The presence prober reports whether " + runtime + "'s credentials file exists, by stat only (runtime probe), " +
+		"but that check is not part of an implementation for " + runtime + ": nothing reads the file, and a present file " +
+		"does not prove " + runtime + " is authenticated."
 }
 
 func supported(c Capability, detail string, tests ...string) Claim {

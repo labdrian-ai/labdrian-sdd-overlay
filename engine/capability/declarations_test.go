@@ -162,7 +162,7 @@ func TestClaudeCodeStatuses(t *testing.T) {
 		capability.Cancellation:      capability.Partial,
 		capability.Persistence:       capability.Supported,
 		capability.Restart:           capability.Partial,
-		capability.Authentication:    capability.Unsupported,
+		capability.Authentication:    capability.Partial,
 		capability.MemoryEnforcement: capability.Partial,
 	}
 	d, err := capability.Declare(capability.TargetClaude)
@@ -220,7 +220,7 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 		},
 		capability.MemoryEnforcement: {
 			"longterm-mem query", "project", "memory plan", "no project",
-			"carries no project", "Engram", "mapping between the plan's sources", "Writes are never blocked", notInstalled, "restart",
+			"Not enforced, because the tool input cannot verify these: ", "a get call (it carries no project)", "Engram tools", "the mapping between the plan's sources and a query's sources", "Writes are never blocked", notInstalled, "restart",
 		},
 	} {
 		detail := claims[name].Detail
@@ -233,12 +233,72 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	// The old wording, which denied that any gate exists, must be gone.
 	for name, stale := range map[capability.Capability][]string{
 		capability.Cancellation:      {"no gate denies any tool", "Not implemented yet"},
-		capability.MemoryEnforcement: {"nothing enforces it", "Not implemented yet"},
+		capability.MemoryEnforcement: {"nothing enforces it", "Not implemented yet", "as the tool input cannot verify it: get carries no project, Engram tools, and"},
 	} {
 		for _, phrase := range stale {
 			if strings.Contains(claims[name].Detail, phrase) {
 				t.Errorf("%s detail %q still says %q, which the gate contradicts", name, claims[name].Detail, phrase)
 			}
 		}
+	}
+}
+
+// TestAuthenticationClaimsStateWhatPresenceDoesNotProve pins the wording of the
+// authentication claims, because a status alone would let it drift into claiming
+// more than a stat can show. Claude Code's claim is partial: the presence prober
+// says whether its credentials file exists, and never that a session is
+// authenticated. Codex and Pi stay unsupported (declared only), and their details
+// may say the same probe reports file presence while being no part of an
+// implementation for them; OpenCode has no credentials check at all.
+func TestAuthenticationClaimsStateWhatPresenceDoesNotProve(t *testing.T) {
+	claim := func(target string) capability.Claim {
+		d, err := capability.Declare(target)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, c := range d.Claims {
+			if c.Capability == capability.Authentication {
+				return c
+			}
+		}
+		t.Fatalf("%s has no authentication claim", target)
+		return capability.Claim{}
+	}
+
+	claude := claim(capability.TargetClaude)
+	if claude.Status != capability.Partial || len(claude.Tests) == 0 {
+		t.Fatalf("claude authentication = %s with %d tests, want partial with named tests", claude.Status, len(claude.Tests))
+	}
+	for _, phrase := range []string{
+		"presence prober", "Claude Code's credentials file exists", "by stat only", "never reads the file",
+		"cannot prove the credentials are valid", "No lifecycle operation requires authentication",
+	} {
+		if !strings.Contains(claude.Detail, phrase) {
+			t.Errorf("claude authentication detail %q does not state %q", claude.Detail, phrase)
+		}
+	}
+	if strings.Contains(claude.Detail, "Not implemented") || strings.Contains(claude.Detail, "does not check whether") {
+		t.Errorf("claude authentication detail %q still says nothing is checked", claude.Detail)
+	}
+
+	for target, name := range map[string]string{capability.TargetCodex: "Codex", capability.TargetPi: "Pi"} {
+		c := claim(target)
+		if c.Status != capability.Unsupported || len(c.Tests) != 0 {
+			t.Errorf("%s authentication = %s with %d tests, want unsupported without tests (declared only)", target, c.Status, len(c.Tests))
+		}
+		for _, phrase := range []string{
+			"reports whether " + name + "'s credentials file exists, by stat only",
+			"not part of an implementation for " + name,
+			"does not prove " + name + " is authenticated",
+		} {
+			if !strings.Contains(c.Detail, phrase) {
+				t.Errorf("%s authentication detail %q does not state %q", target, c.Detail, phrase)
+			}
+		}
+	}
+
+	open := claim(capability.TargetOpenCode)
+	if open.Status != capability.Unsupported || strings.Contains(open.Detail, "credentials file exists") {
+		t.Errorf("opencode authentication = %s %q, want unsupported with no presence claim (it has no credentials check)", open.Status, open.Detail)
 	}
 }
