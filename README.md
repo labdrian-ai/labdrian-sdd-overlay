@@ -401,6 +401,11 @@ overlay skills <verb>
     never create it, so validate and install work on a read-only overlay. A lock that stays taken for 2 seconds means
     another skills command is in progress: the verb changes nothing and reports it with exit 2 (retry). Exit 1 is
     unchanged: the verb ran or was refused, or the lock could not be created at all, which retrying will not fix.
+    Project lock: project-register, project-revise, project-retire and install also take an exclusive lock on the project
+    root directory itself (--project-root, or install's working directory), so no file is created in the project and nothing
+    needs git-ignoring; a busy one is exit 2 like the overlay lock. A filesystem that cannot lock a directory refuses the
+    verb (exit 1, nothing written); the lock is never skipped or replaced by a file in the project. A verb that holds both
+    takes the overlay lock first, then the project lock, and releases them in reverse. project-status takes neither.
 
 overlay shaper <verb>
     Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.
