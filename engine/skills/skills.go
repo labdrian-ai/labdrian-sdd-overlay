@@ -91,6 +91,8 @@ func runLocked(attempt int, verb string, args []string, installRoot string, read
 		// Whether a writer began cannot be known, so the read cannot be trusted and is
 		// not printed. This is a refusal that reading again will not clear, not a busy
 		// lock: it is exit 1, with the reason the system gave (which names the path).
+		// It wins over raced: a read that may be torn is discarded either way, and
+		// reading again would meet the same failure and end in a busy exit.
 		fmt.Fprintf(stderr, "error: skills %s: cannot tell whether a writer began while it read: %v; nothing was changed\n", verb, statErr)
 		exit(1)
 		return true
