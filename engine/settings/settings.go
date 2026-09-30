@@ -152,7 +152,8 @@ func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand s
 		HasLabdrianDesignHook(root, "PreToolUse", hookCommand) &&
 		HasLabdrianSyncTriggerHook(root, "SessionEnd", hookCommand) &&
 		HasLabdrianReviewReceiptHook(root, "PreToolUse", hookCommand) &&
-		HasShaperClearanceGuard(root, hookCommand)
+		HasShaperClearanceGuard(root, hookCommand) &&
+		HasProjectionHooks(root, hookCommand)
 }
 
 // HasShaperClearanceGuard reports whether the shaper clearance deny guard is
@@ -359,6 +360,12 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
+	// Projection family (identity: binary path + projection token): the
+	// UserPromptSubmit context projection and the two PreToolUse gates.
+	if m.mergeProjection(hooks) {
+		changed = true
+	}
+
 	root["hooks"] = hooks
 	return changed
 }
@@ -452,7 +459,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isLegacyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}

@@ -268,11 +268,11 @@ func TestMerge_Idempotent(t *testing.T) {
 	}
 
 	root := parseJSON(t, path)
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
-		t.Errorf("UserPromptSubmit: expected exactly 2 entries (minimalism + design), got %d", n)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
+		t.Errorf("UserPromptSubmit: expected exactly 3 entries (minimalism + design + projection), got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 5 {
-		t.Errorf("PreToolUse: expected exactly 5 entries (minimalism + design + review-receipt + 2 shaper guard), got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 7 {
+		t.Errorf("PreToolUse: expected exactly 7 entries (minimalism + design + review-receipt + 2 shaper guard + 2 projection), got %d", n)
 	}
 	// Both pairs must be distinguishable: exactly one entry per identity per key.
 	if n := countOurHooks(root, "UserPromptSubmit", settings.LabdrianDesignIdentity); n != 1 {
@@ -761,11 +761,11 @@ func TestUninstall_CountIsZeroAfterInstall(t *testing.T) {
 	if n := countOurHooks(before, "SessionEnd", testHookCommand); n != 1 {
 		t.Fatalf("precondition: expected 1 SessionEnd entry after Install, got %d", n)
 	}
-	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 2 {
-		t.Fatalf("precondition: expected 2 UserPromptSubmit entries after Install, got %d", n)
+	if n := countOurHooks(before, "UserPromptSubmit", testHookCommand); n != 3 {
+		t.Fatalf("precondition: expected 3 UserPromptSubmit entries after Install, got %d", n)
 	}
-	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 5 {
-		t.Fatalf("precondition: expected 5 PreToolUse entries after Install, got %d", n)
+	if n := countOurHooks(before, "PreToolUse", testHookCommand); n != 7 {
+		t.Fatalf("precondition: expected 7 PreToolUse entries after Install, got %d", n)
 	}
 
 	if err := m.Uninstall(); err != nil {
@@ -1009,11 +1009,11 @@ func TestSchema_InstallTwice_Idempotent(t *testing.T) {
 	root := parseJSON(t, path)
 	// Two pairs install (minimalism + design) → 2 entries per key; a second
 	// Install adds no more.
-	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 2 {
-		t.Errorf("Install×2: UserPromptSubmit should have exactly 2 entries; got %d", n)
+	if n := countOurHooks(root, "UserPromptSubmit", testHookCommand); n != 3 {
+		t.Errorf("Install×2: UserPromptSubmit should have exactly 3 entries; got %d", n)
 	}
-	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 5 {
-		t.Errorf("Install×2: PreToolUse should have exactly 5 entries (3 families + 2 shaper guard); got %d", n)
+	if n := countOurHooks(root, "PreToolUse", testHookCommand); n != 7 {
+		t.Errorf("Install×2: PreToolUse should have exactly 7 entries (3 families + 2 shaper guard + 2 projection); got %d", n)
 	}
 	if n := countOurHooks(root, "SessionEnd", testHookCommand); n != 1 {
 		t.Errorf("Install×2: SessionEnd should have exactly 1 entry; got %d", n)
@@ -1213,8 +1213,13 @@ func TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily(t *testing.T
 	}
 
 	allFive := withShaperGuardFamily(allFour, testHookCommand)
-	if !settings.HasSupportedClaudeLifecycleState(allFive, testHookCommand) {
-		t.Error("HasSupportedClaudeLifecycleState: expected true once all five families exist")
+	if settings.HasSupportedClaudeLifecycleState(allFive, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected false with five families (projection family missing)")
+	}
+
+	allSix := withProjectionFamily(allFive, testHookCommand)
+	if !settings.HasSupportedClaudeLifecycleState(allSix, testHookCommand) {
+		t.Error("HasSupportedClaudeLifecycleState: expected true once all six families exist")
 	}
 }
 
