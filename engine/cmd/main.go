@@ -148,6 +148,8 @@ func main() {
 		runMemory(os.Args[2:])
 	case "workflow":
 		runWorkflow(os.Args[2:])
+	case "projection":
+		runProjection(os.Args[2:])
 	default:
 		fmt.Fprintf(os.Stderr, "error: unknown subcommand %q\n", os.Args[1])
 		usage()
@@ -238,6 +240,13 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    exit 0 success, 2 refused/invalid (no git repository, a workflow that cannot be bound, a binding file that is not ours")
 	fmt.Fprintln(os.Stderr, "    or cannot be used (foreign, malformed, unavailable), another bind or unbind in progress (busy), a binding another")
 	fmt.Fprintln(os.Stderr, "    process changed meanwhile), 1 usage error")
+	fmt.Fprintln(os.Stderr, "  engine projection hook --event UserPromptSubmit")
+	fmt.Fprintln(os.Stderr, "    internal Claude Code hook command (install-hooks does not install it yet): reads the hook JSON on stdin and prints at most one")
+	fmt.Fprintln(os.Stderr, "    JSON object, {\"hookSpecificOutput\":{\"hookEventName\":\"UserPromptSubmit\",\"additionalContext\":...},\"systemMessage\":...}, that puts the")
+	fmt.Fprintln(os.Stderr, "    workflow the repository is bound to (see workflow bind) into the session: id, profile, status, stages, and the memory plan.")
+	fmt.Fprintln(os.Stderr, "    silent (no output at all) when the repository is not bound, the input is not a usable hook input, or the directory is not in a")
+	fmt.Fprintln(os.Stderr, "    repository; a bound workflow that cannot be followed gives one warning and nothing is projected; the binding to a closed")
+	fmt.Fprintln(os.Stderr, "    workflow is removed. read-only otherwise. exit 0 always (it never blocks a prompt), 1 usage error")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "Embedded contracts: anti-generic-design")
 	fmt.Fprintln(os.Stderr, "status exit codes: 0 ok, 1 hard failure, 2 degraded")

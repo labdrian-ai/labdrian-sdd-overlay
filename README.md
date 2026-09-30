@@ -529,6 +529,35 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     unsupported, with the limit written. It reads no configuration, HOME, or file and starts no
     session. Exit 0 on success, 2 on an unknown --target value, 1 on a usage error (including an unknown flag).
 
+gentle-ai-overlay projection hook --event UserPromptSubmit
+    Internal hook command (Phase 7): Claude Code is meant to run it before each prompt; a person does
+    not. There is no `overlay projection` wrapper, so it runs on the installed engine binary,
+    ~/.claude/bin/gentle-ai-overlay, and `install-hooks` does not install it into Claude Code
+    settings yet, so no session receives its output today: it runs when something feeds it hook JSON,
+    as its tests do. UserPromptSubmit is the only event supported.
+    Purpose: put the workflow the repository is bound to (see `workflow bind`) into the session's
+    context, so a new or restarted session is told the same thing as the last one.
+    Input: the hook JSON on stdin, at most 1 MiB. Only hook_event_name and cwd are read (cwd only when
+    absolute, else the process's working directory is used). The session id and the prompt are
+    ignored, so the output depends on neither.
+    Output: nothing, or exactly one JSON object,
+    {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"..."},"systemMessage":"..."},
+    with either part left out when it is empty. additionalContext (at most 16 KiB, the same bytes for
+    the same state, no timestamps) states the workflow id and project, the profile, the status, the
+    goal id and a short digest, the recorded, current, and next stage, the memory plan (a read-only
+    plan: scope, sources, project_id, goal_id, write=none), the dependencies the last event recorded
+    as unavailable, and the Claude Code capabilities the engine declares partial or unsupported. A
+    paused workflow is announced as paused, to be advanced only after `workflow resume`; no tool is
+    denied, because nothing gates tools yet. systemMessage is one warning line for the user.
+    Silent (no output on either stream) when the repository has no binding, the working directory is
+    not in a repository, or the input is not a usable hook input. A binding, or a bound workflow, that
+    cannot be followed (foreign, malformed, drifted, unavailable, or gone) gives one warning and
+    projects nothing. A closed workflow is announced in one line and its binding is removed, best
+    effort and only if it is still the binding the hook read.
+    Read-only otherwise: it never appends to a workflow log or rewrites a binding, starts no process,
+    and makes no network call. Exit 0 always, so it can never block a prompt (it never exits 2), except
+    1 on a command line it does not understand.
+
 overlay --help
     Show this help.
 ```

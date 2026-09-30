@@ -157,11 +157,11 @@ func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 func TestClaudeCodeStatuses(t *testing.T) {
 	want := map[capability.Capability]capability.Status{
 		capability.Installation:      capability.Supported,
-		capability.Projection:        capability.Unsupported,
+		capability.Projection:        capability.Partial,
 		capability.Dispatch:          capability.Partial,
 		capability.Cancellation:      capability.Unsupported,
 		capability.Persistence:       capability.Supported,
-		capability.Restart:           capability.Unsupported,
+		capability.Restart:           capability.Partial,
 		capability.Authentication:    capability.Unsupported,
 		capability.MemoryEnforcement: capability.Unsupported,
 	}
@@ -176,10 +176,15 @@ func TestClaudeCodeStatuses(t *testing.T) {
 	}
 }
 
-// TestClaudeCodeBindingClaimsStateTheirScope pins what the two claims that rest
-// on the session binding say about their own reach, because a status alone
-// would let the wording drift away from what the tests prove.
-func TestClaudeCodeBindingClaimsStateTheirScope(t *testing.T) {
+// TestClaudeCodeSessionClaimsStateTheirScope pins what the claims that rest on
+// the session binding and the projection hook say about their own reach, because
+// a status alone would let the wording drift away from what the tests prove. The
+// hook exists and is tested by feeding it hook JSON, but install-hooks does not
+// install it into Claude Code settings yet, so no session receives its context;
+// three claims are partial for that reason, and each has to say so. When the hook
+// is installed the wording changes and so does this test, in the same commit that
+// flips the statuses.
+func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	d, err := capability.Declare(capability.TargetClaude)
 	if err != nil {
 		t.Fatal(err)
@@ -188,17 +193,29 @@ func TestClaudeCodeBindingClaimsStateTheirScope(t *testing.T) {
 	for _, c := range d.Claims {
 		claims[c.Capability] = c
 	}
+	const notInstalled = "install-hooks does not install the hook"
 
-	persistence := claims[capability.Persistence]
-	for _, want := range []string{"workflow log", "binding", "survive", "transcripts are not managed"} {
-		if !strings.Contains(persistence.Detail, want) {
-			t.Errorf("persistence detail %q does not mention %q", persistence.Detail, want)
+	for name, want := range map[capability.Capability][]string{
+		capability.Persistence: {"workflow log", "binding", "survive", "transcripts are not managed"},
+		capability.Dispatch:    {"can be bound", "stored", "the hook projects that workflow", notInstalled, "no session is steered"},
+		capability.Projection:  {"UserPromptSubmit hook", "builds the bound workflow's context", "tests feed it hook JSON", notInstalled, "restart", "no session receives the context"},
+		capability.Restart:     {"reads the binding and the workflow log from disk on every prompt", "separate processes", notInstalled, "restart", "no real session re-binds"},
+	} {
+		detail := claims[name].Detail
+		for _, phrase := range want {
+			if !strings.Contains(detail, phrase) {
+				t.Errorf("%s detail %q does not state %q", name, detail, phrase)
+			}
 		}
 	}
-	dispatch := claims[capability.Dispatch]
-	for _, want := range []string{"can be bound", "stored", "reads the binding into a session"} {
-		if !strings.Contains(dispatch.Detail, want) {
-			t.Errorf("dispatch detail %q does not state %q", dispatch.Detail, want)
-		}
+
+	// The claims that stay unsupported must not contradict the ones above: the
+	// hook reports a paused or closed workflow and states the memory plan, and
+	// their details say what that is and is not.
+	if detail := claims[capability.Cancellation].Detail; !strings.Contains(detail, "no gate denies any tool") || strings.Contains(detail, "does not change what a session is told") {
+		t.Errorf("cancellation detail %q must say no gate denies a tool, and must not deny that the hook tells a session about a paused or closed workflow", detail)
+	}
+	if detail := claims[capability.MemoryEnforcement].Detail; !strings.Contains(detail, "states the memory plan") || !strings.Contains(detail, "nothing enforces it") || strings.Contains(detail, "nothing projects") {
+		t.Errorf("memory-enforcement detail %q must say the hook states the plan and nothing enforces it", detail)
 	}
 }
