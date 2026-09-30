@@ -75,9 +75,11 @@ func buildProjectionEntry(hookCommand string, s projectionSpec) map[string]inter
 }
 
 // isProjectionEntry reports whether a hook entry belongs to the projection
-// family: it references our binary AND the projection identity token.
+// family: it references our binary AND the projection identity token. With no
+// binary path there is nothing to tell our entries from foreign ones (every
+// command contains the empty string), so no entry is ours.
 func isProjectionEntry(e interface{}, hookCommand string) bool {
-	return entryContainsBinary(e, hookCommand) && entryContainsBinary(e, LabdrianProjectionIdentity)
+	return hookCommand != "" && entryContainsBinary(e, hookCommand) && entryContainsBinary(e, LabdrianProjectionIdentity)
 }
 
 func (m *Merger) isProjectionEntry(e interface{}) bool {
@@ -105,30 +107,61 @@ func matchingSpec(e interface{}, hookCommand string, specs []projectionSpec) int
 	return -1
 }
 
+// entryKind says what one entry of an event's hook list is to the family.
+type entryKind int
+
+const (
+	// entryForeign is not ours: never read past the identity check.
+	entryForeign entryKind = iota
+	// entryMatched is exactly what this version writes for a spec, seen once.
+	entryMatched
+	// entryDrifted is ours but differs from what this version writes, or
+	// repeats an entry already matched.
+	entryDrifted
+)
+
+// classifyProjectionEntries is the one place that decides what each entry of
+// one event's hook list is to the family, so the merge and the status check
+// cannot disagree. kinds is parallel to entries; seen is parallel to specs and
+// says which spec has a matching entry.
+func classifyProjectionEntries(entries []interface{}, hookCommand string, specs []projectionSpec) (kinds []entryKind, seen []bool) {
+	kinds = make([]entryKind, len(entries))
+	seen = make([]bool, len(specs))
+	for n, e := range entries {
+		if !isProjectionEntry(e, hookCommand) {
+			kinds[n] = entryForeign
+			continue
+		}
+		if i := matchingSpec(e, hookCommand, specs); i >= 0 && !seen[i] {
+			seen[i] = true
+			kinds[n] = entryMatched
+			continue
+		}
+		kinds[n] = entryDrifted
+	}
+	return kinds, seen
+}
+
 // mergeProjection makes the projection family exactly the desired entries:
 // missing entries are appended, and an owned entry that is stale (drifted from
 // what this version writes) or a duplicate is replaced. Foreign entries are
-// never read past the identity check and never rewritten. Returns true if
-// anything changed.
+// never read past the identity check and never rewritten. A hook list that is
+// not an array cannot hold hooks, so, as in every other family, it is replaced
+// (the original stays in settings.json.bak). Returns true if anything changed.
 func (m *Merger) mergeProjection(hooks map[string]interface{}) bool {
 	changed := false
 	for _, event := range projectionEvents {
 		specs := projectionSpecsFor(event)
 		entries, _ := hooks[event].([]interface{})
-		seen := make([]bool, len(specs))
+		kinds, seen := classifyProjectionEntries(entries, m.hookCommand, specs)
 		kept := make([]interface{}, 0, len(entries)+len(specs))
 		keyChanged := false
-		for _, e := range entries {
-			if !m.isProjectionEntry(e) {
-				kept = append(kept, e)
+		for n, e := range entries {
+			if kinds[n] == entryDrifted {
+				keyChanged = true
 				continue
 			}
-			if i := matchingSpec(e, m.hookCommand, specs); i >= 0 && !seen[i] {
-				seen[i] = true
-				kept = append(kept, e)
-				continue
-			}
-			keyChanged = true
+			kept = append(kept, e)
 		}
 		for i, s := range specs {
 			if !seen[i] {
@@ -148,24 +181,21 @@ func (m *Merger) mergeProjection(hooks map[string]interface{}) bool {
 // missing or has drifted in root, in a fixed order. It returns nil when the
 // family is exactly what Install writes. An owned entry that differs from what
 // this version writes, or a duplicate, is reported as drifted; Install repairs
-// both.
+// both. Settings that are not shaped as Claude Code expects (hooks or an event
+// that is not an object or an array) hold none of the family, so all of it is
+// reported missing.
 func MissingProjectionHookParts(root map[string]interface{}, hookCommand string) []string {
 	var parts []string
 	hooks, _ := root["hooks"].(map[string]interface{})
 	for _, event := range projectionEvents {
 		specs := projectionSpecsFor(event)
 		entries, _ := hooks[event].([]interface{})
-		seen := make([]bool, len(specs))
+		kinds, seen := classifyProjectionEntries(entries, hookCommand, specs)
 		drifted := 0
-		for _, e := range entries {
-			if !isProjectionEntry(e, hookCommand) {
-				continue
+		for _, k := range kinds {
+			if k == entryDrifted {
+				drifted++
 			}
-			if i := matchingSpec(e, hookCommand, specs); i >= 0 && !seen[i] {
-				seen[i] = true
-				continue
-			}
-			drifted++
 		}
 		for i, s := range specs {
 			if !seen[i] {

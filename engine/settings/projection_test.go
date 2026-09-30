@@ -389,8 +389,6 @@ func TestInstall_AddsTheProjectionFamilyToAnOlderInstall(t *testing.T) {
 // hand-built root. It takes them from a real Install into a temp file, because
 // the family is only complete when its entries are exactly what Install writes.
 func withProjectionFamily(root map[string]interface{}, hookCommand string) map[string]interface{} {
-	path := filepath.Join(os.TempDir(), "unused")
-	_ = path
 	tmp, err := os.MkdirTemp("", "projection-family-")
 	if err != nil {
 		panic(err)

@@ -204,6 +204,12 @@ func hasDenyRule(root map[string]interface{}, rule string) bool {
 	return false
 }
 
+// errEmptyHookCommand is returned by Install and Uninstall when the merger was
+// built without a binary path. Every entry is recognized as ours by that path,
+// so with none there is nothing to tell our entries from anyone else's, and
+// acting could rewrite or remove foreign hooks.
+var errEmptyHookCommand = errors.New("settings: the hook command is empty; without the binary path our entries cannot be told from foreign ones (nothing was changed)")
+
 // NewMerger returns a Merger that will merge hooks into settingsPath using
 // hookCommand as the unique identity (binary path substring) for our entries.
 func NewMerger(settingsPath, hookCommand string) *Merger {
@@ -219,6 +225,9 @@ func NewMerger(settingsPath, hookCommand string) *Merger {
 // rename). Returns an error — and leaves the original untouched — if the
 // existing file contains invalid JSON.
 func (m *Merger) Install() error {
+	if m.hookCommand == "" {
+		return errEmptyHookCommand
+	}
 	root, err := m.loadOrEmpty()
 	if err != nil {
 		return err
@@ -235,6 +244,9 @@ func (m *Merger) Install() error {
 // Uninstall removes our two hook entries from settings.json. If the file is
 // absent, it is a no-op. Leaves all other keys and hooks intact.
 func (m *Merger) Uninstall() error {
+	if m.hookCommand == "" {
+		return errEmptyHookCommand
+	}
 	if _, err := os.Stat(m.settingsPath); os.IsNotExist(err) {
 		return nil
 	}
