@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -35,8 +36,14 @@ const probeReportVersion = 1
 
 // probeTimeout bounds one probe run. The checks are stats of a handful of
 // paths, so this is generous; it exists so a hung filesystem cannot hang the
-// command.
-const probeTimeout = 5 * time.Second
+// command. A blocked stat cannot be interrupted, so the probe runs in its own
+// goroutine and the command stops waiting at the deadline (see probeWithin).
+// It is a variable only so tests can shorten it.
+var probeTimeout = 5 * time.Second
+
+// runtimeProbeFS is the prober's stat access; nil (outside tests) means the
+// operating system's.
+var runtimeProbeFS capability.StatFS
 
 // probeTargetAll is the --target value that selects every runtime's credentials
 // signal.
@@ -78,9 +85,7 @@ func runRuntimeProbe(args []string, home, path string, stdout, stderr io.Writer,
 		return
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), probeTimeout)
-	defer cancel()
-	observations, err := capability.PresenceProber{Home: home, Path: path}.Probe(ctx, names)
+	observations, err := probeWithin(capability.PresenceProber{Home: home, Path: path, ProbeFS: runtimeProbeFS}, names, probeTimeout)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)
@@ -149,4 +154,36 @@ func probeCapabilities(target string) ([]string, error) {
 		capability.CapabilityMemoryProcedural,
 		capability.CapabilityGentleAIReview,
 	), nil
+}
+
+// probeWithin runs prober in its own goroutine and waits at most timeout. A
+// probe that does not finish in time, for example because a stat is blocked on
+// an unresponsive filesystem, is reported as every capability unavailable with
+// the reason; the blocked goroutine is abandoned, which a short-lived command
+// can afford.
+func probeWithin(prober workflow.DependencyProber, names []string, timeout time.Duration) ([]workflow.Observation, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	type result struct {
+		observations []workflow.Observation
+		err          error
+	}
+	done := make(chan result, 1)
+	go func() {
+		observations, err := prober.Probe(ctx, names)
+		done <- result{observations, err}
+	}()
+	select {
+	case r := <-done:
+		if r.err == nil || !errors.Is(r.err, context.DeadlineExceeded) {
+			return r.observations, r.err
+		}
+	case <-ctx.Done():
+	}
+	detail := fmt.Sprintf("the probe did not finish within %s (a filesystem may be unresponsive)", timeout)
+	observations := make([]workflow.Observation, len(names))
+	for i, name := range names {
+		observations[i] = workflow.Observation{Capability: name, Status: workflow.ObservationUnavailable, Detail: detail}
+	}
+	return observations, nil
 }

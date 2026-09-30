@@ -11,7 +11,9 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -149,5 +151,34 @@ func TestProjectedContextListsOnlyTheDependenciesThePresenceProberDidNotFind(t *
 	}
 	if !strings.Contains(line, "memory:engram") || !strings.Contains(line, "memory:procedural-skills") {
 		t.Errorf("line %q lost the dependencies that were not found", line)
+	}
+}
+
+// TestWorkflowVerbWithAHungStatReturnsWithinTheProbeDeadline wires the real
+// presence prober over a filesystem whose stat never returns. The lifecycle
+// runs the prober in its own goroutine with a deadline, so the verb still
+// finishes, and records every dependency as unavailable.
+func TestWorkflowVerbWithAHungStatReturnsWithinTheProbeDeadline(t *testing.T) {
+	if testing.Short() {
+		t.Skip("waits out the lifecycle's probe deadline")
+	}
+	home, _ := phase6IsolatedHome(t)
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	saved := workflowProber
+	workflowProber = func() workflow.DependencyProber {
+		return capability.PresenceProber{Home: home, ProbeFS: hangingStatFS{release: release}}
+	}
+	t.Cleanup(func() { workflowProber = saved })
+
+	dir := t.TempDir()
+	goalPath := writeMemoryTestFile(t, dir, "goal.json", memoryTestGoalJSON("proj-1", "goal-1"))
+	start := time.Now()
+	r := runWorkflowTest([]string{"create", "--project", "proj-1", "--workflow", "wf-1", "--goal", goalPath, "--profile", "odd"}, dir)
+	if elapsed := time.Since(start); elapsed > 15*time.Second {
+		t.Fatalf("create took %v with a hung stat, want it bounded by the probe deadline", elapsed)
+	}
+	if r.code != 0 {
+		t.Fatalf("create: code=%d stderr=%q, want exit 0", r.code, r.stderr)
 	}
 }

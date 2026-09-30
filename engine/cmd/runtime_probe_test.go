@@ -11,6 +11,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"reflect"
@@ -18,6 +19,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
@@ -289,9 +291,38 @@ func TestRuntimeProbeSourceOpensNoFile(t *testing.T) {
 	})
 }
 
-func TestRuntimeProbeDeadlineIsBounded(t *testing.T) {
-	if probeTimeout <= 0 || probeTimeout > 30_000_000_000 {
-		t.Errorf("probeTimeout = %v, want a positive bound of at most 30s", probeTimeout)
+// hangingStatFS models a filesystem whose stat never returns, as on a hung
+// network mount: a context cannot interrupt a blocked syscall, so only a
+// deadline enforced around the whole probe bounds the command.
+type hangingStatFS struct{ release chan struct{} }
+
+func (h hangingStatFS) Lstat(name string) (fs.FileInfo, error) {
+	<-h.release
+	return nil, fs.ErrNotExist
+}
+
+func (h hangingStatFS) Stat(name string) (fs.FileInfo, error) { return h.Lstat(name) }
+
+func TestRuntimeProbeReturnsWithinItsDeadlineWhenAStatHangs(t *testing.T) {
+	release := make(chan struct{})
+	t.Cleanup(func() { close(release) })
+	savedFS, savedTimeout := runtimeProbeFS, probeTimeout
+	runtimeProbeFS, probeTimeout = hangingStatFS{release: release}, 50*time.Millisecond
+	t.Cleanup(func() { runtimeProbeFS, probeTimeout = savedFS, savedTimeout })
+
+	start := time.Now()
+	r := runProbeTest(t.TempDir(), "")
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("runtime probe took %v with a hung stat, want it bounded by the deadline", elapsed)
+	}
+	rep := decodeProbe(t, r)
+	if len(rep.Observations) == 0 {
+		t.Fatal("no observations, want one per capability, each unavailable")
+	}
+	for _, o := range rep.Observations {
+		if o.Status != workflow.ObservationUnavailable || !strings.Contains(o.Detail, "did not finish") {
+			t.Errorf("observation %+v, want unavailable with a detail saying the probe did not finish", o)
+		}
 	}
 	var _ context.Context = context.Background()
 }
