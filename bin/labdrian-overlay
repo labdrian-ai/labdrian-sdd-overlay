@@ -625,7 +625,8 @@ Commands:
   workflow <verb>                  Forward standalone workflow lifecycle verbs to the engine unchanged.
                                    Local bookkeeping under $XDG_STATE_HOME/labdrian/workflows/<project>/<workflow>.jsonl;
                                    no verb requires Gentle AI, gentle-pi, a runtime, memory, or auth (an
-                                   unavailable dependency is recorded on the event, never approved), and no
+                                   unavailable dependency is recorded on the event, and one is recorded available
+                                   only when its file or binary is seen by stat, never opened, run, or trusted), and no
                                    verb executes a workflow step or check (that is Phase 7).
                                    create --project ID --workflow ID --goal PATH --profile NAME [--role-chain ID]
                                              create a workflow, binding the Goal's digest, the profile, and

@@ -50,6 +50,7 @@ var phase7Sources = []string{
 	"projection/*.go",
 	"cmd/projection_hook.go",
 	"cmd/runtime_capabilities.go",
+	"cmd/runtime_probe.go",
 	"cmd/workflow_bind.go",
 	// workflow_provenance.go is a Phase 6 file that now also holds the Phase 7
 	// repository key (observeRepoKey), so it answers to the same policy: it

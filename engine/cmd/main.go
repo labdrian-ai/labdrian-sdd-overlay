@@ -177,6 +177,12 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    every supported or partial claim names the tests that prove it, every partial or unsupported claim")
 	fmt.Fprintln(os.Stderr, "    states its limit, and untested appears only for a runtime that cannot be exercised on this machine")
 	fmt.Fprintln(os.Stderr, "    reads no configuration, HOME, or file; exit 0 success, 2 unknown --target value, 1 usage error including an unknown flag")
+	fmt.Fprintln(os.Stderr, "  engine runtime probe [--target claude|codex|pi|all]")
+	fmt.Fprintln(os.Stderr, "    read-only, stat only: prints, as JSON, whether each selected runtime's credentials file is present (default")
+	fmt.Fprintln(os.Stderr, "    --target all) and whether the Engram database, the longterm-mem registration record, and the gentle-ai binary")
+	fmt.Fprintln(os.Stderr, "    on PATH are present, from the real HOME and PATH; it never opens or reads a file and never runs a program, so")
+	fmt.Fprintln(os.Stderr, "    a present credentials file does not prove the runtime is authenticated; exit 0 success, 2 unknown --target value,")
+	fmt.Fprintln(os.Stderr, "    1 usage error including an unknown flag")
 	fmt.Fprintln(os.Stderr, "  OVERLAY_DIR=<repo-root> gentle-ai-overlay gadu-generate [--check]")
 	fmt.Fprintln(os.Stderr, "  engine pipkg build|check --overlay-root <path> --registry <path> --dest-dir <path>")
 	fmt.Fprintln(os.Stderr, "    build: writes the labdrian-pi package tree to --dest-dir")
@@ -225,7 +231,8 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  engine workflow close  --project <id> --workflow <id> --outcome completed|abandoned [--reason <text>]")
 	fmt.Fprintln(os.Stderr, "    Phase 6 standalone workflow lifecycle: local bookkeeping under $XDG_STATE_HOME/labdrian/workflows/;")
 	fmt.Fprintln(os.Stderr, "    no verb requires Gentle AI, gentle-pi, a runtime, memory, or auth (an unavailable dependency is")
-	fmt.Fprintln(os.Stderr, "    recorded on the event, never approved). --goal is re-read from disk at both create and verify;")
+	fmt.Fprintln(os.Stderr, "    recorded on the event, and a dependency is recorded available only when its file or binary is seen by stat,")
+	fmt.Fprintln(os.Stderr, "    never opened, run, or trusted). --goal is re-read from disk at both create and verify;")
 	fmt.Fprintln(os.Stderr, "    no path is ever persisted. exit 0 success, 2 refused/invalid (illegal transition, verify failure,")
 	fmt.Fprintln(os.Stderr, "    non-owned state), 1 usage error")
 	fmt.Fprintln(os.Stderr, "  engine workflow bind --project <id> --workflow <id>")
@@ -432,6 +439,13 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 	// defaults (its --target defaults to all, not opencode).
 	if len(args) > 0 && args[0] == "capabilities" {
 		runRuntimeCapabilities(args[1:], stdout, stderr, exit)
+		return
+	}
+	// probe is read-only too: it stats the presence signals under the process's
+	// home and PATH and shares none of the lifecycle flags or defaults.
+	if len(args) > 0 && args[0] == "probe" {
+		home, path := runtimeProbeEnv()
+		runRuntimeProbe(args[1:], home, path, stdout, stderr, exit)
 		return
 	}
 

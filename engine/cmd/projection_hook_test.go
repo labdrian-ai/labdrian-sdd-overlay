@@ -447,11 +447,13 @@ func TestProjectionHookStatesTheMemoryPlanOfTheProfile(t *testing.T) {
 	}
 }
 
-// TestProjectionHookNamesTheUnavailableDependenciesAndTheCapabilityLimits: the
-// CLI's default prober approves nothing, so every dependency of a workflow it
-// created is recorded unavailable, and the context says so; the capability line
-// is the declaration's.
+// TestProjectionHookNamesTheUnavailableDependenciesAndTheCapabilityLimits: with
+// a prober that confirms nothing (the seam installs UnavailableProber, so the
+// test does not depend on what the machine running it has on PATH), every
+// dependency of a workflow is recorded unavailable, and the context says so; the
+// capability line is the declaration's.
 func TestProjectionHookNamesTheUnavailableDependenciesAndTheCapabilityLimits(t *testing.T) {
+	useUnavailableProber(t)
 	e := newHookEnv(t)
 	e.running(t, "proj-1", "wf-1", "odd")
 	ctx := decodeHookOutput(t, e.hook(t, e.repo)).Context
