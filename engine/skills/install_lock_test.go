@@ -156,7 +156,11 @@ func TestTwoInstallsIntoDifferentProjectsShareTheOverlayLock(t *testing.T) {
 	go func() { first <- runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
 	<-gate.arrived
 	// The first install has resolved its project and is parked; the seam may move.
+	// Restored explicitly here, so no later test depends on the order of this
+	// test's cleanups (newInstallFixture also restores the value it saved).
+	fixtureCwd := installCwd
 	installCwd = func() (string, error) { return otherProject, nil }
+	t.Cleanup(func() { installCwd = fixtureCwd })
 	second := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
 	gate.release()
 	<-first
@@ -174,6 +178,9 @@ func TestTwoInstallsIntoDifferentProjectsShareTheOverlayLock(t *testing.T) {
 // copy of one skill directory.
 func TestTwoInstallsIntoOneProjectAreSerialized(t *testing.T) {
 	f := newInstallFixture(t)
+	if dir, err := installCwd(); err != nil || dir != f.project {
+		t.Fatalf("installCwd() = %q, %v; want this test's project %q (a seam leaked from another test)", dir, err, f.project)
+	}
 	gate := newReadGate(t, f.reg)
 	locker := &exclusionLocker{blocked: gate.release}
 
