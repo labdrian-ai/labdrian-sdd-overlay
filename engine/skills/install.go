@@ -107,6 +107,8 @@ func ExecuteInstall(plan []CopyOp, stdout, stderr io.Writer) error {
 // copyTree recursively copies the directory tree rooted at src into dst,
 // preserving file mode bits. dst is created if absent.
 // Symlinks are not followed (plain files and directories only).
+// The skill's approval record (ApprovalRecordName at the root of src) is
+// repository governance state, not skill content, and is never copied.
 func copyTree(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -119,6 +121,12 @@ func copyTree(src, dst string) error {
 		rel, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
+		}
+		if rel == ApprovalRecordName {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		target := filepath.Join(dst, rel)
 
