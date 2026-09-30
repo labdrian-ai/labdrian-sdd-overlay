@@ -143,8 +143,9 @@ func HasLabdrianReviewReceiptHook(root map[string]interface{}, key, hookCommand 
 
 // HasSupportedClaudeLifecycleState reports whether settings contain all known
 // Labdrian-owned Claude hook families: the minimalism pair, the
-// anti-generic-design pair, the SessionEnd sync-trigger entry, and the
-// PreToolUse/Bash review-receipt entry.
+// anti-generic-design pair, the SessionEnd sync-trigger entry, the
+// PreToolUse/Bash review-receipt entry, the shaper clearance guard, the workflow
+// projection family, and the skills approve guard.
 func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand string) bool {
 	return HasLabdrianMinimalismHook(root, "UserPromptSubmit", hookCommand) &&
 		HasLabdrianMinimalismHook(root, "PreToolUse", hookCommand) &&
@@ -153,7 +154,8 @@ func HasSupportedClaudeLifecycleState(root map[string]interface{}, hookCommand s
 		HasLabdrianSyncTriggerHook(root, "SessionEnd", hookCommand) &&
 		HasLabdrianReviewReceiptHook(root, "PreToolUse", hookCommand) &&
 		HasShaperClearanceGuard(root, hookCommand) &&
-		HasProjectionHooks(root, hookCommand)
+		HasProjectionHooks(root, hookCommand) &&
+		HasApproveGuard(root, hookCommand)
 }
 
 // HasShaperClearanceGuard reports whether the shaper clearance deny guard is
@@ -378,6 +380,13 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 		changed = true
 	}
 
+	// Approve guard family (identity: binary path + approve guard token): the
+	// two PreToolUse entries that deny the agent running skills approve or
+	// writing the approval record. A speed bump, not a security boundary.
+	if approveGuardFamily.merge(hooks, m.hookCommand) {
+		changed = true
+	}
+
 	root["hooks"] = hooks
 	return changed
 }
@@ -452,7 +461,8 @@ func (m *Merger) isLegacyEntry(e interface{}) bool {
 
 // removeHooks removes our hook entries. Returns true if any change was made.
 // Identity is Labdrian-owned entry shape: our minimalism, design, or
-// sync-trigger entries, plus any stale entry matching legacyIdentities (see
+// sync-trigger entries, the review-receipt, shaper guard, projection, and
+// approve guard entries, plus any stale entry matching legacyIdentities (see
 // its doc comment), not merely any entry that happens to reference the same
 // binary path. SessionEnd is scanned alongside UserPromptSubmit/PreToolUse
 // so an owned sync-trigger entry there is removed the same way; Stop is
@@ -471,7 +481,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isLegacyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || approveGuardFamily.owns(e, m.hookCommand) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}

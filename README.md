@@ -123,8 +123,8 @@ same confirm→run→result pattern as apply/self-update.
 | `update` | read-only | Report the latest published release version and each target's recorded version (up-to-date / behind / never deployed). Never mutates anything. |
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
-| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
-| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, and the three projection entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
+| `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
+| `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the three projection entries, and the two approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
 | `status-hooks` | read-only | Check engine binary, hooks wired, contracts readable — exits 0 if all healthy; missing binary exits non-zero with `run 'overlay install-hooks'` guidance. |
 | `doctor [--fix]` | read-only | Host-toolchain preflight: go, gentle-ai, discovery tools (bat/rg/fd/sd/eza), engine binary, skill registry — plus a per-target version/digest consistency row (WARN only, never fails the exit code). `--fix` best-effort installs missing discovery tools via Homebrew. |
 | `validate-entry-contract --schema PATH --instance PATH` | read-only | Validate a pre-SDD entry candidate against the version-matched schema and deterministic cross-field rules. |
@@ -331,16 +331,19 @@ overlay sync-check [--target claude|opencode|codex|all] [--check-origin|--fetch]
     'git fetch origin' first for a live count.
 
 overlay install-hooks
-    Build the Go engine binary and wire the deterministic-scoping hooks into
-    ~/.claude/settings.json: three hook families (two pairs + SessionEnd sync-trigger),
-    five entries — one UserPromptSubmit + PreToolUse/Agent pair per managed contract
-    (minimalism-contract, anti-generic-design), plus a SessionEnd entry that fires a
-    non-blocking longterm-mem sync at session close. Backs up settings.json
+    Build the Go engine binary and wire the overlay's hook families into
+    ~/.claude/settings.json: the deterministic-scoping pairs (minimalism-contract and
+    anti-generic-design), a SessionEnd entry that fires a non-blocking longterm-mem
+    sync at session close, the review-receipt and shaper clearance guards, the workflow
+    projection hooks, and the skills approve guard (below). Backs up settings.json
     to settings.json.bak before modifying. Run once to activate; inert until then.
+    Re-run it after an upgrade that adds a hook family, then restart Claude Code, which
+    loads hooks only when it starts.
 
 overlay uninstall-hooks
-    Remove the overlay hook entries from ~/.claude/settings.json, including entries
-    left by contracts retired in earlier versions, leaving all other keys and hooks intact.
+    Remove every overlay hook entry (each family install-hooks wires, projection and approve
+    guard included) from ~/.claude/settings.json, including entries left by contracts retired
+    in earlier versions, leaving all other keys and hooks intact.
 
 overlay status-hooks
     Check overlay installation health: binary present, hooks wired, contracts readable.
@@ -391,6 +394,8 @@ overlay skills <verb>
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
     approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
+                 Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
+                 `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
 
 overlay shaper <verb>
     Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.
@@ -614,6 +619,35 @@ gentle-ai-overlay projection hook --event UserPromptSubmit|PreToolUse
     tool call and UserPromptSubmit already warns once per prompt. An in-flight tool call cannot be
     interrupted: the gate acts at the next tool call. Like the projection, it does nothing until you re-run
     `install-hooks` and restart Claude Code.
+
+gentle-ai-overlay skills guard-hook
+    Internal hook command: Claude Code is meant to run it before each Bash and file-edit tool call; a person does
+    not. It runs on the installed engine binary, ~/.claude/bin/gentle-ai-overlay. `install-hooks` installs it into Claude
+    Code settings.json (two PreToolUse entries, one for Bash and one for Write, Edit, MultiEdit, and NotebookEdit);
+    on an existing install, re-run `install-hooks` and restart Claude Code to load it, because Claude Code reads
+    hooks only at start and `status-hooks` reports degraded until the entries are in place.
+    It denies the agent running `skills approve` (approval records that a human reviewed the exact SKILL.md bytes)
+    and writing a skill's `.approval.json` record with a file-edit tool. The reason names the verb, says approval is a
+    human step, and gives the human the command to run in their own terminal:
+    `labdrian skills approve --id <id> --approver <name>`. Reading the record, the other skills verbs, and file
+    contents that merely mention the verb are never denied.
+    It is a speed bump, not a security boundary. It matches text only: the entry point (labdrian, labdrian-overlay, or
+    gentle-ai-overlay, with or without a path) followed by `skills approve` anywhere in a Bash command, including after
+    `cd x &&` and inside `sh -c '...'`, or a file tool whose path ends in `.approval.json`. It is not a shell parser, so
+    it can be bypassed (an alias under another name, a variable that holds the entry point, a script written to a file
+    and run, an encoded command, or a shell redirection into the record), and it can deny a command that only spells
+    the invocation, such as an `echo`, a commit message, or a heredoc line naming `labdrian skills approve`; `rg` and
+    `grep` searches for it are not denied. Reword such a command. The record's real guarantee is unchanged: it matches
+    the exact bytes of the skill beside it.
+    Input: the hook JSON on stdin, at most 8 MiB (input over that is allowed, unjudged). Only tool_name and the command,
+    file_path, and notebook_path fields of tool_input are read.
+    Output: nothing, or exactly one JSON object,
+    {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}},
+    with exit 0 (the JSON decides; exit 2 is never used). An allow prints nothing and never permissionDecision "allow".
+    It never blocks on an error: input it cannot read, a failing stdin or stdout, and a recovered internal error all
+    allow the call (unlike the shaper clearance guard, which fails closed for its narrower markers, because this hook runs
+    on every Bash and file-edit call). With the engine binary missing the hook does nothing, and `status-hooks` reports it.
+    Exit 0 always, except 1 on a command line it does not understand.
 
 overlay --help
     Show this help.

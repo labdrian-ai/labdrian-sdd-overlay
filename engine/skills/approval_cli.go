@@ -52,13 +52,19 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 	const verb = "skills approve"
 	var id, approver, sourceRoot string
 	haveApprover := false
-	endOfOptions := false
 	i := 0
 
 	fail := func(format string, a ...any) {
 		fmt.Fprintf(stderr, "error: "+verb+": "+format+"\n", a...)
 		exit(1)
 	}
+	// consumeValue takes the next argument as the value of flag. A value that
+	// begins with "-" is refused because it is far more likely to be the next
+	// flag than a value, and that is deliberate: no sibling `skills` verb has a
+	// --flag=value form, so there is no other spelling to fall back on, and this
+	// verb does not invent one. For --approver the refusal says so in its own
+	// words, because a label is free text and the one value where a leading dash
+	// is at all plausible.
 	consumeValue := func(flag string) (string, bool) {
 		if i+1 >= len(args) {
 			fail("flag %q requires a value", flag)
@@ -66,54 +72,56 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 		}
 		value := args[i+1]
 		if strings.HasPrefix(value, "-") {
-			fail("flag %q requires a value; got flag token %q", flag, value)
+			if flag == "--approver" {
+				fail("flag %q: the label %q starts with \"-\", which would be read as a flag; choose a label that does not start with \"-\"", flag, value)
+			} else {
+				fail("flag %q requires a value; got flag token %q", flag, value)
+			}
 			return "", false
 		}
 		i++
 		return value, true
 	}
 
+	// There is no end-of-options marker: approve takes no positional argument,
+	// so "--" would have nothing to protect and is refused as the unknown flag
+	// it is, like any other "-"-prefixed argument.
 	for ; i < len(args); i++ {
 		arg := args[i]
-		if !endOfOptions {
-			switch arg {
-			case "--":
-				endOfOptions = true
-				continue
-			case "--id":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				id = value
-				continue
-			case "--approver":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				approver = value
-				haveApprover = true
-				continue
-			case "--source-root":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				sourceRoot = value
-				continue
-			case "--registry", "--manifest":
-				// Wrapper-injected and unused here: consume the value so it is
-				// never misread as a positional.
-				if _, ok := consumeValue(arg); !ok {
-					return
-				}
-				continue
-			}
-			if strings.HasPrefix(arg, "-") {
-				fail("unknown flag %q", arg)
+		switch arg {
+		case "--id":
+			value, ok := consumeValue(arg)
+			if !ok {
 				return
 			}
+			id = value
+			continue
+		case "--approver":
+			value, ok := consumeValue(arg)
+			if !ok {
+				return
+			}
+			approver = value
+			haveApprover = true
+			continue
+		case "--source-root":
+			value, ok := consumeValue(arg)
+			if !ok {
+				return
+			}
+			sourceRoot = value
+			continue
+		case "--registry", "--manifest":
+			// Wrapper-injected and unused here: consume the value so it is
+			// never misread as a positional.
+			if _, ok := consumeValue(arg); !ok {
+				return
+			}
+			continue
+		}
+		if strings.HasPrefix(arg, "-") {
+			fail("unknown flag %q", arg)
+			return
 		}
 		fail("unexpected argument %q (approve takes --id, not a positional)", arg)
 		return

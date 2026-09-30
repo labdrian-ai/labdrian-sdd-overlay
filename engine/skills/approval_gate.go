@@ -90,13 +90,17 @@ func EvaluateApproval(id, recordPath string, skillMD []byte, status ApprovalStat
 	}
 }
 
-// ApprovalSummary counts what CheckApprovals found. Global counts every
-// global-scope registry entry; Approved and Grandfathered count those satisfied
-// by a valid record and by the baseline respectively.
+// ApprovalSummary accounts for every global-scope registry entry exactly once:
+// Global = Approved + Grandfathered + SkillFileMissing + the number of
+// approval divergences CheckApprovals returned. Approved and Grandfathered
+// count the entries satisfied by a valid record and by the baseline
+// respectively; SkillFileMissing counts the entries set aside because their
+// SKILL.md does not exist, which the manifest and on-disk cross-checks report.
 type ApprovalSummary struct {
-	Global        int
-	Approved      int
-	Grandfathered int
+	Global           int
+	Approved         int
+	Grandfathered    int
+	SkillFileMissing int
 }
 
 // CheckApprovals applies the approval requirement to every global-scope entry
@@ -104,10 +108,13 @@ type ApprovalSummary struct {
 // full scan: it never stops at the first divergence. Project-scope entries stay
 // autonomous and are skipped.
 //
-// An entry whose SKILL.md does not exist is skipped here: the manifest and
-// on-disk cross-checks already report it, and reporting it twice would only add
-// noise. Any other read failure, of the skill or of its record, is
-// DivApprovalUnverifiable rather than a guess in either direction.
+// An entry whose SKILL.md does not exist is set aside here, counted in
+// SkillFileMissing so the summary still adds up: every full `skills validate`
+// run already reports it, as MISSING_ON_DISK when the manifest has its row and
+// as a registry/manifest divergence when it does not, and reporting it a second
+// time as an approval finding would only add noise. Any other read failure, of
+// the skill or of its record, is DivApprovalUnverifiable rather than a guess in
+// either direction.
 //
 // The entry's Path names its directory under sourceRoot and is the skill id the
 // record must carry (AddEntry always registers Path == ID).
@@ -124,6 +131,7 @@ func CheckApprovals(reg Registry, sourceRoot string, readFile readFileFn) ([]Div
 		skillMD, err := readFile(skillPath)
 		if err != nil {
 			if os.IsNotExist(err) {
+				sum.SkillFileMissing++
 				continue
 			}
 			divs = append(divs, Divergence{

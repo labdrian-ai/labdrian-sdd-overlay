@@ -53,6 +53,9 @@
 // approve: record a human approval of skills/<id>/SKILL.md, bound to the digest
 // of its exact bytes, next to the skill (--id, --approver, --source-root). The
 // engine cannot prove a human ran it; the record only proves the bytes match.
+// guard-hook: the internal Claude Code PreToolUse hook that denies the agent
+// running approve or writing the approval record (see cmd/skills_guard.go); a
+// speed bump, not a security boundary, installed by install-hooks.
 // project-register/revise/status: manage project-tier procedural skills and
 // report ownership from the project lock.
 package main
@@ -203,6 +206,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "    remove        <id> [--registry <path>] [--manifest <path>]                             unregister a skill from registry and manifest")
 	fmt.Fprintln(os.Stderr, "    sync-manifest [--registry <path>] [--manifest <path>]                                  regenerate */SKILL.md rows from registry")
 	fmt.Fprintln(os.Stderr, "    lint          <path> | --rules                                                         lint a SKILL.md file, or print the rule table; exit 1 on any hard error")
+	fmt.Fprintln(os.Stderr, "    approve       --id <id> --approver <label> --source-root <path>                        record a human approval of skills/<id>/SKILL.md, bound to the digest of its exact bytes")
 	fmt.Fprintln(os.Stderr, "    project-register --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>")
 	fmt.Fprintln(os.Stderr, "                                                                                           register a project-tier procedural skill; --dry-run prints the plan and writes nothing")
 	fmt.Fprintln(os.Stderr, "    project-revise   --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>")
@@ -211,6 +215,12 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "                                                                                           report project-tier ownership and global supersession")
 	fmt.Fprintln(os.Stderr, "    project-retire   --project-root <abs> [--dry-run] [--reason <reason>] [--absorbed-into <id>] [--registry <path>] <id>")
 	fmt.Fprintln(os.Stderr, "                                                                                           retire an agent-owned project skill; --dry-run prints the removal plan")
+	fmt.Fprintln(os.Stderr, "  engine skills guard-hook")
+	fmt.Fprintln(os.Stderr, "    internal Claude Code PreToolUse hook command (install-hooks installs it; on an existing install, re-run install-hooks and restart Claude Code to load it):")
+	fmt.Fprintln(os.Stderr, "    reads the hook JSON on stdin and denies the agent running 'skills approve' (approval is a human step) or writing a skill's .approval.json record with")
+	fmt.Fprintln(os.Stderr, "    Write, Edit, MultiEdit, or NotebookEdit. A denial is {\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permissionDecision\":\"deny\",")
+	fmt.Fprintln(os.Stderr, "    \"permissionDecisionReason\":...}} with exit 0; an allow prints nothing. A speed bump, not a security boundary: it matches the command text and the file name,")
+	fmt.Fprintln(os.Stderr, "    so it can be bypassed and can deny text that only spells the invocation. It never blocks on an error (unusable input is an allow): exit 0 always, 1 usage error")
 	fmt.Fprintln(os.Stderr, "  engine sync-trigger --event session-end|archive --cwd <path> [--state-dir <path>]")
 	fmt.Fprintln(os.Stderr, "    always exits 0 to its caller; detaches a bounded longterm-mem sync and logs its outcome")
 	fmt.Fprintln(os.Stderr, "  engine review-receipt capture --cwd <repo> [--change <name>]")
@@ -817,7 +827,7 @@ func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepk
 // runSkills implements the 'skills <verb>' subcommand.
 // Requires exactly one verb argument; fails LOUD on missing or unknown verb (ADR-4).
 func runSkills(args []string) {
-	runSkillsCore(verbFromArgs(args), args, os.Stdout, os.Stderr, os.Exit)
+	runSkillsWithStdin(args, os.Stdin, os.Stdout, os.Stderr, os.Exit)
 }
 
 // runSkillsCore is the testable core of the skills subcommand.
@@ -1739,6 +1749,12 @@ func statusCore(stdout io.Writer, deps statusDeps) (allOK bool, degraded bool) {
 	// PreToolUse gates). A machine that has not re-run install-hooks since the
 	// family landed is WARN/degraded, not broken.
 	checks = append(checks, checkProjectionHooks(settingsRoot, settingsErr, settingsPath, binaryPath))
+
+	// Check 3f: skills approve guard (the two PreToolUse entries that deny the
+	// agent running skills approve or writing the approval record). A machine
+	// that has not re-run install-hooks since the guard landed is WARN/degraded,
+	// not broken.
+	checks = append(checks, checkApproveGuard(settingsRoot, settingsErr, settingsPath, binaryPath))
 
 	// Check 4: contract readable + frontmatter parses.
 	checks = append(checks, checkContract(contractPath, deps.readFile))

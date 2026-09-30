@@ -243,6 +243,68 @@ func TestCheckApprovals_LeavesMissingAndUnreadableSkillFilesToTheRightCheck(t *t
 	}
 }
 
+// The summary must account for every global entry exactly once: it is either
+// approved, grandfathered, reported as an approval divergence, or set aside
+// because its SKILL.md does not exist (which the manifest and on-disk
+// cross-checks report). An entry that fell into none of them would make the
+// counts read as if it had been verified.
+func TestCheckApprovals_TheSummaryAccountsForEveryGlobalEntryExactlyOnce(t *testing.T) {
+	f := newGateFixture(t, []string{"approved", "legacy", "unapproved", "no-file", "also-no-file"}, []string{"project-skill"})
+	legacy, _ := os.ReadFile(filepath.Join(f.root, "legacy", "SKILL.md"))
+	setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "legacy", SHA256: SkillDigest(legacy)}})
+	writeValidApproval(t, f.root, "approved")
+	for _, id := range []string{"no-file", "also-no-file"} {
+		if err := os.Remove(filepath.Join(f.root, id, "SKILL.md")); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	divs, sum := CheckApprovals(f.reg, f.root, os.ReadFile)
+
+	if sum.Global != 5 {
+		t.Errorf("Global = %d, want 5: project-tier entries are not counted", sum.Global)
+	}
+	if sum.Approved != 1 || sum.Grandfathered != 1 || len(divs) != 1 || sum.SkillFileMissing != 2 {
+		t.Errorf("summary = %+v with %d divergences, want 1 approved, 1 grandfathered, 1 divergence, 2 without a SKILL.md", sum, len(divs))
+	}
+	if accounted := sum.Approved + sum.Grandfathered + sum.SkillFileMissing + len(divs); accounted != sum.Global {
+		t.Errorf("the summary accounts for %d of %d global entries: %+v with %d divergences", accounted, sum.Global, sum, len(divs))
+	}
+	if got := classesByPath(divs); got["unapproved"] != DivApprovalMissing || len(got) != 1 {
+		t.Errorf("divergences = %v, want only unapproved as APPROVAL_MISSING: a missing SKILL.md is not an approval finding", got)
+	}
+}
+
+// A global entry whose SKILL.md is gone is reported once, by the check that
+// owns it, and never as an approval finding, and the run does not claim the
+// approvals were verified.
+func TestValidateCore_AGlobalEntryWithoutItsSkillFileIsReportedOnceByTheOnDiskCheck(t *testing.T) {
+	setBaselineForTest(t, nil)
+	dir := t.TempDir()
+	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("gone"), minimalManifest("gone"), []string{"gone"})
+	if err := os.Remove(filepath.Join(root, "gone", "SKILL.md")); err != nil {
+		t.Fatal(err)
+	}
+
+	var out, errBuf bytes.Buffer
+	code := 0
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
+
+	if code != 1 {
+		t.Fatalf("exit = %d, want 1; stdout=%q stderr=%q", code, out.String(), errBuf.String())
+	}
+	lines := strings.Split(strings.TrimSpace(errBuf.String()), "\n")
+	if len(lines) != 1 || !strings.HasPrefix(lines[0], "[MISSING_ON_DISK] gone/SKILL.md:") {
+		t.Errorf("stderr = %q, want exactly one [MISSING_ON_DISK] line for gone/SKILL.md", errBuf.String())
+	}
+	if strings.Contains(errBuf.String(), "APPROVAL_") {
+		t.Errorf("stderr %q must not report the missing file as an approval finding", errBuf.String())
+	}
+	if out.Len() != 0 {
+		t.Errorf("stdout = %q, want nothing: a failing run does not claim the approvals were verified", out.String())
+	}
+}
+
 func TestCheckApprovals_AnUnreadableRecordIsUnverifiableNotAbsent(t *testing.T) {
 	setBaselineForTest(t, nil)
 	f := newGateFixture(t, []string{"odd"}, nil)
