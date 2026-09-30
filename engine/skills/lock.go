@@ -7,6 +7,7 @@ package skills
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
 	"strings"
 )
@@ -19,7 +20,8 @@ const (
 	LockExclusive LockMode = iota
 	// LockShared is a reader's lock: any number of holders, none while an
 	// exclusive one holds. A shared lock never creates the lock file, so a reader
-	// works on a tree it cannot write to.
+	// works on a tree it cannot write to; on a lock file that does not exist it holds
+	// nothing, which is why validate checks afterwards that the file is still absent.
 	LockShared
 )
 
@@ -50,6 +52,11 @@ type Locker interface {
 // retry.
 const ExitBusy = 2
 
+// maxRereadAttempts bounds how many times a reader that raced the first writer
+// reads: the first read and the reads that follow it. See
+// rereadsWhenTheLockFileAppears.
+const maxRereadAttempts = 3
+
 // RegistryLockPath is the lock file that serializes every verb working on the
 // registry at registryPath: a dot-named sibling of the registry, so it sits beside
 // what it protects, is skipped by the skills tree scan (ScanSkillFiles ignores
@@ -64,6 +71,11 @@ type lockRequest struct {
 	dir     bool // path is a directory locked itself (a project root), not a lock file
 	mode    LockMode
 	subject string // what the lock protects, for the messages
+	// rereads marks a shared lock on a lock file whose holder reads several files
+	// that must agree. When that file does not exist, the lock holds nothing (see
+	// filelock.Shared), so the verb's read is provisional: see
+	// rereadsWhenTheLockFileAppears.
+	rereads bool
 }
 
 // lockRequestsFor lists, in the order they must be taken, the locks a verb needs.
@@ -81,7 +93,12 @@ type lockRequest struct {
 //     and must not see the pair between its two renames; install copies skill
 //     directories the writers above touch. Neither writes anything in the overlay,
 //     so shared is enough, any number of them run together, and a shared lock never
-//     creates the lock file, so both work on a read-only overlay.
+//     creates the lock file, so both work on a read-only overlay. A shared lock on a
+//     lock file that does not exist yet holds nothing, and validate, which reads
+//     files that must agree, is marked to read again when the file appears during its
+//     read (rereadsWhenTheLockFileAppears). install is not: it reads one atomic
+//     file, the registry, and a tree that no locked verb writes into except the
+//     approval record and the temporary file behind it, which it never copies.
 //   - list, status, lint: one atomic file or none, so none.
 //
 // Project lock, keyed by the project root directory, taken on the directory itself
@@ -107,12 +124,13 @@ type lockRequest struct {
 // so nothing decided before the lock is trusted after it.
 func lockRequestsFor(verb string, args []string) []lockRequest {
 	var requests []lockRequest
-	overlay := func(mode LockMode) {
+	overlay := func(mode LockMode, rereads bool) {
 		registryPath, _, _, _, _, _ := parseFlags(args)
 		requests = append(requests, lockRequest{
 			path:    RegistryLockPath(registryPath),
 			mode:    mode,
 			subject: "the registry " + registryPath,
+			rereads: rereads,
 		})
 	}
 	project := func(root string) {
@@ -125,11 +143,11 @@ func lockRequestsFor(verb string, args []string) []lockRequest {
 	}
 	switch verb {
 	case "add", "remove", "sync-manifest", "approve":
-		overlay(LockExclusive)
+		overlay(LockExclusive, false)
 	case "validate":
-		overlay(LockShared)
+		overlay(LockShared, true)
 	case "install":
-		overlay(LockShared)
+		overlay(LockShared, false)
 		// install writes into the working directory. If that cannot be resolved the
 		// verb reports it itself, before it writes anything.
 		if cwd, err := installCwd(); err == nil && filepath.IsAbs(cwd) {
@@ -177,15 +195,19 @@ func projectRootArg(args []string) (string, bool) {
 // The lock is held until the release function runs. A production caller exits the
 // process from inside the verb, which skips it; the kernel frees the lock when the
 // process ends.
-func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, exit func(int)) (release func(), ok bool) {
+//
+// provisional lists the lock files of the requests marked rereads that did not exist
+// when they were asked for, whose shared locks therefore hold nothing:
+// rereadsWhenTheLockFileAppears says what the caller does about them.
+func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, exit func(int)) (release func(), provisional []string, ok bool) {
 	requests := lockRequestsFor(verb, args)
 	if len(requests) == 0 {
-		return func() {}, true
+		return func() {}, nil, true
 	}
 	if locker == nil {
 		fmt.Fprintf(stderr, "error: skills %s: no lock is configured, so it will not run unserialized with the other skills commands\n", verb)
 		exit(1)
-		return nil, false
+		return nil, nil, false
 	}
 	var unlocks []func()
 	releaseAll := func() {
@@ -197,6 +219,13 @@ func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, e
 		var unlock func()
 		var err error
 		what := "lock " + req.path
+		if req.rereads && !req.dir && req.mode == LockShared {
+			// Looked at before the locker is asked: a file that is absent now may be
+			// created by the time the locker opens it, which only costs one more read.
+			if _, statErr := os.Stat(req.path); os.IsNotExist(statErr) {
+				provisional = append(provisional, req.path)
+			}
+		}
 		if req.dir {
 			what = "lock on the directory " + req.path
 			unlock, err = locker.LockDir(req.path, req.mode)
@@ -212,11 +241,32 @@ func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, e
 				fmt.Fprintf(stderr, "error: skills %s: cannot take the %s: %v\n", verb, what, err)
 				exit(1)
 			}
-			return nil, false
+			return nil, nil, false
 		}
 		unlocks = append(unlocks, unlock)
 	}
-	return releaseAll, true
+	return releaseAll, provisional, true
+}
+
+// rereadsWhenTheLockFileAppears is the answer to the one case a shared lock cannot
+// cover. A shared lock on a lock file that does not exist holds nothing, so the
+// first writer ever can create the file, take the lock, and change the registry and
+// the manifest (two renames) while the reader reads them. A writer creates the file
+// before it writes anything, so if the file is still absent when the read is done,
+// no write began during it and the read stands; if it exists now, the read may have
+// seen the pair between its renames, and is discarded. The caller then reads again,
+// and this time the file exists, so the lock it takes is real and waits for the
+// writer to finish. The bound is for a file that is removed again between attempts,
+// which nothing in this program does.
+func rereadsWhenTheLockFileAppears(provisional []string) bool {
+	for _, path := range provisional {
+		// Anything but "still absent" counts as appeared: a stat that fails for
+		// another reason cannot prove that no writer began.
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			return true
+		}
+	}
+	return false
 }
 
 // isBusy reports whether err, or an error it wraps, says the lock stayed taken.
