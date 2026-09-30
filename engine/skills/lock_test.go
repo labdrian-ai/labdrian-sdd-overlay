@@ -331,17 +331,38 @@ func TestTheRegistryLockIsNotSkillContent(t *testing.T) {
 // ---- which verbs lock, and how ---------------------------------------------------
 
 // lockFixture is a registry with one skill, its manifest and source tree, all
-// approved, so every locking verb can run for real.
+// approved, so every locking verb can run for real. project is the temporary
+// directory install is pointed at, so that no test of the lock installs into the
+// directory the tests run in.
 type lockFixture struct {
 	dir, reg, man, root string
 	lockPath            string
+	project             string
 }
 
 func newLockFixture(t *testing.T) lockFixture {
 	t.Helper()
 	dir := t.TempDir()
 	reg, man, root := setupFixture(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing"})
-	return lockFixture{dir: dir, reg: reg, man: man, root: root, lockPath: RegistryLockPath(reg)}
+	f := lockFixture{dir: dir, reg: reg, man: man, root: root, lockPath: RegistryLockPath(reg), project: t.TempDir()}
+	saved := installCwd
+	installCwd = func() (string, error) { return f.project, nil }
+	t.Cleanup(func() { installCwd = saved })
+	return f
+}
+
+// The lock fixture never leaves install pointed at the working directory of the
+// test process, which is the package directory.
+func TestTheLockFixtureInstallsIntoATemporaryProject(t *testing.T) {
+	f := newLockFixture(t)
+	cwd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := installCwd()
+	if err != nil || got != f.project || got == cwd {
+		t.Errorf("installCwd() = %q, %v; want the fixture's temporary project %q, not the working directory %q", got, err, f.project, cwd)
+	}
 }
 
 // withSkillsFor is withSkills for the one verb that needs an unregistered skill
@@ -390,11 +411,7 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 			if tc.verb == "install" {
 				// install writes into the working directory, so it also takes the
 				// project lock, second (see project_dirlock_test.go).
-				project := t.TempDir()
-				saved := installCwd
-				installCwd = func() (string, error) { return project, nil }
-				t.Cleanup(func() { installCwd = saved })
-				want = []string{"lock shared " + f.lockPath, "lockdir exclusive " + project, "unlock " + project, "unlock " + f.lockPath}
+				want = []string{"lock shared " + f.lockPath, "lockdir exclusive " + f.project, "unlock " + f.project, "unlock " + f.lockPath}
 			}
 			r := runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
 			if r.code != tc.code {
@@ -431,6 +448,13 @@ func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
 func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 	f := newLockFixture(t)
 	other := filepath.Join(f.dir, "other", "team.registry.yaml")
+	// A writer locks the registry it names, and only a registry that is there: see
+	// TestAWriterWithoutARegistryLocksNothing.
+	registry, err := os.ReadFile(f.reg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	writeTestFile(t, other, string(registry))
 
 	first := func(l *recordingLocker) string {
 		if events := l.log(); len(events) > 0 {
@@ -445,7 +469,10 @@ func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 		t.Errorf("first event = %q, want %q", got, want)
 	}
 
-	// No --registry: the default the verbs share, relative to the working directory.
+	// No --registry: the default the verbs share, relative to the working directory,
+	// which here holds a registry.
+	chdirToATempDir(t)
+	writeTestFile(t, defaultRegistryPath, string(registry))
 	locker = &recordingLocker{}
 	runAt("sync-manifest", []string{"--manifest", f.man}, os.ReadFile, nil, locker)
 	if got, want := first(locker), "lock exclusive .skills.registry.yaml.lock"; got != want {

@@ -7,8 +7,8 @@ package skills
 import (
 	"fmt"
 	"io"
+	"os"
 	"path/filepath"
-	"strings"
 )
 
 // LockMode is how a lock is held.
@@ -19,7 +19,8 @@ const (
 	LockExclusive LockMode = iota
 	// LockShared is a reader's lock: any number of holders, none while an
 	// exclusive one holds. A shared lock never creates the lock file, so a reader
-	// works on a tree it cannot write to.
+	// works on a tree it cannot write to; on a lock file that does not exist it holds
+	// nothing, which is why validate checks afterwards that the file is still absent.
 	LockShared
 )
 
@@ -50,6 +51,15 @@ type Locker interface {
 // retry.
 const ExitBusy = 2
 
+// defaultRegistryPath is the registry a verb works on when it is given no
+// --registry: relative, so it means the working directory of the process.
+const defaultRegistryPath = "skills.registry.yaml"
+
+// maxRereadAttempts bounds how many times a reader that raced the first writer
+// reads: the first read and the reads that follow it. See
+// rereadsWhenTheLockFileAppears.
+const maxRereadAttempts = 3
+
 // RegistryLockPath is the lock file that serializes every verb working on the
 // registry at registryPath: a dot-named sibling of the registry, so it sits beside
 // what it protects, is skipped by the skills tree scan (ScanSkillFiles ignores
@@ -64,6 +74,17 @@ type lockRequest struct {
 	dir     bool // path is a directory locked itself (a project root), not a lock file
 	mode    LockMode
 	subject string // what the lock protects, for the messages
+	// registry, when set, is a registry file that must exist before this lock is
+	// asked for, because asking creates the lock file beside it. The exception is a
+	// verb that never reads the registry (approve) and was told which registry's
+	// lock to take: there the path is only the name of the lock.
+	registry         string
+	registryOptional bool
+	// rereads marks a shared lock on a lock file whose holder reads several files
+	// that must agree. When that file does not exist, the lock holds nothing (see
+	// filelock.Shared), so the verb's read is provisional: see
+	// rereadsWhenTheLockFileAppears.
+	rereads bool
 }
 
 // lockRequestsFor lists, in the order they must be taken, the locks a verb needs.
@@ -81,7 +102,12 @@ type lockRequest struct {
 //     and must not see the pair between its two renames; install copies skill
 //     directories the writers above touch. Neither writes anything in the overlay,
 //     so shared is enough, any number of them run together, and a shared lock never
-//     creates the lock file, so both work on a read-only overlay.
+//     creates the lock file, so both work on a read-only overlay. A shared lock on a
+//     lock file that does not exist yet holds nothing, and validate, which reads
+//     files that must agree, is marked to read again when the file appears during its
+//     read (rereadsWhenTheLockFileAppears). install is not: it reads one atomic
+//     file, the registry, and a tree that no locked verb writes into except the
+//     approval record and the temporary file behind it, which it never copies.
 //   - list, status, lint: one atomic file or none, so none.
 //
 // Project lock, keyed by the project root directory, taken on the directory itself
@@ -96,6 +122,12 @@ type lockRequest struct {
 //     takes no lock: it refuses before it reads or writes anything.
 //   - project-status only reads and reports; it takes none.
 //
+// The project root is read once, by the same code the verb reads it with:
+// parseProjectArgs for the project verbs, and for install the working directory,
+// which SkillsCoreAt resolves before it asks for any lock and hands to the verb as
+// installRoot, so that what is locked is what is written. A verb that cannot name a
+// usable root takes no lock.
+//
 // LOCK ORDER. A verb that needs both takes the overlay lock first and the project
 // lock second, and lets go in the opposite order. Every verb that holds two locks
 // must follow this, including the ones added later (install's ownership work
@@ -105,15 +137,27 @@ type lockRequest struct {
 //
 // Every read of shared state happens after the locks are held, in the verb itself,
 // so nothing decided before the lock is trusted after it.
-func lockRequestsFor(verb string, args []string) []lockRequest {
+func lockRequestsFor(verb string, args []string, installRoot string) []lockRequest {
 	var requests []lockRequest
-	overlay := func(mode LockMode) {
+	overlay := func(mode LockMode, rereads bool) {
 		registryPath, _, _, _, _, _ := parseFlags(args)
-		requests = append(requests, lockRequest{
+		req := lockRequest{
 			path:    RegistryLockPath(registryPath),
 			mode:    mode,
 			subject: "the registry " + registryPath,
-		})
+			rereads: rereads,
+		}
+		if mode == LockExclusive {
+			// An exclusive lock creates the lock file, and a lock file created beside a
+			// registry that does not exist (a raw call made from any directory, with the
+			// default registry path) is litter in a directory that is not an overlay.
+			// add, remove, and sync-manifest read the registry and would fail anyway.
+			// approve does not read it, so an explicit path is taken as the name of the
+			// lock; the default path, which is only the working directory's, is not.
+			req.registry = registryPath
+			req.registryOptional = verb == "approve" && registryPath != defaultRegistryPath
+		}
+		requests = append(requests, req)
 	}
 	project := func(root string) {
 		requests = append(requests, lockRequest{
@@ -125,48 +169,37 @@ func lockRequestsFor(verb string, args []string) []lockRequest {
 	}
 	switch verb {
 	case "add", "remove", "sync-manifest", "approve":
-		overlay(LockExclusive)
+		overlay(LockExclusive, false)
 	case "validate":
-		overlay(LockShared)
+		overlay(LockShared, true)
 	case "install":
-		overlay(LockShared)
-		// install writes into the working directory. If that cannot be resolved the
-		// verb reports it itself, before it writes anything.
-		if cwd, err := installCwd(); err == nil && filepath.IsAbs(cwd) {
-			project(cwd)
+		overlay(LockShared, false)
+		if installRoot != "" {
+			project(installRoot)
 		}
 	case "project-register", "project-revise", "project-retire":
-		if root, ok := projectRootArg(args); ok {
+		if root, ok := projectRootArg(verb, args); ok {
 			project(root)
 		}
 	}
 	return requests
 }
 
-// projectRootArg is the project root the project verbs will use, read the way they
-// read it: the last --project-root before an end-of-options marker, whose value must
-// be present, must not look like a flag, and must be an absolute path. When it is
-// not, the verb is about to refuse, before it reads or writes anything, so there is
-// nothing to lock.
-func projectRootArg(args []string) (string, bool) {
-	root := ""
-	for i := 0; i < len(args); i++ {
-		if args[i] == "--" {
-			break
-		}
-		if args[i] != "--project-root" {
-			continue
-		}
-		if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
-			return "", false
-		}
-		root = args[i+1]
-		i++
-	}
-	if root == "" || !filepath.IsAbs(root) {
+// projectRootArg is the project root a project verb will use: what parseProjectArgs,
+// the parser the verb itself uses, reads from the arguments that follow the verb's
+// name. When the command line does not parse, or the root is missing or not
+// absolute, the verb is about to refuse before it reads or writes anything, so there
+// is nothing to lock.
+func projectRootArg(verb string, args []string) (string, bool) {
+	spec, ok := projectArgSpecs[verb]
+	if !ok {
 		return "", false
 	}
-	return root, true
+	parsed, err := parseProjectArgs(spec, stripVerb(args, verb))
+	if err != nil || parsed.Root == "" || !filepath.IsAbs(parsed.Root) {
+		return "", false
+	}
+	return parsed.Root, true
 }
 
 // acquireLocks takes every lock the verb needs, in order, and returns the function
@@ -177,15 +210,19 @@ func projectRootArg(args []string) (string, bool) {
 // The lock is held until the release function runs. A production caller exits the
 // process from inside the verb, which skips it; the kernel frees the lock when the
 // process ends.
-func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, exit func(int)) (release func(), ok bool) {
-	requests := lockRequestsFor(verb, args)
+//
+// provisional lists the lock files of the requests marked rereads that did not exist
+// when they were asked for, whose shared locks therefore hold nothing:
+// rereadsWhenTheLockFileAppears says what the caller does about them.
+func acquireLocks(verb string, args []string, installRoot string, locker Locker, stderr io.Writer, exit func(int)) (release func(), provisional []string, ok bool) {
+	requests := lockRequestsFor(verb, args, installRoot)
 	if len(requests) == 0 {
-		return func() {}, true
+		return func() {}, nil, true
 	}
 	if locker == nil {
 		fmt.Fprintf(stderr, "error: skills %s: no lock is configured, so it will not run unserialized with the other skills commands\n", verb)
 		exit(1)
-		return nil, false
+		return nil, nil, false
 	}
 	var unlocks []func()
 	releaseAll := func() {
@@ -196,15 +233,36 @@ func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, e
 	for _, req := range requests {
 		var unlock func()
 		var err error
-		what := "lock " + req.path
+		if req.registry != "" && !req.registryOptional {
+			if _, statErr := os.Stat(req.registry); statErr != nil {
+				releaseAll()
+				fmt.Fprintf(stderr, "error: skills %s: reading registry %q: %v; nothing was locked and nothing was changed\n", verb, req.registry, statErr)
+				exit(1)
+				return nil, nil, false
+			}
+		}
+		if req.rereads && !req.dir && req.mode == LockShared {
+			// Looked at before the locker is asked: a file that is absent now may be
+			// created by the time the locker opens it, which only costs one more read.
+			if _, statErr := os.Stat(req.path); os.IsNotExist(statErr) {
+				provisional = append(provisional, req.path)
+			}
+		}
 		if req.dir {
-			what = "lock on the directory " + req.path
 			unlock, err = locker.LockDir(req.path, req.mode)
 		} else {
 			unlock, err = locker.Lock(req.path, req.mode)
 		}
 		if err != nil {
 			releaseAll()
+			// The lock that failed is named as the locker tried it, which can differ
+			// from the path asked for: a directory reached through a symlink is locked
+			// where it really is, and that is the one another process holds.
+			locked := lockedPath(err, req.path)
+			what := "lock " + locked
+			if req.dir {
+				what = "lock on the directory " + locked
+			}
 			if isBusy(err) {
 				fmt.Fprintf(stderr, "error: skills %s: another skills command is in progress for %s (%s); nothing was changed, retry in a moment\n", verb, req.subject, what)
 				exit(ExitBusy)
@@ -212,18 +270,45 @@ func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, e
 				fmt.Fprintf(stderr, "error: skills %s: cannot take the %s: %v\n", verb, what, err)
 				exit(1)
 			}
-			return nil, false
+			return nil, nil, false
 		}
 		unlocks = append(unlocks, unlock)
 	}
-	return releaseAll, true
+	return releaseAll, provisional, true
 }
+
+// rereadsWhenTheLockFileAppears is the answer to the one case a shared lock cannot
+// cover. A shared lock on a lock file that does not exist holds nothing, so the
+// first writer ever can create the file, take the lock, and change the registry and
+// the manifest (two renames) while the reader reads them. A writer creates the file
+// before it writes anything, so if the file is still absent when the read is done,
+// no write began during it and the read stands; if it exists now, the read may have
+// seen the pair between its renames, and is discarded. The caller then reads again,
+// and this time the file exists, so the lock it takes is real and waits for the
+// writer to finish. The bound is for a file that is removed again between attempts,
+// which nothing in this program does.
+func rereadsWhenTheLockFileAppears(provisional []string) bool {
+	for _, path := range provisional {
+		// Anything but "still absent" counts as appeared: a stat that fails for
+		// another reason cannot prove that no writer began.
+		if _, err := os.Stat(path); !os.IsNotExist(err) {
+			return true
+		}
+	}
+	return false
+}
+
+// maxErrorChain bounds a walk along wrapped errors. A real chain is a few links
+// long. The bound is for one that never ends: an error type can unwrap to itself or
+// to a cycle, nothing in the language forbids it, and this walk runs while a verb is
+// reporting a failed lock, where hanging would be the worst answer.
+const maxErrorChain = 16
 
 // isBusy reports whether err, or an error it wraps, says the lock stayed taken.
 // It asks by method, not by type, because this package cannot import the package
 // that defines the locker's errors.
 func isBusy(err error) bool {
-	for depth := 0; err != nil && depth < 16; depth++ {
+	for depth := 0; err != nil && depth < maxErrorChain; depth++ {
 		if b, ok := err.(interface{ Busy() bool }); ok && b.Busy() {
 			return true
 		}
@@ -234,4 +319,21 @@ func isBusy(err error) bool {
 		err = wrapped.Unwrap()
 	}
 	return false
+}
+
+// lockedPath is the path a failed lock was tried on: the one the error names with a
+// LockPath method (engine/filelock's BusyError has one), looked for the way isBusy
+// looks for Busy, or else the path that was asked for.
+func lockedPath(err error, asked string) string {
+	for depth := 0; err != nil && depth < maxErrorChain; depth++ {
+		if n, ok := err.(interface{ LockPath() string }); ok && n.LockPath() != "" {
+			return n.LockPath()
+		}
+		wrapped, ok := err.(interface{ Unwrap() error })
+		if !ok {
+			break
+		}
+		err = wrapped.Unwrap()
+	}
+	return asked
 }

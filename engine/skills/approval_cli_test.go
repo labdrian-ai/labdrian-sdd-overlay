@@ -349,7 +349,11 @@ func TestSkillsCoreAt_DispatchesApprove(t *testing.T) {
 	e := newApproveEnv(t, "my-skill")
 	var out, errBuf bytes.Buffer
 	code := -1
-	SkillsCoreAt("approve", append([]string{"approve"}, e.args()...), os.ReadFile, fixedClock(approveFixedNow), noopLocker{}, &out, &errBuf, func(c int) { code = c })
+	// The labdrian wrapper always names the registry; approve does not read it, but
+	// the overlay lock is keyed by it.
+	registry := filepath.Join(filepath.Dir(e.root), "skills.registry.yaml")
+	args := append([]string{"approve"}, e.args("--registry", registry)...)
+	SkillsCoreAt("approve", args, os.ReadFile, fixedClock(approveFixedNow), noopLocker{}, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%q", code, errBuf.String())
 	}

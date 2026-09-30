@@ -8,7 +8,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strings"
 )
 
 // RenderProjectRegisterCore is the testable CLI core for
@@ -77,82 +76,13 @@ func RenderProjectRegisterCore(
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
-	projectRoot := ""
-	candidate := ""
-	registryPath := "skills.registry.yaml"
-	draftPath := ""
-	dryRun := false
-	endOfOptions := false
-	i := 0
-	consumeValue := func(flag string) (string, bool) {
-		if i+1 >= len(args) {
-			fmt.Fprintf(stderr, "error: skills project-register: flag %q requires a value\n", flag)
-			exit(1)
-			return "", false
-		}
-		value := args[i+1]
-		if strings.HasPrefix(value, "-") {
-			fmt.Fprintf(stderr, "error: skills project-register: flag %q requires a value; got flag token %q\n", flag, value)
-			exit(1)
-			return "", false
-		}
-		i++
-		return value, true
-	}
-
-	for ; i < len(args); i++ {
-		arg := args[i]
-		if !endOfOptions {
-			switch arg {
-			case "--":
-				endOfOptions = true
-				continue
-			case "--dry-run":
-				dryRun = true
-				continue
-			case "--project-root":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				projectRoot = value
-				continue
-			case "--candidate":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				candidate = value
-				continue
-			case "--registry":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				registryPath = value
-				continue
-			case "--manifest", "--source-root":
-				// Wrapper-injected and unused here: consume the value so it
-				// is never misread as the draft positional.
-				if _, ok := consumeValue(arg); !ok {
-					return
-				}
-				continue
-			}
-			if strings.HasPrefix(arg, "-") {
-				fmt.Fprintf(stderr, "error: skills project-register: unknown flag %q\n", arg)
-				exit(1)
-				return
-			}
-		}
-		if draftPath == "" {
-			draftPath = arg
-			continue
-		}
-		fmt.Fprintf(stderr, "error: skills project-register: unexpected extra argument %q (project-register accepts exactly one <draft-file>)\n", arg)
+	parsed, err := parseProjectArgs(projectRegisterSpec, args)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
 		return
 	}
+	projectRoot, candidate, registryPath, draftPath, dryRun := parsed.Root, parsed.Candidate, parsed.Registry, parsed.Positional, parsed.DryRun
 
 	if projectRoot == "" {
 		fmt.Fprintln(stderr, "error: skills project-register requires --project-root <abs> (there is no working-directory fallback)")
@@ -263,81 +193,15 @@ func RenderProjectReviseCore(
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
-	projectRoot := ""
-	candidate := ""
-	registryPath := "skills.registry.yaml"
-	draftPath := ""
-	dryRun := false
-	endOfOptions := false
-	i := 0
-	consumeValue := func(flag string) (string, bool) {
-		if i+1 >= len(args) {
-			fmt.Fprintf(stderr, "error: skills project-revise: flag %q requires a value\n", flag)
-			exit(1)
-			return "", false
-		}
-		value := args[i+1]
-		if strings.HasPrefix(value, "-") {
-			fmt.Fprintf(stderr, "error: skills project-revise: flag %q requires a value; got flag token %q\n", flag, value)
-			exit(1)
-			return "", false
-		}
-		i++
-		return value, true
-	}
-
-	for ; i < len(args); i++ {
-		arg := args[i]
-		if !endOfOptions {
-			switch arg {
-			case "--":
-				endOfOptions = true
-				continue
-			case "--dry-run":
-				dryRun = true
-				continue
-			case "--project-root":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				projectRoot = value
-				continue
-			case "--candidate":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				candidate = value
-				continue
-			case "--registry":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				registryPath = value
-				_ = registryPath
-				continue
-			case "--manifest", "--source-root":
-				if _, ok := consumeValue(arg); !ok {
-					return
-				}
-				continue
-			}
-			if strings.HasPrefix(arg, "-") {
-				fmt.Fprintf(stderr, "error: skills project-revise: unknown flag %q\n", arg)
-				exit(1)
-				return
-			}
-		}
-		if draftPath == "" {
-			draftPath = arg
-			continue
-		}
-		fmt.Fprintf(stderr, "error: skills project-revise: unexpected extra argument %q (project-revise accepts exactly one <draft-file>)\n", arg)
+	// --registry is accepted and not used: the revision needs no registry, but the
+	// labdrian wrapper appends one to every skills verb.
+	parsed, err := parseProjectArgs(projectReviseSpec, args)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
 		return
 	}
+	projectRoot, candidate, draftPath, dryRun := parsed.Root, parsed.Candidate, parsed.Positional, parsed.DryRun
 
 	if projectRoot == "" {
 		fmt.Fprintln(stderr, "error: skills project-revise requires --project-root <abs> (there is no working-directory fallback)")
@@ -429,90 +293,13 @@ func RenderProjectRetireCore(
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
-	projectRoot := ""
-	registryPath := "skills.registry.yaml"
-	reason := ""
-	absorbedInto := ""
-	id := ""
-	dryRun := false
-	endOfOptions := false
-	i := 0
-	consumeValue := func(flag string) (string, bool) {
-		if i+1 >= len(args) {
-			fmt.Fprintf(stderr, "error: skills project-retire: flag %q requires a value\n", flag)
-			exit(1)
-			return "", false
-		}
-		value := args[i+1]
-		if strings.HasPrefix(value, "-") {
-			fmt.Fprintf(stderr, "error: skills project-retire: flag %q requires a value; got flag token %q\n", flag, value)
-			exit(1)
-			return "", false
-		}
-		i++
-		return value, true
-	}
-
-	for ; i < len(args); i++ {
-		arg := args[i]
-		if !endOfOptions {
-			switch arg {
-			case "--":
-				endOfOptions = true
-				continue
-			case "--dry-run":
-				dryRun = true
-				continue
-			case "--project-root":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				projectRoot = value
-				continue
-			case "--registry":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				registryPath = value
-				continue
-			case "--reason":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				reason = value
-				continue
-			case "--absorbed-into":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				absorbedInto = value
-				continue
-			case "--manifest", "--source-root":
-				// Wrapper-injected and unused here. Consume their values so a
-				// value cannot be mistaken for the skill id.
-				if _, ok := consumeValue(arg); !ok {
-					return
-				}
-				continue
-			}
-			if strings.HasPrefix(arg, "-") {
-				fmt.Fprintf(stderr, "error: skills project-retire: unknown flag %q\n", arg)
-				exit(1)
-				return
-			}
-		}
-		if id == "" {
-			id = arg
-			continue
-		}
-		fmt.Fprintf(stderr, "error: skills project-retire: unexpected extra argument %q (project-retire accepts exactly one <id>)\n", arg)
+	parsed, err := parseProjectArgs(projectRetireSpec, args)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
 		return
 	}
+	projectRoot, registryPath, reason, absorbedInto, id, dryRun := parsed.Root, parsed.Registry, parsed.Reason, parsed.AbsorbedInto, parsed.Positional, parsed.DryRun
 
 	if projectRoot == "" {
 		fmt.Fprintln(stderr, "error: skills project-retire requires --project-root <abs> (there is no working-directory fallback)")
@@ -606,67 +393,13 @@ func RenderProjectStatusCore(
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
-	projectRoot := ""
-	registryPath := "skills.registry.yaml"
-	id := ""
-	endOfOptions := false
-	i := 0
-	consumeValue := func(flag string) (string, bool) {
-		if i+1 >= len(args) {
-			fmt.Fprintf(stderr, "error: skills project-status: flag %q requires a value\n", flag)
-			exit(1)
-			return "", false
-		}
-		value := args[i+1]
-		if strings.HasPrefix(value, "-") {
-			fmt.Fprintf(stderr, "error: skills project-status: flag %q requires a value; got flag token %q\n", flag, value)
-			exit(1)
-			return "", false
-		}
-		i++
-		return value, true
-	}
-	for ; i < len(args); i++ {
-		arg := args[i]
-		if !endOfOptions {
-			switch arg {
-			case "--":
-				endOfOptions = true
-				continue
-			case "--project-root":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				projectRoot = value
-				continue
-			case "--registry":
-				value, ok := consumeValue(arg)
-				if !ok {
-					return
-				}
-				registryPath = value
-				continue
-			case "--manifest", "--source-root":
-				if _, ok := consumeValue(arg); !ok {
-					return
-				}
-				continue
-			}
-			if strings.HasPrefix(arg, "-") {
-				fmt.Fprintf(stderr, "error: skills project-status: unknown flag %q\n", arg)
-				exit(1)
-				return
-			}
-		}
-		if id == "" {
-			id = arg
-			continue
-		}
-		fmt.Fprintf(stderr, "error: skills project-status: unexpected extra argument %q\n", arg)
+	parsed, err := parseProjectArgs(projectStatusSpec, args)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
 		return
 	}
+	projectRoot, registryPath, id := parsed.Root, parsed.Registry, parsed.Positional
 	if projectRoot == "" {
 		fmt.Fprintln(stderr, "error: skills project-status requires --project-root <abs> (there is no working-directory fallback)")
 		exit(1)

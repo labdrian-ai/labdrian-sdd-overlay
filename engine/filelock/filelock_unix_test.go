@@ -45,6 +45,38 @@ func TestAcquireDirOnAFilesystemThatCannotLockADirectoryFailsClosedWithAClearErr
 	}
 }
 
+// The lock file is created 0644 before the umask, not 0666: a checkout shared by
+// several users can still lock it (a shared lock only needs to read it), but no
+// other user can write into it. The assertion holds the umask fixed so that the
+// mode the code asks for, not the machine's umask, is what is compared.
+func TestTheLockFileIsCreatedWithMode0644BeforeTheUmask(t *testing.T) {
+	for _, tc := range []struct {
+		umask int
+		want  os.FileMode
+	}{
+		{0o000, 0o644},
+		{0o022, 0o644},
+		{0o077, 0o600},
+	} {
+		old := syscall.Umask(tc.umask)
+		path := filepath.Join(t.TempDir(), ".mode.lock")
+		unlock, err := Acquire(path, Options{})
+		syscall.Umask(old)
+		if err != nil {
+			t.Fatal(err)
+		}
+		unlock()
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != tc.want {
+			t.Errorf("umask %04o: lock file mode %04o, want %04o", tc.umask, got, tc.want)
+		}
+	}
+}
+
 // A file lock that fails for the same reason does not blame directories.
 func TestAcquireOnAFailingFilesystemDoesNotMentionDirectories(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".fixture.lock")

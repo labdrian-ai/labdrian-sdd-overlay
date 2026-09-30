@@ -141,6 +141,12 @@ func TestAcquireReportsBusyAfterTheBound(t *testing.T) {
 	if !busy.Busy() {
 		t.Error("BusyError.Busy() = false")
 	}
+	// A caller that cannot import this package names the lock that was actually
+	// tried (for a directory lock, the resolved directory) by method.
+	named, ok := err.(interface{ LockPath() string })
+	if !ok || named.LockPath() != path {
+		t.Errorf("LockPath() on %T: answers %v, want it to answer %q", err, ok, path)
+	}
 	if !strings.Contains(err.Error(), path) {
 		t.Errorf("error %q does not name the lock", err)
 	}

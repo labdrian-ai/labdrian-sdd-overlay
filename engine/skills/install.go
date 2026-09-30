@@ -188,7 +188,7 @@ func copyFile(src, dst string, d fs.DirEntry) error {
 // RenderInstallCore is the testable CLI entry for `engine skills install`.
 // cwdFn is injected for testability (production callers pass os.Getwd).
 func RenderInstallCore(args []string, readFile readFileFn, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	registryPath := "skills.registry.yaml"
+	registryPath := defaultRegistryPath
 	sourceRoot := ""
 	projectID := ""
 

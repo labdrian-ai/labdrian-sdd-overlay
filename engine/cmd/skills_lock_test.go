@@ -288,8 +288,51 @@ func TestSkillsLock_AProjectRootReachedThroughASymlinkIsTheSameLock(t *testing.T
 		t.Fatal(err)
 	}
 	defer held()
-	if r := w.run("project-register", w.registerArgs(t, link)...); r.code != skills.ExitBusy {
+	r := w.run("project-register", w.registerArgs(t, link)...)
+	if r.code != skills.ExitBusy {
 		t.Errorf("project-register through the symlink while the real directory is locked: exit %d, stderr %q, want exit 2", r.code, r.stderr)
+	}
+	// The message names the path the caller gave and the directory that is really
+	// locked: the second is the one another process holds.
+	real, err := filepath.EvalSymlinks(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, want := range []string{"the project " + link, "lock on the directory " + real} {
+		if !strings.Contains(r.stderr, want) {
+			t.Errorf("stderr %q does not contain %q", r.stderr, want)
+		}
+	}
+}
+
+// A raw engine call with no --registry in a directory that has none must not leave
+// a lock file behind in that directory: the writer refuses, and nothing was locked.
+func TestSkillsLock_ARawWriterWithoutARegistryCreatesNoLockFile(t *testing.T) {
+	w := newLockWorld(t)
+	old, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	here := t.TempDir()
+	if err := os.Chdir(here); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chdir(old) })
+
+	var out, errBuf bytes.Buffer
+	code := 0
+	// No --registry: the default is ./skills.registry.yaml, which is not here.
+	runSkillsCore("sync-manifest", []string{"sync-manifest", "--manifest", w.manifest}, &out, &errBuf, func(c int) { code = c })
+
+	if code != 1 || !strings.Contains(errBuf.String(), "nothing was locked") {
+		t.Errorf("exit %d, stderr %q, want exit 1 and 'nothing was locked'", code, errBuf.String())
+	}
+	entries, err := os.ReadDir(here)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 0 {
+		t.Errorf("the working directory holds %d entries after a refused raw call, want none (first: %s)", len(entries), entries[0].Name())
 	}
 }
 
