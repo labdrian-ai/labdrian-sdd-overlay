@@ -589,41 +589,95 @@ func phase8DetectorLockKeys(t *testing.T) (top, entry map[string]bool) {
 func phase8AssertDetectorAcceptsLock(t *testing.T, label string, data []byte) {
 	t.Helper()
 	top, entry := phase8DetectorLockKeys(t)
+	for _, problem := range phase8DetectorLockProblems(data, top, entry) {
+		t.Errorf("%s: %s", label, problem)
+	}
+}
+
+// phase8DetectorLockProblems returns one line for each way the detector would refuse or
+// misread the lock in data, given the field names it declares (top for ProjectLock, entry
+// for ProjectLockEntry). It is a function of its inputs, with no *testing.T, so that a
+// test can hand it a lock the detector would reject and see that it says so: a value of
+// the wrong type for "id" or "targets" makes the detector's typed decode fail, so it is a
+// problem here too, never a value silently read as empty.
+func phase8DetectorLockProblems(data []byte, top, entry map[string]bool) []string {
+	var problems []string
 	var doc map[string]json.RawMessage
 	if err := json.Unmarshal(data, &doc); err != nil {
-		t.Fatalf("%s: the project lock is not JSON: %v", label, err)
+		return []string{"the project lock is not JSON: " + err.Error()}
 	}
 	for key := range doc {
 		if !top[key] {
-			t.Errorf("%s: the lock has the field %q, which the detector's ProjectLock does not declare, so its strict parser would refuse the file", label, key)
+			problems = append(problems, "the lock has the field "+strconv.Quote(key)+", which the detector's ProjectLock does not declare, so its strict parser would refuse the file")
 		}
 	}
 	var version int
 	if err := json.Unmarshal(doc["version"], &version); err != nil || version != 1 {
-		t.Errorf("%s: lock version = %s, want 1", label, doc["version"])
+		problems = append(problems, "lock version = "+string(doc["version"])+", want 1")
 	}
 	var procedural []map[string]json.RawMessage
 	if err := json.Unmarshal(doc["skills"], &procedural); err != nil {
-		t.Fatalf("%s: skills: %v", label, err)
+		return append(problems, "skills: "+err.Error())
 	}
 	seen := map[string]bool{}
-	for _, item := range procedural {
+	for i, item := range procedural {
 		for key := range item {
 			if !entry[key] {
-				t.Errorf("%s: a skill entry has the field %q, which the detector's ProjectLockEntry does not declare", label, key)
+				problems = append(problems, "skill entry "+strconv.Itoa(i)+" has the field "+strconv.Quote(key)+", which the detector's ProjectLockEntry does not declare")
 			}
 		}
 		var skillID string
+		if err := json.Unmarshal(item["id"], &skillID); err != nil {
+			problems = append(problems, "skill entry "+strconv.Itoa(i)+": id does not decode as the detector's string: "+err.Error())
+		}
 		var targets []string
-		_ = json.Unmarshal(item["id"], &skillID)
-		_ = json.Unmarshal(item["targets"], &targets)
+		if err := json.Unmarshal(item["targets"], &targets); err != nil {
+			problems = append(problems, "skill entry "+strconv.Itoa(i)+" ("+strconv.Quote(skillID)+"): targets do not decode as the detector's list of strings: "+err.Error())
+		}
 		if seen[skillID] {
-			t.Errorf("%s: skill id %q appears twice; the detector refuses duplicates", label, skillID)
+			problems = append(problems, "skill id "+strconv.Quote(skillID)+" appears twice; the detector refuses duplicates")
 		}
 		seen[skillID] = true
 		if len(targets) == 0 {
-			t.Errorf("%s: skill %q has no targets; the detector reads the first one", label, skillID)
+			problems = append(problems, "skill "+strconv.Quote(skillID)+" has no targets; the detector reads the first one")
 		}
+	}
+	return problems
+}
+
+func TestPhase8DetectorLockProblems_SaysWhatTheDetectorWouldRefuse(t *testing.T) {
+	top := map[string]bool{"version": true, "skills": true, "installs": true}
+	entry := map[string]bool{"id": true, "provenance": true, "candidate": true, "sha256": true, "revision": true, "targets": true}
+	const good = `{"version":1,"skills":[{"id":"a","provenance":"p","candidate":"c","sha256":"s","revision":1,"targets":[".claude/skills/a/SKILL.md"]}],"installs":[]}`
+
+	if problems := phase8DetectorLockProblems([]byte(good), top, entry); len(problems) != 0 {
+		t.Fatalf("a lock the detector accepts got problems: %v", problems)
+	}
+	for _, tc := range []struct {
+		name string
+		lock string
+		want string // a substring of one problem
+	}{
+		{"not JSON", `{`, "not JSON"},
+		{"a field the detector does not declare", `{"version":1,"skills":[],"extra":1}`, `"extra"`},
+		{"an unsupported version", `{"version":2,"skills":[]}`, "want 1"},
+		{"a skill field the detector does not declare", `{"version":1,"skills":[{"id":"a","targets":["t"],"extra":1}]}`, `"extra"`},
+		{"an id that is not a string", `{"version":1,"skills":[{"id":5,"targets":["t"]}]}`, "id does not decode"},
+		{"a skill with no id", `{"version":1,"skills":[{"targets":["t"]}]}`, "id does not decode"},
+		{"targets that are not a list", `{"version":1,"skills":[{"id":"a","targets":"t"}]}`, "targets do not decode"},
+		{"a skill with no targets key", `{"version":1,"skills":[{"id":"a"}]}`, "targets do not decode"},
+		{"a skill with an empty targets list", `{"version":1,"skills":[{"id":"a","targets":[]}]}`, "has no targets"},
+		{"a duplicate id", `{"version":1,"skills":[{"id":"a","targets":["t"]},{"id":"a","targets":["t"]}]}`, "appears twice"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			problems := phase8DetectorLockProblems([]byte(tc.lock), top, entry)
+			if len(problems) == 0 {
+				t.Fatalf("a lock the detector would reject got no problem: %s", tc.lock)
+			}
+			if !strings.Contains(strings.Join(problems, "\n"), tc.want) {
+				t.Errorf("problems %q do not contain %q", problems, tc.want)
+			}
+		})
 	}
 }
 
@@ -839,9 +893,10 @@ func phase8ApproveGuard(t *testing.T, binary string) {
 	if err := os.MkdirAll(filepath.Dir(hookCommand), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(binary, hookCommand); err != nil {
-		t.Fatal(err)
-	}
+	// The hook entry point is a link to the built binary. Links are the premise of this
+	// part: it skips only where links cannot be made (makeSymlink) and fails on any other
+	// error, so Linux, where CI runs, never skips it silently.
+	makeSymlink(t, binary, hookCommand)
 	// Foreign entries share our event and our matchers; one runs our binary with
 	// another verb, and one runs another program with our verb.
 	foreign := map[string]any{

@@ -177,9 +177,7 @@ func TestValidateGivesUpWhenTheLockFileKeepsAppearingAndVanishing(t *testing.T) 
 func TestValidateRefusesWithTheRealReasonWhenTheLockFileCannotBeInspected(t *testing.T) {
 	f := newLockFixture(t)
 	loop := filepath.Join(t.TempDir(), "loop")
-	if err := os.Symlink(loop, loop); err != nil {
-		t.Skipf("cannot make a symbolic link that points at itself: %v", err)
-	}
+	makeSymlink(t, loop, loop) // a link that points at itself
 	_, statErr := os.Stat(loop)
 	pathErr, ok := statErr.(*fs.PathError)
 	if !ok || os.IsNotExist(statErr) {
@@ -233,9 +231,7 @@ func TestRereadsWhenTheLockFileAppearsReportsEachSignalWhateverTheOrder(t *testi
 	appeared := filepath.Join(dir, "appeared.lock")
 	writeTestFile(t, appeared, "")
 	loop := filepath.Join(dir, "loop.lock")
-	if err := os.Symlink(loop, loop); err != nil {
-		t.Skipf("cannot make a symbolic link that points at itself: %v", err)
-	}
+	makeSymlink(t, loop, loop) // a link that points at itself
 	if _, err := os.Stat(loop); err == nil || os.IsNotExist(err) {
 		t.Fatalf("a symbolic link that points at itself gave %v, want a stat failure that is not 'does not exist'", err)
 	}
