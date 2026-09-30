@@ -558,8 +558,9 @@ Commands:
                                    comparison is unavailable (no origin remote, no cached ref,
                                    or a requested fetch failed) -- other checks still complete.
   install-hooks                    Build + deploy the engine binary, then wire the
-                                   deterministic-scoping hooks and the workflow projection
-                                   hooks into ~/.claude/settings.json. Re-run it after an
+                                   deterministic-scoping hooks, the workflow projection
+                                   hooks, and the skills approve guard into
+                                   ~/.claude/settings.json. Re-run it after an
                                    upgrade that adds a hook family, then restart Claude Code
                                    to load the hooks.
                                    DELIBERATE ACTION — not called by 'apply'. Run once to
@@ -617,6 +618,9 @@ Commands:
                                              skills/<id>/.approval.json, bound to the digest of
                                              its exact bytes; the engine cannot prove a human ran
                                              it, so the record only proves the bytes match
+                                             A PreToolUse hook (install-hooks) denies the agent running
+                                             it or writing the record by hand: a speed bump, not a
+                                             security boundary. A person runs it in a terminal.
   shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
                                    assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
                                    clearance record --stdin  store a human decision (Pi /shaper-clear)
@@ -2917,10 +2921,14 @@ cmd_install_hooks() {
   echo "install-hooks complete."
   echo "  binary  : $ENGINE_BINARY"
   echo "  settings: $settings_path (backup at ${settings_path}.bak)"
-  echo "  hooks   : three hook families (two pairs + SessionEnd sync-trigger), five entries"
-  echo "            wired into UserPromptSubmit, PreToolUse/Agent, and SessionEnd."
+  echo "  hooks   : the overlay hook families, wired into UserPromptSubmit, PreToolUse, and SessionEnd:"
+  echo "            deterministic scoping (minimalism-contract and anti-generic-design),"
+  echo "            the SessionEnd longterm-mem sync, the review-receipt and shaper clearance guards,"
+  echo "            the workflow projection hooks, and the skills approve guard"
+  echo "            (denies the agent running 'skills approve'; a speed bump, not a security boundary)."
   echo ""
-  echo "Deterministic scoping is now ACTIVE for Claude Code sessions."
+  echo "Deterministic scoping is now ACTIVE for Claude Code sessions once you restart Claude Code,"
+  echo "which loads hooks only when it starts (re-run install-hooks after an upgrade that adds a family)."
   echo ""
   echo "Run 'labdrian doctor' to verify the full installation."
 
@@ -3000,8 +3008,8 @@ cmd_uninstall_hooks() {
 
   echo ""
   echo "uninstall-hooks complete."
-  echo "  Our five hook entries (three hook families: two pairs + SessionEnd sync-trigger)"
-  echo "  have been removed from $settings_path"
+  echo "  Every overlay hook entry (scoping, the SessionEnd sync, the review-receipt and shaper guards,"
+  echo "  the workflow projection hooks, and the skills approve guard) has been removed from $settings_path"
   echo "  (backup at ${settings_path}.bak if the file was modified)"
   echo ""
   echo "Run 'labdrian doctor' to verify the installation state."
