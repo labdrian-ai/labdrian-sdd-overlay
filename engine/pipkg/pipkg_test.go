@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // fixtureOverlay builds a minimal overlay tree: two skills (one targeted at
@@ -201,6 +202,29 @@ func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {
 		if _, err := os.Stat(filepath.Join(destDir, "skills", "_shared", name)); err != nil {
 			t.Errorf("expected skills/_shared/%s to be built: %v", name, err)
 		}
+	}
+}
+
+// TestPipkgBuild_DoesNotProjectTheApprovalRecord pins that a skill's approval
+// record, which sits inside the skill directory in the repository, is not
+// copied into the built Pi package: it is governance state, not skill content.
+// Only the root-level record is skipped; the skill's other files still build.
+func TestPipkgBuild_DoesNotProjectTheApprovalRecord(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", skills.ApprovalRecordName), "{}\n")
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+
+	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		t.Fatalf("Build: %v", err)
+	}
+
+	for _, want := range []string{"SKILL.md", filepath.Join("references", "notes.md")} {
+		if _, err := os.Stat(filepath.Join(destDir, "skills", "pi-skill", want)); err != nil {
+			t.Errorf("skill content %q must still be built: %v", want, err)
+		}
+	}
+	if _, err := os.Stat(filepath.Join(destDir, "skills", "pi-skill", skills.ApprovalRecordName)); err == nil {
+		t.Error("the approval record must not be projected into the built Pi package")
 	}
 }
 

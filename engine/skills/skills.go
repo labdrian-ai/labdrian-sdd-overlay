@@ -7,14 +7,23 @@ import (
 	"os"
 )
 
-// SkillsCore is the testable CLI core for `engine skills <verb>`.
+// SkillsCore is the testable CLI core for `engine skills <verb>`. It is
+// SkillsCoreAt without a clock: every verb but approve behaves identically,
+// and approve fails closed, because it must not invent an approval time.
+func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
+	SkillsCoreAt(verb, args, readFile, nil, stdout, stderr, exit)
+}
+
+// SkillsCoreAt is the testable CLI core for `engine skills <verb>`.
 // Dispatches to RenderListCore, RenderStatusCore, RenderValidateCore,
 // RenderInstallCore, AddCore, RemoveCore, SyncCore, RenderLintCore,
-// RenderProjectRegisterCore, RenderProjectReviseCore, RenderProjectStatusCore,
-// or RenderProjectRetireCore.
+// RenderApproveCore, RenderProjectRegisterCore, RenderProjectReviseCore,
+// RenderProjectStatusCore, or RenderProjectRetireCore.
 // Unknown or empty verbs fail loud (exit 1), mirroring the prespec pattern (ADR-2).
-// No global state; all I/O is injected.
-func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
+// No global state; all I/O is injected. now returns the current time as an
+// RFC 3339 UTC timestamp for the verbs that record one (approve); the
+// production caller passes the wall clock, and nil is legal for every other verb.
+func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() string, stdout, stderr io.Writer, exit func(int)) {
 	switch verb {
 	case "list":
 		RenderListCore(args, readFile, stdout, stderr, exit)
@@ -32,6 +41,8 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 		SyncCore(stripVerb(args, "sync-manifest"), readFile, stdout, stderr, exit)
 	case "lint":
 		RenderLintCore(stripVerb(args, "lint"), readFile, stdout, stderr, exit)
+	case "approve":
+		RenderApproveCore(stripVerb(args, "approve"), readFile, now, stdout, stderr, exit)
 	case "project-register":
 		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "project-revise":
@@ -41,10 +52,10 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 	case "project-retire":
 		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "":
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire")
+		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
 		exit(1)
 	default:
-		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove, sync-manifest, lint, project-register, project-revise, project-status, project-retire)\n", verb)
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: list, status, validate, install, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)\n", verb)
 		exit(1)
 	}
 }
@@ -68,8 +79,9 @@ func stripVerb(args []string, verb string) []string {
 // Parses --registry, --manifest, and --source-root flags, loads the registry
 // and manifest, and runs both the registry/manifest cross-check (Diff, via
 // Validate) and the on-disk cross-check (DiffOnDisk) in the same run.
-// Exits 0 only when both checks are clean, 1 when any divergence is found
-// (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006).
+// Exits 0 only when every check is clean, 1 when any divergence is found
+// (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006
+// and to the global-skill approval check by CheckApprovals).
 //
 // --source-root has no default and no cwd-derived fallback (R-002): a caller
 // that omits it gets a usage error, never a silent scan of the working
@@ -153,17 +165,26 @@ func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(stri
 	}
 	onDiskDivs := DiffOnDisk(diskPaths, manifestPaths)
 
-	// Full-scan reporting (R-007): print every divergence from both checks in
+	// Approval check: every global skill needs a valid human-approval record
+	// for its exact SKILL.md bytes, unless it is the grandfathered baseline's.
+	approvalDivs, approvals := CheckApprovals(reg, sourceRoot, readFile)
+
+	// Full-scan reporting (R-007): print every divergence from all checks in
 	// this one run, never stopping at the first error.
 	for _, d := range onDiskDivs {
 		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
 	}
+	for _, d := range approvalDivs {
+		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
+	}
 
-	if regErr != nil || len(onDiskDivs) > 0 {
+	if regErr != nil || len(onDiskDivs) > 0 || len(approvalDivs) > 0 {
 		exit(1)
 		return
 	}
 
 	fmt.Fprintf(stdout, "registry and manifest aligned (%d skills)\n", len(reg.Skills))
 	fmt.Fprintf(stdout, "skills/ on disk matches overlay.manifest (%d files)\n", len(diskPaths))
+	fmt.Fprintf(stdout, "global skill approvals verified (%d skills: %d approved, %d grandfathered)\n",
+		approvals.Global, approvals.Approved, approvals.Grandfathered)
 }

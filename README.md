@@ -384,11 +384,13 @@ overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.
     list         [--registry <path>]                                               print sorted registry entries (id, source type, update strategy, targets)
     status       [--registry <path>]                                               print count summary (total / core / custom)
-    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest; exit 1 on any divergence
+    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 37 skills present at the Phase 8 base are grandfathered while their bytes are unchanged); exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   copy project-scoped skills into <cwd>/.claude/skills/
-    add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external)
+    add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves the exact SKILL.md bytes (see approve)
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
+    approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
+                 The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
 
 overlay shaper <verb>
     Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.

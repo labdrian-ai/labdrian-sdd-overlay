@@ -598,15 +598,25 @@ Commands:
                                    status    print count summary
                                    validate  cross-check registry vs overlay.manifest,
                                              and skills/ on disk vs overlay.manifest
-                                             (requires --source-root)
+                                             (requires --source-root); every global skill
+                                             needs a valid approval record, except the
+                                             grandfathered baseline while its bytes are unchanged
                                    install   copy project-scoped skills into <cwd>/.claude/skills
                                    add <id> [--repo <url>] [--ref <sha>]
                                              register a skill: custom (no --repo) or
                                              external=vendored provenance (--repo set).
                                              The overlay NEVER fetches; --repo/--ref are
                                              inert labels for a file you already committed.
+                                             Refused unless skills/<id>/.approval.json holds a
+                                             valid approval for the exact SKILL.md bytes (see
+                                             approve below); nothing is written on refusal.
                                    remove <id> unregister a skill from registry + manifest
                                    sync-manifest  regenerate */SKILL.md rows from skills.registry.yaml
+                                   approve --id <id> --approver <label>
+                                             record a human approval of skills/<id>/SKILL.md in
+                                             skills/<id>/.approval.json, bound to the digest of
+                                             its exact bytes; the engine cannot prove a human ran
+                                             it, so the record only proves the bytes match
   shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
                                    assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
                                    clearance record --stdin  store a human decision (Pi /shaper-clear)

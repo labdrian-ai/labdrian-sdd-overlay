@@ -207,6 +207,8 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo
 //   - id is not already registered (delegated to AddEntry)
 //   - <sourceRoot>/<id>/SKILL.md exists (R-060)
 //   - LintSkillFile reports no hard findings for the source skill
+//   - the skill has a valid approval record for its exact bytes, or is the
+//     grandfathered baseline's (approval_gate.go)
 //   - Serialize + re-parse of new registry is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
 func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
@@ -269,6 +271,25 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		for _, finding := range hardLint {
 			fmt.Fprintln(stderr, finding)
 		}
+		exit(1)
+		return
+	}
+
+	// 4b. Approval gate. Every skill `add` registers is global tier
+	// (AddEntry hardcodes defaultScope global), so a human-approval record
+	// bound to the exact SKILL.md bytes is required, unless the bytes are the
+	// grandfathered baseline's. Like every check above it runs before any
+	// write, so a refusal leaves the registry and manifest untouched.
+	// Project-tier skills never reach this verb: they register through
+	// project-register and stay autonomous.
+	approval, err := ReadApprovalStatus(sourceRoot, id, skillData, readFile)
+	if err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+	if verdict := EvaluateApproval(id, ApprovalRecordPath(sourceRoot, id), skillData, approval); !verdict.OK {
+		fmt.Fprintf(stderr, "error: [%s] %s\n", verdict.Class, verdict.Detail)
 		exit(1)
 		return
 	}

@@ -375,6 +375,11 @@ func setupFixture(t *testing.T, dir string, regContent, mfContent string, skillI
 		if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(lintCleanSkillMD(id)), 0644); err != nil {
 			t.Fatal(err)
 		}
+		// A global skill needs a human approval record to be added or to
+		// validate; the fixture starts approved so tests of the other add
+		// behaviors stay about those behaviors. The approval-specific tests
+		// (approval_gate_test.go) remove or spoil the record explicitly.
+		writeValidApproval(t, skillsRoot, id)
 	}
 	return regPath, mfPath, skillsRoot
 }
@@ -509,6 +514,7 @@ func TestAddCoreWarningsOnlyProceeds(t *testing.T) {
 	if err := os.WriteFile(skillPath, []byte(warningsOnlySkill), 0644); err != nil {
 		t.Fatal(err)
 	}
+	writeValidApproval(t, skillsRoot, "foo") // the record must cover the edited bytes
 	hard, warnings := LintSkillFile([]byte(warningsOnlySkill))
 	if len(hard) != 0 {
 		t.Fatalf("warnings-only fixture has hard lint errors: %v", hard)
