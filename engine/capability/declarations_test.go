@@ -147,3 +147,58 @@ func TestRuntimesOtherThanClaudeAreDeclaredOnly(t *testing.T) {
 		}
 	}
 }
+
+// TestClaudeCodeStatuses pins which Claude Code claims are proven today. A
+// claim is upgraded in the commit that adds the tests proving it, and this pin
+// changes in the same commit, so every upgrade shows up in review and none can
+// slip in on the side. The pin does not replace the evidence guard: a claim
+// that names a test that does not exist still fails
+// TestDeclaredEvidenceExists.
+func TestClaudeCodeStatuses(t *testing.T) {
+	want := map[capability.Capability]capability.Status{
+		capability.Installation:      capability.Supported,
+		capability.Projection:        capability.Unsupported,
+		capability.Dispatch:          capability.Partial,
+		capability.Cancellation:      capability.Unsupported,
+		capability.Persistence:       capability.Supported,
+		capability.Restart:           capability.Unsupported,
+		capability.Authentication:    capability.Unsupported,
+		capability.MemoryEnforcement: capability.Unsupported,
+	}
+	d, err := capability.Declare(capability.TargetClaude)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, c := range d.Claims {
+		if c.Status != want[c.Capability] {
+			t.Errorf("claude %s is %s, want %s", c.Capability, c.Status, want[c.Capability])
+		}
+	}
+}
+
+// TestClaudeCodeBindingClaimsStateTheirScope pins what the two claims that rest
+// on the session binding say about their own reach, because a status alone
+// would let the wording drift away from what the tests prove.
+func TestClaudeCodeBindingClaimsStateTheirScope(t *testing.T) {
+	d, err := capability.Declare(capability.TargetClaude)
+	if err != nil {
+		t.Fatal(err)
+	}
+	claims := make(map[capability.Capability]capability.Claim)
+	for _, c := range d.Claims {
+		claims[c.Capability] = c
+	}
+
+	persistence := claims[capability.Persistence]
+	for _, want := range []string{"workflow log", "binding", "survive", "transcripts are not managed"} {
+		if !strings.Contains(persistence.Detail, want) {
+			t.Errorf("persistence detail %q does not mention %q", persistence.Detail, want)
+		}
+	}
+	dispatch := claims[capability.Dispatch]
+	for _, want := range []string{"can be bound", "stored", "reads the binding into a session"} {
+		if !strings.Contains(dispatch.Detail, want) {
+			t.Errorf("dispatch detail %q does not state %q", dispatch.Detail, want)
+		}
+	}
+}

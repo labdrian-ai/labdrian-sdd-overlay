@@ -442,7 +442,8 @@ overlay memory <verb>
 
 overlay workflow <verb>
     Forward standalone workflow lifecycle verbs (Phase 6) to the engine unchanged: create,
-    start, pause, resume, stage, verify, close, and status. A workflow is its own append-only,
+    start, pause, resume, stage, verify, close, and status, plus the session-binding verbs bind,
+    unbind, and binding (Phase 7, described after status). A workflow is its own append-only,
     hash-chained event log stored outside the repository at
     $XDG_STATE_HOME/labdrian/workflows/<project_id>/<workflow_id>.jsonl (or
     $HOME/.local/state/... when XDG_STATE_HOME is unset), keyed by project_id so every git
@@ -472,12 +473,42 @@ overlay workflow <verb>
     status --project <id> --workflow <id>
         Read-only: the on-disk classification (absent, owned, foreign, malformed, drifted, or
         unavailable) and, when owned, the replayed state. Never appends anything.
-    Every verb prints the resulting classification and state (or, for status, the current one)
-    as JSON on stdout and reports errors on stderr. Exit 0 on success, 2 on a refused or invalid
-    operation (an illegal transition, a failed verify, non-owned on-disk state), 1 on a usage
-    error. Provenance (worktree root, git HEAD) is observed by walking the .git directory by
-    hand; it never runs the git binary or any other subprocess, and any part it cannot read is
-    left empty rather than failing the operation.
+    bind --project <id> --workflow <id>
+        Record that the git repository containing the working directory follows this workflow.
+        The binding is a pointer stored outside the repository, at
+        $XDG_STATE_HOME/labdrian/bindings/<repo-key>.json (or $HOME/.local/state/... when
+        XDG_STATE_HOME is unset). <repo-key> is the SHA-256 of the repository's git common
+        directory, so every worktree of a repository, and every symlinked spelling of its path,
+        shares one binding. The repository is found by walking up from the working directory
+        for a .git entry, by hand, without running git; outside a repository bind is refused.
+        The workflow must exist, be owned, and not be closed. Binding the workflow the
+        repository is already bound to changes nothing. A binding to a workflow that is still
+        active (created, running, or paused), or whose log cannot be read right now and so may
+        still be active, is never replaced silently: bind is refused, names the bound workflow,
+        and asks for unbind first. A binding to a workflow that is closed, gone, corrupt, or not
+        ours (drifted, malformed, or foreign) is stale, and bind replaces it. A binding file that is not ours
+        (foreign or malformed) is never overwritten. Prints the classification and the binding
+        as JSON. A binding records the association only; it does not change the workflow.
+        Bind and unbind take turns per repository: one that cannot get the repository's lock
+        within 2 seconds is refused (exit 2) and can be retried. bind prints the binding only if
+        it is the one requested; if another process changed it meanwhile, bind exits 2 and says so.
+    unbind
+        Remove the binding of the repository containing the working directory and print
+        {"removed": true} or {"removed": false}. Idempotent: unbinding a repository that is not
+        bound succeeds. A foreign or malformed binding file is refused and left untouched.
+    binding
+        Read-only: print the binding's classification (absent, owned, foreign, malformed, or
+        unavailable) and, when it is owned, the binding plus the bound workflow's classification
+        and status (absent when its log is gone). A workflow store that cannot be read is
+        reported in that section as data, not as an error.
+    The lifecycle verbs print the resulting classification and state (or, for status, the
+    current one) as JSON on stdout and report errors on stderr. Exit 0 on success, 2 on a
+    refused or invalid operation (an illegal transition, a failed verify, non-owned on-disk
+    state; for the binding verbs, no git repository, a workflow that cannot be bound, or a
+    binding file that is not ours), 1 on a usage error (including an unknown flag). Provenance
+    (worktree root, git HEAD) is observed by walking the .git directory by hand; it never runs
+    the git binary or any other subprocess, and any part it cannot read is left empty rather
+    than failing the operation.
 
 gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     Engine verb (Phase 7): there is no `overlay runtime` wrapper, so run it on the installed engine

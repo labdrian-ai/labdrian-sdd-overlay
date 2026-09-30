@@ -87,7 +87,28 @@ case_help_lists_workflow_with_its_own_verbs() {
   fi
 }
 
+case_help_lists_the_binding_verbs() {
+  local block verb missing=""
+  # The workflow entry runs from its "  workflow <verb>" header to the next
+  # command header (two spaces then a letter); its continuation lines are
+  # indented much deeper.
+  block="$(HOME="$work_root" bash "$OVERLAY" --help 2>&1 | awk '/^  workflow <verb>/ { on = 1; next } on && /^  [a-z]/ { exit } on { print }')"
+  # Each verb is matched with its own help wording: the bare word "binding"
+  # already appears in the description of create.
+  for verb in "bind   --project ID --workflow ID" "unbind    remove this repository's binding" "binding   read-only"; do
+    if [[ "$block" != *"$verb"* ]]; then
+      missing="$missing [$verb]"
+    fi
+  done
+  if [[ -z "$missing" ]]; then
+    pass "--help lists the workflow binding verbs"
+  else
+    fail "--help does not list the workflow binding verbs" "missing:$missing"
+  fi
+}
+
 case_help_lists_workflow_with_its_own_verbs
+case_help_lists_the_binding_verbs
 case_forwards_verb_and_args_verbatim
 case_preserves_engine_exit_status
 case_refuses_when_engine_missing

@@ -71,6 +71,77 @@ func TestNewStoreRejectsUnusableHome(t *testing.T) {
 	}
 }
 
+// TestNewStoreErrorMessagesAreStable characterizes what NewStore reports for an
+// unusable environment, so extracting the state home resolution (StateHome)
+// cannot change the text a person sees.
+func TestNewStoreErrorMessagesAreStable(t *testing.T) {
+	tests := []struct {
+		name string
+		xdg  string
+		home string
+		want string
+	}{
+		{"relative XDG_STATE_HOME", "relative/path", "/home/someone", `workflow store: XDG_STATE_HOME "relative/path" is not absolute`},
+		{"relative HOME fallback", "", "relative/home", `workflow store: XDG_STATE_HOME is unset and HOME "relative/home" is not an absolute path`},
+		{"unset HOME fallback", "", "", `workflow store: XDG_STATE_HOME is unset and HOME "" is not an absolute path`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("XDG_STATE_HOME", tt.xdg)
+			t.Setenv("HOME", tt.home)
+			_, err := NewStore()
+			if err == nil || err.Error() != tt.want {
+				t.Fatalf("NewStore() error = %v, want %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestStateHomeResolution(t *testing.T) {
+	t.Run("XDG_STATE_HOME wins and is cleaned", func(t *testing.T) {
+		t.Setenv("XDG_STATE_HOME", "/srv/xdg/../state/")
+		t.Setenv("HOME", "/home/someone")
+		got, err := StateHome()
+		if err != nil || got != "/srv/state" {
+			t.Fatalf("StateHome() = %q, %v, want %q", got, err, "/srv/state")
+		}
+	})
+	t.Run("an unset XDG_STATE_HOME falls back to HOME/.local/state", func(t *testing.T) {
+		t.Setenv("XDG_STATE_HOME", "")
+		t.Setenv("HOME", "/home/someone")
+		got, err := StateHome()
+		if err != nil || got != "/home/someone/.local/state" {
+			t.Fatalf("StateHome() = %q, %v, want %q", got, err, "/home/someone/.local/state")
+		}
+	})
+	t.Run("a relative XDG_STATE_HOME is refused", func(t *testing.T) {
+		t.Setenv("XDG_STATE_HOME", "relative/path")
+		t.Setenv("HOME", "/home/someone")
+		got, err := StateHome()
+		if err == nil || got != "" || !strings.Contains(err.Error(), "XDG_STATE_HOME") {
+			t.Fatalf("StateHome() = %q, %v, want an error naming XDG_STATE_HOME and no path", got, err)
+		}
+	})
+	t.Run("an unusable HOME fallback is refused", func(t *testing.T) {
+		for _, home := range []string{"", "relative/home"} {
+			t.Setenv("XDG_STATE_HOME", "")
+			t.Setenv("HOME", home)
+			got, err := StateHome()
+			if err == nil || got != "" || !strings.Contains(err.Error(), "HOME") {
+				t.Fatalf("HOME=%q: StateHome() = %q, %v, want an error naming HOME and no path", home, got, err)
+			}
+		}
+	})
+	t.Run("the error carries no store prefix", func(t *testing.T) {
+		// Each store adds its own prefix; a shared helper that named one store
+		// would mislabel every other store's error.
+		t.Setenv("XDG_STATE_HOME", "relative/path")
+		if _, err := StateHome(); err == nil || strings.Contains(err.Error(), "store") {
+			t.Fatalf("StateHome() error = %v, want a store-agnostic message", err)
+		}
+	})
+}
+
 func TestStoreLoadAbsentWhenNoFile(t *testing.T) {
 	s := newTestStore(t)
 	loaded, err := s.Load("proj-1", "wf-1")
