@@ -31,6 +31,12 @@ const (
 type ProjectLock struct {
 	Version int                `json:"version"`
 	Skills  []ProjectLockEntry `json:"skills"`
+	// Installs holds the records `skills install` keeps in the same file, for the
+	// registry skills it wrote into the project. The detector is about procedural
+	// skills and never reads them; the field is here so that the strict parser
+	// accepts a lock that has them instead of reporting an unknown field. It is
+	// kept raw on purpose: what is in it is engine/skills' to validate.
+	Installs json.RawMessage `json:"installs,omitempty"`
 }
 
 // ProjectLockEntry identifies one registered project skill and its target
