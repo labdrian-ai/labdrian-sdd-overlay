@@ -636,9 +636,13 @@ Commands:
                                              A skill that fails the hard lint is refused, except
                                              a baseline skill (the grandfathered global skills,
                                              which predate the lint budget and will be rewritten
-                                             in a later feature): for those, each hard finding is
-                                             printed as a "warning:" line on stderr, the approval
-                                             is still recorded, and the exit is 0
+                                             in a later feature): for those, only the size and
+                                             description findings (body-hard-budget,
+                                             description-max, description-one-line) are printed
+                                             as "warning:" lines on stderr, the approval is still
+                                             recorded, and the exit is 0; any other hard finding,
+                                             such as a missing front matter, refuses a baseline
+                                             skill too
                                              A PreToolUse hook (install-hooks) denies the agent running
                                              it or writing the record by hand: a speed bump, not a
                                              security boundary. A person runs it in a terminal.
