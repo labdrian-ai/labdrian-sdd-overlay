@@ -69,14 +69,8 @@ var retireE2EBinary struct {
 	out  []byte
 }
 
-// TestMain removes the shared engine binary after the package's tests run.
-func TestMain(m *testing.M) {
-	code := m.Run()
-	if retireE2EBinary.dir != "" {
-		_ = os.RemoveAll(retireE2EBinary.dir)
-	}
-	os.Exit(code)
-}
+// The shared engine binary is removed by TestMain (live_guard_test.go), which
+// also isolates HOME and the XDG state and config directories for the package.
 
 // buildRetireEngineBinary compiles the real engine binary once per package
 // run into an isolated temp directory, the same way
