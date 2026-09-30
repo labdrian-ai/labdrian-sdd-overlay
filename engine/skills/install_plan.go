@@ -80,6 +80,9 @@ type InstallOutcome struct {
 // the zero ProjectWrite (Rel == "") when no record changed. A refused install has the
 // zero plan.
 type InstallPlan struct {
+	// Verb is the command that built the plan, "install" or "adopt", which the
+	// executor names in its failures. The zero value means install.
+	Verb    string
 	Skills  []InstallOutcome
 	Writes  []ProjectWrite
 	Deletes []ProjectWrite
@@ -89,6 +92,13 @@ type InstallPlan struct {
 	Dirs []string
 	// Notes are things worth telling the person that are not refusals.
 	Notes []string
+}
+
+func (p InstallPlan) verb() string {
+	if p.Verb == "" {
+		return "install"
+	}
+	return p.Verb
 }
 
 // planContext is what install and adopt both establish before they look at a skill:
@@ -148,7 +158,10 @@ func (c *planContext) checkSkill(sk InstallSkill, refuse func(string, ...any)) b
 		return false
 	}
 	if len(sk.Files) == 0 {
-		refuse("skill %s has no files to install (its source directory holds nothing install copies)", sk.ID)
+		// Shared by install and adopt, so the verb is the one that was asked. Both read
+		// the source through the same rule (readSkillSource), so "what install copies" is
+		// what adopt compares too.
+		refuse("skill %s has no files to %s (its source directory holds nothing that skills install copies)", sk.ID, c.in.verb())
 		return false
 	}
 	return true
@@ -215,7 +228,7 @@ func PlanInstallOwnership(in InstallInput) (InstallPlan, []string) {
 		refusals = append(refusals, fmt.Sprintf("skills %s: "+format, append([]any{in.verb()}, a...)...))
 	}
 
-	plan := InstallPlan{}
+	plan := InstallPlan{Verb: in.verb()}
 	installs := append([]ProjectInstallEntry(nil), c.lock.Installs...)
 	recordsChanged := false
 

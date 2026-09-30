@@ -456,6 +456,63 @@ func TestInstall_RefusesAnUnreadableLockWithoutReplacingIt(t *testing.T) {
 	assertSameTree(t, before, f.snapshot())
 }
 
+// The planner decides from the probes it is given and from a project root it can
+// trust. Without a probe, or with a root that is not absolute, it cannot decide and
+// says so, in the words of the verb that asked, and plans nothing: a nil probe would
+// otherwise be a panic halfway through, and a relative root would plan against
+// whatever directory the process happens to be in.
+func TestPlanners_RefuseAnInputTheyCannotDecideFrom(t *testing.T) {
+	plan := map[string]func(InstallInput) (InstallPlan, []string){
+		"install": PlanInstallOwnership,
+		"adopt":   PlanAdopt,
+	}
+	for verb, planFn := range plan {
+		for _, tc := range []struct {
+			name   string
+			mutate func(*InstallInput)
+			want   string
+		}{
+			{"no file reader", func(in *InstallInput) { in.ReadFile = nil }, "no filesystem probes"},
+			{"no stat", func(in *InstallInput) { in.Stat = nil }, "no filesystem probes"},
+			{"no path resolver", func(in *InstallInput) { in.ResolvePath = nil }, "no filesystem probes"},
+			{"a relative project root", func(in *InstallInput) { in.ProjectRoot = filepath.Join("relative", "project") }, "is not an absolute path"},
+			{"an empty project root", func(in *InstallInput) { in.ProjectRoot = "" }, `"" is not an absolute path`},
+		} {
+			t.Run(verb+"/"+tc.name, func(t *testing.T) {
+				f := newOwnFixture(t)
+				in := f.input(skill("pdf", pdfV1))
+				tc.mutate(&in)
+
+				p, refusals := planFn(in)
+
+				if len(refusals) != 1 || !strings.HasPrefix(refusals[0], "skills "+verb+": ") || !strings.Contains(refusals[0], tc.want) {
+					t.Errorf("refusals = %q, want one that starts %q and contains %q", refusals, "skills "+verb+": ", tc.want)
+				}
+				if len(p.Skills)+len(p.Writes)+len(p.Deletes) != 0 || p.Lock.Rel != "" {
+					t.Errorf("a refused input returned a plan: %+v", p)
+				}
+				if f.exists(".claude") || f.exists(".agents") || f.exists(".labdrian") {
+					t.Error("a refused input touched the project")
+				}
+			})
+		}
+	}
+}
+
+// adopt also reads directories, to prove one holds the source and nothing else.
+func TestAdopt_RefusesWithoutADirectoryProbe(t *testing.T) {
+	f := newOwnFixture(t)
+	in := f.input(skill("pdf", pdfV1))
+	in.ReadDir = nil
+
+	p, refusals := PlanAdopt(in)
+
+	refusedWith(t, refusals, "skills adopt:", "no directory probe")
+	if len(p.Skills) != 0 || p.Lock.Rel != "" {
+		t.Errorf("a refused input returned a plan: %+v", p)
+	}
+}
+
 func TestInstall_RefusesASkillWithNothingToInstall(t *testing.T) {
 	f := newOwnFixture(t)
 

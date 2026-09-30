@@ -765,7 +765,8 @@ func ExecuteProjectRetirePlan(p ProjectPlan, fsys projectFS, stdout, stderr io.W
 	}
 	order := append([]ProjectWrite(nil), p.DeleteWrites...)
 	order = append(order, p.Lock)
-	if err := checkProjectDestinations(fsys, root, order); err != nil {
+	// Worded as it always was, for project-register, although this is a retirement.
+	if err := checkProjectDestinations(projectRegisterVerb, fsys, root, order); err != nil {
 		return err
 	}
 
@@ -1155,11 +1156,11 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 		return err
 	}
 	order := projectCommitOrder(p)
-	if err := checkProjectDestinations(fsys, root, order); err != nil {
+	if err := checkProjectDestinations(projectRegisterVerb, fsys, root, order); err != nil {
 		return err
 	}
 
-	s := newProjectStager(fsys, root, order, nil)
+	s := newProjectStager(projectRegisterVerb, fsys, root, order, nil)
 	if err := s.stageAndCommit(stderr); err != nil {
 		return err
 	}
@@ -1173,8 +1174,15 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 	return nil
 }
 
-func newProjectStager(fsys projectFS, root string, order []ProjectWrite, deleting []bool) *projectStager {
+// projectRegisterVerb is how the project verbs word a failure of the executor they
+// share with `skills install` and `skills adopt`, which pass their own names.
+// Retirement words its destination refusals the same way; that is how it always
+// read, although it is not registration.
+const projectRegisterVerb = "project-register"
+
+func newProjectStager(verb string, fsys projectFS, root string, order []ProjectWrite, deleting []bool) *projectStager {
 	return &projectStager{
+		verb:      verb,
 		fsys:      fsys,
 		root:      root,
 		order:     order,
@@ -1202,11 +1210,11 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 		}
 		dir := filepath.Dir(w.Abs)
 		if err := s.mkdirAll(dir); err != nil {
-			return s.rollback(stderr, fmt.Errorf("project-register: creating %q: %w", path.Dir(w.Rel), err))
+			return s.rollback(stderr, fmt.Errorf("%s: creating %q: %w", s.verb, path.Dir(w.Rel), err))
 		}
 		tmp, err := fsys.WriteTemp(dir, w.Data, w.Mode)
 		if err != nil {
-			return s.rollback(stderr, fmt.Errorf("project-register: staging %q: %w", w.Rel, err))
+			return s.rollback(stderr, fmt.Errorf("%s: staging %q: %w", s.verb, w.Rel, err))
 		}
 		s.temps[i] = tmp
 	}
@@ -1223,7 +1231,7 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 		if w.Backup != nil {
 			info, err := fsys.Stat(w.Abs)
 			if err != nil {
-				return s.rollback(stderr, fmt.Errorf("project-register: inspecting %q before committing over it: %w", w.Rel, err))
+				return s.rollback(stderr, fmt.Errorf("%s: inspecting %q before committing over it: %w", s.verb, w.Rel, err))
 			}
 			s.preMode[i] = info.Mode().Perm()
 		}
@@ -1235,12 +1243,12 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 		s.attempted[i] = true
 		if s.isDelete(i) {
 			if err := fsys.Remove(w.Abs); err != nil {
-				return s.rollback(stderr, fmt.Errorf("project-register: removing %q: %w", w.Rel, err))
+				return s.rollback(stderr, fmt.Errorf("%s: removing %q: %w", s.verb, w.Rel, err))
 			}
 			continue
 		}
 		if err := fsys.Rename(s.temps[i], w.Abs); err != nil {
-			return s.rollback(stderr, fmt.Errorf("project-register: committing %q: %w", w.Rel, err))
+			return s.rollback(stderr, fmt.Errorf("%s: committing %q: %w", s.verb, w.Rel, err))
 		}
 		s.temps[i] = ""
 	}
@@ -1253,10 +1261,22 @@ func (s *projectStager) stageAndCommit(stderr io.Writer) error {
 // it (and a test) tell an honest "nothing happened" from "look at these paths".
 var ErrRollbackIncomplete = fmt.Errorf("project-register: rollback incomplete")
 
+// rollbackIncompleteError is ErrRollbackIncomplete worded for the verb that ran the
+// executor, with the paths left and the cause as its detail. errors.Is finds the
+// sentinel in it. For "project-register" the text is the sentinel's, unchanged.
+type rollbackIncompleteError struct{ verb, detail string }
+
+func (e rollbackIncompleteError) Error() string {
+	return e.verb + ": rollback incomplete: " + e.detail
+}
+
+func (e rollbackIncompleteError) Is(target error) bool { return target == ErrRollbackIncomplete }
+
 // projectStager records what one execution has done so far, which is exactly
 // what rollback needs: the directories this run created and the temps it
 // staged. The planned writes themselves are already in order.
 type projectStager struct {
+	verb      string // how a failure is worded: the command that is executing the plan
 	fsys      projectFS
 	root      string
 	order     []ProjectWrite
@@ -1384,7 +1404,7 @@ func (s *projectStager) rollback(stderr io.Writer, cause error) error {
 		for _, rel := range bad {
 			fmt.Fprintf(stderr, "error: rollback incomplete: %s\n", rel)
 		}
-		return fmt.Errorf("%w: %s (after %v)", ErrRollbackIncomplete, strings.Join(bad, ", "), cause)
+		return rollbackIncompleteError{verb: s.verb, detail: fmt.Sprintf("%s (after %v)", strings.Join(bad, ", "), cause)}
 	}
 	return cause
 }
@@ -1424,13 +1444,18 @@ func (s *projectStager) rel(p string) string {
 // Every one of those is point-in-time in the plan, which is the whole reason
 // this function exists; re-proving only some of them was the gap D4 and D3
 // named (review round 4).
-func checkProjectDestinations(fsys projectFS, root string, order []ProjectWrite) error {
+//
+// verb is how every refusal is worded: the name of the command that is executing
+// the plan, "project-register" for the project verbs and "skills install" or
+// "skills adopt" for the two that share this executor.
+func checkProjectDestinations(verb string, fsys projectFS, root string, order []ProjectWrite) error {
+	fail := func(format string, a ...any) error { return fmt.Errorf("%s: "+format, append([]any{verb}, a...)...) }
 	resolvedRoot, err := fsys.ResolvePath(root)
 	if err != nil {
-		return fmt.Errorf("project-register: resolving the project root %q: %w", root, err)
+		return fail("resolving the project root %q: %w", root, err)
 	}
 	if resolvedRoot == "" {
-		return fmt.Errorf("project-register: the resolver returned an empty path for the project root %q", root)
+		return fail("the resolver returned an empty path for the project root %q", root)
 	}
 	resolvedRoot = filepath.Clean(resolvedRoot)
 
@@ -1441,44 +1466,44 @@ func checkProjectDestinations(fsys projectFS, root string, order []ProjectWrite)
 	// symlink created after planning was written straight through.
 	resolvedSkills, err := fsys.ResolvePath(filepath.Join(root, projectSourceSkillsDir))
 	if err != nil {
-		return fmt.Errorf("project-register: resolving the project's own %s/ directory: %w", projectSourceSkillsDir, err)
+		return fail("resolving the project's own %s/ directory: %w", projectSourceSkillsDir, err)
 	}
 	if resolvedSkills == "" {
-		return fmt.Errorf("project-register: the resolver returned an empty path for the project's own %s/ directory", projectSourceSkillsDir)
+		return fail("the resolver returned an empty path for the project's own %s/ directory", projectSourceSkillsDir)
 	}
 	resolvedSkills = filepath.Clean(resolvedSkills)
 
 	seen := make(map[string]string, len(order))
 	for _, w := range order {
 		if w.Rel == "" || w.Abs == "" {
-			return fmt.Errorf("project-register: the plan carries a write with no path")
+			return fail("the plan carries a write with no path")
 		}
 		abs := filepath.Clean(w.Abs)
 		if want := filepath.Join(root, filepath.FromSlash(w.Rel)); abs != want {
-			return fmt.Errorf("project-register: write %q resolves to %q, want %q", w.Rel, abs, want)
+			return fail("write %q resolves to %q, want %q", w.Rel, abs, want)
 		}
 		if !withinRoot(root, abs) {
-			return fmt.Errorf("project-register: destination %q escapes the project root", w.Rel)
+			return fail("destination %q escapes the project root", w.Rel)
 		}
 		resolved, err := fsys.ResolvePath(abs)
 		if err != nil {
-			return fmt.Errorf("project-register: destination %q could not be resolved: %w", w.Rel, err)
+			return fail("destination %q could not be resolved: %w", w.Rel, err)
 		}
 		if resolved == "" {
-			return fmt.Errorf("project-register: the resolver returned an empty path for destination %q", w.Rel)
+			return fail("the resolver returned an empty path for destination %q", w.Rel)
 		}
 		resolved = filepath.Clean(resolved)
 		if !withinRoot(resolvedRoot, resolved) {
-			return fmt.Errorf("project-register: destination %q escapes the project root through a symlink", w.Rel)
+			return fail("destination %q escapes the project root through a symlink", w.Rel)
 		}
 		if underSkillsDir(w.Rel) {
-			return fmt.Errorf("project-register: destination %q %v", w.Rel, errDestUnderSkillsDir)
+			return fail("destination %q %v", w.Rel, errDestUnderSkillsDir)
 		}
 		if withinRoot(resolvedSkills, resolved) || resolved == resolvedSkills {
-			return fmt.Errorf("project-register: destination %q %v", w.Rel, errDestResolvesUnderSkillsDir)
+			return fail("destination %q %v", w.Rel, errDestResolvesUnderSkillsDir)
 		}
 		if other, ok := seen[resolved]; ok {
-			return fmt.Errorf("project-register: destinations %q and %q resolve to the same file, so one would silently overwrite the other", other, w.Rel)
+			return fail("destinations %q and %q resolve to the same file, so one would silently overwrite the other", other, w.Rel)
 		}
 		seen[resolved] = w.Rel
 
@@ -1502,11 +1527,11 @@ func checkProjectDestinations(fsys projectFS, root string, order []ProjectWrite)
 		_, statErr := fsys.Stat(abs)
 		switch {
 		case statErr == nil && w.Backup == nil:
-			return fmt.Errorf("project-register: destination %q already exists although the plan found it absent; it was created after the plan was built and this run will not overwrite it", w.Rel)
+			return fail("destination %q already exists although the plan found it absent; it was created after the plan was built and this run will not overwrite it", w.Rel)
 		case statErr != nil && os.IsNotExist(statErr) && w.Backup != nil:
-			return fmt.Errorf("project-register: destination %q no longer exists although the plan captured its contents; it was removed after the plan was built", w.Rel)
+			return fail("destination %q no longer exists although the plan captured its contents; it was removed after the plan was built", w.Rel)
 		case statErr != nil && !os.IsNotExist(statErr):
-			return fmt.Errorf("project-register: inspecting destination %q: %w", w.Rel, statErr)
+			return fail("inspecting destination %q: %w", w.Rel, statErr)
 		}
 	}
 	return nil

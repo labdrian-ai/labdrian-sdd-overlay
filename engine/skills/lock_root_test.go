@@ -18,16 +18,24 @@ import (
 // install writes into the working directory. When that directory cannot be resolved,
 // or resolves to something that is not absolute, the verb used to run without the
 // project lock (or, for a relative path, write relative to the process). It refuses
-// instead, before it takes any lock, and says so.
+// instead, before it takes any lock, and says so. Each way of failing gives its own
+// reason, so that the person is told which one it was: the error the system gave, or
+// the path it returned and why that path cannot be used.
 func TestInstallRefusesBeforeLockingWhenItCannotNameItsProjectDirectory(t *testing.T) {
-	for name, cwd := range map[string]func() (string, error){
-		"the working directory cannot be read": func() (string, error) { return "", fmt.Errorf("getwd: permission denied") },
-		"a relative path":                      func() (string, error) { return filepath.Join("rel", "dir"), nil },
-		"an empty path":                        func() (string, error) { return "", nil },
-	} {
-		t.Run(name, func(t *testing.T) {
+	notAbsolute := func(path string) string { return fmt.Sprintf("%q is not an absolute path", path) }
+	cases := []struct {
+		name   string
+		cwd    func() (string, error)
+		reason string
+	}{
+		{"the working directory cannot be read", func() (string, error) { return "", fmt.Errorf("getwd: permission denied") }, "getwd: permission denied"},
+		{"a relative path", func() (string, error) { return filepath.Join("rel", "dir"), nil }, notAbsolute(filepath.Join("rel", "dir"))},
+		{"an empty path", func() (string, error) { return "", nil }, notAbsolute("")},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
 			f := newInstallFixture(t)
-			installCwd = cwd
+			installCwd = tc.cwd
 			locker := &recordingLocker{}
 			// No project admits a skill: a run that goes ahead writes nothing, so a
 			// failing test cannot leave files behind in the package directory.
@@ -38,9 +46,14 @@ func TestInstallRefusesBeforeLockingWhenItCannotNameItsProjectDirectory(t *testi
 			if r.code != 1 || r.stdout != "" {
 				t.Errorf("exit %d, stdout %q, want exit 1 and nothing on stdout; stderr %q", r.code, r.stdout, r.stderr)
 			}
-			for _, want := range []string{"skills install", "nothing was locked"} {
+			for _, want := range []string{"skills install", "nothing was locked", tc.reason} {
 				if !strings.Contains(r.stderr, want) {
 					t.Errorf("stderr %q does not contain %q", r.stderr, want)
+				}
+			}
+			for _, other := range cases {
+				if other.name != tc.name && strings.Contains(r.stderr, other.reason) {
+					t.Errorf("stderr %q gives the reason of %q (%q)", r.stderr, other.name, other.reason)
 				}
 			}
 			if got := locker.log(); len(got) != 0 {

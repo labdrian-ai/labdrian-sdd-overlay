@@ -44,7 +44,7 @@ func PlanAdopt(in InstallInput) (InstallPlan, []string) {
 		refusals = append(refusals, fmt.Sprintf("skills adopt: "+format, a...))
 	}
 
-	plan := InstallPlan{}
+	plan := InstallPlan{Verb: in.verb()}
 	installs := append([]ProjectInstallEntry(nil), c.lock.Installs...)
 	recordsChanged := false
 

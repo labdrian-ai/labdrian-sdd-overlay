@@ -259,7 +259,34 @@ func TestAdopt_RefusesAnUnreadableLockAndAnEmptySource(t *testing.T) {
 
 	g := newOwnFixture(t)
 	_, refusals = g.adoptPlan(InstallSkill{ID: "pdf"})
-	refusedWith(t, refusals, "no files to install")
+	// The refusal is shared with install and names the verb that was asked.
+	refusedWith(t, refusals, "skills adopt: skill pdf has no files to adopt")
+	for _, r := range refusals {
+		if strings.Contains(r, "no files to install") {
+			t.Errorf("refusal %q tells adopt it has nothing to install", r)
+		}
+	}
+}
+
+// Two runtime directories that are one directory cannot both be adopted: the skill
+// would be recorded twice for a single copy on disk. install refuses the same shape
+// for the same reason (TestInstall_RefusesWhenTheTwoRuntimeDirectoriesAreTheSameDirectory).
+func TestAdopt_RefusesWhenTheTwoRuntimeDirectoriesAreTheSameDirectory(t *testing.T) {
+	f := newOwnFixture(t)
+	f.preexisting("pdf", pdfV1, ".claude")
+	if err := os.MkdirAll(filepath.Join(f.root, ".agents"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(filepath.Join(f.root, ".claude", "skills"), filepath.Join(f.root, ".agents", "skills")); err != nil {
+		t.Fatal(err)
+	}
+
+	plan, refusals := f.adoptPlan(skill("pdf", pdfV1))
+
+	refusedWith(t, refusals, "skills adopt:", ".claude/skills/pdf", ".agents/skills/pdf", "resolve to the same directory", "cannot both be adopted")
+	if len(plan.Skills) != 0 || plan.Lock.Rel != "" {
+		t.Errorf("a refused adopt returned a plan: %+v", plan)
+	}
 }
 
 // ---- the verb ----------------------------------------------------------------------------
@@ -294,6 +321,21 @@ func TestAdoptVerb_TakesOwnershipOfAnExistingInstallAndThenInstallLeavesItBe(t *
 	second := runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
 	if second.code != 0 || !strings.Contains(second.stdout, "unchanged: proj") {
 		t.Errorf("a second adopt: exit %d, stdout %q, stderr %q, want unchanged", second.code, second.stdout, second.stderr)
+	}
+}
+
+// A skill that is in one runtime only is adopted there, and the plan says what is left
+// for install. The note is part of the verb's output: it goes to stdout, after the
+// outcomes, through the same dispatch the command line uses.
+func TestAdoptVerb_PrintsTheNoteForTheRuntimeThatDoesNotHaveTheSkill(t *testing.T) {
+	f := newInstallFixture(t)
+	writeTestFile(t, filepath.Join(f.project, ".claude", "skills", "proj", "SKILL.md"), lintCleanSkillMD("proj"))
+
+	r := runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
+
+	want := "adopted: proj\nnote: .agents/skills/proj is not installed; run `labdrian skills install --project-id p` to add it\n"
+	if r.code != 0 || r.stdout != want || r.stderr != "" {
+		t.Errorf("exit %d, stdout %q, stderr %q, want exit 0, stdout %q, and nothing on stderr", r.code, r.stdout, r.stderr, want)
 	}
 }
 
