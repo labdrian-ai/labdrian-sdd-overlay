@@ -349,7 +349,7 @@ func TestSkillsCoreAt_DispatchesApprove(t *testing.T) {
 	e := newApproveEnv(t, "my-skill")
 	var out, errBuf bytes.Buffer
 	code := -1
-	SkillsCoreAt("approve", append([]string{"approve"}, e.args()...), os.ReadFile, fixedClock(approveFixedNow), &out, &errBuf, func(c int) { code = c })
+	SkillsCoreAt("approve", append([]string{"approve"}, e.args()...), os.ReadFile, fixedClock(approveFixedNow), noopLocker{}, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%q", code, errBuf.String())
 	}

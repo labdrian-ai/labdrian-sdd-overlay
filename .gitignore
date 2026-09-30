@@ -16,6 +16,10 @@ tui/tui
 .atl/skill-registry.md
 .atl/.skill-registry.cache.json
 
+# Advisory lock of the skills registry: 'skills add', 'remove', 'sync-manifest' and
+# 'approve' create it beside skills.registry.yaml on their first run and never remove it.
+/.skills.registry.yaml.lock
+
 # Go coverage artifacts
 coverage.out
 coverage.html

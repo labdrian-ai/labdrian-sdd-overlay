@@ -837,7 +837,7 @@ func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit fu
 		exit(1)
 		return
 	}
-	skills.SkillsCoreAt(verb, args, os.ReadFile, wallClockUTC, stdout, stderr, exit)
+	skills.SkillsCoreAt(verb, args, os.ReadFile, wallClockUTC, newSkillsLocker(), stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current

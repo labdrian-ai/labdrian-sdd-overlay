@@ -30,7 +30,8 @@ const approveSkillBody = "---\n" +
 // package cannot read the time itself (its import allowlist excludes "time"),
 // so this wiring is the only place a record's approved_at is decided.
 func TestRunSkillsCore_ApproveStampsTheWallClock(t *testing.T) {
-	root := filepath.Join(t.TempDir(), "skills")
+	base := t.TempDir()
+	root := filepath.Join(base, "skills")
 	skillDir := filepath.Join(root, "wall-clock")
 	if err := os.MkdirAll(skillDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -43,7 +44,9 @@ func TestRunSkillsCore_ApproveStampsTheWallClock(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := -1
 	runSkillsCore("approve",
-		[]string{"approve", "--id", "wall-clock", "--approver", "test-reviewer", "--source-root", root},
+		// --registry only places the overlay lock file, in the temporary directory
+		// and not in the working directory of the test.
+		[]string{"approve", "--id", "wall-clock", "--approver", "test-reviewer", "--source-root", root, "--registry", filepath.Join(base, "skills.registry.yaml")},
 		&out, &errBuf, func(c int) { code = c })
 	after := time.Now().UTC()
 
