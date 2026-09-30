@@ -79,8 +79,9 @@ func stripVerb(args []string, verb string) []string {
 // Parses --registry, --manifest, and --source-root flags, loads the registry
 // and manifest, and runs both the registry/manifest cross-check (Diff, via
 // Validate) and the on-disk cross-check (DiffOnDisk) in the same run.
-// Exits 0 only when both checks are clean, 1 when any divergence is found
-// (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006).
+// Exits 0 only when every check is clean, 1 when any divergence is found
+// (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006
+// and to the global-skill approval check by CheckApprovals).
 //
 // --source-root has no default and no cwd-derived fallback (R-002): a caller
 // that omits it gets a usage error, never a silent scan of the working
@@ -164,17 +165,26 @@ func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(stri
 	}
 	onDiskDivs := DiffOnDisk(diskPaths, manifestPaths)
 
-	// Full-scan reporting (R-007): print every divergence from both checks in
+	// Approval check: every global skill needs a valid human-approval record
+	// for its exact SKILL.md bytes, unless it is the grandfathered baseline's.
+	approvalDivs, approvals := CheckApprovals(reg, sourceRoot, readFile)
+
+	// Full-scan reporting (R-007): print every divergence from all checks in
 	// this one run, never stopping at the first error.
 	for _, d := range onDiskDivs {
 		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
 	}
+	for _, d := range approvalDivs {
+		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
+	}
 
-	if regErr != nil || len(onDiskDivs) > 0 {
+	if regErr != nil || len(onDiskDivs) > 0 || len(approvalDivs) > 0 {
 		exit(1)
 		return
 	}
 
 	fmt.Fprintf(stdout, "registry and manifest aligned (%d skills)\n", len(reg.Skills))
 	fmt.Fprintf(stdout, "skills/ on disk matches overlay.manifest (%d files)\n", len(diskPaths))
+	fmt.Fprintf(stdout, "global skill approvals verified (%d skills: %d approved, %d grandfathered)\n",
+		approvals.Global, approvals.Approved, approvals.Grandfathered)
 }

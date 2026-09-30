@@ -108,6 +108,9 @@ skills:
 		if err := os.WriteFile(filepath.Join(skillsRoot, "sdd-spec", "SKILL.md"), []byte("# sdd-spec\n"), 0644); err != nil {
 			t.Fatal(err)
 		}
+		// sdd-spec is a grandfathered baseline id, but these bytes are not the
+		// pinned ones, so validate needs a record covering them.
+		writeValidApproval(t, skillsRoot, "sdd-spec")
 
 		var out, errBuf bytes.Buffer
 		exitCode := 0
@@ -524,6 +527,7 @@ skills:
 	if err := os.WriteFile(filepath.Join(skillsRoot, "new-skill", "SKILL.md"), []byte(lintCleanSkillMD("new-skill")), 0644); err != nil {
 		t.Fatal(err)
 	}
+	writeValidApproval(t, skillsRoot, "new-skill") // add requires a human-approval record
 
 	t.Run("add_routes_without_unknown_verb_error", func(t *testing.T) {
 		var out, errBuf bytes.Buffer

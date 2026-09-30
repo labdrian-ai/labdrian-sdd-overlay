@@ -41,9 +41,12 @@
 // skills: registry management commands for skills.registry.yaml and overlay.manifest.
 // list: print sorted registry entries. status: print count summary.
 // validate: cross-check registry vs overlay.manifest, and skills/ on disk vs
-// overlay.manifest via the required --source-root flag; exit 1 on divergence.
+// overlay.manifest via the required --source-root flag, and that every global
+// skill has a valid approval record (grandfathered baseline aside); exit 1 on
+// divergence.
 // install: copy project-scoped skills into <cwd>/.claude/skills.
-// add: register a skill (custom or vendored). remove: unregister from registry + manifest.
+// add: register a skill (custom or vendored); refused unless a valid approval
+// record covers the exact SKILL.md bytes. remove: unregister from registry + manifest.
 // sync-manifest: regenerate */SKILL.md rows from skills.registry.yaml.
 // lint: lint a SKILL.md file against the authoritative rule table, or print
 // that table with --rules; exit 1 on any hard error.
