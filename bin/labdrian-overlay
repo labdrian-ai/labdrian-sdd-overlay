@@ -602,7 +602,17 @@ Commands:
                                              (requires --source-root); every global skill
                                              needs a valid approval record, except the
                                              grandfathered baseline while its bytes are unchanged
-                                   install   copy project-scoped skills into <cwd>/.claude/skills
+                                   install   install project-scoped skills into <cwd>/.claude/skills and
+                                             <cwd>/.agents/skills, replacing only what it installed and left
+                                             unmodified. It records each file it writes (with its SHA-256) in the
+                                             project lock, refuses, naming the path, a hand-edited file or a
+                                             directory it did not install, reports every refusal and then writes
+                                             nothing for any skill, and on a second run with no source change
+                                             writes nothing and prints "unchanged: <id>"
+                                   adopt     record skill directories already in the project as installed, only
+                                             when they are exactly the current source; nothing is adopted silently
+                                             (a directory stays foreign to install until skills adopt records it).
+                                             It writes the project lock and no skill file
                                    add <id> [--repo <url>] [--ref <sha>]
                                              register a skill: custom (no --repo) or
                                              external=vendored provenance (--repo set).
@@ -628,11 +638,14 @@ Commands:
                                    taken for 2 seconds means another skills command is in progress: the verb
                                    changes nothing and reports it with exit 2 (retry). Exit 1 is unchanged: the
                                    verb ran or was refused, or the lock could not be created at all.
-                                   Project lock: project-register, project-revise, project-retire and install also
+                                   Project lock: project-register, project-revise, project-retire, install and adopt also
                                    take an exclusive lock on the project root directory itself (--project-root, or
-                                   install's working directory), so no file is created in the project; a busy one is
-                                   exit 2 too, and a filesystem that cannot lock a directory refuses the verb (exit 1).
-                                   A verb that holds both takes the overlay lock first, then the project lock.
+                                   the working directory for install and adopt), so no file is created in the project; a
+                                   busy one is exit 2 too, and a filesystem that cannot lock a directory refuses the verb
+                                   (exit 1). A verb that holds both takes the overlay lock first, then the project lock,
+                                   so install and adopt can wait up to twice the lock bound (2 seconds each) when both
+                                   are busy. project-status takes a shared lock on the project. A writer refuses, with
+                                   nothing locked, when the registry it would lock does not exist.
   shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
                                    assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
                                    clearance record --stdin  store a human decision (Pi /shaper-clear)

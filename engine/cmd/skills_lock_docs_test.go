@@ -36,10 +36,19 @@ func TestDocsDescribeTheSkillsLockAndTheBusyExit(t *testing.T) {
 			"retry",
 			"never removed",
 			// The project lock: which verbs, on what, and that no file is created.
-			"project-register, project-revise, project-retire and install",
+			"project-register, project-revise, project-retire, install and adopt",
 			"project root directory itself",
 			"no file is created in the project",
 			"overlay lock first",
+			"project-status takes a shared lock",
+			// Two locks can each be waited for, so the wait can be twice the bound.
+			"twice the lock bound",
+			// What install does with what it does not own, and adopt.
+			".agents/skills",
+			"only what it installed",
+			"hand-edited",
+			"skills adopt",
+			"unchanged: <id>",
 		} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", name, want)

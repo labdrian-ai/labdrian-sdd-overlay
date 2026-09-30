@@ -388,7 +388,8 @@ overlay skills <verb>
     list         [--registry <path>]                                               print sorted registry entries (id, source type, update strategy, targets)
     status       [--registry <path>]                                               print count summary (total / core / custom)
     validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 37 skills present at the Phase 8 base are grandfathered while their bytes are unchanged); exit 1 on any divergence
-    install      [--registry <path>] [--source-root <path>] [--project-id <id>]   copy project-scoped skills into <cwd>/.claude/skills/
+    install      [--registry <path>] [--source-root <path>] [--project-id <id>]   install the project-scoped skills admitted for the project into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified (see below)
+    adopt        [--registry <path>] [--source-root <path>] [--project-id <id>]   record skill directories already in the project as installed by `skills install`, only when they are exactly the current source
     add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves the exact SKILL.md bytes (see approve)
     remove       <id> [--registry <path>] [--manifest <path>]                      unregister a skill from registry and manifest
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
@@ -396,16 +397,37 @@ overlay skills <verb>
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
                  Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
                  `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
+    What install owns. install records every file it writes, with its SHA-256, in the project lock
+    (.labdrian/procedural-skills.lock.json, in an "installs" array beside the procedural skills; an older program that
+    reads a lock with installs refuses it instead of misreading it). On the next run it replaces only the files that
+    still match their record: what the source changed, added, or dropped, and what a person deleted. It never overwrites
+    anything else, and it refuses, naming the path, in these cases: a hand-edited file of a skill it installed; a skill
+    directory it did not install, including every install made before it kept records (a foreign directory); a file the
+    source now wants to write where an unrecorded file already is; and a destination that leaves the project or makes
+    .claude/skills and .agents/skills the same directory. A file you keep beside an installed skill is left alone. Every
+    refusal is reported and then nothing is written, for any skill: all or nothing per invocation. A second install with
+    no source change writes nothing and prints "unchanged: <id>" (otherwise "installed: <id>" or "updated: <id>").
+    Nothing is adopted silently: a foreign directory stays foreign until `skills adopt` records it, and adopt does so only
+    when the directory is exactly the current source (same files, same bytes, nothing else), naming each file that
+    differs when it is not. adopt only records; it writes no skill file, and one runtime directory is enough (install
+    adds the other). The approval record and a writer's temporary file are never copied, by install or by the Pi package
+    build (engine/pipkg), which share one rule for it.
     Locking: add, remove, sync-manifest, and approve hold an exclusive lock, and validate and install a shared one, on
     .skills.registry.yaml.lock beside the registry (created by the first write, never removed, git-ignored). Shared holders
-    never create it, so validate and install work on a read-only overlay. A lock that stays taken for 2 seconds means
-    another skills command is in progress: the verb changes nothing and reports it with exit 2 (retry). Exit 1 is
-    unchanged: the verb ran or was refused, or the lock could not be created at all, which retrying will not fix.
-    Project lock: project-register, project-revise, project-retire and install also take an exclusive lock on the project
-    root directory itself (--project-root, or install's working directory), so no file is created in the project and nothing
-    needs git-ignoring; a busy one is exit 2 like the overlay lock. A filesystem that cannot lock a directory refuses the
-    verb (exit 1, nothing written); the lock is never skipped or replaced by a file in the project. A verb that holds both
-    takes the overlay lock first, then the project lock, and releases them in reverse. project-status takes neither.
+    never create it, so validate and install work on a read-only overlay; validate, which reads files that must agree,
+    reads again under a real lock when the first writer ever creates the lock file while it reads. A writer refuses, with
+    nothing locked, when the registry it would lock does not exist, so a raw call made from another directory leaves no
+    lock file behind. A lock that stays taken for 2 seconds means another skills command is in progress: the verb changes
+    nothing and reports it with exit 2 (retry). Exit 1 is unchanged: the verb ran or was refused, or the lock could not be
+    created at all, which retrying will not fix.
+    Project lock: project-register, project-revise, project-retire, install and adopt also take an exclusive lock on the
+    project root directory itself (--project-root, or the working directory for install and adopt, read once before any
+    lock), so no file is created in the project and nothing needs git-ignoring; a busy one is exit 2 like the overlay
+    lock. A filesystem that cannot lock a directory refuses the verb (exit 1, nothing written); the lock is never skipped
+    or replaced by a file in the project, and install and adopt refuse, with nothing locked, when the working directory
+    cannot be resolved. A verb that holds both takes the overlay lock first, then the project lock, and releases them in
+    reverse, so install and adopt can wait up to twice the lock bound (2 seconds each) when both are busy. project-status
+    takes a shared lock on the project, so it never reports a project between a writer's renames.
 
 overlay shaper <verb>
     Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.
