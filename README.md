@@ -226,7 +226,7 @@ If there are merge conflicts, `overlay apply` exits 1 and tells you exactly whic
 labdrian skills approve --id <id> --approver <name>
 ```
 
-An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A baseline skill that fails the hard lint is approved with `warning:` lines on stderr instead of being refused. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
+An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A baseline skill whose only hard-lint findings are its size or its description (`body-hard-budget`, `description-max`, `description-one-line`) is approved with `warning:` lines on stderr instead of being refused; any other hard finding, such as a missing front matter, refuses it like any skill. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
 
 ## sync-check — validating gentle-ai sync state
 
@@ -409,8 +409,9 @@ overlay skills <verb>
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
                  A skill that fails the hard lint is refused, except a baseline skill (the 37 grandfathered global skills, which predate the lint budget and will be
                  rewritten in a later feature): for those, approve prints each hard finding as a `warning: [lint:<rule>] ... (baseline skill: approved with lint findings)`
-                 line on stderr, still records the approval of the exact bytes, and exits 0, so an upstream merge that changes one of them can be approved. `add` is
-                 unchanged: it still refuses a hard lint finding for every skill.
+                 line on stderr, still records the approval of the exact bytes, and exits 0, so an upstream merge that changes one of them can be approved. Only the
+                 legacy rules warn (body-hard-budget, description-max, description-one-line); any other hard finding, such as a missing front matter, refuses a
+                 baseline skill too. `add` is unchanged: it still refuses a hard lint finding for every skill.
                  Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
                  `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
     lint         <path> | --rules                                                  lint a SKILL.md file against the authoritative rule table, or print the table; exit 1 on any hard finding (warnings never block)

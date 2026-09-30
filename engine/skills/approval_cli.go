@@ -174,11 +174,14 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 	// Hard lint refuses a skill outside the approval baseline. A baseline skill
 	// predates the lint budget (most of the 37 fail it today), and refusing it would
 	// leave no way to approve the change an upstream merge makes to its bytes, so
-	// its findings are warned about, after the approval, and do not block it.
+	// its legacy findings (size and description shape, see legacyBaselineLintRules)
+	// are warned about, after the approval, and do not block it. Any other hard
+	// finding means the file is not a usable skill (a truncated or corrupted merge,
+	// for example) and refuses a baseline skill too.
 	hard, _ := LintSkillFile(skillData)
 	var warnings []string
 	if len(hard) > 0 {
-		if _, inBaseline := baselineDigest(id); !inBaseline {
+		if _, inBaseline := baselineDigest(id); !inBaseline || !allLegacyBaselineFindings(hard) {
 			for _, finding := range hard {
 				fmt.Fprintln(stderr, finding)
 			}
@@ -232,6 +235,30 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 // baselineLintWarning is the stderr line for one hard lint finding of a baseline
 // skill that `skills approve` records an approval for anyway: the finding as the
 // lint prints it, marked as a warning and saying why it did not refuse.
+// legacyBaselineLintRules are the hard lint rules the baseline skills already
+// broke before the lint budget existed: the body budget and the description's
+// length and shape. Only these become warnings for a baseline skill.
+var legacyBaselineLintRules = []string{"body-hard-budget", "description-max", "description-one-line"}
+
+// allLegacyBaselineFindings reports whether every hard finding comes from a
+// legacy rule. Findings render as "[lint:<rule>] ..."; anything else, including a
+// finding with no rule prefix, is structural and refuses.
+func allLegacyBaselineFindings(hard []error) bool {
+	for _, finding := range hard {
+		legacy := false
+		for _, rule := range legacyBaselineLintRules {
+			if strings.HasPrefix(finding.Error(), "[lint:"+rule+"]") {
+				legacy = true
+				break
+			}
+		}
+		if !legacy {
+			return false
+		}
+	}
+	return true
+}
+
 func baselineLintWarning(finding error) string {
 	return "warning: " + finding.Error() + " (baseline skill: approved with lint findings)"
 }

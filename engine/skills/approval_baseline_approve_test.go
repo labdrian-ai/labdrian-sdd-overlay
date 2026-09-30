@@ -46,8 +46,9 @@ func multiLineDescriptionSkillMD(id string) string {
 		"Load this skill for its documented procedure.\n"
 }
 
-// hardLintShapes are the ways a baseline skill fails the hard lint today, plus a file
-// with no front matter at all: a baseline skill is approved whatever its current bytes.
+// hardLintShapes are the ways a baseline skill fails the hard lint today (the
+// legacy findings: body over the budget, description too long or on several
+// lines). A baseline skill is approved with them as warnings.
 var hardLintShapes = []struct {
 	name string
 	md   func(id string) string
@@ -57,7 +58,41 @@ var hardLintShapes = []struct {
 	{"multi-line description and a body over the budget", func(id string) string {
 		return multiLineDescriptionSkillMD(id) + strings.Repeat("Another line of the procedure, long enough to count.\n", 100)
 	}},
+}
+
+// structuralLintShapes are hard findings that mean the file is not a usable skill
+// (for example a merge that truncated it). They refuse a baseline skill too:
+// the exemption covers only the legacy findings.
+var structuralLintShapes = []struct {
+	name string
+	md   func(id string) string
+}{
 	{"no front matter", func(string) string { return "no frontmatter here\n" }},
+	{"no front matter beside a body over the budget", func(string) string {
+		return strings.Repeat("Another line of the procedure, long enough to count.\n", 100)
+	}},
+}
+
+func TestApprove_ABaselineSkillWithAStructuralLintFindingIsRefused(t *testing.T) {
+	for _, shape := range structuralLintShapes {
+		t.Run(shape.name, func(t *testing.T) {
+			md := shape.md(baselineSkillID)
+			hardFindingLines(t, md)
+			e := newApproveEnvWith(t, baselineSkillID, md)
+
+			_, stderr, code := runApprove(e.args(), fixedClock(approveFixedNow))
+
+			if code != 1 {
+				t.Fatalf("exit = %d, want 1 (refused); stderr=%q", code, stderr)
+			}
+			if strings.Contains(stderr, baselineWarningSuffix) {
+				t.Errorf("stderr = %q: a structural finding must refuse, not warn", stderr)
+			}
+			if _, err := os.Stat(e.recordPath()); !os.IsNotExist(err) {
+				t.Errorf("an approval record was written (stat err = %v); a refusal writes nothing", err)
+			}
+		})
+	}
 }
 
 // hardFindingLines are the lines of the hard lint findings of md, in lint order.
