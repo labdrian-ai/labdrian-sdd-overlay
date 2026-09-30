@@ -400,6 +400,10 @@ func phase7Running(t *testing.T, binary string) {
 	if !reflect.DeepEqual(msg.Keys, []string{"hookSpecificOutput"}) || msg.Warning != "" {
 		t.Fatalf("output %s, want hookSpecificOutput alone: a running workflow needs no warning", r.stdout)
 	}
+	// The literal is the documented 16 KiB bound; the second operand follows the
+	// constant. Both are kept so that raising projection.MaxContextBytes cannot
+	// loosen this end-to-end check (the constant's own value is pinned by
+	// projection.TestHookLimits).
 	if len(msg.Context) == 0 || len(msg.Context) > 16<<10 || len(msg.Context) > projection.MaxContextBytes {
 		t.Errorf("context is %d bytes, want between 1 and the 16 KiB bound", len(msg.Context))
 	}
