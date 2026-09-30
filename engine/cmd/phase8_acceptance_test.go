@@ -21,6 +21,8 @@ package main
 //	  revise, retire, drift, report-only retirement
 //	skills add needs a record for the exact bytes      /Approval_AddNeedsARecordForTheExactBytes
 //	grandfathered baseline                             /Baseline_GrandfathersOnlyTheFixedList
+//	approve warns, not refuses, for baseline skills    /Baseline_ApproveWarnsForSkillsThatPredateTheLintBudget
+//	  that fail the hard lint; others still refused
 //	approve guard: denial, other commands, family      /ApproveGuard_DeniesTheAgentAndManagesItsSettingsFamily
 //	concurrent add and install are serialized          not repeated here: the multi-process tests in engine/skills
 //	                                                   prove it with 15 rounds of 19 real processes, which a
@@ -331,6 +333,7 @@ func TestPhase8Acceptance(t *testing.T) {
 		{"Lifecycle_DraftToProjectWithDriftAndReportOnlyRetirement", phase8Lifecycle},
 		{"Approval_AddNeedsARecordForTheExactBytes", phase8Approval},
 		{"Baseline_GrandfathersOnlyTheFixedList", phase8Baseline},
+		{"Baseline_ApproveWarnsForSkillsThatPredateTheLintBudget", phase8BaselineLintBudget},
 		{"ApproveGuard_DeniesTheAgentAndManagesItsSettingsFamily", phase8ApproveGuard},
 		{"Install_OwnsByHashKeepsForeignFilesAndAdoptIsExplicit", phase8Install},
 		{"Capabilities_DeclareSkillsPerRuntimeWithTheApplyLimit", phase8Capabilities},
@@ -746,31 +749,36 @@ func phase8Approval(t *testing.T, binary string) {
 // --- baseline ----------------------------------------------------------------
 
 // phase8BaselineSkill finds a grandfathered skill whose bytes in this repository are
-// still the ones the baseline pins and that passes the hard lint rules, and returns
-// its id and bytes. It is the one place this file reads the repository's own skills/
-// tree, read-only: the compiled baseline pins the SHA-256 of real files, so the only
-// bytes that can exercise it through the built binary are those files. A baseline
-// skill that was changed and approved since is skipped over, and so is one that
-// fails lint (approve refuses those, so the last step below could not run); the pin
-// itself is tested in engine/skills
-// (TestApprovalBaseline_PinnedToTheRepositoryRegistry), not here.
-func phase8BaselineSkill(t *testing.T) (string, []byte) {
+// still the ones the baseline pins, and returns its id and bytes. With lintClean it
+// also requires that the skill passes the hard lint rules; without it, that it fails
+// them, as most baseline skills do today. It is the one place this file reads the
+// repository's own skills/ tree, read-only: the compiled baseline pins the SHA-256 of
+// real files, so the only bytes that can exercise it through the built binary are
+// those files. A baseline skill that was changed and approved since is skipped over;
+// the pin itself is tested in engine/skills
+// (TestApprovalBaseline_PinnedToTheRepositoryRegistry), not here. ok is false when no
+// skill qualifies, and the caller decides whether that skips the test or only a step.
+func phase8BaselineSkill(t *testing.T, lintClean bool) (id string, data []byte, ok bool) {
 	t.Helper()
 	for _, b := range skills.ApprovalBaseline() {
 		data, err := os.ReadFile(filepath.Join("..", "..", "skills", b.ID, "SKILL.md"))
 		if err != nil || skills.SkillDigest(data) != b.SHA256 {
 			continue
 		}
-		if hard, _ := skills.LintSkillFile(data); len(hard) == 0 {
-			return b.ID, data
+		if hard, _ := skills.LintSkillFile(data); (len(hard) == 0) == lintClean {
+			return b.ID, data, true
 		}
 	}
-	t.Skip("no baseline skill still has the bytes the baseline pins and passes the hard lint rules, so the compiled baseline cannot be exercised through the binary")
-	return "", nil
+	return "", nil, false
 }
 
 func phase8Baseline(t *testing.T, binary string) {
-	baseID, baseBytes := phase8BaselineSkill(t)
+	// This test's last step approves a changed baseline skill and expects no warning, so
+	// it needs one that passes the lint; the ones that fail it are the next test's.
+	baseID, baseBytes, ok := phase8BaselineSkill(t, true)
+	if !ok {
+		t.Skip("no baseline skill still has the bytes the baseline pins and passes the hard lint rules, so the compiled baseline cannot be exercised through the binary")
+	}
 	w := newPhase8World(t, binary)
 	w.writeOverlay(
 		phase8Registry(
@@ -805,6 +813,115 @@ func phase8Baseline(t *testing.T, binary string) {
 		"[APPROVAL_MISSING] "+baseID, "differs from the grandfathered baseline")
 	w.approve(baseID, "alice").must(t, "approve the changed baseline skill")
 	w.overlayVerb("validate").expect(t, "validate with every skill approved", 0, "(3 skills: 3 approved, 0 grandfathered)")
+}
+
+// --- baseline skills that predate the lint budget ------------------------------
+
+// phase8BaselineWarningSuffix is the tail of every warning line approve prints for a
+// baseline skill; the pin is in this file on purpose, apart from the code that prints it.
+const phase8BaselineWarningSuffix = " (baseline skill: approved with lint findings)"
+
+// phase8OverBudgetSkillMD is a SKILL.md that fails the hard lint only because its body
+// is past the token budget, the way most of the baseline skills do.
+func phase8OverBudgetSkillMD(name string) string {
+	return phase8SkillMD(name, "Follow the procedure.") + strings.Repeat("Another line of the procedure, long enough to count.\n", 100)
+}
+
+// phase8BaselineWarnings is what approve must print for md: one line per hard finding.
+func phase8BaselineWarnings(t *testing.T, md string) string {
+	t.Helper()
+	hard, _ := skills.LintSkillFile([]byte(md))
+	if len(hard) == 0 {
+		t.Fatalf("the fixture must fail the hard lint:\n%s", md)
+	}
+	var sb strings.Builder
+	for _, finding := range hard {
+		sb.WriteString("warning: " + finding.Error() + phase8BaselineWarningSuffix + "\n")
+	}
+	return sb.String()
+}
+
+// phase8BaselineLintBudget is the scenario an upstream merge creates for the baseline
+// skills that fail the hard lint (most of them): their bytes change, validate asks for
+// an approval, and approve must be able to give it. A skill outside the baseline gets no
+// such allowance.
+func phase8BaselineLintBudget(t *testing.T, binary string) {
+	t.Run("a changed baseline skill that fails the lint is approved with warnings", func(t *testing.T) {
+		w := newPhase8World(t, binary)
+		baseID := skills.ApprovalBaseline()[0].ID
+		md := phase8OverBudgetSkillMD(baseID)
+		wantWarnings := phase8BaselineWarnings(t, md)
+		w.writeOverlay(phase8Registry(phase8RegistryEntry{id: baseID, scope: "global"}), phase8Manifest(baseID))
+		w.writeSkill(baseID, md)
+
+		// validate asks for the approval the merge made necessary...
+		w.overlayVerb("validate").expect(t, "validate a changed baseline skill", 1,
+			"[APPROVAL_MISSING] "+baseID, "differs from the grandfathered baseline")
+
+		// ...a skill outside the baseline with the very same finding is refused, and no
+		// record is written for it...
+		strayRoot := filepath.Join(w.dir, "outside", "skills")
+		writeFixtureFile(t, filepath.Join(strayRoot, "outsider", "SKILL.md"), phase8OverBudgetSkillMD("outsider"))
+		refused := w.skillsVerb(w.dir, "approve", "--id", "outsider", "--approver", "alice", "--source-root", strayRoot, "--registry", w.registryPath()).
+			expect(t, "approve outside the baseline", 1, "[lint:body-hard-budget]")
+		if strings.Contains(refused.stderr, "warning:") {
+			t.Errorf("a skill outside the baseline was warned about instead of refused: %q", refused.stderr)
+		}
+		if _, err := os.Stat(filepath.Join(strayRoot, "outsider", skills.ApprovalRecordName)); !os.IsNotExist(err) {
+			t.Errorf("a refused approve wrote a record (stat: %v)", err)
+		}
+
+		// ...and the baseline skill is approved: exit 0, one warning per finding on stderr,
+		// a record of the exact bytes in the unchanged format.
+		approved := w.approve(baseID, "alice").expect(t, "approve a baseline skill with lint findings", 0, "approved: "+baseID)
+		if approved.stderr != wantWarnings {
+			t.Errorf("approve printed %q on stderr, want %q", approved.stderr, wantWarnings)
+		}
+		var record struct {
+			Version  int    `json:"version"`
+			Skill    string `json:"skill"`
+			SHA256   string `json:"sha256"`
+			Approver string `json:"approver"`
+		}
+		if err := json.Unmarshal(phase8Read(t, w.recordPath(baseID)), &record); err != nil {
+			t.Fatalf("the approval record is not JSON: %v", err)
+		}
+		if record.Version != 1 || record.Skill != baseID || record.SHA256 != phase8Digest([]byte(md)) || record.Approver != "alice" {
+			t.Errorf("approval record = %+v, want version 1, skill %s, the digest of the exact bytes, approver alice", record, baseID)
+		}
+		w.overlayVerb("validate").expect(t, "validate after approving", 0, "(1 skills: 1 approved, 0 grandfathered)")
+	})
+
+	// The same path with the real bytes of a baseline skill that fails the lint, changed
+	// by one byte as a merge would change them. The pinned bytes come from this
+	// repository's own skills/ tree; when no baseline skill has them any more (they were
+	// all rewritten or approved since), the synthetic step above is the coverage.
+	t.Run("a real baseline skill that fails the lint, unchanged and then changed", func(t *testing.T) {
+		id, data, ok := phase8BaselineSkill(t, false)
+		if !ok {
+			t.Skip("no baseline skill still has the bytes the baseline pins and fails the hard lint rules")
+		}
+		w := newPhase8World(t, binary)
+		w.writeOverlay(phase8Registry(phase8RegistryEntry{id: id, scope: "global"}), phase8Manifest(id))
+		w.writeSkill(id, string(data))
+		wantWarnings := phase8BaselineWarnings(t, string(data))
+
+		w.overlayVerb("validate").expect(t, "validate the unchanged skill", 0, "(1 skills: 0 approved, 1 grandfathered)")
+		r := w.approve(id, "alice").expect(t, "approve the unchanged skill", 0, "approved: "+id)
+		if r.stderr != wantWarnings {
+			t.Errorf("approve of the unchanged skill printed %q on stderr, want %q", r.stderr, wantWarnings)
+		}
+		w.overlayVerb("validate").expect(t, "validate the approved skill", 0, "(1 skills: 1 approved, 0 grandfathered)")
+
+		changed := string(data) + "\n"
+		w.writeSkill(id, changed)
+		w.overlayVerb("validate").expect(t, "validate after the bytes changed", 1, "[APPROVAL_STALE] "+id)
+		r = w.approve(id, "alice").expect(t, "approve the changed skill", 0, "approved: "+id)
+		if r.stderr != phase8BaselineWarnings(t, changed) {
+			t.Errorf("approve of the changed skill printed %q on stderr, want its findings as warnings", r.stderr)
+		}
+		w.overlayVerb("validate").expect(t, "validate after approving the change", 0, "(1 skills: 1 approved, 0 grandfathered)")
+	})
 }
 
 // --- the approve guard ---------------------------------------------------------

@@ -395,6 +395,10 @@ overlay skills <verb>
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
     approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
+                 A skill that fails the hard lint is refused, except a baseline skill (the 37 grandfathered global skills, which predate the lint budget and will be
+                 rewritten in a later feature): for those, approve prints each hard finding as a `warning: [lint:<rule>] ... (baseline skill: approved with lint findings)`
+                 line on stderr, still records the approval of the exact bytes, and exits 0, so an upstream merge that changes one of them can be approved. `add` is
+                 unchanged: it still refuses a hard lint finding for every skill.
                  Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
                  `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
     What install owns. install records every file it writes, with its SHA-256, in the project lock

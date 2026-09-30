@@ -628,6 +628,12 @@ Commands:
                                              skills/<id>/.approval.json, bound to the digest of
                                              its exact bytes; the engine cannot prove a human ran
                                              it, so the record only proves the bytes match
+                                             A skill that fails the hard lint is refused, except
+                                             a baseline skill (the grandfathered global skills,
+                                             which predate the lint budget and will be rewritten
+                                             in a later feature): for those, each hard finding is
+                                             printed as a "warning:" line on stderr, the approval
+                                             is still recorded, and the exit is 0
                                              A PreToolUse hook (install-hooks) denies the agent running
                                              it or writing the record by hand: a speed bump, not a
                                              security boundary. A person runs it in a terminal.
