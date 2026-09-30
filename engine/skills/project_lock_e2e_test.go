@@ -125,6 +125,7 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 		results := runAll(jobs)
 
 		registered := map[string]bool{}
+		installRecorded := false
 		if data, err := os.ReadFile(projectLockFile(f.project)); err == nil {
 			lock, perr := ParseProjectLock(data)
 			if perr != nil {
@@ -132,6 +133,9 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 			}
 			for _, e := range lock.Skills {
 				registered[e.ID] = true
+			}
+			for _, in := range lock.Installs {
+				installRecorded = installRecorded || in.ID == "proj"
 			}
 		}
 		installed := 0
@@ -149,8 +153,16 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 			}
 		}
 		if installed > 0 {
-			if _, err := os.Stat(filepath.Join(f.project, ".claude", "skills", "proj", "SKILL.md")); err != nil {
-				t.Errorf("round %d: an install exited 0 but the skill is not there: %v", round, err)
+			for _, runtime := range []string{".claude", ".agents"} {
+				if _, err := os.Stat(filepath.Join(f.project, runtime, "skills", "proj", "SKILL.md")); err != nil {
+					t.Errorf("round %d: an install exited 0 but the skill is not in %s: %v", round, runtime, err)
+				}
+			}
+			// The install record and the procedural entries share one lock file, and
+			// racing processes must not lose either: an install that exited 0 while a
+			// registration overwrote the lock would leave its files foreign.
+			if !installRecorded {
+				t.Errorf("round %d: an install exited 0 but its record is not in the project lock", round)
 			}
 		}
 		if reg, man := registryIDs(t, f.reg), manifestIDs(t, f.man); !reflect.DeepEqual(reg, man) {

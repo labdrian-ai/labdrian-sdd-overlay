@@ -56,6 +56,32 @@ func lockedProjectRoots(l *recordingLocker) []string {
 	return out
 }
 
+// Every verb that reads --project-root is in projectArgSpecs, the table the lock layer
+// looks verbs up in, and is locked on that root: a verb added to the table without a
+// lock, or locked without being in the table, would run beside writers of the project.
+func TestEveryProjectVerbIsLockedOnItsOwnRoot(t *testing.T) {
+	root := t.TempDir()
+	want := map[string]LockMode{
+		"project-register": LockExclusive,
+		"project-revise":   LockExclusive,
+		"project-retire":   LockExclusive,
+		"project-status":   LockShared,
+	}
+	if len(projectArgSpecs) != len(want) {
+		t.Errorf("projectArgSpecs has %d verbs, this test knows %d", len(projectArgSpecs), len(want))
+	}
+	for verb, mode := range want {
+		if _, ok := projectArgSpecs[verb]; !ok {
+			t.Errorf("%s is not in projectArgSpecs", verb)
+			continue
+		}
+		requests := lockRequestsFor(verb, []string{verb, "--project-root", root}, "")
+		if len(requests) != 1 || !requests[0].dir || requests[0].path != root || requests[0].mode != mode {
+			t.Errorf("%s: lock requests = %+v, want one %v lock on %s", verb, requests, modeName(mode), root)
+		}
+	}
+}
+
 func TestTheLockLayerAndTheProjectVerbsReadTheSameProjectRoot(t *testing.T) {
 	e := newProjectCLIEnv(t, "tidy-worktree", projectCLIRegistry)
 	if _, errOut, code := runProjectRegister(t, registerArgs(e)); code != 0 {
