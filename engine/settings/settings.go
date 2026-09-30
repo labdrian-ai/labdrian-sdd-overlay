@@ -383,7 +383,7 @@ func (m *Merger) mergeHooks(root map[string]interface{}) bool {
 	// Approve guard family (identity: binary path + approve guard token): the
 	// two PreToolUse entries that deny the agent running skills approve or
 	// writing the approval record. A speed bump, not a security boundary.
-	if approveGuardFamily.merge(hooks, m.hookCommand) {
+	if m.mergeApproveGuard(hooks) {
 		changed = true
 	}
 
@@ -481,7 +481,7 @@ func (m *Merger) removeHooks(root map[string]interface{}) bool {
 		}
 		var filtered []interface{}
 		for _, e := range entries {
-			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || approveGuardFamily.owns(e, m.hookCommand) || m.isLegacyEntry(e) {
+			if m.isMinimalismEntry(e) || m.isDesignEntry(e) || m.isSyncTriggerEntry(e) || m.isReviewReceiptEntry(e) || m.isShaperGuardEntry(e) || m.isProjectionEntry(e) || m.isApproveGuardEntry(e) || m.isLegacyEntry(e) {
 				changed = true
 				continue
 			}

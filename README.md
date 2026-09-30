@@ -633,11 +633,14 @@ gentle-ai-overlay skills guard-hook
     contents that merely mention the verb are never denied.
     It is a speed bump, not a security boundary. It matches text only: the entry point (labdrian, labdrian-overlay, or
     gentle-ai-overlay, with or without a path) followed by `skills approve` anywhere in a Bash command, including after
-    `cd x &&` and inside `sh -c '...'`, or a file tool whose path ends in `.approval.json`. It is not a shell parser, so
+    `cd x &&` and inside `sh -c '...'`, or a file tool whose target file is named `.approval.json` (the last path component
+    is compared, case-insensitively, in any directory; a longer name that merely ends in it is not matched). It is not a shell parser, so
     it can be bypassed (an alias under another name, a variable that holds the entry point, a script written to a file
     and run, an encoded command, or a shell redirection into the record), and it can deny a command that only spells
     the invocation, such as an `echo`, a commit message, or a heredoc line naming `labdrian skills approve`; `rg` and
-    `grep` searches for it are not denied. Reword such a command. The record's real guarantee is unchanged: it matches
+    `grep` searches for it are not denied, unless the `rg` segment is handed a program to run with `--pre` or
+    `--hostname-bin` (bare or as `--flag=value`; flags that only start with the same letters, such as `--pretty` and
+    `--pre-glob`, do not count). Reword such a command. The record's real guarantee is unchanged: it matches
     the exact bytes of the skill beside it.
     Input: the hook JSON on stdin, at most 8 MiB (input over that is allowed, unjudged). Only tool_name and the command,
     file_path, and notebook_path fields of tool_input are read.
@@ -646,7 +649,9 @@ gentle-ai-overlay skills guard-hook
     with exit 0 (the JSON decides; exit 2 is never used). An allow prints nothing and never permissionDecision "allow".
     It never blocks on an error: input it cannot read, a failing stdin or stdout, and a recovered internal error all
     allow the call (unlike the shaper clearance guard, which fails closed for its narrower markers, because this hook runs
-    on every Bash and file-edit call). With the engine binary missing the hook does nothing, and `status-hooks` reports it.
+    on every Bash and file-edit call). A recovered internal error also shows one short sanitized `systemMessage` naming
+    the approve guard and saying the tool call was not checked and was not denied, so a guard that stopped guarding does
+    not look like one that allowed; the full error goes to stderr. It is never a permission decision. With the engine binary missing the hook does nothing, and `status-hooks` reports it.
     Exit 0 always, except 1 on a command line it does not understand.
 
 overlay --help

@@ -163,13 +163,47 @@ func TestSkillsGuardHook_NothingItDoesCanBlockACall(t *testing.T) {
 		if !reflect.DeepEqual(r.codes, []int{0}) {
 			t.Errorf("exits %v, want a single exit 0 (a Go panic exits 2, which blocks the call)", r.codes)
 		}
-		if r.stdout != "" {
-			t.Errorf("stdout %q after a panic, want nothing: the call goes through", r.stdout)
+		if strings.Contains(r.stdout, "permissionDecision") {
+			t.Errorf("stdout %q carries a permission decision; a panic must never decide", r.stdout)
 		}
 		if !strings.Contains(r.stderr, "boom") {
 			t.Errorf("stderr %q does not report the internal error", r.stderr)
 		}
 	})
+}
+
+// TestSkillsGuardHook_ADegradedGuardSaysSo: a recovered panic used to be visible
+// only on stderr, which Claude Code shows only in verbose mode, so a guard that
+// had stopped guarding looked like a guard that allowed. It now also shows the
+// user one short sanitized systemMessage, the way the projection hook does for a
+// PreToolUse panic, and still never decides: exit 0, no permission decision.
+func TestSkillsGuardHook_ADegradedGuardSaysSo(t *testing.T) {
+	beforeApproveGuardDecision = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
+	t.Cleanup(func() { beforeApproveGuardDecision = nil })
+
+	r := runGuardHook(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve --id x"}))
+	if !reflect.DeepEqual(r.codes, []int{0}) || !strings.Contains(r.stderr, "internal error: boom") {
+		t.Fatalf("exits %v, stderr %q, want exit 0 and the panic reported on stderr", r.codes, r.stderr)
+	}
+	var top map[string]json.RawMessage
+	if err := json.Unmarshal([]byte(r.stdout), &top); err != nil || len(top) != 1 || top["systemMessage"] == nil {
+		t.Fatalf("stdout %q (%v), want only a systemMessage: the call is allowed", r.stdout, err)
+	}
+	var warning string
+	if err := json.Unmarshal(top["systemMessage"], &warning); err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(warning, "boom second line") || strings.ContainsAny(warning, "\n\x1b") || len(warning) > 700 {
+		t.Errorf("warning %q is not one short clean line naming the error", warning)
+	}
+	for _, want := range []string{"approve guard", "tool call", "not denied"} {
+		if !strings.Contains(warning, want) {
+			t.Errorf("warning %q does not say %q: it must name the guard and what happened to the call", warning, want)
+		}
+	}
+	if strings.Contains(warning, "workflow") || strings.Contains(warning, "projection") {
+		t.Errorf("warning %q speaks of the projection hook; it is the approve guard that failed", warning)
+	}
 }
 
 // The read is bounded: an endless stdin is judged on what fits, never read to

@@ -31,7 +31,9 @@ package skills
 //   - A segment whose command is grep, egrep, fgrep, or rg is exempt, because
 //     the entry point there is a search pattern, not an invocation, and an agent
 //     searching the repository for the hint text is common. rg is not exempt
-//     when the segment carries --pre, which makes rg run a command.
+//     when the segment carries --pre or --hostname-bin (bare or with =value),
+//     the two rg flags that make it run a program. Only those exact spellings
+//     count: --pretty and --pre-glob are ordinary rg flags.
 //   - Nothing else is exempt. echo and printf are not, because their output can
 //     be piped to a shell; git and gh are not, so a commit message or a pull
 //     request body that spells the entry point followed by "skills approve" is
@@ -222,7 +224,8 @@ func approveGuardWords(segment string) []string {
 
 // approveGuardIsReader reports whether a segment runs one of the search
 // commands, after any NAME=value assignments, so its words are a pattern and not
-// an invocation. A segment that hands rg a --pre command is not exempt.
+// an invocation. A segment that hands rg a program to run (--pre or
+// --hostname-bin, see approveGuardCommandFlag) is not exempt.
 func approveGuardIsReader(words []string) bool {
 	i := 0
 	for i < len(words) && isEnvAssignment(words[i]) {
@@ -232,11 +235,23 @@ func approveGuardIsReader(words []string) bool {
 		return false
 	}
 	for _, w := range words[i+1:] {
-		if strings.HasPrefix(w, "--pre") {
+		if approveGuardCommandFlag(w) {
 			return false
 		}
 	}
 	return true
+}
+
+// approveGuardCommandFlag reports whether a word is one of the rg flags that
+// name a program for rg to run: --pre COMMAND (a preprocessor, run once per
+// file) and --hostname-bin COMMAND (run to learn the host name for hyperlinks),
+// in either the separate-value or the --flag=value spelling. rg does not accept
+// abbreviated flags, so an exact match on the flag name is the whole rule;
+// --pretty and --pre-glob, which only start with the same letters, do not run
+// anything.
+func approveGuardCommandFlag(word string) bool {
+	name, _, _ := strings.Cut(word, "=")
+	return name == "--pre" || name == "--hostname-bin"
 }
 
 // isEnvAssignment reports whether a word has the shape NAME=value.

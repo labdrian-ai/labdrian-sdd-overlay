@@ -1111,7 +1111,7 @@ func buildRootWithPairs(hookCommand string, includeMinimalism, includeDesign boo
 // TestHasSupportedClaudeLifecycleState_RequiresDesignPair asserts the
 // lifecycle-state check returns false when the anti-generic-design pair is
 // absent. "both" no longer proves true here — the SessionEnd sync-trigger
-// family is also required (TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily
+// family is also required (TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily
 // covers the true case).
 func TestHasSupportedClaudeLifecycleState_RequiresDesignPair(t *testing.T) {
 	onlyMinimalism := buildRootWithPairs(testHookCommand, true, false)
@@ -1192,11 +1192,12 @@ func withShaperGuardFamily(root map[string]interface{}, hookCommand string) map[
 	return root
 }
 
-// TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily asserts the
-// lifecycle-state check returns true only once all four owned families
+// TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily asserts the
+// lifecycle-state check returns true only once all seven owned families
 // (minimalism pair, design pair, SessionEnd sync-trigger, PreToolUse/Bash
-// review-receipt) are present.
-func TestHasSupportedClaudeLifecycleState_RequiresSyncTriggerFamily(t *testing.T) {
+// review-receipt, shaper clearance guard, projection, approve guard) are
+// present: it adds them one at a time and requires false until the last.
+func TestHasSupportedClaudeLifecycleState_RequiresEveryOwnedFamily(t *testing.T) {
 	twoFamilies := buildRootWithPairs(testHookCommand, true, true)
 	if settings.HasSupportedClaudeLifecycleState(twoFamilies, testHookCommand) {
 		t.Error("HasSupportedClaudeLifecycleState: expected false with only two families")

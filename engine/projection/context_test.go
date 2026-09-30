@@ -438,6 +438,30 @@ func TestHookFailureWarningsAreOneShortSanitizedLine(t *testing.T) {
 	}
 }
 
+// TestPanicTextIsOneShortSanitizedLine: PanicText is the part of a recovered-panic
+// warning that comes from outside, shared with hooks that word the rest
+// themselves (the skills approve guard). Whatever the value is, it is one clean
+// line, cut short, and PanicWarning carries exactly it.
+func TestPanicTextIsOneShortSanitizedLine(t *testing.T) {
+	hostile := "line one\nline two \x1b[31mred\x1b[0m " + string(rune(0x202e)) + "evil " + strings.Repeat("é", 5000)
+	got := projection.PanicText(hostile)
+	if strings.ContainsAny(got, "\n\r\x1b") || strings.ContainsRune(got, 0x202e) || !utf8.ValidString(got) {
+		t.Errorf("PanicText %q is not one clean line", got)
+	}
+	if len(got) > 400 {
+		t.Errorf("PanicText is %d bytes, want a short one", len(got))
+	}
+	if !strings.HasPrefix(got, "line one line two") || !strings.HasSuffix(got, "...") {
+		t.Errorf("PanicText %q lost its detail or does not show that it was cut", got)
+	}
+	if got := projection.PanicText(errors.New("an error value")); got != "an error value" {
+		t.Errorf("PanicText of an error = %q, want its message", got)
+	}
+	if warning := projection.PanicWarning(projection.HookEventPreToolUse, hostile); !strings.Contains(warning, projection.PanicText(hostile)) {
+		t.Errorf("PanicWarning %q does not carry PanicText", warning)
+	}
+}
+
 // TestProjectOnlyEverUnbindsAClosedWorkflow pins that Unbind is the verdict of a
 // state that was read and understood, never a default.
 func TestProjectOnlyEverUnbindsAClosedWorkflow(t *testing.T) {
