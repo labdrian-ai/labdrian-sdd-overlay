@@ -966,7 +966,8 @@ func containsTarget(targets []string, want string) bool {
 
 // copyTree recursively copies src into dst, refusing any symlink found
 // anywhere in the tree (R-010) and setting 0755 on directories / 0644 on
-// files.
+// files. The skill's approval record (skills.ApprovalRecordName at the root of
+// src) is repository governance state, not skill content, and is never copied.
 func copyTree(src, dst string) error {
 	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -981,6 +982,12 @@ func copyTree(src, dst string) error {
 		rel, err := filepath.Rel(src, path)
 		if err != nil {
 			return err
+		}
+		if rel == skills.ApprovalRecordName {
+			if d.IsDir() {
+				return filepath.SkipDir
+			}
+			return nil
 		}
 		target := filepath.Join(dst, rel)
 		if d.IsDir() {
