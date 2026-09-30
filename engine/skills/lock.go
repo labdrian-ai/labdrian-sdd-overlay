@@ -304,17 +304,25 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 // neither a writer arriving nor a reason to read again, because the same failure will
 // come back, and the bound would turn it into a busy exit that tells the caller to
 // retry. It is returned, with the path it names, and the caller refuses with it.
+//
+// Every path is checked and the two signals are independent: appeared is true when any
+// path appeared, and err is the first inspection failure, whatever order the paths came
+// in and whichever signal was seen first. Neither overwrites the other. A caller that
+// is handed both discards the read either way; it refuses on the error, because
+// reading again cannot clear it, and the appeared flag is still there for a caller
+// that needs to tell the two situations apart. (validate asks about one path, so the
+// verbs cannot produce both; the function's answer is pinned by its own test.)
 func rereadsWhenTheLockFileAppears(provisional []string) (appeared bool, err error) {
 	for _, path := range provisional {
 		_, statErr := os.Stat(path)
 		switch {
 		case statErr == nil:
 			appeared = true
-		case !os.IsNotExist(statErr):
-			return false, statErr
+		case !os.IsNotExist(statErr) && err == nil:
+			err = statErr
 		}
 	}
-	return appeared, nil
+	return appeared, err
 }
 
 // maxErrorChain bounds a walk along wrapped errors. A real chain is a few links

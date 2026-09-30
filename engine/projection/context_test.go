@@ -717,6 +717,27 @@ func TestProjectContextCarriesTheCapabilityLimitsOfTheDeclaration(t *testing.T) 
 	}
 }
 
+// TestProjectContextListsTheSkillsCapabilityAsPartial pins the claim the README
+// makes about a bound Claude Code session: its projected context lists
+// skills=partial with the other limits, so a session that asks what it can rely on
+// is told that skill projection is not fully proven. The comparison test above
+// derives the line from the declaration, which would keep passing if the skills
+// claim stopped being a limit; this one names the claim and its status.
+func TestProjectContextListsTheSkillsCapabilityAsPartial(t *testing.T) {
+	ctx := project(ownedBinding(), loadedWorkflow("odd", workflow.StatusRunning)).Context
+	line := lineWithPrefix(t, ctx, "capability limits (claude): ")
+	limits := strings.Split(strings.TrimPrefix(line, "capability limits (claude): "), ", ")
+
+	// The literal is the README's wording, on purpose: it is what a session reads.
+	const want = "skills=partial"
+	for _, limit := range limits {
+		if limit == want {
+			return
+		}
+	}
+	t.Errorf("limits %q do not include %q", limits, want)
+}
+
 func TestProjectContextNamesTheCommandsThatRecordProgress(t *testing.T) {
 	ctx := project(ownedBinding(), loadedWorkflow("odd", workflow.StatusRunning)).Context
 	line := lineWithPrefix(t, ctx, "progress commands:")

@@ -278,7 +278,9 @@ func TestAdopt_RefusesWhenTheTwoRuntimeDirectoriesAreTheSameDirectory(t *testing
 		t.Fatal(err)
 	}
 	if err := os.Symlink(filepath.Join(f.root, ".claude", "skills"), filepath.Join(f.root, ".agents", "skills")); err != nil {
-		t.Fatal(err)
+		// Some platforms and accounts cannot make a symbolic link (Windows without the
+		// privilege, for one). The premise of the test is the link, not the platform.
+		t.Skipf("cannot make a symbolic link here: %v", err)
 	}
 
 	plan, refusals := f.adoptPlan(skill("pdf", pdfV1))
