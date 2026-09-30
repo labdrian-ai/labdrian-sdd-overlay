@@ -9,7 +9,9 @@ import (
 	"path/filepath"
 )
 
-// CopyOp is a single file-tree copy directive: copy the Src/ tree to Dst/.
+// CopyOp is one skill to install: where its source tree is and where the first
+// runtime's copy of it goes. The second runtime's copy (.agents/skills/<id>) is the
+// same tree in the projectTargets table; PlanInstallOwnership derives both.
 type CopyOp struct {
 	SkillID string // entry id, used for output messages
 	Src     string // <sourceRoot>/<entry.Path>
@@ -71,123 +73,67 @@ func containsString(slice []string, s string) bool {
 	return false
 }
 
-// ExecuteInstall performs the filesystem side of an install plan.
-// It first verifies all Src directories exist (fail-loud, full scan), then
-// recursively copies each Src tree into its Dst, removing Dst first (clean
-// overwrite). Prints "installed: <id>\n" to stdout per skill.
-func ExecuteInstall(plan []CopyOp, stdout, stderr io.Writer) error {
-	// First pass: verify all sources exist (R-053 full-scan fail-loud).
-	var missing []CopyOp
-	for _, op := range plan {
-		info, err := os.Stat(op.Src)
-		if err != nil || !info.IsDir() {
-			fmt.Fprintf(stderr, "error: skill %s: source dir not found: %s\n", op.SkillID, op.Src)
-			missing = append(missing, op)
-		}
-	}
-	if len(missing) > 0 {
-		return fmt.Errorf("%d source director(ies) missing", len(missing))
-	}
-
-	// Second pass: copy each op.
-	for _, op := range plan {
-		if err := os.RemoveAll(op.Dst); err != nil {
-			fmt.Fprintf(stderr, "error: skill %s: removing dst %s: %v\n", op.SkillID, op.Dst, err)
-			return err
-		}
-		if err := copyTree(op.Src, op.Dst); err != nil {
-			fmt.Fprintf(stderr, "error: skill %s: copying to %s: %v\n", op.SkillID, op.Dst, err)
-			return err
-		}
-		fmt.Fprintf(stdout, "installed: %s\n", op.SkillID)
-	}
-	return nil
-}
-
-// copyTree recursively copies the directory tree rooted at src into dst,
-// preserving file mode bits. dst is created if absent.
-// Symlinks are not followed (plain files and directories only).
-// The skill's approval record (ApprovalRecordName at the root of src) is
-// repository governance state, not skill content, and is never copied.
-func copyTree(src, dst string) error {
-	return filepath.WalkDir(src, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		// Skip symlinks.
-		if d.Type()&fs.ModeSymlink != 0 {
-			return nil
-		}
-		rel, err := filepath.Rel(src, path)
-		if err != nil {
-			return err
-		}
-		// Never copied, whatever else is skipped below: see the doc comment.
-		// TestCopyTree_SkipsAWritersTemporaryFile relies on this rule for the
-		// approval record in its fixture.
-		if rel == ApprovalRecordName {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if isWriterTempFile(d) {
-			return nil
-		}
-		target := filepath.Join(dst, rel)
-
-		if d.IsDir() {
-			info, ierr := d.Info()
-			if ierr != nil {
-				return ierr
-			}
-			return os.MkdirAll(target, info.Mode())
-		}
-
-		return copyFile(path, target, d)
-	})
-}
-
 // isWriterTempFile reports whether d is a regular file that writeFileAtomic made
 // and has not yet renamed into place: the temporary-file prefix followed by its
 // unique suffix. It is half of a write another verb is doing in the source tree,
 // not skill content. install also holds the overlay lock, which keeps those verbs
-// out while it copies; this is the second defence, for a writer that did not take
-// it. The prefix alone, with no suffix, is not a name writeFileAtomic makes, and
+// out while it reads the tree; this is the second defence, for a writer that did not
+// take it. The prefix alone, with no suffix, is not a name writeFileAtomic makes, and
 // a directory with such a name is walked like any other.
 func isWriterTempFile(d fs.DirEntry) bool {
 	name := d.Name()
 	return !d.IsDir() && len(name) > len(atomicTempPrefix) && name[:len(atomicTempPrefix)] == atomicTempPrefix
 }
 
-// copyFile copies a single file from src to dst preserving its mode bits.
-func copyFile(src, dst string, d fs.DirEntry) error {
-	info, err := d.Info()
-	if err != nil {
-		return err
-	}
+// installEnv is everything install and adopt touch outside their own arguments, so
+// that a test can replace any of it. Production wires the real filesystem.
+type installEnv struct {
+	readRegistry readFileFn                         // the registry
+	readProject  readFileFn                         // the project lock, and anything else in the project
+	cwd          func() (string, error)             // the directory to install into
+	stat         func(string) (fs.FileInfo, error)  // the project's paths
+	resolve      func(string) (string, error)       // symlink resolution, for containment
+	fsys         projectFS                          // the writes
+	readSource   func(string) ([]sourceFile, error) // a skill's source tree
+}
 
-	in, err := os.Open(src)
-	if err != nil {
-		return err
+// productionInstallEnv is the real filesystem. Registry reads go through readRegistry,
+// so the registry can be injected; the project is always read from disk.
+func productionInstallEnv(readRegistry readFileFn, cwd func() (string, error)) installEnv {
+	return installEnv{
+		readRegistry: readRegistry,
+		readProject:  os.ReadFile,
+		cwd:          cwd,
+		stat:         os.Stat,
+		resolve:      resolvePathKeepingMissing,
+		fsys:         osProjectFS{},
+		readSource:   readSkillSource,
 	}
-	defer in.Close()
-
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, info.Mode())
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-
-	if _, err := io.Copy(out, in); err != nil {
-		return fmt.Errorf("writing %s: %w", dst, err)
-	}
-	return out.Close()
 }
 
 // RenderInstallCore is the testable CLI entry for `engine skills install`.
 // cwdFn is injected for testability (production callers pass os.Getwd).
 func RenderInstallCore(args []string, readFile readFileFn, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
+	renderInstall(productionInstallEnv(readFile, cwdFn), args, stdout, stderr, exit)
+}
+
+// installContext is what install and adopt have read and decided before either
+// looks at the project: who the project is, which skills are admitted, their source
+// files, and the project lock as it is.
+type installContext struct {
+	projectID  string
+	root       string
+	skills     []InstallSkill
+	lockData   []byte
+	lockExists bool
+}
+
+// prepareInstall parses the arguments the two verbs share (--registry,
+// --source-root, --project-id), resolves the project, and reads the registry, the
+// source trees of the admitted skills, and the project lock. It reports false, having
+// already printed and exited, when the verb has nothing more to do: a failure, or no
+// skill admitted for the project.
+func prepareInstall(verb string, env installEnv, args []string, stdout, stderr io.Writer, exit func(int)) (installContext, bool) {
 	registryPath := defaultRegistryPath
 	sourceRoot := ""
 	projectID := ""
@@ -213,50 +159,118 @@ func RenderInstallCore(args []string, readFile readFileFn, cwdFn func() (string,
 	}
 
 	// Resolve cwd (targetRoot + basename-derived projectID).
-	cwd, err := cwdFn()
+	cwd, err := env.cwd()
 	if err != nil {
-		fmt.Fprintf(stderr, "error: resolving project identity: %v\n", err)
+		fmt.Fprintf(stderr, "error: skills %s: resolving project identity: %v\n", verb, err)
 		exit(1)
-		return
+		return installContext{}, false
 	}
-	targetRoot := cwd
+	targetRoot := filepath.Clean(cwd)
 
 	if projectID == "" {
 		projectID = filepath.Base(cwd)
 	}
 
 	// Read and parse registry.
-	data, err := readFile(registryPath)
+	data, err := env.readRegistry(registryPath)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
 		exit(1)
-		return
+		return installContext{}, false
 	}
 	reg, err := ParseRegistry(bytes.NewReader(data))
 	if err != nil {
 		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
 		exit(1)
-		return
+		return installContext{}, false
 	}
 
 	// Plan.
 	plan, err := PlanInstall(reg, projectID, sourceRoot, targetRoot)
 	if err != nil {
-		fmt.Fprintf(stderr, "error: planning install: %v\n", err)
+		fmt.Fprintf(stderr, "error: planning %s: %v\n", verb, err)
 		exit(1)
-		return
+		return installContext{}, false
 	}
 
 	if len(plan) == 0 {
 		fmt.Fprintf(stdout, "no project-scoped skills admitted for project %q\n", projectID)
 		exit(0)
+		return installContext{}, false
+	}
+
+	// Verify all sources exist (R-053 full-scan fail-loud), then read them.
+	var missing []CopyOp
+	for _, op := range plan {
+		info, err := env.stat(op.Src)
+		if err != nil || !info.IsDir() {
+			fmt.Fprintf(stderr, "error: skill %s: source dir not found: %s\n", op.SkillID, op.Src)
+			missing = append(missing, op)
+		}
+	}
+	if len(missing) > 0 {
+		fmt.Fprintf(stderr, "error: %d source director(ies) missing\n", len(missing))
+		exit(1)
+		return installContext{}, false
+	}
+	skills := make([]InstallSkill, 0, len(plan))
+	for _, op := range plan {
+		files, err := env.readSource(op.Src)
+		if err != nil {
+			fmt.Fprintf(stderr, "error: skill %s: reading its source %s: %v\n", op.SkillID, op.Src, err)
+			exit(1)
+			return installContext{}, false
+		}
+		skills = append(skills, InstallSkill{ID: op.SkillID, Files: files})
+	}
+
+	// The lock is optional: the first install in a project creates it. A lock that
+	// exists and cannot be read must never be replaced by an empty one, which would
+	// disown everything recorded in it.
+	lockData, err := env.readProject(filepath.Join(targetRoot, filepath.FromSlash(ProjectLockRelPath)))
+	if err != nil && !os.IsNotExist(err) {
+		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
+		exit(1)
+		return installContext{}, false
+	}
+	return installContext{projectID: projectID, root: targetRoot, skills: skills, lockData: lockData, lockExists: err == nil}, true
+}
+
+func (c installContext) input(env installEnv) InstallInput {
+	return InstallInput{
+		ProjectRoot: c.root,
+		ProjectID:   c.projectID,
+		Skills:      c.skills,
+		LockData:    c.lockData,
+		LockExists:  c.lockExists,
+		ReadFile:    env.readProject,
+		Stat:        env.stat,
+		ResolvePath: env.resolve,
+	}
+}
+
+func renderInstall(env installEnv, args []string, stdout, stderr io.Writer, exit func(int)) {
+	ctx, ok := prepareInstall("install", env, args, stdout, stderr, exit)
+	if !ok {
 		return
 	}
 
-	// Execute.
-	if err := ExecuteInstall(plan, stdout, stderr); err != nil {
+	plan, refusals := PlanInstallOwnership(ctx.input(env))
+	if len(refusals) > 0 {
+		for _, r := range refusals {
+			fmt.Fprintf(stderr, "error: %s\n", r)
+		}
+		fmt.Fprintln(stderr, "error: skills install: refused, so nothing was installed")
 		exit(1)
 		return
+	}
+	if err := ExecuteInstallPlan(plan, ctx.root, env.fsys, stderr); err != nil {
+		fmt.Fprintf(stderr, "error: %v\n", err)
+		exit(1)
+		return
+	}
+	for _, o := range plan.Skills {
+		fmt.Fprintf(stdout, "%s: %s\n", o.Status, o.ID)
 	}
 	exit(0)
 }

@@ -27,9 +27,103 @@ const ProceduralAuthor = "labdrian-overlay procedural"
 const ProjectLockRelPath = ".labdrian/procedural-skills.lock.json"
 
 // ProjectLock is the top-level shape of the project-tier lock file.
+//
+// Skills are the procedural skills written by project-register; Installs are the
+// registry skills written by `skills install`. They are two lists because they mean
+// different things: a procedural skill is one SKILL.md with one digest, written
+// identically to each target, and EvaluateOwnership proves it; an installed skill is
+// a tree of files, each with its own digest. Installs is optional and omitted when
+// empty, so a lock that never recorded an install is byte-for-byte what it was.
+// Version stays 1: every lock written before installs existed is still valid, and
+// an older program that reads one with installs refuses it (it rejects unknown
+// fields), which stops it rather than letting it misread what it cannot see.
 type ProjectLock struct {
-	Version int                `json:"version"`
-	Skills  []ProjectLockEntry `json:"skills"`
+	Version  int                   `json:"version"`
+	Skills   []ProjectLockEntry    `json:"skills"`
+	Installs []ProjectInstallEntry `json:"installs,omitempty"`
+}
+
+// ProjectInstallEntry records one registry skill `skills install` wrote into the
+// project: its id and, for every file of it, what the file held when it was written.
+// The same files, with the same digests, are in each target directory
+// (.claude/skills/<id>/ and .agents/skills/<id>/); which targets they are is the
+// fixed projectTargets table, not a field, as it is for a procedural skill.
+type ProjectInstallEntry struct {
+	ID    string               `json:"id"`
+	Files []ProjectInstallFile `json:"files"`
+}
+
+// ProjectInstallFile is one file of an installed skill: its path relative to the
+// skill directory, slash-separated, and the SHA-256 of the bytes that were written.
+type ProjectInstallFile struct {
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
+}
+
+// validateInstalls checks the install records the way Parse and Serialize both need
+// them checked, so that a lock one writes is one the other reads. what names the
+// caller in the error ("parse project lock").
+func validateInstalls(l ProjectLock, what string) error {
+	procedural := make(map[string]bool, len(l.Skills))
+	for _, e := range l.Skills {
+		procedural[e.ID] = true
+	}
+	seen := make(map[string]bool, len(l.Installs))
+	for _, in := range l.Installs {
+		if !slugRe.MatchString(in.ID) {
+			return fmt.Errorf("%s: install record id %q is not a skill id", what, in.ID)
+		}
+		if seen[in.ID] {
+			return fmt.Errorf("%s: duplicate install record for %q", what, in.ID)
+		}
+		seen[in.ID] = true
+		if procedural[in.ID] {
+			return fmt.Errorf("%s: %q is both a procedural skill and an installed skill", what, in.ID)
+		}
+		if len(in.Files) == 0 {
+			return fmt.Errorf("%s: install record %q lists no files", what, in.ID)
+		}
+		paths := make(map[string]bool, len(in.Files))
+		for _, f := range in.Files {
+			if !validInstallPath(f.Path) {
+				return fmt.Errorf("%s: install record %q has an invalid path %q (want a clean relative slash-separated path)", what, in.ID, f.Path)
+			}
+			if paths[f.Path] {
+				return fmt.Errorf("%s: install record %q lists %q twice (duplicate path)", what, in.ID, f.Path)
+			}
+			paths[f.Path] = true
+			if !validDigest(f.SHA256) {
+				return fmt.Errorf("%s: install record %q file %q has an invalid sha256 %q (want 64 lowercase hex digits)", what, in.ID, f.Path, f.SHA256)
+			}
+		}
+	}
+	return nil
+}
+
+// validInstallPath reports whether p can name a file inside a skill directory: a
+// non-empty, clean, relative, slash-separated path that stays inside it. The approval
+// record is governance state that is never installed, so it is never recorded.
+func validInstallPath(p string) bool {
+	if p == "" || strings.Contains(p, `\`) || path.IsAbs(p) || path.Clean(p) != p {
+		return false
+	}
+	if p == "." || p == ".." || strings.HasPrefix(p, "../") {
+		return false
+	}
+	return p != ApprovalRecordName
+}
+
+// validDigest reports whether s is a lowercase hex SHA-256.
+func validDigest(s string) bool {
+	if len(s) != 64 {
+		return false
+	}
+	for _, c := range s {
+		if (c < '0' || c > '9') && (c < 'a' || c > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // ProjectLockEntry records one project-tier procedural skill: its identity,
@@ -70,6 +164,9 @@ func ParseProjectLock(data []byte) (ProjectLock, error) {
 		}
 		seen[e.ID] = true
 	}
+	if err := validateInstalls(l, "parse project lock"); err != nil {
+		return ProjectLock{}, err
+	}
 	return l, nil
 }
 
@@ -104,11 +201,25 @@ func SerializeProjectLock(l ProjectLock) ([]byte, error) {
 		seen[e.ID] = true
 	}
 
+	if err := validateInstalls(l, "serialize project lock"); err != nil {
+		return nil, err
+	}
+
 	sorted := make([]ProjectLockEntry, len(l.Skills))
 	copy(sorted, l.Skills)
 	sort.SliceStable(sorted, func(i, j int) bool { return sorted[i].ID < sorted[j].ID })
 
 	out := ProjectLock{Version: version, Skills: sorted}
+	if len(l.Installs) > 0 {
+		out.Installs = make([]ProjectInstallEntry, len(l.Installs))
+		for i, in := range l.Installs {
+			files := make([]ProjectInstallFile, len(in.Files))
+			copy(files, in.Files)
+			sort.Slice(files, func(a, b int) bool { return files[a].Path < files[b].Path })
+			out.Installs[i] = ProjectInstallEntry{ID: in.ID, Files: files}
+		}
+		sort.Slice(out.Installs, func(i, j int) bool { return out.Installs[i].ID < out.Installs[j].ID })
+	}
 	data, err := json.MarshalIndent(out, "", "  ")
 	if err != nil {
 		return nil, fmt.Errorf("serialize project lock: %w", err)

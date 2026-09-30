@@ -1159,19 +1159,47 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 		return err
 	}
 
-	s := &projectStager{
+	s := newProjectStager(fsys, root, order, nil)
+	if err := s.stageAndCommit(stderr); err != nil {
+		return err
+	}
+
+	// Reported only once the whole set is committed: a `wrote:` line for a file
+	// that a later failure rolls back would be a lie, and the agent uses these
+	// lines as a git pathspec.
+	for _, w := range order {
+		fmt.Fprintf(stdout, "wrote: %s\n", w.Rel)
+	}
+	return nil
+}
+
+func newProjectStager(fsys projectFS, root string, order []ProjectWrite, deleting []bool) *projectStager {
+	return &projectStager{
 		fsys:      fsys,
 		root:      root,
 		order:     order,
+		deleting:  deleting,
 		temps:     make([]string, len(order)),
 		attempted: make([]bool, len(order)),
 		preMode:   make([]fs.FileMode, len(order)),
 	}
+}
+
+// isDelete reports whether order[i] removes its file instead of writing it.
+func (s *projectStager) isDelete(i int) bool { return i < len(s.deleting) && s.deleting[i] }
+
+// stageAndCommit stages every write and commits the whole order, rolling the tree
+// back to its pre-run state on any failure. It prints nothing.
+func (s *projectStager) stageAndCommit(stderr io.Writer) error {
+	fsys, order := s.fsys, s.order
 
 	// Stage: create each target directory, recording which ones this run
 	// created, and write every SKILL.md and the new lock to a same-directory
-	// temp at mode 0644.
+	// temp at mode 0644. A removal has nothing to stage.
 	for i, w := range order {
+		if s.isDelete(i) {
+			continue
+		}
 		dir := filepath.Dir(w.Abs)
 		if err := s.mkdirAll(dir); err != nil {
 			return s.rollback(stderr, fmt.Errorf("project-register: creating %q: %w", path.Dir(w.Rel), err))
@@ -1184,6 +1212,7 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 	}
 
 	// Commit: rename the SKILL.md temps in projectTargets order, the lock last.
+	// (An install also removes files, in its place in the order.)
 	for i, w := range order {
 		// The destination's REAL mode, read immediately before it is renamed
 		// over, is the only thing that can put it back the way it was. The
@@ -1204,17 +1233,16 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 		// — restoring identical bytes over an untouched file still replaces it,
 		// with a new inode and the planned mode (review round 4, D1).
 		s.attempted[i] = true
+		if s.isDelete(i) {
+			if err := fsys.Remove(w.Abs); err != nil {
+				return s.rollback(stderr, fmt.Errorf("project-register: removing %q: %w", w.Rel, err))
+			}
+			continue
+		}
 		if err := fsys.Rename(s.temps[i], w.Abs); err != nil {
 			return s.rollback(stderr, fmt.Errorf("project-register: committing %q: %w", w.Rel, err))
 		}
 		s.temps[i] = ""
-	}
-
-	// Reported only once the whole set is committed: a `wrote:` line for a file
-	// that a later failure rolls back would be a lie, and the agent uses these
-	// lines as a git pathspec.
-	for _, w := range order {
-		fmt.Fprintf(stdout, "wrote: %s\n", w.Rel)
 	}
 	return nil
 }
@@ -1232,6 +1260,7 @@ type projectStager struct {
 	fsys      projectFS
 	root      string
 	order     []ProjectWrite
+	deleting  []bool   // deleting[i]: order[i] removes its file (nil: nothing is removed)
 	temps     []string // "" once renamed away or never staged
 	created   []string // directories this run created
 	attempted []bool   // a rename over order[i].Abs was reached for
