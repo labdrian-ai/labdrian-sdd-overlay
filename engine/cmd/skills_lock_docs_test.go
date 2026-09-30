@@ -35,6 +35,11 @@ func TestDocsDescribeTheSkillsLockAndTheBusyExit(t *testing.T) {
 			"exit 2",
 			"retry",
 			"never removed",
+			// The project lock: which verbs, on what, and that no file is created.
+			"project-register, project-revise, project-retire and install",
+			"project root directory itself",
+			"no file is created in the project",
+			"overlay lock first",
 		} {
 			if !strings.Contains(text, want) {
 				t.Errorf("%s does not say %q", name, want)

@@ -6,6 +6,7 @@ package main
 // engine/skills/lock.go for which verb takes which lock and why.
 
 import (
+	"path/filepath"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
@@ -28,9 +29,26 @@ func newSkillsLocker() skills.Locker { return fileLocker{wait: skillsLockWait} }
 // Lock takes an advisory file lock. It returns filelock's errors as they are, so
 // that a *filelock.BusyError still answers Busy() to engine/skills.
 func (l fileLocker) Lock(path string, mode skills.LockMode) (func(), error) {
+	return filelock.Acquire(path, l.options(mode))
+}
+
+// LockDir locks a directory itself, so that no file appears in it. The path is
+// resolved through symlinks first: the lock is on the directory, whatever way the
+// caller reached it (a working directory reached through a symlinked $PWD is the
+// ordinary case), and filelock refuses a symlink as the final component. A path
+// that cannot be resolved is an error, not a lock that is skipped.
+func (l fileLocker) LockDir(dir string, mode skills.LockMode) (func(), error) {
+	real, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return nil, err
+	}
+	return filelock.AcquireDir(real, l.options(mode))
+}
+
+func (l fileLocker) options(mode skills.LockMode) filelock.Options {
 	m := filelock.Exclusive
 	if mode == skills.LockShared {
 		m = filelock.Shared
 	}
-	return filelock.Acquire(path, filelock.Options{Mode: m, Wait: l.wait})
+	return filelock.Options{Mode: m, Wait: l.wait}
 }

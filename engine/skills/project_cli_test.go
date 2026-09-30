@@ -604,7 +604,7 @@ func TestSkillsCore_DispatchesProjectRegister(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	exitCode := -1
 	args := append([]string{"project-register"}, registerArgs(e, "--dry-run")...)
-	SkillsCore("project-register", args, os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
+	skillsCoreUnlocked("project-register", args, os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
 
 	if exitCode != 0 {
 		t.Fatalf("expected exit 0 through SkillsCore, got %d, stderr: %q", exitCode, errBuf.String())
@@ -786,7 +786,7 @@ func TestSkillsCore_DispatchesProjectReviseAndStatus(t *testing.T) {
 
 	var reviseOut, reviseErr bytes.Buffer
 	reviseExit := -1
-	SkillsCore("project-revise", append([]string{"project-revise"}, registerArgs(e, "--dry-run")...), os.ReadFile, &reviseOut, &reviseErr, func(c int) { reviseExit = c })
+	skillsCoreUnlocked("project-revise", append([]string{"project-revise"}, registerArgs(e, "--dry-run")...), os.ReadFile, &reviseOut, &reviseErr, func(c int) { reviseExit = c })
 	if reviseExit != 0 {
 		t.Fatalf("project-revise dispatch exit = %d, stderr %q", reviseExit, reviseErr.String())
 	}
@@ -829,7 +829,7 @@ func TestSkillsCore_DispatchesProjectRetireAndRemovesRegisteredSkill(t *testing.
 	var out, errBuf bytes.Buffer
 	exitCode := -1
 	args := append([]string{"project-retire"}, projectRetireArgs(e, id, "--reason", "human-request")...)
-	SkillsCore("project-retire", args, os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
+	skillsCoreUnlocked("project-retire", args, os.ReadFile, &out, &errBuf, func(c int) { exitCode = c })
 	if exitCode != 0 {
 		t.Fatalf("project-retire dispatch exit = %d, stderr %q", exitCode, errBuf.String())
 	}

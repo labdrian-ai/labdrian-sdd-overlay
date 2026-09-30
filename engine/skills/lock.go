@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"strings"
 )
 
 // LockMode is how a lock is held.
@@ -34,7 +35,13 @@ const (
 // stayed taken past the bound and the call can be retried; any other error means
 // the lock could not be taken at all.
 type Locker interface {
+	// Lock takes the lock on the lock file at path, creating it for an exclusive
+	// lock and never for a shared one.
 	Lock(path string, mode LockMode) (unlock func(), err error)
+	// LockDir takes the lock on the directory dir itself, creating nothing in it:
+	// for a directory that belongs to the user, such as a project root. It fails,
+	// rather than doing without, when dir cannot be locked.
+	LockDir(dir string, mode LockMode) (unlock func(), err error)
 }
 
 // ExitBusy is the exit code of a skills verb that could not run because another
@@ -54,6 +61,7 @@ func RegistryLockPath(registryPath string) string {
 // lockRequest is one lock a verb needs before it runs.
 type lockRequest struct {
 	path    string
+	dir     bool // path is a directory locked itself (a project root), not a lock file
 	mode    LockMode
 	subject string // what the lock protects, for the messages
 }
@@ -74,26 +82,91 @@ type lockRequest struct {
 //     directories the writers above touch. Neither writes anything in the overlay,
 //     so shared is enough, any number of them run together, and a shared lock never
 //     creates the lock file, so both work on a read-only overlay.
-//   - list, status, lint and the project verbs read one atomic file or none: none.
+//   - list, status, lint: one atomic file or none, so none.
+//
+// Project lock, keyed by the project root directory, taken on the directory itself
+// so that no file appears in the user's repository:
+//
+//   - project-register, project-revise, project-retire, install: exclusive. Each
+//     reads the project's lock file (.labdrian/procedural-skills.lock.json), decides,
+//     and writes it back together with the skill files it stages, so two of them on
+//     one root lose an update, or leave a skill written and unregistered. install is
+//     the same read-decide-write on the project's .claude/skills. A verb that finds
+//     no usable project root (the flag is missing, has no value, or is relative)
+//     takes no lock: it refuses before it reads or writes anything.
+//   - project-status only reads and reports; it takes none.
+//
+// LOCK ORDER. A verb that needs both takes the overlay lock first and the project
+// lock second, and lets go in the opposite order. Every verb that holds two locks
+// must follow this, including the ones added later (install's ownership work
+// inherits it); the requests below are listed in that order, and
+// TestLockRequestsAreAlwaysOverlayBeforeProject fails if a verb asks for them the
+// other way round.
 //
 // Every read of shared state happens after the locks are held, in the verb itself,
 // so nothing decided before the lock is trusted after it.
 func lockRequestsFor(verb string, args []string) []lockRequest {
-	var mode LockMode
+	var requests []lockRequest
+	overlay := func(mode LockMode) {
+		registryPath, _, _, _, _, _ := parseFlags(args)
+		requests = append(requests, lockRequest{
+			path:    RegistryLockPath(registryPath),
+			mode:    mode,
+			subject: "the registry " + registryPath,
+		})
+	}
+	project := func(root string) {
+		requests = append(requests, lockRequest{
+			path:    filepath.Clean(root),
+			dir:     true,
+			mode:    LockExclusive,
+			subject: "the project " + filepath.Clean(root),
+		})
+	}
 	switch verb {
 	case "add", "remove", "sync-manifest", "approve":
-		mode = LockExclusive
-	case "validate", "install":
-		mode = LockShared
-	default:
-		return nil
+		overlay(LockExclusive)
+	case "validate":
+		overlay(LockShared)
+	case "install":
+		overlay(LockShared)
+		// install writes into the working directory. If that cannot be resolved the
+		// verb reports it itself, before it writes anything.
+		if cwd, err := installCwd(); err == nil && filepath.IsAbs(cwd) {
+			project(cwd)
+		}
+	case "project-register", "project-revise", "project-retire":
+		if root, ok := projectRootArg(args); ok {
+			project(root)
+		}
 	}
-	registryPath, _, _, _, _, _ := parseFlags(args)
-	return []lockRequest{{
-		path:    RegistryLockPath(registryPath),
-		mode:    mode,
-		subject: "the registry " + registryPath,
-	}}
+	return requests
+}
+
+// projectRootArg is the project root the project verbs will use, read the way they
+// read it: the last --project-root before an end-of-options marker, whose value must
+// be present, must not look like a flag, and must be an absolute path. When it is
+// not, the verb is about to refuse, before it reads or writes anything, so there is
+// nothing to lock.
+func projectRootArg(args []string) (string, bool) {
+	root := ""
+	for i := 0; i < len(args); i++ {
+		if args[i] == "--" {
+			break
+		}
+		if args[i] != "--project-root" {
+			continue
+		}
+		if i+1 >= len(args) || strings.HasPrefix(args[i+1], "-") {
+			return "", false
+		}
+		root = args[i+1]
+		i++
+	}
+	if root == "" || !filepath.IsAbs(root) {
+		return "", false
+	}
+	return root, true
 }
 
 // acquireLocks takes every lock the verb needs, in order, and returns the function
@@ -121,14 +194,22 @@ func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, e
 		}
 	}
 	for _, req := range requests {
-		unlock, err := locker.Lock(req.path, req.mode)
+		var unlock func()
+		var err error
+		what := "lock " + req.path
+		if req.dir {
+			what = "lock on the directory " + req.path
+			unlock, err = locker.LockDir(req.path, req.mode)
+		} else {
+			unlock, err = locker.Lock(req.path, req.mode)
+		}
 		if err != nil {
 			releaseAll()
 			if isBusy(err) {
-				fmt.Fprintf(stderr, "error: skills %s: another skills command is in progress for %s (lock %s); nothing was changed, retry in a moment\n", verb, req.subject, req.path)
+				fmt.Fprintf(stderr, "error: skills %s: another skills command is in progress for %s (%s); nothing was changed, retry in a moment\n", verb, req.subject, what)
 				exit(ExitBusy)
 			} else {
-				fmt.Fprintf(stderr, "error: skills %s: cannot take the lock %s: %v\n", verb, req.path, err)
+				fmt.Fprintf(stderr, "error: skills %s: cannot take the %s: %v\n", verb, what, err)
 				exit(1)
 			}
 			return nil, false

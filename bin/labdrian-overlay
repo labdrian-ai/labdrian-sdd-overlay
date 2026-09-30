@@ -628,6 +628,11 @@ Commands:
                                    taken for 2 seconds means another skills command is in progress: the verb
                                    changes nothing and reports it with exit 2 (retry). Exit 1 is unchanged: the
                                    verb ran or was refused, or the lock could not be created at all.
+                                   Project lock: project-register, project-revise, project-retire and install also
+                                   take an exclusive lock on the project root directory itself (--project-root, or
+                                   install's working directory), so no file is created in the project; a busy one is
+                                   exit 2 too, and a filesystem that cannot lock a directory refuses the verb (exit 1).
+                                   A verb that holds both takes the overlay lock first, then the project lock.
   shaper <verb>                    Forward Shaper handoff verbs to the engine unchanged
                                    assess    read-only readiness (exit 0 ready, 3 draft, 2 invalid)
                                    clearance record --stdin  store a human decision (Pi /shaper-clear)
