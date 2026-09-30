@@ -351,7 +351,9 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 		},
 		capability.TargetOpenCode: {
 			"labdrian apply copies global skills into OpenCode's skills directory", fixtureOnly, "never the real skills",
-			"not used on this machine", "no test connects the project tier to OpenCode",
+			"A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills",
+			"recorded, not tested", "the global tier was not observed live", "its names also existing in several global directories",
+			"No test observes OpenCode loading a skill", "no test connects the project tier to OpenCode",
 		},
 	} {
 		detail := skillsClaim(t, target).Detail
@@ -363,9 +365,13 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 	}
 
 	// A claim names no runtime but its own. "Pi" is matched as a word, so that the
-	// prefix of another word cannot trip it.
+	// prefix of another word cannot trip it. Claude Code is matched by its name and by
+	// its user-level directory ~/.claude, not by the project directory .claude/skills:
+	// like .agents/skills, that one is shared. skills install writes it for every
+	// project, and a live OpenCode session discovered skills placed in it (2026-09-30),
+	// so OpenCode's claim may name it without naming Claude Code.
 	names := map[string]*regexp.Regexp{
-		capability.TargetClaude:   regexp.MustCompile(`Claude|\.claude`),
+		capability.TargetClaude:   regexp.MustCompile(`Claude|~/\.claude`),
 		capability.TargetCodex:    regexp.MustCompile(`Codex|\.codex`),
 		capability.TargetPi:       regexp.MustCompile(`\bPi\b|\.pi/`),
 		capability.TargetOpenCode: regexp.MustCompile(`OpenCode|opencode`),
@@ -377,8 +383,8 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 				continue
 			}
 			// ~/.codex/skills and .pi/skills are named by the claims that own them, and
-			// the shared .agents/skills is named by several, so only runtime names and
-			// each runtime's own directory count as a mention.
+			// the shared .agents/skills and .claude/skills are named by several, so only
+			// runtime names and each runtime's own directory count as a mention.
 			if loc := re.FindString(detail); loc != "" {
 				t.Errorf("%s skills detail %q names %s (%q)", target, detail, other, loc)
 			}

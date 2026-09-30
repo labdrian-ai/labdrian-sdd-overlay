@@ -140,6 +140,7 @@ The hooks run in the background: `UserPromptSubmit` (propagate) keeps skill regi
 labdrian sync-check                         # UPSTREAM_CHANGED detected
 labdrian capture --target claude            # pull new vendor files into upstream
 labdrian apply                              # re-merge your customizations + redeploy
+labdrian skills validate                    # exit 1 lists the global skills the merge changed: approve each one (see "Normal update cycle")
 labdrian sync-check                         # confirm: healthy
 ```
 
@@ -209,12 +210,23 @@ overlay capture --from-backup ~/.gentle-ai/backups/<new-backup>/snapshot.tar.gz
 # 2. Merge upstream into main and deploy to all targets
 overlay apply
 
-# 3. Check drift at any time
+# 3. Check the approvals of the global skills the merge may have changed
+overlay skills validate
+
+# 4. Check drift at any time
 overlay status
 overlay status --target opencode
 ```
 
-That's it. If there are merge conflicts, `overlay apply` exits 1 and tells you exactly which files to resolve.
+If there are merge conflicts, `overlay apply` exits 1 and tells you exactly which files to resolve.
+
+**After the merge, review the skills it changed (step 3).** A global skill's approval record binds the exact bytes of its `SKILL.md`, so a merge that changes a skill (core skills included, baseline ones too) makes `skills validate` exit 1 and report `APPROVAL_MISSING` (a baseline skill whose bytes changed) or `APPROVAL_STALE` (a skill with a record). For every global skill it reports, review the change (for example `git diff` of `skills/<id>/SKILL.md`), and only then run, in a terminal:
+
+```bash
+labdrian skills approve --id <id> --approver <name>
+```
+
+An agent cannot do this for you: the approve guard denies it (a speed bump, not a security boundary). A baseline skill whose only hard-lint findings are its size or its description (`body-hard-budget`, `description-max`, `description-one-line`) is approved with `warning:` lines on stderr instead of being refused; any other hard finding, such as a missing front matter, refuses it like any skill. Run `skills validate` again until it exits 0. Until you do, the merged skills are deployed but not approved, and `skills validate` keeps exiting 1.
 
 ## sync-check — validating gentle-ai sync state
 
@@ -387,7 +399,7 @@ overlay skills <verb>
     Manage the skills registry (skills.registry.yaml) and overlay.manifest.
     list         [--registry <path>]                                               print sorted registry entries (id, source type, update strategy, targets)
     status       [--registry <path>]                                               print count summary (total / core / custom)
-    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 37 skills present at the Phase 8 base are grandfathered while their bytes are unchanged); exit 1 on any divergence
+    validate     [--registry <path>] [--manifest <path>] --source-root <path>      cross-check registry vs manifest and skills/ on disk vs manifest, and that every global skill has a valid approval record (the 37 global skills present at the Phase 8 base, which is `main` at `53f545d`, the commit the skill lifecycle was built on, are grandfathered while their bytes are unchanged); exit 1 on any divergence
     install      [--registry <path>] [--source-root <path>] [--project-id <id>]   install the project-scoped skills admitted for the project into <cwd>/.claude/skills/ and <cwd>/.agents/skills/, replacing only what it installed and left unmodified (see below)
     adopt        [--registry <path>] [--source-root <path>] [--project-id <id>]   record skill directories already in the project as installed by `skills install`, only when they are exactly the current source
     add          <id> [--registry <path>] [--manifest <path>] [--source-root <path>] [--repo <url>] [--ref <sha>]  register a skill (custom or external); refused, with nothing written, unless skills/<id>/.approval.json approves the exact SKILL.md bytes (see approve)
@@ -395,8 +407,27 @@ overlay skills <verb>
     sync-manifest [--registry <path>] [--manifest <path>]                          regenerate */SKILL.md rows from registry; preserves all non-skill lines
     approve      --id <id> --approver <label> --source-root <path>                 record a human approval of skills/<id>/SKILL.md in skills/<id>/.approval.json, bound to the SHA-256 of its exact bytes
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
+                 A skill that fails the hard lint is refused, except a baseline skill (the 37 grandfathered global skills, which predate the lint budget and will be
+                 rewritten in a later feature): for those, approve prints each hard finding as a `warning: [lint:<rule>] ... (baseline skill: approved with lint findings)`
+                 line on stderr, still records the approval of the exact bytes, and exits 0, so an upstream merge that changes one of them can be approved. Only the
+                 legacy rules warn (body-hard-budget, description-max, description-one-line); any other hard finding, such as a missing front matter, refuses a
+                 baseline skill too. `add` is unchanged: it still refuses a hard lint finding for every skill.
                  Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
                  `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
+    lint         <path> | --rules                                                  lint a SKILL.md file against the authoritative rule table, or print the table; exit 1 on any hard finding (warnings never block)
+    project-register --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>
+                 register an agent-owned, project-tier procedural skill: write <root>/.claude/skills and <root>/.agents/skills and the project lock; --dry-run prints the plan and writes nothing
+    project-revise   --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>
+                 revise an agent-owned project skill the same way
+    project-status   --project-root <abs> [--registry <path>] [<id>]
+                 report project-tier ownership and global supersession from the project lock (read-only)
+    project-retire   --project-root <abs> [--dry-run] [--reason <text>] [--absorbed-into <id>] [--registry <path>] <id>
+                 retire an agent-owned project skill; an explicit decision that nothing in the engine takes for you, not even the retirement detector; --dry-run prints the removal plan
+    The project tier stays autonomous: project-register, project-revise, and project-retire need no approval record.
+    What the approval digest binds. The record holds the SHA-256 of the exact bytes of SKILL.md, so any byte change makes it stale. A tree-wide rewrite of
+    line endings or whitespace (for example a git attribute change such as `text=auto eol=crlf`, or an editor that normalizes whitespace on save) therefore
+    changes every skill at once: each baseline skill then needs `approve` again (validate reports APPROVAL_MISSING) and so does each approved skill
+    (APPROVAL_STALE). That is the intended guarantee (exact bytes), not a bug; do such a rewrite deliberately, and approve the skills afterwards.
     What install owns. install records every file it writes, with its SHA-256, in the project lock
     (.labdrian/procedural-skills.lock.json, in an "installs" array beside the procedural skills; an older program that
     reads a lock with installs refuses it instead of misreading it). On the next run it replaces only the files that
@@ -578,9 +609,12 @@ gentle-ai-overlay runtime capabilities [--target claude|codex|pi|opencode|all]
     on a fixture overlay and a sandbox home, never the real skills tree. Unused-skill detection is report-only
     and exists for the project tier only (longterm-mem's skillstale check); a global skill is retired by hand.
     No test observes a runtime loading a skill. Codex reading a project skill at .agents/skills was observed
-    once live (2026-09-28, Codex 0.148.0) and is recorded in odd/tasks/phase5-closeout.md, not tested. A
-    bound Claude Code session's projected context lists every capability that is not supported, so it now
-    lists skills=partial with the others.
+    once live (2026-09-28, Codex 0.148.0) and is recorded in odd/tasks/phase5-closeout.md, not tested. A live
+    OpenCode 1.18.31 session discovered project skills placed under .agents/skills and .claude/skills (2026-09-30;
+    recorded in the Phase 8 ledger, odd/tasks/skill-lifecycle.md, not tested); its global tier was not observed live,
+    because the skill names also exist in several global directories OpenCode reads. A bound Claude Code
+    session's projected context lists every capability that is not supported, so it now lists skills=partial
+    with the others.
 
 gentle-ai-overlay runtime probe [--target claude|codex|pi|all]
     Engine verb (Phase 7), run on the installed engine binary like runtime capabilities. Read-only and

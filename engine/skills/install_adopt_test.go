@@ -277,11 +277,9 @@ func TestAdopt_RefusesWhenTheTwoRuntimeDirectoriesAreTheSameDirectory(t *testing
 	if err := os.MkdirAll(filepath.Join(f.root, ".agents"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(filepath.Join(f.root, ".claude", "skills"), filepath.Join(f.root, ".agents", "skills")); err != nil {
-		// Some platforms and accounts cannot make a symbolic link (Windows without the
-		// privilege, for one). The premise of the test is the link, not the platform.
-		t.Skipf("cannot make a symbolic link here: %v", err)
-	}
+	// The premise of the test is the link: it skips only where links cannot be made
+	// (makeSymlink), and fails on Linux, where CI runs, on any other error.
+	makeSymlink(t, filepath.Join(f.root, ".claude", "skills"), filepath.Join(f.root, ".agents", "skills"))
 
 	plan, refusals := f.adoptPlan(skill("pdf", pdfV1))
 

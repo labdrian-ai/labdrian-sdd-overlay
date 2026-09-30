@@ -28,9 +28,21 @@ import (
 //     even when an agent ran the command), and --source-root is given (no
 //     cwd-derived fallback, the R-002 precedent from RenderValidateCore);
 //   - <source-root>/<id>/SKILL.md exists and passes the same hard lint
-//     `skills add` enforces (warnings never block);
+//     `skills add` enforces (warnings never block), unless id is in the approval
+//     baseline (see below);
 //   - an existing record file is readable (an unreadable one is refused rather
 //     than overwritten blind).
+//
+// A skill in the approval baseline (by id, whatever its current bytes) is not
+// refused for hard lint findings. The baseline skills predate the lint budget
+// and most of them fail it, so refusing them would leave no way to approve the
+// change an upstream merge makes to their bytes; they will be rewritten within
+// the budget in a later feature. For them each hard finding is printed on
+// stderr as a warning (see baselineLintWarning), the approval of the exact bytes
+// is recorded, and the exit is 0. The warnings are printed only once the
+// approval has happened, never for one that was refused or failed. The record
+// format does not change, and `skills add` keeps refusing hard findings for
+// every skill.
 //
 // Re-approving identical bytes is idempotent: a valid record is left exactly as
 // it is, so the original approver and time stay the record of who approved
@@ -159,12 +171,26 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 		fail("skill %q: SKILL.md not found or unreadable at %q: %v", id, skillPath, err)
 		return
 	}
-	if hard, _ := LintSkillFile(skillData); len(hard) > 0 {
-		for _, finding := range hard {
-			fmt.Fprintln(stderr, finding)
+	// Hard lint refuses a skill outside the approval baseline. A baseline skill
+	// predates the lint budget (most of the 37 fail it today), and refusing it would
+	// leave no way to approve the change an upstream merge makes to its bytes, so
+	// its legacy findings (size and description shape, see legacyBaselineLintRules)
+	// are warned about, after the approval, and do not block it. Any other hard
+	// finding means the file is not a usable skill (a truncated or corrupted merge,
+	// for example) and refuses a baseline skill too.
+	hard, _ := LintSkillFile(skillData)
+	var warnings []string
+	if len(hard) > 0 {
+		if _, inBaseline := baselineDigest(id); !inBaseline || !allLegacyBaselineFindings(hard) {
+			for _, finding := range hard {
+				fmt.Fprintln(stderr, finding)
+			}
+			exit(1)
+			return
 		}
-		exit(1)
-		return
+		for _, finding := range hard {
+			warnings = append(warnings, baselineLintWarning(finding))
+		}
 	}
 
 	digest := SkillDigest(skillData)
@@ -195,10 +221,46 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 		}
 	}
 
+	// Only now: a warning says these bytes are approved, so none is printed for an
+	// approval that was refused or failed above.
+	for _, warning := range warnings {
+		fmt.Fprintln(stderr, warning)
+	}
 	fmt.Fprintf(stdout, "%s: %s\n", verdict, id)
 	fmt.Fprintf(stdout, "sha256: %s\n", digest)
 	fmt.Fprintf(stdout, "record: %s\n", filepath.ToSlash(recordPath))
 	exit(0)
+}
+
+// baselineLintWarning is the stderr line for one hard lint finding of a baseline
+// skill that `skills approve` records an approval for anyway: the finding as the
+// lint prints it, marked as a warning and saying why it did not refuse.
+// legacyBaselineLintRules are the hard lint rules the baseline skills already
+// broke before the lint budget existed: the body budget and the description's
+// length and shape. Only these become warnings for a baseline skill.
+var legacyBaselineLintRules = []string{"body-hard-budget", "description-max", "description-one-line"}
+
+// allLegacyBaselineFindings reports whether every hard finding comes from a
+// legacy rule. Findings render as "[lint:<rule>] ..."; anything else, including a
+// finding with no rule prefix, is structural and refuses.
+func allLegacyBaselineFindings(hard []error) bool {
+	for _, finding := range hard {
+		legacy := false
+		for _, rule := range legacyBaselineLintRules {
+			if strings.HasPrefix(finding.Error(), "[lint:"+rule+"]") {
+				legacy = true
+				break
+			}
+		}
+		if !legacy {
+			return false
+		}
+	}
+	return true
+}
+
+func baselineLintWarning(finding error) string {
+	return "warning: " + finding.Error() + " (baseline skill: approved with lint findings)"
 }
 
 // writeApprovalRecord writes data to path atomically: a temp file in the same

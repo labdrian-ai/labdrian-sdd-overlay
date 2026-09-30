@@ -466,7 +466,7 @@ third. `.pi/skills/` is never written by this capability.
 | Directory | Runtime(s) | Status | Evidence |
 |---|---|---|---|
 | `.claude/skills/` | Claude Code | verified | Claude Code loads project skills from `.claude/skills/<id>/SKILL.md` directly; no trust prompt applies. |
-| `.agents/skills/` | Pi (always, after project trust); Codex (discovery only, on this host) | verified | Pi: installed Pi docs (`docs/security.md`, `docs/skills.md`) list project `.agents/skills` as a trust-requiring resource; project skills load only after trust. Codex: `codex-smoke.md` (2026-09-18, Codex 0.148.0) recorded verdict `PASS`, scoped to discovery of `.agents/skills/<id>/` (name and description exposed in Codex's skill list); loading the skill body is unverified on this host, because the body-read probe hit a host filesystem-sandbox limitation, not a discovery failure. |
+| `.agents/skills/` | Pi (always, after project trust); Codex (discovery and body loading, on this host) | verified | Pi: installed Pi docs (`docs/security.md`, `docs/skills.md`) list project `.agents/skills` as a trust-requiring resource; project skills load only after trust. Codex: `codex-smoke.md` (2026-09-18, Codex 0.148.0) recorded verdict `PASS`, scoped to discovery of `.agents/skills/<id>/` (name and description exposed in Codex's skill list); loading the skill body was inconclusive then, because the body-read probe hit a host filesystem-sandbox limitation, not a discovery failure, and was verified live on 2026-09-28 (Codex 0.148.0): with a nonce present only in a project skill's body, `codex exec` read `.agents/skills/<id>/SKILL.md` through its own sandboxed shell and answered the exact nonce, after three host-side causes were fixed without weakening the sandbox (record: `odd/tasks/phase5-closeout.md`, C4). |
 
 **Pi trust note**: writing to `.agents/skills/` in a project Pi has not yet
 trusted makes Pi prompt for project trust once, on its next start, under the
@@ -611,8 +611,13 @@ Global promotion is a human-gated decision. The project-tier agent may
 prepare a candidate handoff and a linted project skill, but it MUST NOT write
 under the overlay's global `skills/` tree and it MUST NOT set the candidate's
 `Status` to `promoted`. The only global promotion path is the existing human
-`engine skills add` / `AddCore` path; this procedure adds no new CLI surface,
-no new approval machinery, no TTL, and no implicit consent from silence.
+`engine skills add` / `AddCore` path, which since Phase 8 also requires a
+typed human approval: the global tier has an approval record, written by
+`labdrian skills approve`, bound to the SHA-256 of the exact `SKILL.md` bytes
+(step 3). The project tier is unchanged and stays autonomous: no approval
+record applies to it, and `project-register` and `project-revise` need none.
+This procedure adds no further CLI surface, no TTL, and no implicit consent
+from silence.
 
 **Silence is not consent.** No response, elapsed time, an unreviewed draft, or
 an absent objection promotes a skill. Until a human explicitly reviews and
@@ -631,14 +636,24 @@ manifest row is written.
    the agent, copies the approved bytes into the overlay source path
    `skills/<id>/SKILL.md`; this is the only promotion-time write under
    `skills/`.
-3. **Run the existing add path.** From the overlay repository, the human
-   invokes the unmodified `engine skills add <id>` command (or the established
-   wrapper invocation with the same `add` verb and explicit registry,
-   manifest, and source-root paths). No promotion-specific command is
-   introduced. `AddCore` first verifies that `skills/<id>/SKILL.md` exists,
-   then runs `LintSkillFile` before serializing either the manifest or the
-   registry. A hard finding prints its `[lint:<rule>]` error and refuses the
-   add without changing either file; warnings are non-blocking.
+3. **Approve the exact bytes, then run the existing add path.** From the
+   overlay repository, the human first runs `labdrian skills approve --id <id>
+   --approver <name>` in a terminal, which records the approval in
+   `skills/<id>/.approval.json`, bound to the SHA-256 of the exact `SKILL.md`
+   bytes; the record is committed with the skill, and a change to the bytes
+   afterwards makes it stale. A `PreToolUse` guard denies the agent running
+   `approve` or writing the record by hand: a speed bump, not a security
+   boundary, and the engine cannot prove that a human ran the command. The
+   human then invokes the unmodified `engine skills add <id>` command (or the
+   established wrapper invocation with the same `add` verb and explicit
+   registry, manifest, and source-root paths). No promotion-specific command
+   is introduced. `AddCore` first verifies that `skills/<id>/SKILL.md` exists,
+   then runs `LintSkillFile`, then requires a valid approval record for the
+   exact bytes, all before serializing either the manifest or the registry. A
+   hard finding prints its `[lint:<rule>]` error, and a missing, stale, or
+   malformed record prints its `[APPROVAL_*]` reason with the `approve`
+   command to run; either refuses the add without changing either file;
+   warnings are non-blocking.
 4. **Record the human transition.** Only after the human's add operation and
    overlay commit succeed does the agent read the exact promoted file bytes
    and append, without rewriting prior entries:
