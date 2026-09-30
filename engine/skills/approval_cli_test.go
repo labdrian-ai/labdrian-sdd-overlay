@@ -117,6 +117,27 @@ func TestApprove_TrimsTheApproverLabel(t *testing.T) {
 	}
 }
 
+func TestApprove_AnApproverOfExactlyTheBoundIsAccepted(t *testing.T) {
+	// The bound is in runes, not bytes: 100 two-byte runes are 200 bytes and
+	// must pass, and the label must survive the write and the strict re-read
+	// unchanged.
+	for name, label := range map[string]string{
+		"ascii":     strings.Repeat("a", ApprovalApproverMaxRunes),
+		"multibyte": strings.Repeat("é", ApprovalApproverMaxRunes),
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := newApproveEnv(t, "my-skill")
+			args := []string{"--id", e.id, "--approver", label, "--source-root", e.root}
+			if _, stderr, code := runApprove(args, fixedClock(approveFixedNow)); code != 0 {
+				t.Fatalf("exit = %d, want 0 for a label of exactly %d runes; stderr=%q", code, ApprovalApproverMaxRunes, stderr)
+			}
+			if got := readRecord(t, e.recordPath()).Approver; got != label {
+				t.Errorf("approver = %q, want the %d-rune label unchanged", got, ApprovalApproverMaxRunes)
+			}
+		})
+	}
+}
+
 func TestApprove_ReapprovingIdenticalBytesIsIdempotent(t *testing.T) {
 	e := newApproveEnv(t, "my-skill")
 	if _, stderr, code := runApprove(e.args(), fixedClock(approveFixedNow)); code != 0 {
@@ -206,6 +227,21 @@ func TestApprove_RefusesWithoutWritingAnything(t *testing.T) {
 		{"flag without a value", func(e approveEnv) []string { return []string{"--id"} }, fixedClock(approveFixedNow), "--id"},
 		{"flag value that is a flag", func(e approveEnv) []string { return []string{"--id", "--approver", "r"} }, fixedClock(approveFixedNow), "--id"},
 		{"stray positional", func(e approveEnv) []string { return e.args("extra") }, fixedClock(approveFixedNow), "extra"},
+		// approve takes no positional argument, so an end-of-options marker
+		// would have nothing to protect: it is an unknown flag like any other,
+		// and it must not switch the parser into a mode that changes anything.
+		{"end-of-options marker", func(e approveEnv) []string { return e.args("--") }, fixedClock(approveFixedNow), `unknown flag "--"`},
+		{"end-of-options marker before the flags", func(e approveEnv) []string {
+			return append([]string{"--"}, e.args()...)
+		}, fixedClock(approveFixedNow), `unknown flag "--"`},
+		// The refusal of a value that begins with "-" is deliberate (a flag
+		// where a value belongs is a common mistake, and no sibling verb has a
+		// --flag=value form), and for the approver it says why in its own words.
+		{"approver that begins with a dash", func(e approveEnv) []string { return e.args("--approver", "-jo") }, fixedClock(approveFixedNow), `--approver`},
+		{"approver that is a lone dash", func(e approveEnv) []string { return e.args("--approver", "-") }, fixedClock(approveFixedNow), `starts with "-"`},
+		{"approver of one rune over the bound", func(e approveEnv) []string {
+			return e.args("--approver", strings.Repeat("é", ApprovalApproverMaxRunes+1))
+		}, fixedClock(approveFixedNow), "exceeds the bound"},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
