@@ -3,6 +3,7 @@ package projection_test
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 	"unicode"
@@ -158,7 +159,8 @@ func TestParseHookInputIgnoresTheSessionAndThePromptEntirely(t *testing.T) {
 func TestParseHookInputAcceptsOnlyAnAbsoluteWorkingDirectory(t *testing.T) {
 	for _, tt := range []struct{ name, cwd, want string }{
 		{"absolute", `"/home/u/repo"`, "/home/u/repo"},
-		{"absolute with dot segments", `"/home/u/../v/repo"`, "/home/u/../v/repo"},
+		{"absolute with dot segments is cleaned", `"/home/u/../v/repo"`, "/home/v/repo"},
+		{"absolute with a trailing slash and repeated separators is cleaned", `"/home//u/repo/"`, "/home/u/repo"},
 		{"relative", `"repo/sub"`, ""},
 		{"dot", `"."`, ""},
 		{"dot dot", `".."`, ""},
@@ -335,7 +337,7 @@ func TestProjectAnnouncesAClosedWorkflowAndAsksForItsBindingToBeRemoved(t *testi
 			if strings.Contains(got.Context, "\n") {
 				t.Errorf("context %q is more than one line", got.Context)
 			}
-			for _, want := range []string{"wf-1", "proj-1", "closed (" + string(outcome) + ")", "binding", "removed"} {
+			for _, want := range []string{"wf-1", "proj-1", "closed (" + string(outcome) + ")"} {
 				if !strings.Contains(got.Context, want) {
 					t.Errorf("context %q does not mention %q", got.Context, want)
 				}
@@ -343,7 +345,96 @@ func TestProjectAnnouncesAClosedWorkflowAndAsksForItsBindingToBeRemoved(t *testi
 			if strings.Contains(got.Context, "reason") {
 				t.Errorf("context %q repeats the close reason", got.Context)
 			}
+			// Project only decides that the binding should go. Whether it went is
+			// known only after the caller tried, so Project itself claims nothing.
+			if strings.Contains(got.Context, "removed") || strings.Contains(got.Context, "being removed") {
+				t.Errorf("context %q claims a removal before anything was removed", got.Context)
+			}
 		})
+	}
+}
+
+// TestAfterUnbindStatesWhatTheRemovalDid: the note of a closed workflow says the
+// binding was removed only when the store reported it, says the removal failed
+// (and how to finish it) when it errored, and says it was left alone when it was
+// already gone or replaced.
+func TestAfterUnbindStatesWhatTheRemovalDid(t *testing.T) {
+	w := loadedWorkflow("odd", workflow.StatusClosed, "authorize")
+	w.State.CloseOutcome = workflow.OutcomeAbandoned
+	base := project(ownedBinding(), w)
+
+	for _, tt := range []struct {
+		name    string
+		removed bool
+		err     error
+		want    []string
+		notWant []string
+	}{
+		{"removed", true, nil, []string{"closed (abandoned)", "was removed"}, []string{"failed", "workflow unbind"}},
+		{"failed", false, errors.New("permission denied\nsecond line"), []string{"closed (abandoned)", "failed", "labdrian workflow unbind", "permission denied"}, []string{"was removed", "being removed"}},
+		{"already gone or replaced", false, nil, []string{"closed (abandoned)", "left alone"}, []string{"was removed", "failed", "being removed"}},
+		{"an error wins over a removed flag", true, errors.New("x"), []string{"failed"}, []string{"was removed"}},
+		{"the binding changed since it was read", false, fmt.Errorf("wrapped: %w", projection.ErrBindingChanged), []string{"left alone"}, []string{"was removed", "failed", "workflow unbind"}},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := base.AfterUnbind(tt.removed, tt.err)
+			if !got.Unbind || got.Warning != "" || strings.Contains(got.Context, "\n") {
+				t.Fatalf("AfterUnbind() = %+v, want a one-line context, Unbind kept, and no warning", got)
+			}
+			for _, want := range tt.want {
+				if !strings.Contains(got.Context, want) {
+					t.Errorf("context %q does not contain %q", got.Context, want)
+				}
+			}
+			for _, bad := range tt.notWant {
+				if strings.Contains(got.Context, bad) {
+					t.Errorf("context %q must not contain %q", got.Context, bad)
+				}
+			}
+		})
+	}
+
+	// Anything that is not a closed workflow's result is returned unchanged.
+	open := project(ownedBinding(), loadedWorkflow("odd", workflow.StatusRunning))
+	if got := open.AfterUnbind(true, nil); got != open {
+		t.Errorf("AfterUnbind() changed a result that asked for no unbind: %+v -> %+v", open, got)
+	}
+}
+
+// TestHookFailureWarningsAreOneShortSanitizedLine: the warnings for a store that
+// cannot be read and for a recovered panic carry text from outside (an error, a
+// panic value), so they are sanitized like every other warning and bounded, and
+// never span lines.
+func TestHookFailureWarningsAreOneShortSanitizedLine(t *testing.T) {
+	hostile := "line one\nline two \x1b[31mred\x1b[0m \u202eevil " + strings.Repeat("é", 5000)
+	for name, got := range map[string]string{
+		"store": projection.StoreWarning(errors.New(hostile)),
+		"panic": projection.PanicWarning(hostile),
+	} {
+		t.Run(name, func(t *testing.T) {
+			if strings.ContainsAny(got, "\n\r\x1b") || strings.ContainsRune(got, 0x202e) || !utf8.ValidString(got) {
+				t.Errorf("warning %q is not one clean line", got)
+			}
+			if len(got) > 700 {
+				t.Errorf("warning is %d bytes, want a short one", len(got))
+			}
+			if !strings.Contains(got, "line one line two") || !strings.Contains(got, "...") {
+				t.Errorf("warning %q lost its detail or does not show that it was cut", got)
+			}
+			if !strings.HasPrefix(got, "labdrian:") {
+				t.Errorf("warning %q does not start with the labdrian prefix", got)
+			}
+		})
+	}
+	if got := projection.StoreWarning(errors.New("boom")); !strings.Contains(got, "no workflow is projected") {
+		t.Errorf("store warning %q does not say nothing is projected", got)
+	}
+	if got := projection.PanicWarning("boom"); !strings.Contains(got, "boom") || !strings.Contains(got, "internal error") {
+		t.Errorf("panic warning %q does not name the internal error", got)
+	}
+	// Panic values are not always strings.
+	if got := projection.PanicWarning(errors.New("an error value")); !strings.Contains(got, "an error value") {
+		t.Errorf("panic warning %q does not carry an error value", got)
 	}
 }
 
