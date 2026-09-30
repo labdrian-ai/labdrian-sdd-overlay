@@ -34,21 +34,34 @@ type recordingLocker struct {
 	mu     sync.Mutex
 	events []string
 	held   map[string]int
-	fail   error
+	fail   error            // every lock fails with it
+	failOn map[string]error // the lock on this path or directory fails with it
 }
 
 func (l *recordingLocker) Lock(path string, mode LockMode) (func(), error) {
+	return l.take("lock", path, mode)
+}
+
+func (l *recordingLocker) LockDir(dir string, mode LockMode) (func(), error) {
+	return l.take("lockdir", dir, mode)
+}
+
+func (l *recordingLocker) take(kind, path string, mode LockMode) (func(), error) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.fail != nil {
+	err := l.fail
+	if e := l.failOn[path]; e != nil {
+		err = e
+	}
+	if err != nil {
 		l.events = append(l.events, fmt.Sprintf("refused %s %s", modeName(mode), path))
-		return nil, l.fail
+		return nil, err
 	}
 	if l.held == nil {
 		l.held = map[string]int{}
 	}
 	l.held[path]++
-	l.events = append(l.events, fmt.Sprintf("lock %s %s", modeName(mode), path))
+	l.events = append(l.events, fmt.Sprintf("%s %s %s", kind, modeName(mode), path))
 	return func() {
 		l.mu.Lock()
 		defer l.mu.Unlock()
@@ -80,7 +93,8 @@ func modeName(m LockMode) string {
 // not the lock, use it through skillsCoreUnlocked.
 type noopLocker struct{}
 
-func (noopLocker) Lock(string, LockMode) (func(), error) { return func() {}, nil }
+func (noopLocker) Lock(string, LockMode) (func(), error)    { return func() {}, nil }
+func (noopLocker) LockDir(string, LockMode) (func(), error) { return func() {}, nil }
 
 // skillsCoreUnlocked is SkillsCore for tests that exercise a verb's own behavior:
 // no clock, and a locker that never blocks.
@@ -125,7 +139,18 @@ func (l *exclusionLocker) rw(path string) *sync.RWMutex {
 }
 
 func (l *exclusionLocker) Lock(path string, mode LockMode) (func(), error) {
-	rw := l.rw(path)
+	return l.take(path, path, mode)
+}
+
+// LockDir locks a directory. A directory and a file that happen to share a path
+// are different locks in the tests as little as they are in the kernel, where a
+// file and a directory cannot share a path at all.
+func (l *exclusionLocker) LockDir(dir string, mode LockMode) (func(), error) {
+	return l.take("dir:"+dir, dir, mode)
+}
+
+func (l *exclusionLocker) take(key, path string, mode LockMode) (func(), error) {
+	rw := l.rw(key)
 	name := modeName(mode) + " " + filepath.Base(path)
 	if mode == LockShared {
 		if !rw.TryRLock() {
@@ -361,11 +386,20 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 		t.Run(tc.verb, func(t *testing.T) {
 			f := newLockFixture(t).withSkillsFor(t, tc.verb, "newbie")
 			locker := &recordingLocker{}
+			want := []string{"lock " + tc.mode + " " + f.lockPath, "unlock " + f.lockPath}
+			if tc.verb == "install" {
+				// install writes into the working directory, so it also takes the
+				// project lock, second (see project_dirlock_test.go).
+				project := t.TempDir()
+				saved := installCwd
+				installCwd = func() (string, error) { return project, nil }
+				t.Cleanup(func() { installCwd = saved })
+				want = []string{"lock shared " + f.lockPath, "lockdir exclusive " + project, "unlock " + project, "unlock " + f.lockPath}
+			}
 			r := runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
 			if r.code != tc.code {
 				t.Fatalf("exit %d, want %d; stderr=%q", r.code, tc.code, r.stderr)
 			}
-			want := []string{"lock " + tc.mode + " " + f.lockPath, "unlock " + f.lockPath}
 			if got := locker.log(); !reflect.DeepEqual(got, want) {
 				t.Errorf("lock events = %v, want %v", got, want)
 			}

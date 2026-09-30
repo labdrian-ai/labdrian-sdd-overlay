@@ -108,7 +108,11 @@ func TestSkillsLock_TheProductionEntryPointCreatesAndHonoursTheRegistryLock(t *t
 		if verb == "remove" {
 			args = []string{"one"}
 		}
+		start := time.Now()
 		r := w.run(verb, args...)
+		if waited := time.Since(start); waited > time.Second {
+			t.Errorf("%s waited %v for a lock with a 30ms wait configured: the wait is not the one the entry point sets", verb, waited)
+		}
 		if r.code != skills.ExitBusy || r.stdout != "" || !strings.Contains(r.stderr, "in progress") || !strings.Contains(r.stderr, "retry") {
 			t.Errorf("%s while the lock is held: exit %d, stdout %q, stderr %q, want exit 2, no stdout, and a retry message", verb, r.code, r.stdout, r.stderr)
 		}
@@ -195,6 +199,113 @@ func TestSkillsLock_ReadersNeverCreateTheLockFileAndWorkOnAReadOnlyOverlay(t *te
 		if strings.HasSuffix(e.Name(), ".lock") {
 			t.Errorf("a reader created %s", e.Name())
 		}
+	}
+}
+
+// ---- the project lock ------------------------------------------------------------------
+//
+// project-register, project-revise, project-retire and install lock the project
+// root directory itself. These tests use real directory locks in a temporary
+// project: nothing is created in it for the lock, a symlinked path to it is the
+// same lock, and a root that cannot be locked refuses the verb.
+
+const projectDraft = "---\n" +
+	"name: tidy-worktree\n" +
+	"description: Tidy a git worktree before handing it to a reviewer.\n" +
+	"license: Apache-2.0\n" +
+	"metadata:\n" +
+	"  author: someone\n" +
+	"  version: 1.0.0\n" +
+	"---\n" +
+	"\n" +
+	"## Activation Contract\n" +
+	"\n" +
+	"Use when a worktree must be handed over clean.\n"
+
+func (w lockWorld) registerArgs(t *testing.T, root string) []string {
+	t.Helper()
+	draft := filepath.Join(w.dir, "drafts", "SKILL.md")
+	writeFixtureFile(t, draft, projectDraft)
+	return []string{"--project-root", root, "--candidate", "procedural/candidates/repeated-success/tidy-worktree", draft}
+}
+
+func TestSkillsLock_ProjectVerbsHonourARealDirectoryLockAndCreateNoFileForIt(t *testing.T) {
+	shortWait(t)
+	w := newLockWorld(t)
+	root := filepath.Join(t.TempDir(), "project")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	args := w.registerArgs(t, root)
+
+	held, err := filelock.AcquireDir(root, filelock.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	r := w.run("project-register", args...)
+	if r.code != skills.ExitBusy || r.stdout != "" || !strings.Contains(r.stderr, "in progress") || !strings.Contains(r.stderr, "the project "+root) {
+		t.Errorf("project-register while the root is locked: exit %d, stdout %q, stderr %q, want exit 2 naming the project", r.code, r.stdout, r.stderr)
+	}
+	if entries, _ := os.ReadDir(root); len(entries) != 0 {
+		t.Errorf("a refused project-register left %d entries in the project", len(entries))
+	}
+
+	held()
+	if r := w.run("project-register", args...); r.code != 0 {
+		t.Fatalf("project-register after the lock was released: exit %d, stderr %q", r.code, r.stderr)
+	}
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, e := range entries {
+		names = append(names, e.Name())
+	}
+	// What the verb wrote, and nothing for the lock: the lock is on the directory.
+	if want := []string{".agents", ".claude", ".labdrian"}; !reflect.DeepEqual(names, want) {
+		t.Errorf("the project holds %v after project-register, want exactly %v", names, want)
+	}
+}
+
+// A working directory reached through a symlink is the same project: the lock is
+// on the directory, whichever way it is named.
+func TestSkillsLock_AProjectRootReachedThroughASymlinkIsTheSameLock(t *testing.T) {
+	shortWait(t)
+	w := newLockWorld(t)
+	base := t.TempDir()
+	root := filepath.Join(base, "project")
+	if err := os.Mkdir(root, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(root, link); err != nil {
+		t.Fatal(err)
+	}
+
+	held, err := filelock.AcquireDir(root, filelock.Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer held()
+	if r := w.run("project-register", w.registerArgs(t, link)...); r.code != skills.ExitBusy {
+		t.Errorf("project-register through the symlink while the real directory is locked: exit %d, stderr %q, want exit 2", r.code, r.stderr)
+	}
+}
+
+// A root that cannot be locked (here, one that does not exist) refuses the verb:
+// it is not skipped, and nothing is created to make it lockable.
+func TestSkillsLock_AProjectRootThatCannotBeLockedRefusesTheVerb(t *testing.T) {
+	w := newLockWorld(t)
+	root := filepath.Join(t.TempDir(), "no-such-project")
+
+	r := w.run("project-register", w.registerArgs(t, root)...)
+
+	if r.code != 1 || strings.Contains(r.stderr, "retry") || !strings.Contains(r.stderr, "cannot take the lock on the directory") {
+		t.Errorf("exit %d, stderr %q, want exit 1, 'cannot take the lock on the directory', and no retry", r.code, r.stderr)
+	}
+	if _, err := os.Lstat(root); err == nil {
+		t.Errorf("the verb created %s", root)
 	}
 }
 

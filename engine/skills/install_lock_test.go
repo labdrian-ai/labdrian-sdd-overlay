@@ -140,10 +140,14 @@ func TestAnApproveStartedDuringAnInstallWaitsForTheInstallToFinish(t *testing.T)
 	}
 }
 
-// Two installs do not exclude each other (they only read the overlay), so a slow
-// one never makes another wait.
-func TestTwoInstallsShareTheOverlayLock(t *testing.T) {
+// Two installs into different projects do not exclude each other (they only read
+// the overlay), so a slow one never makes another wait.
+func TestTwoInstallsIntoDifferentProjectsShareTheOverlayLock(t *testing.T) {
 	f := newInstallFixture(t)
+	otherProject := filepath.Join(t.TempDir(), "other")
+	if err := os.MkdirAll(otherProject, 0o755); err != nil {
+		t.Fatal(err)
+	}
 	gate := newReadGate(t, f.reg)
 	blocked := false
 	locker := &exclusionLocker{blocked: func() { blocked = true; gate.release() }}
@@ -151,6 +155,8 @@ func TestTwoInstallsShareTheOverlayLock(t *testing.T) {
 	first := make(chan coreRun, 1)
 	go func() { first <- runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
 	<-gate.arrived
+	// The first install has resolved its project and is parked; the seam may move.
+	installCwd = func() (string, error) { return otherProject, nil }
 	second := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
 	gate.release()
 	<-first
@@ -161,6 +167,40 @@ func TestTwoInstallsShareTheOverlayLock(t *testing.T) {
 	if !strings.Contains(second.stdout, "installed: proj") {
 		t.Errorf("the second install printed %q", second.stdout)
 	}
+}
+
+// Two installs into the same project are serialized by the project lock: the second
+// waits for the first, which is what keeps them from interleaving RemoveAll and the
+// copy of one skill directory.
+func TestTwoInstallsIntoOneProjectAreSerialized(t *testing.T) {
+	f := newInstallFixture(t)
+	gate := newReadGate(t, f.reg)
+	locker := &exclusionLocker{blocked: gate.release}
+
+	first := make(chan coreRun, 1)
+	go func() { first <- runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
+	<-gate.arrived
+	second := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
+	gate.release()
+	<-first
+
+	if second.code != 0 {
+		t.Fatalf("the second install: exit %d, stderr %q", second.code, second.stderr)
+	}
+	events := locker.events()
+	released, granted := indexOf(events, "released exclusive project"), lastIndexOf(events, "granted exclusive project")
+	if released < 0 || granted < 0 || released > granted {
+		t.Errorf("lock events %v: the second install was granted the project before the first released it", events)
+	}
+}
+
+func lastIndexOf(events []string, want string) int {
+	for i := len(events) - 1; i >= 0; i-- {
+		if events[i] == want {
+			return i
+		}
+	}
+	return -1
 }
 
 func indexOf(events []string, want string) int {
