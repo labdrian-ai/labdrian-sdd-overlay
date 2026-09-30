@@ -14,6 +14,9 @@ const platformSupported = false
 // only so this build target compiles.
 func openLockFile(path string, mode Mode) (*os.File, error) { return nil, ErrUnsupported }
 
+// openDirLock is unreachable for the same reason as openLockFile.
+func openDirLock(path string) (*os.File, error) { return nil, ErrUnsupported }
+
 // tryLock is unreachable for the same reason as openLockFile.
 func tryLock(f *os.File, mode Mode) (bool, error) { return false, ErrUnsupported }
 

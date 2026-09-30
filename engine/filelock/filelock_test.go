@@ -304,9 +304,122 @@ func TestAcquireReportsAnUnusableLocationAsAnErrorNotAsBusy(t *testing.T) {
 	}
 }
 
+// ---- a directory as the lock ---------------------------------------------------------
+//
+// AcquireDir locks a directory itself: the directory is opened read-only and
+// flocked, so nothing is created in it and there is nothing to git-ignore. That is
+// what a project root needs, because the repository is the user's.
+
+func dirLockTarget(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "project")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	return dir
+}
+
+func mustAcquireDir(t *testing.T, dir string, opts Options) func() {
+	t.Helper()
+	unlock, err := AcquireDir(dir, opts)
+	if err != nil {
+		t.Fatalf("AcquireDir(%q, %+v) = %v, want a held lock", dir, opts, err)
+	}
+	return unlock
+}
+
+func TestAcquireDirExcludesAndSharesLikeAFileLock(t *testing.T) {
+	skipUnlessSupported(t)
+	dir := dirLockTarget(t)
+	busy := func(mode Mode) error {
+		_, err := AcquireDir(dir, Options{Mode: mode, Wait: time.Nanosecond, Clock: newFakeClock().Clock()})
+		return err
+	}
+
+	exclusive := mustAcquireDir(t, dir, Options{})
+	if err := busy(Exclusive); !errors.Is(err, ErrBusy) {
+		t.Errorf("second exclusive = %v, want ErrBusy", err)
+	}
+	if err := busy(Shared); !errors.Is(err, ErrBusy) {
+		t.Errorf("shared against exclusive = %v, want ErrBusy", err)
+	}
+	exclusive()
+
+	first := mustAcquireDir(t, dir, Options{Mode: Shared})
+	second := mustAcquireDir(t, dir, Options{Mode: Shared})
+	if err := busy(Exclusive); !errors.Is(err, ErrBusy) {
+		t.Errorf("exclusive against shared holders = %v, want ErrBusy", err)
+	}
+	first()
+	second()
+	mustAcquireDir(t, dir, Options{})() // free again
+}
+
+// The point of locking the directory: no file appears in it, so a user's
+// repository is never dirtied, and a directory that cannot be written to locks like
+// any other.
+func TestAcquireDirCreatesNothingAndWorksOnAReadOnlyDirectory(t *testing.T) {
+	skipUnlessSupported(t)
+	dir := dirLockTarget(t)
+	if err := os.WriteFile(filepath.Join(dir, "README"), []byte("x"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o555); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(dir, 0o755) })
+
+	for _, mode := range []Mode{Exclusive, Shared} {
+		mustAcquireDir(t, dir, Options{Mode: mode})()
+	}
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != 1 || entries[0].Name() != "README" {
+		t.Errorf("the directory holds %v after locking it, want only README", entries)
+	}
+}
+
+// A directory lock is never the no-op a shared lock on a missing lock file is: a
+// directory that is missing, is a file, or is a symlink is an error, because
+// holding nothing on a project that cannot be found would be running unlocked.
+func TestAcquireDirRefusesWhatIsNotADirectory(t *testing.T) {
+	skipUnlessSupported(t)
+	base := t.TempDir()
+	file := filepath.Join(base, "file")
+	if err := os.WriteFile(file, nil, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	dir := filepath.Join(base, "real")
+	if err := os.Mkdir(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	link := filepath.Join(base, "link")
+	if err := os.Symlink(dir, link); err != nil {
+		t.Fatal(err)
+	}
+	for name, path := range map[string]string{"a missing path": filepath.Join(base, "missing"), "a regular file": file, "a symlink to a directory": link} {
+		for _, mode := range []Mode{Exclusive, Shared} {
+			unlock, err := AcquireDir(path, Options{Mode: mode})
+			if err == nil || errors.Is(err, ErrBusy) || unlock != nil {
+				t.Errorf("%s, mode %v: AcquireDir = (unlock nil: %v, %v), want a plain error and no lock", name, mode, unlock == nil, err)
+			} else if !strings.Contains(err.Error(), path) {
+				t.Errorf("%s: error %q does not name the path", name, err)
+			}
+		}
+	}
+	if _, err := os.Lstat(filepath.Join(base, "missing")); err == nil {
+		t.Error("AcquireDir created the missing path")
+	}
+}
+
 // ---- across real processes ------------------------------------------------------
 
-const helperEnv = "FILELOCK_TEST_HELPER_PATH"
+const (
+	helperEnv    = "FILELOCK_TEST_HELPER_PATH"
+	helperDirEnv = "FILELOCK_TEST_HELPER_DIR" // set: the path is a directory to lock with AcquireDir
+)
 
 // TestHelperProcessHoldsTheLock is not a test: it is the child the tests below
 // start. It takes the exclusive lock named by the environment, says so on stdout,
@@ -316,7 +429,11 @@ func TestHelperProcessHoldsTheLock(t *testing.T) {
 	if path == "" {
 		t.Skip("helper process only")
 	}
-	unlock, err := Acquire(path, Options{})
+	acquire := Acquire
+	if os.Getenv(helperDirEnv) != "" {
+		acquire = AcquireDir
+	}
+	unlock, err := acquire(path, Options{})
 	if err != nil {
 		os.Stdout.WriteString("error: " + err.Error() + "\n")
 		os.Exit(3)
@@ -332,8 +449,50 @@ func TestHelperProcessHoldsTheLock(t *testing.T) {
 func TestALockHeldByAnotherProcessIsBusyUntilItExits(t *testing.T) {
 	skipUnlessSupported(t)
 	path := lockPath(t)
+	release := holdInAnotherProcess(t, path, false)
+
+	// A real bound, kept short: these are the only tests here that wait on real time.
+	begin := time.Now()
+	_, err := Acquire(path, Options{Wait: 30 * time.Millisecond})
+	if !errors.Is(err, ErrBusy) {
+		t.Fatalf("Acquire while another process holds the lock = %v, want ErrBusy", err)
+	}
+	if waited := time.Since(begin); waited < 25*time.Millisecond || waited > 2*time.Second {
+		t.Errorf("waited %v for a 30ms bound", waited)
+	}
+
+	release()
+	// The holder exited without unlocking anything by hand: the kernel let go.
+	mustAcquire(t, path, Options{Wait: time.Second})()
+}
+
+// The same for a directory lock, which is the one a project root gets.
+func TestADirectoryLockHeldByAnotherProcessIsBusyUntilItExits(t *testing.T) {
+	skipUnlessSupported(t)
+	dir := dirLockTarget(t)
+	release := holdInAnotherProcess(t, dir, true)
+
+	if _, err := AcquireDir(dir, Options{Wait: 30 * time.Millisecond}); !errors.Is(err, ErrBusy) {
+		t.Fatalf("AcquireDir while another process holds the lock = %v, want ErrBusy", err)
+	}
+	if _, err := AcquireDir(dir, Options{Mode: Shared, Wait: 30 * time.Millisecond}); !errors.Is(err, ErrBusy) {
+		t.Fatalf("shared AcquireDir while another process holds it exclusively = %v, want ErrBusy", err)
+	}
+
+	release()
+	mustAcquireDir(t, dir, Options{Wait: time.Second})()
+}
+
+// holdInAnotherProcess starts a child that takes the exclusive lock on path (a
+// directory lock when dir is true) and holds it until the returned function is
+// called, which ends the child and waits for it.
+func holdInAnotherProcess(t *testing.T, path string, dir bool) (release func()) {
+	t.Helper()
 	cmd := exec.Command(os.Args[0], "-test.run=^TestHelperProcessHoldsTheLock$")
 	cmd.Env = []string{helperEnv + "=" + path}
+	if dir {
+		cmd.Env = append(cmd.Env, helperDirEnv+"=1")
+	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		t.Fatal(err)
@@ -351,23 +510,12 @@ func TestALockHeldByAnotherProcessIsBusyUntilItExits(t *testing.T) {
 	if err != nil || strings.TrimSpace(line) != "held" {
 		t.Fatalf("helper said %q (%v), want it to hold the lock", line, err)
 	}
-
-	// A real bound, kept short: this is the only test here that waits on real time.
-	begin := time.Now()
-	_, err = Acquire(path, Options{Wait: 30 * time.Millisecond})
-	if !errors.Is(err, ErrBusy) {
-		t.Fatalf("Acquire while another process holds the lock = %v, want ErrBusy", err)
+	return func() {
+		_ = stdin.Close()
+		if err := cmd.Wait(); err != nil {
+			t.Fatalf("helper: %v", err)
+		}
 	}
-	if waited := time.Since(begin); waited < 25*time.Millisecond || waited > 2*time.Second {
-		t.Errorf("waited %v for a 30ms bound", waited)
-	}
-
-	_ = stdin.Close()
-	if err := cmd.Wait(); err != nil {
-		t.Fatalf("helper: %v", err)
-	}
-	// The holder exited without unlocking anything by hand: the kernel let go.
-	mustAcquire(t, path, Options{Wait: time.Second})()
 }
 
 // ---- the platform contract -------------------------------------------------------
@@ -378,6 +526,9 @@ func TestUnsupportedPlatformsFailClosed(t *testing.T) {
 	}
 	if _, err := Acquire(lockPath(t), Options{}); !errors.Is(err, ErrUnsupported) {
 		t.Fatalf("Acquire = %v, want ErrUnsupported", err)
+	}
+	if _, err := AcquireDir(t.TempDir(), Options{}); !errors.Is(err, ErrUnsupported) {
+		t.Fatalf("AcquireDir = %v, want ErrUnsupported", err)
 	}
 }
 

@@ -25,6 +25,11 @@
 //     Exclusive holder. A Shared acquire never creates the lock file; see Mode.
 //   - A final-component symlink is refused, so a lock file cannot be aimed at
 //     another file.
+//   - AcquireDir locks a directory itself (open it read-only, flock the
+//     descriptor) for a caller that may not put a file in the directory, such as a
+//     project root in the user's repository. It creates nothing. A filesystem that
+//     cannot lock a directory makes it fail with an error that says so, never
+//     silently succeed and never fall back to a file.
 //   - Only linux and darwin have flock. Elsewhere Acquire fails closed with
 //     ErrUnsupported, the same choice engine/workflow and engine/projection make.
 //
@@ -142,6 +147,33 @@ type Options struct {
 // error, a symlink) is an ordinary error naming the path, because waiting would
 // not help; a platform without flock is ErrUnsupported.
 func Acquire(path string, opts Options) (unlock func(), err error) {
+	return acquire(path, opts, false)
+}
+
+// AcquireDir takes the advisory lock on the directory at path itself: it opens
+// the directory read-only and flocks that descriptor, so nothing is created in
+// it, nothing needs git-ignoring, and a directory that cannot be written to locks
+// like any other. It is what a caller wants when the directory belongs to someone
+// else (a project root in the user's repository) and no file of ours may appear
+// in it. Every other rule is Acquire's: the bound, the poll, *BusyError, a lock
+// the kernel frees when the holder exits, ErrUnsupported off linux and darwin,
+// and a final-component symlink refused (so a caller resolves the path first if
+// it may be reached through one).
+//
+// Unlike a Shared file lock, a missing directory is an error in either mode, never
+// a lock that holds nothing: there is no "nobody ever wrote here" reading of a
+// project root that cannot be found. So is a path that is not a directory.
+//
+// Not every filesystem can lock a directory; some network and FUSE filesystems
+// refuse. Then AcquireDir fails with an error that names the path, the kernel's
+// reason, and says the filesystem may not support locking a directory and that
+// nothing was locked. It never reports a lock it does not hold, never reports
+// busy, and never falls back to a lock file in the directory.
+func AcquireDir(path string, opts Options) (unlock func(), err error) {
+	return acquire(path, opts, true)
+}
+
+func acquire(path string, opts Options, dir bool) (unlock func(), err error) {
 	if !platformSupported {
 		return nil, ErrUnsupported
 	}
@@ -150,9 +182,14 @@ func Acquire(path string, opts Options) (unlock func(), err error) {
 		wait = DefaultWait
 	}
 
-	f, err := openLockFile(path, opts.Mode)
+	var f *os.File
+	if dir {
+		f, err = openDirLock(path)
+	} else {
+		f, err = openLockFile(path, opts.Mode)
+	}
 	if err != nil {
-		if opts.Mode == Shared && errors.Is(err, os.ErrNotExist) {
+		if !dir && opts.Mode == Shared && errors.Is(err, os.ErrNotExist) {
 			return func() {}, nil
 		}
 		return nil, fmt.Errorf("filelock: open %s: %w", path, err)
@@ -163,6 +200,9 @@ func Acquire(path string, opts Options) (unlock func(), err error) {
 		held, err := tryLock(f, opts.Mode)
 		if err != nil {
 			f.Close()
+			if dir {
+				return nil, fmt.Errorf("filelock: lock %s: %w (this filesystem may not support locking a directory; nothing was locked)", path, err)
+			}
 			return nil, fmt.Errorf("filelock: lock %s: %w", path, err)
 		}
 		if held {
