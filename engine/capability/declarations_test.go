@@ -233,10 +233,8 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	// No Claude Code claim may still say the hooks are not installed: they are,
 	// and a claim that says otherwise would understate what a user can enable.
 	for _, c := range d.Claims {
-		for _, stale := range []string{"does not install", "not installed", "yet"} {
-			if strings.Contains(c.Detail, stale) {
-				t.Errorf("claude %s detail %q still says %q", c.Capability, c.Detail, stale)
-			}
+		for _, stale := range staleInstallWording(c.Detail) {
+			t.Errorf("claude %s detail %q still says %q", c.Capability, c.Detail, stale)
 		}
 	}
 
@@ -310,5 +308,53 @@ func TestAuthenticationClaimsStateWhatPresenceDoesNotProve(t *testing.T) {
 	open := claim(capability.TargetOpenCode)
 	if open.Status != capability.Unsupported || strings.Contains(open.Detail, "credentials file exists") {
 		t.Errorf("opencode authentication = %s %q, want unsupported with no presence claim (it has no credentials check)", open.Status, open.Detail)
+	}
+}
+
+// staleInstallPhrases are the phrasings the Claude Code details used while
+// install-hooks did not yet install the projection hooks. They are matched as
+// whole phrases, not as the bare word "yet", so ordinary prose (a limit that
+// says something has not been observed yet) is never rejected.
+var staleInstallPhrases = []string{
+	"does not install", "not installed",
+	"settings yet", "hooks yet", "hook yet", "gated yet", "steered yet", "re-binds yet",
+}
+
+// staleInstallWording returns every stale phrase that detail contains.
+func staleInstallWording(detail string) []string {
+	var found []string
+	for _, phrase := range staleInstallPhrases {
+		if strings.Contains(detail, phrase) {
+			found = append(found, phrase)
+		}
+	}
+	return found
+}
+
+// TestStaleInstallGuardRejectsTheOldWordingOnly pins the guard itself: the
+// wording the details had before the hooks were installed is caught, and
+// ordinary sentences that happen to contain "yet" are not.
+func TestStaleInstallGuardRejectsTheOldWordingOnly(t *testing.T) {
+	stale := []string{
+		"Limit: install-hooks does not install the hook into Claude Code settings yet, and hook changes need a restart.",
+		"install-hooks does not install the hooks yet and hook changes need a Claude Code restart, so no session is gated yet.",
+		"so no real session re-binds yet.",
+		"The hooks are not installed.",
+		"so no session is steered yet",
+	}
+	for _, detail := range stale {
+		if len(staleInstallWording(detail)) == 0 {
+			t.Errorf("the guard accepts the stale wording %q", detail)
+		}
+	}
+	ordinary := []string{
+		"Nothing here has been observed in a live session yet.",
+		"A value the caller has not set yet is left empty.",
+		"the hooks are installed by install-hooks; a real session receiving the context is not part of the tests",
+	}
+	for _, detail := range ordinary {
+		if found := staleInstallWording(detail); len(found) != 0 {
+			t.Errorf("the guard rejects ordinary prose %q because of %q", detail, found)
+		}
 	}
 }
