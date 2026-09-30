@@ -85,6 +85,12 @@ var (
 	// same project_id/workflow_id holds the append lock. Append does not
 	// retry or wait: the caller decides whether to retry.
 	ErrAppendConflict = errors.New("workflow store: append: a concurrent append is in progress for this workflow")
+	// ErrStaleSeq is returned by Append when the event's seq is not the
+	// next one: the log already advanced (for example, another appender
+	// finished first) or the caller skipped ahead. Nothing is written. A
+	// caller that raced another appender sees this instead of
+	// ErrAppendConflict when the other append had already released the lock.
+	ErrStaleSeq = errors.New("workflow store: append: seq is not the next seq")
 )
 
 // workflowStoreComponents are the fixed directories under the state home.
@@ -388,7 +394,7 @@ func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 			return fmt.Errorf("workflow store: append: %w", err)
 		}
 		if next.Seq != len(loaded.Events) {
-			return fmt.Errorf("workflow store: append: seq %d is not the next seq (%d)", next.Seq, len(loaded.Events))
+			return fmt.Errorf("%w: got %d, want %d", ErrStaleSeq, next.Seq, len(loaded.Events))
 		}
 		if next.PrevDigest != lastDigest {
 			return fmt.Errorf("workflow store: append: prev_digest %q does not match the last stored event's digest %q", next.PrevDigest, lastDigest)
