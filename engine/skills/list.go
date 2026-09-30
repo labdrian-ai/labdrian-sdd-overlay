@@ -15,7 +15,7 @@ type readFileFn func(string) ([]byte, error)
 // parseRegistryFlag extracts --registry <path> from args.
 // Defaults to "skills.registry.yaml" (CWD-relative, per R-023).
 func parseRegistryFlag(args []string) string {
-	path := "skills.registry.yaml"
+	path := defaultRegistryPath
 	for i := 0; i < len(args); i++ {
 		if args[i] == "--registry" && i+1 < len(args) {
 			path = args[i+1]

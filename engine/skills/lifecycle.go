@@ -164,7 +164,7 @@ func filterManifestLines(src []byte, id string) []byte {
 // parseFlags extracts --registry, --manifest, --source-root, --repo, --ref flag
 // values and the first non-flag positional argument (the skill id) from args.
 func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo, ref string) {
-	registryPath = "skills.registry.yaml"
+	registryPath = defaultRegistryPath
 	manifestPath = "overlay.manifest"
 	sourceRoot = "skills"
 	for i := 0; i < len(args); i++ {

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 )
 
 // installCwd is the working directory `skills install` installs into. It is a
@@ -31,8 +32,26 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 // RFC 3339 UTC timestamp for the verbs that record one (approve); the
 // production caller passes the wall clock, and nil is legal for every other verb.
 func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
+	// install writes into the working directory. It is resolved here, once, before
+	// any lock is asked for, and the lock and the verb are both given this answer:
+	// a second call could return another directory, and a directory that cannot be
+	// named cannot be locked. A verb that cannot name where it writes does not run.
+	installRoot := ""
+	if verb == "install" {
+		cwd, err := installCwd()
+		if err != nil || !filepath.IsAbs(cwd) {
+			reason := fmt.Sprintf("%q is not an absolute path", cwd)
+			if err != nil {
+				reason = err.Error()
+			}
+			fmt.Fprintf(stderr, "error: skills install: cannot resolve the project directory to install into (%s); nothing was locked and nothing was installed\n", reason)
+			exit(1)
+			return
+		}
+		installRoot = cwd
+	}
 	for attempt := 1; ; attempt++ {
-		if done := runLocked(attempt, verb, args, readFile, now, locker, stdout, stderr, exit); done {
+		if done := runLocked(attempt, verb, args, installRoot, readFile, now, locker, stdout, stderr, exit); done {
 			return
 		}
 	}
@@ -42,14 +61,14 @@ func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() st
 // only when the attempt must be made again: the verb read under a shared lock that
 // held nothing, and the lock file appeared while it read (see
 // rereadsWhenTheLockFileAppears). That attempt's output is discarded, not printed.
-func runLocked(attempt int, verb string, args []string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) (done bool) {
-	release, provisional, ok := acquireLocks(verb, args, locker, stderr, exit)
+func runLocked(attempt int, verb string, args []string, installRoot string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) (done bool) {
+	release, provisional, ok := acquireLocks(verb, args, installRoot, locker, stderr, exit)
 	if !ok {
 		return true
 	}
 	if len(provisional) == 0 {
 		defer release()
-		dispatchVerb(verb, args, readFile, now, stdout, stderr, exit)
+		dispatchVerb(verb, args, installRoot, readFile, now, stdout, stderr, exit)
 		return true
 	}
 
@@ -58,7 +77,7 @@ func runLocked(attempt int, verb string, args []string, readFile readFileFn, now
 	// the check. The first call is the one that counts, as it would be for a real exit.
 	var out, errOut bytes.Buffer
 	code, exited := 0, false
-	dispatchVerb(verb, args, readFile, now, &out, &errOut, func(c int) {
+	dispatchVerb(verb, args, installRoot, readFile, now, &out, &errOut, func(c int) {
 		if !exited {
 			code, exited = c, true
 		}
@@ -81,8 +100,9 @@ func runLocked(attempt int, verb string, args []string, readFile readFileFn, now
 	return false
 }
 
-// dispatchVerb runs the verb. The locks, if it needs any, are already held.
-func dispatchVerb(verb string, args []string, readFile readFileFn, now func() string, stdout, stderr io.Writer, exit func(int)) {
+// dispatchVerb runs the verb. The locks, if it needs any, are already held, and
+// installRoot is the directory install was resolved to and locked.
+func dispatchVerb(verb string, args []string, installRoot string, readFile readFileFn, now func() string, stdout, stderr io.Writer, exit func(int)) {
 	switch verb {
 	case "list":
 		RenderListCore(args, readFile, stdout, stderr, exit)
@@ -91,7 +111,7 @@ func dispatchVerb(verb string, args []string, readFile readFileFn, now func() st
 	case "validate":
 		RenderValidateCore(args, readFile, ScanSkillFiles, stdout, stderr, exit)
 	case "install":
-		RenderInstallCore(args, readFile, installCwd, stdout, stderr, exit)
+		RenderInstallCore(args, readFile, func() (string, error) { return installRoot, nil }, stdout, stderr, exit)
 	case "add":
 		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
 	case "remove":
@@ -148,7 +168,7 @@ func stripVerb(args []string, verb string) []string {
 // unit-testable without walking a real tree; production callers pass
 // ScanSkillFiles.
 func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(string) ([]string, error), stdout, stderr io.Writer, exit func(int)) {
-	registryPath := "skills.registry.yaml"
+	registryPath := defaultRegistryPath
 	manifestPath := "overlay.manifest"
 	sourceRoot := ""
 	for i := 0; i < len(args); i++ {

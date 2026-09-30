@@ -150,7 +150,11 @@ func TestLockRequestsAreAlwaysOverlayBeforeProject(t *testing.T) {
 	multi := 0
 	for verb, args := range cases {
 		seenDir := false
-		requests := lockRequestsFor(verb, args)
+		installRoot := ""
+		if verb == "install" {
+			installRoot = f.project
+		}
+		requests := lockRequestsFor(verb, args, installRoot)
 		for _, req := range requests {
 			if req.dir {
 				seenDir = true
