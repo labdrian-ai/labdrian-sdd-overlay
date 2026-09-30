@@ -396,6 +396,11 @@ overlay skills <verb>
                  The engine cannot prove a human ran approve: the record only proves it matches the exact bytes of the skill beside it.
                  Approval is a human step: a PreToolUse hook, installed by install-hooks, denies the agent running approve or writing the record by hand (see
                  `skills guard-hook` below). It is a speed bump, not a security boundary; a person runs approve in a terminal.
+    Locking: add, remove, sync-manifest, and approve hold an exclusive lock, and validate and install a shared one, on
+    .skills.registry.yaml.lock beside the registry (created by the first write, never removed, git-ignored). Shared holders
+    never create it, so validate and install work on a read-only overlay. A lock that stays taken for 2 seconds means
+    another skills command is in progress: the verb changes nothing and reports it with exit 2 (retry). Exit 1 is
+    unchanged: the verb ran or was refused, or the lock could not be created at all, which retrying will not fix.
 
 overlay shaper <verb>
     Forward Shaper handoff verbs to the engine unchanged. Exit codes: 0 ready, 3 draft, 2 invalid, 1 error.
