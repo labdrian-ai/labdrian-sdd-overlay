@@ -353,7 +353,7 @@ func TestSkillsClaimsStateTheirScope(t *testing.T) {
 			"labdrian apply copies global skills into OpenCode's skills directory", fixtureOnly, "never the real skills",
 			"A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills",
 			"recorded, not tested", "the global tier was not observed live", "its names also existing in several global directories",
-			"not used on this machine", "no test observes it loading a skill", "no test connects the project tier to OpenCode",
+			"No test observes OpenCode loading a skill", "no test connects the project tier to OpenCode",
 		},
 	} {
 		detail := skillsClaim(t, target).Detail

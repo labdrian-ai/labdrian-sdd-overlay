@@ -20,8 +20,8 @@ import (
 // table states only what the tests at that commit prove. Codex, Pi, and
 // OpenCode are declared only: they state what is proven today (installation)
 // and an honest unsupported, with the limit written, for the rest. OpenCode is
-// also declared untested: it is not used on this machine and cannot be
-// exercised here.
+// also declared untested: it is installed here but outside the regular runtime
+// set, and no test exercises it (one recorded live probe aside).
 //
 // Skills, added in Phase 8, is the exception to "declared only": every runtime
 // states what its own tests prove about carrying skills into it, and all four are
@@ -167,7 +167,7 @@ var declarations = []Declaration{
 	},
 	{
 		Target:   TargetOpenCode,
-		Untested: "OpenCode is not used on this machine and cannot be exercised here",
+		Untested: "OpenCode is outside the regular runtime set here and no test exercises it",
 		Claims: append([]Claim{
 			partial(Installation,
 				"Install, update, uninstall, and status are tested at file level against a temporary config root. Status reaches supported only after a running OpenCode plugin writes its active marker; tests write that marker by hand, so plugin loading by a real OpenCode is unverified.",
@@ -179,7 +179,7 @@ var declarations = []Declaration{
 			),
 		}, declaredOnlyClaims("OpenCode", "Not implemented: the engine does not check whether OpenCode has credentials, and the presence prober has no credentials check for it.",
 			partial(Skills,
-				"labdrian apply copies global skills into OpenCode's skills directory, tested only on a fixture overlay and a sandbox home, never the real skills. A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested); the global tier was not observed live, its names also existing in several global directories. OpenCode is not used on this machine, so no test observes it loading a skill, and no test connects the project tier to OpenCode.",
+				"labdrian apply copies global skills into OpenCode's skills directory, tested only on a fixture overlay and a sandbox home, never the real skills. A live OpenCode 1.18.31 session on 2026-09-30 discovered project skills under .agents/skills and .claude/skills (recorded, not tested); the global tier was not observed live, its names also existing in several global directories. No test observes OpenCode loading a skill, and no test connects the project tier to OpenCode.",
 				"installer:TestApply_AgentsLandInNativeAgentDirs",
 				"installer:TestUnrelatedSkillUnchanged",
 			))...),
