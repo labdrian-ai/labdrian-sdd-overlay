@@ -18,9 +18,13 @@ import (
 func TestCopyTree_SkipsAWritersTemporaryFile(t *testing.T) {
 	src, dst := filepath.Join(t.TempDir(), "src"), filepath.Join(t.TempDir(), "dst")
 	for path, content := range map[string]string{
-		"SKILL.md":                              "the skill",
-		"references/guide.md":                   "a reference",
-		".gitkeep":                              "",
+		"SKILL.md":            "the skill",
+		"references/guide.md": "a reference",
+		".gitkeep":            "",
+		// In the fixture on purpose. copyTree never copies the approval record
+		// (its `rel == ApprovalRecordName` rule in install.go: the record is
+		// repository governance state, not skill content), so it is absent from
+		// want below although its name does not carry the writer's temp prefix.
 		ApprovalRecordName:                      `{"version":1}`,
 		atomicTempPrefix + "123456789":          "half a record",
 		"references/" + atomicTempPrefix:        "not a writer's file: a longer name is needed",
@@ -45,10 +49,14 @@ func TestCopyTree_SkipsAWritersTemporaryFile(t *testing.T) {
 		t.Fatal(err)
 	}
 	// A name that is exactly the prefix has no unique suffix and is not something
-	// writeFileAtomic makes; it is content, and is copied.
+	// writeFileAtomic makes; it is content, and is copied. The approval record
+	// and the two writer's temp files are the three fixture entries left out.
 	want := []string{".gitkeep", "SKILL.md", "references/.tmp-skills-", "references/guide.md"}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("copied %v, want %v", got, want)
+	}
+	if _, err := os.Lstat(filepath.Join(dst, ApprovalRecordName)); !os.IsNotExist(err) {
+		t.Errorf("the approval record was copied (Lstat err = %v); copyTree must skip it", err)
 	}
 }
 

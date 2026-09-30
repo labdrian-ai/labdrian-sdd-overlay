@@ -122,6 +122,9 @@ func copyTree(src, dst string) error {
 		if err != nil {
 			return err
 		}
+		// Never copied, whatever else is skipped below: see the doc comment.
+		// TestCopyTree_SkipsAWritersTemporaryFile relies on this rule for the
+		// approval record in its fixture.
 		if rel == ApprovalRecordName {
 			if d.IsDir() {
 				return filepath.SkipDir
