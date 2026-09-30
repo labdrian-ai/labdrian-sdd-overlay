@@ -198,7 +198,7 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	for name, want := range map[capability.Capability][]string{
 		capability.Persistence: {"workflow log", "binding", "survive", "transcripts are not managed"},
 		capability.Dispatch:    {"can be bound", "stored", "the hook projects that workflow", "explicit workflow bind", "restart", "no test observes a real session being steered"},
-		capability.Projection:  {installs, "UserPromptSubmit hook", "builds the bound workflow's context", "reports partial until install-hooks is re-run", "restart", "Tests feed the hook JSON", "a real session receiving the context is not part of them"},
+		capability.Projection:  {installs, "UserPromptSubmit hook", "builds the bound workflow's context", "reports partial until install-hooks is re-run", "restart", "If the binding or workflow cannot be followed, the hook projects nothing and warns", "Tests feed the hook JSON", "a real session receiving the context is not part of them"},
 		capability.Restart:     {"reads the binding and the workflow log from disk on every prompt", "separate processes", installs, "restart_required", "a real session re-binding is not part of the tests"},
 	} {
 		detail := claims[name].Detail
@@ -216,7 +216,7 @@ func TestClaudeCodeSessionClaimsStateTheirScope(t *testing.T) {
 	for name, want := range map[capability.Capability][]string{
 		capability.Cancellation: {
 			"paused", "PreToolUse gate", "Write, Edit, MultiEdit, and NotebookEdit", "next tool call",
-			"tells the session", installs, "in-flight tool call cannot be interrupted", "Bash is never gated", "restart", "no test observes a real session being denied",
+			"tells the session", installs, "in-flight tool call cannot be interrupted", "Bash is never gated", "the gate denies nothing when the binding or the workflow cannot be followed", "restart", "no test observes a real session being denied",
 		},
 		capability.MemoryEnforcement: {
 			"longterm-mem query", "project", "memory plan", "no project",
