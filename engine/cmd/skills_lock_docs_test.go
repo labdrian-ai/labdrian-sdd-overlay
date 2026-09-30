@@ -11,6 +11,19 @@ import (
 	"testing"
 )
 
+// The four project verbs' usage lines put the verb, a space, and then the flags in
+// one column. A verb name as long as the column (project-register) once ran into
+// its first flag with no space, which read as a single word.
+func TestUsageSeparatesEachProjectVerbFromItsFlags(t *testing.T) {
+	text := captureUsage(t)
+	for _, verb := range []string{"project-register", "project-revise", "project-status", "project-retire"} {
+		want := "\n    " + verb + strings.Repeat(" ", 17-len(verb)) + "--project-root "
+		if !strings.Contains(text, want) {
+			t.Errorf("usage() has no line starting with the verb %q padded to the flag column and then --project-root", verb)
+		}
+	}
+}
+
 func TestDocsDescribeTheSkillsLockAndTheBusyExit(t *testing.T) {
 	readme, err := os.ReadFile(filepath.Join("..", "..", "README.md"))
 	if err != nil {

@@ -214,7 +214,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "                  a skill that fails the hard lint is refused, except a baseline skill (a grandfathered global skill, which predates the lint budget and will be rewritten in a later feature):")
 	fmt.Fprintln(os.Stderr, "                  for those, a size or description finding is printed as a \"warning:\" line on stderr, the approval is still recorded, and the exit is 0;")
 	fmt.Fprintln(os.Stderr, "                  any other hard finding, such as a missing front matter, refuses a baseline skill too")
-	fmt.Fprintln(os.Stderr, "    project-register--project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>")
+	fmt.Fprintln(os.Stderr, "    project-register --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>")
 	fmt.Fprintln(os.Stderr, "                                                                                           register a project-tier procedural skill; --dry-run prints the plan and writes nothing")
 	fmt.Fprintln(os.Stderr, "    project-revise   --project-root <abs> --candidate <key> [--dry-run] [--registry <path>] <draft-file>")
 	fmt.Fprintln(os.Stderr, "                                                                                           revise an agent-owned project skill; --dry-run prints the plan and writes nothing")

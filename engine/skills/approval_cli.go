@@ -34,15 +34,16 @@ import (
 //     than overwritten blind).
 //
 // A skill in the approval baseline (by id, whatever its current bytes) is not
-// refused for hard lint findings. The baseline skills predate the lint budget
-// and most of them fail it, so refusing them would leave no way to approve the
-// change an upstream merge makes to their bytes; they will be rewritten within
-// the budget in a later feature. For them each hard finding is printed on
-// stderr as a warning (see baselineLintWarning), the approval of the exact bytes
-// is recorded, and the exit is 0. The warnings are printed only once the
-// approval has happened, never for one that was refused or failed. The record
-// format does not change, and `skills add` keeps refusing hard findings for
-// every skill.
+// refused for its legacy hard lint findings (see legacyBaselineLintRules). The
+// baseline skills predate the lint budget and most of them fail it, so refusing
+// them would leave no way to approve the change an upstream merge makes to their
+// bytes; they will be rewritten within the budget in a later feature. For them
+// each legacy finding is printed on stderr as a warning (see
+// baselineLintWarning), the approval of the exact bytes is recorded, and the
+// exit is 0. Any other hard finding, such as a missing front matter, refuses a
+// baseline skill too. The warnings are printed only once the approval has
+// happened, never for one that was refused or failed. The record format does not
+// change, and `skills add` keeps refusing hard findings for every skill.
 //
 // Re-approving identical bytes is idempotent: a valid record is left exactly as
 // it is, so the original approver and time stay the record of who approved
@@ -232,9 +233,6 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 	exit(0)
 }
 
-// baselineLintWarning is the stderr line for one hard lint finding of a baseline
-// skill that `skills approve` records an approval for anyway: the finding as the
-// lint prints it, marked as a warning and saying why it did not refuse.
 // legacyBaselineLintRules are the hard lint rules the baseline skills already
 // broke before the lint budget existed: the body budget and the description's
 // length and shape. Only these become warnings for a baseline skill.
@@ -259,6 +257,9 @@ func allLegacyBaselineFindings(hard []error) bool {
 	return true
 }
 
+// baselineLintWarning is the stderr line for one hard lint finding of a baseline
+// skill that `skills approve` records an approval for anyway: the finding as the
+// lint prints it, marked as a warning and saying why it did not refuse.
 func baselineLintWarning(finding error) string {
 	return "warning: " + finding.Error() + " (baseline skill: approved with lint findings)"
 }
