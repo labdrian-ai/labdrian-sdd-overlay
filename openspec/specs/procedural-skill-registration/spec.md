@@ -261,13 +261,18 @@ procedure.
 - THEN no test writes a file under `skills/` outside the explicit, human
   procedure's own `AddCore` tests
 
-### Requirement: Global Promotion Reuses AddCore Unchanged Apart From the Lint Gate
+### Requirement: Global Promotion Reuses AddCore Apart From the Lint and Approval Gates
 
 The system MUST document project-to-overlay promotion as a human-invoked
 procedure over the existing `engine skills add` / `AddCore` path, adding no
-new CLI surface and no new approval machinery, no TTL, and no implicit
-consent from silence. The only behavioral addition to `AddCore` MUST be the
-`LintSkill` hard gate defined by the `skill-lifecycle` capability.
+further CLI surface, no TTL, and no implicit consent from silence. Since
+Phase 8 the global tier has one approval mechanism: a typed human approval
+record, written by `labdrian skills approve` and bound to the SHA-256 of the
+exact `SKILL.md` bytes, which `AddCore` requires before it registers a global
+skill. The project tier is unchanged and stays autonomous: no approval record
+applies to it. The only behavioral additions to `AddCore` MUST be the
+`LintSkill` hard gate defined by the `skill-lifecycle` capability and that
+approval gate.
 
 #### Scenario: Promotion procedure names an existing command
 

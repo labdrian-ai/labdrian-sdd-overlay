@@ -1,5 +1,7 @@
 # Apply Progress: pi-runtime-target
 
+> **Superseded in part.** This file is a chronological log. The Batch 1 progress sections (slice count, remaining tasks, workload boundary, status: "planned=5 realized=1", "ready for the next slice") describe the state after slice 1 only. The final state is in the later batches and remediations below and in `archive-report.md`: all five slices were delivered (PRs #308, #310, #311, #313, #314; landing commit `ca7ed2a`). The text below is kept unedited as the historical record (issue #309).
+
 ## Batch 1 — Slice 1: pi-target-plumbing (R-001, R-008)
 
 **Mode**: Strict TDD

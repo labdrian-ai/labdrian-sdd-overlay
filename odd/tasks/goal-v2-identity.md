@@ -36,4 +36,9 @@ Add an explicit `goal_id` to version 2 of the runtime-neutral Goal contract so t
 - Remaining integration: Goal v2 supplies `(project_id, goal_id)` only; authoritative Goal selection, worktree association, currentness and positive Shaper readiness evidence are not implemented. No Goal completion or worktree isolation is implied by identity alone.
 
 ## Next step
-Clarify whether worktree identity must be durable across sessions for Shaper readiness or whether observed Git provenance is sufficient at plan time; separately identify the authoritative Goal source and flag/scope evidence before implementing a positive readiness test. The original dirty checkout remains unchanged; no push or PR.
+**Closed as superseded** (user decision Q12, 2026-10-01; recorded in `odd/tasks/consolidation-phase9.md`). The question of whether worktree identity must be durable across sessions for Shaper readiness, or whether observed Git provenance is sufficient at plan time, is answered by what was built since:
+- The Shaper handoff contract reads git `HEAD` at plan time as informational provenance and does not bind it (`odd/tasks/shaper-handoff-contract.md`, "Engineering defaults taken by the parent", line 228).
+- Phase 6 records git-free provenance (worktree root and `HEAD`) on every workflow event in the workflow log (`engine/cmd/workflow_provenance.go`; ledger `odd/tasks/workflow-lifecycle.md`).
+- Phase 9 decision Q8 makes project identity a port (`ProjectIdentity`, with ordered adapters), so a durable worktree adapter could be added to it later.
+
+Q12 closes only that question. The original text of this step is kept for the record: "Clarify whether worktree identity must be durable across sessions for Shaper readiness or whether observed Git provenance is sufficient at plan time; separately identify the authoritative Goal source and flag/scope evidence before implementing a positive readiness test. The original dirty checkout remains unchanged; no push or PR."

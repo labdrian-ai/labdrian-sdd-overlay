@@ -1,5 +1,7 @@
 # Proposal: Pi Runtime Target
 
+> **Superseded in part.** The "Approach" section and the `extensions/gate.js` row of "Affected Areas" describe the first revision. The "Corrections from verified research" in `design.md` (A1 to A5) replace its MCP shape, its uninstall verb, its bypass flags, its handler composition, and its extension file type, and the change was delivered as five slices (PRs #308, #310, #311, #313, #314; landing commit `ca7ed2a`), not the four it names. The text below is kept unedited as the historical record (issue #309).
+
 ## Intent
 
 The overlay currently ships parity adapters for `claude`, `opencode`, and `codex` only. Pi (via gentle-pi) is a fourth agent runtime the user actively runs, but it has no `--target pi`, no package of skills/agents, no per-phase contract gate, and no longterm-mem MCP registration path. Without this, Pi sessions get none of the overlay's SDD discipline (minimalism/anti-generic-design contracts, GADU, longterm-mem) that claude/opencode/codex already receive. This closes that gap using research-confirmed Pi mechanisms (`before_agent_start`, `pi.mcp`, local-path packages).
