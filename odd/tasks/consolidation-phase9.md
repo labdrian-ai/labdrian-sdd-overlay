@@ -33,7 +33,7 @@ Wave 0 — hygiene (each GitHub or destructive step asks for approval at the tim
 - [x] C1 — Close delivered issues #366–#371 and #297 with evidence.
 - [x] C2 — Prune worktrees and merged branches; delete the three superseded orphan branches (Q10).
 - [x] C3 — `.gitignore` the tool directories; resolve the `skills/archify` symlink; `.gitattributes` `skills/** -text` (Q3, Q11-1). Done in `887a519`.
-- [ ] C3b — Fix the Codex skill frontmatter outside the repository (needs explicit authorization for `~/.codex`).
+- [x] C3b — Fix the Codex skill frontmatter outside the repository (needs explicit authorization for `~/.codex`).
 - [x] C9 — Stale-text sweep (roadmap and ledgers, canonical spec, superseded notes, Q12); close #309. Text done in `06bbea2`; closing #309 is a GitHub step that still waits for approval.
 
 Wave 1 — architecture:
@@ -91,6 +91,9 @@ Per-class degradation warnings (sources disagree); the Phase 8 non-blocking find
   - `odd/tasks/goal-v2-identity.md`: the next step is closed as superseded (Q12), citing the Shaper handoff contract, Phase 6 git-free provenance, and the Phase 9 `ProjectIdentity` port.
 - **Checks** (from `engine/`, after each commit): `gofmt -l .` clean, `go vet ./...` ok, `go test -count=1 ./...` 26 packages ok. The CI archive guards (`tools/archive-anchor-gate`, `tools/archive-reconcile`) run locally against the worktree exit 0.
 
+- **C3b** (user authorization for `~/.codex`, 2026-10-01): `~/.codex/skills/software-architect-consultor-senior-de-arquitectura-y-diseno/SKILL.md` had no front matter at all (it started with a Markdown title), so Codex could not read its name or description. Backed up to `~/.labdrian-phase9-backup-20261001T024838/SKILL.md`; prepended a front matter with `name` (the directory name) and a one-line Spanish `description` matching the skill's own trigger section; the body is byte-identical to the backup (`cmp`). The file is outside the repository and outside labdrian's registry, so the overlay lint's `license`/`metadata` requirements do not apply to it.
+- **Wave 0 native review** — lineage `review-f617c59cd19bbe12` over `f19a33c..ad5bb45` (high; the process evidence is a comment in `engine/pipkg/pipkg.go`), granted, four lenses; approved first pass, acknowledged. Folded into the first Wave 2 commit: `R3-env-override` (the `.gitattributes` test appends git environment variables instead of replacing existing ones), `R4-1` (that test runs git with no deadline and no `GIT_TERMINAL_PROMPT=0`). Fixed here: `R2-next-step-stale-wave0` (this section's next step). Cleanup: the remaining suggestions.
+
 ## Next step
 
-Wave 0 continues: C1 (close #366–#371 and #297 with evidence, and #309 now that its documentation notes landed), C2 (prune worktrees and branches), and C3b (needs explicit authorization for `~/.codex`); then C17. The C3 and C9 range `f19a33c..HEAD` on `chore/phase9-hygiene` still needs its native review assessment, a push, and a pull request, each on the user's decision.
+Wave 0 is done except closing #309 (with the delivery of this branch, on the user's approval). Then Wave 1: C17, the read-only hexagonal alignment audit.
