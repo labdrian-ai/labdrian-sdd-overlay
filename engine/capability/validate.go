@@ -44,7 +44,7 @@ var testRefPattern = regexp.MustCompile(`^[a-z][a-z0-9/_-]*:Test[A-Za-z0-9_]+$`)
 //     whole strings.
 //
 // Validate reads nothing outside d. Whether a named test exists is the job of
-// CheckEvidence.
+// capabilitytest.CheckEvidence.
 func Validate(d Declaration) error {
 	if !isTarget(d.Target) {
 		return fmt.Errorf("target %q is not one of %s", d.Target, strings.Join(Targets(), ", "))
@@ -158,7 +158,7 @@ func validateText(field, s string) error {
 
 func validateTestRefs(refs []string) error {
 	for i, ref := range refs {
-		if _, _, err := parseTestRef(ref); err != nil {
+		if _, _, err := ParseTestRef(ref); err != nil {
 			return err
 		}
 		if i == 0 {
@@ -174,12 +174,13 @@ func validateTestRefs(refs []string) error {
 	return nil
 }
 
-// parseTestRef splits a test reference into its directory (relative to the
+// ParseTestRef splits a test reference into its directory (relative to the
 // engine root, with forward slashes) and its test function name. It is the
 // single definition of a well-formed reference: Validate uses it for the
-// format rule and CheckEvidence uses it before touching the filesystem, so a
-// reference that could name a path outside the engine root never reaches it.
-func parseTestRef(ref string) (dir, name string, err error) {
+// format rule and capabilitytest.CheckEvidence uses it before touching the
+// filesystem, so a reference that could name a path outside the engine root
+// never reaches it. It is pure.
+func ParseTestRef(ref string) (dir, name string, err error) {
 	if !testRefPattern.MatchString(ref) {
 		return "", "", fmt.Errorf("test reference %q must match <dir>:<TestName> (%s)", ref, testRefPattern)
 	}

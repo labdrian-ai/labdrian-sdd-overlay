@@ -1,4 +1,4 @@
-package capability_test
+package capabilitytest_test
 
 import (
 	"os"
@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capabilitytest"
 )
 
 // evidenceFixture builds a small engine-shaped tree under a temporary
@@ -61,11 +62,16 @@ func evidenceFixture(t *testing.T) string {
 }
 
 // declarationWithRefs returns a declaration whose installation claim names
-// refs; every other claim is unsupported and names none.
+// refs; its other claim (projection) is unsupported and names none. CheckEvidence
+// reads the references and nothing else, so no more of a declaration is needed.
 func declarationWithRefs(refs ...string) capability.Declaration {
-	d := validDeclaration()
-	d.Claims[0].Tests = refs
-	return d
+	return capability.Declaration{
+		Target: capability.TargetClaude,
+		Claims: []capability.Claim{
+			{Capability: capability.Installation, Status: capability.Supported, Tests: refs},
+			{Capability: capability.Projection, Status: capability.Unsupported, Detail: "not implemented"},
+		},
+	}
 }
 
 func TestCheckEvidenceAcceptsRealTests(t *testing.T) {
@@ -81,7 +87,7 @@ func TestCheckEvidenceAcceptsRealTests(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			if err := capability.CheckEvidence(root, declarationWithRefs(tt.refs...)); err != nil {
+			if err := capabilitytest.CheckEvidence(root, declarationWithRefs(tt.refs...)); err != nil {
 				t.Fatalf("CheckEvidence() = %v, want nil", err)
 			}
 		})
@@ -114,7 +120,7 @@ func TestCheckEvidenceRefusesAnythingThatIsNotARunnableTest(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			err := capability.CheckEvidence(root, declarationWithRefs(tt.ref))
+			err := capabilitytest.CheckEvidence(root, declarationWithRefs(tt.ref))
 			if err == nil {
 				t.Fatalf("CheckEvidence(%q) = nil, want an error containing %q", tt.ref, tt.wantErr)
 			}
@@ -138,7 +144,7 @@ func TestCheckEvidenceReportsEveryFailureAtOnce(t *testing.T) {
 		Detail:     "limited",
 	}
 
-	err := capability.CheckEvidence(root, d)
+	err := capabilitytest.CheckEvidence(root, d)
 	if err == nil {
 		t.Fatal("CheckEvidence() = nil, want three failures")
 	}
@@ -162,7 +168,7 @@ func TestCheckEvidenceReportsEveryFailureAtOnce(t *testing.T) {
 // engine root is the parent of this package's directory.
 func TestDeclaredEvidenceExists(t *testing.T) {
 	for _, d := range capability.All() {
-		if err := capability.CheckEvidence("..", d); err != nil {
+		if err := capabilitytest.CheckEvidence("..", d); err != nil {
 			t.Errorf("declared evidence for %s is missing:\n%v", d.Target, err)
 		}
 	}
@@ -170,7 +176,7 @@ func TestDeclaredEvidenceExists(t *testing.T) {
 
 func TestCheckEvidenceRefusesAMissingEngineRoot(t *testing.T) {
 	missing := filepath.Join(t.TempDir(), "no-such-engine")
-	err := capability.CheckEvidence(missing, declarationWithRefs("alpha:TestPresent"))
+	err := capabilitytest.CheckEvidence(missing, declarationWithRefs("alpha:TestPresent"))
 	if err == nil || !strings.Contains(err.Error(), `directory "alpha" not found under the engine root`) {
 		t.Fatalf("CheckEvidence() = %v, want the directory-not-found error", err)
 	}

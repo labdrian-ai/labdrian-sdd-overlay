@@ -30,7 +30,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
@@ -167,13 +167,13 @@ func (r pathGoalReader) LoadGoal(projectID, goalID string) (goal.Goal, error) {
 // workflowProber returns the DependencyProber the workflow verbs record
 // observations with: the presence prober, pointed at the process's home and
 // PATH. It looks at paths with stat and at PATH entries by name, and never opens
-// a file, runs a program, or names a path (see engine/capability), so an
+// a file, runs a program, or names a path (see engine/capability/presence), so an
 // "available" observation only says something is present and states the limit.
 // It is a variable so a test can install workflow.UnavailableProber, the safe
 // default that confirms nothing.
 var workflowProber = func() workflow.DependencyProber {
 	home, path := runtimeProbeEnv()
-	return capability.PresenceProber{Home: home, Path: path}
+	return presence.Prober{Home: home, Path: path}
 }
 
 // newWorkflowLifecycle builds a Lifecycle over the real XDG-resolved Store

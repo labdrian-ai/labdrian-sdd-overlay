@@ -1,4 +1,4 @@
-package capability_test
+package presence_test
 
 // Tests for the presence prober. Every file the prober is pointed at is a
 // fixture under t.TempDir(); no test names the real home directory, and none
@@ -17,6 +17,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/memoryscope"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
@@ -88,7 +89,7 @@ type failingFS struct {
 func (f *failingFS) Lstat(string) (fs.FileInfo, error) { f.calls++; return nil, f.err }
 func (f *failingFS) Stat(string) (fs.FileInfo, error)  { f.calls++; return nil, f.err }
 
-func probeOne(t *testing.T, p capability.PresenceProber, name string) workflow.Observation {
+func probeOne(t *testing.T, p presence.Prober, name string) workflow.Observation {
 	t.Helper()
 	got, err := p.Probe(context.Background(), []string{name})
 	if err != nil || len(got) != 1 {
@@ -102,7 +103,7 @@ func probeOne(t *testing.T, p capability.PresenceProber, name string) workflow.O
 
 func TestPresenceProberReportsEachFileSignalFromTheFixtureHome(t *testing.T) {
 	home := fixtureHome(t)
-	p := capability.PresenceProber{Home: home}
+	p := presence.Prober{Home: home}
 	for name, want := range map[string]string{
 		"memory:engram":           "the Engram database file is present (not opened, so its contents and health are unverified)",
 		"memory:longterm-mem":     "the longterm-mem registration record is present (not opened; whether a runtime has the MCP server loaded is unverified)",
@@ -120,7 +121,7 @@ func TestPresenceProberReportsEachFileSignalFromTheFixtureHome(t *testing.T) {
 }
 
 func TestPresenceProberNeverReportsAuthenticatedOrHealthy(t *testing.T) {
-	p := capability.PresenceProber{Home: fixtureHome(t), Path: binDir(t)}
+	p := presence.Prober{Home: fixtureHome(t), Path: binDir(t)}
 	names := []string{"memory:engram", "memory:longterm-mem", "gentle-ai-review", "credentials:claude-code", "credentials:codex", "credentials:pi"}
 	got, err := p.Probe(context.Background(), names)
 	if err != nil {
@@ -146,7 +147,7 @@ func TestPresenceProberNeverReportsAuthenticatedOrHealthy(t *testing.T) {
 
 func TestPresenceProberReportsAMissingFileAsUnavailableWithoutThePath(t *testing.T) {
 	home := t.TempDir()
-	p := capability.PresenceProber{Home: home}
+	p := presence.Prober{Home: home}
 	for name, subject := range map[string]string{
 		"memory:engram":           "the Engram database file was not found",
 		"memory:longterm-mem":     "the longterm-mem registration record was not found",
@@ -165,7 +166,7 @@ func TestPresenceProberReportsAMissingFileAsUnavailableWithoutThePath(t *testing
 }
 
 func TestPresenceProberFixedSignalsAndUnknownCapabilities(t *testing.T) {
-	p := capability.PresenceProber{Home: fixtureHome(t), Path: binDir(t)}
+	p := presence.Prober{Home: fixtureHome(t), Path: binDir(t)}
 	if got := probeOne(t, p, "memory:procedural-skills"); got.Status != workflow.ObservationUnavailable || got.Detail != "no presence check exists for procedural skills" {
 		t.Errorf("procedural skills = %+v, want unavailable with the fixed detail even when everything else is present", got)
 	}
@@ -178,7 +179,7 @@ func TestPresenceProberFixedSignalsAndUnknownCapabilities(t *testing.T) {
 }
 
 func TestPresenceProberAnswersInTheOrderAndLengthOfTheRequest(t *testing.T) {
-	p := capability.PresenceProber{Home: fixtureHome(t)}
+	p := presence.Prober{Home: fixtureHome(t)}
 	names := []string{"credentials:pi", "nope", "memory:engram", "credentials:pi"}
 	got, err := p.Probe(context.Background(), names)
 	if err != nil || len(got) != len(names) {
@@ -199,7 +200,7 @@ func TestPresenceProberWithoutAHomeReportsEveryHomeSignalUnavailable(t *testing.
 	for name, home := range map[string]string{"empty": "", "relative": "some/relative/home"} {
 		t.Run(name, func(t *testing.T) {
 			rec := &recordingFS{}
-			p := capability.PresenceProber{Home: home, ProbeFS: rec}
+			p := presence.Prober{Home: home, ProbeFS: rec}
 			for _, signal := range []string{"memory:engram", "memory:longterm-mem", "credentials:claude-code", "credentials:codex", "credentials:pi"} {
 				got := probeOne(t, p, signal)
 				if got.Status != workflow.ObservationUnavailable || !strings.Contains(got.Detail, "home directory is unknown") {
@@ -231,7 +232,7 @@ func TestPresenceProberFindsGentleAIOnAnAbsolutePathEntry(t *testing.T) {
 		"relative then absolute": {"bin" + list + good, true},
 	} {
 		t.Run(name, func(t *testing.T) {
-			got := probeOne(t, capability.PresenceProber{Path: tc.path}, "gentle-ai-review")
+			got := probeOne(t, presence.Prober{Path: tc.path}, "gentle-ai-review")
 			wantStatus := workflow.ObservationUnavailable
 			if tc.want {
 				wantStatus = workflow.ObservationAvailable
@@ -252,7 +253,7 @@ func TestPresenceProberFindsGentleAIOnAnAbsolutePathEntry(t *testing.T) {
 // TestPresenceProberDoesNotNeedAHomeToFindTheBinary: the binary check depends on
 // PATH only, so an unknown home does not hide a binary that is plainly there.
 func TestPresenceProberDoesNotNeedAHomeToFindTheBinary(t *testing.T) {
-	got := probeOne(t, capability.PresenceProber{Home: "", Path: binDir(t)}, "gentle-ai-review")
+	got := probeOne(t, presence.Prober{Home: "", Path: binDir(t)}, "gentle-ai-review")
 	if got.Status != workflow.ObservationAvailable {
 		t.Errorf("observation = %+v, want available: PATH alone decides", got)
 	}
@@ -261,7 +262,7 @@ func TestPresenceProberDoesNotNeedAHomeToFindTheBinary(t *testing.T) {
 func TestPresenceProberSkipsRelativePathEntriesWithoutTouchingThem(t *testing.T) {
 	rec := &recordingFS{}
 	list := string(os.PathListSeparator)
-	p := capability.PresenceProber{Path: "bin" + list + "." + list + list + filepath.Join("x", "y"), ProbeFS: rec}
+	p := presence.Prober{Path: "bin" + list + "." + list + list + filepath.Join("x", "y"), ProbeFS: rec}
 	got := probeOne(t, p, "gentle-ai-review")
 	if got.Status != workflow.ObservationUnavailable {
 		t.Errorf("observation = %+v, want unavailable", got)
@@ -282,13 +283,13 @@ func TestPresenceProberRequiresAnExecutableRegularFileForTheBinary(t *testing.T)
 		t.Fatal(err)
 	}
 	for name, dir := range map[string]string{"a file without the execute bit": notExec, "a directory": asDir} {
-		got := probeOne(t, capability.PresenceProber{Path: dir}, "gentle-ai-review")
+		got := probeOne(t, presence.Prober{Path: dir}, "gentle-ai-review")
 		if got.Status != workflow.ObservationUnavailable {
 			t.Errorf("%s: observation = %+v, want unavailable", name, got)
 		}
 	}
 	// A non-executable file earlier on PATH does not hide an executable later on.
-	got := probeOne(t, capability.PresenceProber{Path: notExec + string(os.PathListSeparator) + binDir(t)}, "gentle-ai-review")
+	got := probeOne(t, presence.Prober{Path: notExec + string(os.PathListSeparator) + binDir(t)}, "gentle-ai-review")
 	if got.Status != workflow.ObservationAvailable {
 		t.Errorf("observation = %+v, want available: the scan goes on past a file that cannot run", got)
 	}
@@ -302,7 +303,7 @@ func TestPresenceProberOnlyStatsTheExpectedPaths(t *testing.T) {
 	home := fixtureHome(t)
 	bin := binDir(t)
 	rec := &recordingFS{}
-	p := capability.PresenceProber{Home: home, Path: bin, ProbeFS: rec}
+	p := presence.Prober{Home: home, Path: bin, ProbeFS: rec}
 	names := []string{"memory:engram", "memory:longterm-mem", "memory:procedural-skills", "gentle-ai-review", "credentials:claude-code", "credentials:codex", "credentials:pi", "unknown"}
 	if _, err := p.Probe(context.Background(), names); err != nil {
 		t.Fatal(err)
@@ -346,7 +347,7 @@ func TestPresenceProberTreatsASymlinkAsPresentOnlyIfItResolvesToARegularFile(t *
 	if err := os.Symlink(t.TempDir(), filepath.Join(home, ".pi", "agent", "auth.json")); err != nil {
 		t.Fatal(err)
 	}
-	p := capability.PresenceProber{Home: home}
+	p := presence.Prober{Home: home}
 
 	ok := probeOne(t, p, "credentials:codex")
 	if ok.Status != workflow.ObservationAvailable || !strings.HasSuffix(ok.Detail, "; the checked path is a symlink") {
@@ -377,7 +378,7 @@ func TestPresenceProberNamesTheErrorClassNotThePath(t *testing.T) {
 		"other error":       {errors.New("input/output error on " + home + "/.codex/auth.json"), "the path could not be examined"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			p := capability.PresenceProber{Home: home, ProbeFS: &failingFS{err: tc.err}}
+			p := presence.Prober{Home: home, ProbeFS: &failingFS{err: tc.err}}
 			got := probeOne(t, p, "credentials:codex")
 			if got.Status != workflow.ObservationUnavailable || !strings.HasSuffix(got.Detail, tc.want) {
 				t.Errorf("observation = %+v, want unavailable ending %q", got, tc.want)
@@ -392,13 +393,13 @@ func TestPresenceProberNamesTheErrorClassNotThePath(t *testing.T) {
 func TestPresenceProberCountsPathDirectoriesItCouldNotCheck(t *testing.T) {
 	fsys := &failingFS{err: fs.ErrPermission}
 	dirs := []string{filepath.Join(string(filepath.Separator), "a"), filepath.Join(string(filepath.Separator), "b")}
-	p := capability.PresenceProber{Path: strings.Join(dirs, string(os.PathListSeparator)), ProbeFS: fsys}
+	p := presence.Prober{Path: strings.Join(dirs, string(os.PathListSeparator)), ProbeFS: fsys}
 	got := probeOne(t, p, "gentle-ai-review")
 	if got.Status != workflow.ObservationUnavailable || !strings.Contains(got.Detail, "(2 could not be checked)") {
 		t.Errorf("observation = %+v, want unavailable and a count of the directories that could not be checked", got)
 	}
 	// A directory that simply lacks the binary is not "could not be checked".
-	missing := probeOne(t, capability.PresenceProber{Path: t.TempDir()}, "gentle-ai-review")
+	missing := probeOne(t, presence.Prober{Path: t.TempDir()}, "gentle-ai-review")
 	if strings.Contains(missing.Detail, "could not be checked") {
 		t.Errorf("detail %q counts a plain absence as unchecked", missing.Detail)
 	}
@@ -406,7 +407,7 @@ func TestPresenceProberCountsPathDirectoriesItCouldNotCheck(t *testing.T) {
 
 func TestPresenceProberHonorsAContextThatIsAlreadyDone(t *testing.T) {
 	rec := &recordingFS{}
-	p := capability.PresenceProber{Home: fixtureHome(t), Path: binDir(t), ProbeFS: rec}
+	p := presence.Prober{Home: fixtureHome(t), Path: binDir(t), ProbeFS: rec}
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 	got, err := p.Probe(ctx, []string{"memory:engram", "gentle-ai-review"})
@@ -436,7 +437,7 @@ func TestPresenceProberStopsBetweenCapabilitiesAndBetweenPathDirectories(t *test
 	t.Run("between capabilities", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(context.Background())
 		fsys := &cancelingFS{cancel: cancel}
-		p := capability.PresenceProber{Home: fixtureHome(t), ProbeFS: fsys}
+		p := presence.Prober{Home: fixtureHome(t), ProbeFS: fsys}
 		got, err := p.Probe(ctx, []string{"memory:engram", "memory:longterm-mem", "credentials:pi"})
 		if !errors.Is(err, context.Canceled) || got != nil {
 			t.Errorf("Probe() = %v, %v, want the context's error", got, err)
@@ -449,7 +450,7 @@ func TestPresenceProberStopsBetweenCapabilitiesAndBetweenPathDirectories(t *test
 		ctx, cancel := context.WithCancel(context.Background())
 		fsys := &cancelingFS{cancel: cancel}
 		list := string(os.PathListSeparator)
-		p := capability.PresenceProber{Path: t.TempDir() + list + t.TempDir() + list + binDir(t), ProbeFS: fsys}
+		p := presence.Prober{Path: t.TempDir() + list + t.TempDir() + list + binDir(t), ProbeFS: fsys}
 		got, err := p.Probe(ctx, []string{"gentle-ai-review"})
 		if err != nil || len(got) != 1 {
 			t.Fatalf("Probe() = %v, %v, want one observation", got, err)
@@ -465,7 +466,7 @@ func TestPresenceProberStopsBetweenCapabilitiesAndBetweenPathDirectories(t *test
 
 func TestPresenceProberDetailsStayWithinTheObservationBounds(t *testing.T) {
 	home := fixtureHome(t)
-	for _, p := range []capability.PresenceProber{
+	for _, p := range []presence.Prober{
 		{Home: home, Path: binDir(t)},
 		{},
 		{Home: home, ProbeFS: &failingFS{err: errors.New(strings.Repeat("x", 10000))}},
@@ -491,16 +492,16 @@ func TestPresenceProberDetailsStayWithinTheObservationBounds(t *testing.T) {
 // memoryscope source.
 func TestPresenceCapabilityNamesMatchWhatTheLifecycleRequests(t *testing.T) {
 	for source, name := range map[memoryscope.Source]string{
-		memoryscope.SourceEngram:           capability.CapabilityMemoryEngram,
-		memoryscope.SourceLongtermMem:      capability.CapabilityMemoryLongtermMem,
-		memoryscope.SourceProceduralSkills: capability.CapabilityMemoryProcedural,
+		memoryscope.SourceEngram:           presence.CapabilityMemoryEngram,
+		memoryscope.SourceLongtermMem:      presence.CapabilityMemoryLongtermMem,
+		memoryscope.SourceProceduralSkills: presence.CapabilityMemoryProcedural,
 	} {
 		if want := "memory:" + string(source); name != want {
 			t.Errorf("capability name %q, want %q", name, want)
 		}
 	}
-	if capability.CapabilityGentleAIReview != "gentle-ai-review" {
-		t.Errorf("gentle-ai-review name = %q", capability.CapabilityGentleAIReview)
+	if presence.CapabilityGentleAIReview != "gentle-ai-review" {
+		t.Errorf("gentle-ai-review name = %q", presence.CapabilityGentleAIReview)
 	}
 }
 
@@ -510,12 +511,12 @@ func TestCredentialsCapabilityMapsTheThreeRuntimesThatHaveOne(t *testing.T) {
 		capability.TargetCodex:  "credentials:codex",
 		capability.TargetPi:     "credentials:pi",
 	} {
-		if got, ok := capability.CredentialsCapability(target); !ok || got != want {
+		if got, ok := presence.CredentialsCapability(target); !ok || got != want {
 			t.Errorf("CredentialsCapability(%q) = %q, %v, want %q", target, got, ok, want)
 		}
 	}
 	for _, target := range []string{capability.TargetOpenCode, "", "all", "claude-code"} {
-		if got, ok := capability.CredentialsCapability(target); ok || got != "" {
+		if got, ok := presence.CredentialsCapability(target); ok || got != "" {
 			t.Errorf("CredentialsCapability(%q) = %q, %v, want none", target, got, ok)
 		}
 	}
@@ -526,11 +527,11 @@ func TestCredentialsCapabilityMapsTheThreeRuntimesThatHaveOne(t *testing.T) {
 // value, which is the safe default when nothing is configured.
 func TestPresenceProberZeroValueReportsEverythingUnavailable(t *testing.T) {
 	names := []string{"memory:engram", "memory:longterm-mem", "memory:procedural-skills", "gentle-ai-review", "credentials:claude-code"}
-	got, err := capability.PresenceProber{}.Probe(context.Background(), names)
+	got, err := presence.Prober{}.Probe(context.Background(), names)
 	if err != nil {
 		t.Fatal(err)
 	}
-	var _ workflow.DependencyProber = capability.PresenceProber{}
+	var _ workflow.DependencyProber = presence.Prober{}
 	for _, o := range got {
 		if o.Status != workflow.ObservationUnavailable {
 			t.Errorf("zero prober reported %+v, want everything unavailable", o)

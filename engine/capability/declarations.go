@@ -11,7 +11,7 @@ import (
 // To upgrade a claim, change its status, name the tests that prove it, and
 // add or update those tests in the same commit. Two guards keep the table
 // honest: Validate refuses a supported or partial claim that names no test,
-// and TestDeclaredEvidenceExists (through CheckEvidence) refuses a reference
+// and TestDeclaredEvidenceExists (through capabilitytest.CheckEvidence) refuses a reference
 // to a test that does not exist. A claim is never upgraded on the strength of
 // a runtime being known to work: only a named, existing test counts.
 //
@@ -87,8 +87,8 @@ var declarations = []Declaration{
 			),
 			partial(Authentication,
 				"The presence prober reports whether Claude Code's credentials file exists, by stat only (runtime probe --target claude, and the observations a workflow records). It never reads the file and cannot prove the credentials are valid or that a session is authenticated. No lifecycle operation requires authentication.",
-				"capability:TestPresenceProberReportsEachFileSignalFromTheFixtureHome",
-				"capability:TestPresenceProberSourceOnlyStats",
+				"capability/presence:TestPresenceProberReportsEachFileSignalFromTheFixtureHome",
+				"capability/presence:TestPresenceProberSourceOnlyStats",
 				"cmd:TestPhase7Acceptance",
 				"cmd:TestRuntimeProbeDefaultsToAllTargetsAndReportsPresenceOnly",
 				"cmd:TestRuntimeProbeSourceOpensNoFile",

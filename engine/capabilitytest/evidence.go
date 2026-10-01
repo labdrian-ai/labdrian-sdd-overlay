@@ -1,4 +1,9 @@
-package capability
+// Package capabilitytest is test tooling for the capability declarations: the
+// guard that every test a declaration names exists. It reads the engine's test
+// sources, which is why it is not part of engine/capability, whose declarations,
+// validation and report stay free of the file system. Nothing in the program
+// imports it; the tests that guard the shipped declarations do.
+package capabilitytest
 
 import (
 	"errors"
@@ -12,6 +17,8 @@ import (
 	"strings"
 	"unicode"
 	"unicode/utf8"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 )
 
 // CheckEvidence verifies that every test a declaration names exists. A
@@ -31,13 +38,13 @@ import (
 //
 // References are checked for format first, so one that could name a path
 // outside engineRoot is refused before any file is read.
-func CheckEvidence(engineRoot string, d Declaration) error {
+func CheckEvidence(engineRoot string, d capability.Declaration) error {
 	dirs := make(map[string]dirTests)
 	var errs []error
 	for _, c := range d.Claims {
 		for _, ref := range c.Tests {
 			where := fmt.Sprintf("target %s, capability %s", d.Target, c.Capability)
-			dir, name, err := parseTestRef(ref)
+			dir, name, err := capability.ParseTestRef(ref)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("%s: %w", where, err))
 				continue

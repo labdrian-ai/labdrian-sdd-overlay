@@ -1,7 +1,7 @@
 package main
 
 // runtime probe: 'runtime probe [--target claude|codex|pi|all]'. It prints, as
-// JSON, what the presence prober (engine/capability) finds: for the selected
+// JSON, what the presence prober (engine/capability/presence) finds: for the selected
 // runtimes a credentials signal, and for every run the memory and Gentle AI
 // review signals a workflow records. The prober is the one the workflow verbs
 // use, pointed at the real home directory and PATH.
@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -43,7 +44,7 @@ var probeTimeout = 5 * time.Second
 
 // runtimeProbeFS is the prober's stat access; nil (outside tests) means the
 // operating system's.
-var runtimeProbeFS capability.StatFS
+var runtimeProbeFS presence.StatFS
 
 // probeTargetAll is the --target value that selects every runtime's credentials
 // signal.
@@ -85,7 +86,7 @@ func runRuntimeProbe(args []string, home, path string, stdout, stderr io.Writer,
 		return
 	}
 
-	observations, err := probeWithin(capability.PresenceProber{Home: home, Path: path, ProbeFS: runtimeProbeFS}, names, probeTimeout)
+	observations, err := probeWithin(presence.Prober{Home: home, Path: path, ProbeFS: runtimeProbeFS}, names, probeTimeout)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: runtime probe: %v\n", err)
 		exit(1)
@@ -142,17 +143,17 @@ func probeCapabilities(target string) ([]string, error) {
 	}
 	var names []string
 	for _, t := range targets {
-		name, ok := capability.CredentialsCapability(t)
+		name, ok := presence.CredentialsCapability(t)
 		if !ok {
 			return nil, fmt.Errorf("unknown target %q (expected %s, %s, %s, or %s)", target, capability.TargetClaude, capability.TargetCodex, capability.TargetPi, probeTargetAll)
 		}
 		names = append(names, name)
 	}
 	return append(names,
-		capability.CapabilityMemoryEngram,
-		capability.CapabilityMemoryLongtermMem,
-		capability.CapabilityMemoryProcedural,
-		capability.CapabilityGentleAIReview,
+		presence.CapabilityMemoryEngram,
+		presence.CapabilityMemoryLongtermMem,
+		presence.CapabilityMemoryProcedural,
+		presence.CapabilityGentleAIReview,
 	), nil
 }
 

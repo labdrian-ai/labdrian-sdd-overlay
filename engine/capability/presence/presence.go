@@ -1,8 +1,6 @@
-package capability
-
-// The presence prober: a workflow.DependencyProber that answers, for the
-// capabilities a workflow declares and for each runtime's credentials, one
-// narrow question, "is the thing there?", and nothing more.
+// Package presence is the presence prober: a workflow.DependencyProber that
+// answers, for the capabilities a workflow declares and for each runtime's
+// credentials, one narrow question, "is the thing there?", and nothing more.
 //
 // Decision 4 of the Phase 7 design is the contract. The prober looks at a path
 // with stat and at the PATH directories by name. It never opens, reads, hashes,
@@ -16,10 +14,12 @@ package capability
 // pins the source of this file to that contract: no os.Open, no os.ReadFile, no
 // io/ioutil, no os/exec, no net.
 //
-// The prober lives in this package rather than in engine/projection because
-// engine/workflow does not import engine/capability, so importing workflow here
-// creates no cycle, and the presence checks are a statement about what runtimes
-// and dependencies leave on disk, which is what this package declares.
+// The prober is a driven adapter: engine/workflow owns the DependencyProber port
+// and engine/capability stays the pure vocabulary and declarations of what each
+// runtime can do, so the stat-level checks, which are a statement about what
+// runtimes and dependencies leave on disk, sit in a subpackage of capability and
+// depend on both; neither depends on them. The composition root (engine/cmd) builds
+// the prober and hands it to the workflow lifecycle.
 //
 // Where the signals come from:
 //
@@ -44,6 +44,7 @@ package capability
 //
 // Any other capability name is unavailable: absence of a check is reported, not
 // guessed.
+package presence
 
 import (
 	"context"
@@ -54,6 +55,7 @@ import (
 	"runtime"
 	"strconv"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -62,6 +64,9 @@ import (
 // workflow lifecycle records; they are repeated here as literals because this
 // package must not depend on more of the engine than it needs, and a test pins
 // them against the names the lifecycle really requests.
+//
+// They are the names of what is probed, not of what a runtime can do, so they
+// belong to the prober and not to engine/capability's vocabulary.
 const (
 	CapabilityMemoryEngram      = "memory:engram"
 	CapabilityMemoryLongtermMem = "memory:longterm-mem"
@@ -73,15 +78,15 @@ const (
 )
 
 // CredentialsCapability returns the capability name of the credentials
-// presence check for a runtime target (TargetClaude, TargetCodex, or TargetPi),
-// and false for a target that has none (OpenCode, or an unknown value).
+// presence check for a runtime target (capability.TargetClaude, TargetCodex, or
+// TargetPi), and false for a target that has none (OpenCode, or an unknown value).
 func CredentialsCapability(target string) (string, bool) {
 	switch target {
-	case TargetClaude:
+	case capability.TargetClaude:
 		return CapabilityCredentialsClaude, true
-	case TargetCodex:
+	case capability.TargetCodex:
 		return CapabilityCredentialsCodex, true
-	case TargetPi:
+	case capability.TargetPi:
 		return CapabilityCredentialsPi, true
 	}
 	return "", false
@@ -89,7 +94,7 @@ func CredentialsCapability(target string) (string, bool) {
 
 // StatFS is the only filesystem access the prober has: stat, with and without
 // following a final symbolic link. It has no method that opens a file, so a
-// PresenceProber cannot read one through it. The default is the operating
+// Prober cannot read one through it. The default is the operating
 // system's Lstat and Stat; a test injects a fake to produce errors that are hard
 // to produce on a real disk.
 type StatFS interface {
@@ -103,9 +108,9 @@ type osStatFS struct{}
 func (osStatFS) Lstat(name string) (fs.FileInfo, error) { return os.Lstat(name) }
 func (osStatFS) Stat(name string) (fs.FileInfo, error)  { return os.Stat(name) }
 
-// PresenceProber implements workflow.DependencyProber with stat-level checks
+// Prober implements workflow.DependencyProber with stat-level checks
 // only. The zero value has no home and no PATH, so every signal is unavailable.
-type PresenceProber struct {
+type Prober struct {
 	// Home is the absolute home directory the per-user files are looked for
 	// under. Empty, or not absolute, means the home is unknown: every signal that
 	// lives under it is unavailable, and the prober never falls back to the
@@ -120,14 +125,14 @@ type PresenceProber struct {
 	ProbeFS StatFS
 }
 
-var _ workflow.DependencyProber = PresenceProber{}
+var _ workflow.DependencyProber = Prober{}
 
 // Probe returns one observation per capability, in order. It honors ctx: when
 // the context is done it returns the context's error at once, which the
 // workflow lifecycle records as every capability being unavailable. It never
 // returns another error, and it never returns an observation that would fail the
 // workflow's bounds: every detail is a short fixed sentence.
-func (p PresenceProber) Probe(ctx context.Context, capabilities []string) ([]workflow.Observation, error) {
+func (p Prober) Probe(ctx context.Context, capabilities []string) ([]workflow.Observation, error) {
 	out := make([]workflow.Observation, len(capabilities))
 	for i, name := range capabilities {
 		if err := ctx.Err(); err != nil {
@@ -138,7 +143,7 @@ func (p PresenceProber) Probe(ctx context.Context, capabilities []string) ([]wor
 	return out, nil
 }
 
-func (p PresenceProber) statFS() StatFS {
+func (p Prober) statFS() StatFS {
 	if p.ProbeFS != nil {
 		return p.ProbeFS
 	}
@@ -197,7 +202,7 @@ func gentleAIBinaryName() string {
 	return "gentle-ai"
 }
 
-func (p PresenceProber) observe(ctx context.Context, name string) workflow.Observation {
+func (p Prober) observe(ctx context.Context, name string) workflow.Observation {
 	switch name {
 	case CapabilityMemoryProcedural:
 		return unavailable(name, "no presence check exists for procedural skills")
@@ -228,7 +233,7 @@ func (p PresenceProber) observe(ctx context.Context, name string) workflow.Obser
 // observeGentleAI scans the absolute PATH directories, by name, for an
 // executable regular file called gentle-ai. It stats <dir>/gentle-ai and never
 // lists a directory, opens the file, or runs it.
-func (p PresenceProber) observeGentleAI(ctx context.Context, name string) workflow.Observation {
+func (p Prober) observeGentleAI(ctx context.Context, name string) workflow.Observation {
 	binary := gentleAIBinaryName()
 	unchecked := 0
 	for _, dir := range filepath.SplitList(p.Path) {
@@ -282,7 +287,7 @@ type statResult struct {
 // counts as present only when following it succeeds and lands on a regular file,
 // and the result says it was a link so the detail can. Anything else, a
 // directory or a device included, is not present.
-func (p PresenceProber) statRegular(path string) statResult {
+func (p Prober) statRegular(path string) statResult {
 	fsys := p.statFS()
 	info, err := fsys.Lstat(path)
 	if err != nil {

@@ -26,7 +26,7 @@ package main
 //	unusable state                    /UnusableState_ProjectsNothingWarnsOnceDeniesNothing
 //	presence prober                   /PresenceProber_RecordsPresenceByStatOnly
 //	                                  (its source opens no file, static:
-//	                                  capability: TestPresenceProberSourceOnlyStats,
+//	                                  capability/presence: TestPresenceProberSourceOnlyStats,
 //	                                  TestRuntimeProbeSourceOpensNoFile)
 //	settings family                   /Settings_MergeIsIdempotentAndPreservesForeignEntries
 //	live session (RA8)                not a fixture: one authorized real prompt
@@ -47,6 +47,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capabilitytest"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -276,7 +277,7 @@ func phase7Capabilities(t *testing.T, binary string) {
 		if err := capability.Validate(d); err != nil {
 			t.Errorf("%s: printed declaration is invalid: %v", d.Target, err)
 		}
-		if err := capability.CheckEvidence("..", d); err != nil {
+		if err := capabilitytest.CheckEvidence("..", d); err != nil {
 			t.Errorf("%s: printed declaration cites a test that does not exist: %v", d.Target, err)
 		}
 	}

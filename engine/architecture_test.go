@@ -21,40 +21,45 @@ import (
 //     half is debt below.
 //   - assets, gadu, synctrigger, filelock, gitprov, statestore and atomicfile are
 //     adapters: infrastructure the domain reaches only through a port.
-//   - installer, shelltest and this guard (the module root) are test-only.
+//   - capability/presence is the adapter of the workflow's DependencyProber port:
+//     it stats files and the PATH, and capability itself stays pure.
+//   - installer, shelltest, capabilitytest and this guard (the module root) are
+//     test-only.
 var rings = map[string]archguard.Ring{
-	".":                  archguard.Support,
-	"assets":             archguard.Adapter,
-	"atomicfile":         archguard.Adapter,
-	"capability":         archguard.Domain,
-	"cmd":                archguard.Root,
-	"filelock":           archguard.Adapter,
-	"gadu":               archguard.Adapter,
-	"gate":               archguard.Domain,
-	"gitprov":            archguard.Adapter,
-	"goal":               archguard.Domain,
-	"installer":          archguard.Support,
-	"jsonstrict":         archguard.Domain,
-	"memoryscope":        archguard.Domain,
-	"pathguard":          archguard.Domain,
-	"pipkg":              archguard.Adapter,
-	"prespec":            archguard.Domain,
-	"projection":         archguard.Domain,
-	"projection/fsstore": archguard.Adapter,
-	"propagator":         archguard.Domain,
-	"reviewreceipt":      archguard.Domain,
-	"roles":              archguard.Domain,
-	"roles/filechain":    archguard.Adapter,
-	"runtime":            archguard.Adapter,
-	"settings":           archguard.Adapter,
-	"shaper":             archguard.Domain,
-	"shelltest":          archguard.Support,
-	"skills":             archguard.Domain,
-	"statestore":         archguard.Adapter,
-	"synctrigger":        archguard.Adapter,
-	"workflow":           archguard.Domain,
-	"workflow/filelog":   archguard.Adapter,
-	"workflowprofile":    archguard.Domain,
+	".":                   archguard.Support,
+	"assets":              archguard.Adapter,
+	"atomicfile":          archguard.Adapter,
+	"capability":          archguard.Domain,
+	"capability/presence": archguard.Adapter,
+	"capabilitytest":      archguard.Support,
+	"cmd":                 archguard.Root,
+	"filelock":            archguard.Adapter,
+	"gadu":                archguard.Adapter,
+	"gate":                archguard.Domain,
+	"gitprov":             archguard.Adapter,
+	"goal":                archguard.Domain,
+	"installer":           archguard.Support,
+	"jsonstrict":          archguard.Domain,
+	"memoryscope":         archguard.Domain,
+	"pathguard":           archguard.Domain,
+	"pipkg":               archguard.Adapter,
+	"prespec":             archguard.Domain,
+	"projection":          archguard.Domain,
+	"projection/fsstore":  archguard.Adapter,
+	"propagator":          archguard.Domain,
+	"reviewreceipt":       archguard.Domain,
+	"roles":               archguard.Domain,
+	"roles/filechain":     archguard.Adapter,
+	"runtime":             archguard.Adapter,
+	"settings":            archguard.Adapter,
+	"shaper":              archguard.Domain,
+	"shelltest":           archguard.Support,
+	"skills":              archguard.Domain,
+	"statestore":          archguard.Adapter,
+	"synctrigger":         archguard.Adapter,
+	"workflow":            archguard.Domain,
+	"workflow/filelog":    archguard.Adapter,
+	"workflowprofile":     archguard.Domain,
 }
 
 // knownDebt is every violation of the rule that exists today, each owed to the
@@ -71,16 +76,6 @@ var rings = map[string]archguard.Ring{
 //   - shaper: the global open hook of the clearance store (H10)
 //   - reviewreceipt: the global store path variable (H12)
 var knownDebt = archguard.Debt{
-	// capability: the presence prober and the evidence check read the file system
-	// and the platform; they move to capability/presence and capabilitytest.
-	"capability": {
-		"go/ast":    "H9",
-		"go/parser": "H9",
-		"go/token":  "H9",
-		"os":        "H9",
-		"runtime":   "H9",
-	},
-
 	// pathguard: the file system half (symlink resolution) moves to
 	// pathguard/fsresolve, leaving the pure containment rules.
 	"pathguard": {
