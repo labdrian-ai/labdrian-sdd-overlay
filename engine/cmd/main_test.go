@@ -1451,7 +1451,7 @@ func TestStatusCore_RegistryAbsent_BestEffort(t *testing.T) {
 // ---------------------------------------------------------------------------
 
 // TC-PRESPEC-1: lint verb wired into main dispatch — happy path.
-// Verifies runPrespec passes the verb and stdin to PrespecCore correctly.
+// Verifies runPrespec passes the verb and stdin to runPrespecCore correctly.
 func TestRunPrespec_LintHappyPath(t *testing.T) {
 	var outBuf, errBuf bytes.Buffer
 	code := -1
@@ -1461,6 +1461,7 @@ func TestRunPrespec_LintHappyPath(t *testing.T) {
 		&outBuf,
 		&errBuf,
 		func(c int) { code = c },
+		fixedPrespecEnv(),
 	)
 	if code != -1 {
 		t.Fatalf("lint happy path: unexpected exit %d; stderr=%q", code, errBuf.String())
@@ -1486,6 +1487,7 @@ func TestRunPrespec_UnknownVerbExitsOne(t *testing.T) {
 		&outBuf,
 		&errBuf,
 		func(c int) { code = c },
+		fixedPrespecEnv(),
 	)
 	if code != 1 {
 		t.Errorf("unknown verb: want exit 1; got %d", code)
@@ -1502,6 +1504,7 @@ func TestRunPrespec_MalformedJSONExitsOne(t *testing.T) {
 		&outBuf,
 		&errBuf,
 		func(c int) { code = c },
+		fixedPrespecEnv(),
 	)
 	if code != 1 {
 		t.Errorf("malformed JSON: want exit 1; got %d", code)

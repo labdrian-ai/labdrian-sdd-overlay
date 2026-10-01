@@ -1,7 +1,6 @@
 package prespec
 
 import (
-	"crypto/rand"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -14,7 +13,9 @@ import (
 // Excludes I, L, O, U to avoid ambiguity.
 const crockfordAlphabet = "0123456789ABCDEFGHJKMNPQRSTVWXYZ"
 
-// NewIDFrom generates a ULID from the given timestamp and random source.
+// NewIDFrom generates a ULID from the given timestamp and random source. The
+// domain takes both as values and reads neither the clock nor the system entropy
+// itself: the composition root (engine/cmd) supplies time.Now and crypto/rand.
 // The random source is an io.Reader (injectable for deterministic tests).
 // Format: 10-char timestamp ‖ 16-char random, all Crockford base32 uppercase,
 // 26 chars total — structurally impossible to confuse with a kebab slug (R-012, R-014).
@@ -78,11 +79,6 @@ func NewIDFrom(ts time.Time, rnd io.Reader) string {
 	result[25] = crockfordAlphabet[r[9]&0x1F]
 
 	return string(result[:])
-}
-
-// NewID generates a fresh ULID using the current UTC time and crypto/rand.
-func NewID() string {
-	return NewIDFrom(time.Now().UTC(), rand.Reader)
 }
 
 // Section keys for the six discovery sections (in order).

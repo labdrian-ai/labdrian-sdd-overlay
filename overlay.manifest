@@ -59,8 +59,8 @@ engine/prespec/grid.go managed
 engine/prespec/grid_test.go managed
 engine/prespec/lint.go managed
 engine/prespec/lint_test.go managed
-engine/prespec/prespec.go managed
-engine/prespec/prespec_test.go managed
+engine/cmd/prespec.go managed
+engine/cmd/prespec_test.go managed
 engine/prespec/readiness.go managed
 engine/prespec/readiness_test.go managed
 sdd-spec/SKILL.md managed

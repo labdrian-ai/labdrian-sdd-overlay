@@ -75,7 +75,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/prespec"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
@@ -426,22 +425,6 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 	}
 	fmt.Fprintln(stdout, "pipkg check: OK (built package matches the current manifest)")
 	exit(0)
-}
-
-// runPrespec implements the 'prespec <verb>' subcommand.
-// Requires exactly one verb argument; fails LOUD on missing or unknown verb (ADR-4).
-func runPrespec(args []string) {
-	runPrespecCore(verbFromArgs(args), os.Stdin, os.Stdout, os.Stderr, os.Exit)
-}
-
-// runPrespecCore is the testable core of the prespec subcommand.
-func runPrespecCore(verb string, stdin io.Reader, stdout io.Writer, stderr io.Writer, exit func(int)) {
-	if verb == "" {
-		fmt.Fprintln(stderr, "error: prespec requires a verb: rank, lint, readiness, brief")
-		exit(1)
-		return
-	}
-	prespec.PrespecCore(verb, stdin, stdout, stderr, exit)
 }
 
 // ---------------------------------------------------------------------------

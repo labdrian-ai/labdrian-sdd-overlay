@@ -86,12 +86,6 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "H22",
 	},
 
-	// prespec: the clock and entropy are injected, the CLI handler moves to cmd.
-	"prespec": {
-		"crypto/rand": "H11",
-		"time.Now":    "H11",
-	},
-
 	// projection: the binding store moves to projection/fsstore behind a
 	// BindingStore port. Its lock already rides on filelock (H3), an adapter edge
 	// that moves with the store.
