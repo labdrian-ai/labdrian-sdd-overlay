@@ -111,6 +111,15 @@ digest-match status, and offers a confirmed "Restaurar respaldo" (restore) actio
 gated on a backup actually existing for the selected target(s) — routed through the
 same confirm→run→result pattern as apply/self-update.
 
+The target list on the first screen is not kept by the TUI: it is read from
+`labdrian targets` at launch, so it is always what `--target all` acts on (today that
+includes `pi`). The TUI sends `--target all` only when you leave every listed target
+selected, and re-checks the list with the backend right before it does; with any target
+unticked it runs the action once per ticked target instead. Capture and restore are
+per-file operations that the backend refuses for a package target such as `pi`, so they
+run on the selected `copy` targets only. If the list cannot be read the screen says so and
+offers no target action.
+
 ### Action map
 
 | Command | Mode | What it does |

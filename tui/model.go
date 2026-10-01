@@ -25,11 +25,22 @@ type model struct {
 	repoRoot string
 	rootErr  error
 
+	// catalog is the port the targets come from. The model holds no list of
+	// its own: targets stays empty until the catalog answers.
+	catalog TargetCatalog
+
 	scr screen
 
-	targets  []Target
-	selected map[int]bool // index into targets -> selected
-	tCursor  int
+	// targets is the backend's catalog exactly as the operator was shown it,
+	// in the backend's order. It is what `--target all` may be taken to mean.
+	targets []Target
+	// targetsLoaded is false until the catalog's answer arrives; targetsErr is
+	// that answer when it is a failure. With a failed catalog targets stays
+	// empty, so there is nothing to select and no target action can start.
+	targetsLoaded bool
+	targetsErr    error
+	selected      map[int]bool // index into targets -> selected
+	tCursor       int
 
 	actions []Action
 	aCursor int
@@ -75,26 +86,27 @@ type model struct {
 	bannerDismissed bool
 }
 
-// newModel builds the initial state with every target selected.
-func newModel() model {
-	targets := AllTargets()
-	selected := make(map[int]bool, len(targets))
-	for i := range targets {
-		selected[i] = true
-	}
+// deps is what the composition root (main) hands the model: the repo root it
+// located and the ports the model talks to. The model builds none of them.
+type deps struct {
+	repoRoot string
+	rootErr  error
+	catalog  TargetCatalog
+}
 
-	root, err := RepoRoot()
-
+// newModel builds the initial state. It has no targets yet: the catalog is
+// asked from Init, off the UI goroutine, and its answer selects them all.
+func newModel(d deps) model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
 
 	return model{
-		repoRoot:      root,
-		rootErr:       err,
+		repoRoot:      d.repoRoot,
+		rootErr:       d.rootErr,
+		catalog:       d.catalog,
 		scr:           screenTargets,
-		targets:       targets,
-		selected:      selected,
+		selected:      map[int]bool{},
 		actions:       Actions(),
 		spinner:       sp,
 		behindOrigin:  RepoBehindOriginNA,
@@ -102,10 +114,32 @@ func newModel() model {
 	}
 }
 
-// Init returns the launch-time cached-only origin probe (R-001). It runs
-// async off the UI goroutine and never blocks the first render — the result
-// arrives later as a probeDoneMsg.
-func (m model) Init() tea.Cmd { return probeBehindOriginCmd(m.repoRoot) }
+// Init returns the launch-time commands: the target catalog (D5) and the
+// cached-only origin probe (R-001). Both run async off the UI goroutine and
+// never block the first render -- the results arrive later as a
+// targetsLoadedMsg and a probeDoneMsg.
+func (m model) Init() tea.Cmd {
+	return tea.Batch(loadTargetsCmd(m.catalog), probeBehindOriginCmd(m.repoRoot))
+}
+
+// targetsLoadedMsg is delivered with the catalog's answer. err is set when the
+// backend's catalog could not be read, in which case targets is empty.
+type targetsLoadedMsg struct {
+	targets []Target
+	err     error
+}
+
+// loadTargetsCmd asks the catalog port for the targets.
+func loadTargetsCmd(catalog TargetCatalog) tea.Cmd {
+	return func() tea.Msg {
+		targets, err := catalog.Targets()
+		return targetsLoadedMsg{targets: targets, err: err}
+	}
+}
+
+// catalogReady reports whether the backend's catalog was read successfully.
+// Until it is, the TUI has no targets and offers no target action.
+func (m model) catalogReady() bool { return m.targetsLoaded && m.targetsErr == nil }
 
 // runDoneMsg is delivered when a backend invocation completes.
 type runDoneMsg struct{ result commandResult }
@@ -121,10 +155,13 @@ type probeDoneMsg struct {
 // runActionCmd executes the backend off the UI goroutine against the exact
 // targets given -- never m.selectedTargets() internally, since a caller may
 // need to invoke a filtered subset of the current selection (restore/D4).
+// The catalog the operator was shown travels with the run, so `--target all`
+// can be checked against it.
 func (m model) runActionCmd(action Action, targets []Target) tea.Cmd {
 	root := m.repoRoot
+	scope := targetScope{shown: append([]Target(nil), m.targets...), catalog: m.catalog}
 	return func() tea.Msg {
-		return runDoneMsg{result: runBackend(root, action, targets)}
+		return runDoneMsg{result: runBackend(root, action, targets, scope)}
 	}
 }
 
@@ -248,6 +285,18 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.behindRelease = msg.behindRelease
 		return m, nil
 
+	case targetsLoadedMsg:
+		m.targetsLoaded = true
+		m.targetsErr = msg.err
+		m.targets = msg.targets
+		m.selected = make(map[int]bool, len(m.targets))
+		// Every target starts selected, as it always has: the operator sees
+		// the whole catalog ticked and unticks what they do not want.
+		for i := range m.targets {
+			m.selected[i] = true
+		}
+		return m, nil
+
 	case spinner.TickMsg:
 		if m.scr != screenRunning {
 			// Drop ticks once we've left screenRunning — stops the self-perpetuating loop.
@@ -275,8 +324,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// the menu-navigation step for the single most common recovery. Like
 		// "x" above, works on any screen and is a no-op when the banner
 		// isn't visible. Excluded while a command is actively running
-		// (screenRunning) so it cannot hijack an in-flight invocation.
-		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning {
+		// (screenRunning) so it cannot hijack an in-flight invocation, and
+		// while the target catalog is unknown: self-update chains an apply,
+		// which is a target action, and with no catalog there is no target
+		// it may run against.
+		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning && m.catalogReady() {
 			if a, ok := m.selfUpdateAction(); ok {
 				m.pendingAction = a
 				m.pendingTargets = m.selectedTargets()
@@ -346,7 +398,14 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		action := m.actions[m.aCursor]
-		targets := m.selectedTargets()
+		// Only the selected targets this action can actually run against.
+		targets := action.applicableTo(m.selectedTargets())
+		if action.usesTargets() && len(targets) == 0 {
+			// Nothing to run it on -- no catalog was read, or every selected
+			// target is one the backend refuses for this action (capture on
+			// pi alone). Stay put: no confirm screen, no process.
+			return m, nil
+		}
 		if action.Command == "restore" {
 			// R-003: restore is never offered/selectable for a target with
 			// zero backups. Entering it with no available backup among the
@@ -356,7 +415,7 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			// narrows `targets` down to the backup-bearing subset -- the
 			// SAME subset both the confirm text and the real invocation use
 			// (see pendingTargets' doc comment).
-			info, restoreTargets, ok := m.restoreConfirmInfo(action)
+			info, restoreTargets, ok := m.restoreConfirmInfo(action, targets)
 			if !ok {
 				return m, nil
 			}
@@ -387,10 +446,11 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // action misreport as failed even though the backup-bearing target's
 // destructive restore had already succeeded). ok is false when NONE of the
 // selected targets have an available backup, the signal updateActions uses
-// to refuse entering the confirm screen at all (R-003).
-func (m model) restoreConfirmInfo(action Action) (message string, targets []Target, ok bool) {
+// to refuse entering the confirm screen at all (R-003). candidates are the
+// selected targets restore can apply to at all (copy targets only).
+func (m model) restoreConfirmInfo(action Action, candidates []Target) (message string, targets []Target, ok bool) {
 	var lines []string
-	for _, t := range m.selectedTargets() {
+	for _, t := range candidates {
 		ts, version, hasBackup := latestBackup(t.Name)
 		if !hasBackup {
 			continue

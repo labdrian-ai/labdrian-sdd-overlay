@@ -13,28 +13,40 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// AllTargets is the TUI's own list of overlay targets. It is superseded by the
-// backend's catalog (TargetCatalog) and is removed once the model reads that
-// instead.
-func AllTargets() []Target {
-	return []Target{
-		{Name: "claude", Kind: KindCopy},
-		{Name: "opencode", Kind: KindCopy},
-		{Name: "codex", Kind: KindCopy},
-	}
-}
+// targetAll is the backend's `--target` value that stands for every target in
+// its catalog. buildArgSets is the only producer and usesTargetAll the only
+// reader, so the TUI has one definition of what "an all invocation" is.
+const targetAll = "all"
 
 // Action is a backend subcommand the TUI can invoke.
 type Action struct {
-	Name           string   // label shown in the menu
-	Command        string   // bin/labdrian-overlay subcommand
-	Args           []string // additional positional args appended after Command
-	Mutating       bool     // requires confirmation
-	SupportsAll    bool     // can pass --target all when every target is selected
-	TargetAgnostic bool     // when true: invoke WITHOUT --target, skip target selection
-	ConfirmMessage string   // per-action confirm copy; empty falls back to generic
-	Hint           string   // one-line purpose scent shown in the menu
-	Also           []Action // nested sub-actions merged into this menu entry (invisible in the menu)
+	Name            string   // label shown in the menu
+	Command         string   // bin/labdrian-overlay subcommand
+	Args            []string // additional positional args appended after Command
+	Mutating        bool     // requires confirmation
+	SupportsAll     bool     // can pass --target all when the selection is the whole catalog
+	TargetAgnostic  bool     // when true: invoke WITHOUT --target, skip target selection
+	CopyTargetsOnly bool     // the backend refuses package targets: run only against KindCopy ones
+	ConfirmMessage  string   // per-action confirm copy; empty falls back to generic
+	Hint            string   // one-line purpose scent shown in the menu
+	Also            []Action // nested sub-actions merged into this menu entry (invisible in the menu)
+}
+
+// applicableTo narrows selected to the targets this action can run against:
+// all of them, or only the KindCopy ones when the backend refuses package
+// targets for it. The model uses it to decide what an action will be invoked
+// on, and the confirm screen names the same set.
+func (a Action) applicableTo(selected []Target) []Target {
+	if !a.CopyTargetsOnly {
+		return selected
+	}
+	var out []Target
+	for _, t := range selected {
+		if t.Kind == KindCopy {
+			out = append(out, t)
+		}
+	}
+	return out
 }
 
 // usesTargets reports whether running this action -- the primary invocation
@@ -83,8 +95,12 @@ func Actions() []Action {
 			}},
 		{Name: "Verificar sincronización", Command: "sync-check", Mutating: false, SupportsAll: true,
 			Hint: "Compara overlay vs upstream"},
+		// Capture reads a target's deployed files back into the repo, so it
+		// only exists for per-file (copy) targets: the backend refuses a
+		// package target such as pi.
 		{Name: "Capturar (actualizar upstream)", Command: "capture", Mutating: true, SupportsAll: false,
-			Hint: "Trae cambios de upstream al overlay"},
+			CopyTargetsOnly: true,
+			Hint:            "Trae cambios de upstream al overlay"},
 		{Name: "Aplicar cambios", Command: "apply", Mutating: true, SupportsAll: true,
 			Hint: "Despliega el overlay en los destinos"},
 		// Restore — per-target, never SupportsAll (the backend's cmd_restore
@@ -95,7 +111,10 @@ func Actions() []Action {
 		// restored for each selected target (D4), and refuses to enter the
 		// confirm screen at all when none of the selected targets actually
 		// have a backup (never offer restore for a target with zero backups).
+		// Like capture, restore is refused by the backend for a package
+		// target (it keeps no per-target backups), hence CopyTargetsOnly.
 		{Name: "Restaurar respaldo", Command: "restore", Mutating: true, SupportsAll: false,
+			CopyTargetsOnly: true,
 			ConfirmMessage: "Restaura el respaldo más reciente de cada destino seleccionado,\n" +
 				"sobrescribiendo sus archivos actualmente desplegados.",
 			Hint: "Revierte un destino a su respaldo más reciente"},
@@ -535,13 +554,16 @@ func prefix(action Action) []string {
 //     because it is semantically incorrect and future-proofs against stricter
 //     argument parsing.
 //  2. SupportsAll + allSelected: single `--target all` invocation.
+//     allSelected must mean "the selection is the whole catalog the operator
+//     was shown" (targetScope.coversAll), never a count compared with a list
+//     kept here: `all` is whatever the backend says it is.
 //  3. Default: one invocation per selected target.
 func buildArgSets(action Action, selected []Target, allSelected bool) [][]string {
 	switch {
 	case action.TargetAgnostic:
 		return [][]string{prefix(action)}
 	case action.SupportsAll && allSelected:
-		return [][]string{append(prefix(action), "--target", "all")}
+		return [][]string{append(prefix(action), "--target", targetAll)}
 	default:
 		var sets [][]string
 		for _, t := range selected {
@@ -559,6 +581,17 @@ func allArgSets(action Action, selected []Target, allSelected bool) [][]string {
 		sets = append(sets, buildArgSets(sub, selected, allSelected)...)
 	}
 	return sets
+}
+
+// usesTargetAll reports whether args is an `--target all` invocation, the one
+// kind runBackend verifies against the backend's catalog before running.
+func usesTargetAll(args []string) bool {
+	for i := 0; i+1 < len(args); i++ {
+		if args[i] == "--target" && args[i+1] == targetAll {
+			return true
+		}
+	}
+	return false
 }
 
 // invocationSeverity ranks a single invocation's outcome so runBackend can
@@ -580,26 +613,49 @@ func invocationSeverity(err error, exitCode int) int {
 
 // runBackend executes the backend action for the selected targets.
 //
-// When the action supports `all` and every target is selected, it issues a
-// single `--target all` invocation. Otherwise it iterates per target (this is
-// required for `capture`, which rejects `--target all`). For TargetAgnostic
-// actions (hooks lifecycle), no --target is emitted at all. Nested Also
-// actions contribute their own invocations, routed and appended after the
-// primary action's.
-func runBackend(root string, action Action, selected []Target) commandResult {
+// When the action supports `all` and the selection is the whole catalog the
+// operator was shown (scope.coversAll), it issues a single `--target all`
+// invocation, after confirming the backend still lists that same catalog.
+// Otherwise it iterates per target (this is required for `capture`, which
+// rejects `--target all`, and it is what keeps a partial selection from ever
+// widening into `all`). For TargetAgnostic actions (hooks lifecycle), no
+// --target is emitted at all. Nested Also actions contribute their own
+// invocations, routed and appended after the primary action's.
+func runBackend(root string, action Action, selected []Target, scope targetScope) commandResult {
 	res := commandResult{action: action, targets: selected}
 	bin := filepath.Join(root, "bin", "labdrian-overlay")
 
-	allSelected := len(selected) == len(AllTargets())
-	argSets := allArgSets(action, selected, allSelected)
+	argSets := allArgSets(action, selected, scope.coversAll(selected))
 
 	var sb strings.Builder
 	severity := 0
+	// Aggregate by worst severity seen across all invocations in this
+	// commandResult, not "last failing invocation wins": a later degraded
+	// (exit 2) invocation must never mask an earlier hard failure (or vice
+	// versa) once the Also merge concatenates invocations from different
+	// backend subcommands into this loop.
+	fail := func(err error, exitCode int) {
+		if sev := invocationSeverity(err, exitCode); sev > severity {
+			severity = sev
+			res.err = err
+			res.exitCode = exitCode
+		}
+	}
 	for i, args := range argSets {
 		if i > 0 {
 			sb.WriteString("\n")
 		}
 		sb.WriteString(fmt.Sprintf("$ bin/labdrian-overlay %s\n", strings.Join(args, " ")))
+
+		// `all` is defined by the backend when it runs, so verify it still
+		// means what the operator saw; if it cannot be verified, do not run.
+		if usesTargetAll(args) {
+			if err := scope.confirmUnchanged(); err != nil {
+				sb.WriteString(fmt.Sprintf("[omitido: %v]\n", err))
+				fail(err, -1)
+				continue
+			}
+		}
 
 		cmd := exec.Command(bin, args...)
 		cmd.Dir = root
@@ -613,16 +669,7 @@ func runBackend(root string, action Action, selected []Target) commandResult {
 			if ee, ok := err.(*exec.ExitError); ok {
 				exitCode = ee.ExitCode()
 			}
-			// Aggregate by worst severity seen across all invocations in this
-			// commandResult, not "last failing invocation wins": a later
-			// degraded (exit 2) invocation must never mask an earlier hard
-			// failure (or vice versa) once the Also merge concatenates
-			// invocations from different backend subcommands into this loop.
-			if sev := invocationSeverity(err, exitCode); sev > severity {
-				severity = sev
-				res.err = err
-				res.exitCode = exitCode
-			}
+			fail(err, exitCode)
 		}
 	}
 

@@ -19,7 +19,7 @@ import (
 // "Detrás de origin" status label AND the "detrás de origin: N" count
 // (R-005 Scenario: distinct indicator rendered).
 func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
@@ -49,7 +49,7 @@ func TestViewDashboard_ShowsOriginBehindIndicator(t *testing.T) {
 // the value is "known" (R-005 Scenario: zero count renders no origin
 // indicator).
 func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
@@ -76,7 +76,7 @@ func TestViewDashboard_ZeroOriginBehind_NoIndicator(t *testing.T) {
 // classify() returns SyncBehindOrigin) must never render as "Sincronizado"
 // (healthy) — it must render its own distinct status instead.
 func TestViewDashboard_NeverHealthyWhileBehindOrigin(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
@@ -128,7 +128,7 @@ func TestRepoLine_BehindOriginBannerStates(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			m.behindOrigin = tc.behindOrigin
 			m.bannerDismissed = tc.bannerDismissed
 			m.rootErr = tc.rootErr
@@ -180,7 +180,7 @@ func TestRepoLine_PersistentStatusLine(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			m.behindOrigin = tc.behindOrigin
 
 			line := stripANSI(m.repoLine())
@@ -199,7 +199,7 @@ func TestRepoLine_PersistentStatusLine(t *testing.T) {
 	}
 
 	t.Run("rootErr still takes precedence over the healthy state", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.behindOrigin = 0
 		m.rootErr = errors.New("boom")
 
@@ -244,7 +244,7 @@ func TestRepoLine_ReleaseBehindBannerStates(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			m.behindRelease = tc.behindRelease
 			m.bannerDismissed = tc.bannerDismissed
 			m.rootErr = tc.rootErr
@@ -267,7 +267,7 @@ func TestRepoLine_ReleaseBehindBannerStates(t *testing.T) {
 // it renders a dim informational line instead, and the release-healthy
 // text is still present.
 func TestRepoLine_OriginDriftDemotesToInformationalOnceReleaseKnown(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.behindRelease = 0
 	m.behindOrigin = 4
 
@@ -302,7 +302,7 @@ func TestBannerVisible_ReleaseTakesPrecedenceOnceKnown(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			m.behindRelease = tc.behindRelease
 			m.behindOrigin = tc.behindOrigin
 			if got := m.bannerVisible(); got != tc.want {
@@ -320,7 +320,7 @@ func TestBannerVisible_ReleaseTakesPrecedenceOnceKnown(t *testing.T) {
 // TestViewDashboard_ShowsOriginBehindIndicator for the new SyncBehindRelease
 // status and its RepoBehindRelease count.
 func TestViewDashboard_ShowsReleaseBehindIndicator(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
@@ -375,7 +375,7 @@ func TestViewDashboard_VersionLineRendering(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			m.width = 80
 			m.scr = screenResult
 			m.result = commandResult{
@@ -396,7 +396,7 @@ func TestViewDashboard_VersionLineRendering(t *testing.T) {
 // code that predates this field, or a legacy sync-check run) renders no
 // version line at all rather than a blank/garbled one.
 func TestViewDashboard_EmptyRecordedVersionRendersNoVersionLine(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
