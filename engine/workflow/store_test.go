@@ -359,7 +359,7 @@ func TestStoreAppendRejectsNonEmptyPrevDigestOnFirstEvent(t *testing.T) {
 	}
 }
 
-// classifyWorkflowLog's Detail messages report 1-based line numbers, matching
+// ClassifyLog's Detail messages report 1-based line numbers, matching
 // how a human reading the file (or an editor's line gutter) would count
 // lines; the previous 0-based index made "line 0" point at the file's first
 // line, which is confusing to a person debugging a malformed log by hand.
@@ -532,7 +532,7 @@ func TestStoreLoadMalformedWhenOversized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
-	padding := strings.Repeat("x", maxWorkflowLogBytes+1)
+	padding := strings.Repeat("x", MaxLogBytes+1)
 	writeRawLog(t, root, "proj-1", "wf-1", padding+"\n")
 	loaded, err := s.Load("proj-1", "wf-1")
 	if err != nil {

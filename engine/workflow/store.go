@@ -1,112 +1,20 @@
 package workflow
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
-	"unicode/utf8"
 )
 
-// Classification is the closed vocabulary Load reports for the on-disk state
-// of one workflow. Only ClassificationAbsent and ClassificationOwned accept
-// further writes through Append; every other value is preserved exactly as
-// found and reported through Append's named refusal errors.
-type Classification string
-
-const (
-	// ClassificationAbsent means no file exists yet at the workflow's path.
-	// The next Append must be the workflow's created event at seq 0.
-	ClassificationAbsent Classification = "absent"
-	// ClassificationOwned means every line parsed as a WorkflowEvent v1 for
-	// this exact project_id/workflow_id, the hash chain and seq sequence
-	// verify (VerifyEvents), and the lifecycle transitions replay cleanly
-	// (Replay). Loaded.Events and Loaded.State are populated.
-	ClassificationOwned Classification = "owned"
-	// ClassificationForeign means the file exists and is not a workflow log
-	// of ours: it may be valid JSON lacking our version/shape, or a
-	// correctly shaped WorkflowEvent log for a different workflow_id or
-	// project_id than requested. A foreign file is never overwritten.
-	ClassificationForeign Classification = "foreign"
-	// ClassificationMalformed means the file cannot be parsed as a sequence
-	// of our JSONL records at all: not valid UTF-8, oversized beyond
-	// maxWorkflowLogBytes, missing its final trailing newline, containing a
-	// blank line, or containing a line that is not even syntactically valid
-	// JSON. A malformed file is never overwritten.
-	ClassificationMalformed Classification = "malformed"
-	// ClassificationDrifted means every line parses as one of our events for
-	// the right ids, but the hash chain, seq sequence, or lifecycle
-	// transitions do not verify. A drifted file is never overwritten.
-	ClassificationDrifted Classification = "drifted"
-	// ClassificationUnavailable means the state root or the file itself
-	// could not be read (for example, a permission error, or a symlink at a
-	// store path component). Nothing about the file's content is known, so
-	// it is never overwritten.
-	ClassificationUnavailable Classification = "unavailable"
-)
-
-// Loaded is the result of Load: the classification, and, only when
-// Classification is ClassificationOwned, the parsed event log and its
-// replayed State. Detail carries a human-readable explanation for every
-// classification other than ClassificationAbsent and ClassificationOwned.
-type Loaded struct {
-	Classification Classification
-	Events         []WorkflowEvent
-	State          State
-	Detail         string
-}
-
-// Sentinel errors Append returns. Wrap with %w so callers can distinguish
-// the failure with errors.Is.
-var (
-	// ErrStoreNotInitialized is returned by every Store method when called
-	// on the zero Store value instead of one built with NewStore.
-	ErrStoreNotInitialized = errors.New("workflow store: store is not initialized; use NewStore")
-	// ErrRefuseForeignState is returned by Append when the current on-disk
-	// state classifies as foreign; the file is left byte-for-byte unchanged.
-	ErrRefuseForeignState = errors.New("workflow store: refusing to write: on-disk state is foreign")
-	// ErrRefuseMalformedState is returned by Append when the current
-	// on-disk state classifies as malformed; the file is left
-	// byte-for-byte unchanged.
-	ErrRefuseMalformedState = errors.New("workflow store: refusing to write: on-disk state is malformed")
-	// ErrRefuseDriftedState is returned by Append when the current on-disk
-	// state classifies as drifted; the file is left byte-for-byte
-	// unchanged.
-	ErrRefuseDriftedState = errors.New("workflow store: refusing to write: on-disk state is drifted")
-	// ErrStateUnavailable is returned by Append when the current on-disk
-	// state could not be read (classification unavailable); nothing is
-	// written.
-	ErrStateUnavailable = errors.New("workflow store: refusing to write: on-disk state is unavailable")
-	// ErrAppendConflict is returned by Append when another Append for the
-	// same project_id/workflow_id holds the append lock. Append does not
-	// retry or wait: the caller decides whether to retry.
-	ErrAppendConflict = errors.New("workflow store: append: a concurrent append is in progress for this workflow")
-	// ErrStaleSeq is returned by Append when the event's seq is not the
-	// next one: the log already advanced (for example, another appender
-	// finished first) or the caller skipped ahead. Nothing is written. A
-	// caller that raced another appender sees this instead of
-	// ErrAppendConflict when the other append had already released the lock.
-	ErrStaleSeq = errors.New("workflow store: append: seq is not the next seq")
-)
+// ErrStoreNotInitialized is returned by every Store method when called on the
+// zero Store value instead of one built with NewStore.
+var ErrStoreNotInitialized = errors.New("workflow store: store is not initialized; use NewStore")
 
 // workflowStoreComponents are the fixed directories under the state home.
 var workflowStoreComponents = []string{"labdrian", "workflows"}
-
-// maxWorkflowLogBytes bounds the total size of one workflow's on-disk JSONL
-// log that Load will read and classify. It exists to give Load a documented,
-// finite worst case; a file beyond this size is classified malformed rather
-// than read in full. It is far larger than any workflow this phase's
-// profiles produce (each event is bounded well under 64 KiB by
-// MaxEventBytes), so it is not expected to be reached by normal use: even a
-// workflow that recorded MaxStages (256) stages plus every other event kind
-// would use a small fraction of this ceiling. 16 MiB also keeps Append's
-// O(n) full-log rewrite (see Store's doc comment) a fast, bounded, in-memory
-// operation on every supported platform.
-const maxWorkflowLogBytes = 16 * 1024 * 1024
 
 // Store holds one workflow's append-only event log at
 // <state home>/labdrian/workflows/<project_id>/<workflow_id>.jsonl, outside
@@ -130,7 +38,7 @@ const maxWorkflowLogBytes = 16 * 1024 * 1024
 // appendWorkflowLog): that is what makes the publish atomic (a single
 // rename can never leave a reader with a half-written file), at the cost of
 // making one Append's I/O cost O(n) in the number of events already
-// recorded. This is bounded and acceptable: maxWorkflowLogBytes caps a
+// recorded. This is bounded and acceptable: MaxLogBytes caps a
 // workflow's whole log at 16 MiB, so the worst-case rewrite is a bounded,
 // fast, in-memory copy, never an unbounded scan.
 //
@@ -271,66 +179,18 @@ func (s Store) Load(projectID, workflowID string) (Loaded, error) {
 	if err != nil {
 		return Loaded{Classification: ClassificationUnavailable, Detail: err.Error()}, nil
 	}
-	return classifyWorkflowLog(projectID, workflowID, data), nil
-}
-
-// classifyWorkflowLog classifies raw JSONL bytes against the requested
-// project_id/workflow_id. See Classification for the exact rules.
-func classifyWorkflowLog(projectID, workflowID string, data []byte) Loaded {
-	if len(data) == 0 {
-		return Loaded{Classification: ClassificationMalformed, Detail: "workflow log is empty"}
-	}
-	if len(data) > maxWorkflowLogBytes {
-		return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("workflow log is %d bytes, exceeding the maximum of %d", len(data), maxWorkflowLogBytes)}
-	}
-	if !utf8.Valid(data) {
-		return Loaded{Classification: ClassificationMalformed, Detail: "workflow log is not valid UTF-8"}
-	}
-	if data[len(data)-1] != '\n' {
-		return Loaded{Classification: ClassificationMalformed, Detail: "workflow log does not end with a trailing newline"}
-	}
-	lines := strings.Split(string(data[:len(data)-1]), "\n")
-
-	events := make([]WorkflowEvent, 0, len(lines))
-	for i, line := range lines {
-		// Detail messages report 1-based line numbers: a person reading the
-		// raw file (or an editor's line gutter) counts lines from 1, not 0.
-		lineNumber := i + 1
-		if line == "" {
-			return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("line %d is blank", lineNumber)}
-		}
-		if !json.Valid([]byte(line)) {
-			return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("line %d is not valid JSON", lineNumber)}
-		}
-		e, err := ParseWorkflowEvent([]byte(line))
-		if err != nil {
-			return Loaded{Classification: ClassificationForeign, Detail: fmt.Sprintf("line %d is not a workflow event we recognize: %v", lineNumber, err)}
-		}
-		if e.ProjectID != projectID || e.WorkflowID != workflowID {
-			return Loaded{Classification: ClassificationForeign, Detail: fmt.Sprintf("line %d declares project_id=%q workflow_id=%q, want %q/%q", lineNumber, e.ProjectID, e.WorkflowID, projectID, workflowID)}
-		}
-		events = append(events, e)
-	}
-
-	if err := VerifyEvents(events); err != nil {
-		return Loaded{Classification: ClassificationDrifted, Detail: err.Error()}
-	}
-	state, err := Replay(events)
-	if err != nil {
-		return Loaded{Classification: ClassificationDrifted, Detail: err.Error()}
-	}
-	return Loaded{Classification: ClassificationOwned, Events: events, State: state}
+	return ClassifyLog(projectID, workflowID, data), nil
 }
 
 // Append validates next against the current on-disk state and, if legal,
-// appends it atomically. It is allowed only when Load classifies the
-// current state as ClassificationAbsent (next must be the seq-0 created
-// event) or ClassificationOwned (next must be the next seq, chain to the
-// last stored event's digest, and pass CheckTransition against the replayed
-// State). Every other classification is refused with a named error and the
-// file, if any, is left byte-for-byte unchanged. Append serializes
-// concurrent writers for the same workflow with a lock file; see
-// acquireLock.
+// appends it atomically. The rules are the domain's (see AdmitAppend): it is
+// allowed only when Load classifies the current state as ClassificationAbsent
+// (next must be the seq-0 created event) or ClassificationOwned (next must be
+// the next seq, chain to the last stored event's digest, and pass
+// CheckTransition against the replayed State). Every other classification is
+// refused with a named error and the file, if any, is left byte-for-byte
+// unchanged. Append serializes concurrent writers for the same workflow with a
+// lock file; see acquireLock.
 func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 	path, err := s.path(projectID, workflowID)
 	if err != nil {
@@ -354,69 +214,13 @@ func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 	}
 	defer release()
 
-	if next.ProjectID != projectID || next.WorkflowID != workflowID {
-		return fmt.Errorf("workflow store: append: event project_id/workflow_id (%q/%q) does not match the requested workflow (%q/%q)", next.ProjectID, next.WorkflowID, projectID, workflowID)
-	}
-	if err := next.Validate(); err != nil {
-		return fmt.Errorf("workflow store: append: %w", err)
-	}
-
 	loaded, err := s.Load(projectID, workflowID)
 	if err != nil {
 		return fmt.Errorf("workflow store: append: %w", err)
 	}
-
-	switch loaded.Classification {
-	case ClassificationAbsent:
-		// An absent workflow has no prior event, so its first append must
-		// be the created event at seq 0: checked explicitly and locally
-		// here (not only through CheckTransition(State{}, next) below,
-		// which enforces the same rule against the zero State as a second,
-		// independent line of defense; a future change to CheckTransition
-		// cannot silently drop this invariant without also failing here).
-		// The zero State also has no last stored digest, so next.PrevDigest
-		// must be empty, mirroring the explicit prev_digest check the
-		// ClassificationOwned branch below performs against its own last
-		// stored event's digest.
-		if next.Seq != 0 || next.Kind != KindCreated {
-			return fmt.Errorf("workflow store: append: the first event must be a created event at seq 0, got kind %q at seq %d", next.Kind, next.Seq)
-		}
-		if next.PrevDigest != "" {
-			return fmt.Errorf("workflow store: append: prev_digest must be empty for the first event, got %q", next.PrevDigest)
-		}
-		if err := CheckTransition(State{}, next); err != nil {
-			return fmt.Errorf("workflow store: append: %w", err)
-		}
-	case ClassificationOwned:
-		last := loaded.Events[len(loaded.Events)-1]
-		lastDigest, err := EventDigest(last)
-		if err != nil {
-			return fmt.Errorf("workflow store: append: %w", err)
-		}
-		if next.Seq != len(loaded.Events) {
-			return fmt.Errorf("%w: got %d, want %d", ErrStaleSeq, next.Seq, len(loaded.Events))
-		}
-		if next.PrevDigest != lastDigest {
-			return fmt.Errorf("workflow store: append: prev_digest %q does not match the last stored event's digest %q", next.PrevDigest, lastDigest)
-		}
-		if err := CheckTransition(loaded.State, next); err != nil {
-			return fmt.Errorf("workflow store: append: %w", err)
-		}
-	case ClassificationForeign:
-		return fmt.Errorf("%w: %s", ErrRefuseForeignState, loaded.Detail)
-	case ClassificationMalformed:
-		return fmt.Errorf("%w: %s", ErrRefuseMalformedState, loaded.Detail)
-	case ClassificationDrifted:
-		return fmt.Errorf("%w: %s", ErrRefuseDriftedState, loaded.Detail)
-	case ClassificationUnavailable:
-		return fmt.Errorf("%w: %s", ErrStateUnavailable, loaded.Detail)
-	default:
-		return fmt.Errorf("workflow store: append: unknown classification %q", loaded.Classification)
-	}
-
-	line, err := next.MarshalLine()
+	line, err := AdmitAppend(projectID, workflowID, loaded, next)
 	if err != nil {
-		return fmt.Errorf("workflow store: append: %w", err)
+		return err
 	}
 	return appendWorkflowLog(path, line)
 }
