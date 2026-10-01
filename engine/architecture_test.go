@@ -93,13 +93,13 @@ var knownDebt = archguard.Debt{
 	},
 
 	// projection: the binding store moves to projection/fsstore behind a
-	// BindingStore port.
+	// BindingStore port. Its lock already rides on filelock (H3), an adapter edge
+	// that moves with the store.
 	"projection": {
-		"os":         "H8",
-		"runtime":    "H8",
-		"syscall":    "H8",
-		"time.Now":   "H8",
-		"time.Sleep": "H8",
+		"filelock": "H8",
+		"os":       "H8",
+		"runtime":  "H8",
+		"syscall":  "H8",
 	},
 
 	// reviewreceipt: the receipt scan and the git resolution move behind ports
@@ -132,11 +132,13 @@ var knownDebt = archguard.Debt{
 		"path/filepath.WalkDir": "H17",
 	},
 
-	// workflow: the event log store moves to workflow/filelog.
+	// workflow: the event log store moves to workflow/filelog. Its append lock
+	// already rides on filelock (H3), an adapter edge that moves with the store.
 	"workflow": {
-		"os":      "H6",
-		"runtime": "H6",
-		"syscall": "H6",
+		"filelock": "H6",
+		"os":       "H6",
+		"runtime":  "H6",
+		"syscall":  "H6",
 	},
 }
 

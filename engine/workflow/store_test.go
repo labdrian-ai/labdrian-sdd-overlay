@@ -851,6 +851,37 @@ func TestStoreReleaseNeverDeletesALockItDoesNotHold(t *testing.T) {
 	}
 }
 
+// The append lock is private like the rest of the store, and a contended append is
+// refused at once, not queued: the caller gets ErrAppendConflict and decides.
+func TestStoreAppendLockFileIsPrivateAndAContendedAppendIsRefusedAtOnce(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("flock-based locking is only implemented on linux/darwin")
+	}
+	s, lockPath, started := setupStoreWithCreated(t)
+
+	info, err := os.Stat(lockPath)
+	if err != nil {
+		t.Fatalf("os.Stat(lockPath) = %v, want nil", err)
+	}
+	if !info.Mode().IsRegular() || info.Mode().Perm() != 0o600 {
+		t.Errorf("lock file mode = %v, want a regular file with mode 0600", info.Mode())
+	}
+
+	release, err := acquireLock(lockPath)
+	if err != nil {
+		t.Fatalf("acquireLock() = %v, want nil", err)
+	}
+	defer release()
+	begin := time.Now()
+	err = s.Append(started.ProjectID, started.WorkflowID, started)
+	if !errors.Is(err, ErrAppendConflict) || !strings.Contains(err.Error(), lockPath) {
+		t.Fatalf("Append() = %v, want ErrAppendConflict naming %s", err, lockPath)
+	}
+	if took := time.Since(begin); took > 500*time.Millisecond {
+		t.Errorf("a contended Append took %v, want an immediate refusal", took)
+	}
+}
+
 // TestStoreAppendOfAnAlreadyStoredSeqIsErrStaleSeq pins the refusal a caller
 // gets when the log advanced past the seq it built its event for: the same
 // outcome the loser of a concurrent append sees once the winner has finished.
