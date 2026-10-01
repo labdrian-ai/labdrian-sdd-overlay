@@ -13,20 +13,14 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// Target is one of the deployable overlay targets.
-type Target struct {
-	Name string
-	Path string
-}
-
-// AllTargets is the canonical, ordered list of overlay targets.
-// Paths mirror the bash backend's TARGET_PATHS map.
+// AllTargets is the TUI's own list of overlay targets. It is superseded by the
+// backend's catalog (TargetCatalog) and is removed once the model reads that
+// instead.
 func AllTargets() []Target {
-	home, _ := os.UserHomeDir()
 	return []Target{
-		{Name: "claude", Path: filepath.Join(home, ".claude", "skills")},
-		{Name: "opencode", Path: filepath.Join(home, ".config", "opencode", "skills")},
-		{Name: "codex", Path: filepath.Join(home, ".codex", "skills")},
+		{Name: "claude", Kind: KindCopy},
+		{Name: "opencode", Kind: KindCopy},
+		{Name: "codex", Kind: KindCopy},
 	}
 }
 

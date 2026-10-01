@@ -759,7 +759,7 @@ func TestBuildArgSets(t *testing.T) {
 
 	t.Run("non-TargetAgnostic with one target includes --target", func(t *testing.T) {
 		action := Action{TargetAgnostic: false, Command: "apply", SupportsAll: true}
-		targets := []Target{{Name: "agent-x", Path: "/some/path"}}
+		targets := []Target{{Name: "agent-x"}}
 		sets := buildArgSets(action, targets, false)
 		if len(sets) != 1 {
 			t.Fatalf("expected 1 arg set, got %d", len(sets))
@@ -1426,7 +1426,7 @@ func TestAllArgSetsFlattensPrimaryThenAlso(t *testing.T) {
 			{Command: "status-hooks", TargetAgnostic: true},
 		},
 	}
-	targets := []Target{{Name: "claude", Path: "/some/path"}}
+	targets := []Target{{Name: "claude"}}
 
 	sets := allArgSets(action, targets, false)
 	if len(sets) != 2 {
@@ -1773,7 +1773,7 @@ func TestAllArgSetsSelfUpdateActionComposition(t *testing.T) {
 		t.Fatal("Actions() must contain a top-level self-update action")
 	}
 
-	targets := []Target{{Name: "claude", Path: "/some/path"}, {Name: "opencode", Path: "/other/path"}}
+	targets := []Target{{Name: "claude"}, {Name: "opencode"}}
 
 	t.Run("all targets selected -> apply --target all", func(t *testing.T) {
 		sets := allArgSets(selfUpdate, targets, true)
@@ -2576,7 +2576,7 @@ func TestNoActionPassesPurge(t *testing.T) {
 // validates it before parsing any flag), --target must be passed, and
 // --target all must be used when every target is selected.
 func TestAllArgSetsLongtermMemComposition(t *testing.T) {
-	targets := []Target{{Name: "claude", Path: "/a"}, {Name: "opencode", Path: "/b"}}
+	targets := []Target{{Name: "claude"}, {Name: "opencode"}}
 
 	for _, verb := range []string{"status", "install", "uninstall"} {
 		a := findActionByCommandArgs(t, "longterm-mem", verb)
