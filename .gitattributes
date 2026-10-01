@@ -1,0 +1,2 @@
+# A skill's approval record binds the exact bytes of its SKILL.md: never let git rewrite line endings under skills/.
+skills/** -text
