@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -115,12 +116,16 @@ func validRoleChain(projectID, goalID, chainID string) []roles.ChainRecord {
 // newTestLifecycle builds a Lifecycle over store, failing the test on error.
 func newTestLifecycle(t *testing.T, store Store, clock func() time.Time, goals GoalReader, chains RoleChainReader, prober DependencyProber) Lifecycle {
 	t.Helper()
-	lc, err := NewLifecycle(store, clock, testProvenance(), goals, chains, prober)
+	lc, err := NewLifecycle(store, builtInProfiles, clock, testProvenance(), goals, chains, prober)
 	if err != nil {
 		t.Fatalf("NewLifecycle() = %v, want nil", err)
 	}
 	return lc
 }
+
+// builtInProfiles is the catalog of the built-in Workflow Profiles, the one the
+// program is wired with.
+var builtInProfiles = ProfileCatalogFunc(workflowprofile.Resolve)
 
 func TestNewLifecycleRejectsMissingDependencies(t *testing.T) {
 	store := newTestStore(t)
@@ -128,18 +133,129 @@ func TestNewLifecycleRejectsMissingDependencies(t *testing.T) {
 	chains := newFakeChainReader()
 	clock := stepClock()
 
-	if _, err := NewLifecycle(store, nil, testProvenance(), goals, chains, nil); err == nil {
+	if _, err := NewLifecycle(nil, builtInProfiles, clock, testProvenance(), goals, chains, nil); err == nil {
+		t.Fatalf("NewLifecycle() = nil, want error for a nil event log")
+	}
+	if _, err := NewLifecycle(store, nil, clock, testProvenance(), goals, chains, nil); err == nil {
+		t.Fatalf("NewLifecycle() = nil, want error for a nil profile catalog")
+	}
+	if _, err := NewLifecycle(store, builtInProfiles, nil, testProvenance(), goals, chains, nil); err == nil {
 		t.Fatalf("NewLifecycle() = nil, want error for a nil clock")
 	}
-	if _, err := NewLifecycle(store, clock, testProvenance(), nil, chains, nil); err == nil {
+	if _, err := NewLifecycle(store, builtInProfiles, clock, testProvenance(), nil, chains, nil); err == nil {
 		t.Fatalf("NewLifecycle() = nil, want error for a nil goal reader")
 	}
-	if _, err := NewLifecycle(store, clock, testProvenance(), goals, nil, nil); err == nil {
+	if _, err := NewLifecycle(store, builtInProfiles, clock, testProvenance(), goals, nil, nil); err == nil {
 		t.Fatalf("NewLifecycle() = nil, want error for a nil role chain reader")
 	}
 	// A nil prober is accepted and defaults to UnavailableProber.
-	if _, err := NewLifecycle(store, clock, testProvenance(), goals, chains, nil); err != nil {
+	if _, err := NewLifecycle(store, builtInProfiles, clock, testProvenance(), goals, chains, nil); err != nil {
 		t.Fatalf("NewLifecycle() = %v, want nil for a nil prober (defaults to UnavailableProber)", err)
+	}
+}
+
+// memEventLog is an in-memory EventLog: the lifecycle needs a log, not a file
+// system, and this one proves it. It keeps the rule every log must keep, that an
+// append extends the log it finds.
+type memEventLog struct {
+	events  map[string][]WorkflowEvent
+	loads   int
+	appends int
+}
+
+func newMemEventLog() *memEventLog { return &memEventLog{events: map[string][]WorkflowEvent{}} }
+
+func (m *memEventLog) Load(projectID, workflowID string) (Loaded, error) {
+	m.loads++
+	events := m.events[projectID+"/"+workflowID]
+	if len(events) == 0 {
+		return Loaded{Classification: ClassificationAbsent}, nil
+	}
+	state, err := Replay(events)
+	if err != nil {
+		return Loaded{Classification: ClassificationDrifted, Detail: err.Error()}, nil
+	}
+	return Loaded{Classification: ClassificationOwned, Events: append([]WorkflowEvent(nil), events...), State: state}, nil
+}
+
+func (m *memEventLog) Append(projectID, workflowID string, next WorkflowEvent) error {
+	m.appends++
+	key := projectID + "/" + workflowID
+	if err := next.Validate(); err != nil {
+		return err
+	}
+	if next.Seq != len(m.events[key]) {
+		return ErrStaleSeq
+	}
+	m.events[key] = append(m.events[key], next)
+	return nil
+}
+
+// countingCatalog counts the profiles asked of it.
+type countingCatalog struct {
+	inner ProfileCatalog
+	asked int
+}
+
+func (c *countingCatalog) Resolve(name string) (workflowprofile.WorkflowProfile, error) {
+	c.asked++
+	return c.inner.Resolve(name)
+}
+
+// The lifecycle reaches its log and its profiles only through the two ports: a
+// whole workflow runs over an in-memory log with the catalog counted, and no state
+// directory is touched.
+func TestLifecycleRunsOverAnyEventLogAndProfileCatalog(t *testing.T) {
+	stateHome := t.TempDir()
+	t.Setenv("XDG_STATE_HOME", stateHome)
+	log := newMemEventLog()
+	catalog := &countingCatalog{inner: builtInProfiles}
+	goals := newFakeGoalReader()
+	g := validGoal("proj-1", "goal-1")
+	goals.set("proj-1", "goal-1", g)
+	lc, err := NewLifecycle(log, catalog, stepClock(), testProvenance(), goals, newFakeChainReader(), UnavailableProber{})
+	if err != nil {
+		t.Fatalf("NewLifecycle() = %v, want nil", err)
+	}
+
+	profile, err := workflowprofile.Resolve("standalone-minimal")
+	if err != nil {
+		t.Fatal(err)
+	}
+	steps := []struct {
+		name string
+		do   func() (State, error)
+	}{
+		{"create", func() (State, error) { return lc.Create("proj-1", "wf-1", g, profile.Name, "") }},
+		{"start", func() (State, error) { return lc.Start("proj-1", "wf-1") }},
+		{"stage", func() (State, error) { return lc.RecordStage("proj-1", "wf-1", profile.Stages[0].Name) }},
+		{"verify", func() (State, error) { return lc.Verify("proj-1", "wf-1") }},
+		{"close", func() (State, error) { return lc.Close("proj-1", "wf-1", OutcomeCompleted, "") }},
+	}
+	var last State
+	for _, step := range steps {
+		if last, err = step.do(); err != nil {
+			t.Fatalf("%s: %v", step.name, err)
+		}
+	}
+	if last.Status != StatusClosed {
+		t.Errorf("final status = %q, want %q", last.Status, StatusClosed)
+	}
+	if log.appends != len(steps) {
+		t.Errorf("appends to the injected log = %d, want %d (one per operation)", log.appends, len(steps))
+	}
+	if log.loads == 0 {
+		t.Error("the injected log was never read")
+	}
+	if catalog.asked == 0 {
+		t.Error("the injected catalog was never asked")
+	}
+	if cls, state, err := lc.Status("proj-1", "wf-1"); err != nil || cls != ClassificationOwned || state.Status != StatusClosed {
+		t.Errorf("Status() = (%q, %q, %v), want the closed workflow read back through the log", cls, state.Status, err)
+	}
+	entries, err := os.ReadDir(stateHome)
+	if err != nil || len(entries) != 0 {
+		t.Errorf("state home holds %v (%v), want nothing: no file store was used", entries, err)
 	}
 }
 
@@ -646,9 +762,9 @@ func TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves(t *testing.T) {
 		t.Fatalf("Start() = %v, want nil", err)
 	}
 
-	lc.resolveProfile = func(name string) (workflowprofile.WorkflowProfile, error) {
+	lc.profiles = ProfileCatalogFunc(func(name string) (workflowprofile.WorkflowProfile, error) {
 		return workflowprofile.WorkflowProfile{}, errors.New("profile retired")
-	}
+	})
 	state, err := lc.Close("proj-1", "wf-1", OutcomeAbandoned, "profile retired upstream")
 	if err != nil {
 		t.Fatalf("Close(abandoned) = %v, want nil when the profile no longer resolves", err)
@@ -855,7 +971,7 @@ func TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable(t *tes
 }
 
 // TestLifecycleVerifyFailsWhenProfileNoLongerResolves covers R3-2: Verify's
-// ErrProfileInvalid branch, driven through the injectable resolveProfile the
+// ErrProfileInvalid branch, driven through the injectable ProfileCatalog the
 // same way TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves drives
 // Close's profile-observation fallback.
 func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
@@ -879,9 +995,9 @@ func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
 	}
 
 	lc := newLC()
-	lc.resolveProfile = func(name string) (workflowprofile.WorkflowProfile, error) {
+	lc.profiles = ProfileCatalogFunc(func(name string) (workflowprofile.WorkflowProfile, error) {
 		return workflowprofile.WorkflowProfile{}, errors.New("profile retired")
-	}
+	})
 	if _, err := lc.Verify("proj-1", "wf-1"); !errors.Is(err, ErrProfileInvalid) {
 		t.Fatalf("Verify() err = %v, want ErrProfileInvalid", err)
 	}
@@ -896,7 +1012,7 @@ func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
 }
 
 // TestLifecycleVerifyFailsWhenStageOrderInvalid covers R3-2's other branch:
-// ErrStageOrderInvalid, driven by an injected resolveProfile that reports a
+// ErrStageOrderInvalid, driven by an injected ProfileCatalog that reports a
 // profile whose declared stage order no longer matches what was actually
 // recorded.
 func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
@@ -927,12 +1043,12 @@ func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
 	}
 
 	lc := newLC()
-	lc.resolveProfile = func(name string) (workflowprofile.WorkflowProfile, error) {
+	lc.profiles = ProfileCatalogFunc(func(name string) (workflowprofile.WorkflowProfile, error) {
 		mutated := profile
 		mutated.Stages = append([]workflowprofile.Stage{}, profile.Stages...)
 		mutated.Stages[0].Name = "not-" + profile.Stages[0].Name
 		return mutated, nil
-	}
+	})
 	if _, err := lc.Verify("proj-1", "wf-1"); !errors.Is(err, ErrStageOrderInvalid) {
 		t.Fatalf("Verify() err = %v, want ErrStageOrderInvalid", err)
 	}
@@ -1088,5 +1204,63 @@ func TestLifecycleNilDegradedHookIsNoop(t *testing.T) {
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, erroringProber{err: errors.New("boom")})
 	if _, err := lc.Create("proj-1", "wf-1", g, "odd", ""); err != nil {
 		t.Fatalf("Create() = %v, want nil", err)
+	}
+}
+
+// Every operation resolves a profile through the one resolver the Lifecycle was
+// built with. Create used to resolve it directly for its first check and
+// RecordStage for its stage order, so a resolver other than the built-in
+// catalog was honoured by some operations and ignored by others.
+
+// A profile the resolver refuses is refused by Create before anything else is
+// read: the role chain is never loaded for it.
+func TestLifecycleCreateRefusesAProfileTheResolverRefusesBeforeReadingAnythingElse(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader() // holds no chain: loading "chain-1" would fail as ErrRoleChainInvalid
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
+	retired := errors.New("profile retired")
+	lc.profiles = ProfileCatalogFunc(func(string) (workflowprofile.WorkflowProfile, error) {
+		return workflowprofile.WorkflowProfile{}, retired
+	})
+
+	_, err := lc.Create("proj-1", "wf-1", validGoal("proj-1", "goal-1"), "odd", "chain-1")
+	if !errors.Is(err, retired) {
+		t.Fatalf("Create() err = %v, want the resolver's refusal", err)
+	}
+	if errors.Is(err, ErrRoleChainInvalid) {
+		t.Fatalf("Create() err = %v: the role chain was read although the resolver refused the profile", err)
+	}
+}
+
+// The next stage RecordStage admits is the one the resolver's profile declares.
+func TestLifecycleRecordStageFollowsTheResolversProfile(t *testing.T) {
+	store := newTestStore(t)
+	goals := newFakeGoalReader()
+	chains := newFakeChainReader()
+	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
+	g := validGoal("proj-1", "goal-1")
+	if _, err := lc.Create("proj-1", "wf-1", g, "maintenance", ""); err != nil {
+		t.Fatalf("Create() = %v, want nil", err)
+	}
+	if _, err := lc.Start("proj-1", "wf-1"); err != nil {
+		t.Fatalf("Start() = %v, want nil", err)
+	}
+
+	builtIn, err := workflowprofile.Resolve("maintenance")
+	if err != nil {
+		t.Fatal(err)
+	}
+	lc.profiles = ProfileCatalogFunc(func(name string) (workflowprofile.WorkflowProfile, error) {
+		custom := builtIn
+		custom.Stages = append([]workflowprofile.Stage{{Name: "custom-first"}}, builtIn.Stages...)
+		return custom, nil
+	})
+	state, err := lc.RecordStage("proj-1", "wf-1", "custom-first")
+	if err != nil {
+		t.Fatalf("RecordStage(custom-first) = %v, want nil: the resolver's profile declares it first", err)
+	}
+	if len(state.Stages) != 1 || state.Stages[0] != "custom-first" {
+		t.Fatalf("state.Stages = %v, want [custom-first]", state.Stages)
 	}
 }

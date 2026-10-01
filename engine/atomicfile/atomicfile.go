@@ -19,7 +19,8 @@
 //     through it would put the content somewhere the caller did not name.
 //   - With Options.Backup the replaced content is kept beside the file, with its
 //     own mode, before anything is replaced; a backup that cannot be made stops the
-//     write.
+//     write. The file is read through one no-follow descriptor, so a symlink put
+//     at the name after Replace looked at it is refused, not read.
 //
 // Two operations cover the callers. Replace puts the staged content at a name,
 // replacing what is there (WriteFile is Stage and Replace in one call). Create puts
@@ -36,6 +37,7 @@ package atomicfile
 import (
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"path/filepath"
@@ -183,7 +185,7 @@ func (s *Staged) Replace(path string) error {
 	case info.Mode()&fs.ModeSymlink != 0:
 		return fmt.Errorf("%w: %s", ErrSymlink, path)
 	case s.opts.Backup && info.Mode().IsRegular():
-		if err := s.backUp(path, info.Mode().Perm()); err != nil {
+		if err := s.backUp(path); err != nil {
 			return err
 		}
 	}
@@ -243,13 +245,35 @@ func (s *Staged) flushDir(path string) error {
 // backUp copies the file at path to path+".bak", in the same atomic way and with
 // the same mode as the original. It does not follow a backup name that is a
 // symlink.
-func (s *Staged) backUp(path string, perm fs.FileMode) error {
-	old, err := os.ReadFile(path)
+//
+// The file is opened once, without following a symlink (openNoFollow), and its
+// mode and content both come from that descriptor. Replace has looked at the name
+// by then, but the name can change between that look and this open; reading
+// through the descriptor means a link swapped in meanwhile is refused (ErrSymlink)
+// instead of read, and the mode kept is that of the content kept. Anything that is
+// not a regular file at that point is refused too.
+func (s *Staged) backUp(path string) error {
+	f, err := openNoFollow(path)
+	if err != nil {
+		if errors.Is(err, ErrSymlink) {
+			return err
+		}
+		return fmt.Errorf("atomicfile: read %s for its backup: %w", path, err)
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return fmt.Errorf("atomicfile: read %s for its backup: %w", path, err)
+	}
+	if !info.Mode().IsRegular() {
+		return fmt.Errorf("atomicfile: read %s for its backup: not a regular file", path)
+	}
+	old, err := io.ReadAll(f)
 	if err != nil {
 		return fmt.Errorf("atomicfile: read %s for its backup: %w", path, err)
 	}
 	opts := s.opts
-	opts.Perm, opts.Backup = perm, false
+	opts.Perm, opts.Backup = info.Mode().Perm(), false
 	backup, err := stage(s.ops, s.dir, old, opts)
 	if err != nil {
 		return fmt.Errorf("atomicfile: stage the backup of %s: %w", path, err)

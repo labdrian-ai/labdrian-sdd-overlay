@@ -11,9 +11,39 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
+
+// The shaper binds the three worktree paths and nothing else. The composition root
+// maps the git adapter's observation into that value, so HEAD (informational) and
+// Linked (derivable from the paths) never reach the shaper: two observations that
+// differ only in them are the same provenance.
+func TestWorktreeProvenanceFromCarriesOnlyTheBoundPaths(t *testing.T) {
+	obs := gitprov.Observation{
+		Toplevel:  "/work/tree",
+		GitDir:    "/work/main/.git/worktrees/tree",
+		CommonDir: "/work/main/.git",
+		Head:      "0123456789abcdef0123456789abcdef01234567",
+		Linked:    true,
+	}
+	want := shaper.WorktreeProvenance{
+		Toplevel:  "/work/tree",
+		GitDir:    "/work/main/.git/worktrees/tree",
+		CommonDir: "/work/main/.git",
+	}
+	if got := worktreeProvenanceFrom(obs); got != want {
+		t.Fatalf("worktreeProvenanceFrom = %#v, want %#v", got, want)
+	}
+
+	moved := obs
+	moved.Head = "fedcba9876543210fedcba9876543210fedcba98"
+	moved.Linked = false
+	if got := worktreeProvenanceFrom(moved); got != want {
+		t.Errorf("provenance changed with HEAD and Linked alone: %#v, want %#v", got, want)
+	}
+}
 
 const shaperTestHandoff = `{"version":1,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","architecture":"Layered CLI.","stages":["Extract jsonstrict.","Refactor goal.Parse."],"acceptance":["go test ./... passes."],"out_of_scope":["Runtime clearance UI."]}`
 

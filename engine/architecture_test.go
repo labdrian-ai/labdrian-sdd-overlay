@@ -86,12 +86,6 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "H22",
 	},
 
-	// prespec: the clock and entropy are injected, the CLI handler moves to cmd.
-	"prespec": {
-		"crypto/rand": "H11",
-		"time.Now":    "H11",
-	},
-
 	// projection: the binding store moves to projection/fsstore behind a
 	// BindingStore port. Its lock already rides on filelock (H3), an adapter edge
 	// that moves with the store.
@@ -116,10 +110,9 @@ var knownDebt = archguard.Debt{
 		"syscall": "H7",
 	},
 
-	// shaper: owns WorktreeProvenance instead of importing gitprov (H4); the
-	// contained reads and the clearance store move to shaper/fsadapter (H10).
+	// shaper: the contained reads and the clearance store move to
+	// shaper/fsadapter.
 	"shaper": {
-		"gitprov": "H4",
 		"os":      "H10",
 		"runtime": "H10",
 		"syscall": "H10",

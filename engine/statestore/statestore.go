@@ -48,6 +48,9 @@ var (
 	ErrNotRegular = errors.New("statestore: not a regular file")
 	// ErrImmutable: an existing record holds different bytes than the ones offered.
 	ErrImmutable = errors.New("statestore: immutable record holds different bytes")
+	// ErrEmptyParts: EnsureDirs or CheckDirs was given no components, so there is
+	// not even a state home to start from.
+	ErrEmptyParts = errors.New("statestore: no store components given (the state home is the first)")
 )
 
 // refusal is an error whose text is exactly the message a store always printed and
@@ -90,8 +93,11 @@ func HomeFrom(getenv func(string) string) (string, error) {
 // component below it, creating the missing ones with mode 0700 and refusing any
 // that is a symlink (ErrSymlink) or not a directory (ErrNotDir). A directory that
 // already exists is accepted as it is, whatever its mode. The state home itself
-// may be a symlink to a directory.
+// may be a symlink to a directory. An empty chain is ErrEmptyParts.
 func EnsureDirs(parts []string) error {
+	if len(parts) == 0 {
+		return ErrEmptyParts
+	}
 	home := parts[0]
 	if _, err := os.Stat(home); errors.Is(err, fs.ErrNotExist) {
 		if err := os.MkdirAll(home, 0o700); err != nil {
@@ -129,7 +135,11 @@ func EnsureDirs(parts []string) error {
 // that does not exist is reported as the error of its inspection, which satisfies
 // errors.Is(err, fs.ErrNotExist): the store is absent, not broken. A symlink is
 // ErrSymlink and a non-directory ErrNotDir. The state home itself is not checked.
+// An empty chain is ErrEmptyParts.
 func CheckDirs(parts []string) error {
+	if len(parts) == 0 {
+		return ErrEmptyParts
+	}
 	current := parts[0]
 	for _, part := range parts[1:] {
 		current = filepath.Join(current, part)

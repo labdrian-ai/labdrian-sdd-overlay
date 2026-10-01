@@ -9,8 +9,6 @@ import (
 	"reflect"
 	"strings"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 )
 
 const readinessRoot = "/work/tree"
@@ -44,11 +42,10 @@ func inputWith(t *testing.T, handoffBytes, goalBytes []byte) ReadinessInput {
 			GoalBytes:  goalBytes,
 			GoalSHA256: sha256Hex(goalBytes),
 		},
-		Provenance: &gitprov.Observation{
+		Provenance: &WorktreeProvenance{
 			Toplevel:  readinessRoot,
 			GitDir:    readinessRoot + "/.git",
 			CommonDir: readinessRoot + "/.git",
-			Head:      "0123456789abcdef0123456789abcdef01234567",
 		},
 	}
 }
@@ -302,17 +299,31 @@ func TestEvaluateIgnoresHandoffStructAndDerivesFromBytes(t *testing.T) {
 	}
 }
 
-func TestEvaluateSubjectDoesNotBindHead(t *testing.T) {
-	a := completeInput(t)
-	b := completeInput(t)
-	b.Provenance.Head = "fedcba9876543210fedcba9876543210fedcba98"
-
-	sa, sb := Evaluate(a, nil).Subject, Evaluate(b, nil).Subject
-	if sa == nil || sb == nil {
-		t.Fatalf("Subject missing: %v, %v", sa, sb)
+// HEAD is informational and is not bound, so a clearance does not go stale when a
+// commit lands. The shaper's provenance value has no field for it, which is what
+// guarantees that; adding one would change what every clearance binds.
+func TestWorktreeProvenanceBindsThePathsAndNotHead(t *testing.T) {
+	var got []string
+	typ := reflect.TypeOf(WorktreeProvenance{})
+	for i := 0; i < typ.NumField(); i++ {
+		got = append(got, typ.Field(i).Name)
 	}
-	if *sa != *sb {
-		t.Errorf("Subject changed with HEAD alone: %#v vs %#v", *sa, *sb)
+	if want := []string{"Toplevel", "GitDir", "CommonDir"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("WorktreeProvenance fields = %v, want exactly %v", got, want)
+	}
+}
+
+// The subject carries the provenance it was given, unchanged.
+func TestEvaluateSubjectBindsTheGivenProvenance(t *testing.T) {
+	in := completeInput(t)
+	in.Provenance.GitDir = readinessRoot + "/.git/worktrees/other"
+
+	got := Evaluate(in, nil).Subject
+	if got == nil {
+		t.Fatal("Subject missing")
+	}
+	if got.Worktree != *in.Provenance {
+		t.Errorf("Subject.Worktree = %#v, want %#v", got.Worktree, *in.Provenance)
 	}
 }
 

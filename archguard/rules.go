@@ -6,14 +6,18 @@ import "strings"
 // rule.
 func (r Ring) pure() bool { return r == Domain || r == Application }
 
-// importable lists, for each ring, the rings inside the module that its packages
-// may import.
+// judged reports whether packages of the ring are held to the dependency rule at
+// all. Test support is not production code and has no rule, so it is never
+// judged, and importable needs no row for it.
+func (r Ring) judged() bool { return r != Support }
+
+// importable lists, for each judged ring, the rings inside the module that its
+// packages may import. A ring that is not judged has no row.
 var importable = map[Ring][]Ring{
 	Domain:      {Domain},
 	Application: {Domain, Application},
 	Adapter:     {Domain, Application, Adapter},
 	Root:        {Domain, Application, Adapter},
-	Support:     {Domain, Application, Adapter, Root, Support},
 }
 
 func (r Ring) mayImport(target Ring) bool {

@@ -41,7 +41,7 @@ func (c *checker) violations() []violation {
 	var out []violation
 	for _, pkg := range c.packages {
 		r, declared := c.rings[pkg.dir]
-		if !declared || r == Support {
+		if !declared || !r.judged() {
 			continue
 		}
 		out = append(out, c.judge(pkg, r)...)

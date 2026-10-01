@@ -26,14 +26,25 @@ func (z zeroBits) Read(p []byte) (int, error) {
 	return len(p), nil
 }
 
-// TestNewIDFormat verifies the generated ULID matches R-014 format exactly.
-func TestNewIDFormat(t *testing.T) {
-	id := NewID()
+// fillBits is an io.Reader that returns one byte value forever, so a test can give
+// two IDs different, still predictable, random components.
+type fillBits byte
+
+func (f fillBits) Read(p []byte) (int, error) {
+	for i := range p {
+		p[i] = byte(f)
+	}
+	return len(p), nil
+}
+
+// TestNewIDFromFormat verifies the generated ULID matches R-014 format exactly.
+func TestNewIDFromFormat(t *testing.T) {
+	id := NewIDFrom(fixedTime, zeroBits{})
 	if !ulidRe.MatchString(id) {
-		t.Errorf("NewID() = %q; does not match ULID regex %s", id, ulidRe)
+		t.Errorf("NewIDFrom() = %q; does not match ULID regex %s", id, ulidRe)
 	}
 	if len(id) != 26 {
-		t.Errorf("NewID() length = %d; want 26", len(id))
+		t.Errorf("NewIDFrom() length = %d; want 26", len(id))
 	}
 }
 
@@ -51,12 +62,23 @@ func TestNewIDFromDeterministic(t *testing.T) {
 	}
 }
 
-// TestNewIDUniqueness verifies two real NewID() calls produce different values
-// (crypto/rand makes collision astronomically unlikely).
-func TestNewIDUniqueness(t *testing.T) {
-	a, b := NewID(), NewID()
-	if a == b {
-		t.Errorf("NewID() produced identical values: %q", a)
+// TestNewIDFromDiffersWithEitherInput verifies that the timestamp and the random
+// source each change the ID, and that the timestamp leads it, so IDs sort by time.
+// (That the production clock and crypto/rand give distinct IDs is checked where
+// they are wired, in engine/cmd.)
+func TestNewIDFromDiffersWithEitherInput(t *testing.T) {
+	base := NewIDFrom(fixedTime, zeroBits{})
+	if other := NewIDFrom(fixedTime, fillBits(0xff)); other == base {
+		t.Errorf("a different random source gave the same ID %q", base)
+	} else if other[:10] != base[:10] {
+		t.Errorf("a different random source changed the timestamp part: %q vs %q", other[:10], base[:10])
+	}
+	later := NewIDFrom(fixedTime.Add(time.Second), zeroBits{})
+	if later == base {
+		t.Errorf("a different timestamp gave the same ID %q", base)
+	}
+	if later[:10] <= base[:10] {
+		t.Errorf("a later timestamp does not sort after an earlier one: %q vs %q", later[:10], base[:10])
 	}
 }
 
