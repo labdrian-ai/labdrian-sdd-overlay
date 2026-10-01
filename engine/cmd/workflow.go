@@ -34,6 +34,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
 // runWorkflow implements the 'workflow <verb>' subcommand.
@@ -177,7 +178,8 @@ var workflowProber = func() workflow.DependencyProber {
 }
 
 // newWorkflowLifecycle builds a Lifecycle over the real XDG-resolved Store
-// and the real role chain store, with provenance observed from cwd (no
+// (its EventLog), the built-in profile catalog, and the real role chain store,
+// with provenance observed from cwd (no
 // subprocess) and the presence prober of workflowProber (a dependency is
 // recorded available only when its presence is seen by stat, never on the
 // CLI's own authority). goalFile is used only by
@@ -198,7 +200,8 @@ func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Life
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
-	lc, err := workflow.NewLifecycle(store, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, workflowProber())
+	profiles := workflow.ProfileCatalogFunc(workflowprofile.Resolve)
+	lc, err := workflow.NewLifecycle(store, profiles, time.Now, observeProvenance(cwd), pathGoalReader{path: goalFile}, chains, workflowProber())
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}

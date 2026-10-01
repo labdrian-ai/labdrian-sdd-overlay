@@ -143,22 +143,20 @@ func unavailableObservations(capabilities []string, detail string) []Observation
 
 // Lifecycle performs the standalone workflow lifecycle operations (create,
 // start, pause, resume, stage recording, structural verify, close) over one
-// Store, with every side-effecting dependency injected for testability: a
-// clock, static caller-supplied provenance (this package never runs git or
-// any other subprocess), a GoalReader, a RoleChainReader, and a
-// DependencyProber. Every operation appends at most one event through
-// Store.Append and returns the resulting State; a rejected operation
-// appends nothing.
+// EventLog, with every side-effecting dependency injected: the log itself, the
+// ProfileCatalog every profile is resolved from, a clock, static
+// caller-supplied provenance (this package never runs git or any other
+// subprocess), a GoalReader, a RoleChainReader, and a DependencyProber. Every
+// operation appends at most one event through EventLog.Append and returns the
+// resulting State; a rejected operation appends nothing.
 type Lifecycle struct {
-	store      Store
+	log        EventLog
+	profiles   ProfileCatalog
 	clock      func() time.Time
 	provenance Provenance
 	goals      GoalReader
 	chains     RoleChainReader
 	prober     DependencyProber
-	// resolveProfile resolves a workflow's recorded profile name; it is
-	// workflowprofile.Resolve outside tests.
-	resolveProfile func(string) (workflowprofile.WorkflowProfile, error)
 	// probeTimeout bounds a single DependencyProber.Probe call; it is
 	// dependencyProbeTimeout outside tests.
 	probeTimeout time.Duration
@@ -198,12 +196,18 @@ func (l Lifecycle) notifyDegraded(detail string) {
 	}
 }
 
-// NewLifecycle builds a Lifecycle. clock, goals, and chains must not be
-// nil; prober may be nil, in which case UnavailableProber is used.
+// NewLifecycle builds a Lifecycle. log, profiles, clock, goals, and chains
+// must not be nil; prober may be nil, in which case UnavailableProber is used.
 // provenance is validated once here (the same shape check WorkflowEvent's
 // own Validate applies) since it is reused, unchanged, on every event this
 // Lifecycle appends.
-func NewLifecycle(store Store, clock func() time.Time, provenance Provenance, goals GoalReader, chains RoleChainReader, prober DependencyProber) (Lifecycle, error) {
+func NewLifecycle(log EventLog, profiles ProfileCatalog, clock func() time.Time, provenance Provenance, goals GoalReader, chains RoleChainReader, prober DependencyProber) (Lifecycle, error) {
+	if log == nil {
+		return Lifecycle{}, fmt.Errorf("workflow lifecycle: event log must not be nil")
+	}
+	if profiles == nil {
+		return Lifecycle{}, fmt.Errorf("workflow lifecycle: profile catalog must not be nil")
+	}
 	if clock == nil {
 		return Lifecycle{}, fmt.Errorf("workflow lifecycle: clock must not be nil")
 	}
@@ -219,13 +223,13 @@ func NewLifecycle(store Store, clock func() time.Time, provenance Provenance, go
 	if prober == nil {
 		prober = UnavailableProber{}
 	}
-	return Lifecycle{store: store, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, resolveProfile: workflowprofile.Resolve, probeTimeout: dependencyProbeTimeout}, nil
+	return Lifecycle{log: log, profiles: profiles, clock: clock, provenance: provenance, goals: goals, chains: chains, prober: prober, probeTimeout: dependencyProbeTimeout}, nil
 }
 
 // loadOwned loads the workflow and requires it to be ClassificationOwned;
 // every operation except Create calls this first.
 func (l Lifecycle) loadOwned(projectID, workflowID string) (Loaded, error) {
-	loaded, err := l.store.Load(projectID, workflowID)
+	loaded, err := l.log.Load(projectID, workflowID)
 	if err != nil {
 		return Loaded{}, err
 	}
@@ -280,7 +284,7 @@ func (l Lifecycle) eventWith(loaded Loaded, projectID, workflowID string, kind K
 // every caller in this file checks the error first and never reads that
 // zero-value State.
 func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event WorkflowEvent) (State, error) {
-	if err := l.store.Append(projectID, workflowID, event); err != nil {
+	if err := l.log.Append(projectID, workflowID, event); err != nil {
 		return State{}, err
 	}
 	return applyEvent(loaded.State, event), nil
@@ -298,7 +302,7 @@ func (l Lifecycle) commit(projectID, workflowID string, loaded Loaded, event Wor
 // requested capability is recorded unavailable, with a detail explaining
 // why (see l.probe).
 func (l Lifecycle) observationsFor(profileName string) ([]Observation, error) {
-	profile, err := l.resolveProfile(profileName)
+	profile, err := l.profiles.Resolve(profileName)
 	if err != nil {
 		return nil, fmt.Errorf("workflow lifecycle: %w", err)
 	}
@@ -481,7 +485,7 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 	if err := g.Validate(); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: invalid goal: %w", err)
 	}
-	if _, err := workflowprofile.Resolve(profileName); err != nil {
+	if _, err := l.profiles.Resolve(profileName); err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 	var roleChainHead string
@@ -500,7 +504,7 @@ func (l Lifecycle) Create(projectID, workflowID string, g goal.Goal, profileName
 		return State{}, fmt.Errorf("workflow lifecycle: create: %w", err)
 	}
 
-	loaded, err := l.store.Load(projectID, workflowID)
+	loaded, err := l.log.Load(projectID, workflowID)
 	if err != nil {
 		return State{}, err
 	}
@@ -573,7 +577,7 @@ func (l Lifecycle) RecordStage(projectID, workflowID, stage string) (State, erro
 	if err != nil {
 		return State{}, err
 	}
-	profile, err := workflowprofile.Resolve(loaded.State.Profile)
+	profile, err := l.profiles.Resolve(loaded.State.Profile)
 	if err != nil {
 		return State{}, fmt.Errorf("workflow lifecycle: record stage: %w", err)
 	}
@@ -616,7 +620,7 @@ func (l Lifecycle) Verify(projectID, workflowID string) (State, error) {
 	if err := VerifyEvents(loaded.Events); err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrChainInvalid, err)
 	}
-	profile, err := l.resolveProfile(state.Profile)
+	profile, err := l.profiles.Resolve(state.Profile)
 	if err != nil {
 		return State{}, fmt.Errorf("%w: %v", ErrProfileInvalid, err)
 	}
@@ -700,7 +704,7 @@ func (l Lifecycle) Close(projectID, workflowID string, outcome Outcome, reason s
 // Status is a read-only report of one workflow's on-disk classification and
 // (when owned) its replayed State. It never appends anything.
 func (l Lifecycle) Status(projectID, workflowID string) (Classification, State, error) {
-	loaded, err := l.store.Load(projectID, workflowID)
+	loaded, err := l.log.Load(projectID, workflowID)
 	if err != nil {
 		return "", State{}, err
 	}
