@@ -117,21 +117,36 @@ declare -A AGENT_TARGET_PATHS=(
   [opencode]="$HOME/.config/opencode/agents"
 )
 
-# Every recognized --target, mapped to how it receives content (pi-target-
-# plumbing, R-001/R-008). "copy": per-file, deployed via TARGET_PATHS above.
-# "package": built and installed as a whole (pi, via `pi install`/`pi
-# remove` — engine/pipkg, wired starting in the pi-package-build slice).
-# This is the single source of truth for "is this a known target at all"
-# and "does it have a TARGET_PATHS entry" — every call site that used to
-# probe TARGET_PATHS directly for either question now goes through
-# is_valid_target/is_copy_target below instead, so a package target is
-# never silently treated as a copy target with an empty destination.
-declare -A TARGET_KINDS=(
-  [claude]="copy"
-  [opencode]="copy"
-  [codex]="copy"
-  [pi]="package"
+# Every recognized --target, in the order `--target all` expands to, each as
+# "<name>:<kind>" (pi-target-plumbing, R-001/R-008). "copy": per-file,
+# deployed via TARGET_PATHS above. "package": built and installed as a whole
+# (pi, via `pi install`/`pi remove` — engine/pipkg, wired starting in the
+# pi-package-build slice).
+#
+# This is the ONE place a target is declared. ALL_TARGETS (the order and the
+# `--target all` expansion, see resolve_targets), TARGET_KINDS (the lookup
+# behind is_valid_target/is_copy_target) and the `targets` subcommand (the
+# catalog the TUI reads) are all derived from it just below, so the set a
+# front-end shows and the set `all` acts on cannot drift apart. Add a target
+# here and nowhere else.
+TARGET_CATALOG=(
+  claude:copy
+  opencode:copy
+  codex:copy
+  pi:package
 )
+
+# Every call site that used to probe TARGET_PATHS directly for "is this a
+# known target at all" and "does it have a TARGET_PATHS entry" now goes
+# through is_valid_target/is_copy_target below instead, so a package target is
+# never silently treated as a copy target with an empty destination.
+declare -a ALL_TARGETS=()
+declare -A TARGET_KINDS=()
+for _catalog_entry in "${TARGET_CATALOG[@]}"; do
+  ALL_TARGETS+=("${_catalog_entry%%:*}")
+  TARGET_KINDS["${_catalog_entry%%:*}"]="${_catalog_entry#*:}"
+done
+unset _catalog_entry
 
 # True (exit 0) when $1 names any recognized target, copy or package.
 is_valid_target() {
@@ -493,16 +508,33 @@ ensure_parent() {
   mkdir -p "$parent"
 }
 
-# Resolve --target argument to a space-separated list of target names
+# Resolve --target argument to a space-separated list of target names.
+# `all` expands to ALL_TARGETS, the same list `targets` prints.
 resolve_targets() {
   local arg="${1:-all}"
   if [[ "$arg" == "all" ]]; then
-    echo "claude opencode codex pi"
+    echo "${ALL_TARGETS[*]}"
   elif is_valid_target "$arg"; then
     echo "$arg"
   else
-    die "Unknown target: $arg. Valid: claude, opencode, codex, pi, all"
+    local valid
+    printf -v valid '%s, ' "${ALL_TARGETS[@]}"
+    die "Unknown target: $arg. Valid: ${valid}all"
   fi
+}
+
+# cmd_targets: print the target catalog, one target per line, as
+# "<name><TAB><kind>" (kind is "copy" or "package"), in the order `--target
+# all` expands to. The TUI reads this instead of keeping a list of its own,
+# and a front-end that sends `--target all` only when the user selected every
+# line printed here can never act on a target the user did not see. Read-only:
+# it takes no arguments and touches no file.
+cmd_targets() {
+  [[ $# -eq 0 ]] || die "targets takes no arguments (got: $*)"
+  local name
+  for name in "${ALL_TARGETS[@]}"; do
+    printf '%s\t%s\n' "$name" "${TARGET_KINDS[$name]}"
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -545,6 +577,11 @@ Commands:
                                    --backup TIMESTAMP picks a specific one. Exits non-zero
                                    without touching any file when the target has no backups.
                                    Performs zero git operations.
+  targets                          Read-only: print the target catalog, one target per line as
+                                   <name><TAB><kind> (kind: copy or package), in the order
+                                   --target all expands to. Takes no arguments. Front-ends
+                                   read this list instead of keeping their own, so they never
+                                   act on a target they did not show.
   version (also: --version)       Read-only: print this clone's current release version
                                    (from local main) and each target's recorded deployed
                                    version, naming any that are behind. Never-deployed
@@ -4551,6 +4588,7 @@ if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
     self-update)     cmd_self_update "$@" ;;
     update)          cmd_update "$@" ;;
     restore)         cmd_restore "$@" ;;
+    targets)         cmd_targets "$@" ;;
     version|--version) cmd_version "$@" ;;
     status)          cmd_status "$@" ;;
     sync-check)      cmd_sync_check "$@" ;;
