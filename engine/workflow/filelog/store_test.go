@@ -1,4 +1,4 @@
-package workflow
+package filelog
 
 import (
 	"errors"
@@ -9,7 +9,45 @@ import (
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
+
+// validCreatedEvent is the seq-0 created event of proj-1/wf-1; validStartedEvent
+// is the started event that follows it.
+func validCreatedEvent() workflow.WorkflowEvent {
+	return workflow.WorkflowEvent{
+		Version:    1,
+		WorkflowID: "wf-1",
+		ProjectID:  "proj-1",
+		Seq:        0,
+		PrevDigest: "",
+		Kind:       workflow.KindCreated,
+		At:         "2026-09-28T10:00:00Z",
+		Provenance: workflow.Provenance{
+			WorktreeRoot: "/home/labdrian/labdrian-sdd-overlay",
+			GitHead:      "e1218c2f00000000000000000000000000000000",
+		},
+		Observations: []workflow.Observation{},
+		GoalID:       "goal-1",
+		GoalDigest:   strings.Repeat("a", 64),
+		Profile:      "odd",
+	}
+}
+
+func validStartedEvent() workflow.WorkflowEvent {
+	created := validCreatedEvent()
+	prevDigest, err := workflow.EventDigest(created)
+	if err != nil {
+		panic(err)
+	}
+	e := created
+	e.Seq = 1
+	e.PrevDigest = prevDigest
+	e.Kind = workflow.KindStarted
+	e.GoalID, e.GoalDigest, e.Profile = "", "", ""
+	return e
+}
 
 // setStoreEnv points XDG_STATE_HOME at a fresh temp dir and an unusable HOME,
 // so NewStore always resolves the same isolated root and every test in this
@@ -41,13 +79,26 @@ func storeFilePath(t *testing.T, root, projectID, workflowID string) string {
 func TestCheckPlatformAcceptsOnlySupportedPlatforms(t *testing.T) {
 	supported := map[string]bool{"linux": true, "darwin": true, "windows": false, "freebsd": false}
 	for goos, want := range supported {
-		err := checkPlatform(goos)
+		// Whether a platform is supported is statestore's answer, made by build
+		// constraints to linux and darwin; the store only reports it.
+		err := checkPlatform(want, goos)
 		if want != (err == nil) {
-			t.Fatalf("checkPlatform(%q) = %v, want supported=%v", goos, err, want)
+			t.Fatalf("checkPlatform(%v, %q) = %v, want supported=%v", want, goos, err, want)
 		}
-		if !want && !errors.Is(err, ErrUnsupportedPlatform) {
-			t.Fatalf("checkPlatform(%q) err = %v, want ErrUnsupportedPlatform", goos, err)
+		if !want && (!errors.Is(err, ErrUnsupportedPlatform) || !strings.Contains(err.Error(), goos)) {
+			t.Fatalf("checkPlatform(%v, %q) err = %v, want ErrUnsupportedPlatform naming the platform", want, goos, err)
 		}
+	}
+}
+
+// The platforms that run these tests are the ones that have a store.
+func TestThisPlatformHasAStore(t *testing.T) {
+	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
+		t.Skip("the workflow store is only implemented on linux and darwin")
+	}
+	setStoreEnv(t)
+	if _, err := NewStore(); err != nil {
+		t.Fatalf("NewStore() = %v, want nil on %s", err, runtime.GOOS)
 	}
 }
 
@@ -72,7 +123,7 @@ func TestNewStoreRejectsUnusableHome(t *testing.T) {
 }
 
 // TestNewStoreErrorMessagesAreStable characterizes what NewStore reports for an
-// unusable environment, so extracting the state home resolution (StateHome)
+// unusable environment, so the state home resolution (statestore.Home)
 // cannot change the text a person sees.
 func TestNewStoreErrorMessagesAreStable(t *testing.T) {
 	tests := []struct {
@@ -97,59 +148,14 @@ func TestNewStoreErrorMessagesAreStable(t *testing.T) {
 	}
 }
 
-func TestStateHomeResolution(t *testing.T) {
-	t.Run("XDG_STATE_HOME wins and is cleaned", func(t *testing.T) {
-		t.Setenv("XDG_STATE_HOME", "/srv/xdg/../state/")
-		t.Setenv("HOME", "/home/someone")
-		got, err := StateHome()
-		if err != nil || got != "/srv/state" {
-			t.Fatalf("StateHome() = %q, %v, want %q", got, err, "/srv/state")
-		}
-	})
-	t.Run("an unset XDG_STATE_HOME falls back to HOME/.local/state", func(t *testing.T) {
-		t.Setenv("XDG_STATE_HOME", "")
-		t.Setenv("HOME", "/home/someone")
-		got, err := StateHome()
-		if err != nil || got != "/home/someone/.local/state" {
-			t.Fatalf("StateHome() = %q, %v, want %q", got, err, "/home/someone/.local/state")
-		}
-	})
-	t.Run("a relative XDG_STATE_HOME is refused", func(t *testing.T) {
-		t.Setenv("XDG_STATE_HOME", "relative/path")
-		t.Setenv("HOME", "/home/someone")
-		got, err := StateHome()
-		if err == nil || got != "" || !strings.Contains(err.Error(), "XDG_STATE_HOME") {
-			t.Fatalf("StateHome() = %q, %v, want an error naming XDG_STATE_HOME and no path", got, err)
-		}
-	})
-	t.Run("an unusable HOME fallback is refused", func(t *testing.T) {
-		for _, home := range []string{"", "relative/home"} {
-			t.Setenv("XDG_STATE_HOME", "")
-			t.Setenv("HOME", home)
-			got, err := StateHome()
-			if err == nil || got != "" || !strings.Contains(err.Error(), "HOME") {
-				t.Fatalf("HOME=%q: StateHome() = %q, %v, want an error naming HOME and no path", home, got, err)
-			}
-		}
-	})
-	t.Run("the error carries no store prefix", func(t *testing.T) {
-		// Each store adds its own prefix; a shared helper that named one store
-		// would mislabel every other store's error.
-		t.Setenv("XDG_STATE_HOME", "relative/path")
-		if _, err := StateHome(); err == nil || strings.Contains(err.Error(), "store") {
-			t.Fatalf("StateHome() error = %v, want a store-agnostic message", err)
-		}
-	})
-}
-
 func TestStoreLoadAbsentWhenNoFile(t *testing.T) {
 	s := newTestStore(t)
 	loaded, err := s.Load("proj-1", "wf-1")
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationAbsent {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationAbsent)
+	if loaded.Classification != workflow.ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationAbsent)
 	}
 }
 
@@ -173,14 +179,14 @@ func TestStoreAppendCreatesOwnedWorkflow(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationOwned {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationOwned)
+	if loaded.Classification != workflow.ClassificationOwned {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationOwned)
 	}
-	if len(loaded.Events) != 1 || loaded.Events[0].Kind != KindCreated {
+	if len(loaded.Events) != 1 || loaded.Events[0].Kind != workflow.KindCreated {
 		t.Fatalf("Load() events = %+v, want one created event", loaded.Events)
 	}
-	if loaded.State.Status != StatusCreated {
-		t.Fatalf("Load() state.Status = %q, want %q", loaded.State.Status, StatusCreated)
+	if loaded.State.Status != workflow.StatusCreated {
+		t.Fatalf("Load() state.Status = %q, want %q", loaded.State.Status, workflow.StatusCreated)
 	}
 }
 
@@ -196,8 +202,8 @@ func TestStoreAppendRejectsCreateWithWrongSeqOrKind(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationAbsent {
-		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	if loaded.Classification != workflow.ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, workflow.ClassificationAbsent)
 	}
 }
 
@@ -207,26 +213,26 @@ func TestStoreAppendChainOfEvents(t *testing.T) {
 	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
 		t.Fatalf("Append(created) = %v, want nil", err)
 	}
-	createdDigest, err := EventDigest(created)
+	createdDigest, err := workflow.EventDigest(created)
 	if err != nil {
-		t.Fatalf("EventDigest() = %v, want nil", err)
+		t.Fatalf("workflow.EventDigest() = %v, want nil", err)
 	}
 	started := created
 	started.Seq = 1
 	started.PrevDigest = createdDigest
-	started.Kind = KindStarted
+	started.Kind = workflow.KindStarted
 	started.GoalID, started.GoalDigest, started.Profile = "", "", ""
 	if err := s.Append(started.ProjectID, started.WorkflowID, started); err != nil {
 		t.Fatalf("Append(started) = %v, want nil", err)
 	}
-	startedDigest, err := EventDigest(started)
+	startedDigest, err := workflow.EventDigest(started)
 	if err != nil {
-		t.Fatalf("EventDigest() = %v, want nil", err)
+		t.Fatalf("workflow.EventDigest() = %v, want nil", err)
 	}
 	stage := started
 	stage.Seq = 2
 	stage.PrevDigest = startedDigest
-	stage.Kind = KindStageRecorded
+	stage.Kind = workflow.KindStageRecorded
 	stage.Stage = "explore"
 	if err := s.Append(stage.ProjectID, stage.WorkflowID, stage); err != nil {
 		t.Fatalf("Append(stage) = %v, want nil", err)
@@ -236,14 +242,14 @@ func TestStoreAppendChainOfEvents(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationOwned {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationOwned)
+	if loaded.Classification != workflow.ClassificationOwned {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationOwned)
 	}
 	if len(loaded.Events) != 3 {
 		t.Fatalf("Load() events = %d, want 3", len(loaded.Events))
 	}
-	if loaded.State.Status != StatusRunning {
-		t.Fatalf("Load() state.Status = %q, want %q", loaded.State.Status, StatusRunning)
+	if loaded.State.Status != workflow.StatusRunning {
+		t.Fatalf("Load() state.Status = %q, want %q", loaded.State.Status, workflow.StatusRunning)
 	}
 	if len(loaded.State.Stages) != 1 || loaded.State.Stages[0] != "explore" {
 		t.Fatalf("Load() state.Stages = %v, want [explore]", loaded.State.Stages)
@@ -274,18 +280,18 @@ func TestStoreAppendRejectsIllegalTransition(t *testing.T) {
 	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
 		t.Fatalf("Append(created) = %v, want nil", err)
 	}
-	createdDigest, err := EventDigest(created)
+	createdDigest, err := workflow.EventDigest(created)
 	if err != nil {
-		t.Fatalf("EventDigest() = %v, want nil", err)
+		t.Fatalf("workflow.EventDigest() = %v, want nil", err)
 	}
 	// paused is illegal directly from created.
 	paused := created
 	paused.Seq = 1
 	paused.PrevDigest = createdDigest
-	paused.Kind = KindPaused
+	paused.Kind = workflow.KindPaused
 	paused.GoalID, paused.GoalDigest, paused.Profile = "", "", ""
-	if err := s.Append(paused.ProjectID, paused.WorkflowID, paused); !errors.Is(err, ErrInvalidTransition) {
-		t.Fatalf("Append() err = %v, want ErrInvalidTransition", err)
+	if err := s.Append(paused.ProjectID, paused.WorkflowID, paused); !errors.Is(err, workflow.ErrInvalidTransition) {
+		t.Fatalf("Append() err = %v, want workflow.ErrInvalidTransition", err)
 	}
 }
 
@@ -316,8 +322,8 @@ func TestStoreAppendRejectsMismatchedIdentifiersOnFirstEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationAbsent {
-		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	if loaded.Classification != workflow.ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, workflow.ClassificationAbsent)
 	}
 }
 
@@ -338,8 +344,8 @@ func TestStoreAppendRejectsNonZeroSeqOnFirstEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationAbsent {
-		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	if loaded.Classification != workflow.ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, workflow.ClassificationAbsent)
 	}
 }
 
@@ -354,8 +360,8 @@ func TestStoreAppendRejectsNonEmptyPrevDigestOnFirstEvent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationAbsent {
-		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, ClassificationAbsent)
+	if loaded.Classification != workflow.ClassificationAbsent {
+		t.Fatalf("Load() classification = %q, want %q (a rejected append must not create the file)", loaded.Classification, workflow.ClassificationAbsent)
 	}
 }
 
@@ -374,8 +380,8 @@ func TestStoreLoadMalformedDetailUsesOneBasedLineNumbers(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 	if !strings.Contains(loaded.Detail, "line 1 ") {
 		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 1")
@@ -403,8 +409,8 @@ func TestStoreLoadMalformedBlankLineDetailUsesOneBasedLineNumbers(t *testing.T) 
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 	if !strings.Contains(loaded.Detail, "line 2 ") {
 		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 2")
@@ -422,8 +428,8 @@ func TestStoreLoadForeignWhenValidJSONNotOurs(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationForeign {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationForeign)
+	if loaded.Classification != workflow.ClassificationForeign {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationForeign)
 	}
 	if !strings.Contains(loaded.Detail, "line 1 ") {
 		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 1")
@@ -449,8 +455,8 @@ func TestStoreLoadForeignWhenIDsMismatch(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationForeign {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationForeign)
+	if loaded.Classification != workflow.ClassificationForeign {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationForeign)
 	}
 	if !strings.Contains(loaded.Detail, "line 1 ") {
 		t.Fatalf("Load() detail = %q, want it to reference the 1-based %q", loaded.Detail, "line 1")
@@ -468,8 +474,8 @@ func TestStoreLoadMalformedWhenNotValidJSON(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 }
 
@@ -484,8 +490,8 @@ func TestStoreLoadMalformedWhenNotUTF8(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 }
 
@@ -505,8 +511,8 @@ func TestStoreLoadMalformedWhenMissingTrailingNewline(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 }
 
@@ -521,8 +527,8 @@ func TestStoreLoadMalformedWhenEmpty(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 }
 
@@ -532,14 +538,14 @@ func TestStoreLoadMalformedWhenOversized(t *testing.T) {
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
-	padding := strings.Repeat("x", MaxLogBytes+1)
+	padding := strings.Repeat("x", workflow.MaxLogBytes+1)
 	writeRawLog(t, root, "proj-1", "wf-1", padding+"\n")
 	loaded, err := s.Load("proj-1", "wf-1")
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationMalformed {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationMalformed)
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
 	}
 }
 
@@ -565,8 +571,8 @@ func TestStoreLoadDriftedWhenChainBroken(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationDrifted {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationDrifted)
+	if loaded.Classification != workflow.ClassificationDrifted {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationDrifted)
 	}
 }
 
@@ -580,7 +586,7 @@ func TestStoreLoadDriftedWhenTransitionIllegal(t *testing.T) {
 	// is illegal as the first event of a workflow: VerifyEvents accepts it
 	// (chain/seq are fine), but Replay rejects it.
 	e := validCreatedEvent()
-	e.Kind = KindStarted
+	e.Kind = workflow.KindStarted
 	e.GoalID, e.GoalDigest, e.Profile = "", "", ""
 	line, err := e.MarshalLine()
 	if err != nil {
@@ -591,8 +597,8 @@ func TestStoreLoadDriftedWhenTransitionIllegal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationDrifted {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationDrifted)
+	if loaded.Classification != workflow.ClassificationDrifted {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationDrifted)
 	}
 }
 
@@ -602,8 +608,8 @@ func TestStoreAppendRefusesNonOwnedStatesWithoutMutation(t *testing.T) {
 		content string
 		wantErr error
 	}{
-		{"foreign", `{"hello":"world"}` + "\n", ErrRefuseForeignState},
-		{"malformed", "not json\n", ErrRefuseMalformedState},
+		{"foreign", `{"hello":"world"}` + "\n", workflow.ErrRefuseForeignState},
+		{"malformed", "not json\n", workflow.ErrRefuseMalformedState},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -657,7 +663,7 @@ func TestStoreRoundTripAfterRestart(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationOwned || len(loaded.Events) != 1 {
+	if loaded.Classification != workflow.ClassificationOwned || len(loaded.Events) != 1 {
 		t.Fatalf("Load() = %+v, want one owned event after restart", loaded)
 	}
 }
@@ -721,8 +727,8 @@ func TestStoreLoadUnavailableOnPermissionDenied(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil (unavailable is reported via Classification, not error)", err)
 	}
-	if loaded.Classification != ClassificationUnavailable {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationUnavailable)
+	if loaded.Classification != workflow.ClassificationUnavailable {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationUnavailable)
 	}
 }
 
@@ -732,14 +738,14 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
 		t.Fatalf("Append(created) = %v, want nil", err)
 	}
-	createdDigest, err := EventDigest(created)
+	createdDigest, err := workflow.EventDigest(created)
 	if err != nil {
-		t.Fatalf("EventDigest() = %v, want nil", err)
+		t.Fatalf("workflow.EventDigest() = %v, want nil", err)
 	}
 	started := created
 	started.Seq = 1
 	started.PrevDigest = createdDigest
-	started.Kind = KindStarted
+	started.Kind = workflow.KindStarted
 	started.GoalID, started.GoalDigest, started.Profile = "", "", ""
 
 	var wg sync.WaitGroup
@@ -762,13 +768,13 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 		case err == nil:
 			successes++
 		// The loser is refused one of two ways, depending on timing: it
-		// finds the append lock held (ErrAppendConflict), or it takes the
+		// finds the append lock held (workflow.ErrAppendConflict), or it takes the
 		// lock after the winner released it and finds its seq already
-		// stored (ErrStaleSeq). Both leave the log unchanged.
-		case errors.Is(err, ErrAppendConflict), errors.Is(err, ErrStaleSeq):
+		// stored (workflow.ErrStaleSeq). Both leave the log unchanged.
+		case errors.Is(err, workflow.ErrAppendConflict), errors.Is(err, workflow.ErrStaleSeq):
 			conflicts++
 		default:
-			t.Fatalf("Append() err = %v, want nil, ErrAppendConflict, or ErrStaleSeq", err)
+			t.Fatalf("Append() err = %v, want nil, workflow.ErrAppendConflict, or workflow.ErrStaleSeq", err)
 		}
 	}
 	if successes != 1 || conflicts != 1 {
@@ -779,8 +785,8 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Load() = %v, want nil", err)
 	}
-	if loaded.Classification != ClassificationOwned {
-		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, ClassificationOwned)
+	if loaded.Classification != workflow.ClassificationOwned {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationOwned)
 	}
 	if len(loaded.Events) != 2 {
 		t.Fatalf("Load() events = %d, want 2 (exactly one append should have won)", len(loaded.Events))
@@ -789,7 +795,7 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 
 // setupStoreWithCreated appends the seq-0 created event and returns the
 // store, its lock file path, and the next legal (seq-1) event.
-func setupStoreWithCreated(t *testing.T) (Store, string, WorkflowEvent) {
+func setupStoreWithCreated(t *testing.T) (Store, string, workflow.WorkflowEvent) {
 	t.Helper()
 	root := setStoreEnv(t)
 	s, err := NewStore()
@@ -800,14 +806,14 @@ func setupStoreWithCreated(t *testing.T) (Store, string, WorkflowEvent) {
 	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
 		t.Fatalf("Append(created) = %v, want nil", err)
 	}
-	createdDigest, err := EventDigest(created)
+	createdDigest, err := workflow.EventDigest(created)
 	if err != nil {
-		t.Fatalf("EventDigest() = %v, want nil", err)
+		t.Fatalf("workflow.EventDigest() = %v, want nil", err)
 	}
 	started := created
 	started.Seq = 1
 	started.PrevDigest = createdDigest
-	started.Kind = KindStarted
+	started.Kind = workflow.KindStarted
 	started.GoalID, started.GoalDigest, started.Profile = "", "", ""
 	lockPath := filepath.Join(root, "labdrian", "workflows", created.ProjectID, created.WorkflowID+".lock")
 	return s, lockPath, started
@@ -828,8 +834,8 @@ func TestStoreLiveLockIsNeverStolenRegardlessOfAge(t *testing.T) {
 	if err := os.Chtimes(lockPath, old, old); err != nil {
 		t.Fatalf("os.Chtimes() = %v, want nil", err)
 	}
-	if err := s.Append(started.ProjectID, started.WorkflowID, started); !errors.Is(err, ErrAppendConflict) {
-		t.Fatalf("Append() = %v, want ErrAppendConflict (a live lock must never be stolen)", err)
+	if err := s.Append(started.ProjectID, started.WorkflowID, started); !errors.Is(err, workflow.ErrAppendConflict) {
+		t.Fatalf("Append() = %v, want workflow.ErrAppendConflict (a live lock must never be stolen)", err)
 	}
 }
 
@@ -852,7 +858,7 @@ func TestStoreReleaseNeverDeletesALockItDoesNotHold(t *testing.T) {
 }
 
 // The append lock is private like the rest of the store, and a contended append is
-// refused at once, not queued: the caller gets ErrAppendConflict and decides.
+// refused at once, not queued: the caller gets workflow.ErrAppendConflict and decides.
 func TestStoreAppendLockFileIsPrivateAndAContendedAppendIsRefusedAtOnce(t *testing.T) {
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		t.Skip("flock-based locking is only implemented on linux/darwin")
@@ -874,8 +880,8 @@ func TestStoreAppendLockFileIsPrivateAndAContendedAppendIsRefusedAtOnce(t *testi
 	defer release()
 	begin := time.Now()
 	err = s.Append(started.ProjectID, started.WorkflowID, started)
-	if !errors.Is(err, ErrAppendConflict) || !strings.Contains(err.Error(), lockPath) {
-		t.Fatalf("Append() = %v, want ErrAppendConflict naming %s", err, lockPath)
+	if !errors.Is(err, workflow.ErrAppendConflict) || !strings.Contains(err.Error(), lockPath) {
+		t.Fatalf("Append() = %v, want workflow.ErrAppendConflict naming %s", err, lockPath)
 	}
 	if took := time.Since(begin); took > 500*time.Millisecond {
 		t.Errorf("a contended Append took %v, want an immediate refusal", took)
@@ -891,25 +897,25 @@ func TestStoreAppendOfAnAlreadyStoredSeqIsErrStaleSeq(t *testing.T) {
 	if err := s.Append(created.ProjectID, created.WorkflowID, created); err != nil {
 		t.Fatalf("Append(created) = %v, want nil", err)
 	}
-	createdDigest, err := EventDigest(created)
+	createdDigest, err := workflow.EventDigest(created)
 	if err != nil {
-		t.Fatalf("EventDigest() = %v, want nil", err)
+		t.Fatalf("workflow.EventDigest() = %v, want nil", err)
 	}
 	started := created
 	started.Seq = 1
 	started.PrevDigest = createdDigest
-	started.Kind = KindStarted
+	started.Kind = workflow.KindStarted
 	started.GoalID, started.GoalDigest, started.Profile = "", "", ""
 	if err := s.Append(started.ProjectID, started.WorkflowID, started); err != nil {
 		t.Fatalf("first Append(started) = %v, want nil", err)
 	}
 
 	err = s.Append(started.ProjectID, started.WorkflowID, started)
-	if !errors.Is(err, ErrStaleSeq) {
-		t.Fatalf("second Append(started) err = %v, want ErrStaleSeq", err)
+	if !errors.Is(err, workflow.ErrStaleSeq) {
+		t.Fatalf("second Append(started) err = %v, want workflow.ErrStaleSeq", err)
 	}
-	if errors.Is(err, ErrAppendConflict) {
-		t.Fatalf("second Append(started) err = %v, must not be ErrAppendConflict: no append was in progress", err)
+	if errors.Is(err, workflow.ErrAppendConflict) {
+		t.Fatalf("second Append(started) err = %v, must not be workflow.ErrAppendConflict: no append was in progress", err)
 	}
 	loaded, err := s.Load(created.ProjectID, created.WorkflowID)
 	if err != nil || len(loaded.Events) != 2 {

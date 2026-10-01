@@ -34,6 +34,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog"
 )
 
 // errNoRepository is why a binding verb refuses to run outside a repository:
@@ -140,7 +141,7 @@ func loadWorkflow(projectID, workflowID string) workflow.Loaded {
 	unavailable := func(err error) workflow.Loaded {
 		return workflow.Loaded{Classification: workflow.ClassificationUnavailable, Detail: err.Error()}
 	}
-	store, err := workflow.NewStore()
+	store, err := filelog.NewStore()
 	if err != nil {
 		return unavailable(err)
 	}

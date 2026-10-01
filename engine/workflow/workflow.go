@@ -27,7 +27,7 @@ const EventVersion = 1
 
 // MaxIdentifierLength bounds every identifier this package validates
 // (workflow_id, project_id, role_chain_id). The workflow store
-// (engine/workflow's on-disk JSONL log) uses workflow_id and project_id as
+// (engine/workflow/filelog's on-disk JSONL log) uses workflow_id and project_id as
 // file path components — <state home>/labdrian/workflows/<project_id>/
 // <workflow_id>.jsonl — so identifiers must be safe single path components on
 // every supported platform: see ValidateIdentifier. 128 runes is far beyond

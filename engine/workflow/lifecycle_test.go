@@ -114,7 +114,7 @@ func validRoleChain(projectID, goalID, chainID string) []roles.ChainRecord {
 }
 
 // newTestLifecycle builds a Lifecycle over store, failing the test on error.
-func newTestLifecycle(t *testing.T, store Store, clock func() time.Time, goals GoalReader, chains RoleChainReader, prober DependencyProber) Lifecycle {
+func newTestLifecycle(t *testing.T, store EventLog, clock func() time.Time, goals GoalReader, chains RoleChainReader, prober DependencyProber) Lifecycle {
 	t.Helper()
 	lc, err := NewLifecycle(store, builtInProfiles, clock, testProvenance(), goals, chains, prober)
 	if err != nil {
@@ -128,7 +128,7 @@ func newTestLifecycle(t *testing.T, store Store, clock func() time.Time, goals G
 var builtInProfiles = ProfileCatalogFunc(workflowprofile.Resolve)
 
 func TestNewLifecycleRejectsMissingDependencies(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	clock := stepClock()
@@ -155,39 +155,40 @@ func TestNewLifecycleRejectsMissingDependencies(t *testing.T) {
 }
 
 // memEventLog is an in-memory EventLog: the lifecycle needs a log, not a file
-// system, and this one proves it. It keeps the rule every log must keep, that an
-// append extends the log it finds.
+// system, and this one proves it. It keeps each workflow's log as the same JSONL
+// bytes a file would hold and decides everything with the domain's own pure rules
+// (ClassifyLog to read them, AdmitAppend to extend them), so it refuses what a
+// real log refuses. What it leaves out is the file: that is the adapter's, and
+// engine/workflow/filelog tests it, including a Lifecycle running over it.
 type memEventLog struct {
-	events  map[string][]WorkflowEvent
+	logs    map[string][]byte
 	loads   int
 	appends int
 }
 
-func newMemEventLog() *memEventLog { return &memEventLog{events: map[string][]WorkflowEvent{}} }
+func newMemEventLog() *memEventLog { return &memEventLog{logs: map[string][]byte{}} }
+
+func (m *memEventLog) classify(projectID, workflowID string) Loaded {
+	raw := m.logs[projectID+"/"+workflowID]
+	if raw == nil {
+		return Loaded{Classification: ClassificationAbsent}
+	}
+	return ClassifyLog(projectID, workflowID, raw)
+}
 
 func (m *memEventLog) Load(projectID, workflowID string) (Loaded, error) {
 	m.loads++
-	events := m.events[projectID+"/"+workflowID]
-	if len(events) == 0 {
-		return Loaded{Classification: ClassificationAbsent}, nil
-	}
-	state, err := Replay(events)
-	if err != nil {
-		return Loaded{Classification: ClassificationDrifted, Detail: err.Error()}, nil
-	}
-	return Loaded{Classification: ClassificationOwned, Events: append([]WorkflowEvent(nil), events...), State: state}, nil
+	return m.classify(projectID, workflowID), nil
 }
 
 func (m *memEventLog) Append(projectID, workflowID string, next WorkflowEvent) error {
 	m.appends++
-	key := projectID + "/" + workflowID
-	if err := next.Validate(); err != nil {
+	line, err := AdmitAppend(projectID, workflowID, m.classify(projectID, workflowID), next)
+	if err != nil {
 		return err
 	}
-	if next.Seq != len(m.events[key]) {
-		return ErrStaleSeq
-	}
-	m.events[key] = append(m.events[key], next)
+	key := projectID + "/" + workflowID
+	m.logs[key] = append(append([]byte(nil), m.logs[key]...), line...)
 	return nil
 }
 
@@ -261,9 +262,9 @@ func TestLifecycleRunsOverAnyEventLogAndProfileCatalog(t *testing.T) {
 
 // TestLifecycleHappyPathAcrossRestarts drives create through close(completed)
 // using a fresh Lifecycle instance for every operation, over the same
-// backing Store, to simulate the process restarting between each step.
+// backing log, to simulate the process restarting between each step.
 func TestLifecycleHappyPathAcrossRestarts(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -372,7 +373,7 @@ func TestLifecycleHappyPathAcrossRestarts(t *testing.T) {
 }
 
 func TestLifecycleCreateRejectsUnknownProfile(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
@@ -393,7 +394,7 @@ func TestLifecycleCreateRejectsUnknownProfile(t *testing.T) {
 }
 
 func TestLifecycleCreateRejectsInvalidGoal(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
@@ -406,7 +407,7 @@ func TestLifecycleCreateRejectsInvalidGoal(t *testing.T) {
 }
 
 func TestLifecycleCreateRejectsBrokenRoleChain(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
@@ -427,7 +428,7 @@ func TestLifecycleCreateRejectsBrokenRoleChain(t *testing.T) {
 }
 
 func TestLifecycleCreateWithValidRoleChainSucceeds(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
@@ -446,7 +447,7 @@ func TestLifecycleCreateWithValidRoleChainSucceeds(t *testing.T) {
 }
 
 func TestLifecycleVerifyFailsWhenGoalDigestChanged(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -486,7 +487,7 @@ func TestLifecycleVerifyFailsWhenGoalDigestChanged(t *testing.T) {
 }
 
 func TestLifecycleVerifyFailsWhenRoleChainBreaks(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -528,7 +529,7 @@ func TestLifecycleVerifyFailsWhenRoleChainBreaks(t *testing.T) {
 }
 
 func TestLifecycleRecordStageRejectsOutOfOrder(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -567,7 +568,7 @@ func TestLifecycleRecordStageRejectsOutOfOrder(t *testing.T) {
 }
 
 func TestLifecycleCloseCompletedRequiresPriorVerify(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -603,7 +604,7 @@ func TestLifecycleCloseAbandonedFromEachState(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			store := newTestStore(t)
+			store := newMemEventLog()
 			clock := stepClock()
 			goals := newFakeGoalReader()
 			chains := newFakeChainReader()
@@ -634,7 +635,7 @@ func TestLifecycleCloseAbandonedFromEachState(t *testing.T) {
 // unavailable, and every unavailable observation is recorded, never
 // silently approved or hidden.
 func TestLifecycleDependenciesUnavailableNeverBlock(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -686,7 +687,7 @@ func TestLifecycleReviewCapabilityDerivedFromProfileData(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.profile, func(t *testing.T) {
-			store := newTestStore(t)
+			store := newMemEventLog()
 			goals := newFakeGoalReader()
 			chains := newFakeChainReader()
 			lc := newTestLifecycle(t, store, stepClock(), goals, chains, UnavailableProber{})
@@ -715,7 +716,7 @@ func TestLifecycleReviewCapabilityDerivedFromProfileData(t *testing.T) {
 }
 
 func TestLifecycleLoadOwnedRefusesNonOwnedClassifications(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
@@ -748,7 +749,7 @@ func TestGentleReviewProfilesMatchReviewPolicies(t *testing.T) {
 // close is recorded with a "profile" observation marked unavailable instead
 // of failing, while a completed close still requires a successful verify.
 func TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, UnavailableProber{})
@@ -822,7 +823,7 @@ func growRoleChain(records []roles.ChainRecord, fromRole, toRole roles.Role) []r
 // grown) chain, not merely that some chain with the same id currently
 // verifies.
 func TestLifecycleCreateBindsRoleChainHeadAndVerifyRequiresIt(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -890,7 +891,7 @@ func (blockingProber) Probe(ctx context.Context, capabilities []string) ([]Obser
 // operation, and every declared dependency is recorded unavailable with a
 // detail explaining why.
 func TestLifecycleObservationsForProbeTimeout(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	g := validGoal("proj-1", "goal-1")
@@ -945,7 +946,7 @@ func (mismatchedCountProber) Probe(_ context.Context, capabilities []string) ([]
 // ObservationAvailable; every declared dependency is instead recorded
 // unavailable with a detail naming the mismatch.
 func TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	g := validGoal("proj-1", "goal-1")
@@ -975,7 +976,7 @@ func TestLifecycleObservationsForTreatsMismatchedProberCountAsUnavailable(t *tes
 // same way TestLifecycleAbandonSucceedsWhenProfileNoLongerResolves drives
 // Close's profile-observation fallback.
 func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -1016,7 +1017,7 @@ func TestLifecycleVerifyFailsWhenProfileNoLongerResolves(t *testing.T) {
 // profile whose declared stage order no longer matches what was actually
 // recorded.
 func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -1068,7 +1069,7 @@ func TestLifecycleVerifyFailsWhenStageOrderInvalid(t *testing.T) {
 // TestLifecycleRecordStageRejectsOutOfOrder's skip-ahead and undeclared-name
 // cases.
 func TestLifecycleRecordStageRejectsWhenAllStagesRecorded(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -1102,7 +1103,7 @@ func TestLifecycleRecordStageRejectsWhenAllStagesRecorded(t *testing.T) {
 // non-negative; this test asserts the exact seq of the appended verified
 // event.
 func TestLifecycleVerifyRecordsExactLastVerifiedSeq(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	clock := stepClock()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
@@ -1144,7 +1145,7 @@ func (p erroringProber) Probe(_ context.Context, capabilities []string) ([]Obser
 // operation itself still succeeds (dependency unavailability never blocks a
 // lifecycle operation).
 func TestLifecycleDegradedHookNotifiesOnProberError(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	g := validGoal("proj-1", "goal-1")
@@ -1173,7 +1174,7 @@ func TestLifecycleDegradedHookNotifiesOnProberError(t *testing.T) {
 // TestLifecycleDegradedHookNotifiesOnMismatchedCount covers the same
 // notification for the mismatched-observation-count degradation shape.
 func TestLifecycleDegradedHookNotifiesOnMismatchedCount(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	g := validGoal("proj-1", "goal-1")
@@ -1195,7 +1196,7 @@ func TestLifecycleDegradedHookNotifiesOnMismatchedCount(t *testing.T) {
 // WithDegradedHook (the default from NewLifecycle) tolerates a degraded
 // probe with no panic and no notification, since l.degraded is nil.
 func TestLifecycleNilDegradedHookIsNoop(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	g := validGoal("proj-1", "goal-1")
@@ -1215,7 +1216,7 @@ func TestLifecycleNilDegradedHookIsNoop(t *testing.T) {
 // A profile the resolver refuses is refused by Create before anything else is
 // read: the role chain is never loaded for it.
 func TestLifecycleCreateRefusesAProfileTheResolverRefusesBeforeReadingAnythingElse(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader() // holds no chain: loading "chain-1" would fail as ErrRoleChainInvalid
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)
@@ -1235,7 +1236,7 @@ func TestLifecycleCreateRefusesAProfileTheResolverRefusesBeforeReadingAnythingEl
 
 // The next stage RecordStage admits is the one the resolver's profile declares.
 func TestLifecycleRecordStageFollowsTheResolversProfile(t *testing.T) {
-	store := newTestStore(t)
+	store := newMemEventLog()
 	goals := newFakeGoalReader()
 	chains := newFakeChainReader()
 	lc := newTestLifecycle(t, store, stepClock(), goals, chains, nil)

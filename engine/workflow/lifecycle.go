@@ -21,7 +21,7 @@ var (
 	// ErrWorkflowNotOwned is returned by every operation except Create when
 	// the on-disk state is not ClassificationOwned: either it does not
 	// exist yet (create it first) or it is foreign, malformed, drifted, or
-	// unavailable (the Store never overwrites those; see Store.Load).
+	// unavailable (the event log never overwrites those; see ClassifyLog).
 	ErrWorkflowNotOwned = errors.New("workflow lifecycle: workflow state is not owned; create it first, or its on-disk state is foreign, malformed, drifted, or unavailable")
 	// ErrCreateRefused is returned by Create when on-disk state already
 	// exists for this workflow (owned or otherwise); a workflow may be
@@ -33,7 +33,7 @@ var (
 	// when the Profile has no more undeclared stages left to record).
 	ErrStageOutOfOrder = errors.New("workflow lifecycle: stage is not the profile's next declared stage")
 	// ErrChainInvalid is returned by Verify when the workflow's own event
-	// hash chain does not verify. Store.Load already refuses to classify a
+	// hash chain does not verify. ClassifyLog already refuses to classify a
 	// broken chain as owned, so this should be unreachable in practice; it
 	// exists as a defensive, named failure rather than a silent assumption.
 	ErrChainInvalid = errors.New("workflow lifecycle: verify: event hash chain does not verify")
