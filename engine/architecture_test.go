@@ -43,6 +43,7 @@ var rings = map[string]archguard.Ring{
 	"propagator":       archguard.Domain,
 	"reviewreceipt":    archguard.Domain,
 	"roles":            archguard.Domain,
+	"roles/filechain":  archguard.Adapter,
 	"runtime":          archguard.Adapter,
 	"settings":         archguard.Adapter,
 	"shaper":           archguard.Domain,
@@ -102,13 +103,6 @@ var knownDebt = archguard.Debt{
 	"reviewreceipt": {
 		"os":      "H12",
 		"os/exec": "H12",
-	},
-
-	// roles: the chain store moves to roles/filechain.
-	"roles": {
-		"os":      "H7",
-		"runtime": "H7",
-		"syscall": "H7",
 	},
 
 	// shaper: the contained reads and the clearance store move to

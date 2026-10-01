@@ -1,0 +1,10 @@
+d 0700 labdrian
+d 0700 labdrian/role-chains
+d 0700 labdrian/role-chains/proj-1
+d 0700 labdrian/role-chains/proj-1/goal-1
+d 0700 labdrian/role-chains/proj-1/goal-1/chain-1
+f 0600 labdrian/role-chains/proj-1/goal-1/chain-1/000001.json 3a18b102a54c6092410b07c7cbc8cc9a55d79156522bc0fbeff521c6c2fa2c9f 467
+f 0600 labdrian/role-chains/proj-1/goal-1/chain-1/000002.json 58c88e1d8849f5fd87ae46c8e24ed44fb44b08b69ef637af61e4a4f47f9fd0c4 503
+f 0600 labdrian/role-chains/proj-1/goal-1/chain-1/000003.json ffb616741d69d8200c29af1d0a91ce65955aed3161b666cbeac1e5077893ee36 468
+f 0600 labdrian/role-chains/proj-1/goal-1/chain-1/000004.json 92a1585c4826b5ed4d961f535f140bb3ac6e19de60864750ec5dd970595363c3 467
+f 0600 labdrian/role-chains/proj-1/goal-1/chain-1/000005.json cd6a6174b1b3312106c3f2ae5ccd9b2b8961e36dd3c2d29e2ace7f1290daf49f 468

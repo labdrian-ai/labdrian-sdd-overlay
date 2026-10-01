@@ -60,14 +60,14 @@ var storeComponents = []string{"labdrian", "workflows"}
 // every worktree. The state home is $XDG_STATE_HOME, or $HOME/.local/state
 // when XDG_STATE_HOME is unset. It follows the same resolution, directory
 // permissions (0700), and file permissions (0600) as engine/roles's
-// ChainStore and engine/shaper's FileStore.
+// filechain.Store and engine/shaper's FileStore.
 //
 // Unlike those two stores, which hold one immutable record per file (keyed
 // by seq or content hash, published via hardlink so a concurrent write can
 // never silently replace an existing record), a workflow's log is one
 // mutable, growing file: each Append rewrites the whole file with the new
 // event appended. That rewrite-and-replace shape is why Store needs an
-// explicit append lock (see acquireLock) where ChainStore and FileStore do
+// explicit append lock (see acquireLock) where filechain.Store and FileStore do
 // not: two of their writers race for a name that at most one can ever claim,
 // while two of this store's writers would otherwise both read the same
 // prefix and each publish a "next" event, silently discarding one of them.
@@ -97,7 +97,7 @@ func checkPlatform(supported bool, goos string) error {
 }
 
 // NewStore resolves the store from the environment, exactly as
-// roles.NewChainStore and shaper.NewFileStore do (see statestore.Home). A
+// filechain.NewStore and shaper.NewFileStore do (see statestore.Home). A
 // set but relative XDG_STATE_HOME, and an unset, empty, or relative HOME
 // fallback, are refused, as is an unsupported platform (see checkPlatform).
 func NewStore() (Store, error) {
