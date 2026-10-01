@@ -103,12 +103,23 @@ WHILE two concurrent `propagate` invocations target the same registry, the
 system SHALL serialize their writes via the existing `<registry>.lock` flock
 and atomic rename, unregressed by the read-side retry changes.
 
+The wait for the lock SHALL be bounded. A `propagate` that finds the lock held
+waits at most 2 seconds for the holder to let go, then fails with a typed busy
+refusal and exit code 1; it SHALL NOT wait for as long as the holder lives.
+
 #### Scenario: Two concurrent propagate runs still serialize
 
 - GIVEN two `propagate` processes target the same registry concurrently
 - WHEN both attempt to acquire `<registry>.lock`
-- THEN one proceeds while the other waits, and the atomic rename still
-  guarantees no torn write is ever observable by a reader
+- THEN one proceeds while the other waits (for at most the bound), and the
+  atomic rename still guarantees no torn write is ever observable by a reader
+
+#### Scenario: A lock that stays held is refused after the bound
+
+- GIVEN another process holds `<registry>.lock` and does not release it
+- WHEN `propagate` targets the same registry
+- THEN after 2 seconds it exits 1 with a busy refusal that names the lock and
+  says another process holds it, and the registry is unchanged
 
 ### Requirement: Mixed-Evidence Exhaustion Prefers Fail-Loud Over the Absent No-Op
 
