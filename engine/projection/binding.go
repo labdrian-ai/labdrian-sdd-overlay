@@ -10,9 +10,11 @@
 //
 // The package is pure Go over the standard library and the engine's own pure
 // packages (jsonstrict, workflow, workflowprofile, memoryscope, capability). It
-// starts no process and makes no network call (a static test in engine/runtime
-// pins that), and it keeps nothing in memory between calls: every call reads the
-// disk, so a restarted process sees exactly what the last one wrote.
+// starts no process, makes no network call (a static test in engine/runtime pins
+// that) and touches no file: where bindings are kept is the BindingStore port
+// (bindingstore.go), implemented by the file-backed adapter
+// engine/projection/fsstore, which keeps nothing in memory between calls, so a
+// restarted process sees exactly what the last one wrote.
 package projection
 
 import (
@@ -31,7 +33,7 @@ import (
 const BindingVersion = 1
 
 // MaxBindingBytes bounds the size of a binding document that ParseBinding
-// decodes and of a binding file that Store.Load reads. A valid binding is under
+// decodes and of a binding file that a BindingStore reads. A valid binding is under
 // 500 bytes even with every identifier at its maximum length (three fields of
 // at most 128 characters, a 64-character key, and a timestamp), so 4 KiB is
 // generous. The bound exists so that a corrupted or hostile file is rejected
@@ -99,7 +101,7 @@ func (b Binding) Validate() error {
 	if b.Version != BindingVersion {
 		return fmt.Errorf("version must be %d, got %d", BindingVersion, b.Version)
 	}
-	if err := validateRepoKey(b.RepoKey); err != nil {
+	if err := ValidateRepoKey(b.RepoKey); err != nil {
 		return err
 	}
 	if err := workflow.ValidateIdentifier("project_id", b.ProjectID); err != nil {
@@ -125,10 +127,10 @@ func (b Binding) Marshal() ([]byte, error) {
 	return append(data, '\n'), nil
 }
 
-// validateRepoKey requires key to be exactly 64 lowercase hex digits. The
+// ValidateRepoKey requires key to be exactly 64 lowercase hex digits. The
 // store also relies on it for safety: a key that passes is a plain file name
 // that cannot climb out of the bindings directory.
-func validateRepoKey(key string) error {
+func ValidateRepoKey(key string) error {
 	if !repoKeyPattern.MatchString(key) {
 		return fmt.Errorf("repo_key must be 64 lowercase hex characters, got %q", key)
 	}
