@@ -11,8 +11,6 @@ import (
 	"strings"
 	"time"
 	"unicode/utf8"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 // Classification is the closed vocabulary Load reports for the on-disk state
@@ -98,8 +96,9 @@ var lockWait = 2 * time.Second
 
 // Store keeps one binding per repository at
 // <state home>/labdrian/bindings/<repo_key>.json, outside every worktree. The
-// state home is workflow.StateHome: $XDG_STATE_HOME, or $HOME/.local/state when
-// XDG_STATE_HOME is unset, the same resolution engine/workflow's Store uses.
+// state home is $XDG_STATE_HOME, or $HOME/.local/state when XDG_STATE_HOME is
+// unset (see stateHomeFromEnv), the same resolution engine/workflow/filelog's
+// Store uses.
 // Directories are created with mode 0700 and the file with mode 0600, as that
 // store does.
 //
@@ -136,18 +135,40 @@ type Store struct {
 	stateHome string
 }
 
-// NewStore resolves the store from the environment (see workflow.StateHome).
-// A set but relative XDG_STATE_HOME, and an unset, empty, or relative HOME
-// fallback, are refused, as is an unsupported platform.
+// NewStore resolves the store from the environment (see stateHomeFromEnv). A set
+// but relative XDG_STATE_HOME, and an unset, empty, or relative HOME fallback, are
+// refused, as is an unsupported platform.
 func NewStore() (Store, error) {
 	if !platformSupported {
 		return Store{}, fmt.Errorf("%w: %s (supported: linux, darwin)", ErrUnsupportedPlatform, runtime.GOOS)
 	}
-	stateHome, err := workflow.StateHome()
+	stateHome, err := stateHomeFromEnv()
 	if err != nil {
 		return Store{}, fmt.Errorf("projection store: %w", err)
 	}
 	return Store{stateHome: stateHome}, nil
+}
+
+// stateHomeFromEnv resolves the directory under which labdrian keeps its local
+// state: $XDG_STATE_HOME when it is set, otherwise $HOME/.local/state. A set but
+// relative XDG_STATE_HOME, and an unset, empty, or relative HOME fallback, are
+// refused. It is the rule of engine/statestore.Home, which the workflow store
+// resolves its home with (a test pins that the two agree): the workflow package
+// no longer exports it, because reading the environment is not the domain's.
+// Moving this store to projection/fsstore (H8) makes the composition root resolve
+// the home once and hand it in, and this copy goes with it.
+func stateHomeFromEnv() (string, error) {
+	if xdg := os.Getenv("XDG_STATE_HOME"); xdg != "" {
+		if !filepath.IsAbs(xdg) {
+			return "", fmt.Errorf("XDG_STATE_HOME %q is not absolute", xdg)
+		}
+		return filepath.Clean(xdg), nil
+	}
+	home := os.Getenv("HOME")
+	if home == "" || !filepath.IsAbs(home) {
+		return "", fmt.Errorf("XDG_STATE_HOME is unset and HOME %q is not an absolute path", home)
+	}
+	return filepath.Join(home, ".local", "state"), nil
 }
 
 // dirParts returns the state home followed by every store directory below it.

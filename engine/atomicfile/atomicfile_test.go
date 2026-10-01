@@ -75,6 +75,7 @@ type spy struct {
 
 func (s *spy) ops() ops {
 	return ops{
+		openNoFollow: realOps().openNoFollow,
 		syncFile: func(f *os.File) error {
 			s.events = append(s.events, "sync-file")
 			s.syncedFiles++
@@ -355,6 +356,7 @@ func TestAFailedDirectorySyncIsReportedAfterTheReplace(t *testing.T) {
 }
 
 func TestBackupKeepsTheReplacedContentAndModeBesideTheFile(t *testing.T) {
+	requireNoFollow(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "settings.json")
 	writeFixture(t, path, "old", 0o640)
@@ -376,6 +378,7 @@ func TestBackupKeepsTheReplacedContentAndModeBesideTheFile(t *testing.T) {
 }
 
 func TestBackupOfASecondWriteHoldsTheFirstWrite(t *testing.T) {
+	requireNoFollow(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f")
 	for _, content := range []string{"one", "two", "three"} {
@@ -389,6 +392,7 @@ func TestBackupOfASecondWriteHoldsTheFirstWrite(t *testing.T) {
 }
 
 func TestNoBackupIsMadeForAFileThatDidNotExistOrWhenNotAsked(t *testing.T) {
+	requireNoFollow(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f")
 	if err := WriteFile(path, []byte("first"), Options{Perm: 0o600, Backup: true}); err != nil {
@@ -404,6 +408,7 @@ func TestNoBackupIsMadeForAFileThatDidNotExistOrWhenNotAsked(t *testing.T) {
 
 // A backup that cannot be made stops the write: the old content is the only copy.
 func TestAFailedBackupLeavesTheTargetUntouched(t *testing.T) {
+	requireNoFollow(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f")
 	writeFixture(t, path, "old", 0o600)
@@ -425,6 +430,7 @@ func TestAFailedBackupLeavesTheTargetUntouched(t *testing.T) {
 // whatever the link points at. backUp is called on a link directly, which is the
 // state a swap leaves behind.
 func TestBackUpRefusesASymlinkInsteadOfReadingThroughIt(t *testing.T) {
+	requireNoFollow(t)
 	dir := t.TempDir()
 	secret := filepath.Join(dir, "secret")
 	writeFixture(t, secret, "not yours to copy", 0o600)
@@ -450,7 +456,118 @@ func TestBackUpRefusesASymlinkInsteadOfReadingThroughIt(t *testing.T) {
 	}
 }
 
+// noNoFollow is the ops of a platform without a no-follow open: the real
+// operations, minus the opener. The code a platform without one runs is shared
+// with every other platform, so this is how a test exercises it on any of them.
+func noNoFollow() ops {
+	o := realOps()
+	o.openNoFollow = nil
+	return o
+}
+
+// A backup reads the file it keeps through one no-follow descriptor. Where there
+// is no such open, looking at the name and then opening it leaves a window in which
+// a symlink can be swapped in, so a backup that was asked for is refused, with a
+// typed error and before anything changes, rather than made unsafely.
+func TestWithoutANoFollowOpenABackupFailsClosedBeforeAnythingChanges(t *testing.T) {
+	t.Run("a file that exists keeps its content and gets no backup", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "f")
+		writeFixture(t, path, "old", 0o640)
+
+		err := writeFile(noNoFollow(), path, []byte("new"), Options{Perm: 0o600, Backup: true})
+		if !errors.Is(err, ErrBackupUnsupported) {
+			t.Fatalf("writeFile with a backup and no no-follow open = %v, want ErrBackupUnsupported", err)
+		}
+		if got := readFixture(t, path); got != "old" {
+			t.Errorf("target = %q, want the old content untouched", got)
+		}
+		if got := modeOf(t, path); got != 0o640 {
+			t.Errorf("target mode = %v, want the old 0640 untouched", got)
+		}
+		assertOnly(t, dir, "f")
+	})
+
+	// The answer does not depend on whether there is anything to back up: the same
+	// Options fail on the first write as on every later one.
+	t.Run("a file that does not exist yet is not created", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "f")
+
+		err := writeFile(noNoFollow(), path, []byte("new"), Options{Perm: 0o600, Backup: true})
+		if !errors.Is(err, ErrBackupUnsupported) {
+			t.Fatalf("writeFile with a backup and no no-follow open = %v, want ErrBackupUnsupported", err)
+		}
+		assertOnly(t, dir)
+	})
+
+	t.Run("the error names the file", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "settings.json")
+		err := writeFile(noNoFollow(), path, []byte("new"), Options{Backup: true})
+		if err == nil || !strings.Contains(err.Error(), path) {
+			t.Errorf("error = %v, want it to name %s", err, path)
+		}
+	})
+
+	t.Run("a staged file stays free to be placed elsewhere or discarded", func(t *testing.T) {
+		dir := t.TempDir()
+		path := filepath.Join(dir, "f")
+		staged, err := stage(noNoFollow(), dir, []byte("new"), Options{Perm: 0o600, Backup: true})
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer staged.Discard()
+		if err := staged.Replace(path); !errors.Is(err, ErrBackupUnsupported) {
+			t.Fatalf("Replace = %v, want ErrBackupUnsupported", err)
+		}
+		if err := staged.Replace(path); !errors.Is(err, ErrBackupUnsupported) {
+			t.Errorf("a second Replace = %v, want the same refusal, not a use of the staged file", err)
+		}
+	})
+}
+
+// Everything that does not make a backup is unchanged where there is no no-follow
+// open, and never reaches for the opener.
+func TestWithoutANoFollowOpenEverythingButABackupWorksAsBefore(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, "f")
+	writeFixture(t, path, "old", 0o640)
+	o := noNoFollow()
+
+	if err := writeFile(o, path, []byte("new"), Options{Perm: 0o600}); err != nil {
+		t.Fatalf("writeFile without a backup = %v, want nil", err)
+	}
+	if got := readFixture(t, path); got != "new" {
+		t.Errorf("target = %q, want new", got)
+	}
+	assertOnly(t, dir, "f")
+
+	// Create ignores Backup, as it always has.
+	other := filepath.Join(dir, "g")
+	staged, err := stage(o, dir, []byte("record"), Options{Perm: 0o600, Backup: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer staged.Discard()
+	if err := staged.Create(other); err != nil {
+		t.Fatalf("Create with Backup set = %v, want nil: Create makes no backup", err)
+	}
+	if got := readFixture(t, other); got != "record" {
+		t.Errorf("created file = %q, want record", got)
+	}
+}
+
+// requireNoFollow skips a test of the backup on a platform that cannot make one.
+func requireNoFollow(t *testing.T) {
+	t.Helper()
+	if realOps().openNoFollow == nil {
+		t.Skip("this platform has no no-follow open, so it makes no backups")
+	}
+}
+
 func TestBackupIsFlushedWhenSyncIsAsked(t *testing.T) {
+	requireNoFollow(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f")
 	writeFixture(t, path, "old", 0o600)

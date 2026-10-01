@@ -14,7 +14,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
 
 var t0 = time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
@@ -114,10 +114,10 @@ func TestNewStoreWritesUnderXDGStateHome(t *testing.T) {
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("binding not at %s: %v", want, err)
 	}
-	// The workflow store resolves the same variable through the same helper,
+	// The workflow store resolves the same variable through engine/statestore,
 	// so the two can never disagree about where the state home is.
-	if home, err := workflow.StateHome(); err != nil || home != root {
-		t.Fatalf("workflow.StateHome() = %q, %v, want %q", home, err, root)
+	if home, err := statestore.Home(); err != nil || home != root {
+		t.Fatalf("statestore.Home() = %q, %v, want %q", home, err, root)
 	}
 }
 

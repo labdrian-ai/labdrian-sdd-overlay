@@ -1,15 +1,16 @@
-package workflow
+package filelog
 
 import (
 	"errors"
 	"fmt"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 // acquireLock serializes concurrent Append calls for one workflow, failing every
-// other caller at once with ErrAppendConflict (the contract is to refuse a
-// contended append, not to queue behind it); the returned release func must be
+// other caller at once with workflow.ErrAppendConflict (the contract is to refuse
+// a contended append, not to queue behind it); the returned release func must be
 // called exactly once (via defer). It holds an OS advisory flock through
 // engine/filelock: a live holder is never mistaken for a crashed one, and the
 // kernel frees a dead holder's lock. The lock file is private (0600) like the rest
@@ -24,7 +25,7 @@ func acquireLock(lockPath string) (func(), error) {
 	case err == nil:
 		return unlock, nil
 	case errors.Is(err, filelock.ErrBusy):
-		return nil, fmt.Errorf("%w: %s", ErrAppendConflict, lockPath)
+		return nil, fmt.Errorf("%w: %s", workflow.ErrAppendConflict, lockPath)
 	case errors.Is(err, filelock.ErrUnsupported):
 		return nil, ErrUnsupportedPlatform
 	default:
