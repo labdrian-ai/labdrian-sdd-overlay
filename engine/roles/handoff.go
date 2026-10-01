@@ -85,11 +85,13 @@ var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 // free-form narrative (a summary, decisions, open questions) and a list of evidence, none
 // of which has a length of its own, so the whole document is bounded instead: it keeps a
 // caller that parses records from an untrusted source (disk, stdin, another process)
-// from an arbitrarily large document before any field is inspected. 1 MiB is the order of
-// the other bounds on a document read from outside (projection.MaxHookInputBytes), many
-// times what a legitimate handoff needs, and a quarter of the CLI's stdin cap, so no
-// record a person could reasonably write approaches it.
-const MaxRecordBytes = 1 << 20
+// from an arbitrarily large document before any field is inspected. 4 MiB is exactly the
+// stdin cap `roles append` applied before this bound existed: any record a chain already
+// holds was accepted under that cap, so a smaller bound would make such a chain
+// unloadable. It is still many times what a legitimate handoff needs. The bound is owned
+// here, and the CLI's append verb reads stdin through it, so every record the CLI accepts
+// is one a chain store can load back.
+const MaxRecordBytes = 4 << 20
 
 // ErrRecordTooLarge is returned by ParseRoleHandoff when the input exceeds
 // MaxRecordBytes.

@@ -287,6 +287,15 @@ func TestParseRoleHandoffBoundsTheDocumentExactly(t *testing.T) {
 	}
 }
 
+// Before the record bound existed, `roles append` accepted any record up to its 4 MiB
+// stdin cap and wrote it to the chain. A smaller bound would make such a chain
+// unloadable, so the bound is exactly that historical write cap and never lower.
+func TestMaxRecordBytesIsTheHistoricalWriteCap(t *testing.T) {
+	if MaxRecordBytes != 4<<20 {
+		t.Fatalf("MaxRecordBytes = %d, want %d: records already written up to the old 4 MiB append cap must stay loadable", MaxRecordBytes, 4<<20)
+	}
+}
+
 func TestParseRoleHandoffRejectsInterruptedWithoutResumeReasonEndToEnd(t *testing.T) {
 	data := strings.Replace(validHandoffJSON(), `"status": "completed"`, `"status": "interrupted"`, 1)
 	if _, err := ParseRoleHandoff([]byte(data)); err == nil {
