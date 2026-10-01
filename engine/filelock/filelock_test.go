@@ -190,6 +190,49 @@ func TestAcquireTriesOnceEvenWithNoTimeToWait(t *testing.T) {
 	}
 }
 
+// NoWait is for a caller whose contract is to fail at once on a taken lock, such
+// as a store that answers "a concurrent append is in progress" instead of queueing.
+// It is not a tiny bound: it needs no clock at all, so it holds on any clock.
+func TestNoWaitRefusesATakenLockAtOnceWithoutTouchingTheClock(t *testing.T) {
+	skipUnlessSupported(t)
+	path := lockPath(t)
+	held := mustAcquire(t, path, Options{})
+	defer held()
+
+	clock := newFakeClock()
+	_, err := Acquire(path, Options{NoWait: true, Wait: time.Hour, Clock: clock.Clock()})
+
+	var busy *BusyError
+	if !errors.As(err, &busy) || !errors.Is(err, ErrBusy) {
+		t.Fatalf("Acquire with NoWait on a taken lock = %v, want a *BusyError", err)
+	}
+	if busy.Waited != 0 {
+		t.Errorf("Waited = %v, want 0: nothing was waited for", busy.Waited)
+	}
+	if len(clock.sleeps) != 0 {
+		t.Errorf("slept %d times, want none", len(clock.sleeps))
+	}
+}
+
+func TestNoWaitStillTakesAFreeLockAndSeesItReleased(t *testing.T) {
+	skipUnlessSupported(t)
+	path := lockPath(t)
+
+	unlock, err := Acquire(path, Options{NoWait: true})
+	if err != nil {
+		t.Fatalf("Acquire of a free lock with NoWait = %v, want it held", err)
+	}
+	if _, err := Acquire(path, Options{NoWait: true}); !errors.Is(err, ErrBusy) {
+		t.Fatalf("second Acquire = %v, want ErrBusy while held", err)
+	}
+	unlock()
+	again, err := Acquire(path, Options{NoWait: true})
+	if err != nil {
+		t.Fatalf("Acquire after the release = %v, want it held", err)
+	}
+	again()
+}
+
 func TestTheBoundAndThePollIntervalAreThePhase7Ones(t *testing.T) {
 	if DefaultWait != 2*time.Second || pollInterval != 5*time.Millisecond {
 		t.Errorf("DefaultWait = %v and pollInterval = %v, want 2s and 5ms (engine/projection's binding store)", DefaultWait, pollInterval)

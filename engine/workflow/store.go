@@ -421,11 +421,6 @@ func (s Store) Append(projectID, workflowID string, next WorkflowEvent) error {
 	return appendWorkflowLog(path, line)
 }
 
-// acquireLock serializes concurrent Append calls for one workflow, failing
-// every other caller immediately with ErrAppendConflict; the returned
-// release func must be called exactly once (via defer). Platform-specific:
-// see store_lock_unix.go and store_lock_other.go.
-
 // appendWorkflowLog rewrites the whole workflow log with line appended to
 // its current content (empty if the file does not exist yet), publishing
 // the result atomically: written and synced to a temporary file in the

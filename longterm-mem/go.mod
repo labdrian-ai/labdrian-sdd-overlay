@@ -3,6 +3,7 @@ module github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem
 go 1.26.1
 
 require (
+	github.com/labdrian-ai/labdrian-sdd-overlay/archguard v0.0.0
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	modernc.org/sqlite v1.57.0
@@ -26,3 +27,5 @@ require (
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
 )
+
+replace github.com/labdrian-ai/labdrian-sdd-overlay/archguard => ../archguard

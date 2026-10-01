@@ -428,3 +428,37 @@ jobs:
       - name: Test
         working-directory: longterm-mem
         run: go test ./... -cover
+
+  # archguard is the checker behind the architecture tests of engine and
+  # longterm-mem. Those two jobs already build and run it: each module requires it
+  # with a local replace (../archguard), and the checkout above is the whole
+  # repository, so no network and no workflow change is needed for them. This job
+  # is for archguard's own tests, which are not part of either module.
+  test-archguard:
+    name: Archguard Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: archguard/go.mod
+
+      - name: Gofmt
+        working-directory: archguard
+        run: test -z "$(gofmt -l .)" || { gofmt -l .; exit 1; }
+
+      - name: Vet
+        working-directory: archguard
+        run: go vet ./...
+
+      - name: Staticcheck
+        working-directory: archguard
+        run: go run honnef.co/go/tools/cmd/staticcheck@v0.7.0 ./...
+
+      - name: Test
+        working-directory: archguard
+        run: go test ./... -cover

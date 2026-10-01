@@ -16,6 +16,3 @@ func openNoFollow(path string) (*os.File, error) {
 
 // isSymlinkRefusal is never true here because openNoFollow never opens.
 func isSymlinkRefusal(err error) bool { return false }
-
-// lockFile is unreachable for the same reason as openNoFollow.
-func lockFile(path string) (func(), error) { return nil, ErrUnsupportedPlatform }

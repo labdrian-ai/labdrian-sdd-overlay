@@ -24,10 +24,9 @@ func TestAcquireDirOnAFilesystemThatCannotLockADirectoryFailsClosedWithAClearErr
 	}
 
 	for _, errno := range []syscall.Errno{syscall.ENOTSUP, syscall.ENOLCK, syscall.EBADF, syscall.EINVAL} {
-		saved := flock
-		flock = func(fd, how int) error { return errno }
-		unlock, err := AcquireDir(dir, Options{Clock: newFakeClock().Clock()})
-		flock = saved
+		errno := errno
+		failing := locker{flock: func(fd, how int) error { return errno }}
+		unlock, err := failing.acquire(dir, Options{Clock: newFakeClock().Clock()}, true)
 
 		if unlock != nil || err == nil || errors.Is(err, ErrBusy) {
 			t.Errorf("%v: AcquireDir = (unlock nil: %v, %v), want no lock and a plain error", errno, unlock == nil, err)
@@ -80,12 +79,70 @@ func TestTheLockFileIsCreatedWithMode0644BeforeTheUmask(t *testing.T) {
 // A file lock that fails for the same reason does not blame directories.
 func TestAcquireOnAFailingFilesystemDoesNotMentionDirectories(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".fixture.lock")
-	saved := flock
-	flock = func(fd, how int) error { return syscall.ENOLCK }
-	defer func() { flock = saved }()
+	failing := locker{flock: func(fd, how int) error { return syscall.ENOLCK }}
 
-	_, err := Acquire(path, Options{Clock: Clock{Now: time.Now}})
+	_, err := failing.acquire(path, Options{Clock: Clock{Now: time.Now}}, false)
 	if err == nil || errors.Is(err, ErrBusy) || strings.Contains(err.Error(), "directory") {
 		t.Errorf("Acquire = %v, want a plain error that does not mention directories", err)
+	}
+}
+
+// The seam is a field of the locker, not a variable of the package: a locker
+// with a failing flock does not change what the package-level Acquire does, in
+// this test or in any other that runs beside it.
+func TestAFailingLockerDoesNotLeakIntoThePackageLevelAcquire(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".fixture.lock")
+	failing := locker{flock: func(fd, how int) error { return syscall.ENOLCK }}
+	if _, err := failing.acquire(path, Options{}, false); err == nil {
+		t.Fatal("the failing locker acquired a lock")
+	}
+	unlock, err := Acquire(path, Options{})
+	if err != nil {
+		t.Fatalf("Acquire after a failing locker was used = %v, want a held lock", err)
+	}
+	unlock()
+}
+
+// Perm is the mode of a lock file an Exclusive acquire creates, before the umask,
+// so a caller whose lock lives in a private directory can keep it private. The
+// assertion holds the umask fixed, as the 0644 test does.
+func TestPermSetsTheModeOfACreatedLockFileBeforeTheUmask(t *testing.T) {
+	for _, tc := range []struct {
+		umask int
+		perm  os.FileMode
+		want  os.FileMode
+	}{
+		{0o022, 0o600, 0o600},
+		{0o022, 0o640, 0o640},
+		{0o077, 0o640, 0o600},
+		{0o000, 0o600, 0o600},
+	} {
+		old := syscall.Umask(tc.umask)
+		path := filepath.Join(t.TempDir(), ".mode.lock")
+		unlock, err := Acquire(path, Options{Perm: tc.perm})
+		syscall.Umask(old)
+		if err != nil {
+			t.Fatal(err)
+		}
+		unlock()
+
+		info, err := os.Stat(path)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := info.Mode().Perm(); got != tc.want {
+			t.Errorf("umask %04o, Perm %04o: lock file mode %04o, want %04o", tc.umask, tc.perm, got, tc.want)
+		}
+	}
+}
+
+func TestPermMustBePermissionBitsOnly(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".fixture.lock")
+	_, err := Acquire(path, Options{Perm: os.ModeSetuid | 0o600})
+	if err == nil || !strings.Contains(err.Error(), "permission bits") {
+		t.Errorf("Acquire with a setuid Perm = %v, want a refusal naming the permission bits", err)
+	}
+	if _, statErr := os.Stat(path); statErr == nil {
+		t.Error("a lock file was created although Perm was refused")
 	}
 }

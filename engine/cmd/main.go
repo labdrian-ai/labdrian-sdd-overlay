@@ -9,7 +9,7 @@
 //
 // propagate: ensures the scoped minimalism-contract BEGIN/END marker block is
 // present in a target .atl/skill-registry.md. Fails LOUD on bad input.
-// Concurrency-safe: serializes via an exclusive flock on <registry>.lock,
+// Concurrency-safe: serializes via a bounded exclusive flock on <registry>.lock,
 // writes the registry atomically (temp file + rename), and refuses (exit 1)
 // to propagate over a registry that exists but is empty/whitespace-only.
 //
@@ -68,10 +68,10 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
@@ -901,27 +901,18 @@ func atomicWriteFile(path string, data []byte, perm os.FileMode) error {
 	return os.Rename(tmpPath, path)
 }
 
-// acquireRegistryLock takes an exclusive advisory flock(2) on lockPath (a
-// sidecar file next to the registry), blocking until it is granted. It
-// serializes the read-modify-write cycle across concurrent propagate processes
-// (both contract hooks fire on every UserPromptSubmit). Returns a release func.
+// acquireRegistryLock takes an exclusive advisory lock on lockPath (a sidecar
+// file next to the registry) through engine/filelock, waiting up to
+// filelock.DefaultWait for a holder to let go and then failing with a
+// *filelock.BusyError. It serializes the read-modify-write cycle across
+// concurrent propagate processes (both contract hooks fire on every
+// UserPromptSubmit), and the bound means a hung holder costs the next prompt two
+// seconds and an error, not its whole session. Returns a release func.
 //
-// Unix-only by design: this tool runs on Linux and the lock is dependency-free.
 // The kernel releases the lock on process exit, so an os.Exit inside the core
 // (which skips defers) can never leave the lock held.
 func acquireRegistryLock(lockPath string) (release func(), err error) {
-	f, err := os.OpenFile(lockPath, os.O_CREATE|os.O_RDWR, 0644)
-	if err != nil {
-		return nil, err
-	}
-	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX); err != nil {
-		f.Close()
-		return nil, err
-	}
-	return func() {
-		syscall.Flock(int(f.Fd()), syscall.LOCK_UN)
-		f.Close()
-	}, nil
+	return filelock.Acquire(lockPath, filelock.Options{})
 }
 
 // registryPathFromArgs extracts the cleaned --registry value, empty if absent.
@@ -945,6 +936,8 @@ func registryPathFromArgs(args []string) string {
 // Concurrency safety (two layers, plus the empty-registry guard in the core):
 //  1. an exclusive flock on <registry>.lock serializes the read-modify-write
 //     against the sibling propagate process spawned by the other contract hook;
+//     it waits up to filelock.DefaultWait for a holder, then exits 1 naming the
+//     lock instead of waiting for as long as the holder lives;
 //  2. the registry write itself is atomic (temp file + rename), so even a
 //     reader outside the lock can never observe a truncated/empty registry.
 func runPropagate(args []string) {
