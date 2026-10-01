@@ -1,4 +1,4 @@
-package guard
+package archguard
 
 import (
 	"os"
@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-// The tests in this file prove the checker in archcheck_test.go on throwaway
-// modules, so the rules are pinned by what they flag and what they let through
-// rather than by the real tree, whose violations change as work units land.
+// The tests in this file prove the checker on throwaway modules, so the rules are
+// pinned by what they flag and what they let through rather than by the real tree
+// of any module that uses archguard, whose violations change as work units land.
 
 const fixtureModule = "example.test/m"
 
@@ -35,7 +35,7 @@ func writeFixtureModule(t *testing.T, files map[string]string) string {
 
 // fixtureEdges loads a fixture module and returns the sorted "from -> target"
 // edges the checker reports for it.
-func fixtureEdges(t *testing.T, rings map[string]ring, files map[string]string) []string {
+func fixtureEdges(t *testing.T, rings map[string]Ring, files map[string]string) []string {
 	t.Helper()
 	root := writeFixtureModule(t, files)
 	c, err := newChecker(root, rings)
@@ -53,31 +53,31 @@ func fixtureEdges(t *testing.T, rings map[string]ring, files map[string]string) 
 func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 	tests := []struct {
 		name  string
-		rings map[string]ring
+		rings map[string]Ring
 		files map[string]string
 		want  []string
 	}{
 		{
 			name:  "a domain package may use the pure standard library",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{"dom/a.go": "package dom\nimport (\"fmt\"; \"strings\"; \"encoding/json\")\nvar _ = fmt.Sprint(strings.ToUpper(\"x\"))\nvar _ json.Marshaler\n"},
 			want:  nil,
 		},
 		{
 			name:  "a domain package must not import os, os/exec, syscall or net",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{"dom/a.go": "package dom\nimport (\"net\"; \"os\"; \"os/exec\"; \"syscall\")\nvar _ = []any{net.IPv4len, os.Args, exec.ErrDot, syscall.EINVAL}\n"},
 			want:  []string{"dom -> net", "dom -> os", "dom -> os/exec", "dom -> syscall"},
 		},
 		{
 			name:  "a domain package must not import crypto/rand",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{"dom/a.go": "package dom\nimport \"crypto/rand\"\nvar _ = rand.Reader\n"},
 			want:  []string{"dom -> crypto/rand"},
 		},
 		{
 			name:  "a domain package may import another domain package",
-			rings: map[string]ring{"dom": ringDomain, "other": ringDomain},
+			rings: map[string]Ring{"dom": Domain, "other": Domain},
 			files: map[string]string{
 				"dom/a.go":   "package dom\nimport \"" + fixtureModule + "/other\"\nvar _ = other.X\n",
 				"other/b.go": "package other\nvar X = 1\n",
@@ -86,7 +86,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "a domain package must not import an adapter",
-			rings: map[string]ring{"dom": ringDomain, "ad": ringAdapter},
+			rings: map[string]Ring{"dom": Domain, "ad": Adapter},
 			files: map[string]string{
 				"dom/a.go": "package dom\nimport \"" + fixtureModule + "/ad\"\nvar _ = ad.X\n",
 				"ad/b.go":  "package ad\nvar X = 1\n",
@@ -95,13 +95,13 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "a domain package must not import a third-party module",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{"dom/a.go": "package dom\nimport _ \"github.com/someone/lib\"\n"},
 			want:  []string{"dom -> github.com/someone/lib"},
 		},
 		{
 			name:  "an application package may use domain packages but not adapters",
-			rings: map[string]ring{"app": ringApplication, "dom": ringDomain, "ad": ringAdapter},
+			rings: map[string]Ring{"app": Application, "dom": Domain, "ad": Adapter},
 			files: map[string]string{
 				"app/a.go": "package app\nimport (\"" + fixtureModule + "/dom\"; \"" + fixtureModule + "/ad\")\nvar _ = []int{dom.X, ad.X}\n",
 				"dom/b.go": "package dom\nvar X = 1\n",
@@ -111,7 +111,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "a domain package must not import an application package",
-			rings: map[string]ring{"dom": ringDomain, "app": ringApplication},
+			rings: map[string]Ring{"dom": Domain, "app": Application},
 			files: map[string]string{
 				"dom/a.go": "package dom\nimport \"" + fixtureModule + "/app\"\nvar _ = app.X\n",
 				"app/b.go": "package app\nvar X = 1\n",
@@ -120,7 +120,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "an adapter may use the operating system, third-party modules and the inner rings",
-			rings: map[string]ring{"ad": ringAdapter, "dom": ringDomain},
+			rings: map[string]Ring{"ad": Adapter, "dom": Domain},
 			files: map[string]string{
 				"ad/a.go":  "package ad\nimport (\"os\"; \"os/exec\"; _ \"github.com/someone/lib\"; \"" + fixtureModule + "/dom\")\nvar _ = []any{os.Args, exec.ErrDot, dom.X}\n",
 				"dom/b.go": "package dom\nvar X = 1\n",
@@ -129,7 +129,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "an adapter must not import a support package",
-			rings: map[string]ring{"ad": ringAdapter, "sup": ringSupport},
+			rings: map[string]Ring{"ad": Adapter, "sup": Support},
 			files: map[string]string{
 				"ad/a.go":  "package ad\nimport \"" + fixtureModule + "/sup\"\nvar _ = sup.X\n",
 				"sup/b.go": "package sup\nvar X = 1\n",
@@ -138,7 +138,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "the composition root may build adapters",
-			rings: map[string]ring{"cmd": ringRoot, "ad": ringAdapter, "dom": ringDomain},
+			rings: map[string]Ring{"cmd": Root, "ad": Adapter, "dom": Domain},
 			files: map[string]string{
 				"cmd/main.go": "package main\nimport (\"os\"; \"" + fixtureModule + "/ad\"; \"" + fixtureModule + "/dom\")\nfunc main() { _ = []any{os.Args, ad.X, dom.X} }\n",
 				"ad/a.go":     "package ad\nvar X = 1\n",
@@ -148,7 +148,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "a support package has no rule",
-			rings: map[string]ring{"sup": ringSupport, "ad": ringAdapter},
+			rings: map[string]Ring{"sup": Support, "ad": Adapter},
 			files: map[string]string{
 				"sup/a.go": "package sup\nimport (\"os\"; \"" + fixtureModule + "/ad\")\nvar _ = []any{os.Args, ad.X}\n",
 				"ad/b.go":  "package ad\nvar X = 1\n",
@@ -157,7 +157,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "test files are not production code",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{
 				"dom/a.go":      "package dom\nvar X = 1\n",
 				"dom/a_test.go": "package dom\nimport \"os\"\nvar _ = os.Args\n",
@@ -166,7 +166,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "a build-tagged file counts on every platform",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{
 				"dom/a.go":         "package dom\nvar X = 1\n",
 				"dom/a_windows.go": "//go:build windows\n\npackage dom\nimport \"os\"\nvar _ = os.Args\n",
@@ -175,7 +175,7 @@ func TestCheckerFlagsTheDependencyRule(t *testing.T) {
 		},
 		{
 			name:  "a nested module is not part of the module under test",
-			rings: map[string]ring{"dom": ringDomain},
+			rings: map[string]Ring{"dom": Domain},
 			files: map[string]string{
 				"dom/a.go":          "package dom\nvar X = 1\n",
 				"nested/go.mod":     "module example.test/nested\n",
@@ -218,7 +218,7 @@ func TestCheckerFlagsAmbientMembersOfPartlyPurePackages(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			files := map[string]string{"dom/a.go": "package dom\n" + tc.body}
-			if got := fixtureEdges(t, map[string]ring{"dom": ringDomain}, files); !reflect.DeepEqual(got, tc.want) {
+			if got := fixtureEdges(t, map[string]Ring{"dom": Domain}, files); !reflect.DeepEqual(got, tc.want) {
 				t.Errorf("violations = %q, want %q", got, tc.want)
 			}
 		})
@@ -229,10 +229,10 @@ func TestCheckerAppliesTheMemberRulesToApplicationPackagesAndSparesAdapters(t *t
 	body := "package p\nimport \"time\"\nvar _ = time.Now()\n"
 	files := func() map[string]string { return map[string]string{"p/a.go": body} }
 
-	if got := fixtureEdges(t, map[string]ring{"p": ringApplication}, files()); !reflect.DeepEqual(got, []string{"p -> time.Now"}) {
+	if got := fixtureEdges(t, map[string]Ring{"p": Application}, files()); !reflect.DeepEqual(got, []string{"p -> time.Now"}) {
 		t.Errorf("application: violations = %q, want the wall clock flagged", got)
 	}
-	if got := fixtureEdges(t, map[string]ring{"p": ringAdapter}, files()); got != nil {
+	if got := fixtureEdges(t, map[string]Ring{"p": Adapter}, files()); got != nil {
 		t.Errorf("adapter: violations = %q, want none", got)
 	}
 }
@@ -243,7 +243,7 @@ func TestCheckerNamesTheFilesOfAViolation(t *testing.T) {
 		"dom/a.go": "package dom\nimport \"os\"\nvar _ = os.Args\n",
 		"dom/c.go": "package dom\nvar X = 1\n",
 	})
-	c, err := newChecker(root, map[string]ring{"dom": ringDomain})
+	c, err := newChecker(root, map[string]Ring{"dom": Domain})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -265,7 +265,7 @@ func TestCheckerReportsDeclarationDrift(t *testing.T) {
 		"newcomer/b.go": "package newcomer\n",
 		"main.go":       "package root\n",
 	})
-	c, err := newChecker(root, map[string]ring{"declared": ringDomain, "gone": ringDomain})
+	c, err := newChecker(root, map[string]Ring{"declared": Domain, "gone": Domain})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -285,7 +285,7 @@ func TestCheckerTreatsATestOnlyDirectoryAsAPackage(t *testing.T) {
 		"harness/h_test.go": "package harness\nimport \"os\"\nvar _ = os.Args\n",
 		"dom/a.go":          "package dom\nvar X = 1\n",
 	})
-	c, err := newChecker(root, map[string]ring{"dom": ringDomain})
+	c, err := newChecker(root, map[string]Ring{"dom": Domain})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestCheckerTreatsATestOnlyDirectoryAsAPackage(t *testing.T) {
 		t.Errorf("violations = %v, want none: test files are not read", got)
 	}
 
-	c, err = newChecker(root, map[string]ring{"dom": ringDomain, "harness": ringSupport})
+	c, err = newChecker(root, map[string]Ring{"dom": Domain, "harness": Support})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -306,64 +306,11 @@ func TestCheckerTreatsATestOnlyDirectoryAsAPackage(t *testing.T) {
 }
 
 func TestCheckerRefusesAnImportOfAPackageWithoutARing(t *testing.T) {
-	got := fixtureEdges(t, map[string]ring{"dom": ringDomain}, map[string]string{
+	got := fixtureEdges(t, map[string]Ring{"dom": Domain}, map[string]string{
 		"dom/a.go":    "package dom\nimport \"" + fixtureModule + "/orphan\"\nvar _ = orphan.X\n",
 		"orphan/b.go": "package orphan\nvar X = 1\n",
 	})
 	if want := []string{"dom -> orphan"}; !reflect.DeepEqual(got, want) {
 		t.Errorf("violations = %q, want %q", got, want)
-	}
-}
-
-func TestReconcileSplitsViolationsIntoNewAndKnown(t *testing.T) {
-	found := []violation{
-		{from: "a", target: "os"},
-		{from: "a", target: "syscall"},
-		{from: "b", target: "a"},
-	}
-	debts := []debt{
-		{from: "a", target: "os", unit: "H1"},
-		{from: "gone", target: "os", unit: "H2"},
-	}
-	unlisted, stale := reconcile(found, debts)
-	if want := []string{"a -> syscall", "b -> a"}; !reflect.DeepEqual(edgesOf(unlisted), want) {
-		t.Errorf("unlisted = %q, want %q", edgesOf(unlisted), want)
-	}
-	if want := []debt{{from: "gone", target: "os", unit: "H2"}}; !reflect.DeepEqual(stale, want) {
-		t.Errorf("stale = %v, want %v (a debt whose violation is gone must be deleted)", stale, want)
-	}
-}
-
-func edgesOf(vs []violation) []string {
-	var out []string
-	for _, v := range vs {
-		out = append(out, v.edge())
-	}
-	return out
-}
-
-func TestValidateDebtsRejectsUnusableLines(t *testing.T) {
-	rings := map[string]ring{"dom": ringDomain, "ad": ringAdapter}
-	tests := []struct {
-		name  string
-		debts []debt
-		want  string
-	}{
-		{"a unit id is required", []debt{{from: "dom", target: "os"}}, "unit"},
-		{"a unit id names a work unit", []debt{{from: "dom", target: "os", unit: "later"}}, "unit"},
-		{"the package must be declared", []debt{{from: "nope", target: "os", unit: "H1"}}, "declared"},
-		{"only domain and application packages can owe debt", []debt{{from: "ad", target: "os", unit: "H1"}}, "domain or application"},
-		{"a line appears once", []debt{{from: "dom", target: "os", unit: "H1"}, {from: "dom", target: "os", unit: "H2"}}, "twice"},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			problems := validateDebts(tc.debts, rings)
-			if len(problems) != 1 || !strings.Contains(problems[0], tc.want) {
-				t.Errorf("problems = %q, want one mentioning %q", problems, tc.want)
-			}
-		})
-	}
-	if problems := validateDebts([]debt{{from: "dom", target: "os", unit: "H12"}, {from: "dom", target: "syscall", unit: "L3"}}, rings); len(problems) != 0 {
-		t.Errorf("well-formed debts rejected: %q", problems)
 	}
 }

@@ -174,7 +174,7 @@ T1 and T2 are user-visible correctness bugs. They can go first, in parallel with
 
 ### Enforcement (H1, delivered)
 
-`engine/architecture_test.go` and `longterm-mem/architecture_test.go` hold the guard's two inputs for their module: `rings` declares the layer of every package (domain, application, adapter, root, or support for test-only code), and `knownDebt` lists every violation that exists today, each with the work unit that removes it. The checker itself, `archcheck_test.go`, is the same file in both modules; its header states what it sees and what it cannot see.
+`engine/architecture_test.go` and `longterm-mem/architecture_test.go` hold the guard's two inputs for their module: `rings` declares the layer of every package (domain, application, adapter, root, or support for test-only code), and `knownDebt` lists every violation that exists today, each with the work unit that removes it. The checker itself is the `archguard` module (D7): standard library only, with its own tests, required by engine and longterm-mem from their tests only through a local `replace` (`../archguard`), so neither production build needs it. Its package documentation states what the checker sees and what it cannot see.
 
 - A package with no ring, a ring row with no package, a violation with no `knownDebt` line, and a `knownDebt` line whose violation is gone each fail the test.
 - A work unit that removes a violation deletes its `knownDebt` line in the same commit. `knownDebt` only shrinks; a new violation is fixed, not listed.
@@ -257,3 +257,4 @@ Nothing in the repo was written, edited or committed.
 - D4 (strictness changes): A — accept all three: unknown install/add flags are errors (H20), lock and approval records reject duplicate JSON keys (H19), contract lists use the strict parser (H13); each with a test, a clear error message, and a changelog line.
 - D5 (TUI target source, bug T1): A — the backend exposes a `targets` subcommand as the single source of the target list; the TUI consumes it through a TargetCatalog port and keeps no list of its own; a contract test pins both sides (B, explicit per-target invocations, only as an interim patch if T1 must ship first).
 - D6 (bash migration scope): B — all of B1–B4 in Phase 9: B1 manifest routes in the engine, B2 registry repair and doctor in the engine under the lock, B3 longterm-mem installed-targets ownership in engine/runtime, B4 split bin/labdrian-overlay into sourced modules.
+- D7 (shared architecture checker, raised by H1): A — extract the checker into the small Go module `archguard` (own go.mod, standard library only); engine and longterm-mem require it from their tests only through a local `replace`, and each keeps its own `rings` and `knownDebt`. The checker is not duplicated.
