@@ -19,12 +19,13 @@ import (
 //   - pathguard, capability, projection, workflow and the like are domain
 //     packages because their pure half is the part that stays; the file system
 //     half is debt below.
-//   - assets, gadu, synctrigger, filelock and gitprov are adapters:
+//   - assets, gadu, synctrigger, filelock, gitprov and atomicfile are adapters:
 //     infrastructure the domain reaches only through a port.
 //   - installer, shelltest and this guard (the module root) are test-only.
 var rings = map[string]archguard.Ring{
 	".":               archguard.Support,
 	"assets":          archguard.Adapter,
+	"atomicfile":      archguard.Adapter,
 	"capability":      archguard.Domain,
 	"cmd":             archguard.Root,
 	"filelock":        archguard.Adapter,
