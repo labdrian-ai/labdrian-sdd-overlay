@@ -173,6 +173,25 @@ func TestTheStateHomeItselfMayBeASymlink(t *testing.T) {
 	}
 }
 
+// The first component is the state home, so a chain with none has nothing to start
+// from. That is a caller's mistake to report, never a panic in a hook.
+func TestEnsureDirsAndCheckDirsRefuseAnEmptyChain(t *testing.T) {
+	for name, parts := range map[string][]string{"nil": nil, "empty": {}} {
+		for fn, call := range map[string]func([]string) error{"EnsureDirs": EnsureDirs, "CheckDirs": CheckDirs} {
+			func() {
+				defer func() {
+					if r := recover(); r != nil {
+						t.Errorf("%s(%s) panicked: %v", fn, name, r)
+					}
+				}()
+				if err := call(parts); !errors.Is(err, ErrEmptyParts) {
+					t.Errorf("%s(%s) = %v, want ErrEmptyParts", fn, name, err)
+				}
+			}()
+		}
+	}
+}
+
 func TestCheckDirsReadsAndNeverCreates(t *testing.T) {
 	skipUnlessSupported(t)
 	home := t.TempDir()

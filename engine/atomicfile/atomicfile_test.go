@@ -420,6 +420,36 @@ func TestAFailedBackupLeavesTheTargetUntouched(t *testing.T) {
 	assertOnly(t, dir, "f", "f.bak")
 }
 
+// Replace looks at the name and then the backup reads it. The read must not follow
+// a symlink put there between the two, or the backup would hold the content of
+// whatever the link points at. backUp is called on a link directly, which is the
+// state a swap leaves behind.
+func TestBackUpRefusesASymlinkInsteadOfReadingThroughIt(t *testing.T) {
+	dir := t.TempDir()
+	secret := filepath.Join(dir, "secret")
+	writeFixture(t, secret, "not yours to copy", 0o600)
+	path := filepath.Join(dir, "f")
+	if err := os.Symlink(secret, path); err != nil {
+		t.Fatal(err)
+	}
+	staged, err := Stage(dir, []byte("new"), Options{Perm: 0o600, Backup: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer staged.Discard()
+
+	err = staged.backUp(path)
+	if !errors.Is(err, ErrSymlink) {
+		t.Fatalf("backUp of a symlink = %v, want ErrSymlink", err)
+	}
+	if _, lerr := os.Lstat(path + ".bak"); !errors.Is(lerr, fs.ErrNotExist) {
+		t.Errorf("a backup was written from a symlink (lstat: %v)", lerr)
+	}
+	if got := readFixture(t, secret); got != "not yours to copy" {
+		t.Errorf("the link target changed: %q", got)
+	}
+}
+
 func TestBackupIsFlushedWhenSyncIsAsked(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "f")

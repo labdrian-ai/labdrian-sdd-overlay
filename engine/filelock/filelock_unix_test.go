@@ -136,6 +136,31 @@ func TestPermSetsTheModeOfACreatedLockFileBeforeTheUmask(t *testing.T) {
 	}
 }
 
+// Perm is the mode of a lock file, and a directory lock creates no file, so Perm
+// does not apply to it. The same Options that a file lock refuses must therefore
+// not stop AcquireDir, whichever mode it is taken in; the file lock still refuses
+// them, and creates nothing when it does.
+func TestAnInvalidPermStopsAFileLockButNotADirectoryLock(t *testing.T) {
+	invalid := os.ModeSetuid | 0o600
+	dir := dirLockTarget(t)
+	for _, mode := range []Mode{Exclusive, Shared} {
+		unlock, err := AcquireDir(dir, Options{Mode: mode, Perm: invalid})
+		if err != nil {
+			t.Errorf("AcquireDir(mode %v) with a Perm that only applies to files = %v, want a held lock", mode, err)
+			continue
+		}
+		unlock()
+	}
+
+	path := filepath.Join(t.TempDir(), ".fixture.lock")
+	if _, err := Acquire(path, Options{Perm: invalid}); err == nil || !strings.Contains(err.Error(), "permission bits") {
+		t.Errorf("Acquire with the same Perm = %v, want a refusal naming the permission bits", err)
+	}
+	if _, statErr := os.Stat(path); statErr == nil {
+		t.Error("a lock file was created although Perm was refused")
+	}
+}
+
 func TestPermMustBePermissionBitsOnly(t *testing.T) {
 	path := filepath.Join(t.TempDir(), ".fixture.lock")
 	_, err := Acquire(path, Options{Perm: os.ModeSetuid | 0o600})
