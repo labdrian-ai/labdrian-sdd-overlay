@@ -138,4 +138,4 @@ Implementation of RA1–RA9 on `feat/runtime-adapters`, with work-unit commits. 
 
 ## Next step
 
-None — feature closed. Deferred cleanup backlog: the binary path is interpolated unquoted into the shell command of every hook family; per-class degradation warnings instead of one generic recovery message; the `install-hooks` summary text did not mention the projection family (done in `28d2082`, which names it and the approve guard); the `runtime-roster` rewrite against the current runtime set. Product P8 (second-runtime portability) stays open and distinct. Next roadmap phase: Phase 8.
+None — feature closed. Deferred cleanup backlog: the binary path is interpolated unquoted into the shell command of every hook family; per-class degradation warnings instead of one generic recovery message; the `install-hooks` summary text did not mention the projection family (done in `28d2082`, which names it and the approve guard); the `runtime-roster` rewrite against the current runtime set. Product P8 (second-runtime portability) stays open and distinct. Next roadmap phase: Phase 8 (verified 2026-09-30); the deferred items above moved to Phase 9, Consolidation and polish.

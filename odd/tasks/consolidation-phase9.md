@@ -30,8 +30,8 @@ Ultracode workflow `wf_afe65bf2-736` (9 read-only agents) collected 124 items fr
 ## Tasks
 
 Wave 0 — hygiene (each GitHub or destructive step asks for approval at the time):
-- [ ] C1 — Close delivered issues #366–#371 and #297 with evidence.
-- [ ] C2 — Prune worktrees and merged branches; delete the three superseded orphan branches (Q10).
+- [x] C1 — Close delivered issues #366–#371 and #297 with evidence.
+- [x] C2 — Prune worktrees and merged branches; delete the three superseded orphan branches (Q10).
 - [x] C3 — `.gitignore` the tool directories; resolve the `skills/archify` symlink; `.gitattributes` `skills/** -text` (Q3, Q11-1). Done in `887a519`.
 - [ ] C3b — Fix the Codex skill frontmatter outside the repository (needs explicit authorization for `~/.codex`).
 - [x] C9 — Stale-text sweep (roadmap and ledgers, canonical spec, superseded notes, Q12); close #309. Text done in `06bbea2`; closing #309 is a GitHub step that still waits for approval.
@@ -75,6 +75,8 @@ Per-class degradation warnings (sources disagree); the Phase 8 non-blocking find
 ## Progress and evidence
 
 - Inventory (Engram #3855); decisions Q1–Q12 and the principle (this ledger; Engram #3856).
+- **C1** (user OK 2026-10-01): closed #366–#371 (delivered by PRs #372–#377, merged 2026-09-21 through tracker #379 into main) and #297 (delivered by `1495b21`, in main), each with an evidence comment.
+- **C2** (user OK 2026-10-01): removed 5 worktrees (goal-v2; three `/tmp/labdrian-goal-*`; review-workflow-profile, whose untracked ledger was an older version of the one on main) and pruned 3 missing ones; kept `labdrian-standalone` and the gentle-ai candidate view. Deleted 90 local branches (every commit verified in main with `git cherry`, plus the three Q10 orphans); kept `main`, `chore/phase9-hygiene`, `sdd/shared-project-vault`, `wip/audit-remediation-snapshot`, `wip/standalone-platform`. Deleted 3 remote branches (`fix/pre-sdd-entry-contract-assets` and `union/pr1b-merge`, contained in main; `feat/archive-reconcile-guard`, Q10).
 - **Mode and routes.** TDD strict, runner `go test` from `engine/`, resolved from the project configuration (this ledger). C3 and C9 ran as one delegated writer (each touches 2 or more non-trivial files) on branch `chore/phase9-hygiene` in the `~/labdrian-sdd-overlay-shaper` worktree, from `main` `f19a33c`. The commits are unpushed.
 - **C3** — `887a519` `chore(repo): ignore tool installs and keep skill bytes exact`.
   - `.gitignore` gains `/.agents/`, `/.claude/skills/`, `/.pi/`, and `/skills-lock.json` (anchored at the repository root), plus `/skills/archify`. `skills/archify`, the only tracked symlink, is untracked with `git rm --cached`. `.gitattributes` is new, with `skills/** -text`.
