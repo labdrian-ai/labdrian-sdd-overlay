@@ -172,6 +172,14 @@ Everything else is new: H1–H14, H17, H19–H22, H25–H32, H34–H35, L1–L10
 
 T1 and T2 are user-visible correctness bugs. They can go first, in parallel with Phase A, because they touch only `tui`.
 
+### Enforcement (H1, delivered)
+
+`engine/architecture_test.go` and `longterm-mem/architecture_test.go` hold the guard's two inputs for their module: `rings` declares the layer of every package (domain, application, adapter, root, or support for test-only code), and `knownDebt` lists every violation that exists today, each with the work unit that removes it. The checker itself, `archcheck_test.go`, is the same file in both modules; its header states what it sees and what it cannot see.
+
+- A package with no ring, a ring row with no package, a violation with no `knownDebt` line, and a `knownDebt` line whose violation is gone each fail the test.
+- A work unit that removes a violation deletes its `knownDebt` line in the same commit. `knownDebt` only shrinks; a new violation is fixed, not listed.
+- When a unit creates a package, it adds the package to `rings`. Adapters go in the adapter ring; a pure split such as `runtime/core` goes in the domain ring.
+
 ## 5. Decisions for you
 
 - **D1. Where adapters live in the engine.**
