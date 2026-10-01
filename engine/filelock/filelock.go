@@ -156,10 +156,12 @@ type Options struct {
 	NoWait bool
 	// Perm is the mode, before the umask, of a lock file an Exclusive acquire
 	// creates. Zero means 0644; a caller whose lock lives in a private directory
-	// asks for 0600. A Shared acquire creates nothing and AcquireDir creates no
-	// file, so neither uses it. Any bit beyond the permission bits is an error for
-	// Acquire in either mode, so the same Options behave the same in both; it is
-	// not checked for AcquireDir, where it does not apply.
+	// asks for 0600. Only an Exclusive Acquire uses it and only an Exclusive
+	// Acquire checks it: a Shared acquire creates nothing and AcquireDir creates no
+	// file, so both ignore it, whatever it holds. Any bit beyond the permission
+	// bits is an error for an Exclusive Acquire, checked before the file is opened
+	// and whether or not the file already exists, so the same Options behave the
+	// same on the first call as on the hundredth.
 	Perm os.FileMode
 	// Clock is the time source; the zero value is the real clock.
 	Clock Clock
@@ -224,10 +226,11 @@ func (l locker) acquire(path string, opts Options, dir bool) (unlock func(), err
 	if !platformSupported {
 		return nil, ErrUnsupported
 	}
-	// Perm is the mode of a lock file; a directory lock creates none, so it is
-	// neither used nor checked there.
+	// Perm is the mode of a lock file an Exclusive acquire creates. A directory
+	// lock creates none and a Shared lock never creates one, so for them it is
+	// neither used nor checked.
 	var perm os.FileMode
-	if !dir {
+	if !dir && opts.Mode != Shared {
 		if perm, err = opts.perm(); err != nil {
 			return nil, err
 		}

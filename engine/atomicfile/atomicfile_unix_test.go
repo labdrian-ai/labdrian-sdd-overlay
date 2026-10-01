@@ -10,6 +10,14 @@ import (
 	"time"
 )
 
+// linux and darwin have the no-follow open a backup is read through, so a backup
+// is possible there; the platforms without it are pinned in atomicfile_other_test.go.
+func TestThisPlatformHasANoFollowOpen(t *testing.T) {
+	if realOps().openNoFollow == nil {
+		t.Fatal("realOps has no no-follow opener on a platform that has the open")
+	}
+}
+
 // A FIFO swapped in for the target would block a plain open until a writer
 // appears, hanging the caller. The backup must refuse it as not a regular file.
 func TestBackUpDoesNotBlockOnAFIFO(t *testing.T) {

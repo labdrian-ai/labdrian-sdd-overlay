@@ -9,6 +9,9 @@ import (
 	"syscall"
 )
 
+// noFollowOpener is the no-follow open of this platform.
+func noFollowOpener() func(path string) (*os.File, error) { return openNoFollow }
+
 // openNoFollow opens path read-only without following a final-component symlink
 // and without blocking on a FIFO. A symlink at path is refused with ErrSymlink by
 // the kernel (ELOOP under O_NOFOLLOW), so checking the name and opening it are one

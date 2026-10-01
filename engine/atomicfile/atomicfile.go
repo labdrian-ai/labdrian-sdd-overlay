@@ -20,7 +20,10 @@
 //   - With Options.Backup the replaced content is kept beside the file, with its
 //     own mode, before anything is replaced; a backup that cannot be made stops the
 //     write. The file is read through one no-follow descriptor, so a symlink put
-//     at the name after Replace looked at it is refused, not read.
+//     at the name after Replace looked at it is refused, not read. A platform
+//     without a no-follow open (anything but linux and darwin) cannot make that
+//     promise, so there a backup is refused (ErrBackupUnsupported) before anything
+//     changes instead of being made with a window between the check and the read.
 //
 // Two operations cover the callers. Replace puts the staged content at a name,
 // replacing what is there (WriteFile is Stage and Replace in one call). Create puts
@@ -50,6 +53,11 @@ const DefaultTempPattern = ".atomicfile-*.tmp"
 // ErrSymlink is returned (wrapped) when the target of a Replace is a symlink.
 var ErrSymlink = errors.New("atomicfile: refusing to replace a symlink")
 
+// ErrBackupUnsupported is returned (wrapped) by a Replace with Options.Backup on a
+// platform without a no-follow open (anything but linux and darwin). Nothing has
+// been changed when it is returned.
+var ErrBackupUnsupported = errors.New("atomicfile: a backup needs a no-follow open, which this platform does not have")
+
 // Options tunes one write. The zero value writes a private file (0600), flushes
 // nothing, and keeps no backup.
 type Options struct {
@@ -62,6 +70,8 @@ type Options struct {
 	Sync bool
 	// Backup keeps the content a Replace overwrites at <path>.bak, with the mode
 	// it had. A file that did not exist has nothing to back up. Create ignores it.
+	// On a platform without a no-follow open, Replace with Backup fails with
+	// ErrBackupUnsupported, whether or not there is a file to back up.
 	Backup bool
 	// TempPattern is the name of the temporary file, with a "*" where the random
 	// part goes (see os.CreateTemp). Empty means DefaultTempPattern. A caller that
@@ -89,10 +99,15 @@ func (o Options) normalized() (Options, error) {
 type ops struct {
 	syncFile func(*os.File) error
 	syncDir  func(dir string) error
+	// openNoFollow opens a file read-only without following a final-component
+	// symlink, as one operation. It is nil on a platform that has no such open, and
+	// a backup, which has to read the file it keeps, is then refused. It is a field
+	// so that a test runs the code of such a platform on any other.
+	openNoFollow func(path string) (*os.File, error)
 }
 
 func realOps() ops {
-	return ops{syncFile: (*os.File).Sync, syncDir: SyncDir}
+	return ops{syncFile: (*os.File).Sync, syncDir: SyncDir, openNoFollow: noFollowOpener()}
 }
 
 // SyncDir flushes a directory, so that a rename or a new name in it survives a
@@ -171,9 +186,17 @@ func fill(o ops, f *os.File, data []byte, opts Options) error {
 // directory is flushed if Options.Sync is set; a failure of that flush is
 // returned although the content is already in place.
 //
+// A backup reads the replaced file through a no-follow open. On a platform that
+// has none, a Replace with Options.Backup fails with ErrBackupUnsupported before
+// anything is changed or the staged file is used up, whether or not there is a
+// file to back up, so the same Options give the same answer on every write.
+//
 // A staged file is committed once. Replace on one that was already placed is an
 // error.
 func (s *Staged) Replace(path string) error {
+	if s.opts.Backup && s.ops.openNoFollow == nil {
+		return fmt.Errorf("%w: %s", ErrBackupUnsupported, path)
+	}
 	if err := s.claim(); err != nil {
 		return err
 	}
@@ -246,14 +269,15 @@ func (s *Staged) flushDir(path string) error {
 // the same mode as the original. It does not follow a backup name that is a
 // symlink.
 //
-// The file is opened once, without following a symlink (openNoFollow), and its
+// The file is opened once, without following a symlink (ops.openNoFollow), and its
 // mode and content both come from that descriptor. Replace has looked at the name
 // by then, but the name can change between that look and this open; reading
 // through the descriptor means a link swapped in meanwhile is refused (ErrSymlink)
 // instead of read, and the mode kept is that of the content kept. Anything that is
-// not a regular file at that point is refused too.
+// not a regular file at that point is refused too. Replace has already refused a
+// platform with no such open, which is why the opener is not checked here.
 func (s *Staged) backUp(path string) error {
-	f, err := openNoFollow(path)
+	f, err := s.ops.openNoFollow(path)
 	if err != nil {
 		if errors.Is(err, ErrSymlink) {
 			return err

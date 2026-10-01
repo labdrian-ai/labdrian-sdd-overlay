@@ -136,28 +136,69 @@ func TestPermSetsTheModeOfACreatedLockFileBeforeTheUmask(t *testing.T) {
 	}
 }
 
-// Perm is the mode of a lock file, and a directory lock creates no file, so Perm
-// does not apply to it. The same Options that a file lock refuses must therefore
-// not stop AcquireDir, whichever mode it is taken in; the file lock still refuses
+// Perm is the mode of a lock file an Exclusive acquire creates, so only that
+// acquire uses it and only that acquire checks it. A directory lock creates no
+// file and a Shared lock never creates one, so the same Options that an Exclusive
+// file lock refuses must not stop AcquireDir in either mode, nor a Shared file
+// lock whether or not the file is there; the Exclusive file lock still refuses
 // them, and creates nothing when it does.
-func TestAnInvalidPermStopsAFileLockButNotADirectoryLock(t *testing.T) {
+func TestAnInvalidPermStopsAnExclusiveFileLockOnly(t *testing.T) {
 	invalid := os.ModeSetuid | 0o600
 	dir := dirLockTarget(t)
 	for _, mode := range []Mode{Exclusive, Shared} {
 		unlock, err := AcquireDir(dir, Options{Mode: mode, Perm: invalid})
 		if err != nil {
-			t.Errorf("AcquireDir(mode %v) with a Perm that only applies to files = %v, want a held lock", mode, err)
+			t.Errorf("AcquireDir(mode %v) with a Perm that only applies to a created file = %v, want a held lock", mode, err)
 			continue
 		}
 		unlock()
 	}
 
+	existing := filepath.Join(t.TempDir(), ".existing.lock")
+	if unlock, err := Acquire(existing, Options{}); err != nil {
+		t.Fatal(err)
+	} else {
+		unlock()
+	}
+	unlock, err := Acquire(existing, Options{Mode: Shared, Perm: invalid})
+	if err != nil {
+		t.Errorf("Acquire(Shared) of a lock file that exists, with a Perm that only applies to a created file = %v, want a held lock", err)
+	} else {
+		unlock()
+	}
+
+	missing := filepath.Join(t.TempDir(), ".missing.lock")
+	unlock, err = Acquire(missing, Options{Mode: Shared, Perm: invalid})
+	if err != nil {
+		t.Errorf("Acquire(Shared) of a lock file that is missing, with a Perm that only applies to a created file = %v, want the provisional lock that holds nothing", err)
+	} else {
+		unlock()
+	}
+	if _, statErr := os.Stat(missing); statErr == nil {
+		t.Error("a Shared acquire created the lock file")
+	}
+
 	path := filepath.Join(t.TempDir(), ".fixture.lock")
 	if _, err := Acquire(path, Options{Perm: invalid}); err == nil || !strings.Contains(err.Error(), "permission bits") {
-		t.Errorf("Acquire with the same Perm = %v, want a refusal naming the permission bits", err)
+		t.Errorf("Acquire(Exclusive) with the same Perm = %v, want a refusal naming the permission bits", err)
 	}
 	if _, statErr := os.Stat(path); statErr == nil {
 		t.Error("a lock file was created although Perm was refused")
+	}
+}
+
+// An Exclusive acquire checks Perm whether or not the lock file exists yet, so the
+// same Options behave the same on the first call as on the hundredth.
+func TestAnInvalidPermStopsAnExclusiveAcquireOfAnExistingLockFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".existing.lock")
+	unlock, err := Acquire(path, Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlock()
+
+	if _, err := Acquire(path, Options{Perm: os.ModeSticky | 0o600}); err == nil || !strings.Contains(err.Error(), "permission bits") {
+		t.Errorf("Acquire(Exclusive) of an existing lock file with an invalid Perm = %v, want a refusal naming the permission bits", err)
 	}
 }
 
