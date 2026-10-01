@@ -150,9 +150,17 @@ func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	if err != nil {
 		notes = append(notes, "worktree observation failed: "+err.Error())
 	} else {
-		in.Provenance = &obs
+		provenance := worktreeProvenanceFrom(obs)
+		in.Provenance = &provenance
 	}
 	return in, notes, nil
+}
+
+// worktreeProvenanceFrom maps what the git adapter observed into the value the
+// shaper binds. HEAD is informational and Linked follows from the paths, so
+// neither is carried across: the shaper never sees them, and so cannot bind them.
+func worktreeProvenanceFrom(obs gitprov.Observation) shaper.WorktreeProvenance {
+	return shaper.WorktreeProvenance{Toplevel: obs.Toplevel, GitDir: obs.GitDir, CommonDir: obs.CommonDir}
 }
 
 // clearanceReport describes the stored clearance lookup of one assessment.

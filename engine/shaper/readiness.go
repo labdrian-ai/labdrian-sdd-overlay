@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
 )
 
@@ -224,8 +223,11 @@ type FlagResolution struct {
 	Evidence string `json:"evidence"`
 }
 
-// WorktreeProvenance is the bound part of a gitprov.Observation. HEAD is
-// deliberately excluded: it is informational only and not bound.
+// WorktreeProvenance is the worktree identity a clearance binds: the toplevel and
+// the two git directories, as absolute symlink-resolved paths. The shaper owns this
+// value; whatever observed the worktree (the git adapter, mapped by the composition
+// root) fills it in. HEAD is deliberately not part of it: it is informational only
+// and not bound.
 type WorktreeProvenance struct {
 	Toplevel  string
 	GitDir    string
@@ -283,7 +285,7 @@ type ReadinessInput struct {
 	// Goal is nil when no Goal was bound.
 	Goal *GoalBinding
 	// Provenance is nil when the worktree was not observed.
-	Provenance *gitprov.Observation
+	Provenance *WorktreeProvenance
 }
 
 // Assessment is the result of one readiness evaluation: its state, every
@@ -394,7 +396,7 @@ func Evaluate(in ReadinessInput, clearance *VerifiedClearance) Assessment {
 		block(ReasonWorktreeProvenanceMismatch, "worktree root %q, observed toplevel %q", in.WorktreeRoot, p.Toplevel)
 		subjectOK = false
 	default:
-		worktree = WorktreeProvenance{Toplevel: p.Toplevel, GitDir: p.GitDir, CommonDir: p.CommonDir}
+		worktree = *p
 	}
 
 	var subject *Subject

@@ -116,10 +116,9 @@ var knownDebt = archguard.Debt{
 		"syscall": "H7",
 	},
 
-	// shaper: owns WorktreeProvenance instead of importing gitprov (H4); the
-	// contained reads and the clearance store move to shaper/fsadapter (H10).
+	// shaper: the contained reads and the clearance store move to
+	// shaper/fsadapter.
 	"shaper": {
-		"gitprov": "H4",
 		"os":      "H10",
 		"runtime": "H10",
 		"syscall": "H10",
