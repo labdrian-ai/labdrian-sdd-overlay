@@ -12,6 +12,9 @@ import (
 // These tests are the rules of keeping a binding, on values alone: no file, no
 // lock, no directory. The file-backed store that applies them is tested where it
 // lives, in projection/fsstore.
+//
+// The shared fixtures hex64, validBinding, and rawBinding are defined in
+// binding_test.go, which is in this same package (projection_test).
 
 func owned(b projection.Binding) projection.Loaded {
 	return projection.Loaded{Classification: projection.ClassificationOwned, Binding: b}
