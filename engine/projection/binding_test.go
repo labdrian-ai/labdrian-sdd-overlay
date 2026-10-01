@@ -9,6 +9,10 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 )
 
+// The fixtures below are shared by every test file of package projection_test,
+// including bindingstore_test.go. projection/fsstore keeps its own copies in
+// helpers_test.go, because a _test package cannot import another's helpers.
+
 // hex64 returns a well-formed repo key made of 64 copies of one hex digit.
 func hex64(digit string) string { return strings.Repeat(digit, 64) }
 

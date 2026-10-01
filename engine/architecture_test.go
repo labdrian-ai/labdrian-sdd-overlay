@@ -23,36 +23,38 @@ import (
 //     adapters: infrastructure the domain reaches only through a port.
 //   - installer, shelltest and this guard (the module root) are test-only.
 var rings = map[string]archguard.Ring{
-	".":                archguard.Support,
-	"assets":           archguard.Adapter,
-	"atomicfile":       archguard.Adapter,
-	"capability":       archguard.Domain,
-	"cmd":              archguard.Root,
-	"filelock":         archguard.Adapter,
-	"gadu":             archguard.Adapter,
-	"gate":             archguard.Domain,
-	"gitprov":          archguard.Adapter,
-	"goal":             archguard.Domain,
-	"installer":        archguard.Support,
-	"jsonstrict":       archguard.Domain,
-	"memoryscope":      archguard.Domain,
-	"pathguard":        archguard.Domain,
-	"pipkg":            archguard.Adapter,
-	"prespec":          archguard.Domain,
-	"projection":       archguard.Domain,
-	"propagator":       archguard.Domain,
-	"reviewreceipt":    archguard.Domain,
-	"roles":            archguard.Domain,
-	"runtime":          archguard.Adapter,
-	"settings":         archguard.Adapter,
-	"shaper":           archguard.Domain,
-	"shelltest":        archguard.Support,
-	"skills":           archguard.Domain,
-	"statestore":       archguard.Adapter,
-	"synctrigger":      archguard.Adapter,
-	"workflow":         archguard.Domain,
-	"workflow/filelog": archguard.Adapter,
-	"workflowprofile":  archguard.Domain,
+	".":                  archguard.Support,
+	"assets":             archguard.Adapter,
+	"atomicfile":         archguard.Adapter,
+	"capability":         archguard.Domain,
+	"cmd":                archguard.Root,
+	"filelock":           archguard.Adapter,
+	"gadu":               archguard.Adapter,
+	"gate":               archguard.Domain,
+	"gitprov":            archguard.Adapter,
+	"goal":               archguard.Domain,
+	"installer":          archguard.Support,
+	"jsonstrict":         archguard.Domain,
+	"memoryscope":        archguard.Domain,
+	"pathguard":          archguard.Domain,
+	"pipkg":              archguard.Adapter,
+	"prespec":            archguard.Domain,
+	"projection":         archguard.Domain,
+	"projection/fsstore": archguard.Adapter,
+	"propagator":         archguard.Domain,
+	"reviewreceipt":      archguard.Domain,
+	"roles":              archguard.Domain,
+	"roles/filechain":    archguard.Adapter,
+	"runtime":            archguard.Adapter,
+	"settings":           archguard.Adapter,
+	"shaper":             archguard.Domain,
+	"shelltest":          archguard.Support,
+	"skills":             archguard.Domain,
+	"statestore":         archguard.Adapter,
+	"synctrigger":        archguard.Adapter,
+	"workflow":           archguard.Domain,
+	"workflow/filelog":   archguard.Adapter,
+	"workflowprofile":    archguard.Domain,
 }
 
 // knownDebt is every violation of the rule that exists today, each owed to the
@@ -65,7 +67,6 @@ var rings = map[string]archguard.Ring{
 // It cannot see package-level mutable variables used as test seams, so these
 // known ones are not listed below and are owed to their units all the same:
 //
-//   - projection.lockWait (H8)
 //   - cmd: skillsLockWait and the other global seams of main.go (H31)
 //   - shaper: the global open hook of the clearance store (H10)
 //   - reviewreceipt: the global store path variable (H12)
@@ -87,28 +88,11 @@ var knownDebt = archguard.Debt{
 		"path/filepath.EvalSymlinks": "H22",
 	},
 
-	// projection: the binding store moves to projection/fsstore behind a
-	// BindingStore port. Its lock already rides on filelock (H3), an adapter edge
-	// that moves with the store.
-	"projection": {
-		"filelock": "H8",
-		"os":       "H8",
-		"runtime":  "H8",
-		"syscall":  "H8",
-	},
-
 	// reviewreceipt: the receipt scan and the git resolution move behind ports
 	// and a reviewreceipt/fsstore adapter.
 	"reviewreceipt": {
 		"os":      "H12",
 		"os/exec": "H12",
-	},
-
-	// roles: the chain store moves to roles/filechain.
-	"roles": {
-		"os":      "H7",
-		"runtime": "H7",
-		"syscall": "H7",
 	},
 
 	// shaper: the contained reads and the clearance store move to

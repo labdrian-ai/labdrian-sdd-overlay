@@ -3,6 +3,7 @@ package workflow
 import (
 	"errors"
 	"fmt"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -105,6 +106,22 @@ func TestClassifyLogBoundsTheSizeItWillRead(t *testing.T) {
 	under := ClassifyLog("proj-1", "wf-1", over[:MaxLogBytes])
 	if under.Classification != ClassificationMalformed || strings.Contains(under.Detail, "exceeding") {
 		t.Errorf("ClassifyLog(at the bound) = %q, %q, want a failure that is not about size", under.Classification, under.Detail)
+	}
+}
+
+// OversizedLog is the one answer for a log that is too large, whether ClassifyLog
+// was handed the bytes or an adapter knows the size without having read them.
+func TestOversizedLogNamesTheSizeAndIsTheAnswerClassifyLogGives(t *testing.T) {
+	const size = 3 * MaxLogBytes
+	got := OversizedLog(size)
+	want := fmt.Sprintf("workflow log is %d bytes, exceeding the maximum of %d", int64(size), MaxLogBytes)
+	if got.Classification != ClassificationMalformed || got.Detail != want || len(got.Events) != 0 {
+		t.Errorf("OversizedLog(%d) = %+v, want malformed, detail %q, no events", int64(size), got, want)
+	}
+
+	handed := ClassifyLog("proj-1", "wf-1", make([]byte, MaxLogBytes+1))
+	if again := OversizedLog(MaxLogBytes + 1); !reflect.DeepEqual(handed, again) {
+		t.Errorf("ClassifyLog(over) = %+v, OversizedLog(over) = %+v, want the same answer", handed, again)
 	}
 }
 

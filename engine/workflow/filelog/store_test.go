@@ -2,6 +2,7 @@ package filelog
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -10,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -76,18 +78,32 @@ func storeFilePath(t *testing.T, root, projectID, workflowID string) string {
 	return filepath.Join(root, "labdrian", "workflows", projectID, workflowID+".jsonl")
 }
 
-func TestCheckPlatformAcceptsOnlySupportedPlatforms(t *testing.T) {
-	supported := map[string]bool{"linux": true, "darwin": true, "windows": false, "freebsd": false}
-	for goos, want := range supported {
-		// Whether a platform is supported is statestore's answer, made by build
-		// constraints to linux and darwin; the store only reports it.
-		err := checkPlatform(want, goos)
-		if want != (err == nil) {
-			t.Fatalf("checkPlatform(%v, %q) = %v, want supported=%v", want, goos, err, want)
+// Which platforms have a store is decided where the code is built: statestore
+// compiles Supported to true on linux and darwin and to false everywhere else.
+// This is the mapping from the running platform to the answer NewStore acts on, so
+// the expectation is computed from the platform and the input is what NewStore
+// passes; neither is a value the test chooses to make itself pass.
+func TestTheRunningPlatformIsSupportedOnlyOnLinuxAndDarwin(t *testing.T) {
+	want := runtime.GOOS == "linux" || runtime.GOOS == "darwin"
+	if statestore.Supported != want {
+		t.Fatalf("statestore.Supported = %v on %s, want %v: only linux and darwin have a no-follow read", statestore.Supported, runtime.GOOS, want)
+	}
+	err := checkPlatform(statestore.Supported, runtime.GOOS)
+	if want != (err == nil) {
+		t.Fatalf("checkPlatform on %s = %v, want it to accept exactly the platforms that have a store", runtime.GOOS, err)
+	}
+}
+
+// A platform without a store is refused with the sentinel and named in the message.
+func TestCheckPlatformRefusesAnUnsupportedPlatformAndNamesIt(t *testing.T) {
+	for _, goos := range []string{"windows", "freebsd", "plan9"} {
+		err := checkPlatform(false, goos)
+		if !errors.Is(err, ErrUnsupportedPlatform) || !strings.Contains(err.Error(), goos) {
+			t.Errorf("checkPlatform(false, %q) = %v, want ErrUnsupportedPlatform naming the platform", goos, err)
 		}
-		if !want && (!errors.Is(err, ErrUnsupportedPlatform) || !strings.Contains(err.Error(), goos)) {
-			t.Fatalf("checkPlatform(%v, %q) err = %v, want ErrUnsupportedPlatform naming the platform", want, goos, err)
-		}
+	}
+	if err := checkPlatform(true, "linux"); err != nil {
+		t.Errorf("checkPlatform(true, linux) = %v, want nil", err)
 	}
 }
 
@@ -546,6 +562,103 @@ func TestStoreLoadMalformedWhenOversized(t *testing.T) {
 	}
 	if loaded.Classification != workflow.ClassificationMalformed {
 		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
+	}
+}
+
+// writeSparseLog makes a log file of size bytes that occupies almost no disk: the
+// size is real to every reader, the content is zeros.
+func writeSparseLog(t *testing.T, root, projectID, workflowID string, size int64) {
+	t.Helper()
+	writeRawLog(t, root, projectID, workflowID, "")
+	if err := os.Truncate(storeFilePath(t, root, projectID, workflowID), size); err != nil {
+		t.Fatalf("os.Truncate() = %v, want nil", err)
+	}
+}
+
+// A log larger than workflow.MaxLogBytes is malformed and is never read in full: the
+// documented bound is on what the store reads, so a huge file costs the bound, not
+// its size. The detail names the real size, as it always has.
+func TestStoreLoadNeverReadsMoreThanTheDocumentedBound(t *testing.T) {
+	const size = 512 << 20
+	root := setStoreEnv(t)
+	s, err := NewStore()
+	if err != nil {
+		t.Fatalf("NewStore() = %v, want nil", err)
+	}
+	writeSparseLog(t, root, "proj-1", "wf-1", size)
+
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	loaded, err := s.Load("proj-1", "wf-1")
+	runtime.ReadMemStats(&after)
+	if err != nil {
+		t.Fatalf("Load() = %v, want nil", err)
+	}
+
+	if loaded.Classification != workflow.ClassificationMalformed {
+		t.Fatalf("Load() classification = %q, want %q", loaded.Classification, workflow.ClassificationMalformed)
+	}
+	if want := fmt.Sprintf("workflow log is %d bytes, exceeding the maximum of %d", size, workflow.MaxLogBytes); loaded.Detail != want {
+		t.Errorf("Load() detail = %q, want %q", loaded.Detail, want)
+	}
+	// Reading the bound allocates a few times the bound while the buffer grows;
+	// reading the whole file allocates several times its size.
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 8*workflow.MaxLogBytes {
+		t.Errorf("Load() of a %d byte log allocated %d bytes, want at most %d: the log must not be read past the bound", size, allocated, 8*workflow.MaxLogBytes)
+	}
+}
+
+// The bound is exact: a log of MaxLogBytes is judged on its content like any other,
+// one byte more is judged on its size.
+func TestStoreLoadJudgesSizeOnlyBeyondTheBound(t *testing.T) {
+	tests := []struct {
+		name       string
+		size       int64
+		wantOnSize bool
+	}{
+		{"at the bound", workflow.MaxLogBytes, false},
+		{"one byte over", workflow.MaxLogBytes + 1, true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			root := setStoreEnv(t)
+			s, err := NewStore()
+			if err != nil {
+				t.Fatalf("NewStore() = %v, want nil", err)
+			}
+			writeSparseLog(t, root, "proj-1", "wf-1", tt.size)
+			loaded, err := s.Load("proj-1", "wf-1")
+			if err != nil {
+				t.Fatalf("Load() = %v, want nil", err)
+			}
+			if loaded.Classification != workflow.ClassificationMalformed {
+				t.Fatalf("Load() classification = %q, want malformed", loaded.Classification)
+			}
+			if onSize := strings.Contains(loaded.Detail, "exceeding the maximum"); onSize != tt.wantOnSize {
+				t.Errorf("Load() detail = %q, size judged = %v, want %v", loaded.Detail, onSize, tt.wantOnSize)
+			}
+		})
+	}
+}
+
+// The same bound holds for an append: an oversized log is refused as malformed, and
+// left exactly as it was.
+func TestStoreAppendRefusesAnOversizedLogWithoutReadingItAll(t *testing.T) {
+	const size = 64 << 20
+	root := setStoreEnv(t)
+	s, err := NewStore()
+	if err != nil {
+		t.Fatalf("NewStore() = %v, want nil", err)
+	}
+	writeSparseLog(t, root, "proj-1", "wf-1", size)
+
+	err = s.Append("proj-1", "wf-1", validCreatedEvent())
+	if !errors.Is(err, workflow.ErrRefuseMalformedState) {
+		t.Fatalf("Append() = %v, want ErrRefuseMalformedState", err)
+	}
+	info, statErr := os.Stat(storeFilePath(t, root, "proj-1", "wf-1"))
+	if statErr != nil || info.Size() != size {
+		t.Fatalf("log after the refused append: size %v, err %v, want %d bytes untouched", info, statErr, size)
 	}
 }
 

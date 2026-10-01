@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "project_id": "proj-1",
+  "goal_id": "goal-1",
+  "chain_id": "chain-1",
+  "seq": 2,
+  "from_role": "estimator",
+  "to_role": "builder",
+  "prev_sha256": "3a18b102a54c6092410b07c7cbc8cc9a55d79156522bc0fbeff521c6c2fa2c9f",
+  "payload_kind": "diff",
+  "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evidence": [],
+  "context": {"summary": "s", "decisions": [], "open_questions": []},
+  "status": "interrupted", "resume_reason": "network down"
+}

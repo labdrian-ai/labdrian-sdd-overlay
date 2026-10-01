@@ -157,7 +157,7 @@ type ProjectionResult struct {
 
 // AfterUnbind completes the note of a closed workflow with what the caller's
 // removal of the binding did, and returns the result; any other result is
-// returned unchanged. removed and err are what Store.UnbindIfUnchanged returned:
+// returned unchanged. removed and err are what BindingStore.UnbindIfUnchanged returned:
 // the note says the binding was removed only when removed is true and err is
 // nil; when err is ErrBindingChanged, or there is neither an error nor a
 // removal (the binding was already gone), the note says the binding was left

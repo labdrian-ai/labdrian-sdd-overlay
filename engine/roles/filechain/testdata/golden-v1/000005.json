@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "project_id": "proj-1",
+  "goal_id": "goal-1",
+  "chain_id": "chain-1",
+  "seq": 5,
+  "from_role": "reviewer",
+  "to_role": "delivery",
+  "prev_sha256": "92a1585c4826b5ed4d961f535f140bb3ac6e19de60864750ec5dd970595363c3",
+  "payload_kind": "diff",
+  "payload_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "evidence": [],
+  "context": {"summary": "s", "decisions": [], "open_questions": []},
+  "status": "completed"
+}

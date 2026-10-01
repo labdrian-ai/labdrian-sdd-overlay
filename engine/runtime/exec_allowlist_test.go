@@ -48,6 +48,7 @@ var execImportAllowed = map[string]string{
 var phase7Sources = []string{
 	"capability/*.go",
 	"projection/*.go",
+	"projection/fsstore/*.go",
 	"cmd/projection_hook.go",
 	"cmd/runtime_capabilities.go",
 	"cmd/runtime_probe.go",

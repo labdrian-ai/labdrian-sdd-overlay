@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles/filechain"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
@@ -262,7 +263,7 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 			return
 		}
 	}
-	store, err := roles.NewChainStore()
+	store, err := filechain.NewStore()
 	if err != nil {
 		fail("%v", err)
 		return
@@ -275,9 +276,9 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 	fmt.Fprintf(stdout, "roles append: stored record at %s\n%s\n", path, rolesAuthorityNote)
 }
 
-// loadRolesChain resolves a ChainStore and loads one chain's records.
+// loadRolesChain resolves the chain store and loads one chain's records.
 func loadRolesChain(o rolesOpts) ([]roles.ChainRecord, error) {
-	store, err := roles.NewChainStore()
+	store, err := filechain.NewStore()
 	if err != nil {
 		return nil, err
 	}

@@ -32,7 +32,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles/filechain"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
@@ -197,7 +197,7 @@ func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Life
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
-	chains, err := roles.NewChainStore()
+	chains, err := filechain.NewStore()
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}

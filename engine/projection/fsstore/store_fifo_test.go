@@ -1,6 +1,6 @@
 //go:build linux || darwin
 
-package projection_test
+package fsstore_test
 
 import (
 	"errors"

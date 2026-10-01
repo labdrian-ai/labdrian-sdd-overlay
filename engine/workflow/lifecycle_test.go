@@ -70,7 +70,7 @@ func (f *fakeGoalReader) LoadGoal(projectID, goalID string) (goal.Goal, error) {
 }
 
 // fakeChainReader is an injectable, in-memory RoleChainReader with the same
-// signature as roles.ChainStore.LoadChain, so a real ChainStore satisfies
+// signature as roles.ChainLog.LoadChain, so a real chain store satisfies
 // RoleChainReader directly; this fake exists only to control chain contents
 // deterministically in tests.
 type fakeChainReader struct {

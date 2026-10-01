@@ -523,7 +523,7 @@ func TestProjectionHookLeavesAFreshBindingAlone(t *testing.T) {
 	e.step(t, "proj-2", "wf-2", "start")
 	e.step(t, "proj-1", "wf-1", "close", "--outcome", "abandoned", "--reason", "done")
 
-	store, err := projection.NewStore()
+	store, err := newBindingStore()
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -1,4 +1,4 @@
-package projection_test
+package fsstore_test
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
 )
 
 // These tests pin BindIfUnchanged, the compare-and-swap a caller uses when it
@@ -21,7 +22,7 @@ import (
 
 // boundBinding binds the repository to project/wf and returns the binding the
 // store now holds, which is what a caller that read the store would have seen.
-func boundBinding(t *testing.T, s projection.Store, key, project, wf string, at time.Time) projection.Binding {
+func boundBinding(t *testing.T, s fsstore.Store, key, project, wf string, at time.Time) projection.Binding {
 	t.Helper()
 	mustBind(t, s, key, project, wf, at)
 	loaded := mustLoad(t, s, key)

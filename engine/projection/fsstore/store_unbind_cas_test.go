@@ -1,4 +1,4 @@
-package projection_test
+package fsstore_test
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
 )
 
 // These tests pin UnbindIfUnchanged, the removal a hook makes when the bound
@@ -174,8 +175,8 @@ func TestUnbindIfUnchangedRefusesInvalidInputBeforeAnythingIsRead(t *testing.T) 
 }
 
 func TestUnbindIfUnchangedOnAZeroStoreIsRefused(t *testing.T) {
-	var s projection.Store
-	if removed, err := s.UnbindIfUnchanged(hex64("a"), validBinding()); removed || !errors.Is(err, projection.ErrStoreNotInitialized) {
+	var s fsstore.Store
+	if removed, err := s.UnbindIfUnchanged(hex64("a"), validBinding()); removed || !errors.Is(err, fsstore.ErrStoreNotInitialized) {
 		t.Fatalf("UnbindIfUnchanged() = %v, %v, want false and ErrStoreNotInitialized", removed, err)
 	}
 }
