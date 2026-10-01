@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strconv"
 	"strings"
 	"sync"
@@ -48,15 +49,12 @@ func recordJSON(seq int, prevSHA, from, to, status, resumeReason string) string 
 }`
 }
 
-// newTestStore points the state home at a fresh temporary directory, and HOME at
-// another, so no test can reach the real user's state, and returns the store and the
-// state home.
+// newTestStore builds the store over a fresh temporary directory, so no test can
+// reach the real user's state, and returns the store and the state home.
 func newTestStore(t *testing.T) (Store, string) {
 	t.Helper()
 	root := t.TempDir()
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("XDG_STATE_HOME", root)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -269,48 +267,24 @@ func TestZeroStoreIsRefused(t *testing.T) {
 	}
 }
 
-// TestNewStoreErrorMessagesAreStable characterizes what NewStore reports for an
-// unusable environment: the state home resolution (statestore.Home) cannot change
-// the text a person sees.
-func TestNewStoreErrorMessagesAreStable(t *testing.T) {
-	tests := []struct {
-		name string
-		xdg  string
-		home string
-		want string
-	}{
-		{"relative XDG_STATE_HOME", "relative/path", "/home/someone", `role chain store: XDG_STATE_HOME "relative/path" is not absolute`},
-		{"relative HOME fallback", "", "relative/home", `role chain store: XDG_STATE_HOME is unset and HOME "relative/home" is not an absolute path`},
-		{"unset HOME fallback", "", "", `role chain store: XDG_STATE_HOME is unset and HOME "" is not an absolute path`},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("XDG_STATE_HOME", tt.xdg)
-			t.Setenv("HOME", tt.home)
-			if _, err := NewStore(); err == nil || err.Error() != tt.want {
-				t.Fatalf("NewStore() = %v, want %q", err, tt.want)
-			}
-		})
+// The store is built over the state home it is handed, which must be an absolute
+// path. Resolving it from the environment, and the text that prints for an unusable
+// environment, are the composition root's (cmd pins them).
+func TestNewStoreRefusesAStateHomeThatIsNotAbsolute(t *testing.T) {
+	for _, home := range []string{"", "relative/path", "./state"} {
+		_, err := NewStore(home)
+		want := fmt.Sprintf("role chain store: state home %q is not an absolute path", home)
+		if err == nil || err.Error() != want {
+			t.Errorf("NewStore(%q) = %v, want %q", home, err, want)
+		}
 	}
 }
 
-// With XDG_STATE_HOME unset the state home is $HOME/.local/state, as it always was.
-func TestNewStoreFallsBackToHomeLocalState(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("XDG_STATE_HOME", "")
-	t.Setenv("HOME", home)
-	s, err := NewStore()
-	if err != nil {
-		t.Fatalf("NewStore() = %v, want nil", err)
-	}
-	r1 := recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", "")
-	path, err := s.Append([]byte(r1))
-	if err != nil {
-		t.Fatalf("Append() = %v, want nil", err)
-	}
-	want := filepath.Join(home, ".local", "state", "labdrian", "role-chains", "proj-1", "goal-1", "chain-1", "000001.json")
-	if path != want {
-		t.Fatalf("Append() path = %q, want %q", path, want)
+// A platform without a no-follow open is refused when the store is built, with a
+// sentinel callers can match and the message every store of this kind prints.
+func TestTheUnsupportedPlatformSentinelKeepsItsMessage(t *testing.T) {
+	if got, want := ErrUnsupportedPlatform.Error(), "role chain store: unsupported platform"; got != want {
+		t.Errorf("ErrUnsupportedPlatform = %q, want %q", got, want)
 	}
 }
 
@@ -322,9 +296,7 @@ func TestChainStoreFollowsASymlinkedStateHome(t *testing.T) {
 	if err := os.Symlink(real, link); err != nil {
 		t.Fatalf("Symlink() = %v", err)
 	}
-	t.Setenv("HOME", t.TempDir())
-	t.Setenv("XDG_STATE_HOME", link)
-	s, err := NewStore()
+	s, err := NewStore(link)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -523,6 +495,86 @@ func race(n int, fn func(i int) error) []error {
 	close(start)
 	wg.Wait()
 	return errs
+}
+
+// paddedRecord is the first record of proj-1/goal-1/chain-1 grown to exactly size
+// bytes with blanks before the closing brace: still the same one valid document.
+func paddedRecord(size int) string {
+	record := recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", "")
+	return strings.Replace(record, "\n}", strings.Repeat(" ", size-len(record))+"\n}", 1)
+}
+
+// A record has no length of its own, so the store documents and keeps a bound on the
+// whole file (roles.MaxRecordBytes) and judges the size, not the content, beyond it.
+// The bound is exact: a record of that size is stored and read back like any other.
+func TestARecordAtTheBoundIsStoredAndReadBack(t *testing.T) {
+	s, _ := newTestStore(t)
+	record := paddedRecord(roles.MaxRecordBytes)
+	if _, err := s.Append([]byte(record)); err != nil {
+		t.Fatalf("Append(a record of MaxRecordBytes) = %v, want nil", err)
+	}
+	chain, err := s.LoadChain("proj-1", "goal-1", "chain-1")
+	if err != nil || len(chain) != 1 || string(chain[0].Raw) != record {
+		t.Fatalf("LoadChain() = %d records, %v, want the one record read back whole", len(chain), err)
+	}
+}
+
+// A record over the bound is refused before anything is written.
+func TestAppendRefusesAnOversizedRecordAndStoresNothing(t *testing.T) {
+	s, root := newTestStore(t)
+	_, err := s.Append([]byte(paddedRecord(roles.MaxRecordBytes + 1)))
+	want := fmt.Sprintf("role chain store: append: parse role handoff: roles: handoff record is too large: %d bytes, the maximum is %d", roles.MaxRecordBytes+1, roles.MaxRecordBytes)
+	if err == nil || err.Error() != want {
+		t.Fatalf("Append() = %v, want %q", err, want)
+	}
+	if _, statErr := os.Stat(filepath.Join(root, "labdrian")); !os.IsNotExist(statErr) {
+		t.Errorf("the refused record created %s (%v), want nothing written", root, statErr)
+	}
+}
+
+// A record file over the bound is never read in full: the bound is on what the store
+// reads, so a huge file costs the bound and not its size, and the refusal names the
+// size the file reported.
+func TestLoadChainRefusesAnOversizedRecordWithoutReadingItAll(t *testing.T) {
+	tests := []struct {
+		name string
+		size int64
+	}{
+		{"one byte over", roles.MaxRecordBytes + 1},
+		{"far over", 256 << 20},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, root := newTestStore(t)
+			path := filepath.Join(chainDir(root), "000001.json")
+			if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+				t.Fatal(err)
+			}
+			f, err := os.OpenFile(path, os.O_CREATE|os.O_WRONLY, 0o600)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if err := f.Truncate(tt.size); err != nil { // sparse: it occupies almost no disk
+				t.Fatal(err)
+			}
+			if err := f.Close(); err != nil {
+				t.Fatal(err)
+			}
+
+			var before, after runtime.MemStats
+			runtime.ReadMemStats(&before)
+			_, err = s.LoadChain("proj-1", "goal-1", "chain-1")
+			runtime.ReadMemStats(&after)
+
+			want := fmt.Sprintf("role chain store: record %q is %d bytes, exceeding the maximum of %d", path, tt.size, roles.MaxRecordBytes)
+			if err == nil || err.Error() != want {
+				t.Fatalf("LoadChain() = %v, want %q", err, want)
+			}
+			if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 8*roles.MaxRecordBytes {
+				t.Errorf("LoadChain() of a %d byte record allocated %d bytes, want at most %d: the record must not be read past the bound", tt.size, allocated, 8*roles.MaxRecordBytes)
+			}
+		})
+	}
 }
 
 func mustWrite(t *testing.T, path, content string) {

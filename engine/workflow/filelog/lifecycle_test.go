@@ -32,7 +32,7 @@ func (noChains) LoadChain(projectID, goalID, chainID string) ([]roles.ChainRecor
 }
 
 func TestALifecycleRunsToCompletionOverTheFileLogAcrossRestarts(t *testing.T) {
-	setStoreEnv(t)
+	root := setStoreEnv(t)
 	g := goal.Goal{
 		Version: 2, ProjectID: "proj-1", GoalID: "goal-1", Objective: "ship the thing", Scope: "bounded scope",
 		Constraints: []string{}, NonGoals: []string{}, AcceptanceCriteria: []string{"it works"},
@@ -48,7 +48,7 @@ func TestALifecycleRunsToCompletionOverTheFileLogAcrossRestarts(t *testing.T) {
 
 	// Every call builds its own Store and Lifecycle, as every command does.
 	lifecycle := func() workflow.Lifecycle {
-		store, err := NewStore()
+		store, err := NewStore(root)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,7 +91,7 @@ func TestALifecycleRunsToCompletionOverTheFileLogAcrossRestarts(t *testing.T) {
 		}
 	}
 
-	store, err := NewStore()
+	store, err := NewStore(root)
 	if err != nil {
 		t.Fatal(err)
 	}

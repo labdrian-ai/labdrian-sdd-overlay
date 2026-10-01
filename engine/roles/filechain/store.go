@@ -31,9 +31,10 @@
 //
 // It is built on engine/statestore (the state home, the directory chain, the
 // no-follow read, the immutable publish). Its error messages are the ones the store
-// printed when it lived in the roles package ("role chain store: ..."). On a
-// platform without a no-follow open (anything but linux and darwin) reading a
-// record fails closed instead of reading one it cannot vouch for.
+// printed when it lived in the roles package ("role chain store: ..."). A platform
+// without a no-follow open (anything but linux and darwin) is refused when the store
+// is built, instead of reading a record it cannot vouch for. A record is read through
+// a bound (roles.MaxRecordBytes), so a file of any size costs the bound, not its size.
 package filechain
 
 import (
@@ -58,21 +59,30 @@ var storeComponents = []string{"labdrian", "role-chains"}
 // Store keeps role handoff chains at
 // <state home>/labdrian/role-chains/<project_id>/<goal_id>/<chain_id>/<seq>.json
 // (seq zero-padded to six digits), outside every worktree and outside Engram. The
-// state home is $XDG_STATE_HOME, or $HOME/.local/state when XDG_STATE_HOME is
-// unset. It mirrors engine/shaper's FileStore: records are immutable, store
-// directories it creates are 0700, record files are 0600, and a symlink at any store
-// component is refused. This store grants no execution authority; it only persists
-// and verifies data.
+// state home is the directory NewStore was given: the composition root resolves it
+// ($XDG_STATE_HOME, or $HOME/.local/state when XDG_STATE_HOME is unset; see
+// statestore.Home), and this package reads no environment variable. Like the
+// shaper's clearance store, records are immutable, store directories it creates are
+// 0700, record files are 0600, and a symlink at any store component is refused. A
+// record is read through a bound (roles.MaxRecordBytes). This store grants no
+// execution authority; it only persists and verifies data.
 type Store struct {
 	stateHome string
 }
 
-// NewStore resolves the store from the environment (see statestore.Home). A set but
-// relative XDG_STATE_HOME, and an unset, empty, or relative HOME fallback, are
-// refused.
-func NewStore() (Store, error) {
-	stateHome, err := statestore.Home()
-	if err != nil {
+// ErrUnsupportedPlatform: the running platform has no store support.
+var ErrUnsupportedPlatform = errors.New("role chain store: unsupported platform")
+
+// NewStore builds the store over stateHome, the directory under which labdrian keeps
+// its local state (see statestore.Home); it must be an absolute path. It does not
+// check that the directory exists or is usable: that is checked when the store is
+// used. A platform without a no-follow open (statestore.RequirePlatform) is refused
+// with ErrUnsupportedPlatform.
+func NewStore(stateHome string) (Store, error) {
+	if err := statestore.RequirePlatform(ErrUnsupportedPlatform); err != nil {
+		return Store{}, err
+	}
+	if err := statestore.CheckHome(stateHome); err != nil {
 		return Store{}, fmt.Errorf("role chain store: %w", err)
 	}
 	return Store{stateHome: stateHome}, nil
@@ -121,6 +131,11 @@ func (s Store) LoadChain(projectID, goalID, chainID string) ([]roles.ChainRecord
 	if err != nil {
 		return nil, err
 	}
+	return loadChain(parts)
+}
+
+// loadChain is LoadChain over the directory chain dirParts built for the chain's key.
+func loadChain(parts []string) ([]roles.ChainRecord, error) {
 	if err := statestore.CheckDirs(parts); err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil
@@ -177,7 +192,11 @@ func (s Store) Append(data []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("role chain store: append: %w", err)
 	}
-	chain, err := s.LoadChain(h.ProjectID, h.GoalID, h.ChainID)
+	parts, err := s.dirParts(h.ProjectID, h.GoalID, h.ChainID)
+	if err != nil {
+		return "", fmt.Errorf("role chain store: append: %w", err)
+	}
+	chain, err := loadChain(parts)
 	if err != nil {
 		return "", fmt.Errorf("role chain store: append: %w", err)
 	}
@@ -185,10 +204,6 @@ func (s Store) Append(data []byte) (string, error) {
 		return "", err
 	}
 
-	parts, err := s.dirParts(h.ProjectID, h.GoalID, h.ChainID)
-	if err != nil {
-		return "", err
-	}
 	path := filepath.Join(filepath.Join(parts...), recordFileName(h.Seq))
 	if err := statestore.EnsureDirs(parts); err != nil {
 		return "", fmt.Errorf("role chain store: %w", err)
@@ -200,11 +215,17 @@ func (s Store) Append(data []byte) (string, error) {
 }
 
 // readRecord reads the record at path without following a final symlink and requires
-// the opened descriptor to be a regular file.
+// the opened descriptor to be a regular file. It reads at most roles.MaxRecordBytes+1
+// bytes: one past the bound is enough to know the record is too large, and the rest of
+// it is never read. A record over the bound is refused, naming the size the opened file
+// reported.
 func readRecord(path string) ([]byte, error) {
-	data, err := statestore.ReadFile(path, 0)
+	data, size, err := statestore.ReadFileSized(path, roles.MaxRecordBytes+1)
 	if err != nil {
 		return nil, recordError(path, err)
+	}
+	if len(data) > roles.MaxRecordBytes {
+		return nil, fmt.Errorf("role chain store: record %q is %d bytes, exceeding the maximum of %d", path, max(size, int64(len(data))), roles.MaxRecordBytes)
 	}
 	return data, nil
 }

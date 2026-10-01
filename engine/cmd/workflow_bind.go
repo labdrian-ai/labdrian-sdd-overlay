@@ -33,28 +33,8 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog"
 )
-
-// newBindingStore builds the binding store of the projection domain: the
-// file-backed adapter, over the state home resolved here from the environment
-// ($XDG_STATE_HOME, or $HOME/.local/state). The adapter reads no environment
-// variable itself, so this is the one place the binding store learns where the
-// state lives.
-func newBindingStore() (projection.BindingStore, error) {
-	stateHome, err := statestore.Home()
-	if err != nil {
-		return nil, fmt.Errorf("projection store: %w", err)
-	}
-	store, err := fsstore.NewStore(stateHome)
-	if err != nil {
-		return nil, err
-	}
-	return store, nil
-}
 
 // errNoRepository is why a binding verb refuses to run outside a repository:
 // the binding is keyed by the repository, so without one there is nothing to
@@ -160,7 +140,7 @@ func loadWorkflow(projectID, workflowID string) workflow.Loaded {
 	unavailable := func(err error) workflow.Loaded {
 		return workflow.Loaded{Classification: workflow.ClassificationUnavailable, Detail: err.Error()}
 	}
-	store, err := filelog.NewStore()
+	store, err := newWorkflowStore()
 	if err != nil {
 		return unavailable(err)
 	}

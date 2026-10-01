@@ -32,9 +32,7 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/goal"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles/filechain"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
@@ -193,11 +191,11 @@ var workflowProber = func() workflow.DependencyProber {
 // is visible to whoever ran the command, even though the operation still
 // succeeds.
 func newWorkflowLifecycle(cwd, goalFile string, stderr io.Writer) (workflow.Lifecycle, error) {
-	store, err := filelog.NewStore()
+	store, err := newWorkflowStore()
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}
-	chains, err := filechain.NewStore()
+	chains, err := newRoleChainStore()
 	if err != nil {
 		return workflow.Lifecycle{}, err
 	}

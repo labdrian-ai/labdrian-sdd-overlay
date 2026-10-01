@@ -67,7 +67,7 @@ func logPath(root string) string {
 func TestARecordedLogIsReadAsOwnedAndReplayedToItsFinalState(t *testing.T) {
 	data, _ := goldenLog(t)
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestAppendingToARecordedLogProducesTheRecordedBytes(t *testing.T) {
 		have := have
 		t.Run(fmt.Sprintf("after %d events", have), func(t *testing.T) {
 			root := setStoreEnv(t)
-			s, err := NewStore()
+			s, err := NewStore(root)
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -138,7 +138,7 @@ func TestWritingAWorkflowFromScratchProducesTheRecordedBytesAndLayout(t *testing
 	}
 	data, lines := goldenLog(t)
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatal(err)
 	}
