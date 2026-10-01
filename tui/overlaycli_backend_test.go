@@ -39,6 +39,25 @@ func realOverlayCLI(t *testing.T) (cli overlayCLI, home, stateDir string) {
 	return overlayCLI{root: root, env: env}, home, stateDir
 }
 
+// noMeta, as the metaContent of writeBackupFixture, writes no .meta file at all.
+const noMeta = "\x00__no_meta__"
+
+// writeBackupFixture creates a retained backup of target at the given
+// timestamp under the backend's state directory, with metaContent as its
+// .meta (tab-separated: version, digest, applied_at).
+func writeBackupFixture(t *testing.T, stateDir, target, timestamp, metaContent string) {
+	t.Helper()
+	dir := filepath.Join(stateDir, "backups", target, timestamp)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir backup fixture: %v", err)
+	}
+	if metaContent != noMeta {
+		if err := os.WriteFile(filepath.Join(dir, ".meta"), []byte(metaContent), 0o644); err != nil {
+			t.Fatalf("write .meta fixture: %v", err)
+		}
+	}
+}
+
 // TestOverlayCLIContract_CatalogIsWhatAllExpandsTo is the guarantee T1 exists
 // for: the targets the TUI is shown are exactly the targets the backend's
 // `--target all` acts on. The expansion is read from the real script's own

@@ -28,6 +28,8 @@ type model struct {
 	// catalog is the port the targets come from. The model holds no list of
 	// its own: targets stays empty until the catalog answers.
 	catalog TargetCatalog
+	// backups is the port restore asks for each target's latest backup.
+	backups BackupQuery
 
 	scr screen
 
@@ -92,6 +94,7 @@ type deps struct {
 	repoRoot string
 	rootErr  error
 	catalog  TargetCatalog
+	backups  BackupQuery
 }
 
 // newModel builds the initial state. It has no targets yet: the catalog is
@@ -105,6 +108,7 @@ func newModel(d deps) model {
 		repoRoot:      d.repoRoot,
 		rootErr:       d.rootErr,
 		catalog:       d.catalog,
+		backups:       d.backups,
 		scr:           screenTargets,
 		selected:      map[int]bool{},
 		actions:       Actions(),
@@ -436,10 +440,15 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // restoreConfirmInfo builds the restore action's per-invocation confirm
 // copy (D4): the base overwrite-warning text from Actions(), followed by
-// each selected target's most recent backup timestamp + version — read via
-// latestBackup, never a TUI-side timestamp picker (D4: the TUI always
-// targets the most recent backup only). The returned targets are the SAME
-// backup-bearing subset the confirm text names -- the caller must reuse it
+// each selected target's most recent backup timestamp + version — asked of
+// the BackupQuery port, never read from the state directory here and never a
+// TUI-side timestamp picker (D4: the TUI always targets the most recent
+// backup only). A target whose backups the query cannot confirm (an error,
+// not merely "none") is left out like one with none: a destructive rollback
+// is only offered for a backup the backend vouched for.
+//
+// The returned targets are the SAME backup-bearing subset the confirm text
+// names -- the caller must reuse it
 // for the actual invocation too, never recompute from m.selectedTargets()
 // (that recomputation is exactly the bug an adversarial review caught:
 // a target with zero backups would be invoked, fail, and make the whole
@@ -449,13 +458,22 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 // to refuse entering the confirm screen at all (R-003). candidates are the
 // selected targets restore can apply to at all (copy targets only).
 func (m model) restoreConfirmInfo(action Action, candidates []Target) (message string, targets []Target, ok bool) {
+	if m.backups == nil {
+		return "", nil, false
+	}
 	var lines []string
 	for _, t := range candidates {
-		ts, version, hasBackup := latestBackup(t.Name)
-		if !hasBackup {
+		backup, hasBackup, err := m.backups.LatestBackup(t.Name)
+		if err != nil || !hasBackup {
 			continue
 		}
-		lines = append(lines, fmt.Sprintf("%s: %s (%s)", t.Name, ts, version))
+		// "desconocida" (unknown): the backup exists and is restorable, only
+		// its version label could not be read.
+		version := backup.Version
+		if version == "" {
+			version = "desconocida"
+		}
+		lines = append(lines, fmt.Sprintf("%s: %s (%s)", t.Name, backup.Timestamp, version))
 		targets = append(targets, t)
 	}
 	if len(lines) == 0 {

@@ -228,12 +228,11 @@ func TestCapture_WithOnlyAPackageTargetSelectedIsANoOp(t *testing.T) {
 // TestRestore_NeverRunsAgainstAPackageTarget: even a package target that has
 // a backup directory is not offered a restore, because the backend refuses it.
 func TestRestore_NeverRunsAgainstAPackageTarget(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
-	writeBackupFixture(t, home, "pi", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
-
-	m := newTestModelWith(t, &fakeCatalog{targets: fourTargets()})
+	backups := &fakeBackups{byTarget: map[string]Backup{
+		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+		"pi":     {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+	}}
+	m := newLoadedModel(t, &fakeCatalog{targets: fourTargets()}, backups)
 	m.selected = map[int]bool{0: true, 3: true} // claude and pi
 	m.scr = screenActions
 	m.aCursor = findAction(t, m, "restore")
@@ -246,5 +245,10 @@ func TestRestore_NeverRunsAgainstAPackageTarget(t *testing.T) {
 	}
 	if got := targetNames(m.pendingTargets); got != "claude" {
 		t.Errorf("restore will run against %q, want only claude", got)
+	}
+	for _, asked := range backups.asked {
+		if asked == "pi" {
+			t.Error("the backend was asked for pi's backups, but restore never applies to a package target")
+		}
 	}
 }

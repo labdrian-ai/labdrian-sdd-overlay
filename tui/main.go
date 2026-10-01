@@ -23,6 +23,7 @@ func main() {
 		repoRoot: root,
 		rootErr:  rootErr,
 		catalog:  backend,
+		backups:  backend,
 	}), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Fprintln(os.Stderr, "error:", err)

@@ -2037,109 +2037,6 @@ func TestUpdate_ProbeDoneMsg_SetsBehindRelease(t *testing.T) {
 }
 
 // ---------------------------------------------------------------------------
-// Slice 3b: latestBackup (D3/D4) — pure filesystem read, no backend exec.
-// ---------------------------------------------------------------------------
-
-// writeBackupFixture creates a backup directory for target at the given
-// timestamp under home, with metaContent written to its .meta file (skipped
-// when metaContent is the sentinel noMeta).
-const noMeta = "\x00__no_meta__"
-
-func writeBackupFixture(t *testing.T, home, target, timestamp, metaContent string) {
-	t.Helper()
-	dir := filepath.Join(home, ".labdrian-overlay", "backups", target, timestamp)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir backup fixture: %v", err)
-	}
-	if metaContent != noMeta {
-		if err := os.WriteFile(filepath.Join(dir, ".meta"), []byte(metaContent), 0o644); err != nil {
-			t.Fatalf("write .meta fixture: %v", err)
-		}
-	}
-}
-
-// TestLatestBackup_NoBackupsReturnsNotOK verifies a target with zero
-// retained backups (or no backups directory at all) reports ok=false — the
-// exact signal restore-selectability gating depends on (R-003).
-func TestLatestBackup_NoBackupsReturnsNotOK(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	if _, _, ok := latestBackup("claude"); ok {
-		t.Error("latestBackup() for a target with no backups directory must return ok=false")
-	}
-}
-
-// TestLatestBackup_PicksLexicallyLastAsMostRecent verifies multiple backups
-// resolve to the chronologically newest one (D4: TUI always targets the
-// most recent backup only), and that its recorded version is read from
-// .meta (tab-separated: version, digest, applied_at).
-func TestLatestBackup_PicksLexicallyLastAsMostRecent(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", "v1.2.0\tabc123\t2026-01-01T00:00:00Z")
-	writeBackupFixture(t, home, "claude", "20260215T120000Z", "v1.3.0\tdef456\t2026-02-15T12:00:00Z")
-
-	ts, version, ok := latestBackup("claude")
-	if !ok {
-		t.Fatal("latestBackup() must report ok=true when backups exist")
-	}
-	if ts != "20260215T120000Z" {
-		t.Errorf("timestamp = %q, want the lexically/chronologically last one", ts)
-	}
-	if version != "v1.3.0" {
-		t.Errorf("version = %q, want v1.3.0 (from the most recent backup's .meta)", version)
-	}
-}
-
-// TestLatestBackup_NeverDeployedMetaStillReportsOK verifies a backup whose
-// .meta is the literal "NEVER_DEPLOYED" sentinel (the backup was taken
-// while the target had no prior recorded version) still reports ok=true —
-// the backup itself is restorable, only the version label degrades to
-// "unknown".
-func TestLatestBackup_NeverDeployedMetaStillReportsOK(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", "NEVER_DEPLOYED")
-
-	ts, version, ok := latestBackup("claude")
-	if !ok {
-		t.Fatal("latestBackup() must report ok=true even when .meta is NEVER_DEPLOYED")
-	}
-	if ts != "20260101T000000Z" {
-		t.Errorf("timestamp = %q, want 20260101T000000Z", ts)
-	}
-	if version == "v1.2.0" {
-		t.Errorf("version must not fabricate a real version from a NEVER_DEPLOYED meta, got %q", version)
-	}
-}
-
-// TestLatestBackup_MissingMetaStillReportsOK verifies a backup directory
-// with no .meta file at all (corrupt/partial write) still reports ok=true
-// with a degraded version label, mirroring cmd_restore --list's own
-// "unknown" fallback rather than erroring out.
-func TestLatestBackup_MissingMetaStillReportsOK(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", noMeta)
-
-	_, _, ok := latestBackup("claude")
-	if !ok {
-		t.Fatal("latestBackup() must report ok=true even when .meta is missing")
-	}
-}
-
-// TestLatestBackup_TargetIsolation verifies one target's backups never leak
-// into another target's lookup.
-func TestLatestBackup_TargetIsolation(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", "v1.0.0\tabc\t2026-01-01T00:00:00Z")
-
-	if _, _, ok := latestBackup("opencode"); ok {
-		t.Error("latestBackup(\"opencode\") must be ok=false when only \"claude\" has backups")
-	}
-}
-
-// ---------------------------------------------------------------------------
 // Slice 3b: Actions() registration for restore and the folded-in version
 // command (R-011).
 // ---------------------------------------------------------------------------
@@ -2238,8 +2135,7 @@ func findAction(t *testing.T, m model, command string) int {
 // backups stays on screenActions -- restore is never offered/run for a
 // target with no backup to restore.
 func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // no backups anywhere
-	m := newTestModel(t)
+	m := newTestModel(t) // its backup query holds no backups
 	m.scr = screenActions
 	m.aCursor = findAction(t, m, "restore")
 
@@ -2261,11 +2157,9 @@ func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
 // the EXACT existing confirm->run->result pattern (Mutating: true ->
 // screenConfirm -> y/enter -> screenRunning).
 func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
-
-	m := newTestModel(t)
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]Backup{
+		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+	}})
 	// Only "claude" selected, to make the confirm text assertion unambiguous.
 	m.selected = map[int]bool{0: true, 1: false, 2: false}
 	m.scr = screenActions
@@ -2311,12 +2205,10 @@ func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *t
 // confirm screen still proceeds (naming only the targets that do have one)
 // rather than refusing the whole action.
 func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
 	// "opencode" deliberately has no backup.
-
-	m := newTestModel(t)
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]Backup{
+		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+	}})
 	m.selected = map[int]bool{0: true, 1: true, 2: false} // claude + opencode
 	m.scr = screenActions
 	m.aCursor = findAction(t, m, "restore")

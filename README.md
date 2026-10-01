@@ -118,7 +118,9 @@ selected, and re-checks the list with the backend right before it does; with any
 unticked it runs the action once per ticked target instead. Capture and restore are
 per-file operations that the backend refuses for a package target such as `pi`, so they
 run on the selected `copy` targets only. If the list cannot be read the screen says so and
-offers no target action.
+offers no target action. Likewise the backup that "Restaurar respaldo" offers is read with
+`restore --target <t> --list`, so it follows the backend's `STATE_DIR`; a target whose
+backups the backend cannot confirm is not offered a restore.
 
 ### Action map
 

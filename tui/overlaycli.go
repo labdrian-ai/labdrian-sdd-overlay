@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -44,6 +45,61 @@ func (c overlayCLI) Targets() ([]Target, error) {
 		return nil, fmt.Errorf("labdrian-overlay targets: %w", err)
 	}
 	return targets, nil
+}
+
+// LatestBackup implements BackupQuery with `labdrian-overlay restore --target
+// <target> --list`. The backend owns the backup layout and the STATE_DIR it
+// lives under, so the TUI no longer reads that directory itself.
+func (c overlayCLI) LatestBackup(target string) (Backup, bool, error) {
+	out, err := c.query("restore", "--target", target, "--list")
+	if err != nil {
+		return Backup{}, false, err
+	}
+	backup, ok, err := parseBackupList(out, target)
+	if err != nil {
+		return Backup{}, false, fmt.Errorf("labdrian-overlay restore --target %s --list: %w", target, err)
+	}
+	return backup, ok, nil
+}
+
+// backupEntry matches one retained backup in `restore --list`:
+// "  <timestamp> (<version>)".
+var backupEntry = regexp.MustCompile(`^ {2}(\S+) \((.*)\)$`)
+
+// backendUnknownVersion is how `restore --list` spells a version it could not
+// read from a backup's .meta.
+const backendUnknownVersion = "unknown"
+
+// parseBackupList reads the output of `restore --target <target> --list`:
+// either "No backups available for target '<target>'." or a header naming the
+// target followed by one entry per retained backup, newest last. It returns
+// the newest. It is strict: anything else, including a listing for another
+// target, is an error, because a rollback is only ever offered for a backup
+// the backend confirmed.
+func parseBackupList(output, target string) (Backup, bool, error) {
+	text := strings.TrimSpace(output)
+	if text == fmt.Sprintf("No backups available for target '%s'.", target) {
+		return Backup{}, false, nil
+	}
+	lines := strings.Split(text, "\n")
+	if want := fmt.Sprintf("Backups for %s (newest last):", target); lines[0] != want {
+		return Backup{}, false, fmt.Errorf("unrecognized listing, expected %q first, got %q", want, lines[0])
+	}
+	if len(lines) < 2 {
+		return Backup{}, false, errors.New("the listing names no backups")
+	}
+	var newest Backup
+	for _, line := range lines[1:] {
+		m := backupEntry.FindStringSubmatch(line)
+		if m == nil {
+			return Backup{}, false, fmt.Errorf("unrecognized backup entry %q", line)
+		}
+		newest = Backup{Timestamp: m[1], Version: m[2]}
+		if newest.Version == backendUnknownVersion {
+			newest.Version = ""
+		}
+	}
+	return newest, true, nil
 }
 
 // query runs one backend subcommand and returns its stdout. A failure carries

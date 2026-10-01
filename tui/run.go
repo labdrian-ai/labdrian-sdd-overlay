@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"sort"
 	"strconv"
 	"strings"
 
@@ -678,56 +677,4 @@ func runBackend(root string, action Action, selected []Target, scope targetScope
 		res.verdicts = ParseSyncCheck(res.output)
 	}
 	return res
-}
-
-// latestBackup reports target's most recent retained backup (D3/D4), read
-// directly from the filesystem rather than by invoking the backend's `cmd
-// restore --list` — the backup layout (~/.labdrian-overlay/backups/<target>/
-// <utc-ts>/) is a stable, documented contract (D3), and a plain
-// os.ReadDir/os.ReadFile pair is simpler and needs no process spawn. Entry
-// names are UTC timestamps (YYYYMMDDTHHMMSSZ, optionally suffixed on a
-// same-second collision per backup_target/prune_backups); lexical sort is
-// chronological sort for that format, mirroring the bash backend's own
-// re-sort of the bare basenames. ok is false only when target has zero
-// retained backups — the exact signal the TUI needs to decide whether
-// restore is available for that target (R-003: never offer restore for a
-// target with zero backups).
-func latestBackup(target string) (timestamp, version string, ok bool) {
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", "", false
-	}
-	backupsDir := filepath.Join(home, ".labdrian-overlay", "backups", target)
-	entries, err := os.ReadDir(backupsDir)
-	if err != nil {
-		return "", "", false
-	}
-
-	var names []string
-	for _, e := range entries {
-		if e.IsDir() {
-			names = append(names, e.Name())
-		}
-	}
-	if len(names) == 0 {
-		return "", "", false
-	}
-	sort.Strings(names)
-	timestamp = names[len(names)-1]
-
-	// version defaults to "desconocida" (unknown) — a missing/unreadable
-	// .meta, or a prior state of "NEVER_DEPLOYED" (the backup was taken
-	// while the target had no recorded version yet), both mean the backup
-	// itself still exists and is restorable; only the version label is
-	// unknown. Mirrors cmd_restore --list's own "unknown" fallback.
-	version = "desconocida"
-	if data, err := os.ReadFile(filepath.Join(backupsDir, timestamp, ".meta")); err == nil {
-		meta := strings.TrimSpace(string(data))
-		if meta != "" && meta != "NEVER_DEPLOYED" {
-			if fields := strings.Split(meta, "\t"); len(fields) > 0 && fields[0] != "" {
-				version = fields[0]
-			}
-		}
-	}
-	return timestamp, version, true
 }
