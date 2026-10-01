@@ -1,0 +1,99 @@
+# ODD Task — Phase 9: Consolidation and polish
+
+> **Roadmap authority:** [Standalone Platform Master Roadmap](../../openspec/decisions/standalone-platform-roadmap.md), canonical **Phase 9 — Consolidation and polish** (inserted by the user on 2026-10-01): pay down the debt Phases 5–8 deferred — the SDD/ODD skill rewrite for labdrian's sub-agent team and the deferred cleanup backlog — before building Observability (Phase 10) and Release (Phase 11).
+
+## Problem and why
+
+Phases 5–8 shipped with a recorded backlog of deferred items, an approval baseline that exempts 27 skills failing the lint budget, and skills that were written for a single agent rather than a team of role agents. The user decided the cleanup must not be left out, and set a governing principle: the whole system must align with hexagonal architecture and clean code to the maximum, whatever it costs.
+
+## Inventory
+
+Ultracode workflow `wf_afe65bf2-736` (9 read-only agents) collected 124 items from Engram, the Phase 5–8 ledgers, the skills, and repository state, and verified each against `main` `f19a33c` (Engram #3855). Items proven fixed were removed with their proof (install-hooks summary `28d2082`; workflow store flake `a6d10dc`; #309 and #312 code items; Phase 5 residuals C3/C4; SL2 `--pre`).
+
+## Decisions (user, 2026-10-01)
+
+- **Principle:** hexagonal architecture and clean code to the maximum, whatever it costs; every design fork offers and prefers the maximum-decoupling option (Engram #3856).
+- **Q1 hook upgrade:** `install-hooks` replaces owned entries in place when their command changes; a test pins that old unquoted entries are recognized as owned.
+- **Q2 upstream core skills:** create new overlay-owned role skills for the sub-agent team; leave the 15 upstream core skills untouched; document them in the vault as sources.
+- **Q3 untracked tool directories:** `.gitignore` `.agents/`, `.claude/skills/`, `.pi/`, `skills-lock.json`; resolve the tracked `skills/archify` symlink to untracked content.
+- **Q4 #293 frozen promoted pages:** doctor-only report with the explicit-promote / pin remedy.
+- **Q5 #312 registry/engine coupling:** the skills domain reads its own registry model through a port; the YAML file is an adapter; tolerant reader with must-understand fields; versioned adapters for format changes.
+- **Q6 profile retirement:** snapshot the resolved profile into the workflow log at creation; workflows are self-contained; the catalog only serves new workflows.
+- **Q7 runtime adapters:** archive `runtime-roster` as superseded; implement R-141 as an `Adapter` port with a self-registering adapter registry; an unregistered target is an error.
+- **Q8 project identity:** a `ProjectIdentity` port with ordered adapters (explicit `--project-id`, origin remote read from `.git/config` without running git, directory name); a verb to declare project-scoped skills (R-046/R-047).
+- **Q9 open SDD changes:** archive `overlay-versioned-releases`; finish `longterm-mem-knowledge-ingestion` as an adapter behind an ingestion port, before the skills documentation.
+- **Q10 orphan branches:** delete `pr137`, `feat/archive-reconcile-guard`, `fix/ci-full-history-for-engine-tests` (superseded on main); keep `wip/audit-remediation-snapshot` (review it) and `sdd/shared-project-vault` (input for the vault work).
+- **Q11 additions:** `.gitattributes` `skills/** -text`; a deadline on the Pi subprocess through an injected `CommandRunner` port; a real `memory:procedural-skills` signal through a project-context port; a guarded sandbox test of the Pi global tier. OpenCode `skills` stays `partial`.
+- **Q12 goal-v2 open question:** close as superseded.
+- **Vault (user):** the skills analysis lives in the project vault `~/labdrian-brain` (registered in `~/.labdrian-overlay/vaults.json`): one page per skill and per role, comparisons, open questions; research and thinking happen there; the new skills are designed from that knowledge. The user's uncommitted `.obsidian/` changes are never touched.
+
+## Tasks
+
+Wave 0 — hygiene (each GitHub or destructive step asks for approval at the time):
+- [x] C1 — Close delivered issues #366–#371 and #297 with evidence.
+- [x] C2 — Prune worktrees and merged branches; delete the three superseded orphan branches (Q10).
+- [x] C3 — `.gitignore` the tool directories; resolve the `skills/archify` symlink; `.gitattributes` `skills/** -text` (Q3, Q11-1). Done in `887a519`.
+- [x] C3b — Fix the Codex skill frontmatter outside the repository (needs explicit authorization for `~/.codex`).
+- [x] C9 — Stale-text sweep (roadmap and ledgers, canonical spec, superseded notes, Q12); close #309. Text done in `06bbea2`; closing #309 is a GitHub step that still waits for approval.
+
+Wave 1 — architecture:
+- [ ] C17 — Hexagonal alignment audit (read-only): map every engine and longterm-mem package to domain / port / adapter, list each boundary violation (domain code that knows files, processes, formats, or concrete runtimes), and propose the order of fixes; the user approves before any refactor.
+
+Wave 2 — engine, hooks, ports:
+- [ ] C4 — `synctrigger` platform split; `GOOS=windows` build green.
+- [ ] C5 — `synctrigger` runner hardening (#301).
+- [ ] C6 — Hook recognizer consolidation and identity tightening.
+- [ ] C7 — Quote the binary path in every hook family; in-place upgrade of installed entries (Q1).
+- [ ] C18 — Runtime `Adapter` port with self-registering registry (Q7); archive `runtime-roster`.
+- [ ] C19 — Registry port, YAML adapter, tolerant reader, must-understand fields, versioned adapters (Q5); closes #312.
+- [ ] C20 — Profile snapshot in the workflow log (Q6).
+- [ ] C21 — `ProjectIdentity` port and adapters; project-scoped declaration verb (Q8).
+- [ ] C8 — `skills uninstall`; `project-status` lists install records.
+- [ ] C10 — longterm-mem: `doctor` report for frozen pages (Q4); detector status for candidates without an Engram record; the deploy path rebuilds longterm-mem; Pi `CommandRunner` with deadline; procedural-skills presence through a project-context port; guarded Pi global-tier test (Q11).
+
+Wave 3 — specs and ingestion:
+- [ ] C11 — Archive and spec-sync the four skill aliases with renumbering; archive `overlay-versioned-releases`.
+- [ ] C22 — Finish `longterm-mem-knowledge-ingestion` as an adapter behind an ingestion port (Q9).
+
+Wave 4 — skills for the sub-agent team (last):
+- [ ] C12 — Vault documentation in `~/labdrian-brain` (one page per skill and per role, comparisons, open questions), ingested through C22; research and thinking in the vault; a per-role design the user approves before any rewrite.
+- [ ] C13 — Rewrite the custom inception family.
+- [ ] C14 — Rewrite the remaining custom planning skills.
+- [ ] C15 — New overlay-owned role skills derived from the core skills (Q2), one PR per role.
+- [ ] C16 — Every new or rewritten skill passes lint, carries an approval record, and leaves the baseline.
+
+## Scope and constraints
+
+- Hexagonal principle governs every task. TDD strict (`go test` from `engine/` and `longterm-mem/`). RDD on. One slice at a time. Candidates under about 150 KB.
+- Tests never touch real state. Destructive, GitHub, deploy, vault-write, and `~/.codex` steps each need explicit approval at the time.
+- Ultracode: the user opted into multi-agent workflows for this phase.
+
+## Unclear (investigate inside the tasks)
+
+Per-class degradation warnings (sources disagree); the Phase 8 non-blocking findings triage; branch counts; whether the gentle-ai sync overwrites `~/.claude/skills`; `wip/audit-remediation-snapshot` content vs main.
+
+## Progress and evidence
+
+- Inventory (Engram #3855); decisions Q1–Q12 and the principle (this ledger; Engram #3856).
+- **C1** (user OK 2026-10-01): closed #366–#371 (delivered by PRs #372–#377, merged 2026-09-21 through tracker #379 into main) and #297 (delivered by `1495b21`, in main), each with an evidence comment.
+- **C2** (user OK 2026-10-01): removed 5 worktrees (goal-v2; three `/tmp/labdrian-goal-*`; review-workflow-profile, whose untracked ledger was an older version of the one on main) and pruned 3 missing ones; kept `labdrian-standalone` and the gentle-ai candidate view. Deleted 90 local branches (every commit verified in main with `git cherry`, plus the three Q10 orphans); kept `main`, `chore/phase9-hygiene`, `sdd/shared-project-vault`, `wip/audit-remediation-snapshot`, `wip/standalone-platform`. Deleted 3 remote branches (`fix/pre-sdd-entry-contract-assets` and `union/pr1b-merge`, contained in main; `feat/archive-reconcile-guard`, Q10).
+- **Mode and routes.** TDD strict, runner `go test` from `engine/`, resolved from the project configuration (this ledger). C3 and C9 ran as one delegated writer (each touches 2 or more non-trivial files) on branch `chore/phase9-hygiene` in the `~/labdrian-sdd-overlay-shaper` worktree, from `main` `f19a33c`. The commits are unpushed.
+- **C3** — `887a519` `chore(repo): ignore tool installs and keep skill bytes exact`.
+  - `.gitignore` gains `/.agents/`, `/.claude/skills/`, `/.pi/`, and `/skills-lock.json` (anchored at the repository root), plus `/skills/archify`. `skills/archify`, the only tracked symlink, is untracked with `git rm --cached`. `.gitattributes` is new, with `skills/** -text`.
+  - Test `skills:TestSkillFilesKeepTheirExactBytesUnderLineEndingConversion` pins the rule by what git does under `core.autocrlf` in a throwaway repository, with a control file outside `skills/` that proves the conversion is active. RED observed twice (no `.gitattributes`; then a `.gitattributes` without the rule, where git rewrote the CRLF skill to LF), GREEN with the rule.
+  - Archify dependency check: `rg -n archify` over tracked and untracked files found only a synthetic tar fixture (`engine/pipkg/extract_tar_internal_test.go`), two example comments (`engine/pipkg/pipkg.go:628`, `engine/skills/project_register_test.go:362`), and archived historical docs. Nothing in `bin/`, `overlay.manifest`, `skills.registry.yaml`, the README, `docs/`, `tools/`, `tui/`, `agents/`, `pi/`, or `opencode/` depends on the link being tracked.
+  - Checks: with throwaway installer output in the worktree, `git status --short --ignored` and `git check-ignore -v` showed the four paths and `skills/archify` ignored; `.claude/settings.json` stays tracked; `git ls-files -ci --exclude-standard` prints nothing. `skills validate` exits 0 (37 skills, 77 files, 37 grandfathered) before the change, with the local link resolving, with it dangling, and in a clean clone of the branch where `skills/archify` is absent.
+- **C9** — `06bbea2` `docs: sweep stale text after Phases 7 and 8`.
+  - Roadmap Phase 7 and Phase 8 rows: the "not deployed" text and the "Next action" cells are corrected; the evidence in the rows is untouched.
+  - `odd/tasks/runtime-adapters.md`: the install-hooks summary backlog item is marked done in `28d2082`. The "26 commits" figure was recounted from the ledger's own commit lists (25 commits in slices S1 to S8, plus the RA9 test-comment commit `bf55b52`) and is exact, so it was left.
+  - `openspec/specs/procedural-skill-registration/spec.md`: the global-promotion requirement and its heading now say that the global tier has the Phase 8 approval record and the project tier stays autonomous. No test pins this spec text; the section 12 pin on the contract was already current.
+  - Superseded notes: the sync-triggers proposal (replaced by its `design.md` and the delivered verb `sync-trigger`; PRs #299, #300, #302; issue #301) and the pi-runtime-target proposal and apply-progress (replaced by design corrections A1 to A5 and five slices, PRs #308, #310, #311, #313, #314; issue #309).
+  - `odd/tasks/goal-v2-identity.md`: the next step is closed as superseded (Q12), citing the Shaper handoff contract, Phase 6 git-free provenance, and the Phase 9 `ProjectIdentity` port.
+- **Checks** (from `engine/`, after each commit): `gofmt -l .` clean, `go vet ./...` ok, `go test -count=1 ./...` 26 packages ok. The CI archive guards (`tools/archive-anchor-gate`, `tools/archive-reconcile`) run locally against the worktree exit 0.
+
+- **C3b** (user authorization for `~/.codex`, 2026-10-01): `~/.codex/skills/software-architect-consultor-senior-de-arquitectura-y-diseno/SKILL.md` had no front matter at all (it started with a Markdown title), so Codex could not read its name or description. Backed up to `~/.labdrian-phase9-backup-20261001T024838/SKILL.md`; prepended a front matter with `name` (the directory name) and a one-line Spanish `description` matching the skill's own trigger section; the body is byte-identical to the backup (`cmp`). The file is outside the repository and outside labdrian's registry, so the overlay lint's `license`/`metadata` requirements do not apply to it.
+- **Wave 0 native review** — lineage `review-f617c59cd19bbe12` over `f19a33c..ad5bb45` (high; the process evidence is a comment in `engine/pipkg/pipkg.go`), granted, four lenses; approved first pass, acknowledged. Folded into the first Wave 2 commit: `R3-env-override` (the `.gitattributes` test appends git environment variables instead of replacing existing ones), `R4-1` (that test runs git with no deadline and no `GIT_TERMINAL_PROMPT=0`). Fixed here: `R2-next-step-stale-wave0` (this section's next step). Cleanup: the remaining suggestions.
+
+## Next step
+
+Wave 0 is done except closing #309 (with the delivery of this branch, on the user's approval). Then Wave 1: C17, the read-only hexagonal alignment audit.

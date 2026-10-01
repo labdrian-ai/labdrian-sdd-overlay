@@ -624,9 +624,9 @@ func resolveSymlinkTarget(realDest, base, linkTarget string) (string, error) {
 // would resolve outside dest -- git archive never produces such entries for
 // a normal repository, but this is defense in depth against a corrupted or
 // crafted archive stream. A symlink entry is recreated as a real symlink on
-// disk when its link target resolves inside dest (a tracked symlink like
-// skills/archify -> ../.agents/skills/archify is legitimate git-archive
-// output); a symlink whose target would resolve outside dest is refused, as
+// disk when its link target resolves inside dest (a tracked symlink such as
+// skills/<id> -> ../<dir>/<id> is legitimate git-archive output); a symlink
+// whose target would resolve outside dest is refused, as
 // is any hard-link entry -- there is no legitimate use case for one in a
 // git archive of tracked content.
 func extractTar(r io.Reader, dest string) error {

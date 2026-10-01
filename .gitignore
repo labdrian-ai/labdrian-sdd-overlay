@@ -26,6 +26,18 @@ coverage.html
 # Local AI runtime state
 .atl/
 
+# Directories and files that external skill installers write into a checkout.
+# They are the installer's output, not overlay content.
+/.agents/
+/.claude/skills/
+/.pi/
+/skills-lock.json
+
+# Local link to the archify skill that the installer put under .agents/. It is in
+# neither skills.registry.yaml nor overlay.manifest, so a tracked copy would
+# dangle in every clean clone.
+/skills/archify
+
 # Compiled guard binaries: `go build ./...` inside a tools/ module writes the
 # binary next to its source, where `git add -A` will sweep it in.
 /tools/*/archive-anchor-gate

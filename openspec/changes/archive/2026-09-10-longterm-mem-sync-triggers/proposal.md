@@ -1,5 +1,7 @@
 # Proposal: longterm-mem sync triggers at session close and archive
 
+> **Superseded in part.** The "Approach" section is the pre-design shape of the runner and the hook. `design.md` in this directory replaces it, and the delivered change (PRs #299, #300, #302) uses the verb `sync-trigger`, not `longterm-mem-sync`; `sync-trigger` is also the hook identity token; and `SessionEnd` is the third hook family, not the fifth. The text below is kept unedited as the historical record (issue #301).
+
 ## Intent
 
 `longterm-mem sync` exists but nothing invokes it automatically; the vault only fills when an agent remembers to call `promote`/`sync`. With curated-`topic_key` eligibility landed (`longterm-mem-promotion-scoping`, 0a461d9), an unattended direct-write sync is now safe enough to wire to two natural moments: Claude Code `SessionEnd` (DEC-001) and SDD change archive (whole project, DEC-002; direct write, DEC-003). Every trigger must be best-effort: never fail, block, or delay the host (R-003).
