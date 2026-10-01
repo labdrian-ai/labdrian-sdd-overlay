@@ -68,6 +68,8 @@ func (m model) View() string {
 		body = m.viewActions()
 	case screenConfirm:
 		body = m.viewConfirm()
+	case screenLookup:
+		body = titleStyle.Render(m.spinner.View() + " Consultando respaldos…")
 	case screenRunning:
 		body = m.viewRunning()
 	case screenResult:
@@ -194,6 +196,8 @@ func (m model) footerKeys() string {
 		return "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
 	case screenConfirm:
 		return "y/enter confirmar  ·  n/esc cancelar"
+	case screenLookup:
+		return "esc volver  ·  q salir"
 	case screenRunning:
 		return "Ejecutando…"
 	case screenResult:
@@ -325,6 +329,20 @@ func (m model) viewTargets() string {
 	var b strings.Builder
 	b.WriteString(titleStyle.Render("Seleccionar destinos") + "\n")
 
+	// Until the backend's catalog is read there is nothing to list, and when it
+	// cannot be read the screen says so instead of offering a guessed list.
+	switch {
+	case !m.targetsLoaded:
+		b.WriteString("\n" + dimStyle.Render("Cargando destinos…"))
+		return b.String()
+	case m.targetsErr != nil:
+		wrap := lipgloss.NewStyle().Width(max(m.contentWidth()-4, 20))
+		b.WriteString("\n" + errStyle.Render("No se pudo leer el catálogo de destinos del backend.") + "\n")
+		b.WriteString(wrap.Render(m.targetsErr.Error()) + "\n\n")
+		b.WriteString(dimStyle.Render("Sin el catálogo no hay acciones sobre destinos."))
+		return b.String()
+	}
+
 	for i, t := range m.targets {
 		cursor := "  "
 		if i == m.tCursor {
@@ -401,8 +419,10 @@ func (m model) viewActions() string {
 }
 
 func (m model) viewConfirm() string {
+	// Name the targets this action will actually run against, the same set
+	// updateActions computes: capture and restore skip package targets.
 	sel := []string{}
-	for _, t := range m.selectedTargets() {
+	for _, t := range m.pendingAction.applicableTo(m.selectedTargets()) {
 		sel = append(sel, t.Name)
 	}
 

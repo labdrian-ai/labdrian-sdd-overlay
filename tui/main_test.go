@@ -45,7 +45,7 @@ func TestConsistentLeftAxis(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			updated, _ := m.Update(tea.WindowSizeMsg{Width: width, Height: 40})
 			m = updated.(model)
 			m.scr = tc.scr
@@ -107,7 +107,9 @@ func spinnerTickMsgForTest() tea.Msg {
 // TestInitialRenderShowsTargets verifies the first screen lists all three
 // targets and that they default to selected.
 func TestInitialRenderShowsTargets(t *testing.T) {
-	tm := teatest.NewTestModel(t, newModel(), teatest.WithInitialTermSize(120, 40))
+	// Start unloaded, so the targets reach the screen the way they do in the
+	// program: from the catalog command Init issues.
+	tm := teatest.NewTestModel(t, unloadedTestModel(t, &fakeCatalog{targets: threeCopyTargets()}), teatest.WithInitialTermSize(120, 40))
 
 	// Wait for a frame that shows all three targets, each selected ([✓]).
 	teatest.WaitFor(t, tm.Output(), func(b []byte) bool {
@@ -131,7 +133,7 @@ func TestInitialRenderShowsTargets(t *testing.T) {
 // it must return a non-nil tea.Cmd (R-001 Scenario: probe is async — the
 // cmd is what bubbletea runs off the UI goroutine after the first render).
 func TestInit_ReturnsNonNilCmd(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	cmd := m.Init()
 	if cmd == nil {
 		t.Fatal("Init() must return a non-nil tea.Cmd so the launch-time origin probe runs")
@@ -143,9 +145,9 @@ func TestInit_ReturnsNonNilCmd(t *testing.T) {
 // zero value (which is 0 and would collapse into "confirmed 0 behind" —
 // the exact R-006 bug class this field's sentinel exists to prevent).
 func TestNewModel_BehindOriginDefaultsToNA(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	if m.behindOrigin != RepoBehindOriginNA {
-		t.Errorf("newModel().behindOrigin = %d, want RepoBehindOriginNA (%d) before any probe result arrives", m.behindOrigin, RepoBehindOriginNA)
+		t.Errorf("newTestModel(t).behindOrigin = %d, want RepoBehindOriginNA (%d) before any probe result arrives", m.behindOrigin, RepoBehindOriginNA)
 	}
 }
 
@@ -154,7 +156,7 @@ func TestNewModel_BehindOriginDefaultsToNA(t *testing.T) {
 // exercised with a non-default value so the assertion cannot pass by
 // accident against the zero-value/NA default.
 func TestUpdate_ProbeDoneMsg_SetsBehindOrigin(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	updated, _ := m.Update(probeDoneMsg{behind: 5})
 	m = updated.(model)
 	if m.behindOrigin != 5 {
@@ -169,7 +171,7 @@ func TestUpdate_ProbeDoneMsg_SetsBehindOrigin(t *testing.T) {
 // the TUI causes no state change.
 func TestGlobalXKey_DismissesBannerOnlyWhenVisible(t *testing.T) {
 	t.Run("dismisses when visible", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.behindOrigin = 3
 		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
 		m = updated.(model)
@@ -179,7 +181,7 @@ func TestGlobalXKey_DismissesBannerOnlyWhenVisible(t *testing.T) {
 	})
 
 	t.Run("no-op when not behind origin", func(t *testing.T) {
-		m := newModel() // behindOrigin defaults to RepoBehindOriginNA
+		m := newTestModel(t) // behindOrigin defaults to RepoBehindOriginNA
 		updated, _ := m.Update(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("x")})
 		m = updated.(model)
 		if m.bannerDismissed {
@@ -202,7 +204,7 @@ func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
 	}
 
 	t.Run("jumps to self-update confirm when visible", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.behindOrigin = 3
 		m = pressU(m)
 		if m.scr != screenConfirm {
@@ -214,7 +216,7 @@ func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
 	})
 
 	t.Run("works from any screen, not only the default one", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.behindOrigin = 3
 		m.scr = screenResult
 		m = pressU(m)
@@ -227,7 +229,7 @@ func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
 	})
 
 	t.Run("no-op when not behind origin", func(t *testing.T) {
-		m := newModel() // behindOrigin defaults to RepoBehindOriginNA
+		m := newTestModel(t) // behindOrigin defaults to RepoBehindOriginNA
 		before := m.scr
 		m = pressU(m)
 		if m.scr != before {
@@ -239,7 +241,7 @@ func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
 	})
 
 	t.Run("does not hijack a command that is actively running", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.behindOrigin = 3
 		m.scr = screenRunning
 		m = pressU(m)
@@ -251,7 +253,7 @@ func TestGlobalUKey_JumpsToSelfUpdateConfirmOnlyWhenVisible(t *testing.T) {
 
 // TestToggleSelection verifies space toggles the target under the cursor off.
 func TestToggleSelection(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	// All selected by default.
 	for i := range m.targets {
 		if !m.selected[i] {
@@ -331,7 +333,7 @@ ACTION:codex: gentle-ai sync detected: run 'labdrian capture --target codex' the
 
 // TestSpinnerPresentOnRunning verifies a spinner glyph is present in screenRunning.
 func TestSpinnerPresentOnRunning(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	// Advance into screenRunning by choosing a non-mutating action.
 	action := Action{Name: "Estado", Command: "status", Mutating: false, SupportsAll: true}
 	m.pendingAction = action
@@ -361,7 +363,7 @@ func TestSpinnerPresentOnRunning(t *testing.T) {
 // (~line 162): if removed, spinner ticks would advance and embed the spinner everywhere.
 func TestSpinnerAbsentOutsideRunning(t *testing.T) {
 	// Advance the spinner to a known frame so we have a real glyph to look for.
-	base := newModel()
+	base := newTestModel(t)
 	base.scr = screenRunning
 	updated, _ := base.Update(spinnerTickMsgForTest())
 	base = updated.(model)
@@ -382,7 +384,7 @@ func TestSpinnerAbsentOutsideRunning(t *testing.T) {
 
 	for _, tc := range screens {
 		t.Run(tc.name, func(t *testing.T) {
-			m := newModel()
+			m := newTestModel(t)
 			// Copy the already-advanced spinner into the model so the glyph is
 			// at a known non-default state and would be visible if rendered.
 			m.spinner = base.spinner
@@ -424,7 +426,7 @@ func TestOutputBoxStyleDeclared(t *testing.T) {
 // TestNoDoubleGapInAnyScreen asserts no three consecutive newlines appear in
 // rendered home or result screens (double-gap elimination).
 func TestNoDoubleGapInAnyScreen(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	// Home screen (screenTargets).
 	rendered := m.View()
 	if strings.Contains(rendered, "\n\n\n") {
@@ -450,7 +452,7 @@ func TestWidthResponsiveRendering(t *testing.T) {
 	const narrowWidth = 40
 
 	buildResultModel := func(output string) model {
-		m := newModel()
+		m := newTestModel(t)
 		updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
 		m = updated.(model)
 		m.scr = screenResult
@@ -475,7 +477,7 @@ func TestWidthResponsiveRendering(t *testing.T) {
 		{
 			name: "screenTargets",
 			prepare: func() model {
-				m := newModel()
+				m := newTestModel(t)
 				updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
 				m = updated.(model)
 				return m
@@ -484,7 +486,7 @@ func TestWidthResponsiveRendering(t *testing.T) {
 		{
 			name: "screenActions",
 			prepare: func() model {
-				m := newModel()
+				m := newTestModel(t)
 				updated, _ := m.Update(tea.WindowSizeMsg{Width: narrowWidth, Height: 20})
 				m = updated.(model)
 				m.scr = screenActions
@@ -513,13 +515,13 @@ func TestWidthResponsiveRendering(t *testing.T) {
 	}
 }
 
-// TestWidthFallbackTo80 verifies that a fresh newModel() (width==0) renders at 80
+// TestWidthFallbackTo80 verifies that a fresh newTestModel(t) (width==0) renders at 80
 // columns via the contentWidth() fallback. Must fail if the fallback is removed.
 func TestWidthFallbackTo80(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	// Confirm no WindowSizeMsg has been received — width must be 0.
 	if m.width != 0 {
-		t.Fatalf("newModel() must have width==0 before any WindowSizeMsg, got %d", m.width)
+		t.Fatalf("newTestModel(t) must have width==0 before any WindowSizeMsg, got %d", m.width)
 	}
 
 	if m.contentWidth() != 80 {
@@ -539,7 +541,7 @@ func TestWidthFallbackTo80(t *testing.T) {
 // TestScrollClamp verifies m.scroll is clamped to EXACTLY maxScroll() (not merely
 // <= some value) and never goes negative (R-005). This catches off-by-one errors.
 func TestScrollClamp(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.height = 20
 	m.scr = screenResult
@@ -583,7 +585,7 @@ func TestScrollClamp(t *testing.T) {
 
 // TestSelectAllToggle verifies 'a' on screenTargets toggles all selections (R-006).
 func TestSelectAllToggle(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	// All selected by default.
 	if !m.allSelected() {
 		t.Fatal("all targets must default to selected")
@@ -607,7 +609,7 @@ func TestSelectAllToggle(t *testing.T) {
 // TestErrorBannerOnFailure verifies a red "Comando falló" banner when result.err != nil,
 // and that the success path does NOT contain the banner (R-003).
 func TestErrorBannerOnFailure(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = commandResult{
 		action: Action{Name: "Aplicar cambios", Command: "apply"},
@@ -631,7 +633,7 @@ func TestErrorBannerOnFailure(t *testing.T) {
 // TestDegradedBannerOnExitTwo verifies that a commandResult with exitCode==2 renders
 // the YELLOW "Degradado" banner and NOT the red "Comando falló" banner (exit-2 path).
 func TestDegradedBannerOnExitTwo(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = commandResult{
 		action:   Action{Name: "Aplicar cambios", Command: "apply"},
@@ -653,7 +655,7 @@ func TestDegradedBannerOnExitTwo(t *testing.T) {
 // verdicts (R-004), and that a non-sync-check command does NOT show the note
 // even when verdicts are also empty.
 func TestEmptyVerdictNote(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = commandResult{
 		action:   Action{Name: "Verificar sincronización", Command: "sync-check"},
@@ -689,7 +691,7 @@ func TestEmptyVerdictNote(t *testing.T) {
 // TestFooterLegendCorrectness verifies footer key hints for all interactive screens
 // (R-007). Covers targets, actions, result, and confirm screens.
 func TestFooterLegendCorrectness(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 
 	// screenTargets footer.
 	rendered := m.View()
@@ -759,7 +761,7 @@ func TestBuildArgSets(t *testing.T) {
 
 	t.Run("non-TargetAgnostic with one target includes --target", func(t *testing.T) {
 		action := Action{TargetAgnostic: false, Command: "apply", SupportsAll: true}
-		targets := []Target{{Name: "agent-x", Path: "/some/path"}}
+		targets := []Target{{Name: "agent-x"}}
 		sets := buildArgSets(action, targets, false)
 		if len(sets) != 1 {
 			t.Fatalf("expected 1 arg set, got %d", len(sets))
@@ -817,7 +819,7 @@ func TestHooksActionsRegistered(t *testing.T) {
 //   - TargetAgnostic on screenConfirm → no target list shown (R-010, backwards-compat)
 func TestConfirmMessageSelection(t *testing.T) {
 	t.Run("empty ConfirmMessage shows generic copy", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.scr = screenConfirm
 		m.pendingAction = Action{
 			Name:     "Aplicar cambios",
@@ -844,7 +846,7 @@ func TestConfirmMessageSelection(t *testing.T) {
 			t.Skip("install-hooks not yet registered in Actions()")
 		}
 
-		m := newModel()
+		m := newTestModel(t)
 		m.scr = screenConfirm
 		m.pendingAction = installAction
 		rendered := m.View()
@@ -857,7 +859,7 @@ func TestConfirmMessageSelection(t *testing.T) {
 	})
 
 	t.Run("TargetAgnostic action on screenConfirm hides target list", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		m.scr = screenConfirm
 		m.pendingAction = Action{
 			Name:           "Estado de hooks",
@@ -877,7 +879,7 @@ func TestConfirmMessageSelection(t *testing.T) {
 // TestHooksSeparatorVisible verifies the Hooks group header renders on
 // screenActions when hooks actions are registered (R-009 Scenario 9.2).
 func TestHooksSeparatorVisible(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenActions
 	rendered := m.View()
 	if !strings.Contains(rendered, "── Hooks ──") {
@@ -889,7 +891,7 @@ func TestHooksSeparatorVisible(t *testing.T) {
 // section headers — the operational ("Sincronización") and hooks groups. This
 // locks in the discoverability fix: the top group is no longer silent.
 func TestActionGroupHeadersVisible(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenActions
 	rendered := m.View()
 	if !strings.Contains(rendered, "── Sincronización ──") {
@@ -904,7 +906,7 @@ func TestActionGroupHeadersVisible(t *testing.T) {
 // presence (token-level) rather than column spacing, since the %-32s padding
 // makes exact whitespace brittle.
 func TestActionMenuShowsHints(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	updated, _ := m.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
 	m = updated.(model)
 	m.scr = screenActions
@@ -925,7 +927,7 @@ func TestActionMenuShowsHints(t *testing.T) {
 // TestSuccessBannerOnResult verifies the green success affordance renders on the
 // success path and is absent on failure (locks in the positive-affordance fix).
 func TestSuccessBannerOnResult(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenResult
 	m.result = commandResult{
 		action: Action{Name: "Estado", Command: "status"},
@@ -949,7 +951,7 @@ func TestSuccessBannerOnResult(t *testing.T) {
 // (R-009 Scenario 9.3), and that status-hooks was merged into it via Also
 // rather than dropped.
 func TestEstadoSkipsConfirmAndMergesStatusHooks(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	// Navigate to screenActions.
 	m.scr = screenActions
 
@@ -991,7 +993,7 @@ func TestEstadoSkipsConfirmAndMergesStatusHooks(t *testing.T) {
 // TestInstallHooksRequiresConfirm verifies install-hooks (mutating) routes to
 // screenConfirm before running (R-009 Scenario 9.4).
 func TestInstallHooksRequiresConfirm(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenActions
 
 	installIdx := -1
@@ -1017,7 +1019,7 @@ func TestInstallHooksRequiresConfirm(t *testing.T) {
 // TestUninstallHooksRequiresConfirm verifies uninstall-hooks (mutating) routes to
 // screenConfirm before running (mirrors TestInstallHooksRequiresConfirm).
 func TestUninstallHooksRequiresConfirm(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenActions
 
 	uninstallIdx := -1
@@ -1055,7 +1057,7 @@ func TestUninstallHooksRequiresConfirm(t *testing.T) {
 //	    (install-hooks or uninstall-hooks) and pressing enter there transitions to
 //	    screenConfirm.
 func TestKeyboardNavigationOverSeparator(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenActions
 
 	if len(m.actions) == 0 {
@@ -1100,7 +1102,7 @@ func TestKeyboardNavigationOverSeparator(t *testing.T) {
 		t.Fatal("no hooks mutating action found in Actions(); required by this change")
 	}
 
-	m2 := newModel()
+	m2 := newTestModel(t)
 	m2.scr = screenActions
 	m2.aCursor = hooksIdx
 	updated, _ := m2.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
@@ -1236,7 +1238,7 @@ func TestParseSyncCheckAgentFilesAllStatuses(t *testing.T) {
 // TestViewDashboardShowsAgentsSection verifies the Agents sub-section renders
 // in viewDashboard when a verdict has AgentFiles populated.
 func TestViewDashboardShowsAgentsSection(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
@@ -1267,7 +1269,7 @@ func TestViewDashboardShowsAgentsSection(t *testing.T) {
 // TestViewDashboardNoAgentsSectionWhenEmpty verifies the Agents sub-section is
 // absent when AgentFiles is empty (no spurious label for skills-only targets).
 func TestViewDashboardNoAgentsSectionWhenEmpty(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.width = 80
 	m.scr = screenResult
 	m.result = commandResult{
@@ -1383,7 +1385,7 @@ func TestSkillsActionsRegistered(t *testing.T) {
 // TestSkillsActionsSectionHeaderVisible verifies a "── Skills ──" section header
 // renders on screenActions when skills actions are registered.
 func TestSkillsActionsSectionHeaderVisible(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenActions
 	rendered := m.View()
 	if !strings.Contains(rendered, "── Skills ──") {
@@ -1426,7 +1428,7 @@ func TestAllArgSetsFlattensPrimaryThenAlso(t *testing.T) {
 			{Command: "status-hooks", TargetAgnostic: true},
 		},
 	}
-	targets := []Target{{Name: "claude", Path: "/some/path"}}
+	targets := []Target{{Name: "claude"}}
 
 	sets := allArgSets(action, targets, false)
 	if len(sets) != 2 {
@@ -1700,7 +1702,7 @@ func TestSelfUpdateConfirmScreen(t *testing.T) {
 		t.Fatal(`Actions() must contain "self-update" before its confirm screen can be exercised`)
 	}
 
-	m := newModel()
+	m := newTestModel(t)
 	m.scr = screenConfirm
 	m.pendingAction = selfUpdate
 	rendered := stripANSI(m.View())
@@ -1773,7 +1775,7 @@ func TestAllArgSetsSelfUpdateActionComposition(t *testing.T) {
 		t.Fatal("Actions() must contain a top-level self-update action")
 	}
 
-	targets := []Target{{Name: "claude", Path: "/some/path"}, {Name: "opencode", Path: "/other/path"}}
+	targets := []Target{{Name: "claude"}, {Name: "opencode"}}
 
 	t.Run("all targets selected -> apply --target all", func(t *testing.T) {
 		sets := allArgSets(selfUpdate, targets, true)
@@ -1816,7 +1818,7 @@ func TestAllArgSetsSelfUpdateActionComposition(t *testing.T) {
 // the command AND the error, not just one of them).
 func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 	t.Run("self-update success re-fires probe", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		msg := runDoneMsg{result: commandResult{
 			action: Action{Command: "self-update"},
 			err:    nil,
@@ -1832,7 +1834,7 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 	})
 
 	t.Run("self-update failure does not re-fire probe", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		msg := runDoneMsg{result: commandResult{
 			action: Action{Command: "self-update"},
 			err:    errors.New("boom"),
@@ -1844,7 +1846,7 @@ func TestUpdate_SelfUpdateSuccess_RefiresProbe(t *testing.T) {
 	})
 
 	t.Run("other action success does not re-fire probe", func(t *testing.T) {
-		m := newModel()
+		m := newTestModel(t)
 		msg := runDoneMsg{result: commandResult{
 			action: Action{Command: "apply"},
 			err:    nil,
@@ -2017,123 +2019,20 @@ func TestProbeBehindOriginCmd_AlsoDeliversBehindRelease(t *testing.T) {
 // TestNewModel_BehindOriginDefaultsToNA for the new field: newModel must
 // initialize behindRelease to RepoBehindOriginNA, not Go's zero value.
 func TestNewModel_BehindReleaseDefaultsToNA(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	if m.behindRelease != RepoBehindOriginNA {
-		t.Errorf("newModel().behindRelease = %d, want RepoBehindOriginNA (%d)", m.behindRelease, RepoBehindOriginNA)
+		t.Errorf("newTestModel(t).behindRelease = %d, want RepoBehindOriginNA (%d)", m.behindRelease, RepoBehindOriginNA)
 	}
 }
 
 // TestUpdate_ProbeDoneMsg_SetsBehindRelease mirrors
 // TestUpdate_ProbeDoneMsg_SetsBehindOrigin for the new field.
 func TestUpdate_ProbeDoneMsg_SetsBehindRelease(t *testing.T) {
-	m := newModel()
+	m := newTestModel(t)
 	updated, _ := m.Update(probeDoneMsg{behind: 0, behindRelease: 7})
 	m = updated.(model)
 	if m.behindRelease != 7 {
 		t.Errorf("behindRelease after probeDoneMsg{behindRelease: 7} = %d, want 7", m.behindRelease)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Slice 3b: latestBackup (D3/D4) — pure filesystem read, no backend exec.
-// ---------------------------------------------------------------------------
-
-// writeBackupFixture creates a backup directory for target at the given
-// timestamp under home, with metaContent written to its .meta file (skipped
-// when metaContent is the sentinel noMeta).
-const noMeta = "\x00__no_meta__"
-
-func writeBackupFixture(t *testing.T, home, target, timestamp, metaContent string) {
-	t.Helper()
-	dir := filepath.Join(home, ".labdrian-overlay", "backups", target, timestamp)
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		t.Fatalf("mkdir backup fixture: %v", err)
-	}
-	if metaContent != noMeta {
-		if err := os.WriteFile(filepath.Join(dir, ".meta"), []byte(metaContent), 0o644); err != nil {
-			t.Fatalf("write .meta fixture: %v", err)
-		}
-	}
-}
-
-// TestLatestBackup_NoBackupsReturnsNotOK verifies a target with zero
-// retained backups (or no backups directory at all) reports ok=false — the
-// exact signal restore-selectability gating depends on (R-003).
-func TestLatestBackup_NoBackupsReturnsNotOK(t *testing.T) {
-	t.Setenv("HOME", t.TempDir())
-	if _, _, ok := latestBackup("claude"); ok {
-		t.Error("latestBackup() for a target with no backups directory must return ok=false")
-	}
-}
-
-// TestLatestBackup_PicksLexicallyLastAsMostRecent verifies multiple backups
-// resolve to the chronologically newest one (D4: TUI always targets the
-// most recent backup only), and that its recorded version is read from
-// .meta (tab-separated: version, digest, applied_at).
-func TestLatestBackup_PicksLexicallyLastAsMostRecent(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", "v1.2.0\tabc123\t2026-01-01T00:00:00Z")
-	writeBackupFixture(t, home, "claude", "20260215T120000Z", "v1.3.0\tdef456\t2026-02-15T12:00:00Z")
-
-	ts, version, ok := latestBackup("claude")
-	if !ok {
-		t.Fatal("latestBackup() must report ok=true when backups exist")
-	}
-	if ts != "20260215T120000Z" {
-		t.Errorf("timestamp = %q, want the lexically/chronologically last one", ts)
-	}
-	if version != "v1.3.0" {
-		t.Errorf("version = %q, want v1.3.0 (from the most recent backup's .meta)", version)
-	}
-}
-
-// TestLatestBackup_NeverDeployedMetaStillReportsOK verifies a backup whose
-// .meta is the literal "NEVER_DEPLOYED" sentinel (the backup was taken
-// while the target had no prior recorded version) still reports ok=true —
-// the backup itself is restorable, only the version label degrades to
-// "unknown".
-func TestLatestBackup_NeverDeployedMetaStillReportsOK(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", "NEVER_DEPLOYED")
-
-	ts, version, ok := latestBackup("claude")
-	if !ok {
-		t.Fatal("latestBackup() must report ok=true even when .meta is NEVER_DEPLOYED")
-	}
-	if ts != "20260101T000000Z" {
-		t.Errorf("timestamp = %q, want 20260101T000000Z", ts)
-	}
-	if version == "v1.2.0" {
-		t.Errorf("version must not fabricate a real version from a NEVER_DEPLOYED meta, got %q", version)
-	}
-}
-
-// TestLatestBackup_MissingMetaStillReportsOK verifies a backup directory
-// with no .meta file at all (corrupt/partial write) still reports ok=true
-// with a degraded version label, mirroring cmd_restore --list's own
-// "unknown" fallback rather than erroring out.
-func TestLatestBackup_MissingMetaStillReportsOK(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", noMeta)
-
-	_, _, ok := latestBackup("claude")
-	if !ok {
-		t.Fatal("latestBackup() must report ok=true even when .meta is missing")
-	}
-}
-
-// TestLatestBackup_TargetIsolation verifies one target's backups never leak
-// into another target's lookup.
-func TestLatestBackup_TargetIsolation(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260101T000000Z", "v1.0.0\tabc\t2026-01-01T00:00:00Z")
-
-	if _, _, ok := latestBackup("opencode"); ok {
-		t.Error("latestBackup(\"opencode\") must be ok=false when only \"claude\" has backups")
 	}
 }
 
@@ -2236,13 +2135,7 @@ func findAction(t *testing.T, m model, command string) int {
 // backups stays on screenActions -- restore is never offered/run for a
 // target with no backup to restore.
 func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
-	t.Setenv("HOME", t.TempDir()) // no backups anywhere
-	m := newModel()
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m := enterRestore(t, newTestModel(t)) // its backup query holds no backups
 
 	if m.scr != screenActions {
 		t.Errorf("scr after entering restore with zero backups = %v, want unchanged screenActions", m.scr)
@@ -2259,18 +2152,12 @@ func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
 // the EXACT existing confirm->run->result pattern (Mutating: true ->
 // screenConfirm -> y/enter -> screenRunning).
 func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
-
-	m := newModel()
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]Backup{
+		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+	}})
 	// Only "claude" selected, to make the confirm text assertion unambiguous.
 	m.selected = map[int]bool{0: true, 1: false, 2: false}
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m = enterRestore(t, m)
 
 	if m.scr != screenConfirm {
 		t.Fatalf("scr after entering restore with an available backup = %v, want screenConfirm", m.scr)
@@ -2309,18 +2196,12 @@ func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *t
 // confirm screen still proceeds (naming only the targets that do have one)
 // rather than refusing the whole action.
 func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("HOME", home)
-	writeBackupFixture(t, home, "claude", "20260301T093000Z", "v1.5.0\tdigest123\t2026-03-01T09:30:00Z")
 	// "opencode" deliberately has no backup.
-
-	m := newModel()
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{byTarget: map[string]Backup{
+		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+	}})
 	m.selected = map[int]bool{0: true, 1: true, 2: false} // claude + opencode
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m = enterRestore(t, m)
 
 	if m.scr != screenConfirm {
 		t.Fatalf("scr = %v, want screenConfirm when at least one selected target has a backup", m.scr)
@@ -2576,13 +2457,13 @@ func TestNoActionPassesPurge(t *testing.T) {
 // validates it before parsing any flag), --target must be passed, and
 // --target all must be used when every target is selected.
 func TestAllArgSetsLongtermMemComposition(t *testing.T) {
-	targets := []Target{{Name: "claude", Path: "/a"}, {Name: "opencode", Path: "/b"}}
+	targets := []Target{{Name: "claude"}, {Name: "opencode"}}
 
 	for _, verb := range []string{"status", "install", "uninstall"} {
 		a := findActionByCommandArgs(t, "longterm-mem", verb)
 
 		t.Run(verb+"/all targets", func(t *testing.T) {
-			sets := allArgSets(a, AllTargets(), true)
+			sets := allArgSets(a, threeCopyTargets(), true)
 			want := [][]string{{"longterm-mem", verb, "--target", "all"}}
 			if len(sets) != len(want) || strings.Join(sets[0], " ") != strings.Join(want[0], " ") {
 				t.Fatalf("allArgSets = %v, want %v", sets, want)

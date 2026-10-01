@@ -111,6 +111,17 @@ digest-match status, and offers a confirmed "Restaurar respaldo" (restore) actio
 gated on a backup actually existing for the selected target(s) — routed through the
 same confirm→run→result pattern as apply/self-update.
 
+The target list on the first screen is not kept by the TUI: it is read from
+`labdrian targets` at launch, so it is always what `--target all` acts on (today that
+includes `pi`). The TUI sends `--target all` only when you leave every listed target
+selected, and re-checks the list with the backend right before it does; with any target
+unticked it runs the action once per ticked target instead. Capture and restore are
+per-file operations that the backend refuses for a package target such as `pi`, so they
+run on the selected `copy` targets only. If the list cannot be read the screen says so and
+offers no target action. Likewise the backup that "Restaurar respaldo" offers is read with
+`restore --target <t> --list`, so it follows the backend's `STATE_DIR`; a target whose
+backups the backend cannot confirm is not offered a restore.
+
 ### Action map
 
 | Command | Mode | What it does |
@@ -122,6 +133,7 @@ same confirm→run→result pattern as apply/self-update.
 | `self-update` | **modifies** | Fast-forward local `main` (never the current branch) to the latest published release tag — never past it, even if `origin/main` carries untagged commits beyond it. Falls back to raw `origin/main` HEAD convergence before any release tag exists. Refuses on a dirty tracked tree, local-ahead main, or no `origin` remote. |
 | `update` | read-only | Report the latest published release version and each target's recorded version (up-to-date / behind / never deployed). Never mutates anything. |
 | `restore --target claude\|opencode\|codex [--list] [--backup TIMESTAMP]` | **modifies** | Roll a single target back to one of its retained backups (up to 3, auto-pruned; default: most recent). Refuses `--target all`. `--list` shows retained backups without changing anything. |
+| `targets` | read-only | Print the target catalog, one target per line as `<name><TAB><kind>` (`copy` or `package`), in the order `--target all` expands to. The TUI reads it instead of keeping its own list. |
 | `version` (also: `--version`) | read-only | Print this clone's current release version and each target's recorded deployed version. |
 | `install-hooks` | **modifies** | Build the Go engine binary + wire `UserPromptSubmit`/`PreToolUse`/`Agent` hooks, including the workflow projection family and the skills approve guard, into `~/.claude/settings.json` (backs up to `.bak` first). Run once to activate scoping; re-run it after an upgrade that adds a hook family, then restart Claude Code to load the hooks. |
 | `uninstall-hooks` | **modifies** | Remove the overlay hook entries (the minimalism and design pairs, the SessionEnd sync-trigger, the review-receipt and shaper guard entries, the three projection entries, and the two approve guard entries) from `~/.claude/settings.json`, including entries left by contracts retired in earlier versions, leaving all other keys intact. |
@@ -326,6 +338,12 @@ overlay restore --target claude|opencode|codex [--list] [--backup TIMESTAMP]
     retained backups (timestamp, version) without changing anything. --backup
     TIMESTAMP picks a specific one. Exits non-zero without touching any file when
     the target has no backups. Performs zero git operations.
+
+overlay targets
+    Read-only: print the target catalog, one target per line as <name><TAB><kind>
+    (kind: copy or package), in the order --target all expands to. Takes no
+    arguments. Front-ends read this list instead of keeping their own, so they
+    never act on a target they did not show.
 
 overlay version (also: --version)
     Read-only: print this clone's current release version (from local main) and

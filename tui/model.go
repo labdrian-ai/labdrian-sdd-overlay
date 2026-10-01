@@ -18,6 +18,7 @@ const (
 	screenConfirm               // confirmation for mutating actions
 	screenRunning               // running the backend
 	screenResult                // output pane + sync dashboard
+	screenLookup                // asking the backend for the latest backups (restore confirm)
 )
 
 // model is the root bubbletea state.
@@ -25,11 +26,24 @@ type model struct {
 	repoRoot string
 	rootErr  error
 
+	// catalog is the port the targets come from. The model holds no list of
+	// its own: targets stays empty until the catalog answers.
+	catalog TargetCatalog
+	// backups is the port restore asks for each target's latest backup.
+	backups BackupQuery
+
 	scr screen
 
-	targets  []Target
-	selected map[int]bool // index into targets -> selected
-	tCursor  int
+	// targets is the backend's catalog exactly as the operator was shown it,
+	// in the backend's order. It is what `--target all` may be taken to mean.
+	targets []Target
+	// targetsLoaded is false until the catalog's answer arrives; targetsErr is
+	// that answer when it is a failure. With a failed catalog targets stays
+	// empty, so there is nothing to select and no target action can start.
+	targetsLoaded bool
+	targetsErr    error
+	selected      map[int]bool // index into targets -> selected
+	tCursor       int
 
 	actions []Action
 	aCursor int
@@ -47,6 +61,8 @@ type model struct {
 	// whole action as failed even though the backup-bearing target's
 	// destructive restore already succeeded.
 	pendingTargets []Target
+	// restoreReq numbers the restore backup lookups; only the latest answer counts.
+	restoreReq int
 
 	result commandResult
 	scroll int // line offset into the output pane
@@ -75,26 +91,29 @@ type model struct {
 	bannerDismissed bool
 }
 
-// newModel builds the initial state with every target selected.
-func newModel() model {
-	targets := AllTargets()
-	selected := make(map[int]bool, len(targets))
-	for i := range targets {
-		selected[i] = true
-	}
+// deps is what the composition root (main) hands the model: the repo root it
+// located and the ports the model talks to. The model builds none of them.
+type deps struct {
+	repoRoot string
+	rootErr  error
+	catalog  TargetCatalog
+	backups  BackupQuery
+}
 
-	root, err := RepoRoot()
-
+// newModel builds the initial state. It has no targets yet: the catalog is
+// asked from Init, off the UI goroutine, and its answer selects them all.
+func newModel(d deps) model {
 	sp := spinner.New()
 	sp.Spinner = spinner.Dot
 	sp.Style = lipgloss.NewStyle().Foreground(colorAccent)
 
 	return model{
-		repoRoot:      root,
-		rootErr:       err,
+		repoRoot:      d.repoRoot,
+		rootErr:       d.rootErr,
+		catalog:       d.catalog,
+		backups:       d.backups,
 		scr:           screenTargets,
-		targets:       targets,
-		selected:      selected,
+		selected:      map[int]bool{},
 		actions:       Actions(),
 		spinner:       sp,
 		behindOrigin:  RepoBehindOriginNA,
@@ -102,13 +121,43 @@ func newModel() model {
 	}
 }
 
-// Init returns the launch-time cached-only origin probe (R-001). It runs
-// async off the UI goroutine and never blocks the first render — the result
-// arrives later as a probeDoneMsg.
-func (m model) Init() tea.Cmd { return probeBehindOriginCmd(m.repoRoot) }
+// Init returns the launch-time commands: the target catalog (D5) and the
+// cached-only origin probe (R-001). Both run async off the UI goroutine and
+// never block the first render -- the results arrive later as a
+// targetsLoadedMsg and a probeDoneMsg.
+func (m model) Init() tea.Cmd {
+	return tea.Batch(loadTargetsCmd(m.catalog), probeBehindOriginCmd(m.repoRoot))
+}
+
+// targetsLoadedMsg is delivered with the catalog's answer. err is set when the
+// backend's catalog could not be read, in which case targets is empty.
+type targetsLoadedMsg struct {
+	targets []Target
+	err     error
+}
+
+// loadTargetsCmd asks the catalog port for the targets.
+func loadTargetsCmd(catalog TargetCatalog) tea.Cmd {
+	return func() tea.Msg {
+		targets, err := catalog.Targets()
+		return targetsLoadedMsg{targets: targets, err: err}
+	}
+}
+
+// catalogReady reports whether the backend's catalog was read successfully.
+// Until it is, the TUI has no targets and offers no target action.
+func (m model) catalogReady() bool { return m.targetsLoaded && m.targetsErr == nil }
 
 // runDoneMsg is delivered when a backend invocation completes.
 type runDoneMsg struct{ result commandResult }
+
+// restoreLookupMsg is the outcome of request req's backup lookup: targets is
+// the backup-bearing subset action.ConfirmMessage names (empty: none has one).
+type restoreLookupMsg struct {
+	req     int
+	action  Action
+	targets []Target
+}
 
 // probeDoneMsg is delivered when the launch-time cached-only origin probe
 // (probeBehindOriginCmd, D4) completes. Its fields are consumed by the
@@ -121,10 +170,13 @@ type probeDoneMsg struct {
 // runActionCmd executes the backend off the UI goroutine against the exact
 // targets given -- never m.selectedTargets() internally, since a caller may
 // need to invoke a filtered subset of the current selection (restore/D4).
+// The catalog the operator was shown travels with the run, so `--target all`
+// can be checked against it.
 func (m model) runActionCmd(action Action, targets []Target) tea.Cmd {
 	root := m.repoRoot
+	scope := targetScope{shown: append([]Target(nil), m.targets...), catalog: m.catalog}
 	return func() tea.Msg {
-		return runDoneMsg{result: runBackend(root, action, targets)}
+		return runDoneMsg{result: runBackend(root, action, targets, scope)}
 	}
 }
 
@@ -248,9 +300,32 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.behindRelease = msg.behindRelease
 		return m, nil
 
+	case targetsLoadedMsg:
+		m.targetsLoaded = true
+		m.targetsErr = msg.err
+		m.targets = msg.targets
+		m.selected = make(map[int]bool, len(m.targets))
+		// Every target starts selected, as it always has: the operator sees
+		// the whole catalog ticked and unticks what they do not want.
+		for i := range m.targets {
+			m.selected[i] = true
+		}
+		return m, nil
+
+	case restoreLookupMsg:
+		// Stale if the operator backed out or began a newer lookup.
+		if m.scr != screenLookup || msg.req != m.restoreReq {
+			return m, nil
+		}
+		m.scr = screenActions
+		if len(msg.targets) > 0 {
+			m.pendingAction, m.pendingTargets, m.scr = msg.action, msg.targets, screenConfirm
+		}
+		return m, nil
+
 	case spinner.TickMsg:
-		if m.scr != screenRunning {
-			// Drop ticks once we've left screenRunning — stops the self-perpetuating loop.
+		if m.scr != screenRunning && m.scr != screenLookup {
+			// Drop ticks once we've left a spinner screen — stops the self-perpetuating loop.
 			return m, nil
 		}
 		var cmd tea.Cmd
@@ -275,8 +350,11 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// the menu-navigation step for the single most common recovery. Like
 		// "x" above, works on any screen and is a no-op when the banner
 		// isn't visible. Excluded while a command is actively running
-		// (screenRunning) so it cannot hijack an in-flight invocation.
-		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning {
+		// (screenRunning) so it cannot hijack an in-flight invocation, and
+		// while the target catalog is unknown: self-update chains an apply,
+		// which is a target action, and with no catalog there is no target
+		// it may run against.
+		if msg.String() == "u" && m.bannerVisible() && m.scr != screenRunning && m.catalogReady() {
 			if a, ok := m.selfUpdateAction(); ok {
 				m.pendingAction = a
 				m.pendingTargets = m.selectedTargets()
@@ -293,9 +371,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateConfirm(msg)
 		case screenResult:
 			return m.updateResult(msg)
+		case screenLookup:
+			return m.updateLookup(msg)
 		case screenRunning:
 			return m, nil
 		}
+	}
+	return m, nil
+}
+
+// updateLookup handles keys while the backup lookup runs: quit, or go back.
+func (m model) updateLookup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q":
+		m.quitting = true
+		return m, tea.Quit
+	case "esc":
+		m.scr = screenActions
 	}
 	return m, nil
 }
@@ -346,22 +438,22 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 		}
 	case "enter":
 		action := m.actions[m.aCursor]
-		targets := m.selectedTargets()
+		// Only the selected targets this action can actually run against.
+		targets := action.applicableTo(m.selectedTargets())
+		if action.usesTargets() && len(targets) == 0 {
+			// Nothing to run it on -- no catalog was read, or every selected
+			// target is one the backend refuses for this action (capture on
+			// pi alone). Stay put: no confirm screen, no process.
+			return m, nil
+		}
 		if action.Command == "restore" {
-			// R-003: restore is never offered/selectable for a target with
-			// zero backups. Entering it with no available backup among the
-			// current selection is a no-op — stay on screenActions rather
-			// than opening a confirm screen for something that would just
-			// fail against every selected target. restoreConfirmInfo also
-			// narrows `targets` down to the backup-bearing subset -- the
-			// SAME subset both the confirm text and the real invocation use
-			// (see pendingTargets' doc comment).
-			info, restoreTargets, ok := m.restoreConfirmInfo(action)
-			if !ok {
-				return m, nil
-			}
-			action.ConfirmMessage = info
-			targets = restoreTargets
+			// R-003: restore is never offered for a target with zero backups.
+			// The lookup spawns the backend, so it runs in a command and its
+			// restoreLookupMsg opens the confirm screen (or does nothing when
+			// no target has a backup). Each press is a new request.
+			m.restoreReq++
+			m.scr = screenLookup
+			return m, tea.Batch(m.spinner.Tick, m.restoreLookupCmd(m.restoreReq, action, targets))
 		}
 		m.pendingAction = action
 		m.pendingTargets = targets
@@ -377,31 +469,57 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 
 // restoreConfirmInfo builds the restore action's per-invocation confirm
 // copy (D4): the base overwrite-warning text from Actions(), followed by
-// each selected target's most recent backup timestamp + version — read via
-// latestBackup, never a TUI-side timestamp picker (D4: the TUI always
-// targets the most recent backup only). The returned targets are the SAME
-// backup-bearing subset the confirm text names -- the caller must reuse it
+// each selected target's most recent backup timestamp + version — asked of
+// the BackupQuery port, never read from the state directory here and never a
+// TUI-side timestamp picker (D4: the TUI always targets the most recent
+// backup only). A target whose backups the query cannot confirm (an error,
+// not merely "none") is left out like one with none: a destructive rollback
+// is only offered for a backup the backend vouched for.
+//
+// The returned targets are the SAME backup-bearing subset the confirm text
+// names -- the caller must reuse it
 // for the actual invocation too, never recompute from m.selectedTargets()
 // (that recomputation is exactly the bug an adversarial review caught:
 // a target with zero backups would be invoked, fail, and make the whole
 // action misreport as failed even though the backup-bearing target's
 // destructive restore had already succeeded). ok is false when NONE of the
 // selected targets have an available backup, the signal updateActions uses
-// to refuse entering the confirm screen at all (R-003).
-func (m model) restoreConfirmInfo(action Action) (message string, targets []Target, ok bool) {
+// to refuse entering the confirm screen at all (R-003). candidates are the
+// selected targets restore can apply to at all (copy targets only).
+func (m model) restoreConfirmInfo(action Action, candidates []Target) (message string, targets []Target, ok bool) {
+	if m.backups == nil {
+		return "", nil, false
+	}
 	var lines []string
-	for _, t := range m.selectedTargets() {
-		ts, version, hasBackup := latestBackup(t.Name)
-		if !hasBackup {
+	for _, t := range candidates {
+		backup, hasBackup, err := m.backups.LatestBackup(t.Name)
+		if err != nil || !hasBackup {
 			continue
 		}
-		lines = append(lines, fmt.Sprintf("%s: %s (%s)", t.Name, ts, version))
+		// "desconocida" (unknown): the backup exists and is restorable, only
+		// its version label could not be read.
+		version := backup.Version
+		if version == "" {
+			version = "desconocida"
+		}
+		lines = append(lines, fmt.Sprintf("%s: %s (%s)", t.Name, backup.Timestamp, version))
 		targets = append(targets, t)
 	}
 	if len(lines) == 0 {
 		return "", nil, false
 	}
 	return action.ConfirmMessage + "\n\nRespaldo a restaurar:\n  " + strings.Join(lines, "\n  "), targets, true
+}
+
+// restoreLookupCmd runs restoreConfirmInfo off the UI goroutine, querying the
+// targets one after another: a listing takes milliseconds, the port need not be
+// concurrency-safe, and quit/back stay available however long the backend takes.
+func (m model) restoreLookupCmd(req int, action Action, candidates []Target) tea.Cmd {
+	return func() tea.Msg {
+		info, targets, _ := m.restoreConfirmInfo(action, candidates)
+		action.ConfirmMessage = info
+		return restoreLookupMsg{req: req, action: action, targets: targets}
+	}
 }
 
 func (m model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
