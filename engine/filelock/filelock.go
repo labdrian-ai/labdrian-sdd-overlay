@@ -1,6 +1,7 @@
-// Package filelock is a bounded, advisory, cross-process file lock: the flock
-// idiom engine/workflow (append) and engine/projection (bind) already use, in one
-// place for the callers that cannot import system calls themselves.
+// Package filelock is a bounded, advisory, cross-process file lock: the one flock
+// idiom of the engine. engine/workflow (append), engine/projection (bind), the
+// propagate registry lock of engine/cmd and the skills verbs all take their locks
+// here, and so does any caller that cannot import system calls itself.
 //
 // It exists as its own package because engine/skills' import allowlist
 // (zero_fetch_test.go) admits neither "syscall" nor "time", on purpose: that
@@ -20,7 +21,9 @@
 //     when an exclusive lock first needs it and stays.
 //   - Acquire tries the lock at least once, then retries every pollInterval until
 //     the bound (Options.Wait, DefaultWait by default), then fails with a
-//     *BusyError. It never blocks without a bound.
+//     *BusyError. It never blocks without a bound. A caller whose contract is to
+//     refuse a contended operation asks for Options.NoWait and gets the
+//     *BusyError after the first attempt.
 //   - Exclusive and Shared modes follow flock: any number of Shared holders, or one
 //     Exclusive holder. A Shared acquire never creates the lock file; see Mode.
 //   - A final-component symlink is refused, so a lock file cannot be aimed at
@@ -94,7 +97,8 @@ type Mode int
 
 const (
 	// Exclusive is the writer's mode: one holder, no Shared holders. The lock
-	// file is created (mode 0644 before the umask) if it does not exist.
+	// file is created (mode Options.Perm, 0644 by default, before the umask) if it
+	// does not exist.
 	Exclusive Mode = iota
 	// Shared is the reader's mode: any number of holders, none while an Exclusive
 	// one holds. A Shared acquire opens the lock file read-only and never creates
@@ -138,15 +142,40 @@ func (c Clock) sleep(d time.Duration) {
 }
 
 // Options tunes one Acquire. The zero value is an Exclusive lock with the
-// DefaultWait bound on the real clock.
+// DefaultWait bound on the real clock, in a lock file created 0644.
 type Options struct {
 	// Mode is Exclusive (the zero value) or Shared.
 	Mode Mode
 	// Wait is the bound on waiting for a taken lock. Zero or negative means
 	// DefaultWait. The lock is tried at least once whatever the bound.
 	Wait time.Duration
+	// NoWait tries the lock exactly once: a taken lock is a *BusyError at once,
+	// with nothing waited for, whatever Wait says and without reading the clock.
+	// It is for a caller whose contract is to refuse a contended operation, not to
+	// queue behind it.
+	NoWait bool
+	// Perm is the mode, before the umask, of a lock file an Exclusive acquire
+	// creates. Zero means 0644; a caller whose lock lives in a private directory
+	// asks for 0600. A Shared acquire and AcquireDir create nothing and ignore it.
+	// Any bit beyond the permission bits is an error.
+	Perm os.FileMode
 	// Clock is the time source; the zero value is the real clock.
 	Clock Clock
+}
+
+// defaultPerm is the mode of a lock file when Options.Perm is zero: flock needs
+// no write access, so every user of a shared checkout can take the lock and none
+// can write into it.
+const defaultPerm os.FileMode = 0o644
+
+func (o Options) perm() (os.FileMode, error) {
+	switch {
+	case o.Perm == 0:
+		return defaultPerm, nil
+	case o.Perm&^os.ModePerm != 0:
+		return 0, fmt.Errorf("filelock: Perm %v has bits beyond the permission bits", o.Perm)
+	}
+	return o.Perm, nil
 }
 
 // Acquire takes the advisory lock on the file at path and returns the function
@@ -160,7 +189,7 @@ type Options struct {
 // error, a symlink) is an ordinary error naming the path, because waiting would
 // not help; a platform without flock is ErrUnsupported.
 func Acquire(path string, opts Options) (unlock func(), err error) {
-	return acquire(path, opts, false)
+	return locker{}.acquire(path, opts, false)
 }
 
 // AcquireDir takes the advisory lock on the directory at path itself: it opens
@@ -183,12 +212,19 @@ func Acquire(path string, opts Options) (unlock func(), err error) {
 // nothing was locked. It never reports a lock it does not hold, never reports
 // busy, and never falls back to a lock file in the directory.
 func AcquireDir(path string, opts Options) (unlock func(), err error) {
-	return acquire(path, opts, true)
+	return locker{}.acquire(path, opts, true)
 }
 
-func acquire(path string, opts Options, dir bool) (unlock func(), err error) {
+// acquire is Acquire and AcquireDir on one locker. The package-level functions use
+// the zero locker, which locks through the operating system; a test uses a locker
+// whose flock fails, and no other caller of the package sees it.
+func (l locker) acquire(path string, opts Options, dir bool) (unlock func(), err error) {
 	if !platformSupported {
 		return nil, ErrUnsupported
+	}
+	perm, err := opts.perm()
+	if err != nil {
+		return nil, err
 	}
 	wait := opts.Wait
 	if wait <= 0 {
@@ -199,7 +235,7 @@ func acquire(path string, opts Options, dir bool) (unlock func(), err error) {
 	if dir {
 		f, err = openDirLock(path)
 	} else {
-		f, err = openLockFile(path, opts.Mode)
+		f, err = openLockFile(path, opts.Mode, perm)
 	}
 	if err != nil {
 		if !dir && opts.Mode == Shared && errors.Is(err, os.ErrNotExist) {
@@ -208,9 +244,12 @@ func acquire(path string, opts Options, dir bool) (unlock func(), err error) {
 		return nil, fmt.Errorf("filelock: open %s: %w", path, err)
 	}
 
-	deadline := opts.Clock.now().Add(wait)
+	var deadline time.Time
+	if !opts.NoWait {
+		deadline = opts.Clock.now().Add(wait)
+	}
 	for {
-		held, err := tryLock(f, opts.Mode)
+		held, err := l.tryLock(f, opts.Mode)
 		if err != nil {
 			f.Close()
 			if dir {
@@ -223,9 +262,13 @@ func acquire(path string, opts Options, dir bool) (unlock func(), err error) {
 				// A closed *os.File reports descriptor -1, so a repeated call
 				// fails harmlessly instead of touching a descriptor number that
 				// something else has since been given.
-				_ = releaseLock(f)
+				_ = l.releaseLock(f)
 				f.Close()
 			}, nil
+		}
+		if opts.NoWait {
+			f.Close()
+			return nil, &BusyError{Path: path}
 		}
 		if !opts.Clock.now().Before(deadline) {
 			f.Close()
