@@ -110,6 +110,15 @@ var (
 // supported platform.
 const MaxLogBytes = 16 * 1024 * 1024
 
+// OversizedLog is how a log of size bytes, more than MaxLogBytes, classifies: it is
+// malformed and says by how much. ClassifyLog gives this answer for bytes it was
+// handed; an adapter calls it directly when it knows the log is too large without
+// having read it all, which is the point of the bound: the log is never read past
+// MaxLogBytes+1 bytes, whatever its size on disk.
+func OversizedLog(size int64) Loaded {
+	return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("workflow log is %d bytes, exceeding the maximum of %d", size, MaxLogBytes)}
+}
+
 // ClassifyLog classifies the raw JSONL bytes of one workflow's log against the
 // requested project_id/workflow_id. See Classification for the exact rules. It
 // performs no I/O and never returns ClassificationUnavailable.
@@ -118,7 +127,7 @@ func ClassifyLog(projectID, workflowID string, data []byte) Loaded {
 		return Loaded{Classification: ClassificationMalformed, Detail: "workflow log is empty"}
 	}
 	if len(data) > MaxLogBytes {
-		return Loaded{Classification: ClassificationMalformed, Detail: fmt.Sprintf("workflow log is %d bytes, exceeding the maximum of %d", len(data), MaxLogBytes)}
+		return OversizedLog(int64(len(data)))
 	}
 	if !utf8.Valid(data) {
 		return Loaded{Classification: ClassificationMalformed, Detail: "workflow log is not valid UTF-8"}

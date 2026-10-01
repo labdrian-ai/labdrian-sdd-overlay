@@ -149,7 +149,9 @@ func (s Store) fileIn(projectID, workflowID, suffix string) (string, error) {
 
 // Load classifies the on-disk state of one workflow (see
 // workflow.Classification) and, for ClassificationOwned, returns its parsed
-// events and replayed State. Load never writes.
+// events and replayed State. Load never writes. It never reads more than
+// workflow.MaxLogBytes+1 bytes of a log: a longer one is ClassificationMalformed
+// (workflow.OversizedLog) without being read in full.
 func (s Store) Load(projectID, workflowID string) (workflow.Loaded, error) {
 	loaded, _, err := s.read(projectID, workflowID)
 	return loaded, err
@@ -193,6 +195,12 @@ func (s Store) read(projectID, workflowID string) (workflow.Loaded, []byte, erro
 	data, err := readLog(path)
 	if err != nil {
 		return unavailable(err.Error()), nil, nil
+	}
+	if len(data) > workflow.MaxLogBytes {
+		// The read stopped one byte past the bound, so data is not the log; the
+		// size the file reported is the closest to its real one. An oversized log
+		// is never handed on: nothing is published over it.
+		return workflow.OversizedLog(max(info.Size(), int64(len(data)))), nil, nil
 	}
 	return workflow.ClassifyLog(projectID, workflowID, data), data, nil
 }
@@ -271,9 +279,11 @@ func publish(path string, existing, line []byte) error {
 }
 
 // readLog reads path without following a final symlink and requires the opened
-// descriptor to be a regular file.
+// descriptor to be a regular file. It reads at most workflow.MaxLogBytes+1 bytes:
+// one past the bound is enough to know the log is too large, and the rest of it is
+// never read.
 func readLog(path string) ([]byte, error) {
-	data, err := statestore.ReadFile(path, 0)
+	data, err := statestore.ReadFile(path, workflow.MaxLogBytes+1)
 	switch {
 	case err == nil:
 		return data, nil
