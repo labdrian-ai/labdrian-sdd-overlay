@@ -208,7 +208,7 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	if !ok {
 		return nil
 	}
-	bindings, err := projection.NewStore()
+	bindings, err := newBindingStore()
 	if err != nil {
 		return warningOutput(projection.HookEventUserPromptSubmit, projection.StoreWarning(err))
 	}
@@ -285,7 +285,7 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 	if onGateStoreAccess != nil {
 		onGateStoreAccess()
 	}
-	bindings, err := projection.NewStore()
+	bindings, err := newBindingStore()
 	if err != nil {
 		return nil
 	}

@@ -1,4 +1,4 @@
-package projection_test
+package fsstore_test
 
 import (
 	"bytes"
@@ -14,19 +14,18 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
 )
 
 var t0 = time.Date(2026, 9, 29, 10, 0, 0, 0, time.UTC)
 
-// isolatedStore points XDG_STATE_HOME at a fresh temporary directory and
-// returns a store over it with that directory. The package TestMain already
-// isolates HOME; this gives each test a state home of its own.
-func isolatedStore(t *testing.T) (projection.Store, string) {
+// isolatedStore returns a store over a fresh temporary directory, and that
+// directory. The store is handed its state home, so no test reads or sets an
+// environment variable, and none can reach the real user's state.
+func isolatedStore(t *testing.T) (fsstore.Store, string) {
 	t.Helper()
 	root := t.TempDir()
-	t.Setenv("XDG_STATE_HOME", root)
-	s, err := projection.NewStore()
+	s, err := fsstore.NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -78,14 +77,14 @@ func names(t *testing.T, dir string) []string {
 	return out
 }
 
-func mustBind(t *testing.T, s projection.Store, key, project, workflowID string, at time.Time) {
+func mustBind(t *testing.T, s fsstore.Store, key, project, workflowID string, at time.Time) {
 	t.Helper()
 	if err := s.Bind(key, project, workflowID, at, false); err != nil {
 		t.Fatalf("Bind(%s/%s) = %v, want nil", project, workflowID, err)
 	}
 }
 
-func mustLoad(t *testing.T, s projection.Store, key string) projection.Loaded {
+func mustLoad(t *testing.T, s fsstore.Store, key string) projection.Loaded {
 	t.Helper()
 	loaded, err := s.Load(key)
 	if err != nil {
@@ -106,7 +105,7 @@ func skipIfPermissionsAreNotEnforced(t *testing.T) {
 
 // --- the state home and the store's location ------------------------------
 
-func TestNewStoreWritesUnderXDGStateHome(t *testing.T) {
+func TestNewStoreWritesUnderTheStateHomeItIsGiven(t *testing.T) {
 	s, root := isolatedStore(t)
 	mustBind(t, s, hex64("a"), "proj-1", "wf-1", t0)
 
@@ -114,65 +113,33 @@ func TestNewStoreWritesUnderXDGStateHome(t *testing.T) {
 	if _, err := os.Stat(want); err != nil {
 		t.Fatalf("binding not at %s: %v", want, err)
 	}
-	// The workflow store resolves the same variable through engine/statestore,
-	// so the two can never disagree about where the state home is.
-	if home, err := statestore.Home(); err != nil || home != root {
-		t.Fatalf("statestore.Home() = %q, %v, want %q", home, err, root)
-	}
 }
 
-func TestNewStoreFallsBackToHomeLocalState(t *testing.T) {
-	home := t.TempDir()
-	t.Setenv("XDG_STATE_HOME", "")
-	t.Setenv("HOME", home)
-	s, err := projection.NewStore()
-	if err != nil {
-		t.Fatalf("NewStore() = %v, want nil", err)
-	}
-	mustBind(t, s, hex64("a"), "proj-1", "wf-1", t0)
-
-	want := filepath.Join(home, ".local", "state", "labdrian", "bindings", hex64("a")+".json")
-	if _, err := os.Stat(want); err != nil {
-		t.Fatalf("binding not at %s: %v", want, err)
-	}
-}
-
-func TestNewStoreRefusesAnUnusableEnvironment(t *testing.T) {
-	tests := []struct {
-		name string
-		xdg  string
-		home string
-		want string
-	}{
-		{"relative XDG_STATE_HOME", "relative/path", "/home/someone", "XDG_STATE_HOME"},
-		{"relative HOME fallback", "", "relative/home", "HOME"},
-		{"unset HOME fallback", "", "", "HOME"},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("XDG_STATE_HOME", tt.xdg)
-			t.Setenv("HOME", tt.home)
-			s, err := projection.NewStore()
-			if err == nil || !strings.Contains(err.Error(), tt.want) {
-				t.Fatalf("NewStore() = %v, want an error naming %s", err, tt.want)
-			}
-			// A refused store must not be usable by accident.
-			if _, loadErr := s.Load(hex64("a")); !errors.Is(loadErr, projection.ErrStoreNotInitialized) {
-				t.Errorf("Load() on the store returned with the error = %v, want ErrStoreNotInitialized", loadErr)
-			}
-		})
+// The state home is resolved from the environment once, by the composition root;
+// the store takes it as it is and wants it absolute.
+func TestNewStoreRefusesAStateHomeThatIsNotAbsolute(t *testing.T) {
+	for _, home := range []string{"", "relative/path", "."} {
+		s, err := fsstore.NewStore(home)
+		want := fmt.Sprintf("projection store: state home %q is not an absolute path", home)
+		if err == nil || err.Error() != want {
+			t.Fatalf("NewStore(%q) = %v, want %q", home, err, want)
+		}
+		// A refused store must not be usable by accident.
+		if _, loadErr := s.Load(hex64("a")); !errors.Is(loadErr, fsstore.ErrStoreNotInitialized) {
+			t.Errorf("Load() on the store returned with the error = %v, want ErrStoreNotInitialized", loadErr)
+		}
 	}
 }
 
 func TestZeroStoreIsNotInitialized(t *testing.T) {
-	var s projection.Store
-	if _, err := s.Load(hex64("a")); !errors.Is(err, projection.ErrStoreNotInitialized) {
+	var s fsstore.Store
+	if _, err := s.Load(hex64("a")); !errors.Is(err, fsstore.ErrStoreNotInitialized) {
 		t.Errorf("Load() = %v, want ErrStoreNotInitialized", err)
 	}
-	if err := s.Bind(hex64("a"), "proj-1", "wf-1", t0, false); !errors.Is(err, projection.ErrStoreNotInitialized) {
+	if err := s.Bind(hex64("a"), "proj-1", "wf-1", t0, false); !errors.Is(err, fsstore.ErrStoreNotInitialized) {
 		t.Errorf("Bind() = %v, want ErrStoreNotInitialized", err)
 	}
-	if _, err := s.Unbind(hex64("a")); !errors.Is(err, projection.ErrStoreNotInitialized) {
+	if _, err := s.Unbind(hex64("a")); !errors.Is(err, fsstore.ErrStoreNotInitialized) {
 		t.Errorf("Unbind() = %v, want ErrStoreNotInitialized", err)
 	}
 }
@@ -323,9 +290,9 @@ func TestLoadClassifiesWhatIsOnDisk(t *testing.T) {
 // state the test must find unchanged afterwards.
 var unavailableCases = []struct {
 	name  string
-	setup func(t *testing.T) (projection.Store, string)
+	setup func(t *testing.T) (fsstore.Store, string)
 }{
-	{"the binding path is a directory", func(t *testing.T) (projection.Store, string) {
+	{"the binding path is a directory", func(t *testing.T) (fsstore.Store, string) {
 		s, root := isolatedStore(t)
 		path := bindingPath(root, hex64("a"))
 		if err := os.MkdirAll(path, 0o700); err != nil {
@@ -333,7 +300,7 @@ var unavailableCases = []struct {
 		}
 		return s, path
 	}},
-	{"the binding path is a symlink to a valid binding", func(t *testing.T) (projection.Store, string) {
+	{"the binding path is a symlink to a valid binding", func(t *testing.T) (fsstore.Store, string) {
 		s, root := isolatedStore(t)
 		target := filepath.Join(t.TempDir(), "elsewhere.json")
 		if err := os.WriteFile(target, []byte(rawBinding(hex64("a"))), 0o600); err != nil {
@@ -348,7 +315,7 @@ var unavailableCases = []struct {
 		}
 		return s, path
 	}},
-	{"the binding path is a dangling symlink", func(t *testing.T) (projection.Store, string) {
+	{"the binding path is a dangling symlink", func(t *testing.T) (fsstore.Store, string) {
 		s, root := isolatedStore(t)
 		if err := os.MkdirAll(bindingsDir(root), 0o700); err != nil {
 			t.Fatal(err)
@@ -359,7 +326,7 @@ var unavailableCases = []struct {
 		}
 		return s, path
 	}},
-	{"the bindings directory is a symlink", func(t *testing.T) (projection.Store, string) {
+	{"the bindings directory is a symlink", func(t *testing.T) (fsstore.Store, string) {
 		s, root := isolatedStore(t)
 		real := t.TempDir()
 		if err := os.WriteFile(filepath.Join(real, hex64("a")+".json"), []byte(rawBinding(hex64("a"))), 0o600); err != nil {
@@ -373,7 +340,7 @@ var unavailableCases = []struct {
 		}
 		return s, bindingsDir(root)
 	}},
-	{"the labdrian directory is a symlink", func(t *testing.T) (projection.Store, string) {
+	{"the labdrian directory is a symlink", func(t *testing.T) (fsstore.Store, string) {
 		s, root := isolatedStore(t)
 		real := t.TempDir()
 		if err := os.Symlink(real, filepath.Join(root, "labdrian")); err != nil {
@@ -381,19 +348,18 @@ var unavailableCases = []struct {
 		}
 		return s, filepath.Join(root, "labdrian")
 	}},
-	{"the state home is a regular file", func(t *testing.T) (projection.Store, string) {
+	{"the state home is a regular file", func(t *testing.T) (fsstore.Store, string) {
 		file := filepath.Join(t.TempDir(), "not-a-directory")
 		if err := os.WriteFile(file, []byte("x"), 0o600); err != nil {
 			t.Fatal(err)
 		}
-		t.Setenv("XDG_STATE_HOME", file)
-		s, err := projection.NewStore()
+		s, err := fsstore.NewStore(file)
 		if err != nil {
 			t.Fatalf("NewStore() = %v, want nil: the state home is only checked when the store is used", err)
 		}
 		return s, file
 	}},
-	{"the binding file cannot be read", func(t *testing.T) (projection.Store, string) {
+	{"the binding file cannot be read", func(t *testing.T) (fsstore.Store, string) {
 		skipIfPermissionsAreNotEnforced(t)
 		s, root := isolatedStore(t)
 		path := plant(t, root, hex64("a"), rawBinding(hex64("a")))
@@ -507,8 +473,7 @@ func TestBindStoresTheTimeAsUTCWithoutFractions(t *testing.T) {
 func TestBindCreatesTheDirectoriesAndFileWithPrivateModes(t *testing.T) {
 	// A state home that does not exist yet, so the store creates every level.
 	root := filepath.Join(t.TempDir(), "state")
-	t.Setenv("XDG_STATE_HOME", root)
-	s, err := projection.NewStore()
+	s, err := fsstore.NewStore(root)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -812,12 +777,12 @@ func TestUnbindRefusesAMalformedRepoKey(t *testing.T) {
 
 // TestAFreshStoreReadsWhatAnotherWrote is the restart guarantee: nothing is
 // held in memory, so a new process (here, a new Store value over the same
-// environment) sees exactly what an earlier one bound, and can change it.
+// state home) sees exactly what an earlier one bound, and can change it.
 func TestAFreshStoreReadsWhatAnotherWrote(t *testing.T) {
 	first, root := isolatedStore(t)
 	mustBind(t, first, hex64("a"), "proj-1", "wf-1", t0)
 
-	second, err := projection.NewStore()
+	second, err := fsstore.NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}

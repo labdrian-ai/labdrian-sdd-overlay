@@ -436,7 +436,7 @@ func TestWorkflowBindDoesNotReplaceABindingThatChangedAfterItWasJudgedStale(t *t
 	seamRuns := 0
 	beforeStaleReplace = func() {
 		seamRuns++
-		store, err := projection.NewStore()
+		store, err := newBindingStore()
 		if err != nil {
 			t.Errorf("NewStore() = %v", err)
 			return
@@ -510,7 +510,7 @@ func TestWorkflowBindAndUnbindAreRefusedWhileTheBindingLockIsHeld(t *testing.T) 
 // the projection store, independently of the CLI.
 func loadStoredBinding(t *testing.T, cwd string) projection.Loaded {
 	t.Helper()
-	store, err := projection.NewStore()
+	store, err := newBindingStore()
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -519,6 +519,54 @@ func loadStoredBinding(t *testing.T, cwd string) projection.Loaded {
 		t.Fatal(err)
 	}
 	return loaded
+}
+
+// The binding store is handed its state home by the composition root, which
+// resolves it from the environment once (statestore.Home): the adapter reads no
+// variable. These pin what a person sees for an unusable environment, which is the
+// text the store printed when it resolved the home itself, and where a binding
+// lands for each way of naming the home.
+func TestNewBindingStoreResolvesTheStateHomeFromTheEnvironment(t *testing.T) {
+	refused := []struct{ name, xdg, home, want string }{
+		{"relative XDG_STATE_HOME", "relative/path", "/home/someone", `projection store: XDG_STATE_HOME "relative/path" is not absolute`},
+		{"relative HOME fallback", "", "relative/home", `projection store: XDG_STATE_HOME is unset and HOME "relative/home" is not an absolute path`},
+		{"unset HOME fallback", "", "", `projection store: XDG_STATE_HOME is unset and HOME "" is not an absolute path`},
+	}
+	for _, tt := range refused {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("XDG_STATE_HOME", tt.xdg)
+			t.Setenv("HOME", tt.home)
+			if store, err := newBindingStore(); err == nil || err.Error() != tt.want || store != nil {
+				t.Fatalf("newBindingStore() = %v, %v, want no store and %q", store, err, tt.want)
+			}
+		})
+	}
+
+	key := strings.Repeat("a", 64)
+	bound := func(t *testing.T, stateHome string) {
+		t.Helper()
+		store, err := newBindingStore()
+		if err != nil {
+			t.Fatalf("newBindingStore() = %v, want nil", err)
+		}
+		if err := store.Bind(key, "proj-1", "wf-1", time.Now(), false); err != nil {
+			t.Fatalf("Bind() = %v, want nil", err)
+		}
+		if _, err := os.Stat(filepath.Join(stateHome, "labdrian", "bindings", key+".json")); err != nil {
+			t.Fatalf("the binding is not under %s: %v", stateHome, err)
+		}
+	}
+	t.Run("XDG_STATE_HOME", func(t *testing.T) {
+		xdg := t.TempDir()
+		t.Setenv("XDG_STATE_HOME", xdg)
+		bound(t, xdg)
+	})
+	t.Run("HOME fallback", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("XDG_STATE_HOME", "")
+		t.Setenv("HOME", home)
+		bound(t, filepath.Join(home, ".local", "state"))
+	})
 }
 
 func TestWorkflowBindRefusesToOverwriteForeignAndMalformedBindingFiles(t *testing.T) {
