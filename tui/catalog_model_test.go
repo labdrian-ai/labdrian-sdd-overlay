@@ -234,11 +234,7 @@ func TestRestore_NeverRunsAgainstAPackageTarget(t *testing.T) {
 	}}
 	m := newLoadedModel(t, &fakeCatalog{targets: fourTargets()}, backups)
 	m.selected = map[int]bool{0: true, 3: true} // claude and pi
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m = enterRestore(t, m)
 
 	if m.scr != screenConfirm {
 		t.Fatalf("restore with claude's backup available should reach the confirm screen, got %v", m.scr)

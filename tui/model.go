@@ -18,6 +18,7 @@ const (
 	screenConfirm               // confirmation for mutating actions
 	screenRunning               // running the backend
 	screenResult                // output pane + sync dashboard
+	screenLookup                // asking the backend for the latest backups (restore confirm)
 )
 
 // model is the root bubbletea state.
@@ -60,6 +61,8 @@ type model struct {
 	// whole action as failed even though the backup-bearing target's
 	// destructive restore already succeeded.
 	pendingTargets []Target
+	// restoreReq numbers the restore backup lookups; only the latest answer counts.
+	restoreReq int
 
 	result commandResult
 	scroll int // line offset into the output pane
@@ -147,6 +150,14 @@ func (m model) catalogReady() bool { return m.targetsLoaded && m.targetsErr == n
 
 // runDoneMsg is delivered when a backend invocation completes.
 type runDoneMsg struct{ result commandResult }
+
+// restoreLookupMsg is the outcome of request req's backup lookup: targets is
+// the backup-bearing subset action.ConfirmMessage names (empty: none has one).
+type restoreLookupMsg struct {
+	req     int
+	action  Action
+	targets []Target
+}
 
 // probeDoneMsg is delivered when the launch-time cached-only origin probe
 // (probeBehindOriginCmd, D4) completes. Its fields are consumed by the
@@ -301,9 +312,20 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return m, nil
 
+	case restoreLookupMsg:
+		// Stale if the operator backed out or began a newer lookup.
+		if m.scr != screenLookup || msg.req != m.restoreReq {
+			return m, nil
+		}
+		m.scr = screenActions
+		if len(msg.targets) > 0 {
+			m.pendingAction, m.pendingTargets, m.scr = msg.action, msg.targets, screenConfirm
+		}
+		return m, nil
+
 	case spinner.TickMsg:
-		if m.scr != screenRunning {
-			// Drop ticks once we've left screenRunning — stops the self-perpetuating loop.
+		if m.scr != screenRunning && m.scr != screenLookup {
+			// Drop ticks once we've left a spinner screen — stops the self-perpetuating loop.
 			return m, nil
 		}
 		var cmd tea.Cmd
@@ -349,9 +371,23 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m.updateConfirm(msg)
 		case screenResult:
 			return m.updateResult(msg)
+		case screenLookup:
+			return m.updateLookup(msg)
 		case screenRunning:
 			return m, nil
 		}
+	}
+	return m, nil
+}
+
+// updateLookup handles keys while the backup lookup runs: quit, or go back.
+func (m model) updateLookup(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
+	switch msg.String() {
+	case "q":
+		m.quitting = true
+		return m, tea.Quit
+	case "esc":
+		m.scr = screenActions
 	}
 	return m, nil
 }
@@ -411,20 +447,13 @@ func (m model) updateActions(msg tea.KeyMsg) (tea.Model, tea.Cmd) {
 			return m, nil
 		}
 		if action.Command == "restore" {
-			// R-003: restore is never offered/selectable for a target with
-			// zero backups. Entering it with no available backup among the
-			// current selection is a no-op — stay on screenActions rather
-			// than opening a confirm screen for something that would just
-			// fail against every selected target. restoreConfirmInfo also
-			// narrows `targets` down to the backup-bearing subset -- the
-			// SAME subset both the confirm text and the real invocation use
-			// (see pendingTargets' doc comment).
-			info, restoreTargets, ok := m.restoreConfirmInfo(action, targets)
-			if !ok {
-				return m, nil
-			}
-			action.ConfirmMessage = info
-			targets = restoreTargets
+			// R-003: restore is never offered for a target with zero backups.
+			// The lookup spawns the backend, so it runs in a command and its
+			// restoreLookupMsg opens the confirm screen (or does nothing when
+			// no target has a backup). Each press is a new request.
+			m.restoreReq++
+			m.scr = screenLookup
+			return m, tea.Batch(m.spinner.Tick, m.restoreLookupCmd(m.restoreReq, action, targets))
 		}
 		m.pendingAction = action
 		m.pendingTargets = targets
@@ -480,6 +509,17 @@ func (m model) restoreConfirmInfo(action Action, candidates []Target) (message s
 		return "", nil, false
 	}
 	return action.ConfirmMessage + "\n\nRespaldo a restaurar:\n  " + strings.Join(lines, "\n  "), targets, true
+}
+
+// restoreLookupCmd runs restoreConfirmInfo off the UI goroutine, querying the
+// targets one after another: a listing takes milliseconds, the port need not be
+// concurrency-safe, and quit/back stay available however long the backend takes.
+func (m model) restoreLookupCmd(req int, action Action, candidates []Target) tea.Cmd {
+	return func() tea.Msg {
+		info, targets, _ := m.restoreConfirmInfo(action, candidates)
+		action.ConfirmMessage = info
+		return restoreLookupMsg{req: req, action: action, targets: targets}
+	}
 }
 
 func (m model) updateConfirm(msg tea.KeyMsg) (tea.Model, tea.Cmd) {

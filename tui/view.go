@@ -68,6 +68,8 @@ func (m model) View() string {
 		body = m.viewActions()
 	case screenConfirm:
 		body = m.viewConfirm()
+	case screenLookup:
+		body = titleStyle.Render(m.spinner.View() + " Consultando respaldos…")
 	case screenRunning:
 		body = m.viewRunning()
 	case screenResult:
@@ -194,6 +196,8 @@ func (m model) footerKeys() string {
 		return "↑/↓ navegar  ·  enter ejecutar la acción seleccionada  ·  esc volver  ·  q salir"
 	case screenConfirm:
 		return "y/enter confirmar  ·  n/esc cancelar"
+	case screenLookup:
+		return "esc volver  ·  q salir"
 	case screenRunning:
 		return "Ejecutando…"
 	case screenResult:

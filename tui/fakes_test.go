@@ -33,9 +33,13 @@ type fakeBackups struct {
 	byTarget map[string]Backup
 	errs     map[string]error
 	asked    []string
+	gate     chan struct{} // when set, every query waits until it is closed
 }
 
 func (f *fakeBackups) LatestBackup(target string) (Backup, bool, error) {
+	if f.gate != nil {
+		<-f.gate
+	}
 	f.asked = append(f.asked, target)
 	b, ok := f.byTarget[target]
 	// A failing query may still hand back what it knew. The model must go by

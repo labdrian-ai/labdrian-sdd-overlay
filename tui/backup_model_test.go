@@ -8,18 +8,100 @@ import (
 	"errors"
 	"strings"
 	"testing"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 )
 
-// enterRestore selects the restore action on the actions screen and presses
-// enter, returning the resulting model.
+// lookupResult runs a command and picks out the lookup's message.
+func lookupResult(t *testing.T, cmd tea.Cmd) restoreLookupMsg {
+	t.Helper()
+	for _, msg := range collectMsgs(cmd) {
+		if r, ok := msg.(restoreLookupMsg); ok {
+			return r
+		}
+	}
+	t.Fatal("the command produced no restoreLookupMsg")
+	return restoreLookupMsg{}
+}
+
+// pressRestore presses enter on restore; the answer is in the returned command.
+func pressRestore(t *testing.T, m model) (model, tea.Cmd) {
+	t.Helper()
+	m.scr, m.aCursor = screenActions, findAction(t, m, "restore")
+	updated, cmd := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
+	return updated.(model), cmd
+}
+
+// deliver hands msg to Update, as the program does when a command finishes.
+func deliver(m model, msg tea.Msg) model {
+	updated, _ := m.Update(msg)
+	return updated.(model)
+}
+
+// enterRestore presses enter on restore and delivers the lookup's answer.
 func enterRestore(t *testing.T, m model) model {
 	t.Helper()
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	return updated.(model)
+	m, cmd := pressRestore(t, m)
+	return deliver(m, lookupResult(t, cmd))
+}
+
+// TestRestore_EnterNeverQueriesInsideUpdate: the real query spawns the backend,
+// so it runs in the returned command, never in Update, where it would freeze the UI.
+func TestRestore_EnterNeverQueriesInsideUpdate(t *testing.T) {
+	backups := &fakeBackups{gate: make(chan struct{}), byTarget: map[string]Backup{
+		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
+	}}
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, backups)
+
+	// A query inside Update would wait on the gate until this timer opens it.
+	timer := time.AfterFunc(2*time.Second, func() { close(backups.gate) })
+	m, cmd := pressRestore(t, m)
+	if !timer.Stop() {
+		t.Fatal("enter on restore blocked on the BackupQuery inside Update")
+	}
+	if len(backups.asked) != 0 || m.scr != screenLookup || !strings.Contains(stripANSI(m.View()), "Consultando respaldos") {
+		t.Errorf("after enter: asked %q, screen %v; want no query yet and the lookup screen", backups.asked, m.scr)
+	}
+
+	close(backups.gate)
+	lookupResult(t, cmd) // only the returned command touches the port
+	if len(backups.asked) == 0 {
+		t.Error("the returned command never queried the port")
+	}
+}
+
+// TestRestore_AStaleLookupResultIsIgnored: an answer arriving after the operator
+// backed out, or after a newer request began, must not open the confirm screen.
+func TestRestore_AStaleLookupResultIsIgnored(t *testing.T) {
+	backups := &fakeBackups{byTarget: map[string]Backup{"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"}}}
+	m := newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, backups)
+
+	m, cmd := pressRestore(t, m)
+	first := lookupResult(t, cmd)
+	m = deliver(pressKey(t, m, tea.KeyMsg{Type: tea.KeyEsc}), first) // answer after backing out
+	if m.scr != screenActions || m.pendingAction.Command == "restore" {
+		t.Fatalf("an answer after backing out reached screen %v (pending %q)", m.scr, m.pendingAction.Command)
+	}
+	m, cmd = pressRestore(t, m) // a newer request is in flight
+	second := lookupResult(t, cmd)
+	if m = deliver(m, first); m.scr != screenLookup {
+		t.Fatalf("an earlier request's answer completed the current lookup: screen %v", m.scr)
+	}
+	if m = deliver(m, second); m.scr != screenConfirm {
+		t.Errorf("the current request's answer should open the confirm screen, got %v", m.scr)
+	}
+}
+
+// TestRestore_QuitWorksWhileTheLookupIsInFlight: its command is never run here.
+func TestRestore_QuitWorksWhileTheLookupIsInFlight(t *testing.T) {
+	m, _ := pressRestore(t, newLoadedModel(t, &fakeCatalog{targets: threeCopyTargets()}, &fakeBackups{}))
+
+	for _, key := range []tea.KeyMsg{{Type: tea.KeyRunes, Runes: []rune("q")}, {Type: tea.KeyCtrlC}} {
+		if next, cmd := m.Update(key); cmd == nil || !next.(model).quitting || cmd() != tea.Quit() {
+			t.Errorf("%v while the lookup runs did not quit", key)
+		}
+	}
 }
 
 // TestRestore_AsksTheBackupQueryForEachSelectedTarget: the latest backup comes

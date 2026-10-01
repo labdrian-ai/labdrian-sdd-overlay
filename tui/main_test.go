@@ -2135,12 +2135,7 @@ func findAction(t *testing.T, m model, command string) int {
 // backups stays on screenActions -- restore is never offered/run for a
 // target with no backup to restore.
 func TestUpdateActions_Restore_NoBackupIsNoOp(t *testing.T) {
-	m := newTestModel(t) // its backup query holds no backups
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m := enterRestore(t, newTestModel(t)) // its backup query holds no backups
 
 	if m.scr != screenActions {
 		t.Errorf("scr after entering restore with zero backups = %v, want unchanged screenActions", m.scr)
@@ -2162,11 +2157,7 @@ func TestUpdateActions_Restore_WithBackupShowsConfirmNamingTimestampVersion(t *t
 	}})
 	// Only "claude" selected, to make the confirm text assertion unambiguous.
 	m.selected = map[int]bool{0: true, 1: false, 2: false}
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m = enterRestore(t, m)
 
 	if m.scr != screenConfirm {
 		t.Fatalf("scr after entering restore with an available backup = %v, want screenConfirm", m.scr)
@@ -2210,11 +2201,7 @@ func TestUpdateActions_Restore_PartialBackupAvailabilityAmongSelection(t *testin
 		"claude": {Timestamp: "20260301T093000Z", Version: "v1.5.0"},
 	}})
 	m.selected = map[int]bool{0: true, 1: true, 2: false} // claude + opencode
-	m.scr = screenActions
-	m.aCursor = findAction(t, m, "restore")
-
-	updated, _ := m.updateActions(tea.KeyMsg{Type: tea.KeyEnter})
-	m = updated.(model)
+	m = enterRestore(t, m)
 
 	if m.scr != screenConfirm {
 		t.Fatalf("scr = %v, want screenConfirm when at least one selected target has a backup", m.scr)
