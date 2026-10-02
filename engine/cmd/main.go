@@ -76,7 +76,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -758,8 +757,14 @@ func runReviewReceiptCapture(args []string) {
 		os.Exit(1)
 	}
 
+	svc, err := newReviewReceiptService(cwd)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
+		os.Exit(1)
+	}
+
 	if change == "" {
-		detected, err := reviewreceipt.DetectActiveChange(cwd)
+		detected, err := svc.DetectActiveChange()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "error: %v\n", err)
 			os.Exit(1)
@@ -771,7 +776,7 @@ func runReviewReceiptCapture(args []string) {
 		change = detected
 	}
 
-	captured, err := reviewreceipt.Capture(cwd, change)
+	captured, err := svc.Capture(change)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
 		os.Exit(1)
@@ -781,8 +786,8 @@ func runReviewReceiptCapture(args []string) {
 
 // runReviewReceiptHook implements 'review-receipt hook --cwd <repo>': the
 // fail-closed PreToolUse Bash hook entry point. Reads the raw hook input
-// JSON from stdin and exits with reviewreceipt.RunHook's exit code, printing
-// its message (if any) to stderr.
+// JSON from stdin and exits with reviewreceipt.Service.RunHook's exit code,
+// printing its message (if any) to stderr.
 func runReviewReceiptHook(args []string) {
 	cwd, _ := parseReviewReceiptArgs(args)
 	if cwd == "" {
@@ -799,7 +804,15 @@ func runReviewReceiptHook(args []string) {
 		os.Exit(2)
 	}
 
-	exitCode, message := reviewreceipt.RunHook(raw, cwd)
+	svc, err := newReviewReceiptService(cwd)
+	if err != nil {
+		// Fail closed, as for an unreadable input: a hook that cannot be set up
+		// cannot guard the acknowledgement it was started for.
+		fmt.Fprintf(os.Stderr, "review-receipt hook: %v\n", err)
+		os.Exit(2)
+	}
+
+	exitCode, message := svc.RunHook(raw)
 	if message != "" {
 		fmt.Fprintln(os.Stderr, message)
 	}

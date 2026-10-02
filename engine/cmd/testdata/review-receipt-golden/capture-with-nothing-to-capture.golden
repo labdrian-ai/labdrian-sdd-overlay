@@ -1,0 +1,18 @@
+$ review-receipt capture --cwd <ROOT>
+exit: 0
+--- stdout ---
+review-receipt capture: 0 receipt(s) captured for "the-change"
+--- stderr ---
+
+$ review-receipt capture --cwd <ROOT> --change the-change
+exit: 0
+--- stdout ---
+review-receipt capture: 0 receipt(s) captured for "the-change"
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/the-change
+file openspec/changes/the-change/tasks.md 0644 8 b23b81c926c4
+

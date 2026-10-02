@@ -1,0 +1,14 @@
+$ review-receipt capture --cwd <RELATIVE-ROOT>
+exit: 0
+--- stdout ---
+review-receipt capture: 1 receipt(s) captured for "the-change"
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/the-change
+dir  openspec/changes/the-change/review-receipts
+file openspec/changes/the-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/the-change/tasks.md 0644 8 b23b81c926c4
+

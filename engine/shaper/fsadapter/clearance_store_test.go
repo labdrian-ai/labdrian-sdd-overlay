@@ -460,3 +460,32 @@ func TestStoreRefusesANonRegularRecord(t *testing.T) {
 		t.Errorf("Get accepted a directory at the record path")
 	}
 }
+
+// A record that cannot be written because the directory refuses a new file is refused in
+// the store's name with the words of the write that failed (engine/atomicfile's). The
+// store printed "write temporary record" and "publish record" for these before it was
+// built on atomicfile; that wording is the documented difference, and this pins what
+// replaced it.
+func TestPutReportsAWriteFailureInTheAtomicFileWords(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a read-only directory does not stop root from writing")
+	}
+	s, state := newTestStore(t)
+	key, data := storedRecord(t)
+	dir := filepath.Dir(recordPath(state, key))
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(dir, 0o500); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(dir, 0o700) })
+
+	_, err := s.Put(data)
+	if err == nil || !strings.HasPrefix(err.Error(), "clearance store: atomicfile: create temporary file: ") || !strings.HasSuffix(err.Error(), "permission denied") {
+		t.Fatalf("Put into a directory that refuses a new file = %v, want %q ... %q", err, "clearance store: atomicfile: create temporary file: ", "permission denied")
+	}
+	if _, err := os.Lstat(recordPath(state, key)); !os.IsNotExist(err) {
+		t.Errorf("a record exists after a failed Put (err %v)", err)
+	}
+}

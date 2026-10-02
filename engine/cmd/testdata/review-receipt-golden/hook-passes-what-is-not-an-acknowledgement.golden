@@ -1,0 +1,39 @@
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"git status"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+not json
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash"}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_input":{"command":42}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+

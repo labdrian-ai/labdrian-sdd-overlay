@@ -14,9 +14,12 @@ import (
 // 'shaper assess' (the JSON, the presented view, and the refusals of a source that cannot
 // be read), the verb that stores a clearance, and 'roles match-shaper', which reads a
 // handoff through the same contained read. They were recorded from the program as it was
-// before the contained read moved behind a port (H10 S2) and before the disclosure file
-// was renamed (S3), and they did not change when those landed: a change to what a verb
-// prints, or to the wording of a refusal, fails here. Rewrite them deliberately with
+// before two refactors of Phase 9 unit H10 (the shaper's file access moving out of the
+// domain, docs/architecture/hexagonal-target.md): slice S2, which put the contained read of
+// the handoff and the Goal behind the shaper.ContainedSource port and moved it to
+// engine/shaper/fsadapter, and slice S3, which renamed engine/shaper/cli_support.go to
+// disclosure.go. They did not change when those landed: a change to what a verb prints, or
+// to the wording of a refusal, fails here. Rewrite them deliberately with
 //
 //	go test ./cmd -run TestShaperGolden -update-shaper-golden
 //

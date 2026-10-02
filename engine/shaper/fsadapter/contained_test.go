@@ -2,14 +2,18 @@ package fsadapter
 
 import (
 	"bytes"
-	"encoding/json"
+	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"reflect"
+	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper/shapertest"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
 
 // These tests read real files through the file-backed ContainedSource, directly and end to
@@ -18,42 +22,15 @@ import (
 // of the bytes, is proved against a fake source in package shaper; the platform-specific
 // races are in contained_race_linux_test.go.
 
-const validHandoffJSON = `{"version":1,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","architecture":"Layered CLI with a shared jsonstrict wire gate.","stages":["Extract jsonstrict.","Refactor goal.Parse onto jsonstrict."],"acceptance":["go test ./... passes."],"out_of_scope":["Runtime clearance UI."]}`
-
-// documentWith is the valid handoff document with some fields replaced.
-func documentWith(t *testing.T, changes map[string]any) []byte {
+// sampleHandoff is the handoff the shared fixture (shapertest.ValidHandoffJSON) parses to:
+// the typed value is derived from the text, not written out a second time.
+func sampleHandoff(t testing.TB) shaper.Handoff {
 	t.Helper()
-	var fields map[string]any
-	if err := json.Unmarshal([]byte(validHandoffJSON), &fields); err != nil {
-		t.Fatalf("decode valid test document: %v", err)
-	}
-	for key, value := range changes {
-		fields[key] = value
-	}
-	data, err := json.Marshal(fields)
+	h, err := shaper.Parse([]byte(shapertest.ValidHandoffJSON))
 	if err != nil {
-		t.Fatalf("encode test document: %v", err)
+		t.Fatalf("the shared valid handoff does not parse: %v", err)
 	}
-	return data
-}
-
-func sampleHandoff() shaper.Handoff {
-	return shaper.Handoff{
-		Version:      1,
-		ProjectID:    "standalone-shaper-handoff",
-		GoalID:       "goal-alpha",
-		Architecture: "Layered CLI with a shared jsonstrict wire gate.",
-		Stages:       []string{"Extract jsonstrict.", "Refactor goal.Parse onto jsonstrict."},
-		Acceptance:   []string{"go test ./... passes."},
-		OutOfScope:   []string{"Runtime clearance UI."},
-	}
-}
-
-func goalV2JSON(projectID, goalID string) string {
-	return `{"version":2,"project_id":"` + projectID + `","goal_id":"` + goalID + `",` +
-		`"objective":"Bind the handoff to real intent.","scope":"One project.",` +
-		`"constraints":[],"non_goals":[],"acceptance_criteria":["Binding succeeds."],` +
-		`"memory_scope":"Project-scoped.","runtime_scope":"Deferred.","delivery_boundary":"No delivery."}`
+	return h
 }
 
 func writeGoalFile(t *testing.T, dir, name string, data []byte) string {
@@ -63,30 +40,6 @@ func writeGoalFile(t *testing.T, dir, name string, data []byte) string {
 		t.Fatalf("write goal file %s: %v", path, err)
 	}
 	return path
-}
-
-// assertRejectedWithoutPartialBinding fails unless BindGoal returned an error
-// together with the zero GoalBinding, so no rejection leaks partial state.
-func assertRejectedWithoutPartialBinding(t *testing.T, got shaper.GoalBinding, err error, what string) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("BindGoal accepted %s", what)
-	}
-	if !reflect.DeepEqual(got, shaper.GoalBinding{}) {
-		t.Errorf("BindGoal returned a partial GoalBinding alongside error %v: %#v", err, got)
-	}
-}
-
-// assertLoadHandoffRejected fails unless LoadHandoff returned an error
-// together with the zero HandoffSource, so no rejection leaks partial state.
-func assertLoadHandoffRejected(t *testing.T, got shaper.HandoffSource, err error, what string) {
-	t.Helper()
-	if err == nil {
-		t.Fatalf("LoadHandoff accepted %s", what)
-	}
-	if !reflect.DeepEqual(got, shaper.HandoffSource{}) {
-		t.Errorf("LoadHandoff returned a partial HandoffSource alongside error %v: %#v", err, got)
-	}
 }
 
 func TestReadContainedReturnsTheExactBytesOfARegularFile(t *testing.T) {
@@ -162,8 +115,17 @@ func TestReadContainedNamesTheSourceByItsLabelInEveryRefusal(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// The words of a missing file are the operating system's (the adapter wraps the Lstat
+	// error as it is), so they are taken from the system here, not pinned: what this test
+	// owns is the adapter's part, the label, the path it was given, and the "is not
+	// accessible" in front.
+	_, lstatErr := os.Lstat(filepath.Join(root, "absent.json"))
+	if lstatErr == nil {
+		t.Fatal("absent.json exists")
+	}
+
 	for _, tc := range []struct{ rel, want string }{
-		{"absent.json", `widget "absent.json" is not accessible: lstat ` + filepath.Join(root, "absent.json") + `: no such file or directory`},
+		{"absent.json", `widget "absent.json" is not accessible: ` + lstatErr.Error()},
 		{"link.json", `widget "link.json" must not be a symlink`},
 		{"dir.json", `widget "dir.json" must be a regular file`},
 		{"escape/real.json", `widget "escape/real.json" resolves outside the worktree root`},
@@ -202,14 +164,71 @@ func TestTheOpenHookBelongsToTheSourceItIsSetOn(t *testing.T) {
 	}
 }
 
+// The no-follow open has one owner, engine/statestore, and it is the one this source opens
+// with. A refusal of a platform that has none (statestore.ErrUnsupported) is worded in the
+// contained read's own terms, as it always was, and every other failure of the open is
+// reported as the open's own. The opener is a field of the value, so this runs the code of
+// such a platform on any other.
+func TestReadContainedWordsAnOpenTheStateStoreRefusesAsUnsupportedByItsOwnTerms(t *testing.T) {
+	root := t.TempDir()
+	writeGoalFile(t, root, "goal.json", []byte("{}"))
+
+	for _, tc := range []struct {
+		name string
+		err  error
+		want string
+	}{
+		{"a platform without a no-follow open", statestore.ErrUnsupported,
+			fmt.Sprintf("open widget %q: contained read is unsupported on %s", "goal.json", runtime.GOOS)},
+		{"any other failure of the open", errors.New("the disk went away"),
+			fmt.Sprintf("open widget %q: the disk went away", "goal.json")},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			src := ContainedSource{open: func(string) (*os.File, error) { return nil, tc.err }}
+			got, err := src.ReadContained(root, "goal.json", "widget")
+			if err == nil || err.Error() != tc.want || got != nil {
+				t.Errorf("ReadContained = %q, %v, want a refusal %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
+// No file of this package opens a file without following a symlink, or recognizes the
+// kernel's refusal of one, by itself: the one owner of that is engine/statestore, so a
+// hardening of it reaches the contained read too. (The clearance store of this same package
+// already reads through statestore.)
+func TestTheNoFollowOpenHasOneOwner(t *testing.T) {
+	files, err := filepath.Glob("*.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(files) == 0 {
+		t.Fatal("found no source files to check")
+	}
+	for _, file := range files {
+		if strings.HasSuffix(file, "_test.go") {
+			continue
+		}
+		src, err := os.ReadFile(file)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, banned := range []string{"syscall.O_NOFOLLOW", "syscall.ELOOP"} {
+			if strings.Contains(string(src), banned) {
+				t.Errorf("%s mentions %s: the no-follow open belongs to engine/statestore", file, banned)
+			}
+		}
+	}
+}
+
 func TestBindGoalReadsTheGoalFromARealFile(t *testing.T) {
 	root := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
+	data := []byte(shapertest.GoalV2JSON("standalone-shaper-handoff", "goal-alpha"))
 	writeGoalFile(t, filepath.Join(root, "sub"), "goal.json", data)
-	h := sampleHandoff()
+	h := sampleHandoff(t)
 
 	got, err := shaper.BindGoal(ContainedSource{}, h, root, "./sub/goal.json")
 	if err != nil {
@@ -227,7 +246,7 @@ func TestBindGoalReadsTheGoalFromARealFile(t *testing.T) {
 }
 
 func TestBindGoalRejectsWhatCannotBeReadAsAPlainContainedFile(t *testing.T) {
-	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
+	data := []byte(shapertest.GoalV2JSON("standalone-shaper-handoff", "goal-alpha"))
 	for _, tc := range []struct {
 		name  string
 		setup func(t *testing.T, root string) string
@@ -265,8 +284,8 @@ func TestBindGoalRejectsWhatCannotBeReadAsAPlainContainedFile(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			root := t.TempDir()
 			path := tc.setup(t, root)
-			got, err := shaper.BindGoal(ContainedSource{}, sampleHandoff(), root, path)
-			assertRejectedWithoutPartialBinding(t, got, err, tc.name)
+			got, err := shaper.BindGoal(ContainedSource{}, sampleHandoff(t), root, path)
+			shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", got, err, tc.name)
 		})
 	}
 }
@@ -276,7 +295,7 @@ func TestLoadHandoffReadsTheHandoffFromARealFile(t *testing.T) {
 	if err := os.MkdirAll(filepath.Join(root, "shaper"), 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
-	data := documentWith(t, nil)
+	data := shapertest.DocumentWith(t, nil)
 	writeGoalFile(t, filepath.Join(root, "shaper"), "handoff.json", data)
 
 	got, err := shaper.LoadHandoff(ContainedSource{}, root, "./shaper/handoff.json")
@@ -317,7 +336,7 @@ func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
 		{
 			name: "absolute path",
 			setup: func(t *testing.T, root string) string {
-				return writeGoalFile(t, root, "handoff.json", documentWith(t, nil))
+				return writeGoalFile(t, root, "handoff.json", shapertest.DocumentWith(t, nil))
 			},
 			wantErr: "must be relative",
 		},
@@ -339,7 +358,7 @@ func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
 		{
 			name: "symlink inside root",
 			setup: func(t *testing.T, root string) string {
-				target := writeGoalFile(t, t.TempDir(), "handoff.json", documentWith(t, nil))
+				target := writeGoalFile(t, t.TempDir(), "handoff.json", shapertest.DocumentWith(t, nil))
 				if err := os.Symlink(target, filepath.Join(root, "handoff.json")); err != nil {
 					t.Skipf("symlink not supported in this environment: %v", err)
 				}
@@ -351,7 +370,7 @@ func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
 			name: "symlinked ancestor escaping root",
 			setup: func(t *testing.T, root string) string {
 				outside := t.TempDir()
-				writeGoalFile(t, outside, "handoff.json", documentWith(t, nil))
+				writeGoalFile(t, outside, "handoff.json", shapertest.DocumentWith(t, nil))
 				if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
 					t.Skipf("symlink not supported in this environment: %v", err)
 				}
@@ -372,7 +391,7 @@ func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
 		{
 			name: "invalid handoff",
 			setup: func(t *testing.T, root string) string {
-				writeGoalFile(t, root, "handoff.json", documentWith(t, map[string]any{"version": 2}))
+				writeGoalFile(t, root, "handoff.json", shapertest.DocumentWith(t, map[string]any{"version": 2}))
 				return "handoff.json"
 			},
 			wantErr: "parse shaper handoff",
@@ -386,7 +405,7 @@ func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
 				root = ""
 			}
 			got, err := shaper.LoadHandoff(ContainedSource{}, root, path)
-			assertLoadHandoffRejected(t, got, err, tc.name)
+			shapertest.AssertRejectedWithoutPartialState(t, "LoadHandoff", got, err, tc.name)
 			if !strings.Contains(err.Error(), tc.wantErr) {
 				t.Errorf("LoadHandoff error = %v, want it to contain %q", err, tc.wantErr)
 			}
@@ -399,7 +418,7 @@ func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
 
 func TestLoadHandoffRejectsRelativeWorktreeRoot(t *testing.T) {
 	got, err := shaper.LoadHandoff(ContainedSource{}, "relative/root", "handoff.json")
-	assertLoadHandoffRejected(t, got, err, "a relative worktreeRoot")
+	shapertest.AssertRejectedWithoutPartialState(t, "LoadHandoff", got, err, "a relative worktreeRoot")
 }
 
 func TestReadContainedSourceReadsARegularFileInsideRoot(t *testing.T) {

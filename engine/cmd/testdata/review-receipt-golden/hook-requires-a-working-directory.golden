@@ -1,0 +1,16 @@
+$ review-receipt hook
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+error: --cwd is required
+
+$ review-receipt hook --cwd
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+error: --cwd is required
+

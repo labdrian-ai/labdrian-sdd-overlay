@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper/shapertest"
 )
 
 // The tests below race the file system between the steps of ContainedSource.ReadContained
@@ -21,7 +22,7 @@ import (
 // goalV2JSONWithObjective is a matching Goal v2 document whose objective
 // distinguishes which file was actually read.
 func goalV2JSONWithObjective(objective string) string {
-	return strings.Replace(goalV2JSON("standalone-shaper-handoff", "goal-alpha"),
+	return strings.Replace(shapertest.GoalV2JSON("standalone-shaper-handoff", "goal-alpha"),
 		"Bind the handoff to real intent.", objective, 1)
 }
 
@@ -55,8 +56,8 @@ func TestBindGoalRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.T) 
 		mustSymlink(t, outsidePath, joined)
 	}}
 
-	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a goal source swapped for a symlink between check and open")
+	got, err := shaper.BindGoal(src, sampleHandoff(t), root, "goal.json")
+	shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", got, err, "a goal source swapped for a symlink between check and open")
 	if !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("BindGoal error = %v, want it to name the symlink", err)
 	}
@@ -80,8 +81,8 @@ func TestBindGoalRefusesAncestorSwappedToOutsideDirectoryBeforeOpen(t *testing.T
 		mustSymlink(t, outside, goalsDir)
 	}}
 
-	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goals/goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a goal source reached through an ancestor swapped outside the root before open")
+	got, err := shaper.BindGoal(src, sampleHandoff(t), root, "goals/goal.json")
+	shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", got, err, "a goal source reached through an ancestor swapped outside the root before open")
 }
 
 func TestBindGoalRefusesDoubleToggledAncestorAfterOpen(t *testing.T) {
@@ -109,8 +110,8 @@ func TestBindGoalRefusesDoubleToggledAncestorAfterOpen(t *testing.T) {
 		}
 	}}
 
-	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goals/goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a descriptor opened outside the root while the path was toggled back")
+	got, err := shaper.BindGoal(src, sampleHandoff(t), root, "goals/goal.json")
+	shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", got, err, "a descriptor opened outside the root while the path was toggled back")
 	if err != nil && !strings.Contains(err.Error(), "outside the worktree root") {
 		t.Errorf("BindGoal error = %v, want the containment refusal", err)
 	}
@@ -118,7 +119,7 @@ func TestBindGoalRefusesDoubleToggledAncestorAfterOpen(t *testing.T) {
 
 func TestBindGoalRefusesFIFOSwappedInBeforeOpenWithoutBlocking(t *testing.T) {
 	root := t.TempDir()
-	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha")))
+	writeGoalFile(t, root, "goal.json", []byte(shapertest.GoalV2JSON("standalone-shaper-handoff", "goal-alpha")))
 
 	var fifo string
 	src := ContainedSource{openHook: func(stage, joined string) {
@@ -149,13 +150,13 @@ func TestBindGoalRefusesFIFOSwappedInBeforeOpenWithoutBlocking(t *testing.T) {
 	}
 	done := make(chan result, 1)
 	go func() {
-		got, err := shaper.BindGoal(src, sampleHandoff(), root, "goal.json")
+		got, err := shaper.BindGoal(src, sampleHandoff(t), root, "goal.json")
 		done <- result{got, err}
 	}()
 
 	select {
 	case r := <-done:
-		assertRejectedWithoutPartialBinding(t, r.got, r.err, "a FIFO swapped in before open")
+		shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", r.got, r.err, "a FIFO swapped in before open")
 		if !strings.Contains(r.err.Error(), "regular file") {
 			t.Errorf("BindGoal error = %v, want it to require a regular file", r.err)
 		}
@@ -166,7 +167,7 @@ func TestBindGoalRefusesFIFOSwappedInBeforeOpenWithoutBlocking(t *testing.T) {
 
 func TestBindGoalRefusesSourceUnlinkedAfterOpen(t *testing.T) {
 	root := t.TempDir()
-	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha")))
+	writeGoalFile(t, root, "goal.json", []byte(shapertest.GoalV2JSON("standalone-shaper-handoff", "goal-alpha")))
 
 	src := ContainedSource{openHook: func(stage, joined string) {
 		if stage != "post-open" {
@@ -177,14 +178,14 @@ func TestBindGoalRefusesSourceUnlinkedAfterOpen(t *testing.T) {
 		}
 	}}
 
-	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a goal source unlinked after open")
+	got, err := shaper.BindGoal(src, sampleHandoff(t), root, "goal.json")
+	shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", got, err, "a goal source unlinked after open")
 }
 
 func TestLoadHandoffRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.T) {
 	root := t.TempDir()
 	outside := t.TempDir()
-	data := documentWith(t, nil)
+	data := shapertest.DocumentWith(t, nil)
 	writeGoalFile(t, root, "handoff.json", data)
 	outsidePath := writeGoalFile(t, outside, "handoff.json", data)
 
@@ -199,7 +200,7 @@ func TestLoadHandoffRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.
 	}}
 
 	got, err := shaper.LoadHandoff(src, root, "handoff.json")
-	assertLoadHandoffRejected(t, got, err, "a handoff swapped for a symlink between check and open")
+	shapertest.AssertRejectedWithoutPartialState(t, "LoadHandoff", got, err, "a handoff swapped for a symlink between check and open")
 }
 
 // What is returned is what was proved, not what the path names by the time the bytes are

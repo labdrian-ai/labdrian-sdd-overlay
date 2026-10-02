@@ -1,0 +1,9 @@
+$ review-receipt capture --cwd <ROOT> --change    
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: change name is required
+
+=== after ===
+(no openspec directory)
+

@@ -143,9 +143,18 @@ func (s ClearanceStore) Get(projectID, goalID, handoffSHA256 string) ([]byte, er
 		return nil, absent(recordError(path, err))
 	}
 	if len(data) > shaper.MaxRecordBytes {
-		return nil, fmt.Errorf("clearance store: record %q is %d bytes, exceeding the maximum of %d", path, max(size, int64(len(data))), shaper.MaxRecordBytes)
+		return nil, recordTooLarge(path, size, len(data))
 	}
 	return data, nil
+}
+
+// recordTooLarge is the refusal of a record file over the bound. reported is the size the
+// opened file reported and read how many bytes of it were read, at most one past the bound.
+// It names the larger of the two: they differ when the file grew between the open and the
+// read, and then the descriptor's size alone would make the refusal say that a file of a
+// few bytes exceeds the maximum.
+func recordTooLarge(path string, reported int64, read int) error {
+	return fmt.Errorf("clearance store: record %q is %d bytes, exceeding the maximum of %d", path, max(reported, int64(read)), shaper.MaxRecordBytes)
 }
 
 // recordError gives a failure to read or publish the record at path the wording this store

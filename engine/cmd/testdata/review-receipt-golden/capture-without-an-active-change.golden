@@ -1,0 +1,9 @@
+$ review-receipt capture --cwd <ROOT>
+exit: 0
+--- stdout ---
+review-receipt capture: no active change; nothing to capture
+--- stderr ---
+
+=== after ===
+(no openspec directory)
+

@@ -47,14 +47,14 @@ func requiresReceipt(date string) bool {
 // trust. override.json is never a candidate here; it is read separately by
 // loadReceiptOverride.
 //
-// Parsing both shapes is delegated to engine/reviewreceipt.ApprovedSummary,
-// the single reader Capture itself uses to persist these files -- CRIT-1
+// Parsing both shapes is delegated to engine/reviewreceipt.Parse, which shares
+// its decoding with the Capture that persists these files -- CRIT-1
 // (verify-report, pi-package-hardening) found this gate maintaining its own,
 // wrong model of the gentle-ai.review-state-record/v2 wrapper shape
 // (`<lineage>.review-state.json`): it expected a flat top-level `state`
 // string, but the real file nests `lineage_id`, `state`,
 // `current_snapshot.candidate_tree`, `selected_lenses` and `risk_level`
-// under a `state` OBJECT. Reusing ApprovedSummary means there is exactly one
+// under a `state` OBJECT. Reusing Parse means there is exactly one
 // place in the repository that knows either on-disk shape.
 //
 //   - legacy `<lineage>.json`: gentle-ai.review-receipt/v2, approved when
@@ -92,16 +92,21 @@ func loadApprovedTreeFromReceipts(dir string) (tree, lineageID string, found boo
 
 	for i := len(names) - 1; i >= 0; i-- {
 		path := filepath.Join(dir, names[i])
-		lineage, candidateTree, _, _, _, summaryErr := reviewreceipt.ApprovedSummary(path)
-		if summaryErr != nil {
-			// Not approved, not one of the two recognized shapes, or
-			// unreadable content -- not a candidate, try the next file.
+		data, readErr := os.ReadFile(path)
+		if readErr != nil {
+			// Unreadable content -- not a candidate, try the next file.
 			continue
 		}
-		if strings.TrimSpace(candidateTree) == "" {
+		approved, parseErr := reviewreceipt.Parse(path, data)
+		if parseErr != nil {
+			// Not approved, or not one of the two recognized shapes -- not a
+			// candidate, try the next file.
 			continue
 		}
-		return candidateTree, lineage, true, nil
+		if strings.TrimSpace(approved.FinalCandidateTree) == "" {
+			continue
+		}
+		return approved.FinalCandidateTree, approved.Lineage, true, nil
 	}
 	return "", "", false, nil
 }

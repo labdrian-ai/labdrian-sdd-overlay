@@ -374,7 +374,10 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 		return
 	}
 	// The record bound is the domain's (shaper.MaxRecordBytes), not the CLI-wide stdin cap,
-	// so every record this verb accepts is one the clearance store can load back.
+	// so every record this verb accepts is one the clearance store can load back. That the
+	// two constants hold the same value today (4 MiB) is a coincidence of history, not the
+	// link between them: this verb follows the record bound on purpose, and a change to the
+	// CLI-wide cap alone must not move it. The tests of this verb pin it at the bound.
 	data, err := io.ReadAll(io.LimitReader(stdin, shaper.MaxRecordBytes+1))
 	if err != nil {
 		fail("read stdin: %v", err)

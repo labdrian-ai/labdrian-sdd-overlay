@@ -1,13 +1,16 @@
 package fsadapter
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 )
 
 // ContainedSource is a shaper.ContainedSource.
@@ -26,6 +29,10 @@ type ContainedSource struct {
 	// after the descriptor is confirmed regular and before containment is proven, so a test
 	// can race the file system at exactly those points.
 	openHook func(stage, joined string)
+	// open is the no-follow open, nil in production, where it is statestore.OpenNoFollow:
+	// the one owner of that open, shared with the clearance store of this package. It is a
+	// field so that a test runs the refusal of a platform that has none on any other.
+	open func(path string) (*os.File, error)
 }
 
 // hook calls the test seam, when there is one.
@@ -33,6 +40,15 @@ func (s ContainedSource) hook(stage, joined string) {
 	if s.openHook != nil {
 		s.openHook(stage, joined)
 	}
+}
+
+// openNoFollow opens path read-only without following a final-component symlink and
+// without blocking on a FIFO.
+func (s ContainedSource) openNoFollow(path string) (*os.File, error) {
+	if s.open != nil {
+		return s.open(path)
+	}
+	return statestore.OpenNoFollow(path)
 }
 
 // ReadContained reads worktreeRoot/relPath with no check-then-use gap between what is
@@ -71,10 +87,15 @@ func (s ContainedSource) ReadContained(worktreeRoot, relPath, label string) ([]b
 	}
 
 	s.hook("pre-open", joined)
-	f, err := openNoFollow(joined)
+	f, err := s.openNoFollow(joined)
 	if err != nil {
-		if isSymlinkRefusal(err) {
+		switch {
+		case statestore.IsSymlinkRefusal(err):
 			return nil, fmt.Errorf("%s %q must not be a symlink", label, relPath)
+		case errors.Is(err, statestore.ErrUnsupported):
+			// statestore says so in its own words; the contained read has always said
+			// it in its own, and that is what a person who reads the refusal sees.
+			return nil, fmt.Errorf("open %s %q: contained read is unsupported on %s", label, relPath, runtime.GOOS)
 		}
 		return nil, fmt.Errorf("open %s %q: %w", label, relPath, err)
 	}

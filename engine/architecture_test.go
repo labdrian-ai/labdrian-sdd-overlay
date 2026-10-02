@@ -25,44 +25,49 @@ import (
 //     it stats files and the PATH, and capability itself stays pure.
 //   - shaper/fsadapter is the adapter of the shaper's file-facing ports: the
 //     ClearanceStore and the ContainedSource (H10).
-//   - installer, shelltest, capabilitytest and this guard (the module root) are
-//     test-only.
+//   - reviewreceipt/fsstore is the adapter of the four ports of the review receipt
+//     capture (H12): the transaction stores found through gitprov, the receipts, the
+//     persisted receipts and the changes, all of them files.
+//   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
+//     tests share) and this guard (the module root) are test-only.
 var rings = map[string]archguard.Ring{
-	".":                   archguard.Support,
-	"assets":              archguard.Adapter,
-	"atomicfile":          archguard.Adapter,
-	"capability":          archguard.Domain,
-	"capability/presence": archguard.Adapter,
-	"capabilitytest":      archguard.Support,
-	"cmd":                 archguard.Root,
-	"filelock":            archguard.Adapter,
-	"gadu":                archguard.Adapter,
-	"gate":                archguard.Domain,
-	"gitprov":             archguard.Adapter,
-	"goal":                archguard.Domain,
-	"installer":           archguard.Support,
-	"jsonstrict":          archguard.Domain,
-	"memoryscope":         archguard.Domain,
-	"pathguard":           archguard.Domain,
-	"pipkg":               archguard.Adapter,
-	"prespec":             archguard.Domain,
-	"projection":          archguard.Domain,
-	"projection/fsstore":  archguard.Adapter,
-	"propagator":          archguard.Domain,
-	"reviewreceipt":       archguard.Domain,
-	"roles":               archguard.Domain,
-	"roles/filechain":     archguard.Adapter,
-	"runtime":             archguard.Adapter,
-	"settings":            archguard.Adapter,
-	"shaper":              archguard.Domain,
-	"shaper/fsadapter":    archguard.Adapter,
-	"shelltest":           archguard.Support,
-	"skills":              archguard.Domain,
-	"statestore":          archguard.Adapter,
-	"synctrigger":         archguard.Adapter,
-	"workflow":            archguard.Domain,
-	"workflow/filelog":    archguard.Adapter,
-	"workflowprofile":     archguard.Domain,
+	".":                     archguard.Support,
+	"assets":                archguard.Adapter,
+	"atomicfile":            archguard.Adapter,
+	"capability":            archguard.Domain,
+	"capability/presence":   archguard.Adapter,
+	"capabilitytest":        archguard.Support,
+	"cmd":                   archguard.Root,
+	"filelock":              archguard.Adapter,
+	"gadu":                  archguard.Adapter,
+	"gate":                  archguard.Domain,
+	"gitprov":               archguard.Adapter,
+	"goal":                  archguard.Domain,
+	"installer":             archguard.Support,
+	"jsonstrict":            archguard.Domain,
+	"memoryscope":           archguard.Domain,
+	"pathguard":             archguard.Domain,
+	"pipkg":                 archguard.Adapter,
+	"prespec":               archguard.Domain,
+	"projection":            archguard.Domain,
+	"projection/fsstore":    archguard.Adapter,
+	"propagator":            archguard.Domain,
+	"reviewreceipt":         archguard.Domain,
+	"reviewreceipt/fsstore": archguard.Adapter,
+	"roles":                 archguard.Domain,
+	"roles/filechain":       archguard.Adapter,
+	"runtime":               archguard.Adapter,
+	"settings":              archguard.Adapter,
+	"shaper":                archguard.Domain,
+	"shaper/fsadapter":      archguard.Adapter,
+	"shaper/shapertest":     archguard.Support,
+	"shelltest":             archguard.Support,
+	"skills":                archguard.Domain,
+	"statestore":            archguard.Adapter,
+	"synctrigger":           archguard.Adapter,
+	"workflow":              archguard.Domain,
+	"workflow/filelog":      archguard.Adapter,
+	"workflowprofile":       archguard.Domain,
 }
 
 // knownDebt is every violation of the rule that exists today, each owed to the
@@ -76,20 +81,12 @@ var rings = map[string]archguard.Ring{
 // known ones are not listed below and are owed to their units all the same:
 //
 //   - cmd: skillsLockWait and the other global seams of main.go (H31)
-//   - reviewreceipt: the global store path variable (H12)
 var knownDebt = archguard.Debt{
 	// pathguard: the file system half (symlink resolution) moves to
 	// pathguard/fsresolve, leaving the pure containment rules.
 	"pathguard": {
 		"os":                         "H22",
 		"path/filepath.EvalSymlinks": "H22",
-	},
-
-	// reviewreceipt: the receipt scan and the git resolution move behind ports
-	// and a reviewreceipt/fsstore adapter.
-	"reviewreceipt": {
-		"os":      "H12",
-		"os/exec": "H12",
 	},
 
 	// skills: the concrete file system moves to skills/skillsfs.

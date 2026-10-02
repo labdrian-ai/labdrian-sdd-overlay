@@ -1,0 +1,16 @@
+$ review-receipt capture --cwd <LINKED>
+exit: 0
+--- stdout ---
+review-receipt capture: 3 receipt(s) captured for "the-change"
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/the-change
+dir  openspec/changes/the-change/review-receipts
+file openspec/changes/the-change/review-receipts/review-common-only.json 0600 209 dfc916795eda
+file openspec/changes/the-change/review-receipts/review-shared.json 0600 204 a226647f6de2
+file openspec/changes/the-change/review-receipts/review-shared.review-state.json 0600 387 ffe680ba2004
+file openspec/changes/the-change/tasks.md 0644 8 b23b81c926c4
+
