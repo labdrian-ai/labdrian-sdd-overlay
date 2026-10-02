@@ -91,13 +91,10 @@ type Store struct {
 // keeps its local state (see statestore.Home); it must be an absolute path. It does
 // not check that the directory exists or is usable: that is checked when the store
 // is used. A platform without the no-follow read and the lock the store needs
-// (statestore.RequirePlatform) is refused with ErrUnsupportedPlatform.
+// (statestore.RequireStore) is refused with ErrUnsupportedPlatform.
 func NewStore(stateHome string) (Store, error) {
-	if err := statestore.RequirePlatform(ErrUnsupportedPlatform); err != nil {
+	if err := statestore.RequireStore("workflow store", ErrUnsupportedPlatform, stateHome); err != nil {
 		return Store{}, err
-	}
-	if err := statestore.CheckHome(stateHome); err != nil {
-		return Store{}, fmt.Errorf("workflow store: %w", err)
 	}
 	return Store{stateHome: stateHome}, nil
 }

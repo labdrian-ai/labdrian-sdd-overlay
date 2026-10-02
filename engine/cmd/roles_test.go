@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -219,6 +220,90 @@ func TestRolesAppendBoundsStdinAtTheRecordBound(t *testing.T) {
 	want := fmt.Sprintf("stdin exceeds %d bytes", roles.MaxRecordBytes)
 	if r.code != 1 || !strings.Contains(r.stderr, want) {
 		t.Fatalf("code=%d stderr=%q, want a refusal containing %q", r.code, r.stderr, want)
+	}
+}
+
+// rolesPaddedRecord is the first record of proj-1/goal-1/chain-1 grown to exactly size
+// bytes with blanks before the closing brace: still the same one valid document.
+func rolesPaddedRecord(size int) string {
+	record := rolesHandoffJSON(1, "", "shaper", "estimator", "completed", "")
+	return strings.Replace(record, "\n}", strings.Repeat(" ", size-len(record))+"\n}", 1)
+}
+
+// The bound is exact on the accepting side too: the verb takes a record of exactly
+// roles.MaxRecordBytes, and the reading verbs load that chain back, because the store
+// reads through the same bound. Nothing the verb accepts is a record the chain cannot hold.
+func TestRolesAppendAcceptsARecordOfExactlyTheBoundAndResumeLoadsItBack(t *testing.T) {
+	rolesTestStateHome(t)
+	record := rolesPaddedRecord(roles.MaxRecordBytes)
+	if len(record) != roles.MaxRecordBytes {
+		t.Fatalf("the fixture is %d bytes, want exactly roles.MaxRecordBytes (%d)", len(record), roles.MaxRecordBytes)
+	}
+	appended := runRolesTest([]string{"append", "--project", "proj-1", "--goal", "goal-1", "--chain", "chain-1", "--stdin"}, record)
+	if appended.code != 0 {
+		t.Fatalf("append code=%d stderr=%q, want 0 for a record of exactly the bound", appended.code, appended.stderr)
+	}
+	for _, verb := range []string{"resume", "next"} {
+		r := runRolesTest([]string{verb, "--project", "proj-1", "--goal", "goal-1", "--chain", "chain-1"}, "")
+		if r.code != 0 {
+			t.Fatalf("%s code=%d stderr=%q, want 0: the chain holding a record of the bound must load", verb, r.code, r.stderr)
+		}
+	}
+	resume := runRolesTest([]string{"resume", "--project", "proj-1", "--goal", "goal-1", "--chain", "chain-1"}, "")
+	if !strings.Contains(resume.stdout, `"role": "estimator"`) {
+		t.Fatalf("resume stdout = %q, want the loaded record's role (estimator)", resume.stdout)
+	}
+}
+
+// The validate verb reads its file through the same bound as the append verb reads stdin,
+// so a file of any size costs the bound and not its size, and the refusal names the bound
+// before anything is parsed.
+func TestRolesValidateBoundsItsFileAtTheRecordBound(t *testing.T) {
+	dir := t.TempDir()
+	over := filepath.Join(dir, "over.json")
+	if err := os.WriteFile(over, []byte(rolesPaddedRecord(roles.MaxRecordBytes+1)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r := runRolesTest([]string{"validate", "--file", over}, "")
+	want := fmt.Sprintf("file %q exceeds %d bytes", over, roles.MaxRecordBytes)
+	if r.code != 1 || !strings.Contains(r.stderr, want) {
+		t.Fatalf("code=%d stderr=%q, want a refusal containing %q", r.code, r.stderr, want)
+	}
+
+	exact := filepath.Join(dir, "exact.json")
+	if err := os.WriteFile(exact, []byte(rolesPaddedRecord(roles.MaxRecordBytes)), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	r = runRolesTest([]string{"validate", "--file", exact}, "")
+	if r.code != 0 || !strings.Contains(r.stdout, `"valid": true`) {
+		t.Fatalf("code=%d stdout=%q stderr=%q, want a file of exactly the bound validated", r.code, r.stdout, r.stderr)
+	}
+}
+
+// A file far over the bound is refused without being read in full: the read stops one byte
+// past the bound. A sparse file occupies almost no disk but reports its full size.
+func TestRolesValidateDoesNotReadAFileFarOverTheBound(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "huge.json")
+	f, err := os.Create(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Truncate(512 << 20); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	var before, after runtime.MemStats
+	runtime.ReadMemStats(&before)
+	r := runRolesTest([]string{"validate", "--file", path}, "")
+	runtime.ReadMemStats(&after)
+	want := fmt.Sprintf("file %q exceeds %d bytes", path, roles.MaxRecordBytes)
+	if r.code != 1 || !strings.Contains(r.stderr, want) {
+		t.Fatalf("code=%d stderr=%q, want a refusal containing %q", r.code, r.stderr, want)
+	}
+	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 8*roles.MaxRecordBytes {
+		t.Errorf("validate of a 512 MiB file allocated %d bytes, want at most %d: the file must not be read past the bound", allocated, 8*roles.MaxRecordBytes)
 	}
 }
 

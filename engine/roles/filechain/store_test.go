@@ -258,12 +258,50 @@ func TestChainStoreRejectsUnsafePathComponent(t *testing.T) {
 	}
 }
 
-// A zero Store was not built by NewStore and has no state home to write under.
+// Append builds the chain's directory chain before it loads the chain, so a key that is
+// not a safe path component is refused before any file is looked at. Every failure of
+// Append carries the "append:" step after the store's name, this one included; LoadChain,
+// which has no such step, reports the same refusal without it (the test above). The
+// words are pinned here so that the wrapping cannot be dropped or doubled unnoticed.
+func TestAppendReportsAnUnsafePathComponentAsAnAppendFailure(t *testing.T) {
+	tests := []struct {
+		name, project, goal, chain, want string
+	}{
+		{"parent directory as project", "../escape", "goal-1", "chain-1", `role chain store: append: role chain store: project_id "../escape" contains a path separator or NUL`},
+		{"slash in goal", "proj-1", "a/b", "chain-1", `role chain store: append: role chain store: goal_id "a/b" contains a path separator or NUL`},
+		{"dot-dot chain", "proj-1", "goal-1", "..", `role chain store: append: role chain store: chain_id ".." is not a usable path component`},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			s, root := newTestStore(t)
+			record := strings.NewReplacer(
+				`"project_id": "proj-1"`, `"project_id": "`+tt.project+`"`,
+				`"goal_id": "goal-1"`, `"goal_id": "`+tt.goal+`"`,
+				`"chain_id": "chain-1"`, `"chain_id": "`+tt.chain+`"`,
+			).Replace(recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", ""))
+			_, err := s.Append([]byte(record))
+			if err == nil || err.Error() != tt.want {
+				t.Fatalf("Append() = %v, want %q", err, tt.want)
+			}
+			if entries, _ := os.ReadDir(root); len(entries) != 0 {
+				t.Errorf("the refused record left %d entries under the state home, want none", len(entries))
+			}
+		})
+	}
+}
+
+// A zero Store was not built by NewStore and has no state home to write under, so it is
+// refused whether it is asked to load a chain or to append a record to one.
 func TestZeroStoreIsRefused(t *testing.T) {
 	_, err := Store{}.LoadChain("proj-1", "goal-1", "chain-1")
 	want := "role chain store: store is not initialized; use NewStore"
 	if err == nil || err.Error() != want {
 		t.Fatalf("LoadChain() = %v, want %q", err, want)
+	}
+	_, err = Store{}.Append([]byte(recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", "")))
+	want = "role chain store: append: role chain store: store is not initialized; use NewStore"
+	if err == nil || err.Error() != want {
+		t.Fatalf("Append() = %v, want %q", err, want)
 	}
 }
 
@@ -516,6 +554,26 @@ func TestARecordAtTheBoundIsStoredAndReadBack(t *testing.T) {
 	chain, err := s.LoadChain("proj-1", "goal-1", "chain-1")
 	if err != nil || len(chain) != 1 || string(chain[0].Raw) != record {
 		t.Fatalf("LoadChain() = %d records, %v, want the one record read back whole", len(chain), err)
+	}
+}
+
+// A record of exactly the bound does not stop its chain: the chain loads with it in it and
+// the next record chains to its bytes, padding and all, and is stored. (A record over the
+// bound fails the whole chain closed; that is for a file this program did not write, see
+// LoadChain.)
+func TestAChainWithARecordAtTheBoundLoadsAndGrows(t *testing.T) {
+	s, _ := newTestStore(t)
+	first := paddedRecord(roles.MaxRecordBytes)
+	if _, err := s.Append([]byte(first)); err != nil {
+		t.Fatalf("Append(a record of MaxRecordBytes) = %v, want nil", err)
+	}
+	second := recordJSON(2, sha256Hex([]byte(first)), "estimator", "builder", "completed", "")
+	if _, err := s.Append([]byte(second)); err != nil {
+		t.Fatalf("Append(the record after one of MaxRecordBytes) = %v, want nil", err)
+	}
+	chain, err := s.LoadChain("proj-1", "goal-1", "chain-1")
+	if err != nil || len(chain) != 2 || len(chain[0].Raw) != roles.MaxRecordBytes || string(chain[1].Raw) != second {
+		t.Fatalf("LoadChain() = %d records, %v, want both, the first of exactly MaxRecordBytes", len(chain), err)
 	}
 }
 

@@ -112,7 +112,8 @@ func parseRolesArgs(args []string, allowStdin bool, required []string) (rolesOpt
 
 // runRolesValidate implements 'roles validate --file <path>'. It is
 // read-only: it strictly parses and validates one RoleHandoff record from
-// disk and reports the result. It never touches the chain store.
+// disk, read through the record bound (roles.MaxRecordBytes), and reports the
+// result. It never touches the chain store.
 func runRolesValidate(args []string, stdout, stderr io.Writer, exit func(int)) {
 	o, err := parseRolesArgs(args, false, []string{"--file"})
 	if err != nil {
@@ -120,7 +121,7 @@ func runRolesValidate(args []string, stdout, stderr io.Writer, exit func(int)) {
 		exit(1)
 		return
 	}
-	data, err := os.ReadFile(o.file)
+	data, err := readRoleRecordFile(o.file)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: roles validate: %v\n", err)
 		exit(1)
@@ -143,6 +144,27 @@ func runRolesValidate(args []string, stdout, stderr io.Writer, exit func(int)) {
 		Authority: rolesAuthorityNote,
 	}
 	writeRolesJSON(stdout, stderr, out, exit)
+}
+
+// readRoleRecordFile reads the record file at path through the domain's record bound
+// (roles.MaxRecordBytes), the same bound the append verb reads stdin through: it reads at
+// most one byte past it, which is enough to know the file is too large, and never the rest,
+// so a file of any size costs the bound and not its size. Every other failure is the
+// operating system's own, as os.ReadFile reported it.
+func readRoleRecordFile(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, roles.MaxRecordBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > roles.MaxRecordBytes {
+		return nil, fmt.Errorf("file %q exceeds %d bytes", path, roles.MaxRecordBytes)
+	}
+	return data, nil
 }
 
 // runRolesNext implements 'roles next --project --goal --chain'. It is

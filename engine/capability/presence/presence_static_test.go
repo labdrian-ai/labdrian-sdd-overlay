@@ -18,8 +18,9 @@ import (
 	"testing"
 )
 
-// presenceSources are the files under the presence contract.
-var presenceSources = []string{"presence.go"}
+// presenceSources are the files under the presence contract: every production source of
+// the package, doc.go (the package comment and its clause, no code) included.
+var presenceSources = []string{"doc.go", "presence.go"}
 
 // allowedOSSelectors are the only members of package os the prober may use.
 var allowedOSSelectors = map[string]bool{"Lstat": true, "Stat": true}

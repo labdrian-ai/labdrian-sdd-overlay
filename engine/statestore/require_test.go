@@ -56,6 +56,49 @@ func TestCheckHomeAcceptsOnlyAnAbsolutePath(t *testing.T) {
 	}
 }
 
+// A store makes the two checks together, in this order, and keeps what it printed when it
+// made them by hand: the platform refusal is the caller's own sentinel wrapped with the
+// platform, bare, and the state home refusal carries the store's name. The platform is
+// judged first, so on a platform with no store even a relative state home is reported as
+// the platform, never as the home.
+func TestCheckStoreRefusesThePlatformBeforeTheStateHome(t *testing.T) {
+	sentinel := errors.New("some store: unsupported platform")
+	absolute := filepath.Join(string(filepath.Separator), "srv", "state")
+
+	err := checkStore(false, "windows", "some store", sentinel, "relative/state")
+	want := "some store: unsupported platform: windows (supported: linux, darwin)"
+	if !errors.Is(err, sentinel) || err.Error() != want {
+		t.Errorf("an unsupported platform with a relative home = %v, want the sentinel wrapped as %q", err, want)
+	}
+
+	for _, home := range []string{"", "state", "./state", "../state"} {
+		err := checkStore(true, "linux", "some store", sentinel, home)
+		want := `some store: state home "` + home + `" is not an absolute path`
+		if err == nil || err.Error() != want || errors.Is(err, sentinel) {
+			t.Errorf("checkStore(supported, %q) = %v, want %q and not the platform sentinel", home, err, want)
+		}
+	}
+
+	if err := checkStore(true, "linux", "some store", sentinel, absolute); err != nil {
+		t.Errorf("checkStore(supported, absolute home) = %v, want nil", err)
+	}
+}
+
+// RequireStore is checkStore for the running platform: a store built on a supported
+// platform over an absolute home is accepted, and a relative home is refused with the
+// store's name.
+func TestRequireStoreChecksTheRunningPlatformAndTheHome(t *testing.T) {
+	skipUnlessSupported(t)
+	sentinel := errors.New("some store: unsupported platform")
+	if err := RequireStore("some store", sentinel, filepath.Join(string(filepath.Separator), "srv", "state")); err != nil {
+		t.Errorf("RequireStore(absolute home) = %v, want nil", err)
+	}
+	err := RequireStore("some store", sentinel, "state")
+	if want := `some store: state home "state" is not an absolute path`; err == nil || err.Error() != want {
+		t.Errorf("RequireStore(relative home) = %v, want %q", err, want)
+	}
+}
+
 // ReadFileSized reports the size of the file it opened, the same descriptor the bytes
 // came from, so a caller that stopped at its limit can say how large the file is
 // without a second look at a path that may have changed.

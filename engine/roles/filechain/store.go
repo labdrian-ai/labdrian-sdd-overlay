@@ -76,14 +76,11 @@ var ErrUnsupportedPlatform = errors.New("role chain store: unsupported platform"
 // NewStore builds the store over stateHome, the directory under which labdrian keeps
 // its local state (see statestore.Home); it must be an absolute path. It does not
 // check that the directory exists or is usable: that is checked when the store is
-// used. A platform without a no-follow open (statestore.RequirePlatform) is refused
+// used. A platform without a no-follow open (statestore.RequireStore) is refused
 // with ErrUnsupportedPlatform.
 func NewStore(stateHome string) (Store, error) {
-	if err := statestore.RequirePlatform(ErrUnsupportedPlatform); err != nil {
+	if err := statestore.RequireStore("role chain store", ErrUnsupportedPlatform, stateHome); err != nil {
 		return Store{}, err
-	}
-	if err := statestore.CheckHome(stateHome); err != nil {
-		return Store{}, fmt.Errorf("role chain store: %w", err)
 	}
 	return Store{stateHome: stateHome}, nil
 }
@@ -126,6 +123,15 @@ func recordFileName(seq int) string {
 // empty, nil-error slice: appending to it is simply the first record. It refuses a
 // symlink at any store component, a record file that is not a regular file, and a
 // record whose filename does not match its own declared seq.
+//
+// A record file over roles.MaxRecordBytes fails the whole chain closed: nothing is
+// returned, and the chain cannot be appended to either, because an append loads and
+// verifies the chain first. That cannot happen to a record this program wrote. The bound
+// is exactly the cap `roles append` has always applied to the record it reads from stdin,
+// and the verb reads stdin through roles.MaxRecordBytes itself, so no record the command
+// line accepted, now or in any earlier version, is larger than a chain can load back. Only
+// a file put there by other means (an edit by hand, another tool) can exceed it. A record
+// of exactly roles.MaxRecordBytes loads like any other.
 func (s Store) LoadChain(projectID, goalID, chainID string) ([]roles.ChainRecord, error) {
 	parts, err := s.dirParts(projectID, goalID, chainID)
 	if err != nil {
