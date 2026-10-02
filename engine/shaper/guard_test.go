@@ -1,24 +1,9 @@
 package shaper
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 )
-
-func TestGuardStoreMarkerIsTheStorePathSegment(t *testing.T) {
-	if want := filepath.Join(storeComponents...); GuardStoreMarker != want {
-		t.Fatalf("GuardStoreMarker = %q, want the store path segment %q", GuardStoreMarker, want)
-	}
-	store := FileStore{stateHome: "/state"}
-	path, err := store.Path("p", "g", strings.Repeat("a", 64))
-	if err != nil {
-		t.Fatalf("Path: %v", err)
-	}
-	if !GuardMatches(path) {
-		t.Errorf("GuardMatches(%q) = false for a store record path", path)
-	}
-}
 
 func TestGuardMatchesRecordEntryPointAndStorePath(t *testing.T) {
 	for _, tc := range []struct {

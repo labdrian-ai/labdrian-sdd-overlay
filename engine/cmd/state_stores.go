@@ -7,18 +7,20 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection/fsstore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles/filechain"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper/fsadapter"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog"
 )
 
 // This file is where the file-backed stores of the domain are built: the workflow
-// event log, the role handoff chain and the session binding store. Each adapter is
-// handed the state home and reads no environment variable, so the composition root
-// is the one place that learns where the state lives ($XDG_STATE_HOME, or
-// $HOME/.local/state; see statestore.Home). A home that cannot be resolved is
-// reported in the words each store has always used for it, with the store's name in
-// front.
+// event log, the role handoff chain, the session binding store and the shaper's
+// clearance store. Each adapter is handed the state home and reads no environment
+// variable, so the composition root is the one place that learns where the state lives
+// ($XDG_STATE_HOME, or $HOME/.local/state; see statestore.Home). A home that cannot be
+// resolved is reported in the words each store has always used for it, with the store's
+// name in front.
 
 // resolveStateHome resolves the state home from the environment for the store named
 // store, which prefixes the error.
@@ -66,6 +68,20 @@ func newBindingStore() (projection.BindingStore, error) {
 		return nil, err
 	}
 	store, err := fsstore.NewStore(stateHome)
+	if err != nil {
+		return nil, err
+	}
+	return store, nil
+}
+
+// newClearanceStore builds the shaper's clearance store: the file-backed adapter over the
+// state home.
+func newClearanceStore() (shaper.ClearanceStore, error) {
+	stateHome, err := resolveStateHome("clearance store")
+	if err != nil {
+		return nil, err
+	}
+	store, err := fsadapter.NewClearanceStore(stateHome)
 	if err != nil {
 		return nil, err
 	}

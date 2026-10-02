@@ -1,0 +1,8 @@
+d 0700 labdrian
+d 0700 labdrian/shaper-clearance
+d 0700 labdrian/shaper-clearance/proj-1
+d 0700 labdrian/shaper-clearance/proj-1/goal-1
+d 0700 labdrian/shaper-clearance/proj-1/goal-2
+f 0600 labdrian/shaper-clearance/proj-1/goal-1/52ca2c5974fa0b535a76ca57b3e16ad6fdc6b8904744b878a04797354396f7a1.json 91be749bda65c4e744c053567e1fd13496833c0f84b71eff353a0c6f658ed84a 499
+f 0600 labdrian/shaper-clearance/proj-1/goal-1/bfe56dd6bf1b3e03314a9f8acaa4268db134c5d30f9eae98f4bee6a4bc33905a.json 39c95bc1b6ae9e32c7d3d3b27741b8bff76d3eac5e7cea17090c50bb712c03e8 728
+f 0600 labdrian/shaper-clearance/proj-1/goal-2/1c673fc4368cb6087ee25386d36a7721488561d06f744346f0c63540d612dbcf.json fdce8b4f74f829a2a0f1afb00f14d04a025320610bdd3ed98a067b6d74d9d004 498
