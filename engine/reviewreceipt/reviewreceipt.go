@@ -13,7 +13,10 @@
 // persisted as <lineage_id>.json, and the 2.7.0+ lifecycle
 // "review-state.json" (an approved-but-unacknowledged lineage directory
 // contains ONLY this file), persisted as <lineage_id>.review-state.json.
-// Both are captured when both are present.
+// Both are captured when both are present. Parse reads the approved review a
+// document of either shape holds (an ApprovedReceipt); it is pure, so a caller
+// that holds the bytes, such as the archive anchor gate, needs no git and no
+// file access to read one.
 //
 // Single-active-change rule: a review receipt names no change of its own, so
 // DetectActiveChange resolves which change a captured receipt belongs to by
@@ -34,7 +37,6 @@ package reviewreceipt
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -44,15 +46,6 @@ import (
 	"strings"
 )
 
-// receiptSchema is the only schema Capture accepts.
-const receiptSchema = "gentle-ai.review-receipt/v2"
-
-// approvedState is the only terminal_state Capture persists. A surviving
-// receipt in the transaction store that is NOT approved (or not yet
-// terminal) is never captured -- only an approved receipt is by definition
-// un-acknowledged and worth preserving before the burn.
-const approvedState = "approved"
-
 // receiptFileName is the legacy receipt file (gentle-ai < 2.7.0) Capture
 // looks for inside each lineage directory.
 const receiptFileName = "review-receipt.json"
@@ -61,12 +54,8 @@ const receiptFileName = "review-receipt.json"
 // instead of receiptFileName.
 const stateFileName = "review-state.json"
 
-// stateSuffix distinguishes a captured review-state.json from a captured
-// legacy receipt sharing the same lineage id.
-const stateSuffix = ".review-state.json"
-
-// storeRelPath is the transaction store location relative to a git-dir.
-var storeRelPath = filepath.Join("gentle-ai", "review-transactions", "v2")
+// storeRelPath is the transaction store location relative to a git-dir, slash-separated.
+const storeRelPath = "gentle-ai/review-transactions/v2"
 
 // activeChangeMarkers are the SDD artifact files whose presence marks a
 // directory under openspec/changes/ as a genuine active change, distinct
@@ -74,43 +63,17 @@ var storeRelPath = filepath.Join("gentle-ai", "review-transactions", "v2")
 // marker: this repository's own openspec/changes/ directories never carry a
 // state.yaml (the orchestrator's state persistence is optional and, for
 // hybrid/engram-store changes, state lives in Engram instead), so requiring
-// it would make active-change detection permanently empty.
-var activeChangeMarkers = []string{"tasks.md", "design.md", "proposal.md", "entry.json"}
+// it would make active-change detection permanently empty. Each call returns a
+// fresh slice, so nothing can change the list for the next one.
+func activeChangeMarkers() []string {
+	return []string{"tasks.md", "design.md", "proposal.md", "entry.json"}
+}
 
 // Captured records one receipt Capture persisted (or confirmed already
 // persisted byte-for-byte) this run.
 type Captured struct {
 	LineageID string
 	Path      string
-}
-
-// receipt is the subset of gentle-ai.review-receipt/v2 fields Capture and
-// ApprovedSummary read.
-type receipt struct {
-	Schema             string   `json:"schema"`
-	LineageID          string   `json:"lineage_id"`
-	TerminalState      string   `json:"terminal_state"`
-	FinalCandidateTree string   `json:"final_candidate_tree"`
-	BaseTree           string   `json:"base_tree"`
-	SelectedLenses     []string `json:"selected_lenses"`
-	RiskLevel          string   `json:"risk_level"`
-}
-
-// reviewState is the subset of review-state.json's nested "state" object
-// that Capture and ApprovedSummary read.
-type reviewState struct {
-	State struct {
-		LineageID       string   `json:"lineage_id"`
-		State           string   `json:"state"`
-		RiskLevel       string   `json:"risk_level"`
-		SelectedLenses  []string `json:"selected_lenses"`
-		InitialSnapshot struct {
-			BaseTree string `json:"base_tree"`
-		} `json:"initial_snapshot"`
-		CurrentSnapshot struct {
-			CandidateTree string `json:"candidate_tree"`
-		} `json:"current_snapshot"`
-	} `json:"state"`
 }
 
 // Capture scans both the worktree-private and common git transaction stores
@@ -130,95 +93,74 @@ func Capture(repoRoot, change string) ([]Captured, error) {
 	targetDir := filepath.Join(repoRoot, "openspec", "changes", change, "review-receipts")
 
 	var captured []Captured
-	seenReceipt := map[string]bool{}
-	seenState := map[string]bool{}
+	err = eachSurvivingApproved(stores, func(s surviving) error {
+		dest := filepath.Join(targetDir, s.Receipt.FileName())
+		if err := writeReceiptFile(targetDir, dest, s.Data); err != nil {
+			return err
+		}
+		captured = append(captured, Captured{LineageID: s.Receipt.Lineage, Path: dest})
+		return nil
+	})
+	return captured, err
+}
+
+// surviving is one currently-approved receipt, either shape, and the exact
+// bytes of the document it was read from.
+type surviving struct {
+	Receipt ApprovedReceipt
+	Data    []byte
+}
+
+// seenReceipt is what two surviving receipts must share to be the same one: a
+// lineage can hold both shapes, and they are two receipts.
+type seenReceipt struct {
+	shape   Shape
+	lineage string
+}
+
+// eachSurvivingApproved calls visit for every currently-approved receipt across
+// stores (either shape), once per lineage and shape, in the order the stores
+// list them: store by store, lineage directory by lineage directory, the legacy
+// receipt before the lifecycle state. It stops at the first error, a visit's
+// included, so a caller that writes as it goes has written what came before it.
+// A store that does not exist holds nothing; a file that cannot be read is not
+// a receipt.
+func eachSurvivingApproved(stores []string, visit func(surviving) error) error {
+	seen := map[seenReceipt]bool{}
 	for _, store := range stores {
 		entries, err := os.ReadDir(store)
 		if err != nil {
 			if os.IsNotExist(err) {
 				continue
 			}
-			return captured, fmt.Errorf("reviewreceipt: read %s: %w", store, err)
-		}
-		for _, e := range entries {
-			if !e.IsDir() {
-				continue
-			}
-			lineageDir := filepath.Join(store, e.Name())
-
-			if data, err := os.ReadFile(filepath.Join(lineageDir, receiptFileName)); err == nil {
-				var r receipt
-				if json.Unmarshal(data, &r) == nil && r.Schema == receiptSchema &&
-					r.TerminalState == approvedState && r.LineageID != "" && !seenReceipt[r.LineageID] {
-					seenReceipt[r.LineageID] = true
-					dest := filepath.Join(targetDir, r.LineageID+".json")
-					if err := writeReceiptFile(targetDir, dest, data); err != nil {
-						return captured, err
-					}
-					captured = append(captured, Captured{LineageID: r.LineageID, Path: dest})
-				}
-			}
-			if data, err := os.ReadFile(filepath.Join(lineageDir, stateFileName)); err == nil {
-				var s reviewState
-				if json.Unmarshal(data, &s) == nil && s.State.State == approvedState &&
-					s.State.LineageID != "" && !seenState[s.State.LineageID] {
-					seenState[s.State.LineageID] = true
-					dest := filepath.Join(targetDir, s.State.LineageID+stateSuffix)
-					if err := writeReceiptFile(targetDir, dest, data); err != nil {
-						return captured, err
-					}
-					captured = append(captured, Captured{LineageID: s.State.LineageID, Path: dest})
-				}
-			}
-		}
-	}
-	return captured, nil
-}
-
-// survivingReceipt is one currently-approved receipt, either shape; FileName
-// is the name Capture persists it under (e.g. "<lineage>.json").
-type survivingReceipt struct {
-	LineageID, FileName string
-	Data                []byte
-}
-
-// scanSurvivingApproved lists every currently-approved receipt across
-// stores (either shape), deduped by lineage ID like Capture.
-func scanSurvivingApproved(stores []string) ([]survivingReceipt, error) {
-	var out []survivingReceipt
-	seen := map[string]bool{}
-	for _, store := range stores {
-		entries, err := os.ReadDir(store)
-		if err != nil {
-			if os.IsNotExist(err) {
-				continue
-			}
-			return nil, fmt.Errorf("reviewreceipt: read %s: %w", store, err)
+			return fmt.Errorf("reviewreceipt: read %s: %w", store, err)
 		}
 		for _, e := range entries {
 			if !e.IsDir() {
 				continue
 			}
 			dir := filepath.Join(store, e.Name())
-			if data, err := os.ReadFile(filepath.Join(dir, receiptFileName)); err == nil {
-				var r receipt
-				if json.Unmarshal(data, &r) == nil && r.Schema == receiptSchema &&
-					r.TerminalState == approvedState && r.LineageID != "" && !seen["r:"+r.LineageID] {
-					seen["r:"+r.LineageID] = true
-					out = append(out, survivingReceipt{r.LineageID, r.LineageID + ".json", data})
+			for _, doc := range []struct {
+				shape Shape
+				name  string
+			}{{ShapeReceipt, receiptFileName}, {ShapeState, stateFileName}} {
+				data, err := os.ReadFile(filepath.Join(dir, doc.name))
+				if err != nil {
+					continue
 				}
-			}
-			if data, err := os.ReadFile(filepath.Join(dir, stateFileName)); err == nil {
-				var s reviewState
-				if json.Unmarshal(data, &s) == nil && s.State.State == approvedState &&
-					s.State.LineageID != "" && !seen["s:"+s.State.LineageID] {
-					seen["s:"+s.State.LineageID] = true
-					out = append(out, survivingReceipt{s.State.LineageID, s.State.LineageID + stateSuffix, data})
+				r, ok := approvedIn(doc.shape, data)
+				key := seenReceipt{doc.shape, r.Lineage}
+				if !ok || seen[key] {
+					continue
+				}
+				seen[key] = true
+				if err := visit(surviving{Receipt: r, Data: data}); err != nil {
+					return err
 				}
 			}
 		}
 	}
-	return out, nil
+	return nil
 }
 
 // AllSurvivingApprovedPersisted reports whether every currently-approved
@@ -229,14 +171,17 @@ func AllSurvivingApprovedPersisted(repoRoot string, changes []string) (bool, err
 	if err != nil {
 		return false, err
 	}
-	surviving, err := scanSurvivingApproved(stores)
-	if err != nil {
+	var all []surviving
+	if err := eachSurvivingApproved(stores, func(s surviving) error {
+		all = append(all, s)
+		return nil
+	}); err != nil {
 		return false, err
 	}
-	for _, s := range surviving {
+	for _, s := range all {
 		found := false
 		for _, change := range changes {
-			dest := filepath.Join(repoRoot, "openspec", "changes", change, "review-receipts", s.FileName)
+			dest := filepath.Join(repoRoot, "openspec", "changes", change, "review-receipts", s.Receipt.FileName())
 			if exists, persisted, err := isPersistedByteForByte(dest, s.Data); err != nil {
 				return false, err
 			} else if exists && persisted {
@@ -249,37 +194,6 @@ func AllSurvivingApprovedPersisted(repoRoot string, changes []string) (bool, err
 		}
 	}
 	return true, nil
-}
-
-// ApprovedSummary reads an approved review artifact at path -- either
-// shape Capture persists -- and returns the tuple a caller needs to
-// verify an approved_tree anchor. Errors if path is unreadable, unparsable
-// as either shape, or not approved.
-func ApprovedSummary(path string) (lineage, finalCandidateTree, baseTree string, lenses []string, riskLevel string, err error) {
-	data, readErr := os.ReadFile(path)
-	if readErr != nil {
-		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: read %s: %w", path, readErr)
-	}
-
-	var r receipt
-	if json.Unmarshal(data, &r) == nil && r.Schema == receiptSchema {
-		if r.TerminalState != approvedState {
-			return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is not approved (terminal_state=%q)", path, r.TerminalState)
-		}
-		return r.LineageID, r.FinalCandidateTree, r.BaseTree, r.SelectedLenses, r.RiskLevel, nil
-	}
-
-	var s reviewState
-	if err := json.Unmarshal(data, &s); err != nil {
-		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is neither a recognized receipt nor review-state file: %w", path, err)
-	}
-	if s.State.LineageID == "" {
-		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is neither a recognized receipt nor review-state file", path)
-	}
-	if s.State.State != approvedState {
-		return "", "", "", nil, "", fmt.Errorf("reviewreceipt: %s is not approved (state=%q)", path, s.State.State)
-	}
-	return s.State.LineageID, s.State.CurrentSnapshot.CandidateTree, s.State.InitialSnapshot.BaseTree, s.State.SelectedLenses, s.State.RiskLevel, nil
 }
 
 // isPersistedByteForByte is the single "already persisted?" check shared by
@@ -350,9 +264,10 @@ func transactionStores(repoRoot string) ([]string, error) {
 		return nil, err
 	}
 
-	stores := []string{filepath.Join(gitDir, storeRelPath)}
+	rel := filepath.FromSlash(storeRelPath)
+	stores := []string{filepath.Join(gitDir, rel)}
 	if commonDir != gitDir {
-		stores = append(stores, filepath.Join(commonDir, storeRelPath))
+		stores = append(stores, filepath.Join(commonDir, rel))
 	}
 	return stores, nil
 }
@@ -413,7 +328,7 @@ func DetectActiveChange(repoRoot string) (string, error) {
 // hasActiveChangeMarker reports whether dir contains at least one file from
 // activeChangeMarkers.
 func hasActiveChangeMarker(dir string) bool {
-	for _, marker := range activeChangeMarkers {
+	for _, marker := range activeChangeMarkers() {
 		if _, err := os.Stat(filepath.Join(dir, marker)); err == nil {
 			return true
 		}

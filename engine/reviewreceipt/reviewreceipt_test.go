@@ -189,39 +189,6 @@ func TestCapture_BothFormatsPresent(t *testing.T) {
 	}
 }
 
-// TestApprovedSummary asserts ApprovedSummary reads the same logical tuple
-// from equivalent legacy-receipt and review-state fixtures.
-func TestApprovedSummary(t *testing.T) {
-	dir := t.TempDir()
-	receiptPath := filepath.Join(dir, "receipt.json")
-	receiptJSON := []byte(`{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-summary1",` +
-		`"final_candidate_tree":"candidatetree1","base_tree":"basetree1",` +
-		`"selected_lenses":["review-risk","review-readability"],"risk_level":"medium","terminal_state":"approved"}`)
-	if err := os.WriteFile(receiptPath, receiptJSON, 0644); err != nil {
-		t.Fatal(err)
-	}
-	statePath := filepath.Join(dir, "state.json")
-	if err := os.WriteFile(statePath, stateJSON("review-summary1", "approved"), 0644); err != nil {
-		t.Fatal(err)
-	}
-
-	rLineage, rTree, rBase, rLenses, rRisk, err := reviewreceipt.ApprovedSummary(receiptPath)
-	if err != nil {
-		t.Fatalf("ApprovedSummary(receipt): %v", err)
-	}
-	sLineage, sTree, sBase, sLenses, sRisk, err := reviewreceipt.ApprovedSummary(statePath)
-	if err != nil {
-		t.Fatalf("ApprovedSummary(state): %v", err)
-	}
-	if rLineage != sLineage || rTree != sTree || rBase != sBase || rRisk != sRisk || len(rLenses) != len(sLenses) {
-		t.Errorf("summary mismatch: receipt=(%q,%q,%q,%v,%q) state=(%q,%q,%q,%v,%q)",
-			rLineage, rTree, rBase, rLenses, rRisk, sLineage, sTree, sBase, sLenses, sRisk)
-	}
-	if rLineage != "review-summary1" || rTree != "candidatetree1" || rBase != "basetree1" || rRisk != "medium" {
-		t.Errorf("unexpected values: %q %q %q %q", rLineage, rTree, rBase, rRisk)
-	}
-}
-
 // TestCapture_AtomicWrite asserts Capture writes a byte-identical copy of
 // the source receipt, that re-running Capture on the same source is a
 // no-op (idempotent), and that a differing existing destination file is an

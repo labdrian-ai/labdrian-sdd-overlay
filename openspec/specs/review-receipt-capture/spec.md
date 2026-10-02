@@ -30,7 +30,7 @@ present for the same lineage.
 - WHEN the orchestrator proceeds to acknowledge it
 - THEN `openspec/changes/<change>/review-receipts/<lineage>.json` (or
   `<lineage>.review-state.json` on gentle-ai 2.7.0+) SHALL exist and SHALL
-  resolve, via `reviewreceipt.ApprovedSummary`, to a `final_candidate_tree`,
+  resolve, via `reviewreceipt.Parse`, to a `final_candidate_tree`,
   `selected_lenses`, and approved state before `acknowledge-approved` is
   invoked
 
