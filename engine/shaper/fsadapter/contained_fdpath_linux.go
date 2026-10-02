@@ -1,6 +1,6 @@
 //go:build linux
 
-package shaper
+package fsadapter
 
 import (
 	"fmt"

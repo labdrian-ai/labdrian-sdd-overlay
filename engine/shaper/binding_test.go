@@ -3,21 +3,17 @@ package shaper
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
-	"path/filepath"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
 )
 
-func writeGoalFile(t *testing.T, dir, name string, data []byte) string {
-	t.Helper()
-	path := filepath.Join(dir, name)
-	if err := os.WriteFile(path, data, 0o644); err != nil {
-		t.Fatalf("write goal file %s: %v", path, err)
-	}
-	return path
-}
+// BindGoal parses and binds what a ContainedSource returns; reading the file is the
+// source's. These tests give it a fake source, so they prove what the domain decides on
+// its own: which path it asks for, what it makes of the bytes, and what it refuses. The
+// read of real files (symlinks, directories, a FIFO, a swapped ancestor) is proved against
+// the file-backed source, in engine/shaper/fsadapter, through these same functions.
 
 // assertRejectedWithoutPartialBinding fails unless BindGoal returned an error
 // together with the zero GoalBinding, so no rejection leaks partial state.
@@ -39,12 +35,11 @@ func goalV2JSON(projectID, goalID string) string {
 }
 
 func TestBindGoalHappyPathReturnsExactBytesAndCleanedPath(t *testing.T) {
-	root := t.TempDir()
 	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	writeGoalFile(t, root, "goal.json", data)
+	src := &fakeSource{files: map[string][]byte{"goal.json": data}}
 	h := sampleHandoff()
 
-	got, err := BindGoal(h, root, "goal.json")
+	got, err := BindGoal(src, h, sourceRoot, "goal.json")
 	if err != nil {
 		t.Fatalf("BindGoal: %v", err)
 	}
@@ -59,130 +54,57 @@ func TestBindGoalHappyPathReturnsExactBytesAndCleanedPath(t *testing.T) {
 	}
 }
 
-func TestBindGoalCleansNestedRelativePath(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
+// The source is asked for the cleaned path, under the root it was given, and told what the
+// bytes are for: it is the domain that decides what to read, not the caller's spelling.
+func TestBindGoalAsksTheSourceForTheCleanedPathUnderItsLabel(t *testing.T) {
 	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	writeGoalFile(t, filepath.Join(root, "sub"), "goal.json", data)
-	h := sampleHandoff()
+	src := &fakeSource{files: map[string][]byte{"sub/goal.json": data}}
 
-	got, err := BindGoal(h, root, "./sub/goal.json")
+	got, err := BindGoal(src, sampleHandoff(), sourceRoot, "./sub/../sub/goal.json")
 	if err != nil {
 		t.Fatalf("BindGoal: %v", err)
 	}
-	if got.SourcePath != filepath.Clean("./sub/goal.json") {
-		t.Errorf("SourcePath = %q, want %q", got.SourcePath, filepath.Clean("./sub/goal.json"))
+	if got.SourcePath != "sub/goal.json" {
+		t.Errorf("SourcePath = %q, want the cleaned %q", got.SourcePath, "sub/goal.json")
+	}
+	want := []readCall{{root: sourceRoot, rel: "sub/goal.json", label: "goal source"}}
+	if !reflect.DeepEqual(src.calls, want) {
+		t.Errorf("source was asked %+v, want exactly %+v", src.calls, want)
 	}
 }
 
-func TestBindGoalRejectsAbsoluteGoalPath(t *testing.T) {
-	root := t.TempDir()
-	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	absPath := writeGoalFile(t, root, "goal.json", data)
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, absPath)
-	assertRejectedWithoutPartialBinding(t, got, err, "an absolute goalPath")
-}
-
-func TestBindGoalRejectsTraversal(t *testing.T) {
-	root := t.TempDir()
-	outside := t.TempDir()
-	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	writeGoalFile(t, outside, "goal.json", data)
-	h := sampleHandoff()
-
-	traversal := filepath.Join("..", filepath.Base(outside), "goal.json")
-	got, err := BindGoal(h, root, traversal)
-	assertRejectedWithoutPartialBinding(t, got, err, "a traversing goalPath")
-}
-
-func TestBindGoalRejectsCleanedDotPath(t *testing.T) {
-	root := t.TempDir()
-	h := sampleHandoff()
-	got, err := BindGoal(h, root, ".")
-	assertRejectedWithoutPartialBinding(t, got, err, "goalPath that cleans to \".\"")
-}
-
-func TestBindGoalRejectsMissingFile(t *testing.T) {
-	root := t.TempDir()
-	h := sampleHandoff()
-	got, err := BindGoal(h, root, "absent.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a missing goal file")
-}
-
-func TestBindGoalRejectsSymlinkFileInsideRoot(t *testing.T) {
-	root := t.TempDir()
-	real := t.TempDir()
-	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	realPath := writeGoalFile(t, real, "goal.json", data)
-
-	link := filepath.Join(root, "goal.json")
-	if err := os.Symlink(realPath, link); err != nil {
-		t.Skipf("symlink not supported in this environment: %v", err)
+// What the source refuses is reported, with the operation named, and nothing is bound.
+func TestBindGoalReportsWhatTheSourceRefusesWithoutAPartialBinding(t *testing.T) {
+	refusal := errors.New(`goal source "goal.json" must not be a symlink`)
+	got, err := BindGoal(&fakeSource{err: refusal}, sampleHandoff(), sourceRoot, "goal.json")
+	assertRejectedWithoutPartialBinding(t, got, err, "a goal the source refused")
+	if want := "bind goal: " + refusal.Error(); err.Error() != want {
+		t.Errorf("BindGoal error = %q, want %q", err, want)
 	}
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, "goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a symlinked goal source pointing inside root")
-}
-
-func TestBindGoalRejectsSymlinkedAncestorDirectoryEscapingRoot(t *testing.T) {
-	root := t.TempDir()
-	outside := t.TempDir()
-	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	writeGoalFile(t, outside, "goal.json", data)
-
-	linkedDir := filepath.Join(root, "escape")
-	if err := os.Symlink(outside, linkedDir); err != nil {
-		t.Skipf("symlink not supported in this environment: %v", err)
+	if !errors.Is(err, refusal) {
+		t.Errorf("BindGoal error %v does not wrap the source's", err)
 	}
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, "escape/goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a source reached through a symlinked ancestor directory escaping root")
-}
-
-func TestBindGoalRejectsDirectoryInsteadOfFile(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "goal.json"), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, "goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a directory in place of a file")
 }
 
 func TestBindGoalRejectsInvalidGoalJSON(t *testing.T) {
-	root := t.TempDir()
-	writeGoalFile(t, root, "goal.json", []byte(`{"version":`))
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, "goal.json")
+	src := &fakeSource{files: map[string][]byte{"goal.json": []byte(`{"version":`)}}
+	got, err := BindGoal(src, sampleHandoff(), sourceRoot, "goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "invalid Goal JSON")
 }
 
 func TestBindGoalRejectsGoalVersionOne(t *testing.T) {
-	root := t.TempDir()
 	v1 := `{"version":1,"project_id":"standalone-shaper-handoff","objective":"o","scope":"s",` +
 		`"constraints":[],"non_goals":[],"acceptance_criteria":["a"],` +
 		`"memory_scope":"m","runtime_scope":"r","delivery_boundary":"d"}`
-	writeGoalFile(t, root, "goal.json", []byte(v1))
-	h := sampleHandoff()
+	src := &fakeSource{files: map[string][]byte{"goal.json": []byte(v1)}}
 
-	got, err := BindGoal(h, root, "goal.json")
+	got, err := BindGoal(src, sampleHandoff(), sourceRoot, "goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a version 1 Goal")
 }
 
 func TestBindGoalRejectsProjectIDMismatch(t *testing.T) {
-	root := t.TempDir()
-	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("other-project", "goal-alpha")))
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, "goal.json")
+	src := &fakeSource{files: map[string][]byte{"goal.json": []byte(goalV2JSON("other-project", "goal-alpha"))}}
+	got, err := BindGoal(src, sampleHandoff(), sourceRoot, "goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a project_id mismatch")
 	if !strings.Contains(err.Error(), "project_id") {
 		t.Errorf("BindGoal error = %v, want it to name project_id", err)
@@ -190,42 +112,19 @@ func TestBindGoalRejectsProjectIDMismatch(t *testing.T) {
 }
 
 func TestBindGoalRejectsGoalIDMismatch(t *testing.T) {
-	root := t.TempDir()
-	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("standalone-shaper-handoff", "goal-beta")))
-	h := sampleHandoff()
-
-	got, err := BindGoal(h, root, "goal.json")
+	src := &fakeSource{files: map[string][]byte{"goal.json": []byte(goalV2JSON("standalone-shaper-handoff", "goal-beta"))}}
+	got, err := BindGoal(src, sampleHandoff(), sourceRoot, "goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a goal_id mismatch")
 	if !strings.Contains(err.Error(), "goal_id") {
 		t.Errorf("BindGoal error = %v, want it to name goal_id", err)
 	}
 }
 
-func TestBindGoalRejectsEmptyWorktreeRoot(t *testing.T) {
-	h := sampleHandoff()
-	got, err := BindGoal(h, "", "goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "an empty worktreeRoot")
-}
-
-func TestBindGoalRejectsRelativeWorktreeRoot(t *testing.T) {
-	h := sampleHandoff()
-	got, err := BindGoal(h, "relative/root", "goal.json")
-	assertRejectedWithoutPartialBinding(t, got, err, "a relative worktreeRoot")
-}
-
-func TestBindGoalRejectsEmptyGoalPath(t *testing.T) {
-	root := t.TempDir()
-	h := sampleHandoff()
-	got, err := BindGoal(h, root, "")
-	assertRejectedWithoutPartialBinding(t, got, err, "an empty goalPath")
-}
-
 func TestBindGoalExposesSHA256OfExactEvaluatedBytes(t *testing.T) {
-	root := t.TempDir()
 	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	writeGoalFile(t, root, "goal.json", data)
+	src := &fakeSource{files: map[string][]byte{"goal.json": data}}
 
-	got, err := BindGoal(sampleHandoff(), root, "goal.json")
+	got, err := BindGoal(src, sampleHandoff(), sourceRoot, "goal.json")
 	if err != nil {
 		t.Fatalf("BindGoal: %v", err)
 	}
@@ -236,16 +135,14 @@ func TestBindGoalExposesSHA256OfExactEvaluatedBytes(t *testing.T) {
 }
 
 func TestBindGoalSHA256ChangesOnWhitespaceOnlyEdit(t *testing.T) {
-	root := t.TempDir()
 	data := []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha"))
-	writeGoalFile(t, root, "goal.json", data)
-	before, err := BindGoal(sampleHandoff(), root, "goal.json")
+	before, err := BindGoal(&fakeSource{files: map[string][]byte{"goal.json": data}}, sampleHandoff(), sourceRoot, "goal.json")
 	if err != nil {
 		t.Fatalf("BindGoal before edit: %v", err)
 	}
 
-	writeGoalFile(t, root, "goal.json", append(append([]byte{}, data...), '\n'))
-	after, err := BindGoal(sampleHandoff(), root, "goal.json")
+	edited := append(append([]byte{}, data...), '\n')
+	after, err := BindGoal(&fakeSource{files: map[string][]byte{"goal.json": edited}}, sampleHandoff(), sourceRoot, "goal.json")
 	if err != nil {
 		t.Fatalf("BindGoal after edit: %v", err)
 	}

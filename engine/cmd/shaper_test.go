@@ -446,7 +446,7 @@ func TestShaperClearanceRecord_Refusals(t *testing.T) {
 		{"record content in argv", recordArgs(root, "--stdin", good), good, nil, "unexpected argument"},
 		{"unknown flag", recordArgs(root, "--stdin", "--record", "x"), good, nil, "unknown flag"},
 		{"empty stdin", recordArgs(root, "--stdin"), "", nil, "empty"},
-		{"oversized stdin", recordArgs(root, "--stdin"), strings.Repeat(" ", stdinSizeLimit+1), nil, "exceeds"},
+		{"oversized stdin", recordArgs(root, "--stdin"), strings.Repeat(" ", shaper.MaxRecordBytes+1), nil, "exceeds"},
 		{"view digest mismatch", recordArgs(root, "--stdin"), badView, nil, "view_sha256"},
 		{"missing flag resolution", recordArgs(root, "--stdin"), unresolved, nil, "unresolved"},
 		{"rpc channel", recordArgs(root, "--stdin"), recordFromAssess(t, a, "affirm", "rpc", nil), nil, "tui"},

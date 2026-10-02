@@ -1,6 +1,6 @@
 //go:build !linux && !darwin
 
-package shaper
+package fsadapter
 
 import (
 	"fmt"

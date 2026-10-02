@@ -18,8 +18,10 @@ import (
 	"testing"
 )
 
-// presenceSources are the files under the presence contract: every production source of
-// the package, doc.go (the package comment and its clause, no code) included.
+// presenceSources are the files under the presence contract: presence.go, which holds the
+// prober, and doc.go, which holds only the package comment and its clause and no code. doc.go
+// is listed so that the guard keeps parsing it: should code ever land there, it is held to
+// the same imports and os members as the prober, with nothing to exempt it.
 var presenceSources = []string{"doc.go", "presence.go"}
 
 // allowedOSSelectors are the only members of package os the prober may use.

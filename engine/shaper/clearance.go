@@ -3,6 +3,7 @@ package shaper
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -96,15 +97,34 @@ var (
 
 var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
+// MaxRecordBytes bounds the size of one clearance record that ParseRecord will decode, and
+// so of every record a ClearanceStore will accept and read back. A record carries
+// free-form text (the reason and the evidence of each flag resolution), none of which has
+// a length of its own, so the whole document is bounded instead: it keeps a caller that
+// parses a record from an untrusted source (disk, stdin, another process) from an
+// arbitrarily large document before any field is inspected. 4 MiB is exactly the stdin cap
+// the CLI's clearance record verb applied before this bound existed: every record the
+// program has stored was accepted under that cap, so a smaller bound would make such a
+// record unreadable. It is still many times what a legitimate record needs. The bound is
+// owned here, and the CLI reads stdin through it, so a record the CLI accepts is one the
+// store can load back.
+const MaxRecordBytes = 4 << 20
+
+// ErrRecordTooLarge is returned by ParseRecord when the input exceeds MaxRecordBytes.
+var ErrRecordTooLarge = errors.New("shaper: clearance record is too large")
+
 // IsSHA256Hex reports whether s is a SHA-256 digest as every digest in a clearance
 // record is written: exactly 64 lowercase hexadecimal characters.
 func IsSHA256Hex(s string) bool { return sha256HexPattern.MatchString(s) }
 
-// ParseRecord strictly parses one clearance record: valid UTF-8, no duplicate
-// keys at any depth, no unknown fields at any depth, no trailing data, the
-// pinned version, and every field shape. It accepts both decisions; Verify
-// decides whether the record clears anything.
+// ParseRecord strictly parses one clearance record: bounded overall size
+// (MaxRecordBytes), valid UTF-8, no duplicate keys at any depth, no unknown fields at any
+// depth, no trailing data, the pinned version, and every field shape. It accepts both
+// decisions; Verify decides whether the record clears anything.
 func ParseRecord(data []byte) (ClearanceRecord, error) {
+	if len(data) > MaxRecordBytes {
+		return ClearanceRecord{}, fmt.Errorf("parse clearance record: %w: %d bytes, the maximum is %d", ErrRecordTooLarge, len(data), MaxRecordBytes)
+	}
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return ClearanceRecord{}, fmt.Errorf("parse clearance record: %w", err)
 	}

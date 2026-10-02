@@ -1,6 +1,14 @@
 package shaper
 
-import "fmt"
+// This file holds the disclosures: the statements of what a ready claim and a clearance
+// record do and do not establish. They belong to the domain because they are the limits of
+// its own claim (a clearance is bound to exact content by digests and is not a signature;
+// readiness grants no execution authority; what the plan fields cover depends on the
+// handoff version), and ReadyDisclosureFor is the rule that picks the statement a version
+// owes. Printing them is the caller's obligation (the doc comments of Evaluate and of the
+// ready state say so): engine/cmd prints them, and the Pi gate carries a copy of
+// ForgeryDisclosure that a test keeps equal to this one. Nothing here reads a file or
+// formats output.
 
 // ForgeryDisclosure is the trust limit every output that can report the
 // ready state must print. A ready outcome is not a signature: any process
@@ -50,27 +58,4 @@ func ReadyDisclosureFor(version int) string {
 		return ReadyDisclosureV3
 	}
 	return ReadyDisclosure
-}
-
-// ReadContainedSource reads relPath strictly inside worktreeRoot under the
-// same containment rules as LoadHandoff and BindGoal, without parsing it. It
-// returns the cleaned root-relative path and the exact bytes read. A caller
-// uses it to hand bytes that failed a strict parse to Evaluate, which then
-// reports them as a blocker instead of an I/O failure.
-func ReadContainedSource(worktreeRoot, relPath string) (string, []byte, error) {
-	cleaned, err := cleanContainedRelPath(worktreeRoot, "path", relPath)
-	if err != nil {
-		return "", nil, fmt.Errorf("read source: %w", err)
-	}
-	data, err := readContainedRegularFile(worktreeRoot, cleaned, "source")
-	if err != nil {
-		return "", nil, fmt.Errorf("read source: %w", err)
-	}
-	return cleaned, data, nil
-}
-
-// SourceSHA256 is the lowercase hex SHA-256 of source bytes. It detects
-// drift only and is not a signature.
-func SourceSHA256(data []byte) string {
-	return sha256Hex(data)
 }

@@ -1,0 +1,133 @@
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 3
+--- stdout ---
+{
+  "state": "draft",
+  "blockers": [
+    {
+      "reason": "flags_unresolved",
+      "kind": "unprovable",
+      "detail": "1 flag(s) await a host-captured human resolution"
+    },
+    {
+      "reason": "clearance_missing",
+      "kind": "unprovable",
+      "detail": "no host-owned clearance supplied"
+    },
+    {
+      "reason": "acceptance_verification_unrepresentable",
+      "kind": "unprovable",
+      "detail": "handoff version 1 has no per-criterion verification method or adjudication path"
+    }
+  ],
+  "flags": [
+    {
+      "id": "goal_non_goal_overlap:stages:1",
+      "kind": "goal_non_goal_overlap",
+      "field": "stages",
+      "index": 1,
+      "item": "Extract jsonstrict."
+    }
+  ],
+  "subject": {
+    "project_id": "standalone-shaper-handoff",
+    "goal_id": "goal-alpha",
+    "handoff_source_path": "handoff.json",
+    "handoff_sha256": "c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7",
+    "goal_source_path": "goal.json",
+    "goal_sha256": "6b51e015e1574026051df7206ad9fac2f39aa40b5c2a0874fdedf2faa6f40a6e",
+    "provenance_sha256": "<PROVENANCE-SHA256>",
+    "view_sha256": "605b2aafddba8456b70adeb8789952f95fe495ccd3a02881730f75c6342d517e",
+    "worktree": {
+      "toplevel": "<ROOT>",
+      "git_dir": "<ROOT>/.git",
+      "common_dir": "<ROOT>/.git"
+    }
+  },
+  "clearance": {
+    "status": "absent",
+    "path": "<STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7.json"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json --view
+exit: 3
+--- stdout ---
+labdrian shaper clearance view 1
+goal 340
+{"version":2,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","objective":"Bind the handoff to real intent.","scope":"One project.","constraints":[],"non_goals":["Extract jsonstrict."],"acceptance_criteria":["Binding succeeds."],"memory_scope":"Project-scoped.","runtime_scope":"Deferred.","delivery_boundary":"No delivery."}
+plan 243
+{"version":1,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","architecture":"Layered CLI.","stages":["Extract jsonstrict.","Refactor goal.Parse."],"acceptance":["go test ./... passes."],"out_of_scope":["Runtime clearance UI."]}
+goal_scope 12
+One project.
+goal_non_goals 1
+item 19
+Extract jsonstrict.
+out_of_scope 1
+item 21
+Runtime clearance UI.
+flags 1
+flag_id 30
+goal_non_goal_overlap:stages:1
+flag_kind 21
+goal_non_goal_overlap
+flag_field 6
+stages
+flag_index 1
+flag_item 19
+Extract jsonstrict.
+--- stderr ---
+
+$ shaper clearance record --root <ROOT> --handoff handoff.json --goal goal.json --stdin
+exit: 0
+--- stdout ---
+shaper clearance record: stored affirm record at <STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7.json
+Trust limit: this clearance is bound to exact content by SHA-256 digests only; it is not a signature. Any process running as the same OS user, including any installed Pi extension, can forge a clearance record, and the Claude Code and Pi deny guards are speed bumps, not a security boundary. Readiness grants no execution authority.
+--- stderr ---
+
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 3
+--- stdout ---
+{
+  "state": "draft",
+  "blockers": [
+    {
+      "reason": "acceptance_verification_unrepresentable",
+      "kind": "unprovable",
+      "detail": "handoff version 1 has no per-criterion verification method or adjudication path"
+    }
+  ],
+  "flags": [
+    {
+      "id": "goal_non_goal_overlap:stages:1",
+      "kind": "goal_non_goal_overlap",
+      "field": "stages",
+      "index": 1,
+      "item": "Extract jsonstrict."
+    }
+  ],
+  "subject": {
+    "project_id": "standalone-shaper-handoff",
+    "goal_id": "goal-alpha",
+    "handoff_source_path": "handoff.json",
+    "handoff_sha256": "c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7",
+    "goal_source_path": "goal.json",
+    "goal_sha256": "6b51e015e1574026051df7206ad9fac2f39aa40b5c2a0874fdedf2faa6f40a6e",
+    "provenance_sha256": "<PROVENANCE-SHA256>",
+    "view_sha256": "605b2aafddba8456b70adeb8789952f95fe495ccd3a02881730f75c6342d517e",
+    "worktree": {
+      "toplevel": "<ROOT>",
+      "git_dir": "<ROOT>/.git",
+      "common_dir": "<ROOT>/.git"
+    }
+  },
+  "clearance": {
+    "status": "verified",
+    "path": "<STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7.json"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+

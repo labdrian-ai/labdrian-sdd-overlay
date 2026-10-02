@@ -1,6 +1,6 @@
 //go:build darwin
 
-package shaper
+package fsadapter
 
 import (
 	"bytes"

@@ -125,9 +125,10 @@ func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	in := shaper.ReadinessInput{WorktreeRoot: root}
 	var notes []string
 
-	src, loadErr := shaper.LoadHandoff(root, o.handoff)
+	files := newContainedSource()
+	src, loadErr := shaper.LoadHandoff(files, root, o.handoff)
 	if loadErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(root, o.handoff)
+		cleaned, data, err := shaper.ReadContainedSource(files, root, o.handoff)
 		if err != nil {
 			return shaper.ReadinessInput{}, nil, loadErr
 		}
@@ -136,9 +137,9 @@ func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	}
 	in.Handoff = src
 
-	gb, bindErr := shaper.BindGoal(src.Handoff, root, o.goal)
+	gb, bindErr := shaper.BindGoal(files, src.Handoff, root, o.goal)
 	if bindErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(root, o.goal)
+		cleaned, data, err := shaper.ReadContainedSource(files, root, o.goal)
 		if err != nil {
 			return shaper.ReadinessInput{}, nil, bindErr
 		}
@@ -372,13 +373,15 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 		fail("refusing inside a gentle-pi agent child (GENTLE_PI_AGENTS_CHILD=1): no human answers its dialogs")
 		return
 	}
-	data, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit+1))
+	// The record bound is the domain's (shaper.MaxRecordBytes), not the CLI-wide stdin cap,
+	// so every record this verb accepts is one the clearance store can load back.
+	data, err := io.ReadAll(io.LimitReader(stdin, shaper.MaxRecordBytes+1))
 	if err != nil {
 		fail("read stdin: %v", err)
 		return
 	}
-	if len(data) > stdinSizeLimit {
-		fail("stdin exceeds %d bytes", stdinSizeLimit)
+	if len(data) > shaper.MaxRecordBytes {
+		fail("stdin exceeds %d bytes", shaper.MaxRecordBytes)
 		return
 	}
 	if strings.TrimSpace(string(data)) == "" {

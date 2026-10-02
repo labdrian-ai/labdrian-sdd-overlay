@@ -332,7 +332,7 @@ func runRolesMatchShaper(args []string, stdout, stderr io.Writer, exit func(int)
 		exit(1)
 		return
 	}
-	src, err := shaper.LoadHandoff(filepath.Clean(resolved), o.handoff)
+	src, err := shaper.LoadHandoff(newContainedSource(), filepath.Clean(resolved), o.handoff)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: roles match-shaper: %v\n", err)
 		exit(1)

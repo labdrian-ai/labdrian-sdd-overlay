@@ -3,12 +3,16 @@ package shaper
 import (
 	"crypto/sha256"
 	"encoding/hex"
-	"os"
-	"path/filepath"
+	"errors"
 	"reflect"
 	"strings"
 	"testing"
 )
+
+// LoadHandoff parses what a ContainedSource returns; reading the file is the source's.
+// These tests give it a fake source, so they prove what the domain decides on its own. The
+// read of real files is proved against the file-backed source, in engine/shaper/fsadapter,
+// through this same function.
 
 // assertLoadHandoffRejected fails unless LoadHandoff returned an error
 // together with the zero HandoffSource, so no rejection leaks partial state.
@@ -23,19 +27,15 @@ func assertLoadHandoffRejected(t *testing.T, got HandoffSource, err error, what 
 }
 
 func TestLoadHandoffReturnsParsedHandoffRawBytesAndDigest(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, "shaper"), 0o755); err != nil {
-		t.Fatalf("mkdir: %v", err)
-	}
 	data := documentWith(t, nil)
-	writeGoalFile(t, filepath.Join(root, "shaper"), "handoff.json", data)
+	src := &fakeSource{files: map[string][]byte{"shaper/handoff.json": data}}
 
-	got, err := LoadHandoff(root, "./shaper/handoff.json")
+	got, err := LoadHandoff(src, sourceRoot, "./shaper/handoff.json")
 	if err != nil {
 		t.Fatalf("LoadHandoff: %v", err)
 	}
-	if got.SourcePath != filepath.Join("shaper", "handoff.json") {
-		t.Errorf("SourcePath = %q, want %q", got.SourcePath, filepath.Join("shaper", "handoff.json"))
+	if got.SourcePath != "shaper/handoff.json" {
+		t.Errorf("SourcePath = %q, want %q", got.SourcePath, "shaper/handoff.json")
 	}
 	if string(got.Bytes) != string(data) {
 		t.Errorf("Bytes = %q, want %q", got.Bytes, data)
@@ -53,17 +53,29 @@ func TestLoadHandoffReturnsParsedHandoffRawBytesAndDigest(t *testing.T) {
 	}
 }
 
+// The source is asked for the cleaned path, under the root it was given, and told what the
+// bytes are for.
+func TestLoadHandoffAsksTheSourceForTheCleanedPathUnderItsLabel(t *testing.T) {
+	src := &fakeSource{files: map[string][]byte{"h/handoff.json": documentWith(t, nil)}}
+
+	if _, err := LoadHandoff(src, sourceRoot, "h/./x/../handoff.json"); err != nil {
+		t.Fatalf("LoadHandoff: %v", err)
+	}
+	want := []readCall{{root: sourceRoot, rel: "h/handoff.json", label: "handoff source"}}
+	if !reflect.DeepEqual(src.calls, want) {
+		t.Errorf("source was asked %+v, want exactly %+v", src.calls, want)
+	}
+}
+
 func TestLoadHandoffSHA256ChangesOnWhitespaceOnlyEdit(t *testing.T) {
-	root := t.TempDir()
 	data := documentWith(t, nil)
-	writeGoalFile(t, root, "handoff.json", data)
-	before, err := LoadHandoff(root, "handoff.json")
+	before, err := LoadHandoff(&fakeSource{files: map[string][]byte{"handoff.json": data}}, sourceRoot, "handoff.json")
 	if err != nil {
 		t.Fatalf("LoadHandoff before edit: %v", err)
 	}
 
-	writeGoalFile(t, root, "handoff.json", append(append([]byte{}, data...), ' ', '\n'))
-	after, err := LoadHandoff(root, "handoff.json")
+	edited := append(append([]byte{}, data...), ' ', '\n')
+	after, err := LoadHandoff(&fakeSource{files: map[string][]byte{"handoff.json": edited}}, sourceRoot, "handoff.json")
 	if err != nil {
 		t.Fatalf("LoadHandoff after edit: %v", err)
 	}
@@ -75,106 +87,26 @@ func TestLoadHandoffSHA256ChangesOnWhitespaceOnlyEdit(t *testing.T) {
 	}
 }
 
-func TestLoadHandoffRejectsUncontainedOrIrregularSources(t *testing.T) {
-	cases := []struct {
-		name    string
-		setup   func(t *testing.T, root string) string
-		wantErr string
-	}{
-		{
-			name:    "empty worktree root",
-			setup:   func(t *testing.T, root string) string { return "handoff.json" },
-			wantErr: "worktreeRoot must not be empty",
-		},
-		{
-			name:    "empty path",
-			setup:   func(t *testing.T, root string) string { return "" },
-			wantErr: "handoffPath must not be empty",
-		},
-		{
-			name: "absolute path",
-			setup: func(t *testing.T, root string) string {
-				return writeGoalFile(t, root, "handoff.json", documentWith(t, nil))
-			},
-			wantErr: "must be relative",
-		},
-		{
-			name:    "traversal",
-			setup:   func(t *testing.T, root string) string { return filepath.Join("..", "handoff.json") },
-			wantErr: "must not traverse",
-		},
-		{
-			name:    "root itself",
-			setup:   func(t *testing.T, root string) string { return "." },
-			wantErr: "worktree root itself",
-		},
-		{
-			name:    "missing file",
-			setup:   func(t *testing.T, root string) string { return "absent.json" },
-			wantErr: "not accessible",
-		},
-		{
-			name: "symlink inside root",
-			setup: func(t *testing.T, root string) string {
-				target := writeGoalFile(t, t.TempDir(), "handoff.json", documentWith(t, nil))
-				if err := os.Symlink(target, filepath.Join(root, "handoff.json")); err != nil {
-					t.Skipf("symlink not supported in this environment: %v", err)
-				}
-				return "handoff.json"
-			},
-			wantErr: "must not be a symlink",
-		},
-		{
-			name: "symlinked ancestor escaping root",
-			setup: func(t *testing.T, root string) string {
-				outside := t.TempDir()
-				writeGoalFile(t, outside, "handoff.json", documentWith(t, nil))
-				if err := os.Symlink(outside, filepath.Join(root, "escape")); err != nil {
-					t.Skipf("symlink not supported in this environment: %v", err)
-				}
-				return "escape/handoff.json"
-			},
-			wantErr: "outside the worktree root",
-		},
-		{
-			name: "directory",
-			setup: func(t *testing.T, root string) string {
-				if err := os.MkdirAll(filepath.Join(root, "handoff.json"), 0o755); err != nil {
-					t.Fatalf("mkdir: %v", err)
-				}
-				return "handoff.json"
-			},
-			wantErr: "must be a regular file",
-		},
-		{
-			name: "invalid handoff",
-			setup: func(t *testing.T, root string) string {
-				writeGoalFile(t, root, "handoff.json", documentWith(t, map[string]any{"version": 2}))
-				return "handoff.json"
-			},
-			wantErr: "parse shaper handoff",
-		},
+// What the source refuses is reported, with the operation named, and nothing is loaded.
+func TestLoadHandoffReportsWhatTheSourceRefusesWithoutAPartialSource(t *testing.T) {
+	refusal := errors.New(`handoff source "handoff.json" resolves outside the worktree root`)
+	got, err := LoadHandoff(&fakeSource{err: refusal}, sourceRoot, "handoff.json")
+	assertLoadHandoffRejected(t, got, err, "a handoff the source refused")
+	if want := "load handoff: " + refusal.Error(); err.Error() != want {
+		t.Errorf("LoadHandoff error = %q, want %q", err, want)
 	}
-	for _, tc := range cases {
-		t.Run(tc.name, func(t *testing.T) {
-			root := t.TempDir()
-			path := tc.setup(t, root)
-			if tc.name == "empty worktree root" {
-				root = ""
-			}
-			got, err := LoadHandoff(root, path)
-			assertLoadHandoffRejected(t, got, err, tc.name)
-			if !strings.Contains(err.Error(), tc.wantErr) {
-				t.Errorf("LoadHandoff error = %v, want it to contain %q", err, tc.wantErr)
-			}
-			if !strings.HasPrefix(err.Error(), "load handoff: ") {
-				t.Errorf("LoadHandoff error = %v, want the %q prefix", err, "load handoff: ")
-			}
-		})
+	if !errors.Is(err, refusal) {
+		t.Errorf("LoadHandoff error %v does not wrap the source's", err)
 	}
 }
 
-func TestLoadHandoffRejectsRelativeWorktreeRoot(t *testing.T) {
-	got, err := LoadHandoff("relative/root", "handoff.json")
-	assertLoadHandoffRejected(t, got, err, "a relative worktreeRoot")
+// Bytes the source read but that are not a handoff are refused by the strict parse, in the
+// parse's words and under the same prefix.
+func TestLoadHandoffRejectsBytesThatAreNotAHandoff(t *testing.T) {
+	src := &fakeSource{files: map[string][]byte{"handoff.json": documentWith(t, map[string]any{"version": 9})}}
+	got, err := LoadHandoff(src, sourceRoot, "handoff.json")
+	assertLoadHandoffRejected(t, got, err, "an invalid handoff")
+	if want := "load handoff: parse shaper handoff"; !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("LoadHandoff error = %v, want it to start with %q", err, want)
+	}
 }

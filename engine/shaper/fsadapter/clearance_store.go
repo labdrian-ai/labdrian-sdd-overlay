@@ -1,30 +1,3 @@
-// Package fsadapter is the shaper's file-backed adapter: what the domain asks of the
-// world through its ports (engine/shaper/ports.go), answered from files under the user's
-// state home.
-//
-// ClearanceStore is the shaper.ClearanceStore: clearance records kept as one immutable
-// JSON file each. What a record is and means (shaper.ParseRecord, shaper.Verify) is the
-// domain's, and pure. This package is the rest: where the files live, how they are read
-// without following a symlink, and how a record is published so that no writer can
-// replace another's. The state home is handed in by the composition root, which resolves
-// it from the environment once (see engine/statestore.Home); this package reads no
-// environment variable.
-//
-// The on-disk format and layout are a contract with every earlier version of the program,
-// and they do not change here:
-// <state home>/labdrian/shaper-clearance/<project_id>/<goal_id>/<handoff_sha256>.json, the
-// record's own bytes exactly as offered, files 0600 in directories of mode 0700. The
-// runtime deny guards refuse any path that contains shaper.GuardStoreMarker, which is this
-// layout's fixed directory, and a test pins the two to each other. testdata holds a
-// sequence of states recorded from the version that kept this code in the shaper package,
-// and the tests read them, extend them, and write them again, byte for byte.
-//
-// It is built on engine/statestore (the state home, the directory chain, the no-follow
-// read, the immutable publish). Its error messages are the ones the store printed when it
-// lived in the shaper package ("clearance store: ..."), except that a failure to write or
-// publish a record now carries engine/atomicfile's words. A platform without a no-follow
-// open (anything but linux and darwin) is refused when the store is built, instead of
-// reading a record it cannot vouch for.
 package fsadapter
 
 import (
@@ -145,6 +118,12 @@ func (s ClearanceStore) Put(data []byte) (string, error) {
 // component and a record that is not a regular file. A key with no record is
 // shaper.ErrClearanceNotFound. It returns raw bytes; callers verify them with
 // shaper.Verify.
+//
+// The read is bounded by shaper.MaxRecordBytes. Put refuses a larger record (the parse it
+// starts with does), and the bound is the largest record the program ever accepted, so no
+// record this program stored is out of reach; a larger file is something else left in the
+// store, and it is refused after one byte past the bound has been read, naming the size
+// the opened file reported, instead of being read whole.
 func (s ClearanceStore) Get(projectID, goalID, handoffSHA256 string) ([]byte, error) {
 	path, err := s.Path(projectID, goalID, handoffSHA256)
 	if err != nil {
@@ -157,9 +136,14 @@ func (s ClearanceStore) Get(projectID, goalID, handoffSHA256 string) ([]byte, er
 	if err := statestore.CheckDirs(parts); err != nil {
 		return nil, absent(fmt.Errorf("clearance store: %w", err))
 	}
-	data, err := statestore.ReadFile(path, 0)
+	// One byte past the bound is enough to know the record is too large; the rest of it is
+	// never read.
+	data, size, err := statestore.ReadFileSized(path, shaper.MaxRecordBytes+1)
 	if err != nil {
 		return nil, absent(recordError(path, err))
+	}
+	if len(data) > shaper.MaxRecordBytes {
+		return nil, fmt.Errorf("clearance store: record %q is %d bytes, exceeding the maximum of %d", path, max(size, int64(len(data))), shaper.MaxRecordBytes)
 	}
 	return data, nil
 }

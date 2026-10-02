@@ -1,0 +1,247 @@
+== handoff missing
+$ shaper assess --root <ROOT> --handoff absent.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoff source "absent.json" is not accessible: lstat <ROOT>/absent.json: no such file or directory
+
+
+== goal missing
+$ shaper assess --root <ROOT> --handoff handoff.json --goal absent.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: bind goal: goal source "absent.json" is not accessible: lstat <ROOT>/absent.json: no such file or directory
+
+
+== handoff is a symlink
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoff source "handoff.json" must not be a symlink
+
+
+== goal is a symlink
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: bind goal: goal source "goal.json" must not be a symlink
+
+
+== handoff is a directory
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoff source "handoff.json" must be a regular file
+
+
+== goal is a directory
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: bind goal: goal source "goal.json" must be a regular file
+
+
+== handoff through a symlinked directory out of the root
+$ shaper assess --root <ROOT> --handoff escape/handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoff source "escape/handoff.json" resolves outside the worktree root
+
+
+== goal through a symlinked directory out of the root
+$ shaper assess --root <ROOT> --handoff handoff.json --goal escape/goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: bind goal: goal source "escape/goal.json" resolves outside the worktree root
+
+
+== handoff traverses above the root
+$ shaper assess --root <ROOT> --handoff ../handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoffPath must not traverse outside the worktree root, got "../handoff.json"
+
+
+== goal traverses above the root
+$ shaper assess --root <ROOT> --handoff handoff.json --goal sub/../../goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: bind goal: goalPath must not traverse outside the worktree root, got "sub/../../goal.json"
+
+
+== handoff is an absolute path
+$ shaper assess --root <ROOT> --handoff <ROOT>/handoff.json --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoffPath must be relative, got "<ROOT>/handoff.json"
+
+
+== goal is an absolute path
+$ shaper assess --root <ROOT> --handoff handoff.json --goal <ROOT>/goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: bind goal: goalPath must be relative, got "<ROOT>/goal.json"
+
+
+== handoff is the root itself
+$ shaper assess --root <ROOT> --handoff . --goal goal.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: load handoff: handoffPath must not resolve to the worktree root itself, got "."
+
+
+== goal is empty
+$ shaper assess --root <ROOT> --handoff handoff.json --goal 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: shaper assess: --goal is required
+
+
+== handoff in a nested directory
+$ shaper assess --root <ROOT> --handoff ./nested/dir/../dir/handoff.json --goal goal.json
+exit: 3
+--- stdout ---
+{
+  "state": "draft",
+  "blockers": [
+    {
+      "reason": "clearance_missing",
+      "kind": "unprovable",
+      "detail": "no host-owned clearance supplied"
+    },
+    {
+      "reason": "acceptance_verification_unrepresentable",
+      "kind": "unprovable",
+      "detail": "handoff version 1 has no per-criterion verification method or adjudication path"
+    }
+  ],
+  "flags": [],
+  "subject": {
+    "project_id": "standalone-shaper-handoff",
+    "goal_id": "goal-alpha",
+    "handoff_source_path": "nested/dir/handoff.json",
+    "handoff_sha256": "c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7",
+    "goal_source_path": "goal.json",
+    "goal_sha256": "9fbdce9dd8a64874e2d43ae315ecc98d3f7de5cd753f0d8c442aaabfc390eb8a",
+    "provenance_sha256": "<PROVENANCE-SHA256>",
+    "view_sha256": "90a536f89f10162d3fd0d2798c201265f782cd1a978b7f58fe7d2e7487d8955d",
+    "worktree": {
+      "toplevel": "<ROOT>",
+      "git_dir": "<ROOT>/.git",
+      "common_dir": "<ROOT>/.git"
+    }
+  },
+  "clearance": {
+    "status": "absent",
+    "path": "<STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/c5c44bd797c53909372af07e2465348991046ee24084140a3e39b738b211e1e7.json"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+
+
+== handoff is not a valid handoff
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 2
+--- stdout ---
+{
+  "state": "invalid",
+  "blockers": [
+    {
+      "reason": "handoff_invalid",
+      "kind": "refused",
+      "detail": "parse shaper handoff: unsupported version 9, want 1"
+    }
+  ],
+  "flags": [],
+  "subject": null,
+  "clearance": {
+    "status": "absent",
+    "detail": "subject evidence is incomplete or refused, so no clearance can be looked up"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+
+
+== goal is not a valid goal
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 3
+--- stdout ---
+{
+  "state": "draft",
+  "blockers": [
+    {
+      "reason": "goal_invalid",
+      "kind": "refused",
+      "detail": "parse goal: invalid character 'o' in literal null (expecting 'u')"
+    },
+    {
+      "reason": "clearance_missing",
+      "kind": "unprovable",
+      "detail": "no host-owned clearance supplied"
+    },
+    {
+      "reason": "acceptance_verification_unrepresentable",
+      "kind": "unprovable",
+      "detail": "handoff version 1 has no per-criterion verification method or adjudication path"
+    }
+  ],
+  "flags": [],
+  "subject": null,
+  "clearance": {
+    "status": "absent",
+    "detail": "subject evidence is incomplete or refused, so no clearance can be looked up"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+
+
+== goal names another project
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 3
+--- stdout ---
+{
+  "state": "draft",
+  "blockers": [
+    {
+      "reason": "goal_identity_mismatch",
+      "kind": "refused",
+      "detail": "handoff (\"standalone-shaper-handoff\", \"goal-alpha\"), goal (\"another-project\", \"goal-alpha\")"
+    },
+    {
+      "reason": "clearance_missing",
+      "kind": "unprovable",
+      "detail": "no host-owned clearance supplied"
+    },
+    {
+      "reason": "acceptance_verification_unrepresentable",
+      "kind": "unprovable",
+      "detail": "handoff version 1 has no per-criterion verification method or adjudication path"
+    }
+  ],
+  "flags": [],
+  "subject": null,
+  "clearance": {
+    "status": "absent",
+    "detail": "subject evidence is incomplete or refused, so no clearance can be looked up"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+
+
