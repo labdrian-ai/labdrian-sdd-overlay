@@ -113,8 +113,10 @@ func (s Store) Stores() ([]reviewreceipt.Store, error) {
 }
 
 // Documents is reviewreceipt.ReceiptSource. A store that does not exist holds nothing, and a
-// file that cannot be read is not a document: the stores belong to another tool, which may
-// leave a lineage half written, and only what can be read whole is of interest.
+// document that does not exist is absent: the stores belong to another tool, which may leave
+// a lineage half written. A store or a document that is there and cannot be read is an error
+// that names it, never an absence, because the hook counts the approved receipts it reads:
+// one dropped in silence would let an acknowledgement proceed and lose that receipt.
 func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, error) {
 	dir := string(store)
 	entries, err := os.ReadDir(dir)
@@ -133,9 +135,13 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 			shape reviewreceipt.Shape
 			name  string
 		}{{reviewreceipt.ShapeReceipt, receiptFileName}, {reviewreceipt.ShapeState, stateFileName}} {
-			data, err := os.ReadFile(filepath.Join(dir, e.Name(), file.name))
+			path := filepath.Join(dir, e.Name(), file.name)
+			data, err := os.ReadFile(path)
 			if err != nil {
-				continue
+				if os.IsNotExist(err) {
+					continue
+				}
+				return nil, fmt.Errorf("read %s: %w", path, err)
 			}
 			documents = append(documents, reviewreceipt.Document{Shape: file.shape, Data: data})
 		}

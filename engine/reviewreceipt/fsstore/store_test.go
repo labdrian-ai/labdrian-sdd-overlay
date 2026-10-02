@@ -117,7 +117,7 @@ func TestDocumentsAreTheLineagesInNameOrderLegacyBeforeState(t *testing.T) {
 	write(t, filepath.Join(store, "review-a", "review-state.json"), "a-state")
 	write(t, filepath.Join(store, "review-c", "other.json"), "not a document")
 	write(t, filepath.Join(store, "a-plain-file"), "not a lineage")
-	if err := os.MkdirAll(filepath.Join(store, "review-d", "review-receipt.json"), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Join(store, "review-d"), 0o755); err != nil {
 		t.Fatal(err)
 	}
 
@@ -142,9 +142,8 @@ func TestAStoreThatDoesNotExistHoldsNothing(t *testing.T) {
 	}
 }
 
-// A store that is there and cannot be read is an error that names it; a document that cannot
-// be read is not a document, whatever the reason.
-func TestAStoreThatCannotBeReadIsAnErrorAndADocumentThatCannotIsSkipped(t *testing.T) {
+// A store that is there and cannot be read is an error that names it.
+func TestAStoreThatCannotBeReadIsAnErrorThatNamesIt(t *testing.T) {
 	dir := t.TempDir()
 	notADirectory := filepath.Join(dir, "v2")
 	write(t, notADirectory, "a file where the store should be")
@@ -153,21 +152,41 @@ func TestAStoreThatCannotBeReadIsAnErrorAndADocumentThatCannotIsSkipped(t *testi
 	if err == nil || !strings.HasPrefix(err.Error(), "read "+notADirectory+": ") {
 		t.Errorf("Documents of a file = %v, want an error that names it", err)
 	}
+}
 
-	if os.Geteuid() == 0 {
-		t.Skip("a file without permissions does not stop root")
-	}
-	store := filepath.Join(dir, "store")
-	secret := filepath.Join(store, "review-a", "review-receipt.json")
-	write(t, secret, "unreadable")
-	write(t, filepath.Join(store, "review-a", "review-state.json"), "readable")
-	if err := os.Chmod(secret, 0); err != nil {
-		t.Fatal(err)
-	}
-	got, err := newStore(t, dir, &locator{}).Documents(reviewreceipt.Store(store))
-	if err != nil || len(got) != 1 || got[0].Shape != reviewreceipt.ShapeState {
-		t.Errorf("Documents = %v, %v, want only the readable state", got, err)
-	}
+// Only a missing document is absent. A document that is there and cannot be read is an error
+// that names it, never a silent absence: the hook would otherwise count fewer approved
+// receipts than exist, allow the acknowledgement, and lose a receipt with nothing said.
+func TestADocumentThatIsThereAndCannotBeReadIsAnErrorThatNamesIt(t *testing.T) {
+	t.Run("a directory where a document should be", func(t *testing.T) {
+		dir := t.TempDir()
+		store := filepath.Join(dir, "store")
+		doc := filepath.Join(store, "review-a", "review-receipt.json")
+		if err := os.MkdirAll(doc, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		got, err := newStore(t, dir, &locator{}).Documents(reviewreceipt.Store(store))
+		if err == nil || !strings.HasPrefix(err.Error(), "read "+doc+": ") || got != nil {
+			t.Errorf("Documents = %v, %v, want no documents and an error that names %s", got, err, doc)
+		}
+	})
+	t.Run("a document without permissions", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("a file without permissions does not stop root")
+		}
+		dir := t.TempDir()
+		store := filepath.Join(dir, "store")
+		secret := filepath.Join(store, "review-a", "review-receipt.json")
+		write(t, secret, "unreadable")
+		write(t, filepath.Join(store, "review-a", "review-state.json"), "readable")
+		if err := os.Chmod(secret, 0); err != nil {
+			t.Fatal(err)
+		}
+		got, err := newStore(t, dir, &locator{}).Documents(reviewreceipt.Store(store))
+		if err == nil || !strings.HasPrefix(err.Error(), "read "+secret+": ") || got != nil {
+			t.Errorf("Documents = %v, %v, want no documents and an error that names %s", got, err, secret)
+		}
+	})
 }
 
 func TestLocationIsUnderTheChangesReviewReceiptsOfTheRootAsGiven(t *testing.T) {
