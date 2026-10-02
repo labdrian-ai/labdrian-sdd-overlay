@@ -145,6 +145,12 @@ func (s ClearanceStore) Put(data []byte) (string, error) {
 // component and a record that is not a regular file. A key with no record is
 // shaper.ErrClearanceNotFound. It returns raw bytes; callers verify them with
 // shaper.Verify.
+//
+// The read is bounded by shaper.MaxRecordBytes. Put refuses a larger record (the parse it
+// starts with does), and the bound is the largest record the program ever accepted, so no
+// record this program stored is out of reach; a larger file is something else left in the
+// store, and it is refused after one byte past the bound has been read, naming the size
+// the opened file reported, instead of being read whole.
 func (s ClearanceStore) Get(projectID, goalID, handoffSHA256 string) ([]byte, error) {
 	path, err := s.Path(projectID, goalID, handoffSHA256)
 	if err != nil {
@@ -157,9 +163,14 @@ func (s ClearanceStore) Get(projectID, goalID, handoffSHA256 string) ([]byte, er
 	if err := statestore.CheckDirs(parts); err != nil {
 		return nil, absent(fmt.Errorf("clearance store: %w", err))
 	}
-	data, err := statestore.ReadFile(path, 0)
+	// One byte past the bound is enough to know the record is too large; the rest of it is
+	// never read.
+	data, size, err := statestore.ReadFileSized(path, shaper.MaxRecordBytes+1)
 	if err != nil {
 		return nil, absent(recordError(path, err))
+	}
+	if len(data) > shaper.MaxRecordBytes {
+		return nil, fmt.Errorf("clearance store: record %q is %d bytes, exceeding the maximum of %d", path, max(size, int64(len(data))), shaper.MaxRecordBytes)
 	}
 	return data, nil
 }

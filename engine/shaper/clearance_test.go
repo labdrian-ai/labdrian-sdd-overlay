@@ -3,6 +3,7 @@ package shaper
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -128,6 +129,73 @@ func TestParseRecordAcceptsInformationalHostTime(t *testing.T) {
 	}
 	if got.HostTime == nil || got.HostTime.Value != "2026-09-25T10:00:00Z" {
 		t.Errorf("HostTime = %#v, want the recorded value", got.HostTime)
+	}
+}
+
+// paddedRecord is a valid clearance record of exactly size bytes: the one flag resolution
+// carries a reason as long as it takes. A reason is free text with no length of its own,
+// which is why the record as a whole is bounded.
+func paddedRecord(t *testing.T, size int) []byte {
+	t.Helper()
+	a := freshAssessment(t, overlapInput(t))
+	r := recordFor(t, a)
+	base := len(marshalRecord(t, r))
+	if len(r.FlagResolutions) == 0 || size < base {
+		t.Fatalf("cannot pad a %d byte record to %d bytes (%d resolutions)", base, size, len(r.FlagResolutions))
+	}
+	r.FlagResolutions[0].Reason += strings.Repeat("x", size-base)
+	data := marshalRecord(t, r)
+	if len(data) != size {
+		t.Fatalf("padded record is %d bytes, want %d", len(data), size)
+	}
+	return data
+}
+
+// A record carries free-form text, so the whole document is bounded before any field is
+// looked at: a record of exactly MaxRecordBytes parses, one byte more is refused as too
+// large, naming the size and the bound. The bound is the 4 MiB stdin cap that
+// `shaper clearance record` applied before this bound existed, so a record the program
+// stored under that cap is a record this parse accepts.
+func TestParseRecordBoundsTheRecord(t *testing.T) {
+	if MaxRecordBytes != 4<<20 {
+		t.Errorf("MaxRecordBytes = %d, want 4 MiB: the CLI write cap every stored record was accepted under", MaxRecordBytes)
+	}
+	if _, err := ParseRecord(paddedRecord(t, MaxRecordBytes)); err != nil {
+		t.Fatalf("ParseRecord of a record of exactly MaxRecordBytes: %v", err)
+	}
+	_, err := ParseRecord(paddedRecord(t, MaxRecordBytes+1))
+	want := fmt.Sprintf("parse clearance record: %v: %d bytes, the maximum is %d", ErrRecordTooLarge, MaxRecordBytes+1, MaxRecordBytes)
+	if !errors.Is(err, ErrRecordTooLarge) || err.Error() != want {
+		t.Errorf("ParseRecord of a record one byte over the bound = %v, want %q", err, want)
+	}
+}
+
+// IsSHA256Hex is the one digest rule a store checks its keys by, so its boundary is pinned
+// at the function itself: exactly 64 lowercase hexadecimal characters, nothing else.
+func TestIsSHA256Hex(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		in   string
+		want bool
+	}{
+		{"64 lowercase hex digits", strings.Repeat("a1", 32), true},
+		{"all digits", strings.Repeat("0", 64), true},
+		{"empty", "", false},
+		{"one short", strings.Repeat("a", 63), false},
+		{"one long", strings.Repeat("a", 65), false},
+		{"uppercase", strings.Repeat("A", 64), false},
+		{"one uppercase among lowercase", strings.Repeat("a", 63) + "F", false},
+		{"a non-hex letter", strings.Repeat("a", 63) + "g", false},
+		{"embedded traversal", strings.Repeat("a", 30) + "/../" + strings.Repeat("b", 30), false},
+		{"trailing newline", strings.Repeat("a", 64) + "\n", false},
+		{"leading space", " " + strings.Repeat("a", 63), false},
+		{"0x prefix", "0x" + strings.Repeat("a", 62), false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := IsSHA256Hex(tc.in); got != tc.want {
+				t.Errorf("IsSHA256Hex(%q) = %v, want %v", tc.in, got, tc.want)
+			}
+		})
 	}
 }
 

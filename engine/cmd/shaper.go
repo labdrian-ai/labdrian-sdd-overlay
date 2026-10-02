@@ -372,13 +372,15 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 		fail("refusing inside a gentle-pi agent child (GENTLE_PI_AGENTS_CHILD=1): no human answers its dialogs")
 		return
 	}
-	data, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit+1))
+	// The record bound is the domain's (shaper.MaxRecordBytes), not the CLI-wide stdin cap,
+	// so every record this verb accepts is one the clearance store can load back.
+	data, err := io.ReadAll(io.LimitReader(stdin, shaper.MaxRecordBytes+1))
 	if err != nil {
 		fail("read stdin: %v", err)
 		return
 	}
-	if len(data) > stdinSizeLimit {
-		fail("stdin exceeds %d bytes", stdinSizeLimit)
+	if len(data) > shaper.MaxRecordBytes {
+		fail("stdin exceeds %d bytes", shaper.MaxRecordBytes)
 		return
 	}
 	if strings.TrimSpace(string(data)) == "" {

@@ -33,11 +33,13 @@ type ClearanceStore interface {
 	// Put strictly parses data as a clearance record (ParseRecord), stores it under the
 	// key its subject names, and returns where it is kept. Either decision is stored; a
 	// record from any channel but a human's TUI is refused by the parse. Identical
-	// bytes already stored under the key are idempotent; different bytes are refused.
+	// bytes already stored under the key are idempotent; different bytes are refused. A
+	// record over MaxRecordBytes is refused by the parse (ErrRecordTooLarge).
 	Put(data []byte) (string, error)
 
 	// Get returns the stored bytes for one key, unverified. A key with no record is an
 	// error that satisfies errors.Is(err, ErrClearanceNotFound); a store that cannot be
-	// read, or holds something that is not a plain record, is any other error.
+	// read, or holds something that is not a plain record (a file over MaxRecordBytes
+	// included), is any other error.
 	Get(projectID, goalID, handoffSHA256 string) ([]byte, error)
 }

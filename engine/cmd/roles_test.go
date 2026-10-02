@@ -302,6 +302,11 @@ func TestRolesValidateDoesNotReadAFileFarOverTheBound(t *testing.T) {
 	if r.code != 1 || !strings.Contains(r.stderr, want) {
 		t.Fatalf("code=%d stderr=%q, want a refusal containing %q", r.code, r.stderr, want)
 	}
+	// Reading the bound plus one byte grows the read buffer a few times over (ReadAll
+	// doubles it), so the limit is eight times the bound: room for that growth and for the
+	// command's own work, and 16 times less than reading the 512 MiB file whole would
+	// allocate. Tighten it only with a measurement of the read; loosen it and the test
+	// stops telling a bounded read from an unbounded one.
 	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 8*roles.MaxRecordBytes {
 		t.Errorf("validate of a 512 MiB file allocated %d bytes, want at most %d: the file must not be read past the bound", allocated, 8*roles.MaxRecordBytes)
 	}
