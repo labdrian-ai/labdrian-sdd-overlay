@@ -1,30 +1,9 @@
 package shaper
 
 import (
-	"os"
-	"path/filepath"
 	"strings"
 	"testing"
 )
-
-func TestReadContainedSourceReadsARegularFileInsideRoot(t *testing.T) {
-	root := t.TempDir()
-	if err := os.WriteFile(filepath.Join(root, "h.json"), []byte("not json"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	cleaned, data, err := ReadContainedSource(root, "./h.json")
-	if err != nil {
-		t.Fatalf("ReadContainedSource: %v", err)
-	}
-	if cleaned != "h.json" || string(data) != "not json" {
-		t.Errorf("ReadContainedSource = (%q, %q)", cleaned, data)
-	}
-	for _, bad := range []string{"../h.json", "/etc/passwd", "missing.json"} {
-		if _, _, err := ReadContainedSource(root, bad); err == nil {
-			t.Errorf("ReadContainedSource(%q) accepted", bad)
-		}
-	}
-}
 
 func TestCheckRecordBindingAcceptsBothDecisionsAndRefusesMismatch(t *testing.T) {
 	a := freshAssessment(t, overlapInput(t))

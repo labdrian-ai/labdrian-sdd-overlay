@@ -18,18 +18,14 @@ type HandoffSource struct {
 	Handoff Handoff
 }
 
-// LoadHandoff reads handoffPath strictly inside worktreeRoot under the same
-// containment rules as BindGoal (relative, non-traversing, a regular file
-// that is not a symlink and whose opened descriptor lies inside the resolved
-// root, read from that same descriptor), then strictly parses it with Parse.
-// It fails closed: every rejection is a plain error and no partial
+// LoadHandoff has src read handoffPath strictly inside worktreeRoot under the
+// same containment rules as BindGoal (relative, non-traversing, a regular file
+// that is not a symlink and whose opened file lies inside the resolved root,
+// read from that same open file; see ContainedSource), then strictly parses it
+// with Parse. It fails closed: every rejection is a plain error and no partial
 // HandoffSource is ever returned.
-func LoadHandoff(worktreeRoot, handoffPath string) (HandoffSource, error) {
-	cleaned, err := cleanContainedRelPath(worktreeRoot, "handoffPath", handoffPath)
-	if err != nil {
-		return HandoffSource{}, fmt.Errorf("load handoff: %w", err)
-	}
-	data, err := readContainedRegularFile(worktreeRoot, cleaned, "handoff source")
+func LoadHandoff(src ContainedSource, worktreeRoot, handoffPath string) (HandoffSource, error) {
+	cleaned, data, err := readSource(src, worktreeRoot, "handoffPath", handoffPath, "handoff source")
 	if err != nil {
 		return HandoffSource{}, fmt.Errorf("load handoff: %w", err)
 	}

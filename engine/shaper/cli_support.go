@@ -1,7 +1,5 @@
 package shaper
 
-import "fmt"
-
 // ForgeryDisclosure is the trust limit every output that can report the
 // ready state must print. A ready outcome is not a signature: any process
 // running as the same OS user, including any installed Pi extension, can
@@ -50,27 +48,4 @@ func ReadyDisclosureFor(version int) string {
 		return ReadyDisclosureV3
 	}
 	return ReadyDisclosure
-}
-
-// ReadContainedSource reads relPath strictly inside worktreeRoot under the
-// same containment rules as LoadHandoff and BindGoal, without parsing it. It
-// returns the cleaned root-relative path and the exact bytes read. A caller
-// uses it to hand bytes that failed a strict parse to Evaluate, which then
-// reports them as a blocker instead of an I/O failure.
-func ReadContainedSource(worktreeRoot, relPath string) (string, []byte, error) {
-	cleaned, err := cleanContainedRelPath(worktreeRoot, "path", relPath)
-	if err != nil {
-		return "", nil, fmt.Errorf("read source: %w", err)
-	}
-	data, err := readContainedRegularFile(worktreeRoot, cleaned, "source")
-	if err != nil {
-		return "", nil, fmt.Errorf("read source: %w", err)
-	}
-	return cleaned, data, nil
-}
-
-// SourceSHA256 is the lowercase hex SHA-256 of source bytes. It detects
-// drift only and is not a signature.
-func SourceSHA256(data []byte) string {
-	return sha256Hex(data)
 }

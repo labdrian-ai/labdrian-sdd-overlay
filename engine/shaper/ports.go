@@ -7,6 +7,35 @@ import "errors"
 // subpackage (engine/shaper/fsadapter), answers it from files. The domain never learns
 // where the answer came from.
 
+// ContainedSource is where the shaper reads the two files it is pointed at, a handoff and
+// a Goal, each named by a path inside a worktree. The domain owns this port;
+// engine/shaper/fsadapter implements it over the local file system. BindGoal, LoadHandoff
+// and ReadContainedSource take it, so the domain parses and binds what was read and never
+// opens a file.
+//
+// The domain applies the lexical rules to a path before it asks (see ReadContainedSource):
+// the root is an absolute path and the path a cleaned relative one that is not the root and
+// does not leave it. An adapter does not rely on that. What it returns must be proven by
+// what was actually read, not by how the path is spelled.
+type ContainedSource interface {
+	// ReadContained returns the exact bytes of the file at relPath strictly inside
+	// worktreeRoot. It fails closed, with an error and no bytes, unless all of these hold
+	// of the file the bytes come from:
+	//
+	//   - it is a plain regular file: not missing, not a symlink (even one swapped in
+	//     after a first look), not a directory, a FIFO or a device, and opening it cannot
+	//     block;
+	//   - it lies inside the resolved worktreeRoot, which the adapter proves from the file
+	//     it opened and not by walking the path again, so swapping a directory on the way
+	//     before or after the open cannot make outside bytes pass; and
+	//   - the bytes are read from that same open file, so nothing is checked on one file
+	//     and read from another.
+	//
+	// A platform that cannot prove the second point refuses every read. label names the
+	// source in the errors ("goal source"); the adapter words them.
+	ReadContained(worktreeRoot, relPath, label string) ([]byte, error)
+}
+
 // ErrClearanceNotFound is what a ClearanceStore reports, wrapped with its own detail,
 // when it holds no record for the key it was asked about. It is how a caller tells an
 // absent clearance apart from a store that could not be read.

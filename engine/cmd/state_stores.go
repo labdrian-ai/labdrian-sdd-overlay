@@ -20,7 +20,8 @@ import (
 // variable, so the composition root is the one place that learns where the state lives
 // ($XDG_STATE_HOME, or $HOME/.local/state; see statestore.Home). A home that cannot be
 // resolved is reported in the words each store has always used for it, with the store's
-// name in front.
+// name in front. The shaper's contained source is built here too: it keeps no state, so it
+// has no home to be handed.
 
 // resolveStateHome resolves the state home from the environment for the store named
 // store, which prefixes the error.
@@ -86,4 +87,10 @@ func newClearanceStore() (shaper.ClearanceStore, error) {
 		return nil, err
 	}
 	return store, nil
+}
+
+// newContainedSource builds the shaper's source of the handoff and Goal files: the
+// file-backed adapter, with the production behavior of the read (no test hook).
+func newContainedSource() shaper.ContainedSource {
+	return fsadapter.ContainedSource{}
 }

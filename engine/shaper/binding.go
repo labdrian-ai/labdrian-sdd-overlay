@@ -23,20 +23,15 @@ type GoalBinding struct {
 	Goal       goal.Goal
 }
 
-// BindGoal resolves goalPath strictly inside worktreeRoot, requires the
-// target to be a plain regular file (not missing, not a symlink, not a
-// directory, not a FIFO) whose opened descriptor lies inside the resolved
-// root, reads it from that same descriptor so no check-then-read gap
-// remains, strictly
-// parses it as a version 2 Goal, and requires both project_id and goal_id to
-// match h. It fails closed: every rejection is a plain error and no partial
-// GoalBinding is ever returned.
-func BindGoal(h Handoff, worktreeRoot, goalPath string) (GoalBinding, error) {
-	cleaned, err := cleanContainedRelPath(worktreeRoot, "goalPath", goalPath)
-	if err != nil {
-		return GoalBinding{}, fmt.Errorf("bind goal: %w", err)
-	}
-	data, err := readContainedRegularFile(worktreeRoot, cleaned, "goal source")
+// BindGoal resolves goalPath strictly inside worktreeRoot (a relative path
+// that does not leave it), has src read it (a plain regular file, not
+// missing, not a symlink, not a directory, not a FIFO, whose opened file lies
+// inside the resolved root and is the one the bytes come from; see
+// ContainedSource), strictly parses it as a version 2 Goal, and requires both
+// project_id and goal_id to match h. It fails closed: every rejection is a
+// plain error and no partial GoalBinding is ever returned.
+func BindGoal(src ContainedSource, h Handoff, worktreeRoot, goalPath string) (GoalBinding, error) {
+	cleaned, data, err := readSource(src, worktreeRoot, "goalPath", goalPath, "goal source")
 	if err != nil {
 		return GoalBinding{}, fmt.Errorf("bind goal: %w", err)
 	}

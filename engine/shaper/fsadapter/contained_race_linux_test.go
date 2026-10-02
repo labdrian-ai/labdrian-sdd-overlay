@@ -1,24 +1,22 @@
 //go:build linux
 
-package shaper
+package fsadapter
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
 	"syscall"
 	"testing"
 	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
-// setContainedOpenHook installs fn as the contained-read test seam and
-// restores the no-op seam when the test ends.
-func setContainedOpenHook(t *testing.T, fn func(stage, joined string)) {
-	t.Helper()
-	prev := containedOpenHook
-	containedOpenHook = fn
-	t.Cleanup(func() { containedOpenHook = prev })
-}
+// The tests below race the file system between the steps of ContainedSource.ReadContained
+// through its openHook, at exactly the points the hook marks, and drive the read through
+// the domain's own entry points so that the refusal they prove is the one a caller sees.
 
 // goalV2JSONWithObjective is a matching Goal v2 document whose objective
 // distinguishes which file was actually read.
@@ -47,7 +45,7 @@ func TestBindGoalRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.T) 
 	writeGoalFile(t, root, "goal.json", []byte(goalV2JSONWithObjective("Inside.")))
 	outsidePath := writeGoalFile(t, outside, "goal.json", []byte(goalV2JSONWithObjective("Outside.")))
 
-	setContainedOpenHook(t, func(stage, joined string) {
+	src := ContainedSource{openHook: func(stage, joined string) {
 		if stage != "pre-open" {
 			return
 		}
@@ -55,9 +53,9 @@ func TestBindGoalRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.T) 
 			t.Fatalf("remove: %v", err)
 		}
 		mustSymlink(t, outsidePath, joined)
-	})
+	}}
 
-	got, err := BindGoal(sampleHandoff(), root, "goal.json")
+	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a goal source swapped for a symlink between check and open")
 	if !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("BindGoal error = %v, want it to name the symlink", err)
@@ -74,15 +72,15 @@ func TestBindGoalRefusesAncestorSwappedToOutsideDirectoryBeforeOpen(t *testing.T
 	writeGoalFile(t, outside, "goal.json", []byte(goalV2JSONWithObjective("Outside.")))
 
 	goalsDir := filepath.Join(root, "goals")
-	setContainedOpenHook(t, func(stage, joined string) {
+	src := ContainedSource{openHook: func(stage, joined string) {
 		if stage != "pre-open" {
 			return
 		}
 		mustRename(t, goalsDir, goalsDir+".real")
 		mustSymlink(t, outside, goalsDir)
-	})
+	}}
 
-	got, err := BindGoal(sampleHandoff(), root, "goals/goal.json")
+	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goals/goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a goal source reached through an ancestor swapped outside the root before open")
 }
 
@@ -96,7 +94,7 @@ func TestBindGoalRefusesDoubleToggledAncestorAfterOpen(t *testing.T) {
 	writeGoalFile(t, goalsDir, "goal.json", []byte(goalV2JSONWithObjective("Inside.")))
 	writeGoalFile(t, outside, "goal.json", []byte(goalV2JSONWithObjective("Outside.")))
 
-	setContainedOpenHook(t, func(stage, joined string) {
+	src := ContainedSource{openHook: func(stage, joined string) {
 		switch stage {
 		case "pre-open":
 			mustRename(t, goalsDir, goalsDir+".real")
@@ -109,9 +107,9 @@ func TestBindGoalRefusesDoubleToggledAncestorAfterOpen(t *testing.T) {
 			}
 			mustRename(t, goalsDir+".real", goalsDir)
 		}
-	})
+	}}
 
-	got, err := BindGoal(sampleHandoff(), root, "goals/goal.json")
+	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goals/goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a descriptor opened outside the root while the path was toggled back")
 	if err != nil && !strings.Contains(err.Error(), "outside the worktree root") {
 		t.Errorf("BindGoal error = %v, want the containment refusal", err)
@@ -123,7 +121,7 @@ func TestBindGoalRefusesFIFOSwappedInBeforeOpenWithoutBlocking(t *testing.T) {
 	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha")))
 
 	var fifo string
-	setContainedOpenHook(t, func(stage, joined string) {
+	src := ContainedSource{openHook: func(stage, joined string) {
 		if stage != "pre-open" {
 			return
 		}
@@ -134,7 +132,7 @@ func TestBindGoalRefusesFIFOSwappedInBeforeOpenWithoutBlocking(t *testing.T) {
 			t.Fatalf("mkfifo: %v", err)
 		}
 		fifo = joined
-	})
+	}}
 	t.Cleanup(func() {
 		// Unblock a reader left behind by a failing run.
 		if fifo == "" {
@@ -146,12 +144,12 @@ func TestBindGoalRefusesFIFOSwappedInBeforeOpenWithoutBlocking(t *testing.T) {
 	})
 
 	type result struct {
-		got GoalBinding
+		got shaper.GoalBinding
 		err error
 	}
 	done := make(chan result, 1)
 	go func() {
-		got, err := BindGoal(sampleHandoff(), root, "goal.json")
+		got, err := shaper.BindGoal(src, sampleHandoff(), root, "goal.json")
 		done <- result{got, err}
 	}()
 
@@ -170,16 +168,16 @@ func TestBindGoalRefusesSourceUnlinkedAfterOpen(t *testing.T) {
 	root := t.TempDir()
 	writeGoalFile(t, root, "goal.json", []byte(goalV2JSON("standalone-shaper-handoff", "goal-alpha")))
 
-	setContainedOpenHook(t, func(stage, joined string) {
+	src := ContainedSource{openHook: func(stage, joined string) {
 		if stage != "post-open" {
 			return
 		}
 		if err := os.Remove(joined); err != nil {
 			t.Fatalf("remove: %v", err)
 		}
-	})
+	}}
 
-	got, err := BindGoal(sampleHandoff(), root, "goal.json")
+	got, err := shaper.BindGoal(src, sampleHandoff(), root, "goal.json")
 	assertRejectedWithoutPartialBinding(t, got, err, "a goal source unlinked after open")
 }
 
@@ -190,7 +188,7 @@ func TestLoadHandoffRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.
 	writeGoalFile(t, root, "handoff.json", data)
 	outsidePath := writeGoalFile(t, outside, "handoff.json", data)
 
-	setContainedOpenHook(t, func(stage, joined string) {
+	src := ContainedSource{openHook: func(stage, joined string) {
 		if stage != "pre-open" {
 			return
 		}
@@ -198,8 +196,35 @@ func TestLoadHandoffRefusesFinalComponentSwappedForSymlinkBeforeOpen(t *testing.
 			t.Fatalf("remove: %v", err)
 		}
 		mustSymlink(t, outsidePath, joined)
-	})
+	}}
 
-	got, err := LoadHandoff(root, "handoff.json")
+	got, err := shaper.LoadHandoff(src, root, "handoff.json")
 	assertLoadHandoffRejected(t, got, err, "a handoff swapped for a symlink between check and open")
+}
+
+// What is returned is what was proved, not what the path names by the time the bytes are
+// read: the file the descriptor holds is moved to another name inside the root and a
+// different file takes its path right after the open, and the read still returns the bytes
+// of the file that was opened. A read that went back to the path would return the
+// replacement.
+func TestReadContainedReturnsTheBytesOfTheOpenedFileNotOfWhatIsAtThePathNow(t *testing.T) {
+	root := t.TempDir()
+	original := []byte(goalV2JSONWithObjective("Original."))
+	writeGoalFile(t, root, "goal.json", original)
+
+	src := ContainedSource{openHook: func(stage, joined string) {
+		if stage != "post-open" {
+			return
+		}
+		mustRename(t, joined, joined+".moved")
+		writeGoalFile(t, filepath.Dir(joined), filepath.Base(joined), []byte(goalV2JSONWithObjective("Replacement.")))
+	}}
+
+	got, err := src.ReadContained(root, "goal.json", "goal source")
+	if err != nil {
+		t.Fatalf("ReadContained: %v", err)
+	}
+	if !bytes.Equal(got, original) {
+		t.Errorf("ReadContained returned %q, want the bytes of the file it opened, %q", got, original)
+	}
 }

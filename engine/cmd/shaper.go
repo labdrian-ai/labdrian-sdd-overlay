@@ -125,9 +125,10 @@ func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	in := shaper.ReadinessInput{WorktreeRoot: root}
 	var notes []string
 
-	src, loadErr := shaper.LoadHandoff(root, o.handoff)
+	files := newContainedSource()
+	src, loadErr := shaper.LoadHandoff(files, root, o.handoff)
 	if loadErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(root, o.handoff)
+		cleaned, data, err := shaper.ReadContainedSource(files, root, o.handoff)
 		if err != nil {
 			return shaper.ReadinessInput{}, nil, loadErr
 		}
@@ -136,9 +137,9 @@ func loadShaperInput(o shaperOpts) (shaper.ReadinessInput, []string, error) {
 	}
 	in.Handoff = src
 
-	gb, bindErr := shaper.BindGoal(src.Handoff, root, o.goal)
+	gb, bindErr := shaper.BindGoal(files, src.Handoff, root, o.goal)
 	if bindErr != nil {
-		cleaned, data, err := shaper.ReadContainedSource(root, o.goal)
+		cleaned, data, err := shaper.ReadContainedSource(files, root, o.goal)
 		if err != nil {
 			return shaper.ReadinessInput{}, nil, bindErr
 		}
