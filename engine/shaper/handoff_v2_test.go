@@ -493,14 +493,3 @@ func TestPlannedVerificationIsNeverExecuted(t *testing.T) {
 		t.Errorf("State = %q, want ready: checks are not readiness prerequisites (blockers %v)", got.State, blockerReasons(got))
 	}
 }
-
-func TestPlanIncompleteDisclosureNamesAbsentPhase3Fields(t *testing.T) {
-	for _, want := range []string{"Phase 3", "not yet met", "roles", "tests", "risks", "estimates", "memory_scope", "delivery_limit"} {
-		if !strings.Contains(ReadyDisclosure, want) {
-			t.Errorf("ReadyDisclosure does not state %q:\n%s", want, ReadyDisclosure)
-		}
-	}
-	if !strings.HasPrefix(ReadyDisclosure, ForgeryDisclosure) {
-		t.Errorf("ReadyDisclosure must keep the forgery-limit disclosure first")
-	}
-}

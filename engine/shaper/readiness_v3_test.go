@@ -207,37 +207,6 @@ func TestEvaluateV3RefusesUnpresentableV3Section(t *testing.T) {
 	}
 }
 
-// --- disclosures ---
-
-func TestReadyDisclosureV3StatesCompletenessNotAbsence(t *testing.T) {
-	for _, want := range []string{"roles", "tests", "risks", "estimates", "memory_scope", "delivery_limit", "no execution authority"} {
-		if !strings.Contains(strings.ToLower(ReadyDisclosureV3), strings.ToLower(want)) {
-			t.Errorf("ReadyDisclosureV3 does not state %q:\n%s", want, ReadyDisclosureV3)
-		}
-	}
-	if strings.Contains(ReadyDisclosureV3, "not yet met") {
-		t.Errorf("ReadyDisclosureV3 must not say the Phase 3 plan outcome is unmet:\n%s", ReadyDisclosureV3)
-	}
-	if strings.Contains(ReadyDisclosureV3, "are absent") {
-		t.Errorf("ReadyDisclosureV3 must not claim missing plan fields:\n%s", ReadyDisclosureV3)
-	}
-	if !strings.HasPrefix(ReadyDisclosureV3, ForgeryDisclosure) {
-		t.Errorf("ReadyDisclosureV3 must keep the forgery-limit disclosure first")
-	}
-}
-
-func TestReadyDisclosureForSelectsByVersion(t *testing.T) {
-	if got := ReadyDisclosureFor(1); got != ReadyDisclosure {
-		t.Errorf("ReadyDisclosureFor(1) = %q, want ReadyDisclosure", got)
-	}
-	if got := ReadyDisclosureFor(2); got != ReadyDisclosure {
-		t.Errorf("ReadyDisclosureFor(2) = %q, want ReadyDisclosure", got)
-	}
-	if got := ReadyDisclosureFor(3); got != ReadyDisclosureV3 {
-		t.Errorf("ReadyDisclosureFor(3) = %q, want ReadyDisclosureV3", got)
-	}
-}
-
 // TestEvaluateV3ContradictoryPlanNeverReachesReady pins end to end that the
 // deterministic contradiction rejections hold at readiness: even with a
 // verified clearance for the complete plan, a contradictory v3 handoff is

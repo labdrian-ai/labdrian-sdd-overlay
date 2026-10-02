@@ -99,6 +99,32 @@ func marshalAny(t *testing.T, v any) []byte {
 	return data
 }
 
+func TestCheckRecordBindingAcceptsBothDecisionsAndRefusesMismatch(t *testing.T) {
+	a := freshAssessment(t, overlapInput(t))
+	affirm := recordFor(t, a)
+	decline := recordFor(t, a)
+	decline.Decision = DecisionDecline
+	for _, r := range []ClearanceRecord{affirm, decline} {
+		got, err := CheckRecordBinding(marshalRecord(t, r), *a.Subject, a.Flags, a.View)
+		if err != nil {
+			t.Fatalf("CheckRecordBinding(%s): %v", r.Decision, err)
+		}
+		if got.Decision != r.Decision {
+			t.Errorf("decision = %q, want %q", got.Decision, r.Decision)
+		}
+	}
+
+	view := append(append([]byte{}, a.View...), ' ')
+	if _, err := CheckRecordBinding(marshalRecord(t, decline), *a.Subject, a.Flags, view); err == nil || !strings.Contains(err.Error(), "view_sha256") {
+		t.Errorf("view drift: err = %v, want a view_sha256 mismatch", err)
+	}
+	unresolved := decline
+	unresolved.FlagResolutions = []FlagResolution{}
+	if _, err := CheckRecordBinding(marshalRecord(t, unresolved), *a.Subject, a.Flags, a.View); err == nil || !strings.Contains(err.Error(), "unresolved") {
+		t.Errorf("missing resolution: err = %v, want unresolved", err)
+	}
+}
+
 func TestParseRecordAcceptsAffirmAndDecline(t *testing.T) {
 	a := freshAssessment(t, overlapInput(t))
 	for _, decision := range []ClearanceDecision{DecisionAffirm, DecisionDecline} {

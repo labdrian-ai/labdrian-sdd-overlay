@@ -1,5 +1,15 @@
 package shaper
 
+// This file holds the disclosures: the statements of what a ready claim and a clearance
+// record do and do not establish. They belong to the domain because they are the limits of
+// its own claim (a clearance is bound to exact content by digests and is not a signature;
+// readiness grants no execution authority; what the plan fields cover depends on the
+// handoff version), and ReadyDisclosureFor is the rule that picks the statement a version
+// owes. Printing them is the caller's obligation (the doc comments of Evaluate and of the
+// ready state say so): engine/cmd prints them, and the Pi gate carries a copy of
+// ForgeryDisclosure that a test keeps equal to this one. Nothing here reads a file or
+// formats output.
+
 // ForgeryDisclosure is the trust limit every output that can report the
 // ready state must print. A ready outcome is not a signature: any process
 // running as the same OS user, including any installed Pi extension, can
