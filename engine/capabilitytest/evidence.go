@@ -1,8 +1,10 @@
-// Package capabilitytest is test tooling for the capability declarations: the
-// guard that every test a declaration names exists. It reads the engine's test
-// sources, which is why it is not part of engine/capability, whose declarations,
-// validation and report stay free of the file system. Nothing in the program
-// imports it; the tests that guard the shipped declarations do.
+// Package capabilitytest is test tooling for the capability declarations: the adapter
+// of capability.TestCatalog that reads the engine's test sources, and the guard that
+// every test a declaration names exists. The rule itself, that a named test must exist,
+// is capability.CheckEvidence and is pure; what reads the files is here, which is why it
+// is not part of engine/capability, whose declarations, validation and report stay free
+// of the file system. Nothing in the program imports it; the tests that guard the
+// shipped declarations do.
 package capabilitytest
 
 import (
@@ -12,8 +14,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
-	"os"
-	"path/filepath"
+	"path"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -21,65 +22,56 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
 )
 
-// CheckEvidence verifies that every test a declaration names exists. A
-// reference <dir>:<TestName> is satisfied only by a top-level function
-// TestName, declared in a _test.go file directly inside <dir> under
-// engineRoot, that go test would run: no receiver, no type parameters, no
-// results, and one parameter of type *testing.T. A same-named function in a
-// non-test file, a method, a benchmark, a TestMain, or a name whose first
-// character after "Test" is a lowercase letter (which go test skips) does not
-// count.
+// NewCatalog returns the capability.TestCatalog that answers from the test sources of the
+// engine tree fsys, whose root is the engine root. A reference <dir>:<TestName> is
+// satisfied only by a top-level function TestName, declared in a _test.go file directly
+// inside <dir>, that go test would run: no receiver, no type parameters, no results, and
+// one parameter of type *testing.T. A same-named function in a non-test file, a method, a
+// benchmark, a TestMain, or a name whose first character after "Test" is a lowercase
+// letter (which go test skips) does not count.
 //
-// The guard reads the source with go/parser. It starts no process and does
-// not run go list, so it works in the same sandboxes the tests do. It proves
-// the named test is declared, not that it passes and not that it runs on
-// every platform: build constraints are not evaluated. Every failing
-// reference is reported at once, each naming its target and capability.
-//
-// References are checked for format first, so one that could name a path
-// outside engineRoot is refused before any file is read.
-func CheckEvidence(engineRoot string, d capability.Declaration) error {
-	dirs := make(map[string]dirTests)
-	var errs []error
-	for _, c := range d.Claims {
-		for _, ref := range c.Tests {
-			where := fmt.Sprintf("target %s, capability %s", d.Target, c.Capability)
-			dir, name, err := capability.ParseTestRef(ref)
-			if err != nil {
-				errs = append(errs, fmt.Errorf("%s: %w", where, err))
-				continue
-			}
-			found, ok := dirs[dir]
-			if !ok {
-				found = loadTestFuncs(engineRoot, dir)
-				dirs[dir] = found
-			}
-			switch {
-			case found.err != nil:
-				errs = append(errs, fmt.Errorf("%s: test %q: %w", where, ref, found.err))
-			case !found.names[name]:
-				errs = append(errs, fmt.Errorf("%s: test %q not found: no top-level func %s(t *testing.T) in a _test.go file of %q", where, ref, name, dir))
-			}
-		}
-	}
-	return errors.Join(errs...)
+// The catalog reads the source with go/parser. It starts no process and does not run go
+// list, so it works in the same sandboxes the tests do. It proves the named test is
+// declared, not that it passes and not that it runs on every platform: build constraints
+// are not evaluated. It reads through fsys only, so it cannot reach a path fsys does not
+// hold (os.DirFS refuses one that climbs out of its root), and it parses a directory once,
+// when it is first asked about it: the answer for a directory, including why it could not
+// be given, is kept for the life of the catalog. A catalog is not safe for concurrent use.
+func NewCatalog(fsys fs.FS) capability.TestCatalog {
+	return &sourceCatalog{fsys: fsys, dirs: make(map[string]dirTests)}
 }
 
-// dirTests is what one directory's _test.go files declare, or why that could
-// not be determined. It is computed once per directory per CheckEvidence
-// call.
+// sourceCatalog is the catalog NewCatalog builds.
+type sourceCatalog struct {
+	fsys fs.FS
+	dirs map[string]dirTests
+}
+
+// HasTest implements capability.TestCatalog.
+func (c *sourceCatalog) HasTest(dir, name string) (bool, error) {
+	found, ok := c.dirs[dir]
+	if !ok {
+		found = loadTestFuncs(c.fsys, dir)
+		c.dirs[dir] = found
+	}
+	if found.err != nil {
+		return false, found.err
+	}
+	return found.names[name], nil
+}
+
+// dirTests is what one directory's _test.go files declare, or why that could not be
+// determined.
 type dirTests struct {
 	names map[string]bool
 	err   error
 }
 
-// loadTestFuncs parses every regular _test.go file directly inside
-// engineRoot/relDir and collects the names of the runnable test functions
-// they declare. relDir is a validated, clean, slash-separated relative
-// directory.
-func loadTestFuncs(engineRoot, relDir string) dirTests {
-	absDir := filepath.Join(engineRoot, filepath.FromSlash(relDir))
-	entries, err := os.ReadDir(absDir)
+// loadTestFuncs parses every regular _test.go file directly inside relDir of fsys and
+// collects the names of the runnable test functions they declare. relDir is a validated,
+// clean, slash-separated relative directory.
+func loadTestFuncs(fsys fs.FS, relDir string) dirTests {
+	entries, err := fs.ReadDir(fsys, relDir)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return dirTests{err: fmt.Errorf("directory %q not found under the engine root", relDir)}
@@ -95,7 +87,11 @@ func loadTestFuncs(engineRoot, relDir string) dirTests {
 		if !entry.Type().IsRegular() || !strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(fset, filepath.Join(absDir, entry.Name()), nil, parser.SkipObjectResolution)
+		src, err := fs.ReadFile(fsys, path.Join(relDir, entry.Name()))
+		if err != nil {
+			return dirTests{err: fmt.Errorf("read %s/%s: %w", relDir, entry.Name(), err)}
+		}
+		file, err := parser.ParseFile(fset, path.Join(relDir, entry.Name()), src, parser.SkipObjectResolution)
 		if err != nil {
 			// A test file that does not parse cannot be trusted to declare
 			// anything, so the whole directory is unusable as evidence.

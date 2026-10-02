@@ -4,11 +4,11 @@
 // whose every claim states its own proof or its own limit.
 //
 // A claim is honest by construction. A "supported" or "partial" claim names
-// at least one test that proves it, and the evidence guard
-// (capabilitytest.CheckEvidence, which reads the test sources and so lives
-// outside this pure package) verifies that each named test exists; a "partial"
-// or "unsupported" claim
-// must state the limit in words. Nothing in this package runs a runtime, so
+// at least one test that proves it, and the evidence check (CheckEvidence, which
+// asks a TestCatalog whether each named test exists; the catalog that reads the
+// test sources is capabilitytest.NewCatalog and lives outside this pure
+// package) verifies that each named test exists; a "partial" or "unsupported"
+// claim must state the limit in words. Nothing in this package runs a runtime, so
 // a declaration describes what the engine's own tests prove, never what a
 // runtime happened to do on some machine.
 //
