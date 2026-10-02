@@ -3,6 +3,7 @@ package roles
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -79,10 +80,30 @@ var (
 
 var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
 
-// ParseRoleHandoff strictly parses one RoleHandoff record: valid UTF-8, no
-// duplicate keys at any depth, no unknown fields at any depth (exact case),
+// MaxRecordBytes bounds the size of one RoleHandoff JSON document that
+// ParseRoleHandoff will decode, and that a chain store will read back. A record carries
+// free-form narrative (a summary, decisions, open questions) and a list of evidence, none
+// of which has a length of its own, so the whole document is bounded instead: it keeps a
+// caller that parses records from an untrusted source (disk, stdin, another process)
+// from an arbitrarily large document before any field is inspected. 4 MiB is exactly the
+// stdin cap `roles append` applied before this bound existed: any record a chain already
+// holds was accepted under that cap, so a smaller bound would make such a chain
+// unloadable. It is still many times what a legitimate handoff needs. The bound is owned
+// here, and the CLI's append verb reads stdin through it, so every record the CLI accepts
+// is one a chain store can load back.
+const MaxRecordBytes = 4 << 20
+
+// ErrRecordTooLarge is returned by ParseRoleHandoff when the input exceeds
+// MaxRecordBytes.
+var ErrRecordTooLarge = errors.New("roles: handoff record is too large")
+
+// ParseRoleHandoff strictly parses one RoleHandoff record: bounded overall size, valid
+// UTF-8, no duplicate keys at any depth, no unknown fields at any depth (exact case),
 // no trailing data, the pinned version, and every field shape via Validate.
 func ParseRoleHandoff(data []byte) (RoleHandoff, error) {
+	if len(data) > MaxRecordBytes {
+		return RoleHandoff{}, fmt.Errorf("parse role handoff: %w: %d bytes, the maximum is %d", ErrRecordTooLarge, len(data), MaxRecordBytes)
+	}
 	if err := jsonstrict.CheckUTF8(data); err != nil {
 		return RoleHandoff{}, fmt.Errorf("parse role handoff: %w", err)
 	}

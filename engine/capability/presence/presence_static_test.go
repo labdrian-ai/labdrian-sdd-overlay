@@ -1,4 +1,4 @@
-package capability_test
+package presence_test
 
 // Static guard for Decision 4: the presence prober only stats. The test parses
 // the prober's source with go/parser and fails on any way to open, read, list,

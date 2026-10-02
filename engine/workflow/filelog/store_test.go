@@ -11,7 +11,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -65,8 +64,8 @@ func setStoreEnv(t *testing.T) string {
 
 func newTestStore(t *testing.T) Store {
 	t.Helper()
-	setStoreEnv(t)
-	s, err := NewStore()
+	root := setStoreEnv(t)
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -78,89 +77,36 @@ func storeFilePath(t *testing.T, root, projectID, workflowID string) string {
 	return filepath.Join(root, "labdrian", "workflows", projectID, workflowID+".jsonl")
 }
 
-// Which platforms have a store is decided where the code is built: statestore
-// compiles Supported to true on linux and darwin and to false everywhere else.
-// This is the mapping from the running platform to the answer NewStore acts on, so
-// the expectation is computed from the platform and the input is what NewStore
-// passes; neither is a value the test chooses to make itself pass.
-func TestTheRunningPlatformIsSupportedOnlyOnLinuxAndDarwin(t *testing.T) {
-	want := runtime.GOOS == "linux" || runtime.GOOS == "darwin"
-	if statestore.Supported != want {
-		t.Fatalf("statestore.Supported = %v on %s, want %v: only linux and darwin have a no-follow read", statestore.Supported, runtime.GOOS, want)
-	}
-	err := checkPlatform(statestore.Supported, runtime.GOOS)
-	if want != (err == nil) {
-		t.Fatalf("checkPlatform on %s = %v, want it to accept exactly the platforms that have a store", runtime.GOOS, err)
-	}
-}
-
-// A platform without a store is refused with the sentinel and named in the message.
-func TestCheckPlatformRefusesAnUnsupportedPlatformAndNamesIt(t *testing.T) {
-	for _, goos := range []string{"windows", "freebsd", "plan9"} {
-		err := checkPlatform(false, goos)
-		if !errors.Is(err, ErrUnsupportedPlatform) || !strings.Contains(err.Error(), goos) {
-			t.Errorf("checkPlatform(false, %q) = %v, want ErrUnsupportedPlatform naming the platform", goos, err)
-		}
-	}
-	if err := checkPlatform(true, "linux"); err != nil {
-		t.Errorf("checkPlatform(true, linux) = %v, want nil", err)
-	}
-}
-
+// Which platforms have a store, and the text that names one without a store, are
+// statestore.RequirePlatform's (see its tests); this store keeps its own sentinel.
 // The platforms that run these tests are the ones that have a store.
 func TestThisPlatformHasAStore(t *testing.T) {
 	if runtime.GOOS != "linux" && runtime.GOOS != "darwin" {
 		t.Skip("the workflow store is only implemented on linux and darwin")
 	}
-	setStoreEnv(t)
-	if _, err := NewStore(); err != nil {
+	root := setStoreEnv(t)
+	if _, err := NewStore(root); err != nil {
 		t.Fatalf("NewStore() = %v, want nil on %s", err, runtime.GOOS)
 	}
 }
 
-func TestNewStoreRejectsRelativeXDGStateHome(t *testing.T) {
-	t.Setenv("XDG_STATE_HOME", "relative/path")
-	if _, err := NewStore(); err == nil {
-		t.Fatalf("NewStore() = nil, want error for relative XDG_STATE_HOME")
+// The store is built over the state home it is handed, which must be an absolute
+// path. Resolving it from the environment is the composition root's job (cmd), and
+// the text that prints for an unusable environment is pinned there.
+func TestNewStoreRefusesAStateHomeThatIsNotAbsolute(t *testing.T) {
+	for _, home := range []string{"", "relative/path", "./state"} {
+		_, err := NewStore(home)
+		want := fmt.Sprintf("workflow store: state home %q is not an absolute path", home)
+		if err == nil || err.Error() != want {
+			t.Errorf("NewStore(%q) error = %v, want %q", home, err, want)
+		}
 	}
 }
 
-func TestNewStoreRejectsUnusableHome(t *testing.T) {
-	t.Setenv("XDG_STATE_HOME", "")
-	t.Setenv("HOME", "relative/home")
-	if _, err := NewStore(); err == nil {
-		t.Fatalf("NewStore() = nil, want error for relative HOME fallback")
-	}
-
-	t.Setenv("HOME", "")
-	if _, err := NewStore(); err == nil {
-		t.Fatalf("NewStore() = nil, want error for unset HOME")
-	}
-}
-
-// TestNewStoreErrorMessagesAreStable characterizes what NewStore reports for an
-// unusable environment, so the state home resolution (statestore.Home)
-// cannot change the text a person sees.
-func TestNewStoreErrorMessagesAreStable(t *testing.T) {
-	tests := []struct {
-		name string
-		xdg  string
-		home string
-		want string
-	}{
-		{"relative XDG_STATE_HOME", "relative/path", "/home/someone", `workflow store: XDG_STATE_HOME "relative/path" is not absolute`},
-		{"relative HOME fallback", "", "relative/home", `workflow store: XDG_STATE_HOME is unset and HOME "relative/home" is not an absolute path`},
-		{"unset HOME fallback", "", "", `workflow store: XDG_STATE_HOME is unset and HOME "" is not an absolute path`},
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Setenv("XDG_STATE_HOME", tt.xdg)
-			t.Setenv("HOME", tt.home)
-			_, err := NewStore()
-			if err == nil || err.Error() != tt.want {
-				t.Fatalf("NewStore() error = %v, want %q", err, tt.want)
-			}
-		})
+// The sentinel a caller matches for an unsupported platform keeps its message.
+func TestTheUnsupportedPlatformSentinelKeepsItsMessage(t *testing.T) {
+	if got, want := ErrUnsupportedPlatform.Error(), "workflow store: unsupported platform"; got != want {
+		t.Errorf("ErrUnsupportedPlatform = %q, want %q", got, want)
 	}
 }
 
@@ -387,7 +333,7 @@ func TestStoreAppendRejectsNonEmptyPrevDigestOnFirstEvent(t *testing.T) {
 // line, which is confusing to a person debugging a malformed log by hand.
 func TestStoreLoadMalformedDetailUsesOneBasedLineNumbers(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -410,7 +356,7 @@ func TestStoreLoadMalformedDetailUsesOneBasedLineNumbers(t *testing.T) {
 // branch has its own, separate fmt.Sprintf call site.
 func TestStoreLoadMalformedBlankLineDetailUsesOneBasedLineNumbers(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -435,7 +381,7 @@ func TestStoreLoadMalformedBlankLineDetailUsesOneBasedLineNumbers(t *testing.T) 
 
 func TestStoreLoadForeignWhenValidJSONNotOurs(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -454,7 +400,7 @@ func TestStoreLoadForeignWhenValidJSONNotOurs(t *testing.T) {
 
 func TestStoreLoadForeignWhenIDsMismatch(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -481,7 +427,7 @@ func TestStoreLoadForeignWhenIDsMismatch(t *testing.T) {
 
 func TestStoreLoadMalformedWhenNotValidJSON(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -497,7 +443,7 @@ func TestStoreLoadMalformedWhenNotValidJSON(t *testing.T) {
 
 func TestStoreLoadMalformedWhenNotUTF8(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -513,7 +459,7 @@ func TestStoreLoadMalformedWhenNotUTF8(t *testing.T) {
 
 func TestStoreLoadMalformedWhenMissingTrailingNewline(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -534,7 +480,7 @@ func TestStoreLoadMalformedWhenMissingTrailingNewline(t *testing.T) {
 
 func TestStoreLoadMalformedWhenEmpty(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -550,7 +496,7 @@ func TestStoreLoadMalformedWhenEmpty(t *testing.T) {
 
 func TestStoreLoadMalformedWhenOversized(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -581,7 +527,7 @@ func writeSparseLog(t *testing.T, root, projectID, workflowID string, size int64
 func TestStoreLoadNeverReadsMoreThanTheDocumentedBound(t *testing.T) {
 	const size = 512 << 20
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -622,7 +568,7 @@ func TestStoreLoadJudgesSizeOnlyBeyondTheBound(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := setStoreEnv(t)
-			s, err := NewStore()
+			s, err := NewStore(root)
 			if err != nil {
 				t.Fatalf("NewStore() = %v, want nil", err)
 			}
@@ -646,7 +592,7 @@ func TestStoreLoadJudgesSizeOnlyBeyondTheBound(t *testing.T) {
 func TestStoreAppendRefusesAnOversizedLogWithoutReadingItAll(t *testing.T) {
 	const size = 64 << 20
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -664,7 +610,7 @@ func TestStoreAppendRefusesAnOversizedLogWithoutReadingItAll(t *testing.T) {
 
 func TestStoreLoadDriftedWhenChainBroken(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -691,7 +637,7 @@ func TestStoreLoadDriftedWhenChainBroken(t *testing.T) {
 
 func TestStoreLoadDriftedWhenTransitionIllegal(t *testing.T) {
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -727,7 +673,7 @@ func TestStoreAppendRefusesNonOwnedStatesWithoutMutation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			root := setStoreEnv(t)
-			s, err := NewStore()
+			s, err := NewStore(root)
 			if err != nil {
 				t.Fatalf("NewStore() = %v, want nil", err)
 			}
@@ -754,7 +700,7 @@ func TestStoreAppendRefusesNonOwnedStatesWithoutMutation(t *testing.T) {
 
 func TestStoreRoundTripAfterRestart(t *testing.T) {
 	root := setStoreEnv(t)
-	s1, err := NewStore()
+	s1, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -765,7 +711,7 @@ func TestStoreRoundTripAfterRestart(t *testing.T) {
 
 	// Simulate a process restart: a brand new Store value resolved fresh
 	// from the same environment must see the same state.
-	s2, err := NewStore()
+	s2, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -786,7 +732,7 @@ func TestStoreDirectoryAndFilePermissions(t *testing.T) {
 		t.Skip("POSIX permission bits are not meaningful on windows")
 	}
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -822,7 +768,7 @@ func TestStoreLoadUnavailableOnPermissionDenied(t *testing.T) {
 		t.Skip("root bypasses permission checks")
 	}
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}
@@ -911,7 +857,7 @@ func TestStoreConcurrentAppendExactlyOneWins(t *testing.T) {
 func setupStoreWithCreated(t *testing.T) (Store, string, workflow.WorkflowEvent) {
 	t.Helper()
 	root := setStoreEnv(t)
-	s, err := NewStore()
+	s, err := NewStore(root)
 	if err != nil {
 		t.Fatalf("NewStore() = %v, want nil", err)
 	}

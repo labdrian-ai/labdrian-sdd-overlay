@@ -4,7 +4,9 @@
 // user's state home:
 //
 //   - Home resolves the state home from the environment: $XDG_STATE_HOME, or
-//     $HOME/.local/state, either of them absolute.
+//     $HOME/.local/state, either of them absolute. RequirePlatform and CheckHome are
+//     the two checks a store makes when it is built over one: the platform has a
+//     no-follow open, and the state home it was handed is an absolute path.
 //   - EnsureDirs creates the chain of store directories below it, private (0700),
 //     and CheckDirs walks the same chain without creating anything. Both refuse a
 //     symlink or a non-directory at any component below the state home; the state
@@ -32,6 +34,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/atomicfile"
 )
@@ -87,6 +90,35 @@ func HomeFrom(getenv func(string) string) (string, error) {
 		return "", fmt.Errorf("XDG_STATE_HOME is unset and HOME %q is not an absolute path", home)
 	}
 	return filepath.Join(home, ".local", "state"), nil
+}
+
+// RequirePlatform is the check every store makes before it accepts a state home: nil
+// where the platform has a no-follow open (Supported), and otherwise unsupported
+// wrapped with the platform's name, as in "<store>: unsupported platform: windows
+// (supported: linux, darwin)". unsupported is the store's own sentinel, so each store
+// keeps the message it prints and the error callers match with errors.Is.
+func RequirePlatform(unsupported error) error {
+	return checkPlatform(Supported, runtime.GOOS, unsupported)
+}
+
+// checkPlatform is RequirePlatform with the platform passed in, so a test can name one
+// that is not the running one.
+func checkPlatform(supported bool, goos string, unsupported error) error {
+	if supported {
+		return nil
+	}
+	return fmt.Errorf("%w: %s (supported: linux, darwin)", unsupported, goos)
+}
+
+// CheckHome is the check every store makes of the state home it is handed: an
+// absolute path, because a relative one would put the records wherever the process
+// happens to run. It does not check that the directory exists or is usable. The error
+// carries no store name; the caller adds its own.
+func CheckHome(stateHome string) error {
+	if !filepath.IsAbs(stateHome) {
+		return fmt.Errorf("state home %q is not an absolute path", stateHome)
+	}
+	return nil
 }
 
 // EnsureDirs makes sure the state home (parts[0]) exists, then walks every
@@ -170,26 +202,39 @@ func requirePlainDir(path string, info fs.FileInfo) error {
 // tell the file is too large without reading the rest. A missing file satisfies
 // errors.Is(err, fs.ErrNotExist).
 func ReadFile(path string, limit int64) ([]byte, error) {
+	data, _, err := ReadFileSized(path, limit)
+	return data, err
+}
+
+// ReadFileSized is ReadFile that also returns the size the opened file reported, taken
+// from the descriptor the bytes were read from. A caller that stopped at its limit and
+// found the file too large can say how large it is from this, without a second look at
+// a path that may have been replaced since.
+func ReadFileSized(path string, limit int64) (data []byte, size int64, err error) {
 	f, err := OpenNoFollow(path)
 	if err != nil {
 		if IsSymlinkRefusal(err) {
-			return nil, refuse(ErrSymlink, "refusing symlinked file %q", path)
+			return nil, 0, refuse(ErrSymlink, "refusing symlinked file %q", path)
 		}
-		return nil, err
+		return nil, 0, err
 	}
 	defer f.Close()
 	info, err := f.Stat()
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if !info.Mode().IsRegular() {
-		return nil, refuse(ErrNotRegular, "%q is not a regular file", path)
+		return nil, 0, refuse(ErrNotRegular, "%q is not a regular file", path)
 	}
 	var r io.Reader = f
 	if limit > 0 {
 		r = io.LimitReader(f, limit)
 	}
-	return io.ReadAll(r)
+	data, err = io.ReadAll(r)
+	if err != nil {
+		return nil, 0, err
+	}
+	return data, info.Size(), nil
 }
 
 // recordOptions is how a record is stored: private, flushed to disk, in a hidden

@@ -35,7 +35,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/atomicfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/statestore"
@@ -57,20 +56,22 @@ var storeComponents = []string{"labdrian", "workflows"}
 
 // Store holds one workflow's append-only event log at
 // <state home>/labdrian/workflows/<project_id>/<workflow_id>.jsonl, outside
-// every worktree. The state home is $XDG_STATE_HOME, or $HOME/.local/state
-// when XDG_STATE_HOME is unset. It follows the same resolution, directory
-// permissions (0700), and file permissions (0600) as engine/roles's
-// filechain.Store and engine/shaper's FileStore.
+// every worktree. The state home is the directory NewStore was given: the
+// composition root resolves it ($XDG_STATE_HOME, or $HOME/.local/state when
+// XDG_STATE_HOME is unset; see statestore.Home), and this package reads no
+// environment variable. Directories are created with mode 0700 and files with
+// mode 0600, as the other file-backed stores do (roles/filechain, the shaper's
+// clearance store, projection/fsstore), all on engine/statestore.
 //
-// Unlike those two stores, which hold one immutable record per file (keyed
-// by seq or content hash, published via hardlink so a concurrent write can
-// never silently replace an existing record), a workflow's log is one
-// mutable, growing file: each Append rewrites the whole file with the new
-// event appended. That rewrite-and-replace shape is why Store needs an
-// explicit append lock (see acquireLock) where filechain.Store and FileStore do
-// not: two of their writers race for a name that at most one can ever claim,
-// while two of this store's writers would otherwise both read the same
-// prefix and each publish a "next" event, silently discarding one of them.
+// Unlike the two stores that hold one immutable record per file (roles/filechain,
+// keyed by seq, and the shaper's clearance store, keyed by content hash, both
+// published via hardlink so a concurrent write can never silently replace an
+// existing record), a workflow's log is one mutable, growing file: each Append
+// rewrites the whole file with the new event appended. That rewrite-and-replace
+// shape is why Store needs an explicit append lock (see acquireLock) where those
+// two do not: their writers race for a name that at most one can ever claim,
+// while two of this store's writers would otherwise both read the same prefix and
+// each publish a "next" event, silently discarding one of them.
 //
 // Each Append therefore reads the whole existing log and rewrites it plus
 // the new event to a temporary file before renaming it into place (see
@@ -81,31 +82,21 @@ var storeComponents = []string{"labdrian", "workflows"}
 // the worst-case rewrite is a bounded, fast, in-memory copy, never an unbounded
 // scan.
 //
-// Store supports linux and darwin only (see checkPlatform).
+// Store supports linux and darwin only (see NewStore).
 type Store struct {
 	stateHome string
 }
 
-// checkPlatform accepts only a platform that has the no-follow read and the lock
-// the store needs: supported is statestore.Supported, goos only names the platform
-// in the message.
-func checkPlatform(supported bool, goos string) error {
-	if supported {
-		return nil
-	}
-	return fmt.Errorf("%w: %s (supported: linux, darwin)", ErrUnsupportedPlatform, goos)
-}
-
-// NewStore resolves the store from the environment, exactly as
-// filechain.NewStore and shaper.NewFileStore do (see statestore.Home). A
-// set but relative XDG_STATE_HOME, and an unset, empty, or relative HOME
-// fallback, are refused, as is an unsupported platform (see checkPlatform).
-func NewStore() (Store, error) {
-	if err := checkPlatform(statestore.Supported, runtime.GOOS); err != nil {
+// NewStore builds the store over stateHome, the directory under which labdrian
+// keeps its local state (see statestore.Home); it must be an absolute path. It does
+// not check that the directory exists or is usable: that is checked when the store
+// is used. A platform without the no-follow read and the lock the store needs
+// (statestore.RequirePlatform) is refused with ErrUnsupportedPlatform.
+func NewStore(stateHome string) (Store, error) {
+	if err := statestore.RequirePlatform(ErrUnsupportedPlatform); err != nil {
 		return Store{}, err
 	}
-	stateHome, err := statestore.Home()
-	if err != nil {
+	if err := statestore.CheckHome(stateHome); err != nil {
 		return Store{}, fmt.Errorf("workflow store: %w", err)
 	}
 	return Store{stateHome: stateHome}, nil
@@ -192,15 +183,17 @@ func (s Store) read(projectID, workflowID string) (workflow.Loaded, []byte, erro
 		return unavailable(fmt.Sprintf("refusing symlinked workflow log %q", path)), nil, nil
 	}
 
-	data, err := readLog(path)
+	data, size, err := readLog(path)
 	if err != nil {
 		return unavailable(err.Error()), nil, nil
 	}
 	if len(data) > workflow.MaxLogBytes {
 		// The read stopped one byte past the bound, so data is not the log; the
-		// size the file reported is the closest to its real one. An oversized log
-		// is never handed on: nothing is published over it.
-		return workflow.OversizedLog(max(info.Size(), int64(len(data)))), nil, nil
+		// size the opened file reported is the closest to its real one. It is the
+		// size of the file that was read, not of whatever the path named when it
+		// was first looked at. An oversized log is never handed on: nothing is
+		// published over it.
+		return workflow.OversizedLog(max(size, int64(len(data)))), nil, nil
 	}
 	return workflow.ClassifyLog(projectID, workflowID, data), data, nil
 }
@@ -261,9 +254,10 @@ func logOptions() atomicfile.Options {
 // publish replaces the log at path with existing plus line, atomically: the whole
 // new log is written and synced to a temporary file in the target directory and
 // renamed into place, then the directory is synced. A rename is right here, where
-// engine/roles's and engine/shaper's per-record hardlink publish is not, because
-// this file is a single mutable, growing log rather than one immutable record per
-// name (see Store). A symlink at path is refused, never replaced.
+// the per-record hardlink publish of roles/filechain and of the shaper's clearance
+// store (statestore.Publish) is not, because this file is a single mutable, growing
+// log rather than one immutable record per name (see Store). A symlink at path is
+// refused, never replaced.
 func publish(path string, existing, line []byte) error {
 	data := make([]byte, 0, len(existing)+len(line))
 	data = append(data, existing...)
@@ -281,16 +275,17 @@ func publish(path string, existing, line []byte) error {
 // readLog reads path without following a final symlink and requires the opened
 // descriptor to be a regular file. It reads at most workflow.MaxLogBytes+1 bytes:
 // one past the bound is enough to know the log is too large, and the rest of it is
-// never read.
-func readLog(path string) ([]byte, error) {
-	data, err := statestore.ReadFile(path, workflow.MaxLogBytes+1)
+// never read. It also returns the size the opened file reported, which is what an
+// oversized log is reported as.
+func readLog(path string) (data []byte, size int64, err error) {
+	data, size, err = statestore.ReadFileSized(path, workflow.MaxLogBytes+1)
 	switch {
 	case err == nil:
-		return data, nil
+		return data, size, nil
 	case errors.Is(err, statestore.ErrSymlink):
-		return nil, fmt.Errorf("workflow store: refusing symlinked workflow log %q", path)
+		return nil, 0, fmt.Errorf("workflow store: refusing symlinked workflow log %q", path)
 	case errors.Is(err, statestore.ErrNotRegular):
-		return nil, fmt.Errorf("workflow store: %q is not a regular file", path)
+		return nil, 0, fmt.Errorf("workflow store: %q is not a regular file", path)
 	}
-	return nil, fmt.Errorf("workflow store: %w", err)
+	return nil, 0, fmt.Errorf("workflow store: %w", err)
 }

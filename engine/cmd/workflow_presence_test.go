@@ -13,7 +13,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability/presence"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
@@ -167,7 +167,7 @@ func TestWorkflowVerbWithAHungStatReturnsWithinTheProbeDeadline(t *testing.T) {
 	t.Cleanup(func() { close(release) })
 	saved := workflowProber
 	workflowProber = func() workflow.DependencyProber {
-		return capability.PresenceProber{Home: home, ProbeFS: hangingStatFS{release: release}}
+		return presence.Prober{Home: home, ProbeFS: hangingStatFS{release: release}}
 	}
 	t.Cleanup(func() { workflowProber = saved })
 

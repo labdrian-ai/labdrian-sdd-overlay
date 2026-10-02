@@ -17,7 +17,6 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles/filechain"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
 
@@ -235,13 +234,15 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 		fail("--stdin is required: the record is accepted only on stdin, never from argv")
 		return
 	}
-	data, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit+1))
+	// The record bound is the domain's (roles.MaxRecordBytes), not the CLI-wide stdin cap,
+	// so every record accepted here is one a chain store can load back.
+	data, err := io.ReadAll(io.LimitReader(stdin, roles.MaxRecordBytes+1))
 	if err != nil {
 		fail("read stdin: %v", err)
 		return
 	}
-	if len(data) > stdinSizeLimit {
-		fail("stdin exceeds %d bytes", stdinSizeLimit)
+	if len(data) > roles.MaxRecordBytes {
+		fail("stdin exceeds %d bytes", roles.MaxRecordBytes)
 		return
 	}
 	if strings.TrimSpace(string(data)) == "" {
@@ -263,7 +264,7 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 			return
 		}
 	}
-	store, err := filechain.NewStore()
+	store, err := newRoleChainStore()
 	if err != nil {
 		fail("%v", err)
 		return
@@ -278,7 +279,7 @@ func runRolesAppend(args []string, stdin io.Reader, stdout, stderr io.Writer, ex
 
 // loadRolesChain resolves the chain store and loads one chain's records.
 func loadRolesChain(o rolesOpts) ([]roles.ChainRecord, error) {
-	store, err := filechain.NewStore()
+	store, err := newRoleChainStore()
 	if err != nil {
 		return nil, err
 	}

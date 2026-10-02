@@ -4,10 +4,13 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
 )
 
 func sha256HexTest(data []byte) string {
@@ -204,6 +207,18 @@ func TestRolesAppendRejectsIdentityMismatch(t *testing.T) {
 	r := runRolesTest([]string{"append", "--project", "other-project", "--goal", "goal-1", "--chain", "chain-1", "--stdin"}, r1)
 	if r.code != 1 || !strings.Contains(r.stderr, "project") {
 		t.Fatalf("code=%d stderr=%q, want a refusal naming the project_id mismatch", r.code, r.stderr)
+	}
+}
+
+// The append verb reads stdin through the domain's record bound, not a CLI-wide cap, so
+// every record it accepts is one a chain store can load back: a larger stdin is refused
+// before parsing, naming roles.MaxRecordBytes.
+func TestRolesAppendBoundsStdinAtTheRecordBound(t *testing.T) {
+	rolesTestStateHome(t)
+	r := runRolesTest([]string{"append", "--project", "p3", "--goal", "g3", "--chain", "c3", "--stdin"}, strings.Repeat(" ", roles.MaxRecordBytes+1))
+	want := fmt.Sprintf("stdin exceeds %d bytes", roles.MaxRecordBytes)
+	if r.code != 1 || !strings.Contains(r.stderr, want) {
+		t.Fatalf("code=%d stderr=%q, want a refusal containing %q", r.code, r.stderr, want)
 	}
 }
 

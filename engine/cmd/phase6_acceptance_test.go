@@ -19,7 +19,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow/filelog"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
 
@@ -62,9 +61,9 @@ func phase6ReadLog(t *testing.T, stateHome, project, wf string) []byte {
 func phase6LoadOwned(t *testing.T, stateHome, project, wf string) workflow.Loaded {
 	t.Helper()
 	t.Setenv("XDG_STATE_HOME", stateHome)
-	store, err := filelog.NewStore()
+	store, err := newWorkflowStore()
 	if err != nil {
-		t.Fatalf("filelog.NewStore() = %v, want nil", err)
+		t.Fatalf("newWorkflowStore() = %v, want nil", err)
 	}
 	loaded, err := store.Load(project, wf)
 	if err != nil {
@@ -401,9 +400,9 @@ func TestPhase6Acceptance_CorruptState(t *testing.T) {
 
 			loaded := func() workflow.Loaded {
 				t.Setenv("XDG_STATE_HOME", stateHome)
-				store, err := filelog.NewStore()
+				store, err := newWorkflowStore()
 				if err != nil {
-					t.Fatalf("filelog.NewStore() = %v, want nil", err)
+					t.Fatalf("newWorkflowStore() = %v, want nil", err)
 				}
 				l, err := store.Load(project, wf)
 				if err != nil {
@@ -473,9 +472,9 @@ func TestPhase6Acceptance_ForeignState(t *testing.T) {
 			}
 
 			t.Setenv("XDG_STATE_HOME", stateHome)
-			store, err := filelog.NewStore()
+			store, err := newWorkflowStore()
 			if err != nil {
-				t.Fatalf("filelog.NewStore() = %v, want nil", err)
+				t.Fatalf("newWorkflowStore() = %v, want nil", err)
 			}
 			loaded, err := store.Load(project, wf)
 			if err != nil {

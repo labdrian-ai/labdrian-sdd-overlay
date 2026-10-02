@@ -20,7 +20,9 @@
 // It is built on engine/statestore (the directory chain and the no-follow read),
 // engine/filelock (the lock) and engine/atomicfile (the publish). Its error messages
 // are the ones the store printed when it lived in the projection package
-// ("projection store: ...").
+// ("projection store: ..."). An error says the store's name once, from the sentinel it
+// wraps or its own prefix; the detail of an unavailable binding says what was found and
+// not who found it, so the refusal that quotes it does not repeat the name.
 package fsstore
 
 import (
@@ -29,7 +31,6 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"time"
 
@@ -100,11 +101,11 @@ type Store struct {
 // check that the directory exists or is usable: that is checked when the store is
 // used. An unsupported platform is refused.
 func NewStore(stateHome string) (Store, error) {
-	if !statestore.Supported {
-		return Store{}, fmt.Errorf("%w: %s (supported: linux, darwin)", ErrUnsupportedPlatform, runtime.GOOS)
+	if err := statestore.RequirePlatform(ErrUnsupportedPlatform); err != nil {
+		return Store{}, err
 	}
-	if !filepath.IsAbs(stateHome) {
-		return Store{}, fmt.Errorf("projection store: state home %q is not an absolute path", stateHome)
+	if err := statestore.CheckHome(stateHome); err != nil {
+		return Store{}, fmt.Errorf("projection store: %w", err)
 	}
 	return Store{stateHome: stateHome, lockWait: DefaultLockWait}, nil
 }
@@ -146,7 +147,7 @@ func (s Store) path(repoKey string) (string, error) {
 // has refused the platform long before this is reached.
 func (s Store) lock(path string) (func(), error) {
 	if err := statestore.EnsureDirs(s.dirParts()); err != nil {
-		return nil, fmt.Errorf("%w: projection store: %v", projection.ErrBindingUnavailable, err)
+		return nil, fmt.Errorf("%w: %v", projection.ErrBindingUnavailable, err)
 	}
 	unlock, err := filelock.Acquire(strings.TrimSuffix(path, ".json")+".lock", filelock.Options{Perm: 0o600, Wait: s.lockWait})
 	switch {
@@ -173,11 +174,8 @@ func (s Store) Load(repoKey string) (projection.Loaded, error) {
 	}
 
 	if err := statestore.CheckDirs(s.dirParts()); err != nil {
-		switch {
-		case errors.Is(err, fs.ErrNotExist):
+		if errors.Is(err, fs.ErrNotExist) {
 			return projection.Loaded{Classification: projection.ClassificationAbsent}, nil
-		case errors.Is(err, statestore.ErrSymlink), errors.Is(err, statestore.ErrNotDir):
-			return unavailable("projection store: " + err.Error()), nil
 		}
 		return unavailable(err.Error()), nil
 	}
@@ -212,6 +210,10 @@ func readFailure(err error) projection.Loaded {
 	return unavailable(err.Error())
 }
 
+// unavailable is the answer for a binding that could not be read. Its detail says
+// what was found and not who found it, like every detail of the domain (empty,
+// malformed, foreign): the refusal that quotes it (projection.ErrBindingUnavailable)
+// already names the store, and naming it twice reads as an error in the error.
 func unavailable(detail string) projection.Loaded {
 	return projection.Loaded{Classification: projection.ClassificationUnavailable, Detail: detail}
 }

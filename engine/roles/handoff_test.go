@@ -1,6 +1,8 @@
 package roles
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -262,6 +264,36 @@ func TestRoleHandoffValidate(t *testing.T) {
 			t.Fatalf("Validate() = %v, want nil for interrupted with resume_reason", err)
 		}
 	})
+}
+
+// paddedHandoffJSON is validHandoffJSON grown to exactly size bytes with blanks before
+// the closing brace, which is still the same one valid document.
+func paddedHandoffJSON(size int) string {
+	record := validHandoffJSON()
+	return strings.Replace(record, "\n}", strings.Repeat(" ", size-len(record))+"\n}", 1)
+}
+
+// A record is one JSON document with narrative fields that have no length of their own,
+// so the whole document is bounded, and the bound is exact: MaxRecordBytes is judged on
+// its content like any other record, one byte more is judged on its size.
+func TestParseRoleHandoffBoundsTheDocumentExactly(t *testing.T) {
+	if _, err := ParseRoleHandoff([]byte(paddedHandoffJSON(MaxRecordBytes))); err != nil {
+		t.Fatalf("ParseRoleHandoff(a record of MaxRecordBytes) = %v, want nil", err)
+	}
+	_, err := ParseRoleHandoff([]byte(paddedHandoffJSON(MaxRecordBytes + 1)))
+	want := fmt.Sprintf("parse role handoff: roles: handoff record is too large: %d bytes, the maximum is %d", MaxRecordBytes+1, MaxRecordBytes)
+	if !errors.Is(err, ErrRecordTooLarge) || err.Error() != want {
+		t.Fatalf("ParseRoleHandoff(MaxRecordBytes+1) = %v, want ErrRecordTooLarge as %q", err, want)
+	}
+}
+
+// Before the record bound existed, `roles append` accepted any record up to its 4 MiB
+// stdin cap and wrote it to the chain. A smaller bound would make such a chain
+// unloadable, so the bound is exactly that historical write cap and never lower.
+func TestMaxRecordBytesIsTheHistoricalWriteCap(t *testing.T) {
+	if MaxRecordBytes != 4<<20 {
+		t.Fatalf("MaxRecordBytes = %d, want %d: records already written up to the old 4 MiB append cap must stay loadable", MaxRecordBytes, 4<<20)
+	}
 }
 
 func TestParseRoleHandoffRejectsInterruptedWithoutResumeReasonEndToEnd(t *testing.T) {
