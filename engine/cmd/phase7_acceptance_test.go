@@ -277,7 +277,7 @@ func phase7Capabilities(t *testing.T, binary string) {
 		if err := capability.Validate(d); err != nil {
 			t.Errorf("%s: printed declaration is invalid: %v", d.Target, err)
 		}
-		if err := capabilitytest.CheckEvidence("..", d); err != nil {
+		if err := capability.CheckEvidence(capabilitytest.NewCatalog(os.DirFS("..")), d); err != nil {
 			t.Errorf("%s: printed declaration cites a test that does not exist: %v", d.Target, err)
 		}
 	}

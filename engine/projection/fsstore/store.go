@@ -101,11 +101,8 @@ type Store struct {
 // check that the directory exists or is usable: that is checked when the store is
 // used. An unsupported platform is refused.
 func NewStore(stateHome string) (Store, error) {
-	if err := statestore.RequirePlatform(ErrUnsupportedPlatform); err != nil {
+	if err := statestore.RequireStore("projection store", ErrUnsupportedPlatform, stateHome); err != nil {
 		return Store{}, err
-	}
-	if err := statestore.CheckHome(stateHome); err != nil {
-		return Store{}, fmt.Errorf("projection store: %w", err)
 	}
 	return Store{stateHome: stateHome, lockWait: DefaultLockWait}, nil
 }

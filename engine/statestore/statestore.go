@@ -4,9 +4,10 @@
 // user's state home:
 //
 //   - Home resolves the state home from the environment: $XDG_STATE_HOME, or
-//     $HOME/.local/state, either of them absolute. RequirePlatform and CheckHome are
-//     the two checks a store makes when it is built over one: the platform has a
-//     no-follow open, and the state home it was handed is an absolute path.
+//     $HOME/.local/state, either of them absolute. RequireStore is what a store
+//     checks when it is built over one, in a single call: RequirePlatform (the
+//     platform has a no-follow open) and CheckHome (the state home it was handed is
+//     an absolute path), each also available alone.
 //   - EnsureDirs creates the chain of store directories below it, private (0700),
 //     and CheckDirs walks the same chain without creating anything. Both refuse a
 //     symlink or a non-directory at any component below the state home; the state
@@ -117,6 +118,29 @@ func checkPlatform(supported bool, goos string, unsupported error) error {
 func CheckHome(stateHome string) error {
 	if !filepath.IsAbs(stateHome) {
 		return fmt.Errorf("state home %q is not an absolute path", stateHome)
+	}
+	return nil
+}
+
+// RequireStore is the whole of what a store checks when it is built over a state home,
+// in the order every store always did: the platform first (RequirePlatform), then the
+// home (CheckHome). unsupported is the store's own sentinel and name its message prefix,
+// so a store keeps the text it prints and the error callers match with errors.Is: a
+// refused platform is unsupported wrapped with the platform's name, bare, and a refused
+// home reads "<name>: state home ... is not an absolute path". A store's constructor is
+// this call and its own struct literal.
+func RequireStore(name string, unsupported error, stateHome string) error {
+	return checkStore(Supported, runtime.GOOS, name, unsupported, stateHome)
+}
+
+// checkStore is RequireStore with the platform passed in, so a test can name one that is
+// not the running one.
+func checkStore(supported bool, goos, name string, unsupported error, stateHome string) error {
+	if err := checkPlatform(supported, goos, unsupported); err != nil {
+		return err
+	}
+	if err := CheckHome(stateHome); err != nil {
+		return fmt.Errorf("%s: %w", name, err)
 	}
 	return nil
 }

@@ -23,6 +23,8 @@ import (
 //     adapters: infrastructure the domain reaches only through a port.
 //   - capability/presence is the adapter of the workflow's DependencyProber port:
 //     it stats files and the PATH, and capability itself stays pure.
+//   - shaper/fsadapter is the adapter of the shaper's file-facing ports: today the
+//     ClearanceStore, later the contained source (H10 S2).
 //   - installer, shelltest, capabilitytest and this guard (the module root) are
 //     test-only.
 var rings = map[string]archguard.Ring{
@@ -53,6 +55,7 @@ var rings = map[string]archguard.Ring{
 	"runtime":             archguard.Adapter,
 	"settings":            archguard.Adapter,
 	"shaper":              archguard.Domain,
+	"shaper/fsadapter":    archguard.Adapter,
 	"shelltest":           archguard.Support,
 	"skills":              archguard.Domain,
 	"statestore":          archguard.Adapter,
@@ -73,7 +76,7 @@ var rings = map[string]archguard.Ring{
 // known ones are not listed below and are owed to their units all the same:
 //
 //   - cmd: skillsLockWait and the other global seams of main.go (H31)
-//   - shaper: the global open hook of the clearance store (H10)
+//   - shaper: the global open hook of the contained reads (H10, slice S2)
 //   - reviewreceipt: the global store path variable (H12)
 var knownDebt = archguard.Debt{
 	// pathguard: the file system half (symlink resolution) moves to
@@ -90,8 +93,9 @@ var knownDebt = archguard.Debt{
 		"os/exec": "H12",
 	},
 
-	// shaper: the contained reads and the clearance store move to
-	// shaper/fsadapter.
+	// shaper: the contained reads move to shaper/fsadapter (H10, slice S2). The
+	// clearance store has moved there already (S1), but the package keeps these
+	// imports for as long as a contained read does.
 	"shaper": {
 		"os":      "H10",
 		"runtime": "H10",

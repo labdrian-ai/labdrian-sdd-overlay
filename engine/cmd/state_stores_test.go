@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/roles"
@@ -90,6 +91,47 @@ func TestNewRoleChainStoreResolvesTheStateHomeFromTheEnvironment(t *testing.T) {
 		}
 		if _, err := os.Stat(want); err != nil {
 			t.Fatalf("the record is not under %s: %v", stateHome, err)
+		}
+	}
+	t.Run("XDG_STATE_HOME", func(t *testing.T) {
+		xdg := t.TempDir()
+		t.Setenv("XDG_STATE_HOME", xdg)
+		lands(t, xdg)
+	})
+	t.Run("HOME fallback", func(t *testing.T) {
+		home := t.TempDir()
+		t.Setenv("XDG_STATE_HOME", "")
+		t.Setenv("HOME", home)
+		lands(t, filepath.Join(home, ".local", "state"))
+	})
+}
+
+func TestNewClearanceStoreResolvesTheStateHomeFromTheEnvironment(t *testing.T) {
+	for _, tt := range unusableStateHomes {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Setenv("XDG_STATE_HOME", tt.xdg)
+			t.Setenv("HOME", tt.home)
+			want := "clearance store: " + tt.detail
+			if store, err := newClearanceStore(); err == nil || err.Error() != want || store != nil {
+				t.Fatalf("newClearanceStore() = %v, %v, want no store and %q", store, err, want)
+			}
+		})
+	}
+
+	lands := func(t *testing.T, stateHome string) {
+		t.Helper()
+		store, err := newClearanceStore()
+		if err != nil {
+			t.Fatalf("newClearanceStore() = %v, want nil", err)
+		}
+		sha := strings.Repeat("a", 64)
+		path, err := store.Path("proj-1", "goal-1", sha)
+		if err != nil {
+			t.Fatalf("Path() = %v, want nil", err)
+		}
+		want := filepath.Join(stateHome, "labdrian", "shaper-clearance", "proj-1", "goal-1", sha+".json")
+		if path != want {
+			t.Fatalf("Path() = %q, want %q", path, want)
 		}
 	}
 	t.Run("XDG_STATE_HOME", func(t *testing.T) {

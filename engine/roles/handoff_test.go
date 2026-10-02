@@ -287,6 +287,20 @@ func TestParseRoleHandoffBoundsTheDocumentExactly(t *testing.T) {
 	}
 }
 
+// A record between the 1 MiB bound this package had for a while and the 4 MiB it has now is
+// a record `roles append` accepted all along, so it must parse: a bound that refuses it
+// would make the chain holding it unloadable.
+func TestParseRoleHandoffAcceptsARecordBetweenTheOldAndTheNewBound(t *testing.T) {
+	const size = 2 << 20 // above the old 1 MiB bound, below MaxRecordBytes
+	h, err := ParseRoleHandoff([]byte(paddedHandoffJSON(size)))
+	if err != nil {
+		t.Fatalf("ParseRoleHandoff(a %d byte record) = %v, want nil", size, err)
+	}
+	if h.Seq != 2 || h.FromRole != RoleBuilder {
+		t.Errorf("ParseRoleHandoff(a %d byte record) = seq %d from %q, want the record's own fields", size, h.Seq, h.FromRole)
+	}
+}
+
 // Before the record bound existed, `roles append` accepted any record up to its 4 MiB
 // stdin cap and wrote it to the chain. A smaller bound would make such a chain
 // unloadable, so the bound is exactly that historical write cap and never lower.

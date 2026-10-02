@@ -1340,7 +1340,7 @@ func phase8Capabilities(t *testing.T, binary string) {
 		if !strings.Contains(claim.Detail, "observes") {
 			t.Errorf("%s skills detail does not say that loading a skill is unobserved: %q", d.Target, claim.Detail)
 		}
-		if err := capabilitytest.CheckEvidence("..", d); err != nil {
+		if err := capability.CheckEvidence(capabilitytest.NewCatalog(os.DirFS("..")), d); err != nil {
 			t.Errorf("%s cites a test that does not exist: %v", d.Target, err)
 		}
 		// The global tier depends on labdrian apply, not on the engine, for the runtimes

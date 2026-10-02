@@ -176,7 +176,7 @@ func lookUpClearance(a shaper.Assessment) (*shaper.VerifiedClearance, clearanceR
 	if a.Subject == nil {
 		return nil, clearanceReport{Status: "absent", Detail: "subject evidence is incomplete or refused, so no clearance can be looked up"}
 	}
-	store, err := shaper.NewFileStore()
+	store, err := newClearanceStore()
 	if err != nil {
 		return nil, clearanceReport{Status: "unavailable", Detail: err.Error()}
 	}
@@ -186,7 +186,7 @@ func lookUpClearance(a shaper.Assessment) (*shaper.VerifiedClearance, clearanceR
 		return nil, clearanceReport{Status: "unavailable", Detail: err.Error()}
 	}
 	data, err := store.Get(s.ProjectID, s.GoalID, s.HandoffSHA256)
-	if errors.Is(err, os.ErrNotExist) {
+	if errors.Is(err, shaper.ErrClearanceNotFound) {
 		return nil, clearanceReport{Status: "absent", Path: path}
 	}
 	if err != nil {
@@ -408,7 +408,7 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 	}
 	// A non-TUI channel is already refused by ParseRecord (inside
 	// CheckRecordBinding), so an RPC-captured record never reaches the store.
-	store, err := shaper.NewFileStore()
+	store, err := newClearanceStore()
 	if err != nil {
 		fail("%v", err)
 		return

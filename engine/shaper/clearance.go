@@ -68,7 +68,7 @@ type ChannelProvenance struct {
 	Runtime string `json:"runtime"`
 	// Mode is the runtime's interactive mode. Only "tui" is accepted: an RPC
 	// dialog is answered by the driving process, not a human, so ParseRecord,
-	// and with it Verify and FileStore.Put, refuse every other mode.
+	// and with it Verify and ClearanceStore.Put, refuse every other mode.
 	Mode string `json:"mode"`
 	// Verified must be present and false.
 	Verified *bool `json:"verified"`
@@ -95,6 +95,10 @@ var (
 )
 
 var sha256HexPattern = regexp.MustCompile(`^[0-9a-f]{64}$`)
+
+// IsSHA256Hex reports whether s is a SHA-256 digest as every digest in a clearance
+// record is written: exactly 64 lowercase hexadecimal characters.
+func IsSHA256Hex(s string) bool { return sha256HexPattern.MatchString(s) }
 
 // ParseRecord strictly parses one clearance record: valid UTF-8, no duplicate
 // keys at any depth, no unknown fields at any depth, no trailing data, the
