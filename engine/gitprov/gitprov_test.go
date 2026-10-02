@@ -520,6 +520,34 @@ func TestObserveFailsClosedWhenGitIsNotOnPath(t *testing.T) {
 	}
 }
 
+// isolateGitEnvironment points HOME at a fresh directory and clears every ambient GIT_*
+// variable, so the setup git commands and the code under test both run against the
+// temporary repositories; t.Setenv restores them afterwards.
+func isolateGitEnvironment(t *testing.T) {
+	t.Helper()
+	home := resolvedTempDir(t)
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
+	for _, kv := range os.Environ() {
+		if name, _, _ := strings.Cut(kv, "="); strings.HasPrefix(name, "GIT_") {
+			t.Setenv(name, "")
+			os.Unsetenv(name)
+		}
+	}
+}
+
+// realGit returns a function that runs the real git binary in a directory, failing the test
+// when it fails.
+func realGit(t *testing.T, gitBin string) func(dir string, args ...string) {
+	return func(dir string, args ...string) {
+		t.Helper()
+		cmd := exec.Command(gitBin, append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false"}, args...)...)
+		if out, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("git %v: %v\n%s", args, err, out)
+		}
+	}
+}
+
 // TestObserveMatchesRealGitRepository is the one optional integration test:
 // it drives a real git binary and skips when none is installed.
 func TestObserveMatchesRealGitRepository(t *testing.T) {
@@ -527,27 +555,11 @@ func TestObserveMatchesRealGitRepository(t *testing.T) {
 	if err != nil {
 		t.Skip("git binary not available")
 	}
-	home := resolvedTempDir(t)
-	t.Setenv("HOME", home)
-	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
-	// Clear ambient GIT_* so the setup git commands and Observe both run
-	// against the temp repositories; t.Setenv restores them afterwards.
-	for _, kv := range os.Environ() {
-		if name, _, _ := strings.Cut(kv, "="); strings.HasPrefix(name, "GIT_") {
-			t.Setenv(name, "")
-			os.Unsetenv(name)
-		}
-	}
+	isolateGitEnvironment(t)
 	base := resolvedTempDir(t)
 	main := filepath.Join(base, "main")
 	wt := filepath.Join(base, "wt")
-	gitRun := func(dir string, args ...string) {
-		t.Helper()
-		cmd := exec.Command(gitBin, append([]string{"-C", dir, "-c", "user.name=t", "-c", "user.email=t@example.invalid", "-c", "commit.gpgsign=false"}, args...)...)
-		if out, err := cmd.CombinedOutput(); err != nil {
-			t.Fatalf("git %v: %v\n%s", args, err, out)
-		}
-	}
+	gitRun := realGit(t, gitBin)
 	if err := os.Mkdir(main, 0o755); err != nil {
 		t.Fatalf("mkdir: %v", err)
 	}
@@ -665,4 +677,312 @@ func TestObserveFailsClosedOnFifoBackPointer(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("Observe did not return within 2s; it blocked reading a non-regular back-pointer file")
 	}
+}
+
+// subdir makes a directory inside root and returns it.
+func subdir(t *testing.T, root string, parts ...string) string {
+	t.Helper()
+	dir := filepath.Join(append([]string{root}, parts...)...)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatalf("mkdir %s: %v", dir, err)
+	}
+	return dir
+}
+
+func TestLocateFindsTheWorktreeThatHoldsADirectory(t *testing.T) {
+	repo := newMainRepo(t)
+	sub := subdir(t, repo.root, "a", "b")
+
+	for _, dir := range []string{repo.root, filepath.Join(repo.root, "a"), sub} {
+		got, err := repo.observer("HOME=/home/x").Locate(dir)
+		if err != nil {
+			t.Fatalf("Locate(%s): %v", dir, err)
+		}
+		want := Observation{
+			Toplevel:  repo.root,
+			GitDir:    filepath.Join(repo.root, ".git"),
+			CommonDir: filepath.Join(repo.root, ".git"),
+			Linked:    false,
+		}
+		if got != want {
+			t.Errorf("Locate(%s) = %+v, want %+v", dir, got, want)
+		}
+	}
+}
+
+func TestLocateFindsALinkedWorktreeFromInsideIt(t *testing.T) {
+	repo, common, wtGitDir := newLinkedRepo(t)
+
+	got, err := repo.observer().Locate(subdir(t, repo.root, "src"))
+	if err != nil {
+		t.Fatalf("Locate: %v", err)
+	}
+	want := Observation{Toplevel: repo.root, GitDir: wtGitDir, CommonDir: common, Linked: true}
+	if got != want {
+		t.Errorf("Locate = %+v, want %+v", got, want)
+	}
+}
+
+// Locate answers which git directories belong to a worktree, which a repository with no
+// commit yet has as well: it does not ask for HEAD, and leaves it empty. Observe, which
+// records HEAD as provenance, still refuses such a repository.
+func TestLocateDoesNotNeedACommit(t *testing.T) {
+	repo := newMainRepo(t)
+	repo.fail["rev-parse --verify HEAD^{commit}"] = errors.New("exit status 128")
+
+	got, err := repo.observer().Locate(repo.root)
+	if err != nil {
+		t.Fatalf("Locate in a repository with no commit: %v", err)
+	}
+	if got.Head != "" || got.Toplevel != repo.root {
+		t.Errorf("Locate = %+v, want the worktree with no HEAD", got)
+	}
+	for _, c := range repo.calls {
+		if reflect.DeepEqual(c.args, argvHead) {
+			t.Errorf("Locate asked for HEAD: %v", c.args)
+		}
+	}
+	if _, err := repo.observer().Observe(repo.root); err == nil {
+		t.Error("Observe accepted a repository with no commit")
+	}
+}
+
+// The first question, which worktree holds the directory, is asked in the directory
+// itself; everything after is asked in the toplevel it names, exactly as Observe asks it.
+func TestLocateAsksTheToplevelWhereTheDirectoryIsAndTheRestWhereTheToplevelIs(t *testing.T) {
+	repo := newMainRepo(t)
+	sub := subdir(t, repo.root, "deep", "er")
+
+	if _, err := repo.observer().Locate(sub); err != nil {
+		t.Fatalf("Locate: %v", err)
+	}
+	want := []call{
+		{dir: sub, args: argvToplevel},
+		{dir: repo.root, args: argvIsBare},
+		{dir: repo.root, args: argvInWorkTree},
+		{dir: repo.root, args: argvToplevel},
+		{dir: repo.root, args: argvGitDir},
+		{dir: repo.root, args: argvCommonDir},
+	}
+	if len(repo.calls) != len(want) {
+		t.Fatalf("git was run %d times (%v), want %d", len(repo.calls), repo.calls, len(want))
+	}
+	for i, c := range repo.calls {
+		if c.dir != want[i].dir || !reflect.DeepEqual(c.args, want[i].args) {
+			t.Errorf("call %d = %s in %s, want %s in %s", i, strings.Join(c.args, " "), c.dir, strings.Join(want[i].args, " "), want[i].dir)
+		}
+	}
+}
+
+func TestLocateResolvesASymlinkedDirectoryToTheToplevel(t *testing.T) {
+	repo := newMainRepo(t)
+	sub := subdir(t, repo.root, "real")
+	link := filepath.Join(resolvedTempDir(t), "link")
+	if err := os.Symlink(sub, link); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+
+	got, err := repo.observer().Locate(link)
+	if err != nil {
+		t.Fatalf("Locate: %v", err)
+	}
+	if got.Toplevel != repo.root {
+		t.Errorf("Toplevel = %q, want %q", got.Toplevel, repo.root)
+	}
+	if repo.calls[0].dir != sub {
+		t.Errorf("the first question was asked in %q, want the resolved directory %q", repo.calls[0].dir, sub)
+	}
+}
+
+func TestLocateScrubsGitEnvironmentFromEveryCall(t *testing.T) {
+	repo := newMainRepo(t)
+	environ := []string{"HOME=/home/x", "GIT_CONFIG_COUNT=1", "GIT_CONFIG_KEY_0=core.fsmonitor", "GIT_CONFIG_VALUE_0=/tmp/evil", "PATH=/usr/bin"}
+
+	if _, err := repo.observer(environ...).Locate(subdir(t, repo.root, "sub")); err != nil {
+		t.Fatalf("Locate: %v", err)
+	}
+	want := []string{"HOME=/home/x", "PATH=/usr/bin"}
+	for _, c := range repo.calls {
+		if !reflect.DeepEqual(c.env, want) {
+			t.Errorf("call %v env = %v, want %v", c.args, c.env, want)
+		}
+	}
+}
+
+func TestLocateRefusesRepositoryRedirectingEnvironmentBeforeAskingGit(t *testing.T) {
+	for _, name := range []string{"GIT_DIR", "GIT_WORK_TREE", "GIT_COMMON_DIR"} {
+		t.Run(name, func(t *testing.T) {
+			repo := newMainRepo(t)
+
+			if _, err := repo.observer(name + "=/elsewhere").Locate(repo.root); err == nil || !strings.Contains(err.Error(), name) {
+				t.Fatalf("Locate = %v, want a refusal naming %s", err, name)
+			}
+			if len(repo.calls) != 0 {
+				t.Errorf("git was run %d times; want refusal before any git invocation", len(repo.calls))
+			}
+		})
+	}
+}
+
+func TestLocateFailsClosed(t *testing.T) {
+	cases := []struct {
+		name   string
+		mutate func(t *testing.T, r *fakeRepo)
+		want   string
+	}{
+		{"not_inside_a_worktree", func(t *testing.T, r *fakeRepo) {
+			r.fail["rev-parse --show-toplevel"] = errors.New("exit status 128")
+		}, "show-toplevel"},
+		{"relative_toplevel", func(t *testing.T, r *fakeRepo) {
+			r.answers["rev-parse --show-toplevel"] = "repo\n"
+		}, "absolute"},
+		{"toplevel_that_does_not_exist", func(t *testing.T, r *fakeRepo) {
+			r.answers["rev-parse --show-toplevel"] = filepath.Join(r.root, "gone") + "\n"
+		}, "resolve"},
+		{"empty_toplevel", func(t *testing.T, r *fakeRepo) {
+			r.answers["rev-parse --show-toplevel"] = "\n"
+		}, "empty"},
+		{"bare_repository", func(t *testing.T, r *fakeRepo) {
+			r.answers["rev-parse --is-bare-repository"] = "true\n"
+		}, "bare"},
+		{"git_not_found", func(t *testing.T, r *fakeRepo) {
+			r.fail["rev-parse --show-toplevel"] = exec.ErrNotFound
+		}, "git binary not found"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			repo := newMainRepo(t)
+			tc.mutate(t, repo)
+
+			got, err := repo.observer().Locate(subdir(t, repo.root, "sub"))
+			if err == nil {
+				t.Fatalf("Locate succeeded with %+v; want refusal", got)
+			}
+			if got != (Observation{}) {
+				t.Errorf("Locate returned partial observation %+v alongside error", got)
+			}
+			if !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("error %q does not mention %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// Locate finds the toplevel and then judges it with every check Observe makes, so a forged
+// gitfile is refused from a subdirectory as it is from the toplevel.
+func TestLocateRefusesAForgedGitfileFromASubdirectory(t *testing.T) {
+	repo, _ := newGitfileRepo(t)
+
+	got, err := repo.observer().Locate(subdir(t, repo.root, "sub"))
+	if err == nil || !strings.Contains(err.Error(), "core.worktree") {
+		t.Fatalf("Locate = %+v, %v, want a refusal naming core.worktree", got, err)
+	}
+}
+
+func TestLocateRejectsInvalidDirectoryAndRunner(t *testing.T) {
+	repo := newMainRepo(t)
+	for _, tc := range []struct {
+		name string
+		obs  Observer
+		dir  string
+	}{
+		{"empty_dir", repo.observer(), ""},
+		{"relative_dir", repo.observer(), "repo"},
+		{"missing_dir", repo.observer(), filepath.Join(repo.root, "missing")},
+		{"nil_runner", Observer{}, repo.root},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got, err := tc.obs.Locate(tc.dir); err == nil {
+				t.Fatalf("Locate(%q) = %+v; want refusal", tc.dir, got)
+			}
+		})
+	}
+}
+
+// TestLocateMatchesRealGitRepository drives a real git binary, and skips when none is
+// installed: from the toplevel and from inside it, in a main and a linked worktree, in a
+// repository with no commit, and where there is no worktree to find.
+func TestLocateMatchesRealGitRepository(t *testing.T) {
+	gitBin, err := exec.LookPath("git")
+	if err != nil {
+		t.Skip("git binary not available")
+	}
+	isolateGitEnvironment(t)
+	gitRun := realGit(t, gitBin)
+	base := resolvedTempDir(t)
+	main := filepath.Join(base, "main")
+	wt := filepath.Join(base, "wt")
+	if err := os.Mkdir(main, 0o755); err != nil {
+		t.Fatalf("mkdir: %v", err)
+	}
+	gitRun(main, "init", "-q")
+	gitRun(main, "commit", "-q", "--allow-empty", "-m", "init")
+	gitRun(main, "worktree", "add", "-q", wt)
+
+	t.Run("the_same_worktree_from_the_toplevel_and_from_inside_it", func(t *testing.T) {
+		deep := subdir(t, main, "a", "b")
+		want, err := Observe(main)
+		if err != nil {
+			t.Fatalf("Observe: %v", err)
+		}
+		want.Head = ""
+		for _, dir := range []string{main, filepath.Join(main, "a"), deep} {
+			got, err := Locate(dir)
+			if err != nil {
+				t.Fatalf("Locate(%s): %v", dir, err)
+			}
+			if got != want {
+				t.Errorf("Locate(%s) = %+v, want %+v", dir, got, want)
+			}
+		}
+	})
+	t.Run("a_linked_worktree_from_inside_it", func(t *testing.T) {
+		got, err := Locate(subdir(t, wt, "src"))
+		if err != nil {
+			t.Fatalf("Locate: %v", err)
+		}
+		if got.Toplevel != wt || got.CommonDir != filepath.Join(main, ".git") || got.GitDir == got.CommonDir || !got.Linked {
+			t.Errorf("Locate = %+v", got)
+		}
+	})
+	t.Run("a_repository_with_no_commit", func(t *testing.T) {
+		unborn := filepath.Join(base, "unborn")
+		if err := os.Mkdir(unborn, 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		gitRun(unborn, "init", "-q")
+		got, err := Locate(subdir(t, unborn, "sub"))
+		if err != nil {
+			t.Fatalf("Locate: %v", err)
+		}
+		if got.Toplevel != unborn || got.GitDir != filepath.Join(unborn, ".git") || got.Head != "" {
+			t.Errorf("Locate = %+v", got)
+		}
+		if _, err := Observe(unborn); err == nil {
+			t.Error("Observe accepted a repository with no commit")
+		}
+	})
+	t.Run("a_forged_gitfile_from_inside_it", func(t *testing.T) {
+		forged := filepath.Join(base, "forged")
+		if err := os.Mkdir(forged, 0o755); err != nil {
+			t.Fatalf("mkdir: %v", err)
+		}
+		writeFile(t, filepath.Join(forged, ".git"), "gitdir: "+filepath.Join(main, ".git")+"\n")
+		if got, err := Locate(subdir(t, forged, "sub")); err == nil {
+			t.Fatalf("Locate(forged) = %+v; want refusal", got)
+		}
+	})
+	t.Run("no_worktree_to_find", func(t *testing.T) {
+		bare := filepath.Join(base, "bare.git")
+		gitRun(base, "init", "-q", "--bare", bare)
+		for name, dir := range map[string]string{
+			"a_bare_repository":       bare,
+			"the_git_directory":       filepath.Join(main, ".git"),
+			"a_directory_outside_any": resolvedTempDir(t),
+		} {
+			if got, err := Locate(dir); err == nil {
+				t.Errorf("Locate(%s) = %+v; want refusal", name, got)
+			}
+		}
+	})
 }

@@ -1,0 +1,564 @@
+package reviewreceipt_test
+
+import (
+	"errors"
+	"fmt"
+	"reflect"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
+)
+
+// world is every port of the service answered from memory. It records the order of the
+// questions it was asked, so a test can say that the service asked nothing it did not need.
+type world struct {
+	stores    []reviewreceipt.Store
+	storesErr error
+	// docs and docsErr are what each store holds, or why it cannot be read.
+	docs    map[reviewreceipt.Store][]reviewreceipt.Document
+	docsErr map[reviewreceipt.Store]error
+
+	// changes is the directories under openspec/changes, artifacts what each one holds.
+	changes    []string
+	changesErr error
+	artifacts  map[string][]string
+
+	// persisted is the bytes under "<change>/<name>"; the errors are what Read and Write
+	// answer for a key.
+	persisted map[string][]byte
+	readErr   map[string]error
+	writeErr  map[string]error
+
+	calls  []string
+	writes []string
+}
+
+func newWorld() *world {
+	return &world{
+		docs: map[reviewreceipt.Store][]reviewreceipt.Document{}, docsErr: map[reviewreceipt.Store]error{},
+		artifacts: map[string][]string{}, persisted: map[string][]byte{},
+		readErr: map[string]error{}, writeErr: map[string]error{},
+	}
+}
+
+func (w *world) service() *reviewreceipt.Service {
+	return reviewreceipt.NewService(reviewreceipt.Ports{Stores: w, Source: w, Sink: w, Changes: w})
+}
+
+func (w *world) Stores() ([]reviewreceipt.Store, error) {
+	w.calls = append(w.calls, "Stores")
+	return w.stores, w.storesErr
+}
+
+func (w *world) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, error) {
+	w.calls = append(w.calls, "Documents "+string(store))
+	if err := w.docsErr[store]; err != nil {
+		return nil, err
+	}
+	return w.docs[store], nil
+}
+
+func (w *world) Changes() ([]string, error) {
+	w.calls = append(w.calls, "Changes")
+	return w.changes, w.changesErr
+}
+
+func (w *world) HasArtifact(change, name string) bool {
+	w.calls = append(w.calls, "HasArtifact "+change+"/"+name)
+	for _, a := range w.artifacts[change] {
+		if a == name {
+			return true
+		}
+	}
+	return false
+}
+
+func key(change, name string) string { return change + "/" + name }
+
+func (w *world) Read(change, name string) ([]byte, error) {
+	w.calls = append(w.calls, "Read "+key(change, name))
+	if err := w.readErr[key(change, name)]; err != nil {
+		return nil, err
+	}
+	data, ok := w.persisted[key(change, name)]
+	if !ok {
+		return nil, fmt.Errorf("read %s: %w", w.Location(change, name), reviewreceipt.ErrNotPersisted)
+	}
+	return data, nil
+}
+
+func (w *world) Write(change, name string, data []byte) error {
+	w.calls = append(w.calls, "Write "+key(change, name))
+	if err := w.writeErr[key(change, name)]; err != nil {
+		return err
+	}
+	w.persisted[key(change, name)] = data
+	w.writes = append(w.writes, key(change, name))
+	return nil
+}
+
+func (w *world) Location(change, name string) string {
+	return "/project/openspec/changes/" + change + "/review-receipts/" + name
+}
+
+// the documents a store holds
+func receiptDoc(lineage, schema, terminal string) reviewreceipt.Document {
+	return reviewreceipt.Document{Shape: reviewreceipt.ShapeReceipt, Data: []byte(fmt.Sprintf(
+		`{"schema":%q,"lineage_id":%q,"final_candidate_tree":"tree","terminal_state":%q}`, schema, lineage, terminal))}
+}
+
+func approvedReceiptDoc(lineage string) reviewreceipt.Document {
+	return receiptDoc(lineage, "gentle-ai.review-receipt/v2", "approved")
+}
+
+func stateDoc(lineage, state string) reviewreceipt.Document {
+	return reviewreceipt.Document{Shape: reviewreceipt.ShapeState, Data: stateJSON(lineage, state)}
+}
+
+func (w *world) calledNothing(t *testing.T) {
+	t.Helper()
+	if len(w.calls) != 0 {
+		t.Errorf("the service asked %v, want it to ask nothing", w.calls)
+	}
+}
+
+func lineages(captured []reviewreceipt.Captured) []string {
+	var out []string
+	for _, c := range captured {
+		out = append(out, c.LineageID)
+	}
+	return out
+}
+
+// Capture persists each approved receipt once, in the order the stores list them (store by
+// store, lineage by lineage, the legacy receipt before the lifecycle state), under the name
+// its shape gives it, and reports where each is.
+func TestCapturePersistsEachApprovedReceiptOnceInStoreOrder(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"private", "common"}
+	w.docs["private"] = []reviewreceipt.Document{approvedReceiptDoc("review-a"), stateDoc("review-a", "approved"), approvedReceiptDoc("review-shared")}
+	w.docs["common"] = []reviewreceipt.Document{approvedReceiptDoc("review-shared"), stateDoc("review-b", "approved")}
+
+	captured, err := w.service().Capture("my-change")
+	if err != nil {
+		t.Fatalf("Capture: %v", err)
+	}
+
+	wantWrites := []string{"my-change/review-a.json", "my-change/review-a.review-state.json", "my-change/review-shared.json", "my-change/review-b.review-state.json"}
+	if !reflect.DeepEqual(w.writes, wantWrites) {
+		t.Errorf("writes = %v, want %v", w.writes, wantWrites)
+	}
+	if want := []string{"review-a", "review-a", "review-shared", "review-b"}; !reflect.DeepEqual(lineages(captured), want) {
+		t.Errorf("captured lineages = %v, want %v", lineages(captured), want)
+	}
+	if want := w.Location("my-change", "review-a.review-state.json"); captured[1].Path != want {
+		t.Errorf("captured[1].Path = %q, want where the sink says it is, %q", captured[1].Path, want)
+	}
+	if string(w.persisted["my-change/review-shared.json"]) != string(approvedReceiptDoc("review-shared").Data) {
+		t.Error("the persisted receipt is not the exact bytes of the document")
+	}
+}
+
+// The two shapes of one lineage are two receipts, and the same shape of one lineage in two
+// stores is one.
+func TestCaptureCountsALineageOncePerShape(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"a", "b"}
+	w.docs["a"] = []reviewreceipt.Document{approvedReceiptDoc("review-x"), stateDoc("review-x", "approved")}
+	w.docs["b"] = []reviewreceipt.Document{approvedReceiptDoc("review-x"), stateDoc("review-x", "approved")}
+
+	captured, err := w.service().Capture("c")
+	if err != nil || len(captured) != 2 {
+		t.Fatalf("Capture = %v, %v, want two receipts, one per shape", lineages(captured), err)
+	}
+}
+
+// Only an approved receipt of a known schema that names its lineage is worth keeping.
+func TestCaptureSkipsWhatIsNotAnApprovedReceipt(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{
+		receiptDoc("review-v1", "gentle-ai.review-receipt/v1", "approved"),
+		receiptDoc("review-declined", "gentle-ai.review-receipt/v2", "declined"),
+		receiptDoc("", "gentle-ai.review-receipt/v2", "approved"),
+		stateDoc("review-reviewing", "reviewing"),
+		stateDoc("", "approved"),
+		{Shape: reviewreceipt.ShapeReceipt, Data: []byte("not json")},
+		{Shape: reviewreceipt.ShapeState, Data: []byte("{}")},
+		approvedReceiptDoc("review-ok"),
+	}
+
+	captured, err := w.service().Capture("c")
+	if err != nil || !reflect.DeepEqual(lineages(captured), []string{"review-ok"}) {
+		t.Fatalf("Capture = %v, %v, want only review-ok", lineages(captured), err)
+	}
+}
+
+// What is already persisted, byte for byte, is left alone and still reported; a different
+// file at the name is never replaced, and what came before it stays captured.
+func TestCaptureIsIdempotentAndNeverReplacesADifferingFile(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-a"), approvedReceiptDoc("review-b"), approvedReceiptDoc("review-c")}
+	w.persisted["c/review-a.json"] = approvedReceiptDoc("review-a").Data
+	w.persisted["c/review-b.json"] = []byte(`{"different":true}`)
+
+	captured, err := w.service().Capture("c")
+
+	wantErr := "reviewreceipt: " + w.Location("c", "review-b.json") + " already exists with different content"
+	if err == nil || err.Error() != wantErr {
+		t.Fatalf("Capture error = %v, want %q", err, wantErr)
+	}
+	if !reflect.DeepEqual(lineages(captured), []string{"review-a"}) {
+		t.Errorf("captured = %v, want the one that was already there, reported", lineages(captured))
+	}
+	if len(w.writes) != 0 {
+		t.Errorf("wrote %v; the identical file is left alone and the differing one is never replaced", w.writes)
+	}
+	if string(w.persisted["c/review-b.json"]) != `{"different":true}` {
+		t.Error("the differing file was replaced")
+	}
+	for _, call := range w.calls {
+		if call == "Read c/review-c.json" {
+			t.Errorf("the service went on to the next receipt after a refusal: %v", w.calls)
+		}
+	}
+}
+
+// A failure of the sink is reported in the sink's words behind the package's name, and
+// nothing after it is written.
+func TestCaptureStopsAtTheFirstFailureOfTheSink(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		arm  func(w *world)
+		want string
+	}{
+		{"a read", func(w *world) { w.readErr["c/review-b.json"] = errors.New("read x: boom") }, "reviewreceipt: read x: boom"},
+		{"a write", func(w *world) { w.writeErr["c/review-b.json"] = errors.New("create y: no space") }, "reviewreceipt: create y: no space"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newWorld()
+			w.stores = []reviewreceipt.Store{"s"}
+			w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-a"), approvedReceiptDoc("review-b"), approvedReceiptDoc("review-c")}
+			tc.arm(w)
+
+			captured, err := w.service().Capture("c")
+			if err == nil || err.Error() != tc.want {
+				t.Fatalf("Capture error = %v, want %q", err, tc.want)
+			}
+			if !reflect.DeepEqual(lineages(captured), []string{"review-a"}) || !reflect.DeepEqual(w.writes, []string{"c/review-a.json"}) {
+				t.Errorf("captured %v and wrote %v, want only review-a", lineages(captured), w.writes)
+			}
+		})
+	}
+}
+
+// Stores are read one at a time and what one holds is persisted before the next is read, so
+// a store that cannot be read stops the capture with the stores before it already kept.
+func TestCaptureReadsAStoreOnlyWhenItGetsToIt(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"first", "second", "third"}
+	w.docs["first"] = []reviewreceipt.Document{approvedReceiptDoc("review-a")}
+	w.docsErr["second"] = errors.New("read second: permission denied")
+
+	captured, err := w.service().Capture("c")
+
+	if err == nil || err.Error() != "reviewreceipt: read second: permission denied" {
+		t.Fatalf("Capture error = %v", err)
+	}
+	if !reflect.DeepEqual(lineages(captured), []string{"review-a"}) {
+		t.Errorf("captured = %v, want what the first store held", lineages(captured))
+	}
+	for _, call := range w.calls {
+		if call == "Documents third" {
+			t.Error("the third store was read after the second failed")
+		}
+	}
+}
+
+func TestCaptureReportsStoresThatCannotBeListed(t *testing.T) {
+	w := newWorld()
+	w.storesErr = errors.New("git rev-parse --show-toplevel: exit status 128")
+
+	captured, err := w.service().Capture("c")
+	if err == nil || err.Error() != "reviewreceipt: git rev-parse --show-toplevel: exit status 128" || captured != nil {
+		t.Fatalf("Capture = %v, %v", captured, err)
+	}
+}
+
+// A blank change name is refused before anything is asked.
+func TestCaptureRequiresAChangeName(t *testing.T) {
+	for _, change := range []string{"", "  ", "\t\n"} {
+		w := newWorld()
+		captured, err := w.service().Capture(change)
+		if err == nil || err.Error() != "reviewreceipt: change name is required" || captured != nil {
+			t.Errorf("Capture(%q) = %v, %v, want the refusal", change, captured, err)
+		}
+		w.calledNothing(t)
+	}
+}
+
+// DetectActiveChange: a directory under openspec/changes is an active change when it is
+// not the archive and holds one of the SDD artifacts.
+func TestDetectActiveChange(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		changes   []string
+		artifacts map[string][]string
+		want      string
+		wantMulti []string
+	}{
+		{"no changes at all", nil, nil, "", nil},
+		{"a directory with no artifact", []string{"stray"}, map[string][]string{"stray": {"notes.txt"}}, "", nil},
+		{"the archive is never a change", []string{"archive"}, map[string][]string{"archive": {"tasks.md"}}, "", nil},
+		{"one change among strays", []string{"stray", "mine"}, map[string][]string{"mine": {"tasks.md"}}, "mine", nil},
+		{"several, reported in name order", []string{"zeta", "alpha", "archive"}, map[string][]string{"zeta": {"proposal.md"}, "alpha": {"entry.json"}, "archive": {"design.md"}}, "", []string{"alpha", "zeta"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newWorld()
+			w.changes, w.artifacts = tc.changes, tc.artifacts
+
+			got, err := w.service().DetectActiveChange()
+			var multi *reviewreceipt.MultipleActiveChangesError
+			switch {
+			case tc.wantMulti != nil:
+				if !errors.As(err, &multi) || !reflect.DeepEqual(multi.Changes, tc.wantMulti) {
+					t.Fatalf("DetectActiveChange = %q, %v, want the changes %v", got, err, tc.wantMulti)
+				}
+			case err != nil || got != tc.want:
+				t.Fatalf("DetectActiveChange = %q, %v, want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
+func TestEveryArtifactMarksAChange(t *testing.T) {
+	for _, artifact := range []string{"tasks.md", "design.md", "proposal.md", "entry.json"} {
+		w := newWorld()
+		w.changes, w.artifacts = []string{"c"}, map[string][]string{"c": {artifact}}
+		if got, err := w.service().DetectActiveChange(); err != nil || got != "c" {
+			t.Errorf("a change holding only %s: DetectActiveChange = %q, %v, want it active", artifact, got, err)
+		}
+	}
+	w := newWorld()
+	w.changes, w.artifacts = []string{"c"}, map[string][]string{"c": {"state.yaml", "README.md"}}
+	if got, _ := w.service().DetectActiveChange(); got != "" {
+		t.Errorf("a change holding only state.yaml is active (%q): it is not an SDD artifact marker", got)
+	}
+}
+
+func TestDetectActiveChangeReportsAListingThatFails(t *testing.T) {
+	w := newWorld()
+	w.changesErr = errors.New("read /project/openspec/changes: permission denied")
+	if got, err := w.service().DetectActiveChange(); err == nil || err.Error() != "reviewreceipt: read /project/openspec/changes: permission denied" || got != "" {
+		t.Errorf("DetectActiveChange = %q, %v", got, err)
+	}
+}
+
+func TestMultipleActiveChangesErrorNamesTheRemedy(t *testing.T) {
+	err := &reviewreceipt.MultipleActiveChangesError{Changes: []string{"a", "b"}}
+	want := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` before acknowledging"
+	if err.Error() != want {
+		t.Errorf("Error() = %q, want %q", err.Error(), want)
+	}
+}
+
+// AllSurvivingApprovedPersisted: every approved receipt that survives must be persisted
+// byte for byte under some change; none surviving is true.
+func TestAllSurvivingApprovedPersisted(t *testing.T) {
+	a, b := approvedReceiptDoc("review-a"), stateDoc("review-b", "approved")
+	for _, tc := range []struct {
+		name      string
+		persisted map[string][]byte
+		want      bool
+	}{
+		{"nothing is persisted", nil, false},
+		{"one of two is persisted", map[string][]byte{"c1/review-a.json": a.Data}, false},
+		{"both, under different changes", map[string][]byte{"c1/review-a.json": a.Data, "c2/review-b.review-state.json": b.Data}, true},
+		{"the right name with different bytes", map[string][]byte{"c1/review-a.json": []byte("{}"), "c2/review-b.review-state.json": b.Data}, false},
+		{"the right bytes under the other shape's name", map[string][]byte{"c1/review-a.json": a.Data, "c1/review-b.json": b.Data}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newWorld()
+			w.stores = []reviewreceipt.Store{"s"}
+			w.docs["s"] = []reviewreceipt.Document{a, b, receiptDoc("review-declined", "gentle-ai.review-receipt/v2", "declined")}
+			for k, v := range tc.persisted {
+				w.persisted[k] = v
+			}
+
+			got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1", "c2"})
+			if err != nil || got != tc.want {
+				t.Errorf("AllSurvivingApprovedPersisted = %v, %v, want %v", got, err, tc.want)
+			}
+		})
+	}
+}
+
+func TestAllSurvivingApprovedPersistedIsTrueWhenNothingSurvives(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	if got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"}); err != nil || !got {
+		t.Errorf("AllSurvivingApprovedPersisted with no receipts = %v, %v, want true", got, err)
+	}
+	for _, call := range w.calls {
+		if strings.HasPrefix(call, "Read ") {
+			t.Errorf("asked the sink for %q although no receipt survives", call)
+		}
+	}
+}
+
+func TestAllSurvivingApprovedPersistedReportsWhatFails(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		arm  func(w *world)
+		want string
+	}{
+		{"stores", func(w *world) { w.storesErr = errors.New("no repository") }, "reviewreceipt: no repository"},
+		{"a store", func(w *world) { w.docsErr["s"] = errors.New("read s: denied") }, "reviewreceipt: read s: denied"},
+		{"a read", func(w *world) { w.readErr["c1/review-a.json"] = errors.New("read c1: denied") }, "reviewreceipt: read c1: denied"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newWorld()
+			w.stores = []reviewreceipt.Store{"s"}
+			w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-a")}
+			tc.arm(w)
+			got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"})
+			if err == nil || err.Error() != tc.want || got {
+				t.Errorf("AllSurvivingApprovedPersisted = %v, %v, want a refusal %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
+const ackInput = `{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}`
+
+// A command that is not an acknowledgement, and input that cannot be read, pass without the
+// service asking anything: the hook runs before every Bash call.
+func TestHookPassesWhatIsNotAnAcknowledgementWithoutAsking(t *testing.T) {
+	for name, input := range map[string]string{
+		"another command":           `{"tool_name":"Bash","tool_input":{"command":"git status"}}`,
+		"not JSON":                  "not json",
+		"empty input":               "",
+		"no command":                `{"tool_name":"Bash"}`,
+		"a command that isn't text": `{"tool_input":{"command":42}}`,
+	} {
+		w := newWorld()
+		if code, message := w.service().RunHook([]byte(input)); code != 0 || message != "" {
+			t.Errorf("%s: RunHook = (%d, %q), want (0, \"\")", name, code, message)
+		}
+		w.calledNothing(t)
+	}
+}
+
+// Without an active change there is nothing to attach a receipt to: the hook allows, and it
+// never asks where the stores are (so a directory that is not a repository costs nothing).
+func TestHookAllowsWithoutAnActiveChangeAndNeverListsTheStores(t *testing.T) {
+	w := newWorld()
+	w.changes = []string{"stray"}
+	w.storesErr = errors.New("not a repository")
+
+	if code, message := w.service().RunHook([]byte(ackInput)); code != 0 || message != "" {
+		t.Errorf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	}
+	for _, call := range w.calls {
+		if call == "Stores" {
+			t.Error("the hook asked for the stores although there is no change to capture into")
+		}
+	}
+}
+
+func TestHookCapturesIntoTheSingleActiveChange(t *testing.T) {
+	w := newWorld()
+	w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-solo")}
+
+	if code, message := w.service().RunHook([]byte(ackInput)); code != 0 || message != "" {
+		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	}
+	if !reflect.DeepEqual(w.writes, []string{"only/review-solo.json"}) {
+		t.Errorf("writes = %v", w.writes)
+	}
+}
+
+func TestHookDeniesWhenCaptureFails(t *testing.T) {
+	w := newWorld()
+	w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
+	w.storesErr = errors.New("git rev-parse --show-toplevel: exit status 128")
+
+	code, message := w.service().RunHook([]byte(ackInput))
+	if want := "review-receipt: capture failed: reviewreceipt: git rev-parse --show-toplevel: exit status 128"; code != 2 || message != want {
+		t.Errorf("RunHook = (%d, %q), want (2, %q)", code, message, want)
+	}
+}
+
+func TestHookDeniesAnAmbiguousChangeUnlessEveryReceiptIsPersisted(t *testing.T) {
+	setup := func() *world {
+		w := newWorld()
+		w.changes, w.artifacts = []string{"b", "a"}, map[string][]string{"a": {"tasks.md"}, "b": {"tasks.md"}}
+		w.stores = []reviewreceipt.Store{"s"}
+		w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-1")}
+		return w
+	}
+
+	w := setup()
+	code, message := w.service().RunHook([]byte(ackInput))
+	wantDeny := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` before acknowledging"
+	if code != 2 || message != wantDeny {
+		t.Errorf("unpersisted: RunHook = (%d, %q), want (2, %q)", code, message, wantDeny)
+	}
+	if len(w.writes) != 0 {
+		t.Errorf("the hook guessed a change and wrote %v", w.writes)
+	}
+
+	w = setup()
+	w.persisted["a/review-1.json"] = approvedReceiptDoc("review-1").Data
+	if code, message := w.service().RunHook([]byte(ackInput)); code != 0 || message != "" {
+		t.Errorf("persisted: RunHook = (%d, %q), want (0, \"\")", code, message)
+	}
+
+	w = setup()
+	w.storesErr = errors.New("no repository")
+	if code, message := w.service().RunHook([]byte(ackInput)); code != 2 || message != "review-receipt: reviewreceipt: no repository" {
+		t.Errorf("survey fails: RunHook = (%d, %q), want (2, %q)", code, message, "review-receipt: reviewreceipt: no repository")
+	}
+}
+
+func TestHookDeniesWhenTheChangesCannotBeListed(t *testing.T) {
+	w := newWorld()
+	w.changesErr = errors.New("read changes: denied")
+	if code, message := w.service().RunHook([]byte(ackInput)); code != 2 || message != "review-receipt: reviewreceipt: read changes: denied" {
+		t.Errorf("RunHook = (%d, %q)", code, message)
+	}
+}
+
+// A service that is missing a port cannot do its work, which it says, never by guessing: the
+// hook denies an acknowledgement it cannot guard and still passes every other command.
+func TestAServiceMissingAPortRefusesInsteadOfGuessing(t *testing.T) {
+	w := newWorld()
+	for _, svc := range []*reviewreceipt.Service{
+		{},
+		reviewreceipt.NewService(reviewreceipt.Ports{Source: w, Sink: w, Changes: w}),
+		reviewreceipt.NewService(reviewreceipt.Ports{Stores: w, Sink: w, Changes: w}),
+		reviewreceipt.NewService(reviewreceipt.Ports{Stores: w, Source: w, Changes: w}),
+		reviewreceipt.NewService(reviewreceipt.Ports{Stores: w, Source: w, Sink: w}),
+	} {
+		if _, err := svc.Capture("c"); err == nil || !strings.Contains(err.Error(), "port") {
+			t.Errorf("Capture = %v, want a refusal naming the missing port", err)
+		}
+		if _, err := svc.DetectActiveChange(); err == nil {
+			t.Error("DetectActiveChange accepted a service with a missing port")
+		}
+		if _, err := svc.AllSurvivingApprovedPersisted([]string{"c"}); err == nil {
+			t.Error("AllSurvivingApprovedPersisted accepted a service with a missing port")
+		}
+		if code, message := svc.RunHook([]byte(ackInput)); code != 2 || !strings.HasPrefix(message, "review-receipt: ") {
+			t.Errorf("RunHook of an acknowledgement = (%d, %q), want a denial", code, message)
+		}
+		if code, message := svc.RunHook([]byte(`{"tool_input":{"command":"ls"}}`)); code != 0 || message != "" {
+			t.Errorf("RunHook of another command = (%d, %q), want (0, \"\")", code, message)
+		}
+	}
+	w.calledNothing(t)
+}

@@ -16,6 +16,10 @@
 // does not name this toplevel back (a forged or copied gitfile). Git is run with fixed argv and with every
 // GIT_* variable removed from its environment, so ambient configuration such
 // as GIT_CONFIG_* or GIT_CEILING_DIRECTORIES cannot steer discovery.
+//
+// Locate answers a narrower question with the same checks: which git directories
+// belong to the worktree that holds a directory, which may be any directory
+// inside the worktree, in a repository that may have no commit yet.
 package gitprov
 
 import (
@@ -39,7 +43,8 @@ type Observation struct {
 	// repository; it equals GitDir for a main worktree.
 	CommonDir string
 	// Head is the full object name HEAD resolved to. Informational only: it
-	// is not bound and proves nothing about what is checked out now.
+	// is not bound and proves nothing about what is checked out now. Locate
+	// does not ask for it and leaves it empty.
 	Head string
 	// Linked reports whether the root is a linked worktree (GitDir differs
 	// from CommonDir).
@@ -86,6 +91,12 @@ func Observe(root string) (Observation, error) {
 	return Observer{Run: ExecRunner, Environ: os.Environ()}.Observe(root)
 }
 
+// Locate locates the worktree that holds dir with the real git binary found on
+// PATH and the process environment. See Observer.Locate.
+func Locate(dir string) (Observation, error) {
+	return Observer{Run: ExecRunner, Environ: os.Environ()}.Locate(dir)
+}
+
 // ExecRunner is the production Runner: it executes the git binary found on
 // PATH. An empty env stays empty; it never falls back to the process
 // environment.
@@ -104,6 +115,62 @@ func ExecRunner(dir string, env []string, args []string) ([]byte, error) {
 // must resolve to exactly the worktree toplevel. The first failed check wins
 // and no partial Observation is returned alongside an error.
 func (o Observer) Observe(root string) (Observation, error) {
+	return o.observe(root, true)
+}
+
+// Locate reports the worktree that holds dir, which must be absolute: dir itself
+// when it is the worktree toplevel, or any directory inside the worktree. It asks
+// git for the toplevel from dir, then judges that toplevel with every check
+// Observe makes, so a forged gitfile is refused from a subdirectory as it is
+// from the toplevel.
+//
+// It differs from Observe in two ways, both because its question is only which
+// git directories belong to this worktree. dir need not be the toplevel, and
+// HEAD need not name a commit: a repository with no commit yet has a git
+// directory and a common directory all the same. Head is left empty, and
+// nothing is asked of git to fill it. The first failed check wins and no partial
+// Observation is returned alongside an error.
+func (o Observer) Locate(dir string) (Observation, error) {
+	if o.Run == nil {
+		return Observation{}, fmt.Errorf("no git runner configured")
+	}
+	if dir == "" || !filepath.IsAbs(dir) {
+		return Observation{}, fmt.Errorf("directory %q is not an absolute path", dir)
+	}
+	resolvedDir, err := filepath.EvalSymlinks(dir)
+	if err != nil {
+		return Observation{}, fmt.Errorf("resolve directory %q: %w", dir, err)
+	}
+	env, err := scrubEnv(o.Environ)
+	if err != nil {
+		return Observation{}, err
+	}
+	toplevel, err := runPath(o.runner(resolvedDir, env), argvToplevel, "")
+	if err != nil {
+		return Observation{}, err
+	}
+	return o.observe(toplevel, false)
+}
+
+// runner returns the function that runs one fixed argv in dir under env and
+// returns its single line of output, wording each failure by the argv.
+func (o Observer) runner(dir string, env []string) func(argv []string) (string, error) {
+	return func(argv []string) (string, error) {
+		out, err := o.Run(dir, env, argv)
+		label := "git " + strings.Join(argv, " ")
+		if err != nil {
+			if errors.Is(err, exec.ErrNotFound) {
+				return "", fmt.Errorf("%s: git binary not found: %w", label, err)
+			}
+			return "", fmt.Errorf("%s: %w", label, err)
+		}
+		return singleLine(label, out)
+	}
+}
+
+// observe is Observe and Locate once the root is chosen; requireHead says
+// whether HEAD must name a commit (it is recorded when it is required).
+func (o Observer) observe(root string, requireHead bool) (Observation, error) {
 	if o.Run == nil {
 		return Observation{}, fmt.Errorf("no git runner configured")
 	}
@@ -118,17 +185,7 @@ func (o Observer) Observe(root string) (Observation, error) {
 	if err != nil {
 		return Observation{}, err
 	}
-	run := func(argv []string) (string, error) {
-		out, err := o.Run(resolvedRoot, env, argv)
-		label := "git " + strings.Join(argv, " ")
-		if err != nil {
-			if errors.Is(err, exec.ErrNotFound) {
-				return "", fmt.Errorf("%s: git binary not found: %w", label, err)
-			}
-			return "", fmt.Errorf("%s: %w", label, err)
-		}
-		return singleLine(label, out)
-	}
+	run := o.runner(resolvedRoot, env)
 
 	isBare, err := run(argvIsBare)
 	if err != nil {
@@ -176,12 +233,15 @@ func (o Observer) Observe(root string) (Observation, error) {
 		}
 	}
 
-	head, err := run(argvHead)
-	if err != nil {
-		return Observation{}, fmt.Errorf("HEAD does not name a commit: %w", err)
-	}
-	if !objectName.MatchString(head) {
-		return Observation{}, fmt.Errorf("HEAD %q is not a full lowercase object name", head)
+	var head string
+	if requireHead {
+		head, err = run(argvHead)
+		if err != nil {
+			return Observation{}, fmt.Errorf("HEAD does not name a commit: %w", err)
+		}
+		if !objectName.MatchString(head) {
+			return Observation{}, fmt.Errorf("HEAD %q is not a full lowercase object name", head)
+		}
 	}
 
 	return Observation{Toplevel: toplevel, GitDir: gitDir, CommonDir: commonDir, Head: head, Linked: linked}, nil
