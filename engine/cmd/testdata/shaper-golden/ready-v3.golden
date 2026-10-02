@@ -1,0 +1,135 @@
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 3
+--- stdout ---
+{
+  "state": "draft",
+  "blockers": [
+    {
+      "reason": "clearance_missing",
+      "kind": "unprovable",
+      "detail": "no host-owned clearance supplied"
+    }
+  ],
+  "flags": [],
+  "subject": {
+    "project_id": "standalone-shaper-handoff",
+    "goal_id": "goal-alpha",
+    "handoff_source_path": "handoff.json",
+    "handoff_sha256": "78bf699dea11c5b9fd5b7ed19715d6135a29a93b60fbf29468c2b5c039938c28",
+    "goal_source_path": "goal.json",
+    "goal_sha256": "9fbdce9dd8a64874e2d43ae315ecc98d3f7de5cd753f0d8c442aaabfc390eb8a",
+    "provenance_sha256": "<PROVENANCE-SHA256>",
+    "view_sha256": "ba32930efcfef989e9ac778a897680c12f80a10fcc868a6dd5d64ccaad0ad8ab",
+    "worktree": {
+      "toplevel": "<ROOT>",
+      "git_dir": "<ROOT>/.git",
+      "common_dir": "<ROOT>/.git"
+    }
+  },
+  "clearance": {
+    "status": "absent",
+    "path": "<STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/78bf699dea11c5b9fd5b7ed19715d6135a29a93b60fbf29468c2b5c039938c28.json"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work."
+}
+--- stderr ---
+
+$ shaper clearance record --root <ROOT> --handoff handoff.json --goal goal.json --stdin
+exit: 0
+--- stdout ---
+shaper clearance record: stored affirm record at <STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/78bf699dea11c5b9fd5b7ed19715d6135a29a93b60fbf29468c2b5c039938c28.json
+Trust limit: this clearance is bound to exact content by SHA-256 digests only; it is not a signature. Any process running as the same OS user, including any installed Pi extension, can forge a clearance record, and the Claude Code and Pi deny guards are speed bumps, not a security boundary. Readiness grants no execution authority.
+--- stderr ---
+
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json
+exit: 0
+--- stdout ---
+{
+  "state": "ready",
+  "blockers": [],
+  "flags": [],
+  "subject": {
+    "project_id": "standalone-shaper-handoff",
+    "goal_id": "goal-alpha",
+    "handoff_source_path": "handoff.json",
+    "handoff_sha256": "78bf699dea11c5b9fd5b7ed19715d6135a29a93b60fbf29468c2b5c039938c28",
+    "goal_source_path": "goal.json",
+    "goal_sha256": "9fbdce9dd8a64874e2d43ae315ecc98d3f7de5cd753f0d8c442aaabfc390eb8a",
+    "provenance_sha256": "<PROVENANCE-SHA256>",
+    "view_sha256": "ba32930efcfef989e9ac778a897680c12f80a10fcc868a6dd5d64ccaad0ad8ab",
+    "worktree": {
+      "toplevel": "<ROOT>",
+      "git_dir": "<ROOT>/.git",
+      "common_dir": "<ROOT>/.git"
+    }
+  },
+  "clearance": {
+    "status": "verified",
+    "path": "<STATE>/labdrian/shaper-clearance/standalone-shaper-handoff/goal-alpha/78bf699dea11c5b9fd5b7ed19715d6135a29a93b60fbf29468c2b5c039938c28.json"
+  },
+  "authority": "Readiness is evidence only and grants no execution authority; it never permits or dispatches work.",
+  "disclosure": "Trust limit: this clearance is bound to exact content by SHA-256 digests only; it is not a signature. Any process running as the same OS user, including any installed Pi extension, can forge a clearance record, and the Claude Code and Pi deny guards are speed bumps, not a security boundary. Readiness grants no execution authority. Plan completeness: ready covers the full Phase 3 plan: roles, tests, risks, estimates, memory_scope, and delivery_limit are present, alongside the approved handoff core and each acceptance criterion's planned verification. Planned checks, adjudications, and tests were not executed; their results are downstream fulfillment evidence, not proof that any criterion or test was met. Readiness grants no execution authority."
+}
+--- stderr ---
+
+$ shaper assess --root <ROOT> --handoff handoff.json --goal goal.json --view
+exit: 0
+--- stdout ---
+labdrian shaper clearance view 3
+goal 319
+{"version":2,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","objective":"Bind the handoff to real intent.","scope":"One project.","constraints":[],"non_goals":[],"acceptance_criteria":["Binding succeeds."],"memory_scope":"Project-scoped.","runtime_scope":"Deferred.","delivery_boundary":"No delivery."}
+plan 906
+{"version":3,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","architecture":"Layered CLI.","stages":["Extract jsonstrict.","Refactor goal.Parse."],"acceptance":[{"criterion":"go test ./... passes.","verification":{"check":"cd engine && go test -count=1 ./..."}},{"criterion":"The help reads clearly.","verification":{"adjudication":"A maintainer judges the help text."}}],"out_of_scope":["Runtime clearance UI."],"roles":[{"role":"implementer","responsibility":"Writes the code."},{"role":"reviewer","responsibility":"Reviews the diff."}],"tests":["go test ./... passes."],"risks":[{"risk":"Scope creep.","mitigation":"Stick to the approved design."}],"estimates":[{"stage":"Extract jsonstrict.","low_minutes":10,"high_minutes":20},{"stage":"Refactor goal.Parse.","low_minutes":15,"high_minutes":30}],"memory_scope":"Project-scoped.","delivery_limit":"No delivery without human clearance."}
+goal_scope 12
+One project.
+goal_non_goals 0
+out_of_scope 1
+item 21
+Runtime clearance UI.
+acceptance 2
+criterion 21
+go test ./... passes.
+verification_check 35
+cd engine && go test -count=1 ./...
+criterion 23
+The help reads clearly.
+verification_adjudication 34
+A maintainer judges the help text.
+memory_scope 15
+Project-scoped.
+goal_memory_scope 15
+Project-scoped.
+delivery_limit 36
+No delivery without human clearance.
+goal_delivery_boundary 12
+No delivery.
+roles 2
+role 11
+implementer
+responsibility 16
+Writes the code.
+role 8
+reviewer
+responsibility 17
+Reviews the diff.
+tests 1
+item 21
+go test ./... passes.
+risks 1
+risk 12
+Scope creep.
+mitigation 29
+Stick to the approved design.
+estimates 2
+stage 19
+Extract jsonstrict.
+low_minutes 10
+high_minutes 20
+stage 20
+Refactor goal.Parse.
+low_minutes 15
+high_minutes 30
+flags 0
+--- stderr ---
+Trust limit: this clearance is bound to exact content by SHA-256 digests only; it is not a signature. Any process running as the same OS user, including any installed Pi extension, can forge a clearance record, and the Claude Code and Pi deny guards are speed bumps, not a security boundary. Readiness grants no execution authority. Plan completeness: ready covers the full Phase 3 plan: roles, tests, risks, estimates, memory_scope, and delivery_limit are present, alongside the approved handoff core and each acceptance criterion's planned verification. Planned checks, adjudications, and tests were not executed; their results are downstream fulfillment evidence, not proof that any criterion or test was met. Readiness grants no execution authority.
+

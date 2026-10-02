@@ -1,0 +1,294 @@
+== handoff missing
+$ roles match-shaper --root <ROOT> --handoff absent.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoff source "absent.json" is not accessible: lstat <ROOT>/absent.json: no such file or directory
+
+
+== goal missing
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff is a symlink
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoff source "handoff.json" must not be a symlink
+
+
+== goal is a symlink
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff is a directory
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoff source "handoff.json" must be a regular file
+
+
+== goal is a directory
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff through a symlinked directory out of the root
+$ roles match-shaper --root <ROOT> --handoff escape/handoff.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoff source "escape/handoff.json" resolves outside the worktree root
+
+
+== goal through a symlinked directory out of the root
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff traverses above the root
+$ roles match-shaper --root <ROOT> --handoff ../handoff.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoffPath must not traverse outside the worktree root, got "../handoff.json"
+
+
+== goal traverses above the root
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff is an absolute path
+$ roles match-shaper --root <ROOT> --handoff <ROOT>/handoff.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoffPath must be relative, got "<ROOT>/handoff.json"
+
+
+== goal is an absolute path
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff is the root itself
+$ roles match-shaper --root <ROOT> --handoff .
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: handoffPath must not resolve to the worktree root itself, got "."
+
+
+== goal is empty
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff in a nested directory
+$ roles match-shaper --root <ROOT> --handoff ./nested/dir/../dir/handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== handoff is not a valid handoff
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 1
+--- stdout ---
+--- stderr ---
+error: roles match-shaper: load handoff: parse shaper handoff: unsupported version 9, want 1
+
+
+== goal is not a valid goal
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
+== goal names another project
+$ roles match-shaper --root <ROOT> --handoff handoff.json
+exit: 0
+--- stdout ---
+{
+  "handoff_version": 3,
+  "matches": [
+    {
+      "role": "implementer",
+      "responsibility": "Writes the code.",
+      "matches_vocabulary": false
+    },
+    {
+      "role": "reviewer",
+      "responsibility": "Reviews the diff.",
+      "matches_vocabulary": true
+    }
+  ],
+  "authority": "Role data carries no execution authority; no roles command launches an agent or dispatches work."
+}
+--- stderr ---
+
+
