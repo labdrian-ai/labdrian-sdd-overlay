@@ -2,13 +2,13 @@ $ review-receipt capture --cwd <ROOT>
 exit: 1
 --- stdout ---
 --- stderr ---
-error: review-receipt capture: reviewreceipt: git rev-parse --git-dir: exit status 128
+error: review-receipt capture: reviewreceipt: git rev-parse --show-toplevel: exit status 128
 
 $ review-receipt capture --cwd <ROOT> --change the-change
 exit: 1
 --- stdout ---
 --- stderr ---
-error: review-receipt capture: reviewreceipt: git rev-parse --git-dir: exit status 128
+error: review-receipt capture: reviewreceipt: git rev-parse --show-toplevel: exit status 128
 
 === after ===
 dir  openspec

@@ -81,20 +81,12 @@ var rings = map[string]archguard.Ring{
 // known ones are not listed below and are owed to their units all the same:
 //
 //   - cmd: skillsLockWait and the other global seams of main.go (H31)
-//   - reviewreceipt: the global store path variable (H12)
 var knownDebt = archguard.Debt{
 	// pathguard: the file system half (symlink resolution) moves to
 	// pathguard/fsresolve, leaving the pure containment rules.
 	"pathguard": {
 		"os":                         "H22",
 		"path/filepath.EvalSymlinks": "H22",
-	},
-
-	// reviewreceipt: the receipt scan and the git resolution move behind ports
-	// and a reviewreceipt/fsstore adapter.
-	"reviewreceipt": {
-		"os":      "H12",
-		"os/exec": "H12",
 	},
 
 	// skills: the concrete file system moves to skills/skillsfs.

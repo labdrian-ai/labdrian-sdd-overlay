@@ -9,7 +9,7 @@ import (
 )
 
 // writeReceiptFile persists a gentle-ai.review-receipt/v2-shaped JSON file
-// under dir/<lineage>.json, exactly as engine/reviewreceipt.Capture would
+// under dir/<lineage>.json, exactly as engine/reviewreceipt.Service.Capture would
 // have written it.
 func writeReceiptFile(t *testing.T, dir, lineage, finalCandidateTree, terminalState string) {
 	t.Helper()

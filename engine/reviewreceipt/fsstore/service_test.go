@@ -480,3 +480,40 @@ func TestARootGivenAsASymlinkOrARelativePathFindsTheSameStores(t *testing.T) {
 		}
 	}
 }
+
+// A repository that gitprov refuses is refused by the hook too, in gitprov's words, not
+// trusted: a gitfile naming a git directory that does not name this tree back (a forged or
+// copied one), and a GIT_DIR in the environment that points git elsewhere. The hook is
+// fail-closed, so it denies the acknowledgement.
+func TestARepositoryGitprovRefusesIsRefusedByTheHook(t *testing.T) {
+	repo := gitFixtureRepo(t)
+	writeReceipt(t, gitDirOf(repo), "review-one", "gentle-ai.review-receipt/v2", "approved")
+
+	t.Run("a forged gitfile", func(t *testing.T) {
+		forged := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-forged")
+		if err := os.MkdirAll(forged, 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(filepath.Join(forged, ".git"), []byte("gitdir: "+gitDirOf(repo)+"\n"), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		seedActiveChange(t, forged, "c")
+
+		code, message := serviceFor(t, forged).RunHook([]byte(ackHookInput))
+		if code != 2 || !strings.Contains(message, "core.worktree") {
+			t.Errorf("RunHook = (%d, %q), want a deny that says why the worktree is not trusted", code, message)
+		}
+		if _, err := os.Stat(receiptsOf(forged, "c")); !os.IsNotExist(err) {
+			t.Errorf("a receipt was captured from the repository a forged gitfile names (stat err=%v)", err)
+		}
+	})
+	t.Run("GIT_DIR in the environment", func(t *testing.T) {
+		seedActiveChange(t, repo, "c")
+		t.Setenv("GIT_DIR", gitDirOf(repo))
+
+		code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput))
+		if code != 2 || !strings.Contains(message, "GIT_DIR") {
+			t.Errorf("RunHook = (%d, %q), want a deny naming GIT_DIR", code, message)
+		}
+	})
+}

@@ -4,7 +4,7 @@ $ review-receipt hook --cwd <ROOT>
 exit: 2
 --- stdout ---
 --- stderr ---
-review-receipt: capture failed: reviewreceipt: git rev-parse --git-dir: exit status 128
+review-receipt: capture failed: reviewreceipt: git rev-parse --show-toplevel: exit status 128
 
 $ review-receipt hook --cwd <ROOT>
 --- stdin ---
@@ -12,7 +12,7 @@ $ review-receipt hook --cwd <ROOT>
 exit: 2
 --- stdout ---
 --- stderr ---
-review-receipt: reviewreceipt: git rev-parse --git-dir: exit status 128
+review-receipt: reviewreceipt: git rev-parse --show-toplevel: exit status 128
 
 === after ===
 dir  openspec

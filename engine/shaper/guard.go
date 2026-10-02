@@ -43,7 +43,7 @@ type guardHookInput struct {
 }
 
 // RunGuardHook implements the Claude Code PreToolUse clearance deny guard,
-// following reviewreceipt.RunHook. It returns (0, "") to allow and
+// following reviewreceipt.Service.RunHook. It returns (0, "") to allow and
 // (2, message) to deny. It denies when a Bash command names the record entry
 // point or the store path, or when a file tool's path lies in the store.
 // Unlike RunHook it fails closed: input it cannot decode is denied, because

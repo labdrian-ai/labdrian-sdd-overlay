@@ -146,3 +146,20 @@ func TestNewClearanceStoreResolvesTheStateHomeFromTheEnvironment(t *testing.T) {
 		lands(t, filepath.Join(home, ".local", "state"))
 	})
 }
+
+// The review receipt capture is built over the project root the verb was given, with the
+// real git; an empty root is refused instead of looking at whatever directory the process
+// happens to be in.
+func TestNewReviewReceiptServiceIsBuiltOverTheProjectRoot(t *testing.T) {
+	if svc, err := newReviewReceiptService(""); err == nil || svc != nil {
+		t.Errorf("newReviewReceiptService(\"\") = %v, %v, want no service and an error", svc, err)
+	}
+	svc, err := newReviewReceiptService(t.TempDir())
+	if err != nil || svc == nil {
+		t.Fatalf("newReviewReceiptService(dir) = %v, %v, want a service", svc, err)
+	}
+	// A project with no openspec/changes has no change to capture into, whatever git says.
+	if change, err := svc.DetectActiveChange(); err != nil || change != "" {
+		t.Errorf("DetectActiveChange = %q, %v, want none", change, err)
+	}
+}
