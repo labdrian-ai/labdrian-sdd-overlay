@@ -25,8 +25,8 @@ import (
 //     it stats files and the PATH, and capability itself stays pure.
 //   - shaper/fsadapter is the adapter of the shaper's file-facing ports: the
 //     ClearanceStore and the ContainedSource (H10).
-//   - installer, shelltest, capabilitytest and this guard (the module root) are
-//     test-only.
+//   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
+//     tests share) and this guard (the module root) are test-only.
 var rings = map[string]archguard.Ring{
 	".":                   archguard.Support,
 	"assets":              archguard.Adapter,
@@ -56,6 +56,7 @@ var rings = map[string]archguard.Ring{
 	"settings":            archguard.Adapter,
 	"shaper":              archguard.Domain,
 	"shaper/fsadapter":    archguard.Adapter,
+	"shaper/shapertest":   archguard.Support,
 	"shelltest":           archguard.Support,
 	"skills":              archguard.Domain,
 	"statestore":          archguard.Adapter,

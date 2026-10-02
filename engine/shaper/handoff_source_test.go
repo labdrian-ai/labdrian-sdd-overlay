@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper/shapertest"
 )
 
 // LoadHandoff parses what a ContainedSource returns; reading the file is the source's.
@@ -18,12 +20,7 @@ import (
 // together with the zero HandoffSource, so no rejection leaks partial state.
 func assertLoadHandoffRejected(t *testing.T, got HandoffSource, err error, what string) {
 	t.Helper()
-	if err == nil {
-		t.Fatalf("LoadHandoff accepted %s", what)
-	}
-	if !reflect.DeepEqual(got, HandoffSource{}) {
-		t.Errorf("LoadHandoff returned a partial HandoffSource alongside error %v: %#v", err, got)
-	}
+	shapertest.AssertRejectedWithoutPartialState(t, "LoadHandoff", got, err, what)
 }
 
 func TestLoadHandoffReturnsParsedHandoffRawBytesAndDigest(t *testing.T) {

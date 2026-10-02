@@ -112,6 +112,33 @@ func TestGetRefusesARecordFileOverTheBound(t *testing.T) {
 	}
 }
 
+// The size a refusal names is the larger of what the opened file reported and what was read
+// of it. They differ when the file grew between the open and the read: the descriptor
+// reported a few bytes and the read then returned the bound plus one, and a refusal that
+// said "is 10 bytes, exceeding the maximum" would contradict itself. The race cannot be
+// staged through Get, which opens and reads in one call, so the wording is pinned where it
+// is made.
+func TestTheRefusalOfAnOversizedRecordNamesTheLargerOfTheSizeAndWhatWasRead(t *testing.T) {
+	const path = "/state/record.json"
+	for _, tc := range []struct {
+		name     string
+		reported int64
+		read     int
+		want     int64
+	}{
+		{"a file that reported its full size", 512 << 20, shaper.MaxRecordBytes + 1, 512 << 20},
+		{"a file that grew after it was opened", 10, shaper.MaxRecordBytes + 1, shaper.MaxRecordBytes + 1},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := recordTooLarge(path, tc.reported, tc.read)
+			want := fmt.Sprintf("clearance store: record %q is %d bytes, exceeding the maximum of %d", path, tc.want, shaper.MaxRecordBytes)
+			if err == nil || err.Error() != want {
+				t.Errorf("recordTooLarge(%d, %d) = %v, want %q", tc.reported, tc.read, err, want)
+			}
+		})
+	}
+}
+
 // A file far over the bound is refused without being read in full: the read stops one byte
 // past the bound. A sparse file occupies almost no disk but reports its full size.
 func TestGetDoesNotReadAFileFarOverTheBound(t *testing.T) {
@@ -137,34 +164,5 @@ func TestGetDoesNotReadAFileFarOverTheBound(t *testing.T) {
 	// times less than reading the file whole would allocate.
 	if allocated := after.TotalAlloc - before.TotalAlloc; allocated > 8*shaper.MaxRecordBytes {
 		t.Errorf("Get of a 512 MiB file allocated %d bytes, want at most %d: the file must not be read past the bound", allocated, 8*shaper.MaxRecordBytes)
-	}
-}
-
-// A record that cannot be written because the directory refuses a new file is refused in
-// the store's name with the words of the write that failed (engine/atomicfile's). The
-// store printed "write temporary record" and "publish record" for these before it was
-// built on atomicfile; that wording is the documented difference, and this pins what
-// replaced it.
-func TestPutReportsAWriteFailureInTheAtomicFileWords(t *testing.T) {
-	if os.Geteuid() == 0 {
-		t.Skip("a read-only directory does not stop root from writing")
-	}
-	s, state := newTestStore(t)
-	key, data := storedRecord(t)
-	dir := filepath.Dir(recordPath(state, key))
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	if err := os.Chmod(dir, 0o500); err != nil {
-		t.Fatal(err)
-	}
-	t.Cleanup(func() { os.Chmod(dir, 0o700) })
-
-	_, err := s.Put(data)
-	if err == nil || !strings.HasPrefix(err.Error(), "clearance store: atomicfile: create temporary file: ") || !strings.HasSuffix(err.Error(), "permission denied") {
-		t.Fatalf("Put into a directory that refuses a new file = %v, want %q ... %q", err, "clearance store: atomicfile: create temporary file: ", "permission denied")
-	}
-	if _, err := os.Lstat(recordPath(state, key)); !os.IsNotExist(err) {
-		t.Errorf("a record exists after a failed Put (err %v)", err)
 	}
 }

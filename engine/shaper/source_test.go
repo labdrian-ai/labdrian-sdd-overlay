@@ -106,6 +106,21 @@ func TestReadsWithoutAContainedSourceAreRefused(t *testing.T) {
 	}
 }
 
+// The lexical rules run before the source is looked at: a path refused by its spelling is
+// reported as that, whether or not there is a source to ask, so the refusal a caller sees
+// does not depend on which of the two faults it happened to have. A well-spelled path with
+// no source is the refusal above.
+func TestAPathRefusedByItsSpellingIsReportedEvenWithoutASource(t *testing.T) {
+	for _, ep := range entryPoints() {
+		t.Run(ep.name, func(t *testing.T) {
+			err := ep.read(nil, sourceRoot, "../goal.json")
+			if want := ep.prefix + ep.arg + ` must not traverse outside the worktree root, got "../goal.json"`; err == nil || err.Error() != want {
+				t.Errorf("%s with no source and a traversing path = %v, want %q", ep.name, err, want)
+			}
+		})
+	}
+}
+
 // What the source returns as an error is passed on as it is, under the operation's prefix,
 // so the domain adds no wording of its own to a refusal that is the source's to explain.
 func TestWhatTheSourceRefusesIsPassedOnUnderTheOperationsPrefix(t *testing.T) {

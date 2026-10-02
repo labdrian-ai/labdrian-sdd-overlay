@@ -5,24 +5,17 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper/shapertest"
 )
 
-const validHandoffJSON = `{"version":1,"project_id":"standalone-shaper-handoff","goal_id":"goal-alpha","architecture":"Layered CLI with a shared jsonstrict wire gate.","stages":["Extract jsonstrict.","Refactor goal.Parse onto jsonstrict."],"acceptance":["go test ./... passes."],"out_of_scope":["Runtime clearance UI."]}`
+// The valid handoff and the way a test varies it are shared with the file-backed adapter's
+// tests (shapertest), so the two cannot disagree about what a valid document is.
+const validHandoffJSON = shapertest.ValidHandoffJSON
 
 func documentWith(t *testing.T, changes map[string]any) []byte {
 	t.Helper()
-	var fields map[string]any
-	if err := json.Unmarshal([]byte(validHandoffJSON), &fields); err != nil {
-		t.Fatalf("decode valid test document: %v", err)
-	}
-	for key, value := range changes {
-		fields[key] = value
-	}
-	data, err := json.Marshal(fields)
-	if err != nil {
-		t.Fatalf("encode test document: %v", err)
-	}
-	return data
+	return shapertest.DocumentWith(t, changes)
 }
 
 func documentWithout(t *testing.T, field string) []byte {

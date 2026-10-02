@@ -29,10 +29,12 @@
 // a path inside a worktree. It opens the file once without following a symlink, checks the
 // descriptor it holds, proves from that descriptor (not from the path) that the file lies
 // inside the worktree root, and reads from the same descriptor, so nothing is proven of one
-// file and read from another. It keeps the code and the messages it had in the shaper
-// package, and its one test seam, a hook that lets a test race the file system between
-// those steps, is a field of the struct rather than a variable of the package. On a
-// platform that cannot ask the kernel which path a descriptor names (anything but linux and
-// darwin) it refuses every read when it is asked, and the messages for that case are the
-// ones it always had.
+// file and read from another. It keeps the messages it had in the shaper package. The
+// no-follow open is engine/statestore's, the one owner of it, shared with the clearance
+// store above; the source's two test seams, a hook that lets a test race the file system
+// between those steps and the opener itself (so a test runs a platform that has no
+// no-follow open on any other), are fields of the struct rather than variables of the
+// package. On a platform that cannot open without following a symlink or ask the kernel
+// which path a descriptor names (anything but linux and darwin) it refuses every read when
+// it is asked, and says, as it always did, that the contained read is unsupported there.
 package fsadapter

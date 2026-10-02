@@ -7,6 +7,8 @@ import (
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper/shapertest"
 )
 
 // BindGoal parses and binds what a ContainedSource returns; reading the file is the
@@ -19,19 +21,12 @@ import (
 // together with the zero GoalBinding, so no rejection leaks partial state.
 func assertRejectedWithoutPartialBinding(t *testing.T, got GoalBinding, err error, what string) {
 	t.Helper()
-	if err == nil {
-		t.Fatalf("BindGoal accepted %s", what)
-	}
-	if !reflect.DeepEqual(got, GoalBinding{}) {
-		t.Errorf("BindGoal returned a partial GoalBinding alongside error %v: %#v", err, got)
-	}
+	shapertest.AssertRejectedWithoutPartialState(t, "BindGoal", got, err, what)
 }
 
+// goalV2JSON is shared with the file-backed adapter's tests (shapertest).
 func goalV2JSON(projectID, goalID string) string {
-	return `{"version":2,"project_id":"` + projectID + `","goal_id":"` + goalID + `",` +
-		`"objective":"Bind the handoff to real intent.","scope":"One project.",` +
-		`"constraints":[],"non_goals":[],"acceptance_criteria":["Binding succeeds."],` +
-		`"memory_scope":"Project-scoped.","runtime_scope":"Deferred.","delivery_boundary":"No delivery."}`
+	return shapertest.GoalV2JSON(projectID, goalID)
 }
 
 func TestBindGoalHappyPathReturnsExactBytesAndCleanedPath(t *testing.T) {
