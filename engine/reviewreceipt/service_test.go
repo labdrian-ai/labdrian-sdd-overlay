@@ -347,6 +347,30 @@ func TestCaptureRefusesAReceiptWhoseFileNameIsNotOnePathComponent(t *testing.T) 
 	}
 }
 
+// The refusal stops every capture until the document is dealt with, so it names the document
+// as its source reported it and says how to recover. It stays an *UnsafeNameError underneath.
+func TestARefusedApprovedReceiptNamesItsDocumentAndTheRemedy(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	bad := approvedReceiptDoc("../out")
+	bad.Origin = "s/review-bad/review-receipt.json"
+	w.docs["s"] = []reviewreceipt.Document{bad}
+
+	_, err := w.service().Capture("c1")
+	var unusable *reviewreceipt.UnusableReceiptError
+	var unsafe *reviewreceipt.UnsafeNameError
+	if !errors.As(err, &unusable) || unusable.Origin != bad.Origin || !errors.As(err, &unsafe) {
+		t.Fatalf("Capture error = %v, want an *UnusableReceiptError for %s wrapping an *UnsafeNameError", err, bad.Origin)
+	}
+	want := `reviewreceipt: the approved receipt in s/review-bad/review-receipt.json cannot be kept: reviewreceipt: receipt file name "../out.json" is not a safe path component: it holds a path separator; correct or remove that lineage in the review tool's store, then run the command again`
+	if err.Error() != want {
+		t.Errorf("Capture error =\n%s\nwant\n%s", err, want)
+	}
+	if _, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"}); !errors.As(err, &unusable) || unusable.Origin != bad.Origin {
+		t.Errorf("AllSurvivingApprovedPersisted error = %v, want the same *UnusableReceiptError", err)
+	}
+}
+
 // The survey that lets a retried acknowledgement through reads the sink too, so it refuses
 // the same names, and an unsafe change in its list is not asked about.
 func TestAllSurvivingApprovedPersistedRefusesNamesThatAreNotOnePathComponent(t *testing.T) {
@@ -379,10 +403,12 @@ func TestHookDeniesAnUnsafeNameInsteadOfWritingOutsideTheFolder(t *testing.T) {
 	w := newWorld()
 	w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
 	w.stores = []reviewreceipt.Store{"s"}
-	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("../../escaped")}
+	escaped := approvedReceiptDoc("../../escaped")
+	escaped.Origin = "s/review-escaped/review-receipt.json"
+	w.docs["s"] = []reviewreceipt.Document{escaped}
 
 	code, message := w.service().RunHook([]byte(ackInput))
-	want := `review-receipt: capture failed: reviewreceipt: receipt file name "../../escaped.json" is not a safe path component: it holds a path separator`
+	want := `review-receipt: capture failed: reviewreceipt: the approved receipt in s/review-escaped/review-receipt.json cannot be kept: reviewreceipt: receipt file name "../../escaped.json" is not a safe path component: it holds a path separator; correct or remove that lineage in the review tool's store, then run the command again`
 	if code != 2 || message != want {
 		t.Errorf("RunHook = (%d, %q), want (2, %q)", code, message, want)
 	}

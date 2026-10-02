@@ -151,7 +151,7 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 				}
 				return nil, fmt.Errorf("read %s: %w", path, err)
 			}
-			documents = append(documents, reviewreceipt.Document{Shape: file.shape, Data: data})
+			documents = append(documents, reviewreceipt.Document{Shape: file.shape, Data: data, Origin: path})
 		}
 	}
 	return documents, nil

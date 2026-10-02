@@ -4,7 +4,7 @@ $ review-receipt hook --cwd <ROOT>
 exit: 2
 --- stdout ---
 --- stderr ---
-review-receipt: capture failed: reviewreceipt: receipt file name "../../escaped.review-state.json" is not a safe path component: it holds a path separator
+review-receipt: capture failed: reviewreceipt: the approved receipt in <ROOT>/.git/gentle-ai/review-transactions/v2/review-b-escape/review-state.json cannot be kept: reviewreceipt: receipt file name "../../escaped.review-state.json" is not a safe path component: it holds a path separator; correct or remove that lineage in the review tool's store, then run the command again
 
 === after ===
 dir  openspec

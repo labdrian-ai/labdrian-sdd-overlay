@@ -126,9 +126,9 @@ func TestDocumentsAreTheLineagesInNameOrderLegacyBeforeState(t *testing.T) {
 		t.Fatalf("Documents: %v", err)
 	}
 	want := []reviewreceipt.Document{
-		{Shape: reviewreceipt.ShapeState, Data: []byte("a-state")},
-		{Shape: reviewreceipt.ShapeReceipt, Data: []byte("b-receipt")},
-		{Shape: reviewreceipt.ShapeState, Data: []byte("b-state")},
+		{Shape: reviewreceipt.ShapeState, Data: []byte("a-state"), Origin: filepath.Join(store, "review-a", "review-state.json")},
+		{Shape: reviewreceipt.ShapeReceipt, Data: []byte("b-receipt"), Origin: filepath.Join(store, "review-b", "review-receipt.json")},
+		{Shape: reviewreceipt.ShapeState, Data: []byte("b-state"), Origin: filepath.Join(store, "review-b", "review-state.json")},
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Documents = %q, want %q", got, want)

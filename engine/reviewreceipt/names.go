@@ -24,6 +24,22 @@ func (e *UnsafeNameError) Error() string {
 	return fmt.Sprintf("reviewreceipt: %s %q is not a safe path component: %s", e.Kind, e.Name, e.Reason)
 }
 
+// UnusableReceiptError reports an approved receipt that cannot be kept because of the
+// document it came from. It stops the capture instead of skipping the receipt, since a
+// receipt skipped in silence would be lost; so it names the document and the remedy.
+type UnusableReceiptError struct {
+	// Origin is where the document was read, as the source named it.
+	Origin string
+	// Err is why the receipt cannot be kept.
+	Err error
+}
+
+func (e *UnusableReceiptError) Error() string {
+	return fmt.Sprintf("reviewreceipt: the approved receipt in %s cannot be kept: %v; correct or remove that lineage in the review tool's store, then run the command again", e.Origin, e.Err)
+}
+
+func (e *UnusableReceiptError) Unwrap() error { return e.Err }
+
 // The reasons a name is refused, in the order the rules are checked.
 const (
 	reasonEmpty      = "it is empty"

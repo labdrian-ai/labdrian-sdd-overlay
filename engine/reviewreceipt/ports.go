@@ -21,6 +21,9 @@ type Store string
 type Document struct {
 	Shape Shape
 	Data  []byte
+	// Origin names where the document was read, as the source names it (a file path for a
+	// file store). The domain only reports it, so a person can find the document.
+	Origin string
 }
 
 // TransactionStores says where the review transactions of the project are.

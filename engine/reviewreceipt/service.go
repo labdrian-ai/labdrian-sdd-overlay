@@ -127,7 +127,7 @@ func (s *Service) eachApproved(visit func(surviving) error) error {
 			// The lineage id was read from a document another program wrote; the file name
 			// it makes is checked before anything is asked of the sink with it.
 			if err := CheckPathComponent(kindReceiptFile, r.FileName()); err != nil {
-				return err
+				return &UnusableReceiptError{Origin: doc.Origin, Err: err}
 			}
 			if err := visit(surviving{Receipt: r, Data: doc.Data}); err != nil {
 				return err
