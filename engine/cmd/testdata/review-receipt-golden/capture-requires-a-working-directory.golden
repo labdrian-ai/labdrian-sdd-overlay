@@ -1,0 +1,12 @@
+$ review-receipt capture
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --cwd is required
+
+$ review-receipt capture --change x
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --cwd is required
+

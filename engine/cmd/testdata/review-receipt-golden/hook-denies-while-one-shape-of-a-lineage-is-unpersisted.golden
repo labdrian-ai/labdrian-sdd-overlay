@@ -1,0 +1,26 @@
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` before acknowledging
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/change-a
+dir  openspec/changes/change-a/review-receipts
+file openspec/changes/change-a/review-receipts/review-both.json 0644 202 532ac8082469
+file openspec/changes/change-a/review-receipts/review-both.review-state.json 0644 385 b371eaf8140c
+file openspec/changes/change-a/tasks.md 0644 8 b23b81c926c4
+dir  openspec/changes/change-b
+file openspec/changes/change-b/tasks.md 0644 8 b23b81c926c4
+

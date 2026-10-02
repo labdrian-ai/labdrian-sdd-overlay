@@ -19,7 +19,6 @@ func TestMain(m *testing.M) {
 	if err != nil {
 		panic(err)
 	}
-	defer os.RemoveAll(home)
 	os.Setenv("HOME", home)
 	os.Setenv("STATE_DIR", filepath.Join(home, ".labdrian-overlay"))
 	os.Unsetenv("OVERLAY_DIR")
@@ -27,5 +26,9 @@ func TestMain(m *testing.M) {
 	os.Setenv("XDG_STATE_HOME", filepath.Join(home, ".local", "state"))
 	os.Setenv("XDG_CONFIG_HOME", filepath.Join(home, ".config"))
 	os.Unsetenv("GENTLE_PI_AGENTS_CHILD")
-	os.Exit(m.Run())
+	// os.Exit does not run deferred calls, so what the run made is removed before it.
+	code := m.Run()
+	os.RemoveAll(home)
+	removeReviewReceiptBinary()
+	os.Exit(code)
 }

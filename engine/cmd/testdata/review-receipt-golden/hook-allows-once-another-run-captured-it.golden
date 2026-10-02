@@ -1,0 +1,40 @@
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` before acknowledging
+
+$ review-receipt capture --cwd <ROOT> --change change-a
+exit: 0
+--- stdout ---
+review-receipt capture: 2 receipt(s) captured for "change-a"
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` before acknowledging
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/change-a
+dir  openspec/changes/change-a/review-receipts
+file openspec/changes/change-a/review-receipts/review-fixable-state.review-state.json 0600 394 dee174adeb02
+file openspec/changes/change-a/review-receipts/review-fixable.json 0600 205 45889927f4b3
+file openspec/changes/change-a/tasks.md 0644 8 b23b81c926c4
+dir  openspec/changes/change-b
+file openspec/changes/change-b/tasks.md 0644 8 b23b81c926c4
+

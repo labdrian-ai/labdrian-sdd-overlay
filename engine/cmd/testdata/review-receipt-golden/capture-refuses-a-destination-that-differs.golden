@@ -1,0 +1,14 @@
+$ review-receipt capture --cwd <ROOT>
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: <ROOT>/openspec/changes/the-change/review-receipts/review-one.json already exists with different content
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/the-change
+dir  openspec/changes/the-change/review-receipts
+file openspec/changes/the-change/review-receipts/review-one.json 0644 2 44136fa355b3
+file openspec/changes/the-change/tasks.md 0644 8 b23b81c926c4
+

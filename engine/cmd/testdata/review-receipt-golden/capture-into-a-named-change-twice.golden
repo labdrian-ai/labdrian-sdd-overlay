@@ -1,0 +1,31 @@
+$ review-receipt capture --cwd <ROOT> --change change-b
+exit: 0
+--- stdout ---
+review-receipt capture: 1 receipt(s) captured for "change-b"
+--- stderr ---
+
+$ review-receipt capture --cwd <ROOT> --change change-b
+exit: 0
+--- stdout ---
+review-receipt capture: 1 receipt(s) captured for "change-b"
+--- stderr ---
+
+$ review-receipt capture --cwd <ROOT> --change a-change-with-no-folder
+exit: 0
+--- stdout ---
+review-receipt capture: 1 receipt(s) captured for "a-change-with-no-folder"
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/a-change-with-no-folder
+dir  openspec/changes/a-change-with-no-folder/review-receipts
+file openspec/changes/a-change-with-no-folder/review-receipts/review-one.json 0600 201 130e405e6318
+dir  openspec/changes/change-a
+file openspec/changes/change-a/tasks.md 0644 8 b23b81c926c4
+dir  openspec/changes/change-b
+dir  openspec/changes/change-b/review-receipts
+file openspec/changes/change-b/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/change-b/tasks.md 0644 8 b23b81c926c4
+

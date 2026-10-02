@@ -1,0 +1,18 @@
+$ review-receipt 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt requires a verb: capture, hook
+
+$ review-receipt frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt: unknown verb "frobnicate" (expected capture or hook)
+
+$ review-receipt capture --unknown --cwd
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --cwd is required
+

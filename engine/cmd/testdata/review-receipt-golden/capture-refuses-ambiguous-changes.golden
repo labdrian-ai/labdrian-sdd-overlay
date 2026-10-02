@@ -1,0 +1,14 @@
+$ review-receipt capture --cwd <ROOT>
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reviewreceipt: multiple active changes (change-a, change-b); run `review-receipt capture --change <name>` before acknowledging
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/change-a
+file openspec/changes/change-a/tasks.md 0644 8 b23b81c926c4
+dir  openspec/changes/change-b
+file openspec/changes/change-b/tasks.md 0644 8 b23b81c926c4
+
