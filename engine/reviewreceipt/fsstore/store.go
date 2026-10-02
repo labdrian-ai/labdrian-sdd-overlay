@@ -43,6 +43,7 @@ package fsstore
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 
@@ -140,6 +141,11 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 			if err != nil {
 				if os.IsNotExist(err) {
 					continue
+				}
+				// The path is named once: the cause of a *fs.PathError, not its own text.
+				var pathErr *fs.PathError
+				if errors.As(err, &pathErr) {
+					err = pathErr.Err
 				}
 				return nil, fmt.Errorf("read %s: %w", path, err)
 			}

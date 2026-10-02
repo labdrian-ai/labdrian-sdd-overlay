@@ -343,6 +343,17 @@ func receiptGoldenCases() []receiptGoldenCase {
 			w.putReceipt(gitDir, "review-no-lineage", legacyReceipt("", receiptSchemaV2, approved))
 			w.putState(gitDir, "review-state-no-lineage", lifecycleState("", approved))
 			w.put(filepath.Join(store(gitDir), "a-plain-file"), "not a lineage directory\n")
+			w.hook(root, acknowledgeCommand)
+			w.tree("after", root)
+		}},
+		// A review document that is there and cannot be read is never a silent absence: the
+		// hook would count fewer approved receipts than exist and lose one. It denies, names
+		// the document, and captures nothing.
+		{"hook-denies-an-unreadable-document", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			gitDir := filepath.Join(root, ".git")
+			w.change(root, "only-change")
+			w.putState(gitDir, "review-both", lifecycleState("review-both", approved))
 			if err := os.MkdirAll(filepath.Join(store(gitDir), "review-dir", "review-receipt.json"), 0o755); err != nil {
 				w.t.Fatal(err)
 			}

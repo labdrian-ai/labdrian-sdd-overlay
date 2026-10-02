@@ -166,7 +166,7 @@ func TestADocumentThatIsThereAndCannotBeReadIsAnErrorThatNamesIt(t *testing.T) {
 			t.Fatal(err)
 		}
 		got, err := newStore(t, dir, &locator{}).Documents(reviewreceipt.Store(store))
-		if err == nil || !strings.HasPrefix(err.Error(), "read "+doc+": ") || got != nil {
+		if err == nil || !strings.HasPrefix(err.Error(), "read "+doc+": ") || strings.Count(err.Error(), doc) != 1 || got != nil {
 			t.Errorf("Documents = %v, %v, want no documents and an error that names %s", got, err, doc)
 		}
 	})
@@ -183,7 +183,7 @@ func TestADocumentThatIsThereAndCannotBeReadIsAnErrorThatNamesIt(t *testing.T) {
 			t.Fatal(err)
 		}
 		got, err := newStore(t, dir, &locator{}).Documents(reviewreceipt.Store(store))
-		if err == nil || !strings.HasPrefix(err.Error(), "read "+secret+": ") || got != nil {
+		if err == nil || !strings.HasPrefix(err.Error(), "read "+secret+": ") || strings.Count(err.Error(), secret) != 1 || got != nil {
 			t.Errorf("Documents = %v, %v, want no documents and an error that names %s", got, err, secret)
 		}
 	})
