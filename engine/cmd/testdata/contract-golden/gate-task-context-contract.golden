@@ -1,0 +1,111 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["TypeScript"],"activations":["review"],"work_kinds":["application-code"]}
+# a matching trusted context
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["go"],"activations":["review"],"work_kinds":["application-code"]}
+# another language
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":false,"languages":["typescript"],"activations":["review"],"work_kinds":["application-code"]}
+# an untrusted context
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["typescript"],"activations":["review"]}
+# no work kinds
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["typescript"],"activations":["review"],"work_kinds":["documentation"]}
+# work that is not application code
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["typescript"],"activations":["planning"],"work_kinds":["application-code"]}
+# an activation the contract does not ask for
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# no context at all
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["go"],"activations":["review"],"work_kinds":["application-code"]}
+# an excluded phase strips whatever the context
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-propose"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-propose"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json not json
+# a context that is not JSON
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: work context ignored: invalid character 'o' in literal null (expecting 'u') (passing through for context-aware contracts)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-file /virtual/context.json
+# a context file
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["TypeScript"],"activations":["review"],"work_kinds":["application-code"]} --work-context-file /virtual/context.json
+# both forms of the context
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: work context ignored: use only one of --work-context-json or --work-context-file (passing through for context-aware contracts)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-file /virtual/missing.json
+# a context file that is missing
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: work context ignored: open /virtual/missing.json: file does not exist (passing through for context-aware contracts)
+

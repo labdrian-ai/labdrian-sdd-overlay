@@ -1,0 +1,57 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contract anti-generic-design
+# the block is inserted
+exit: none
+--- stdout ---
+registry: anti-generic-design scoped row inserted/updated
+--- stderr ---
+--- registry after ---
+# Skill Registry
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-scope (auto-generated) -->
+| other | skills/_shared/other.md | Foreign row |
+<!-- END: some-other-scope -->
+<!-- BEGIN: anti-generic-design-scope (auto-generated) -->
+| anti-generic-design | skills/_shared/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+<!-- END: anti-generic-design-scope -->
+
+### Other section
+
+text
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contract anti-generic-design
+# the same run again is silent
+exit: none
+--- stdout ---
+--- stderr ---
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contract anti-generic-design --contract-path custom/anti-generic-design.md
+# an explicit path for the row
+exit: none
+--- stdout ---
+registry: anti-generic-design scoped row inserted/updated
+--- stderr ---
+--- registry after ---
+# Skill Registry
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-scope (auto-generated) -->
+| other | skills/_shared/other.md | Foreign row |
+<!-- END: some-other-scope -->
+<!-- BEGIN: anti-generic-design-scope (auto-generated) -->
+| anti-generic-design | custom/anti-generic-design.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+<!-- END: anti-generic-design-scope -->
+
+### Other section
+
+text
+

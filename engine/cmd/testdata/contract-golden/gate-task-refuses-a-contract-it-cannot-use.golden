@@ -1,0 +1,80 @@
+$ gate-task 
+# no contract source
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: --contract-file not provided; all Agent hooks will pass through
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a contract file that is missing
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: cannot read contract file: open /virtual/skills/_shared/contract.md: file does not exist (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an empty file
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: contract file has no YAML frontmatter (expected content between --- delimiters) (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# no frontmatter
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: contract file has no YAML frontmatter (expected content between --- delimiters) (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# one delimiter only
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: contract file has no YAML frontmatter (expected content between --- delimiters) (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# no applies_to_phases
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an empty applies_to_phases list
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an applies_to_phases with no value
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into (passing through)
+
