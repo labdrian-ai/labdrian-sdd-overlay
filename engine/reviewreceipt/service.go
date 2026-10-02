@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+// What a name is for, as an UnsafeNameError says it.
+const (
+	kindChange      = "change name"
+	kindReceiptFile = "receipt file name"
+)
+
 // Service captures the review receipts of one project: it reads them from the stores the
 // review tool keeps its transactions in and persists them where the project versions them,
 // before the acknowledgement that burns them. It is built over the four ports and knows no
@@ -50,10 +56,15 @@ func (s *Service) ready() error {
 // byte-for-byte) this run, and on failure the ones that came before it.
 //
 // It never replaces a receipt file with different bytes: that is an error, not an overwrite.
-// A lineage is persisted once per shape, however many stores hold it.
+// A lineage is persisted once per shape, however many stores hold it. The change name and
+// every file name are checked to be one path component (CheckPathComponent) before the sink
+// is asked anything, so a receipt is never put outside the change's folder.
 func (s *Service) Capture(change string) ([]Captured, error) {
 	if strings.TrimSpace(change) == "" {
 		return nil, errors.New("reviewreceipt: change name is required")
+	}
+	if err := CheckPathComponent(kindChange, change); err != nil {
+		return nil, err
 	}
 	if err := s.ready(); err != nil {
 		return nil, err
@@ -113,6 +124,11 @@ func (s *Service) eachApproved(visit func(surviving) error) error {
 				continue
 			}
 			seen[key] = true
+			// The lineage id was read from a document another program wrote; the file name
+			// it makes is checked before anything is asked of the sink with it.
+			if err := CheckPathComponent(kindReceiptFile, r.FileName()); err != nil {
+				return err
+			}
 			if err := visit(surviving{Receipt: r, Data: doc.Data}); err != nil {
 				return err
 			}
@@ -138,6 +154,9 @@ func (s *Service) AllSurvivingApprovedPersisted(changes []string) (bool, error) 
 	for _, sv := range all {
 		found := false
 		for _, change := range changes {
+			if err := CheckPathComponent(kindChange, change); err != nil {
+				return false, err
+			}
 			persisted, err := s.ports.Sink.Read(change, sv.Receipt.FileName())
 			if errors.Is(err, ErrNotPersisted) {
 				continue

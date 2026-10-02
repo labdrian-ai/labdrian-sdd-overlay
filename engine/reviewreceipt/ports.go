@@ -46,7 +46,9 @@ type ReceiptSource interface {
 var ErrNotPersisted = errors.New("no such persisted receipt")
 
 // ReceiptSink keeps receipts where the project versions them: a change's review-receipts
-// folder.
+// folder. The change and the name every method is given are single safe path components
+// (CheckPathComponent): the Service checks them before it asks, so an adapter may join them
+// into a path without checking them again.
 type ReceiptSink interface {
 	// Read returns the bytes persisted under name in change's review-receipts folder, or
 	// an error satisfying errors.Is(err, ErrNotPersisted) when there are none.

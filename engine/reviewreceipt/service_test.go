@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt/receipttest"
 )
 
 // world is every port of the service answered from memory. It records the order of the
@@ -104,16 +105,15 @@ func (w *world) Location(change, name string) string {
 
 // the documents a store holds
 func receiptDoc(lineage, schema, terminal string) reviewreceipt.Document {
-	return reviewreceipt.Document{Shape: reviewreceipt.ShapeReceipt, Data: []byte(fmt.Sprintf(
-		`{"schema":%q,"lineage_id":%q,"final_candidate_tree":"tree","terminal_state":%q}`, schema, lineage, terminal))}
+	return reviewreceipt.Document{Shape: reviewreceipt.ShapeReceipt, Data: []byte(receipttest.ReceiptDocument(lineage, schema, terminal))}
 }
 
 func approvedReceiptDoc(lineage string) reviewreceipt.Document {
-	return receiptDoc(lineage, "gentle-ai.review-receipt/v2", "approved")
+	return receiptDoc(lineage, receipttest.ReceiptSchema, receipttest.Approved)
 }
 
 func stateDoc(lineage, state string) reviewreceipt.Document {
-	return reviewreceipt.Document{Shape: reviewreceipt.ShapeState, Data: stateJSON(lineage, state)}
+	return reviewreceipt.Document{Shape: reviewreceipt.ShapeState, Data: []byte(receipttest.StateDocument(lineage, state))}
 }
 
 func (w *world) calledNothing(t *testing.T) {
@@ -180,8 +180,8 @@ func TestCaptureSkipsWhatIsNotAnApprovedReceipt(t *testing.T) {
 	w.stores = []reviewreceipt.Store{"s"}
 	w.docs["s"] = []reviewreceipt.Document{
 		receiptDoc("review-v1", "gentle-ai.review-receipt/v1", "approved"),
-		receiptDoc("review-declined", "gentle-ai.review-receipt/v2", "declined"),
-		receiptDoc("", "gentle-ai.review-receipt/v2", "approved"),
+		receiptDoc("review-declined", receipttest.ReceiptSchema, "declined"),
+		receiptDoc("", receipttest.ReceiptSchema, "approved"),
 		stateDoc("review-reviewing", "reviewing"),
 		stateDoc("", "approved"),
 		{Shape: reviewreceipt.ShapeReceipt, Data: []byte("not json")},
@@ -299,6 +299,108 @@ func TestCaptureRequiresAChangeName(t *testing.T) {
 	}
 }
 
+// A change name that is not one path component is refused before anything is asked, and the
+// refusal names it: the receipts folder is joined from it, so a name with a separator or a
+// dot segment would put a receipt outside the folder, and one with white space at an end
+// would put it in a sibling that is not the change the caller meant.
+func TestCaptureRefusesAChangeNameThatIsNotOnePathComponent(t *testing.T) {
+	for _, change := range []string{"../x", "a/b", "/etc", "..", ".", " padded", "padded ", "padded\n", `a\b`} {
+		w := newWorld()
+		captured, err := w.service().Capture(change)
+		var unsafe *reviewreceipt.UnsafeNameError
+		if !errors.As(err, &unsafe) || unsafe.Kind != "change name" || unsafe.Name != change || captured != nil {
+			t.Errorf("Capture(%q) = %v, %v, want an *UnsafeNameError for the change name", change, captured, err)
+		}
+		if err != nil && !strings.HasPrefix(err.Error(), "reviewreceipt: change name ") {
+			t.Errorf("Capture(%q) error = %q, want it to name the change name", change, err)
+		}
+		w.calledNothing(t)
+	}
+}
+
+// The name a receipt is persisted under is made of the lineage id the review tool wrote,
+// which is read from a document in a directory another program owns. A lineage that would
+// put the file outside the folder is refused, before the sink is asked to read or write it,
+// and whatever came before it stays persisted.
+func TestCaptureRefusesAReceiptWhoseFileNameIsNotOnePathComponent(t *testing.T) {
+	for _, lineage := range []string{"../../escaped", "a/b", `a\b`, " padded", "line\nbreak"} {
+		w := newWorld()
+		w.stores = []reviewreceipt.Store{"s"}
+		w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-fine"), approvedReceiptDoc(lineage), approvedReceiptDoc("review-after")}
+
+		captured, err := w.service().Capture("c1")
+		var unsafe *reviewreceipt.UnsafeNameError
+		if !errors.As(err, &unsafe) || unsafe.Kind != "receipt file name" || unsafe.Name != lineage+".json" {
+			t.Errorf("lineage %q: Capture error = %v, want an *UnsafeNameError for the receipt file name", lineage, err)
+		}
+		if got := lineages(captured); !reflect.DeepEqual(got, []string{"review-fine"}) {
+			t.Errorf("lineage %q: captured %v, want only what came before the refusal", lineage, got)
+		}
+		for _, call := range w.calls {
+			if strings.Contains(call, lineage+".json") {
+				t.Errorf("lineage %q: the sink was asked %q", lineage, call)
+			}
+		}
+		if !reflect.DeepEqual(w.writes, []string{"c1/review-fine.json"}) {
+			t.Errorf("lineage %q: wrote %v, want only the receipt before the refusal", lineage, w.writes)
+		}
+	}
+}
+
+// The survey that lets a retried acknowledgement through reads the sink too, so it refuses
+// the same names, and an unsafe change in its list is not asked about.
+func TestAllSurvivingApprovedPersistedRefusesNamesThatAreNotOnePathComponent(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("../out")}
+	got, err := w.service().AllSurvivingApprovedPersisted([]string{"c1"})
+	var unsafe *reviewreceipt.UnsafeNameError
+	if !errors.As(err, &unsafe) || unsafe.Kind != "receipt file name" || got {
+		t.Errorf("unsafe lineage: AllSurvivingApprovedPersisted = %v, %v, want a refusal", got, err)
+	}
+
+	w = newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-a")}
+	got, err = w.service().AllSurvivingApprovedPersisted([]string{"c1", "../c2"})
+	if !errors.As(err, &unsafe) || unsafe.Kind != "change name" || unsafe.Name != "../c2" || got {
+		t.Errorf("unsafe change: AllSurvivingApprovedPersisted = %v, %v, want a refusal naming the change", got, err)
+	}
+	for _, call := range w.calls {
+		if strings.Contains(call, "../c2") {
+			t.Errorf("the sink was asked %q", call)
+		}
+	}
+}
+
+// The hook denies, naming the name, whichever way an unsafe name reaches the service: an
+// acknowledgement it cannot capture safely is one it must not let burn the receipt.
+func TestHookDeniesAnUnsafeNameInsteadOfWritingOutsideTheFolder(t *testing.T) {
+	w := newWorld()
+	w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("../../escaped")}
+
+	code, message := w.service().RunHook([]byte(ackInput))
+	want := `review-receipt: capture failed: reviewreceipt: receipt file name "../../escaped.json" is not a safe path component: it holds a path separator`
+	if code != 2 || message != want {
+		t.Errorf("RunHook = (%d, %q), want (2, %q)", code, message, want)
+	}
+	if len(w.writes) != 0 {
+		t.Errorf("the hook wrote %v", w.writes)
+	}
+
+	w = newWorld()
+	w.changes, w.artifacts = []string{"b", "a "}, map[string][]string{"a ": {"tasks.md"}, "b": {"tasks.md"}}
+	w.stores = []reviewreceipt.Store{"s"}
+	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-1")}
+	w.persisted["b/review-1.json"] = approvedReceiptDoc("review-1").Data
+	code, message = w.service().RunHook([]byte(ackInput))
+	if code != 2 || !strings.Contains(message, `change name "a "`) {
+		t.Errorf("padded change among several: RunHook = (%d, %q), want a denial naming the change", code, message)
+	}
+}
+
 // DetectActiveChange: a directory under openspec/changes is an active change when it is
 // not the archive and holds one of the SDD artifacts.
 func TestDetectActiveChange(t *testing.T) {
@@ -382,7 +484,7 @@ func TestAllSurvivingApprovedPersisted(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			w := newWorld()
 			w.stores = []reviewreceipt.Store{"s"}
-			w.docs["s"] = []reviewreceipt.Document{a, b, receiptDoc("review-declined", "gentle-ai.review-receipt/v2", "declined")}
+			w.docs["s"] = []reviewreceipt.Document{a, b, receiptDoc("review-declined", receipttest.ReceiptSchema, "declined")}
 			for k, v := range tc.persisted {
 				w.persisted[k] = v
 			}

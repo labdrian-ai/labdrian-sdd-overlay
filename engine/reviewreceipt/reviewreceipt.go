@@ -34,6 +34,14 @@
 // so a caller fails closed instead of guessing which change owns the
 // receipt.
 //
+// Names: the change name and the file name a receipt is persisted under are each
+// joined into a path by the sink, so each must be exactly one path component
+// (CheckPathComponent: not empty, not a dot segment, no separator, no white space
+// at either end, no control character). The lineage id that makes a file name is
+// read from a document another program wrote, so the Service checks the name
+// before it asks the sink anything, and a refused name is an UnsafeNameError that
+// names it.
+//
 // Fail-closed: Capture never overwrites an existing receipt file with
 // different content -- that is an error, never a silent overwrite. The
 // fail-closed PreToolUse Bash hook that calls Capture before

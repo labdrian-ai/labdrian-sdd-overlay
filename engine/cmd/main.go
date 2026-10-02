@@ -76,6 +76,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -745,6 +746,22 @@ func parseReviewReceiptArgs(args []string) (cwd, change string) {
 	return
 }
 
+// buildReviewReceiptService builds the review receipt capture both verbs run on. When it
+// cannot be built it says why on stderr, in the words of the verb (prefix) and as a set-up
+// failure, which tells it apart from a failure of the capture itself, and exits with code,
+// the one the verb's contract gives a failure: 1 for the capture a person runs, 2 for the
+// hook, where exit code 2 denies the acknowledgement. The exit is injected; a caller whose exit
+// returns gets no service.
+func buildReviewReceiptService(cwd string, stderr io.Writer, exit func(int), prefix string, code int) *reviewreceipt.Service {
+	svc, err := newReviewReceiptService(cwd)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: set up failed: %v\n", prefix, err)
+		exit(code)
+		return nil
+	}
+	return svc
+}
+
 // runReviewReceiptCapture implements 'review-receipt capture --cwd <repo>
 // [--change <name>]'. With --change, captures directly into that change.
 // Without it, auto-detects the single active change: zero active changes is
@@ -757,11 +774,7 @@ func runReviewReceiptCapture(args []string) {
 		os.Exit(1)
 	}
 
-	svc, err := newReviewReceiptService(cwd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
-		os.Exit(1)
-	}
+	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "error: review-receipt capture", 1)
 
 	if change == "" {
 		detected, err := svc.DetectActiveChange()
@@ -804,13 +817,9 @@ func runReviewReceiptHook(args []string) {
 		os.Exit(2)
 	}
 
-	svc, err := newReviewReceiptService(cwd)
-	if err != nil {
-		// Fail closed, as for an unreadable input: a hook that cannot be set up
-		// cannot guard the acknowledgement it was started for.
-		fmt.Fprintf(os.Stderr, "review-receipt hook: %v\n", err)
-		os.Exit(2)
-	}
+	// Fail closed, as for an unreadable input: a hook that cannot be set up cannot guard
+	// the acknowledgement it was started for, so its set-up failure exits 2 like a denial.
+	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "review-receipt hook", 2)
 
 	exitCode, message := svc.RunHook(raw)
 	if message != "" {
