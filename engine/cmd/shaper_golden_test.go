@@ -84,10 +84,17 @@ func checkShaperGolden(t *testing.T, name, got string) {
 	if err != nil {
 		t.Fatalf("read golden file: %v (record it with -update-shaper-golden)", err)
 	}
-	if got == string(want) {
-		return
+	if diff := goldenDifference(name, got, string(want)); diff != "" {
+		t.Fatal(diff)
 	}
-	gotLines, wantLines := strings.Split(got, "\n"), strings.Split(string(want), "\n")
+}
+
+// goldenDifference names the first line where got and want differ, or returns "".
+func goldenDifference(label, got, want string) string {
+	if got == want {
+		return ""
+	}
+	gotLines, wantLines := strings.Split(got, "\n"), strings.Split(want, "\n")
 	for i := 0; i < len(gotLines) || i < len(wantLines); i++ {
 		var g, w string
 		if i < len(gotLines) {
@@ -97,9 +104,82 @@ func checkShaperGolden(t *testing.T, name, got string) {
 			w = wantLines[i]
 		}
 		if g != w {
-			t.Fatalf("%s differs from its golden file at line %d:\n got: %s\nwant: %s", name, i+1, g, w)
+			return fmt.Sprintf("%s differs from its golden file at line %d:\n got: %s\nwant: %s", label, i+1, g, w)
 		}
 	}
+	return ""
+}
+
+// checkShaperGoldenCases runs each case as its own subtest and compares its transcript
+// with the case's section of testdata/shaper-golden/<name>.golden, the text from its
+// "== <case name>" line up to the next case's. A case that skips (symlinks unavailable on
+// this platform) drops only its own comparison; every other case still asserts. Under
+// -update-shaper-golden the whole file is rewritten, and a skipped case fails the run,
+// because a recording without it would drop its section.
+func checkShaperGoldenCases(t *testing.T, name string, cases []goldenSourceCase, run func(t *testing.T, tc goldenSourceCase) string) {
+	t.Helper()
+	var want map[string]string
+	if !*updateShaperGolden {
+		want = shaperGoldenSections(t, name, cases)
+	}
+	got := make(map[string]string, len(cases))
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			text := run(t, tc) + "\n"
+			got[tc.name] = text
+			if want != nil {
+				if diff := goldenDifference(name+": "+tc.name, text, want[tc.name]); diff != "" {
+					t.Fatal(diff)
+				}
+			}
+		})
+	}
+	if !*updateShaperGolden {
+		return
+	}
+	var all strings.Builder
+	for _, tc := range cases {
+		text, ok := got[tc.name]
+		if !ok {
+			t.Fatalf("case %q did not run, so %s.golden cannot be recorded here", tc.name, name)
+		}
+		all.WriteString(text)
+	}
+	checkShaperGolden(t, name, all.String())
+}
+
+// shaperGoldenSections splits an aggregated golden file into one section per case, in
+// case order, and fails when the file does not hold exactly those sections.
+func shaperGoldenSections(t *testing.T, name string, cases []goldenSourceCase) map[string]string {
+	t.Helper()
+	data, err := os.ReadFile(filepath.Join("testdata", "shaper-golden", name+".golden"))
+	if err != nil {
+		t.Fatalf("read golden file: %v (record it with -update-shaper-golden)", err)
+	}
+	text := string(data)
+	starts := make([]int, len(cases))
+	from := 0
+	for i, tc := range cases {
+		header := "== " + tc.name + "\n"
+		at := strings.Index(text[from:], header)
+		if at < 0 || (from+at > 0 && text[from+at-1] != '\n') {
+			t.Fatalf("%s.golden has no section %q after byte %d", name, header, from)
+		}
+		starts[i] = from + at
+		from = starts[i] + len(header)
+	}
+	if starts[0] != 0 {
+		t.Fatalf("%s.golden has text before its first section", name)
+	}
+	sections := make(map[string]string, len(cases))
+	for i, tc := range cases {
+		end := len(text)
+		if i+1 < len(cases) {
+			end = starts[i+1]
+		}
+		sections[tc.name] = text[starts[i]:end]
+	}
+	return sections
 }
 
 // A handoff that stays a draft: the JSON assessment, the presented view, and the same
@@ -262,33 +342,27 @@ func goldenSourceCases() []goldenSourceCase {
 // source is an error naming why, and one that is readable but not a valid handoff or Goal
 // reaches the assessment as a blocker.
 func TestShaperGoldenSourceRefusals(t *testing.T) {
-	var all strings.Builder
-	for _, tc := range goldenSourceCases() {
+	checkShaperGoldenCases(t, "source-refusals", goldenSourceCases(), func(t *testing.T, tc goldenSourceCase) string {
 		root, home := shaperWorktree(t, shaperTestHandoff, shaperTestGoal("standalone-shaper-handoff", `[]`))
 		handoff, goal := tc.setup(t, root)
 		args := []string{"assess", "--root", root, "--handoff", handoff, "--goal", goal}
 		g := newGoldenTranscript(root, home)
 		g.write("== %s\n", tc.name)
 		g.run("shaper", args, runShaperTest(args, ""))
-		all.WriteString(g.text())
-		all.WriteString("\n")
-	}
-	checkShaperGolden(t, "source-refusals", all.String())
+		return g.text()
+	})
 }
 
 // 'roles match-shaper' reads the handoff through the same contained read, and prints the
 // same refusals with its own prefix.
 func TestShaperGoldenRolesMatchShaper(t *testing.T) {
-	var all strings.Builder
-	for _, tc := range goldenSourceCases() {
+	checkShaperGoldenCases(t, "roles-match-shaper", goldenSourceCases(), func(t *testing.T, tc goldenSourceCase) string {
 		root, home := shaperWorktree(t, shaperTestHandoffV3, shaperTestGoal("standalone-shaper-handoff", `[]`))
 		handoff, _ := tc.setup(t, root)
 		args := []string{"match-shaper", "--root", root, "--handoff", handoff}
 		g := newGoldenTranscript(root, home)
 		g.write("== %s\n", tc.name)
 		g.run("roles", args, runRolesTest(args, ""))
-		all.WriteString(g.text())
-		all.WriteString("\n")
-	}
-	checkShaperGolden(t, "roles-match-shaper", all.String())
+		return g.text()
+	})
 }
