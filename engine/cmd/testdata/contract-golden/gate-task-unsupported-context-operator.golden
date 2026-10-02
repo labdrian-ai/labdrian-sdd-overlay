@@ -6,6 +6,7 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- stdout ---
 {}
 --- stderr ---
+gate-task: warning: contract frontmatter unparseable: unsupported context_operator (passing through)
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["TypeScript"],"activations":["review"],"work_kinds":["application-code"]}
 # an excluded phase
@@ -15,4 +16,5 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- stdout ---
 {}
 --- stderr ---
+gate-task: warning: contract frontmatter unparseable: unsupported context_operator (passing through)
 

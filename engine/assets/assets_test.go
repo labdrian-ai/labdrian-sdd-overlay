@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
 // repoRoot returns the overlay repo root, two levels above engine/assets/.
@@ -27,9 +27,9 @@ func repoRoot(t *testing.T) string {
 // gate-task/propagate would fail loud (propagate exits 1; gate-task logs a
 // stderr warning and passes through) instead of injecting the contract.
 func TestAntiGenericDesignFrontmatterParses(t *testing.T) {
-	phases, err := propagator.ParseFrontmatter(assets.AntiGenericDesign)
+	phases, err := contract.Parse(assets.AntiGenericDesign)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter(assets.AntiGenericDesign): unexpected error: %v", err)
+		t.Fatalf("contract.Parse(assets.AntiGenericDesign): unexpected error: %v", err)
 	}
 
 	want := []string{"sdd-tasks", "sdd-apply"}

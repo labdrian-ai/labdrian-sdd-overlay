@@ -11,6 +11,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
 const openCodePluginFile = "labdrian-runtime-parity.js"
@@ -465,16 +466,14 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 	if err != nil {
 		return openCodePromptConfig{}, err
 	}
-	phases, err := LoadContractPhases(string(content))
+	doc, err := contract.Parse(string(content))
 	if err != nil {
 		return openCodePromptConfig{}, err
 	}
-	minimalism := openCodeContractConfig{
-		ContractPath:   filepath.ToSlash(contractPath),
-		IncludedPhases: append([]string(nil), phases.AppliesTo...),
-		ExcludedPhases: append([]string(nil), phases.Excluded...),
-		InjectionPoint: injectionHeader(phases),
-	}
+	minimalism := openCodeContract(contractPath, doc)
+	// The minimalism contract is unconditional in OpenCode: whatever context metadata it
+	// carries is not handed to the plugin, as it never has been.
+	minimalism.LanguageContext, minimalism.ActivationContext = nil, nil
 	contracts := []openCodeContractConfig{minimalism}
 	// The anti-generic-design guard rides the embedded asset for the same
 	// reason the minimalism contract above does: the generic-AI-look hazard is
@@ -510,65 +509,24 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 }
 
 func openCodeContractFromContent(path, content string) (openCodeContractConfig, error) {
-	phases, err := LoadContractPhases(content)
+	doc, err := contract.Parse(content)
 	if err != nil {
 		return openCodeContractConfig{}, err
 	}
-	languages, activations, err := parseOpenCodeContext(content)
-	if err != nil {
-		return openCodeContractConfig{}, err
-	}
+	return openCodeContract(path, doc), nil
+}
+
+// openCodeContract is the plugin's entry for the contract at path, which reads as doc.
+func openCodeContract(path string, doc contract.Contract) openCodeContractConfig {
 	return openCodeContractConfig{
 		ContractPath:      filepath.ToSlash(path),
-		IncludedPhases:    append([]string(nil), phases.AppliesTo...),
-		ExcludedPhases:    append([]string(nil), phases.Excluded...),
-		InjectionPoint:    injectionHeader(phases),
-		LanguageContext:   languages,
-		ActivationContext: activations,
+		IncludedPhases:    doc.AppliesTo,
+		ExcludedPhases:    doc.Excluded,
+		InjectionPoint:    doc.Header(),
+		LanguageContext:   doc.LanguageContext,
+		ActivationContext: doc.ActivationContext,
 		ContextOperator:   nil,
-	}, nil
-}
-
-func parseOpenCodeContext(content string) (languages, activations []string, err error) {
-	parts := strings.SplitN(content, "---", 3)
-	if len(parts) < 3 {
-		return nil, nil, nil
 	}
-	for _, line := range strings.Split(parts[1], "\n") {
-		line = strings.TrimSpace(line)
-		switch {
-		case strings.HasPrefix(line, "language_context:"):
-			languages, err = parseOpenCodeInlineList(strings.TrimPrefix(line, "language_context:"))
-			if err != nil {
-				return nil, nil, fmt.Errorf("malformed language_context")
-			}
-		case strings.HasPrefix(line, "activation_context:"):
-			activations, err = parseOpenCodeInlineList(strings.TrimPrefix(line, "activation_context:"))
-			if err != nil {
-				return nil, nil, fmt.Errorf("malformed activation_context")
-			}
-		case strings.HasPrefix(line, "context_operator:"):
-			return nil, nil, fmt.Errorf("unsupported context_operator")
-		}
-	}
-	return languages, activations, nil
-}
-
-func parseOpenCodeInlineList(raw string) ([]string, error) {
-	raw = strings.TrimSpace(raw)
-	if !strings.HasPrefix(raw, "[") || !strings.HasSuffix(raw, "]") {
-		return nil, fmt.Errorf("strict inline list required")
-	}
-	raw = strings.TrimPrefix(raw, "[")
-	raw = strings.TrimSuffix(raw, "]")
-	var out []string
-	for _, item := range strings.Split(raw, ",") {
-		item = strings.Trim(strings.TrimSpace(item), `"'`)
-		if item != "" {
-			out = append(out, item)
-		}
-	}
-	return out, nil
 }
 
 type promptConfigMismatchError struct {

@@ -48,20 +48,6 @@ exit: 0
         "sdd-archive"
       ],
       "injection_point": "## Skills to load before work"
-    },
-    {
-      "contract_path": "skills/_shared/oo-quality-contract.md",
-      "included_phases": [
-        "sdd-design",
-        "sdd-apply"
-      ],
-      "excluded_phases": [
-        "sdd-propose"
-      ],
-      "injection_point": "## Skills to load before work",
-      "language_context": [
-        "typescript"
-      ]
     }
   ]
 }

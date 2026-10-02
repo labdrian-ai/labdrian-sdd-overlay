@@ -4,7 +4,7 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
 --- stderr ---
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
@@ -13,7 +13,7 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"}}}
 --- stderr ---
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
@@ -22,7 +22,7 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-propose"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-propose"}}}
 --- stderr ---
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md

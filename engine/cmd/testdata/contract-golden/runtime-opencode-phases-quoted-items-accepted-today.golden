@@ -7,22 +7,22 @@ exit: 0
 {
   "contract_path": "skills/_shared/minimalism-contract.md",
   "included_phases": [
-    "\"sdd-tasks\"",
-    "'sdd-apply'"
+    "sdd-tasks",
+    "sdd-apply"
   ],
   "excluded_phases": [
-    "\"sdd-propose\""
+    "sdd-propose"
   ],
   "injection_point": "## Skills to load before work",
   "contracts": [
     {
       "contract_path": "skills/_shared/minimalism-contract.md",
       "included_phases": [
-        "\"sdd-tasks\"",
-        "'sdd-apply'"
+        "sdd-tasks",
+        "sdd-apply"
       ],
       "excluded_phases": [
-        "\"sdd-propose\""
+        "sdd-propose"
       ],
       "injection_point": "## Skills to load before work"
     },

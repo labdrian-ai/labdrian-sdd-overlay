@@ -71,6 +71,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
@@ -83,6 +84,14 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 )
 
+// The names and default registry paths of the contracts the verbs manage. The minimalism
+// contract is the one read from a file by default; anti-generic-design ships in the binary.
+const (
+	defaultContractPath          = "skills/_shared/minimalism-contract.md"
+	embeddedAntiGenericDesign    = "anti-generic-design"
+	defaultAntiGenericDesignPath = "skills/_shared/anti-generic-design.md"
+)
+
 // embeddedContract resolves a named engine-owned managed contract to its content
 // and (for propagate) the distinct marker pair + row label that scope its block.
 // Returns ok=false for an unknown name so callers can fail loud.
@@ -92,16 +101,16 @@ import (
 // no dependency on an external, regenerable skill file.
 func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 	switch name {
-	case "anti-generic-design":
+	case embeddedAntiGenericDesign:
 		return embeddedContractSpec{
 			content:     assets.AntiGenericDesign,
 			beginMarker: propagator.AntiGenericDesignBeginMarker,
 			endMarker:   propagator.AntiGenericDesignEndMarker,
-			rowLabel:    "anti-generic-design",
+			rowLabel:    embeddedAntiGenericDesign,
 			// defaultPath is the registry-row Path cell / bare injected line when
 			// the caller does not override --contract-path. It is where the
 			// overlay deploys the standalone copy of this contract.
-			defaultPath: "skills/_shared/anti-generic-design.md",
+			defaultPath: defaultAntiGenericDesignPath,
 		}, true
 	default:
 		return embeddedContractSpec{}, false
@@ -1288,7 +1297,7 @@ func runPropagateCore(
 	exit func(int),
 ) {
 	var registryPath, contractFilePath, contractPath, embeddedName string
-	contractPath = "skills/_shared/minimalism-contract.md" // default
+	contractPath = defaultContractPath
 	contractPathExplicit := false
 	requireRegistry := false
 
@@ -1332,7 +1341,7 @@ func runPropagateCore(
 	// (engine-owned managed text) takes precedence and overrides marker/label so
 	// it writes a DISTINCT block that never collides with minimalism-contract.
 	cfg := propagator.Config{ContractPath: contractPath}
-	rowLabelForMsg := "minimalism-contract"
+	rowLabelForMsg := propagator.DefaultRowLabel
 	var contractContent string
 
 	if embeddedName != "" {
@@ -1367,7 +1376,7 @@ func runPropagateCore(
 		contractContent = string(b)
 	}
 
-	phases, err := propagator.ParseFrontmatter(contractContent)
+	doc, err := contract.Parse(contractContent)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
@@ -1415,7 +1424,7 @@ func runPropagateCore(
 		return
 	}
 
-	out, changed, err := propagator.Propagate(string(registryContent), cfg, phases)
+	out, changed, err := propagator.Propagate(string(registryContent), cfg, doc)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
@@ -1455,7 +1464,7 @@ type readFileFn func(string) ([]byte, error)
 // all branches without real files or OS I/O.
 func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, readFile readFileFn) {
 	var contractFilePath, contractPath, embeddedName, workContextJSON, workContextFile string
-	contractPath = "skills/_shared/minimalism-contract.md" // default (minimalism)
+	contractPath = defaultContractPath
 	contractPathExplicit := false
 
 	for i := 0; i < len(args); i++ {
@@ -1536,10 +1545,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 		return
 	}
 
-	cfg := gate.Config{
-		ContractPath:    contractPath,
-		ContractContent: contractContent,
-	}
+	cfg := gate.Config{Contracts: []gate.ContractConfig{{Path: contractPath, Content: contractContent}}}
 	workContext, workContextErr := loadWorkContext(workContextJSON, workContextFile, readFile)
 	if workContextErr != nil {
 		fmt.Fprintf(stderr, "gate-task: warning: work context ignored: %v (passing through for context-aware contracts)\n", workContextErr)
@@ -1550,7 +1556,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	// Item 2: emit a stderr diagnostic when the contract frontmatter is broken so
 	// wiring mistakes with a corrupt contract are immediately visible. stdout stays
 	// pass-through '{}' and exit 0 (fail-safe contract UNCHANGED).
-	if _, err := propagator.ParseFrontmatter(contractContent); err != nil {
+	if _, err := contract.Parse(contractContent); err != nil {
 		fmt.Fprintf(stderr, "gate-task: warning: contract frontmatter unparseable: %v (passing through)\n", err)
 	}
 
@@ -1964,7 +1970,7 @@ func checkContract(contractPath string, readFile readFileFn) checkResult {
 		}
 		return checkResult{label: label, ok: false, note: err.Error()}
 	}
-	if _, err := propagator.ParseFrontmatter(string(data)); err != nil {
+	if _, err := contract.Parse(string(data)); err != nil {
 		return checkResult{label: label, ok: false, note: "frontmatter error: " + err.Error()}
 	}
 	return checkResult{label: label, ok: true}

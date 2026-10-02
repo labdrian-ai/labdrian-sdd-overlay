@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 )
 
@@ -87,26 +88,10 @@ func TestLifecycleResultRendersTargetStatusAndMessage(t *testing.T) {
 	}
 }
 
-func TestLoadContractPhasesFromContent(t *testing.T) {
-	phases, err := engineRuntime.LoadContractPhases(contractContent)
-	if err != nil {
-		t.Fatalf("LoadContractPhases: %v", err)
-	}
-	if phases.InjectionPoint != "## Skills to load before work" {
-		t.Fatalf("InjectionPoint = %q", phases.InjectionPoint)
-	}
-	if !phases.AppliesToPhase("sdd-tasks") || !phases.AppliesToPhase("sdd-apply") {
-		t.Fatalf("applies-to phases not recognized: %#v", phases.AppliesTo)
-	}
-	if !phases.ExcludesPhase("sdd-propose") || phases.ExcludesPhase("sdd-apply") {
-		t.Fatalf("excluded phases not recognized: %#v", phases.Excluded)
-	}
-}
-
 func TestMutatePromptInjectsAndStripsByContractPhases(t *testing.T) {
-	phases, err := engineRuntime.LoadContractPhases(contractContent)
+	phases, err := contract.Parse(contractContent)
 	if err != nil {
-		t.Fatalf("LoadContractPhases: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 	const contractPath = "skills/_shared/minimalism-contract.md"
 
@@ -128,9 +113,9 @@ func TestMutatePromptInjectsAndStripsByContractPhases(t *testing.T) {
 }
 
 func TestMutatePromptLeavesUnknownPhaseUnchanged(t *testing.T) {
-	phases, err := engineRuntime.LoadContractPhases(contractContent)
+	phases, err := contract.Parse(contractContent)
 	if err != nil {
-		t.Fatalf("LoadContractPhases: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 	const prompt = "Do future work."
 
@@ -158,7 +143,7 @@ func TestPromptHelpersHandleExistingHeaderAndDefaultHeader(t *testing.T) {
 		t.Fatalf("InjectPrompt should be idempotent when contract path already exists")
 	}
 
-	phases := engineRuntime.ContractPhases{AppliesTo: []string{"sdd-apply"}}
+	phases := contract.Contract{AppliesTo: []string{"sdd-apply"}}
 	mutated, changed := engineRuntime.MutatePrompt("Apply now.", "sdd-apply", contractPath, phases)
 	if !changed || !strings.Contains(mutated, "## Skills to load before work") {
 		t.Fatalf("MutatePrompt should use default injection header when absent, got changed=%v prompt=%q", changed, mutated)

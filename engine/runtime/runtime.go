@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
 type Target string
@@ -77,38 +77,12 @@ type Adapter interface {
 	Uninstall() LifecycleResult
 }
 
-type ContractPhases struct {
-	AppliesTo      []string
-	Excluded       []string
-	InjectionPoint string
-}
-
-func LoadContractPhases(content string) (ContractPhases, error) {
-	phases, err := propagator.ParseFrontmatter(content)
-	if err != nil {
-		return ContractPhases{}, err
-	}
-	return ContractPhases{
-		AppliesTo:      phases.AppliesTo,
-		Excluded:       phases.Excluded,
-		InjectionPoint: phases.InjectionPoint,
-	}, nil
-}
-
-func (p ContractPhases) AppliesToPhase(phase string) bool {
-	return contains(p.AppliesTo, phase)
-}
-
-func (p ContractPhases) ExcludesPhase(phase string) bool {
-	return contains(p.Excluded, phase)
-}
-
-func MutatePrompt(prompt, phase, contractPath string, phases ContractPhases) (string, bool) {
+func MutatePrompt(prompt, phase, contractPath string, c contract.Contract) (string, bool) {
 	switch {
-	case phases.AppliesToPhase(phase):
-		mutated := InjectPrompt(prompt, contractPath, injectionHeader(phases))
+	case c.AppliesToPhase(phase):
+		mutated := InjectPrompt(prompt, contractPath, c.Header())
 		return mutated, mutated != prompt
-	case phases.ExcludesPhase(phase):
+	case c.ExcludesPhase(phase):
 		mutated := StripPrompt(prompt, contractPath)
 		return mutated, mutated != prompt
 	default:
@@ -245,13 +219,6 @@ func (a foundationAdapter) Uninstall() LifecycleResult { return a.result(ActionU
 
 func (a foundationAdapter) result(action Action) LifecycleResult {
 	return NewLifecycleResult(a.target, action, CapabilityUnsupported, "runtime adapter foundation present; target implementation is scheduled for a later PR slice", nil)
-}
-
-func injectionHeader(phases ContractPhases) string {
-	if phases.InjectionPoint != "" {
-		return phases.InjectionPoint
-	}
-	return "## Skills to load before work"
 }
 
 func contains(items []string, want string) bool {

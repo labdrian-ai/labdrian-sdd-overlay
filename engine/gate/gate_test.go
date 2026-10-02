@@ -8,6 +8,12 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 )
 
+// singleContract is the configuration of a gate that manages one contract, at path, whose
+// document is content.
+func singleContract(path, content string) gate.Config {
+	return gate.Config{Contracts: []gate.ContractConfig{{Path: path, Content: content}}}
+}
+
 // ---- helpers ---------------------------------------------------------------
 
 const contractContent = `---
@@ -72,7 +78,7 @@ func assertNoCanonicalEntry(t *testing.T, prompt string) {
 // TC-1: sdd-tasks → contract path injected into prompt under injection_point header.
 func TestInjectsForSddTasks(t *testing.T) {
 	input := buildInput("sdd-tasks", "Do the tasks phase.")
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -130,7 +136,7 @@ func TestInjectsForSddTasks(t *testing.T) {
 // TC-2: sdd-apply → contract path injected into prompt.
 func TestInjectsForSddApply(t *testing.T) {
 	input := buildInput("sdd-apply", "Apply the tasks.")
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -166,7 +172,7 @@ func TestStripsFromSddPropose(t *testing.T) {
 	// Prompt already contains the canonical contract entry (bare path) — it should be stripped.
 	promptWithContract := "Do propose.\n\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-propose", promptWithContract)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -198,7 +204,7 @@ func TestStripsFromSddPropose(t *testing.T) {
 func TestStripsFromSddSpec(t *testing.T) {
 	promptWithContract := "Spec phase.\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-spec", promptWithContract)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -219,7 +225,7 @@ func TestStripsFromSddSpec(t *testing.T) {
 func TestStripsFromSddDesign(t *testing.T) {
 	promptWithContract := "Design phase.\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-design", promptWithContract)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -240,7 +246,7 @@ func TestStripsFromSddDesign(t *testing.T) {
 func TestStripsFromSddVerify(t *testing.T) {
 	promptWithContract := "Verify.\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-verify", promptWithContract)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -260,7 +266,7 @@ func TestStripsFromSddVerify(t *testing.T) {
 func TestStripsFromSddArchive(t *testing.T) {
 	promptWithContract := "Archive.\n## Skills to load before work\n" + canonicalContractEntry + "\n"
 	input := buildInput("sdd-archive", promptWithContract)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -279,7 +285,7 @@ func TestStripsFromSddArchive(t *testing.T) {
 // TC-8: excluded phase with NO contract in prompt → pass-through (no-op, no error).
 func TestExcludedPhaseNoContractIsPassThrough(t *testing.T) {
 	input := buildInput("sdd-propose", "Do propose phase. No contract here.")
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -307,7 +313,7 @@ func TestExcludedPhaseNoContractIsPassThrough(t *testing.T) {
 // TC-9: unknown subagent_type → pass-through unchanged (FAIL-SAFE).
 func TestUnknownSubagentTypePassThrough(t *testing.T) {
 	input := buildInput("some-future-phase", "Do something unknown.")
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -342,7 +348,7 @@ func TestMalformedJSONPassThrough(t *testing.T) {
 		"null",
 		"[]",
 	}
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	for _, bad := range inputs {
 		resp, err := gate.Process(bad, cfg)
@@ -365,7 +371,7 @@ func TestMalformedJSONPassThrough(t *testing.T) {
 func TestMissingPromptPassThrough(t *testing.T) {
 	// tool_input exists but has no "prompt" key.
 	input := `{"tool_name":"Agent","tool_input":{"description":"desc","subagent_type":"sdd-tasks"}}`
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -381,7 +387,7 @@ func TestMissingPromptPassThrough(t *testing.T) {
 func TestBrokenFrontmatterPassThrough(t *testing.T) {
 	brokenContract := "no frontmatter here at all"
 	input := buildInput("sdd-tasks", "Do tasks.")
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: brokenContract}
+	cfg := singleContract(contractPath, brokenContract)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -408,7 +414,7 @@ func TestInjectsUnderExistingHeader(t *testing.T) {
 	// Prompt has the header but NOT the contract path yet.
 	promptWithHeader := "Do tasks phase.\n\n## Skills to load before work\nRead some-other-skill.md\n"
 	input := buildInput("sdd-tasks", promptWithHeader)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -443,7 +449,7 @@ func TestNoOpWhenContractAlreadyPresent(t *testing.T) {
 	// Prompt already has the bare contract path line.
 	promptAlreadyHas := "Do tasks.\n\n## Skills to load before work\n" + contractPath + "\n"
 	input := buildInput("sdd-tasks", promptAlreadyHas)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -476,7 +482,7 @@ func TestExactMatchInjection_SubstringPathDoesNotSuppressInject(t *testing.T) {
 	// The super-path appears as a bare line (not as the canonical entry for contractPath).
 	prompt := "Do tasks.\n\n## Skills to load before work\n" + superPath + "\n"
 	input := buildInput("sdd-tasks", prompt)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -522,7 +528,7 @@ func TestExactMatchStrip_BackupLineNotStripped(t *testing.T) {
 	//   - a .bak line that must NOT be stripped
 	prompt := "Do propose.\n\n## Skills to load before work\n" + contractPath + "\n" + backupLine + "\n"
 	input := buildInput("sdd-propose", prompt)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -558,7 +564,7 @@ func TestExactMatchCanonicalEntry(t *testing.T) {
 	// Inject: start from blank prompt, verify canonical bare path line appears.
 	prompt := "Do tasks."
 	input := buildInput("sdd-tasks", prompt)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -621,7 +627,7 @@ func TestHeaderVariantStillInjects(t *testing.T) {
 	variantHeader := "## Skills to load before work (extra context)"
 	prompt := "Do tasks.\n\n" + variantHeader + "\nRead some-other-skill.md\n"
 	input := buildInput("sdd-tasks", prompt)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -656,7 +662,7 @@ func TestInjectDoubleNewlineSeparator(t *testing.T) {
 	// before the header so the new section is visually separate.
 	prompt := "Do tasks."
 	input := buildInput("sdd-tasks", prompt)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -680,7 +686,7 @@ func TestInjectDoubleNewlineSeparator(t *testing.T) {
 // key at all. Any presence of hookSpecificOutput (empty or not) is a regression.
 func TestMissingPromptPassThrough_NoUpdatedInput(t *testing.T) {
 	input := `{"tool_name":"Agent","tool_input":{"description":"desc","subagent_type":"sdd-tasks"}}`
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: contractContent}
+	cfg := singleContract(contractPath, contractContent)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -714,7 +720,7 @@ injection_point: "## Custom Injection Header"
 	// Prompt has neither the custom header nor the default header.
 	prompt := "Do the tasks phase."
 	input := buildInput("sdd-tasks", prompt)
-	cfg := gate.Config{ContractPath: contractPath, ContractContent: customContract}
+	cfg := singleContract(contractPath, customContract)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -778,7 +784,7 @@ injection_point: "## Skills to load before work"
 `
 	// sdd-spec should now INJECT.
 	inputSpec := buildInput("sdd-spec", "Do spec phase.")
-	cfgSwapped := gate.Config{ContractPath: contractPath, ContractContent: swappedContract}
+	cfgSwapped := singleContract(contractPath, swappedContract)
 
 	respSpec, err := gate.Process(inputSpec, cfgSwapped)
 	if err != nil {

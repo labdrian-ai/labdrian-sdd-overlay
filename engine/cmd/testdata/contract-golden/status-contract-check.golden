@@ -30,26 +30,26 @@ note: frontmatter error: contract frontmatter missing or empty applies_to_phases
 
 # phases without brackets (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: true
-note: 
+ok: false
+note: frontmatter error: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply"
 
 # an unclosed list (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: true
-note: 
+ok: false
+note: frontmatter error: malformed applies_to_phases: expected an inline list such as [a, b], got "[sdd-tasks"
 
 # an excluded list with no brackets (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: true
-note: 
+ok: false
+note: frontmatter error: malformed excluded_phases: expected an inline list such as [a, b], got "sdd-propose"
 
 # a malformed language_context (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: true
-note: 
+ok: false
+note: frontmatter error: malformed language_context: expected an inline list such as [a, b], got "typescript"
 
 # a context_operator (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: true
-note: 
+ok: false
+note: frontmatter error: unsupported context_operator
 

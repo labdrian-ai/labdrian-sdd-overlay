@@ -4,8 +4,9 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
 
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+{}
 --- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply" (passing through)
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
 # sdd-tasks, with a skills section
@@ -13,8 +14,9 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"},"tool_name":"Agent"}
 
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"}}}
+{}
 --- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply" (passing through)
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
 # sdd-propose carrying the contract
@@ -22,8 +24,9 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-propose"},"tool_name":"Agent"}
 
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-propose"}}}
+{}
 --- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply" (passing through)
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
 # sdd-explore, in neither list
@@ -33,4 +36,5 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- stdout ---
 {}
 --- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply" (passing through)
 

@@ -76,5 +76,5 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- stdout ---
 {}
 --- stderr ---
-gate-task: warning: contract frontmatter unparseable: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into (passing through)
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "" (passing through)
 

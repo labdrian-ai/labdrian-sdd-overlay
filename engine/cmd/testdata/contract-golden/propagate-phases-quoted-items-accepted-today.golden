@@ -16,7 +16,7 @@ registry: minimalism-contract scoped row inserted/updated
 | other | skills/_shared/other.md | Foreign row |
 <!-- END: some-other-scope -->
 <!-- BEGIN: minimalism-contract-scope (auto-generated) -->
-| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into "sdd-tasks" and 'sdd-apply' sub-agent prompts under '## Skills to load before work'. Do NOT inject into "sdd-propose". |
+| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose. |
 <!-- END: minimalism-contract-scope -->
 
 ### Other section

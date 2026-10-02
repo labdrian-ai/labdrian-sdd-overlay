@@ -69,10 +69,7 @@ func TestE2E_OrchestratorFormat_SddTasks_AlreadyPresent_NoOp(t *testing.T) {
 	description := "sdd-tasks sub-agent for scoping-fixes"
 
 	input := buildAgentInput("sdd-tasks", description, prompt, true)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -109,10 +106,7 @@ func TestE2E_OrchestratorFormat_SddTasks_InjectsOnce(t *testing.T) {
 	description := "sdd-tasks sub-agent for scoping-fixes"
 
 	input := buildAgentInput("sdd-tasks", description, prompt, true)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -195,10 +189,7 @@ func TestE2E_OrchestratorFormat_SddPropose_StripsContract(t *testing.T) {
 	description := "sdd-propose sub-agent for scoping-fixes"
 
 	input := buildAgentInput("sdd-propose", description, prompt, true)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -263,10 +254,7 @@ func TestE2E_OrchestratorFormat_SddPropose_StripsContract(t *testing.T) {
 // TC-E2E-3: malformed/empty stdin → benign pass-through + exit 0 (no error).
 func TestE2E_MalformedInput_PassThrough(t *testing.T) {
 	inputs := []string{"", "not json", "{broken", "null", "[]"}
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	for _, bad := range inputs {
 		resp, err := gate.Process(bad, cfg)
@@ -288,10 +276,7 @@ func TestE2E_MalformedInput_PassThrough(t *testing.T) {
 // TC-E2E-4: missing contract file → benign pass-through (fail-safe).
 func TestE2E_MissingContractFile_PassThrough(t *testing.T) {
 	input := buildAgentInput("sdd-tasks", "desc", "do tasks", false)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: "", // simulates broken/missing contract content
-	}
+	cfg := singleContract(absoluteContractPath, "") // simulates broken/missing contract content
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -310,10 +295,7 @@ func TestE2E_MissingContractFile_PassThrough(t *testing.T) {
 // TC-E2E-5: unknown subagent_type → benign pass-through + exit 0.
 func TestE2E_UnknownSubagentType_PassThrough(t *testing.T) {
 	input := buildAgentInput("some-future-phase", "desc", "do something", false)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -338,10 +320,7 @@ func TestE2E_UnknownSubagentType_PassThrough(t *testing.T) {
 func TestE2E_NoModelField_NotEchoed(t *testing.T) {
 	prompt := "Do tasks without model field."
 	input := buildAgentInput("sdd-tasks", "desc", prompt, false /* no model */)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
@@ -370,10 +349,7 @@ func TestE2E_NoModelField_NotEchoed(t *testing.T) {
 func TestE2E_InjectBarePath_NoExistingHeader(t *testing.T) {
 	prompt := "Do tasks with no header."
 	input := buildAgentInput("sdd-tasks", "desc", prompt, false)
-	cfg := gate.Config{
-		ContractPath:    absoluteContractPath,
-		ContractContent: contractContentForE2E,
-	}
+	cfg := singleContract(absoluteContractPath, contractContentForE2E)
 
 	resp, err := gate.Process(input, cfg)
 	if err != nil {
