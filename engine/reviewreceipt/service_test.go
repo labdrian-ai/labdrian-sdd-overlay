@@ -320,8 +320,9 @@ func TestCaptureRefusesAChangeNameThatIsNotOnePathComponent(t *testing.T) {
 
 // The name a receipt is persisted under is made of the lineage id the review tool wrote,
 // which is read from a document in a directory another program owns. A lineage that would
-// put the file outside the folder is refused, before the sink is asked to read or write it,
-// and whatever came before it stays persisted.
+// put the file outside the folder is refused, before the sink is asked to read or write it;
+// every other approved receipt, before or after it, is still persisted, and the capture then
+// fails naming the refused one, so one bad document blocks nothing else.
 func TestCaptureRefusesAReceiptWhoseFileNameIsNotOnePathComponent(t *testing.T) {
 	for _, lineage := range []string{"../../escaped", "a/b", `a\b`, " padded", "line\nbreak"} {
 		w := newWorld()
@@ -333,16 +334,36 @@ func TestCaptureRefusesAReceiptWhoseFileNameIsNotOnePathComponent(t *testing.T) 
 		if !errors.As(err, &unsafe) || unsafe.Kind != "receipt file name" || unsafe.Name != lineage+".json" {
 			t.Errorf("lineage %q: Capture error = %v, want an *UnsafeNameError for the receipt file name", lineage, err)
 		}
-		if got := lineages(captured); !reflect.DeepEqual(got, []string{"review-fine"}) {
-			t.Errorf("lineage %q: captured %v, want only what came before the refusal", lineage, got)
+		if got := lineages(captured); !reflect.DeepEqual(got, []string{"review-fine", "review-after"}) {
+			t.Errorf("lineage %q: captured %v, want every receipt but the refused one", lineage, got)
 		}
 		for _, call := range w.calls {
 			if strings.Contains(call, lineage+".json") {
 				t.Errorf("lineage %q: the sink was asked %q", lineage, call)
 			}
 		}
-		if !reflect.DeepEqual(w.writes, []string{"c1/review-fine.json"}) {
-			t.Errorf("lineage %q: wrote %v, want only the receipt before the refusal", lineage, w.writes)
+		if !reflect.DeepEqual(w.writes, []string{"c1/review-fine.json", "c1/review-after.json"}) {
+			t.Errorf("lineage %q: wrote %v, want every receipt but the refused one", lineage, w.writes)
+		}
+	}
+}
+
+// Every refused receipt is named, not only the first, so one run tells a person all that has
+// to be corrected.
+func TestCaptureNamesEveryRefusedReceipt(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	first, second := approvedReceiptDoc("../one"), approvedReceiptDoc("a/two")
+	first.Origin, second.Origin = "s/review-one/review-receipt.json", "s/review-two/review-receipt.json"
+	w.docs["s"] = []reviewreceipt.Document{first, approvedReceiptDoc("review-fine"), second}
+
+	captured, err := w.service().Capture("c1")
+	if got := lineages(captured); !reflect.DeepEqual(got, []string{"review-fine"}) {
+		t.Errorf("captured %v, want the one receipt that can be kept", got)
+	}
+	for _, origin := range []string{first.Origin, second.Origin} {
+		if err == nil || !strings.Contains(err.Error(), "the approved receipt in "+origin+" cannot be kept") {
+			t.Errorf("Capture error = %v, want it to name %s", err, origin)
 		}
 	}
 }

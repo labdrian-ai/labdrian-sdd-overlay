@@ -434,6 +434,17 @@ func receiptGoldenCases() []receiptGoldenCase {
 			w.hook(root, acknowledgeCommand)
 			w.tree("after", root)
 		}},
+		// A receipt that cannot be kept blocks no other: the lineage after it is still
+		// captured, and the hook then denies, naming the document and the remedy.
+		{"hook-captures-the-rest-and-denies-an-unusable-receipt", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			gitDir := filepath.Join(root, ".git")
+			w.change(root, "only-change")
+			w.putState(gitDir, "review-a-escape", lifecycleState("../../escaped", approved))
+			w.putReceipt(gitDir, "review-b-after", legacyReceipt("review-b-after", receiptSchemaV2, approved))
+			w.hook(root, acknowledgeCommand)
+			w.tree("after", root)
+		}},
 		{"hook-denies-an-ambiguous-change", func(w *receiptWorld) {
 			root := w.repo("<ROOT>", false)
 			w.change(root, "change-b")

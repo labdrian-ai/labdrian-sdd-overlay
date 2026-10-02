@@ -105,12 +105,16 @@ func (s *Service) persist(change string, sv surviving) error {
 // stores (either shape), once per lineage and shape, in the order the stores list them. A
 // store is read when the walk gets to it, and what it holds is visited before the next is
 // read, so a caller that writes as it goes has written what came before a failure. It
-// stops at the first error, a visit's included.
+// stops at the first error a store or a visit returns. An approved receipt that cannot be
+// kept (an *UnusableReceiptError) does not stop the walk: every other receipt is still
+// visited, and the walk then fails naming each one that could not be kept, so one bad
+// document never keeps the others from being persisted, and none is skipped in silence.
 func (s *Service) eachApproved(visit func(surviving) error) error {
 	stores, err := s.ports.Stores.Stores()
 	if err != nil {
 		return fmt.Errorf("reviewreceipt: %w", err)
 	}
+	var unusable []error
 	seen := map[seenReceipt]bool{}
 	for _, store := range stores {
 		documents, err := s.ports.Source.Documents(store)
@@ -127,14 +131,15 @@ func (s *Service) eachApproved(visit func(surviving) error) error {
 			// The lineage id was read from a document another program wrote; the file name
 			// it makes is checked before anything is asked of the sink with it.
 			if err := CheckPathComponent(kindReceiptFile, r.FileName()); err != nil {
-				return &UnusableReceiptError{Origin: doc.Origin, Err: err}
+				unusable = append(unusable, &UnusableReceiptError{Origin: doc.Origin, Err: err})
+				continue
 			}
 			if err := visit(surviving{Receipt: r, Data: doc.Data}); err != nil {
 				return err
 			}
 		}
 	}
-	return nil
+	return errors.Join(unusable...)
 }
 
 // AllSurvivingApprovedPersisted reports whether every currently-approved receipt is already
