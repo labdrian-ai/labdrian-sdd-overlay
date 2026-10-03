@@ -99,7 +99,7 @@ func (noopLocker) LockDir(string, LockMode) (func(), error) { return func() {}, 
 // skillsCoreUnlocked is SkillsCore for tests that exercise a verb's own behavior:
 // no clock, and a locker that never blocks.
 func skillsCoreUnlocked(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, readFile, nil, noopLocker{}, stdout, stderr, exit)
+	SkillsCoreAt(verb, args, readFile, testRegistries(readFile), nil, noopLocker{}, stdout, stderr, exit)
 }
 
 // exclusionLocker is a real in-process lock: one exclusive holder or any number of
@@ -228,7 +228,7 @@ type coreRun struct {
 func runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
 	var out, errBuf bytes.Buffer
 	code := 0
-	SkillsCoreAt(verb, append([]string{verb}, args...), readFile, now, locker, &out, &errBuf, func(c int) { code = c })
+	SkillsCoreAt(verb, append([]string{verb}, args...), readFile, testRegistries(readFile), now, locker, &out, &errBuf, func(c int) { code = c })
 	return coreRun{out.String(), errBuf.String(), code}
 }
 
@@ -253,7 +253,7 @@ func registryIDs(t *testing.T, regPath string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(data))
+	reg, err := parseRegistry(data)
 	if err != nil {
 		t.Fatalf("registry does not parse: %v", err)
 	}

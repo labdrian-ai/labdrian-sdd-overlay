@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -88,35 +87,35 @@ func isWriterTempFile(d fs.DirEntry) bool {
 // installEnv is everything install and adopt touch outside their own arguments, so
 // that a test can replace any of it. Production wires the real filesystem.
 type installEnv struct {
-	readRegistry readFileFn                        // the registry
-	readProject  readFileFn                        // the project lock, and anything else in the project
-	cwd          func() (string, error)            // the directory to install into
-	stat         func(string) (fs.FileInfo, error) // the project's paths
-	readDir      func(string) ([]fs.DirEntry, error)
-	resolve      func(string) (string, error)       // symlink resolution, for containment
-	fsys         projectFS                          // the writes
-	readSource   func(string) ([]sourceFile, error) // a skill's source tree
+	registries  RegistryRepository                // the registry
+	readProject readFileFn                        // the project lock, and anything else in the project
+	cwd         func() (string, error)            // the directory to install into
+	stat        func(string) (fs.FileInfo, error) // the project's paths
+	readDir     func(string) ([]fs.DirEntry, error)
+	resolve     func(string) (string, error)       // symlink resolution, for containment
+	fsys        projectFS                          // the writes
+	readSource  func(string) ([]sourceFile, error) // a skill's source tree
 }
 
 // productionInstallEnv is the real filesystem. Registry reads go through readRegistry,
 // so the registry can be injected; the project is always read from disk.
-func productionInstallEnv(readRegistry readFileFn, cwd func() (string, error)) installEnv {
+func productionInstallEnv(registries RegistryRepository, cwd func() (string, error)) installEnv {
 	return installEnv{
-		readRegistry: readRegistry,
-		readProject:  os.ReadFile,
-		cwd:          cwd,
-		stat:         os.Stat,
-		readDir:      os.ReadDir,
-		resolve:      resolvePathKeepingMissing,
-		fsys:         osProjectFS{},
-		readSource:   readSkillSource,
+		registries:  registries,
+		readProject: os.ReadFile,
+		cwd:         cwd,
+		stat:        os.Stat,
+		readDir:     os.ReadDir,
+		resolve:     resolvePathKeepingMissing,
+		fsys:        osProjectFS{},
+		readSource:  readSkillSource,
 	}
 }
 
 // RenderInstallCore is the testable CLI entry for `engine skills install`.
 // cwdFn is injected for testability (production callers pass os.Getwd).
-func RenderInstallCore(args []string, readFile readFileFn, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	renderInstall(productionInstallEnv(readFile, cwdFn), args, stdout, stderr, exit)
+func RenderInstallCore(args []string, registries RegistryRepository, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
+	renderInstall(productionInstallEnv(registries, cwdFn), args, stdout, stderr, exit)
 }
 
 // installContext is what install and adopt have read and decided before either
@@ -173,17 +172,9 @@ func prepareInstall(verb string, env installEnv, args []string, stdout, stderr i
 		projectID = filepath.Base(cwd)
 	}
 
-	// Read and parse registry.
-	data, err := env.readRegistry(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return installContext{}, false
-	}
-	reg, err := ParseRegistry(bytes.NewReader(data))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
-		exit(1)
+	// Read the registry.
+	reg, ok := readRegistryForVerb(env.registries, registryPath, false, stderr, exit)
+	if !ok {
 		return installContext{}, false
 	}
 

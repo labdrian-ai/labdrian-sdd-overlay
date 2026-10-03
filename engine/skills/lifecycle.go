@@ -84,7 +84,7 @@ func RemoveEntry(reg Registry, id string) (Registry, error) {
 	}
 
 	// Normalize to nil when empty so serialize→parse round-trip holds:
-	// ParseRegistry returns nil Skills for an empty sequence (ADR-8).
+	// A registry decoded from an empty sequence has nil Skills (ADR-8).
 	if len(skills) == 0 {
 		skills = nil
 	}
@@ -215,9 +215,9 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo
 //   - LintSkillFile reports no hard findings for the source skill
 //   - the skill has a valid approval record for its exact bytes, or is the
 //     grandfathered baseline's (approval_gate.go)
-//   - Serialize + re-parse of new registry is consistent (R-063)
+//   - encoding the new registry and decoding it back is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
-func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
+func AddCore(args []string, readFile readFileFn, registries RegistryRepository, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, sourceRoot, id, repo, ref := parseFlags(args)
 
 	if id == "" {
@@ -234,17 +234,9 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 1. Load and parse the registry.
-	regData, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	reg, err := ParseRegistry(bytes.NewReader(regData))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
-		exit(1)
+	// 1. Load the registry.
+	reg, ok := readRegistryForVerb(registries, registryPath, false, stderr, exit)
+	if !ok {
 		return
 	}
 
@@ -300,8 +292,8 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 		return
 	}
 
-	// 5. Serialize the new registry.
-	regBytes, err := Serialize(newReg)
+	// 5. Encode the new registry.
+	regBytes, err := registries.Encode(newReg)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: serializing registry: %v\n", err)
 		exit(1)
@@ -309,7 +301,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 	}
 
 	// 6. Validate-before-write: re-parse must equal in-memory state (R-063).
-	reg2, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg2, err := DecodeRegistry(registries, regBytes)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: validate-before-write re-parse failed: %v\n", err)
 		exit(1)
@@ -381,7 +373,7 @@ func AddCore(args []string, readFile readFileFn, statFile func(string) (os.FileI
 // It reads the registry and manifest, removes the entry (pure), validates
 // the in-memory state, then writes both files atomically (manifest-first per
 // ADR-9). All side effects are injected; no global state is used.
-func RemoveCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
+func RemoveCore(args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, _, id, _, _ := parseFlags(args)
 
 	if id == "" {
@@ -390,17 +382,9 @@ func RemoveCore(args []string, readFile readFileFn, stdout, stderr io.Writer, ex
 		return
 	}
 
-	// 1. Load and parse the registry.
-	regData, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	reg, err := ParseRegistry(bytes.NewReader(regData))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
-		exit(1)
+	// 1. Load the registry.
+	reg, ok := readRegistryForVerb(registries, registryPath, false, stderr, exit)
+	if !ok {
 		return
 	}
 
@@ -412,8 +396,8 @@ func RemoveCore(args []string, readFile readFileFn, stdout, stderr io.Writer, ex
 		return
 	}
 
-	// 3. Serialize the new registry.
-	regBytes, err := Serialize(newReg)
+	// 3. Encode the new registry.
+	regBytes, err := registries.Encode(newReg)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: serializing registry: %v\n", err)
 		exit(1)
@@ -421,7 +405,7 @@ func RemoveCore(args []string, readFile readFileFn, stdout, stderr io.Writer, ex
 	}
 
 	// 4. Validate-before-write: re-parse must equal in-memory state (R-063).
-	reg2, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg2, err := DecodeRegistry(registries, regBytes)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: validate-before-write re-parse failed: %v\n", err)
 		exit(1)

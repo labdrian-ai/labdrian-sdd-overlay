@@ -288,7 +288,7 @@ func TestValidateCore_AGlobalEntryWithoutItsSkillFileIsReportedOnceByTheOnDiskCh
 
 	var out, errBuf bytes.Buffer
 	code := 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
 
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1; stdout=%q stderr=%q", code, out.String(), errBuf.String())
@@ -326,7 +326,7 @@ func TestValidateCore_ReportsApprovalDivergencesAndExitsNonZero(t *testing.T) {
 
 	var out, errBuf bytes.Buffer
 	code := 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1; stdout=%q stderr=%q", code, out.String(), errBuf.String())
 	}
@@ -339,7 +339,7 @@ func TestValidateCore_ReportsApprovalDivergencesAndExitsNonZero(t *testing.T) {
 	out.Reset()
 	errBuf.Reset()
 	code = 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d after approving; stderr=%q", code, errBuf.String())
 	}
@@ -367,7 +367,7 @@ func TestValidateCore_TheRecordFileNeedsNoManifestRow(t *testing.T) {
 	}
 	var out, errBuf bytes.Buffer
 	code := 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%q", code, errBuf.String())
 	}
@@ -395,7 +395,7 @@ func runAdd(t *testing.T, regPath, mfPath, root, id string) addRun {
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	code := -1
-	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, os.Stat, &out, &errBuf, func(c int) { code = c })
+	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, testRegistries(os.ReadFile), os.Stat, &out, &errBuf, func(c int) { code = c })
 	return addRun{out.String(), errBuf.String(), code}
 }
 
@@ -598,7 +598,7 @@ func TestApprovalBaseline_PinnedToTheRepositoryRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read real registry: %v", err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(regData))
+	reg, err := parseRegistry(regData)
 	if err != nil {
 		t.Fatalf("parse real registry: %v", err)
 	}

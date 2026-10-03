@@ -1,12 +1,14 @@
-package skills
+package registryyaml
 
 import (
 	"fmt"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // forbiddenChars are characters the tokenizer rejects even inside quotes.
-// A value containing any of them can never round-trip through ParseRegistry.
+// A value containing any of them can never round-trip through Decode.
 const forbiddenChars = "{}[]&*!\t"
 
 // representable reports whether v can be safely emitted in the strict YAML subset.
@@ -16,7 +18,7 @@ func representable(v string) bool {
 }
 
 // needsQuote reports whether v must be wrapped in double quotes for safe round-trip
-// through ParseRegistry. ADR-7 quoting rules.
+// through Decode. ADR-7 quoting rules.
 func needsQuote(v string) bool {
 	if v == "" {
 		return true
@@ -49,12 +51,12 @@ func scalar(v string) string {
 	return v
 }
 
-// Serialize emits reg as a strict-subset YAML byte slice — the exact inverse of
-// ParseRegistry. Returns a non-nil error (and nil bytes) if any scalar value
+// Encode emits reg as a strict-subset YAML byte slice — the exact inverse of
+// Decode. Returns a non-nil error (and nil bytes) if any scalar value
 // contains characters unrepresentable in the subset (ADR-7). The output is
 // deterministic: identical Registry values always produce identical bytes.
 // minimal: forced — ADR-6 (full re-emit, zero-dep invariant)
-func Serialize(reg Registry) ([]byte, error) {
+func Encode(reg skills.Registry) ([]byte, error) {
 	var b strings.Builder
 
 	// Check representability of all scalar values before writing any output.
@@ -135,7 +137,7 @@ func Serialize(reg Registry) ([]byte, error) {
 
 // checkRepresentable walks every scalar in reg and returns an error for the first
 // value that contains tokenizer-forbidden characters.
-func checkRepresentable(reg Registry) error {
+func checkRepresentable(reg skills.Registry) error {
 	if !representable(reg.Version) {
 		return fmt.Errorf("serialize: version %q contains unrepresentable characters", reg.Version)
 	}

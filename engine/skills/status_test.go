@@ -37,7 +37,7 @@ func TestRenderStatusCore(t *testing.T) {
 		}
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		RenderStatusCore(nil, mockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		RenderStatusCore(nil, testRegistries(mockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}
@@ -57,7 +57,7 @@ func TestRenderStatusCore(t *testing.T) {
 		}
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		RenderStatusCore(nil, mockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		RenderStatusCore(nil, testRegistries(mockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}
@@ -77,7 +77,7 @@ func TestRenderStatusCore(t *testing.T) {
 		}
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		RenderStatusCore(nil, mockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		RenderStatusCore(nil, testRegistries(mockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -99,7 +99,7 @@ func TestRenderStatusCore(t *testing.T) {
 		}
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		RenderStatusCore(nil, mockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		RenderStatusCore(nil, testRegistries(mockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}

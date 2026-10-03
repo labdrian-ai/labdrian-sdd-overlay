@@ -18,8 +18,8 @@ var installCwd = os.Getwd
 // behave identically, approve fails closed because it must not invent an
 // approval time, and so does every verb that takes the overlay lock, because it
 // must not run unserialized.
-func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, readFile, nil, nil, stdout, stderr, exit)
+func SkillsCore(verb string, args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
+	SkillsCoreAt(verb, args, readFile, registries, nil, nil, stdout, stderr, exit)
 }
 
 // SkillsCoreAt is the testable CLI core for `engine skills <verb>`.
@@ -31,7 +31,10 @@ func SkillsCore(verb string, args []string, readFile readFileFn, stdout, stderr 
 // No global state; all I/O is injected. now returns the current time as an
 // RFC 3339 UTC timestamp for the verbs that record one (approve); the
 // production caller passes the wall clock, and nil is legal for every other verb.
-func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
+//
+// registries is how every verb that works on the registry reads it (and how add and remove encode
+// what they write): the composition root builds one, the verbs know no file format.
+func SkillsCoreAt(verb string, args []string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
 	// install writes into the working directory. It is resolved here, once, before
 	// any lock is asked for, and the lock and the verb are both given this answer:
 	// a second call could return another directory, and a directory that cannot be
@@ -52,7 +55,7 @@ func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() st
 		installRoot = cwd
 	}
 	for attempt := 1; ; attempt++ {
-		if done := runLocked(attempt, verb, args, installRoot, readFile, now, locker, stdout, stderr, exit); done {
+		if done := runLocked(attempt, verb, args, installRoot, readFile, registries, now, locker, stdout, stderr, exit); done {
 			return
 		}
 	}
@@ -64,14 +67,14 @@ func SkillsCoreAt(verb string, args []string, readFile readFileFn, now func() st
 // rereadsWhenTheLockFileAppears). That attempt's output is discarded, not printed.
 // When the lock file cannot be inspected the attempt is discarded too, and the verb
 // refuses with exit 1 instead of trying again.
-func runLocked(attempt int, verb string, args []string, installRoot string, readFile readFileFn, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) (done bool) {
+func runLocked(attempt int, verb string, args []string, installRoot string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) (done bool) {
 	release, provisional, ok := acquireLocks(verb, args, installRoot, locker, stderr, exit)
 	if !ok {
 		return true
 	}
 	if len(provisional) == 0 {
 		defer release()
-		dispatchVerb(verb, args, installRoot, readFile, now, stdout, stderr, exit)
+		dispatchVerb(verb, args, installRoot, readFile, registries, now, stdout, stderr, exit)
 		return true
 	}
 
@@ -80,7 +83,7 @@ func runLocked(attempt int, verb string, args []string, installRoot string, read
 	// the check. The first call is the one that counts, as it would be for a real exit.
 	var out, errOut bytes.Buffer
 	code, exited := 0, false
-	dispatchVerb(verb, args, installRoot, readFile, now, &out, &errOut, func(c int) {
+	dispatchVerb(verb, args, installRoot, readFile, registries, now, &out, &errOut, func(c int) {
 		if !exited {
 			code, exited = c, true
 		}
@@ -115,40 +118,40 @@ func runLocked(attempt int, verb string, args []string, installRoot string, read
 
 // dispatchVerb runs the verb. The locks, if it needs any, are already held, and
 // installRoot is the directory install was resolved to and locked.
-func dispatchVerb(verb string, args []string, installRoot string, readFile readFileFn, now func() string, stdout, stderr io.Writer, exit func(int)) {
+func dispatchVerb(verb string, args []string, installRoot string, readFile readFileFn, registries RegistryRepository, now func() string, stdout, stderr io.Writer, exit func(int)) {
 	switch verb {
 	case "list":
-		RenderListCore(args, readFile, stdout, stderr, exit)
+		RenderListCore(args, registries, stdout, stderr, exit)
 	case "status":
-		RenderStatusCore(args, readFile, stdout, stderr, exit)
+		RenderStatusCore(args, registries, stdout, stderr, exit)
 	case "validate":
-		RenderValidateCore(args, readFile, ScanSkillFiles, stdout, stderr, exit)
+		RenderValidateCore(args, readFile, registries, ScanSkillFiles, stdout, stderr, exit)
 	case "install":
-		env := productionInstallEnv(readFile, func() (string, error) { return installRoot, nil })
+		env := productionInstallEnv(registries, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
 		renderInstall(env, args, stdout, stderr, exit)
 	case "adopt":
-		env := productionInstallEnv(readFile, func() (string, error) { return installRoot, nil })
+		env := productionInstallEnv(registries, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
 		renderAdopt(env, args, stdout, stderr, exit)
 	case "add":
-		AddCore(stripVerb(args, "add"), readFile, os.Stat, stdout, stderr, exit)
+		AddCore(stripVerb(args, "add"), readFile, registries, os.Stat, stdout, stderr, exit)
 	case "remove":
-		RemoveCore(stripVerb(args, "remove"), readFile, stdout, stderr, exit)
+		RemoveCore(stripVerb(args, "remove"), readFile, registries, stdout, stderr, exit)
 	case "sync-manifest":
-		SyncCore(stripVerb(args, "sync-manifest"), readFile, stdout, stderr, exit)
+		SyncCore(stripVerb(args, "sync-manifest"), readFile, registries, stdout, stderr, exit)
 	case "lint":
 		RenderLintCore(stripVerb(args, "lint"), readFile, stdout, stderr, exit)
 	case "approve":
 		RenderApproveCore(stripVerb(args, "approve"), readFile, now, stdout, stderr, exit)
 	case "project-register":
-		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, registries, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "project-revise":
 		RenderProjectReviseCore(stripVerb(args, "project-revise"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "project-status":
-		RenderProjectStatusCore(stripVerb(args, "project-status"), readFile, os.ReadDir, resolvePathKeepingMissing, stdout, stderr, exit)
+		RenderProjectStatusCore(stripVerb(args, "project-status"), readFile, registries, os.ReadDir, resolvePathKeepingMissing, stdout, stderr, exit)
 	case "project-retire":
-		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, registries, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
 	case "":
 		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
 		exit(1)
@@ -186,7 +189,7 @@ func stripVerb(args []string, verb string) []string {
 // directory. scanSkills is an injected seam (R-003) so the on-disk check is
 // unit-testable without walking a real tree; production callers pass
 // ScanSkillFiles.
-func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(string) ([]string, error), stdout, stderr io.Writer, exit func(int)) {
+func RenderValidateCore(args []string, readFile readFileFn, registries RegistryRepository, scanSkills func(string) ([]string, error), stdout, stderr io.Writer, exit func(int)) {
 	registryPath := defaultRegistryPath
 	manifestPath := "overlay.manifest"
 	sourceRoot := ""
@@ -216,16 +219,8 @@ func RenderValidateCore(args []string, readFile readFileFn, scanSkills func(stri
 		return
 	}
 
-	data, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	reg, err := ParseRegistry(bytes.NewReader(data))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
-		exit(1)
+	reg, ok := readRegistryForVerb(registries, registryPath, false, stderr, exit)
+	if !ok {
 		return
 	}
 

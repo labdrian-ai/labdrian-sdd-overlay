@@ -1,59 +1,66 @@
-package skills
+package registryyaml_test
 
 import (
 	"bytes"
+	"flag"
 	"os"
 	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 )
 
+// update rewrites the golden file: go test ./skills/registryyaml -run TestEncodeGoldenTwoEntry -update
+var update = flag.Bool("update", false, "update golden files")
+
 // mustParseBytes is a test helper that parses YAML bytes or fatals.
-func mustParseBytes(t *testing.T, data []byte) Registry {
+func mustParseBytes(t *testing.T, data []byte) skills.Registry {
 	t.Helper()
-	reg, err := ParseRegistry(bytes.NewReader(data))
+	reg, err := readRegistryBytes(data)
 	if err != nil {
-		t.Fatalf("ParseRegistry: %v", err)
+		t.Fatalf("reading the registry: %v", err)
 	}
 	return reg
 }
 
-// mustSerialize is a test helper that calls Serialize or fatals.
-func mustSerialize(t *testing.T, reg Registry) []byte {
+// mustEncode is a test helper that encodes a registry or fatals.
+func mustEncode(t *testing.T, reg skills.Registry) []byte {
 	t.Helper()
-	out, err := Serialize(reg)
+	out, err := registryyaml.Encode(reg)
 	if err != nil {
-		t.Fatalf("Serialize: %v", err)
+		t.Fatalf("Encode: %v", err)
 	}
 	return out
 }
 
-// TestSerializeRoundTripAllowedProjects verifies SC-21: a project-scoped entry with
+// TestEncodeRoundTripAllowedProjects verifies SC-21: a project-scoped entry with
 // allowedProjects round-trips through serialize → parse with DeepEqual.
-func TestSerializeRoundTripAllowedProjects(t *testing.T) {
-	reg := Registry{
+func TestEncodeRoundTripAllowedProjects(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills: []Entry{
+		Skills: []skills.Entry{
 			{
 				ID:   "prespec-malandra",
 				Path: "prespec-malandra",
-				Source: Source{
+				Source: skills.Source{
 					Type: "custom",
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope:    "project",
 					Targets:         []string{"claude"},
 					AllowedProjects: []string{"labdrian-sdd-overlay"},
 				},
-				Lifecycle: Lifecycle{
+				Lifecycle: skills.Lifecycle{
 					UpdateStrategy: "overlay-only",
 				},
 			},
 		},
 	}
 
-	out := mustSerialize(t, reg)
+	out := mustEncode(t, reg)
 	got := mustParseBytes(t, out)
 
 	if !reflect.DeepEqual(reg, got) {
@@ -61,99 +68,99 @@ func TestSerializeRoundTripAllowedProjects(t *testing.T) {
 	}
 }
 
-// TestSerializeDeterministic verifies SC-22: two calls on the same Registry produce
+// TestEncodeDeterministic verifies SC-22: two calls on the same Registry produce
 // identical byte slices.
-func TestSerializeDeterministic(t *testing.T) {
-	reg := Registry{
+func TestEncodeDeterministic(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills: []Entry{
+		Skills: []skills.Entry{
 			{
 				ID:   "sdd-spec",
 				Path: "sdd-spec",
-				Source: Source{
+				Source: skills.Source{
 					Type:     "core",
-					Upstream: &Upstream{Owner: "gentleman-programming"},
+					Upstream: &skills.Upstream{Owner: "gentleman-programming"},
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope: "global",
 					Targets:      []string{"claude", "opencode", "codex"},
 				},
-				Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"},
+				Lifecycle: skills.Lifecycle{UpdateStrategy: "vendor-merge"},
 			},
 			{
 				ID:   "my-custom",
 				Path: "my-custom",
-				Source: Source{
+				Source: skills.Source{
 					Type: "custom",
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope: "global",
 					Targets:      []string{"claude", "opencode", "codex"},
 				},
-				Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+				Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
 			},
 		},
 	}
 
-	a := mustSerialize(t, reg)
-	b := mustSerialize(t, reg)
+	a := mustEncode(t, reg)
+	b := mustEncode(t, reg)
 
 	if !bytes.Equal(a, b) {
 		t.Errorf("Serialize is not deterministic:\nfirst call:\n%s\nsecond call:\n%s", a, b)
 	}
 }
 
-// TestSerializeNoUpstreamForCustom verifies SC-23: output for a custom entry must not
+// TestEncodeNoUpstreamForCustom verifies SC-23: output for a custom entry must not
 // contain the string "upstream".
-func TestSerializeNoUpstreamForCustom(t *testing.T) {
-	reg := Registry{
+func TestEncodeNoUpstreamForCustom(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills: []Entry{
+		Skills: []skills.Entry{
 			{
 				ID:   "my-custom",
 				Path: "my-custom",
-				Source: Source{
+				Source: skills.Source{
 					Type:     "custom",
 					Upstream: nil,
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope: "global",
 					Targets:      []string{"claude", "opencode", "codex"},
 				},
-				Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+				Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
 			},
 		},
 	}
 
-	out := mustSerialize(t, reg)
+	out := mustEncode(t, reg)
 	if strings.Contains(string(out), "upstream") {
 		t.Errorf("output for custom entry must not contain 'upstream', got:\n%s", out)
 	}
 }
 
-// TestSerializeUpstreamForCore verifies SC-24: a serialized core entry re-parsed has a
+// TestEncodeUpstreamForCore verifies SC-24: a serialized core entry re-parsed has a
 // non-nil Source.Upstream with a non-empty Owner.
-func TestSerializeUpstreamForCore(t *testing.T) {
-	reg := Registry{
+func TestEncodeUpstreamForCore(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills: []Entry{
+		Skills: []skills.Entry{
 			{
 				ID:   "sdd-spec",
 				Path: "sdd-spec",
-				Source: Source{
+				Source: skills.Source{
 					Type:     "core",
-					Upstream: &Upstream{Owner: "gentleman-programming"},
+					Upstream: &skills.Upstream{Owner: "gentleman-programming"},
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope: "global",
 					Targets:      []string{"claude", "opencode", "codex"},
 				},
-				Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"},
+				Lifecycle: skills.Lifecycle{UpdateStrategy: "vendor-merge"},
 			},
 		},
 	}
 
-	out := mustSerialize(t, reg)
+	out := mustEncode(t, reg)
 	got := mustParseBytes(t, out)
 
 	if got.Skills[0].Source.Upstream == nil {
@@ -164,41 +171,41 @@ func TestSerializeUpstreamForCore(t *testing.T) {
 	}
 }
 
-// TestSerializeGoldenTwoEntry verifies SC-25: the serialized form of a two-entry registry
+// TestEncodeGoldenTwoEntry verifies SC-25: the serialized form of a two-entry registry
 // matches a golden file. Run with -update to write the golden file.
-func TestSerializeGoldenTwoEntry(t *testing.T) {
-	reg := Registry{
+func TestEncodeGoldenTwoEntry(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills: []Entry{
+		Skills: []skills.Entry{
 			{
 				ID:   "sdd-spec",
 				Path: "sdd-spec",
-				Source: Source{
+				Source: skills.Source{
 					Type:     "core",
-					Upstream: &Upstream{Owner: "gentleman-programming"},
+					Upstream: &skills.Upstream{Owner: "gentleman-programming"},
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope: "global",
 					Targets:      []string{"claude", "opencode", "codex"},
 				},
-				Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"},
+				Lifecycle: skills.Lifecycle{UpdateStrategy: "vendor-merge"},
 			},
 			{
 				ID:   "my-custom",
 				Path: "my-custom",
-				Source: Source{
+				Source: skills.Source{
 					Type: "custom",
 				},
-				Install: Install{
+				Install: skills.Install{
 					DefaultScope: "global",
 					Targets:      []string{"claude", "opencode", "codex"},
 				},
-				Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+				Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
 			},
 		},
 	}
 
-	out := mustSerialize(t, reg)
+	out := mustEncode(t, reg)
 
 	goldenPath := filepath.Join("testdata", "golden", "two_entry.yaml")
 
@@ -228,9 +235,9 @@ func TestSerializeGoldenTwoEntry(t *testing.T) {
 	}
 }
 
-// TestSerializeRejectsUnrepresentable verifies ADR-7: values containing forbidden
+// TestEncodeRejectsUnrepresentable verifies ADR-7: values containing forbidden
 // characters must cause Serialize to return a non-nil error with no bytes.
-func TestSerializeRejectsUnrepresentable(t *testing.T) {
+func TestEncodeRejectsUnrepresentable(t *testing.T) {
 	forbidden := []struct {
 		name  string
 		value string
@@ -252,25 +259,25 @@ func TestSerializeRejectsUnrepresentable(t *testing.T) {
 			// by constructing a core entry with a forbidden owner value.
 			// We test via ID since slug guard in AddEntry would block this in normal flow;
 			// direct struct construction bypasses that guard.
-			reg := Registry{
+			reg := skills.Registry{
 				Version: "1",
-				Skills: []Entry{
+				Skills: []skills.Entry{
 					{
 						ID:   "test-entry",
 						Path: "test-entry",
-						Source: Source{
+						Source: skills.Source{
 							Type:     "core",
-							Upstream: &Upstream{Owner: tc.value},
+							Upstream: &skills.Upstream{Owner: tc.value},
 						},
-						Install: Install{
+						Install: skills.Install{
 							DefaultScope: "global",
 							Targets:      []string{"claude"},
 						},
-						Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"},
+						Lifecycle: skills.Lifecycle{UpdateStrategy: "vendor-merge"},
 					},
 				},
 			}
-			out, err := Serialize(reg)
+			out, err := registryyaml.Encode(reg)
 			if err == nil {
 				t.Errorf("expected non-nil error for forbidden value %q, got nil; output:\n%s", tc.value, out)
 			}
@@ -281,29 +288,29 @@ func TestSerializeRejectsUnrepresentable(t *testing.T) {
 	}
 }
 
-// TestSerializeRoundTripRealRegistry verifies SC-20: parse the real skills.registry.yaml,
+// TestEncodeRoundTripRealRegistry verifies SC-20: parse the real skills.registry.yaml,
 // serialize, re-parse, and confirm DeepEqual for all entries.
-func TestSerializeRoundTripRealRegistry(t *testing.T) {
+func TestEncodeRoundTripRealRegistry(t *testing.T) {
 	// Locate the real registry relative to the module root.
 	// Running from engine/skills/, the registry is two levels up.
-	registryPath := filepath.Join("..", "..", "skills.registry.yaml")
+	registryPath := filepath.Join("..", "..", "..", "skills.registry.yaml")
 
 	data, err := os.ReadFile(registryPath)
 	if err != nil {
 		t.Fatalf("read real registry %s: %v", registryPath, err)
 	}
 
-	original, err := ParseRegistry(bytes.NewReader(data))
+	original, err := readRegistryBytes(data)
 	if err != nil {
 		t.Fatalf("parse real registry: %v", err)
 	}
 
-	serialized, err := Serialize(original)
+	serialized, err := registryyaml.Encode(original)
 	if err != nil {
 		t.Fatalf("Serialize real registry: %v", err)
 	}
 
-	reparsed, err := ParseRegistry(bytes.NewReader(serialized))
+	reparsed, err := readRegistryBytes(serialized)
 	if err != nil {
 		t.Fatalf("re-parse serialized registry: %v\noutput:\n%s", err, serialized)
 	}
@@ -327,32 +334,32 @@ func TestSerializeRoundTripRealRegistry(t *testing.T) {
 }
 
 // externalEntry returns a minimal valid external Registry entry for use in tests.
-func externalEntry(id, repo, ref string) Entry {
-	return Entry{
+func externalEntry(id, repo, ref string) skills.Entry {
+	return skills.Entry{
 		ID:   id,
 		Path: id,
-		Source: Source{
+		Source: skills.Source{
 			Type: "external",
 			Repo: repo,
 			Ref:  ref,
 		},
-		Install: Install{
+		Install: skills.Install{
 			DefaultScope: "global",
 			Targets:      []string{"claude"},
 		},
-		Lifecycle: Lifecycle{UpdateStrategy: "overlay-only"},
+		Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
 	}
 }
 
-// TestSerializeRoundTripExternal verifies SC-60: parse(serialize(r)) == r for a Registry
+// TestEncodeRoundTripExternal verifies SC-60: parse(serialize(r)) == r for a Registry
 // containing an external entry with both Repo and Ref set.
-func TestSerializeRoundTripExternal(t *testing.T) {
-	reg := Registry{
+func TestEncodeRoundTripExternal(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills:  []Entry{externalEntry("my-ext-skill", "https://github.com/example/skills", "a1b2c3d")},
+		Skills:  []skills.Entry{externalEntry("my-ext-skill", "https://github.com/example/skills", "a1b2c3d")},
 	}
 
-	out := mustSerialize(t, reg)
+	out := mustEncode(t, reg)
 
 	// Serialized bytes must contain "repo:" and "ref:" under the source block.
 	if !strings.Contains(string(out), "repo:") {
@@ -369,16 +376,16 @@ func TestSerializeRoundTripExternal(t *testing.T) {
 	}
 }
 
-// TestSerializeExternalRejectsForbiddenRepo verifies SC-61: a repo value containing a
+// TestEncodeExternalRejectsForbiddenRepo verifies SC-61: a repo value containing a
 // forbidden character causes Serialize to return a non-nil error naming the entry id
 // and "source.repo".
-func TestSerializeExternalRejectsForbiddenRepo(t *testing.T) {
-	reg := Registry{
+func TestEncodeExternalRejectsForbiddenRepo(t *testing.T) {
+	reg := skills.Registry{
 		Version: "1",
-		Skills:  []Entry{externalEntry("bad-entry", "https://example.com/{repo}", "")},
+		Skills:  []skills.Entry{externalEntry("bad-entry", "https://example.com/{repo}", "")},
 	}
 
-	out, err := Serialize(reg)
+	out, err := registryyaml.Encode(reg)
 	if err == nil {
 		t.Fatalf("SC-61: expected non-nil error for repo with forbidden char, got nil; output:\n%s", out)
 	}

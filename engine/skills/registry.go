@@ -1,6 +1,10 @@
 package skills
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+	"io"
+)
 
 // RegistryRepository is the port through which the skills domain reads and writes its own
 // registry model. It is owned here and implemented by an adapter that knows where a registry is
@@ -85,4 +89,27 @@ func judged(reg Registry, readErr error) (Registry, error) {
 		return Registry{}, readErr
 	}
 	return reg, nil
+}
+
+// readRegistryForVerb reads the registry at path for a verb that works on it, and says what a
+// person is told when it cannot: the words of a store that could not be read, or of a registry
+// that is not usable (a verb that names the registry in its refusal, quotePath, puts the path
+// in the second). It reports false, having printed and exited, when the verb has nothing more
+// to do.
+func readRegistryForVerb(registries RegistryRepository, path string, quotePath bool, stderr io.Writer, exit func(int)) (Registry, bool) {
+	reg, err := ReadRegistry(registries, path)
+	if err == nil {
+		return reg, true
+	}
+	var unreadable *RegistryReadError
+	switch {
+	case errors.As(err, &unreadable):
+		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", path, err)
+	case quotePath:
+		fmt.Fprintf(stderr, "error: parsing registry %q: %v\n", path, err)
+	default:
+		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
+	}
+	exit(1)
+	return Registry{}, false
 }

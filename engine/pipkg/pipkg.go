@@ -37,6 +37,7 @@ import (
 	"archive/tar"
 	_ "embed"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -49,6 +50,7 @@ import (
 	"syscall"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 )
 
 const piTarget = "pi"
@@ -708,12 +710,12 @@ func buildInto(overlayRoot string, reg skills.Registry, dir string, provenanceRo
 		if !containsTarget(e.Install.Targets, piTarget) {
 			continue
 		}
-		// R-003 (defense in depth, D3): validateEntry already rejects an
-		// unclean/absolute/".."-bearing path at parse time, since the
+		// R-003 (defense in depth, D3): Registry.Validate already rejects an
+		// unclean/absolute/".."-bearing path when the registry is read, since the
 		// same e.Path is joined to both the source and destination roots
 		// below. Re-check the destination join here too, so a future
 		// caller that constructs a Registry without going through
-		// ParseRegistry cannot escape skillsDir either.
+		// skills.ReadRegistry cannot escape skillsDir either.
 		dst := filepath.Join(skillsDir, e.Path)
 		if rel, err := filepath.Rel(skillsDir, dst); err != nil || strings.HasPrefix(rel, "..") {
 			return fmt.Errorf("pipkg: entry %q: path %q escapes the package skills directory", e.ID, e.Path)
@@ -852,18 +854,20 @@ func frontmatterName(content string) (string, error) {
 	return "", fmt.Errorf("SKILL.md frontmatter is not terminated")
 }
 
-// loadRegistry parses the skills registry at registryPath.
+// loadRegistry reads the skills registry at registryPath through the registry port: the file of
+// the working tree, or, when Check compares against the deploy ref, the file of the directory that
+// ref was exported to. The registry is the domain's to judge (skills.ReadRegistry), so a package
+// is never built from one it would not accept.
 func loadRegistry(registryPath string) (skills.Registry, error) {
-	f, err := os.Open(registryPath)
-	if err != nil {
+	reg, err := skills.ReadRegistry(registryyaml.NewRepository(os.ReadFile), registryPath)
+	if err == nil {
+		return reg, nil
+	}
+	var unreadable *skills.RegistryReadError
+	if errors.As(err, &unreadable) {
 		return skills.Registry{}, fmt.Errorf("pipkg: opening registry: %w", err)
 	}
-	defer f.Close()
-	reg, err := skills.ParseRegistry(f)
-	if err != nil {
-		return skills.Registry{}, fmt.Errorf("pipkg: parsing registry: %w", err)
-	}
-	return reg, nil
+	return skills.Registry{}, fmt.Errorf("pipkg: parsing registry: %w", err)
 }
 
 // resolveBuildRev resolves overlayRoot's checked-out HEAD commit SHA

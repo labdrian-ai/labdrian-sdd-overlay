@@ -36,9 +36,9 @@ func installedTree(t *testing.T, files map[string]string) (project string) {
 	code := -1
 	RenderInstallCore(
 		[]string{"--registry", "reg.yaml", "--source-root", overlay, "--project-id", "target-repo"},
-		func(string) ([]byte, error) {
+		testRegistries(func(string) ([]byte, error) {
 			return []byte(makeInstallRegistryYAML("my-skill", []string{"target-repo"})), nil
-		},
+		}),
 		func() (string, error) { return project, nil },
 		&out, &errBuf, func(c int) { code = c },
 	)

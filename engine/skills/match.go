@@ -86,7 +86,7 @@ func truncateSlug(s string, maxLen int) string {
 // duplicate silently discards knowledge, a miss only defers it. An empty or
 // all-punctuation candidate never matches. MatchCandidate performs no
 // filesystem or Engram access; the caller parses skills.registry.yaml with
-// ParseRegistry and passes the resulting Registry in.
+// ReadRegistry and passes the resulting Registry in.
 //
 // Extension point (documented, not built): when the registry schema grows a
 // trigger/keyword field, add MatchCandidateBy(reg, candidate, fields
