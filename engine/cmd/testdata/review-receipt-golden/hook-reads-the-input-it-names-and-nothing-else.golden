@@ -1,0 +1,314 @@
+# tool_name of the wrong type: the input cannot be decoded
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":7,"tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# tool_name an object
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":{},"tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# tool_name missing: the name is not consulted
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# tool_name of another tool: the name is not consulted
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Write","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# fields of the envelope it does not read, of the wrong type
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"cwd":5,"hook_event_name":7,"session_id":{},"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# file_path of the wrong type beside the command: not a field it reads
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x","file_path":5}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# notebook_path of the wrong type beside the command
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x","notebook_path":[]}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# keys in other cases
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"TOOL_NAME":"Bash","TOOL_INPUT":{"COMMAND":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# a key twice: the last one wins
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls","command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# white space around the object
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+ 
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+ 
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# the phrase inside a longer command, as a look-alike
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"echo \"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x\" >> log"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# tool_input a string
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# tool_input an array
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":["gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"]}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# tool_input null
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":null}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# command an array
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":["gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"]}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# command null
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":null}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# an array in place of the object
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+[{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}]
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# null
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+null
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# two objects
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}{}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# text after the object
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}} trailing
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+# a truncated object
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+

@@ -1,0 +1,91 @@
+$ skills guard-hook
+# Bash: labdrian skills approve --id my-skill --approver me
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"labdrian skills approve --id my-skill --approver me","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: /usr/local/bin/labdrian-overlay skills approve --id x
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"/usr/local/bin/labdrian-overlay skills approve --id x","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: "gentle-ai-overlay" 'skills' "approve"
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"\"gentle-ai-overlay\" 'skills' \"approve\"","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: sh -c 'labdrian skills approve --id x'
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"sh -c 'labdrian skills approve --id x'","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: echo x | xargs labdrian skills approve
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo x | xargs labdrian skills approve","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: cd /repo && labdrian skills approve --id x
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"cd /repo \u0026\u0026 labdrian skills approve --id x","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: ls
+labdrian skills approve --id x
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls\nlabdrian skills approve --id x","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: rg --pre ./x labdrian skills approve
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"rg --pre ./x labdrian skills approve","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# Bash: git commit -m 'run labdrian skills approve'
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git commit -m 'run labdrian skills approve'","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+

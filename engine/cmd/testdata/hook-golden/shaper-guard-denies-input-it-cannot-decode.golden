@@ -1,0 +1,119 @@
+$ shaper guard-hook
+# empty
+--- stdin ---
+<empty>
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: unexpected end of JSON input)
+
+$ shaper guard-hook
+# white space only
+--- stdin ---
+ 
+	 
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: unexpected end of JSON input)
+
+$ shaper guard-hook
+# not JSON
+--- stdin ---
+hello
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: invalid character 'h' looking for beginning of value)
+
+$ shaper guard-hook
+# a truncated object
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls"
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: unexpected end of JSON input)
+
+$ shaper guard-hook
+# an array
+--- stdin ---
+[{"tool_name":"Bash","tool_input":{"command":"ls"}}]
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal array into Go value of type shaper.guardHookInput)
+
+$ shaper guard-hook
+# a string
+--- stdin ---
+"Bash"
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal string into Go value of type shaper.guardHookInput)
+
+$ shaper guard-hook
+# a number
+--- stdin ---
+7
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal number into Go value of type shaper.guardHookInput)
+
+$ shaper guard-hook
+# true
+--- stdin ---
+true
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal bool into Go value of type shaper.guardHookInput)
+
+$ shaper guard-hook
+# null
+--- stdin ---
+null
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# two objects
+--- stdin ---
+{"tool_name":"Bash"}{"tool_name":"Bash"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: invalid character '{' after top-level value)
+
+$ shaper guard-hook
+# text after the object
+--- stdin ---
+{"tool_name":"Bash"} trailing
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: invalid character 't' after top-level value)
+
+$ shaper guard-hook
+# an empty object
+--- stdin ---
+{}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

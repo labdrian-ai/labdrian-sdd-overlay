@@ -1,0 +1,139 @@
+$ skills guard-hook
+# tool_name of the wrong type with a denied command
+--- stdin ---
+{"tool_name":7,"tool_input":{"command":"labdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# tool_name an object
+--- stdin ---
+{"tool_name":{},"tool_input":{"command":"labdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# tool_name missing
+--- stdin ---
+{"tool_input":{"command":"labdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# tool_input a string
+--- stdin ---
+{"tool_name":"Bash","tool_input":"labdrian skills approve"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# tool_input an array
+--- stdin ---
+{"tool_name":"Bash","tool_input":[1]}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# tool_input a number
+--- stdin ---
+{"tool_name":"Bash","tool_input":5}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# tool_input null
+--- stdin ---
+{"tool_name":"Bash","tool_input":null}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# command of the wrong type
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":5}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# command null
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":null}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# file_path of the wrong type beside a denied command
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"labdrian skills approve","file_path":5}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# notebook_path of the wrong type
+--- stdin ---
+{"tool_name":"NotebookEdit","tool_input":{"notebook_path":["x"]}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# fields of the envelope it does not read, of the wrong type
+--- stdin ---
+{"cwd":5,"hook_event_name":7,"session_id":{},"tool_name":"Bash","tool_input":{"command":"labdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# keys in other cases
+--- stdin ---
+{"TOOL_NAME":"Bash","TOOL_INPUT":{"COMMAND":"labdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# a key twice: the last one wins
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls","command":"labdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# a command with an escaped line break
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls\nlabdrian skills approve"}}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+

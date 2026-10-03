@@ -1,0 +1,22 @@
+$ skills guard-hook
+# a panic where the guard decides
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the skills approve guard hit an internal error (boom second line [31mred xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...); this tool call was not checked for 'skills approve' and was not denied."}
+--- stderr ---
+<5062 bytes, sha256 b86f576a7ee0, starting "skills guard-hook: internal error: boom\nsecond line \x1b[31mred">
+
+$ skills guard-hook
+# a short panic value
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"labdrian skills approve","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the skills approve guard hit an internal error (boom); this tool call was not checked for 'skills approve' and was not denied."}
+--- stderr ---
+skills guard-hook: internal error: boom
+

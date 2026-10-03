@@ -1,0 +1,156 @@
+$ shaper guard-hook
+# Bash: go test ./...
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"go test ./..."},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Bash: gentle-ai-overlay shaper assess --root /r --handoff h.json --goal g.json
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"gentle-ai-overlay shaper assess --root /r --handoff h.json --goal g.json"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Bash: git checkout feat/shaper-clearance
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"git checkout feat/shaper-clearance"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Bash: echo shaper clearance
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"echo shaper clearance"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Write {"file_path":"/repo/doc.md","content":"run shaper clearance record"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"/repo/doc.md","content":"run shaper clearance record"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Write {"file_path":"/repo/labdrian/shaper-clearance-notes.md","content":"x"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"/repo/labdrian/shaper-clearance-notes.md","content":"x"},"tool_use_id":"toolu_01"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# Write {"file_path":"/repo/doc.md","content":"labdrian/shaper-clearance"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"/repo/doc.md","content":"labdrian/shaper-clearance"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Edit {"file_path":"/repo/main.go","old_string":"a","new_string":"b"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Write {}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Bash {}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# Bash null
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":null,"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# an object with no fields it reads
+--- stdin ---
+{}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# an object with only tool_name
+--- stdin ---
+{"tool_name":"Bash"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# null: nothing to decode into
+--- stdin ---
+null
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# fields of the envelope it does not read, of the wrong type
+--- stdin ---
+{"cwd":5,"hook_event_name":7,"session_id":{},"tool_name":"Bash","tool_input":{"command":"ls"}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# keys in other cases
+--- stdin ---
+{"TOOL_NAME":"Bash","TOOL_INPUT":{"COMMAND":"gentle-ai-overlay shaper clearance record --stdin"}}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# a key twice: the last one wins
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls","command":"gentle-ai-overlay shaper clearance record"}}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+

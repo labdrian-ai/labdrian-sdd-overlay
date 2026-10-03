@@ -1,0 +1,70 @@
+$ skills guard-hook
+# Write {"file_path":"/repo/skills/my-skill/.approval.json","content":"{}"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"/repo/skills/my-skill/.approval.json","content":"{}"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
+$ skills guard-hook
+# Edit {"file_path":"/repo/skills/my-skill/.approval.json","old_string":"a","new_string":"b"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/skills/my-skill/.approval.json","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
+$ skills guard-hook
+# MultiEdit {"file_path":"/repo/skills/my-skill/.approval.json","edits":[]}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"MultiEdit","tool_input":{"file_path":"/repo/skills/my-skill/.approval.json","edits":[]},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
+$ skills guard-hook
+# NotebookEdit {"notebook_path":"/repo/skills/my-skill/.approval.json","new_source":"x"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"NotebookEdit","tool_input":{"notebook_path":"/repo/skills/my-skill/.approval.json","new_source":"x"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
+$ skills guard-hook
+# Write {"file_path":"/repo/skills/my-skill/.APPROVAL.JSON","content":"{}"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"/repo/skills/my-skill/.APPROVAL.JSON","content":"{}"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
+$ skills guard-hook
+# Write {"file_path":"C:\\repo\\skills\\x\\.approval.json","content":"{}"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"C:\\repo\\skills\\x\\.approval.json","content":"{}"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
+$ skills guard-hook
+# Write {"file_path":".approval.json","content":"{}"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":".approval.json","content":"{}"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: .approval.json is the approval record that \"skills approve\" writes for a human who reviewed the exact SKILL.md bytes, so the agent must not write it by hand. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the tool and the file name, so a shell command can still write the file."}}
+--- stderr ---
+
