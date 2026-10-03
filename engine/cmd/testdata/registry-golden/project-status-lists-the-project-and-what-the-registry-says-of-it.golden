@@ -1,0 +1,54 @@
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/renamed-two --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/two/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-two/SKILL.md
+wrote: .agents/skills/tidy-two/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 5aea37c0e4d9297242d06bd6245dcd9539c2ace9638b9b7f1d9e80f648898e38
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+# a registry that has nothing of them
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-two rev:1 owner:agent superseded-by:-
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# a registry that has the id of the first: it is superseded
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-two rev:1 owner:agent superseded-by:-
+tidy-worktree rev:1 owner:agent superseded-by:tidy-worktree
+--- stderr ---
+
+# a registry that has the id of the second: it is superseded
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-two rev:1 owner:agent superseded-by:tidy-two
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# a registry that has the last word of the candidate of the second: it is superseded
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-two rev:1 owner:agent superseded-by:renamed-two
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+

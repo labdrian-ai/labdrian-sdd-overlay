@@ -1,0 +1,44 @@
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+# a plan
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason not needed any more --dry-run tidy-worktree
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# a retirement
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason not needed any more tidy-worktree
+exit: 0
+--- stdout ---
+removed: .claude/skills/tidy-worktree/SKILL.md
+removed: .agents/skills/tidy-worktree/SKILL.md
+--- stderr ---
+
+--- tree of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.labdrian/
+.labdrian/procedural-skills.lock.json (35 bytes)
+
+--- project/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": []
+}
+

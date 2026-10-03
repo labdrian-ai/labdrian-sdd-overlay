@@ -1,0 +1,29 @@
+# a committed overlay, built, and checked
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
+--- stderr ---
+
+$ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg check: compared against main (<SHA12>); package built from <SHA>
+pipkg check: OK (built package matches the current manifest)
+--- stderr ---
+
+# the registry of the working tree broken since: the comparison is with the committed one
+$ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg check: compared against main (<SHA12>); package built from <SHA>
+pipkg check: OK (built package matches the current manifest)
+--- stderr ---
+
+# a build from that working tree is not
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 1
+--- stdout ---
+--- stderr ---
+pipkg build: pipkg: parsing registry: skills: entry "broken": path must not be empty
+

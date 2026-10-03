@@ -1,0 +1,9 @@
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in nowhere)
+exit: 0
+--- stdout ---
+no project-scoped skills admitted for project "nowhere"
+--- stderr ---
+
+--- tree of nowhere ---
+(empty)
+

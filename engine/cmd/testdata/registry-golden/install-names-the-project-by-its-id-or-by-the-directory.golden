@@ -1,0 +1,58 @@
+# a project id that the registry names for one skill only
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id other (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (405 bytes)
+
+# a directory that is not a project the registry admits a skill to
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in nowhere)
+exit: 0
+--- stdout ---
+no project-scoped skills admitted for project "nowhere"
+--- stderr ---
+
+# the same directory under the project id that is
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in nowhere)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of nowhere ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+

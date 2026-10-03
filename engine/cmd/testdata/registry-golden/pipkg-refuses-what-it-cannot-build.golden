@@ -1,0 +1,55 @@
+# no verb, an unknown verb, an unknown option, a flag with no value, a flag missing
+$ pipkg
+exit: 1
+--- stdout ---
+--- stderr ---
+error: pipkg requires a verb: build, check
+
+$ pipkg pack
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown pipkg verb "pack"; expected build or check
+
+$ pipkg build --shape x
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown option "--shape"
+
+$ pipkg build --registry
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --registry requires a value
+
+$ pipkg build --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: pipkg requires --overlay-root, --registry, and --dest-dir
+
+# a destination that is the overlay
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/overlay
+exit: 1
+--- stdout ---
+--- stderr ---
+pipkg build: pipkg: destination <WORLD>/overlay overlaps overlay root <WORLD>/overlay
+
+# a skill of the registry that has no SKILL.md
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 1
+--- stdout ---
+--- stderr ---
+pipkg build: pipkg: entry "beta": reading SKILL.md: open <WORLD>/overlay/skills/beta/SKILL.md: no such file or directory
+
+# a skill that is named otherwise than its directory
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 1
+--- stdout ---
+--- stderr ---
+pipkg build: pipkg: entry "beta": SKILL.md name "other" does not match directory "beta"
+
+--- tree of out ---
+(empty)
+
