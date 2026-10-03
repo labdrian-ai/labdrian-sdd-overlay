@@ -220,12 +220,3 @@ func (a foundationAdapter) Uninstall() LifecycleResult { return a.result(ActionU
 func (a foundationAdapter) result(action Action) LifecycleResult {
 	return NewLifecycleResult(a.target, action, CapabilityUnsupported, "runtime adapter foundation present; target implementation is scheduled for a later PR slice", nil)
 }
-
-func contains(items []string, want string) bool {
-	for _, item := range items {
-		if item == want {
-			return true
-		}
-	}
-	return false
-}
