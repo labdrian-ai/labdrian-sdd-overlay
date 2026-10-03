@@ -1,8 +1,6 @@
 package fsstore_test
 
 import (
-	"encoding/json"
-	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -13,6 +11,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt/fsstore"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt/receipttest"
 )
 
 // These tests run the whole capture, the domain's Service over this package's Store, against
@@ -90,31 +89,10 @@ func writeReceipt(t *testing.T, gitDir, lineage, schema, terminalState string) {
 	if err := os.MkdirAll(lineageDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	payload := map[string]interface{}{
-		"schema":               schema,
-		"lineage_id":           lineage,
-		"final_candidate_tree": "deadbeef",
-		"selected_lenses":      []string{"review-risk"},
-		"terminal_state":       terminalState,
-	}
-	data, err := json.Marshal(payload)
-	if err != nil {
-		t.Fatal(err)
-	}
+	data := []byte(receipttest.ReceiptDocument(lineage, schema, terminalState))
 	if err := os.WriteFile(filepath.Join(lineageDir, "review-receipt.json"), data, 0644); err != nil {
 		t.Fatal(err)
 	}
-}
-
-// stateJSON builds a minimal gentle-ai 2.7.0+ review-state.json payload.
-func stateJSON(lineage, state string) []byte {
-	return []byte(fmt.Sprintf(
-		`{"schema":"gentle-ai.review-transaction/v2","revision":3,"state":{`+
-			`"schema":"gentle-ai.review-state/v2","lineage_id":%q,"generation":1,"state":%q,`+
-			`"risk_level":"medium","selected_lenses":["review-risk","review-readability"],`+
-			`"initial_snapshot":{"base_tree":"basetree1"},`+
-			`"current_snapshot":{"kind":"candidate","base_tree":"basetree1","candidate_tree":"candidatetree1"}}}`,
-		lineage, state))
 }
 
 // writeReviewState writes review-state.json (gentle-ai 2.7.0+ shape) under gitDir's
@@ -125,7 +103,7 @@ func writeReviewState(t *testing.T, gitDir, lineage, state string) {
 	if err := os.MkdirAll(lineageDir, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(lineageDir, "review-state.json"), stateJSON(lineage, state), 0644); err != nil {
+	if err := os.WriteFile(filepath.Join(lineageDir, "review-state.json"), []byte(receipttest.StateDocument(lineage, state)), 0644); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -155,9 +133,9 @@ func gitDirOf(root string) string { return filepath.Join(root, ".git") }
 func TestCaptureSchemaAndTerminalState(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "my-change")
-	writeReceipt(t, gitDirOf(repo), "review-approved1", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-approved1", receipttest.ReceiptSchema, receipttest.Approved)
 	writeReceipt(t, gitDirOf(repo), "review-wrongschema", "gentle-ai.review-receipt/v1", "approved")
-	writeReceipt(t, gitDirOf(repo), "review-notapproved", "gentle-ai.review-receipt/v2", "declined")
+	writeReceipt(t, gitDirOf(repo), "review-notapproved", receipttest.ReceiptSchema, "declined")
 
 	captured, err := serviceFor(t, repo).Capture("my-change")
 	if err != nil {
@@ -204,7 +182,7 @@ func TestCaptureReviewState(t *testing.T) {
 func TestCaptureBothFormatsPresent(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "my-change")
-	writeReceipt(t, gitDirOf(repo), "review-both1", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-both1", receipttest.ReceiptSchema, receipttest.Approved)
 	writeReviewState(t, gitDirOf(repo), "review-both1", "approved")
 
 	captured, err := serviceFor(t, repo).Capture("my-change")
@@ -224,7 +202,7 @@ func TestCaptureBothFormatsPresent(t *testing.T) {
 func TestCaptureAtomicWrite(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "my-change")
-	writeReceipt(t, gitDirOf(repo), "review-atomic1", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-atomic1", receipttest.ReceiptSchema, receipttest.Approved)
 
 	srcBytes, err := os.ReadFile(filepath.Join(transactionStore(gitDirOf(repo)), "review-atomic1", "review-receipt.json"))
 	if err != nil {
@@ -266,7 +244,7 @@ const ackHookInput = `{"tool_name":"Bash","tool_input":{"command":"gentle-ai rev
 
 func TestHookPassesThroughWithoutOpenspecChanges(t *testing.T) {
 	repo := gitFixtureRepo(t)
-	writeReceipt(t, gitDirOf(repo), "review-orphan", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-orphan", receipttest.ReceiptSchema, receipttest.Approved)
 
 	if code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
 		t.Errorf("RunHook = (%d, %q), want (0, \"\")", code, message)
@@ -283,7 +261,7 @@ func TestHookMultipleActiveChanges(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "change-a")
 	seedActiveChange(t, repo, "change-b")
-	writeReceipt(t, gitDirOf(repo), "review-captured", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-captured", receipttest.ReceiptSchema, receipttest.Approved)
 	svc := serviceFor(t, repo)
 
 	code, message := svc.RunHook([]byte(ackHookInput))
@@ -298,7 +276,7 @@ func TestHookMultipleActiveChanges(t *testing.T) {
 		t.Fatalf("after the remedy: RunHook = (%d, %q), want (0, \"\")", code, message)
 	}
 
-	writeReceipt(t, gitDirOf(repo), "review-uncaptured", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-uncaptured", receipttest.ReceiptSchema, receipttest.Approved)
 	if code, message := svc.RunHook([]byte(ackHookInput)); code != 2 || !strings.Contains(message, "review-receipt capture --change <name>") {
 		t.Errorf("one lineage still uncaptured: RunHook = (%d, %q), want a deny", code, message)
 	}
@@ -307,7 +285,7 @@ func TestHookMultipleActiveChanges(t *testing.T) {
 func TestHookCapturesIntoTheSingleActiveChange(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "only-change")
-	writeReceipt(t, gitDirOf(repo), "review-solo", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-solo", receipttest.ReceiptSchema, receipttest.Approved)
 
 	if code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
 		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
@@ -320,7 +298,7 @@ func TestHookCapturesIntoTheSingleActiveChange(t *testing.T) {
 func TestHookIgnoresACommandThatIsNotAnAcknowledgement(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "only-change")
-	writeReceipt(t, gitDirOf(repo), "review-untouched", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-untouched", receipttest.ReceiptSchema, receipttest.Approved)
 
 	input := `{"tool_name":"Bash","tool_input":{"command":"git status"}}`
 	if code, message := serviceFor(t, repo).RunHook([]byte(input)); code != 0 || message != "" {
@@ -380,7 +358,7 @@ func TestTheStoresAreTheSameFromTheToplevelAndFromInsideIt(t *testing.T) {
 func TestAHookStartedInsideTheRepositoryLooksForOpenspecWhereItStarted(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	seedActiveChange(t, repo, "top-change")
-	writeReceipt(t, gitDirOf(repo), "review-from-below", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-from-below", receipttest.ReceiptSchema, receipttest.Approved)
 
 	plain := filepath.Join(repo, "plain")
 	own := filepath.Join(repo, "own")
@@ -416,7 +394,7 @@ func TestARepositoryWithNoCommitIsServed(t *testing.T) {
 	}
 	runGit(t, repo, "init", "-q")
 	seedActiveChange(t, repo, "first")
-	writeReceipt(t, gitDirOf(repo), "review-first", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-first", receipttest.ReceiptSchema, receipttest.Approved)
 
 	if code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
 		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
@@ -487,7 +465,7 @@ func TestARootGivenAsASymlinkOrARelativePathFindsTheSameStores(t *testing.T) {
 // fail-closed, so it denies the acknowledgement.
 func TestARepositoryGitprovRefusesIsRefusedByTheHook(t *testing.T) {
 	repo := gitFixtureRepo(t)
-	writeReceipt(t, gitDirOf(repo), "review-one", "gentle-ai.review-receipt/v2", "approved")
+	writeReceipt(t, gitDirOf(repo), "review-one", receipttest.ReceiptSchema, receipttest.Approved)
 
 	t.Run("a forged gitfile", func(t *testing.T) {
 		forged := filepath.Join(filepath.Dir(repo), filepath.Base(repo)+"-forged")

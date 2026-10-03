@@ -1,0 +1,16 @@
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+review-receipt: capture failed: reviewreceipt: the approved receipt in <ROOT>/.git/gentle-ai/review-transactions/v2/review-b-escape/review-state.json cannot be kept: reviewreceipt: receipt file name "../../escaped.review-state.json" is not a safe path component: it holds a path separator; correct or remove that lineage in the review tool's store, then run the command again
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-a-fine.json 0600 204 9a20513c904a
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+

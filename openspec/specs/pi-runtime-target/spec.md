@@ -60,7 +60,7 @@ WHEN a Pi session starts the `sdd-tasks` or `sdd-apply` agent, a
 LINE for each applicable contract under that contract's `injection_point`
 header into that agent's system prompt, selecting applicability from each
 contract's frontmatter (`applies_to_phases`/`excluded_phases`) via a strict
-parse mirroring `engine/gate/gate.go`. It MUST exclude every other agent,
+parse mirroring `engine/contract` (the one parse of a contract document). It MUST exclude every other agent,
 and MUST compose with (not overwrite) gentle-pi's own `before_agent_start`
 handler output. Injected contract paths MUST be contained within the
 package root; frontmatter that fails strict parsing MUST yield no injection

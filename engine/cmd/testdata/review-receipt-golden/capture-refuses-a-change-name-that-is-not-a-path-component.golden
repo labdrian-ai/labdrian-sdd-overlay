@@ -1,0 +1,36 @@
+$ review-receipt capture --cwd <ROOT> --change ../escaped
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: change name "../escaped" is not a safe path component: it holds a path separator
+
+$ review-receipt capture --cwd <ROOT> --change a/b
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: change name "a/b" is not a safe path component: it holds a path separator
+
+$ review-receipt capture --cwd <ROOT> --change ..
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: change name ".." is not a safe path component: it is a dot segment
+
+$ review-receipt capture --cwd <ROOT> --change  padded
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: change name " padded" is not a safe path component: it has leading or trailing white space
+
+$ review-receipt capture --cwd <ROOT> --change padded 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: review-receipt capture: reviewreceipt: change name "padded " is not a safe path component: it has leading or trailing white space
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/the-change
+file openspec/changes/the-change/tasks.md 0644 8 b23b81c926c4
+

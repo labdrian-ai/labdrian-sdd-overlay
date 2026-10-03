@@ -1,0 +1,55 @@
+# a contract that is missing
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: not found
+
+# a well-formed contract
+label: contract: /virtual/skills/_shared/contract.md
+ok: true
+note: 
+
+# an empty file
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: contract file has no YAML frontmatter (expected content between --- delimiters)
+
+# no frontmatter
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: contract file has no YAML frontmatter (expected content between --- delimiters)
+
+# no applies_to_phases
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+
+# an empty applies_to_phases list
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+
+# phases without brackets (accepted today)
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: malformed applies_to_phases: expected an inline list such as [a, b], got "sdd-tasks, sdd-apply"
+
+# an unclosed list (accepted today)
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: malformed applies_to_phases: expected an inline list such as [a, b], got "[sdd-tasks"
+
+# an excluded list with no brackets (accepted today)
+label: contract: /virtual/skills/_shared/contract.md
+ok: false
+note: frontmatter error: malformed excluded_phases: expected an inline list such as [a, b], got "sdd-propose"
+
+# a malformed language_context (accepted today)
+label: contract: /virtual/skills/_shared/contract.md
+ok: true
+note: 
+
+# a context_operator (accepted today)
+label: contract: /virtual/skills/_shared/contract.md
+ok: true
+note: 
+

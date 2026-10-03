@@ -1,0 +1,40 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# sdd-apply, no skills section
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "[sdd-tasks, sdd-apply" (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# sdd-tasks, with a skills section
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "[sdd-tasks, sdd-apply" (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# sdd-propose carrying the contract
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-propose"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "[sdd-tasks, sdd-apply" (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# sdd-explore, in neither list
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-explore"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed applies_to_phases: expected an inline list such as [a, b], got "[sdd-tasks, sdd-apply" (passing through)
+

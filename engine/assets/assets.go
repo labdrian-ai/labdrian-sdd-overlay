@@ -14,7 +14,7 @@ import _ "embed"
 
 // AntiGenericDesign is the embedded markdown for the anti-generic-design
 // managed contract. It carries the frontmatter (applies_to_phases /
-// excluded_phases / injection_point) the propagator and gate parse, plus the
+// excluded_phases / injection_point) that engine/contract parses, plus the
 // forbidden-pattern list and self-critique checklist distilled from
 // skills/anti-generic-design/SKILL.md as agent-facing guidance.
 //

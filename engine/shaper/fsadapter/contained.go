@@ -93,8 +93,10 @@ func (s ContainedSource) ReadContained(worktreeRoot, relPath, label string) ([]b
 		case statestore.IsSymlinkRefusal(err):
 			return nil, fmt.Errorf("%s %q must not be a symlink", label, relPath)
 		case errors.Is(err, statestore.ErrUnsupported):
-			// statestore says so in its own words; the contained read has always said
-			// it in its own, and that is what a person who reads the refusal sees.
+			// The text is this adapter's own, not statestore's: err is dropped on purpose,
+			// and a fixed sentence is worded here, because it is what a person who reads
+			// the refusal has always seen (contained_test.go pins it byte for byte). Do not
+			// fold this case into the generic one below, which would print err instead.
 			return nil, fmt.Errorf("open %s %q: contained read is unsupported on %s", label, relPath, runtime.GOOS)
 		}
 		return nil, fmt.Errorf("open %s %q: %w", label, relPath, err)

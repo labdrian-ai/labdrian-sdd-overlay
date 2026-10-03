@@ -64,8 +64,10 @@ const (
 // receiptsFolder is the folder of a change that holds the persisted receipts.
 const receiptsFolder = "review-receipts"
 
-// tempPattern names the temporary files of a write: hidden, and the suffix tells a person
-// what a leftover is.
+// tempPattern names the temporary files of a write of either shape of document the package
+// persists (a lineage's legacy receipt, <lineage>.json, or its lifecycle state,
+// <lineage>.review-state.json): hidden, and the name tells a person that a leftover is a
+// review receipt that was being put in place, not which of the two it was.
 const tempPattern = ".review-receipt-*.json.tmp"
 
 // Locator finds the git working tree that holds a directory. gitprov.Observer is the
@@ -149,7 +151,7 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 				}
 				return nil, fmt.Errorf("read %s: %w", path, err)
 			}
-			documents = append(documents, reviewreceipt.Document{Shape: file.shape, Data: data})
+			documents = append(documents, reviewreceipt.Document{Shape: file.shape, Data: data, Origin: path})
 		}
 	}
 	return documents, nil

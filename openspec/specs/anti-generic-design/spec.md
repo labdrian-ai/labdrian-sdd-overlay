@@ -207,19 +207,19 @@ ID: R-104
 
 The deployed `skills/_shared/anti-generic-design.md` file SHALL carry
 `applies_to_phases: [sdd-tasks, sdd-apply]` in its frontmatter so
-`propagator.ParseFrontmatter` derives scope without error.
+`contract.Parse` derives scope without error.
 
 #### Scenario: Frontmatter parses to the two target phases
 
 - GIVEN `skills/_shared/anti-generic-design.md`'s frontmatter
-- WHEN `propagator.ParseFrontmatter` parses its content
+- WHEN `contract.Parse` parses its content
 - THEN `phases.AppliesTo` equals `["sdd-tasks", "sdd-apply"]`
 - AND no error is returned
 
 #### Scenario: Missing applies_to_phases fails loud
 
 - GIVEN a copy of the contract with `applies_to_phases` removed
-- WHEN `propagator.ParseFrontmatter` parses it
+- WHEN `contract.Parse` parses it
 - THEN it returns an error and callers surface it (propagate exits 1; gate-task
   logs a stderr warning and passes through)
 

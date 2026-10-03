@@ -1,0 +1,80 @@
+$ propagate --contract-file /virtual/skills/_shared/contract.md
+# no registry flag
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --registry is required
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md
+# no contract source
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --contract-file is required
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/missing.md
+# a contract file that is missing
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading contract file: open /virtual/missing.md: file does not exist
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --embedded-contract no-such-contract
+# an unknown embedded contract
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown embedded contract "no-such-contract"
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# an empty contract
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract file has no YAML frontmatter (expected content between --- delimiters)
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# a contract with no frontmatter
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract file has no YAML frontmatter (expected content between --- delimiters)
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# a contract with one delimiter
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract file has no YAML frontmatter (expected content between --- delimiters)
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# a contract with no applies_to_phases
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# a contract with an empty applies_to_phases list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# a contract with an applies_to_phases that has no value
+exit: 1
+--- stdout ---
+--- stderr ---
+error: malformed applies_to_phases: expected an inline list such as [a, b], got ""
+--- registry unchanged ---
+

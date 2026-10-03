@@ -1,0 +1,32 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# no registry: a clean no-op
+exit: none
+--- stdout ---
+propagate: registry not found at /virtual/project/.atl/skill-registry.md — project does not use the overlay (no-op)
+--- stderr ---
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --require-registry
+# no registry, one is required
+exit: 1
+--- stdout ---
+--- stderr ---
+error: registry required but not found at /virtual/project/.atl/skill-registry.md (--require-registry)
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# an empty registry
+exit: 1
+--- stdout ---
+--- stderr ---
+error: registry exists but is empty — refusing to propagate over it
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# a registry of white space
+exit: 1
+--- stdout ---
+--- stderr ---
+error: registry exists but is empty — refusing to propagate over it
+--- registry unchanged ---
+

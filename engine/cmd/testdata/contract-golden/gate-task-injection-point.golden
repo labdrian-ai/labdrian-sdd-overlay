@@ -1,0 +1,36 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# with injection_point: "## Custom header"
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# with injection_point: '## Single quoted'
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n\n## Single quoted\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# with injection_point: ## Bare header
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n\n## Bare header\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# with injection_point:
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do it.\n\n## Custom header\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+

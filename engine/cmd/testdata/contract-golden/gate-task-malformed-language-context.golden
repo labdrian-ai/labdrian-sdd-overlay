@@ -1,0 +1,20 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["TypeScript"],"activations":["review"],"work_kinds":["application-code"]}
+# a matching context
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed language_context: expected an inline list such as [a, b], got "typescript" (passing through)
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md --work-context-json {"trusted":true,"languages":["TypeScript"],"activations":["review"],"work_kinds":["application-code"]}
+# an excluded phase
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-propose"},"tool_name":"Agent"}
+
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: contract frontmatter unparseable: malformed language_context: expected an inline list such as [a, b], got "typescript" (passing through)
+

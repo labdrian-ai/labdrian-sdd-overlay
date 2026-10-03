@@ -16,9 +16,10 @@
 package propagator
 
 import (
-	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 )
 
 // Markers wrapping the scoped minimalism-contract row. These remain the package
@@ -38,16 +39,17 @@ const (
 	AntiGenericDesignEndMarker   = "<!-- END: anti-generic-design-scope -->"
 )
 
-// defaultRowLabel is the leading table-cell label used when Config.RowLabel is
+// DefaultRowLabel is the leading table-cell label used when Config.RowLabel is
 // empty, preserving the original minimalism-contract behavior.
-const defaultRowLabel = "minimalism-contract"
+const DefaultRowLabel = "minimalism-contract"
 
-// ContractPhases holds the phase scope parsed from the contract frontmatter.
-type ContractPhases struct {
-	AppliesTo      []string
-	Excluded       []string
-	InjectionPoint string // from injection_point frontmatter key; may be empty
-}
+// The shapes of the lines that delimit a marker block in the registry, and the heading of
+// the table a new row is appended to.
+const (
+	beginMarkerPrefix     = "<!-- BEGIN:"
+	endMarkerPrefix       = "<!-- END:"
+	sharedContractsHeader = "### Shared Contracts"
+)
 
 // Config holds the contract path used in the generated registry row, plus the
 // marker pair and row label that scope the block. The marker/label fields are
@@ -93,88 +95,27 @@ func (c Config) rowLabel() string {
 	if c.RowLabel != "" {
 		return c.RowLabel
 	}
-	return defaultRowLabel
-}
-
-// ParseFrontmatter extracts phase scope from YAML-like frontmatter.
-//
-// Expected format:
-//
-//	---
-//	applies_to_phases: [sdd-tasks, sdd-apply]
-//	excluded_phases: [...]
-//	...
-//	---
-//
-// Returns an error if applies_to_phases is absent or empty — callers must not
-// silently continue without knowing which phases the contract targets.
-func ParseFrontmatter(content string) (ContractPhases, error) {
-	// Locate the frontmatter block between the first two "---" delimiters.
-	parts := strings.SplitN(content, "---", 3)
-	if len(parts) < 3 {
-		return ContractPhases{}, errors.New(
-			"contract file has no YAML frontmatter (expected content between --- delimiters)")
-	}
-	fm := parts[1]
-
-	var phases ContractPhases
-	for _, line := range strings.Split(fm, "\n") {
-		line = strings.TrimSpace(line)
-		if strings.HasPrefix(line, "applies_to_phases:") {
-			phases.AppliesTo = parseInlineList(strings.TrimPrefix(line, "applies_to_phases:"))
-		}
-		if strings.HasPrefix(line, "excluded_phases:") {
-			phases.Excluded = parseInlineList(strings.TrimPrefix(line, "excluded_phases:"))
-		}
-		if strings.HasPrefix(line, "injection_point:") {
-			raw := strings.TrimSpace(strings.TrimPrefix(line, "injection_point:"))
-			// Strip surrounding quotes if present.
-			raw = strings.Trim(raw, `"'`)
-			phases.InjectionPoint = raw
-		}
-	}
-
-	if len(phases.AppliesTo) == 0 {
-		return ContractPhases{}, errors.New(
-			"contract frontmatter missing or empty applies_to_phases: " +
-				"cannot derive scope without knowing which phases to inject into")
-	}
-	return phases, nil
-}
-
-// parseInlineList parses a YAML inline sequence like "[a, b, c]" into a slice.
-func parseInlineList(raw string) []string {
-	raw = strings.TrimSpace(raw)
-	raw = strings.TrimPrefix(raw, "[")
-	raw = strings.TrimSuffix(raw, "]")
-	var out []string
-	for _, item := range strings.Split(raw, ",") {
-		item = strings.TrimSpace(item)
-		if item != "" {
-			out = append(out, item)
-		}
-	}
-	return out
+	return DefaultRowLabel
 }
 
 // BuildScopedRow returns the three lines (begin-marker, table-row, end-marker)
 // that form the regeneration-safe block for the default minimalism-contract
-// markers and label. The description is derived from phases.AppliesTo — never
+// markers and label. The description is derived from c.AppliesTo — never
 // hardcoded. Exported for testing; backward-compatible signature.
-func BuildScopedRow(contractPath string, phases ContractPhases) string {
-	return buildScopedRowWith(Config{ContractPath: contractPath}, phases)
+func BuildScopedRow(contractPath string, c contract.Contract) string {
+	return buildScopedRowWith(Config{ContractPath: contractPath}, c)
 }
 
 // buildScopedRowWith builds the marker-delimited block using the marker pair and
 // row label resolved from cfg (with package defaults when unset).
-func buildScopedRowWith(cfg Config, phases ContractPhases) string {
-	injectList := strings.Join(phases.AppliesTo, " and ")
+func buildScopedRowWith(cfg Config, c contract.Contract) string {
+	injectList := strings.Join(c.AppliesTo, " and ")
 	// Build the "do not inject into" part from excluded phases when present.
 	doNotInject := ""
-	if len(phases.Excluded) > 0 {
+	if len(c.Excluded) > 0 {
 		doNotInject = fmt.Sprintf(
 			" Do NOT inject into %s.",
-			strings.Join(phases.Excluded, "/"),
+			strings.Join(c.Excluded, "/"),
 		)
 	}
 	desc := fmt.Sprintf(
@@ -195,8 +136,8 @@ func buildScopedRowWith(cfg Config, phases ContractPhases) string {
 //
 // Idempotent: calling Propagate on already-correct output returns changed=false
 // and an identical string.
-func Propagate(registry string, cfg Config, phases ContractPhases) (out string, changed bool, err error) {
-	desiredBlock := buildScopedRowWith(cfg, phases)
+func Propagate(registry string, cfg Config, c contract.Contract) (out string, changed bool, err error) {
+	desiredBlock := buildScopedRowWith(cfg, c)
 	begin := cfg.begin()
 	end := cfg.end()
 	label := cfg.rowLabel()
@@ -246,10 +187,10 @@ func hasUnscopedRow(registry, label string) bool {
 	inAnyBlock := false
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "<!-- BEGIN:") {
+		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
 			inAnyBlock = true
 		}
-		if strings.HasPrefix(trimmed, "<!-- END:") {
+		if strings.HasPrefix(trimmed, endMarkerPrefix) {
 			inAnyBlock = false
 		}
 		if !inAnyBlock && isContractRow(line, label) {
@@ -291,10 +232,10 @@ func replaceUnscopedRow(registry, newBlock, label string) string {
 	var out []string
 	for _, line := range lines {
 		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "<!-- BEGIN:") {
+		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
 			inAnyBlock = true
 		}
-		if strings.HasPrefix(trimmed, "<!-- END:") {
+		if strings.HasPrefix(trimmed, endMarkerPrefix) {
 			inAnyBlock = false
 			out = append(out, line)
 			continue
@@ -326,10 +267,10 @@ func appendToSharedContracts(registry, newBlock string) string {
 		trimmed := strings.TrimSpace(line)
 
 		// Track entry/exit of ANY marker block (foreign or ours).
-		if strings.HasPrefix(trimmed, "<!-- BEGIN:") {
+		if strings.HasPrefix(trimmed, beginMarkerPrefix) {
 			inAnyMarkerBlock = true
 		}
-		if strings.HasPrefix(trimmed, "<!-- END:") {
+		if strings.HasPrefix(trimmed, endMarkerPrefix) {
 			inAnyMarkerBlock = false
 			// Record the END marker line itself as the last known position so
 			// we can insert after a closing marker that follows a section table.
@@ -339,7 +280,7 @@ func appendToSharedContracts(registry, newBlock string) string {
 			continue
 		}
 
-		if strings.HasPrefix(trimmed, "### Shared Contracts") {
+		if strings.HasPrefix(trimmed, sharedContractsHeader) {
 			inSharedContracts = true
 		}
 		if inSharedContracts && !inAnyMarkerBlock {
@@ -348,7 +289,7 @@ func appendToSharedContracts(registry, newBlock string) string {
 			}
 			// Stop at the next section heading (after we've entered Shared Contracts).
 			if i > 0 && strings.HasPrefix(trimmed, "#") &&
-				!strings.HasPrefix(trimmed, "### Shared Contracts") {
+				!strings.HasPrefix(trimmed, sharedContractsHeader) {
 				break
 			}
 		}

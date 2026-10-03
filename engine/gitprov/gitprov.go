@@ -115,7 +115,11 @@ func ExecRunner(dir string, env []string, args []string) ([]byte, error) {
 // must resolve to exactly the worktree toplevel. The first failed check wins
 // and no partial Observation is returned alongside an error.
 func (o Observer) Observe(root string) (Observation, error) {
-	return o.observe(root, true)
+	resolvedRoot, env, err := o.begin("root", root)
+	if err != nil {
+		return Observation{}, err
+	}
+	return o.judge(resolvedRoot, env, headRequired)
 }
 
 // Locate reports the worktree that holds dir, which must be absolute: dir itself
@@ -131,25 +135,39 @@ func (o Observer) Observe(root string) (Observation, error) {
 // nothing is asked of git to fill it. The first failed check wins and no partial
 // Observation is returned alongside an error.
 func (o Observer) Locate(dir string) (Observation, error) {
-	if o.Run == nil {
-		return Observation{}, fmt.Errorf("no git runner configured")
-	}
-	if dir == "" || !filepath.IsAbs(dir) {
-		return Observation{}, fmt.Errorf("directory %q is not an absolute path", dir)
-	}
-	resolvedDir, err := filepath.EvalSymlinks(dir)
-	if err != nil {
-		return Observation{}, fmt.Errorf("resolve directory %q: %w", dir, err)
-	}
-	env, err := scrubEnv(o.Environ)
+	resolvedDir, env, err := o.begin("directory", dir)
 	if err != nil {
 		return Observation{}, err
 	}
+	// runPath resolves the toplevel git reports (filepath.EvalSymlinks), as begin resolves
+	// a root given to Observe, so the toplevel is judged where it really is, and judge's
+	// consistency check compares two resolved paths.
 	toplevel, err := runPath(o.runner(resolvedDir, env), argvToplevel, "")
 	if err != nil {
 		return Observation{}, err
 	}
-	return o.observe(toplevel, false)
+	return o.judge(toplevel, env, headOptional)
+}
+
+// begin is what both questions start with: a runner is configured, dir (named what in a
+// message) is absolute and resolves, and the ambient environment is acceptable. It returns
+// the resolved directory and the environment git is run in, which is worked out here once.
+func (o Observer) begin(what, dir string) (resolved string, env []string, err error) {
+	if o.Run == nil {
+		return "", nil, fmt.Errorf("no git runner configured")
+	}
+	if dir == "" || !filepath.IsAbs(dir) {
+		return "", nil, fmt.Errorf("%s %q is not an absolute path", what, dir)
+	}
+	resolved, err = filepath.EvalSymlinks(dir)
+	if err != nil {
+		return "", nil, fmt.Errorf("resolve %s %q: %w", what, dir, err)
+	}
+	env, err = scrubEnv(o.Environ)
+	if err != nil {
+		return "", nil, err
+	}
+	return resolved, env, nil
 }
 
 // runner returns the function that runs one fixed argv in dir under env and
@@ -168,23 +186,21 @@ func (o Observer) runner(dir string, env []string) func(argv []string) (string, 
 	}
 }
 
-// observe is Observe and Locate once the root is chosen; requireHead says
-// whether HEAD must name a commit (it is recorded when it is required).
-func (o Observer) observe(root string, requireHead bool) (Observation, error) {
-	if o.Run == nil {
-		return Observation{}, fmt.Errorf("no git runner configured")
-	}
-	if root == "" || !filepath.IsAbs(root) {
-		return Observation{}, fmt.Errorf("root %q is not an absolute path", root)
-	}
-	resolvedRoot, err := filepath.EvalSymlinks(root)
-	if err != nil {
-		return Observation{}, fmt.Errorf("resolve root %q: %w", root, err)
-	}
-	env, err := scrubEnv(o.Environ)
-	if err != nil {
-		return Observation{}, err
-	}
+// headPolicy says whether the HEAD of a worktree must name a commit.
+type headPolicy int
+
+const (
+	// headRequired is Observe's: HEAD must name a commit, and it is recorded.
+	headRequired headPolicy = iota
+	// headOptional is Locate's: a repository with no commit yet is served all the same, and
+	// Head is left empty.
+	headOptional
+)
+
+// judge is Observe and Locate once the worktree toplevel is chosen: root is absolute and
+// symlink-free, and env is the scrubbed environment git is run in. It applies every check
+// there is to a worktree; head says whether HEAD is one of them.
+func (o Observer) judge(resolvedRoot string, env []string, head headPolicy) (Observation, error) {
 	run := o.runner(resolvedRoot, env)
 
 	isBare, err := run(argvIsBare)
@@ -233,18 +249,18 @@ func (o Observer) observe(root string, requireHead bool) (Observation, error) {
 		}
 	}
 
-	var head string
-	if requireHead {
-		head, err = run(argvHead)
+	var headName string
+	if head == headRequired {
+		headName, err = run(argvHead)
 		if err != nil {
 			return Observation{}, fmt.Errorf("HEAD does not name a commit: %w", err)
 		}
-		if !objectName.MatchString(head) {
-			return Observation{}, fmt.Errorf("HEAD %q is not a full lowercase object name", head)
+		if !objectName.MatchString(headName) {
+			return Observation{}, fmt.Errorf("HEAD %q is not a full lowercase object name", headName)
 		}
 	}
 
-	return Observation{Toplevel: toplevel, GitDir: gitDir, CommonDir: commonDir, Head: head, Linked: linked}, nil
+	return Observation{Toplevel: toplevel, GitDir: gitDir, CommonDir: commonDir, Head: headName, Linked: linked}, nil
 }
 
 // scrubEnv refuses a repository-redirecting variable and otherwise returns

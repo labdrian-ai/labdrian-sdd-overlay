@@ -71,15 +71,25 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
+)
+
+// The names and default registry paths of the contracts the verbs manage. The minimalism
+// contract is the one read from a file by default; anti-generic-design ships in the binary.
+const (
+	defaultContractPath          = "skills/_shared/minimalism-contract.md"
+	embeddedAntiGenericDesign    = "anti-generic-design"
+	defaultAntiGenericDesignPath = "skills/_shared/anti-generic-design.md"
 )
 
 // embeddedContract resolves a named engine-owned managed contract to its content
@@ -91,16 +101,16 @@ import (
 // no dependency on an external, regenerable skill file.
 func embeddedContract(name string) (spec embeddedContractSpec, ok bool) {
 	switch name {
-	case "anti-generic-design":
+	case embeddedAntiGenericDesign:
 		return embeddedContractSpec{
 			content:     assets.AntiGenericDesign,
 			beginMarker: propagator.AntiGenericDesignBeginMarker,
 			endMarker:   propagator.AntiGenericDesignEndMarker,
-			rowLabel:    "anti-generic-design",
+			rowLabel:    embeddedAntiGenericDesign,
 			// defaultPath is the registry-row Path cell / bare injected line when
 			// the caller does not override --contract-path. It is where the
 			// overlay deploys the standalone copy of this contract.
-			defaultPath: "skills/_shared/anti-generic-design.md",
+			defaultPath: defaultAntiGenericDesignPath,
 		}, true
 	default:
 		return embeddedContractSpec{}, false
@@ -745,6 +755,22 @@ func parseReviewReceiptArgs(args []string) (cwd, change string) {
 	return
 }
 
+// buildReviewReceiptService builds the review receipt capture both verbs run on. When it
+// cannot be built it says why on stderr, in the words of the verb (prefix) and as a set-up
+// failure, which tells it apart from a failure of the capture itself, and exits with code,
+// the one the verb's contract gives a failure: 1 for the capture a person runs, 2 for the
+// hook, where exit code 2 denies the acknowledgement. The exit is injected; a caller whose exit
+// returns gets no service.
+func buildReviewReceiptService(cwd string, stderr io.Writer, exit func(int), prefix string, code int) *reviewreceipt.Service {
+	svc, err := newReviewReceiptService(cwd)
+	if err != nil {
+		fmt.Fprintf(stderr, "%s: set up failed: %v\n", prefix, err)
+		exit(code)
+		return nil
+	}
+	return svc
+}
+
 // runReviewReceiptCapture implements 'review-receipt capture --cwd <repo>
 // [--change <name>]'. With --change, captures directly into that change.
 // Without it, auto-detects the single active change: zero active changes is
@@ -757,11 +783,7 @@ func runReviewReceiptCapture(args []string) {
 		os.Exit(1)
 	}
 
-	svc, err := newReviewReceiptService(cwd)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "error: review-receipt capture: %v\n", err)
-		os.Exit(1)
-	}
+	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "error: review-receipt capture", 1)
 
 	if change == "" {
 		detected, err := svc.DetectActiveChange()
@@ -804,13 +826,9 @@ func runReviewReceiptHook(args []string) {
 		os.Exit(2)
 	}
 
-	svc, err := newReviewReceiptService(cwd)
-	if err != nil {
-		// Fail closed, as for an unreadable input: a hook that cannot be set up
-		// cannot guard the acknowledgement it was started for.
-		fmt.Fprintf(os.Stderr, "review-receipt hook: %v\n", err)
-		os.Exit(2)
-	}
+	// Fail closed, as for an unreadable input: a hook that cannot be set up cannot guard
+	// the acknowledgement it was started for, so its set-up failure exits 2 like a denial.
+	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "review-receipt hook", 2)
 
 	exitCode, message := svc.RunHook(raw)
 	if message != "" {
@@ -1279,7 +1297,7 @@ func runPropagateCore(
 	exit func(int),
 ) {
 	var registryPath, contractFilePath, contractPath, embeddedName string
-	contractPath = "skills/_shared/minimalism-contract.md" // default
+	contractPath = defaultContractPath
 	contractPathExplicit := false
 	requireRegistry := false
 
@@ -1323,7 +1341,7 @@ func runPropagateCore(
 	// (engine-owned managed text) takes precedence and overrides marker/label so
 	// it writes a DISTINCT block that never collides with minimalism-contract.
 	cfg := propagator.Config{ContractPath: contractPath}
-	rowLabelForMsg := "minimalism-contract"
+	rowLabelForMsg := propagator.DefaultRowLabel
 	var contractContent string
 
 	if embeddedName != "" {
@@ -1358,7 +1376,7 @@ func runPropagateCore(
 		contractContent = string(b)
 	}
 
-	phases, err := propagator.ParseFrontmatter(contractContent)
+	doc, err := contract.Parse(contractContent)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
@@ -1406,7 +1424,7 @@ func runPropagateCore(
 		return
 	}
 
-	out, changed, err := propagator.Propagate(string(registryContent), cfg, phases)
+	out, changed, err := propagator.Propagate(string(registryContent), cfg, doc)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)
@@ -1446,7 +1464,7 @@ type readFileFn func(string) ([]byte, error)
 // all branches without real files or OS I/O.
 func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Writer, readFile readFileFn) {
 	var contractFilePath, contractPath, embeddedName, workContextJSON, workContextFile string
-	contractPath = "skills/_shared/minimalism-contract.md" // default (minimalism)
+	contractPath = defaultContractPath
 	contractPathExplicit := false
 
 	for i := 0; i < len(args); i++ {
@@ -1527,10 +1545,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 		return
 	}
 
-	cfg := gate.Config{
-		ContractPath:    contractPath,
-		ContractContent: contractContent,
-	}
+	cfg := gate.Config{Contracts: []gate.ContractConfig{{Path: contractPath, Content: contractContent}}}
 	workContext, workContextErr := loadWorkContext(workContextJSON, workContextFile, readFile)
 	if workContextErr != nil {
 		fmt.Fprintf(stderr, "gate-task: warning: work context ignored: %v (passing through for context-aware contracts)\n", workContextErr)
@@ -1540,8 +1555,12 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 
 	// Item 2: emit a stderr diagnostic when the contract frontmatter is broken so
 	// wiring mistakes with a corrupt contract are immediately visible. stdout stays
-	// pass-through '{}' and exit 0 (fail-safe contract UNCHANGED).
-	if _, err := propagator.ParseFrontmatter(contractContent); err != nil {
+	// pass-through '{}' and exit 0 (fail-safe contract UNCHANGED). The gate reads both parses.
+	_, err = contract.Parse(contractContent)
+	if err == nil {
+		_, err = contract.ParseContext(contractContent)
+	}
+	if err != nil {
 		fmt.Fprintf(stderr, "gate-task: warning: contract frontmatter unparseable: %v (passing through)\n", err)
 	}
 
@@ -1955,7 +1974,7 @@ func checkContract(contractPath string, readFile readFileFn) checkResult {
 		}
 		return checkResult{label: label, ok: false, note: err.Error()}
 	}
-	if _, err := propagator.ParseFrontmatter(string(data)); err != nil {
+	if _, err := contract.Parse(string(data)); err != nil {
 		return checkResult{label: label, ok: false, note: "frontmatter error: " + err.Error()}
 	}
 	return checkResult{label: label, ok: true}

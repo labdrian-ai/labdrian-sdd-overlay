@@ -1,0 +1,8 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md
+# the row is built from the phases
+exit: 1
+--- stdout ---
+--- stderr ---
+error: malformed excluded_phases: expected an inline list such as [a, b], got "sdd-propose, sdd-spec"
+--- registry unchanged ---
+

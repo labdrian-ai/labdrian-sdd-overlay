@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 )
 
@@ -12,12 +13,6 @@ import (
 const contractFrontmatter = `---
 applies_to_phases: [sdd-tasks, sdd-apply]
 excluded_phases: [sdd-propose, sdd-spec, sdd-design, sdd-verify, sdd-archive]
-injection_point: "## Skills to load before work"
----
-# Minimalism Contract
-`
-
-const contractFrontmatterMissingPhases = `---
 injection_point: "## Skills to load before work"
 ---
 # Minimalism Contract
@@ -86,9 +81,9 @@ func TestInsertsMissingRow(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryMissingRow, cfg, phases)
@@ -117,9 +112,9 @@ func TestCorrectsUnscopedRow(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryUnscopedRow, cfg, phases)
@@ -161,9 +156,9 @@ func TestIdempotentWhenAlreadyScoped(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryAlreadyScoped, cfg, phases)
@@ -178,17 +173,6 @@ func TestIdempotentWhenAlreadyScoped(t *testing.T) {
 	}
 }
 
-// TC-D: contract frontmatter missing applies_to_phases → fails LOUDLY.
-func TestFailsLoudlyOnMissingFrontmatter(t *testing.T) {
-	_, err := propagator.ParseFrontmatter(contractFrontmatterMissingPhases)
-	if err == nil {
-		t.Fatal("expected error when applies_to_phases is missing, got nil")
-	}
-	if !strings.Contains(err.Error(), "applies_to_phases") {
-		t.Errorf("error should mention 'applies_to_phases', got: %v", err)
-	}
-}
-
 // TC-E: regeneration-safety — after a simulated regeneration (marker block
 // already present with correct content), Propagate is a no-op and the marker
 // block content is preserved verbatim.
@@ -196,9 +180,9 @@ func TestRegenerationSafety(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	// First pass: insert.
@@ -244,9 +228,9 @@ injection_point: "## Skills to load before work"
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(altFrontmatter)
+	phases, err := contract.Parse(altFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, _, err := propagator.Propagate(registryMissingRow, cfg, phases)
@@ -295,9 +279,9 @@ func TestReplaceStaleBlock(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryStaleScopedBlock, cfg, phases)
@@ -351,9 +335,9 @@ func TestForeignBlockSurvival(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryWithForeign, cfg, phases)
@@ -403,9 +387,9 @@ func TestAppendFallback_NoSharedContractsSection(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryNoSection, cfg, phases)
@@ -453,9 +437,9 @@ func TestReplaceUnscopedRow_ForeignBlockProtectsRow(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryWithContractInsideForeign, cfg, phases)
@@ -492,9 +476,9 @@ func TestReplaceBlock_MalformedMarkers(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	t.Run("lone BEGIN no END", func(t *testing.T) {
@@ -569,9 +553,9 @@ func TestReplaceUnscopedRow_InAnyBlockBranches(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryWithBothBlocks, cfg, phases)
@@ -623,37 +607,6 @@ func TestReplaceUnscopedRow_InAnyBlockBranches(t *testing.T) {
 	}
 }
 
-// TC-M: ParseFrontmatter missing-delimiter — input with no YAML frontmatter
-// (len(parts) < 3) must return an error with the expected struct shape.
-func TestParseFrontmatter_MissingDelimiter(t *testing.T) {
-	inputs := []string{
-		"no frontmatter at all",
-		"just some text without any dashes",
-		"",
-		"---\nonly one delimiter\n",
-	}
-
-	for _, input := range inputs {
-		phases, err := propagator.ParseFrontmatter(input)
-		if err == nil {
-			t.Errorf("ParseFrontmatter(%q): expected error for missing frontmatter delimiters, got nil", input)
-			continue
-		}
-		// Error message should be informative.
-		if !strings.Contains(err.Error(), "frontmatter") && !strings.Contains(err.Error(), "---") &&
-			!strings.Contains(err.Error(), "applies_to_phases") {
-			t.Errorf("ParseFrontmatter(%q): error message should mention frontmatter/delimiters/applies_to_phases; got: %v", input, err)
-		}
-		// The returned struct must be the zero value (no partial data).
-		if len(phases.AppliesTo) != 0 {
-			t.Errorf("ParseFrontmatter(%q): AppliesTo should be empty on error, got: %v", input, phases.AppliesTo)
-		}
-		if len(phases.Excluded) != 0 {
-			t.Errorf("ParseFrontmatter(%q): Excluded should be empty on error, got: %v", input, phases.Excluded)
-		}
-	}
-}
-
 // TC-N: appendToSharedContracts break-on-next-heading — a registry whose
 // '### Shared Contracts' section is followed by another heading before EOF.
 // The block must be inserted at the correct position (inside the Shared
@@ -679,9 +632,9 @@ func TestAppendToSharedContracts_NextHeadingBreak(t *testing.T) {
 	cfg := propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	out, changed, err := propagator.Propagate(registryWithNextHeading, cfg, phases)
@@ -775,9 +728,9 @@ func TestAntiGenericDesignPropagate_TwoBlockIsolationAndIdempotency(t *testing.T
 		EndMarker:    propagator.AntiGenericDesignEndMarker,
 		RowLabel:     "anti-generic-design",
 	}
-	phases, err := propagator.ParseFrontmatter(contractFrontmatter)
+	phases, err := contract.Parse(contractFrontmatter)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 
 	firstOut, changed, err := propagator.Propagate(registryWithOneBlock, designCfg, phases)

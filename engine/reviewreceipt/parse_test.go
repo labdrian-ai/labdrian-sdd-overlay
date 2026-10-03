@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt/receipttest"
 )
 
 const legacyApproved = `{"schema":"gentle-ai.review-receipt/v2","lineage_id":"review-summary1",` +
@@ -27,7 +28,7 @@ func TestParseReadsTheSameSummaryFromBothShapes(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse(legacy receipt): %v", err)
 	}
-	fromState, err := reviewreceipt.Parse("state.json", stateJSON("review-summary1", "approved"))
+	fromState, err := reviewreceipt.Parse("state.json", []byte(receipttest.StateDocument("review-summary1", receipttest.Approved)))
 	if err != nil {
 		t.Fatalf("Parse(lifecycle state): %v", err)
 	}
@@ -66,7 +67,7 @@ func TestParseRefusesWhatIsNotAnApprovedReview(t *testing.T) {
 	}{
 		{"a legacy receipt that was declined", strings.Replace(legacyApproved, `"approved"`, `"declined"`, 1),
 			`reviewreceipt: x.json is not approved (terminal_state="declined")`, false},
-		{"a lifecycle state still in review", string(stateJSON("review-a", "reviewing")),
+		{"a lifecycle state still in review", receipttest.StateDocument("review-a", "reviewing"),
 			`reviewreceipt: x.json is not approved (state="reviewing")`, false},
 		{"text that is not JSON", "this is not json",
 			"reviewreceipt: x.json is neither a recognized receipt nor review-state file: ", true},

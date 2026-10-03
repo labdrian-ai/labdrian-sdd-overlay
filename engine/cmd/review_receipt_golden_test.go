@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -15,7 +16,11 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
+	"time"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt/receipttest"
 )
 
 // The golden files under testdata/review-receipt-golden record what the review-receipt
@@ -44,13 +49,42 @@ import (
 var updateReviewReceiptGolden = flag.Bool("update-review-receipt-golden", false, "rewrite the golden files of the review-receipt verbs")
 
 // The engine binary is built once per test run, from the package under test, and removed by
-// TestMain when the run ends.
+// TestMain when the run ends. The build is bounded by a deadline and tried again once, so a
+// toolchain that hangs does not hang the run and a failure that will not repeat does not fail
+// every case; one that keeps failing is reported in full by the first case and by a line
+// pointing at it by the others.
 var (
 	reviewReceiptBinaryOnce sync.Once
 	reviewReceiptBinaryPath string
 	reviewReceiptBinaryDir  string
 	reviewReceiptBinaryErr  error
+	// reviewReceiptBuildReported says that a case already printed the failed build in full.
+	reviewReceiptBuildReported atomic.Bool
 )
+
+const (
+	// engineBuildAttempts is how many times the build is tried before it is reported.
+	engineBuildAttempts = 2
+	// engineBuildTimeout bounds one attempt. A cold build of the engine takes seconds.
+	engineBuildTimeout = 5 * time.Minute
+)
+
+// buildWithRetry runs attempt (numbered from 1) until it succeeds or attempts have failed,
+// and reports every failure it saw. At least one attempt is made.
+func buildWithRetry(attempts int, attempt func(n int) error) error {
+	if attempts < 1 {
+		attempts = 1
+	}
+	var failures []string
+	for n := 1; n <= attempts; n++ {
+		err := attempt(n)
+		if err == nil {
+			return nil
+		}
+		failures = append(failures, fmt.Sprintf("attempt %d: %v", n, err))
+	}
+	return fmt.Errorf("the build failed %d times:\n%s", attempts, strings.Join(failures, "\n"))
+}
 
 func reviewReceiptBinary(t *testing.T) string {
 	t.Helper()
@@ -71,12 +105,24 @@ func reviewReceiptBinary(t *testing.T) string {
 		}
 		reviewReceiptBinaryDir = dir
 		reviewReceiptBinaryPath = filepath.Join(dir, "engine")
-		build := exec.Command("go", "build", "-buildvcs=false", "-o", reviewReceiptBinaryPath, ".")
-		if out, err := build.CombinedOutput(); err != nil {
-			reviewReceiptBinaryErr = fmt.Errorf("go build: %v\n%s", err, out)
-		}
+		reviewReceiptBinaryErr = buildWithRetry(engineBuildAttempts, func(int) error {
+			ctx, cancel := context.WithTimeout(context.Background(), engineBuildTimeout)
+			defer cancel()
+			build := exec.CommandContext(ctx, "go", "build", "-buildvcs=false", "-o", reviewReceiptBinaryPath, ".")
+			out, err := build.CombinedOutput()
+			if ctx.Err() != nil {
+				return fmt.Errorf("go build did not finish within %s\n%s", engineBuildTimeout, out)
+			}
+			if err != nil {
+				return fmt.Errorf("go build: %v\n%s", err, out)
+			}
+			return nil
+		})
 	})
 	if reviewReceiptBinaryErr != nil {
+		if reviewReceiptBuildReported.Swap(true) {
+			t.Fatalf("the engine binary could not be built (the first case that needed it printed why)")
+		}
 		t.Fatalf("build the engine binary: %v", reviewReceiptBinaryErr)
 	}
 	return reviewReceiptBinaryPath
@@ -87,6 +133,20 @@ func removeReviewReceiptBinary() {
 	if reviewReceiptBinaryDir != "" {
 		os.RemoveAll(reviewReceiptBinaryDir)
 	}
+}
+
+// goldenEnvironment is the environment the program and the git that sets its repositories up
+// run in: the test process's own, without any GIT_* variable (a git hook that runs the tests
+// sets GIT_DIR, and the program refuses a repository it is redirected to), and with git told to
+// read no configuration of the machine.
+func goldenEnvironment() []string {
+	var env []string
+	for _, kv := range os.Environ() {
+		if name, _, _ := strings.Cut(kv, "="); !strings.HasPrefix(name, "GIT_") {
+			env = append(env, kv)
+		}
+	}
+	return append(env, "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null")
 }
 
 // receiptWorld is the scratch space of one case: the program, the places it was told about
@@ -134,7 +194,7 @@ func (w *receiptWorld) run(stdin string, args ...string) {
 	w.t.Helper()
 	cmd := exec.Command(w.bin, append([]string{"review-receipt"}, args...)...)
 	cmd.Dir = w.reader
-	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null")
+	cmd.Env = goldenEnvironment()
 	cmd.Stdin = strings.NewReader(stdin)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &stdout, &stderr
@@ -223,7 +283,7 @@ func (w *receiptWorld) git(dir string, args ...string) {
 	w.t.Helper()
 	cmd := exec.Command("git", args...)
 	cmd.Dir = dir
-	cmd.Env = append(os.Environ(), "GIT_CONFIG_NOSYSTEM=1", "GIT_CONFIG_GLOBAL=/dev/null")
+	cmd.Env = goldenEnvironment()
 	if out, err := cmd.CombinedOutput(); err != nil {
 		w.t.Fatalf("git %v: %v\n%s", args, err, out)
 	}
@@ -250,18 +310,19 @@ func store(gitDir string) string {
 	return filepath.Join(gitDir, "gentle-ai", "review-transactions", "v2")
 }
 
-// legacyReceipt and lifecycleState are the two documents gentle-ai leaves for a lineage.
+// legacyReceipt and lifecycleState are the two documents gentle-ai leaves for a lineage, as
+// the tests of the review receipt capture share them (engine/reviewreceipt/receipttest).
 func legacyReceipt(lineage, schema, terminal string) string {
-	return fmt.Sprintf(`{"schema":%q,"lineage_id":%q,"final_candidate_tree":"deadbeef","base_tree":"cafe","selected_lenses":["review-risk"],"risk_level":"high","terminal_state":%q}`, schema, lineage, terminal)
+	return receipttest.ReceiptDocument(lineage, schema, terminal)
 }
 
 func lifecycleState(lineage, state string) string {
-	return fmt.Sprintf(`{"schema":"gentle-ai.review-transaction/v2","revision":3,"state":{"schema":"gentle-ai.review-state/v2","lineage_id":%q,"generation":1,"state":%q,"risk_level":"medium","selected_lenses":["review-risk","review-readability"],"initial_snapshot":{"base_tree":"basetree1"},"current_snapshot":{"kind":"candidate","base_tree":"basetree1","candidate_tree":"candidatetree1"}}}`, lineage, state)
+	return receipttest.StateDocument(lineage, state)
 }
 
 const (
-	receiptSchemaV2 = "gentle-ai.review-receipt/v2"
-	approved        = "approved"
+	receiptSchemaV2 = receipttest.ReceiptSchema
+	approved        = receipttest.Approved
 )
 
 // putReceipt and putState leave the legacy receipt, or the lifecycle state, of a lineage in
@@ -353,10 +414,34 @@ func receiptGoldenCases() []receiptGoldenCase {
 			root := w.repo("<ROOT>", false)
 			gitDir := filepath.Join(root, ".git")
 			w.change(root, "only-change")
-			w.putState(gitDir, "review-both", lifecycleState("review-both", approved))
+			w.putState(gitDir, "review-readable", lifecycleState("review-readable", approved))
 			if err := os.MkdirAll(filepath.Join(store(gitDir), "review-dir", "review-receipt.json"), 0o755); err != nil {
 				w.t.Fatal(err)
 			}
+			w.hook(root, acknowledgeCommand)
+			w.tree("after", root)
+		}},
+		// A lineage id is read from a document another program wrote, and the file a receipt
+		// is persisted under is named from it. An id that would walk out of the change's
+		// receipts folder is refused, naming the file, and the hook denies; what came before
+		// it stays captured, and nothing is written outside the folder.
+		{"hook-denies-a-lineage-id-that-would-leave-the-folder", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			gitDir := filepath.Join(root, ".git")
+			w.change(root, "only-change")
+			w.putReceipt(gitDir, "review-a-fine", legacyReceipt("review-a-fine", receiptSchemaV2, approved))
+			w.putState(gitDir, "review-b-escape", lifecycleState("../../escaped", approved))
+			w.hook(root, acknowledgeCommand)
+			w.tree("after", root)
+		}},
+		// A receipt that cannot be kept blocks no other: the lineage after it is still
+		// captured, and the hook then denies, naming the document and the remedy.
+		{"hook-captures-the-rest-and-denies-an-unusable-receipt", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			gitDir := filepath.Join(root, ".git")
+			w.change(root, "only-change")
+			w.putState(gitDir, "review-a-escape", lifecycleState("../../escaped", approved))
+			w.putReceipt(gitDir, "review-b-after", legacyReceipt("review-b-after", receiptSchemaV2, approved))
 			w.hook(root, acknowledgeCommand)
 			w.tree("after", root)
 		}},
@@ -552,6 +637,17 @@ func receiptGoldenCases() []receiptGoldenCase {
 			root := w.repo("<ROOT>", false)
 			w.putReceipt(filepath.Join(root, ".git"), "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
 			w.run("", "capture", "--cwd", root, "--change", "   ")
+			w.tree("after", root)
+		}},
+		// The change name becomes a directory under openspec/changes, so a name that is not
+		// one path component is refused by name, and nothing is created for it.
+		{"capture-refuses-a-change-name-that-is-not-a-path-component", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.change(root, "the-change")
+			w.putReceipt(filepath.Join(root, ".git"), "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
+			for _, change := range []string{"../escaped", "a/b", "..", " padded", "padded "} {
+				w.run("", "capture", "--cwd", root, "--change", change)
+			}
 			w.tree("after", root)
 		}},
 		{"capture-refuses-a-destination-that-differs", func(w *receiptWorld) {

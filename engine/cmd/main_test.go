@@ -14,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/assets"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
@@ -2467,9 +2468,9 @@ func TestRunPropagateVerified_NoOpDoesNotRetryOrWrite(t *testing.T) {
 
 	// Build the already-correctly-scoped registry via a real Propagate call so
 	// the fixture can never drift from what BuildScopedRow actually produces.
-	phases, err := propagator.ParseFrontmatter(testContractContent)
+	phases, err := contract.Parse(testContractContent)
 	if err != nil {
-		t.Fatalf("ParseFrontmatter: %v", err)
+		t.Fatalf("contract.Parse: %v", err)
 	}
 	alreadyScoped, _, err := propagator.Propagate(minimalRegistry, propagator.Config{
 		ContractPath: "skills/_shared/minimalism-contract.md",

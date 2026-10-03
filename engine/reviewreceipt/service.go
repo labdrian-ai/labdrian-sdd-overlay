@@ -9,6 +9,12 @@ import (
 	"strings"
 )
 
+// What a name is for, as an UnsafeNameError says it.
+const (
+	kindChange      = "change name"
+	kindReceiptFile = "receipt file name"
+)
+
 // Service captures the review receipts of one project: it reads them from the stores the
 // review tool keeps its transactions in and persists them where the project versions them,
 // before the acknowledgement that burns them. It is built over the four ports and knows no
@@ -50,10 +56,15 @@ func (s *Service) ready() error {
 // byte-for-byte) this run, and on failure the ones that came before it.
 //
 // It never replaces a receipt file with different bytes: that is an error, not an overwrite.
-// A lineage is persisted once per shape, however many stores hold it.
+// A lineage is persisted once per shape, however many stores hold it. The change name and
+// every file name are checked to be one path component (CheckPathComponent) before the sink
+// is asked anything, so a receipt is never put outside the change's folder.
 func (s *Service) Capture(change string) ([]Captured, error) {
 	if strings.TrimSpace(change) == "" {
 		return nil, errors.New("reviewreceipt: change name is required")
+	}
+	if err := CheckPathComponent(kindChange, change); err != nil {
+		return nil, err
 	}
 	if err := s.ready(); err != nil {
 		return nil, err
@@ -94,12 +105,16 @@ func (s *Service) persist(change string, sv surviving) error {
 // stores (either shape), once per lineage and shape, in the order the stores list them. A
 // store is read when the walk gets to it, and what it holds is visited before the next is
 // read, so a caller that writes as it goes has written what came before a failure. It
-// stops at the first error, a visit's included.
+// stops at the first error a store or a visit returns. An approved receipt that cannot be
+// kept (an *UnusableReceiptError) does not stop the walk: every other receipt is still
+// visited, and the walk then fails naming each one that could not be kept, so one bad
+// document never keeps the others from being persisted, and none is skipped in silence.
 func (s *Service) eachApproved(visit func(surviving) error) error {
 	stores, err := s.ports.Stores.Stores()
 	if err != nil {
 		return fmt.Errorf("reviewreceipt: %w", err)
 	}
+	var unusable []error
 	seen := map[seenReceipt]bool{}
 	for _, store := range stores {
 		documents, err := s.ports.Source.Documents(store)
@@ -113,12 +128,19 @@ func (s *Service) eachApproved(visit func(surviving) error) error {
 				continue
 			}
 			seen[key] = true
+			// The lineage id was read from a document another program wrote; the file name
+			// it makes is checked before anything is asked of the sink with it.
+			if err := CheckPathComponent(kindReceiptFile, r.FileName()); err != nil {
+				unusable = append(unusable, &UnusableReceiptError{Origin: doc.Origin, Err: err})
+				continue
+			}
 			if err := visit(surviving{Receipt: r, Data: doc.Data}); err != nil {
-				return err
+				// The refusals collected so far are kept: a later failure drops none.
+				return errors.Join(append(unusable, err)...)
 			}
 		}
 	}
-	return nil
+	return errors.Join(unusable...)
 }
 
 // AllSurvivingApprovedPersisted reports whether every currently-approved receipt is already
@@ -138,6 +160,9 @@ func (s *Service) AllSurvivingApprovedPersisted(changes []string) (bool, error) 
 	for _, sv := range all {
 		found := false
 		for _, change := range changes {
+			if err := CheckPathComponent(kindChange, change); err != nil {
+				return false, err
+			}
 			persisted, err := s.ports.Sink.Read(change, sv.Receipt.FileName())
 			if errors.Is(err, ErrNotPersisted) {
 				continue

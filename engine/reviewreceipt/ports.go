@@ -21,6 +21,9 @@ type Store string
 type Document struct {
 	Shape Shape
 	Data  []byte
+	// Origin names where the document was read, as the source names it (a file path for a
+	// file store). The domain only reports it, so a person can find the document.
+	Origin string
 }
 
 // TransactionStores says where the review transactions of the project are.
@@ -46,7 +49,9 @@ type ReceiptSource interface {
 var ErrNotPersisted = errors.New("no such persisted receipt")
 
 // ReceiptSink keeps receipts where the project versions them: a change's review-receipts
-// folder.
+// folder. The change and the name every method is given are single safe path components
+// (CheckPathComponent): the Service checks them before it asks, so an adapter may join them
+// into a path without checking them again.
 type ReceiptSink interface {
 	// Read returns the bytes persisted under name in change's review-receipts folder, or
 	// an error satisfying errors.Is(err, ErrNotPersisted) when there are none.

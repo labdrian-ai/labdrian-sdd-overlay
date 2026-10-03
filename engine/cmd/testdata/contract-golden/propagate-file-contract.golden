@@ -1,0 +1,82 @@
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# the block is inserted
+exit: none
+--- stdout ---
+registry: minimalism-contract scoped row inserted/updated
+--- stderr ---
+--- registry after ---
+# Skill Registry
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-scope (auto-generated) -->
+| other | skills/_shared/other.md | Foreign row |
+<!-- END: some-other-scope -->
+<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
+| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-tasks and sdd-apply sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-propose/sdd-spec/sdd-design/sdd-verify/sdd-archive. |
+<!-- END: minimalism-contract-scope -->
+
+### Other section
+
+text
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# the same run again is silent
+exit: none
+--- stdout ---
+--- stderr ---
+--- registry unchanged ---
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a changed contract updates the block
+exit: none
+--- stdout ---
+registry: minimalism-contract scoped row inserted/updated
+--- stderr ---
+--- registry after ---
+# Skill Registry
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-scope (auto-generated) -->
+| other | skills/_shared/other.md | Foreign row |
+<!-- END: some-other-scope -->
+<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
+| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-design sub-agent prompts under '## Skills to load before work'. Do NOT inject into sdd-apply. |
+<!-- END: minimalism-contract-scope -->
+
+### Other section
+
+text
+
+$ propagate --registry /virtual/project/.atl/skill-registry.md --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a contract with no excluded phases
+exit: none
+--- stdout ---
+registry: minimalism-contract scoped row inserted/updated
+--- stderr ---
+--- registry after ---
+# Skill Registry
+
+### Shared Contracts
+
+| Artifact | Path | Description |
+|----------|------|-------------|
+| pre-sdd-contracts | skills/_shared/pre-sdd-contracts.md | Shared contracts |
+<!-- BEGIN: some-other-scope (auto-generated) -->
+| other | skills/_shared/other.md | Foreign row |
+<!-- END: some-other-scope -->
+<!-- BEGIN: minimalism-contract-scope (auto-generated) -->
+| minimalism-contract | skills/_shared/minimalism-contract.md | Inject ONLY into sdd-design sub-agent prompts under '## Skills to load before work'. |
+<!-- END: minimalism-contract-scope -->
+
+### Other section
+
+text
+
