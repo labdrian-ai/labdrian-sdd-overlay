@@ -127,7 +127,7 @@ covered by an existing entry in the registered skill registry
 (`skills.registry.yaml`), recording the rejection reason `duplicate` and the
 matched skill path. This rejection MUST be backed by a new read-only Go
 entrypoint in `engine/skills` that reuses the existing exported
-`ParseRegistry` function and performs no write to the registry or to
+`ReadRegistry` function and performs no write to the registry or to
 `skills/`. Rejection is decided purely on registry contents at check time;
 the registry itself is never mutated by this capability.
 
@@ -153,7 +153,7 @@ the registry itself is never mutated by this capability.
 - WHEN it evaluates a match
 - THEN it performs no write to `skills.registry.yaml`, to any file under
   `skills/`, or to any other persisted state
-- AND it reuses the existing exported `ParseRegistry` function rather than
+- AND it reuses the existing exported `ReadRegistry` function rather than
   re-parsing the registry YAML independently
 
 ### Requirement: No Go-Side Engram Write Path
