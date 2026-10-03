@@ -1,0 +1,70 @@
+# version with a block under it
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: version must be a single value, not a block
+
+# skills with a value
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 2: skills must be a list of entries, not a value
+
+# id with a block under it
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: id must be a single value, not a block
+
+# path with a block under it
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: path must be a single value, not a block
+
+# source with a value
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 5: source must be a block of fields (type, upstream, repo, ref), not a value
+
+# source.type with a block under it
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 6: source.type must be a single value, not a block
+
+# install with a value
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 9: install must be a block of fields (defaultScope, allowedProjects, targets), not a value
+
+# install.defaultScope with a block under it
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 10: install.defaultScope must be a single value, not a block
+
+# install.allowedProjects with a value
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 47: install.allowedProjects must be a list of values, one "- value" line each
+
+# install.targets with a value
+$ skills list --registry <WORLD>/docs/10.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 11: install.targets must be a list of values, one "- value" line each
+

@@ -113,20 +113,22 @@ func TestADecoderThatFailsHandsBackTheEntriesThatWereWholeBeforeTheFault(t *test
 		wantIDs []string
 		want    string // a piece of the error
 	}{
-		"an unknown key in the second entry": {
-			oneEntry + anEntry("beta")[:len("  - id: beta\n")] + "    color: red\n", []string{"alpha"}, `unknown key "color" in skill entry`},
-		"an unknown key at the root, after the entries": {
-			oneEntry + anEntry("beta") + "extra: 1\n", []string{"alpha", "beta"}, `unknown top-level key "extra"`},
+		"a key that repeats in the second entry": {
+			oneEntry + anEntry("beta")[:len("  - id: beta\n")] + "    id: gamma\n", []string{"alpha"}, `duplicate key "id" in skill entry`},
+		"a token that is not a key at the root, after the entries": {
+			oneEntry + anEntry("beta") + "- stray\n", []string{"alpha", "beta"}, "unexpected token at document root"},
 		"an entry that is whole and a token that is not where it should be": {
 			oneEntry + "   stray: 1\n", []string{"alpha"}, "unexpected indentation inside skills sequence"},
+		// The version is found and judged before the entries are read (a decoder is chosen by it),
+		// so a version the file gets wrong hands back nothing, wherever the file puts it.
 		"a version the decoder does not know, after the entries": {
-			strings.Replace(oneEntry+anEntry("beta"), `"1"`, `"9"`, 1), []string{"alpha", "beta"}, `version "9" is not supported`},
+			strings.Replace(oneEntry+anEntry("beta"), `"1"`, `"9"`, 1), nil, `version "9" is not supported`},
 		"no version, after the entries": {
-			strings.Replace(oneEntry+anEntry("beta"), "version: \"1\"\n", "", 1), []string{"alpha", "beta"}, "missing required top-level field 'version'"},
+			strings.Replace(oneEntry+anEntry("beta"), "version: \"1\"\n", "", 1), nil, "missing required top-level field 'version'"},
 		"a fault of the text itself": {
 			oneEntry + "\ttab: here\n", nil, "tab character not allowed"},
-		"a fault in the first entry": {
-			strings.Replace(oneEntry, "    path: alpha\n", "    path: alpha\n    color: red\n", 1), nil, `unknown key "color"`},
+		"a key that repeats in the first entry": {
+			strings.Replace(oneEntry, "    path: alpha\n", "    path: alpha\n    path: beta\n", 1), nil, `duplicate key "path"`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			reg, err := repo.Decode([]byte(tc.doc))
@@ -154,15 +156,17 @@ func TestTheFirstFaultInTheOrderOfTheFileIsTheOneTheDomainNames(t *testing.T) {
 		"a path indented too little: the entry has none, which comes before the stray line": {
 			strings.Replace(oneEntry, "    path: alpha\n", "   path: alpha\n", 1),
 			`skills: entry "alpha": path must not be empty`},
-		"an invalid first entry before an unknown key in the second": {
-			strings.Replace(oneEntry, "path: alpha", `path: ""`, 1) + "  - id: beta\n    color: red\n",
+		"an invalid first entry before a key that repeats in the second": {
+			strings.Replace(oneEntry, "path: alpha", `path: ""`, 1) + "  - id: beta\n    id: gamma\n",
 			`skills: entry "alpha": path must not be empty`},
-		"a valid first entry before an unknown key in the second": {
-			oneEntry + "  - id: beta\n    color: red\n",
-			`line 14: unknown key "color" in skill entry`},
-		"an invalid entry before a version the file gets wrong": {
+		"a valid first entry before a key that repeats in the second": {
+			oneEntry + "  - id: beta\n    id: gamma\n",
+			`line 14: duplicate key "id" in skill entry`},
+		// The one exception to "the order of the file": the version selects the decoder, so it is
+		// found before any entry is read, and a version the file gets wrong is named first.
+		"a version the file gets wrong, before an invalid entry": {
 			strings.Replace(strings.Replace(oneEntry, "path: alpha", `path: ""`, 1), `"1"`, `"7"`, 1),
-			`skills: entry "alpha": path must not be empty`},
+			`skills: version "7" is not supported; only version "1" is valid`},
 	} {
 		t.Run(name, func(t *testing.T) {
 			_, err := skills.DecodeRegistry(repo, []byte(tc.doc))

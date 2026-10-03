@@ -16,12 +16,13 @@ exit: 1
 --- stderr ---
 error: reading registry "<WORLD>/refused/a.yaml": open <WORLD>/refused/a.yaml: no such file or directory
 
-# a registry with a line the reader does not understand
+# a registry with a key the reader does not know
 $ skills project-status --project-root <WORLD>/project --registry <WORLD>/refused/b.yaml
-exit: 1
+exit: 0
 --- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
 --- stderr ---
-error: parsing registry "<WORLD>/refused/b.yaml": line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # a registry of a version it does not know
 $ skills project-status --project-root <WORLD>/project --registry <WORLD>/refused/c.yaml

@@ -5,12 +5,15 @@ exit: 1
 --- stderr ---
 error: reading registry "<WORLD>/refused/a.yaml": open <WORLD>/refused/a.yaml: no such file or directory
 
-# a registry with a line the reader does not understand
+# a registry with a key the reader does not know
 $ skills validate --registry <WORLD>/refused/b.yaml --source-root <WORLD>/skills
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
+[UNREGISTERED_ON_DISK] beta/SKILL.md: skills/beta/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "beta/SKILL.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] ext-one/SKILL.md: skills/ext-one/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "ext-one/SKILL.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] tidy-notes/SKILL.md: skills/tidy-notes/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "tidy-notes/SKILL.md" to overlay.manifest to register it
 
 # a registry of a version it does not know
 $ skills validate --registry <WORLD>/refused/c.yaml --source-root <WORLD>/skills

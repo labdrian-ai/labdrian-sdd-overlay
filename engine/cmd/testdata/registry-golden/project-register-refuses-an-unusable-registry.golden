@@ -5,12 +5,18 @@ exit: 1
 --- stderr ---
 error: reading registry "<WORLD>/refused/a.yaml": open <WORLD>/refused/a.yaml: no such file or directory
 
-# a registry with a line the reader does not understand
+# a registry with a key the reader does not know
 $ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --registry <WORLD>/refused/b.yaml <WORLD>/drafts/tidy/SKILL.md
-exit: 1
+exit: 0
 --- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
 --- stderr ---
-error: parsing registry "<WORLD>/refused/b.yaml": line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # a registry of a version it does not know
 $ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --registry <WORLD>/refused/c.yaml <WORLD>/drafts/tidy/SKILL.md
@@ -27,5 +33,14 @@ exit: 1
 error: parsing registry "<WORLD>/refused/d.yaml": skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
 
 --- tree of project ---
-(empty)
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md (346 bytes)
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md (346 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (417 bytes)
 

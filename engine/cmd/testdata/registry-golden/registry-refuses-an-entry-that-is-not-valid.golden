@@ -80,7 +80,7 @@ $ skills list --registry <WORLD>/docs/12.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 6: unknown key "mirror" in source
+error: parsing registry: skills: entry "alpha": source.type "" is not valid; must be 'core', 'custom', or 'external'
 
 # an unknown type of source
 $ skills list --registry <WORLD>/docs/13.yaml
@@ -178,7 +178,7 @@ $ skills list --registry <WORLD>/docs/26.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 12: unknown key "other" in lifecycle
+error: parsing registry: skills: entry "alpha": lifecycle.updateStrategy "" is not valid; must be 'vendor-merge' or 'overlay-only'
 
 # no install
 $ skills list --registry <WORLD>/docs/27.yaml

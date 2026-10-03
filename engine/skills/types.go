@@ -4,6 +4,13 @@ package skills
 type Registry struct {
 	Version string
 	Skills  []Entry
+
+	// Unread says what the reader left out of the stored form, one note per field, in the order
+	// the store has them: a field it does not know, or does not need in the shape the store gave
+	// it. It is empty when the registry is the whole of what is stored. A registry that left
+	// fields out can be read and used, and cannot be written back, because writing it would drop
+	// them (AddEntry and RemoveEntry refuse it).
+	Unread []string
 }
 
 // Entry is a single skill entry in the registry.
