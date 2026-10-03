@@ -37,7 +37,7 @@ type Upstream struct {
 
 // Install describes installation parameters for a skill.
 type Install struct {
-	DefaultScope    string   // "global" | "project" (enum; validated in parse.go)
+	DefaultScope    string   // "global" | "project" (enum; Registry.Validate, and the YAML reader on its line)
 	Targets         []string // non-empty subset of {"claude","opencode","codex","pi"} (A-1)
 	AllowedProjects []string // optional; required when DefaultScope == "project"
 }
