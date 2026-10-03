@@ -200,7 +200,9 @@ func ParseContext(content string) (Context, error) {
 // parseList is the one parser of a list in the frontmatter, and it is strict: the value
 // must be an inline list, "[a, b, c]", with the brackets, and nothing before or after them.
 // The brackets are the ends of the value and nothing else: a bracket among the items
-// ("[a][b]", "[a, [b]]") is not a list of one odd item, it is refused. Its items are
+// ("[a][b]", "[a, [b]]") is not a list of one odd item, it is refused, and so is one inside
+// a quoted item (["a[1]"]): the list has no escape for a bracket, and the name of a phase or
+// a language has none. Its items are
 // separated by commas; white space and the quotes (either kind) at the ends of an item are
 // removed, an empty item is dropped, and the case is kept. key only names the list in the
 // error. The empty list "[]" is a list.

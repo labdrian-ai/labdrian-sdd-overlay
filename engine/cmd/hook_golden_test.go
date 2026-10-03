@@ -14,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"unicode"
 )
 
 // The golden files under testdata/hook-golden record what every Claude Code hook the engine
@@ -40,8 +41,13 @@ import (
 // through, one denies it) and a decoder shared by all of them must keep each decision. The
 // files were recorded from the program as it was before Phase 9 unit H14
 // (docs/architecture/hexagonal-target.md) moved the hook wire format into one adapter
-// (engine/hookwire); a change to a byte of any of them fails here. Rewrite them deliberately
-// with
+// (engine/hookwire); a change to a byte of any of them fails here. Three were rewritten on
+// purpose afterwards, in Phase 9 batch 10, and nothing else was: the clearance guard's size
+// bound replaced shaper-guard-reads-without-a-size-bound (the same two cases, then the bound
+// itself and what is over it, which that guard now denies), and two files hold the same input
+// as before, with a character that reorders or hides the text around it now written as text
+// (gate-task-escapes-what-json-marshal-escapes, pretooluse-denies-a-memory-query-for-another-project).
+// Rewrite them deliberately with
 //
 //	go test ./cmd -run TestHookGolden -update-hook-golden
 //
@@ -135,16 +141,25 @@ func (w *hookWorld) text() string {
 	return visibleControls(digests.ReplaceAllString(w.replace(w.b.String()), "<DIGEST>"))
 }
 
-// visibleControls shows a control character (other than a line break or a tab) as \xNN, so a
-// golden file never holds an escape sequence a terminal would act on.
+// visibleControls shows a control character (other than a line break or a tab) as \xNN, and a
+// character that no reader can see or that moves the text around it as \uNNNN, so a golden file
+// never holds an escape sequence a terminal would act on, nor a character that reorders or hides
+// the lines around it in a diff, a pager or an editor: a bidirectional override or isolate, a
+// zero-width character, a byte-order mark, a soft hyphen, the line and paragraph separators
+// and the controls of the second block (Unicode categories Cf, Zl, Zp and the C1 controls).
 func visibleControls(s string) string {
 	var b strings.Builder
 	for _, r := range s {
-		if (r < 0x20 && r != '\n' && r != '\t') || r == 0x7f {
+		switch {
+		case r == '\n' || r == '\t':
+			b.WriteRune(r)
+		case r < 0x20 || r == 0x7f:
 			fmt.Fprintf(&b, `\x%02x`, r)
-			continue
+		case unicode.IsControl(r) || unicode.Is(unicode.Cf, r) || r == 0x2028 || r == 0x2029:
+			fmt.Fprintf(&b, `\u%04x`, r)
+		default:
+			b.WriteRune(r)
 		}
-		b.WriteRune(r)
 	}
 	return b.String()
 }
@@ -211,9 +226,7 @@ const failingStdin = "<the reader fails with: read failed>"
 // gateTask records one run of 'gate-task' over the in-memory files.
 func (w *hookWorld) gateTask(label, stdin string, args ...string) {
 	w.t.Helper()
-	var stdout, stderr bytes.Buffer
-	gateTaskCore(args, strings.NewReader(stdin), &stdout, &stderr, w.readFile)
-	w.record("gate-task "+strings.Join(args, " "), label, stdin, nil, stdout.String(), stderr.String())
+	w.gateTaskReader(label, strings.NewReader(stdin), stdin, args...)
 }
 
 // gateTaskReader records one run of 'gate-task' over a stdin that is not a string.

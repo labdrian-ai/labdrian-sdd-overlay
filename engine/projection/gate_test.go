@@ -4,7 +4,10 @@ package projection_test
 // about (GateRelevant). Everything here is a function of its arguments; nothing reads a file or
 // starts a process, and nothing here knows a JSON document: what the gate is told of a call is
 // its name and what a memory query names as its project (QueryArguments), as the hook adapter
-// (engine/hookwire, with the tests in engine/cmd) reads it from the hook input.
+// reads it from the hook input. How the input is decoded into them, every shape of the project
+// argument (missing, null, not text, an array, an object, a key in another case, a key twice),
+// is tested in engine/hookwire (TestQueryArgumentsAreReadTheWayTheMemoryGateReadThem), and the
+// hooks as a whole, end to end, by the golden files in engine/cmd.
 
 import (
 	"fmt"
@@ -38,6 +41,12 @@ func named(project string) projection.QueryArguments {
 // unnamed is what a call whose arguments could not be read as named arguments carries.
 var unnamed = projection.QueryArguments{}
 
+// reading is how a caller gives the gate the arguments of a call: a function the gate calls if
+// it needs them.
+func reading(q projection.QueryArguments) func() projection.QueryArguments {
+	return func() projection.QueryArguments { return q }
+}
+
 // gate runs the gate for an owned binding to wf-1 of proj-1 and the workflow w, with the edit
 // tools of editTools.
 func gate(w *workflow.Loaded, tool string, query projection.QueryArguments) projection.GateResult {
@@ -45,7 +54,7 @@ func gate(w *workflow.Loaded, tool string, query projection.QueryArguments) proj
 		Binding:   ownedBinding(),
 		Workflow:  w,
 		EditTools: editTools,
-		Call:      projection.ToolCall{Name: tool, Query: query},
+		Call:      projection.ToolCall{Name: tool, ReadQuery: reading(query)},
 	})
 }
 
@@ -92,6 +101,52 @@ func TestGateRelevantSelectsOnlyTheToolsTheGateChecks(t *testing.T) {
 	}
 }
 
+// TestTheArgumentsOfACallAreReadOnlyForAMemoryQuery: reading the arguments of a call costs the
+// caller a decode of the whole input, which for a file edit is the file, so the gate asks for
+// them only for the one tool whose arguments it checks, and at most once. It is the gate that
+// decides that, and not its caller, who would have to know which tool it is.
+func TestTheArgumentsOfACallAreReadOnlyForAMemoryQuery(t *testing.T) {
+	tools := append(append([]string{}, editTools...), "Bash", "Read", "mcp__longterm-mem__get", queryTool, pluginQueryTool)
+	for _, status := range []workflow.Status{workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused, workflow.StatusClosed} {
+		for _, tool := range tools {
+			t.Run(string(status)+"/"+tool, func(t *testing.T) {
+				reads := 0
+				projection.Gate(projection.GateInput{
+					Binding: ownedBinding(), Workflow: loadedWorkflow("odd", status), EditTools: editTools,
+					Call: projection.ToolCall{Name: tool, ReadQuery: func() projection.QueryArguments {
+						reads++
+						return named("proj-1")
+					}},
+				})
+				want := 0
+				if (tool == queryTool || tool == pluginQueryTool) && status != workflow.StatusClosed {
+					want = 1
+				}
+				if reads != want {
+					t.Errorf("the arguments were read %d times, want %d", reads, want)
+				}
+			})
+		}
+	}
+	// Nothing is read for a call the gate has no opinion about, whatever is bound.
+	for _, tool := range []string{"Bash", "Write"} {
+		reads := 0
+		projection.Gate(projection.GateInput{
+			Binding: projection.Loaded{Classification: projection.ClassificationAbsent}, EditTools: editTools,
+			Call: projection.ToolCall{Name: tool, ReadQuery: func() projection.QueryArguments { reads++; return unnamed }},
+		})
+		if reads != 0 {
+			t.Errorf("%s: read the arguments %d times with nothing bound", tool, reads)
+		}
+	}
+	// A caller that gives no way to read them has a query whose arguments are not named.
+	running := loadedWorkflow("odd", workflow.StatusRunning)
+	withNone := projection.Gate(projection.GateInput{Binding: ownedBinding(), Workflow: running, EditTools: editTools, Call: projection.ToolCall{Name: queryTool}})
+	if withNone != gate(running, queryTool, unnamed) || withNone.Warning == "" {
+		t.Errorf("a query with no reader = %+v, want what arguments that are not named give: %+v", withNone, gate(running, queryTool, unnamed))
+	}
+}
+
 // TestTheEditToolsAreTheCallers: the gate has no list of file-edit tools of its own. Given
 // another list it denies those tools, and the ones it was not given are left alone, so a list
 // that is empty (a caller that forgot it) gates no edit.
@@ -112,7 +167,7 @@ func TestTheEditToolsAreTheCallers(t *testing.T) {
 	}
 	// The memory gate does not depend on the list.
 	denied(t, "a memory query with no list", projection.Gate(projection.GateInput{
-		Binding: ownedBinding(), Workflow: loadedWorkflow("odd", workflow.StatusRunning), Call: projection.ToolCall{Name: queryTool, Query: named("other")},
+		Binding: ownedBinding(), Workflow: loadedWorkflow("odd", workflow.StatusRunning), Call: projection.ToolCall{Name: queryTool, ReadQuery: reading(named("other"))},
 	}), `"other"`)
 }
 
@@ -138,7 +193,7 @@ func TestGateAllowsWhenTheRepositoryIsNotBoundToAnOwnedBinding(t *testing.T) {
 					Binding:   projection.Loaded{Classification: class, Detail: "x"},
 					Workflow:  w,
 					EditTools: editTools,
-					Call:      projection.ToolCall{Name: tool, Query: named("other")},
+					Call:      projection.ToolCall{Name: tool, ReadQuery: reading(named("other"))},
 				})
 				allowed(t, "binding "+string(class), got)
 			})
@@ -463,7 +518,7 @@ func TestGateDoesNotModifyItsInput(t *testing.T) {
 	w := loadedWorkflow("odd", workflow.StatusPaused)
 	before := fmt.Sprintf("%+v", *w)
 	tools := append([]string(nil), editTools...)
-	in := projection.GateInput{Binding: ownedBinding(), Workflow: w, EditTools: tools, Call: projection.ToolCall{Name: queryTool, Query: named("other")}}
+	in := projection.GateInput{Binding: ownedBinding(), Workflow: w, EditTools: tools, Call: projection.ToolCall{Name: queryTool, ReadQuery: reading(named("other"))}}
 	first := projection.Gate(in)
 	second := projection.Gate(in)
 	if first != second {

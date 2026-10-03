@@ -44,7 +44,11 @@ func TestParseList(t *testing.T) {
 func TestParseListRefusesWhatIsNotBracketed(t *testing.T) {
 	for _, value := range []string{"", "   ", "a", "a, b", "[a, b", "a, b]", "(a, b)", "{a, b}", "- a", "[a] extra", "extra [a]", `"[a]"`,
 		// A bracket inside the list is not an item: the value is one list, brackets at the ends only.
-		"[a][b]", "[]]", "[[a]]", "[a, [b]]", "[a, b]]", "[[a, b]"} {
+		"[a][b]", "[]]", "[[a]]", "[a, [b]]", "[a, b]]", "[[a, b]",
+		// Quotes do not make a bracket an item's own: the list has no escape for one, so a
+		// quoted bracket is refused as an unquoted one is (nothing a contract names has one;
+		// the refusal is loud: 'gate-task' says so on stderr and lets the call through).
+		`["a[1]"]`, `["a]"]`, `['[a']`, `["a", "b[1]"]`, `["[a]"]`, `['a', "]"]`} {
 		got, err := parseList("the_key", value)
 		var malformed *MalformedListError
 		if !errors.As(err, &malformed) || malformed.Key != "the_key" || got != nil {

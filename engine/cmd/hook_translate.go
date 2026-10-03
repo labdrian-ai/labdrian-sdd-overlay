@@ -19,7 +19,10 @@ import (
 // matcher that routes these tools to the hook retypes it (settings.ProjectionEditToolMatcher);
 // tests check each copy against it. A tool added here is gated only once the matcher installed
 // in Claude Code names it too, which is what the test of the matcher is for.
-var gatedEditTools = []string{"Write", "Edit", "MultiEdit", "NotebookEdit"}
+//
+// Each call returns a list of its own, as the gate has always been given one, so that nothing
+// that holds the list can change it for the next hook call of the process.
+func gatedEditTools() []string { return []string{"Write", "Edit", "MultiEdit", "NotebookEdit"} }
 
 // occasionOf is what the projection hook is doing when it answers event, for the wording of a
 // warning after a panic.
@@ -34,17 +37,25 @@ func occasionOf(event string) projection.Occasion {
 	}
 }
 
-// gateCall is a tool call of a PreToolUse input as the projection gate reads it, with the
-// arguments read as those of a memory query. They are read only for a bound repository, where
-// the gate may need them.
+// gateCall is a tool call of a PreToolUse input as the projection gate reads it. The arguments
+// are read as those of a memory query, and only when the gate asks for them (projection.ToolCall):
+// reading them decodes the whole input of the call, which for a file edit is the file, and the
+// gate wants them for a memory query alone.
 func gateCall(in hookwire.PreToolUse) projection.ToolCall {
-	q := in.Query()
-	return projection.ToolCall{Name: in.Tool, Query: projection.QueryArguments{Named: q.Named, Project: q.Project}}
+	return projection.ToolCall{Name: in.Tool, ReadQuery: func() projection.QueryArguments {
+		q := in.Query()
+		return projection.QueryArguments{Named: q.Named, Project: q.Project}
+	}}
 }
 
-// gateReply is what a decision of the projection gate says to Claude Code.
+// gateReply is what a decision of the projection gate says to Claude Code. Only a denial has a
+// reason to give: an allow says nothing, or its warning.
 func gateReply(r projection.GateResult) hookwire.PreToolUseReply {
-	return hookwire.PreToolUseReply{Deny: r.Deny, Reason: r.Explanation(), Warning: r.Warning}
+	reply := hookwire.PreToolUseReply{Deny: r.Deny, Warning: r.Warning}
+	if r.Deny {
+		reply.Reason = r.Explanation()
+	}
+	return reply
 }
 
 // promptReply is what a projection says to Claude Code.
@@ -56,17 +67,30 @@ func promptReply(r projection.ProjectionResult) hookwire.PromptReply {
 // the gate gives it, or, for everything the gate leaves alone and everything it cannot read, the
 // pass-through that leaves the call as it is. It never fails, and never denies.
 func agentGateAnswer(raw []byte, cfg gate.Config) []byte {
+	if out, ok := rewrittenAgentCall(raw, cfg, hookwire.AgentCall.UpdatedInput); ok {
+		return out
+	}
+	return hookwire.PassThrough()
+}
+
+// rewrittenAgentCall is the answer that carries the call of raw with the prompt the gate gives it,
+// written by encode, and whether there is one: it is not when the input cannot be read, when the
+// gate leaves the call alone, and when the answer cannot be written. The caller says the same
+// thing in each of the three cases, the pass-through, which is why they are one. encode is the
+// writing of the answer, a parameter so that its failure, which cannot happen for text, is
+// tested instead of read.
+func rewrittenAgentCall(raw []byte, cfg gate.Config, encode func(hookwire.AgentCall, string) ([]byte, error)) ([]byte, bool) {
 	call, err := hookwire.DecodeAgentCall(raw)
 	if err != nil {
-		return hookwire.PassThrough()
+		return nil, false
 	}
 	prompt, changed := gate.Rewrite(gate.Call{SubagentType: call.SubagentType, Prompt: call.Prompt}, cfg)
 	if !changed {
-		return hookwire.PassThrough()
+		return nil, false
 	}
-	out, err := call.UpdatedInput(prompt)
+	out, err := encode(call, prompt)
 	if err != nil {
-		return hookwire.PassThrough()
+		return nil, false
 	}
-	return out
+	return out, true
 }

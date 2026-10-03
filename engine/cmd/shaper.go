@@ -431,12 +431,16 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 // runShaperGuardHook implements 'shaper guard-hook', the Claude Code
 // PreToolUse deny guard. It fails closed: unreadable input is denied.
 //
-// It reads the whole payload with no size cap. The guard runs on every Bash
-// and Write/Edit call, so a capped read would truncate large unrelated
-// payloads into undecodable JSON and deny them without judging them. The
-// payload already lives in the calling runtime's memory.
+// It reads at most hookwire.MaxToolCallBytes, the bound of every guard, and one
+// byte more, which is enough to see the input is over it: an input that never
+// ends is not read to the end. The bound is generous, because the guard runs on
+// every Bash and Write/Edit call and a capped read must not truncate a large
+// unrelated payload into undecodable JSON and deny it without judging it. An
+// input over the bound is denied like any input the guard cannot read, and the
+// denial says the input was too large: the guard cannot vouch for a call it was
+// not given to judge, and a call that big is not a call it can afford to read.
 func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
-	raw, err := io.ReadAll(stdin)
+	raw, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxToolCallBytes+1))
 	if err != nil {
 		fmt.Fprintf(stderr, "shaper guard-hook: read stdin: %v\n", err)
 		exit(hookwire.ExitBlock)
@@ -444,7 +448,7 @@ func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
 	}
 	var verdict shaper.GuardVerdict
 	if call, err := hookwire.DecodeToolCall(raw); err != nil {
-		verdict = shaper.GuardUnreadable(err.Error())
+		verdict = shaper.GuardUnreadable(hookwire.ClearanceGuardDetail(err))
 	} else {
 		verdict = shaper.DecideGuard(shaper.GuardCall{Command: call.Command, FilePath: call.FilePath, NotebookPath: call.NotebookPath})
 	}

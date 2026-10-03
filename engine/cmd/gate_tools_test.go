@@ -15,11 +15,11 @@ import (
 
 func TestGatedEditToolsAreTheFourFileEditTools(t *testing.T) {
 	want := []string{"Write", "Edit", "MultiEdit", "NotebookEdit"}
-	if strings.Join(gatedEditTools, ",") != strings.Join(want, ",") {
-		t.Fatalf("gatedEditTools = %v, want %v, in this order (the documentation lists them in it)", gatedEditTools, want)
+	if strings.Join(gatedEditTools(), ",") != strings.Join(want, ",") {
+		t.Fatalf("gatedEditTools() = %v, want %v, in this order (the documentation lists them in it)", gatedEditTools(), want)
 	}
-	for _, tool := range gatedEditTools {
-		if !projection.GateRelevant(gatedEditTools, tool) {
+	for _, tool := range gatedEditTools() {
+		if !projection.GateRelevant(gatedEditTools(), tool) {
 			t.Errorf("edit tool %q is not gate-relevant", tool)
 		}
 	}
@@ -27,8 +27,8 @@ func TestGatedEditToolsAreTheFourFileEditTools(t *testing.T) {
 
 func TestInstalledEditMatcherListsExactlyTheGatedEditTools(t *testing.T) {
 	got := strings.Split(settings.ProjectionEditToolMatcher, "|")
-	if strings.Join(got, "|") != strings.Join(gatedEditTools, "|") {
-		t.Errorf("edit matcher tools %v, gate edit tools %v", got, gatedEditTools)
+	if strings.Join(got, "|") != strings.Join(gatedEditTools(), "|") {
+		t.Errorf("edit matcher tools %v, gate edit tools %v", got, gatedEditTools())
 	}
 }
 
@@ -48,7 +48,7 @@ func TestInstalledMatchersCoverEveryToolTheGateHasAnOpinionAbout(t *testing.T) {
 		"Bash", "Read", "Grep", "mcp__longterm-mem__get", "mcp__longterm-memx__query", "mcp__a__longterm-mem__query",
 		"longterm-mem__query", "mcp__plugin_engram_engram__mem_save", "",
 	} {
-		if projection.GateRelevant(gatedEditTools, name) && !covered(name) {
+		if projection.GateRelevant(gatedEditTools(), name) && !covered(name) {
 			t.Errorf("gate is relevant for %q but no installed matcher covers it", name)
 		}
 	}

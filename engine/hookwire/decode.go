@@ -101,7 +101,7 @@ func (p PreToolUse) Query() QueryArguments {
 // disagree on what a usable input is.
 func decodeEnvelope(data []byte, wire any) error {
 	if len(data) > MaxEnvelopeBytes {
-		return fmt.Errorf("parse hook input: %w: %d bytes exceeds the maximum of %d", ErrTooLarge, len(data), MaxEnvelopeBytes)
+		return tooLarge("parse hook input", len(data), MaxEnvelopeBytes)
 	}
 	trimmed := bytes.TrimSpace(data)
 	if len(trimmed) == 0 || trimmed[0] != '{' {
@@ -143,9 +143,13 @@ type AgentCall struct {
 // of the wrong type, and for a tool_input that is missing or is not an object. A tool_input that
 // is null decodes to an empty call, which a policy leaves alone.
 //
-// There is no bound on the size of the input: the caller reads what it can bear to read, and an
-// input cut short is not valid JSON and is refused.
+// The input is at most MaxAgentCallBytes: a longer one is refused, wrapping ErrTooLarge. The
+// caller reads at most that many bytes, and an input cut short is not valid JSON and is
+// refused too.
 func DecodeAgentCall(data []byte) (AgentCall, error) {
+	if len(data) > MaxAgentCallBytes {
+		return AgentCall{}, tooLarge("decode agent call", len(data), MaxAgentCallBytes)
+	}
 	var envelope struct {
 		ToolName  string          `json:"tool_name"`
 		ToolInput json.RawMessage `json:"tool_input"`

@@ -1,0 +1,40 @@
+$ projection hook --event PreToolUse
+# a project of 199 characters
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"project":"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a project of 200 characters
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"project":"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a project of 201 characters
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"project":"ppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"pppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppppp...\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a project of 201 multi-byte characters is cut by characters, not bytes
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"project":"ééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query asks for project \"éééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééééé...\", but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+
