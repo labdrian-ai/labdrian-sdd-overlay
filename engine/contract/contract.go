@@ -4,13 +4,14 @@
 // it applies at all. The package is pure. It reads text it is given and returns a value; it
 // names no file, no process and no other package of the engine.
 //
-// There is one parse of the document (Parse) and one parse of a list (parseList). The gate
-// that injects a contract into a prompt, the propagator that scopes a row of the skill
-// registry from it, the runtime adapters that configure a plugin from it, and the status
-// verb that checks it all call Parse, so a contract means the same thing to each of them.
-// Before this package three places read the frontmatter with three list parsers, and the
-// lists of phases were read leniently: "applies_to_phases: sdd-tasks, sdd-apply" was taken as
-// two phases and "[sdd-tasks" as one.
+// There is one parse of the phase scope of the document (Parse), one of its context
+// (ParseContext) and one parse of a list (parseList). A reader parses only what it reads: the
+// propagator that scopes a row of the skill registry and the status verb that checks a contract
+// read the scope; the gate reads the scope and the context, and so does the OpenCode adapter
+// for every contract but the unconditional minimalism one. A malformed context breaks the
+// readers of the context and no other. Before this package three places read the frontmatter
+// with three list parsers, and the lists of phases were read leniently:
+// "applies_to_phases: sdd-tasks, sdd-apply" was taken as two phases and "[sdd-tasks" as one.
 //
 // The frontmatter is read the way the contracts in use have always been read, and that is
 // kept: the text between the first two "---" delimiters, which are found by text and not
@@ -54,7 +55,7 @@ const (
 	itemQuotes = `"'`
 )
 
-// Contract is what the frontmatter of a contract document says.
+// Contract is the phase scope a contract document's frontmatter describes.
 type Contract struct {
 	// AppliesTo is the phases the contract is injected into. It is never empty in a
 	// Contract that Parse returns.
@@ -65,6 +66,10 @@ type Contract struct {
 	// InjectionPoint is the heading the contract is injected under, as the frontmatter wrote
 	// it, which is empty when it did not. Header says what to use.
 	InjectionPoint string
+}
+
+// Context is the work a contract document's frontmatter says the contract applies to.
+type Context struct {
 	// LanguageContext and ActivationContext are the languages and the activations the
 	// contract applies to, as written (the case is kept). Both empty means the contract does
 	// not depend on the work it is injected for.
@@ -89,11 +94,11 @@ func (c Contract) Header() string {
 
 // ContextRequired reports whether the contract applies only to work that matches its
 // languages or its activations.
-func (c Contract) ContextRequired() bool {
+func (c Context) ContextRequired() bool {
 	return len(c.LanguageContext) > 0 || len(c.ActivationContext) > 0
 }
 
-// The ways a contract document is refused. Parse returns the zero Contract with each.
+// The ways a contract document is refused. Parse and ParseContext return the zero value with each.
 var (
 	// ErrNoFrontmatter is a document without a frontmatter block.
 	ErrNoFrontmatter = errors.New("contract file has no YAML frontmatter (expected content between " + frontmatterDelimiter + " delimiters)")
@@ -117,23 +122,30 @@ func (e *MalformedListError) Error() string {
 	return fmt.Sprintf("malformed %s: expected an inline list such as [a, b], got %q", e.Key, e.Value)
 }
 
-// Parse reads the contract a document's frontmatter describes. It fails, with the zero
-// Contract, when the document has no frontmatter, when a list in it is not an inline list,
-// when it names a context_operator, or when it names no phase to apply to.
-func Parse(content string) (Contract, error) {
+// frontmatterLines is the lines of the frontmatter of content, or ErrNoFrontmatter.
+func frontmatterLines(content string) ([]string, error) {
 	parts := strings.SplitN(content, frontmatterDelimiter, 3)
 	if len(parts) < 3 {
-		return Contract{}, ErrNoFrontmatter
+		return nil, ErrNoFrontmatter
+	}
+	return strings.Split(parts[1], "\n"), nil
+}
+
+// Parse reads the phase scope a document's frontmatter describes. It fails, with the zero
+// Contract, when the document has no frontmatter, when a list of the scope is not an inline
+// list, or when it names no phase to apply to. It does not read the context (ParseContext does).
+func Parse(content string) (Contract, error) {
+	lines, err := frontmatterLines(content)
+	if err != nil {
+		return Contract{}, err
 	}
 
 	var c Contract
 	lists := map[string]*[]string{
-		keyAppliesTo:         &c.AppliesTo,
-		keyExcluded:          &c.Excluded,
-		keyLanguageContext:   &c.LanguageContext,
-		keyActivationContext: &c.ActivationContext,
+		keyAppliesTo: &c.AppliesTo,
+		keyExcluded:  &c.Excluded,
 	}
-	for _, line := range strings.Split(parts[1], "\n") {
+	for _, line := range lines {
 		key, value, found := strings.Cut(strings.TrimSpace(line), ":")
 		if !found {
 			continue
@@ -147,13 +159,40 @@ func Parse(content string) (Contract, error) {
 			*lists[key] = list
 		case key == keyInjectionPoint:
 			c.InjectionPoint = strings.Trim(strings.TrimSpace(value), itemQuotes)
-		case key == keyContextOperator:
-			return Contract{}, ErrUnsupportedContextOperator
 		}
 	}
 
 	if len(c.AppliesTo) == 0 {
 		return Contract{}, ErrNoAppliesTo
+	}
+	return c, nil
+}
+
+// ParseContext reads the context a document's frontmatter describes. It fails, with the zero
+// Context, when the document has no frontmatter, when a list of the context is not an inline
+// list, or when it names a context_operator. It does not read the phase scope (Parse does).
+func ParseContext(content string) (Context, error) {
+	lines, err := frontmatterLines(content)
+	if err != nil {
+		return Context{}, err
+	}
+
+	var c Context
+	for _, line := range lines {
+		key, value, found := strings.Cut(strings.TrimSpace(line), ":")
+		var err error
+		switch {
+		case !found:
+		case key == keyLanguageContext:
+			c.LanguageContext, err = parseList(key, value)
+		case key == keyActivationContext:
+			c.ActivationContext, err = parseList(key, value)
+		case key == keyContextOperator:
+			err = ErrUnsupportedContextOperator
+		}
+		if err != nil {
+			return Context{}, err
+		}
 	}
 	return c, nil
 }

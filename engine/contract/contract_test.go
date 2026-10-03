@@ -14,23 +14,19 @@ func doc(frontmatter ...string) string {
 	return "---\n" + strings.Join(frontmatter, "\n") + "\n---\n# A contract\n\nThe body is not read: applies_to_phases: nothing\n"
 }
 
-func TestParseReadsTheWholeFrontmatter(t *testing.T) {
+func TestParseReadsThePhaseScope(t *testing.T) {
 	got, err := contract.Parse(doc(
 		"applies_to_phases: [sdd-design, sdd-tasks, sdd-apply]",
 		"excluded_phases: [sdd-propose, sdd-archive]",
 		`injection_point: "## Skills to load before work"`,
-		"language_context: [typescript, nestjs]",
-		"activation_context: [oo-domain-design, review]",
 	))
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 	want := contract.Contract{
-		AppliesTo:         []string{"sdd-design", "sdd-tasks", "sdd-apply"},
-		Excluded:          []string{"sdd-propose", "sdd-archive"},
-		InjectionPoint:    "## Skills to load before work",
-		LanguageContext:   []string{"typescript", "nestjs"},
-		ActivationContext: []string{"oo-domain-design", "review"},
+		AppliesTo:      []string{"sdd-design", "sdd-tasks", "sdd-apply"},
+		Excluded:       []string{"sdd-propose", "sdd-archive"},
+		InjectionPoint: "## Skills to load before work",
 	}
 	if !reflect.DeepEqual(got, want) {
 		t.Errorf("Parse = %#v, want %#v", got, want)
@@ -44,15 +40,11 @@ func TestParseNeedsOnlyTheAppliesToList(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
-	if !reflect.DeepEqual(got.AppliesTo, []string{"sdd-apply"}) || got.Excluded != nil || got.InjectionPoint != "" ||
-		got.LanguageContext != nil || got.ActivationContext != nil {
+	if !reflect.DeepEqual(got.AppliesTo, []string{"sdd-apply"}) || got.Excluded != nil || got.InjectionPoint != "" {
 		t.Errorf("Parse = %#v, want only AppliesTo", got)
 	}
 	if got.Header() != contract.DefaultInjectionPoint {
 		t.Errorf("Header() = %q, want the default %q", got.Header(), contract.DefaultInjectionPoint)
-	}
-	if got.ContextRequired() {
-		t.Error("ContextRequired() = true for a contract with no context metadata")
 	}
 }
 
@@ -103,6 +95,10 @@ func TestParseFrontmatterShapes(t *testing.T) {
 		{"a key name inside a value", doc("injection_point: applies_to_phases: [x]", "applies_to_phases: [sdd-apply]"), []string{"sdd-apply"}},
 		{"a line that is not a key", doc("a note", "applies_to_phases: [sdd-apply]"), []string{"sdd-apply"}},
 		{"the body is not read", "---\napplies_to_phases: [sdd-apply]\n---\napplies_to_phases: [x]\n", []string{"sdd-apply"}},
+		// The context is ParseContext's: a reader of the scope alone is not broken by a malformed one.
+		{"a malformed language_context is not read", doc("applies_to_phases: [sdd-apply]", "language_context: go"), []string{"sdd-apply"}},
+		{"a malformed activation_context is not read", doc("applies_to_phases: [sdd-apply]", "activation_context:"), []string{"sdd-apply"}},
+		{"a context_operator is not read", doc("applies_to_phases: [sdd-apply]", "context_operator: any"), []string{"sdd-apply"}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			got, err := contract.Parse(tc.content)
@@ -181,7 +177,11 @@ func TestParseRefusesAContractThatAppliesToNothing(t *testing.T) {
 // refusal names the key and what was there. A parser that took "sdd-tasks, sdd-apply" as two
 // phases, or "[sdd-tasks" as one, made a contract mean what its author did not write.
 func TestParseRefusesAListThatIsNotAnInlineList(t *testing.T) {
-	for _, key := range []string{"applies_to_phases", "excluded_phases", "language_context", "activation_context"} {
+	scope := func(content string) error { _, err := contract.Parse(content); return err }
+	context := func(content string) error { _, err := contract.ParseContext(content); return err }
+	for key, parse := range map[string]func(string) error{
+		"applies_to_phases": scope, "excluded_phases": scope, "language_context": context, "activation_context": context,
+	} {
 		for _, value := range []string{
 			"sdd-tasks, sdd-apply",
 			"sdd-tasks",
@@ -193,11 +193,10 @@ func TestParseRefusesAListThatIsNotAnInlineList(t *testing.T) {
 			"- sdd-tasks",
 		} {
 			t.Run(key+"="+value, func(t *testing.T) {
-				lines := []string{"applies_to_phases: [sdd-apply]", key + ": " + value}
-				got, err := contract.Parse(doc(lines...))
+				err := parse(doc("applies_to_phases: [sdd-apply]", key+": "+value))
 				var malformed *contract.MalformedListError
 				if !errors.As(err, &malformed) {
-					t.Fatalf("Parse = %#v, %v, want a *MalformedListError", got, err)
+					t.Fatalf("error = %v, want a *MalformedListError", err)
 				}
 				if malformed.Key != key || malformed.Value != strings.TrimSpace(value) {
 					t.Errorf("error = %+v, want key %q and value %q", *malformed, key, strings.TrimSpace(value))
@@ -205,9 +204,6 @@ func TestParseRefusesAListThatIsNotAnInlineList(t *testing.T) {
 				wantText := "malformed " + key + ": expected an inline list such as [a, b], got " + `"` + strings.TrimSpace(value) + `"`
 				if err.Error() != wantText {
 					t.Errorf("error text = %q, want %q", err, wantText)
-				}
-				if !reflect.DeepEqual(got, contract.Contract{}) {
-					t.Errorf("Parse returned %#v with an error, want the zero value", got)
 				}
 			})
 		}
@@ -223,13 +219,13 @@ func TestParseRefusesAMalformedListEvenWhenALaterLineIsFine(t *testing.T) {
 	}
 }
 
-func TestParseRefusesAContextOperator(t *testing.T) {
-	got, err := contract.Parse(doc("applies_to_phases: [sdd-apply]", "context_operator: prompt_contains"))
+func TestParseContextRefusesAContextOperator(t *testing.T) {
+	got, err := contract.ParseContext(doc("language_context: [go]", "context_operator: prompt_contains"))
 	if !errors.Is(err, contract.ErrUnsupportedContextOperator) {
 		t.Errorf("error = %v, want ErrUnsupportedContextOperator", err)
 	}
-	if !reflect.DeepEqual(got, contract.Contract{}) {
-		t.Errorf("Parse returned %#v with an error, want the zero value", got)
+	if !reflect.DeepEqual(got, contract.Context{}) {
+		t.Errorf("ParseContext returned %#v with an error, want the zero value", got)
 	}
 	if err != nil && err.Error() != "unsupported context_operator" {
 		t.Errorf("error text = %q, want %q", err, "unsupported context_operator")
@@ -238,10 +234,10 @@ func TestParseRefusesAContextOperator(t *testing.T) {
 
 // The context lists keep the case they were written in: matching them against the work is the
 // caller's, and a reader that folded the case would change what a runtime is configured with.
-func TestParseKeepsTheCaseAndStripsTheQuotesOfContextItems(t *testing.T) {
-	got, err := contract.Parse(doc("applies_to_phases: [sdd-apply]", `language_context: ["TypeScript", 'NestJS']`, "activation_context: [ Review , ]"))
+func TestParseContextKeepsTheCaseAndStripsTheQuotes(t *testing.T) {
+	got, err := contract.ParseContext(doc(`language_context: ["TypeScript", 'NestJS']`, "activation_context: [ Review , ]"))
 	if err != nil {
-		t.Fatalf("Parse: %v", err)
+		t.Fatalf("ParseContext: %v", err)
 	}
 	if !reflect.DeepEqual(got.LanguageContext, []string{"TypeScript", "NestJS"}) || !reflect.DeepEqual(got.ActivationContext, []string{"Review"}) {
 		t.Errorf("context = %v and %v, want the case kept and the quotes stripped", got.LanguageContext, got.ActivationContext)
@@ -254,7 +250,7 @@ func TestParseKeepsTheCaseAndStripsTheQuotesOfContextItems(t *testing.T) {
 // Either context list alone makes the contract depend on the work.
 func TestEitherContextListRequiresContext(t *testing.T) {
 	for _, line := range []string{"language_context: [go]", "activation_context: [review]"} {
-		got, err := contract.Parse(doc("applies_to_phases: [sdd-apply]", line))
+		got, err := contract.ParseContext(doc(line))
 		if err != nil {
 			t.Fatalf("%s: %v", line, err)
 		}
@@ -265,12 +261,22 @@ func TestEitherContextListRequiresContext(t *testing.T) {
 }
 
 func TestEmptyContextListsRequireNothing(t *testing.T) {
-	got, err := contract.Parse(doc("applies_to_phases: [sdd-apply]", "language_context: []", "activation_context: []"))
+	got, err := contract.ParseContext(doc("language_context: []", "activation_context: []"))
 	if err != nil {
-		t.Fatalf("Parse: %v", err)
+		t.Fatalf("ParseContext: %v", err)
 	}
 	if got.ContextRequired() {
 		t.Error("ContextRequired() = true for empty context lists")
+	}
+}
+
+// ParseContext needs a frontmatter and no phase scope.
+func TestParseContextNeedsAFrontmatterAndNothingElse(t *testing.T) {
+	if got, err := contract.ParseContext("no frontmatter here"); !errors.Is(err, contract.ErrNoFrontmatter) || !reflect.DeepEqual(got, contract.Context{}) {
+		t.Errorf("ParseContext = %#v, %v, want the zero value and ErrNoFrontmatter", got, err)
+	}
+	if got, err := contract.ParseContext(doc("excluded_phases: sdd-propose", "language_context", "context_operator")); err != nil || got.ContextRequired() {
+		t.Errorf("ParseContext of a document with no context = %#v, %v, want an empty context and no error", got, err)
 	}
 }
 

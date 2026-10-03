@@ -45,11 +45,11 @@ note: frontmatter error: malformed excluded_phases: expected an inline list such
 
 # a malformed language_context (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: false
-note: frontmatter error: malformed language_context: expected an inline list such as [a, b], got "typescript"
+ok: true
+note: 
 
 # a context_operator (accepted today)
 label: contract: /virtual/skills/_shared/contract.md
-ok: false
-note: frontmatter error: unsupported context_operator
+ok: true
+note: 
 

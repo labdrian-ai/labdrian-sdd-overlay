@@ -470,10 +470,8 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 	if err != nil {
 		return openCodePromptConfig{}, err
 	}
-	minimalism := openCodeContract(contractPath, doc)
-	// The minimalism contract is unconditional in OpenCode: whatever context metadata it
-	// carries is not handed to the plugin, as it never has been.
-	minimalism.LanguageContext, minimalism.ActivationContext = nil, nil
+	// The minimalism contract is unconditional in OpenCode: it has no context to hand to the plugin.
+	minimalism := openCodeContract(contractPath, doc, contract.Context{})
 	contracts := []openCodeContractConfig{minimalism}
 	// The anti-generic-design guard rides the embedded asset for the same
 	// reason the minimalism contract above does: the generic-AI-look hazard is
@@ -513,18 +511,22 @@ func openCodeContractFromContent(path, content string) (openCodeContractConfig, 
 	if err != nil {
 		return openCodeContractConfig{}, err
 	}
-	return openCodeContract(path, doc), nil
+	needs, err := contract.ParseContext(content)
+	if err != nil {
+		return openCodeContractConfig{}, err
+	}
+	return openCodeContract(path, doc, needs), nil
 }
 
-// openCodeContract is the plugin's entry for the contract at path, which reads as doc.
-func openCodeContract(path string, doc contract.Contract) openCodeContractConfig {
+// openCodeContract is the plugin's entry for the contract at path: its scope doc, its context needs.
+func openCodeContract(path string, doc contract.Contract, needs contract.Context) openCodeContractConfig {
 	return openCodeContractConfig{
 		ContractPath:      filepath.ToSlash(path),
 		IncludedPhases:    doc.AppliesTo,
 		ExcludedPhases:    doc.Excluded,
 		InjectionPoint:    doc.Header(),
-		LanguageContext:   doc.LanguageContext,
-		ActivationContext: doc.ActivationContext,
+		LanguageContext:   needs.LanguageContext,
+		ActivationContext: needs.ActivationContext,
 		ContextOperator:   nil,
 	}
 }

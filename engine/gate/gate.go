@@ -178,19 +178,23 @@ func evaluateContract(prompt, subagentType string, managed ContractConfig, workC
 	if err != nil {
 		return prompt, false
 	}
+	needs, err := contract.ParseContext(managed.Content)
+	if err != nil {
+		return prompt, false
+	}
 	if c.ExcludesPhase(subagentType) {
 		return strip(prompt, managed.Path), true
 	}
 	if !c.AppliesToPhase(subagentType) {
 		return prompt, true
 	}
-	if c.ContextRequired() && !workContextMatches(workContext, c) {
+	if needs.ContextRequired() && !workContextMatches(workContext, needs) {
 		return prompt, true
 	}
 	return inject(prompt, managed.Path, c.Header()), true
 }
 
-func workContextMatches(workContext *WorkContext, c contract.Contract) bool {
+func workContextMatches(workContext *WorkContext, c contract.Context) bool {
 	if workContext == nil || !workContext.Trusted {
 		return false
 	}
