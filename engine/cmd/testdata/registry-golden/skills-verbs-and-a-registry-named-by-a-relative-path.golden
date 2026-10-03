@@ -1,0 +1,24 @@
+# run from the world, the registry in a directory below it
+$ skills list --registry sub/registry.yaml
+exit: 0
+--- stdout ---
+sub-skill	custom	overlay-only	claude
+--- stderr ---
+
+# run from that directory, the default registry is not there
+$ skills list (in sub)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+
+# run from that directory, the registry named relative to it
+$ skills status --registry registry.yaml (in sub)
+exit: 0
+--- stdout ---
+Total:  1
+Core:   0
+Custom: 1
+Status: OK
+--- stderr ---
+

@@ -1,0 +1,78 @@
+# a repository on a custom skill
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is not allowed when source.type is "custom" (line 7)
+
+# a ref on a custom skill
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.ref is not allowed when source.type is "custom" (line 7)
+
+# a repository on a core skill
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is not allowed when source.type is "core" (line 7)
+
+# a ref on a core skill
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.ref is not allowed when source.type is "core" (line 7)
+
+# an external skill with no repository
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is required when source.type is 'external' (line 5)
+
+# an external skill with a ref and no repository
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is required when source.type is 'external' (line 5)
+
+# a repository before the type
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is not allowed when source.type is "custom" (line 6)
+
+# an external skill with an empty repository
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is required when source.type is 'external' (line 5)
+
+# a ref on a custom skill, after the repository fields
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.ref is not allowed when source.type is "custom" (line 6)
+
+# the entry is named by the id read so far: after the source, the id is not yet known
+# an external skill with no repository, its id after its source
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "": source.repo is required when source.type is 'external' (line 3)
+
+# the same, its id before its source
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is required when source.type is 'external' (line 4)
+

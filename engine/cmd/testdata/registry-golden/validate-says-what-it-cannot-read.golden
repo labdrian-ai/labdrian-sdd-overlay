@@ -1,0 +1,31 @@
+# a manifest that is not there
+$ skills validate --manifest <WORLD>/none.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/none.manifest": open <WORLD>/none.manifest: no such file or directory
+
+# a source root that is not there
+$ skills validate --source-root <WORLD>/no-skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: scanning skills directory "<WORLD>/no-skills": ondisk: stat skills dir <WORLD>/no-skills: stat <WORLD>/no-skills: no such file or directory
+
+# a source root that is a file
+$ skills validate --source-root <WORLD>/overlay.manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: scanning skills directory "<WORLD>/overlay.manifest": ondisk: <WORLD>/overlay.manifest is not a directory
+
+# a source root with nothing in it
+$ skills validate --source-root <WORLD>/empty-skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[MISSING_ON_DISK] alpha/SKILL.md: overlay.manifest deploys "alpha/SKILL.md" but skills/alpha/SKILL.md does not exist; remove the "alpha/SKILL.md" row from overlay.manifest, or restore the missing file
+[MISSING_ON_DISK] beta/SKILL.md: overlay.manifest deploys "beta/SKILL.md" but skills/beta/SKILL.md does not exist; remove the "beta/SKILL.md" row from overlay.manifest, or restore the missing file
+[MISSING_ON_DISK] ext-one/SKILL.md: overlay.manifest deploys "ext-one/SKILL.md" but skills/ext-one/SKILL.md does not exist; remove the "ext-one/SKILL.md" row from overlay.manifest, or restore the missing file
+[MISSING_ON_DISK] tidy-notes/SKILL.md: overlay.manifest deploys "tidy-notes/SKILL.md" but skills/tidy-notes/SKILL.md does not exist; remove the "tidy-notes/SKILL.md" row from overlay.manifest, or restore the missing file
+

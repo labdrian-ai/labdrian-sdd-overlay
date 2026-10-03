@@ -1,0 +1,91 @@
+# an unknown key at the root, with a value
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: unknown top-level key "extra"
+
+# an unknown key at the root, with none
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: unknown top-level key "extra"
+
+# an unknown key in an entry
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: unknown key "color" in skill entry
+
+# an unknown key in an entry, after the fields
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: unknown key "color" in skill entry
+
+# an unknown key in a source
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 7: unknown key "mirror" in source
+
+# an unknown key in an upstream
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: unknown key "name" in upstream
+
+# an unknown key in an install
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 9: unknown key "mode" in install
+
+# an unknown key in a lifecycle
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: unknown key "phase" in lifecycle
+
+# a field of an entry twice
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: duplicate key "id" in skill entry
+
+# a field of a source twice
+$ skills list --registry <WORLD>/docs/10.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 7: duplicate key "type" in source
+
+# a field of an upstream twice
+$ skills list --registry <WORLD>/docs/11.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 9: duplicate key "owner" in upstream
+
+# a field of an install twice
+$ skills list --registry <WORLD>/docs/12.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 9: duplicate key "defaultScope" in install
+
+# a field of a lifecycle twice
+$ skills list --registry <WORLD>/docs/13.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: duplicate key "updateStrategy" in lifecycle
+

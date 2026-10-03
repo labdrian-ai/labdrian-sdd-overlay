@@ -1,0 +1,24 @@
+# a skill with no row (alpha), and a row with the wrong tag (beta): in the order of the registry
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[TAG_MISMATCH] beta: registry source.type="core" but manifest tag="custom" for dir "beta"
+[MISSING_IN_MANIFEST] alpha: registry entry "alpha" has no corresponding skill directory in manifest
+[UNREGISTERED_ON_DISK] alpha/SKILL.md: skills/alpha/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "alpha/SKILL.md" to overlay.manifest to register it
+
+# a row with no skill
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[MISSING_IN_REGISTRY] ghost: manifest skill dir "ghost" has no entry in registry
+[MISSING_ON_DISK] ghost/SKILL.md: overlay.manifest deploys "ghost/SKILL.md" but skills/ghost/SKILL.md does not exist; remove the "ghost/SKILL.md" row from overlay.manifest, or restore the missing file
+
+# a skill with both tags
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[MIXED_TAG] ext-one: manifest skill dir "ext-one" has rows with both managed and custom tags
+

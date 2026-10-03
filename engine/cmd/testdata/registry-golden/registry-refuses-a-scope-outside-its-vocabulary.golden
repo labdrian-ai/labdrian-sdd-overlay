@@ -1,0 +1,35 @@
+# a scope that does not exist
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: install.defaultScope "workspace" is not valid; must be 'global' or 'project'
+
+# a scope in capitals
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: install.defaultScope "Global" is not valid; must be 'global' or 'project'
+
+# an empty scope
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: install.defaultScope "" is not valid; must be 'global' or 'project'
+
+# a scope with no value
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: install.defaultScope "" is not valid; must be 'global' or 'project'
+
+# no scope: the targets alone
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+

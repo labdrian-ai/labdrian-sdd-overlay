@@ -1,0 +1,21 @@
+# no id
+$ skills remove
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove requires an <id> argument
+
+# an id that is not registered
+$ skills remove nothing
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "nothing": not found in registry
+
+# a manifest that is not there
+$ skills remove alpha --manifest <WORLD>/none.manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/none.manifest": open <WORLD>/none.manifest: no such file or directory
+

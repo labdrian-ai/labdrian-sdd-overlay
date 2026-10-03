@@ -1,0 +1,14 @@
+# add, with no row for alpha
+$ skills add gamma --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[MISSING_IN_MANIFEST] alpha: registry entry "alpha" has no corresponding skill directory in manifest
+
+# remove, with no row for alpha
+$ skills remove ext-one
+exit: 1
+--- stdout ---
+--- stderr ---
+[MISSING_IN_MANIFEST] alpha: registry entry "alpha" has no corresponding skill directory in manifest
+

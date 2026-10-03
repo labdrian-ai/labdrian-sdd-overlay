@@ -1,0 +1,12 @@
+# skills with no entries
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# skills with no entries and comments
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 0
+--- stdout ---
+--- stderr ---
+

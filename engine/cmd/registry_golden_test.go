@@ -1,0 +1,437 @@
+package main
+
+import (
+	"bytes"
+	"errors"
+	"flag"
+	"fmt"
+	"io/fs"
+	"os"
+	"os/exec"
+	"path/filepath"
+	"regexp"
+	"sort"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+)
+
+// The golden files under testdata/registry-golden record what every verb that reads or writes
+// the skills registry (skills.registry.yaml) prints and leaves behind: 'skills list', 'status',
+// 'validate', 'add', 'remove', 'sync-manifest', 'install', 'adopt', 'project-register',
+// 'project-status' and 'project-retire' (and 'project-revise', which accepts a registry it does
+// not read), 'pipkg build' and 'pipkg check', and the Pi runtime verbs, which build and compare
+// the same package. They were recorded from the program as it was before Phase 9 unit H15
+// (docs/architecture/hexagonal-target.md) put the registry behind a port and moved its YAML
+// reader and writer to engine/skills/registryyaml, and they are the contract that move had to
+// keep: what each verb says for a registry it can read, and the words of every refusal of one
+// it cannot (a missing file, a line it does not understand, a value outside the vocabulary).
+// A change to a byte of any of them fails here. Rewrite them deliberately with
+//
+//	go test ./cmd -run TestRegistryGolden -update-registry-golden
+//
+// and read the diff before committing it.
+//
+// Each case runs the built program in a throwaway world (the engine binary, once for the whole
+// test run, as the review-receipt goldens do), records the command line, the exit code and both
+// streams of every invocation, and, for a verb that writes, the files it left. The temporary
+// directory is written as <WORLD>. Each case is its own subtest.
+var updateRegistryGolden = flag.Bool("update-registry-golden", false, "rewrite the golden files of the registry-reading verbs")
+
+// registryGoldenFileName is what a case name may not contain: it is the name of its file.
+var registryGoldenFileName = regexp.MustCompile(`[^a-z0-9-]+`)
+
+// registryWorld is the scratch space of one case: the directory the program runs in (an overlay,
+// or a project), the program, and the transcript.
+type registryWorld struct {
+	t     *testing.T
+	bin   string
+	dir   string
+	names map[string]string
+	env   []string
+	b     strings.Builder
+	// filter, when it is not nil, rewrites the transcript: a case whose output holds what
+	// differs from one run to the next (the digests of commits) says how to hide it.
+	filter func(string) string
+}
+
+func newRegistryWorld(t *testing.T) *registryWorld {
+	t.Helper()
+	w := &registryWorld{t: t, bin: reviewReceiptBinary(t), dir: t.TempDir(), names: map[string]string{}, env: goldenEnvironment()}
+	w.name(w.dir, "<WORLD>")
+	// No case runs a Pi that is installed on the machine, or reads the home of the machine.
+	w.setenv("LABDRIAN_PI_BIN", filepath.Join(w.dir, "no-pi"))
+	w.setenv("HOME", filepath.Join(w.dir, "home"))
+	if real, err := filepath.EvalSymlinks(w.dir); err == nil {
+		w.name(real, "<WORLD>")
+	}
+	return w
+}
+
+// name registers path to be written as placeholder in the transcript.
+func (w *registryWorld) name(path, placeholder string) { w.names[path] = placeholder }
+
+// path is the place rel names in the world.
+func (w *registryWorld) path(rel string) string { return filepath.Join(w.dir, filepath.FromSlash(rel)) }
+
+// put writes content to rel, making the directories on the way.
+func (w *registryWorld) put(rel, content string) {
+	w.t.Helper()
+	p := w.path(rel)
+	if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
+		w.t.Fatal(err)
+	}
+	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
+		w.t.Fatal(err)
+	}
+}
+
+// mkdir makes the directory rel.
+func (w *registryWorld) mkdir(rel string) {
+	w.t.Helper()
+	if err := os.MkdirAll(w.path(rel), 0o755); err != nil {
+		w.t.Fatal(err)
+	}
+}
+
+// read is the content of rel, or "" when there is none.
+func (w *registryWorld) read(rel string) string {
+	data, err := os.ReadFile(w.path(rel))
+	if err != nil {
+		return ""
+	}
+	return string(data)
+}
+
+// setenv adds name=value to the environment of the program.
+func (w *registryWorld) setenv(name, value string) { w.env = append(w.env, name+"="+value) }
+
+func (w *registryWorld) write(format string, args ...any) { fmt.Fprintf(&w.b, format, args...) }
+
+// label puts a line in the transcript that says what the next invocation shows.
+func (w *registryWorld) label(format string, args ...any) {
+	w.write("# "+format+"\n", args...)
+}
+
+// registryAt writes registry text to rel in the world and returns the path the program is
+// given for it: an absolute one, which the transcript shows as <WORLD>/rel.
+func (w *registryWorld) registryAt(rel, text string) string {
+	w.t.Helper()
+	w.put(rel, text)
+	return w.path(rel)
+}
+
+// run records one invocation of the program, started in the directory cwd of the world ("." for
+// the world itself), with arguments in which the world is written as it is: the arguments are
+// the real ones, and the transcript shows them with <WORLD> in its place.
+func (w *registryWorld) runIn(cwd string, args ...string) {
+	w.t.Helper()
+	cmd := exec.Command(w.bin, args...)
+	cmd.Dir = w.path(cwd)
+	cmd.Env = w.env
+	var stdout, stderr bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &stdout, &stderr
+	code := 0
+	if err := cmd.Run(); err != nil {
+		var exit *exec.ExitError
+		if !errors.As(err, &exit) {
+			w.t.Fatalf("run %v: %v", args, err)
+		}
+		code = exit.ExitCode()
+	}
+	where := ""
+	if cwd != "." {
+		where = " (in " + cwd + ")"
+	}
+	w.write("$ %s%s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), where, code, ensureNewline(stdout.String()), ensureNewline(stderr.String()))
+}
+
+// run records one invocation started in the world itself.
+func (w *registryWorld) run(args ...string) {
+	w.t.Helper()
+	w.runIn(".", args...)
+}
+
+// show records the content of the file rel, or that there is none.
+func (w *registryWorld) show(rel string) {
+	w.t.Helper()
+	data, err := os.ReadFile(w.path(rel))
+	switch {
+	case err == nil:
+		w.write("--- %s ---\n%s\n", rel, ensureNewline(string(data)))
+	case errors.Is(err, fs.ErrNotExist):
+		w.write("--- %s ---\n(absent)\n\n", rel)
+	default:
+		w.write("--- %s ---\n(%v)\n\n", rel, err)
+	}
+}
+
+// tree records the files under rel (names and sizes), in order: what a verb left.
+func (w *registryWorld) tree(rel string) { w.t.Helper(); w.treeOf(rel, true) }
+
+func (w *registryWorld) treeOf(rel string, sizes bool) {
+	w.t.Helper()
+	root := w.path(rel)
+	var lines []string
+	err := filepath.WalkDir(root, func(p string, d fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		name, _ := filepath.Rel(root, p)
+		name = filepath.ToSlash(name)
+		if d.IsDir() {
+			if name != "." {
+				lines = append(lines, name+"/")
+			}
+			return nil
+		}
+		info, err := d.Info()
+		if err != nil {
+			return err
+		}
+		if sizes {
+			name = fmt.Sprintf("%s (%d bytes)", name, info.Size())
+		}
+		lines = append(lines, name)
+		return nil
+	})
+	if err != nil {
+		w.write("--- tree of %s ---\n(%v)\n\n", rel, err)
+		return
+	}
+	sort.Strings(lines)
+	if len(lines) == 0 {
+		lines = []string{"(empty)"}
+	}
+	w.write("--- tree of %s ---\n%s\n\n", rel, strings.Join(lines, "\n"))
+}
+
+// text is the transcript, with the places of the world written as placeholders, longest first.
+func (w *registryWorld) text() string {
+	text := w.b.String()
+	paths := make([]string, 0, len(w.names))
+	for p := range w.names {
+		paths = append(paths, p)
+	}
+	sort.Slice(paths, func(i, j int) bool { return len(paths[i]) > len(paths[j]) })
+	for _, p := range paths {
+		text = strings.ReplaceAll(text, p, w.names[p])
+	}
+	if w.filter != nil {
+		text = w.filter(text)
+	}
+	return visibleControls(text)
+}
+
+// registryGoldenCase is one scenario and the golden file its transcript is compared with.
+type registryGoldenCase struct {
+	name string
+	run  func(w *registryWorld)
+}
+
+// TestRegistryGolden runs every case and compares its transcript with its golden file.
+func TestRegistryGolden(t *testing.T) {
+	for _, tc := range registryGoldenCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newRegistryWorld(t)
+			tc.run(w)
+			checkRegistryGolden(t, tc.name, w.text())
+		})
+	}
+}
+
+func checkRegistryGolden(t *testing.T, name, got string) {
+	t.Helper()
+	if registryGoldenFileName.MatchString(name) {
+		t.Fatalf("case name %q is not a file name", name)
+	}
+	path := filepath.Join("testdata", "registry-golden", name+".golden")
+	if *updateRegistryGolden {
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(got), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	want, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("read golden file: %v (record it with -update-registry-golden)", err)
+	}
+	if diff := goldenDifference(name, got, string(want)); diff != "" {
+		t.Fatal(diff)
+	}
+}
+
+// TestRegistryGoldenCasesAreDistinctFiles guards the case list itself: two cases of one name
+// would share a golden file and each pass against the other's recording, and a file no case
+// owns is a recording nothing checks.
+func TestRegistryGoldenCasesAreDistinctFiles(t *testing.T) {
+	seen := map[string]bool{}
+	for _, tc := range registryGoldenCases() {
+		if seen[tc.name] {
+			t.Errorf("two cases are named %q", tc.name)
+		}
+		seen[tc.name] = true
+	}
+	entries, err := os.ReadDir(filepath.Join("testdata", "registry-golden"))
+	if err != nil {
+		t.Skipf("no golden files yet: %v", err)
+	}
+	for _, e := range entries {
+		if name := strings.TrimSuffix(e.Name(), ".golden"); !seen[name] {
+			t.Errorf("testdata/registry-golden/%s belongs to no case", e.Name())
+		}
+	}
+}
+
+// --- the fixtures every case builds its world from ---------------------------------------
+
+// worldRegistry is where a world keeps its registry, and worldManifest its manifest.
+const (
+	worldRegistry = "skills.registry.yaml"
+	worldManifest = "overlay.manifest"
+)
+
+// goldenRegistryYAML is a registry of four entries that exercises every field the format has:
+// a custom skill, a core one with an upstream, an external one with a repository and a ref,
+// and a project-scoped one with its projects. The entries are not in order of their ids.
+const goldenRegistryYAML = `version: "1"
+skills:
+  - id: beta
+    path: beta
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: ext-one
+    path: ext-one
+    source:
+      type: external
+      repo: https://example.test/org/ext-one
+      ref: v1.2.0
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: tidy-notes
+    path: tidy-notes
+    source:
+      type: custom
+    install:
+      defaultScope: project
+      allowedProjects:
+        - demo
+        - other
+      targets:
+        - claude
+        - pi
+    lifecycle:
+      updateStrategy: overlay-only
+`
+
+// goldenManifest lists the SKILL.md row of each entry of goldenRegistryYAML, with the rows of
+// files that are not skills: the engine's own (never deployed) and a comment.
+const goldenManifest = `# the overlay manifest
+engine/go.mod managed
+alpha/SKILL.md custom
+beta/SKILL.md managed
+ext-one/SKILL.md custom
+tidy-notes/SKILL.md custom
+`
+
+// skillFile is the smallest SKILL.md that passes the lint that 'add' applies.
+func skillFile(id string) string {
+	return "---\n" +
+		"name: " + id + "\n" +
+		"description: A concise procedural skill for " + id + ".\n" +
+		"license: MIT\n" +
+		"metadata:\n" +
+		"  author: tester\n" +
+		"  version: \"1.0\"\n" +
+		"---\n" +
+		"## Activation Contract\n" +
+		"Load this skill for its documented procedure.\n\n" +
+		"## Hard Rules\n" +
+		"- Keep the procedure explicit.\n\n" +
+		"## Execution Steps\n" +
+		"1. Follow the procedure.\n"
+}
+
+// putSkill writes skills/<id>/SKILL.md, and, for a skill that is global, the approval record that
+// the exact bytes need to be added to or validated in a registry.
+func (w *registryWorld) putSkill(id string, approved bool) {
+	w.t.Helper()
+	w.putSkillBytes(id, skillFile(id), approved)
+}
+
+func (w *registryWorld) putSkillBytes(id, content string, approved bool) {
+	w.t.Helper()
+	w.put("skills/"+id+"/SKILL.md", content)
+	record := w.path("skills/" + id + "/" + skills.ApprovalRecordName)
+	if !approved {
+		if err := os.Remove(record); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			w.t.Fatal(err)
+		}
+		return
+	}
+	data, err := skills.SerializeApprovalRecord(skills.ApprovalRecord{
+		Skill:      id,
+		SHA256:     skills.SkillDigest([]byte(content)),
+		ApprovedAt: "2026-09-30T12:00:00Z",
+		Approver:   "fixture-reviewer",
+	})
+	if err != nil {
+		w.t.Fatalf("serialize the approval record of %q: %v", id, err)
+	}
+	w.put("skills/"+id+"/"+skills.ApprovalRecordName, string(data))
+}
+
+// overlay is a world that holds an overlay: the golden registry and manifest, and a skill for each
+// of its entries (approved when it is global).
+func (w *registryWorld) overlay() {
+	w.t.Helper()
+	w.put(worldRegistry, goldenRegistryYAML)
+	w.put(worldManifest, goldenManifest)
+	w.putSkill("alpha", true)
+	w.putSkill("beta", true)
+	w.putSkill("ext-one", true)
+	w.putSkill("tidy-notes", false)
+}
+
+// registryOf is a registry of the given entries, written as the program writes one: the
+// four-field shape of a custom skill that is global.
+func registryOf(ids ...string) string {
+	var b strings.Builder
+	b.WriteString("version: \"1\"\nskills:\n")
+	for _, id := range ids {
+		b.WriteString("  - id: " + id + "\n    path: " + id + "\n    source:\n      type: custom\n")
+		b.WriteString("    install:\n      defaultScope: global\n      targets:\n        - claude\n")
+		b.WriteString("    lifecycle:\n      updateStrategy: overlay-only\n")
+	}
+	return b.String()
+}

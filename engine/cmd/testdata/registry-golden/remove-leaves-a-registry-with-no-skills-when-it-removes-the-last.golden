@@ -1,0 +1,29 @@
+$ skills remove only
+exit: 0
+--- stdout ---
+removed: only
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+--- overlay.manifest ---
+engine/go.mod managed
+only/references/a.md custom
+
+# and that registry reads as one of nothing
+$ skills list
+exit: 0
+--- stdout ---
+--- stderr ---
+
+$ skills status
+exit: 0
+--- stdout ---
+Total:  0
+Core:   0
+Custom: 0
+Status: OK
+--- stderr ---
+

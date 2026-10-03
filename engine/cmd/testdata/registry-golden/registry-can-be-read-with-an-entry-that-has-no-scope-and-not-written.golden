@@ -1,0 +1,51 @@
+# read, it lists and counts
+$ skills list
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+victim	custom	overlay-only	claude
+--- stderr ---
+
+$ skills status
+exit: 0
+--- stdout ---
+Total:  2
+Core:   0
+Custom: 2
+Status: OK
+--- stderr ---
+
+# written back, it is refused, and nothing is changed
+$ skills remove victim
+exit: 1
+--- stdout ---
+--- stderr ---
+error: validate-before-write re-parse failed: line 8: install.defaultScope "" is not valid; must be 'global' or 'project'
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: victim
+    path: victim
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+victim/SKILL.md custom
+

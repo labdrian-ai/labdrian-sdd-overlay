@@ -1,0 +1,68 @@
+# no id
+$ skills add --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add requires an <id> argument
+
+# a ref with no repository
+$ skills add gamma --ref v1 --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --ref requires --repo (ref is only valid for external entries)
+
+# an id that is not a slug
+$ skills add Gamma_1 --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "Gamma_1": invalid slug (must match ^[a-z0-9][a-z0-9-]*$)
+
+# an id already registered
+$ skills add alpha --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "alpha": already registered
+
+# a skill with no SKILL.md
+$ skills add nothing --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill "nothing": SKILL.md not found at "<WORLD>/skills/nothing/SKILL.md": stat <WORLD>/skills/nothing/SKILL.md: no such file or directory
+
+# a skill that does not pass the lint
+$ skills add lintbad --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[lint:required-fields] required field "metadata.version" is missing or empty
+
+# a global skill with no approval
+$ skills add unapproved --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: [APPROVAL_MISSING] skill "unapproved": no approval record at <WORLD>/skills/unapproved/.approval.json; a human must review the exact SKILL.md bytes and run: labdrian skills approve --id unapproved --approver <name>
+
+# a repository with a character the file cannot hold
+$ skills add unslugged --repo https://example.test/{x} --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: serializing registry: serialize: entry "unslugged": source.repo "https://example.test/{x}" contains unrepresentable characters
+
+# a manifest that is not there
+$ skills add gamma --manifest <WORLD>/none.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/none.manifest": open <WORLD>/none.manifest: no such file or directory
+
+# and every refusal left the registry and the manifest as they were
+--- tree of skills/unslugged ---
+.approval.json (198 bytes)
+SKILL.md (296 bytes)
+

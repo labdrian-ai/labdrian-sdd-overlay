@@ -1,0 +1,70 @@
+# an indented key at the root
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: unexpected indentation at document root
+
+# an entry at the root
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 2: unexpected token at document root
+
+# skills with a value
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 2: unknown top-level key "skills"
+
+# skills as a flow list
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 2: flow sequences/mappings ({}, []) are not supported
+
+# entries that are not items of a list
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: expected sequence item ('- key: value') in skills list
+
+# an item that is a bare word
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: expected sequence item ('- key: value') in skills list
+
+# entries indented too far
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: unexpected indentation inside skills sequence
+
+# an entry's keys at the wrong depth
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path must not be empty
+
+# a key of source too deep
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.type "" is not valid; must be 'core', 'custom', or 'external'
+
+# a key of install too shallow
+$ skills list --registry <WORLD>/docs/10.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets must not be empty (R-007)
+

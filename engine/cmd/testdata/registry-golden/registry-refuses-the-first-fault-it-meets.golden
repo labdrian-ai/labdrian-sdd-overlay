@@ -1,0 +1,28 @@
+# an unknown key, then an invalid scope
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: unknown key "mode" in install
+
+# an invalid scope, then an unknown key
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 8: install.defaultScope "workspace" is not valid; must be 'global' or 'project'
+
+# a repository on a custom skill, then an invalid scope
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.repo is not allowed when source.type is "custom" (line 7)
+
+# an invalid scope, then a repository on a custom skill
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 6: install.defaultScope "workspace" is not valid; must be 'global' or 'project'
+

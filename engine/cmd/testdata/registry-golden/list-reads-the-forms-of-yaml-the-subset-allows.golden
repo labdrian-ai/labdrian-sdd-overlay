@@ -1,0 +1,127 @@
+# comments, blank lines and the document marker
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# quoted scalars, double and single
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# a hash inside quotes is part of the value
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "cla # ude"; must be one of: claude, opencode, codex, pi
+
+# white space after a value is not part of it
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# the keys of an entry in any order
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# the version first or last
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# the version unquoted
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# the version in single quotes
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# lines that end with a carriage return
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# a path that is not the id
+$ skills list --registry <WORLD>/docs/10.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# targets in their own order, and repeated
+$ skills list --registry <WORLD>/docs/11.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	pi,claude,pi
+--- stderr ---
+
+# an id that is not a slug
+$ skills list --registry <WORLD>/docs/12.yaml
+exit: 0
+--- stdout ---
+Alpha Beta é	custom	overlay-only	claude
+--- stderr ---
+
+# a core skill with no upstream
+$ skills list --registry <WORLD>/docs/13.yaml
+exit: 0
+--- stdout ---
+alpha	core	overlay-only	claude
+--- stderr ---
+
+# a project skill with no projects
+$ skills list --registry <WORLD>/docs/14.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# a project skill with projects repeated
+$ skills list --registry <WORLD>/docs/15.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# two entries with the same path
+$ skills list --registry <WORLD>/docs/16.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+beta	custom	overlay-only	claude
+--- stderr ---
+
+# the second of two skills keys replaces the first
+$ skills list --registry <WORLD>/docs/17.yaml
+exit: 0
+--- stdout ---
+other	custom	overlay-only	codex
+--- stderr ---
+
+# the last of two versions wins
+$ skills list --registry <WORLD>/docs/18.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
