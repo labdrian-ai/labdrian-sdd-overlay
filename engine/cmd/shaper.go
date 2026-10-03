@@ -17,6 +17,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
@@ -438,14 +439,18 @@ func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
 	raw, err := io.ReadAll(stdin)
 	if err != nil {
 		fmt.Fprintf(stderr, "shaper guard-hook: read stdin: %v\n", err)
-		exit(2)
+		exit(hookwire.ExitBlock)
 		return
 	}
-	code, message := shaper.RunGuardHook(raw)
-	if message != "" {
-		fmt.Fprintln(stderr, message)
+	var verdict shaper.GuardVerdict
+	if call, err := hookwire.DecodeToolCall(raw); err != nil {
+		verdict = shaper.GuardUnreadable(err.Error())
+	} else {
+		verdict = shaper.DecideGuard(shaper.GuardCall{Command: call.Command, FilePath: call.FilePath, NotebookPath: call.NotebookPath})
 	}
-	exit(code)
+	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
+	_, _ = stderr.Write(reply.Stderr())
+	exit(reply.Code())
 }
 
 // checkShaperClearanceGuard reports whether the Claude Code shaper clearance

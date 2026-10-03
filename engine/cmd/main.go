@@ -75,6 +75,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/filelock"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gadu"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/propagator"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
@@ -808,13 +809,14 @@ func runReviewReceiptCapture(args []string) {
 
 // runReviewReceiptHook implements 'review-receipt hook --cwd <repo>': the
 // fail-closed PreToolUse Bash hook entry point. Reads the raw hook input
-// JSON from stdin and exits with reviewreceipt.Service.RunHook's exit code,
-// printing its message (if any) to stderr.
+// JSON from stdin, has engine/hookwire read the command out of it, asks
+// reviewreceipt.Service.CheckCommand, and exits with the status of its
+// verdict, printing its reason (if any) to stderr.
 func runReviewReceiptHook(args []string) {
 	cwd, _ := parseReviewReceiptArgs(args)
 	if cwd == "" {
 		fmt.Fprintln(os.Stderr, "error: --cwd is required")
-		os.Exit(2)
+		os.Exit(hookwire.ExitBlock)
 	}
 
 	raw, err := io.ReadAll(os.Stdin)
@@ -823,18 +825,24 @@ func runReviewReceiptHook(args []string) {
 		// other capture-resolution failure -- deny rather than silently
 		// allow an acknowledgement this hook could not even inspect.
 		fmt.Fprintf(os.Stderr, "review-receipt hook: read stdin: %v\n", err)
-		os.Exit(2)
+		os.Exit(hookwire.ExitBlock)
 	}
 
 	// Fail closed, as for an unreadable input: a hook that cannot be set up cannot guard
 	// the acknowledgement it was started for, so its set-up failure exits 2 like a denial.
-	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "review-receipt hook", 2)
+	svc := buildReviewReceiptService(cwd, os.Stderr, os.Exit, "review-receipt hook", hookwire.ExitBlock)
 
-	exitCode, message := svc.RunHook(raw)
-	if message != "" {
-		fmt.Fprintln(os.Stderr, message)
+	// Malformed or empty input is treated the same as a command that is not an
+	// acknowledgement -- pass through -- because a hook that cannot even see a command is
+	// not looking at an acknowledge-approved invocation in the first place.
+	command, err := hookwire.DecodeCommand(raw)
+	if err != nil {
+		os.Exit(hookwire.ExitAllow)
 	}
-	os.Exit(exitCode)
+	verdict := svc.CheckCommand(command)
+	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
+	_, _ = os.Stderr.Write(reply.Stderr())
+	os.Exit(reply.Code())
 }
 
 func runtimeLifecycleResult(adapter runtimepkg.Adapter, action string) runtimepkg.LifecycleResult {

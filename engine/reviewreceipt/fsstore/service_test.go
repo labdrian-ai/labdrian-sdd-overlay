@@ -240,14 +240,14 @@ func TestCaptureAtomicWrite(t *testing.T) {
 	}
 }
 
-const ackHookInput = `{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}`
+const ackCommand = "gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"
 
 func TestHookPassesThroughWithoutOpenspecChanges(t *testing.T) {
 	repo := gitFixtureRepo(t)
 	writeReceipt(t, gitDirOf(repo), "review-orphan", receipttest.ReceiptSchema, receipttest.Approved)
 
-	if code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
-		t.Errorf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := serviceFor(t, repo).CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Errorf("CheckCommand = %+v, want an allow", v)
 	}
 	if _, err := os.Stat(filepath.Join(repo, "openspec")); !os.IsNotExist(err) {
 		t.Errorf("openspec/ should not have been created by the pass-through hook, stat err=%v", err)
@@ -264,21 +264,21 @@ func TestHookMultipleActiveChanges(t *testing.T) {
 	writeReceipt(t, gitDirOf(repo), "review-captured", receipttest.ReceiptSchema, receipttest.Approved)
 	svc := serviceFor(t, repo)
 
-	code, message := svc.RunHook([]byte(ackHookInput))
-	if code != 2 || !strings.Contains(message, "review-receipt capture --change <name>") {
-		t.Fatalf("first run: RunHook = (%d, %q), want a deny that names the remedy", code, message)
+	v := svc.CheckCommand(ackCommand)
+	if !v.Deny || !strings.Contains(v.Reason, "review-receipt capture --change <name>") {
+		t.Fatalf("first run: CheckCommand = %+v, want a deny that names the remedy", v)
 	}
 
 	if _, err := svc.Capture("change-a"); err != nil {
 		t.Fatalf("Capture: %v", err)
 	}
-	if code, message := svc.RunHook([]byte(ackHookInput)); code != 0 {
-		t.Fatalf("after the remedy: RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := svc.CheckCommand(ackCommand); v.Deny {
+		t.Fatalf("after the remedy: CheckCommand = %+v, want an allow", v)
 	}
 
 	writeReceipt(t, gitDirOf(repo), "review-uncaptured", receipttest.ReceiptSchema, receipttest.Approved)
-	if code, message := svc.RunHook([]byte(ackHookInput)); code != 2 || !strings.Contains(message, "review-receipt capture --change <name>") {
-		t.Errorf("one lineage still uncaptured: RunHook = (%d, %q), want a deny", code, message)
+	if v := svc.CheckCommand(ackCommand); !v.Deny || !strings.Contains(v.Reason, "review-receipt capture --change <name>") {
+		t.Errorf("one lineage still uncaptured: CheckCommand = %+v, want a deny", v)
 	}
 }
 
@@ -287,8 +287,8 @@ func TestHookCapturesIntoTheSingleActiveChange(t *testing.T) {
 	seedActiveChange(t, repo, "only-change")
 	writeReceipt(t, gitDirOf(repo), "review-solo", receipttest.ReceiptSchema, receipttest.Approved)
 
-	if code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
-		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := serviceFor(t, repo).CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Fatalf("CheckCommand = %+v, want an allow", v)
 	}
 	if _, err := os.Stat(filepath.Join(receiptsOf(repo, "only-change"), "review-solo.json")); err != nil {
 		t.Errorf("expected receipt captured: %v", err)
@@ -300,9 +300,8 @@ func TestHookIgnoresACommandThatIsNotAnAcknowledgement(t *testing.T) {
 	seedActiveChange(t, repo, "only-change")
 	writeReceipt(t, gitDirOf(repo), "review-untouched", receipttest.ReceiptSchema, receipttest.Approved)
 
-	input := `{"tool_name":"Bash","tool_input":{"command":"git status"}}`
-	if code, message := serviceFor(t, repo).RunHook([]byte(input)); code != 0 || message != "" {
-		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := serviceFor(t, repo).CheckCommand("git status"); v.Deny || v.Reason != "" {
+		t.Fatalf("CheckCommand = %+v, want an allow", v)
 	}
 	if _, err := os.Stat(receiptsOf(repo, "only-change")); !os.IsNotExist(err) {
 		t.Errorf("a command that is not an acknowledgement must not capture, stat err=%v", err)
@@ -369,15 +368,15 @@ func TestAHookStartedInsideTheRepositoryLooksForOpenspecWhereItStarted(t *testin
 	}
 	seedActiveChange(t, own, "own-change")
 
-	if code, message := serviceFor(t, plain).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
-		t.Errorf("from a directory with no openspec: RunHook = (%d, %q), want it to pass through", code, message)
+	if v := serviceFor(t, plain).CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Errorf("from a directory with no openspec: CheckCommand = %+v, want it to pass through", v)
 	}
 	if _, err := os.Stat(receiptsOf(repo, "top-change")); !os.IsNotExist(err) {
 		t.Errorf("a hook started below the project captured into the toplevel's change (stat err=%v)", err)
 	}
 
-	if code, message := serviceFor(t, own).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
-		t.Fatalf("from a directory with its own openspec: RunHook = (%d, %q)", code, message)
+	if v := serviceFor(t, own).CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Fatalf("from a directory with its own openspec: CheckCommand = %+v", v)
 	}
 	if _, err := os.Stat(filepath.Join(receiptsOf(own, "own-change"), "review-from-below.json")); err != nil {
 		t.Errorf("expected the receipt captured under the directory's own openspec: %v", err)
@@ -396,8 +395,8 @@ func TestARepositoryWithNoCommitIsServed(t *testing.T) {
 	seedActiveChange(t, repo, "first")
 	writeReceipt(t, gitDirOf(repo), "review-first", receipttest.ReceiptSchema, receipttest.Approved)
 
-	if code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput)); code != 0 || message != "" {
-		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := serviceFor(t, repo).CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Fatalf("CheckCommand = %+v, want an allow", v)
 	}
 	if _, err := os.Stat(filepath.Join(receiptsOf(repo, "first"), "review-first.json")); err != nil {
 		t.Errorf("expected the receipt captured: %v", err)
@@ -415,14 +414,14 @@ func TestOutsideARepositoryCaptureFailsAndAHookWithNothingToCaptureDoesNot(t *te
 	}
 	svc := serviceFor(t, dir)
 
-	if code, message := svc.RunHook([]byte(ackHookInput)); code != 0 || message != "" {
-		t.Errorf("no change to capture into: RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := svc.CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Errorf("no change to capture into: CheckCommand = %+v, want an allow", v)
 	}
 
 	seedActiveChange(t, dir, "orphan")
-	code, message := svc.RunHook([]byte(ackHookInput))
-	if code != 2 || !strings.HasPrefix(message, "review-receipt: capture failed: reviewreceipt: git rev-parse ") {
-		t.Errorf("a change to capture into and no repository: RunHook = (%d, %q), want a deny in git's words", code, message)
+	v := svc.CheckCommand(ackCommand)
+	if !v.Deny || !strings.HasPrefix(v.Reason, "review-receipt: capture failed: reviewreceipt: git rev-parse ") {
+		t.Errorf("a change to capture into and no repository: CheckCommand = %+v, want a deny in git's words", v)
 	}
 	if _, err := svc.Capture("orphan"); err == nil {
 		t.Error("Capture outside a repository succeeded")
@@ -477,9 +476,9 @@ func TestARepositoryGitprovRefusesIsRefusedByTheHook(t *testing.T) {
 		}
 		seedActiveChange(t, forged, "c")
 
-		code, message := serviceFor(t, forged).RunHook([]byte(ackHookInput))
-		if code != 2 || !strings.Contains(message, "core.worktree") {
-			t.Errorf("RunHook = (%d, %q), want a deny that says why the worktree is not trusted", code, message)
+		v := serviceFor(t, forged).CheckCommand(ackCommand)
+		if !v.Deny || !strings.Contains(v.Reason, "core.worktree") {
+			t.Errorf("CheckCommand = %+v, want a deny that says why the worktree is not trusted", v)
 		}
 		if _, err := os.Stat(receiptsOf(forged, "c")); !os.IsNotExist(err) {
 			t.Errorf("a receipt was captured from the repository a forged gitfile names (stat err=%v)", err)
@@ -489,9 +488,9 @@ func TestARepositoryGitprovRefusesIsRefusedByTheHook(t *testing.T) {
 		seedActiveChange(t, repo, "c")
 		t.Setenv("GIT_DIR", gitDirOf(repo))
 
-		code, message := serviceFor(t, repo).RunHook([]byte(ackHookInput))
-		if code != 2 || !strings.Contains(message, "GIT_DIR") {
-			t.Errorf("RunHook = (%d, %q), want a deny naming GIT_DIR", code, message)
+		v := serviceFor(t, repo).CheckCommand(ackCommand)
+		if !v.Deny || !strings.Contains(v.Reason, "GIT_DIR") {
+			t.Errorf("CheckCommand = %+v, want a deny naming GIT_DIR", v)
 		}
 	})
 }

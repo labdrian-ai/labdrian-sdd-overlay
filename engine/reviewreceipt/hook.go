@@ -1,7 +1,7 @@
 package reviewreceipt
 
-// acknowledgeMarker is the exact substring Service.RunHook matches inside
-// tool_input.command to recognize the acknowledge-approved invocation. The
+// acknowledgeMarker is the exact substring Service.CheckCommand matches inside
+// the command of a tool call to recognize the acknowledge-approved invocation. The
 // hook never parses the lineage or executes anything of its own beyond
 // Capture -- it only string-matches this marker, per the threat matrix
 // (Subprocess boundary): a look-alike command (e.g. `echo
@@ -10,12 +10,3 @@ package reviewreceipt
 // is harmless (idempotent), while a false negative would let an
 // acknowledgement burn an uncaptured receipt.
 const acknowledgeMarker = "gentle-ai review acknowledge-approved"
-
-// hookInput is the subset of the Claude Code PreToolUse Bash hook JSON
-// shape Service.RunHook needs.
-type hookInput struct {
-	ToolName  string `json:"tool_name"`
-	ToolInput struct {
-		Command string `json:"command"`
-	} `json:"tool_input"`
-}

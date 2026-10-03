@@ -79,7 +79,7 @@ console.log(JSON.stringify(texts.map((t) => mod.matchesShaperClearanceGuard(t)))
 // TestPiGateToolCallBlocksClearanceRecordingAndStoreWrites drives the
 // default export with a fake pi and asserts the tool_call handler blocks bash
 // calls naming the record entry point or the store path, and write/edit calls
-// whose input.path is inside the store, mirroring shaper.RunGuardHook.
+// whose input.path is inside the store, mirroring shaper.DecideGuard.
 func TestPiGateToolCallBlocksClearanceRecordingAndStoreWrites(t *testing.T) {
 	out := runPiGateScript(t, `
 const mod = await import(%[1]q);

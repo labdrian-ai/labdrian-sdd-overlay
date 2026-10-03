@@ -30,15 +30,10 @@ var protocolTags = []string{
 
 var protocolTag = regexp.MustCompile("json:\"(" + strings.Join(protocolTags, "|") + ")[\",]")
 
-// owedWire lists the files that still hold a tag of the protocol outside hookwire, each owed to
-// the slice of H14 that moves it. It only shrinks: the slice that moves a file deletes its row,
-// and a row whose file no longer holds a tag fails the test, so none can be left behind. A new
-// tag is not added here to make the test pass; it is written in hookwire.
-var owedWire = map[string]string{
-	"reviewreceipt/hook.go":   "H14 slice 2",
-	"shaper/guard.go":         "H14 slice 2",
-	"skills/approve_guard.go": "H14 slice 2",
-}
+// There is no file that still holds a tag of the protocol outside hookwire: the units that moved
+// the last of them (H14, batch 9) deleted the table that listed them, as every unit of Phase 9
+// deletes its rows of the architecture test's knownDebt. A tag outside hookwire is not listed
+// here to make the test pass; it is written in hookwire.
 
 func TestNoHookWireFormatOutsideHookwire(t *testing.T) {
 	root := ".."
@@ -88,14 +83,7 @@ func TestNoHookWireFormatOutsideHookwire(t *testing.T) {
 	}
 	sort.Strings(files)
 	for _, f := range files {
-		if _, owed := owedWire[f]; !owed {
-			t.Errorf("%s holds a tag of the hook protocol outside engine/hookwire:\n\t%s\nthe hook format is written in hookwire only", f, strings.Join(found[f], "\n\t"))
-		}
-	}
-	for f, unit := range owedWire {
-		if _, still := found[f]; !still {
-			t.Errorf("owedWire lists %s (owed to %s), which holds no tag of the hook protocol any more: delete the row", f, unit)
-		}
+		t.Errorf("%s holds a tag of the hook protocol outside engine/hookwire:\n\t%s\nthe hook format is written in hookwire only", f, strings.Join(found[f], "\n\t"))
 	}
 }
 

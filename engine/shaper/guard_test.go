@@ -31,37 +31,61 @@ func TestGuardMatchesRecordEntryPointAndStorePath(t *testing.T) {
 	}
 }
 
-func TestRunGuardHook(t *testing.T) {
+// DecideGuard decides on the command a shell tool is about to run and the paths the file tools
+// are about to write: how a hook input is read is engine/hookwire's, and the clearance guard's
+// own words for an input it cannot read are in GuardUnreadable.
+func TestDecideGuard(t *testing.T) {
 	for _, tc := range []struct {
 		name     string
-		input    string
-		wantCode int
+		call     GuardCall
+		wantDeny bool
 	}{
-		{"bash record verb denied", `{"tool_name":"Bash","tool_input":{"command":"gentle-ai-overlay shaper clearance record --stdin"}}`, 2},
-		{"bash store path denied", `{"tool_name":"Bash","tool_input":{"command":"cat ~/.local/state/labdrian/shaper-clearance/p/g/x.json"}}`, 2},
-		{"write into store denied", `{"tool_name":"Write","tool_input":{"file_path":"/home/u/.local/state/labdrian/shaper-clearance/p/g/x.json","content":"{}"}}`, 2},
-		{"edit into store denied", `{"tool_name":"Edit","tool_input":{"file_path":"/s/labdrian/shaper-clearance/p/g/x.json"}}`, 2},
-		{"notebook into store denied", `{"tool_name":"NotebookEdit","tool_input":{"notebook_path":"/s/labdrian/shaper-clearance/n.ipynb"}}`, 2},
-		{"bash unrelated allowed", `{"tool_name":"Bash","tool_input":{"command":"go test ./..."}}`, 0},
-		{"write content mentioning verb allowed", `{"tool_name":"Write","tool_input":{"file_path":"/repo/doc.md","content":"run shaper clearance record"}}`, 0},
-		{"malformed input denied", `{"tool_name":`, 2},
-		{"empty input denied", ``, 2},
+		{"bash record verb denied", GuardCall{Command: "gentle-ai-overlay shaper clearance record --stdin"}, true},
+		{"bash store path denied", GuardCall{Command: "cat ~/.local/state/labdrian/shaper-clearance/p/g/x.json"}, true},
+		{"write into store denied", GuardCall{FilePath: "/home/u/.local/state/labdrian/shaper-clearance/p/g/x.json"}, true},
+		{"edit into store denied", GuardCall{FilePath: "/s/labdrian/shaper-clearance/p/g/x.json"}, true},
+		{"notebook into store denied", GuardCall{NotebookPath: "/s/labdrian/shaper-clearance/n.ipynb"}, true},
+		{"a command and a path, the command alone denies", GuardCall{Command: "gentle-ai-overlay shaper clearance record", FilePath: "/repo/doc.md"}, true},
+		{"a command and a path, the path alone denies", GuardCall{Command: "ls", FilePath: "/s/labdrian/shaper-clearance/x"}, true},
+		{"bash unrelated allowed", GuardCall{Command: "go test ./..."}, false},
+		{"a file outside the store allowed (what is written is not read)", GuardCall{FilePath: "/repo/doc.md"}, false},
+		{"a path that only starts like the store is not the store", GuardCall{FilePath: "/repo/labdrian/shaper-clearance-notes.md"}, true},
+		{"the zero call allowed", GuardCall{}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			code, msg := RunGuardHook([]byte(tc.input))
-			if code != tc.wantCode {
-				t.Fatalf("RunGuardHook code = %d (%q), want %d", code, msg, tc.wantCode)
+			v := DecideGuard(tc.call)
+			if v.Deny != tc.wantDeny {
+				t.Fatalf("DecideGuard(%+v) = %+v, want deny=%v", tc.call, v, tc.wantDeny)
 			}
-			if code == 0 && msg != "" {
-				t.Errorf("allow returned message %q", msg)
+			if !v.Deny && v.Reason != "" {
+				t.Errorf("allow carries the reason %q", v.Reason)
 			}
-			if code == 2 {
+			if v.Deny {
+				if v.Reason != guardDenyMessage {
+					t.Errorf("deny reason %q, want the guard's own message", v.Reason)
+				}
 				for _, want := range []string{"speed bump", "same OS user"} {
-					if !strings.Contains(msg, want) {
-						t.Errorf("deny message %q does not state %q", msg, want)
+					if !strings.Contains(v.Reason, want) {
+						t.Errorf("deny reason %q does not state %q", v.Reason, want)
 					}
 				}
 			}
 		})
+	}
+}
+
+// The guard fails closed: input the hook adapter could not read is denied, because a guard
+// that cannot see the call cannot vouch for it. The denial says why.
+func TestGuardUnreadableDeniesWithTheReason(t *testing.T) {
+	v := GuardUnreadable("unexpected end of JSON input")
+	if !v.Deny {
+		t.Fatalf("GuardUnreadable() = %+v, want a denial", v)
+	}
+	want := guardDenyMessage + " (hook input could not be decoded: unexpected end of JSON input)"
+	if v.Reason != want {
+		t.Errorf("reason %q, want %q", v.Reason, want)
+	}
+	if v := GuardUnreadable(""); !v.Deny || !strings.HasPrefix(v.Reason, guardDenyMessage) {
+		t.Errorf("GuardUnreadable(\"\") = %+v, want a denial that starts with the guard's message", v)
 	}
 }

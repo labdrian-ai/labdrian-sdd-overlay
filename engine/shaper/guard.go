@@ -1,7 +1,6 @@
 package shaper
 
 import (
-	"encoding/json"
 	"strings"
 )
 
@@ -31,34 +30,42 @@ func GuardMatches(text string) bool {
 	return strings.Contains(normalized, GuardCommandMarker) || strings.Contains(text, GuardStoreMarker)
 }
 
-// guardHookInput is the subset of a Claude Code PreToolUse hook input the
-// guard reads: a Bash command and the path fields of the file-writing tools.
-type guardHookInput struct {
-	ToolName  string `json:"tool_name"`
-	ToolInput struct {
-		Command      string `json:"command"`
-		FilePath     string `json:"file_path"`
-		NotebookPath string `json:"notebook_path"`
-	} `json:"tool_input"`
+// GuardCall is the tool call the clearance guard decides about: the command a shell tool is
+// about to run and the paths the file tools are about to write. A field the call does not have
+// is empty. What is written to a file is not part of it: the guard does not inspect file
+// contents, so writing documentation that mentions the entry point is allowed.
+type GuardCall struct {
+	// Command is the command of a shell tool.
+	Command string
+	// FilePath is the path of the file tools that write a file.
+	FilePath string
+	// NotebookPath is the path of the notebook tool.
+	NotebookPath string
 }
 
-// RunGuardHook implements the Claude Code PreToolUse clearance deny guard,
-// following reviewreceipt.Service.RunHook. It returns (0, "") to allow and
-// (2, message) to deny. It denies when a Bash command names the record entry
-// point or the store path, or when a file tool's path lies in the store.
-// Unlike RunHook it fails closed: input it cannot decode is denied, because
-// a guard that cannot see the call cannot vouch for it. File contents are
-// not inspected, so writing documentation that mentions the entry point is
-// allowed.
-func RunGuardHook(rawInput []byte) (exitCode int, message string) {
-	var in guardHookInput
-	if err := json.Unmarshal(rawInput, &in); err != nil {
-		return 2, guardDenyMessage + " (hook input could not be decoded: " + err.Error() + ")"
+// GuardVerdict is the decision of the clearance guard for one call. Reason is set only for a
+// denial, and is what the model is told.
+type GuardVerdict struct {
+	Deny   bool
+	Reason string
+}
+
+// DecideGuard is the Claude Code PreToolUse clearance deny guard. It denies when a command
+// names the record entry point or the store path, or when a file tool's path lies in the
+// store. Everything else is allowed.
+func DecideGuard(call GuardCall) GuardVerdict {
+	if GuardMatches(call.Command) ||
+		strings.Contains(call.FilePath, GuardStoreMarker) ||
+		strings.Contains(call.NotebookPath, GuardStoreMarker) {
+		return GuardVerdict{Deny: true, Reason: guardDenyMessage}
 	}
-	if GuardMatches(in.ToolInput.Command) ||
-		strings.Contains(in.ToolInput.FilePath, GuardStoreMarker) ||
-		strings.Contains(in.ToolInput.NotebookPath, GuardStoreMarker) {
-		return 2, guardDenyMessage
-	}
-	return 0, ""
+	return GuardVerdict{}
+}
+
+// GuardUnreadable is the verdict for a call the caller could not read, with detail saying why. The
+// guard fails closed, unlike the guard of the approval record, which fails open: input it cannot
+// decode is denied, because a guard that cannot see the call cannot vouch for it. The markers
+// are narrow enough to make that affordable.
+func GuardUnreadable(detail string) GuardVerdict {
+	return GuardVerdict{Deny: true, Reason: guardDenyMessage + " (hook input could not be decoded: " + detail + ")"}
 }

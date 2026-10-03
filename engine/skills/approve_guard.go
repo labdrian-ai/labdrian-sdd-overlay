@@ -42,18 +42,15 @@ package skills
 //   - Unusable input is an allow. The hook runs on every Bash and file-edit
 //     call, and a guard that blocked what it could not read would block the
 //     session. This is the opposite of the shaper clearance guard, whose
-//     narrower markers make failing closed affordable.
+//     narrower markers make failing closed affordable. What the guard decides
+//     on is a call (ApproveGuardCall); reading the hook input into one, and
+//     letting through what cannot be read or is over the bound the hook reads,
+//     is the hook adapter's (engine/hookwire, engine/cmd).
 
 import (
-	"encoding/json"
 	"path"
 	"strings"
 )
-
-// ApproveGuardMaxInputBytes bounds the hook input the guard decides on. Input
-// over the bound is allowed, unjudged: the bound exists so that a hook that runs
-// on every tool call never reads without limit.
-const ApproveGuardMaxInputBytes = 8 << 20
 
 // approveGuardEntryPoints are the base names of the executables a session would
 // use to run `skills approve`: the labdrian alias, the overlay script, and the
@@ -109,41 +106,33 @@ var (
 		": it matches the tool and the file name, so a shell command can still write the file."
 )
 
-// approveGuardInput is the subset of a Claude Code PreToolUse hook input the
-// guard reads: the tool's name, a Bash command, and the path fields of the file
-// tools. Fields it does not name, including ones a later Claude Code adds, are
-// ignored.
-type approveGuardInput struct {
-	ToolName  string `json:"tool_name"`
-	ToolInput struct {
-		Command      string `json:"command"`
-		FilePath     string `json:"file_path"`
-		NotebookPath string `json:"notebook_path"`
-	} `json:"tool_input"`
+// ApproveGuardCall is the tool call the guard decides about: the name of the tool, the
+// command of a shell tool, and the path fields of the file tools. A field the call does not
+// have is empty. What is written to a file is not part of it.
+type ApproveGuardCall struct {
+	// Tool is the name of the tool, which decides which of the fields is read.
+	Tool string
+	// Command is the command of the shell tool.
+	Command string
+	// FilePath is the path of the file tools that write a file.
+	FilePath string
+	// NotebookPath is the path of the notebook tool.
+	NotebookPath string
 }
 
-// DecideApproveGuard decides one PreToolUse hook input. It denies a Bash call
-// whose command invokes `skills approve` (ApproveGuardCommandMatches) and a
-// file-tool call whose path is an approval record (ApproveGuardRecordPathMatches).
-// Everything else, including input it cannot read and input over
-// ApproveGuardMaxInputBytes, is a silent allow. File contents are never
-// inspected, so writing documentation that mentions the verb is allowed, and
-// reading the record is not a file-edit call at all.
-func DecideApproveGuard(rawInput []byte) ApproveGuardVerdict {
-	if len(rawInput) > ApproveGuardMaxInputBytes {
-		return ApproveGuardVerdict{}
-	}
-	var in approveGuardInput
-	if err := json.Unmarshal(rawInput, &in); err != nil {
-		return ApproveGuardVerdict{}
-	}
+// DecideApproveGuard decides one tool call. It denies a Bash call whose command invokes
+// `skills approve` (ApproveGuardCommandMatches) and a file-tool call whose path is an approval
+// record (ApproveGuardRecordPathMatches). Everything else is a silent allow. File contents are
+// never inspected, so writing documentation that mentions the verb is allowed, and reading the
+// record is not a file-edit call at all.
+func DecideApproveGuard(call ApproveGuardCall) ApproveGuardVerdict {
 	switch {
-	case in.ToolName == "Bash":
-		if ApproveGuardCommandMatches(in.ToolInput.Command) {
+	case call.Tool == "Bash":
+		if ApproveGuardCommandMatches(call.Command) {
 			return ApproveGuardVerdict{Deny: true, Reason: approveGuardBashReason}
 		}
-	case isApproveGuardFileTool(in.ToolName):
-		if ApproveGuardRecordPathMatches(in.ToolInput.FilePath) || ApproveGuardRecordPathMatches(in.ToolInput.NotebookPath) {
+	case isApproveGuardFileTool(call.Tool):
+		if ApproveGuardRecordPathMatches(call.FilePath) || ApproveGuardRecordPathMatches(call.NotebookPath) {
 			return ApproveGuardVerdict{Deny: true, Reason: approveGuardFileReason}
 		}
 	}
