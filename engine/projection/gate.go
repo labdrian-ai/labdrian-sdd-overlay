@@ -4,13 +4,16 @@ package projection
 // session whose repository is bound to a workflow. Like Project, it is a function
 // of its arguments and nothing else: it reads no file, starts no process, keeps
 // no state, and never writes, so the caller (the hook command in engine/cmd) does
-// the reading and prints GateResult.PreToolUseOutput.
+// the reading and says the result to the runtime (engine/hookwire). Nothing here
+// knows the format that is spoken in: the gate is told the name of the tool and,
+// for a memory query, what it names as its project.
 //
 // The gate has two rules, both about a workflow that is open (created, running,
 // or paused) and owned:
 //
 //   - The paused edit gate. While the workflow is paused, the file-edit tools
-//     Write, Edit, MultiEdit, and NotebookEdit are denied. Bash is never gated
+//     are denied: the ones the caller names (GateInput.EditTools; the engine
+//     names Write, Edit, MultiEdit, and NotebookEdit). Bash is never gated
 //     (a shell command cannot be classified reliably), and neither is anything
 //     that only reads.
 //   - The memory gate. A call to the longterm-mem query tool is checked against
@@ -27,11 +30,8 @@ package projection
 // workflow is the prompt hook's job.
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
-	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -39,63 +39,38 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
-// HookEventPreToolUse is the Claude Code hook event that runs before a tool call
-// and can deny it.
-const HookEventPreToolUse = "PreToolUse"
-
-// PreToolUseInput is what the gate keeps of the JSON a Claude Code PreToolUse
-// hook receives on stdin: the event's name, the session's working directory, the
-// tool's name, and the tool's input exactly as sent. Nothing else is read; in
-// particular not the session or the tool call's id.
-type PreToolUseInput struct {
-	// HookEventName is hook_event_name, or empty when the input has none.
-	HookEventName string
-	// Cwd is the session's working directory as a cleaned absolute path, or empty
-	// when the input has none or it is not an absolute path.
-	Cwd string
-	// ToolName is tool_name, or empty when the input has none.
-	ToolName string
-	// ToolInput is tool_input as raw JSON, or empty when the input has none. Its
-	// shape depends on the tool, so it is decoded only by the rule that needs it.
-	ToolInput json.RawMessage
-}
-
-// ParsePreToolUseInput reads the fields the gate needs from a PreToolUse hook's
-// stdin. As for ParseHookInput, the input is Claude Code's, not ours, so it is
-// decoded leniently: a JSON object no larger than MaxHookInputBytes, with fields
-// it does not name ignored (including ones a later Claude Code adds) and a
-// relative cwd read as missing. A field this function reads with a value of the
-// wrong type (a tool_name that is not a string) is an error, and so is a
-// document that is not exactly one object. tool_input may be any JSON value.
-func ParsePreToolUseInput(data []byte) (PreToolUseInput, error) {
-	if len(data) > MaxHookInputBytes {
-		return PreToolUseInput{}, fmt.Errorf("parse hook input: %w: %d bytes exceeds the maximum of %d", ErrHookInputTooLarge, len(data), MaxHookInputBytes)
-	}
-	trimmed := bytes.TrimSpace(data)
-	if len(trimmed) == 0 || trimmed[0] != '{' {
-		return PreToolUseInput{}, errors.New("parse hook input: the input is not a JSON object")
-	}
-	var wire struct {
-		HookEventName string          `json:"hook_event_name"`
-		Cwd           string          `json:"cwd"`
-		ToolName      string          `json:"tool_name"`
-		ToolInput     json.RawMessage `json:"tool_input"`
-	}
-	if err := decodeHookObject(data, &wire); err != nil {
-		return PreToolUseInput{}, err
-	}
-	return PreToolUseInput{HookEventName: wire.HookEventName, Cwd: cleanHookCwd(wire.Cwd), ToolName: wire.ToolName, ToolInput: wire.ToolInput}, nil
-}
-
 // GateInput is everything Gate decides from: the classification of the
 // repository's binding as the binding store reported it, and, only when the
 // binding is owned, the workflow it names as the workflow store reported it (nil
-// when it could not be loaded), and the tool call.
+// when it could not be loaded), the tools the paused edit gate denies, and the
+// tool call.
 type GateInput struct {
-	Binding   Loaded
-	Workflow  *workflow.Loaded
-	ToolName  string
-	ToolInput json.RawMessage
+	Binding  Loaded
+	Workflow *workflow.Loaded
+	// EditTools are the names of the tools that edit a file, which the paused edit
+	// gate denies, matched exactly. The caller says which: the gate has no list of
+	// its own, and with none it gates no edit.
+	EditTools []string
+	Call      ToolCall
+}
+
+// ToolCall is the tool call the gate is asked about, as the gate reads it.
+type ToolCall struct {
+	// Name is the name of the tool, or empty when the call has none.
+	Name string
+	// Query is what the call names as the project of a memory query. It is read only
+	// for a longterm-mem query, and is the zero value for any other call.
+	Query QueryArguments
+}
+
+// QueryArguments is the arguments of a call read as those of a memory query.
+type QueryArguments struct {
+	// Named is true when the arguments could be read as named arguments, among which is the
+	// project. It is false when they could not (they are not a set of named arguments).
+	Named bool
+	// Project is the project the query names: empty when it names none, which is the case
+	// when the argument is missing, null, not text, or empty.
+	Project string
 }
 
 // GateResult is what Gate decides. Deny is true for a denial, and Reason then
@@ -107,31 +82,27 @@ type GateResult struct {
 	Warning string
 }
 
-// editToolList is the one list of tool names the paused edit gate denies,
-// matched exactly. README, the help text, and the Claude Code cancellation
-// declaration retype it in prose; a test checks each copy against EditTools.
-var editToolList = []string{"Write", "Edit", "MultiEdit", "NotebookEdit"}
+// denyFallbackReason is the reason of a denial that somehow has none, so a denial
+// never reaches the model and the user without a word.
+const denyFallbackReason = "labdrian: this tool call was denied by the workflow this repository is bound to."
 
-// editTools is editToolList as a set.
-var editTools = func() map[string]bool {
-	m := make(map[string]bool, len(editToolList))
-	for _, t := range editToolList {
-		m[t] = true
+// Explanation is what a denial says: its reason, or, for a denial that somehow has
+// none, a fixed sentence. Gate always gives a reason; this is for the caller that
+// would otherwise print a denial with nothing to read.
+func (r GateResult) Explanation() string {
+	if r.Reason == "" {
+		return denyFallbackReason
 	}
-	return m
-}()
-
-// EditTools returns the tool names the paused edit gate denies, in a stable
-// order. The result is a copy: editing it never changes the gate.
-func EditTools() []string { return append([]string(nil), editToolList...) }
+	return r.Reason
+}
 
 // GateRelevant reports whether Gate can ever have an opinion about a tool: a
-// file-edit tool (paused edit gate) or the longterm-mem query tool (memory
-// gate). It is decided from the name alone, so a caller can answer for every
+// file-edit tool of editTools (paused edit gate) or the longterm-mem query tool
+// (memory gate). It is decided from the name alone, so a caller can answer for every
 // other tool without reading the binding or the workflow. Gate itself denies or
 // warns only for tools this reports true for.
-func GateRelevant(toolName string) bool {
-	return editTools[toolName] || longtermQueryTool.MatchString(toolName)
+func GateRelevant(editTools []string, toolName string) bool {
+	return slices.Contains(editTools, toolName) || longtermQueryTool.MatchString(toolName)
 }
 
 // longtermQueryTool matches the MCP name of the longterm-mem query tool and
@@ -147,7 +118,7 @@ var longtermQueryTool = regexp.MustCompile(`^mcp__([A-Za-z0-9-]+_)*longterm-mem_
 // for the rules. It is total: it never fails and never panics, and anything it
 // does not understand is an allow.
 func Gate(in GateInput) GateResult {
-	if !GateRelevant(in.ToolName) {
+	if !GateRelevant(in.EditTools, in.Call.Name) {
 		return GateResult{}
 	}
 	if in.Binding.Classification != ClassificationOwned {
@@ -159,8 +130,8 @@ func Gate(in GateInput) GateResult {
 	}
 	switch w.State.Status {
 	case workflow.StatusPaused:
-		if editTools[in.ToolName] {
-			return GateResult{Deny: true, Reason: pausedReason(in.Binding.Binding, in.ToolName)}
+		if slices.Contains(in.EditTools, in.Call.Name) {
+			return GateResult{Deny: true, Reason: pausedReason(in.Binding.Binding, in.Call.Name)}
 		}
 	case workflow.StatusCreated, workflow.StatusRunning:
 	default:
@@ -168,8 +139,8 @@ func Gate(in GateInput) GateResult {
 		// enforces anything in.
 		return GateResult{}
 	}
-	if longtermQueryTool.MatchString(in.ToolName) {
-		return memoryGate(in.Binding.Binding, w.State, in.ToolInput)
+	if longtermQueryTool.MatchString(in.Call.Name) {
+		return memoryGate(in.Binding.Binding, w.State, in.Call.Query)
 	}
 	return GateResult{}
 }
@@ -182,7 +153,7 @@ func pausedReason(b Binding, tool string) string {
 
 // memoryGate checks one longterm-mem query against the memory plan of the
 // workflow, computed exactly as the projected context computes it.
-func memoryGate(b Binding, s workflow.State, toolInput json.RawMessage) GateResult {
+func memoryGate(b Binding, s workflow.State, query QueryArguments) GateResult {
 	plan, err := resolvePlan(s.Profile, b.ProjectID, s.GoalID)
 	if err != nil {
 		return GateResult{Warning: "labdrian: the memory plan of " + workflowRef(b) + " could not be computed" + detailIn(err.Error()) +
@@ -202,15 +173,13 @@ func memoryGate(b Binding, s workflow.State, toolInput json.RawMessage) GateResu
 			strconv.Quote(sanitizeLine(string(plan.Scope))) + ", so this longterm-mem query was not checked against it."}
 	}
 
-	var fields map[string]json.RawMessage
-	if err := json.Unmarshal(toolInput, &fields); err != nil || fields == nil {
+	if !query.Named {
 		return GateResult{Warning: "labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of " +
 			workflowRef(b) + "."}
 	}
-	var given string
-	if err := json.Unmarshal(fields["project"], &given); err != nil || given == "" {
-		// Absent (a nil raw message does not unmarshal), null, not a string, or
-		// empty: the query names no project.
+	given := query.Project
+	if given == "" {
+		// Absent, null, not text, or empty: the query names no project.
 		return GateResult{Deny: true, Reason: "labdrian: this longterm-mem query names no project (the project argument is missing, not a string, or empty), " +
 			"but the memory plan of " + workflowRef(b) + " permits only project " + strconv.Quote(sanitizeLine(planProject)) + ". " + queryAdvice(planProject)}
 	}
@@ -234,57 +203,4 @@ func quoteValue(s string) string {
 // queryAdvice tells the model and the user how to go on after a denied query.
 func queryAdvice(planProject string) string {
 	return "Query project " + strconv.Quote(sanitizeLine(planProject)) + ", or stop following this workflow with 'labdrian workflow unbind'."
-}
-
-// --- the hook output --------------------------------------------------------
-
-// preToolUseOutput is the JSON object a PreToolUse hook prints to deny a call:
-// the decision and its reason sit inside hookSpecificOutput, next to the event
-// name, and the hook exits 0 (the JSON decides). Nothing here ever says "allow":
-// that would bypass Claude Code's normal permission flow, so an allowed call
-// prints nothing, or only a systemMessage.
-type preToolUseOutput struct {
-	HookSpecificOutput *preToolUseSpecific `json:"hookSpecificOutput,omitempty"`
-	SystemMessage      string              `json:"systemMessage,omitempty"`
-}
-
-type preToolUseSpecific struct {
-	HookEventName            string `json:"hookEventName"`
-	PermissionDecision       string `json:"permissionDecision"`
-	PermissionDecisionReason string `json:"permissionDecisionReason"`
-}
-
-// denyFallbackReason is the reason of a denial that somehow has none, so a denial
-// never reaches the model and the user without a word.
-const denyFallbackReason = "labdrian: this tool call was denied by the workflow this repository is bound to."
-
-// PreToolUseOutput renders r as the one JSON object a PreToolUse hook writes to
-// stdout, followed by a newline. A denial is
-// {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny",
-// "permissionDecisionReason":"..."}}; a warning is a systemMessage. An allow with
-// no warning yields no output at all, which Claude Code reads as "nothing to
-// say". The JSON keeps <, >, and & as they are, so the transcript stays readable.
-func (r GateResult) PreToolUseOutput() ([]byte, error) {
-	if !r.Deny && r.Warning == "" {
-		return nil, nil
-	}
-	out := preToolUseOutput{SystemMessage: r.Warning}
-	if r.Deny {
-		reason := r.Reason
-		if reason == "" {
-			reason = denyFallbackReason
-		}
-		out.HookSpecificOutput = &preToolUseSpecific{
-			HookEventName:            HookEventPreToolUse,
-			PermissionDecision:       "deny",
-			PermissionDecisionReason: reason,
-		}
-	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(out); err != nil {
-		return nil, fmt.Errorf("projection: encode hook output: %w", err)
-	}
-	return buf.Bytes(), nil
 }

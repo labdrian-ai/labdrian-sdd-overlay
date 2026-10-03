@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 )
 
@@ -134,7 +135,7 @@ func TestPreToolUseIsSilentForInputItCannotUse(t *testing.T) {
 	good := gateInput(t, e.repo, "s", "Edit", editInput)
 	assertDenied(t, "the good input", runGateArgs(gateArgs, good, e.dir))
 
-	oversized := `{"cwd":"` + e.repo + `","tool_name":"Edit","tool_input":{"content":"` + strings.Repeat("x", projection.MaxHookInputBytes) + `"}}`
+	oversized := `{"cwd":"` + e.repo + `","tool_name":"Edit","tool_input":{"content":"` + strings.Repeat("x", hookwire.MaxEnvelopeBytes) + `"}}`
 	for name, stdin := range map[string]string{
 		"empty stdin":                   "",
 		"whitespace":                    " \n ",
@@ -161,8 +162,8 @@ func TestPreToolUseReadsNoMoreThanTheCapPlusOneByte(t *testing.T) {
 	var codes []int
 	runProjectionCore(gateArgs, e.repo, stdin, &out, &errBuf, func(c int) { codes = append(codes, c) })
 	assertSilent(t, "an endless input", hookRun{codes: codes, stdout: out.String(), stderr: errBuf.String()})
-	if stdin.read > projection.MaxHookInputBytes+1 {
-		t.Errorf("the gate read %d bytes of an endless input, want at most %d", stdin.read, projection.MaxHookInputBytes+1)
+	if stdin.read > hookwire.MaxEnvelopeBytes+1 {
+		t.Errorf("the gate read %d bytes of an endless input, want at most %d", stdin.read, hookwire.MaxEnvelopeBytes+1)
 	}
 }
 

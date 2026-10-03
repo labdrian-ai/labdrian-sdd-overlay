@@ -35,6 +35,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
@@ -77,7 +78,7 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(stderr, "skills guard-hook: internal error: %v\n", r)
-			if out, err := (projection.GateResult{Warning: guardPanicWarning(r)}).PreToolUseOutput(); err == nil {
+			if out, err := (hookwire.PreToolUseReply{Warning: guardPanicWarning(r)}).Encode(); err == nil {
 				_, _ = stdout.Write(out) // nothing to do if the write fails: the call goes through.
 			}
 			exit(0)
@@ -95,7 +96,7 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	}
 	verdict := skills.DecideApproveGuard(raw)
 	if verdict.Deny {
-		out, err := projection.GateResult{Deny: true, Reason: verdict.Reason}.PreToolUseOutput()
+		out, err := hookwire.PreToolUseReply{Deny: true, Reason: verdict.Reason}.Encode()
 		if err == nil {
 			_, _ = stdout.Write(out) // nothing to do if the write fails: the call goes through.
 		}

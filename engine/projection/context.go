@@ -10,14 +10,12 @@ package projection
 //
 // The caller (the hook command in engine/cmd) does the reading: it loads the
 // binding and the workflow, calls Project, removes the binding when Project
-// asks for that, and prints UserPromptSubmitOutput.
+// asks for that, and says the result to the runtime (engine/hookwire). Nothing
+// here knows the format that is spoken in.
 
 import (
-	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"unicode"
@@ -28,16 +26,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
-
-// HookEventUserPromptSubmit is the Claude Code hook event whose stdout is added
-// to the session's context. It is the only event this package projects for.
-const HookEventUserPromptSubmit = "UserPromptSubmit"
-
-// MaxHookInputBytes bounds the hook input ParseHookInput accepts. A prompt can be
-// long, and Claude Code sends it in the input, so the bound is generous; it
-// exists so that a hostile or runaway writer cannot make the hook read without
-// end.
-const MaxHookInputBytes = 1 << 20
 
 // MaxContextBytes bounds the projected context. A context this size costs a
 // session about four thousand tokens on every prompt, far more than the few
@@ -60,73 +48,9 @@ const maxPanicRunes = 120
 // at a glance and keep the line short. The full digest stays in the workflow log.
 const goalDigestRunes = 12
 
-// ErrHookInputTooLarge is returned by ParseHookInput when the input exceeds
-// MaxHookInputBytes.
-var ErrHookInputTooLarge = errors.New("projection: hook input exceeds the maximum size")
-
 // truncationMarker ends a context that had to be cut to MaxContextBytes. It
 // starts on a line of its own and is ASCII, so it can never be cut itself.
 var truncationMarker = "\n[labdrian: projected context truncated at " + strconv.Itoa(MaxContextBytes) + " bytes]"
-
-// HookInput is what the projection keeps of the JSON a Claude Code hook
-// receives on stdin: the event's name and the working directory of the session
-// (cleaned, see ParseHookInput).
-// Nothing else is read. In particular the session and the prompt are not: the
-// projection depends on neither, so that every session, and every prompt,
-// gets the same view of the workflow.
-type HookInput struct {
-	// HookEventName is hook_event_name, or empty when the input has none.
-	HookEventName string
-	// Cwd is the session's working directory as a cleaned absolute path, or empty
-	// when the input has none or it is not an absolute path.
-	Cwd string
-}
-
-// ParseHookInput reads the fields the projection needs from a hook's stdin. The
-// input is Claude Code's, not ours, so it is decoded leniently: it must be a
-// JSON object no larger than MaxHookInputBytes, and fields it does not name are
-// ignored, including ones a later Claude Code adds. A field this function
-// reads with a value of the wrong type is an error, and so is a document that is
-// not one object.
-func ParseHookInput(data []byte) (HookInput, error) {
-	var wire struct {
-		HookEventName string `json:"hook_event_name"`
-		Cwd           string `json:"cwd"`
-	}
-	if err := decodeHookObject(data, &wire); err != nil {
-		return HookInput{}, err
-	}
-	return HookInput{HookEventName: wire.HookEventName, Cwd: cleanHookCwd(wire.Cwd)}, nil
-}
-
-// decodeHookObject is the lenient reading both hook events share: the input is
-// at most MaxHookInputBytes, is exactly one JSON object (after surrounding white
-// space), and is decoded into wire, ignoring the fields wire does not name. Every
-// event's parser goes through it, so the events cannot disagree on what a usable
-// input is.
-func decodeHookObject(data []byte, wire any) error {
-	if len(data) > MaxHookInputBytes {
-		return fmt.Errorf("parse hook input: %w: %d bytes exceeds the maximum of %d", ErrHookInputTooLarge, len(data), MaxHookInputBytes)
-	}
-	trimmed := bytes.TrimSpace(data)
-	if len(trimmed) == 0 || trimmed[0] != '{' {
-		return errors.New("parse hook input: the input is not a JSON object")
-	}
-	if err := json.Unmarshal(trimmed, wire); err != nil {
-		return fmt.Errorf("parse hook input: %w", err)
-	}
-	return nil
-}
-
-// cleanHookCwd returns cwd cleaned when it is absolute and "" otherwise, so dot
-// segments, repeated separators, and a trailing slash never make one directory
-// look like two, and a relative path is read as missing.
-func cleanHookCwd(cwd string) string {
-	if filepath.IsAbs(cwd) {
-		return filepath.Clean(cwd)
-	}
-	return ""
-}
 
 // ProjectionInput is everything Project decides from: the classification of the
 // repository's binding as the binding store reported it, and, only when the
@@ -204,19 +128,33 @@ func PanicText(recovered any) string {
 	return clip(sanitizeLine(fmt.Sprint(recovered)), maxPanicRunes)
 }
 
+// Occasion is what the projection hook was doing when it recovered from an internal panic. The
+// consequence a warning states is the occasion's own, so each is told apart. The zero value is
+// an occasion nobody named.
+type Occasion int
+
+const (
+	// OccasionUnknown is an occasion nobody named: the warning claims neither consequence.
+	OccasionUnknown Occasion = iota
+	// OccasionPrompt is projecting the workflow into the context of a prompt.
+	OccasionPrompt
+	// OccasionToolCall is checking a tool call against the workflow.
+	OccasionToolCall
+)
+
 // PanicWarning is the one line shown to the user when the hook recovered from
-// an internal panic while answering event. The panic value is sanitized and cut
+// an internal panic while answering on occasion. The panic value is sanitized and cut
 // to a short length, so it can never spread over lines or fill the screen; the
 // full value goes to stderr, where whoever debugs the hook reads it. The
-// consequence it states is the event's own: a prompt that went through with
-// nothing projected, or a tool call that went ahead unchecked. An event this
-// package does not know gets wording that claims neither.
-func PanicWarning(event string, recovered any) string {
+// consequence it states is the occasion's own: a prompt that went through with
+// nothing projected, or a tool call that went ahead unchecked. An occasion nobody
+// named gets wording that claims neither.
+func PanicWarning(occasion Occasion, recovered any) string {
 	head := "labdrian: the projection hook hit an internal error (" + PanicText(recovered) + "); "
-	switch event {
-	case HookEventUserPromptSubmit:
+	switch occasion {
+	case OccasionPrompt:
 		return head + "nothing was projected this time and the prompt was not affected."
-	case HookEventPreToolUse:
+	case OccasionToolCall:
 		return head + "this tool call was not checked against the workflow and was not denied."
 	default:
 		return head + "the hook did nothing this time and the session was not affected."
@@ -509,44 +447,6 @@ const (
 	blankField = "(blank)"
 	noneField  = "none"
 )
-
-// --- the hook output --------------------------------------------------------
-
-// userPromptSubmitOutput is the JSON object a UserPromptSubmit hook prints.
-// additionalContext must sit inside hookSpecificOutput, next to the event name:
-// at the top level Claude Code ignores it without a word.
-type userPromptSubmitOutput struct {
-	HookSpecificOutput *userPromptSubmitSpecific `json:"hookSpecificOutput,omitempty"`
-	SystemMessage      string                    `json:"systemMessage,omitempty"`
-}
-
-type userPromptSubmitSpecific struct {
-	HookEventName     string `json:"hookEventName"`
-	AdditionalContext string `json:"additionalContext"`
-}
-
-// UserPromptSubmitOutput renders r as the one JSON object a UserPromptSubmit hook
-// writes to stdout, followed by a newline: the context as additionalContext
-// inside hookSpecificOutput, and the warning as systemMessage. A part that is
-// empty is left out, and a result with neither yields no output at all, which
-// Claude Code reads as "nothing to add". The JSON keeps <, >, and & as they are,
-// so the transcript stays readable.
-func (r ProjectionResult) UserPromptSubmitOutput() ([]byte, error) {
-	if r.Context == "" && r.Warning == "" {
-		return nil, nil
-	}
-	out := userPromptSubmitOutput{SystemMessage: r.Warning}
-	if r.Context != "" {
-		out.HookSpecificOutput = &userPromptSubmitSpecific{HookEventName: HookEventUserPromptSubmit, AdditionalContext: r.Context}
-	}
-	var buf bytes.Buffer
-	enc := json.NewEncoder(&buf)
-	enc.SetEscapeHTML(false)
-	if err := enc.Encode(out); err != nil {
-		return nil, fmt.Errorf("projection: encode hook output: %w", err)
-	}
-	return buf.Bytes(), nil
-}
 
 // --- text hygiene -----------------------------------------------------------
 

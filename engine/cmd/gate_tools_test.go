@@ -1,4 +1,4 @@
-package projection_test
+package main
 
 import (
 	"regexp"
@@ -9,15 +9,26 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 )
 
-// The settings matchers decide which tool calls reach the gate hook at all, so a
-// matcher narrower than the gate would silently disable it. These tests pin the
-// installed matchers to the gate's own tool set.
+// The settings matchers decide which tool calls reach the gate hook at all, so a matcher
+// narrower than the gate would silently disable it. These tests pin the installed matchers to
+// the tools the engine gives the gate (gatedEditTools): the gate has no list of its own.
+
+func TestGatedEditToolsAreTheFourFileEditTools(t *testing.T) {
+	want := []string{"Write", "Edit", "MultiEdit", "NotebookEdit"}
+	if strings.Join(gatedEditTools, ",") != strings.Join(want, ",") {
+		t.Fatalf("gatedEditTools = %v, want %v, in this order (the documentation lists them in it)", gatedEditTools, want)
+	}
+	for _, tool := range gatedEditTools {
+		if !projection.GateRelevant(gatedEditTools, tool) {
+			t.Errorf("edit tool %q is not gate-relevant", tool)
+		}
+	}
+}
 
 func TestInstalledEditMatcherListsExactlyTheGatedEditTools(t *testing.T) {
 	got := strings.Split(settings.ProjectionEditToolMatcher, "|")
-	want := projection.EditTools()
-	if strings.Join(got, "|") != strings.Join(want, "|") {
-		t.Errorf("edit matcher tools %v, gate edit tools %v", got, want)
+	if strings.Join(got, "|") != strings.Join(gatedEditTools, "|") {
+		t.Errorf("edit matcher tools %v, gate edit tools %v", got, gatedEditTools)
 	}
 }
 
@@ -37,7 +48,7 @@ func TestInstalledMatchersCoverEveryToolTheGateHasAnOpinionAbout(t *testing.T) {
 		"Bash", "Read", "Grep", "mcp__longterm-mem__get", "mcp__longterm-memx__query", "mcp__a__longterm-mem__query",
 		"longterm-mem__query", "mcp__plugin_engram_engram__mem_save", "",
 	} {
-		if projection.GateRelevant(name) && !covered(name) {
+		if projection.GateRelevant(gatedEditTools, name) && !covered(name) {
 			t.Errorf("gate is relevant for %q but no installed matcher covers it", name)
 		}
 	}

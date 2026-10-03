@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflowprofile"
 )
@@ -238,7 +239,7 @@ func TestProjectionHookIsSilentForInputItCannotUse(t *testing.T) {
 		t.Fatal("test bug: the good input does not produce a context")
 	}
 
-	oversized := `{"cwd":"` + e.repo + `","prompt":"` + strings.Repeat("x", projection.MaxHookInputBytes) + `"}`
+	oversized := `{"cwd":"` + e.repo + `","prompt":"` + strings.Repeat("x", hookwire.MaxEnvelopeBytes) + `"}`
 	for name, stdin := range map[string]string{
 		"empty stdin":                 "",
 		"whitespace":                  " \n ",
@@ -282,8 +283,8 @@ func TestProjectionHookReadsNoMoreThanTheCapPlusOneByte(t *testing.T) {
 	}
 	// io.LimitReader may ask the source for less than it is given room for, but
 	// never for more than the cap and the one byte that proves it was passed.
-	if stdin.read > projection.MaxHookInputBytes+1 {
-		t.Errorf("the hook read %d bytes of an endless input, want at most %d", stdin.read, projection.MaxHookInputBytes+1)
+	if stdin.read > hookwire.MaxEnvelopeBytes+1 {
+		t.Errorf("the hook read %d bytes of an endless input, want at most %d", stdin.read, hookwire.MaxEnvelopeBytes+1)
 	}
 }
 
