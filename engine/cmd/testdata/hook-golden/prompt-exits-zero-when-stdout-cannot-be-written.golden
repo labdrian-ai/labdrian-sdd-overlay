@@ -1,0 +1,10 @@
+$ projection hook --event UserPromptSubmit
+# the context cannot be written
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+<stdout cannot be written>
+--- stderr ---
+

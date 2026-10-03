@@ -1,0 +1,10 @@
+$ projection hook --event UserPromptSubmit
+# odd, running: the memory plan and the dependencies it could not confirm
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: odd\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: authorize\nnext stage: explore\nmemory plan (read-only: it executes no query and grants no memory write): scope=project sources=engram,longterm-mem,procedural-skills project_id=proj-1 goal_id=none write=none\nomitted filters: goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nunavailable dependencies at the last recorded event: memory:engram, memory:longterm-mem, memory:procedural-skills, gentle-ai-review\nstages recorded (1): authorize"}}
+--- stderr ---
+

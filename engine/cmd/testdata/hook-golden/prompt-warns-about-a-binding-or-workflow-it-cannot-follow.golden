@@ -1,0 +1,79 @@
+$ projection hook --event UserPromptSubmit
+# no repository is bound: nothing to say
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the workflow log is gone
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1, which this repository is bound to, does not exist; nothing is projected. Run 'labdrian workflow status --project proj-1 --workflow wf-1' to inspect it, or 'labdrian workflow unbind' to stop following it."}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the workflow log is foreign
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1, which this repository is bound to, is foreign (line 1 is not a workflow event we recognize: parse workflow event: unknown workflow event field \"hello\"); nothing is projected. Run 'labdrian workflow status --project proj-1 --workflow wf-1' to inspect it, or 'labdrian workflow unbind' to stop following it."}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the workflow log is malformed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1, which this repository is bound to, is malformed (line 1 is not valid JSON); nothing is projected. Run 'labdrian workflow status --project proj-1 --workflow wf-1' to inspect it, or 'labdrian workflow unbind' to stop following it."}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the workflow log drifted
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: workflow wf-1 of project proj-1, which this repository is bound to, is drifted (workflow: verify events: event 1 prev_digest \"<DIGEST>\" does not match event 0 digest \"<DIGEST>...); nothing is projected. Run 'labdrian workflow status --project proj-1 --workflow wf-1' to inspect it, or 'labdrian workflow unbind' to stop following it."}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the binding file is foreign
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: this repository's workflow binding is foreign (binding file is not a binding we recognize: parse binding: unknown binding field \"hello\"); no workflow is projected. Run 'labdrian workflow binding' to inspect it. 'labdrian workflow unbind' refuses to touch a binding file that is not usable, so fix or move that file by hand."}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the binding file is malformed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: this repository's workflow binding is malformed (binding file is not one valid JSON document (invalid syntax, or data after the document)); no workflow is projected. Run 'labdrian workflow binding' to inspect it. 'labdrian workflow unbind' refuses to touch a binding file that is not usable, so fix or move that file by hand."}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the binding store cannot be opened
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the workflow binding store could not be read (projection store: XDG_STATE_HOME \"relative/state\" is not absolute); no workflow is projected, and if this repository is bound its workflow is not being followed in this session."}
+--- stderr ---
+

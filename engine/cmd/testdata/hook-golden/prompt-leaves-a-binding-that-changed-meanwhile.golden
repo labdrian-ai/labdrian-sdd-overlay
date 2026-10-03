@@ -1,0 +1,20 @@
+$ projection hook --event UserPromptSubmit
+# another process binds the next workflow just before the removal
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: workflow wf-1 of project proj-1 is closed (abandoned). No workflow is projected. This repository's binding to it had already changed, so it was left alone."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the next prompt follows the workflow bound meanwhile
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-2 (project: proj-2)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest a0dffb4cd2a1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-2 --workflow wf-2 --stage <name>; labdrian workflow verify --project proj-2 --workflow wf-2 --goal <goal file>; labdrian workflow close --project proj-2 --workflow wf-2 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+

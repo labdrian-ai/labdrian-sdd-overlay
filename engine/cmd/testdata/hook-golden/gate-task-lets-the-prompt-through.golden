@@ -1,0 +1,50 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a phase the contract names nowhere
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-explore"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an excluded phase that does not carry the contract
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-propose"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an applies-to phase that already carries it
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a sub-agent type no contract knows
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"general-purpose"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# the entry is padded with white space
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n   skills/_shared/minimalism-contract.md   \n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+

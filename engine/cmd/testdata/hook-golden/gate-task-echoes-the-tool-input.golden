@@ -1,0 +1,70 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a model is echoed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","model":"sonnet"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply","model":"sonnet"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a null model is left out
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","model":null},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an empty model is echoed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","model":""},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply","model":""}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a missing description is echoed empty
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"subagent_type":"sdd-apply","prompt":"p"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# fields the Agent tool has besides the four are dropped
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","run_in_background":true,"isolation":"worktree","name":"x"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# the order of the input is not the order of the output
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"prompt":"p","model":"opus","subagent_type":"sdd-apply","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply","model":"opus"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# non-ASCII text is written as it is
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"é 日本 😀","subagent_type":"sdd-apply","prompt":"café 日本"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"é 日本 😀","prompt":"café 日本\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+

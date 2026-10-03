@@ -1,0 +1,136 @@
+$ projection hook --event UserPromptSubmit
+# empty
+--- stdin ---
+<empty>
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# white space only
+--- stdin ---
+ 
+	 
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# not JSON
+--- stdin ---
+hello
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# a truncated object
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# an array
+--- stdin ---
+[{"tool_name":"Bash","tool_input":{"command":"ls"}}]
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# a string
+--- stdin ---
+"Bash"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# a number
+--- stdin ---
+7
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# true
+--- stdin ---
+true
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# null
+--- stdin ---
+null
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# two objects
+--- stdin ---
+{"tool_name":"Bash"}{"tool_name":"Bash"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# text after the object
+--- stdin ---
+{"tool_name":"Bash"} trailing
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# an empty object
+--- stdin ---
+{}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# a cwd of the wrong type
+--- stdin ---
+{"hook_event_name":"UserPromptSubmit","cwd":42}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# input of one byte over the size bound, in the repository of the process
+--- stdin ---
+<1048577 bytes, sha256 ef16d6dbba30, starting "{\"hook_event_name\":\"UserPromptSubmit\",\"prompt\":\"xxxxxxxxxxxx">
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# a stdin that fails
+--- stdin ---
+<the reader fails with: read failed>
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

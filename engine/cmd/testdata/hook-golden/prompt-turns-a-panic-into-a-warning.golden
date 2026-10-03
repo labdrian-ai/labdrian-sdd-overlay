@@ -1,0 +1,11 @@
+$ projection hook --event UserPromptSubmit
+# a panic where the hook removes the binding
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the projection hook hit an internal error (boom second line [31mred xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...); nothing was projected this time and the prompt was not affected."}
+--- stderr ---
+<5060 bytes, sha256 4019f0431b86, starting "projection hook: internal error: boom\nsecond line \x1b[31mred x">
+
