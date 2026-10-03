@@ -1,0 +1,39 @@
+$ projection hook --event PreToolUse
+# no cwd in the input
+--- stdin ---
+{"tool_name":"Edit","tool_input":{}}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a relative cwd is read as missing
+--- stdin ---
+{"hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{},"cwd":"relative/dir"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an empty cwd
+--- stdin ---
+{"hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{},"cwd":""}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a process directory outside every repository
+--- stdin ---
+{"tool_name":"Edit","tool_input":{}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

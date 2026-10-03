@@ -59,6 +59,7 @@ func hookGoldenCases() []hookGoldenCase {
 	var cases []hookGoldenCase
 	cases = append(cases, gateTaskGoldenCases()...)
 	cases = append(cases, promptHookGoldenCases()...)
+	cases = append(cases, toolHookGoldenCases()...)
 	return cases
 }
 
