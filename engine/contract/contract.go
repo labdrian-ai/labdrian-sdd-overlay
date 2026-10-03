@@ -199,15 +199,20 @@ func ParseContext(content string) (Context, error) {
 
 // parseList is the one parser of a list in the frontmatter, and it is strict: the value
 // must be an inline list, "[a, b, c]", with the brackets, and nothing before or after them.
-// Its items are separated by commas; white space and the quotes (either kind) at the ends
-// of an item are removed, an empty item is dropped, and the case is kept. key only names the
-// list in the error. The empty list "[]" is a list.
+// The brackets are the ends of the value and nothing else: a bracket among the items
+// ("[a][b]", "[a, [b]]") is not a list of one odd item, it is refused. Its items are
+// separated by commas; white space and the quotes (either kind) at the ends of an item are
+// removed, an empty item is dropped, and the case is kept. key only names the list in the
+// error. The empty list "[]" is a list.
 func parseList(key, value string) ([]string, error) {
 	value = strings.TrimSpace(value)
 	if !strings.HasPrefix(value, listOpen) || !strings.HasSuffix(value, listClose) {
 		return nil, &MalformedListError{Key: key, Value: value}
 	}
 	inner := strings.TrimPrefix(strings.TrimSuffix(value, listClose), listOpen)
+	if strings.ContainsAny(inner, listOpen+listClose) {
+		return nil, &MalformedListError{Key: key, Value: value}
+	}
 	var items []string
 	for _, item := range strings.Split(inner, listSeparator) {
 		if item = strings.Trim(strings.TrimSpace(item), itemQuotes); item != "" {

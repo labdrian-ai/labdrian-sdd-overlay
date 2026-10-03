@@ -958,6 +958,46 @@ func TestOOContractRequiresTrustedMatchingContext(t *testing.T) {
 	}
 }
 
+// The context lists of a contract keep the case they were written in (engine/contract does not
+// fold it), so the gate is what makes a context match without regard to case, on both sides:
+// a contract that writes "TypeScript" still applies to work that says "typescript", and the
+// other way round. A comparison that lost the folding on either side would stop injecting the
+// contract, with no error to say why.
+func TestContextItemsMatchWithoutRegardToCase(t *testing.T) {
+	withContext := func(languages, activations string) string {
+		return "---\napplies_to_phases: [sdd-apply]\nexcluded_phases: []\ninjection_point: \"## Skills to load before work\"\n" +
+			"language_context: " + languages + "\nactivation_context: " + activations + "\n---\n# OO Quality Contract\n"
+	}
+	work := func(languages, activations string) *gate.WorkContext {
+		return &gate.WorkContext{Trusted: true, Languages: []string{languages}, Activations: []string{activations}, WorkKinds: []string{"Application-Code"}}
+	}
+	for _, tt := range []struct {
+		name       string
+		content    string
+		workCtx    *gate.WorkContext
+		wantInject bool
+	}{
+		{"a contract in mixed case, work in lower case", withContext("[TypeScript, NestJS]", "[OO-Domain-Design]"), work("typescript", "oo-domain-design"), true},
+		{"a contract in lower case, work in mixed case", withContext("[typescript]", "[oo-domain-design]"), work("TypeScript", "OO-Domain-Design"), true},
+		{"both in upper case", withContext("[TYPESCRIPT]", "[OO-DOMAIN-DESIGN]"), work("TYPESCRIPT", "OO-DOMAIN-DESIGN"), true},
+		{"padding around the work's items is ignored", withContext("[typescript]", "[review]"), work(" typescript ", "\treview"), true},
+		{"another language does not match whatever the case", withContext("[TypeScript]", "[review]"), work("Go", "review"), false},
+		{"another activation does not match whatever the case", withContext("[TypeScript]", "[Review]"), work("typescript", "planning"), false},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := gate.Config{Contracts: []gate.ContractConfig{{Path: ooContractPath, Content: tt.content}}, WorkContext: tt.workCtx}
+			resp, err := gate.Process(buildInput("sdd-apply", "Apply implementation."), cfg)
+			if err != nil {
+				t.Fatalf("Process: %v", err)
+			}
+			prompt := promptOrOriginal(t, resp, "Apply implementation.")
+			if got := hasLine(prompt, ooContractPath); got != tt.wantInject {
+				t.Fatalf("injection = %v, want %v; prompt:\n%s", got, tt.wantInject, prompt)
+			}
+		})
+	}
+}
+
 func TestMalformedOrUnsupportedContextContractSkipsOnlyThatContract(t *testing.T) {
 	malformedOO := `---
 applies_to_phases: [sdd-apply]

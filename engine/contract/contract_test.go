@@ -190,6 +190,8 @@ func TestParseRefusesAListThatIsNotAnInlineList(t *testing.T) {
 			"",
 			"(sdd-tasks)",
 			"[sdd-tasks] # the phases",
+			"[sdd-tasks][sdd-apply]",
+			"[[sdd-tasks, sdd-apply]]",
 			"- sdd-tasks",
 		} {
 			t.Run(key+"="+value, func(t *testing.T) {
