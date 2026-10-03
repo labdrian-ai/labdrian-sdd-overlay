@@ -1536,7 +1536,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	}
 
 	// F4: cap stdin reads to stdinSizeLimit so a runaway producer cannot exhaust memory.
-	// On truncation the JSON will be malformed → gate.Process absorbs it as pass-through.
+	// On truncation the JSON will be malformed → the gate absorbs it as pass-through.
 	rawInput, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit))
 	if err != nil {
 		// Fail-safe: log to stderr, pass-through on stdout.
@@ -1564,8 +1564,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 		fmt.Fprintf(stderr, "gate-task: warning: contract frontmatter unparseable: %v (passing through)\n", err)
 	}
 
-	resp, _ := gate.Process(string(rawInput), cfg)
-	fmt.Fprintln(stdout, resp)
+	_, _ = stdout.Write(agentGateAnswer(rawInput, cfg))
 }
 
 func loadWorkContext(rawJSON, filePath string, readFile readFileFn) (*gate.WorkContext, error) {

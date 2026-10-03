@@ -35,7 +35,6 @@ var protocolTag = regexp.MustCompile("json:\"(" + strings.Join(protocolTags, "|"
 // and a row whose file no longer holds a tag fails the test, so none can be left behind. A new
 // tag is not added here to make the test pass; it is written in hookwire.
 var owedWire = map[string]string{
-	"gate/gate.go":            "H14 slice 1, gate",
 	"reviewreceipt/hook.go":   "H14 slice 2",
 	"shaper/guard.go":         "H14 slice 2",
 	"skills/approve_guard.go": "H14 slice 2",

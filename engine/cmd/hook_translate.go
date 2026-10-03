@@ -8,6 +8,7 @@ package main
 // reply that says it.
 
 import (
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 )
@@ -49,4 +50,23 @@ func gateReply(r projection.GateResult) hookwire.PreToolUseReply {
 // promptReply is what a projection says to Claude Code.
 func promptReply(r projection.ProjectionResult) hookwire.PromptReply {
 	return hookwire.PromptReply{Context: r.Context, Warning: r.Warning}
+}
+
+// agentGateAnswer is what 'gate-task' prints for the hook input raw: the call with the prompt
+// the gate gives it, or, for everything the gate leaves alone and everything it cannot read, the
+// pass-through that leaves the call as it is. It never fails, and never denies.
+func agentGateAnswer(raw []byte, cfg gate.Config) []byte {
+	call, err := hookwire.DecodeAgentCall(raw)
+	if err != nil {
+		return hookwire.PassThrough()
+	}
+	prompt, changed := gate.Rewrite(gate.Call{SubagentType: call.SubagentType, Prompt: call.Prompt}, cfg)
+	if !changed {
+		return hookwire.PassThrough()
+	}
+	out, err := call.UpdatedInput(prompt)
+	if err != nil {
+		return hookwire.PassThrough()
+	}
+	return out
 }
