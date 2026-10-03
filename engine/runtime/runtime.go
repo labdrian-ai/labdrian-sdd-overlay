@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 type Target string
@@ -178,7 +179,9 @@ func ExpandTarget(target Target) []Target {
 	return []Target{TargetClaude, TargetOpenCode, TargetCodex, TargetPi}
 }
 
-func NewFoundationAdapter(target Target) Adapter {
+// NewFoundationAdapter returns the adapter of target. registries is how the adapters that build
+// a package from the skills registry (Pi) read it; the others do not read the registry.
+func NewFoundationAdapter(target Target, registries skills.RegistryRepository) Adapter {
 	if target == TargetOpenCode {
 		return NewOpenCodeAdapter(DefaultOpenCodeConfigRoot())
 	}
@@ -189,7 +192,7 @@ func NewFoundationAdapter(target Target) Adapter {
 		return NewCodexAdapter(DefaultCodexConfigRoot())
 	}
 	if target == TargetPi {
-		return NewPiAdapter()
+		return NewPiAdapter(registries)
 	}
 	return foundationAdapter{target: target}
 }
