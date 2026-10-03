@@ -348,6 +348,29 @@ func TestCaptureRefusesAReceiptWhoseFileNameIsNotOnePathComponent(t *testing.T) 
 	}
 }
 
+// A visit that fails after a receipt was refused still stops the walk, and its error keeps
+// every refusal collected before it: none is dropped because another failure came later.
+func TestAFailedVisitKeepsTheRefusalsCollectedBeforeIt(t *testing.T) {
+	w := newWorld()
+	w.stores = []reviewreceipt.Store{"s"}
+	bad := approvedReceiptDoc("../one")
+	bad.Origin = "s/review-one/review-receipt.json"
+	w.docs["s"] = []reviewreceipt.Document{bad, approvedReceiptDoc("review-b"), approvedReceiptDoc("review-c")}
+	w.writeErr["c1/review-b.json"] = errors.New("create y: no space")
+
+	_, err := w.service().Capture("c1")
+	var unusable *reviewreceipt.UnusableReceiptError
+	if !errors.As(err, &unusable) || unusable.Origin != bad.Origin {
+		t.Errorf("Capture error = %v, want it to keep the refusal of %s", err, bad.Origin)
+	}
+	if err == nil || !strings.Contains(err.Error(), "create y: no space") {
+		t.Errorf("Capture error = %v, want it to keep the failed write", err)
+	}
+	if strings.Contains(strings.Join(w.writes, " "), "review-c") {
+		t.Errorf("wrote %v, want the walk stopped at the failed write", w.writes)
+	}
+}
+
 // Every refused receipt is named, not only the first, so one run tells a person all that has
 // to be corrected.
 func TestCaptureNamesEveryRefusedReceipt(t *testing.T) {

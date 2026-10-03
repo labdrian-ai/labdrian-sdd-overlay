@@ -135,7 +135,8 @@ func (s *Service) eachApproved(visit func(surviving) error) error {
 				continue
 			}
 			if err := visit(surviving{Receipt: r, Data: doc.Data}); err != nil {
-				return err
+				// The refusals collected so far are kept: a later failure drops none.
+				return errors.Join(append(unusable, err)...)
 			}
 		}
 	}

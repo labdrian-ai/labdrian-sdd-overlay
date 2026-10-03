@@ -774,6 +774,33 @@ func TestLocateAsksTheToplevelWhereTheDirectoryIsAndTheRestWhereTheToplevelIs(t 
 	}
 }
 
+// The toplevel git reports from the directory is resolved before it is judged, as Observe
+// resolves the root it is given (runPath resolves every path git reports): a toplevel
+// reported through a symlink is judged, and returned, at the path it really is, and every
+// later question is asked there.
+func TestLocateResolvesTheToplevelGitReportsBeforeJudgingIt(t *testing.T) {
+	repo := newMainRepo(t)
+	sub := subdir(t, repo.root, "deep")
+	link := filepath.Join(resolvedTempDir(t), "toplevel-link")
+	if err := os.Symlink(repo.root, link); err != nil {
+		t.Fatalf("symlink: %v", err)
+	}
+	repo.answers["rev-parse --show-toplevel"] = link + "\n"
+
+	got, err := repo.observer().Locate(sub)
+	if err != nil {
+		t.Fatalf("Locate: %v", err)
+	}
+	if got.Toplevel != repo.root {
+		t.Errorf("Toplevel = %q, want the resolved %q, not the symlink git reported", got.Toplevel, repo.root)
+	}
+	for _, c := range repo.calls[1:] {
+		if c.dir != repo.root {
+			t.Errorf("git %s was asked in %q, want the resolved toplevel %q", strings.Join(c.args, " "), c.dir, repo.root)
+		}
+	}
+}
+
 func TestLocateResolvesASymlinkedDirectoryToTheToplevel(t *testing.T) {
 	repo := newMainRepo(t)
 	sub := subdir(t, repo.root, "real")

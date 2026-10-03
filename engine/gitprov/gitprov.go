@@ -139,6 +139,9 @@ func (o Observer) Locate(dir string) (Observation, error) {
 	if err != nil {
 		return Observation{}, err
 	}
+	// runPath resolves the toplevel git reports (filepath.EvalSymlinks), as begin resolves
+	// a root given to Observe, so the toplevel is judged where it really is, and judge's
+	// consistency check compares two resolved paths.
 	toplevel, err := runPath(o.runner(resolvedDir, env), argvToplevel, "")
 	if err != nil {
 		return Observation{}, err
