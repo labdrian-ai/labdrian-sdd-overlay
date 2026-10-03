@@ -1,0 +1,70 @@
+$ projection hook --event PreToolUse
+# a tool input that is "a string"
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":"a string","tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a tool input that is [1]
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":[1],"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a tool input that is 5
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":5,"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a tool input that is null
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":null,"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a tool input that is true
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":true,"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# no tool input at all
+--- stdin ---
+{"hook_event_name":"PreToolUse","cwd":"<REPO>","tool_name":"mcp__longterm-mem__query"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the input of this longterm-mem query is not a JSON object, so its project was not checked against the memory plan of workflow wf-1 of project proj-1."}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a tool input with a project of the wrong type is a denial, not a warning
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__query","tool_input":{"project":["proj-1"]},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: this longterm-mem query names no project (the project argument is missing, not a string, or empty), but the memory plan of workflow wf-1 of project proj-1 permits only project \"proj-1\". Query project \"proj-1\", or stop following this workflow with 'labdrian workflow unbind'."}}
+--- stderr ---
+

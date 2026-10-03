@@ -2,8 +2,8 @@ package main
 
 // The paused edit gate denies a fixed list of tools, and three prose copies
 // retype it: the README, the help text, and the Claude Code cancellation
-// declaration. Each copy is checked against projection.EditTools, the list the
-// gate itself uses, so a tool added to the gate cannot be left out of the words.
+// declaration. Each copy is checked against gatedEditTools, the list the engine
+// gives the gate, so a tool added to the gate cannot be left out of the words.
 
 import (
 	"os"
@@ -12,7 +12,6 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/capability"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 )
 
 func TestEveryCopyOfTheGatedEditToolListNamesEveryTool(t *testing.T) {
@@ -38,9 +37,9 @@ func TestEveryCopyOfTheGatedEditToolListNamesEveryTool(t *testing.T) {
 		"usage()":                 captureUsage(t),
 		"the cancellation detail": cancellation,
 	}
-	tools := projection.EditTools()
+	tools := gatedEditTools
 	if len(tools) == 0 {
-		t.Fatal("EditTools() is empty")
+		t.Fatal("gatedEditTools is empty")
 	}
 	for name, text := range copies {
 		for _, tool := range tools {

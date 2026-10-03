@@ -28,6 +28,9 @@ import (
 //   - reviewreceipt/fsstore is the adapter of the four ports of the review receipt
 //     capture (H12): the transaction stores found through gitprov, the receipts, the
 //     persisted receipts and the changes, all of them files.
+//   - hookwire is the adapter of the Claude Code hook protocol (H14): it decodes what a hook is
+//     handed and encodes what it answers, imports nothing of the module, and is the one home of
+//     the hook's JSON tags; the policies take and return plain values.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -45,6 +48,7 @@ var rings = map[string]archguard.Ring{
 	"gate":                      archguard.Domain,
 	"gitprov":                   archguard.Adapter,
 	"goal":                      archguard.Domain,
+	"hookwire":                  archguard.Adapter,
 	"installer":                 archguard.Support,
 	"jsonstrict":                archguard.Domain,
 	"memoryscope":               archguard.Domain,

@@ -1,0 +1,20 @@
+$ skills guard-hook extra
+# an argument
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: skills guard-hook: unexpected argument "extra" (it takes none; the hook input is read from stdin)
+
+$ skills guard-hook --event PreToolUse
+# a flag
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+1
+--- stdout ---
+--- stderr ---
+error: skills guard-hook: unexpected argument "--event" (it takes none; the hook input is read from stdin)
+

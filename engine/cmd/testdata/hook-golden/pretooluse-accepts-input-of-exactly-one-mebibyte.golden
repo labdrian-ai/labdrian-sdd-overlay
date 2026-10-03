@@ -1,0 +1,10 @@
+$ projection hook --event PreToolUse
+# input of exactly the size bound, in the repository of the process
+--- stdin ---
+<1048576 bytes, sha256 78f424cd9b7b, starting "{\"tool_name\":\"Edit\",\"tool_input\":{\"content\":\"xxxxxxxxxxxxxxx">
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+

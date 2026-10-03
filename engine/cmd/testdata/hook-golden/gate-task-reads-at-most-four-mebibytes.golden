@@ -1,0 +1,30 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an input of 3 MiB is rewritten
+--- stdin ---
+<3145728 bytes, sha256 8ea668309b8c, starting "{\"tool_name\":\"Agent\",\"tool_input\":{\"description\":\"d\",\"subage">
+--- exit ---
+none
+--- stdout ---
+<3145866 bytes, sha256 1e0136e30128, starting "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permiss">
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an input of exactly 4 MiB is read whole and rewritten
+--- stdin ---
+<4194304 bytes, sha256 38243b56ae81, starting "{\"tool_name\":\"Agent\",\"tool_input\":{\"description\":\"d\",\"subage">
+--- exit ---
+none
+--- stdout ---
+<4194442 bytes, sha256 e06a4cba3d08, starting "{\"hookSpecificOutput\":{\"hookEventName\":\"PreToolUse\",\"permiss">
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an input of 4 MiB and one byte is cut off at 4 MiB, and what is left is passed through
+--- stdin ---
+<4194305 bytes, sha256 09c7827b7e3b, starting "{\"tool_name\":\"Agent\",\"tool_input\":{\"description\":\"d\",\"subage">
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+

@@ -137,8 +137,10 @@ const validAntiGenericFixture = "---\napplies_to_phases: [sdd-tasks, sdd-apply]\
 	"injection_point: \"## Skills to load before work\"\n---\n# Anti-Generic\nbody\n"
 
 // malformedMinimalismFixture omits the required "[...]" bracket form for
-// applies_to_phases -- parseStrictInlineList must reject it (R-004: malformed
-// frontmatter yields no injection for that contract, never a crash).
+// applies_to_phases -- the Pi gate's own parseStrictInlineList (pipkg/labdrian-gate.ts, the
+// code this test runs under node; the Go gate's copy of it is gone, engine/contract has the
+// Go parser) must reject it (R-004: malformed frontmatter yields no injection for that
+// contract, never a crash).
 const malformedMinimalismFixture = "---\napplies_to_phases: sdd-tasks, sdd-apply\n---\nbroken\n"
 
 // writeGatePackage writes a scratch package root with extensions/labdrian-

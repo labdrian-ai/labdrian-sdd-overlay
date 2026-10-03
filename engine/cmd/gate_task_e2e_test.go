@@ -1,7 +1,8 @@
-package gate_test
+package main
 
-// TC-E2E-orchestrator: validates the gate against the EXACT format the
-// orchestrator produces, as empirically verified in Claude Code 2.1.185.
+// TC-E2E-orchestrator: validates 'gate-task', the whole chain from the hook input to the answer
+// (engine/hookwire reads the input and writes the answer, engine/gate decides), against the EXACT
+// format the orchestrator produces, as empirically verified in Claude Code 2.1.185.
 //
 // Verified facts this test encodes:
 //   - The sub-agent spawn tool is named "Agent", NOT "Task".
@@ -12,17 +13,20 @@ package gate_test
 //     permissionDecision:"allow" — without them, updatedInput is ignored by Claude Code.
 //   - The canonical injected entry is a BARE absolute path line (not "Read fully BEFORE work: <path>").
 //   - Exact trimmed-line matching prevents double-injection and makes strip work correctly.
+//
+// These tests used to run the gate on the JSON itself, before the hook format had one home;
+// the policy half of them is in engine/gate and the bytes are pinned by the golden files
+// (testdata/hook-golden).
 
 import (
+	"bytes"
 	"encoding/json"
 	"strings"
 	"testing"
-
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 )
 
-// absoluteContractPath is the absolute path the orchestrator injects — what
-// the hook --contract-path flag resolves to after $HOME expansion.
+// absoluteContractPath is the absolute path the orchestrator injects — what the hook
+// --contract-path flag resolves to after $HOME expansion.
 const absoluteContractPath = "/home/testuser/.claude/skills/_shared/minimalism-contract.md"
 
 // contractContentForE2E is a realistic contract frontmatter for E2E tests.
@@ -56,6 +60,44 @@ func buildAgentInput(subagentType, description, prompt string, includeModel bool
 	return string(b)
 }
 
+// gateTaskAnswer runs 'gate-task' for the managed contract at absoluteContractPath whose
+// document is content, over the hook input, and returns the line it printed (without its line
+// break). Whatever the input is, the command prints one line.
+func gateTaskAnswer(t *testing.T, input, content string) string {
+	t.Helper()
+	files := map[string]string{"/virtual/contract.md": content}
+	readFile := func(path string) ([]byte, error) { return []byte(files[path]), nil }
+	var stdout, stderr bytes.Buffer
+	gateTaskCore([]string{"--contract-file", "/virtual/contract.md", "--contract-path", absoluteContractPath},
+		strings.NewReader(input), &stdout, &stderr, readFile)
+	out := stdout.String()
+	if strings.Count(out, "\n") != 1 || !strings.HasSuffix(out, "\n") {
+		t.Fatalf("gate-task printed %q, want exactly one line", out)
+	}
+	return strings.TrimSuffix(out, "\n")
+}
+
+// decodeAnswer decodes the line gate-task printed.
+func decodeAnswer(t *testing.T, resp string) map[string]interface{} {
+	t.Helper()
+	var result map[string]interface{}
+	if err := json.Unmarshal([]byte(resp), &result); err != nil {
+		t.Fatalf("response is not valid JSON: %v\nresponse: %s", err, resp)
+	}
+	return result
+}
+
+// countContractLines counts the lines of prompt that are the contract path.
+func countContractLines(prompt string) int {
+	count := 0
+	for _, line := range strings.Split(prompt, "\n") {
+		if strings.TrimSpace(line) == absoluteContractPath {
+			count++
+		}
+	}
+	return count
+}
+
 // TC-E2E-1a: sdd-tasks with orchestrator-format prompt that ALREADY contains the
 // contract path → gate is a no-op (idempotency), pass-through response.
 // The contract path appears EXACTLY ONCE — no duplication.
@@ -68,18 +110,8 @@ func TestE2E_OrchestratorFormat_SddTasks_AlreadyPresent_NoOp(t *testing.T) {
 		anotherSkillPath + "\n"
 	description := "sdd-tasks sub-agent for scoping-fixes"
 
-	input := buildAgentInput("sdd-tasks", description, prompt, true)
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process: %v", err)
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response is not valid JSON: %v\nresponse: %s", err, resp)
-	}
+	resp := gateTaskAnswer(t, buildAgentInput("sdd-tasks", description, prompt, true), contractContentForE2E)
+	result := decodeAnswer(t, resp)
 
 	// The contract path is already present → gate is a no-op (idempotency).
 	// Pass-through: hookSpecificOutput must be absent.
@@ -105,18 +137,8 @@ func TestE2E_OrchestratorFormat_SddTasks_InjectsOnce(t *testing.T) {
 		anotherSkillPath + "\n"
 	description := "sdd-tasks sub-agent for scoping-fixes"
 
-	input := buildAgentInput("sdd-tasks", description, prompt, true)
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process: %v", err)
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response is not valid JSON: %v\nresponse: %s", err, resp)
-	}
+	resp := gateTaskAnswer(t, buildAgentInput("sdd-tasks", description, prompt, true), contractContentForE2E)
+	result := decodeAnswer(t, resp)
 
 	// Must have hookSpecificOutput (injection happened).
 	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
@@ -156,13 +178,7 @@ func TestE2E_OrchestratorFormat_SddTasks_InjectsOnce(t *testing.T) {
 
 	// F-FORMAT/C1: the canonical injected entry is a BARE absolute path line.
 	// The contract path must appear EXACTLY ONCE (no duplication).
-	count := 0
-	for _, line := range strings.Split(newPrompt, "\n") {
-		if strings.TrimSpace(line) == absoluteContractPath {
-			count++
-		}
-	}
-	if count != 1 {
+	if count := countContractLines(newPrompt); count != 1 {
 		t.Errorf("contract path should appear EXACTLY ONCE in the prompt (no duplication); count=%d\nprompt:\n%s",
 			count, newPrompt)
 	}
@@ -188,18 +204,8 @@ func TestE2E_OrchestratorFormat_SddPropose_StripsContract(t *testing.T) {
 		anotherSkillPath + "\n"
 	description := "sdd-propose sub-agent for scoping-fixes"
 
-	input := buildAgentInput("sdd-propose", description, prompt, true)
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process: %v", err)
-	}
-
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response is not valid JSON: %v\nresponse: %s", err, resp)
-	}
+	resp := gateTaskAnswer(t, buildAgentInput("sdd-propose", description, prompt, true), contractContentForE2E)
+	result := decodeAnswer(t, resp)
 
 	// Must have hookSpecificOutput (strip produced a change).
 	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
@@ -234,13 +240,7 @@ func TestE2E_OrchestratorFormat_SddPropose_StripsContract(t *testing.T) {
 	}
 
 	// Contract path line must be STRIPPED (count 0).
-	count := 0
-	for _, line := range strings.Split(newPrompt, "\n") {
-		if strings.TrimSpace(line) == absoluteContractPath {
-			count++
-		}
-	}
-	if count != 0 {
+	if count := countContractLines(newPrompt); count != 0 {
 		t.Errorf("contract path should be STRIPPED (count 0) for excluded phase; count=%d\nprompt:\n%s",
 			count, newPrompt)
 	}
@@ -253,60 +253,30 @@ func TestE2E_OrchestratorFormat_SddPropose_StripsContract(t *testing.T) {
 
 // TC-E2E-3: malformed/empty stdin → benign pass-through + exit 0 (no error).
 func TestE2E_MalformedInput_PassThrough(t *testing.T) {
-	inputs := []string{"", "not json", "{broken", "null", "[]"}
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	for _, bad := range inputs {
-		resp, err := gate.Process(bad, cfg)
-		if err != nil {
-			t.Errorf("Process(%q): must not error (FAIL-SAFE), got: %v", bad, err)
-			continue
-		}
-		var result map[string]interface{}
-		if err := json.Unmarshal([]byte(resp), &result); err != nil {
-			t.Errorf("Process(%q): response must be valid JSON: %v\nresp: %s", bad, err, resp)
-		}
+	for _, bad := range []string{"", "not json", "{broken", "null", "[]"} {
+		resp := gateTaskAnswer(t, bad, contractContentForE2E)
+		result := decodeAnswer(t, resp)
 		// Pass-through: hookSpecificOutput must be absent.
 		if _, present := result["hookSpecificOutput"]; present {
-			t.Errorf("Process(%q): hookSpecificOutput must be absent on pass-through; got: %s", bad, resp)
+			t.Errorf("gate-task(%q): hookSpecificOutput must be absent on pass-through; got: %s", bad, resp)
 		}
 	}
 }
 
 // TC-E2E-4: missing contract file → benign pass-through (fail-safe).
 func TestE2E_MissingContractFile_PassThrough(t *testing.T) {
-	input := buildAgentInput("sdd-tasks", "desc", "do tasks", false)
-	cfg := singleContract(absoluteContractPath, "") // simulates broken/missing contract content
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process must not error on missing contract (FAIL-SAFE): %v", err)
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response must be valid JSON: %v\nresponse: %s", err, resp)
-	}
 	// With empty/broken contract content → frontmatter parse fails → pass-through.
-	if _, present := result["hookSpecificOutput"]; present {
+	resp := gateTaskAnswer(t, buildAgentInput("sdd-tasks", "desc", "do tasks", false), "")
+	if _, present := decodeAnswer(t, resp)["hookSpecificOutput"]; present {
 		t.Errorf("hookSpecificOutput must be absent on broken contract pass-through; got: %s", resp)
 	}
 }
 
 // TC-E2E-5: unknown subagent_type → benign pass-through + exit 0.
 func TestE2E_UnknownSubagentType_PassThrough(t *testing.T) {
-	input := buildAgentInput("some-future-phase", "desc", "do something", false)
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process must not error on unknown subagent_type (FAIL-SAFE): %v", err)
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response must be valid JSON: %v\nresponse: %s", err, resp)
-	}
+	resp := gateTaskAnswer(t, buildAgentInput("some-future-phase", "desc", "do something", false), contractContentForE2E)
 	// Pass-through: no injection.
-	if hso, ok := result["hookSpecificOutput"].(map[string]interface{}); ok {
+	if hso, ok := decodeAnswer(t, resp)["hookSpecificOutput"].(map[string]interface{}); ok {
 		if ui, ok := hso["updatedInput"].(map[string]interface{}); ok {
 			if p, ok := ui["prompt"].(string); ok && strings.Contains(p, absoluteContractPath) {
 				t.Errorf("unknown type must not inject contract; prompt: %s", p)
@@ -318,19 +288,8 @@ func TestE2E_UnknownSubagentType_PassThrough(t *testing.T) {
 // TC-E2E-6: Agent input without model field → updatedInput must NOT include model key
 // (do not inject a zero-value model field).
 func TestE2E_NoModelField_NotEchoed(t *testing.T) {
-	prompt := "Do tasks without model field."
-	input := buildAgentInput("sdd-tasks", "desc", prompt, false /* no model */)
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process: %v", err)
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response not valid JSON: %v", err)
-	}
-	hso, ok := result["hookSpecificOutput"].(map[string]interface{})
+	resp := gateTaskAnswer(t, buildAgentInput("sdd-tasks", "desc", "Do tasks without model field.", false /* no model */), contractContentForE2E)
+	hso, ok := decodeAnswer(t, resp)["hookSpecificOutput"].(map[string]interface{})
 	if !ok {
 		t.Fatalf("response missing hookSpecificOutput; got: %s", resp)
 	}
@@ -347,31 +306,13 @@ func TestE2E_NoModelField_NotEchoed(t *testing.T) {
 // TC-E2E-inject-bare: inject into a prompt that has NO existing header.
 // The bare absolute path is appended under the injection_point header.
 func TestE2E_InjectBarePath_NoExistingHeader(t *testing.T) {
-	prompt := "Do tasks with no header."
-	input := buildAgentInput("sdd-tasks", "desc", prompt, false)
-	cfg := singleContract(absoluteContractPath, contractContentForE2E)
-
-	resp, err := gate.Process(input, cfg)
-	if err != nil {
-		t.Fatalf("Process: %v", err)
-	}
-	var result map[string]interface{}
-	if err := json.Unmarshal([]byte(resp), &result); err != nil {
-		t.Fatalf("response not valid JSON: %v", err)
-	}
-	hso, _ := result["hookSpecificOutput"].(map[string]interface{})
+	resp := gateTaskAnswer(t, buildAgentInput("sdd-tasks", "desc", "Do tasks with no header.", false), contractContentForE2E)
+	hso, _ := decodeAnswer(t, resp)["hookSpecificOutput"].(map[string]interface{})
 	updatedInput, _ := hso["updatedInput"].(map[string]interface{})
 	newPrompt, _ := updatedInput["prompt"].(string)
 
 	// The bare path must appear as an exact line.
-	found := false
-	for _, line := range strings.Split(newPrompt, "\n") {
-		if strings.TrimSpace(line) == absoluteContractPath {
-			found = true
-			break
-		}
-	}
-	if !found {
+	if countContractLines(newPrompt) == 0 {
 		t.Errorf("bare absolute path %q must appear as exact line; got:\n%s", absoluteContractPath, newPrompt)
 	}
 

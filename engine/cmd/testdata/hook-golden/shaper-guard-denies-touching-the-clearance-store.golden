@@ -1,0 +1,50 @@
+$ shaper guard-hook
+# Write {"file_path":"/home/u/.local/state/labdrian/shaper-clearance/p/g/x.json","content":"{}"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Write","tool_input":{"file_path":"/home/u/.local/state/labdrian/shaper-clearance/p/g/x.json","content":"{}"},"tool_use_id":"toolu_01"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# Edit {"file_path":"/s/labdrian/shaper-clearance/p/g/x.json","old_string":"a","new_string":"b"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/s/labdrian/shaper-clearance/p/g/x.json","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# NotebookEdit {"notebook_path":"/s/labdrian/shaper-clearance/n.ipynb","new_source":"x"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"NotebookEdit","tool_input":{"notebook_path":"/s/labdrian/shaper-clearance/n.ipynb","new_source":"x"},"tool_use_id":"toolu_01"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# Read {"file_path":"/s/labdrian/shaper-clearance/p/g/x.json"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"file_path":"/s/labdrian/shaper-clearance/p/g/x.json"},"tool_use_id":"toolu_01"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# SomethingNew {"file_path":"/s/labdrian/shaper-clearance/p/g/x.json"}
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"SomethingNew","tool_input":{"file_path":"/s/labdrian/shaper-clearance/p/g/x.json"},"tool_use_id":"toolu_01"}
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+

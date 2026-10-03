@@ -88,7 +88,7 @@ func decodeGuardDenial(t *testing.T, r guardRun) string {
 func TestSkillsGuardHook_DeniesAnApproveInvocationWithTheDocumentedJSON(t *testing.T) {
 	r := runGuardHook(guardToolInput(t, "Bash", map[string]any{"command": "cd repo && labdrian skills approve --id my-skill --approver alice"}))
 	reason := decodeGuardDenial(t, r)
-	if want := skills.DecideApproveGuard([]byte(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve"}))).Reason; reason != want {
+	if want := skills.DecideApproveGuard(skills.ApproveGuardCall{Tool: "Bash", Command: "labdrian skills approve"}).Reason; reason != want {
 		t.Errorf("reason = %q, want the decision's reason %q", reason, want)
 	}
 	// The reason is read by people: <id> and <name> stay as they are.
@@ -214,10 +214,10 @@ func TestSkillsGuardHook_ReadsAtMostTheBound(t *testing.T) {
 	assertGuardSilent(t, "endless input", r)
 	// endlessReader (projection_hook_test.go) counts the bytes it was asked for.
 	// One byte past the bound is enough to know the input is over it.
-	if limit := skills.ApproveGuardMaxInputBytes + 1; src.read > limit {
+	if limit := approveGuardMaxInputBytes + 1; src.read > limit {
 		t.Errorf("read %d bytes, want at most %d", src.read, limit)
 	}
-	if src.read <= skills.ApproveGuardMaxInputBytes {
+	if src.read <= approveGuardMaxInputBytes {
 		t.Errorf("read %d bytes, want it to read up to the bound to know the input is over it", src.read)
 	}
 }

@@ -42,7 +42,9 @@ func TestParseList(t *testing.T) {
 }
 
 func TestParseListRefusesWhatIsNotBracketed(t *testing.T) {
-	for _, value := range []string{"", "   ", "a", "a, b", "[a, b", "a, b]", "(a, b)", "{a, b}", "- a", "[a] extra", "extra [a]", `"[a]"`} {
+	for _, value := range []string{"", "   ", "a", "a, b", "[a, b", "a, b]", "(a, b)", "{a, b}", "- a", "[a] extra", "extra [a]", `"[a]"`,
+		// A bracket inside the list is not an item: the value is one list, brackets at the ends only.
+		"[a][b]", "[]]", "[[a]]", "[a, [b]]", "[a, b]]", "[[a, b]"} {
 		got, err := parseList("the_key", value)
 		var malformed *MalformedListError
 		if !errors.As(err, &malformed) || malformed.Key != "the_key" || got != nil {

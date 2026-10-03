@@ -451,10 +451,10 @@ func TestHookDeniesAnUnsafeNameInsteadOfWritingOutsideTheFolder(t *testing.T) {
 	escaped.Origin = "s/review-escaped/review-receipt.json"
 	w.docs["s"] = []reviewreceipt.Document{escaped}
 
-	code, message := w.service().RunHook([]byte(ackInput))
+	v := w.service().CheckCommand(ackCommand)
 	want := `review-receipt: capture failed: reviewreceipt: the approved receipt in s/review-escaped/review-receipt.json cannot be kept: reviewreceipt: receipt file name "../../escaped.json" is not a safe path component: it holds a path separator; correct or remove that lineage in the review tool's store, then run the command again`
-	if code != 2 || message != want {
-		t.Errorf("RunHook = (%d, %q), want (2, %q)", code, message, want)
+	if !v.Deny || v.Reason != want {
+		t.Errorf("CheckCommand = %+v, want a denial %q", v, want)
 	}
 	if len(w.writes) != 0 {
 		t.Errorf("the hook wrote %v", w.writes)
@@ -465,9 +465,9 @@ func TestHookDeniesAnUnsafeNameInsteadOfWritingOutsideTheFolder(t *testing.T) {
 	w.stores = []reviewreceipt.Store{"s"}
 	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-1")}
 	w.persisted["b/review-1.json"] = approvedReceiptDoc("review-1").Data
-	code, message = w.service().RunHook([]byte(ackInput))
-	if code != 2 || !strings.Contains(message, `change name "a "`) {
-		t.Errorf("padded change among several: RunHook = (%d, %q), want a denial naming the change", code, message)
+	v = w.service().CheckCommand(ackCommand)
+	if !v.Deny || !strings.Contains(v.Reason, `change name "a "`) {
+		t.Errorf("padded change among several: CheckCommand = %+v, want a denial naming the change", v)
 	}
 }
 
@@ -603,21 +603,22 @@ func TestAllSurvivingApprovedPersistedReportsWhatFails(t *testing.T) {
 	}
 }
 
-const ackInput = `{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}`
+const ackCommand = "gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"
 
-// A command that is not an acknowledgement, and input that cannot be read, pass without the
-// service asking anything: the hook runs before every Bash call.
-func TestHookPassesWhatIsNotAnAcknowledgementWithoutAsking(t *testing.T) {
-	for name, input := range map[string]string{
-		"another command":           `{"tool_name":"Bash","tool_input":{"command":"git status"}}`,
-		"not JSON":                  "not json",
-		"empty input":               "",
-		"no command":                `{"tool_name":"Bash"}`,
-		"a command that isn't text": `{"tool_input":{"command":42}}`,
+// A command that is not an acknowledgement, and the empty command of a call that has none, pass
+// without the service asking anything: the check runs before every shell command.
+func TestCheckCommandPassesWhatIsNotAnAcknowledgementWithoutAsking(t *testing.T) {
+	for name, command := range map[string]string{
+		"another command":               "git status",
+		"no command":                    "",
+		"white space":                   " \n\t",
+		"the review tool, another verb": "gentle-ai review status --cwd /repo",
+		"the verb in another case":      "GENTLE-AI REVIEW ACKNOWLEDGE-APPROVED",
+		"the words in another order":    "gentle-ai acknowledge-approved review",
 	} {
 		w := newWorld()
-		if code, message := w.service().RunHook([]byte(input)); code != 0 || message != "" {
-			t.Errorf("%s: RunHook = (%d, %q), want (0, \"\")", name, code, message)
+		if v := w.service().CheckCommand(command); v.Deny || v.Reason != "" {
+			t.Errorf("%s: CheckCommand = %+v, want an allow", name, v)
 		}
 		w.calledNothing(t)
 	}
@@ -630,8 +631,8 @@ func TestHookAllowsWithoutAnActiveChangeAndNeverListsTheStores(t *testing.T) {
 	w.changes = []string{"stray"}
 	w.storesErr = errors.New("not a repository")
 
-	if code, message := w.service().RunHook([]byte(ackInput)); code != 0 || message != "" {
-		t.Errorf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := w.service().CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Errorf("CheckCommand = %+v, want an allow", v)
 	}
 	for _, call := range w.calls {
 		if call == "Stores" {
@@ -646,8 +647,8 @@ func TestHookCapturesIntoTheSingleActiveChange(t *testing.T) {
 	w.stores = []reviewreceipt.Store{"s"}
 	w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-solo")}
 
-	if code, message := w.service().RunHook([]byte(ackInput)); code != 0 || message != "" {
-		t.Fatalf("RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := w.service().CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Fatalf("CheckCommand = %+v, want an allow", v)
 	}
 	if !reflect.DeepEqual(w.writes, []string{"only/review-solo.json"}) {
 		t.Errorf("writes = %v", w.writes)
@@ -659,9 +660,9 @@ func TestHookDeniesWhenCaptureFails(t *testing.T) {
 	w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
 	w.storesErr = errors.New("git rev-parse --show-toplevel: exit status 128")
 
-	code, message := w.service().RunHook([]byte(ackInput))
-	if want := "review-receipt: capture failed: reviewreceipt: git rev-parse --show-toplevel: exit status 128"; code != 2 || message != want {
-		t.Errorf("RunHook = (%d, %q), want (2, %q)", code, message, want)
+	v := w.service().CheckCommand(ackCommand)
+	if want := "review-receipt: capture failed: reviewreceipt: git rev-parse --show-toplevel: exit status 128"; !v.Deny || v.Reason != want {
+		t.Errorf("CheckCommand = %+v, want a denial %q", v, want)
 	}
 }
 
@@ -675,10 +676,10 @@ func TestHookDeniesAnAmbiguousChangeUnlessEveryReceiptIsPersisted(t *testing.T) 
 	}
 
 	w := setup()
-	code, message := w.service().RunHook([]byte(ackInput))
+	v := w.service().CheckCommand(ackCommand)
 	wantDeny := "reviewreceipt: multiple active changes (a, b); run `review-receipt capture --change <name>` before acknowledging"
-	if code != 2 || message != wantDeny {
-		t.Errorf("unpersisted: RunHook = (%d, %q), want (2, %q)", code, message, wantDeny)
+	if !v.Deny || v.Reason != wantDeny {
+		t.Errorf("unpersisted: CheckCommand = %+v, want a denial %q", v, wantDeny)
 	}
 	if len(w.writes) != 0 {
 		t.Errorf("the hook guessed a change and wrote %v", w.writes)
@@ -686,22 +687,22 @@ func TestHookDeniesAnAmbiguousChangeUnlessEveryReceiptIsPersisted(t *testing.T) 
 
 	w = setup()
 	w.persisted["a/review-1.json"] = approvedReceiptDoc("review-1").Data
-	if code, message := w.service().RunHook([]byte(ackInput)); code != 0 || message != "" {
-		t.Errorf("persisted: RunHook = (%d, %q), want (0, \"\")", code, message)
+	if v := w.service().CheckCommand(ackCommand); v.Deny || v.Reason != "" {
+		t.Errorf("persisted: CheckCommand = %+v, want an allow", v)
 	}
 
 	w = setup()
 	w.storesErr = errors.New("no repository")
-	if code, message := w.service().RunHook([]byte(ackInput)); code != 2 || message != "review-receipt: reviewreceipt: no repository" {
-		t.Errorf("survey fails: RunHook = (%d, %q), want (2, %q)", code, message, "review-receipt: reviewreceipt: no repository")
+	if v := w.service().CheckCommand(ackCommand); !v.Deny || v.Reason != "review-receipt: reviewreceipt: no repository" {
+		t.Errorf("survey fails: CheckCommand = %+v, want a denial %q", v, "review-receipt: reviewreceipt: no repository")
 	}
 }
 
 func TestHookDeniesWhenTheChangesCannotBeListed(t *testing.T) {
 	w := newWorld()
 	w.changesErr = errors.New("read changes: denied")
-	if code, message := w.service().RunHook([]byte(ackInput)); code != 2 || message != "review-receipt: reviewreceipt: read changes: denied" {
-		t.Errorf("RunHook = (%d, %q)", code, message)
+	if v := w.service().CheckCommand(ackCommand); !v.Deny || v.Reason != "review-receipt: reviewreceipt: read changes: denied" {
+		t.Errorf("CheckCommand = %+v", v)
 	}
 }
 
@@ -725,11 +726,11 @@ func TestAServiceMissingAPortRefusesInsteadOfGuessing(t *testing.T) {
 		if _, err := svc.AllSurvivingApprovedPersisted([]string{"c"}); err == nil {
 			t.Error("AllSurvivingApprovedPersisted accepted a service with a missing port")
 		}
-		if code, message := svc.RunHook([]byte(ackInput)); code != 2 || !strings.HasPrefix(message, "review-receipt: ") {
-			t.Errorf("RunHook of an acknowledgement = (%d, %q), want a denial", code, message)
+		if v := svc.CheckCommand(ackCommand); !v.Deny || !strings.HasPrefix(v.Reason, "review-receipt: ") {
+			t.Errorf("CheckCommand of an acknowledgement = %+v, want a denial", v)
 		}
-		if code, message := svc.RunHook([]byte(`{"tool_input":{"command":"ls"}}`)); code != 0 || message != "" {
-			t.Errorf("RunHook of another command = (%d, %q), want (0, \"\")", code, message)
+		if v := svc.CheckCommand("ls"); v.Deny || v.Reason != "" {
+			t.Errorf("CheckCommand of another command = %+v, want an allow", v)
 		}
 	}
 	w.calledNothing(t)

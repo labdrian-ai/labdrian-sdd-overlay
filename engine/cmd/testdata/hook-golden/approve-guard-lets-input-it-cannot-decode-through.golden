@@ -1,0 +1,109 @@
+$ skills guard-hook
+# empty
+--- stdin ---
+<empty>
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# white space only
+--- stdin ---
+ 
+	 
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# not JSON
+--- stdin ---
+hello
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# a truncated object
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# an array
+--- stdin ---
+[{"tool_name":"Bash","tool_input":{"command":"ls"}}]
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# a string
+--- stdin ---
+"Bash"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# a number
+--- stdin ---
+7
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# true
+--- stdin ---
+true
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# null
+--- stdin ---
+null
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# two objects
+--- stdin ---
+{"tool_name":"Bash"}{"tool_name":"Bash"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# text after the object
+--- stdin ---
+{"tool_name":"Bash"} trailing
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ skills guard-hook
+# an empty object
+--- stdin ---
+{}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

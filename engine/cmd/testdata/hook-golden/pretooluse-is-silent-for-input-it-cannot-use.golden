@@ -1,0 +1,200 @@
+$ projection hook --event PreToolUse
+# the good input, for comparison
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# empty
+--- stdin ---
+<empty>
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# white space only
+--- stdin ---
+ 
+	 
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# not JSON
+--- stdin ---
+hello
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a truncated object
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an array
+--- stdin ---
+[{"tool_name":"Bash","tool_input":{"command":"ls"}}]
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a string
+--- stdin ---
+"Bash"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a number
+--- stdin ---
+7
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# true
+--- stdin ---
+true
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# null
+--- stdin ---
+null
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# two objects
+--- stdin ---
+{"tool_name":"Bash"}{"tool_name":"Bash"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# text after the object
+--- stdin ---
+{"tool_name":"Bash"} trailing
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an empty object
+--- stdin ---
+{}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a truncated object
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# two objects
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a tool name of the wrong type
+--- stdin ---
+{"cwd":"<REPO>","tool_name":7,"tool_input":{}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a cwd of the wrong type
+--- stdin ---
+{"cwd":42,"tool_name":"Edit"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# another event's input
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# an event name of the wrong type
+--- stdin ---
+{"hook_event_name":7,"cwd":"<REPO>","tool_name":"Edit"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# no tool name
+--- stdin ---
+{"cwd":"<REPO>","tool_input":{}}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# input of one byte over the size bound, in the repository of the process
+--- stdin ---
+<1048577 bytes, sha256 bc67f5c5eead, starting "{\"tool_name\":\"Edit\",\"tool_input\":{\"content\":\"xxxxxxxxxxxxxxx">
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a stdin that fails
+--- stdin ---
+<the reader fails with: read failed>
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

@@ -2,7 +2,6 @@ package reviewreceipt
 
 import (
 	"bytes"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"sort"
@@ -221,38 +220,39 @@ func (s *Service) DetectActiveChange() (string, error) {
 	}
 }
 
-// RunHook implements the fail-closed PreToolUse Bash hook: it reads the raw hook input JSON
-// and, only when tool_input.command contains acknowledgeMarker, resolves the single active
-// change and captures every surviving approved receipt before returning allow.
+// Verdict is what the service decides about a command a tool call is about to run: whether to
+// deny it, and why. The zero value is an allow.
+type Verdict struct {
+	Deny   bool
+	Reason string
+}
+
+func deny(reason string) Verdict { return Verdict{Deny: true, Reason: reason} }
+
+// CheckCommand is the fail-closed check that runs before every shell command: only when the
+// command contains acknowledgeMarker does it resolve the single active change and capture every
+// surviving approved receipt before it allows the command, which burns them. How the command
+// reaches it, and what the runtime is told of the verdict, is the hook adapter's.
 //
-// Returns (exitCode, message):
-//   - (0, "") -- allow: the command does not match, there is no
-//     openspec/changes/ directory, or there is no active change to attach a
-//     receipt to.
-//   - (0, "") -- allow: exactly one active change existed and Capture
-//     succeeded.
-//   - (0, "") -- allow: more than one active change exists, but every
-//     surviving approved receipt is already persisted under some active
-//     change (the `capture --change <name>` remedy already ran) -- a
-//     fix-forward path for a retried acknowledgement.
-//   - (2, message) -- deny: more than one active change exists and at
-//     least one surviving approved receipt is unpersisted, or Capture
-//     itself failed. Fail-closed.
+// The verdict is:
+//   - an allow: the command does not match, there is no openspec/changes/ directory, or
+//     there is no active change to attach a receipt to.
+//   - an allow: exactly one active change existed and Capture succeeded.
+//   - an allow: more than one active change exists, but every surviving approved receipt is
+//     already persisted under some active change (the `capture --change <name>` remedy
+//     already ran) -- a fix-forward path for a retried acknowledgement.
+//   - a denial, with its reason: more than one active change exists and at least one surviving
+//     approved receipt is unpersisted, or Capture itself failed. Fail-closed.
 //
-// Malformed or empty input is treated the same as a non-matching command -- pass through --
-// because a hook that cannot even see a command is not looking at an acknowledge-approved
-// invocation in the first place. A service that is missing a port denies an acknowledgement
-// it cannot guard.
-func (s *Service) RunHook(rawInput []byte) (exitCode int, message string) {
-	var hi hookInput
-	if err := json.Unmarshal(rawInput, &hi); err != nil {
-		return 0, ""
-	}
-	if !strings.Contains(hi.ToolInput.Command, acknowledgeMarker) {
-		return 0, ""
+// A command that is not an acknowledgement is allowed without the service asking anything, and so
+// is the empty command that a call with no command has. A service that is missing a port denies
+// an acknowledgement it cannot guard.
+func (s *Service) CheckCommand(command string) Verdict {
+	if !strings.Contains(command, acknowledgeMarker) {
+		return Verdict{}
 	}
 	if err := s.ready(); err != nil {
-		return 2, fmt.Sprintf("review-receipt: %v", err)
+		return deny(fmt.Sprintf("review-receipt: %v", err))
 	}
 
 	change, err := s.DetectActiveChange()
@@ -261,21 +261,21 @@ func (s *Service) RunHook(rawInput []byte) (exitCode int, message string) {
 		if errors.As(err, &multi) {
 			allPersisted, perr := s.AllSurvivingApprovedPersisted(multi.Changes)
 			if perr != nil {
-				return 2, fmt.Sprintf("review-receipt: %v", perr)
+				return deny(fmt.Sprintf("review-receipt: %v", perr))
 			}
 			if allPersisted {
-				return 0, ""
+				return Verdict{}
 			}
-			return 2, multi.Error()
+			return deny(multi.Error())
 		}
-		return 2, fmt.Sprintf("review-receipt: %v", err)
+		return deny(fmt.Sprintf("review-receipt: %v", err))
 	}
 	if change == "" {
-		return 0, ""
+		return Verdict{}
 	}
 
 	if _, err := s.Capture(change); err != nil {
-		return 2, fmt.Sprintf("review-receipt: capture failed: %v", err)
+		return deny(fmt.Sprintf("review-receipt: capture failed: %v", err))
 	}
-	return 0, ""
+	return Verdict{}
 }

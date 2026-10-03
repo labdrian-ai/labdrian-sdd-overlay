@@ -1,0 +1,9 @@
+$ skills guard-hook
+# a stdin that fails
+--- stdin ---
+<the reader fails with: read failed>
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

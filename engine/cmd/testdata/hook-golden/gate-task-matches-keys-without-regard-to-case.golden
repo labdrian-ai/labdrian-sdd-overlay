@@ -1,0 +1,30 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# keys of the tool input in other cases
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"Description":"d","SUBAGENT_TYPE":"sdd-apply","Prompt":"p","MODEL":"opus"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply","model":"opus"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# TOOL_INPUT in capitals
+--- stdin ---
+{"TOOL_NAME":"Agent","TOOL_INPUT":{"description":"d","subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a key twice: the last one wins
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-explore","subagent_type":"sdd-apply","prompt":"p"},"tool_use_id":"toolu_01"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+

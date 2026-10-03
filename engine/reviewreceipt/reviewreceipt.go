@@ -45,7 +45,7 @@
 // Fail-closed: Capture never overwrites an existing receipt file with
 // different content -- that is an error, never a silent overwrite. The
 // fail-closed PreToolUse Bash hook that calls Capture before
-// acknowledge-approved runs (Service.RunHook) denies (exit 2) on any capture
+// acknowledge-approved runs (Service.CheckCommand) denies (exit 2 at the hook) on any capture
 // error or on more than one active change, rather than letting the
 // acknowledgement proceed without a persisted receipt.
 package reviewreceipt

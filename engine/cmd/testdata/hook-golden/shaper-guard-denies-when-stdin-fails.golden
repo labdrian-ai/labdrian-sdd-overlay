@@ -1,0 +1,10 @@
+$ shaper guard-hook
+# a stdin that fails
+--- stdin ---
+<the reader fails with: read failed>
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+shaper guard-hook: read stdin: read failed
+

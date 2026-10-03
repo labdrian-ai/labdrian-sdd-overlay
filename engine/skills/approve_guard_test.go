@@ -1,33 +1,31 @@
 package skills
 
 import (
-	"encoding/json"
 	"strings"
 	"testing"
 )
 
-// hookInput renders the PreToolUse hook JSON Claude Code sends for one tool
-// call, with the tool input's fields as given. It goes through encoding/json so
-// quotes, newlines, and backslashes in a command are escaped exactly as they
-// would be on the wire.
-func hookInput(t *testing.T, tool string, toolInput map[string]any) []byte {
-	t.Helper()
-	data, err := json.Marshal(map[string]any{
-		"session_id":      "s-1",
-		"hook_event_name": "PreToolUse",
-		"cwd":             "/repo",
-		"tool_name":       tool,
-		"tool_input":      toolInput,
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return data
+// The guard decides on a call: the name of the tool, the command of a shell tool and the paths of
+// the file tools. How a hook input is read is engine/hookwire's, so these tests build the call
+// itself, with the field a tool uses for its path.
+
+// bashCall is a call of the shell tool with the command.
+func bashCall(command string) ApproveGuardCall {
+	return ApproveGuardCall{Tool: "Bash", Command: command}
 }
 
-func bashInput(t *testing.T, command string) []byte {
-	t.Helper()
-	return hookInput(t, "Bash", map[string]any{"command": command})
+// fileCall is a call of a file tool with the path in the field the tool uses for it.
+func fileCall(tool, field, path string) ApproveGuardCall {
+	call := ApproveGuardCall{Tool: tool}
+	switch field {
+	case "file_path":
+		call.FilePath = path
+	case "notebook_path":
+		call.NotebookPath = path
+	default:
+		panic("test bug: no such path field " + field)
+	}
+	return call
 }
 
 // ---- the command rule --------------------------------------------------------
@@ -251,7 +249,7 @@ func TestApproveGuardFileToolsAreTheFourEditTools(t *testing.T) {
 // ---- the decision ---------------------------------------------------------------
 
 func TestDecideApproveGuard_DeniesTheApproveVerbInABashCall(t *testing.T) {
-	v := DecideApproveGuard(bashInput(t, "cd repo && labdrian skills approve --id my-skill --approver alice"))
+	v := DecideApproveGuard(bashCall("cd repo && labdrian skills approve --id my-skill --approver alice"))
 	if !v.Deny {
 		t.Fatalf("verdict = %+v, want a denial", v)
 	}
@@ -283,7 +281,7 @@ func TestDecideApproveGuard_DeniesWritingTheRecordWithAnyFileTool(t *testing.T) 
 		{"NotebookEdit", "notebook_path"},
 	} {
 		t.Run(tc.tool, func(t *testing.T) {
-			v := DecideApproveGuard(hookInput(t, tc.tool, map[string]any{tc.field: "/repo/skills/my-skill/.approval.json", "content": "{}"}))
+			v := DecideApproveGuard(fileCall(tc.tool, tc.field, "/repo/skills/my-skill/.approval.json"))
 			if !v.Deny {
 				t.Fatalf("verdict = %+v, want a denial", v)
 			}
@@ -302,82 +300,43 @@ func TestDecideApproveGuard_DeniesWritingTheRecordWithAnyFileTool(t *testing.T) 
 	}
 }
 
+// Either path of a file tool names the record, whatever the tool.
+func TestDecideApproveGuard_ReadsBothPathsOfAFileTool(t *testing.T) {
+	record := "/repo/skills/x/.approval.json"
+	for name, call := range map[string]ApproveGuardCall{
+		"the file path":     {Tool: "Write", FilePath: record},
+		"the notebook path": {Tool: "Write", NotebookPath: record},
+		"the notebook path beside a harmless file path": {Tool: "Edit", FilePath: "/repo/README.md", NotebookPath: record},
+		"the file path beside a harmless notebook path": {Tool: "NotebookEdit", FilePath: record, NotebookPath: "/repo/n.ipynb"},
+	} {
+		if v := DecideApproveGuard(call); !v.Deny {
+			t.Errorf("%s: verdict = %+v, want a denial", name, v)
+		}
+	}
+}
+
 func TestDecideApproveGuard_AllowsEverythingElseSilently(t *testing.T) {
-	huge := strings.Repeat("x", 1<<20)
-	for name, input := range map[string][]byte{
-		"a harmless Bash call":                              bashInput(t, "ls -la"),
-		"another skills verb":                               bashInput(t, "labdrian skills validate --source-root skills"),
-		"a Write to SKILL.md":                               hookInput(t, "Write", map[string]any{"file_path": "/repo/skills/x/SKILL.md", "content": "labdrian skills approve --id x"}),
-		"a Write of documentation about approve":            hookInput(t, "Write", map[string]any{"file_path": "/repo/README.md", "content": "Run `labdrian skills approve --id <id> --approver <name>`."}),
-		"an Edit of documentation":                          hookInput(t, "Edit", map[string]any{"file_path": "/repo/README.md", "old_string": "a", "new_string": "labdrian skills approve"}),
-		"a Read of the record":                              hookInput(t, "Read", map[string]any{"file_path": "/repo/skills/x/.approval.json"}),
-		"a Grep for the record":                             hookInput(t, "Grep", map[string]any{"pattern": ".approval.json", "path": "/repo/skills"}),
-		"a Glob for the record":                             hookInput(t, "Glob", map[string]any{"pattern": "skills/*/.approval.json"}),
-		"the approve text under a tool that has no command": hookInput(t, "Read", map[string]any{"command": "labdrian skills approve --id x"}),
-		"a Bash call carrying only a record path":           hookInput(t, "Bash", map[string]any{"file_path": "/repo/skills/x/.approval.json"}),
-		"a Write of a large unrelated file":                 hookInput(t, "Write", map[string]any{"file_path": "/repo/big.txt", "content": huge}),
-		"a Bash call with an empty command":                 bashInput(t, ""),
-		"an unknown tool":                                   hookInput(t, "SomethingNew", map[string]any{"command": "labdrian skills approve"}),
-		"a lower-case tool name":                            hookInput(t, "bash", map[string]any{"command": "labdrian skills approve"}),
+	for name, call := range map[string]ApproveGuardCall{
+		"a harmless Bash call":                              bashCall("ls -la"),
+		"another skills verb":                               bashCall("labdrian skills validate --source-root skills"),
+		"a Write to SKILL.md":                               {Tool: "Write", FilePath: "/repo/skills/x/SKILL.md"},
+		"a Write of documentation about approve":            {Tool: "Write", FilePath: "/repo/README.md"},
+		"an Edit of documentation":                          {Tool: "Edit", FilePath: "/repo/README.md"},
+		"a Read of the record":                              {Tool: "Read", FilePath: "/repo/skills/x/.approval.json"},
+		"a Grep for the record":                             {Tool: "Grep"},
+		"a Glob for the record":                             {Tool: "Glob"},
+		"the approve text under a tool that has no command": {Tool: "Read", Command: "labdrian skills approve --id x"},
+		"a Bash call carrying only a record path":           {Tool: "Bash", FilePath: "/repo/skills/x/.approval.json"},
+		"a Bash call with an empty command":                 bashCall(""),
+		"an unknown tool":                                   {Tool: "SomethingNew", Command: "labdrian skills approve"},
+		"a lower-case tool name":                            {Tool: "bash", Command: "labdrian skills approve"},
+		"a call with no tool name":                          {Command: "labdrian skills approve", FilePath: "/repo/skills/x/.approval.json"},
+		"the zero call":                                     {},
 	} {
 		t.Run(name, func(t *testing.T) {
-			if v := DecideApproveGuard(input); v.Deny || v.Reason != "" {
+			if v := DecideApproveGuard(call); v.Deny || v.Reason != "" {
 				t.Errorf("verdict = %+v, want a silent allow", v)
 			}
 		})
-	}
-}
-
-// A hook that cannot see the call cannot vouch for it, but it must not block
-// it either: this guard runs on every Bash and file-edit call, so unusable
-// input is an allow, never a denial. That is the opposite of the shaper guard,
-// which fails closed for its narrower markers.
-func TestDecideApproveGuard_UnusableInputIsAnAllow(t *testing.T) {
-	for name, input := range map[string]string{
-		"empty":                    "",
-		"whitespace":               "  \n ",
-		"not JSON":                 "labdrian skills approve",
-		"truncated JSON":           `{"tool_name":"Bash","tool_input":{"command":"labdrian skills app`,
-		"a JSON array":             `["Bash"]`,
-		"null":                     `null`,
-		"a string":                 `"labdrian skills approve"`,
-		"a tool input string":      `{"tool_name":"Bash","tool_input":"labdrian skills approve --id x"}`,
-		"a numeric command":        `{"tool_name":"Bash","tool_input":{"command":42}}`,
-		"a numeric tool name":      `{"tool_name":7,"tool_input":{"command":"labdrian skills approve"}}`,
-		"a missing tool input":     `{"tool_name":"Bash"}`,
-		"a null tool input":        `{"tool_name":"Bash","tool_input":null}`,
-		"an object with no fields": `{}`,
-	} {
-		t.Run(name, func(t *testing.T) {
-			if v := DecideApproveGuard([]byte(input)); v.Deny || v.Reason != "" {
-				t.Errorf("verdict = %+v, want a silent allow", v)
-			}
-		})
-	}
-}
-
-func TestDecideApproveGuard_InputOverTheBoundIsAnAllow(t *testing.T) {
-	over := bashInput(t, "labdrian skills approve --id x #"+strings.Repeat("a", ApproveGuardMaxInputBytes))
-	if len(over) <= ApproveGuardMaxInputBytes {
-		t.Fatalf("test bug: input is %d bytes, not over the bound", len(over))
-	}
-	if v := DecideApproveGuard(over); v.Deny {
-		t.Errorf("verdict = %+v, want an allow for input over the bound", v)
-	}
-	// Just under the bound is still judged.
-	fits := bashInput(t, "labdrian skills approve --id x #"+strings.Repeat("a", ApproveGuardMaxInputBytes-1024))
-	if len(fits) > ApproveGuardMaxInputBytes {
-		t.Fatalf("test bug: input is %d bytes, over the bound", len(fits))
-	}
-	if v := DecideApproveGuard(fits); !v.Deny {
-		t.Errorf("verdict = %+v, want a denial for input within the bound", v)
-	}
-}
-
-// The hook payload can carry fields a later Claude Code adds, in any order.
-func TestDecideApproveGuard_IgnoresUnknownFieldsAndFieldOrder(t *testing.T) {
-	input := `{"future_field":{"a":[1,2,3]},"tool_input":{"description":"x","command":"labdrian skills approve --id x","timeout":5},"tool_name":"Bash","tool_use_id":"t-9"}`
-	if v := DecideApproveGuard([]byte(input)); !v.Deny {
-		t.Errorf("verdict = %+v, want a denial", v)
 	}
 }

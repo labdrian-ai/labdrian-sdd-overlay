@@ -1,0 +1,46 @@
+$ projection hook --event UserPromptSubmit
+# a working directory outside every repository
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<OUTSIDE>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# a repository nothing is bound to
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<UNBOUND>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# another event's input
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# an event name of the wrong type
+--- stdin ---
+{"hook_event_name":7,"cwd":"<REPO>"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# an input with no event name
+--- stdin ---
+{"cwd":"<REPO>"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: this repository follows the workflow below. Its state is read from the workflow log on disk, not from this session.\nworkflow: wf-1 (project: proj-1)\nprofile: standalone-minimal\nstatus: running\ngoal: goal-1 (digest 3fa80a4c34f1)\ncurrent stage: none yet\nnext stage: authorize\nmemory plan (read-only: it executes no query and grants no memory write): scope=none sources=none project_id=none goal_id=none write=none\nomitted filters: project_id, goal_id\ncapability limits (claude): dispatch=partial, cancellation=partial, authentication=partial, memory-enforcement=partial, skills=partial\nprogress commands: labdrian workflow stage --project proj-1 --workflow wf-1 --stage <name>; labdrian workflow verify --project proj-1 --workflow wf-1 --goal <goal file>; labdrian workflow close --project proj-1 --workflow wf-1 --outcome completed|abandoned\nstages recorded (0): none"}}
+--- stderr ---
+

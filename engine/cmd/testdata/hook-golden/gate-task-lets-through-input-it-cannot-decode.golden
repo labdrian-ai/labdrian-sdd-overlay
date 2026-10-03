@@ -1,0 +1,121 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# empty
+--- stdin ---
+<empty>
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# white space only
+--- stdin ---
+ 
+	 
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# not JSON
+--- stdin ---
+hello
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a truncated object
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"ls"
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an array
+--- stdin ---
+[{"tool_name":"Bash","tool_input":{"command":"ls"}}]
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a string
+--- stdin ---
+"Bash"
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a number
+--- stdin ---
+7
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# true
+--- stdin ---
+true
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# null
+--- stdin ---
+null
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# two objects
+--- stdin ---
+{"tool_name":"Bash"}{"tool_name":"Bash"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# text after the object
+--- stdin ---
+{"tool_name":"Bash"} trailing
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an empty object
+--- stdin ---
+{}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+

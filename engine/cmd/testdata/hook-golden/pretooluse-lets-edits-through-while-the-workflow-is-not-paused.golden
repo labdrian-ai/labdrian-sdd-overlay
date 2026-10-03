@@ -1,0 +1,46 @@
+$ projection hook --event PreToolUse
+# created
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# running
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# paused
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian: workflow wf-1 of project proj-1 is paused, so Edit is denied: a paused workflow is not to be advanced. Resume it with 'labdrian workflow resume --project proj-1 --workflow wf-1', or stop following it with 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# resumed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# closed, and the gate never unbinds
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

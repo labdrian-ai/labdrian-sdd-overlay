@@ -541,6 +541,44 @@ func receiptGoldenCases() []receiptGoldenCase {
 			w.run(acknowledgeHookJSON(acknowledgeCommand), "hook")
 			w.run(acknowledgeHookJSON(acknowledgeCommand), "hook", "--cwd")
 		}},
+		{"hook-reads-the-input-it-names-and-nothing-else", func(w *receiptWorld) {
+			// Each input gets a repository of its own with one active change and one approved
+			// receipt, so the tree after it shows whether the hook took the input for an
+			// acknowledgement and captured the receipt (a file under review-receipts) or let it
+			// through without looking (no file). The hook reads tool_name and
+			// tool_input.command, and only those: a field it does not read can be of any type, and
+			// one it reads must be of the type it expects.
+			ack := fmt.Sprintf("%q", acknowledgeCommand)
+			try := func(label, stdin string) {
+				root := w.repo("<ROOT>", false)
+				w.change(root, "only-change")
+				w.putReceipt(filepath.Join(root, ".git"), "review-one", legacyReceipt("review-one", receiptSchemaV2, approved))
+				w.write("# %s\n", label)
+				w.run(stdin, "hook", "--cwd", root)
+				w.tree("after", root)
+			}
+			try("tool_name of the wrong type: the input cannot be decoded", `{"tool_name":7,"tool_input":{"command":`+ack+`}}`)
+			try("tool_name an object", `{"tool_name":{},"tool_input":{"command":`+ack+`}}`)
+			try("tool_name missing: the name is not consulted", `{"tool_input":{"command":`+ack+`}}`)
+			try("tool_name of another tool: the name is not consulted", `{"tool_name":"Write","tool_input":{"command":`+ack+`}}`)
+			try("fields of the envelope it does not read, of the wrong type", `{"cwd":5,"hook_event_name":7,"session_id":{},"tool_name":"Bash","tool_input":{"command":`+ack+`}}`)
+			try("file_path of the wrong type beside the command: not a field it reads", `{"tool_name":"Bash","tool_input":{"command":`+ack+`,"file_path":5}}`)
+			try("notebook_path of the wrong type beside the command", `{"tool_name":"Bash","tool_input":{"command":`+ack+`,"notebook_path":[]}}`)
+			try("keys in other cases", `{"TOOL_NAME":"Bash","TOOL_INPUT":{"COMMAND":`+ack+`}}`)
+			try("a key twice: the last one wins", `{"tool_name":"Bash","tool_input":{"command":"ls","command":`+ack+`}}`)
+			try("white space around the object", " \n"+`{"tool_name":"Bash","tool_input":{"command":`+ack+`}}`+"\n ")
+			try("the phrase inside a longer command, as a look-alike", `{"tool_name":"Bash","tool_input":{"command":"echo \"`+acknowledgeCommand+`\" >> log"}}`)
+			try("tool_input a string", `{"tool_name":"Bash","tool_input":`+ack+`}`)
+			try("tool_input an array", `{"tool_name":"Bash","tool_input":[`+ack+`]}`)
+			try("tool_input null", `{"tool_name":"Bash","tool_input":null}`)
+			try("command an array", `{"tool_name":"Bash","tool_input":{"command":[`+ack+`]}}`)
+			try("command null", `{"tool_name":"Bash","tool_input":{"command":null}}`)
+			try("an array in place of the object", `[{"tool_name":"Bash","tool_input":{"command":`+ack+`}}]`)
+			try("null", `null`)
+			try("two objects", `{"tool_name":"Bash","tool_input":{"command":`+ack+`}}{}`)
+			try("text after the object", `{"tool_name":"Bash","tool_input":{"command":`+ack+`}} trailing`)
+			try("a truncated object", `{"tool_name":"Bash","tool_input":{"command":`+ack)
+		}},
 		{"hook-denies-a-store-it-cannot-read", func(w *receiptWorld) {
 			if os.Geteuid() == 0 {
 				w.t.Skip("a directory without permissions does not stop root")

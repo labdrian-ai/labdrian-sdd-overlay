@@ -114,7 +114,7 @@ func TestGateTaskCore_MissingContractFile(t *testing.T) {
 }
 
 // TC-CLI-3: unparseable contract → '{}' on stdout + exit 0 + stderr diagnostic.
-// A contract with no frontmatter causes gate.Process to produce a pass-through.
+// A contract with no frontmatter makes the gate pass the call through.
 // The gate MUST emit a one-line stderr diagnostic so wiring mistakes with a
 // corrupt contract are immediately visible (item 2 observability fix).
 func TestGateTaskCore_UnparseableContract(t *testing.T) {

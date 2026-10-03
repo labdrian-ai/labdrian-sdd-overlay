@@ -1,0 +1,10 @@
+$ skills guard-hook
+# the denial cannot be written
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"labdrian skills approve","description":"d"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+<stdout cannot be written>
+--- stderr ---
+

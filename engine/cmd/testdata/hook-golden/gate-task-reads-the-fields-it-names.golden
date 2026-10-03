@@ -1,0 +1,200 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_name of the wrong type
+--- stdin ---
+{"tool_name":7,"tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_name an object
+--- stdin ---
+{"tool_name":{},"tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_name missing: the name is not read
+--- stdin ---
+{"tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_name of another tool: the name is not read
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# fields of the envelope it does not read, of the wrong type
+--- stdin ---
+{"cwd":5,"hook_event_name":7,"session_id":{},"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_input missing
+--- stdin ---
+{"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_input null
+--- stdin ---
+{"tool_name":"Agent","tool_input":null}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_input a string
+--- stdin ---
+{"tool_name":"Agent","tool_input":"x"}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_input a number
+--- stdin ---
+{"tool_name":"Agent","tool_input":5}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# tool_input an array
+--- stdin ---
+{"tool_name":"Agent","tool_input":[1]}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# description of the wrong type
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":5,"subagent_type":"sdd-apply","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# prompt of the wrong type
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":5}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# prompt null
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":null}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# subagent_type of the wrong type
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":5,"prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# model of the wrong type
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","model":5}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# model an object
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","model":{}}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a field it does not read, of the wrong type
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"p","command":5,"run_in_background":"yes"}}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"p\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an empty sub-agent type
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"","prompt":"p"}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# an empty prompt
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":""}}
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a prompt of white space
+--- stdin ---
+{"tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"  "}}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d","prompt":"  \n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+

@@ -1,0 +1,90 @@
+$ projection hook --event PreToolUse
+# a paused workflow and Bash
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Bash","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and Read
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Read","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and Grep
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Grep","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and Task
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Task","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and write
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"write","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and Writer
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Writer","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and mcp__longterm-mem__get
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__get","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and mcp__longterm-mem__promote
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__longterm-mem__promote","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and mcp__engram__mem_save
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"mcp__engram__mem_save","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ projection hook --event PreToolUse
+# a paused workflow and 
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"","tool_input":{"command":"ls"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

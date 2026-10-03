@@ -8,11 +8,12 @@ package main
 // loads hook changes only when it starts, so an existing install must re-run
 // install-hooks and restart Claude Code. The tests feed it hook JSON directly.
 //
-// The decision is engine/skills' DecideApproveGuard, a pure function of the hook
-// input; this file only reads stdin (bounded), calls it, and prints the result.
-// It is a speed bump, not a security boundary: it matches the command text and
-// the file name, so it can be bypassed (see engine/skills/approve_guard.go for
-// the rule, the exemptions, and the known bypasses).
+// The decision is engine/skills' DecideApproveGuard, a pure function of the call;
+// this file only reads stdin (bounded), has engine/hookwire read it into a call,
+// calls it, and has hookwire write the result. It is a speed bump, not a security
+// boundary: it matches the command text and the file name, so it can be bypassed
+// (see engine/skills/approve_guard.go for the rule, the exemptions, and the known
+// bypasses).
 //
 // The contract with Claude Code is the projection hook's:
 //
@@ -35,6 +36,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
@@ -43,6 +45,11 @@ import (
 // here, before the skills core, because it reads stdin; it is not a verb a
 // person runs and is not in the skills core's verb list.
 const skillsGuardVerb = "guard-hook"
+
+// approveGuardMaxInputBytes bounds the hook input the guard decides on. Input over the
+// bound is allowed, unjudged: the bound exists so that a hook that runs on every tool call
+// never reads without limit.
+const approveGuardMaxInputBytes = 8 << 20
 
 // beforeApproveGuardDecision is a test seam, nil outside tests. The hook calls it
 // before it decides, so a test can make the hook panic where a bug in it would.
@@ -77,7 +84,7 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(stderr, "skills guard-hook: internal error: %v\n", r)
-			if out, err := (projection.GateResult{Warning: guardPanicWarning(r)}).PreToolUseOutput(); err == nil {
+			if out, err := (hookwire.PreToolUseReply{Warning: guardPanicWarning(r)}).Encode(); err == nil {
 				_, _ = stdout.Write(out) // nothing to do if the write fails: the call goes through.
 			}
 			exit(0)
@@ -85,7 +92,7 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	}()
 	// One byte past the bound is enough to see the input is over it, and no more
 	// of an endless input is ever read. Input over the bound is not judged.
-	raw, err := io.ReadAll(io.LimitReader(stdin, skills.ApproveGuardMaxInputBytes+1))
+	raw, err := io.ReadAll(io.LimitReader(stdin, approveGuardMaxInputBytes+1))
 	if err != nil {
 		exit(0)
 		return
@@ -93,14 +100,28 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	if beforeApproveGuardDecision != nil {
 		beforeApproveGuardDecision()
 	}
-	verdict := skills.DecideApproveGuard(raw)
+	verdict := decideApproveGuard(raw)
 	if verdict.Deny {
-		out, err := projection.GateResult{Deny: true, Reason: verdict.Reason}.PreToolUseOutput()
+		out, err := hookwire.PreToolUseReply{Deny: true, Reason: verdict.Reason}.Encode()
 		if err == nil {
 			_, _ = stdout.Write(out) // nothing to do if the write fails: the call goes through.
 		}
 	}
 	exit(0)
+}
+
+// decideApproveGuard reads the hook input into a call and decides it. Input it cannot read, and
+// input over the bound, are let through unjudged: a guard that blocked what it could not read
+// would block every Bash and file-edit call of the session.
+func decideApproveGuard(raw []byte) skills.ApproveGuardVerdict {
+	if len(raw) > approveGuardMaxInputBytes {
+		return skills.ApproveGuardVerdict{}
+	}
+	call, err := hookwire.DecodeToolCall(raw)
+	if err != nil {
+		return skills.ApproveGuardVerdict{}
+	}
+	return skills.DecideApproveGuard(skills.ApproveGuardCall{Tool: call.Name, Command: call.Command, FilePath: call.FilePath, NotebookPath: call.NotebookPath})
 }
 
 // guardPanicWarning is the one line the user sees when the guard recovered from a

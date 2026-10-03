@@ -1,0 +1,60 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# no skills section, prompt without a line break at its end
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# no skills section, prompt ending in one line break
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# no skills section, prompt ending in two line breaks
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a skills section with another skill
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n/skills/other/SKILL.md\n","subagent_type":"sdd-tasks"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a heading that only starts like the skills section
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do it.\n\n## Skills to load before work (extra)\n/skills/x/SKILL.md\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do it.\n\n## Skills to load before work (extra)\n/skills/x/SKILL.md\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a prompt with carriage returns
+--- stdin ---
+{"tool_input":{"description":"a sub-agent","prompt":"Do it.\r\n\r\n## Skills to load before work\r\n/skills/x/SKILL.md\r\n","subagent_type":"sdd-apply"},"tool_name":"Agent"}
+--- exit ---
+none
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do it.\r\n\r\n## Skills to load before work\r\nskills/_shared/minimalism-contract.md\n/skills/x/SKILL.md\r\n","subagent_type":"sdd-apply"}}}
+--- stderr ---
+

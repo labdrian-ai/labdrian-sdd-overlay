@@ -1,0 +1,33 @@
+$ projection hook --event PreToolUse
+# a panic where the gate decides
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the projection hook hit an internal error (boom second line [31mred xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx...); this tool call was not checked against the workflow and was not denied."}
+--- stderr ---
+<5060 bytes, sha256 4019f0431b86, starting "projection hook: internal error: boom\nsecond line \x1b[31mred x">
+
+$ projection hook --event PreToolUse
+# a short panic value
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the projection hook hit an internal error (boom); this tool call was not checked against the workflow and was not denied."}
+--- stderr ---
+projection hook: internal error: boom
+
+$ projection hook --event PreToolUse
+# an error as the panic value
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Edit","tool_input":{"file_path":"/repo/main.go","old_string":"a","new_string":"b"},"tool_use_id":"toolu_01"}
+--- exit ---
+0
+--- stdout ---
+{"systemMessage":"labdrian: the projection hook hit an internal error (an error value <with> html & quotes \"q\"); this tool call was not checked against the workflow and was not denied."}
+--- stderr ---
+projection hook: internal error: an error value <with> html & quotes "q"
+

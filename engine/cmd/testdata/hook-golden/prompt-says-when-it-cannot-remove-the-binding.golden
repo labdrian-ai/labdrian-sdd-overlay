@@ -1,0 +1,20 @@
+$ projection hook --event UserPromptSubmit
+# the binding cannot be removed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: workflow wf-1 of project proj-1 is closed (abandoned). No workflow is projected. Removing this repository's binding to it failed (projection store: unbind if unchanged: remove <STATE>/labdrian/bindings/<DIGEST>...), so it is still bound and this note repeats on every prompt until it is removed: run 'labdrian workflow unbind'."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# and the note repeats on the next prompt
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: workflow wf-1 of project proj-1 is closed (abandoned). No workflow is projected. Removing this repository's binding to it failed (projection store: unbind if unchanged: remove <STATE>/labdrian/bindings/<DIGEST>...), so it is still bound and this note repeats on every prompt until it is removed: run 'labdrian workflow unbind'."}}
+--- stderr ---
+

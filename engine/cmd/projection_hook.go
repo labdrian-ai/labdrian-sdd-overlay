@@ -10,10 +10,11 @@ package main
 // UserPromptSubmit puts into the session the workflow the repository is bound to
 // (see workflow bind): the decision is engine/projection's Project, a pure
 // function of the binding and the workflow state, and this file only reads those
-// two from disk, calls it, and prints the result. PreToolUse gates a tool call
-// against the same two: engine/projection's Gate denies the file-edit tools
-// while the workflow is paused and checks a longterm-mem query's project against
-// the workflow's memory plan. The contract with Claude Code:
+// two from disk, calls it, and says the result (engine/hookwire reads the input and
+// writes the answer; hook_translate.go maps between it and the policy). PreToolUse
+// gates a tool call against the same two: engine/projection's Gate denies the
+// file-edit tools while the workflow is paused and checks a longterm-mem query's
+// project against the workflow's memory plan. The contract with Claude Code:
 //
 //   - stdout is empty, or exactly one JSON object that begins with '{'.
 //     UserPromptSubmit: {"hookSpecificOutput":{"hookEventName":"UserPromptSubmit",
@@ -53,6 +54,7 @@ import (
 	"os"
 	"strings"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
 )
 
@@ -117,12 +119,12 @@ func runProjectionHook(args []string, processCwd string, stdin io.Reader, stdout
 	defer func() {
 		if r := recover(); r != nil {
 			fmt.Fprintf(stderr, "projection hook: internal error: %v\n", r)
-			_, _ = stdout.Write(warningOutput(event, projection.PanicWarning(event, r)))
+			_, _ = stdout.Write(warningOutput(event, projection.PanicWarning(occasionOf(event), r)))
 			exit(0)
 		}
 	}()
 	var out []byte
-	if event == projection.HookEventPreToolUse {
+	if event == hookwire.EventPreToolUse {
 		out = preToolUse(stdin, processCwd)
 	} else {
 		out = userPromptSubmit(stdin, processCwd)
@@ -154,11 +156,11 @@ func parseHookArgs(args []string) (string, error) {
 			return "", fmt.Errorf("unexpected argument %q", a)
 		}
 	}
-	supported := projection.HookEventUserPromptSubmit + ", " + projection.HookEventPreToolUse
+	supported := hookwire.EventUserPromptSubmit + ", " + hookwire.EventPreToolUse
 	if event == "" {
 		return "", fmt.Errorf("--event is required (supported: %s)", supported)
 	}
-	if event != projection.HookEventUserPromptSubmit && event != projection.HookEventPreToolUse {
+	if event != hookwire.EventUserPromptSubmit && event != hookwire.EventPreToolUse {
 		return "", fmt.Errorf("unsupported --event %q (supported: %s)", event, supported)
 	}
 	return event, nil
@@ -171,10 +173,10 @@ func parseHookArgs(args []string) (string, error) {
 func warningOutput(event, warning string) []byte {
 	var out []byte
 	var err error
-	if event == projection.HookEventPreToolUse {
-		out, err = projection.GateResult{Warning: warning}.PreToolUseOutput()
+	if event == hookwire.EventPreToolUse {
+		out, err = hookwire.PreToolUseReply{Warning: warning}.Encode()
 	} else {
-		out, err = projection.ProjectionResult{Warning: warning}.UserPromptSubmitOutput()
+		out, err = hookwire.PromptReply{Warning: warning}.Encode()
 	}
 	if err != nil {
 		return nil
@@ -189,19 +191,19 @@ func warningOutput(event, warning string) []byte {
 // store that cannot be opened or read is different, because the repository may
 // well be bound, so it gets one warning.
 func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
-	// One byte past the cap is enough for ParseHookInput to see the input is over
+	// One byte past the cap is enough for the decoder to see the input is over
 	// it, and no more of an endless input is ever read.
-	data, err := io.ReadAll(io.LimitReader(stdin, projection.MaxHookInputBytes+1))
+	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
 		return nil
 	}
-	in, err := projection.ParseHookInput(data)
+	in, err := hookwire.DecodeUserPromptSubmit(data)
 	if err != nil {
 		return nil
 	}
 	// The event flag decides the shape of the answer; input that names another
 	// event was not meant for this command.
-	if in.HookEventName != "" && in.HookEventName != projection.HookEventUserPromptSubmit {
+	if in.Event != "" && in.Event != hookwire.EventUserPromptSubmit {
 		return nil
 	}
 	repoKey, ok := hookRepoKey(in.Cwd, processCwd)
@@ -210,11 +212,11 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 	}
 	bindings, err := newBindingStore()
 	if err != nil {
-		return warningOutput(projection.HookEventUserPromptSubmit, projection.StoreWarning(err))
+		return warningOutput(hookwire.EventUserPromptSubmit, projection.StoreWarning(err))
 	}
 	binding, err := bindings.Load(repoKey)
 	if err != nil {
-		return warningOutput(projection.HookEventUserPromptSubmit, projection.StoreWarning(err))
+		return warningOutput(hookwire.EventUserPromptSubmit, projection.StoreWarning(err))
 	}
 
 	input := projection.ProjectionInput{Binding: binding}
@@ -235,7 +237,7 @@ func userPromptSubmit(stdin io.Reader, processCwd string) []byte {
 		removed, unbindErr := bindings.UnbindIfUnchanged(repoKey, binding.Binding)
 		result = result.AfterUnbind(removed, unbindErr)
 	}
-	out, err := result.UserPromptSubmitOutput()
+	out, err := promptReply(result).Encode()
 	if err != nil {
 		return nil
 	}
@@ -260,22 +262,22 @@ func hookRepoKey(inputCwd, processCwd string) (string, bool) {
 // and the prompt hook already warns about those, so it does not repeat the
 // warning. It reads and never writes.
 func preToolUse(stdin io.Reader, processCwd string) []byte {
-	data, err := io.ReadAll(io.LimitReader(stdin, projection.MaxHookInputBytes+1))
+	data, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxEnvelopeBytes+1))
 	if err != nil {
 		return nil
 	}
-	in, err := projection.ParsePreToolUseInput(data)
+	in, err := hookwire.DecodePreToolUse(data)
 	if err != nil {
 		return nil
 	}
-	if in.HookEventName != "" && in.HookEventName != projection.HookEventPreToolUse {
+	if in.Event != "" && in.Event != hookwire.EventPreToolUse {
 		return nil
 	}
 	// Relevance comes first, from the tool name alone: the gate runs on every
 	// tool call, and only a file-edit tool or a longterm-mem query is ever checked
 	// against the workflow. Any other tool is allowed here, without reading the
 	// binding or the workflow log.
-	if !projection.GateRelevant(in.ToolName) {
+	if !projection.GateRelevant(gatedEditTools, in.Tool) {
 		return nil
 	}
 	repoKey, ok := hookRepoKey(in.Cwd, processCwd)
@@ -294,15 +296,16 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 		return nil
 	}
 
-	gateInput := projection.GateInput{Binding: binding, ToolName: in.ToolName, ToolInput: in.ToolInput}
+	gateInput := projection.GateInput{Binding: binding, EditTools: gatedEditTools, Call: projection.ToolCall{Name: in.Tool}}
 	if binding.Classification == projection.ClassificationOwned {
 		w := loadWorkflow(binding.Binding.ProjectID, binding.Binding.WorkflowID)
 		gateInput.Workflow = &w
+		gateInput.Call = gateCall(in)
 	}
 	if beforeGateDecision != nil {
 		beforeGateDecision()
 	}
-	out, err := projection.Gate(gateInput).PreToolUseOutput()
+	out, err := gateReply(projection.Gate(gateInput)).Encode()
 	if err != nil {
 		return nil
 	}

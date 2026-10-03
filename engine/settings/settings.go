@@ -778,7 +778,7 @@ func (m *Merger) buildSyncTriggerSessionEndEntry() map[string]interface{} {
 // on non-zero exit). The command below only short-circuits to exit 0 when
 // the binary itself is missing (the same "don't block on an absent
 // installation" guard as every other entry); once the binary is found, its
-// own exit code — 0 (allow) or 2 (deny) from reviewreceipt.Service.RunHook — is the
+// own exit code — 0 (allow) or 2 (deny) for the verdict of reviewreceipt.Service.CheckCommand — is the
 // command's exit code, unmasked by "|| true".
 func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
 	cmd := fmt.Sprintf(
@@ -796,7 +796,7 @@ func (m *Merger) buildReviewReceiptPreToolUseEntry() map[string]interface{} {
 
 // buildShaperGuardPreToolUseEntry returns one PreToolUse entry of the shaper
 // clearance deny guard. Once the binary is found, its own exit code, 0
-// (allow) or 2 (deny) from shaper.RunGuardHook, is the command's exit code.
+// (allow) or 2 (deny) from the shaper guard hook (shaper.DecideGuard), is the command's exit code.
 //
 // FAIL-CLOSED FOR THE GUARDED MARKERS: unlike the review-receipt entry, a
 // missing binary does not simply exit 0. The command falls back to a POSIX

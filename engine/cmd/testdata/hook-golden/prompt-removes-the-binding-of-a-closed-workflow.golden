@@ -1,0 +1,19 @@
+$ projection hook --event UserPromptSubmit
+# the prompt after the workflow was closed
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"UserPromptSubmit","additionalContext":"labdrian workflow projection: workflow wf-1 of project proj-1 is closed (abandoned). No workflow is projected. This repository's binding to it was removed."}}
+--- stderr ---
+
+$ projection hook --event UserPromptSubmit
+# the next prompt, nothing is bound any more
+--- stdin ---
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+

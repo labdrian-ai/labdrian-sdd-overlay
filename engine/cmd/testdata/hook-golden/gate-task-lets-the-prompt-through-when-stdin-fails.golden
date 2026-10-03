@@ -1,0 +1,11 @@
+$ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
+# a stdin that fails
+--- stdin ---
+<the reader fails with: read failed>
+--- exit ---
+none
+--- stdout ---
+{}
+--- stderr ---
+gate-task: warning: cannot read stdin: read failed (passing through)
+

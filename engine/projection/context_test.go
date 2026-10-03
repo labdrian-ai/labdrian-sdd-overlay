@@ -1,7 +1,6 @@
 package projection_test
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -98,137 +97,11 @@ func claudeLimits(t *testing.T) string {
 	return "capability limits (claude): " + strings.Join(parts, ", ")
 }
 
-// --- constants and the hook input -------------------------------------------
+// --- constants ----------------------------------------------------------------
 
-func TestHookLimits(t *testing.T) {
-	if projection.MaxHookInputBytes != 1<<20 {
-		t.Errorf("MaxHookInputBytes = %d, want 1 MiB", projection.MaxHookInputBytes)
-	}
+func TestContextLimit(t *testing.T) {
 	if projection.MaxContextBytes != 16384 {
 		t.Errorf("MaxContextBytes = %d, want 16384 (16 KiB)", projection.MaxContextBytes)
-	}
-	if projection.HookEventUserPromptSubmit != "UserPromptSubmit" {
-		t.Errorf("HookEventUserPromptSubmit = %q", projection.HookEventUserPromptSubmit)
-	}
-}
-
-func TestParseHookInputKeepsOnlyTheEventAndTheAbsoluteWorkingDirectory(t *testing.T) {
-	// The shape Claude Code sends, plus fields it might add: the input is not
-	// ours, so unknown fields are ignored rather than refused.
-	data := `{
-		"session_id": "abc123",
-		"transcript_path": "/home/u/.claude/projects/x/abc123.jsonl",
-		"cwd": "/home/u/repo/sub",
-		"permission_mode": "default",
-		"hook_event_name": "UserPromptSubmit",
-		"prompt": "do the thing",
-		"a_future_field": {"nested": [1, 2, {"deep": null}]}
-	}`
-	got, err := projection.ParseHookInput([]byte(data))
-	if err != nil {
-		t.Fatalf("ParseHookInput() = %v, want nil", err)
-	}
-	want := projection.HookInput{HookEventName: "UserPromptSubmit", Cwd: "/home/u/repo/sub"}
-	if got != want {
-		t.Fatalf("ParseHookInput() = %+v, want %+v", got, want)
-	}
-}
-
-// TestParseHookInputIgnoresTheSessionAndThePromptEntirely: the projection must
-// not depend on either, so neither is read, not even to be validated. A prompt
-// or session id of the wrong type is not an error.
-func TestParseHookInputIgnoresTheSessionAndThePromptEntirely(t *testing.T) {
-	base := `"hook_event_name":"UserPromptSubmit","cwd":"/r"`
-	for name, extra := range map[string]string{
-		"no session, no prompt":     ``,
-		"a session and a prompt":    `,"session_id":"s1","prompt":"hello"`,
-		"another session":           `,"session_id":"s2","prompt":"a different prompt"`,
-		"a prompt of another type":  `,"prompt":{"unexpected":["structure"]}`,
-		"a session of another type": `,"session_id":12345`,
-		"a huge prompt":             `,"prompt":"` + strings.Repeat("x", 500_000) + `"`,
-	} {
-		t.Run(name, func(t *testing.T) {
-			got, err := projection.ParseHookInput([]byte("{" + base + extra + "}"))
-			if err != nil || got != (projection.HookInput{HookEventName: "UserPromptSubmit", Cwd: "/r"}) {
-				t.Fatalf("ParseHookInput() = %+v, %v, want the same event and cwd whatever the session and prompt are", got, err)
-			}
-		})
-	}
-}
-
-func TestParseHookInputAcceptsOnlyAnAbsoluteWorkingDirectory(t *testing.T) {
-	for _, tt := range []struct{ name, cwd, want string }{
-		{"absolute", `"/home/u/repo"`, "/home/u/repo"},
-		{"absolute with dot segments is cleaned", `"/home/u/../v/repo"`, "/home/v/repo"},
-		{"absolute with a trailing slash and repeated separators is cleaned", `"/home//u/repo/"`, "/home/u/repo"},
-		{"relative", `"repo/sub"`, ""},
-		{"dot", `"."`, ""},
-		{"dot dot", `".."`, ""},
-		{"empty", `""`, ""},
-		{"null", `null`, ""},
-		{"absent", ``, ""},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			data := `{"hook_event_name":"UserPromptSubmit"`
-			if tt.cwd != "" {
-				data += `,"cwd":` + tt.cwd
-			}
-			got, err := projection.ParseHookInput([]byte(data + "}"))
-			if err != nil || got.Cwd != tt.want {
-				t.Fatalf("ParseHookInput() = %+v, %v, want cwd %q", got, err, tt.want)
-			}
-		})
-	}
-}
-
-func TestParseHookInputAcceptsWhitespaceAndMissingFields(t *testing.T) {
-	for _, data := range []string{"{}", " \n {} \n", "\t{\"cwd\":\"/r\"}\n"} {
-		if _, err := projection.ParseHookInput([]byte(data)); err != nil {
-			t.Errorf("ParseHookInput(%q) = %v, want nil", data, err)
-		}
-	}
-	got, err := projection.ParseHookInput([]byte(`{"cwd":"/r"}`))
-	if err != nil || got.HookEventName != "" || got.Cwd != "/r" {
-		t.Errorf("ParseHookInput() = %+v, %v, want no event name and cwd /r", got, err)
-	}
-}
-
-func TestParseHookInputRefusesWhatIsNotAJSONObject(t *testing.T) {
-	for name, data := range map[string]string{
-		"empty":                    "",
-		"only whitespace":          " \n\t ",
-		"an array":                 `[{"cwd":"/r"}]`,
-		"a string":                 `"UserPromptSubmit"`,
-		"a number":                 `42`,
-		"null":                     `null`,
-		"true":                     `true`,
-		"plain text":               `not json`,
-		"a truncated object":       `{"hook_event_name":"UserPromptSubmit","cwd":"/r"`,
-		"data after the object":    `{"cwd":"/r"} {"cwd":"/s"}`,
-		"garbage after the object": `{"cwd":"/r"}x`,
-		"a cwd of another type":    `{"cwd":42}`,
-		"an event of another type": `{"hook_event_name":["UserPromptSubmit"]}`,
-	} {
-		t.Run(name, func(t *testing.T) {
-			if got, err := projection.ParseHookInput([]byte(data)); err == nil {
-				t.Fatalf("ParseHookInput(%q) = %+v, nil, want an error", data, got)
-			}
-		})
-	}
-}
-
-func TestParseHookInputSizeCap(t *testing.T) {
-	object := func(size int) []byte {
-		// {"pad":"xxx...x"} padded to exactly size bytes.
-		pad := size - len(`{"pad":""}`)
-		return []byte(`{"pad":"` + strings.Repeat("x", pad) + `"}`)
-	}
-	if _, err := projection.ParseHookInput(object(projection.MaxHookInputBytes)); err != nil {
-		t.Errorf("ParseHookInput() of exactly the cap = %v, want nil", err)
-	}
-	_, err := projection.ParseHookInput(object(projection.MaxHookInputBytes + 1))
-	if !errors.Is(err, projection.ErrHookInputTooLarge) {
-		t.Errorf("ParseHookInput() one byte over the cap = %v, want ErrHookInputTooLarge", err)
 	}
 }
 
@@ -409,7 +282,7 @@ func TestHookFailureWarningsAreOneShortSanitizedLine(t *testing.T) {
 	hostile := "line one\nline two \x1b[31mred\x1b[0m \u202eevil " + strings.Repeat("é", 5000)
 	for name, got := range map[string]string{
 		"store": projection.StoreWarning(errors.New(hostile)),
-		"panic": projection.PanicWarning(projection.HookEventUserPromptSubmit, hostile),
+		"panic": projection.PanicWarning(projection.OccasionPrompt, hostile),
 	} {
 		t.Run(name, func(t *testing.T) {
 			if strings.ContainsAny(got, "\n\r\x1b") || strings.ContainsRune(got, 0x202e) || !utf8.ValidString(got) {
@@ -429,11 +302,11 @@ func TestHookFailureWarningsAreOneShortSanitizedLine(t *testing.T) {
 	if got := projection.StoreWarning(errors.New("boom")); !strings.Contains(got, "no workflow is projected") {
 		t.Errorf("store warning %q does not say nothing is projected", got)
 	}
-	if got := projection.PanicWarning(projection.HookEventUserPromptSubmit, "boom"); !strings.Contains(got, "boom") || !strings.Contains(got, "internal error") {
+	if got := projection.PanicWarning(projection.OccasionPrompt, "boom"); !strings.Contains(got, "boom") || !strings.Contains(got, "internal error") {
 		t.Errorf("panic warning %q does not name the internal error", got)
 	}
 	// Panic values are not always strings.
-	if got := projection.PanicWarning(projection.HookEventUserPromptSubmit, errors.New("an error value")); !strings.Contains(got, "an error value") {
+	if got := projection.PanicWarning(projection.OccasionPrompt, errors.New("an error value")); !strings.Contains(got, "an error value") {
 		t.Errorf("panic warning %q does not carry an error value", got)
 	}
 }
@@ -457,8 +330,36 @@ func TestPanicTextIsOneShortSanitizedLine(t *testing.T) {
 	if got := projection.PanicText(errors.New("an error value")); got != "an error value" {
 		t.Errorf("PanicText of an error = %q, want its message", got)
 	}
-	if warning := projection.PanicWarning(projection.HookEventPreToolUse, hostile); !strings.Contains(warning, projection.PanicText(hostile)) {
+	if warning := projection.PanicWarning(projection.OccasionToolCall, hostile); !strings.Contains(warning, projection.PanicText(hostile)) {
 		t.Errorf("PanicWarning %q does not carry PanicText", warning)
+	}
+}
+
+// TestPanicWarningNamesTheOccasionItHappenedIn: the recovered-panic warning used to say "the
+// prompt was not affected" also when the panic happened in the PreToolUse gate, where no prompt
+// is involved. Each occasion now says what it actually did to its own subject, and never
+// mentions the other's.
+func TestPanicWarningNamesTheOccasionItHappenedIn(t *testing.T) {
+	prompt := projection.PanicWarning(projection.OccasionPrompt, "boom")
+	if !strings.Contains(prompt, "the prompt was not affected") || strings.Contains(prompt, "tool call") {
+		t.Errorf("prompt warning %q, want it to speak of the prompt only", prompt)
+	}
+	tool := projection.PanicWarning(projection.OccasionToolCall, "boom")
+	if !strings.Contains(tool, "tool call") || strings.Contains(tool, "prompt") {
+		t.Errorf("tool warning %q, want it to speak of the tool call only", tool)
+	}
+	for _, w := range []string{prompt, tool} {
+		if !strings.Contains(w, "boom") || !strings.Contains(w, "internal error") || !strings.HasPrefix(w, "labdrian:") {
+			t.Errorf("warning %q lost the labdrian prefix, the error, or its cause", w)
+		}
+	}
+	// An occasion nobody named gets the neutral wording, not either subject.
+	other := projection.PanicWarning(projection.OccasionUnknown, "boom")
+	if strings.Contains(other, "prompt") || strings.Contains(other, "tool call") || !strings.Contains(other, "boom") {
+		t.Errorf("warning for an unknown occasion %q, want neutral wording that keeps the cause", other)
+	}
+	if projection.OccasionUnknown != 0 {
+		t.Error("the zero Occasion must be the unknown one, so a caller that sets none gets the neutral wording")
 	}
 }
 
@@ -884,112 +785,21 @@ func TestProjectContextOfATypicalWorkflowIsNotTruncated(t *testing.T) {
 	noLineStartsWith(t, got, "[labdrian:")
 }
 
-// --- the hook output --------------------------------------------------------
+// --- realistic states --------------------------------------------------------
 
-func decodeObject(t *testing.T, out []byte) map[string]json.RawMessage {
-	t.Helper()
-	if len(out) == 0 || out[0] != '{' {
-		t.Fatalf("output %q does not begin with '{'", out)
-	}
-	if !json.Valid(out) || strings.Count(strings.TrimRight(string(out), "\n"), "\n") != 0 {
-		t.Fatalf("output %q is not exactly one JSON value on one line", out)
-	}
-	var object map[string]json.RawMessage
-	if err := json.Unmarshal(out, &object); err != nil {
-		t.Fatalf("output %q is not a JSON object: %v", out, err)
-	}
-	return object
-}
-
-func TestUserPromptSubmitOutputPutsTheContextInsideHookSpecificOutput(t *testing.T) {
-	out, err := projection.ProjectionResult{Context: "line one\nline two with <angle brackets> & \"quotes\""}.UserPromptSubmitOutput()
-	if err != nil {
-		t.Fatal(err)
-	}
-	object := decodeObject(t, out)
-	if len(object) != 1 {
-		t.Fatalf("output has the keys %v, want only hookSpecificOutput", keys(object))
-	}
-	if _, top := object["additionalContext"]; top {
-		t.Fatal("additionalContext is at the top level, where Claude Code silently ignores it")
-	}
-	var specific struct {
-		HookEventName     string `json:"hookEventName"`
-		AdditionalContext string `json:"additionalContext"`
-	}
-	if err := json.Unmarshal(object["hookSpecificOutput"], &specific); err != nil {
-		t.Fatalf("hookSpecificOutput = %s: %v", object["hookSpecificOutput"], err)
-	}
-	if specific.HookEventName != "UserPromptSubmit" || specific.AdditionalContext != "line one\nline two with <angle brackets> & \"quotes\"" {
-		t.Fatalf("hookSpecificOutput = %+v, want the event name and the context round-tripped", specific)
-	}
-	// Readable in a transcript: HTML characters are not escaped.
-	if !strings.Contains(string(out), "<angle brackets> &") {
-		t.Errorf("output %q escapes HTML characters", out)
-	}
-}
-
-func TestUserPromptSubmitOutputCarriesAWarningAsASystemMessage(t *testing.T) {
-	out, err := projection.ProjectionResult{Warning: "labdrian: something is wrong"}.UserPromptSubmitOutput()
-	if err != nil {
-		t.Fatal(err)
-	}
-	object := decodeObject(t, out)
-	if len(object) != 1 || string(object["systemMessage"]) != `"labdrian: something is wrong"` {
-		t.Fatalf("output %s, want only the systemMessage", out)
-	}
-}
-
-func TestUserPromptSubmitOutputCarriesBothPartsWhenBothAreSet(t *testing.T) {
-	out, err := projection.ProjectionResult{Context: "ctx", Warning: "warn"}.UserPromptSubmitOutput()
-	if err != nil {
-		t.Fatal(err)
-	}
-	object := decodeObject(t, out)
-	if len(object) != 2 || object["hookSpecificOutput"] == nil || string(object["systemMessage"]) != `"warn"` {
-		t.Fatalf("output %s, want hookSpecificOutput and systemMessage", out)
-	}
-}
-
-func TestUserPromptSubmitOutputIsEmptyWhenThereIsNothingToSay(t *testing.T) {
-	// Unbind alone says nothing: it is an action, not a message.
-	for _, r := range []projection.ProjectionResult{{}, {Unbind: true}} {
-		out, err := r.UserPromptSubmitOutput()
-		if err != nil || len(out) != 0 {
-			t.Errorf("UserPromptSubmitOutput() of %+v = %q, %v, want no output", r, out, err)
-		}
-	}
-}
-
-func keys(m map[string]json.RawMessage) []string {
-	out := make([]string, 0, len(m))
-	for k := range m {
-		out = append(out, k)
-	}
-	return out
-}
-
-// TestProjectAndOutputRoundTripThroughRealisticStates runs Project over the
-// states the CLI produces and checks the output of each is a valid hook output.
-func TestProjectAndOutputRoundTripThroughRealisticStates(t *testing.T) {
+// TestProjectOfRealisticStatesSaysSomethingWithinTheBound runs Project over the states the CLI
+// produces: each has something to tell the session (the context of an open workflow, the note
+// of a closed one) and no warning, within the bound. How that is written for Claude Code is the
+// adapter's (engine/hookwire); the golden files of the hooks in engine/cmd pin the bytes.
+func TestProjectOfRealisticStatesSaysSomethingWithinTheBound(t *testing.T) {
 	for _, status := range []workflow.Status{workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused, workflow.StatusClosed} {
 		t.Run(string(status), func(t *testing.T) {
-			out, err := project(ownedBinding(), loadedWorkflow("odd", status, "authorize")).UserPromptSubmitOutput()
-			if err != nil {
-				t.Fatal(err)
+			got := project(ownedBinding(), loadedWorkflow("odd", status, "authorize"))
+			if got.Context == "" || got.Warning != "" {
+				t.Fatalf("Project() = %+v, want a context and no warning", got)
 			}
-			object := decodeObject(t, out)
-			if _, top := object["additionalContext"]; top {
-				t.Fatalf("additionalContext at the top level: %s", out)
-			}
-			var specific struct {
-				AdditionalContext string `json:"additionalContext"`
-			}
-			if err := json.Unmarshal(object["hookSpecificOutput"], &specific); err != nil || specific.AdditionalContext == "" {
-				t.Fatalf("hookSpecificOutput = %s (%v), want a non-empty additionalContext", object["hookSpecificOutput"], err)
-			}
-			if len(specific.AdditionalContext) > projection.MaxContextBytes {
-				t.Fatalf("additionalContext is %d bytes", len(specific.AdditionalContext))
+			if len(got.Context) > projection.MaxContextBytes {
+				t.Fatalf("the context is %d bytes, over the bound", len(got.Context))
 			}
 		})
 	}
