@@ -8,7 +8,7 @@ engine/cmd/main_test.go managed
 engine/settings/settings.go managed
 engine/settings/settings_test.go managed
 engine/skills/types.go managed
-engine/skills/parse.go managed
+engine/skills/registryyaml/decode.go managed
 engine/skills/manifest.go managed
 engine/skills/validate.go managed
 engine/skills/list.go managed
@@ -26,14 +26,14 @@ engine/skills/lifecycle.go managed
 engine/skills/lifecycle_test.go managed
 engine/skills/ondisk.go managed
 engine/skills/ondisk_test.go managed
-engine/skills/serialize.go managed
-engine/skills/serialize_test.go managed
+engine/skills/registryyaml/encode.go managed
+engine/skills/registryyaml/encode_test.go managed
 engine/skills/actuals_instrumentation_contract_test.go managed
 engine/skills/actuals_instrumentation_d2_anchor_test.go managed
 engine/skills/list_test.go managed
 engine/skills/manifest_test.go managed
 engine/skills/oo_quality_contract_artifact_test.go managed
-engine/skills/parse_test.go managed
+engine/skills/registryyaml/read_test.go managed
 engine/skills/skills_test.go managed
 engine/skills/status_test.go managed
 engine/skills/validate_test.go managed

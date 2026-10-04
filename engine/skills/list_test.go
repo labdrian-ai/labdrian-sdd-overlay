@@ -59,14 +59,14 @@ func TestRenderListCore(t *testing.T) {
 
 		var out1, err1 bytes.Buffer
 		exitCode1 := 0
-		RenderListCore(nil, mockReadFile, &out1, &err1, func(c int) { exitCode1 = c })
+		RenderListCore(nil, testRegistries(mockReadFile), &out1, &err1, func(c int) { exitCode1 = c })
 		if exitCode1 != 0 {
 			t.Fatalf("first call exit %d; stderr=%q", exitCode1, err1.String())
 		}
 
 		var out2, err2 bytes.Buffer
 		exitCode2 := 0
-		RenderListCore(nil, mockReadFile, &out2, &err2, func(c int) { exitCode2 = c })
+		RenderListCore(nil, testRegistries(mockReadFile), &out2, &err2, func(c int) { exitCode2 = c })
 		if exitCode2 != 0 {
 			t.Fatalf("second call exit %d; stderr=%q", exitCode2, err2.String())
 		}
@@ -131,7 +131,7 @@ func TestRenderListCore(t *testing.T) {
 		}
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		RenderListCore(nil, mockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		RenderListCore(nil, testRegistries(mockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -150,7 +150,7 @@ func TestRenderListCore(t *testing.T) {
 		}
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		RenderListCore(nil, mockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		RenderListCore(nil, testRegistries(mockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}

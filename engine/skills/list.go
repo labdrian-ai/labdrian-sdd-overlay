@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"sort"
@@ -43,20 +42,11 @@ func RenderList(w io.Writer, reg Registry) {
 // RenderListCore is the testable CLI core for `engine skills list`.
 // All I/O is injected so every branch is unit-testable without OS access.
 //
-// Reads registry via readFile(path), sorts entries by id, writes tab-separated
-// lines to stdout. Exits 1 on read or parse errors (R-022).
-func RenderListCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	registryPath := parseRegistryFlag(args)
-	data, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	reg, err := ParseRegistry(bytes.NewReader(data))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
-		exit(1)
+// Reads the registry through the repository, sorts entries by id, writes tab-separated
+// lines to stdout. Exits 1 when the registry cannot be read or is not usable (R-022).
+func RenderListCore(args []string, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
+	reg, ok := readRegistryForVerb(registries, parseRegistryFlag(args), false, stderr, exit)
+	if !ok {
 		return
 	}
 	RenderList(stdout, reg)

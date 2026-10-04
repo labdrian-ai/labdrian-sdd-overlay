@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -338,7 +337,7 @@ func TestValidate(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading real registry %s: %v", registryPath, err)
 		}
-		reg, err := ParseRegistry(bytes.NewReader(data))
+		reg, err := parseRegistry(data)
 		if err != nil {
 			t.Fatalf("parsing real registry: %v", err)
 		}

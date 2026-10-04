@@ -103,7 +103,7 @@ func TestAddEntryDefaults(t *testing.T) {
 }
 
 // TestAddEntryNilAllowedProjects verifies ADR-8: AllowedProjects MUST be nil (not
-// []string{}) so the round-trip through Serialize → ParseRegistry produces DeepEqual.
+// []string{}) so the round-trip through encode → decode produces DeepEqual.
 func TestAddEntryNilAllowedProjects(t *testing.T) {
 	reg := Registry{Version: "1"}
 
@@ -116,13 +116,13 @@ func TestAddEntryNilAllowedProjects(t *testing.T) {
 	}
 
 	// Round-trip through serialize → parse must preserve DeepEqual (ADR-8, ADR-7).
-	out, err := Serialize(got)
+	out, err := serializeRegistry(got)
 	if err != nil {
 		t.Fatalf("Serialize: %v", err)
 	}
-	reparsed, err := ParseRegistry(bytes.NewReader(out))
+	reparsed, err := parseRegistry(out)
 	if err != nil {
-		t.Fatalf("ParseRegistry: %v", err)
+		t.Fatalf("decoding the encoded registry: %v", err)
 	}
 	if !reflect.DeepEqual(got, reparsed) {
 		t.Errorf("round-trip not equal:\n  before: %+v\n  after:  %+v", got, reparsed)
@@ -288,14 +288,14 @@ func TestAddEntryRoundTrip(t *testing.T) {
 		t.Fatalf("AddEntry: %v", err)
 	}
 
-	out, err := Serialize(got)
+	out, err := serializeRegistry(got)
 	if err != nil {
 		t.Fatalf("Serialize: %v", err)
 	}
 
-	reparsed, err := ParseRegistry(bytes.NewReader(out))
+	reparsed, err := parseRegistry(out)
 	if err != nil {
-		t.Fatalf("ParseRegistry after serialize: %v", err)
+		t.Fatalf("decoding after encoding: %v", err)
 	}
 
 	if !reflect.DeepEqual(got, reparsed) {
@@ -399,7 +399,7 @@ func TestAddCoreSuccess(t *testing.T) {
 	exitCode := -1
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -413,7 +413,7 @@ func TestAddCoreSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg, err := parseRegistry(regBytes)
 	if err != nil {
 		t.Fatalf("re-parse after add: %v", err)
 	}
@@ -469,7 +469,7 @@ func TestAddCoreRejectsHardLintErrorBeforeWrites(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -527,7 +527,7 @@ func TestAddCoreWarningsOnlyProceeds(t *testing.T) {
 	exitCode := -1
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -539,7 +539,7 @@ func TestAddCoreWarningsOnlyProceeds(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg, err := parseRegistry(regBytes)
 	if err != nil {
 		t.Fatalf("re-parse after warnings-only add: %v", err)
 	}
@@ -569,7 +569,7 @@ func TestAddCoreMissingSkillMD(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -604,7 +604,7 @@ func TestAddCoreIDAlreadyPresent(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -636,7 +636,7 @@ func TestAddCoreRegistryWriteFailureIsAtomic(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -673,7 +673,7 @@ func TestAddCoreValidateBeforeWrite(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -701,7 +701,7 @@ func TestRemoveCoreSuccess(t *testing.T) {
 	exitCode := -1
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile,
+		os.ReadFile, testRegistries(os.ReadFile),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -711,7 +711,7 @@ func TestRemoveCoreSuccess(t *testing.T) {
 	}
 
 	regBytes, _ := os.ReadFile(regPath)
-	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg, err := parseRegistry(regBytes)
 	if err != nil {
 		t.Fatalf("re-parse after remove: %v", err)
 	}
@@ -748,7 +748,7 @@ func TestRemoveCoreIDAbsent(t *testing.T) {
 	exitCode := 0
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile,
+		os.ReadFile, testRegistries(os.ReadFile),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -777,7 +777,7 @@ func TestRemoveCoreDoesNotDeleteDir(t *testing.T) {
 	exitCode := -1
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile,
+		os.ReadFile, testRegistries(os.ReadFile),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -811,7 +811,7 @@ func TestRemoveCoreManifestWriteFailureIsAtomic(t *testing.T) {
 	exitCode := 0
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile,
+		os.ReadFile, testRegistries(os.ReadFile),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -843,7 +843,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 		exitCode := -1
 		AddCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-			os.ReadFile, os.Stat,
+			os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 			&out, &errBuf,
 			func(c int) { exitCode = c },
 		)
@@ -858,7 +858,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 		exitCode := -1
 		RemoveCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-			os.ReadFile,
+			os.ReadFile, testRegistries(os.ReadFile),
 			&out, &errBuf,
 			func(c int) { exitCode = c },
 		)
@@ -870,7 +870,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 	checkValidate := func(label string, wantSkills int) {
 		t.Helper()
 		regBytes, _ := os.ReadFile(regPath)
-		reg, err := ParseRegistry(bytes.NewReader(regBytes))
+		reg, err := parseRegistry(regBytes)
 		if err != nil {
 			t.Fatalf("%s: re-parse: %v", label, err)
 		}
@@ -917,7 +917,7 @@ func TestAddCoreExternalRepo(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"foo", "--repo", "https://github.com/example/skills"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -931,7 +931,7 @@ func TestAddCoreExternalRepo(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg, err := parseRegistry(regBytes)
 	if err != nil {
 		t.Fatalf("SC-65: re-parse: %v", err)
 	}
@@ -986,7 +986,7 @@ func TestAddCoreExternalRepoRef(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"bar", "--repo", "https://example.com/repo", "--ref", "deadbeef"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -999,7 +999,7 @@ func TestAddCoreExternalRepoRef(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg, err := parseRegistry(regBytes)
 	if err != nil {
 		t.Fatalf("SC-66: re-parse: %v", err)
 	}
@@ -1018,11 +1018,11 @@ func TestAddCoreExternalRepoRef(t *testing.T) {
 	}
 
 	// Round-trip: parse(serialize(reg)) must DeepEqual reg.
-	serialized, serErr := Serialize(reg)
+	serialized, serErr := serializeRegistry(reg)
 	if serErr != nil {
 		t.Fatalf("SC-66: Serialize: %v", serErr)
 	}
-	reparsed, rpErr := ParseRegistry(bytes.NewReader(serialized))
+	reparsed, rpErr := parseRegistry(serialized)
 	if rpErr != nil {
 		t.Fatalf("SC-66: re-parse after serialize: %v", rpErr)
 	}
@@ -1045,7 +1045,7 @@ func TestAddCoreNoRepoStaysCustom(t *testing.T) {
 	exitCode := -1
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "baz"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -1058,7 +1058,7 @@ func TestAddCoreNoRepoStaysCustom(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	reg, err := ParseRegistry(bytes.NewReader(regBytes))
+	reg, err := parseRegistry(regBytes)
 	if err != nil {
 		t.Fatalf("SC-67: re-parse: %v", err)
 	}
@@ -1093,7 +1093,7 @@ func TestAddCoreExternalMissingSkillMD(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"missing", "--repo", "https://example.com/repo"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -1130,7 +1130,7 @@ func TestAddCoreRefWithoutRepo(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"foo", "--ref", "deadbeef"},
-		os.ReadFile, os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)

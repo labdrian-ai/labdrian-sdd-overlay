@@ -46,7 +46,7 @@ func TestSkillsCore(t *testing.T) {
 		// "list" with valid registry → exit 0, output has entries.
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("list", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("list", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}
@@ -62,7 +62,7 @@ func TestSkillsCore(t *testing.T) {
 		// "status" with valid registry → exit 0, counts and OK in stdout.
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("status", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("status", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 0 {
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}
@@ -130,7 +130,7 @@ skills:
 		// Unknown verb "nuke" → exit 1, stderr contains the verb name.
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("nuke", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("nuke", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -143,7 +143,7 @@ skills:
 		// Empty verb → exit 1, stderr non-empty.
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -182,7 +182,7 @@ skills:
 		// SC-24: unknown verb → exit 1, stderr contains "install" in the supported verb list.
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("frobnicate", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("frobnicate", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -266,7 +266,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode := -1
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, neverScan, &out, &errBuf,
+			os.ReadFile, testRegistries(os.ReadFile), neverScan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -287,7 +287,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode := 0
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, scan, &out, &errBuf,
+			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -308,7 +308,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode = 0
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, scan, &out, &errBuf,
+			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 0 {
@@ -324,7 +324,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode := -1
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, scan, &out, &errBuf,
+			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -380,7 +380,7 @@ skills:
 		exitCode := -1
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, scan, &out, &errBuf,
+			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -445,7 +445,7 @@ skills:
 				exitCode := 0
 				RenderValidateCore(
 					[]string{"--registry", absRegPath, "--manifest", absMfPath, "--source-root", tt.sourceRoot},
-					os.ReadFile, scan, &out, &errBuf,
+					os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
 					func(c int) { exitCode = c },
 				)
 				if exitCode != 0 {
@@ -477,7 +477,7 @@ skills:
 		exitCode := 0
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, failScan, &out, &errBuf,
+			os.ReadFile, testRegistries(os.ReadFile), failScan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -576,6 +576,7 @@ func TestSkillsCoreLintRoutesToRenderLintCore(t *testing.T) {
 		"lint",
 		[]string{"lint", "skill.md"},
 		func(string) ([]byte, error) { return []byte(validSkillFile()), nil },
+		nil, // lint reads no registry
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -593,7 +594,7 @@ func TestSkillsCoreLintRoutesToRenderLintCore(t *testing.T) {
 func TestSkillsCoreUnknownVerbMessage(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	exitCode := 0
-	SkillsCore("bogus", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+	SkillsCore("bogus", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 	if exitCode != 1 {
 		t.Errorf("exit code = %d, want 1", exitCode)
 	}
@@ -662,7 +663,7 @@ skills:
 	t.Run("SC-52_unknown_verb_lists_sync_manifest", func(t *testing.T) {
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("bogus-after-sync", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("bogus-after-sync", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}
@@ -674,7 +675,7 @@ skills:
 	t.Run("SC-52_empty_verb_lists_sync_manifest", func(t *testing.T) {
 		var out, errBuf bytes.Buffer
 		exitCode := 0
-		SkillsCore("", nil, skillsMockReadFile, &out, &errBuf, func(c int) { exitCode = c })
+		SkillsCore("", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
 		if exitCode != 1 {
 			t.Errorf("exit code = %d, want 1", exitCode)
 		}

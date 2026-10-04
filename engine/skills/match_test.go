@@ -85,7 +85,7 @@ func TestNormalizeSlugCharsetInvariant(t *testing.T) {
 	}
 }
 
-// literalMatchRegistry builds a Registry directly (not via ParseRegistry) with
+// literalMatchRegistry builds a Registry directly (not by reading a registry file) with
 // entries whose ID and Path are deliberately distinct, so exact-ID hits,
 // exact-Path hits, and path.Base hits can be tested independently.
 func literalMatchRegistry() Registry {
@@ -227,11 +227,36 @@ func TestMatchCandidate(t *testing.T) {
 		}
 	})
 
-	t.Run("built via ParseRegistry over a fixture YAML", func(t *testing.T) {
-		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "valid_core_and_custom")))
-		if err != nil {
-			t.Fatalf("ParseRegistry: %v", err)
-		}
+	t.Run("built by reading a registry file", func(t *testing.T) {
+		reg := mustParseRegistry(t, `version: "1"
+skills:
+  - id: sdd-spec
+    path: sdd-spec
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: prespec-malandra
+    path: prespec-malandra
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+`)
 
 		matched, path := MatchCandidate(reg, "sdd-spec")
 		if !matched || path != "sdd-spec" {
