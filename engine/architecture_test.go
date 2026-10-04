@@ -31,6 +31,10 @@ import (
 //   - hookwire is the adapter of the Claude Code hook protocol (H14): it decodes what a hook is
 //     handed and encodes what it answers, imports nothing of the module, and is the one home of
 //     the hook's JSON tags; the policies take and return plain values.
+//   - skills/registryyaml is the adapter of the skills domain's RegistryRepository (H15): the
+//     YAML file of the registry, its reader and its writer, with the policy for what the reader
+//     does not understand (H16). It never calls the domain's Validate: the domain judges what
+//     the adapter returns.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -70,6 +74,7 @@ var rings = map[string]archguard.Ring{
 	"shaper/shapertest":         archguard.Support,
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
+	"skills/registryyaml":       archguard.Adapter,
 	"statestore":                archguard.Adapter,
 	"synctrigger":               archguard.Adapter,
 	"workflow":                  archguard.Domain,

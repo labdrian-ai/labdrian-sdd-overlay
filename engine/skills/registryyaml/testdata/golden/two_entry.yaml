@@ -1,0 +1,28 @@
+version: "1"
+skills:
+  - id: sdd-spec
+    path: sdd-spec
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: my-custom
+    path: my-custom
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only

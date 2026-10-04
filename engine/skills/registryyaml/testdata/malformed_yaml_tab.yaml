@@ -1,0 +1,12 @@
+version: "1"
+skills:
+	- id: some-skill
+    path: some-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only

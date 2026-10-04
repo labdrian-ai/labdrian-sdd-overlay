@@ -1,0 +1,14 @@
+version: "1"
+skills:
+  - id: my-custom
+    path: my-custom
+    source:
+      type: custom
+      upstream:
+        owner: someone
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
