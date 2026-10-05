@@ -1,0 +1,22 @@
+# a skill directory with nothing in it
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: skill only-demo has no files to install (its source directory holds nothing that skills install copies)
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+(empty)
+
+# a file where the skill directory should be
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill only-demo: source dir not found: <WORLD>/overlay/skills/only-demo
+error: 1 source director(ies) missing
+
+--- state of demo ---
+(empty)
+

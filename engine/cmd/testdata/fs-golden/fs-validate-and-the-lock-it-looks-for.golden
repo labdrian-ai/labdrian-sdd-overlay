@@ -1,0 +1,60 @@
+# no lock file beside the registry: validate holds nothing, and creates nothing
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+--- state of . ---
+overlay.manifest 0644 140 6cc75793ba0c
+skills.registry.yaml 0644 1016 6f05a223aa1f
+skills/
+skills/alpha/
+skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/SKILL.md 0644 288 b1349da82d6c
+skills/beta/
+skills/beta/.approval.json 0644 193 8bede767624d
+skills/beta/SKILL.md 0644 286 0b0825f91fe4
+skills/ext-one/
+skills/ext-one/.approval.json 0644 196 f23578f8b18c
+skills/ext-one/SKILL.md 0644 292 67e4e4f00446
+skills/tidy-notes/
+skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+
+# the registry's lock file is there (a writer ran once)
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# the lock file is a directory
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+--- state of . ---
+.skills.registry.yaml.lock/
+overlay.manifest 0644 140 6cc75793ba0c
+skills.registry.yaml 0644 1016 6f05a223aa1f
+skills/
+skills/alpha/
+skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/SKILL.md 0644 288 b1349da82d6c
+skills/beta/
+skills/beta/.approval.json 0644 193 8bede767624d
+skills/beta/SKILL.md 0644 286 0b0825f91fe4
+skills/ext-one/
+skills/ext-one/.approval.json 0644 196 f23578f8b18c
+skills/ext-one/SKILL.md 0644 292 67e4e4f00446
+skills/tidy-notes/
+skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+

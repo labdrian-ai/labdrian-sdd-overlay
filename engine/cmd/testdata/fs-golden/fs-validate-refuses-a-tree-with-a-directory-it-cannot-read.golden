@@ -1,0 +1,14 @@
+# a skill directory with no permission bits
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: scanning skills directory "<WORLD>/skills": ondisk: walk <WORLD>/skills: open <WORLD>/skills/alpha: permission denied
+
+# the root itself with none
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: scanning skills directory "<WORLD>/skills": ondisk: walk <WORLD>/skills: open <WORLD>/skills: permission denied
+

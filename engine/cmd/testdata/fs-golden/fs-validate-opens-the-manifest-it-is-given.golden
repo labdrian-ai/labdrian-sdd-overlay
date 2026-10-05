@@ -1,0 +1,76 @@
+# a manifest that does not exist
+$ skills validate --manifest <WORLD>/missing.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/missing.manifest": open <WORLD>/missing.manifest: no such file or directory
+
+# a manifest that is a directory
+$ skills validate --manifest <WORLD>/a-directory.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/a-directory.manifest": read <WORLD>/a-directory.manifest: is a directory
+
+# a manifest with nothing in it
+$ skills validate --manifest <WORLD>/empty.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[MISSING_IN_MANIFEST] beta: registry entry "beta" has no corresponding skill directory in manifest
+[MISSING_IN_MANIFEST] alpha: registry entry "alpha" has no corresponding skill directory in manifest
+[MISSING_IN_MANIFEST] ext-one: registry entry "ext-one" has no corresponding skill directory in manifest
+[MISSING_IN_MANIFEST] tidy-notes: registry entry "tidy-notes" has no corresponding skill directory in manifest
+[UNREGISTERED_ON_DISK] alpha/SKILL.md: skills/alpha/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "alpha/SKILL.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] beta/SKILL.md: skills/beta/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "beta/SKILL.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] ext-one/SKILL.md: skills/ext-one/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "ext-one/SKILL.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] tidy-notes/SKILL.md: skills/tidy-notes/SKILL.md exists on disk but no overlay.manifest row deploys it; add a row for "tidy-notes/SKILL.md" to overlay.manifest to register it
+
+# a manifest with CRLF line ends
+$ skills validate --manifest <WORLD>/crlf.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# a manifest whose last row has no line end
+$ skills validate --manifest <WORLD>/no-newline.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# a manifest with a line longer than the reader's buffer
+$ skills validate --manifest <WORLD>/long.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing manifest for on-disk check: ondisk: read manifest: bufio.Scanner: token too long
+
+# a manifest that is a link to the real one
+$ skills validate --manifest <WORLD>/link.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# a manifest that is a dangling link
+$ skills validate --manifest <WORLD>/dangling.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/dangling.manifest": open <WORLD>/dangling.manifest: no such file or directory
+
+# a manifest with no name
+$ skills validate --manifest  --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "": open : no such file or directory
+

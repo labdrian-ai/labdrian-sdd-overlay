@@ -1,0 +1,6 @@
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "overlay.manifest": open overlay.manifest: permission denied
+

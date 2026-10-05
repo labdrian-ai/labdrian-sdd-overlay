@@ -1,0 +1,128 @@
+# install reads the tree: links, pipes, the record at the root and the temporary files of a writer are not copied
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/.dotfile 0644 22 27a0b2cecb37
+.agents/skills/tidy-notes/.hidden-dir/
+.agents/skills/tidy-notes/.hidden-dir/inner.md 0644 20 0a1a7bc10892
+.agents/skills/tidy-notes/.tmp-skills-/
+.agents/skills/tidy-notes/.tmp-skills-/inside.md 0644 41 00e47c486dfe
+.agents/skills/tidy-notes/.tmp-skills-dir/
+.agents/skills/tidy-notes/.tmp-skills-dir/kept.md 0644 55 39db435a3d70
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/bin/
+.agents/skills/tidy-notes/bin/run.sh 0755 19 a4e0317eafab
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/.approval.json 0644 46 e055aceb254f
+.agents/skills/tidy-notes/references/.tmp-skills- 0644 41 9cc80ec2c987
+.agents/skills/tidy-notes/references/deep/
+.agents/skills/tidy-notes/references/deep/er/
+.agents/skills/tidy-notes/references/deep/er/still.md 0644 7 483e70361967
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.agents/skills/tidy-notes/references/private.md 0600 8 25bc6f78b121
+.agents/skills/tidy-notes/references/readonly.md 0444 10 28dc50ce2c55
+.agents/skills/tidy-notes/ünï/
+.agents/skills/tidy-notes/ünï/cødé.md 0644 8 ebc45fabefba
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/.dotfile 0644 22 27a0b2cecb37
+.claude/skills/tidy-notes/.hidden-dir/
+.claude/skills/tidy-notes/.hidden-dir/inner.md 0644 20 0a1a7bc10892
+.claude/skills/tidy-notes/.tmp-skills-/
+.claude/skills/tidy-notes/.tmp-skills-/inside.md 0644 41 00e47c486dfe
+.claude/skills/tidy-notes/.tmp-skills-dir/
+.claude/skills/tidy-notes/.tmp-skills-dir/kept.md 0644 55 39db435a3d70
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/bin/
+.claude/skills/tidy-notes/bin/run.sh 0755 19 a4e0317eafab
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/.approval.json 0644 46 e055aceb254f
+.claude/skills/tidy-notes/references/.tmp-skills- 0644 41 9cc80ec2c987
+.claude/skills/tidy-notes/references/deep/
+.claude/skills/tidy-notes/references/deep/er/
+.claude/skills/tidy-notes/references/deep/er/still.md 0644 7 483e70361967
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/skills/tidy-notes/references/private.md 0600 8 25bc6f78b121
+.claude/skills/tidy-notes/references/readonly.md 0444 10 28dc50ce2c55
+.claude/skills/tidy-notes/ünï/
+.claude/skills/tidy-notes/ünï/cødé.md 0644 8 ebc45fabefba
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 2251 3b3b398217c6
+
+# and a second time
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+unchanged: tidy-notes
+unchanged: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/.dotfile 0644 22 27a0b2cecb37
+.agents/skills/tidy-notes/.hidden-dir/
+.agents/skills/tidy-notes/.hidden-dir/inner.md 0644 20 0a1a7bc10892
+.agents/skills/tidy-notes/.tmp-skills-/
+.agents/skills/tidy-notes/.tmp-skills-/inside.md 0644 41 00e47c486dfe
+.agents/skills/tidy-notes/.tmp-skills-dir/
+.agents/skills/tidy-notes/.tmp-skills-dir/kept.md 0644 55 39db435a3d70
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/bin/
+.agents/skills/tidy-notes/bin/run.sh 0755 19 a4e0317eafab
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/.approval.json 0644 46 e055aceb254f
+.agents/skills/tidy-notes/references/.tmp-skills- 0644 41 9cc80ec2c987
+.agents/skills/tidy-notes/references/deep/
+.agents/skills/tidy-notes/references/deep/er/
+.agents/skills/tidy-notes/references/deep/er/still.md 0644 7 483e70361967
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.agents/skills/tidy-notes/references/private.md 0600 8 25bc6f78b121
+.agents/skills/tidy-notes/references/readonly.md 0444 10 28dc50ce2c55
+.agents/skills/tidy-notes/ünï/
+.agents/skills/tidy-notes/ünï/cødé.md 0644 8 ebc45fabefba
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/.dotfile 0644 22 27a0b2cecb37
+.claude/skills/tidy-notes/.hidden-dir/
+.claude/skills/tidy-notes/.hidden-dir/inner.md 0644 20 0a1a7bc10892
+.claude/skills/tidy-notes/.tmp-skills-/
+.claude/skills/tidy-notes/.tmp-skills-/inside.md 0644 41 00e47c486dfe
+.claude/skills/tidy-notes/.tmp-skills-dir/
+.claude/skills/tidy-notes/.tmp-skills-dir/kept.md 0644 55 39db435a3d70
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/bin/
+.claude/skills/tidy-notes/bin/run.sh 0755 19 a4e0317eafab
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/.approval.json 0644 46 e055aceb254f
+.claude/skills/tidy-notes/references/.tmp-skills- 0644 41 9cc80ec2c987
+.claude/skills/tidy-notes/references/deep/
+.claude/skills/tidy-notes/references/deep/er/
+.claude/skills/tidy-notes/references/deep/er/still.md 0644 7 483e70361967
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/skills/tidy-notes/references/private.md 0600 8 25bc6f78b121
+.claude/skills/tidy-notes/references/readonly.md 0444 10 28dc50ce2c55
+.claude/skills/tidy-notes/ünï/
+.claude/skills/tidy-notes/ünï/cødé.md 0644 8 ebc45fabefba
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 2251 3b3b398217c6
+

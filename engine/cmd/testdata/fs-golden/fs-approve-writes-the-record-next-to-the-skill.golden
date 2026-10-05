@@ -1,0 +1,52 @@
+# a skill with no record
+$ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: alpha
+sha256: b1349da82d6c3bd82f610929d73ae0dc047b7c921e7919e3e9beb43b95e85950
+record: <WORLD>/skills/alpha/.approval.json
+--- stderr ---
+
+--- state of skills/alpha ---
+.approval.json 0644 194 -
+SKILL.md 0644 288 -
+
+# the same bytes again: the record is left as it is
+$ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+unchanged: alpha
+sha256: b1349da82d6c3bd82f610929d73ae0dc047b7c921e7919e3e9beb43b95e85950
+record: <WORLD>/skills/alpha/.approval.json
+--- stderr ---
+
+--- state of skills/alpha ---
+.approval.json 0644 194 -
+SKILL.md 0644 288 -
+
+# changed bytes
+$ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: alpha
+sha256: 9b2a215ed09544e5b0e3ab6fe03ddf9753e0da48f9d70d6afec1892b1157f7cb
+record: <WORLD>/skills/alpha/.approval.json
+--- stderr ---
+
+--- state of skills/alpha ---
+.approval.json 0644 194 -
+SKILL.md 0644 297 -
+
+# a record that cannot be parsed is replaced
+$ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+approved: alpha
+sha256: 9b2a215ed09544e5b0e3ab6fe03ddf9753e0da48f9d70d6afec1892b1157f7cb
+record: <WORLD>/skills/alpha/.approval.json
+--- stderr ---
+
+--- state of skills/alpha ---
+.approval.json 0644 194 -
+SKILL.md 0644 297 -
+

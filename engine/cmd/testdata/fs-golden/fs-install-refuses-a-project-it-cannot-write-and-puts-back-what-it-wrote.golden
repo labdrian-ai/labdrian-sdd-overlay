@@ -1,0 +1,65 @@
+# the project directory cannot be written to
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: creating ".claude/skills/tidy-notes": mkdir <WORLD>/demo/.claude: permission denied
+
+--- state of demo ---
+(empty)
+
+# .claude cannot be written to
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: creating ".claude/skills/tidy-notes": mkdir <WORLD>/demo/.claude/skills: permission denied
+
+--- state of demo ---
+.claude/
+
+# .agents cannot be written to, after .claude was
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: creating ".agents/skills/tidy-notes": mkdir <WORLD>/demo/.agents/skills: permission denied
+
+--- state of demo ---
+.agents/
+
+# the skill directory of the second target cannot be written to
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: .agents/skills/tidy-notes already exists and was not installed by skills install (it has no install record in .labdrian/procedural-skills.lock.json); if it is exactly the current skill, run `labdrian skills adopt --project-id demo` to take ownership of it, otherwise move it away
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-notes/
+
+# the project lock cannot be read
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading project lock ".labdrian/procedural-skills.lock.json": open <WORLD>/demo/.labdrian/procedural-skills.lock.json: permission denied
+
+--- state of demo ---
+.labdrian/
+.labdrian/procedural-skills.lock.json 0000 3 (permission denied)
+
+# the directory of the project lock cannot be written to
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: staging ".labdrian/procedural-skills.lock.json": writeProjectTemp: create temp: open <WORLD>/demo/.labdrian/.tmp-skills-<N>: permission denied
+
+--- state of demo ---
+.labdrian/
+.labdrian/keep 0644 2 73cb3858a687
+

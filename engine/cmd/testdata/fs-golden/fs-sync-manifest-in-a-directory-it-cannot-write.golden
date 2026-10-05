@@ -1,0 +1,19 @@
+# a manifest that needs a row dropped, in a directory that cannot be written to
+$ skills sync-manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: writing manifest: writeFileAtomic: create temp: open ./.tmp-skills-<N>: permission denied
+
+--- state of . ---
+.skills.registry.yaml.lock mask 0 e3b0c44298fc
+overlay.manifest 0644 44 aac545ed8218
+skills.registry.yaml 0644 204 f4f6d939ffdf
+skills/
+skills/alpha/
+skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/SKILL.md 0644 288 b1349da82d6c
+skills/foo/
+skills/foo/.approval.json 0644 192 3af492fc2a2e
+skills/foo/SKILL.md 0644 284 de83a6ee05ac
+

@@ -85,6 +85,11 @@ func (w *registryWorld) put(rel, content string) {
 	if err := os.WriteFile(p, []byte(content), 0o644); err != nil {
 		w.t.Fatal(err)
 	}
+	// The mode is set, not asked for: a mask of the process must not change the modes a case
+	// records of the files it copies.
+	if err := os.Chmod(p, 0o644); err != nil {
+		w.t.Fatal(err)
+	}
 }
 
 // mkdir makes the directory rel.
@@ -243,11 +248,19 @@ func TestRegistryGolden(t *testing.T) {
 
 func checkRegistryGolden(t *testing.T, name, got string) {
 	t.Helper()
+	checkGoldenIn(t, "registry-golden", name, got, updateRegistryGolden)
+}
+
+// checkGoldenIn compares got with the golden file testdata/<dir>/<name>.golden, or rewrites the
+// file when update is set. It is the comparison of every golden suite that runs the built program
+// in a world.
+func checkGoldenIn(t *testing.T, dir, name, got string, update *bool) {
+	t.Helper()
 	if registryGoldenFileName.MatchString(name) {
 		t.Fatalf("case name %q is not a file name", name)
 	}
-	path := filepath.Join("testdata", "registry-golden", name+".golden")
-	if *updateRegistryGolden {
+	path := filepath.Join("testdata", dir, name+".golden")
+	if *update {
 		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 			t.Fatal(err)
 		}
@@ -258,7 +271,7 @@ func checkRegistryGolden(t *testing.T, name, got string) {
 	}
 	want, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read golden file: %v (record it with -update-registry-golden)", err)
+		t.Fatalf("read golden file: %v (record it with its update flag)", err)
 	}
 	if diff := goldenDifference(name, got, string(want)); diff != "" {
 		t.Fatal(diff)

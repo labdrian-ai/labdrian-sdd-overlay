@@ -1,0 +1,11 @@
+# a skill directory that is a link to the tree
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: skill tidy-notes has no files to install (its source directory holds nothing that skills install copies)
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+(empty)
+

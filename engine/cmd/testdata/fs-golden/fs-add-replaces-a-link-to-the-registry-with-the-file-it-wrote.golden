@@ -1,0 +1,44 @@
+# a registry and a manifest that are links to files elsewhere
+$ skills add --source-root <WORLD>/skills foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- state of . ---
+.skills.registry.yaml.lock mask 0 e3b0c44298fc
+overlay.manifest 0600 42 a77145c1e8f8
+real/
+real/overlay.manifest 0644 22 602f4f6fe352
+real/skills.registry.yaml 0644 204 f4f6d939ffdf
+skills.registry.yaml 0600 418 cc13be4b39bb
+skills/
+skills/alpha/
+skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/SKILL.md 0644 288 b1349da82d6c
+skills/foo/
+skills/foo/.approval.json 0644 192 3af492fc2a2e
+skills/foo/SKILL.md 0644 284 de83a6ee05ac
+
+# and the next write
+$ skills remove foo
+exit: 0
+--- stdout ---
+removed: foo
+--- stderr ---
+
+--- state of . ---
+.skills.registry.yaml.lock mask 0 e3b0c44298fc
+overlay.manifest 0600 22 602f4f6fe352
+real/
+real/overlay.manifest 0644 22 602f4f6fe352
+real/skills.registry.yaml 0644 204 f4f6d939ffdf
+skills.registry.yaml 0600 204 f4f6d939ffdf
+skills/
+skills/alpha/
+skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/SKILL.md 0644 288 b1349da82d6c
+skills/foo/
+skills/foo/.approval.json 0644 192 3af492fc2a2e
+skills/foo/SKILL.md 0644 284 de83a6ee05ac
+

@@ -1,0 +1,45 @@
+# the skill's directory cannot be written to
+$ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: skill "alpha": writing approval record: writeFileAtomic: create temp: open <WORLD>/skills/alpha/.tmp-skills-<N>: permission denied
+
+--- state of skills/alpha ---
+SKILL.md 0644 288 -
+
+# a record that cannot be read
+$ skills approve --id alpha --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: skill "alpha": reading approval record "<WORLD>/skills/alpha/.approval.json": open <WORLD>/skills/alpha/.approval.json: permission denied
+
+# a SKILL.md that cannot be read
+$ skills approve --id beta --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: skill "beta": SKILL.md not found or unreadable at "<WORLD>/skills/beta/SKILL.md": open <WORLD>/skills/beta/SKILL.md: permission denied
+
+# a skill that is not there
+$ skills approve --id nothing --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: skill "nothing": SKILL.md not found or unreadable at "<WORLD>/skills/nothing/SKILL.md": open <WORLD>/skills/nothing/SKILL.md: no such file or directory
+
+# a skill whose SKILL.md is a directory
+$ skills approve --id dir-skill --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: skill "dir-skill": SKILL.md not found or unreadable at "<WORLD>/skills/dir-skill/SKILL.md": read <WORLD>/skills/dir-skill/SKILL.md: is a directory
+
+# a source root that is not there
+$ skills approve --id alpha --approver x --source-root <WORLD>/missing
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: skill "alpha": SKILL.md not found or unreadable at "<WORLD>/missing/alpha/SKILL.md": open <WORLD>/missing/alpha/SKILL.md: no such file or directory
+

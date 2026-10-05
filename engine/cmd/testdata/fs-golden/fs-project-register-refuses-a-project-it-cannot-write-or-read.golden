@@ -1,0 +1,33 @@
+# a project directory that cannot be written to
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-register: creating ".claude/skills/tidy-worktree": mkdir <WORLD>/project/.claude: permission denied
+
+--- state of project ---
+(empty)
+
+# a lock that cannot be read
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading project lock ".labdrian/procedural-skills.lock.json": open <WORLD>/project/.labdrian/procedural-skills.lock.json: permission denied
+
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading project lock ".labdrian/procedural-skills.lock.json": open <WORLD>/project/.labdrian/procedural-skills.lock.json: permission denied
+
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason r tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading project lock ".labdrian/procedural-skills.lock.json": open <WORLD>/project/.labdrian/procedural-skills.lock.json: permission denied
+
+--- state of project ---
+.labdrian/
+.labdrian/procedural-skills.lock.json 0000 3 (permission denied)
+

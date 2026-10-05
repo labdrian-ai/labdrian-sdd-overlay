@@ -1,0 +1,73 @@
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# a project with an installed skill that has grown
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+unchanged: tidy-notes
+unchanged: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/empty-dir/
+.claude/skills/tidy-notes/link.md -> SKILL.md
+.claude/skills/tidy-notes/pipe (named pipe)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/extra/
+.claude/skills/tidy-notes/references/extra/deep.md 0644 14 9d9cbd44959b
+.claude/skills/tidy-notes/references/notes.md 0600 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 605 c7a433693d47
+
+# and 'install' over the same
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+unchanged: tidy-notes
+unchanged: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/empty-dir/
+.claude/skills/tidy-notes/link.md -> SKILL.md
+.claude/skills/tidy-notes/pipe (named pipe)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/extra/
+.claude/skills/tidy-notes/references/extra/deep.md 0644 14 9d9cbd44959b
+.claude/skills/tidy-notes/references/notes.md 0600 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 605 c7a433693d47
+
