@@ -197,6 +197,59 @@ func TestLocationIsUnderTheChangesReviewReceiptsOfTheRootAsGiven(t *testing.T) {
 	}
 }
 
+// Where openspec/ is looked for is the toplevel the locator reports when it is another
+// directory than the one given and has openspec/changes, and the directory as it was given
+// otherwise: when it is the toplevel itself (so the paths printed keep the form they always
+// had), when the locator refuses or says nothing, and when the toplevel has none. The locator
+// is asked once, however many ports are used.
+func TestOpenspecIsLookedForFromTheToplevelTheLocatorReports(t *testing.T) {
+	top := t.TempDir()
+	sub := filepath.Join(top, "sub")
+	write(t, filepath.Join(top, "openspec", "changes", "top-change", "tasks.md"), "x")
+	write(t, filepath.Join(sub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+	bareTop := t.TempDir()
+	bareSub := filepath.Join(bareTop, "sub")
+	write(t, filepath.Join(bareSub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+
+	for _, tc := range []struct {
+		name       string
+		root       string
+		loc        *locator
+		wantRoot   string
+		wantChange string
+	}{
+		{"a subdirectory of a toplevel with openspec", sub, &locator{obs: gitprov.Observation{Toplevel: top}}, top, "top-change"},
+		{"the toplevel itself keeps the form it was given", top, &locator{obs: gitprov.Observation{Toplevel: top}}, top, "top-change"},
+		{"a toplevel with no openspec falls back to the directory", bareSub, &locator{obs: gitprov.Observation{Toplevel: bareTop}}, bareSub, "sub-change"},
+		{"a locator that refuses falls back to the directory", sub, &locator{err: errors.New("not a repository")}, sub, "sub-change"},
+		{"a locator that reports no toplevel falls back to the directory", sub, &locator{}, sub, "sub-change"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			s := newStore(t, tc.root, tc.loc)
+			changes, err := s.Changes()
+			if err != nil || !reflect.DeepEqual(changes, []string{tc.wantChange}) {
+				t.Fatalf("Changes = %v, %v, want [%s]", changes, err, tc.wantChange)
+			}
+			if !s.HasArtifact(tc.wantChange, "tasks.md") {
+				t.Error("HasArtifact does not find the change's tasks.md under the same root")
+			}
+			want := filepath.Join(tc.wantRoot, "openspec", "changes", tc.wantChange, "review-receipts", "review-a.json")
+			if got := s.Location(tc.wantChange, "review-a.json"); got != want {
+				t.Errorf("Location = %q, want %q", got, want)
+			}
+			if err := s.Write(tc.wantChange, "review-a.json", []byte("{}")); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := os.Stat(want); err != nil {
+				t.Errorf("Write did not put the receipt where Location says: %v", err)
+			}
+			if len(tc.loc.asked) > 1 {
+				t.Errorf("the locator was asked %d times, want at most once", len(tc.loc.asked))
+			}
+		})
+	}
+}
+
 func TestReadReturnsWhatWasPersistedAndSaysWhenNothingWas(t *testing.T) {
 	root := t.TempDir()
 	s := newStore(t, root, &locator{})

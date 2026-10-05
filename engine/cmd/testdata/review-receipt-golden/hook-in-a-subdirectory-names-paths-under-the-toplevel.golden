@@ -1,0 +1,16 @@
+$ review-receipt hook --cwd <ROOT>/sub
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+review-receipt: capture failed: reviewreceipt: <ROOT>/openspec/changes/only-change/review-receipts/review-atomic.json already exists with different content
+
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+review-receipt: capture failed: reviewreceipt: <ROOT>/openspec/changes/only-change/review-receipts/review-atomic.json already exists with different content
+

@@ -6,8 +6,5 @@ exit: 0
 --- stderr ---
 
 === after ===
-dir  openspec
-dir  openspec/changes
-dir  openspec/changes/only-change
-file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+(no openspec directory)
 

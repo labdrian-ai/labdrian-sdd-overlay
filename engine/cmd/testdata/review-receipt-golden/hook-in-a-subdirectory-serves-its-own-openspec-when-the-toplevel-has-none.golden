@@ -1,0 +1,18 @@
+$ review-receipt hook --cwd <ROOT>/sub
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== toplevel ===
+(no openspec directory)
+
+=== sub ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/sub-change
+dir  openspec/changes/sub-change/review-receipts
+file openspec/changes/sub-change/review-receipts/review-from-below.json 0600 208 73ed15d0f4e4
+file openspec/changes/sub-change/tasks.md 0644 8 b23b81c926c4
+
