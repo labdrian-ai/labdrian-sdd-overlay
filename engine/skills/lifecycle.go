@@ -28,7 +28,7 @@ var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 //
 // The input registry is never mutated (pure function).
 func AddEntry(reg Registry, id, repo, ref string) (Registry, error) {
-	if err := refuseToDropUnread(reg); err != nil {
+	if err := reg.CheckWritable(); err != nil {
 		return Registry{}, err
 	}
 	if !slugRe.MatchString(id) {
@@ -72,7 +72,7 @@ func AddEntry(reg Registry, id, repo, ref string) (Registry, error) {
 // them), which is checked first, and if id is not present in reg.Skills (R-069). The relative
 // order of remaining entries is preserved (R-070). The input registry is never mutated.
 func RemoveEntry(reg Registry, id string) (Registry, error) {
-	if err := refuseToDropUnread(reg); err != nil {
+	if err := reg.CheckWritable(); err != nil {
 		return Registry{}, err
 	}
 	found := false

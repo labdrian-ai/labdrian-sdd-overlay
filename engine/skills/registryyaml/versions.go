@@ -73,10 +73,29 @@ func versionOf(tokens []tok) (string, error) {
 		version, found = t.val, true
 	}
 	if !found {
+		if t, ok := keyWithAByteOrderMark(tokens, versionField.path); ok {
+			return "", fmt.Errorf("line %d: the top-level key %q starts with a byte-order mark; save the file without one", t.lineNum, t.key)
+		}
 		return "", fmt.Errorf("skills: missing required top-level field 'version'")
 	}
 	return version, nil
 }
+
+// keyWithAByteOrderMark finds the top-level key that is name with a byte-order mark before it, as
+// an editor that saves the file with one makes of the first key: it is not the key the format
+// asks for, and naming it as it is (with the mark, which %q shows) is the one clue that points at
+// the encoding of the file and not at a field that is missing.
+func keyWithAByteOrderMark(tokens []tok, name string) (tok, bool) {
+	for _, t := range tokens {
+		if t.indent == 0 && strings.TrimPrefix(t.key, byteOrderMark) == name && t.key != name {
+			return t, true
+		}
+	}
+	return tok{}, false
+}
+
+// byteOrderMark is U+FEFF, the mark an editor writes at the start of a file saved with one.
+const byteOrderMark = "\ufeff"
 
 // unsupported is the refusal of a version no decoder is for, naming it and the ones there are.
 func unsupported(version string, versions map[string]decoder) error {

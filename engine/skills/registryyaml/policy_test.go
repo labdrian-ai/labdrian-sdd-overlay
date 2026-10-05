@@ -507,13 +507,48 @@ func TestTheFileIsNotWrittenFromARegistryThatLeftFieldsOut(t *testing.T) {
 	if err == nil || out != nil {
 		t.Fatalf("Encode() = %q, %v, want a refusal and no bytes: they would drop what was left out", out, err)
 	}
-	for _, want := range []string{"left unread", "line 1: unknown top-level key \"extra\""} {
-		if !strings.Contains(err.Error(), want) {
-			t.Errorf("Encode() error = %q, want it to say %q", err, want)
-		}
+	// The rule is the domain's, and so are its words: one rule, one wording, whichever way the
+	// registry is refused (a verb that changes it, or the adapter that would write it).
+	if want := reg.CheckWritable(); want == nil || err.Error() != want.Error() {
+		t.Errorf("Encode() error = %q, want the words of the domain's rule, %v", err, want)
+	}
+	if want := "line 1: unknown top-level key \"extra\""; !strings.Contains(err.Error(), want) {
+		t.Errorf("Encode() error = %q, want it to say %q", err, want)
 	}
 	// What was read whole is written as ever.
 	if _, err := registryyaml.NewRepository(nil).Encode(withNothingUnread(reg)); err != nil {
 		t.Errorf("Encode() of the registry without the note = %v, want it written", err)
+	}
+}
+
+// An unknown key under source does not refuse the file: the entry is read as it is and usable, and
+// the key is left out and reported with its line (the scenario "An unknown key under source is
+// tolerated and reported" of openspec/specs/skill-package-manager/spec.md).
+func TestAnUnknownKeyUnderSourceIsToleratedAndReportedWithItsLine(t *testing.T) {
+	const doc = `version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: external
+      repo: https://example.test/skills
+      mirror: elsewhere
+      ref: v1
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+	reg, err := readRegistry(doc)
+	if err != nil {
+		t.Fatalf("a registry with an unknown key under source = %v, want it read", err)
+	}
+	if want := []string{fmt.Sprintf(`line %d: unknown key "mirror" in source`, lineOf(t, doc, "      mirror: elsewhere"))}; !reflect.DeepEqual(reg.Unread, want) {
+		t.Errorf("left out %q, want %q", reg.Unread, want)
+	}
+	if len(reg.Skills) != 1 || reg.Skills[0].Source.Repo != "https://example.test/skills" || reg.Skills[0].Source.Ref != "v1" {
+		t.Errorf("the entry came back as %+v, want it read, with the repo and the ref it says on both sides of the key", reg.Skills)
 	}
 }

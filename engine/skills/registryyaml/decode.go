@@ -247,12 +247,14 @@ func decodeV1(tokens []tok) (skills.Registry, error) {
 func (p *tokParser) open(path string, t tok, col int) (bool, error) {
 	f, ok := p.schema.byPath[path]
 	if !ok {
-		panic("registryyaml: the decoder asked for a field its schema does not have: " + path)
+		// A fault of the program (a field wired into the decoder and not into its table), refused
+		// like any other fault of the file's reading instead of crashing the verb that reads it.
+		return false, fmt.Errorf("line %d: registryyaml: the decoder asked for a field its schema does not have: no field %q", t.lineNum, path)
 	}
 	hasValue := t.kind == tokKeyValue || t.kind == tokSeqMapping
 	next := p.peek()
 	hasBlock := next != nil && next.indent > col
-	if (f.shape == shapeScalar && !hasBlock) || (f.shape != shapeScalar && !hasValue) {
+	if f.isInShape(hasValue, hasBlock) {
 		return true, nil
 	}
 	if f.must {

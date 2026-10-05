@@ -16,20 +16,6 @@ const (
 	shapeEntries              // "key:" with "- key: value" items under it
 )
 
-// noun is the shape as a note says it of a field that was not in it.
-func (s shape) noun() string {
-	switch s {
-	case shapeScalar:
-		return "a single value"
-	case shapeBlock:
-		return "a block of fields"
-	case shapeList:
-		return "a list of values"
-	default:
-		return "a list of entries"
-	}
-}
-
 // field is one field of a version of the file: where it is (its path from the entry, or from the
 // top of the file for the two that are there), the shape it has, and whether a reader that does
 // not read it as it is has to refuse the file. That last is the must-understand set of the
@@ -56,9 +42,19 @@ func (f field) refusal(children []string) string {
 	}
 }
 
-// note says that this field, which has a block under it where it should have a value, was left
-// out, after "line N: ".
-func (f field) note() string { return fmt.Sprintf("%s is not %s", f.path, f.shape.noun()) }
+// isInShape says whether the key of this field is written in the shape the field has, given
+// whether its line has a value and whether a block is under it. A scalar is a value with nothing
+// under it; every other shape is a key with nothing on its line, and what it holds is under it.
+func (f field) isInShape(hasValue, hasBlock bool) bool {
+	if f.shape == shapeScalar {
+		return !hasBlock
+	}
+	return !hasValue
+}
+
+// note says that this field, a scalar that has a block under it where it should have a value, was
+// left out, after "line N: ".
+func (f field) note() string { return fmt.Sprintf("%s is not a single value", f.path) }
 
 // strayValueNote says that the value on the line of this field, which is a block, was left out
 // and the block under it was read, after "line N: ".

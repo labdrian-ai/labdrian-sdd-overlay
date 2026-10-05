@@ -56,6 +56,10 @@ func TestAValidRegistryIsValid(t *testing.T) {
 		"a core skill with no upstream": registryOfEntries(Entry{ID: "c", Path: "c", Source: Source{Type: SourceCore}, Install: Install{DefaultScope: ScopeGlobal, Targets: []string{"claude"}}, Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"}}),
 		"a path that is not the id":     registryOfEntries(func() Entry { e := validEntry("a"); e.Path = "group-dir"; return e }()),
 		"no scope: carried over, an entry without one is read as neither": registryOfEntries(func() Entry { e := validEntry("a"); e.Install.DefaultScope = ""; return e }()),
+		// Two ids on one path are accepted, as they always were (the golden
+		// list-reads-the-forms-of-yaml-the-subset-allows pins it from the file). Whether they should
+		// be refused is the owner's decision (Phase 9 ledger, batch 11a): it would refuse registries
+		// that read today.
 		"the same path twice":     registryOfEntries(validEntry("a"), func() Entry { e := validEntry("b"); e.Path = "a"; return e }()),
 		"ids that differ in case": registryOfEntries(validEntry("a"), validEntry("A")),
 		"targets repeated":        registryOfEntries(func() Entry { e := validEntry("a"); e.Install.Targets = []string{"pi", "pi"}; return e }()),
@@ -362,5 +366,47 @@ func TestAddEntryAndRemoveEntryRefuseARegistryThatLeftFieldsOut(t *testing.T) {
 	}
 	if removed, err := RemoveEntry(whole, "alpha"); err != nil || len(removed.Skills) != 0 {
 		t.Errorf("RemoveEntry() on a registry read whole = %+v, %v, want it removed", removed, err)
+	}
+}
+
+// The targets a registry may name and the targets a refusal lists are one list: an entry that
+// names any target RegistryTargets lists is accepted, and one that names another is refused in
+// words that list exactly those.
+func TestTheTargetsARefusalListsAreTheTargetsThatAreAccepted(t *testing.T) {
+	for _, target := range RegistryTargets() {
+		e := validEntry("a")
+		e.Install.Targets = []string{target}
+		if err := registryOfEntries(e).Validate(); err != nil {
+			t.Errorf("Validate() with the target %q = %v, want it accepted: it is in RegistryTargets()", target, err)
+		}
+	}
+	e := validEntry("a")
+	e.Install.Targets = []string{"claude", "windsurf"}
+	err := registryOfEntries(e).Validate()
+	want := `skills: entry "a": install.targets contains invalid value "windsurf"; must be one of: ` + strings.Join(RegistryTargets(), ", ")
+	if err == nil || err.Error() != want {
+		t.Errorf("Validate() with the target \"windsurf\" = %v, want %q", err, want)
+	}
+}
+
+func TestRegistryTargetsHandsOutAListOfItsOwn(t *testing.T) {
+	first := RegistryTargets()
+	first[0] = "changed"
+	if got := RegistryTargets()[0]; got != "claude" {
+		t.Errorf("RegistryTargets()[0] = %q after a caller changed the list it was given, want \"claude\"", got)
+	}
+}
+
+// The rule that a registry the reader did not read whole is not written back has one owner and one
+// wording: the verbs that change a registry and the adapter that would write it ask it, and say
+// what it says.
+func TestACheckForWritingSaysWhatTheReaderLeftOut(t *testing.T) {
+	if err := unreadRegistry().CheckWritable(); err != nil {
+		t.Errorf("CheckWritable() of a registry read whole = %v, want nil", err)
+	}
+	reg := unreadRegistry(`line 3: unknown key "color" in skill entry`, "line 9: unknown key \"mirror\" in source")
+	const want = `skills: the registry has fields this program does not read, and rewriting it would drop them: line 3: unknown key "color" in skill entry (and 1 more)`
+	if err := reg.CheckWritable(); err == nil || err.Error() != want {
+		t.Errorf("CheckWritable() = %v, want %q", err, want)
 	}
 }

@@ -8,6 +8,7 @@ package registryyaml_test
 
 import (
 	"errors"
+	"fmt"
 	"io/fs"
 	"strings"
 	"testing"
@@ -159,9 +160,11 @@ func TestTheFirstFaultInTheOrderOfTheFileIsTheOneTheDomainNames(t *testing.T) {
 		"an invalid first entry before a key that repeats in the second": {
 			strings.Replace(oneEntry, "path: alpha", `path: ""`, 1) + "  - id: beta\n    id: gamma\n",
 			`skills: entry "alpha": path must not be empty`},
+		// The repeated key is the second line of the second entry, which begins on the line
+		// after the last of the first.
 		"a valid first entry before a key that repeats in the second": {
 			oneEntry + "  - id: beta\n    id: gamma\n",
-			`line 14: duplicate key "id" in skill entry`},
+			fmt.Sprintf(`line %d: duplicate key "id" in skill entry`, strings.Count(oneEntry, "\n")+2)},
 		// The one exception to "the order of the file": the version selects the decoder, so it is
 		// found before any entry is read, and a version the file gets wrong is named first.
 		"a version the file gets wrong, before an invalid entry": {
@@ -175,4 +178,30 @@ func TestTheFirstFaultInTheOrderOfTheFileIsTheOneTheDomainNames(t *testing.T) {
 			}
 		})
 	}
+}
+
+// --- a top-level key that repeats -----------------------------------------------------------
+
+// The format has always taken the last of a top-level key that repeats, where a key repeated
+// inside a mapping is refused. The golden list-reads-the-forms-of-yaml-the-subset-allows pins it
+// from the outside ('the last of two versions wins', 'the second of two skills keys replaces the
+// first'). Tightening it would change which files read, so it is the owner's decision (Phase 9
+// ledger, batch 11a) and, until it is made, this pins it at the adapter: for 'version', and for
+// 'skills', where the second block replaces the first and the entries of the first are not in the
+// registry.
+func TestARepeatedTopLevelKeyTakesTheLast(t *testing.T) {
+	repo := registryyaml.NewRepository(nil)
+	t.Run("version", func(t *testing.T) {
+		reg, err := repo.Decode([]byte("version: \"2\"\n" + oneEntry))
+		if err != nil || reg.Version != "1" {
+			t.Errorf("Decode() = version %q, %v, want the last of the two, \"1\"", reg.Version, err)
+		}
+	})
+	t.Run("skills", func(t *testing.T) {
+		second := strings.TrimPrefix(strings.Replace(oneEntry, "alpha", "beta", 2), "version: \"1\"\n")
+		reg, err := repo.Decode([]byte(oneEntry + second))
+		if err != nil || len(reg.Skills) != 1 || reg.Skills[0].ID != "beta" {
+			t.Errorf("Decode() = %+v, %v, want only the entry of the last block, beta", reg.Skills, err)
+		}
+	})
 }
