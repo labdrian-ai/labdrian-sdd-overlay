@@ -157,7 +157,9 @@ func fsReadCases() []registryGoldenCase {
 			w.runIn("demo", w.installArgs("install")...)
 			w.state("demo")
 		}},
-		{"fs-install-copies-the-source-through-a-link", func(w *registryWorld) {
+		// A skill directory that is a link is not followed: install finds nothing to copy in it and
+		// refuses, so nothing is installed.
+		{"fs-install-refuses-a-skill-directory-that-is-a-link", func(w *registryWorld) {
 			w.projectWorld()
 			w.move("overlay/skills/tidy-notes", "overlay/real-tidy-notes")
 			w.symlink("../real-tidy-notes", "overlay/skills/tidy-notes")
