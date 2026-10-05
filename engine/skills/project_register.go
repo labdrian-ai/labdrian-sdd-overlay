@@ -749,7 +749,7 @@ func PlanProjectRetire(in RetireInput) (ProjectPlan, error) {
 // repo-relative pointer per path it could not restore. The lock temp is staged
 // before the first delete, so no deletion can become visible without a lock
 // update that can either be committed or rolled back.
-func ExecuteProjectRetirePlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer) error {
+func ExecuteProjectRetirePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer) error {
 	if fsys == nil {
 		return fmt.Errorf("project-retire: no filesystem was injected")
 	}
@@ -813,7 +813,7 @@ func ExecuteProjectRetirePlan(p ProjectPlan, fsys projectFS, stdout, stderr io.W
 // original permission bits; the lock uses the same representation but is
 // restored only if its rename was attempted.
 type projectRetireStager struct {
-	fsys          projectFS
+	fsys          ProjectFS
 	root          string
 	deletes       []ProjectWrite
 	lock          ProjectWrite
@@ -876,7 +876,7 @@ func (s *projectRetireStager) restore(w ProjectWrite) error {
 // executor. Revision writes carry backups for every target and the lock, so
 // the existing temp -> ordered rename -> rollback implementation already
 // provides the required mid-revision recovery without a second write path.
-func ExecuteProjectRevisePlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer) error {
+func ExecuteProjectRevisePlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer) error {
 	return ExecuteProjectPlan(p, fsys, stdout, stderr)
 }
 
@@ -1030,33 +1030,32 @@ func checkRegisterIdentity(id string, reg Registry) error {
 // freshly cloned checkout looks like.
 const projectDirMode fs.FileMode = 0o755
 
-// projectFS is the filesystem seam ExecuteProjectPlan works through, so a test
-// can inject a failure at any single call (design.md: "over an injected
-// `projectFS` interface so tests can inject failures"). design.md names the
-// interface but never enumerates its methods, so this method set is derived
-// from the stage/commit/rollback prose it does specify: MkdirAll for the
-// target directories, a same-directory temp write for staging, Rename for the
-// commit, Remove for leftover temps and created directories, Stat to learn
-// which directories this run created, ReadDir to prove a created directory is
-// empty before removing it, and ResolvePath for the check-then-act containment
-// proof PlanProjectRegister's point-in-time proof explicitly defers here.
-type projectFS interface {
+// ProjectFS is the port through which the skills domain reads and writes the files of a project
+// and of an overlay, and the seam a test injects a failure at, at any single call. It is owned
+// here and implemented by engine/skills/skillsfs. The method set is what the stage, commit and
+// rollback of an execution need: MkdirAll for the target directories, a same-directory temp
+// write for staging, Rename for the commit, Remove for leftover temps and created directories,
+// Stat to learn which directories a run created, ReadDir to prove a created directory is empty
+// before removing it, and ResolvePath for the check-then-act containment proof that a plan's
+// point-in-time proof defers to the moment of writing.
+type ProjectFS interface {
 	Stat(name string) (fs.FileInfo, error)
 	ReadDir(name string) ([]fs.DirEntry, error)
 	MkdirAll(dir string, perm fs.FileMode) error
-	// WriteTemp writes data to a fresh temp file in dir at mode perm and
-	// returns its path; the caller owns the rename. It is the writeFileAtomic
-	// pattern of lifecycle.go (create temp in the destination's own directory,
-	// write, sync, close) plus the os.Chmod step cmd/main.go's atomicWriteFile
-	// carries — lifecycle.go's helper has no perm argument, so its temps keep
-	// os.CreateTemp's 0600 through the rename, which ProjectFileMode forbids.
+	// WriteTemp writes data to a fresh temp file in dir at mode perm, whatever the mask of the
+	// process, and returns its path; the caller owns the rename. The file is created in the
+	// destination's own directory, written, synced and closed before it returns, and its name
+	// begins ".tmp-skills-" followed by a unique suffix, which is how a copier of a tree knows
+	// it for half of a write (SkipWhenCopying). A failure leaves no file and says the step it
+	// failed at in its first words (create temp, write, sync, close, chmod); the caller words
+	// the rest for its verb.
 	WriteTemp(dir string, data []byte, perm fs.FileMode) (string, error)
 	Rename(oldPath, newPath string) error
 	Remove(name string) error
 	ResolvePath(name string) (string, error)
 }
 
-// osProjectFS is the production binding of projectFS: the real filesystem,
+// osProjectFS is the production binding of ProjectFS: the real filesystem,
 // with resolvePathKeepingMissing as the resolver so the executor's
 // check-then-act proof resolves paths exactly as the planner's did.
 type osProjectFS struct{}
@@ -1141,7 +1140,7 @@ func projectCommitOrder(p ProjectPlan) []ProjectWrite {
 // Cross-directory atomicity is not available on POSIX (design.md,
 // alternatives). The git commit is the real atomic unit; this function's job
 // is to leave either the full planned set or the pre-run state behind.
-func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer) error {
+func ExecuteProjectPlan(p ProjectPlan, fsys ProjectFS, stdout, stderr io.Writer) error {
 	// Retirement uses the same public executor seam as registration and
 	// revision when called by a future CLI, but needs delete-specific rollback
 	// state. Keep the dedicated implementation behind this dispatch so callers
@@ -1180,7 +1179,7 @@ func ExecuteProjectPlan(p ProjectPlan, fsys projectFS, stdout, stderr io.Writer)
 // read, although it is not registration.
 const projectRegisterVerb = "project-register"
 
-func newProjectStager(verb string, fsys projectFS, root string, order []ProjectWrite, deleting []bool) *projectStager {
+func newProjectStager(verb string, fsys ProjectFS, root string, order []ProjectWrite, deleting []bool) *projectStager {
 	return &projectStager{
 		verb:      verb,
 		fsys:      fsys,
@@ -1277,7 +1276,7 @@ func (e rollbackIncompleteError) Is(target error) bool { return target == ErrRol
 // staged. The planned writes themselves are already in order.
 type projectStager struct {
 	verb      string // how a failure is worded: the command that is executing the plan
-	fsys      projectFS
+	fsys      ProjectFS
 	root      string
 	order     []ProjectWrite
 	deleting  []bool   // deleting[i]: order[i] removes its file (nil: nothing is removed)
@@ -1448,7 +1447,7 @@ func (s *projectStager) rel(p string) string {
 // verb is how every refusal is worded: the name of the command that is executing
 // the plan, "project-register" for the project verbs and "skills install" or
 // "skills adopt" for the two that share this executor.
-func checkProjectDestinations(verb string, fsys projectFS, root string, order []ProjectWrite) error {
+func checkProjectDestinations(verb string, fsys ProjectFS, root string, order []ProjectWrite) error {
 	fail := func(format string, a ...any) error { return fmt.Errorf("%s: "+format, append([]any{verb}, a...)...) }
 	resolvedRoot, err := fsys.ResolvePath(root)
 	if err != nil {

@@ -628,7 +628,7 @@ func TestSkillsCore_VerbEnumerationsNameProjectRegister(t *testing.T) {
 	}
 }
 
-func runProjectRevise(t *testing.T, args []string, fsys projectFS) (stdout, stderr string, exitCode int) {
+func runProjectRevise(t *testing.T, args []string, fsys ProjectFS) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1
@@ -805,7 +805,7 @@ func TestSkillsCore_DispatchesProjectReviseAndStatus(t *testing.T) {
 	}
 }
 
-func runProjectRetire(t *testing.T, args []string, fsys projectFS) (stdout, stderr string, exitCode int) {
+func runProjectRetire(t *testing.T, args []string, fsys ProjectFS) (stdout, stderr string, exitCode int) {
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1

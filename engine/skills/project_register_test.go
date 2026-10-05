@@ -1157,7 +1157,7 @@ func assertSameTree(t *testing.T, want, got map[string]string) {
 	}
 }
 
-// fakeProjectFS is the injected projectFS of tasks.md 3b-ii.1/3b-ii.3: every
+// fakeProjectFS is the injected ProjectFS of tasks.md 3b-ii.1/3b-ii.3: every
 // call is delegated to the real filesystem over a t.TempDir, and `fail` may
 // turn any single call into an error. Delegating rather than simulating is
 // deliberate — the rollback claim is about the real tree, so the fake injects

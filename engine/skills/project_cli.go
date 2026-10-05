@@ -72,7 +72,7 @@ func RenderProjectRegisterCore(
 	registries RegistryRepository,
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
-	fsys projectFS,
+	fsys ProjectFS,
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
@@ -181,7 +181,7 @@ func RenderProjectReviseCore(
 	readDir func(string) ([]fs.DirEntry, error),
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
-	fsys projectFS,
+	fsys ProjectFS,
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
@@ -282,7 +282,7 @@ func RenderProjectRetireCore(
 	readDir func(string) ([]fs.DirEntry, error),
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
-	fsys projectFS,
+	fsys ProjectFS,
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {

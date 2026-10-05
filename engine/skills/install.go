@@ -93,7 +93,7 @@ type installEnv struct {
 	stat        func(string) (fs.FileInfo, error) // the project's paths
 	readDir     func(string) ([]fs.DirEntry, error)
 	resolve     func(string) (string, error)       // symlink resolution, for containment
-	fsys        projectFS                          // the writes
+	fsys        ProjectFS                          // the writes
 	readSource  func(string) ([]SourceFile, error) // a skill's source tree
 }
 
