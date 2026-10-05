@@ -185,52 +185,6 @@ func TestDeployableManifestPaths_LongtermMemRouteGuardAcceptsEveryValidRoute(t *
 	}
 }
 
-func TestScanSkillFiles(t *testing.T) {
-	root := t.TempDir()
-	files := []string{
-		"alpha/SKILL.md",
-		"alpha/references/one.md",
-		"_shared/contract.md",
-		"beta/SKILL.md",
-	}
-	for _, f := range files {
-		p := filepath.Join(root, filepath.FromSlash(f))
-		if err := os.MkdirAll(filepath.Dir(p), 0o755); err != nil {
-			t.Fatalf("mkdir for %s: %v", f, err)
-		}
-		if err := os.WriteFile(p, []byte("x"), 0o644); err != nil {
-			t.Fatalf("write %s: %v", f, err)
-		}
-	}
-
-	got, err := ScanSkillFiles(root)
-	if err != nil {
-		t.Fatalf("ScanSkillFiles: unexpected error: %v", err)
-	}
-
-	// Sorted, slash-separated, relative to root — directories are not entries.
-	want := []string{
-		"_shared/contract.md",
-		"alpha/SKILL.md",
-		"alpha/references/one.md",
-		"beta/SKILL.md",
-	}
-	if len(got) != len(want) {
-		t.Fatalf("ScanSkillFiles: got %d entries %v, want %d %v", len(got), got, len(want), want)
-	}
-	for i := range want {
-		if got[i] != want[i] {
-			t.Errorf("ScanSkillFiles[%d] = %q, want %q", i, got[i], want[i])
-		}
-	}
-}
-
-func TestScanSkillFilesMissingDir(t *testing.T) {
-	if _, err := ScanSkillFiles(filepath.Join(t.TempDir(), "absent")); err == nil {
-		t.Fatal("ScanSkillFiles: expected an error for a missing directory, got nil")
-	}
-}
-
 // TestDiffOnDiskCatchesUnregisteredSkill is the regression test for the class of
 // bug that shipped anti-generic-design undeployed: a skill present on disk and in
 // Git but absent from overlay.manifest. Registry-vs-manifest cross-checking
@@ -310,7 +264,7 @@ func TestRepositorySkillsAreFullyRegistered(t *testing.T) {
 		t.Fatalf("DeployableManifestPaths: %v", err)
 	}
 
-	disk, err := ScanSkillFiles(filepath.Join(root, "skills"))
+	disk, err := scanSkillFiles(filepath.Join(root, "skills"))
 	if err != nil {
 		t.Fatalf("ScanSkillFiles: %v", err)
 	}

@@ -6,6 +6,7 @@ package main
 // engine/skills/lock.go for which verb takes which lock and why.
 
 import (
+	"os"
 	"path/filepath"
 	"time"
 
@@ -43,6 +44,13 @@ func (l fileLocker) LockDir(dir string, mode skills.LockMode) (func(), error) {
 		return nil, err
 	}
 	return filelock.AcquireDir(real, l.options(mode))
+}
+
+// Exists says whether path is there: nil when it is, and otherwise the failure of the system
+// with its own words (an error that is fs.ErrNotExist when the path is absent).
+func (fileLocker) Exists(path string) error {
+	_, err := os.Stat(path)
+	return err
 }
 
 func (l fileLocker) options(mode skills.LockMode) filelock.Options {

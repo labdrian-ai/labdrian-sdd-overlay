@@ -482,7 +482,7 @@ func TestSyncCore(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		divs, vErr := Validate(reg, mfPath)
+		divs, vErr := validateFile(reg, mfPath)
 		if vErr != nil || len(divs) > 0 {
 			t.Errorf("validate failed after sync: err=%v divs=%v", vErr, divs)
 		}

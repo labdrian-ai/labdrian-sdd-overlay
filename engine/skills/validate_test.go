@@ -282,7 +282,7 @@ func TestValidate(t *testing.T) {
 			t.Fatal(err)
 		}
 		reg := Registry{Version: "1", Skills: []Entry{coreEntry("sdd-spec")}}
-		divs, err := Validate(reg, manifestPath)
+		divs, err := validateFile(reg, manifestPath)
 		if err != nil {
 			t.Errorf("expected nil error for aligned input, got: %v", err)
 		}
@@ -299,7 +299,7 @@ func TestValidate(t *testing.T) {
 			t.Fatal(err)
 		}
 		reg := Registry{Version: "1", Skills: []Entry{coreEntry("sdd-spec")}}
-		divs, err := Validate(reg, manifestPath)
+		divs, err := validateFile(reg, manifestPath)
 		if err == nil {
 			t.Error("expected non-nil error for diverged input")
 		}
@@ -313,7 +313,7 @@ func TestValidate(t *testing.T) {
 
 	t.Run("missing_manifest_file_returns_error", func(t *testing.T) {
 		reg := Registry{}
-		_, err := Validate(reg, "/nonexistent/overlay.manifest")
+		_, err := validateFile(reg, "/nonexistent/overlay.manifest")
 		if err == nil {
 			t.Error("expected error for missing manifest file")
 		}
@@ -342,7 +342,7 @@ func TestValidate(t *testing.T) {
 			t.Fatalf("parsing real registry: %v", err)
 		}
 
-		divs, err := Validate(reg, manifestPath)
+		divs, err := validateFile(reg, manifestPath)
 		if err != nil {
 			t.Errorf("real registry/manifest diverged (%d divergence(s)):", len(divs))
 			for _, d := range divs {
@@ -364,7 +364,7 @@ func TestValidate(t *testing.T) {
 			t.Fatal(err)
 		}
 		reg := Registry{Version: "1", Skills: []Entry{coreEntry("foo")}}
-		divs, err := Validate(reg, manifestPath)
+		divs, err := validateFile(reg, manifestPath)
 		if err == nil {
 			t.Error("expected non-nil error for mixed-tag manifest")
 		}

@@ -14,7 +14,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -36,7 +36,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -53,7 +53,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -72,7 +72,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -92,7 +92,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -106,7 +106,7 @@ func TestLoadManifestView(t *testing.T) {
 	})
 
 	t.Run("missing_file", func(t *testing.T) {
-		_, err := LoadManifestView("/nonexistent/path/overlay.manifest")
+		_, err := loadManifestViewFile("/nonexistent/path/overlay.manifest")
 		if err == nil {
 			t.Error("expected error for missing file, got nil")
 		}
@@ -119,7 +119,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -136,7 +136,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -157,7 +157,7 @@ func TestLoadManifestView(t *testing.T) {
 		if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
 			t.Fatal(err)
 		}
-		mv, err := LoadManifestView(path)
+		mv, err := loadManifestViewFile(path)
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}

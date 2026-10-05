@@ -621,7 +621,7 @@ func TestSkillsCore_DispatchesProjectRegister(t *testing.T) {
 func TestSkillsCore_VerbEnumerationsNameProjectRegister(t *testing.T) {
 	for _, verb := range []string{"", "no-such-verb"} {
 		var out, errBuf bytes.Buffer
-		SkillsCore(verb, nil, os.ReadFile, testRegistries(os.ReadFile), &out, &errBuf, func(int) {})
+		skillsCore(verb, nil, os.ReadFile, testRegistries(os.ReadFile), &out, &errBuf, func(int) {})
 		if !strings.Contains(errBuf.String(), "project-register") {
 			t.Errorf("the verb enumeration for %q must name project-register, got %q", verb, errBuf.String())
 		}

@@ -437,7 +437,7 @@ func TestAddCoreSuccess(t *testing.T) {
 	}
 
 	// Validate must return zero divergences.
-	divs, err := Validate(reg, mfPath)
+	divs, err := validateFile(reg, mfPath)
 	if err != nil || len(divs) > 0 {
 		t.Errorf("Validate after add: err=%v, divs=%v", err, divs)
 	}
@@ -730,7 +730,7 @@ func TestRemoveCoreSuccess(t *testing.T) {
 	}
 
 	// Validate must return zero divergences.
-	divs, err := Validate(reg, mfPath)
+	divs, err := validateFile(reg, mfPath)
 	if err != nil || len(divs) > 0 {
 		t.Errorf("Validate after remove: err=%v, divs=%v", err, divs)
 	}
@@ -877,7 +877,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 		if len(reg.Skills) != wantSkills {
 			t.Errorf("%s: expected %d skills, got %d", label, wantSkills, len(reg.Skills))
 		}
-		divs, vErr := Validate(reg, mfPath)
+		divs, vErr := validateFile(reg, mfPath)
 		if vErr != nil || len(divs) > 0 {
 			t.Errorf("%s: Validate: err=%v, divs=%v", label, vErr, divs)
 		}
@@ -965,7 +965,7 @@ func TestAddCoreExternalRepo(t *testing.T) {
 	}
 
 	// Validate must return zero divergences.
-	divs, vErr := Validate(reg, mfPath)
+	divs, vErr := validateFile(reg, mfPath)
 	if vErr != nil || len(divs) > 0 {
 		t.Errorf("SC-65: Validate after external add: err=%v, divs=%v", vErr, divs)
 	}

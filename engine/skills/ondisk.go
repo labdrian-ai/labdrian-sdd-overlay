@@ -4,9 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"io/fs"
-	"os"
-	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -131,57 +128,6 @@ func DeployableManifestPaths(r io.Reader) (map[string]struct{}, error) {
 		return nil, fmt.Errorf("ondisk: read manifest: %w", err)
 	}
 	return paths, nil
-}
-
-// ScanSkillFiles walks skillsDir and returns every regular file it contains as a
-// slash-separated path relative to skillsDir, sorted.
-//
-// Entries whose name begins with '.' are skipped, files and directories alike.
-// Nothing the overlay deploys is dot-prefixed, so this keeps editor scratch files
-// and VCS metadata from being reported as unregistered content without weakening
-// the guard for anything real.
-func ScanSkillFiles(skillsDir string) ([]string, error) {
-	info, err := os.Stat(skillsDir)
-	if err != nil {
-		return nil, fmt.Errorf("ondisk: stat skills dir %s: %w", skillsDir, err)
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("ondisk: %s is not a directory", skillsDir)
-	}
-
-	var out []string
-	err = filepath.WalkDir(skillsDir, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if path == skillsDir {
-			return nil
-		}
-		if strings.HasPrefix(d.Name(), ".") {
-			if d.IsDir() {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		if d.IsDir() {
-			return nil
-		}
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		rel, relErr := filepath.Rel(skillsDir, path)
-		if relErr != nil {
-			return relErr
-		}
-		out = append(out, filepath.ToSlash(rel))
-		return nil
-	})
-	if err != nil {
-		return nil, fmt.Errorf("ondisk: walk %s: %w", skillsDir, err)
-	}
-
-	sort.Strings(out)
-	return out, nil
 }
 
 // DiffOnDisk cross-checks the files actually present under skills/ against the

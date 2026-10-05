@@ -107,8 +107,7 @@ var knownDebt = archguard.Debt{
 
 	// skills: the concrete file system moves to skills/skillsfs.
 	"skills": {
-		"os":                    "H17",
-		"path/filepath.WalkDir": "H17",
+		"os": "H17",
 	},
 }
 

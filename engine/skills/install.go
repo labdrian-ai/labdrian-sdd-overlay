@@ -97,9 +97,9 @@ type installEnv struct {
 	readSource  func(string) ([]SourceFile, error) // a skill's source tree
 }
 
-// productionInstallEnv is the real filesystem. Registry reads go through readRegistry,
-// so the registry can be injected; the project is always read from disk.
-func productionInstallEnv(registries RegistryRepository, cwd func() (string, error)) installEnv {
+// productionInstallEnv is the real filesystem. Registry reads go through the repository and the
+// source of a skill through the tree, so both can be injected; the project is read from disk.
+func productionInstallEnv(registries RegistryRepository, tree SkillTree, cwd func() (string, error)) installEnv {
 	return installEnv{
 		registries:  registries,
 		readProject: os.ReadFile,
@@ -108,14 +108,14 @@ func productionInstallEnv(registries RegistryRepository, cwd func() (string, err
 		readDir:     os.ReadDir,
 		resolve:     resolvePathKeepingMissing,
 		fsys:        osProjectFS{},
-		readSource:  readSkillSource,
+		readSource:  tree.ReadSkillSource,
 	}
 }
 
 // RenderInstallCore is the testable CLI entry for `engine skills install`.
 // cwdFn is injected for testability (production callers pass os.Getwd).
-func RenderInstallCore(args []string, registries RegistryRepository, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	renderInstall(productionInstallEnv(registries, cwdFn), args, stdout, stderr, exit)
+func RenderInstallCore(args []string, registries RegistryRepository, tree SkillTree, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
+	renderInstall(productionInstallEnv(registries, tree, cwdFn), args, stdout, stderr, exit)
 }
 
 // installContext is what install and adopt have read and decided before either

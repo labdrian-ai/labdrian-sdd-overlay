@@ -251,7 +251,7 @@ func TestRereadsWhenTheLockFileAppearsReportsEachSignalWhateverTheOrder(t *testi
 		{"one appeared between two that cannot be inspected", []string{loop, appeared, loop}, true, loop},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			gotAppeared, err := rereadsWhenTheLockFileAppears(tc.paths)
+			gotAppeared, err := rereadsWhenTheLockFileAppears(noopLocker{}, tc.paths)
 
 			if gotAppeared != tc.wantAppeared {
 				t.Errorf("appeared = %v, want %v: a signal was dropped", gotAppeared, tc.wantAppeared)
@@ -271,6 +271,7 @@ func TestRereadsWhenTheLockFileAppearsReportsEachSignalWhateverTheOrder(t *testi
 // vanishingLocker grants every lock and removes the lock file when the lock is
 // released, so the next attempt finds it absent again.
 type vanishingLocker struct {
+	osExists
 	lockPath string
 	attempts *int
 }
