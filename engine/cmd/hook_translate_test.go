@@ -13,6 +13,7 @@ import (
 	"slices"
 	"strings"
 	"testing"
+	"unicode/utf8"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
@@ -162,8 +163,13 @@ func TestPromptReplySaysWhatTheProjectionProduced(t *testing.T) {
 // characters the encoder escapes.
 func TestAContextAtTheProjectionsBoundSurvivesTheEncoder(t *testing.T) {
 	unit := "a\n\"b\\<c>&d\té" + string(rune(0x2028)) + "\x01"
-	context := strings.Repeat(unit, projection.MaxContextBytes/len(unit)+1)[:projection.MaxContextBytes]
-	context = strings.ToValidUTF8(context, "?")
+	// Whole units, then plain letters up to the bound: a cut inside a multi-byte character would
+	// have to be repaired, and the repair could leave the context shorter than the bound.
+	context := strings.Repeat(unit, projection.MaxContextBytes/len(unit))
+	context += strings.Repeat("x", projection.MaxContextBytes-len(context))
+	if len(context) != projection.MaxContextBytes || !utf8.ValidString(context) {
+		t.Fatalf("the context is %d bytes (valid UTF-8: %v), want exactly %d", len(context), utf8.ValidString(context), projection.MaxContextBytes)
+	}
 	out, err := promptReply(projection.ProjectionResult{Context: context, Warning: "a warning"}).Encode()
 	if err != nil {
 		t.Fatal(err)

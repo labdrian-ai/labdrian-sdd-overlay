@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -13,6 +14,7 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
@@ -41,6 +43,10 @@ var updateRegistryGolden = flag.Bool("update-registry-golden", false, "rewrite t
 
 // registryGoldenFileName is what a case name may not contain: it is the name of its file.
 var registryGoldenFileName = regexp.MustCompile(`[^a-z0-9-]+`)
+
+// registryRunTimeout is how long one invocation of the program may take: far longer than any case
+// needs, and short enough that a hang fails its own case instead of the whole test run.
+const registryRunTimeout = 2 * time.Minute
 
 // registryWorld is the scratch space of one case: the directory the program runs in (an overlay,
 // or a project), the program, and the transcript.
@@ -132,24 +138,66 @@ func (w *registryWorld) registryAt(rel, text string) string {
 // the real ones, and the transcript shows them with <WORLD> in its place.
 func (w *registryWorld) runIn(cwd string, args ...string) {
 	w.t.Helper()
-	cmd := exec.Command(w.bin, args...)
-	cmd.Dir = w.path(cwd)
-	cmd.Env = w.env
-	var stdout, stderr bytes.Buffer
-	cmd.Stdout, cmd.Stderr = &stdout, &stderr
-	code := 0
-	if err := cmd.Run(); err != nil {
-		var exit *exec.ExitError
-		if !errors.As(err, &exit) {
-			w.t.Fatalf("run %v: %v", args, err)
-		}
-		code = exit.ExitCode()
+	code, stdout, stderr, err := runWithin(registryRunTimeout, w.bin, w.path(cwd), w.env, args)
+	if errors.Is(err, errRunTimedOut) {
+		w.t.Fatalf("run %v: the program did not finish in %v (stdout %q, stderr %q)", args, registryRunTimeout, stdout, stderr)
+	}
+	if err != nil {
+		w.t.Fatalf("run %v: %v", args, err)
 	}
 	where := ""
 	if cwd != "." {
 		where = " (in " + cwd + ")"
 	}
-	w.write("$ %s%s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), where, code, ensureNewline(stdout.String()), ensureNewline(stderr.String()))
+	w.write("$ %s%s\nexit: %d\n--- stdout ---\n%s--- stderr ---\n%s\n", strings.Join(args, " "), where, code, ensureNewline(stdout), ensureNewline(stderr))
+}
+
+// errRunTimedOut is what runWithin says of a program that was still running at its deadline.
+var errRunTimedOut = errors.New("the program did not finish in time")
+
+// runWithin runs bin with args in dir and env and reports its exit code and both streams. A program
+// that is still running after timeout is killed and reported as errRunTimedOut, with what it had
+// printed; a program that exits with a code other than 0 is not an error.
+func runWithin(timeout time.Duration, bin, dir string, env, args []string) (code int, stdout, stderr string, err error) {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	defer cancel()
+	cmd := exec.CommandContext(ctx, bin, args...)
+	cmd.Dir = dir
+	cmd.Env = env
+	var out, errOut bytes.Buffer
+	cmd.Stdout, cmd.Stderr = &out, &errOut
+	runErr := cmd.Run()
+	switch {
+	case ctx.Err() != nil:
+		return 0, out.String(), errOut.String(), errRunTimedOut
+	case runErr == nil:
+		return 0, out.String(), errOut.String(), nil
+	}
+	var exit *exec.ExitError
+	if !errors.As(runErr, &exit) {
+		return 0, out.String(), errOut.String(), runErr
+	}
+	return exit.ExitCode(), out.String(), errOut.String(), nil
+}
+
+// A program that hangs fails its own run, with what it had printed, instead of holding the whole
+// test run until the blanket timeout of go test.
+func TestARunThatHangsIsKilledAtItsDeadline(t *testing.T) {
+	sh, err := exec.LookPath("sh")
+	if err != nil {
+		t.Skip("no sh to stand for a program that hangs")
+	}
+	start := time.Now()
+	code, stdout, _, err := runWithin(200*time.Millisecond, sh, t.TempDir(), nil, []string{"-c", "echo started; exec sleep 30"})
+	if !errors.Is(err, errRunTimedOut) {
+		t.Fatalf("runWithin() = %d, %q, %v, want errRunTimedOut", code, stdout, err)
+	}
+	if elapsed := time.Since(start); elapsed > 20*time.Second {
+		t.Errorf("runWithin() returned after %v, want it at the deadline", elapsed)
+	}
+	if code, _, _, err := runWithin(time.Minute, sh, t.TempDir(), nil, []string{"-c", "exit 3"}); err != nil || code != 3 {
+		t.Errorf("runWithin() of a program that exits 3 = %d, %v, want the code and no error", code, err)
+	}
 }
 
 // run records one invocation started in the world itself.
@@ -296,6 +344,36 @@ func TestRegistryGoldenCasesAreDistinctFiles(t *testing.T) {
 	for _, e := range entries {
 		if name := strings.TrimSuffix(e.Name(), ".golden"); !seen[name] {
 			t.Errorf("testdata/registry-golden/%s belongs to no case", e.Name())
+		}
+	}
+}
+
+// The header of this file says which verbs the golden files are the contract of. A claim that is
+// not checked drifts into one that outruns its cases (a verb named here whose cases were never
+// written would look pinned and be free to change), so each command line the header names is
+// looked for in the transcripts: a verb with no case fails here by name.
+func TestEveryVerbTheGoldenHeaderNamesHasAGoldenCase(t *testing.T) {
+	claimed := []string{
+		"skills list", "skills status", "skills validate", "skills add", "skills remove",
+		"skills sync-manifest", "skills install", "skills adopt", "skills project-register",
+		"skills project-status", "skills project-retire", "skills project-revise",
+		"pipkg build", "pipkg check", "runtime install --target pi", "runtime status --target pi",
+	}
+	entries, err := os.ReadDir(filepath.Join("testdata", "registry-golden"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var transcripts strings.Builder
+	for _, e := range entries {
+		data, err := os.ReadFile(filepath.Join("testdata", "registry-golden", e.Name()))
+		if err != nil {
+			t.Fatal(err)
+		}
+		transcripts.Write(data)
+	}
+	for _, verb := range claimed {
+		if !strings.Contains(transcripts.String(), "\n$ "+verb+" ") && !strings.Contains(transcripts.String(), "\n$ "+verb+"\n") && !strings.HasPrefix(transcripts.String(), "$ "+verb) {
+			t.Errorf("no golden file records a run of %q, which the header of registry_golden_test.go names", verb)
 		}
 	}
 }

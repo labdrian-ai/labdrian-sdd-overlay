@@ -52,11 +52,16 @@ func changed(old, new string) string {
 type registryDoc struct{ label, text string }
 
 // listEach records 'skills list --registry <doc>' for each document, in its own file of the
-// world, so a transcript shows what each was read as.
-func (w *registryWorld) listEach(docs []registryDoc) {
+// world, so a transcript shows what each was read as. The files are docs/01.yaml and on; a case
+// that lists twice says where the second list goes (listEachIn), so that one path never stands
+// for two documents in a transcript.
+func (w *registryWorld) listEach(docs []registryDoc) { w.t.Helper(); w.listEachIn("docs", docs) }
+
+// listEachIn is listEach with the files in the directory dir of the world.
+func (w *registryWorld) listEachIn(dir string, docs []registryDoc) {
 	w.t.Helper()
 	for i, doc := range docs {
-		path := w.registryAt(fmt.Sprintf("docs/%02d.yaml", i+1), doc.text)
+		path := w.registryAt(fmt.Sprintf("%s/%02d.yaml", dir, i+1), doc.text)
 		w.label("%s", doc.label)
 		w.run("skills", "list", "--registry", path)
 	}
@@ -374,7 +379,7 @@ func registryRefusalCases() []registryGoldenCase {
 				{"a ref on a custom skill, after the repository fields", changed("      type: custom", "      ref: v1\n      type: custom")},
 			})
 			w.label("the entry is named by the id read so far: after the source, the id is not yet known")
-			w.listEach([]registryDoc{
+			w.listEachIn("docs/id-order", []registryDoc{
 				{"an external skill with no repository, its id after its source", "version: \"1\"\nskills:\n  - source:\n      type: external\n    id: alpha\n    path: alpha\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"},
 				{"the same, its id before its source", "version: \"1\"\nskills:\n  - id: alpha\n    source:\n      type: external\n    path: alpha\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"},
 			})
