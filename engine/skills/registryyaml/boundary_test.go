@@ -40,7 +40,7 @@ func TestTheAdapterNeverJudgesWhatItReads(t *testing.T) {
 			default:
 				return true
 			}
-			if strings.HasPrefix(strings.ToLower(name), "validate") || strings.HasPrefix(name, "judge") {
+			if namesAJudgement(name) {
 				t.Errorf("%s uses %s: the adapter does not judge what it reads, the domain does (skills.ReadRegistry applies skills.Registry.Validate)", file, name)
 			}
 			return true
@@ -48,6 +48,26 @@ func TestTheAdapterNeverJudgesWhatItReads(t *testing.T) {
 	}
 	if checked < 4 {
 		t.Fatalf("only %d production files were read: the glob is broken", checked)
+	}
+}
+
+// namesAJudgement reports whether an identifier says it judges an entry: it starts with
+// "validate" or "judge", in any case, so the exported form is caught as well as the other.
+func namesAJudgement(name string) bool {
+	lower := strings.ToLower(name)
+	return strings.HasPrefix(lower, "validate") || strings.HasPrefix(lower, "judge")
+}
+
+func TestNamesAJudgementIgnoresTheCase(t *testing.T) {
+	for _, name := range []string{"Validate", "validateEntry", "ValidateEntry", "judge", "judgeEntry", "Judge", "JudgeEntry"} {
+		if !namesAJudgement(name) {
+			t.Errorf("namesAJudgement(%q) = false, want true", name)
+		}
+	}
+	for _, name := range []string{"Decode", "Encode", "Invalid", "prejudge", "entry"} {
+		if namesAJudgement(name) {
+			t.Errorf("namesAJudgement(%q) = true, want false", name)
+		}
 	}
 }
 
