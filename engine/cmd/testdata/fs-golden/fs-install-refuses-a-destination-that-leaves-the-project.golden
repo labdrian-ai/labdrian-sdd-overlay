@@ -48,21 +48,42 @@ error: skills install: refused, so nothing was installed
 real.md 0644 27 cc020b515c2f
 skills/
 
-# a file of a skill is a link to a file outside the project
+# the skill installed, to be linked away
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# a file of an installed skill is a link to a file outside the project
 $ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills install: .claude/skills/tidy-notes already exists and was not installed by skills install (it has no install record in .labdrian/procedural-skills.lock.json); if it is exactly the current skill, run `labdrian skills adopt --project-id demo` to take ownership of it, otherwise move it away
+error: skills install: destination .claude/skills/tidy-notes/SKILL.md: escapes the project root through a symlink
+error: skills install: destination .claude/skills/tidy-notes/SKILL.md: escapes the project root through a symlink
 error: skills install: refused, so nothing was installed
 
 --- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
 .claude/
 .claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
 .claude/skills/tidy-notes/
-.claude/skills/tidy-notes/SKILL.md -> ../../../../../outside/real.md
+.claude/skills/tidy-notes/SKILL.md -> ../../../../outside/real.md
 .claude/skills/tidy-notes/references/
-.claude/skills/tidy-notes/references/other.md 0644 2 73cb3858a687
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 605 c7a433693d47
 
 --- state of outside ---
 real.md 0644 27 cc020b515c2f

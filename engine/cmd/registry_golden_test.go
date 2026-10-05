@@ -248,13 +248,13 @@ func TestRegistryGolden(t *testing.T) {
 
 func checkRegistryGolden(t *testing.T, name, got string) {
 	t.Helper()
-	checkGoldenIn(t, "registry-golden", name, got, updateRegistryGolden)
+	checkGoldenIn(t, "registry-golden", name, got, updateRegistryGolden, "-update-registry-golden")
 }
 
 // checkGoldenIn compares got with the golden file testdata/<dir>/<name>.golden, or rewrites the
 // file when update is set. It is the comparison of every golden suite that runs the built program
-// in a world.
-func checkGoldenIn(t *testing.T, dir, name, got string, update *bool) {
+// in a world; updateFlag is the name of the flag that sets update, quoted when a golden is missing.
+func checkGoldenIn(t *testing.T, dir, name, got string, update *bool, updateFlag string) {
 	t.Helper()
 	if registryGoldenFileName.MatchString(name) {
 		t.Fatalf("case name %q is not a file name", name)
@@ -271,7 +271,7 @@ func checkGoldenIn(t *testing.T, dir, name, got string, update *bool) {
 	}
 	want, err := os.ReadFile(path)
 	if err != nil {
-		t.Fatalf("read golden file: %v (record it with its update flag)", err)
+		t.Fatalf("read golden file: %v (record it with %s)", err, updateFlag)
 	}
 	if diff := goldenDifference(name, got, string(want)); diff != "" {
 		t.Fatal(diff)

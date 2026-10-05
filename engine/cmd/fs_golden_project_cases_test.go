@@ -39,9 +39,12 @@ func fsProjectCases() []registryGoldenCase {
 					w.mkdir("demo/.claude/skills")
 					w.symlink("../../../outside/skills", "demo/.claude/skills/tidy-notes")
 				}},
-				{"a file of a skill is a link to a file outside the project", func() {
-					w.put("demo/.claude/skills/tidy-notes/references/other.md", "x\n")
-					w.symlink("../../../../../outside/real.md", "demo/.claude/skills/tidy-notes/SKILL.md")
+				{"a file of an installed skill is a link to a file outside the project", func() {
+					// The skill must be OURS (in the lock) for install to look at its files; a
+					// directory it did not install is refused before any file is read.
+					w.installDemo("the skill installed, to be linked away")
+					w.remove("demo/.claude/skills/tidy-notes/SKILL.md")
+					w.symlink("../../../../outside/real.md", "demo/.claude/skills/tidy-notes/SKILL.md")
 				}},
 				{".agents is a link to a directory inside the project", func() { w.mkdir("demo/elsewhere"); w.symlink("elsewhere", "demo/.agents") }},
 				{".claude is a dangling link", func() { w.symlink("nowhere", "demo/.claude") }},
@@ -224,7 +227,7 @@ func fsProjectCases() []registryGoldenCase {
 			w.remove("project/.claude/skills/tidy-worktree")
 			w.mkdir("project/.claude/skills/tidy-worktree")
 			w.symlink("../../../../outside/x.md", "project/.claude/skills/tidy-worktree/SKILL.md")
-			w.label("SKILL.md is a link to a file outside")
+			w.label("SKILL.md of a directory already there is a link to a file outside (refused as a foreign skill: the program never looks at the link)")
 			w.run(w.registerArgs()...)
 			w.state("project")
 			w.state("outside")

@@ -26,7 +26,7 @@ error: project-register: destination ".claude/skills/tidy-worktree": escapes the
 --- state of outside ---
 (empty)
 
-# SKILL.md is a link to a file outside
+# SKILL.md of a directory already there is a link to a file outside (refused as a foreign skill: the program never looks at the link)
 $ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
 exit: 1
 --- stdout ---

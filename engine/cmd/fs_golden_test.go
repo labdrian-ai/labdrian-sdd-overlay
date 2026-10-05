@@ -12,7 +12,6 @@ import (
 	"regexp"
 	"sort"
 	"strings"
-	"syscall"
 	"testing"
 )
 
@@ -128,17 +127,6 @@ func (w *registryWorld) symlink(target, rel string) {
 	}
 }
 
-// fifo makes rel a named pipe.
-func (w *registryWorld) fifo(rel string) {
-	w.t.Helper()
-	if err := os.MkdirAll(filepath.Dir(w.path(rel)), 0o755); err != nil {
-		w.t.Fatal(err)
-	}
-	if err := syscall.Mkfifo(w.path(rel), 0o644); err != nil {
-		w.t.Fatal(err)
-	}
-}
-
 // chmod sets the permission bits of rel for the rest of the case, and gives them back (as a
 // directory the world can be removed from) when it ends.
 func (w *registryWorld) chmod(rel string, mode fs.FileMode) {
@@ -231,7 +219,7 @@ func TestFSGolden(t *testing.T) {
 			w := newRegistryWorld(t)
 			w.filter = maskTemporaryNames
 			tc.run(w)
-			checkGoldenIn(t, "fs-golden", tc.name, w.text(), updateFSGolden)
+			checkGoldenIn(t, "fs-golden", tc.name, w.text(), updateFSGolden, "-update-fs-golden")
 		})
 	}
 }
