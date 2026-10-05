@@ -141,9 +141,9 @@ type updatedInput struct {
 }
 
 // UpdatedInput is the reply that lets the call go ahead with prompt in place of its own: the
-// whole call is echoed, with a model only if the call had one. Unlike the other replies it is
-// written the way json.Marshal writes it, which escapes <, > and & (and U+2028 and U+2029); it
-// always was, and Claude Code reads the same JSON either way.
+// whole call is echoed, with a model only if the call had one. Like the other replies it keeps
+// <, > and & as they are (Claude Code reads the same JSON either way; until Phase 9 batch 12a it
+// escaped them), and U+2028 and U+2029 are escaped, as they are in every reply.
 func (a AgentCall) UpdatedInput(prompt string) ([]byte, error) {
 	resp := hookResponse{HookSpecificOutput: hookSpecificOutput{
 		HookEventName:      EventPreToolUse,
@@ -155,9 +155,5 @@ func (a AgentCall) UpdatedInput(prompt string) ([]byte, error) {
 			Model:        a.Model,
 		},
 	}}
-	b, err := json.Marshal(resp)
-	if err != nil {
-		return nil, fmt.Errorf("hookwire: encode updated input: %w", err)
-	}
-	return append(b, '\n'), nil
+	return encodeLine(resp)
 }

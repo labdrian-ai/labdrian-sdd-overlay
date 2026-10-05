@@ -46,7 +46,7 @@ import (
 // bound replaced shaper-guard-reads-without-a-size-bound (the same two cases, then the bound
 // itself and what is over it, which that guard now denies), and two files hold the same input
 // as before, with a character that reorders or hides the text around it now written as text
-// (gate-task-escapes-what-json-marshal-escapes, pretooluse-denies-a-memory-query-for-another-project).
+// (gate-task-writes-html-characters-as-they-are, pretooluse-denies-a-memory-query-for-another-project).
 // Rewrite them deliberately with
 //
 //	go test ./cmd -run TestHookGolden -update-hook-golden
