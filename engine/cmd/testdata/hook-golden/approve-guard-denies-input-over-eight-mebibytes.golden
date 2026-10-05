@@ -1,0 +1,30 @@
+$ skills guard-hook
+# a denied command in an input of exactly 8 MiB is judged
+--- stdin ---
+<8388608 bytes, sha256 00ec14e77b3d, starting "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"labdrian skills">
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: \"skills approve\" records that a human reviewed the exact SKILL.md bytes, so the agent must not run it. Ask the person to review skills/<id>/SKILL.md and run this themselves in a terminal: labdrian skills approve --id <id> --approver <name>. This guard matches text only, so it is a speed bump, not a security boundary: it matches the command text, so it can be bypassed, and it also denies a command that only spells an entry point followed by \"skills approve\" (reword such a command)."}}
+--- stderr ---
+
+$ skills guard-hook
+# an unrelated command in an input of 8 MiB and one byte is denied without being judged
+--- stdin ---
+<8388609 bytes, sha256 0f4dee3100cd, starting "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"ls\",\"padding\":\"">
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: this tool call is too large to be checked (the guard reads at most 8388608 bytes), so it could not be checked for \"skills approve\" or for a write of the approval record .approval.json, and it was denied. Send a smaller call, or ask the person to run what it does themselves in a terminal. This guard matches text only, so it is a speed bump, not a security boundary."}}
+--- stderr ---
+
+$ skills guard-hook
+# the same command in an input of 8 MiB and one byte is denied for the size
+--- stdin ---
+<8388609 bytes, sha256 8f78eb17f7ce, starting "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"labdrian skills">
+--- exit ---
+0
+--- stdout ---
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"labdrian skills approve guard: this tool call is too large to be checked (the guard reads at most 8388608 bytes), so it could not be checked for \"skills approve\" or for a write of the approval record .approval.json, and it was denied. Send a smaller call, or ask the person to run what it does themselves in a terminal. This guard matches text only, so it is a speed bump, not a security boundary."}}
+--- stderr ---
+

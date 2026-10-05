@@ -8,7 +8,7 @@ import (
 )
 
 // The golden cases of the two hooks that guard a tool call against the agent that makes it:
-// 'skills guard-hook' (a deny in JSON, exit 0; input it cannot read is let through) and
+// 'skills guard-hook' (a deny in JSON, exit 0; input it cannot decode is let through, input over the bound is denied) and
 // 'shaper guard-hook' (a deny by exit 2 and a message on stderr; input it cannot read is
 // denied). The harness is hook_golden_test.go.
 
@@ -165,11 +165,12 @@ func approveGuardGoldenCases() []hookGoldenCase {
 			w.skillsGuard("a key twice: the last one wins", `{"tool_name":"Bash","tool_input":{"command":"ls","command":"labdrian skills approve"}}`)
 			w.skillsGuard("a command with an escaped line break", `{"tool_name":"Bash","tool_input":{"command":"ls\nlabdrian skills approve"}}`)
 		}},
-		{"approve-guard-does-not-judge-input-over-eight-mebibytes", func(w *hookWorld) {
+		{"approve-guard-denies-input-over-eight-mebibytes", func(w *hookWorld) {
 			const mebibyte = 1 << 20
 			const prefix = `{"tool_name":"Bash","tool_input":{"command":"labdrian skills approve","padding":"`
 			w.skillsGuard("a denied command in an input of exactly 8 MiB is judged", padded(prefix, `"}}`, 8*mebibyte))
-			w.skillsGuard("the same command in an input of 8 MiB and one byte is not", padded(prefix, `"}}`, 8*mebibyte+1))
+			w.skillsGuard("an unrelated command in an input of 8 MiB and one byte is denied without being judged", padded(`{"tool_name":"Bash","tool_input":{"command":"ls","padding":"`, `"}}`, 8*mebibyte+1))
+			w.skillsGuard("the same command in an input of 8 MiB and one byte is denied for the size", padded(prefix, `"}}`, 8*mebibyte+1))
 		}},
 		{"approve-guard-lets-the-call-through-when-stdin-fails", func(w *hookWorld) {
 			w.skillsGuardReader("a stdin that fails", failingReader{}, failingStdin)
@@ -269,8 +270,9 @@ func shaperGuardGoldenCases() []hookGoldenCase {
 		}},
 		// The guard reads at most the bound of every guard, 8 MiB, and one byte more. Up to the
 		// bound it judges what it was given, however large; over it, it denies without judging,
-		// as it denies any input it cannot read: it fails closed, where the approve guard, which
-		// runs on the same calls, lets the call through. (Until Phase 9 batch 10 it read without
+		// as it denies any input it cannot read: it fails closed, and the approve guard, which
+		// runs on the same calls, denies an input over the bound too (it lets through only the
+		// input it cannot decode). (Until Phase 9 batch 10 it read without
 		// any bound, and these were its first two cases, which pass unchanged.)
 		{"shaper-guard-judges-input-up-to-eight-mebibytes", func(w *hookWorld) {
 			const mebibyte = 1 << 20

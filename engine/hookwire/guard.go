@@ -47,8 +47,7 @@ type guardHookInput struct {
 // takes one JSON value (null is an input with nothing in it), matches a key without regard to
 // case, and takes the last of a repeated key. The input is at most MaxToolCallBytes: a longer one
 // is refused, wrapping ErrTooLarge, whatever it holds, and what to do about a call that was not
-// judged is the guard's to answer (the approve guard lets it through, the clearance guard denies
-// it). It fails for text that is not JSON, for a value that is not an object, for a tool_name,
+// judged is the guard's to answer (both guards deny it). It fails for text that is not JSON, for a value that is not an object, for a tool_name,
 // command, file_path or notebook_path that is not text and for a tool_input that is not an
 // object.
 //
