@@ -73,6 +73,24 @@ func testTree() SkillTree {
 	return osTree
 }
 
+// osProject is the ProjectFS of the real file system, registered by skillsfs_hook_test.go.
+var osProject ProjectFS
+
+// UseOSProject is how skillsfs_hook_test.go registers the adapter.
+func UseOSProject(project ProjectFS) { osProject = project }
+
+// testProjectFS is the project file system of a test: the file system adapter.
+func testProjectFS() ProjectFS {
+	if osProject == nil {
+		panic("skills tests: the file system adapter was not registered; see skillsfs_hook_test.go")
+	}
+	return osProject
+}
+
+// installCwd is the working directory `skills install` installs into, in a test. A test points it
+// at a temporary project; nothing else assigns it.
+var installCwd = os.Getwd
+
 // osExists gives a fake locker the answer of the file system to 'is this path there'.
 type osExists struct{}
 
@@ -102,6 +120,20 @@ func loadManifestViewFile(path string) (ManifestView, error) {
 	return loadManifestViewReader(bytes.NewReader(data))
 }
 
+// testDeps is the Deps of a test: the real file system, and what the test passes. The working
+// directory is the one the test points installCwd at.
+func testDeps(readFile readFileFn, registries RegistryRepository, now func() string, locker Locker) Deps {
+	return Deps{
+		ReadFile:   readFile,
+		Registries: registries,
+		Tree:       testTree(),
+		Project:    testProjectFS(),
+		Cwd:        func() (string, error) { return installCwd() },
+		Now:        now,
+		Locker:     locker,
+	}
+}
+
 // skillsCore runs a verb that needs neither the clock nor a lock.
 func skillsCore(verb string, args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
 	skillsCoreAt(verb, args, readFile, registries, nil, nil, stdout, stderr, exit)
@@ -109,10 +141,10 @@ func skillsCore(verb string, args []string, readFile readFileFn, registries Regi
 
 // skillsCoreAt runs a verb with the Deps a test gives it: the real tree, and what it passes.
 func skillsCoreAt(verb string, args []string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, Deps{ReadFile: readFile, Registries: registries, Tree: testTree(), Now: now, Locker: locker}, stdout, stderr, exit)
+	SkillsCoreAt(verb, args, testDeps(readFile, registries, now, locker), stdout, stderr, exit)
 }
 
 // renderInstallCore runs 'install' in the directory cwdFn names, over the real tree.
 func renderInstallCore(args []string, registries RegistryRepository, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	RenderInstallCore(args, registries, testTree(), cwdFn, stdout, stderr, exit)
+	RenderInstallCore(args, testDeps(os.ReadFile, registries, nil, nil), cwdFn, stdout, stderr, exit)
 }

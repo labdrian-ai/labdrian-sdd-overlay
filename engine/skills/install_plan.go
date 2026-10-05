@@ -13,7 +13,6 @@ import (
 	"bytes"
 	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
 	"sort"
 )
@@ -340,7 +339,7 @@ func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, ref
 		info, err := in.Stat(dirAbs)
 		exists := err == nil
 		switch {
-		case err != nil && !os.IsNotExist(err):
+		case err != nil && !isAbsent(err):
 			refuse("cannot inspect %s: %v", dirRel, err)
 			continue
 		case exists && !info.IsDir():
@@ -411,7 +410,7 @@ func planSkill(c *planContext, sk InstallSkill, record *ProjectInstallEntry, ref
 				if _, err := in.Stat(abs); err == nil {
 					refuse("%s exists but is not recorded as installed by skills install, and the source now wants to write it; move it away and run install again", rel)
 					continue
-				} else if !os.IsNotExist(err) {
+				} else if !isAbsent(err) {
 					refuse("cannot inspect %s: %v", rel, err)
 					continue
 				}
@@ -449,7 +448,7 @@ const (
 func readInstalled(in InstallInput, abs string) ([]byte, fs.FileMode, installedFile) {
 	info, err := in.Stat(abs)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if isAbsent(err) {
 			return nil, 0, fileMissing
 		}
 		return nil, 0, fileUnreadable

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"reflect"
 	"regexp"
@@ -226,7 +227,7 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo
 //     grandfathered baseline's (approval_gate.go)
 //   - encoding the new registry and decoding it back is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
-func AddCore(args []string, readFile readFileFn, registries RegistryRepository, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
+func AddCore(args []string, readFile readFileFn, registries RegistryRepository, statFile func(string) (fs.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, sourceRoot, id, repo, ref := parseFlags(args)
 
 	if id == "" {

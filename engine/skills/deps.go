@@ -13,6 +13,11 @@ type Deps struct {
 	Registries RegistryRepository
 	// Tree walks the tree of skills an overlay keeps and reads the source of one skill.
 	Tree SkillTree
+	// Project reads and writes the files of a project and of an overlay: what install, adopt
+	// and the project verbs stage, commit and put back.
+	Project ProjectFS
+	// Cwd names the working directory, which `skills install` and `adopt` install into.
+	Cwd func() (string, error)
 	// Locker takes the advisory locks of the verbs that need them.
 	Locker Locker
 	// Now returns the current time as an RFC 3339 UTC timestamp, for the verbs that record one

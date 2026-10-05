@@ -89,7 +89,7 @@ func (f *ownFixture) install(skills ...InstallSkill) InstallPlan {
 		f.t.Fatalf("install refused: %v", refusals)
 	}
 	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, osProjectFS{}, &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
 		f.t.Fatalf("install failed: %v (stderr %q)", err, errOut.String())
 	}
 	return plan
@@ -227,7 +227,7 @@ func TestInstall_ASecondInstallOfTheSameSourceWritesNothingAndSaysSo(t *testing.
 		t.Errorf("the plan has %d writes, %d deletes, lock %q; want none", len(plan.Writes), len(plan.Deletes), plan.Lock.Rel)
 	}
 	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, osProjectFS{}, &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
 		t.Fatal(err)
 	}
 	assertSameTree(t, before, f.snapshot())

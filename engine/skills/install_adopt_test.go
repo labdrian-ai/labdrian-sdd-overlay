@@ -37,7 +37,7 @@ func (f *ownFixture) adopt(skills ...InstallSkill) InstallPlan {
 		f.t.Fatalf("adopt refused: %v", refusals)
 	}
 	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, osProjectFS{}, &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
 		f.t.Fatalf("adopt failed: %v (stderr %q)", err, errOut.String())
 	}
 	return plan

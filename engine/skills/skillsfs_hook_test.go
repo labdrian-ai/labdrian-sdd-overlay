@@ -10,4 +10,5 @@ import (
 // it; this file, in the external test package, registers it (see export_test.go).
 func init() {
 	skills.UseOSTree(skillsfs.Tree{})
+	skills.UseOSProject(skillsfs.Project{})
 }

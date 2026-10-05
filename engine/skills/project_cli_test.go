@@ -121,7 +121,7 @@ func runProjectRegister(t *testing.T, args []string) (stdout, stderr string, exi
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1
-	RenderProjectRegisterCore(args, os.ReadFile, testRegistries(os.ReadFile), os.Stat, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
+	RenderProjectRegisterCore(args, os.ReadFile, testRegistries(os.ReadFile), os.Stat, resolvePathKeepingMissing, testProjectFS(), &out, &errBuf, func(c int) { exitCode = c })
 	return out.String(), errBuf.String(), exitCode
 }
 
@@ -143,7 +143,7 @@ func runProjectRegisterNoIO(t *testing.T, args []string) (stdout, stderr string,
 	RenderProjectRegisterCore(args, refusingReadFile(t), testRegistries(refusingReadFile(t)), func(string) (fs.FileInfo, error) {
 		t.Error("stat must not be called before the argument refusal")
 		return nil, errors.New("must not be called")
-	}, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
+	}, resolvePathKeepingMissing, testProjectFS(), &out, &errBuf, func(c int) { exitCode = c })
 	return out.String(), errBuf.String(), exitCode
 }
 
@@ -426,7 +426,7 @@ func TestRenderProjectRegisterCore_EndOfOptionsEscapeBindsDashPrefixedDraft(t *t
 	}
 	RenderProjectRegisterCore(
 		[]string{"--project-root", "/abs/project", "--candidate", testCandidateKey, "--registry", "skills.registry.yaml", "--", "-weird-draft.md"},
-		readFile, testRegistries(readFile), os.Stat, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
+		readFile, testRegistries(readFile), os.Stat, resolvePathKeepingMissing, testProjectFS(), &out, &errBuf, func(c int) { exitCode = c })
 
 	if got != "-weird-draft.md" {
 		t.Errorf("after `--` the draft path must bind verbatim, readFile saw %q", got)
@@ -711,7 +711,7 @@ func TestRenderProjectReviseCoreRefusesHumanOwnedReasonsAndWritesNothing(t *test
 			tc.mutate(t, e)
 			before := snapshotTree(t, e.root)
 			args := registerArgs(e)
-			out, errOut, code := runProjectRevise(t, args, osProjectFS{})
+			out, errOut, code := runProjectRevise(t, args, testProjectFS())
 			if code != 1 {
 				t.Fatalf("expected exit 1 for %s, got %d (stdout %q, stderr %q)", tc.reason, code, out, errOut)
 			}

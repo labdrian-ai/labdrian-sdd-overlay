@@ -2,16 +2,11 @@ package skills
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 )
-
-// installCwd is the working directory `skills install` installs into. It is a
-// variable only so that a test can point it at a temporary project; nothing else
-// assigns it.
-var installCwd = os.Getwd
 
 // SkillsCoreAt is the testable CLI core for `engine skills <verb>`.
 // Dispatches to RenderListCore, RenderStatusCore, RenderValidateCore,
@@ -33,7 +28,7 @@ func SkillsCoreAt(verb string, args []string, deps Deps, stdout, stderr io.Write
 	// named cannot be locked. A verb that cannot name where it writes does not run.
 	installRoot := ""
 	if verb == "install" || verb == "adopt" {
-		cwd, err := installCwd()
+		cwd, err := workingDirectory(deps)
 		if err != nil || !filepath.IsAbs(cwd) {
 			reason := fmt.Sprintf("%q is not an absolute path", cwd)
 			if err != nil {
@@ -51,6 +46,15 @@ func SkillsCoreAt(verb string, args []string, deps Deps, stdout, stderr io.Write
 			return
 		}
 	}
+}
+
+// workingDirectory is the directory the process works in, asked of the port the composition root
+// gave. A root that gave none has not wired it, which is an answer a verb can refuse with.
+func workingDirectory(deps Deps) (string, error) {
+	if deps.Cwd == nil {
+		return "", errors.New("no working directory is wired")
+	}
+	return deps.Cwd()
 }
 
 // runLocked is one attempt at a verb under the locks it needs. It reports false
@@ -108,13 +112,25 @@ func runLocked(attempt int, verb string, args []string, installRoot string, deps
 	return false
 }
 
+// needsProject lists the verbs that read or write the files of a project or of an overlay through
+// the Deps' Project.
+var needsProject = map[string]bool{
+	"add": true, "install": true, "adopt": true,
+	"project-register": true, "project-revise": true, "project-status": true, "project-retire": true,
+}
+
 // dispatchVerb runs the verb. The locks, if it needs any, are already held, and
 // installRoot is the directory install was resolved to and locked.
 func dispatchVerb(verb string, args []string, installRoot string, deps Deps, stdout, stderr io.Writer, exit func(int)) {
 	readFile, registries := deps.ReadFile, deps.Registries
+	// A composition root that forgot a port: a refusal, not a crash.
 	if deps.Tree == nil && (verb == "validate" || verb == "install" || verb == "adopt") {
-		// A composition root that forgot the tree: a refusal, not a crash.
 		fmt.Fprintf(stderr, "error: skills %s: no skill tree is wired, so it cannot read the skills of the overlay\n", verb)
+		exit(1)
+		return
+	}
+	if deps.Project == nil && needsProject[verb] {
+		fmt.Fprintf(stderr, "error: skills %s: no project file system is wired, so it cannot read or write files\n", verb)
 		exit(1)
 		return
 	}
@@ -126,15 +142,15 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 	case "validate":
 		RenderValidateCore(args, readFile, registries, deps.Tree.ScanSkillFiles, stdout, stderr, exit)
 	case "install":
-		env := productionInstallEnv(registries, deps.Tree, func() (string, error) { return installRoot, nil })
+		env := installEnvOf(deps, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
 		renderInstall(env, args, stdout, stderr, exit)
 	case "adopt":
-		env := productionInstallEnv(registries, deps.Tree, func() (string, error) { return installRoot, nil })
+		env := installEnvOf(deps, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
 		renderAdopt(env, args, stdout, stderr, exit)
 	case "add":
-		AddCore(stripVerb(args, "add"), readFile, registries, os.Stat, stdout, stderr, exit)
+		AddCore(stripVerb(args, "add"), readFile, registries, deps.Project.Stat, stdout, stderr, exit)
 	case "remove":
 		RemoveCore(stripVerb(args, "remove"), readFile, registries, stdout, stderr, exit)
 	case "sync-manifest":
@@ -144,13 +160,13 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 	case "approve":
 		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Now, stdout, stderr, exit)
 	case "project-register":
-		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, registries, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, registries, deps.Project.Stat, deps.Project.ResolvePath, deps.Project, stdout, stderr, exit)
 	case "project-revise":
-		RenderProjectReviseCore(stripVerb(args, "project-revise"), readFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+		RenderProjectReviseCore(stripVerb(args, "project-revise"), readFile, deps.Project.ReadDir, deps.Project.Stat, deps.Project.ResolvePath, deps.Project, stdout, stderr, exit)
 	case "project-status":
-		RenderProjectStatusCore(stripVerb(args, "project-status"), readFile, registries, os.ReadDir, resolvePathKeepingMissing, stdout, stderr, exit)
+		RenderProjectStatusCore(stripVerb(args, "project-status"), readFile, registries, deps.Project.ReadDir, deps.Project.ResolvePath, stdout, stderr, exit)
 	case "project-retire":
-		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, registries, os.ReadDir, os.Stat, resolvePathKeepingMissing, osProjectFS{}, stdout, stderr, exit)
+		RenderProjectRetireCore(stripVerb(args, "project-retire"), readFile, registries, deps.Project.ReadDir, deps.Project.Stat, deps.Project.ResolvePath, deps.Project, stdout, stderr, exit)
 	case "":
 		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
 		exit(1)

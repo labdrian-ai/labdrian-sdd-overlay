@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 )
@@ -124,7 +123,7 @@ func RenderProjectRegisterCore(
 	lockPath := filepath.Join(filepath.Clean(projectRoot), filepath.FromSlash(ProjectLockRelPath))
 	lockData, err := readFile(lockPath)
 	lockExists := err == nil
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !isAbsent(err) {
 		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
 		exit(1)
 		return

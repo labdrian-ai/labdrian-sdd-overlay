@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -249,7 +248,7 @@ func ReadApprovalStatus(sourceRoot, id string, skillMD []byte, readFile readFile
 	path := ApprovalRecordPath(sourceRoot, id)
 	data, err := readFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
+		if isAbsent(err) {
 			return ApprovalStatus{State: ApprovalAbsent}, nil
 		}
 		return ApprovalStatus{}, fmt.Errorf("skill %q: reading approval record %q: %w", id, path, err)
