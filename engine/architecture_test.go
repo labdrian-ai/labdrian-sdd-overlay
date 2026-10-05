@@ -35,6 +35,9 @@ import (
 //     YAML file of the registry, its reader and its writer, with the policy for what the reader
 //     does not understand (H16). It never calls the domain's Validate: the domain judges what
 //     the adapter returns.
+//   - skills/skillsfs is the adapter of the skills domain's file-facing ports (H17): the tree of
+//     skills an overlay keeps today, and the files of a project and the writes of an overlay as
+//     its later slices land. It imports the domain and nothing else of the module.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -75,6 +78,7 @@ var rings = map[string]archguard.Ring{
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
 	"skills/registryyaml":       archguard.Adapter,
+	"skills/skillsfs":           archguard.Adapter,
 	"statestore":                archguard.Adapter,
 	"synctrigger":               archguard.Adapter,
 	"workflow":                  archguard.Domain,

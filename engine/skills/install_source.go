@@ -29,9 +29,9 @@ func SkipWhenCopying(rel string, d fs.DirEntry) bool {
 	return isWriterTempFile(d)
 }
 
-// sourceFile is one regular file of a skill's source tree: its path relative to the
+// SourceFile is one regular file of a skill's source tree: its path relative to the
 // skill directory (slash-separated), its bytes, and its permission bits.
-type sourceFile struct {
+type SourceFile struct {
 	Rel  string
 	Data []byte
 	Mode fs.FileMode
@@ -42,8 +42,8 @@ type sourceFile struct {
 // anything that is not a regular file; a directory is only the way to its files, so
 // an empty one installs nothing. The approval record and a writer's temporary file
 // are skipped by the rule install shares with the Pi package builder.
-func readSkillSource(dir string) ([]sourceFile, error) {
-	var files []sourceFile
+func readSkillSource(dir string) ([]SourceFile, error) {
+	var files []SourceFile
 	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -75,7 +75,7 @@ func readSkillSource(dir string) ([]sourceFile, error) {
 		if err != nil {
 			return fmt.Errorf("reading %s: %w", p, err)
 		}
-		files = append(files, sourceFile{Rel: filepath.ToSlash(rel), Data: data, Mode: info.Mode().Perm()})
+		files = append(files, SourceFile{Rel: filepath.ToSlash(rel), Data: data, Mode: info.Mode().Perm()})
 		return nil
 	})
 	if err != nil {

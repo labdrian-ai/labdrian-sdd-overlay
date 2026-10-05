@@ -35,7 +35,7 @@ const (
 // directory (readSkillSource).
 type InstallSkill struct {
 	ID    string
-	Files []sourceFile
+	Files []SourceFile
 }
 
 // InstallInput carries the pre-read state PlanInstallOwnership decides from. It

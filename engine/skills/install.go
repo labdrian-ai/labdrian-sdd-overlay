@@ -94,7 +94,7 @@ type installEnv struct {
 	readDir     func(string) ([]fs.DirEntry, error)
 	resolve     func(string) (string, error)       // symlink resolution, for containment
 	fsys        projectFS                          // the writes
-	readSource  func(string) ([]sourceFile, error) // a skill's source tree
+	readSource  func(string) ([]SourceFile, error) // a skill's source tree
 }
 
 // productionInstallEnv is the real filesystem. Registry reads go through readRegistry,
