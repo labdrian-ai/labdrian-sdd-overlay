@@ -11,12 +11,12 @@ exit: 1
 --- stderr ---
 pipkg build: pipkg: opening registry: open <WORLD>/refused/builda.yaml: no such file or directory
 
-# build: a registry with a line the reader does not understand
+# build: a registry with a key the reader does not know
 $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/buildb.yaml --dest-dir <WORLD>/out/labdrian-pi
-exit: 1
+exit: 0
 --- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
 --- stderr ---
-pipkg build: pipkg: parsing registry: line 7: unknown key "mirror" in source
 
 # build: a registry of a version it does not know
 $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/buildc.yaml --dest-dir <WORLD>/out/labdrian-pi
@@ -40,13 +40,13 @@ pipkg check: compared against the worktree (overlay root is not a git repository
 --- stderr ---
 pipkg check: pipkg: opening registry: open <WORLD>/refused/checka.yaml: no such file or directory
 
-# check: a registry with a line the reader does not understand
+# check: a registry with a key the reader does not know
 $ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/refused/checkb.yaml --dest-dir <WORLD>/out/labdrian-pi
-exit: 1
+exit: 0
 --- stdout ---
 pipkg check: compared against the worktree (overlay root is not a git repository)
+pipkg check: OK (built package matches the current manifest)
 --- stderr ---
-pipkg check: pipkg: parsing registry: line 7: unknown key "mirror" in source
 
 # check: a registry of a version it does not know
 $ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/refused/checkc.yaml --dest-dir <WORLD>/out/labdrian-pi
@@ -77,10 +77,4 @@ labdrian-pi/skills/
 labdrian-pi/skills/_shared/
 labdrian-pi/skills/_shared/anti-generic-design.md
 labdrian-pi/skills/_shared/minimalism-contract.md
-labdrian-pi/skills/alpha/
-labdrian-pi/skills/alpha/SKILL.md
-labdrian-pi/skills/alpha/references/
-labdrian-pi/skills/alpha/references/notes.md
-labdrian-pi/skills/beta/
-labdrian-pi/skills/beta/SKILL.md
 

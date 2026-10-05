@@ -1,12 +1,17 @@
 package runtime_test
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
 	engineRuntime "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 )
+
+// fileRegistries reads the registry files of a test from the file system, as the program does.
+var fileRegistries = registryyaml.NewRepository(os.ReadFile)
 
 const contractContent = `---
 applies_to_phases: [sdd-tasks, sdd-apply]
@@ -172,7 +177,7 @@ func TestExpandTarget_Pi(t *testing.T) {
 		t.Fatalf("ExpandTarget(pi) = %#v, want [pi]", single)
 	}
 
-	adapter := engineRuntime.NewFoundationAdapter(engineRuntime.TargetPi)
+	adapter := engineRuntime.NewFoundationAdapter(engineRuntime.TargetPi, fileRegistries)
 	if _, ok := adapter.(engineRuntime.PiAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(pi) should return PiAdapter, got %T", adapter)
 	}
@@ -196,7 +201,7 @@ func TestExpandTarget_Pi(t *testing.T) {
 // pre-pi-lifecycle stub-wording test): an unbuilt package now reports its
 // own concrete reason instead of a "scheduled for a later slice" placeholder.
 func TestPiAdapter_UnbuiltDefaultReportsConcreteReasons(t *testing.T) {
-	adapter := engineRuntime.NewPiAdapter()
+	adapter := engineRuntime.NewPiAdapter(fileRegistries)
 
 	for _, result := range []engineRuntime.LifecycleResult{adapter.Status(), adapter.Uninstall()} {
 		if !strings.Contains(result.Message, "not built") {
@@ -226,7 +231,7 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 	}
 
 	t.Setenv("HOME", t.TempDir())
-	claude := engineRuntime.NewFoundationAdapter(engineRuntime.TargetClaude)
+	claude := engineRuntime.NewFoundationAdapter(engineRuntime.TargetClaude, fileRegistries)
 	if _, ok := claude.(engineRuntime.ClaudeAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(claude) should return ClaudeAdapter foundation")
 	}
@@ -234,7 +239,7 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 		t.Fatalf("Claude foundation status should be unsupported in an empty HOME sandbox, got target=%q status=%q", claude.Target(), claude.Status().Status)
 	}
 
-	codex := engineRuntime.NewFoundationAdapter(engineRuntime.TargetCodex)
+	codex := engineRuntime.NewFoundationAdapter(engineRuntime.TargetCodex, fileRegistries)
 	if _, ok := codex.(engineRuntime.CodexAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(codex) should return CodexAdapter foundation")
 	}
@@ -242,7 +247,7 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 		t.Fatalf("Codex foundation status should be partial in an empty HOME sandbox, got target=%q status=%q", codex.Target(), codex.Status().Status)
 	}
 
-	unknown := engineRuntime.NewFoundationAdapter(engineRuntime.Target("future"))
+	unknown := engineRuntime.NewFoundationAdapter(engineRuntime.Target("future"), fileRegistries)
 	for _, result := range []engineRuntime.LifecycleResult{
 		unknown.Apply(), unknown.Install(), unknown.Status(), unknown.SyncCheck(), unknown.Update(), unknown.Rollback(), unknown.Uninstall(),
 	} {

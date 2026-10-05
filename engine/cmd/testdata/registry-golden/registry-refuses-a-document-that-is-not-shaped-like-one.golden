@@ -3,7 +3,7 @@ $ skills list --registry <WORLD>/docs/01.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 1: unexpected indentation at document root
+error: parsing registry: skills: missing required top-level field 'version'
 
 # an entry at the root
 $ skills list --registry <WORLD>/docs/02.yaml
@@ -17,7 +17,7 @@ $ skills list --registry <WORLD>/docs/03.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 2: unknown top-level key "skills"
+error: parsing registry: line 2: skills must be a list of entries, not a value
 
 # skills as a flow list
 $ skills list --registry <WORLD>/docs/04.yaml

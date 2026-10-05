@@ -9,25 +9,29 @@ import (
 // which write both, and 'sync-manifest', which regenerates the manifest from the registry. Each
 // is shown over a registry it can read, and over every state of a registry it refuses.
 
-// refusedRegistries are the four ways a registry is unusable that every verb has to say, and the
-// registry files that are them: one that is not there, one with a line the reader does not
-// understand, one that names a version it does not know, and one with a value outside its
-// vocabulary (which only a check of the entry finds).
-func refusedRegistries() []registryDoc {
+// registryStates are the four states of a registry that every verb has to meet, and the registry
+// files that are them: one that is not there, one with a key the reader does not know, one that
+// names a version it does not know, and one with a value outside its vocabulary (which only a
+// check of the entry finds). Three of them are refusals. The second is not since H16 (decision Q5):
+// the reader leaves out a key it does not know and says so, the verbs that read go on with the
+// rest, and the verbs that write refuse; before it, it was the fourth refusal, and the golden
+// files of the verbs below (named for the refusals) record that difference in place.
+func registryStates() []registryDoc {
 	return []registryDoc{
 		{"a registry that is not there", ""},
-		{"a registry with a line the reader does not understand", changed("      type: custom", "      type: custom\n      mirror: x")},
+		{"a registry with a key the reader does not know", changed("      type: custom", "      type: custom\n      mirror: x")},
 		{"a registry of a version it does not know", strings.Replace(baseEntry, `"1"`, `"3"`, 1)},
 		{"a registry with a value outside its vocabulary", changed("- claude", "- vim")},
 	}
 }
 
-// eachRefusedRegistry records the run of a verb, which takes the registry path as the argument
-// --registry, over each refused registry; the first is a path where there is no file. args is
-// called with the path of the registry to build the arguments.
-func (w *registryWorld) eachRefusedRegistry(args func(registry string) []string) {
+// eachRegistryState records the run of a verb, which takes the registry path as the argument
+// --registry, over each state of a registry; the first is a path where there is no file. args is
+// called with the path of the registry to build the arguments. (The files are put under refused/,
+// the name they had when all four were refusals, so that the paths in the golden files stay.)
+func (w *registryWorld) eachRegistryState(args func(registry string) []string) {
 	w.t.Helper()
-	for i, doc := range refusedRegistries() {
+	for i, doc := range registryStates() {
 		path := w.path("refused/" + string(rune('a'+i)) + ".yaml")
 		if i > 0 {
 			w.put("refused/"+string(rune('a'+i))+".yaml", doc.text)
@@ -90,15 +94,19 @@ func registryVerbCases() []registryGoldenCase {
 		}},
 		{"validate-refuses-an-unusable-registry", func(w *registryWorld) {
 			w.overlay()
-			w.eachRefusedRegistry(func(registry string) []string {
+			// The registries of the states have one entry (alpha), so the manifest has its row and
+			// no other: a manifest that has rows the registry has not would list those in the order
+			// of a map, which a golden file cannot hold (see the case above that has one at a time).
+			w.put(worldManifest, "engine/go.mod managed\nalpha/SKILL.md custom\n")
+			w.eachRegistryState(func(registry string) []string {
 				return []string{"skills", "validate", "--registry", registry, "--source-root", w.path("skills")}
 			})
 		}},
 		{"status-refuses-an-unusable-registry", func(w *registryWorld) {
-			w.eachRefusedRegistry(func(registry string) []string { return []string{"skills", "status", "--registry", registry} })
+			w.eachRegistryState(func(registry string) []string { return []string{"skills", "status", "--registry", registry} })
 		}},
 		{"list-refuses-an-unusable-registry", func(w *registryWorld) {
-			w.eachRefusedRegistry(func(registry string) []string { return []string{"skills", "list", "--registry", registry} })
+			w.eachRegistryState(func(registry string) []string { return []string{"skills", "list", "--registry", registry} })
 		}},
 		{"add-registers-a-skill-in-the-registry-and-the-manifest", func(w *registryWorld) {
 			w.overlay()
@@ -161,7 +169,7 @@ func registryVerbCases() []registryGoldenCase {
 		{"add-refuses-an-unusable-registry-and-writes-nothing", func(w *registryWorld) {
 			w.overlay()
 			w.putSkill("gamma", true)
-			w.eachRefusedRegistry(func(registry string) []string {
+			w.eachRegistryState(func(registry string) []string {
 				return []string{"skills", "add", "gamma", "--registry", registry, "--manifest", w.path(worldManifest), "--source-root", w.path("skills")}
 			})
 			w.show(worldManifest)
@@ -217,7 +225,7 @@ func registryVerbCases() []registryGoldenCase {
 		}},
 		{"remove-refuses-an-unusable-registry", func(w *registryWorld) {
 			w.overlay()
-			w.eachRefusedRegistry(func(registry string) []string {
+			w.eachRegistryState(func(registry string) []string {
 				return []string{"skills", "remove", "alpha", "--registry", registry, "--manifest", w.path(worldManifest)}
 			})
 			w.show(worldManifest)
@@ -239,7 +247,7 @@ func registryVerbCases() []registryGoldenCase {
 			w.overlay()
 			w.label("a manifest that is not there")
 			w.run("skills", "sync-manifest", "--manifest", w.path("none.manifest"))
-			w.eachRefusedRegistry(func(registry string) []string {
+			w.eachRegistryState(func(registry string) []string {
 				return []string{"skills", "sync-manifest", "--registry", registry, "--manifest", w.path(worldManifest)}
 			})
 			w.show(worldManifest)

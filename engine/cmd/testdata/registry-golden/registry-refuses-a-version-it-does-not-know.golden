@@ -38,7 +38,7 @@ $ skills list --registry <WORLD>/docs/06.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 1: unknown top-level key "version"
+error: parsing registry: skills: version "" is not supported; only version "1" is valid
 
 # a version of 0
 $ skills list --registry <WORLD>/docs/07.yaml

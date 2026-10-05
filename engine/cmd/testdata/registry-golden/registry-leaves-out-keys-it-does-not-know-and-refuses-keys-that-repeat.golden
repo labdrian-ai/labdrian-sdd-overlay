@@ -1,58 +1,65 @@
 # an unknown key at the root, with a value
 $ skills list --registry <WORLD>/docs/01.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 1: unknown top-level key "extra"
+warning: registry fields left unread: line 1: unknown top-level key "extra"
 
 # an unknown key at the root, with none
 $ skills list --registry <WORLD>/docs/02.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 1: unknown top-level key "extra"
+warning: registry fields left unread: line 1: unknown top-level key "extra"
 
 # an unknown key in an entry
 $ skills list --registry <WORLD>/docs/03.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 4: unknown key "color" in skill entry
+warning: registry fields left unread: line 4: unknown key "color" in skill entry
 
 # an unknown key in an entry, after the fields
 $ skills list --registry <WORLD>/docs/04.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 13: unknown key "color" in skill entry
+warning: registry fields left unread: line 13: unknown key "color" in skill entry
 
 # an unknown key in a source
 $ skills list --registry <WORLD>/docs/05.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # an unknown key in an upstream
 $ skills list --registry <WORLD>/docs/06.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 8: unknown key "name" in upstream
+error: parsing registry: skills: entry "alpha": source.upstream.owner must not be empty
 
 # an unknown key in an install
 $ skills list --registry <WORLD>/docs/07.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 9: unknown key "mode" in install
+warning: registry fields left unread: line 9: unknown key "mode" in install
 
 # an unknown key in a lifecycle
 $ skills list --registry <WORLD>/docs/08.yaml
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: line 13: unknown key "phase" in lifecycle
+warning: registry fields left unread: line 13: unknown key "phase" in lifecycle
 
 # a field of an entry twice
 $ skills list --registry <WORLD>/docs/09.yaml

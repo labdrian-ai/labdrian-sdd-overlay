@@ -5,12 +5,13 @@ exit: 1
 --- stderr ---
 error: reading registry "<WORLD>/refused/installa.yaml": open <WORLD>/refused/installa.yaml: no such file or directory
 
-# install: a registry with a line the reader does not understand
+# install: a registry with a key the reader does not know
 $ skills install --registry <WORLD>/refused/installb.yaml --source-root <WORLD>/overlay/skills (in demo)
-exit: 1
+exit: 0
 --- stdout ---
+no project-scoped skills admitted for project "demo"
 --- stderr ---
-error: parsing registry: line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # install: a registry of a version it does not know
 $ skills install --registry <WORLD>/refused/installc.yaml --source-root <WORLD>/overlay/skills (in demo)
@@ -33,12 +34,13 @@ exit: 1
 --- stderr ---
 error: reading registry "<WORLD>/refused/adopta.yaml": open <WORLD>/refused/adopta.yaml: no such file or directory
 
-# adopt: a registry with a line the reader does not understand
+# adopt: a registry with a key the reader does not know
 $ skills adopt --registry <WORLD>/refused/adoptb.yaml --source-root <WORLD>/overlay/skills (in demo)
-exit: 1
+exit: 0
 --- stdout ---
+no project-scoped skills admitted for project "demo"
 --- stderr ---
-error: parsing registry: line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # adopt: a registry of a version it does not know
 $ skills adopt --registry <WORLD>/refused/adoptc.yaml --source-root <WORLD>/overlay/skills (in demo)

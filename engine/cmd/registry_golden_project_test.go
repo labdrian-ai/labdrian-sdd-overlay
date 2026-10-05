@@ -109,7 +109,7 @@ func registryProjectCases() []registryGoldenCase {
 		{"install-and-adopt-refuse-an-unusable-registry", func(w *registryWorld) {
 			w.projectWorld()
 			for _, verb := range []string{"install", "adopt"} {
-				for i, doc := range refusedRegistries() {
+				for i, doc := range registryStates() {
 					path := w.path("refused/" + verb + string(rune('a'+i)) + ".yaml")
 					if i > 0 {
 						w.put("refused/"+verb+string(rune('a'+i))+".yaml", doc.text)
@@ -161,7 +161,7 @@ func registryProjectCases() []registryGoldenCase {
 		}},
 		{"project-register-refuses-an-unusable-registry", func(w *registryWorld) {
 			w.projectRegisterWorld()
-			w.eachRefusedRegistry(func(registry string) []string { return w.registerArgs("--registry", registry) })
+			w.eachRegistryState(func(registry string) []string { return w.registerArgs("--registry", registry) })
 			w.tree("project")
 		}},
 		{"project-status-lists-the-project-and-what-the-registry-says-of-it", func(w *registryWorld) {
@@ -189,7 +189,7 @@ func registryProjectCases() []registryGoldenCase {
 		{"project-status-refuses-an-unusable-registry", func(w *registryWorld) {
 			w.projectRegisterWorld()
 			w.run(w.registerArgs()...)
-			w.eachRefusedRegistry(func(registry string) []string {
+			w.eachRegistryState(func(registry string) []string {
 				return []string{"skills", "project-status", "--project-root", w.path("project"), "--registry", registry}
 			})
 		}},
@@ -206,7 +206,7 @@ func registryProjectCases() []registryGoldenCase {
 		{"project-retire-refuses-an-unusable-registry", func(w *registryWorld) {
 			w.projectRegisterWorld()
 			w.run(w.registerArgs()...)
-			w.eachRefusedRegistry(func(registry string) []string {
+			w.eachRegistryState(func(registry string) []string {
 				return []string{"skills", "project-retire", "--project-root", w.path("project"), "--registry", registry, "--reason", "r", "tidy-worktree"}
 			})
 		}},
@@ -214,7 +214,7 @@ func registryProjectCases() []registryGoldenCase {
 			w.projectRegisterWorld()
 			w.run(w.registerArgs()...)
 			w.put("drafts/revised/SKILL.md", strings.Replace(goldenProjectDraft("tidy-worktree"), "handed over clean.", "handed over clean and reviewed.", 1))
-			for i, doc := range refusedRegistries() {
+			for i, doc := range registryStates() {
 				path := w.path("refused/r" + string(rune('a'+i)) + ".yaml")
 				if i > 0 {
 					w.put("refused/r"+string(rune('a'+i))+".yaml", doc.text)

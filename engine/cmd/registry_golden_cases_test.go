@@ -18,6 +18,7 @@ func registryGoldenCases() []registryGoldenCase {
 	var cases []registryGoldenCase
 	cases = append(cases, registryReadingCases()...)
 	cases = append(cases, registryRefusalCases()...)
+	cases = append(cases, registryPolicyCases()...)
 	cases = append(cases, registryVerbCases()...)
 	cases = append(cases, registryProjectCases()...)
 	cases = append(cases, registryPackageCases()...)
@@ -299,7 +300,7 @@ func registryRefusalCases() []registryGoldenCase {
 				{"a key of install too shallow", changed("      defaultScope: global", "     defaultScope: global")},
 			})
 		}},
-		{"registry-refuses-keys-it-does-not-know-and-keys-that-repeat", func(w *registryWorld) {
+		{"registry-leaves-out-keys-it-does-not-know-and-refuses-keys-that-repeat", func(w *registryWorld) {
 			w.listEach([]registryDoc{
 				{"an unknown key at the root, with a value", "extra: 1\n" + baseEntry},
 				{"an unknown key at the root, with none", "extra:\n" + baseEntry},

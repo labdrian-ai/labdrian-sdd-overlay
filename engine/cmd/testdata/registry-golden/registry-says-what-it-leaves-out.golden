@@ -1,0 +1,40 @@
+# one key it does not know
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+warning: registry fields left unread: line 1: unknown top-level key "extra"
+
+# three keys it does not know: the first is named, and how many more
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+warning: registry fields left unread: line 1: unknown top-level key "first" (and 2 more)
+
+# the same key it does not know twice at the root
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+warning: registry fields left unread: line 1: unknown top-level key "extra" (and 1 more)
+
+# a key it does not know with a block under it
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+warning: registry fields left unread: line 1: unknown top-level key "extra"
+
+# two keys it does not know in a source and one at the end of the entry
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+warning: registry fields left unread: line 7: unknown key "mirror" in source (and 2 more)
+

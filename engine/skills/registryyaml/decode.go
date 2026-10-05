@@ -28,26 +28,6 @@ type tok struct {
 	lineNum int
 }
 
-// Decode reads a registry from the YAML file r, which is a strict subset of YAML. It rejects every
-// construct outside the documented subset with a line-numbered error.
-//
-// It decodes and does not judge: whether the registry may hold what it holds is the domain's rule
-// (skills.Registry.Validate), which the domain applies to what this returns. So that the domain can
-// name the first fault in the order the file says it (as the file has always been read, entry by
-// entry, with each judged as soon as it was whole), a decoder that fails after some entries are
-// complete returns them with the error: the entries whole and in order up to the fault, and the
-// version if it was read. A fault of the text itself, before anything is read (a tab, a flow
-// sequence, a line longer than the reader's buffer), returns the zero registry.
-// minimal: forced — ADR-1 (zero-dep invariant)
-func Decode(r io.Reader) (skills.Registry, error) {
-	tokens, err := tokenize(r)
-	if err != nil {
-		return skills.Registry{}, err
-	}
-	p := &tokParser{tokens: tokens}
-	return p.parseDocument()
-}
-
 // tokenize scans the reader line-by-line, checks for forbidden constructs,
 // and emits a flat []tok slice. Any out-of-subset construct causes an
 // immediate line-numbered error.
@@ -239,6 +219,72 @@ func unquoteScalar(s string, lineNum int) (string, error) {
 type tokParser struct {
 	tokens []tok
 	pos    int
+
+	schema schema
+	// unread is what the parser left out of the file, as notes in the order of the file
+	// (skills.Registry.Unread).
+	unread []string
+}
+
+// decodeV1 is the decoder of version 1 of the file. The version itself was found and judged
+// before it was chosen (versionOf), so it only has to step over the key.
+func decodeV1(tokens []tok) (skills.Registry, error) {
+	p := &tokParser{tokens: tokens, schema: schemaV1}
+	reg, err := p.parseDocument()
+	reg.Unread = p.unread
+	return reg, err
+}
+
+// open says whether the key t, whose own column is col and which the parser has just stepped
+// over, is in the shape its field has, so that what is under it can be read as that field. A
+// scalar has no block under it; the others have no value on their line.
+//
+// A field in another shape is the one thing the reader does not read as it is. If the field is of
+// the must-understand set the file is refused, naming the field and the line: reading the file
+// without it would change what install, approval or projection does. Any other field has the part
+// that is in the wrong shape left out and said: the block under a scalar is skipped (leaveOut),
+// and the value on a block's line is noted and the block under it is read as ever.
+func (p *tokParser) open(path string, t tok, col int) (bool, error) {
+	f, ok := p.schema.byPath[path]
+	if !ok {
+		panic("registryyaml: the decoder asked for a field its schema does not have: " + path)
+	}
+	hasValue := t.kind == tokKeyValue || t.kind == tokSeqMapping
+	next := p.peek()
+	hasBlock := next != nil && next.indent > col
+	if (f.shape == shapeScalar && !hasBlock) || (f.shape != shapeScalar && !hasValue) {
+		return true, nil
+	}
+	if f.must {
+		return false, fmt.Errorf("line %d: %s", t.lineNum, f.refusal(p.schema.childrenOf(path)))
+	}
+	if f.shape == shapeScalar {
+		p.leaveOut(t.lineNum, col, f.note())
+		return false, nil
+	}
+	p.unread = append(p.unread, fmt.Sprintf("line %d: %s", t.lineNum, f.strayValueNote()))
+	return true, nil
+}
+
+// value reads the scalar field at path into into, unless the field is in another shape (open).
+func (p *tokParser) value(path string, t tok, col int, into *string) error {
+	read, err := p.open(path, t, col)
+	if err != nil {
+		return err
+	}
+	if read {
+		*into = t.val
+	}
+	return nil
+}
+
+// leaveOut notes that what the file says at line was not read, and steps over what is under
+// the key, which is everything that follows it in a column further in than the key's own.
+func (p *tokParser) leaveOut(line, col int, note string) {
+	p.unread = append(p.unread, fmt.Sprintf("line %d: %s", line, note))
+	for next := p.peek(); next != nil && next.indent > col; next = p.peek() {
+		p.advance()
+	}
 }
 
 func (p *tokParser) peek() *tok {
@@ -257,11 +303,10 @@ func (p *tokParser) advance() *tok {
 	return nil
 }
 
-// parseDocument parses the top-level YAML document and checks the fields it must have. On a
-// fault it returns what it had decoded so far with the error (see Decode).
+// parseDocument parses the top-level YAML document of version 1 and checks the fields it must
+// have. On a fault it returns what it had decoded so far with the error (see Decode).
 func (p *tokParser) parseDocument() (skills.Registry, error) {
 	var reg skills.Registry
-	seenVersion := false
 	seenSkills := false
 
 	for p.peek() != nil {
@@ -269,40 +314,28 @@ func (p *tokParser) parseDocument() (skills.Registry, error) {
 		if t.indent != 0 {
 			return reg, fmt.Errorf("line %d: unexpected indentation at document root", t.lineNum)
 		}
-		switch t.kind {
-		case tokKeyValue:
-			p.advance()
-			switch t.key {
-			case "version":
-				seenVersion = true
-				reg.Version = t.val
-			default:
-				return reg, fmt.Errorf("line %d: unknown top-level key %q", t.lineNum, t.key)
+		if t.kind != tokKeyValue && t.kind != tokKeyOnly {
+			return reg, fmt.Errorf("line %d: unexpected token at document root", t.lineNum)
+		}
+		p.advance()
+		switch t.key {
+		case "version":
+			// Found and judged before this decoder was chosen (versionOf).
+		case "skills":
+			if _, err := p.open("skills", *t, 0); err != nil {
+				return reg, err
 			}
-		case tokKeyOnly:
-			p.advance()
-			switch t.key {
-			case "skills":
-				seenSkills = true
-				entries, err := p.parseSkillEntries(2)
-				reg.Skills = entries
-				if err != nil {
-					return reg, err
-				}
-			default:
-				return reg, fmt.Errorf("line %d: unknown top-level key %q", t.lineNum, t.key)
+			seenSkills = true
+			entries, err := p.parseSkillEntries(2)
+			reg.Skills = entries
+			if err != nil {
+				return reg, err
 			}
 		default:
-			return reg, fmt.Errorf("line %d: unexpected token at document root", t.lineNum)
+			p.leaveOut(t.lineNum, 0, fmt.Sprintf("unknown top-level key %q", t.key))
 		}
 	}
 
-	if !seenVersion {
-		return reg, fmt.Errorf("skills: missing required top-level field 'version'")
-	}
-	if reg.Version != "1" {
-		return reg, fmt.Errorf("skills: version %q is not supported; only version \"1\" is valid", reg.Version)
-	}
 	if !seenSkills {
 		return reg, fmt.Errorf("skills: missing required top-level field 'skills'")
 	}
@@ -328,7 +361,7 @@ func (p *tokParser) parseSkillEntries(seqIndent int) ([]skills.Entry, error) {
 		}
 		p.advance()
 
-		entry, err := p.parseEntry(t.key, t.val, seqIndent+2, t.lineNum)
+		entry, err := p.parseEntry(*t, seqIndent+2)
 		if err != nil {
 			return entries, err
 		}
@@ -338,14 +371,14 @@ func (p *tokParser) parseSkillEntries(seqIndent int) ([]skills.Entry, error) {
 	return entries, nil
 }
 
-// parseEntry parses one skill entry. firstKey/firstVal come from the sequence-item
-// token (e.g. "- id: sdd-spec"). Subsequent keys at entryIndent are consumed from
-// the token stream. The entry is not judged: that is the domain's.
-func (p *tokParser) parseEntry(firstKey, firstVal string, entryIndent, lineNum int) (skills.Entry, error) {
+// parseEntry parses one skill entry. first is the sequence-item token (e.g. "- id: sdd-spec"),
+// which has the entry's first key. Subsequent keys at entryIndent are consumed from the token
+// stream. The entry is not judged: that is the domain's.
+func (p *tokParser) parseEntry(first tok, entryIndent int) (skills.Entry, error) {
 	var e skills.Entry
 	keysSeen := make(map[string]bool)
 
-	if err := p.applyEntryKey(&e, firstKey, firstVal, entryIndent, lineNum, keysSeen); err != nil {
+	if err := p.applyEntryKey(&e, first, entryIndent, keysSeen); err != nil {
 		return skills.Entry{}, err
 	}
 
@@ -361,7 +394,7 @@ func (p *tokParser) parseEntry(firstKey, firstVal string, entryIndent, lineNum i
 		if keysSeen[t.key] {
 			return skills.Entry{}, fmt.Errorf("line %d: duplicate key %q in skill entry", t.lineNum, t.key)
 		}
-		if err := p.applyEntryKey(&e, t.key, t.val, entryIndent, t.lineNum, keysSeen); err != nil {
+		if err := p.applyEntryKey(&e, *t, entryIndent, keysSeen); err != nil {
 			return skills.Entry{}, err
 		}
 	}
@@ -369,34 +402,47 @@ func (p *tokParser) parseEntry(firstKey, firstVal string, entryIndent, lineNum i
 	return e, nil
 }
 
-// applyEntryKey dispatches a single key within a skill entry.
-func (p *tokParser) applyEntryKey(e *skills.Entry, key, val string, entryIndent, lineNum int, seen map[string]bool) error {
-	seen[key] = true
-	switch key {
+// applyEntryKey dispatches a single key within a skill entry. t is the key's token, which the
+// parser has stepped over; entryIndent is the column of the entry's keys.
+func (p *tokParser) applyEntryKey(e *skills.Entry, t tok, entryIndent int, seen map[string]bool) error {
+	seen[t.key] = true
+	switch t.key {
 	case "id":
-		e.ID = val
+		return p.value("id", t, entryIndent, &e.ID)
 	case "path":
-		e.Path = val
+		return p.value("path", t, entryIndent, &e.Path)
 	case "source":
-		src, err := p.parseSource(entryIndent+2, lineNum, e.ID)
+		read, err := p.open("source", t, entryIndent)
+		if err != nil || !read {
+			return err
+		}
+		src, err := p.parseSource(entryIndent+2, t.lineNum, e.ID)
 		if err != nil {
 			return err
 		}
 		e.Source = src
 	case "install":
-		inst, err := p.parseInstall(entryIndent+2, lineNum)
+		read, err := p.open("install", t, entryIndent)
+		if err != nil || !read {
+			return err
+		}
+		inst, err := p.parseInstall(entryIndent + 2)
 		if err != nil {
 			return err
 		}
 		e.Install = inst
 	case "lifecycle":
-		lc, err := p.parseLifecycle(entryIndent+2, lineNum)
+		read, err := p.open("lifecycle", t, entryIndent)
+		if err != nil || !read {
+			return err
+		}
+		lc, err := p.parseLifecycle(entryIndent + 2)
 		if err != nil {
 			return err
 		}
 		e.Lifecycle = lc
 	default:
-		return fmt.Errorf("line %d: unknown key %q in skill entry", lineNum, key)
+		p.leaveOut(t.lineNum, entryIndent, fmt.Sprintf("unknown key %q in skill entry", t.key))
 	}
 	return nil
 }
@@ -424,21 +470,33 @@ func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (skil
 		seen[t.key] = true
 		switch t.key {
 		case "type":
-			src.Type = t.val
+			if err := p.value("source.type", *t, indent, &src.Type); err != nil {
+				return skills.Source{}, err
+			}
 		case "upstream":
-			u, err := p.parseUpstream(indent+2, t.lineNum)
+			read, err := p.open("source.upstream", *t, indent)
 			if err != nil {
 				return skills.Source{}, err
 			}
-			src.Upstream = &u
+			if read {
+				u, err := p.parseUpstream(indent + 2)
+				if err != nil {
+					return skills.Source{}, err
+				}
+				src.Upstream = &u
+			}
 		case "repo":
-			src.Repo = t.val
+			if err := p.value("source.repo", *t, indent, &src.Repo); err != nil {
+				return skills.Source{}, err
+			}
 			repoLineNum = t.lineNum
 		case "ref":
-			src.Ref = t.val
+			if err := p.value("source.ref", *t, indent, &src.Ref); err != nil {
+				return skills.Source{}, err
+			}
 			refLineNum = t.lineNum
 		default:
-			return skills.Source{}, fmt.Errorf("line %d: unknown key %q in source", t.lineNum, t.key)
+			p.leaveOut(t.lineNum, indent, fmt.Sprintf("unknown key %q in source", t.key))
 		}
 	}
 
@@ -464,7 +522,7 @@ func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (skil
 }
 
 // parseUpstream parses the upstream mapping.
-func (p *tokParser) parseUpstream(indent, lineNum int) (skills.Upstream, error) {
+func (p *tokParser) parseUpstream(indent int) (skills.Upstream, error) {
 	var u skills.Upstream
 	seen := make(map[string]bool)
 
@@ -483,9 +541,11 @@ func (p *tokParser) parseUpstream(indent, lineNum int) (skills.Upstream, error) 
 		seen[t.key] = true
 		switch t.key {
 		case "owner":
-			u.Owner = t.val
+			if err := p.value("source.upstream.owner", *t, indent, &u.Owner); err != nil {
+				return skills.Upstream{}, err
+			}
 		default:
-			return skills.Upstream{}, fmt.Errorf("line %d: unknown key %q in upstream", t.lineNum, t.key)
+			p.leaveOut(t.lineNum, indent, fmt.Sprintf("unknown key %q in upstream", t.key))
 		}
 	}
 
@@ -493,7 +553,7 @@ func (p *tokParser) parseUpstream(indent, lineNum int) (skills.Upstream, error) 
 }
 
 // parseInstall parses the install mapping.
-func (p *tokParser) parseInstall(indent, lineNum int) (skills.Install, error) {
+func (p *tokParser) parseInstall(indent int) (skills.Install, error) {
 	var inst skills.Install
 	seen := make(map[string]bool)
 
@@ -512,24 +572,42 @@ func (p *tokParser) parseInstall(indent, lineNum int) (skills.Install, error) {
 		seen[t.key] = true
 		switch t.key {
 		case "defaultScope":
-			if t.val != skills.ScopeGlobal && t.val != skills.ScopeProject {
-				return skills.Install{}, fmt.Errorf("line %d: install.defaultScope %q is not valid; must be 'global' or 'project'", t.lineNum, t.val)
+			read, err := p.open("install.defaultScope", *t, indent)
+			if err != nil {
+				return skills.Install{}, err
 			}
-			inst.DefaultScope = t.val
+			if read {
+				if t.val != skills.ScopeGlobal && t.val != skills.ScopeProject {
+					return skills.Install{}, fmt.Errorf("line %d: install.defaultScope %q is not valid; must be 'global' or 'project'", t.lineNum, t.val)
+				}
+				inst.DefaultScope = t.val
+			}
 		case "targets":
-			targets, err := p.parseScalarSequence(indent+2, t.lineNum)
+			read, err := p.open("install.targets", *t, indent)
 			if err != nil {
 				return skills.Install{}, err
 			}
-			inst.Targets = targets
+			if read {
+				targets, err := p.parseScalarSequence(indent+2, t.lineNum)
+				if err != nil {
+					return skills.Install{}, err
+				}
+				inst.Targets = targets
+			}
 		case "allowedProjects":
-			projects, err := p.parseScalarSequence(indent+2, t.lineNum)
+			read, err := p.open("install.allowedProjects", *t, indent)
 			if err != nil {
 				return skills.Install{}, err
 			}
-			inst.AllowedProjects = projects
+			if read {
+				projects, err := p.parseScalarSequence(indent+2, t.lineNum)
+				if err != nil {
+					return skills.Install{}, err
+				}
+				inst.AllowedProjects = projects
+			}
 		default:
-			return skills.Install{}, fmt.Errorf("line %d: unknown key %q in install", t.lineNum, t.key)
+			p.leaveOut(t.lineNum, indent, fmt.Sprintf("unknown key %q in install", t.key))
 		}
 	}
 
@@ -537,7 +615,7 @@ func (p *tokParser) parseInstall(indent, lineNum int) (skills.Install, error) {
 }
 
 // parseLifecycle parses the lifecycle mapping.
-func (p *tokParser) parseLifecycle(indent, lineNum int) (skills.Lifecycle, error) {
+func (p *tokParser) parseLifecycle(indent int) (skills.Lifecycle, error) {
 	var lc skills.Lifecycle
 	seen := make(map[string]bool)
 
@@ -556,9 +634,11 @@ func (p *tokParser) parseLifecycle(indent, lineNum int) (skills.Lifecycle, error
 		seen[t.key] = true
 		switch t.key {
 		case "updateStrategy":
-			lc.UpdateStrategy = t.val
+			if err := p.value("lifecycle.updateStrategy", *t, indent, &lc.UpdateStrategy); err != nil {
+				return skills.Lifecycle{}, err
+			}
 		default:
-			return skills.Lifecycle{}, fmt.Errorf("line %d: unknown key %q in lifecycle", t.lineNum, t.key)
+			p.leaveOut(t.lineNum, indent, fmt.Sprintf("unknown key %q in lifecycle", t.key))
 		}
 	}
 

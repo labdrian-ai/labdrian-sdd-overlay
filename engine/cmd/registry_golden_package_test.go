@@ -162,7 +162,7 @@ func registryPackageCases() []registryGoldenCase {
 			w.packageWorld()
 			w.run(w.pipkgArgs("build")...)
 			for _, verb := range []string{"build", "check"} {
-				for i, doc := range refusedRegistries() {
+				for i, doc := range registryStates() {
 					path := w.path("refused/" + verb + string(rune('a'+i)) + ".yaml")
 					if i > 0 {
 						w.put("refused/"+verb+string(rune('a'+i))+".yaml", doc.text)
@@ -201,7 +201,7 @@ func registryPackageCases() []registryGoldenCase {
 			w.setenv("STATE_DIR", w.path("state"))
 			w.label("a package built where the runtime looks for it")
 			w.run("pipkg", "build", "--overlay-root", w.path("overlay"), "--registry", w.path("overlay/"+worldRegistry), "--dest-dir", w.path("state/pi/labdrian-pi"))
-			for i, doc := range refusedRegistries() {
+			for i, doc := range registryStates() {
 				if i > 0 {
 					w.put("overlay/"+worldRegistry, doc.text)
 				} else {

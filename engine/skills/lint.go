@@ -75,8 +75,8 @@ func EstimateBodyTokens(body string) int {
 // parsedFrontmatter is the result of the line-based frontmatter subset
 // reader described in design.md's "LintSkill API shape" decision: top-level
 // key: value pairs, one metadata: block with 2-space-indented pairs, and
-// quote stripping. It is intentionally separate from parse.go, which is
-// registry-specific and rejects unknown keys.
+// quote stripping. It is intentionally separate from the registry's reader
+// (registryyaml/decode.go), which is registry-specific and knows the registry's fields.
 type parsedFrontmatter struct {
 	Raw                  string
 	Name                 string

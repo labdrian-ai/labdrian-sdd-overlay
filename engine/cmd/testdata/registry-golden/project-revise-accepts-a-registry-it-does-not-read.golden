@@ -18,7 +18,7 @@ plan: .agents/skills/tidy-worktree/SKILL.md
 plan: .labdrian/procedural-skills.lock.json
 --- stderr ---
 
-# revising with: a registry with a line the reader does not understand
+# revising with: a registry with a key the reader does not know
 $ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/refused/rb.yaml --dry-run <WORLD>/drafts/revised/SKILL.md
 exit: 0
 --- stdout ---

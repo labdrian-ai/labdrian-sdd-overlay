@@ -5,12 +5,13 @@ exit: 1
 --- stderr ---
 error: skills remove: reading registry "<WORLD>/refused/a.yaml": stat <WORLD>/refused/a.yaml: no such file or directory; nothing was locked and nothing was changed
 
-# a registry with a line the reader does not understand
+# a registry with a key the reader does not know
 $ skills remove alpha --registry <WORLD>/refused/b.yaml --manifest <WORLD>/overlay.manifest
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: line 7: unknown key "mirror" in source
+warning: registry fields left unread: line 7: unknown key "mirror" in source
+error: skills: the registry has fields this program does not read, and rewriting it would drop them: line 7: unknown key "mirror" in source
 
 # a registry of a version it does not know
 $ skills remove alpha --registry <WORLD>/refused/c.yaml --manifest <WORLD>/overlay.manifest
