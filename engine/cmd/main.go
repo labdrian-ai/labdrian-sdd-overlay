@@ -414,7 +414,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 	}
 
 	if verb == "build" {
-		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		if err := pipkg.Build(newRegistryRepository(), overlayRoot, registryPath, destDir); err != nil {
 			fmt.Fprintf(stderr, "pipkg build: %v\n", err)
 			exit(1)
 			return
@@ -424,7 +424,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	report, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(newRegistryRepository(), overlayRoot, registryPath, destDir)
 	if d := report.Disclosure(); d != "" {
 		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
 	}
@@ -580,7 +580,7 @@ func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtim
 	if target == runtimepkg.TargetCodex {
 		return runtimepkg.NewCodexAdapter(configRoot)
 	}
-	return runtimepkg.NewFoundationAdapter(target)
+	return runtimepkg.NewFoundationAdapter(target, newRegistryRepository())
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.

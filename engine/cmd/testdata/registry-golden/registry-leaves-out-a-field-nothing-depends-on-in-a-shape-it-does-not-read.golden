@@ -1,0 +1,54 @@
+# source.upstream with a value
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+warning: registry fields left unread: line 7: source.upstream has a value, which is left out
+
+# source.upstream.owner with a block under it (the domain refuses a core skill with no owner)
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "beta": source.upstream.owner must not be empty
+
+# source.ref with a block under it
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+warning: registry fields left unread: line 34: source.ref is not a single value
+
+# source.repo with a block under it (an external source needs its repository)
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "ext-one": source.repo is required when source.type is 'external' (line 31)
+
+# lifecycle with a value (the value is left out, the block under it is read)
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+warning: registry fields left unread: line 16: lifecycle has a value, which is left out
+
+# lifecycle.updateStrategy with a block under it (the domain refuses an entry with none)
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "beta": lifecycle.updateStrategy "" is not valid; must be 'vendor-merge' or 'overlay-only'
+

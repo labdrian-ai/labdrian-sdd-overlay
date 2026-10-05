@@ -59,6 +59,12 @@ func scalar(v string) string {
 func Encode(reg skills.Registry) ([]byte, error) {
 	var b strings.Builder
 
+	// What the reader left out is not in the registry, so the file written from it would not have
+	// it either: that is not the exact inverse of Decode, and it loses what the file said.
+	if len(reg.Unread) > 0 {
+		return nil, fmt.Errorf("registryyaml: the registry has fields that were left unread, and the file written from it would lose them: %s", reg.UnreadSummary())
+	}
+
 	// Check representability of all scalar values before writing any output.
 	if err := checkRepresentable(reg); err != nil {
 		return nil, err

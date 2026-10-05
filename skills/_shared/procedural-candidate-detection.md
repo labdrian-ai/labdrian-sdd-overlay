@@ -212,8 +212,8 @@ This capability MUST reject a promotion candidate whose identity is already
 covered by an existing entry in the registered skill registry
 (`skills.registry.yaml`). Rejection is backed by a new read-only Go
 entrypoint, `skills.MatchCandidate` (`engine/skills/match.go`). The caller
-parses `skills.registry.yaml` with the already-exported `ParseRegistry`
-function and passes the resulting `Registry` value in; `MatchCandidate`
+reads `skills.registry.yaml` through the registry port (`skills.ReadRegistry`)
+and passes the resulting `Registry` value in; `MatchCandidate`
 itself performs no file, network, or other I/O and makes no write to the
 registry, to any file under `skills/`, or to any other persisted state.
 Matching compares the untruncated normalized form of each identity, never

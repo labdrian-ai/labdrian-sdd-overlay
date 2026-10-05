@@ -24,7 +24,16 @@ import (
 //     in order, up to the fault, with an error that says the fault. The domain judges those
 //     entries first, so what is named is the first fault in the order the store says it. A
 //     decoder that stops at the fault and returns no entries makes a registry whose first entry
-//     is invalid and whose second line is not understood report the second.
+//     is invalid and whose second line is not understood report the second. (A fault of the
+//     store's own version, which selects how the rest is read, comes before any entry and returns
+//     nothing.)
+//   - A store that was read whole and not understood to the last field is a registry, not an
+//     error: the adapter returns what it understood, and Registry.Unread says what it left out,
+//     one note per field. The verbs that read warn of it and go on; the verbs that rewrite the
+//     registry (AddEntry, RemoveEntry) refuse it, because writing it back would drop the fields.
+//     What an adapter must not leave out in silence is the fields its own policy says are needed
+//     to read the registry as it means (for the YAML file, the must-understand set): it refuses
+//     the store instead.
 //
 // Decode and Encode are the stored form of a registry as bytes. The verbs that write a registry
 // (add, remove) encode what they will write and decode it back before they write it, so that
@@ -36,7 +45,8 @@ type RegistryRepository interface {
 	Load(location string) (Registry, error)
 	// Decode reads a registry from its stored form.
 	Decode(data []byte) (Registry, error)
-	// Encode returns the stored form of reg, the exact bytes Decode reads back as reg.
+	// Encode returns the stored form of reg, the exact bytes Decode reads back as reg. It refuses
+	// a registry whose Unread is not empty: the bytes would not have what was left out.
 	Encode(reg Registry) ([]byte, error)
 }
 
@@ -91,6 +101,30 @@ func judged(reg Registry, readErr error) (Registry, error) {
 	return reg, nil
 }
 
+// UnreadSummary says what the reader left out of the registry as a person is told it: the first
+// note, and how many more there are. It is empty when nothing was left out.
+func (r Registry) UnreadSummary() string {
+	switch len(r.Unread) {
+	case 0:
+		return ""
+	case 1:
+		return r.Unread[0]
+	default:
+		return fmt.Sprintf("%s (and %d more)", r.Unread[0], len(r.Unread)-1)
+	}
+}
+
+// refuseToDropUnread is what the verbs that change a registry and write it back (add, remove)
+// say to a registry the reader did not read whole: the file written from it would not have what
+// the reader left out, so the registry is not changed. Reading it, listing it, installing from it
+// lose nothing and are not refused.
+func refuseToDropUnread(reg Registry) error {
+	if len(reg.Unread) == 0 {
+		return nil
+	}
+	return fmt.Errorf("skills: the registry has fields this program does not read, and rewriting it would drop them: %s", reg.UnreadSummary())
+}
+
 // readRegistryForVerb reads the registry at path for a verb that works on it, and says what a
 // person is told when it cannot: the words of a store that could not be read, or of a registry
 // that is not usable (a verb that names the registry in its refusal, quotePath, puts the path
@@ -99,6 +133,9 @@ func judged(reg Registry, readErr error) (Registry, error) {
 func readRegistryForVerb(registries RegistryRepository, path string, quotePath bool, stderr io.Writer, exit func(int)) (Registry, bool) {
 	reg, err := ReadRegistry(registries, path)
 	if err == nil {
+		if left := reg.UnreadSummary(); left != "" {
+			fmt.Fprintf(stderr, "warning: registry fields left unread: %s\n", left)
+		}
 		return reg, true
 	}
 	var unreadable *RegistryReadError

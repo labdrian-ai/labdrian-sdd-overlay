@@ -1,0 +1,56 @@
+# a version it does not know, and then an entry that is not valid
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "2" is not supported; only version "1" is valid
+
+# an entry that is not valid, and a version it knows
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path must not be empty
+
+# no version, and then an entry indented wrongly
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'version'
+
+# a version of a later format, with entries this reader could not read
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "2" is not supported; only version "1" is valid
+
+# a version at the end of the file
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# a version said twice: the last is the version (it is 1)
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude
+--- stderr ---
+
+# a version said twice: the last is the version (it is 2)
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "2" is not supported; only version "1" is valid
+
+# a version with a block under it
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: version must be a single value, not a block
+

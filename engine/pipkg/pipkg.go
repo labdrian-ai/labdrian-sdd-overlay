@@ -50,7 +50,6 @@ import (
 	"syscall"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 )
 
 const piTarget = "pi"
@@ -138,12 +137,12 @@ const mcpConfigBakFileName = mcpConfigFileName + ".bak"
 // touching the registered content, and the only one this atomic
 // stage/rename/replace shape (swap) permits: destDir is wholesale replaced
 // by tmpDir, so anything not copied into tmpDir first is lost.
-func Build(overlayRoot, registryPath, destDir string) error {
+func Build(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string) error {
 	if err := checkNoOverlap(overlayRoot, destDir); err != nil {
 		return err
 	}
 
-	reg, err := loadRegistry(registryPath)
+	reg, err := loadRegistry(registries, registryPath)
 	if err != nil {
 		return err
 	}
@@ -264,7 +263,7 @@ var builtFromPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
 // labdrian.builtFrom field is normalized out of the content comparison
 // (via stripBuiltFrom) so recording a different (but still correct) ref
 // never counts as file-level drift by itself.
-func Check(overlayRoot, registryPath, destDir string) (CheckReport, error) {
+func Check(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string) (CheckReport, error) {
 	got, err := listFiles(destDir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -279,7 +278,7 @@ func Check(overlayRoot, registryPath, destDir string) (CheckReport, error) {
 	}
 	defer cleanup()
 
-	reg, err := loadRegistry(sourceRegistry)
+	reg, err := loadRegistry(registries, sourceRegistry)
 	if err != nil {
 		return report, err
 	}
@@ -854,12 +853,12 @@ func frontmatterName(content string) (string, error) {
 	return "", fmt.Errorf("SKILL.md frontmatter is not terminated")
 }
 
-// loadRegistry reads the skills registry at registryPath through the registry port: the file of
-// the working tree, or, when Check compares against the deploy ref, the file of the directory that
-// ref was exported to. The registry is the domain's to judge (skills.ReadRegistry), so a package
-// is never built from one it would not accept.
-func loadRegistry(registryPath string) (skills.Registry, error) {
-	reg, err := skills.ReadRegistry(registryyaml.NewRepository(os.ReadFile), registryPath)
+// loadRegistry reads the skills registry at registryPath through the port: the file of the working
+// tree, or, when Check compares against the deploy ref, the file of the directory that ref was
+// exported to. The registry is the domain's to judge (skills.ReadRegistry), so a package is never
+// built from one it would not accept.
+func loadRegistry(registries skills.RegistryRepository, registryPath string) (skills.Registry, error) {
+	reg, err := skills.ReadRegistry(registries, registryPath)
 	if err == nil {
 		return reg, nil
 	}

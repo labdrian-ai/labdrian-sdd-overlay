@@ -598,6 +598,8 @@ func TestApprovalBaseline_PinnedToTheRepositoryRegistry(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read real registry: %v", err)
 	}
+	// parseRegistry (export_test.go) takes the bytes of the YAML file, which is what regData
+	// holds: the adapter decodes them and the domain judges the registry, as the program does.
 	reg, err := parseRegistry(regData)
 	if err != nil {
 		t.Fatalf("parse real registry: %v", err)

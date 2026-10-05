@@ -18,6 +18,8 @@ var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 // inferred defaults defined in ADR-8. It fails loudly if:
 //   - id fails the slug guard (R-062)
 //   - id is already present in reg.Skills (R-061)
+//   - reg has fields its reader left out (reg.Unread), which the registry written back would
+//     drop; this is the first thing checked
 //
 // repo and ref control the source type (ADR-14):
 //   - repo == "" → Source.Type = "custom" (backward-compatible default, R-128)
@@ -25,6 +27,9 @@ var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 //
 // The input registry is never mutated (pure function).
 func AddEntry(reg Registry, id, repo, ref string) (Registry, error) {
+	if err := refuseToDropUnread(reg); err != nil {
+		return Registry{}, err
+	}
 	if !slugRe.MatchString(id) {
 		return Registry{}, fmt.Errorf("id %q: invalid slug (must match ^[a-z0-9][a-z0-9-]*$)", id)
 	}
@@ -62,9 +67,13 @@ func AddEntry(reg Registry, id, repo, ref string) (Registry, error) {
 }
 
 // RemoveEntry returns a new Registry with the entry for id removed. It fails
-// loudly if id is not present in reg.Skills (R-069). The relative order of
-// remaining entries is preserved (R-070). The input registry is never mutated.
+// loudly if reg has fields its reader left out (reg.Unread: the registry written back would drop
+// them), which is checked first, and if id is not present in reg.Skills (R-069). The relative
+// order of remaining entries is preserved (R-070). The input registry is never mutated.
 func RemoveEntry(reg Registry, id string) (Registry, error) {
+	if err := refuseToDropUnread(reg); err != nil {
+		return Registry{}, err
+	}
 	found := false
 	for _, e := range reg.Skills {
 		if e.ID == id {

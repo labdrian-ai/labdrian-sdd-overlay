@@ -11,7 +11,11 @@ import (
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/registryyaml"
 )
+
+// fileRegistries reads the registry files of a test from the file system, as the program does.
+var fileRegistries = registryyaml.NewRepository(os.ReadFile)
 
 // fixtureOverlay builds a minimal overlay tree: two skills (one targeted at
 // pi, one not), an agents/GADU.md, and a matching skills.registry.yaml.
@@ -79,7 +83,7 @@ func TestPipkgBuild_PrefersPiAgentVariant(t *testing.T) {
 		writeFile(t, filepath.Join(overlayRoot, "pi", "agents", "GADU.md"), "---\nname: GADU\nmodel: pi-claude-cli/claude-sonnet-5\n---\npi body\n")
 		destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 			t.Fatalf("Build: %v", err)
 		}
 
@@ -100,7 +104,7 @@ func TestPipkgBuild_PrefersPiAgentVariant(t *testing.T) {
 		overlayRoot, registryPath := fixtureOverlay(t)
 		destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 			t.Fatalf("Build: %v", err)
 		}
 
@@ -122,7 +126,7 @@ func TestPipkgBuild_SelectsPiTargetedSkills(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -214,7 +218,7 @@ func TestPipkgBuild_DoesNotProjectTheApprovalRecord(t *testing.T) {
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", skills.ApprovalRecordName), "{}\n")
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -240,7 +244,7 @@ func TestPipkgBuild_DoesNotProjectAWritersTemporaryFile(t *testing.T) {
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "references", ".tmp-skills-"), "content\n")
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -268,7 +272,7 @@ func TestPipkgBuild_RejectsSymlinks(t *testing.T) {
 		t.Skipf("symlink unsupported in this environment: %v", err)
 	}
 
-	err := pipkg.Build(overlayRoot, registryPath, destDir)
+	err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir)
 	if err == nil {
 		t.Fatal("Build must refuse a symlink under a copied skill directory")
 	}
@@ -288,7 +292,7 @@ func TestPipkgBuild_AtomicSwap(t *testing.T) {
 	writeFile(t, filepath.Join(destDir, "stale.txt"), "leftover\n")
 	writeFile(t, filepath.Join(destDir, "skills", "other-skill", "SKILL.md"), "stale\n")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -318,21 +322,21 @@ func TestPipkgCheck_DetectsDrift(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if _, err := pipkg.Check(overlayRoot, registryPath, destDir); err == nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err == nil {
 		t.Fatal("Check must fail when the package has never been built")
 	}
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	_, checkErr := pipkg.Check(overlayRoot, registryPath, destDir)
+	_, checkErr := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
 	if checkErr != nil {
 		t.Errorf("Check must report no drift right after Build, got: %v", checkErr)
 	}
 
 	// A source edit changes what the build would produce → drift.
 	writeFile(t, filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md"), "---\nname: pi-skill\n---\nchanged body\n")
-	_, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
 	if err == nil {
 		t.Fatal("Check must detect drift after a source edit")
 	}
@@ -348,10 +352,10 @@ func TestPipkgCheck_ModeDrift(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
-	if _, err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Check must report no drift right after Build, got: %v", err)
 	}
 
@@ -360,7 +364,7 @@ func TestPipkgCheck_ModeDrift(t *testing.T) {
 		t.Fatalf("chmod: %v", err)
 	}
 
-	_, err := pipkg.Check(overlayRoot, registryPath, destDir)
+	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir)
 	if err == nil {
 		t.Fatal("Check must detect mode-only drift (0644 -> 0755)")
 	}
@@ -379,7 +383,7 @@ func TestPipkgCheck_ModeDrift(t *testing.T) {
 func TestPipkgCheck_SymlinkedDestRootRefused(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	realDest := filepath.Join(t.TempDir(), "labdrian-pi")
-	if err := pipkg.Build(overlayRoot, registryPath, realDest); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, realDest); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -388,7 +392,7 @@ func TestPipkgCheck_SymlinkedDestRootRefused(t *testing.T) {
 		t.Skipf("symlink unsupported in this environment: %v", err)
 	}
 
-	_, err := pipkg.Check(overlayRoot, registryPath, linkedDest)
+	_, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, linkedDest)
 	if err == nil || !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("Check(destDir=symlink) = %v, want symlink refusal", err)
 	}
@@ -401,7 +405,7 @@ func TestPipkgBuild_RootPermissions(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -448,7 +452,7 @@ skills:
 	writeFile(t, registryPath, registry)
 
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
-	err := pipkg.Build(overlayRoot, registryPath, destDir)
+	err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir)
 	if err == nil {
 		t.Fatal("Build must reject a skill whose SKILL.md name != directory name")
 	}
@@ -474,7 +478,7 @@ func TestPipkgBuild_LiveRegistryNamesMatch(t *testing.T) {
 		t.Skipf("live registry not found at %s: %v", registryPath, err)
 	}
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Errorf("Build against the live registry must pass the name/directory check, got: %v", err)
 	}
 }
@@ -482,7 +486,7 @@ func TestPipkgBuild_LiveRegistryNamesMatch(t *testing.T) {
 func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	for _, dest := range []string{overlayRoot, filepath.Join(overlayRoot, "skills"), filepath.Dir(overlayRoot)} {
-		if err := pipkg.Build(overlayRoot, registryPath, dest); err == nil || !strings.Contains(err.Error(), "overlaps overlay root") {
+		if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, dest); err == nil || !strings.Contains(err.Error(), "overlaps overlay root") {
 			t.Errorf("Build(dest=%s) = %v, want overlap error", dest, err)
 		}
 	}
@@ -491,7 +495,7 @@ func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
 		t.Fatal(err)
 	}
 	viaLink := filepath.Join(link, "not-yet", "labdrian-pi")
-	if err := pipkg.Build(overlayRoot, registryPath, viaLink); err == nil || !strings.Contains(err.Error(), "overlaps overlay root") {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, viaLink); err == nil || !strings.Contains(err.Error(), "overlaps overlay root") {
 		t.Errorf("Build(dest via symlinked ancestor, nonexistent) = %v, want overlap error", err)
 	}
 	if _, err := os.Stat(filepath.Join(overlayRoot, "skills", "pi-skill", "SKILL.md")); err != nil {
@@ -501,7 +505,7 @@ func TestPipkgBuild_OverlapAndStaleDirSafety(t *testing.T) {
 	keep := filepath.Join(destDir+".stale", "keep.txt")
 	writeFile(t, keep, "user content\n")
 	for i := 0; i < 2; i++ {
-		if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+		if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 			t.Fatalf("Build #%d: %v", i, err)
 		}
 	}
@@ -532,20 +536,20 @@ func TestPipkgRefusesSpecialFiles(t *testing.T) {
 	if err := syscall.Mkfifo(srcFifo, 0644); err != nil {
 		t.Skipf("mkfifo unsupported: %v", err)
 	}
-	runWithTimeout(t, func() error { return pipkg.Build(overlayRoot, registryPath, destDir) }, "non-regular")
+	runWithTimeout(t, func() error { return pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir) }, "non-regular")
 	os.Remove(srcFifo)
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 	dstFifo := filepath.Join(destDir, "pipe")
 	syscall.Mkfifo(dstFifo, 0644)
-	runWithTimeout(t, func() error { _, err := pipkg.Check(overlayRoot, registryPath, destDir); return err }, "non-regular")
+	runWithTimeout(t, func() error { _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); return err }, "non-regular")
 	os.Remove(dstFifo)
 	link := filepath.Join(destDir, "link.json")
 	if err := os.Symlink(filepath.Join(destDir, "package.json"), link); err != nil {
 		t.Skipf("symlink unsupported: %v", err)
 	}
-	if _, err := pipkg.Check(overlayRoot, registryPath, destDir); err == nil || !strings.Contains(err.Error(), "symlink") {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err == nil || !strings.Contains(err.Error(), "symlink") {
 		t.Errorf("Check = %v, want symlink error", err)
 	}
 }
@@ -559,7 +563,7 @@ func TestPipkgBuild_PreservesRegisteredMcpJSON(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("first Build: %v", err)
 	}
 
@@ -568,7 +572,7 @@ func TestPipkgBuild_PreservesRegisteredMcpJSON(t *testing.T) {
 		t.Fatalf("simulating a prior registration: %v", err)
 	}
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("second Build: %v", err)
 	}
 
@@ -580,7 +584,7 @@ func TestPipkgBuild_PreservesRegisteredMcpJSON(t *testing.T) {
 		t.Errorf("mcp.json after rebuild = %s, want the registered bytes preserved unchanged:\n%s", got, registered)
 	}
 
-	if _, err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Errorf("Check must not report drift for a registered mcp.json, got: %v", err)
 	}
 }
@@ -594,7 +598,7 @@ func TestPipkgCheck_IgnoresMcpJSONBak(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("Build: %v", err)
 	}
 
@@ -604,7 +608,7 @@ func TestPipkgCheck_IgnoresMcpJSONBak(t *testing.T) {
 		t.Fatalf("simulating jsonInstall's .bak: %v", err)
 	}
 
-	if _, err := pipkg.Check(overlayRoot, registryPath, destDir); err != nil {
+	if _, err := pipkg.Check(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Errorf("Check must not report drift for a registration-owned mcp.json.bak, got: %v", err)
 	}
 }
@@ -617,7 +621,7 @@ func TestPipkgBuild_PreservesRegisteredMcpJSONBak(t *testing.T) {
 	overlayRoot, registryPath := fixtureOverlay(t)
 	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("first Build: %v", err)
 	}
 
@@ -626,7 +630,7 @@ func TestPipkgBuild_PreservesRegisteredMcpJSONBak(t *testing.T) {
 		t.Fatalf("simulating a prior registration's .bak: %v", err)
 	}
 
-	if err := pipkg.Build(overlayRoot, registryPath, destDir); err != nil {
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, destDir); err != nil {
 		t.Fatalf("second Build: %v", err)
 	}
 

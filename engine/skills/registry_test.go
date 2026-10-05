@@ -282,3 +282,85 @@ func TestTheVocabularyOfARegistryIsTheOneItHasAlwaysHad(t *testing.T) {
 		t.Errorf("RegistryTargets() = %s, want the four runtimes in the order the refusals list them", got)
 	}
 }
+
+// --- what the reader left out ---------------------------------------------------------------
+
+// unreadRegistry is a registry that is whole and valid as far as it was read, and that the reader
+// says it did not read all of.
+func unreadRegistry(notes ...string) Registry {
+	reg := registryOfEntries(validEntry("alpha"))
+	reg.Unread = notes
+	return reg
+}
+
+func TestUnreadSummaryTellsTheFirstNoteAndHowManyMore(t *testing.T) {
+	for name, tc := range map[string]struct {
+		notes []string
+		want  string
+	}{
+		"nothing left out": {nil, ""},
+		"one":              {[]string{`line 3: unknown key "color" in skill entry`}, `line 3: unknown key "color" in skill entry`},
+		"two":              {[]string{"line 3: a", "line 9: b"}, "line 3: a (and 1 more)"},
+		"four":             {[]string{"line 3: a", "line 9: b", "line 10: c", "line 12: d"}, "line 3: a (and 3 more)"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := unreadRegistry(tc.notes...).UnreadSummary(); got != tc.want {
+				t.Errorf("UnreadSummary() = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A verb that only reads goes on with what was read and says, on the error stream (a script that
+// reads the output is not changed by it), that something was left out. A registry with nothing
+// left out is read in silence.
+func TestAVerbThatReadsWarnsOfWhatWasLeftOutAndGoesOn(t *testing.T) {
+	run := func(reg Registry) (stdout, stderr string, exits []int) {
+		var out, errOut strings.Builder
+		repo := stubRegistries{load: func(string) (Registry, error) { return reg, nil }}
+		RenderListCore([]string{"--registry", "r.yaml"}, repo, &out, &errOut, func(code int) { exits = append(exits, code) })
+		return out.String(), errOut.String(), exits
+	}
+
+	stdout, stderr, exits := run(unreadRegistry(`line 3: unknown key "color" in skill entry`, "line 9: unknown top-level key \"extra\""))
+	if stdout != "alpha\tcustom\toverlay-only\tclaude\n" || len(exits) != 0 {
+		t.Errorf("the verb printed %q and exited %v, want the entry and no exit", stdout, exits)
+	}
+	if want := "warning: registry fields left unread: line 3: unknown key \"color\" in skill entry (and 1 more)\n"; stderr != want {
+		t.Errorf("stderr = %q, want %q", stderr, want)
+	}
+
+	stdout, stderr, exits = run(unreadRegistry())
+	if stdout != "alpha\tcustom\toverlay-only\tclaude\n" || stderr != "" || len(exits) != 0 {
+		t.Errorf("a registry with nothing left out: stdout %q, stderr %q, exits %v, want the entry and silence", stdout, stderr, exits)
+	}
+}
+
+// A registry that was not read whole cannot be changed and written back without losing what was
+// left out, so the pure transforms that make the next registry refuse it, saying what would be
+// lost, and a registry that was read whole is changed as ever.
+func TestAddEntryAndRemoveEntryRefuseARegistryThatLeftFieldsOut(t *testing.T) {
+	const want = `skills: the registry has fields this program does not read, and rewriting it would drop them: line 3: unknown key "color" in skill entry`
+	reg := unreadRegistry(`line 3: unknown key "color" in skill entry`)
+
+	added, err := AddEntry(reg, "beta", "", "")
+	if err == nil || err.Error() != want || len(added.Skills) != 0 {
+		t.Errorf("AddEntry() = %+v, %v, want the zero registry and %q", added, err, want)
+	}
+	removed, err := RemoveEntry(reg, "alpha")
+	if err == nil || err.Error() != want || len(removed.Skills) != 0 {
+		t.Errorf("RemoveEntry() = %+v, %v, want the zero registry and %q", removed, err, want)
+	}
+	// Before the other refusals of the transform: the registry is what cannot be changed.
+	if _, err := RemoveEntry(reg, "no-such-skill"); err == nil || err.Error() != want {
+		t.Errorf("RemoveEntry() of an id it has not = %v, want %q first", err, want)
+	}
+
+	whole := unreadRegistry()
+	if added, err := AddEntry(whole, "beta", "", ""); err != nil || len(added.Skills) != 2 {
+		t.Errorf("AddEntry() on a registry read whole = %+v, %v, want it added", added, err)
+	}
+	if removed, err := RemoveEntry(whole, "alpha"); err != nil || len(removed.Skills) != 0 {
+		t.Errorf("RemoveEntry() on a registry read whole = %+v, %v, want it removed", removed, err)
+	}
+}

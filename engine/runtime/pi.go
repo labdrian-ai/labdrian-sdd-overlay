@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/pipkg"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // PiAdapter is the runtime adapter for the Pi CLI (via gentle-pi). It NEVER
@@ -17,6 +18,7 @@ import (
 // the `pi` CLI does, via the install/remove subprocess calls below.
 type PiAdapter struct {
 	target       Target
+	registries   skills.RegistryRepository
 	overlayRoot  string
 	registryPath string
 	destDir      string
@@ -25,22 +27,23 @@ type PiAdapter struct {
 // NewPiAdapter constructs the Pi adapter, resolving its build paths from
 // OVERLAY_DIR/STATE_DIR (empty when unset — every wired method then
 // honestly reports CapabilityUnsupported rather than fabricating success).
-func NewPiAdapter() PiAdapter {
-	return NewPiAdapterWithPaths(os.Getenv("OVERLAY_DIR"), "", "")
+// registries is how it reads the skills registry the package is built from.
+func NewPiAdapter(registries skills.RegistryRepository) PiAdapter {
+	return NewPiAdapterWithPaths(registries, os.Getenv("OVERLAY_DIR"), "", "")
 }
 
 // NewPiAdapterWithPaths constructs the Pi adapter with explicit build
 // paths. An empty registryPath defaults to "<overlayRoot>/skills.registry.yaml"
 // when overlayRoot is set; an empty destDir defaults to
 // DefaultPiPackageDir(os.Getenv("STATE_DIR")).
-func NewPiAdapterWithPaths(overlayRoot, registryPath, destDir string) PiAdapter {
+func NewPiAdapterWithPaths(registries skills.RegistryRepository, overlayRoot, registryPath, destDir string) PiAdapter {
 	if registryPath == "" && overlayRoot != "" {
 		registryPath = filepath.Join(overlayRoot, "skills.registry.yaml")
 	}
 	if destDir == "" {
 		destDir = DefaultPiPackageDir(os.Getenv("STATE_DIR"))
 	}
-	return PiAdapter{target: TargetPi, overlayRoot: overlayRoot, registryPath: registryPath, destDir: destDir}
+	return PiAdapter{target: TargetPi, registries: registries, overlayRoot: overlayRoot, registryPath: registryPath, destDir: destDir}
 }
 
 // DefaultPiPackageDir returns "<stateDir>/pi/labdrian-pi", defaulting
@@ -75,7 +78,7 @@ func (a PiAdapter) Install() LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(ActionInstall)
 	}
-	if err := pipkg.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	if err := pipkg.Build(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
 		return NewLifecycleResult(a.target, ActionInstall, CapabilityUnsupported, err.Error(), nil)
 	}
 	bin, err := resolvePiBinary()
@@ -119,7 +122,7 @@ func (a PiAdapter) SyncCheck() LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(ActionSyncCheck)
 	}
-	report, err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir)
+	report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir)
 	if err != nil {
 		return NewLifecycleResult(a.target, ActionSyncCheck, CapabilityPartial, err.Error()+" ("+report.Disclosure()+")", nil)
 	}
@@ -140,7 +143,7 @@ func (a PiAdapter) Status() LifecycleResult {
 	var problems []string
 	if a.overlayRoot == "" {
 		problems = append(problems, "in sync (OVERLAY_DIR unset; cannot verify the build matches the current manifest)")
-	} else if report, err := pipkg.Check(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	} else if report, err := pipkg.Check(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
 		problems = append(problems, "in sync ("+err.Error()+"; "+report.Disclosure()+")")
 	}
 	if !isPiPackageListed(a.destDir) {
@@ -237,7 +240,7 @@ func (a PiAdapter) build(action Action) LifecycleResult {
 	if a.overlayRoot == "" {
 		return a.stub(action)
 	}
-	if err := pipkg.Build(a.overlayRoot, a.registryPath, a.destDir); err != nil {
+	if err := pipkg.Build(a.registries, a.overlayRoot, a.registryPath, a.destDir); err != nil {
 		return NewLifecycleResult(a.target, action, CapabilityPartial, err.Error(), nil)
 	}
 	return NewLifecycleResult(a.target, action, CapabilityPartial,

@@ -9,6 +9,18 @@ are always locally vendored and human-reviewed before registration; this
 capability records provenance only and never fetches, clones, or executes
 remote resources.
 
+> Since Phase 9 unit H15 the registry is read through the domain's port: `skills.ReadRegistry`
+> (the name `ReadRegistry` stands for what this spec calls the parser: the YAML adapter
+> `engine/skills/registryyaml` decodes the file and the domain's `Registry.Validate` judges it,
+> with the words of every refusal unchanged) and written by `registryyaml.Encode`. The scenarios
+> keep their names; the behaviors are those the program has always had, except the reader policy
+> of Phase 9 unit H16 (decision Q5): the file's `version` is found first and selects the decoder;
+> a key the reader does not know is left out and reported (`Registry.Unread`) instead of refusing
+> the file, and a registry that has one is not rewritten by `add` or `remove`; and a field that
+> install, approval or projection depend on is refused, naming the field and the line, when it is
+> in a shape the reader does not read. The set and the rule are at the top of
+> `engine/skills/registryyaml/doc.go`.
+
 ## Requirements
 
 ### Requirement: External Source Type Accepted
@@ -22,7 +34,7 @@ type alongside `core` and `custom`. The `validSourceTypes` set MUST include
 #### Scenario: Parser accepts external source type
 
 - GIVEN a registry YAML entry with `source.type: external`
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN the entry is accepted with no "unknown source type" error
 
 ### Requirement: External Provenance Fields — repo and ref
@@ -31,14 +43,15 @@ ID: R-113, R-116
 
 When a skill entry sets `source.type: external`, the parser MUST parse
 optional sub-fields `repo` (string) and `ref` (string) directly under the
-`source` mapping. Unknown keys under `source` MUST still be rejected with a
-line-numbered error. When `ref` is absent, parsing MUST still succeed and
+`source` mapping. A key under `source` that the reader does not know MUST NOT
+refuse the file (since H16, decision Q5): it is left out and reported with its
+line. When `ref` is absent, parsing MUST still succeed and
 `Source.Ref` MUST be the empty string.
 
 #### Scenario: Parse external entry with repo and ref (SC-55)
 
 - GIVEN a registry YAML with one entry: `source: {type: external, repo: https://github.com/example/skills, ref: a1b2c3d}`
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN `entry.Source.Type == "external"`
 - AND `entry.Source.Repo == "https://github.com/example/skills"`
 - AND `entry.Source.Ref == "a1b2c3d"`
@@ -47,7 +60,7 @@ line-numbered error. When `ref` is absent, parsing MUST still succeed and
 #### Scenario: Parse external entry with repo only, ref absent (SC-56)
 
 - GIVEN a registry YAML with `source.type: external` and `repo` present, no `ref` field
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN `entry.Source.Repo` is non-empty
 - AND `entry.Source.Ref == ""`
 - AND error is nil
@@ -64,7 +77,7 @@ entries.
 #### Scenario: Parse rejects external entry missing repo (SC-57)
 
 - GIVEN a registry YAML with `source.type: external` and no `repo` field
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN error is non-nil
 - AND the error message contains the entry id
 - AND the error message contains "repo"
@@ -83,14 +96,14 @@ emitted before any partial state is returned (fail-loud, mirrors the
 #### Scenario: Parse rejects repo on core entry (SC-58)
 
 - GIVEN a registry YAML with `source.type: core` and a `repo` field under `source`
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN error is non-nil
 - AND the error message contains the entry id, "repo", the actual source type ("core"), and a line number
 
 #### Scenario: Parse rejects ref on custom entry (SC-59)
 
 - GIVEN a registry YAML with `source.type: custom` and a `ref` field under `source`
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN error is non-nil
 - AND the error message contains the entry id, "ref", the actual source type ("custom"), and a line number
 
@@ -104,23 +117,23 @@ be non-empty (enforced in `validateEntry`) MUST continue to hold unchanged.
 #### Scenario: core entry without upstream.owner still fails
 
 - GIVEN a registry YAML with `source.type: core` and an empty or absent `upstream.owner`
-- WHEN `ParseRegistry` is called
+- WHEN `ReadRegistry` is called
 - THEN error is non-nil naming the missing `upstream.owner`
 
 ### Requirement: Serializer Emits repo/ref for External Entries
 
 ID: R-118, R-119
 
-When `Serialize` processes an entry with `source.type == "external"`, it MUST
+When `Encode` processes an entry with `source.type == "external"`, it MUST
 emit a `repo` line under the `source` block when `Source.Repo` is non-empty,
 and a `ref` line when `Source.Ref` is non-empty. Both lines MUST appear at
 indent 6 (inside `source:` at indent 4). Emitted `repo`/`ref` values MUST use
 the same `scalar()`/`needsQuote()` quoting rules as all other string scalars.
 
-#### Scenario: Serialize emits repo and ref lines
+#### Scenario: Encode emits repo and ref lines
 
 - GIVEN a `Registry` with an external entry where `Source.Repo` and `Source.Ref` are both non-empty
-- WHEN `Serialize(reg)` is called
+- WHEN `Encode(reg)` is called
 - THEN the output contains a `repo:` line and a `ref:` line under that entry's `source:` block, correctly indented and quoted
 
 ### Requirement: repo/ref Representable Character Validation
@@ -129,13 +142,13 @@ ID: R-120
 
 When `checkRepresentable` validates an entry, it MUST check `source.repo` and
 `source.ref` values using the existing `representable()` function. A repo or
-ref value containing forbidden characters MUST cause `Serialize` to return a
+ref value containing forbidden characters MUST cause `Encode` to return a
 non-nil error naming the entry id and the offending field.
 
-#### Scenario: Serialize rejects repo value with forbidden chars (SC-61)
+#### Scenario: Encode rejects repo value with forbidden chars (SC-61)
 
 - GIVEN a `Registry` with an external entry where `Source.Repo` contains `"{"`
-- WHEN `Serialize(reg)` is called
+- WHEN `Encode(reg)` is called
 - THEN error is non-nil
 - AND the error message names the entry id and "source.repo"
 - AND no bytes are returned
@@ -151,7 +164,7 @@ is evaluated by `reflect.DeepEqual`.
 #### Scenario: Round-trip external entry with repo and ref (SC-60)
 
 - GIVEN a `Registry` value with one external entry where `Source.Repo` and `Source.Ref` are both non-empty
-- WHEN `Serialize(reg)` is called, then `ParseRegistry` is called on the result
+- WHEN `Encode(reg)` is called, then `ReadRegistry` is called on the result
 - THEN `reflect.DeepEqual(reg, parsed) == true`
 - AND the serialized bytes contain `repo:` and `ref:` under the source block
 
