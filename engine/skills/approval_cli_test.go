@@ -37,7 +37,7 @@ func (e approveEnv) args(extra ...string) []string {
 func runApprove(args []string, now func() string) (stdout, stderr string, code int) {
 	var out, errBuf bytes.Buffer
 	code = -1
-	RenderApproveCore(args, os.ReadFile, now, &out, &errBuf, func(c int) { code = c })
+	RenderApproveCore(args, os.ReadFile, now, testProjectFS(), &out, &errBuf, func(c int) { code = c })
 	return out.String(), errBuf.String(), code
 }
 

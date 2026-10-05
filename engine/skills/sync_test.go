@@ -467,7 +467,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, testRegistries(os.ReadFile), &stdout, &stderr,
+			os.ReadFile, testRegistries(os.ReadFile), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 0 {
@@ -521,7 +521,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, testRegistries(os.ReadFile), &stdout, &stderr,
+			os.ReadFile, testRegistries(os.ReadFile), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 
@@ -560,7 +560,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, testRegistries(os.ReadFile), &stdout, &stderr,
+			os.ReadFile, testRegistries(os.ReadFile), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 0 {
@@ -599,7 +599,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, testRegistries(os.ReadFile), &stdout, &stderr,
+			os.ReadFile, testRegistries(os.ReadFile), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 0 {
@@ -636,7 +636,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, testRegistries(os.ReadFile), &stdout, &stderr,
+			os.ReadFile, testRegistries(os.ReadFile), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 0 {
@@ -652,7 +652,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", "missing.yaml", "--manifest", "overlay.manifest"},
-			failRead, testRegistries(failRead), &stdout, &stderr,
+			failRead, testRegistries(failRead), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -676,7 +676,7 @@ func TestSyncCore(t *testing.T) {
 		exitCode := -1
 		SyncCore(
 			[]string{"--registry", "reg.yaml", "--manifest", "missing.manifest"},
-			selectiveRead, testRegistries(selectiveRead), &stdout, &stderr,
+			selectiveRead, testRegistries(selectiveRead), testProjectFS(), &stdout, &stderr,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {

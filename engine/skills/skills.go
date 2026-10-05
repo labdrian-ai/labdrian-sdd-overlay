@@ -113,9 +113,10 @@ func runLocked(attempt int, verb string, args []string, installRoot string, deps
 }
 
 // needsProject lists the verbs that read or write the files of a project or of an overlay through
-// the Deps' Project.
+// the Deps' Project: the writers of the registry, the manifest and the approval records, and the
+// verbs that install into a project or keep its lock.
 var needsProject = map[string]bool{
-	"add": true, "install": true, "adopt": true,
+	"add": true, "remove": true, "sync-manifest": true, "approve": true, "install": true, "adopt": true,
 	"project-register": true, "project-revise": true, "project-status": true, "project-retire": true,
 }
 
@@ -150,15 +151,15 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 		env.readProject = readFile
 		renderAdopt(env, args, stdout, stderr, exit)
 	case "add":
-		AddCore(stripVerb(args, "add"), readFile, registries, deps.Project.Stat, stdout, stderr, exit)
+		AddCore(stripVerb(args, "add"), readFile, registries, deps.Project.Stat, deps.Project, stdout, stderr, exit)
 	case "remove":
-		RemoveCore(stripVerb(args, "remove"), readFile, registries, stdout, stderr, exit)
+		RemoveCore(stripVerb(args, "remove"), readFile, registries, deps.Project, stdout, stderr, exit)
 	case "sync-manifest":
-		SyncCore(stripVerb(args, "sync-manifest"), readFile, registries, stdout, stderr, exit)
+		SyncCore(stripVerb(args, "sync-manifest"), readFile, registries, deps.Project, stdout, stderr, exit)
 	case "lint":
 		RenderLintCore(stripVerb(args, "lint"), readFile, stdout, stderr, exit)
 	case "approve":
-		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Now, stdout, stderr, exit)
+		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Now, deps.Project, stdout, stderr, exit)
 	case "project-register":
 		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, registries, deps.Project.Stat, deps.Project.ResolvePath, deps.Project, stdout, stderr, exit)
 	case "project-revise":

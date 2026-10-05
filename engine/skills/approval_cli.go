@@ -3,7 +3,7 @@ package skills
 import (
 	"fmt"
 	"io"
-	"os"
+	"io/fs"
 	"path/filepath"
 	"strings"
 )
@@ -61,7 +61,7 @@ import (
 // RFC 3339 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ); it is injected because this
 // package's import allowlist (zero_fetch_test.go) does not admit "time". A nil
 // now refuses the approval: the verb never invents a timestamp.
-func RenderApproveCore(args []string, readFile readFileFn, now func() string, stdout, stderr io.Writer, exit func(int)) {
+func RenderApproveCore(args []string, readFile readFileFn, now func() string, files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
 	const verb = "skills approve"
 	var id, approver, sourceRoot string
 	haveApprover := false
@@ -216,7 +216,7 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, st
 			fail("%v", err)
 			return
 		}
-		if err := writeApprovalRecord(recordPath, recordBytes); err != nil {
+		if err := writeApprovalRecord(files, recordPath, recordBytes); err != nil {
 			fail("skill %q: %v", id, err)
 			return
 		}
@@ -264,21 +264,22 @@ func baselineLintWarning(finding error) string {
 	return "warning: " + finding.Error() + " (baseline skill: approved with lint findings)"
 }
 
+// approvalRecordMode is the mode of an approval record: readable by everyone, because the record
+// is committed with the skill and a temporary file's 0600 would not survive a checkout.
+const approvalRecordMode fs.FileMode = 0o644
+
 // writeApprovalRecord writes data to path atomically: a temp file in the same
 // directory, made world-readable (the record is committed with the skill, and
-// CreateTemp's 0600 would not survive a checkout), synced, then renamed over
-// path. A failure at any step removes the temp file and leaves path as it was.
-func writeApprovalRecord(path string, data []byte) error {
-	tmp, err := writeFileAtomic(path, data)
+// the owner-only mode of a temporary file would not survive a checkout), synced,
+// then renamed over path. A failure at any step removes the temp file and leaves
+// path as it was.
+func writeApprovalRecord(files StagedWrites, path string, data []byte) error {
+	tmp, err := writeFileAtomic(files, path, data, approvalRecordMode)
 	if err != nil {
 		return fmt.Errorf("writing approval record: %w", err)
 	}
-	if err := os.Chmod(tmp, 0o644); err != nil {
-		os.Remove(tmp)
-		return fmt.Errorf("writing approval record: %w", err)
-	}
-	if err := os.Rename(tmp, path); err != nil {
-		os.Remove(tmp)
+	if err := files.Rename(tmp, path); err != nil {
+		files.Remove(tmp)
 		return fmt.Errorf("writing approval record: finalizing %q: %w", path, err)
 	}
 	return nil

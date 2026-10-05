@@ -36,7 +36,6 @@ var allowedImports = map[string]bool{
 	"fmt":           true,
 	"io":            true,
 	"io/fs":         true,
-	"os":            true,
 	"path":          true,
 	"path/filepath": true,
 	"reflect":       true,
@@ -44,6 +43,14 @@ var allowedImports = map[string]bool{
 	"sort":          true,
 	"strings":       true,
 	pathguardImport: true,
+}
+
+// pathguardDebtImports is what engine/pathguard imports beyond allowedImports: the file system
+// half of its symlink resolution, owed to Phase 9 unit H22 (pathguard/fsresolve), which leaves
+// the containment rules pure. engine/skills itself imports none of it: allowedImports is its
+// list, and TestZeroFetchImportAllowlist holds the package to it.
+var pathguardDebtImports = map[string]string{
+	"os": "H22",
 }
 
 // pathguardImport is the only module-internal package engine/skills may import.
@@ -116,10 +123,13 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
 		}
 	}
-	// 16 stdlib packages (errors is the one the registry port added) plus the
-	// reviewer-approved pathguardImport exception.
-	if len(allowedImports) != 17 {
-		t.Errorf("len(allowedImports) = %d, want 17 — widen it only after reviewer approval", len(allowedImports))
+	// 15 stdlib packages (errors is the one the registry port added, os the one Phase 9 unit H17
+	// took away) plus the reviewer-approved pathguardImport exception.
+	if len(allowedImports) != 16 {
+		t.Errorf("len(allowedImports) = %d, want 16 — widen it only after reviewer approval", len(allowedImports))
+	}
+	if allowedImports["os"] {
+		t.Error(`"os" is in allowedImports: engine/skills reaches the file system through its ports (Phase 9 unit H17), and engine/skills/skillsfs is the one place that imports os`)
 	}
 	if !allowedImports["errors"] {
 		t.Error(`expected "errors" in allowedImports: the registry port tells an unreadable store from an unusable registry with errors.As`)
@@ -147,6 +157,9 @@ func TestZeroFetchCoversPathguardImports(t *testing.T) {
 			base := filepath.Base(filename)
 			for _, imp := range file.Imports {
 				path := strings.Trim(imp.Path.Value, `"`)
+				if _, owed := pathguardDebtImports[path]; owed {
+					continue
+				}
 				if path == pathguardImport || !allowedImports[path] {
 					t.Errorf("engine/pathguard imports %q in %s; it may import only allowlisted stdlib packages", path, base)
 				}

@@ -1041,16 +1041,8 @@ type ProjectFS interface {
 	Stat(name string) (fs.FileInfo, error)
 	ReadDir(name string) ([]fs.DirEntry, error)
 	MkdirAll(dir string, perm fs.FileMode) error
-	// WriteTemp writes data to a fresh temp file in dir at mode perm, whatever the mask of the
-	// process, and returns its path; the caller owns the rename. The file is created in the
-	// destination's own directory, written, synced and closed before it returns, and its name
-	// begins ".tmp-skills-" followed by a unique suffix, which is how a copier of a tree knows
-	// it for half of a write (SkipWhenCopying). A failure leaves no file and says the step it
-	// failed at in its first words (create temp, write, sync, close, chmod); the caller words
-	// the rest for its verb.
-	WriteTemp(dir string, data []byte, perm fs.FileMode) (string, error)
-	Rename(oldPath, newPath string) error
-	Remove(name string) error
+	// The staged writes of a file: WriteTemp, Rename and Remove.
+	StagedWrites
 	ResolvePath(name string) (string, error)
 }
 

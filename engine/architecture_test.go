@@ -36,8 +36,8 @@ import (
 //     does not understand (H16). It never calls the domain's Validate: the domain judges what
 //     the adapter returns.
 //   - skills/skillsfs is the adapter of the skills domain's file-facing ports (H17): the tree of
-//     skills an overlay keeps today, and the files of a project and the writes of an overlay as
-//     its later slices land. It imports the domain and nothing else of the module.
+//     skills an overlay keeps, and the files of a project and the staged writes of an overlay.
+//     It is the one place engine/skills reaches the operating system through.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -103,11 +103,6 @@ var knownDebt = archguard.Debt{
 	"pathguard": {
 		"os":                         "H22",
 		"path/filepath.EvalSymlinks": "H22",
-	},
-
-	// skills: the concrete file system moves to skills/skillsfs.
-	"skills": {
-		"os": "H17",
 	},
 }
 

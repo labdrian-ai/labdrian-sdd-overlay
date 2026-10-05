@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -201,7 +200,7 @@ func SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error) {
 //
 // On any failure after the temp file is created, the temp file is removed and
 // overlay.manifest is left byte-unchanged (R-102).
-func SyncCore(args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
+func SyncCore(args []string, readFile readFileFn, registries RegistryRepository, files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, _, _, _, _ := parseFlags(args)
 
 	// 1. Read the registry.
@@ -251,14 +250,14 @@ func SyncCore(args []string, readFile readFileFn, registries RegistryRepository,
 	}
 
 	// 6. Atomic write: temp file + rename (R-101, R-102).
-	tmpName, err := writeFileAtomic(manifestPath, newText)
+	tmpName, err := writeFileAtomic(files, manifestPath, newText, overlayFileMode)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	if err := os.Rename(tmpName, manifestPath); err != nil {
-		os.Remove(tmpName)
+	if err := files.Rename(tmpName, manifestPath); err != nil {
+		files.Remove(tmpName)
 		fmt.Fprintf(stderr, "error: finalizing manifest: %v\n", err)
 		exit(1)
 		return

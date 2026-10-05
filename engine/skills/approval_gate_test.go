@@ -395,7 +395,7 @@ func runAdd(t *testing.T, regPath, mfPath, root, id string) addRun {
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	code := -1
-	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, testRegistries(os.ReadFile), os.Stat, &out, &errBuf, func(c int) { code = c })
+	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(), &out, &errBuf, func(c int) { code = c })
 	return addRun{out.String(), errBuf.String(), code}
 }
 

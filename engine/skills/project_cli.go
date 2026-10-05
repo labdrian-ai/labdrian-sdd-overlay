@@ -64,7 +64,7 @@ import (
 // draft path that legitimately begins with a dash can still be named.
 //
 // fsys is an unexported interface on purpose: production callers reach this
-// through SkillsCore, and tests inject osProjectFS{} over t.TempDir().
+// through SkillsCoreAt, and tests inject the file system adapter over t.TempDir().
 func RenderProjectRegisterCore(
 	args []string,
 	readFile readFileFn,
