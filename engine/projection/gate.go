@@ -58,9 +58,20 @@ type GateInput struct {
 type ToolCall struct {
 	// Name is the name of the tool, or empty when the call has none.
 	Name string
-	// Query is what the call names as the project of a memory query. It is read only
-	// for a longterm-mem query, and is the zero value for any other call.
-	Query QueryArguments
+	// ReadQuery reads what the call names as the project of a memory query. Reading the
+	// arguments of a call is the caller's work and costs a decode of its whole input, so Gate
+	// calls it only for a longterm-mem query, at most once, and never for any other call. It
+	// is nil for a caller with no way to read them, which is read as arguments that are not
+	// named.
+	ReadQuery func() QueryArguments
+}
+
+// query reads the arguments of the call as those of a memory query.
+func (c ToolCall) query() QueryArguments {
+	if c.ReadQuery == nil {
+		return QueryArguments{}
+	}
+	return c.ReadQuery()
 }
 
 // QueryArguments is the arguments of a call read as those of a memory query.
@@ -140,7 +151,7 @@ func Gate(in GateInput) GateResult {
 		return GateResult{}
 	}
 	if longtermQueryTool.MatchString(in.Call.Name) {
-		return memoryGate(in.Binding.Binding, w.State, in.Call.Query)
+		return memoryGate(in.Binding.Binding, w.State, in.Call.query())
 	}
 	return GateResult{}
 }

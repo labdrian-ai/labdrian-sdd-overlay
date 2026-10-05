@@ -17,11 +17,28 @@
 // union of the fields would refuse inputs one of the hooks accepts, such as a Bash call with a
 // file_path of the wrong type beside the command of an acknowledgement the receipt hook guards.
 //
+// The decoders do not all match a key the same way, because each keeps the rule of the code it
+// replaced and the golden files of the hooks pin it. DecodeAgentCall, DecodeToolCall and
+// DecodeCommand decode through encoding/json's struct tags, which match a key without regard to
+// case and take the last of a repeated key. PreToolUse.Query reads the arguments of a memory
+// query through a map, so it matches "project" exactly (a key in another case is another key,
+// which names no project) and also takes the last of a repeated key. Each is pinned in its own
+// test, and a decoder is not changed to agree with another without an owner's decision.
+//
+// Each decoder also bounds its input (MaxEnvelopeBytes for the two events, MaxToolCallBytes
+// for the guards, MaxAgentCallBytes for the Agent tool), refusing a larger one with an error
+// wrapping ErrTooLarge. DecodeCommand, the review-receipt hook's, is the exception: the hook
+// must see the command of an acknowledgement whatever else the call carries, and what it
+// should do with an input it cannot bear to read is an owner's decision.
+//
 // The package imports nothing of the module. Its values are its own, and engine/cmd maps them
 // to and from the values of each policy.
 package hookwire
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // The hook events the engine answers.
 const (
@@ -38,5 +55,25 @@ const (
 // that reads stdin reads one byte more than this, which is enough to see the bound was passed.
 const MaxEnvelopeBytes = 1 << 20
 
-// ErrTooLarge is wrapped by the error of a decoder that was given more than MaxEnvelopeBytes.
+// MaxToolCallBytes bounds the input DecodeToolCall accepts. The guards that read it run on every
+// Bash and file-edit call, and the input of a call carries what it writes, so the bound is
+// generous; it exists so that a hostile or runaway writer cannot make a guard read without end.
+// A caller that reads stdin reads one byte more than this, which is enough to see the bound was
+// passed. What a guard does with a call it was not given to judge is its own decision: the
+// approve guard fails open, the clearance guard fails closed.
+const MaxToolCallBytes = 8 << 20
+
+// MaxAgentCallBytes bounds the input DecodeAgentCall accepts. The prompt of a sub-agent can be
+// long. 'gate-task' reads exactly this many bytes, so an input over the bound reaches the decoder
+// cut short, which is not valid JSON, and is let through like every input it cannot read.
+const MaxAgentCallBytes = 4 << 20
+
+// ErrTooLarge is wrapped by the error of a decoder that was given more than its bound
+// (MaxEnvelopeBytes, MaxToolCallBytes, MaxAgentCallBytes).
 var ErrTooLarge = errors.New("hookwire: hook input exceeds the maximum size")
+
+// tooLarge is the refusal of a decoder, named by what it was decoding, for an input of size
+// bytes over its bound of limit.
+func tooLarge(what string, size, limit int) error {
+	return fmt.Errorf("%s: %w: %d bytes exceeds the maximum of %d", what, ErrTooLarge, size, limit)
+}

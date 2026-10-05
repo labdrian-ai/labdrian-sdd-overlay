@@ -1,0 +1,9 @@
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-register: id "tidy-worktree" matches the overlay registry skill "tidy-worktree"; extend it on the human path instead of shadowing it
+
+--- tree of project ---
+(empty)
+

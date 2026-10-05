@@ -1,0 +1,133 @@
+# a tab where the indentation is
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: tab character not allowed; use spaces for indentation
+
+# a tab inside a value
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: tab character not allowed; use spaces for indentation
+
+# a flow sequence
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 9: flow sequences/mappings ({}, []) are not supported
+
+# a flow mapping
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 5: flow sequences/mappings ({}, []) are not supported
+
+# an anchor
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: YAML anchors (&) and aliases (*) are not supported
+
+# an alias
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: YAML anchors (&) and aliases (*) are not supported
+
+# a tag
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: YAML tags (!) are not supported
+
+# a literal block scalar
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: block scalars (| and >) are not supported
+
+# a folded block scalar with a chomping mark
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 4: block scalars (| and >) are not supported
+
+# a block scalar indicator on a line of its own
+$ skills list --registry <WORLD>/docs/10.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 7: block scalars (| and >) are not supported
+
+# a second document
+$ skills list --registry <WORLD>/docs/11.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: multi-document YAML is not supported
+
+# the end of a document, then content
+$ skills list --registry <WORLD>/docs/12.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: multi-document YAML is not supported
+
+# a comment after a value
+$ skills list --registry <WORLD>/docs/13.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: inline comments are not supported
+
+# a comment after an item of a list
+$ skills list --registry <WORLD>/docs/14.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 10: inline comments are not supported
+
+# a double quote that is not closed
+$ skills list --registry <WORLD>/docs/15.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: unterminated quoted string
+
+# a single quote that is not closed
+$ skills list --registry <WORLD>/docs/16.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: unterminated quoted string
+
+# a line that is not a key and a value
+$ skills list --registry <WORLD>/docs/17.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: expected sequence item ('- key: value') in skills list
+
+# a key with no name
+$ skills list --registry <WORLD>/docs/18.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 3: empty key
+
+# an item of a list with a comment, as a bare word
+$ skills list --registry <WORLD>/docs/19.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 10: inline comments are not supported
+

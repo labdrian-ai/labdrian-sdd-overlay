@@ -1,0 +1,48 @@
+# a project named 'a: b' in the registry
+$ skills list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets must not be empty (R-007)
+
+# a repository with ': ' inside quotes, which is not an item of a list
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 0
+--- stdout ---
+alpha	external	overlay-only	claude
+--- stderr ---
+
+# 'add' writes such a repository, quoted, and reads it back
+$ skills add gamma --repo https://example.test/a: b --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+added: gamma
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: gamma
+    path: gamma
+    source:
+      type: external
+      repo: "https://example.test/a: b"
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+

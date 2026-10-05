@@ -353,7 +353,7 @@ func TestSkillsCoreAt_DispatchesApprove(t *testing.T) {
 	// the overlay lock is keyed by it.
 	registry := filepath.Join(filepath.Dir(e.root), "skills.registry.yaml")
 	args := append([]string{"approve"}, e.args("--registry", registry)...)
-	SkillsCoreAt("approve", args, os.ReadFile, fixedClock(approveFixedNow), noopLocker{}, &out, &errBuf, func(c int) { code = c })
+	SkillsCoreAt("approve", args, os.ReadFile, testRegistries(os.ReadFile), fixedClock(approveFixedNow), noopLocker{}, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%q", code, errBuf.String())
 	}
@@ -368,7 +368,7 @@ func TestSkillsCore_WithoutAClockCannotApprove(t *testing.T) {
 	e := newApproveEnv(t, "my-skill")
 	var out, errBuf bytes.Buffer
 	code := -1
-	SkillsCore("approve", append([]string{"approve"}, e.args()...), os.ReadFile, &out, &errBuf, func(c int) { code = c })
+	SkillsCore("approve", append([]string{"approve"}, e.args()...), os.ReadFile, testRegistries(os.ReadFile), &out, &errBuf, func(c int) { code = c })
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1", code)
 	}
@@ -377,7 +377,7 @@ func TestSkillsCore_WithoutAClockCannotApprove(t *testing.T) {
 
 func TestSkillsCore_UnknownVerbListsApprove(t *testing.T) {
 	var out, errBuf bytes.Buffer
-	SkillsCore("nuke", nil, os.ReadFile, &out, &errBuf, func(int) {})
+	SkillsCore("nuke", nil, os.ReadFile, testRegistries(os.ReadFile), &out, &errBuf, func(int) {})
 	if !strings.Contains(errBuf.String(), "approve") {
 		t.Errorf("the supported-verb list %q must include approve", errBuf.String())
 	}

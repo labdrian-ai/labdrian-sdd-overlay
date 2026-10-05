@@ -8,6 +8,7 @@ package hookwire_test
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -331,6 +332,28 @@ func TestAgentCallKeepsTheFourFieldsOfTheAgentTool(t *testing.T) {
 	model := "opus"
 	if got.Description != "d" || got.Prompt != "p" || got.SubagentType != "sdd-apply" || got.Model == nil || *got.Model != model {
 		t.Errorf("DecodeAgentCall() = %+v, want description d, prompt p, subagent_type sdd-apply and model opus", got)
+	}
+}
+
+// The decoder bounds its own input, as the decoders of the two events do: the caller reads at
+// most MaxAgentCallBytes, and a caller that did not would still be refused here. An input cut
+// short at the bound is not valid JSON and is refused for that, which is what 'gate-task'
+// relies on (it reads exactly this many bytes).
+func TestTheSizeBoundOfAnAgentCallIsInclusive(t *testing.T) {
+	pad := func(size int) []byte {
+		prefix, suffix := `{"tool_name":"Agent","tool_input":{"subagent_type":"sdd-apply","prompt":"`, `"}}`
+		return []byte(prefix + strings.Repeat("x", size-len(prefix)-len(suffix)) + suffix)
+	}
+	got, err := hookwire.DecodeAgentCall(pad(hookwire.MaxAgentCallBytes))
+	if err != nil || got.SubagentType != "sdd-apply" {
+		t.Errorf("an input of exactly the bound = %+v, %v, want it read", got, err)
+	}
+	got, err = hookwire.DecodeAgentCall(pad(hookwire.MaxAgentCallBytes + 1))
+	if !errors.Is(err, hookwire.ErrTooLarge) || got.SubagentType != "" || got.Prompt != "" {
+		t.Errorf("an input one byte over the bound = %+v, %v, want the zero value and ErrTooLarge", got, err)
+	}
+	if err != nil && !strings.Contains(err.Error(), strconv.Itoa(hookwire.MaxAgentCallBytes)) {
+		t.Errorf("the refusal %q does not say what the bound is", err)
 	}
 }
 

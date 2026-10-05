@@ -18,6 +18,10 @@ import (
 // dependency impossible to land silently. Notably absent: net, net/http, os/exec,
 // and any package whose path contains "git".
 //
+// "errors" joined the list with the registry port (Phase 9 unit H15): ReadRegistry tells an
+// unreadable store from an unusable registry with errors.As, so an adapter that wraps its
+// error still answers. It is pure and reaches nothing the list exists to keep out.
+//
 // The single module-internal exception is pathguardImport, a pure
 // path-containment helper. Its own imports are held to this same allowlist by
 // TestZeroFetchCoversPathguardImports, so the exception cannot widen the
@@ -28,6 +32,7 @@ var allowedImports = map[string]bool{
 	"crypto/sha256": true,
 	"encoding/hex":  true,
 	"encoding/json": true,
+	"errors":        true,
 	"fmt":           true,
 	"io":            true,
 	"io/fs":         true,
@@ -111,9 +116,13 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("expected %q in allowedImports after the project-lock-ownership widening", want)
 		}
 	}
-	// 15 stdlib packages plus the reviewer-approved pathguardImport exception.
-	if len(allowedImports) != 16 {
-		t.Errorf("len(allowedImports) = %d, want 16 — widen it only after reviewer approval", len(allowedImports))
+	// 16 stdlib packages (errors is the one the registry port added) plus the
+	// reviewer-approved pathguardImport exception.
+	if len(allowedImports) != 17 {
+		t.Errorf("len(allowedImports) = %d, want 17 — widen it only after reviewer approval", len(allowedImports))
+	}
+	if !allowedImports["errors"] {
+		t.Error(`expected "errors" in allowedImports: the registry port tells an unreadable store from an unusable registry with errors.As`)
 	}
 }
 

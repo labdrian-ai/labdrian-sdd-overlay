@@ -36,6 +36,15 @@ func (w *hookWorld) skillsGuardReader(label string, stdin io.Reader, stdinNote s
 	w.record("skills "+strings.Join(append([]string{skillsGuardVerb}, extraArgs...), " "), label, stdinNote, exits, stdout.String(), stderr.String())
 }
 
+// skillsGuardPanicking records one run of 'skills guard-hook' whose decision panics with value.
+func (w *hookWorld) skillsGuardPanicking(label, stdin string, value any) {
+	w.t.Helper()
+	var stdout, stderr bytes.Buffer
+	var exits []int
+	runSkillsGuardHook(nil, strings.NewReader(stdin), &stdout, &stderr, func(c int) { exits = append(exits, c) }, func() { panic(value) })
+	w.record("skills "+skillsGuardVerb, label, stdin, exits, stdout.String(), stderr.String())
+}
+
 // skillsGuardWriter records one run of 'skills guard-hook' whose stdout cannot be written.
 func (w *hookWorld) skillsGuardWriter(label, stdin string, stdout io.Writer) {
 	w.t.Helper()
@@ -60,12 +69,22 @@ func (w *hookWorld) shaperGuardReader(label string, stdin io.Reader, stdinNote s
 	w.record("shaper guard-hook", label, stdinNote, exits, stdout.String(), stderr.String())
 }
 
+// bashToolCall is the hook input of a Bash call of command, in /work, with the tool's
+// description beside it when there is one. The input of both guards is built here, so a field
+// the envelope gains is added in one place.
+func bashToolCall(command, description string) string {
+	input := `{"command":` + jsonText(command)
+	if description != "" {
+		input += `,"description":` + jsonText(description)
+	}
+	return claudeToolCall("/work", "Bash", input+"}")
+}
+
 // ---- skills guard-hook -----------------------------------------------------------------
 
 func approveGuardGoldenCases() []hookGoldenCase {
-	bash := func(command string) string {
-		return claudeToolCall("/work", "Bash", `{"command":`+jsonText(command)+`,"description":"d"}`)
-	}
+	// The approve guard's calls carry the description Claude Code sends beside a command.
+	bash := func(command string) string { return bashToolCall(command, "d") }
 	return []hookGoldenCase{
 		{"approve-guard-denies-the-agent-running-skills-approve", func(w *hookWorld) {
 			for _, command := range []string{
@@ -156,11 +175,8 @@ func approveGuardGoldenCases() []hookGoldenCase {
 			w.skillsGuardReader("a stdin that fails", failingReader{}, failingStdin)
 		}},
 		{"approve-guard-turns-a-panic-into-a-warning", func(w *hookWorld) {
-			beforeApproveGuardDecision = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
-			w.t.Cleanup(func() { beforeApproveGuardDecision = nil })
-			w.skillsGuard("a panic where the guard decides", bash("ls"))
-			beforeApproveGuardDecision = func() { panic("boom") }
-			w.skillsGuard("a short panic value", bash("labdrian skills approve"))
+			w.skillsGuardPanicking("a panic where the guard decides", bash("ls"), "boom\nsecond line \x1b[31mred "+strings.Repeat("x", 5000))
+			w.skillsGuardPanicking("a short panic value", bash("labdrian skills approve"), "boom")
 		}},
 		{"approve-guard-exits-zero-when-stdout-cannot-be-written", func(w *hookWorld) {
 			w.skillsGuardWriter("the denial cannot be written", bash("labdrian skills approve"), failingMemoryWriter{})
@@ -175,9 +191,7 @@ func approveGuardGoldenCases() []hookGoldenCase {
 // ---- shaper guard-hook -----------------------------------------------------------------
 
 func shaperGuardGoldenCases() []hookGoldenCase {
-	bash := func(command string) string {
-		return claudeToolCall("/work", "Bash", `{"command":`+jsonText(command)+`}`)
-	}
+	bash := func(command string) string { return bashToolCall(command, "") }
 	return []hookGoldenCase{
 		{"shaper-guard-denies-recording-a-clearance", func(w *hookWorld) {
 			for _, command := range []string{
@@ -214,6 +228,10 @@ func shaperGuardGoldenCases() []hookGoldenCase {
 			}
 			for _, tc := range []struct{ tool, input string }{
 				{"Write", `{"file_path":"/repo/doc.md","content":"run shaper clearance record"}`},
+				// Not a case of "lets through": the file name only starts like the store (the
+				// marker is a substring of the path), so the guard denies it. It is recorded here
+				// as the over-match it is, a false positive of a guard that matches text only (the
+				// golden file shows exit 2 for this call, not an allow).
 				{"Write", `{"file_path":"/repo/labdrian/shaper-clearance-notes.md","content":"x"}`},
 				{"Write", `{"file_path":"/repo/doc.md","content":"labdrian/shaper-clearance"}`},
 				{"Edit", `{"file_path":"/repo/main.go","old_string":"a","new_string":"b"}`},
@@ -249,10 +267,21 @@ func shaperGuardGoldenCases() []hookGoldenCase {
 			w.shaperGuard("two fields of the wrong type: the first is named", `{"tool_name":7,"tool_input":{"command":5}}`)
 			w.shaperGuard("a field of the wrong type beside a command that would be denied", `{"tool_name":7,"tool_input":{"command":"gentle-ai-overlay shaper clearance record"}}`)
 		}},
-		{"shaper-guard-reads-without-a-size-bound", func(w *hookWorld) {
+		// The guard reads at most the bound of every guard, 8 MiB, and one byte more. Up to the
+		// bound it judges what it was given, however large; over it, it denies without judging,
+		// as it denies any input it cannot read: it fails closed, where the approve guard, which
+		// runs on the same calls, lets the call through. (Until Phase 9 batch 10 it read without
+		// any bound, and these were its first two cases, which pass unchanged.)
+		{"shaper-guard-judges-input-up-to-eight-mebibytes", func(w *hookWorld) {
 			const mebibyte = 1 << 20
-			w.shaperGuard("a large unrelated write is allowed", padded(`{"tool_name":"Write","tool_input":{"file_path":"/tmp/big.txt","content":"`, `"}}`, 5*mebibyte))
-			w.shaperGuard("a large command that names the record verb is denied", padded(`{"tool_name":"Bash","tool_input":{"command":"gentle-ai-overlay shaper clearance record --stdin `, `"}}`, 5*mebibyte))
+			const unrelated = `{"tool_name":"Write","tool_input":{"file_path":"/tmp/big.txt","content":"`
+			const naming = `{"tool_name":"Bash","tool_input":{"command":"gentle-ai-overlay shaper clearance record --stdin `
+			w.shaperGuard("a large unrelated write is allowed", padded(unrelated, `"}}`, 5*mebibyte))
+			w.shaperGuard("a large command that names the record verb is denied", padded(naming, `"}}`, 5*mebibyte))
+			w.shaperGuard("an unrelated write of exactly 8 MiB is judged and allowed", padded(unrelated, `"}}`, 8*mebibyte))
+			w.shaperGuard("a command that names the record verb, in an input of exactly 8 MiB, is judged and denied", padded(naming, `"}}`, 8*mebibyte))
+			w.shaperGuard("an unrelated write of 8 MiB and one byte is denied without being judged", padded(unrelated, `"}}`, 8*mebibyte+1))
+			w.shaperGuard("a command that names the record verb, in an input of 8 MiB and one byte, is denied for the size", padded(naming, `"}}`, 8*mebibyte+1))
 		}},
 		{"shaper-guard-denies-when-stdin-fails", func(w *hookWorld) {
 			w.shaperGuardReader("a stdin that fails", failingReader{}, failingStdin)

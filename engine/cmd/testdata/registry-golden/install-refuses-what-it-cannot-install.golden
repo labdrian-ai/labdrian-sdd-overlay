@@ -1,0 +1,19 @@
+# no source root
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: planning install: skill "tidy-notes": path "tidy-notes" escapes source root — possible traversal
+
+# a source root that has not the skills
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/empty (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill tidy-notes: source dir not found: <WORLD>/empty/tidy-notes
+error: skill only-demo: source dir not found: <WORLD>/empty/only-demo
+error: 2 source director(ies) missing
+
+--- tree of demo ---
+(empty)
+

@@ -1,0 +1,38 @@
+# a manifest that is in sync
+$ skills sync-manifest
+exit: 0
+--- stdout ---
+sync-manifest: 0 added, 0 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+# the overlay manifest
+engine/go.mod managed
+beta/SKILL.md managed
+alpha/SKILL.md custom
+ext-one/SKILL.md custom
+tidy-notes/SKILL.md custom
+
+# a manifest that is not
+$ skills sync-manifest
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 2 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+# kept
+engine/go.mod managed
+beta/SKILL.md managed
+alpha/SKILL.md custom
+ext-one/SKILL.md custom
+tidy-notes/SKILL.md custom
+root-file managed
+
+# and then it is
+$ skills sync-manifest
+exit: 0
+--- stdout ---
+overlay.manifest already in sync
+--- stderr ---
+

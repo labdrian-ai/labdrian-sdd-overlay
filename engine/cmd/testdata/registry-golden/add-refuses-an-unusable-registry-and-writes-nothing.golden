@@ -1,0 +1,40 @@
+# a registry that is not there
+$ skills add gamma --registry <WORLD>/refused/a.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: reading registry "<WORLD>/refused/a.yaml": stat <WORLD>/refused/a.yaml: no such file or directory; nothing was locked and nothing was changed
+
+# a registry with a line the reader does not understand
+$ skills add gamma --registry <WORLD>/refused/b.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 7: unknown key "mirror" in source
+
+# a registry of a version it does not know
+$ skills add gamma --registry <WORLD>/refused/c.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "3" is not supported; only version "1" is valid
+
+# a registry with a value outside its vocabulary
+$ skills add gamma --registry <WORLD>/refused/d.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+
+--- overlay.manifest ---
+# the overlay manifest
+engine/go.mod managed
+alpha/SKILL.md custom
+beta/SKILL.md managed
+ext-one/SKILL.md custom
+tidy-notes/SKILL.md custom
+
+--- tree of skills/gamma ---
+.approval.json (194 bytes)
+SKILL.md (288 bytes)
+

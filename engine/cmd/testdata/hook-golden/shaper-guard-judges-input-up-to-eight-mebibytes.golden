@@ -1,0 +1,58 @@
+$ shaper guard-hook
+# a large unrelated write is allowed
+--- stdin ---
+<5242880 bytes, sha256 9071be908235, starting "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"/tmp/big.txt">
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# a large command that names the record verb is denied
+--- stdin ---
+<5242880 bytes, sha256 6acf6e175736, starting "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"gentle-ai-overl">
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# an unrelated write of exactly 8 MiB is judged and allowed
+--- stdin ---
+<8388608 bytes, sha256 62ce304c2398, starting "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"/tmp/big.txt">
+--- exit ---
+0
+--- stdout ---
+--- stderr ---
+
+$ shaper guard-hook
+# a command that names the record verb, in an input of exactly 8 MiB, is judged and denied
+--- stdin ---
+<8388608 bytes, sha256 b6db2d05ab4f, starting "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"gentle-ai-overl">
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature.
+
+$ shaper guard-hook
+# an unrelated write of 8 MiB and one byte is denied without being judged
+--- stdin ---
+<8388609 bytes, sha256 bf5e1b8e8e0c, starting "{\"tool_name\":\"Write\",\"tool_input\":{\"file_path\":\"/tmp/big.txt">
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: decode tool call: hookwire: hook input exceeds the maximum size: 8388609 bytes exceeds the maximum of 8388608)
+
+$ shaper guard-hook
+# a command that names the record verb, in an input of 8 MiB and one byte, is denied for the size
+--- stdin ---
+<8388609 bytes, sha256 42ca95766519, starting "{\"tool_name\":\"Bash\",\"tool_input\":{\"command\":\"gentle-ai-overl">
+--- exit ---
+2
+--- stdout ---
+--- stderr ---
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: decode tool call: hookwire: hook input exceeds the maximum size: 8388609 bytes exceeds the maximum of 8388608)
+

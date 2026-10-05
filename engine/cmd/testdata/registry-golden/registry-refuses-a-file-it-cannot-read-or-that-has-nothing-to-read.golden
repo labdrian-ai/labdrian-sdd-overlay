@@ -1,0 +1,77 @@
+# no file at the default path
+$ skills list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+
+# no file at the path named
+$ skills list --registry <WORLD>/nowhere/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "<WORLD>/nowhere/skills.registry.yaml": open <WORLD>/nowhere/skills.registry.yaml: no such file or directory
+
+# a directory
+$ skills list --registry <WORLD>/a-directory
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "<WORLD>/a-directory": read <WORLD>/a-directory: is a directory
+
+# an empty file
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'version'
+
+# only a comment
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'version'
+
+# only the document marker
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'version'
+
+# only a version
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'skills'
+
+# only skills
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'version'
+
+# not YAML at all
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: expected 'key: value' or 'key:' format, got "hello world"
+
+# a byte-order mark before the first key
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: unknown top-level key "\ufeffversion"
+
+# a line longer than the reader's buffer
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: read error: bufio.Scanner: token too long
+

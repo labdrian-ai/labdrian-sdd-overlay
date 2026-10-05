@@ -3,6 +3,7 @@ package contract_test
 import (
 	"errors"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -193,6 +194,10 @@ func TestParseRefusesAListThatIsNotAnInlineList(t *testing.T) {
 			"[sdd-tasks][sdd-apply]",
 			"[[sdd-tasks, sdd-apply]]",
 			"- sdd-tasks",
+			// A bracket inside a quoted item is a bracket among the items: the strict list has
+			// no way to write one, and no phase or language has one in its name.
+			`["sdd[1]"]`,
+			`['sdd]', "sdd-apply"]`,
 		} {
 			t.Run(key+"="+value, func(t *testing.T) {
 				err := parse(doc("applies_to_phases: [sdd-apply]", key+": "+value))
@@ -203,7 +208,7 @@ func TestParseRefusesAListThatIsNotAnInlineList(t *testing.T) {
 				if malformed.Key != key || malformed.Value != strings.TrimSpace(value) {
 					t.Errorf("error = %+v, want key %q and value %q", *malformed, key, strings.TrimSpace(value))
 				}
-				wantText := "malformed " + key + ": expected an inline list such as [a, b], got " + `"` + strings.TrimSpace(value) + `"`
+				wantText := "malformed " + key + ": expected an inline list such as [a, b], got " + strconv.Quote(strings.TrimSpace(value))
 				if err.Error() != wantText {
 					t.Errorf("error text = %q, want %q", err, wantText)
 				}

@@ -1,0 +1,49 @@
+# the registry in the working directory
+$ skills list
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+
+# a registry named by its path
+$ skills list --registry <WORLD>/elsewhere/other.yaml
+exit: 0
+--- stdout ---
+ant	custom	overlay-only	claude
+mid	custom	overlay-only	claude
+zed	custom	overlay-only	claude
+--- stderr ---
+
+# a flag with no value reads the registry in the working directory
+$ skills list --registry
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+
+# a later flag wins
+$ skills list --registry <WORLD>/nothing.yaml --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+
+# other arguments are not read
+$ skills list extra --unknown --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+

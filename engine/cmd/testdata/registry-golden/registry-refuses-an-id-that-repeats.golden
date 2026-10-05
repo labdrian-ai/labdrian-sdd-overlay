@@ -1,0 +1,22 @@
+# two entries of one id
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: duplicate id "alpha"
+
+# two entries of one id, the paths differing
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: duplicate id "alpha"
+
+# ids that differ only in case are two
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 0
+--- stdout ---
+ALPHA	custom	overlay-only	claude
+alpha	custom	overlay-only	claude
+--- stderr ---
+

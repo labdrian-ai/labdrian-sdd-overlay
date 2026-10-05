@@ -11,7 +11,7 @@ none
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
 # the separators U+2028 and U+2029
 --- stdin ---
-{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"line sep end"},"tool_use_id":"toolu_01"}
+{"session_id":"s1","transcript_path":"/t.jsonl","cwd":"/work","permission_mode":"default","hook_event_name":"PreToolUse","tool_name":"Agent","tool_input":{"description":"d","subagent_type":"sdd-apply","prompt":"line\u2028sep\u2029end"},"tool_use_id":"toolu_01"}
 --- exit ---
 none
 --- stdout ---

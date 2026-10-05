@@ -1,0 +1,39 @@
+$ skills add gamma --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+added: gamma
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: project
+      targets:
+        - claude
+        - pi
+      allowedProjects:
+        - demo
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: gamma
+    path: gamma
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+gamma/SKILL.md custom
+

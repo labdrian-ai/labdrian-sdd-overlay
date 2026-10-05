@@ -30,7 +30,7 @@ func newInstallFixture(t *testing.T) installFixture {
 		root:    filepath.Join(dir, "skills"),
 		project: filepath.Join(t.TempDir(), "project"),
 	}
-	regBytes, err := Serialize(buildRegistry([]struct {
+	regBytes, err := serializeRegistry(buildRegistry([]struct {
 		id              string
 		scope           string
 		allowedProjects []string
@@ -162,7 +162,7 @@ func TestTwoInstallsIntoOneProjectAreSerialized(t *testing.T) {
 func TestConcurrentInstallsIntoOneProjectKeepBothRecords(t *testing.T) {
 	dir := t.TempDir()
 	reg, root := filepath.Join(dir, "skills.registry.yaml"), filepath.Join(dir, "skills")
-	regBytes, err := Serialize(buildRegistry([]struct {
+	regBytes, err := serializeRegistry(buildRegistry([]struct {
 		id              string
 		scope           string
 		allowedProjects []string

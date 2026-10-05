@@ -21,6 +21,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io/fs"
 	"strings"
 	"testing"
 )
@@ -60,16 +61,27 @@ func buildAgentInput(subagentType, description, prompt string, includeModel bool
 	return string(b)
 }
 
+// inMemoryFiles is a readFile over files: a path that is not one of them does not exist, as it
+// would not on disk, so a test can tell a file that is missing from one that is empty.
+func inMemoryFiles(files map[string]string) func(string) ([]byte, error) {
+	return func(path string) ([]byte, error) {
+		content, ok := files[path]
+		if !ok {
+			return nil, &fs.PathError{Op: "open", Path: path, Err: fs.ErrNotExist}
+		}
+		return []byte(content), nil
+	}
+}
+
 // gateTaskAnswer runs 'gate-task' for the managed contract at absoluteContractPath whose
 // document is content, over the hook input, and returns the line it printed (without its line
 // break). Whatever the input is, the command prints one line.
 func gateTaskAnswer(t *testing.T, input, content string) string {
 	t.Helper()
 	files := map[string]string{"/virtual/contract.md": content}
-	readFile := func(path string) ([]byte, error) { return []byte(files[path]), nil }
 	var stdout, stderr bytes.Buffer
 	gateTaskCore([]string{"--contract-file", "/virtual/contract.md", "--contract-path", absoluteContractPath},
-		strings.NewReader(input), &stdout, &stderr, readFile)
+		strings.NewReader(input), &stdout, &stderr, inMemoryFiles(files))
 	out := stdout.String()
 	if strings.Count(out, "\n") != 1 || !strings.HasSuffix(out, "\n") {
 		t.Fatalf("gate-task printed %q, want exactly one line", out)
@@ -263,12 +275,41 @@ func TestE2E_MalformedInput_PassThrough(t *testing.T) {
 	}
 }
 
-// TC-E2E-4: missing contract file → benign pass-through (fail-safe).
+// TC-E2E-4: missing contract file → benign pass-through (fail-safe), and the warning that says
+// the file could not be read.
 func TestE2E_MissingContractFile_PassThrough(t *testing.T) {
-	// With empty/broken contract content → frontmatter parse fails → pass-through.
+	var stdout, stderr bytes.Buffer
+	gateTaskCore([]string{"--contract-file", "/virtual/missing.md", "--contract-path", absoluteContractPath},
+		strings.NewReader(buildAgentInput("sdd-tasks", "desc", "do tasks", false)), &stdout, &stderr, inMemoryFiles(map[string]string{"/virtual/contract.md": contractContentForE2E}))
+	if stdout.String() != "{}\n" {
+		t.Errorf("gate-task printed %q for a contract file that does not exist, want the pass-through", stdout.String())
+	}
+	if !strings.Contains(stderr.String(), "cannot read contract file") || !strings.Contains(stderr.String(), "/virtual/missing.md") {
+		t.Errorf("stderr %q does not say the contract file could not be read", stderr.String())
+	}
+}
+
+// TC-E2E-4b: a contract file that exists and is empty or broken has no frontmatter to derive a
+// phase from → pass-through. It is not the missing file above: that one is not read at all.
+func TestE2E_EmptyContractFile_PassThrough(t *testing.T) {
 	resp := gateTaskAnswer(t, buildAgentInput("sdd-tasks", "desc", "do tasks", false), "")
 	if _, present := decodeAnswer(t, resp)["hookSpecificOutput"]; present {
 		t.Errorf("hookSpecificOutput must be absent on broken contract pass-through; got: %s", resp)
+	}
+}
+
+// TC-E2E-11: a call with no prompt is left exactly as it came, which is the pass-through and not
+// a reply with an empty hookSpecificOutput: any presence of the key (empty or not) would be a
+// rewrite that Claude Code applies. The gate's own test says the prompt is left alone; this one
+// says what the wire then holds, because the gate knows no JSON.
+func TestE2E_MissingPrompt_LeavesNoHookSpecificOutputAtAll(t *testing.T) {
+	input := `{"tool_name":"Agent","tool_input":{"description":"desc","subagent_type":"sdd-tasks"}}`
+	resp := gateTaskAnswer(t, input, contractContentForE2E)
+	if resp != "{}" {
+		t.Errorf("gate-task answered %q for a call with no prompt, want exactly {}", resp)
+	}
+	if _, present := decodeAnswer(t, resp)["hookSpecificOutput"]; present {
+		t.Errorf("hookSpecificOutput must be absent when the prompt is missing; got: %s", resp)
 	}
 }
 

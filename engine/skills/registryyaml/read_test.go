@@ -1,10 +1,12 @@
-package skills
+package registryyaml_test
 
 import (
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // readTestFixture reads a YAML fixture from testdata/<name>.yaml.
@@ -17,14 +19,15 @@ func readTestFixture(t *testing.T, name string) string {
 	return string(data)
 }
 
-// TestParseRegistry is the table-driven suite for ParseRegistry covering
+// TestReadRegistry is the table-driven suite for reading a registry file (the adapter decodes it,
+// the domain judges it, as the program does) covering
 // valid inputs (SC-01..SC-05) and all rejected-construct cases (ADR-1, R-001..R-012).
-func TestParseRegistry(t *testing.T) {
+func TestReadRegistry(t *testing.T) {
 	// --- valid cases ---
 
 	t.Run("valid_core_and_custom", func(t *testing.T) {
 		// SC-01: 2 entries, declaration order preserved, core first, custom second.
-		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "valid_core_and_custom")))
+		reg, err := readRegistry(readTestFixture(t, "valid_core_and_custom"))
 		if err != nil {
 			t.Fatalf("unexpected error: %v", err)
 		}
@@ -79,7 +82,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("missing_id", func(t *testing.T) {
 		// SC-02: missing id → error, no partial data.
-		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "missing_id")))
+		reg, err := readRegistry(readTestFixture(t, "missing_id"))
 		if err == nil {
 			t.Fatal("expected non-nil error for missing id, got nil")
 		}
@@ -90,7 +93,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("unknown_source_type", func(t *testing.T) {
 		// source.type: bogus (genuinely unknown) → error. ('external' is now a valid type.)
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "unknown_source_type")))
+		_, err := readRegistry(readTestFixture(t, "unknown_source_type"))
 		if err == nil {
 			t.Fatal("expected non-nil error for unknown source.type, got nil")
 		}
@@ -98,7 +101,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("duplicate_id", func(t *testing.T) {
 		// SC-04: error message must include the conflicting id (R-010).
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "duplicate_id")))
+		_, err := readRegistry(readTestFixture(t, "duplicate_id"))
 		if err == nil {
 			t.Fatal("expected non-nil error for duplicate id, got nil")
 		}
@@ -109,7 +112,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("upstream_on_custom_entry", func(t *testing.T) {
 		// SC-05: custom entry with upstream block → error (R-004).
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "upstream_on_custom_entry")))
+		_, err := readRegistry(readTestFixture(t, "upstream_on_custom_entry"))
 		if err == nil {
 			t.Fatal("expected non-nil error for upstream on custom entry, got nil")
 		}
@@ -117,7 +120,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("missing_version", func(t *testing.T) {
 		// R-001: absent version field → error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "missing_version")))
+		_, err := readRegistry(readTestFixture(t, "missing_version"))
 		if err == nil {
 			t.Fatal("expected non-nil error for missing version, got nil")
 		}
@@ -125,7 +128,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("wrong_version", func(t *testing.T) {
 		// R-001: version != "1" → error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "wrong_version")))
+		_, err := readRegistry(readTestFixture(t, "wrong_version"))
 		if err == nil {
 			t.Fatal("expected non-nil error for wrong version, got nil")
 		}
@@ -133,7 +136,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("empty_targets", func(t *testing.T) {
 		// R-007: empty install.targets → error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "empty_targets")))
+		_, err := readRegistry(readTestFixture(t, "empty_targets"))
 		if err == nil {
 			t.Fatal("expected non-nil error for empty targets, got nil")
 		}
@@ -141,7 +144,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("invalid_target", func(t *testing.T) {
 		// R-008: target not in {claude,opencode,codex} → error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "invalid_target")))
+		_, err := readRegistry(readTestFixture(t, "invalid_target"))
 		if err == nil {
 			t.Fatal("expected non-nil error for invalid target value, got nil")
 		}
@@ -149,7 +152,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("invalid_scope", func(t *testing.T) {
 		// R-006: install.defaultScope != "global" → error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "invalid_scope")))
+		_, err := readRegistry(readTestFixture(t, "invalid_scope"))
 		if err == nil {
 			t.Fatal("expected non-nil error for invalid defaultScope, got nil")
 		}
@@ -157,7 +160,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("invalid_lifecycle", func(t *testing.T) {
 		// R-009: updateStrategy not in {vendor-merge,overlay-only} → error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "invalid_lifecycle")))
+		_, err := readRegistry(readTestFixture(t, "invalid_lifecycle"))
 		if err == nil {
 			t.Fatal("expected non-nil error for invalid updateStrategy, got nil")
 		}
@@ -165,7 +168,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("malformed_yaml_tab", func(t *testing.T) {
 		// ADR-1: tab indentation → line-numbered error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "malformed_yaml_tab")))
+		_, err := readRegistry(readTestFixture(t, "malformed_yaml_tab"))
 		if err == nil {
 			t.Fatal("expected non-nil error for tab-indented YAML, got nil")
 		}
@@ -173,7 +176,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("malformed_yaml_flow", func(t *testing.T) {
 		// ADR-1: flow mapping {} → line-numbered error.
-		_, err := ParseRegistry(strings.NewReader(readTestFixture(t, "malformed_yaml_flow")))
+		_, err := readRegistry(readTestFixture(t, "malformed_yaml_flow"))
 		if err == nil {
 			t.Fatal("expected non-nil error for flow mapping YAML, got nil")
 		}
@@ -181,7 +184,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("empty_file", func(t *testing.T) {
 		// R-001: empty reader → missing version → error.
-		_, err := ParseRegistry(strings.NewReader(""))
+		_, err := readRegistry("")
 		if err == nil {
 			t.Fatal("expected non-nil error for empty input, got nil")
 		}
@@ -192,7 +195,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("inline_comment_unquoted_rejected", func(t *testing.T) {
 		// Unquoted scalar with trailing " # ..." must error, not silently absorb the comment.
 		yaml := "version: \"1\"\nskills:\n  - id: sdd-spec # my skill\n    path: sdd-spec\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("expected error for inline comment in unquoted value, got nil")
 		}
@@ -204,7 +207,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("hash_inside_quoted_value_accepted", func(t *testing.T) {
 		// A # inside a properly quoted value must NOT trigger the inline-comment error.
 		yaml := "version: \"1\"\nskills:\n  - id: \"a # b\"\n    path: skill-path\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		reg, err := ParseRegistry(strings.NewReader(yaml))
+		reg, err := readRegistry(yaml)
 		if err != nil {
 			t.Fatalf("unexpected error for # inside quoted value: %v", err)
 		}
@@ -217,7 +220,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("unterminated_double_quote", func(t *testing.T) {
 		yaml := "version: \"1\"\nskills:\n  - id: \"unterminated\n    path: some-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("expected error for unterminated double-quoted string, got nil")
 		}
@@ -228,7 +231,7 @@ func TestParseRegistry(t *testing.T) {
 
 	t.Run("unterminated_single_quote", func(t *testing.T) {
 		yaml := "version: \"1\"\nskills:\n  - id: 'unterminated\n    path: some-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("expected error for unterminated single-quoted string, got nil")
 		}
@@ -242,7 +245,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("upstream_empty_owner_core_entry", func(t *testing.T) {
 		// R-005: core entry with upstream block present but owner field empty → error.
 		yaml := "version: \"1\"\nskills:\n  - id: some-core\n    path: some-core\n    source:\n      type: core\n      upstream:\n        owner:\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: vendor-merge\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("expected non-nil error for core entry with empty upstream.owner, got nil")
 		}
@@ -253,7 +256,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("block_scalar_chomping_clear_error", func(t *testing.T) {
 		// ADR-1: |- and |+ are block scalar indicators; error must name them explicitly.
 		yaml := "version: \"1\"\nskills:\n  - id: some-skill\n    path: some-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: |-\n        overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("expected error for block scalar indicator |-, got nil")
 		}
@@ -267,7 +270,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-10_project_scope_with_allowedProjects", func(t *testing.T) {
 		// SC-10: defaultScope: project + allowedProjects → accepted; fields populated.
 		yaml := "version: \"1\"\nskills:\n  - id: my-skill\n    path: my-skill\n    source:\n      type: custom\n    install:\n      defaultScope: project\n      targets:\n        - claude\n      allowedProjects:\n        - labdrian-sdd-overlay\n        - other-repo\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		reg, err := ParseRegistry(strings.NewReader(yaml))
+		reg, err := readRegistry(yaml)
 		if err != nil {
 			t.Fatalf("SC-10: unexpected error: %v", err)
 		}
@@ -292,7 +295,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-11_unknown_scope_rejected", func(t *testing.T) {
 		// SC-11: defaultScope: workspace → error with line number and invalid value.
 		yaml := "version: \"1\"\nskills:\n  - id: bad-skill\n    path: bad-skill\n    source:\n      type: custom\n    install:\n      defaultScope: workspace\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("SC-11: expected non-nil error for unknown defaultScope, got nil")
 		}
@@ -309,7 +312,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-12_allowedProjects_forbidden_on_global", func(t *testing.T) {
 		// SC-12: defaultScope: global + allowedProjects present → error referencing entry id.
 		yaml := "version: \"1\"\nskills:\n  - id: global-skill\n    path: global-skill\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n      allowedProjects:\n        - some-repo\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("SC-12: expected non-nil error for global + allowedProjects, got nil")
 		}
@@ -324,7 +327,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-13_project_scope_no_allowedProjects", func(t *testing.T) {
 		// SC-13: defaultScope: project with no allowedProjects key → valid, AllowedProjects == nil.
 		yaml := "version: \"1\"\nskills:\n  - id: proj-skill\n    path: proj-skill\n    source:\n      type: custom\n    install:\n      defaultScope: project\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		reg, err := ParseRegistry(strings.NewReader(yaml))
+		reg, err := readRegistry(yaml)
 		if err != nil {
 			t.Fatalf("SC-13: unexpected error: %v", err)
 		}
@@ -339,7 +342,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("T07_valid_project_scoped_fixture", func(t *testing.T) {
 		// T-07: the testdata project-scoped fixture parses cleanly and produces
 		// one entry with defaultScope=project and allowedProjects=[labdrian-sdd-overlay].
-		reg, err := ParseRegistry(strings.NewReader(readTestFixture(t, "valid_project_scoped")))
+		reg, err := readRegistry(readTestFixture(t, "valid_project_scoped"))
 		if err != nil {
 			t.Fatalf("T-07 fixture parse error: %v", err)
 		}
@@ -360,7 +363,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-55_parse_external_with_repo_and_ref", func(t *testing.T) {
 		// SC-55: external entry with repo and ref — both fields set, no error.
 		yaml := "version: \"1\"\nskills:\n  - id: my-ext-skill\n    path: my-ext-skill\n    source:\n      type: external\n      repo: https://github.com/example/skills\n      ref: a1b2c3d\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		reg, err := ParseRegistry(strings.NewReader(yaml))
+		reg, err := readRegistry(yaml)
 		if err != nil {
 			t.Fatalf("SC-55: unexpected error: %v", err)
 		}
@@ -382,7 +385,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-56_parse_external_repo_only_no_ref", func(t *testing.T) {
 		// SC-56: external entry with repo present, ref absent — Ref empty, no error.
 		yaml := "version: \"1\"\nskills:\n  - id: my-ext-skill\n    path: my-ext-skill\n    source:\n      type: external\n      repo: https://github.com/example/skills\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		reg, err := ParseRegistry(strings.NewReader(yaml))
+		reg, err := readRegistry(yaml)
 		if err != nil {
 			t.Fatalf("SC-56: unexpected error: %v", err)
 		}
@@ -398,7 +401,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-57_parse_external_missing_repo_errors", func(t *testing.T) {
 		// SC-57: external entry with no repo field → error naming id, "repo", and line number.
 		yaml := "version: \"1\"\nskills:\n  - id: my-ext-skill\n    path: my-ext-skill\n    source:\n      type: external\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("SC-57: expected non-nil error for external entry missing repo, got nil")
 		}
@@ -416,7 +419,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-58_parse_core_with_repo_errors", func(t *testing.T) {
 		// SC-58: core entry with repo field → error naming id, "repo", "core", and line number.
 		yaml := "version: \"1\"\nskills:\n  - id: sdd-spec\n    path: sdd-spec\n    source:\n      type: core\n      upstream:\n        owner: gentleman-programming\n      repo: https://github.com/example/skills\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: vendor-merge\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("SC-58: expected non-nil error for core entry with repo, got nil")
 		}
@@ -437,7 +440,7 @@ func TestParseRegistry(t *testing.T) {
 	t.Run("SC-59_parse_custom_with_ref_errors", func(t *testing.T) {
 		// SC-59: custom entry with ref field → error naming id, "ref", "custom", and line number.
 		yaml := "version: \"1\"\nskills:\n  - id: my-custom-skill\n    path: my-custom-skill\n    source:\n      type: custom\n      ref: deadbeef\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("SC-59: expected non-nil error for custom entry with ref, got nil")
 		}
@@ -474,7 +477,7 @@ skills:
     lifecycle:
       updateStrategy: overlay-only
 `
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err == nil {
 			t.Fatal("WARNING-1: expected non-nil error for external entry with upstream block, got nil")
 		}
@@ -507,7 +510,7 @@ skills:
 		for _, tc := range cases {
 			t.Run(tc.name, func(t *testing.T) {
 				yaml := "version: \"1\"\nskills:\n  - id: bad-path\n    path: " + escapeYAMLPath(tc.path) + "\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-				_, err := ParseRegistry(strings.NewReader(yaml))
+				_, err := readRegistry(yaml)
 				if err == nil {
 					t.Fatalf("expected non-nil error for path %q, got nil", tc.path)
 				}
@@ -523,31 +526,31 @@ skills:
 
 	t.Run("path_in_root_passes", func(t *testing.T) {
 		yaml := "version: \"1\"\nskills:\n  - id: good-path\n    path: good-path\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
-		_, err := ParseRegistry(strings.NewReader(yaml))
+		_, err := readRegistry(yaml)
 		if err != nil {
 			t.Errorf("expected a clean relative path to pass, got: %v", err)
 		}
 	})
 }
 
-// TestParseRegistry_RealRegistryHasKnowledgeIngestionEntry pins slice 1b's
+// TestReadRegistry_RealRegistryHasKnowledgeIngestionEntry pins slice 1b's
 // registration (R-001, R-003 of longterm-mem-knowledge-ingestion): parsing
 // the real committed skills.registry.yaml must return a `knowledge-ingestion`
 // entry shaped exactly like the `anti-generic-design` precedent — custom
 // source, global scope, all four install targets, overlay-only lifecycle.
-func TestParseRegistry_RealRegistryHasKnowledgeIngestionEntry(t *testing.T) {
-	registryPath := filepath.Join("..", "..", "skills.registry.yaml")
+func TestReadRegistry_RealRegistryHasKnowledgeIngestionEntry(t *testing.T) {
+	registryPath := filepath.Join("..", "..", "..", "skills.registry.yaml")
 
 	data, err := os.ReadFile(registryPath)
 	if err != nil {
 		t.Fatalf("reading real registry %s: %v", registryPath, err)
 	}
-	reg, err := ParseRegistry(strings.NewReader(string(data)))
+	reg, err := readRegistry(string(data))
 	if err != nil {
 		t.Fatalf("parsing real registry: %v", err)
 	}
 
-	var entry *Entry
+	var entry *skills.Entry
 	for i := range reg.Skills {
 		if reg.Skills[i].ID == "knowledge-ingestion" {
 			entry = &reg.Skills[i]

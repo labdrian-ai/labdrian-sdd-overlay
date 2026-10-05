@@ -11,11 +11,13 @@ import (
 	"bytes"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"reflect"
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
@@ -33,6 +35,15 @@ func runGuardHookWith(stdin io.Reader, args ...string) guardRun {
 }
 
 func runGuardHook(stdin string) guardRun { return runGuardHookWith(strings.NewReader(stdin)) }
+
+// runGuardHookBefore runs the hook with beforeDecision called where it decides, which is where
+// a bug in it would panic.
+func runGuardHookBefore(stdin string, beforeDecision func()) guardRun {
+	var out, errBuf bytes.Buffer
+	var codes []int
+	runSkillsGuardHook(nil, strings.NewReader(stdin), &out, &errBuf, func(c int) { codes = append(codes, c) }, beforeDecision)
+	return guardRun{codes: codes, stdout: out.String(), stderr: errBuf.String()}
+}
 
 func guardToolInput(t *testing.T, tool string, toolInput map[string]any) string {
 	t.Helper()
@@ -157,9 +168,7 @@ func TestSkillsGuardHook_NothingItDoesCanBlockACall(t *testing.T) {
 	})
 
 	t.Run("a panic in the decision", func(t *testing.T) {
-		beforeApproveGuardDecision = func() { panic("boom") }
-		t.Cleanup(func() { beforeApproveGuardDecision = nil })
-		r := runGuardHook(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve"}))
+		r := runGuardHookBefore(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve"}), func() { panic("boom") })
 		if !reflect.DeepEqual(r.codes, []int{0}) {
 			t.Errorf("exits %v, want a single exit 0 (a Go panic exits 2, which blocks the call)", r.codes)
 		}
@@ -178,10 +187,8 @@ func TestSkillsGuardHook_NothingItDoesCanBlockACall(t *testing.T) {
 // user one short sanitized systemMessage, the way the projection hook does for a
 // PreToolUse panic, and still never decides: exit 0, no permission decision.
 func TestSkillsGuardHook_ADegradedGuardSaysSo(t *testing.T) {
-	beforeApproveGuardDecision = func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) }
-	t.Cleanup(func() { beforeApproveGuardDecision = nil })
-
-	r := runGuardHook(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve --id x"}))
+	r := runGuardHookBefore(guardToolInput(t, "Bash", map[string]any{"command": "labdrian skills approve --id x"}),
+		func() { panic("boom\nsecond line \x1b[31mred " + strings.Repeat("x", 5000)) })
 	if !reflect.DeepEqual(r.codes, []int{0}) || !strings.Contains(r.stderr, "internal error: boom") {
 		t.Fatalf("exits %v, stderr %q, want exit 0 and the panic reported on stderr", r.codes, r.stderr)
 	}
@@ -214,12 +221,73 @@ func TestSkillsGuardHook_ReadsAtMostTheBound(t *testing.T) {
 	assertGuardSilent(t, "endless input", r)
 	// endlessReader (projection_hook_test.go) counts the bytes it was asked for.
 	// One byte past the bound is enough to know the input is over it.
-	if limit := approveGuardMaxInputBytes + 1; src.read > limit {
-		t.Errorf("read %d bytes, want at most %d", src.read, limit)
+	if limit := hookwire.MaxToolCallBytes + 1; src.read != limit {
+		t.Errorf("read %d bytes, want exactly %d: up to one byte past the bound", src.read, limit)
 	}
-	if src.read <= approveGuardMaxInputBytes {
-		t.Errorf("read %d bytes, want it to read up to the bound to know the input is over it", src.read)
+}
+
+// The bound is the cause of the allow, not a coincidence of the content: the same call, a
+// command that would be denied, is denied within the bound and let through one byte over it,
+// and the bound is inclusive. A call over the bound is refused by the decoder as unreadable,
+// and an unreadable call is let through: that this guard fails open there is the contract of
+// the hook, and the golden file of the eight mebibytes pins its bytes.
+func TestSkillsGuardHook_AMatchingCallOverTheBoundIsAllowedBecauseOfTheBound(t *testing.T) {
+	const prefix = `{"tool_name":"Bash","tool_input":{"command":"labdrian skills approve --id x","padding":"`
+	const suffix = `"}}`
+	padded := func(size int) string {
+		return prefix + strings.Repeat("a", size-len(prefix)-len(suffix)) + suffix
 	}
+	for name, size := range map[string]int{
+		"well within the bound":     hookwire.MaxToolCallBytes - 1024,
+		"exactly the bound":         hookwire.MaxToolCallBytes,
+		"the same call, no padding": len(prefix) + len(suffix),
+	} {
+		if reason := decodeGuardDenial(t, runGuardHook(padded(size))); reason == "" {
+			t.Errorf("%s: a matching call has no reason, want it denied", name)
+		}
+	}
+	assertGuardSilent(t, "the same call one byte over the bound", runGuardHook(padded(hookwire.MaxToolCallBytes+1)))
+}
+
+// What the guard says when its decision panics is made of the recovered value, which is
+// anything: an error, a number, a struct, and not only the strings the golden file pins. Each is
+// one short clean line that names the guard and says the call was not denied.
+func TestGuardPanicWarningNamesWhatWasRecoveredWhateverItIs(t *testing.T) {
+	for name, tc := range map[string]struct {
+		recovered any
+		want      string
+	}{
+		"an error":                 {errors.New("disk on fire"), "disk on fire"},
+		"a wrapped error":          {fmt.Errorf("outer: %w", errors.New("inner")), "outer: inner"},
+		"a number":                 {42, "42"},
+		"a struct":                 {struct{ Code int }{7}, "7"},
+		"a runtime error":          {runtimeErrorOf(t), "index out of range"},
+		"a string with a new line": {"first\nsecond\x1b[31m", "first second"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			got := guardPanicWarning(tc.recovered)
+			if !strings.Contains(got, tc.want) {
+				t.Errorf("the warning %q does not name the recovered value (%q)", got, tc.want)
+			}
+			if strings.ContainsAny(got, "\n\x1b") || len(got) > 700 {
+				t.Errorf("the warning %q is not one short clean line", got)
+			}
+			for _, want := range []string{"approve guard", "not denied"} {
+				if !strings.Contains(got, want) {
+					t.Errorf("the warning %q does not say %q", got, want)
+				}
+			}
+		})
+	}
+}
+
+// runtimeErrorOf is the value recover returns for a runtime panic: an error that is not ours.
+func runtimeErrorOf(t *testing.T) (recovered any) {
+	t.Helper()
+	defer func() { recovered = recover() }()
+	var empty []int
+	_ = empty[len(empty)]
+	return nil
 }
 
 func TestSkillsGuardHook_RefusesAnArgumentItDoesNotUnderstand(t *testing.T) {

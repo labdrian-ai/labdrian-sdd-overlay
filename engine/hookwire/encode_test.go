@@ -149,7 +149,7 @@ func TestUpdatedInputLeavesOutAModelThatWasNotThere(t *testing.T) {
 // U+2028 and U+2029): it always was, and Claude Code reads the same JSON either way. The
 // other replies keep those characters as they are.
 func TestUpdatedInputIsWrittenWithHTMLEscapes(t *testing.T) {
-	out, err := hookwire.AgentCall{Description: "d <x> & y", SubagentType: "t"}.UpdatedInput("a<b>&c ")
+	out, err := hookwire.AgentCall{Description: "d <x> & y", SubagentType: "t"}.UpdatedInput("a<b>&c\u2028")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -166,5 +166,32 @@ func TestUpdatedInputIsWrittenWithHTMLEscapes(t *testing.T) {
 func TestPassThroughIsAnEmptyObject(t *testing.T) {
 	if got := string(hookwire.PassThrough()); got != "{}\n" {
 		t.Errorf("PassThrough() = %q, want {} and a line break", got)
+	}
+}
+
+// Every answer ends in one line break and holds no other: 'gate-task' writes the bytes it is
+// given as they are, and Claude Code reads one line. The line break belongs to the encoders, not
+// to the code that prints them, so a change to an encoder that dropped it would silently break
+// every answer; this is the test that says so.
+func TestEveryAnswerIsOneLineEndingInALineBreak(t *testing.T) {
+	model := "opus"
+	for name, encode := range map[string]func() ([]byte, error){
+		"a denial":                               func() ([]byte, error) { return hookwire.PreToolUseReply{Deny: true, Reason: "no"}.Encode() },
+		"a warning of a PreToolUse":              func() ([]byte, error) { return hookwire.PreToolUseReply{Warning: "careful"}.Encode() },
+		"a prompt's context":                     func() ([]byte, error) { return hookwire.PromptReply{Context: "line one\nline two"}.Encode() },
+		"a prompt's warning":                     func() ([]byte, error) { return hookwire.PromptReply{Warning: "careful"}.Encode() },
+		"an updated tool input":                  func() ([]byte, error) { return hookwire.AgentCall{Prompt: "a\nb", Model: &model}.UpdatedInput("c\nd") },
+		"the pass-through":                       func() ([]byte, error) { return hookwire.PassThrough(), nil },
+		"an updated tool input of an empty call": func() ([]byte, error) { return hookwire.AgentCall{}.UpdatedInput("") },
+	} {
+		t.Run(name, func(t *testing.T) {
+			out, err := encode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !strings.HasSuffix(string(out), "}\n") || strings.Count(string(out), "\n") != 1 || !json.Valid(out) {
+				t.Errorf("the answer is %q, want one JSON object on one line, ending in one line break", out)
+			}
+		})
 	}
 }

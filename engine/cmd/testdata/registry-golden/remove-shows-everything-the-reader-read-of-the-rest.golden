@@ -1,0 +1,134 @@
+# a registry in odd forms
+$ skills remove victim
+exit: 0
+--- stdout ---
+removed: victim
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: first
+    path: first
+    source:
+      type: core
+      upstream:
+        owner: an owner
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - pi
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: second
+    path: second
+    source:
+      type: core
+    install:
+      defaultScope: global
+      targets:
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: third
+    path: third
+    source:
+      type: custom
+    install:
+      defaultScope: project
+      targets:
+        - opencode
+      allowedProjects:
+        - demo
+        - demo
+        - "- dash"
+        - "x:"
+        - "has # hash"
+        - " lead"
+        - "trail "
+        - "?q"
+        - "'single'"
+        - ""
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: ünï-fourth
+    path: fourth
+    source:
+      type: external
+      repo: https://example.test/a b/c
+      ref: "v1 # candidate"
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+
+# the same registry with every line ending in a carriage return
+$ skills remove victim
+exit: 0
+--- stdout ---
+removed: victim
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: first
+    path: first
+    source:
+      type: core
+      upstream:
+        owner: an owner
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - pi
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: second
+    path: second
+    source:
+      type: core
+    install:
+      defaultScope: global
+      targets:
+        - codex
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: third
+    path: third
+    source:
+      type: custom
+    install:
+      defaultScope: project
+      targets:
+        - opencode
+      allowedProjects:
+        - demo
+        - demo
+        - "- dash"
+        - "x:"
+        - "has # hash"
+        - " lead"
+        - "trail "
+        - "?q"
+        - "'single'"
+        - ""
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: ünï-fourth
+    path: fourth
+    source:
+      type: external
+      repo: https://example.test/a b/c
+      ref: "v1 # candidate"
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+

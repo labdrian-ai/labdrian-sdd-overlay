@@ -8,10 +8,13 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/shaper"
 )
@@ -522,7 +525,8 @@ func TestShaperGuardHook_DeniesRecordAndAllowsOthers(t *testing.T) {
 }
 
 // TestShaperGuardHook_JudgesPayloadsLargerThanTheStdinLimit pins that the
-// guard reads the whole PreToolUse payload. The guard runs on every Bash and
+// guard reads the whole PreToolUse payload, up to its bound (the one of every
+// guard, hookwire.MaxToolCallBytes). The guard runs on every Bash and
 // Write/Edit call, so truncating a large unrelated payload would deny it on a
 // JSON decode failure instead of judging it; a large payload that does carry
 // the marker must still be denied.
@@ -535,6 +539,51 @@ func TestShaperGuardHook_JudgesPayloadsLargerThanTheStdinLimit(t *testing.T) {
 	deny := runShaperTest([]string{"guard-hook"}, `{"tool_name":"Bash","tool_input":{"command":"echo `+big+` && labdrian shaper clearance record --stdin"}}`)
 	if deny.code != 2 {
 		t.Errorf("large payload carrying the marker: exit %d, want 2", deny.code)
+	}
+}
+
+// TestShaperGuardHook_DeniesWhatIsOverTheBound pins the other side of the bound. The guard fails
+// closed: a call it cannot read it cannot vouch for, and a call over the bound is not read, so it
+// is denied with the words that say why, as a call that is not JSON is. The bound is inclusive:
+// a call of exactly that many bytes is judged as any other.
+func TestShaperGuardHook_DeniesWhatIsOverTheBound(t *testing.T) {
+	padded := func(prefix string, size int) string {
+		const suffix = `"}}`
+		return prefix + strings.Repeat("x", size-len(prefix)-len(suffix)) + suffix
+	}
+	const write = `{"tool_name":"Write","tool_input":{"file_path":"/tmp/big.txt","content":"`
+	at := runShaperTest([]string{"guard-hook"}, padded(write, hookwire.MaxToolCallBytes))
+	if at.code != 0 || at.stderr != "" {
+		t.Errorf("an unrelated write of exactly the bound: exit %d stderr %q, want it judged and allowed", at.code, at.stderr)
+	}
+	atMarked := runShaperTest([]string{"guard-hook"}, padded(`{"tool_name":"Bash","tool_input":{"command":"shaper clearance record `, hookwire.MaxToolCallBytes))
+	if atMarked.code != 2 || strings.Contains(atMarked.stderr, "could not be decoded") {
+		t.Errorf("a command naming the record verb, of exactly the bound: exit %d stderr %q, want it judged and denied for the command", atMarked.code, atMarked.stderr)
+	}
+	over := runShaperTest([]string{"guard-hook"}, padded(write, hookwire.MaxToolCallBytes+1))
+	if over.code != 2 {
+		t.Fatalf("an unrelated write one byte over the bound: exit %d, want 2: the guard fails closed", over.code)
+	}
+	for _, want := range []string{"speed bump", "hook input could not be decoded", "exceeds the maximum", strconv.Itoa(hookwire.MaxToolCallBytes)} {
+		if !strings.Contains(over.stderr, want) {
+			t.Errorf("the denial %q does not say %q", over.stderr, want)
+		}
+	}
+}
+
+// TestShaperGuardHook_ReadsAtMostTheBoundPlusOneByte: input that never ends is never read to the
+// end, nor held in memory whole. One byte past the bound is enough to know the input is over it.
+func TestShaperGuardHook_ReadsAtMostTheBoundPlusOneByte(t *testing.T) {
+	src := &endlessReader{}
+	var out, errBuf bytes.Buffer
+	var codes []int
+	runShaperCore([]string{"guard-hook"}, src, &out, &errBuf, func(c int) { codes = append(codes, c) })
+	if !reflect.DeepEqual(codes, []int{2}) || !strings.Contains(errBuf.String(), "exceeds the maximum") {
+		t.Errorf("exits %v, stderr %q, want a denial that names the bound", codes, errBuf.String())
+	}
+	// endlessReader (projection_hook_test.go) counts the bytes it was asked for.
+	if limit := hookwire.MaxToolCallBytes + 1; src.read != limit {
+		t.Errorf("read %d bytes, want exactly %d: up to one byte past the bound", src.read, limit)
 	}
 }
 

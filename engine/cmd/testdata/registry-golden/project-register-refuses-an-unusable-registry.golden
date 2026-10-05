@@ -1,0 +1,31 @@
+# a registry that is not there
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --registry <WORLD>/refused/a.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "<WORLD>/refused/a.yaml": open <WORLD>/refused/a.yaml: no such file or directory
+
+# a registry with a line the reader does not understand
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --registry <WORLD>/refused/b.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry "<WORLD>/refused/b.yaml": line 7: unknown key "mirror" in source
+
+# a registry of a version it does not know
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --registry <WORLD>/refused/c.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry "<WORLD>/refused/c.yaml": skills: version "3" is not supported; only version "1" is valid
+
+# a registry with a value outside its vocabulary
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --registry <WORLD>/refused/d.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry "<WORLD>/refused/d.yaml": skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+
+--- tree of project ---
+(empty)
+

@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 )
@@ -32,20 +31,11 @@ func RenderStatus(w io.Writer, reg Registry) {
 }
 
 // RenderStatusCore is the testable CLI core for `engine skills status`.
-// Reads only the registry file (R-026: never reads overlay.manifest).
+// Reads only the registry (R-026: never reads overlay.manifest), through the repository.
 // All I/O is injected so every branch is unit-testable without OS access.
-func RenderStatusCore(args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	registryPath := parseRegistryFlag(args)
-	data, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	reg, err := ParseRegistry(bytes.NewReader(data))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry: %v\n", err)
-		exit(1)
+func RenderStatusCore(args []string, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
+	reg, ok := readRegistryForVerb(registries, parseRegistryFlag(args), false, stderr, exit)
+	if !ok {
 		return
 	}
 	RenderStatus(stdout, reg)

@@ -1,0 +1,66 @@
+# the project is the directory it runs in, named demo
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+--- demo/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [],
+  "installs": [
+    {
+      "id": "only-demo",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "a4d04cee6b49e8528a3f6a07f44a46e507f3bcedf89525cfbaed2a085276b879"
+        }
+      ]
+    },
+    {
+      "id": "tidy-notes",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "46b5a07e78bd689a52161c9913b50f29efb56aa749f3e90f3d43397e511d0869"
+        },
+        {
+          "path": "references/notes.md",
+          "sha256": "f4a77fd56f816488715e4539a2b263a613eb5c260dee801238b6ec8f129747a6"
+        }
+      ]
+    }
+  ]
+}
+
+# the same again changes nothing
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+unchanged: tidy-notes
+unchanged: only-demo
+--- stderr ---
+

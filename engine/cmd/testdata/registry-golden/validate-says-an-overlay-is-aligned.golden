@@ -1,0 +1,25 @@
+# the registry and the manifest agree, every file is a row, every global skill is approved
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# the paths named
+$ skills validate --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# the source root is required
+$ skills validate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate requires --source-root <skills-dir>
+

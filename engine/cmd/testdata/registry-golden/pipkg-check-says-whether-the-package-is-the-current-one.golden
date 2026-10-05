@@ -1,0 +1,39 @@
+# nothing built yet
+$ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 1
+--- stdout ---
+--- stderr ---
+pipkg check: pipkg: package not built at <WORLD>/out/labdrian-pi (run: labdrian-overlay apply --target pi)
+
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
+--- stderr ---
+
+# right after a build
+$ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg check: compared against the worktree (overlay root is not a git repository)
+pipkg check: OK (built package matches the current manifest)
+--- stderr ---
+
+# a skill edited since
+$ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 1
+--- stdout ---
+pipkg check: compared against the worktree (overlay root is not a git repository)
+--- stderr ---
+pipkg check: labdrian-pi package drift:
+  skills/alpha/SKILL.md: changed
+
+# a skill that is for Pi since
+$ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 1
+--- stdout ---
+pipkg check: compared against the worktree (overlay root is not a git repository)
+--- stderr ---
+pipkg check: labdrian-pi package drift:
+  skills/gamma/SKILL.md: missing
+

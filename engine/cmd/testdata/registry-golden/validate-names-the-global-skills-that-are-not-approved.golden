@@ -1,0 +1,8 @@
+# a skill with no record, and a skill whose record is for other bytes
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[APPROVAL_MISSING] beta: skill "beta": no approval record at <WORLD>/skills/beta/.approval.json; a human must review the exact SKILL.md bytes and run: labdrian skills approve --id beta --approver <name>
+[APPROVAL_MISSING] alpha: skill "alpha": no approval record at <WORLD>/skills/alpha/.approval.json; a human must review the exact SKILL.md bytes and run: labdrian skills approve --id alpha --approver <name>
+

@@ -1,0 +1,63 @@
+# a package built where the runtime looks for it
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/state/pi/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/state/pi/labdrian-pi
+--- stderr ---
+
+# install over: a registry that is not there
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pipkg: opening registry: open <WORLD>/overlay/skills.registry.yaml: no such file or directory
+--- stderr ---
+
+# status over: a registry that is not there
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: partial — labdrian-pi status is unproven: in sync (pipkg: opening registry: open <WORLD>/overlay/skills.registry.yaml: no such file or directory; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns) — reasons: in sync (pipkg: opening registry: open <WORLD>/overlay/skills.registry.yaml: no such file or directory; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi)
+--- stderr ---
+
+# install over: a registry with a line the reader does not understand
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pipkg: parsing registry: line 7: unknown key "mirror" in source
+--- stderr ---
+
+# status over: a registry with a line the reader does not understand
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: partial — labdrian-pi status is unproven: in sync (pipkg: parsing registry: line 7: unknown key "mirror" in source; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns) — reasons: in sync (pipkg: parsing registry: line 7: unknown key "mirror" in source; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi)
+--- stderr ---
+
+# install over: a registry of a version it does not know
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pipkg: parsing registry: skills: version "3" is not supported; only version "1" is valid
+--- stderr ---
+
+# status over: a registry of a version it does not know
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: partial — labdrian-pi status is unproven: in sync (pipkg: parsing registry: skills: version "3" is not supported; only version "1" is valid; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns) — reasons: in sync (pipkg: parsing registry: skills: version "3" is not supported; only version "1" is valid; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi)
+--- stderr ---
+
+# install over: a registry with a value outside its vocabulary
+$ runtime install --target pi
+exit: 1
+--- stdout ---
+[pi] install: unsupported — pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+--- stderr ---
+
+# status over: a registry with a value outside its vocabulary
+$ runtime status --target pi
+exit: 1
+--- stdout ---
+[pi] status: partial — labdrian-pi status is unproven: in sync (pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns) — reasons: in sync (pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi; compared against the worktree (overlay root is not a git repository)); listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi)
+--- stderr ---
+

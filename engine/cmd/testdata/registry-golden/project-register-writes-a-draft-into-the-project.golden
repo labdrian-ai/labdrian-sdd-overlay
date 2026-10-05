@@ -1,0 +1,61 @@
+# a plan
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --dry-run <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+--- tree of project ---
+(empty)
+
+# a registration
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+--- tree of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md (346 bytes)
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md (346 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (417 bytes)
+
+--- project/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [
+    {
+      "id": "tidy-worktree",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/tidy-worktree",
+      "sha256": "61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/tidy-worktree/SKILL.md",
+        ".agents/skills/tidy-worktree/SKILL.md"
+      ]
+    }
+  ]
+}
+
+# the same again
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-register: id "tidy-worktree" is already registered in the lock
+

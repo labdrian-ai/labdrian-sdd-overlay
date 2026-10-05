@@ -1,0 +1,8 @@
+# a file with no row, and a row with no file
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[UNREGISTERED_ON_DISK] alpha/extra.md: skills/alpha/extra.md exists on disk but no overlay.manifest row deploys it; add a row for "alpha/extra.md" to overlay.manifest to register it
+[MISSING_ON_DISK] beta/references/missing.md: overlay.manifest deploys "beta/references/missing.md" but skills/beta/references/missing.md does not exist; remove the "beta/references/missing.md" row from overlay.manifest, or restore the missing file
+

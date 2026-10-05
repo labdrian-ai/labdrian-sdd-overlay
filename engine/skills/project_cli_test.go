@@ -121,7 +121,7 @@ func runProjectRegister(t *testing.T, args []string) (stdout, stderr string, exi
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1
-	RenderProjectRegisterCore(args, os.ReadFile, os.Stat, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
+	RenderProjectRegisterCore(args, os.ReadFile, testRegistries(os.ReadFile), os.Stat, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
 	return out.String(), errBuf.String(), exitCode
 }
 
@@ -140,7 +140,7 @@ func runProjectRegisterNoIO(t *testing.T, args []string) (stdout, stderr string,
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1
-	RenderProjectRegisterCore(args, refusingReadFile(t), func(string) (fs.FileInfo, error) {
+	RenderProjectRegisterCore(args, refusingReadFile(t), testRegistries(refusingReadFile(t)), func(string) (fs.FileInfo, error) {
 		t.Error("stat must not be called before the argument refusal")
 		return nil, errors.New("must not be called")
 	}, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
@@ -426,7 +426,7 @@ func TestRenderProjectRegisterCore_EndOfOptionsEscapeBindsDashPrefixedDraft(t *t
 	}
 	RenderProjectRegisterCore(
 		[]string{"--project-root", "/abs/project", "--candidate", testCandidateKey, "--registry", "skills.registry.yaml", "--", "-weird-draft.md"},
-		readFile, os.Stat, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
+		readFile, testRegistries(readFile), os.Stat, resolvePathKeepingMissing, osProjectFS{}, &out, &errBuf, func(c int) { exitCode = c })
 
 	if got != "-weird-draft.md" {
 		t.Errorf("after `--` the draft path must bind verbatim, readFile saw %q", got)
@@ -621,7 +621,7 @@ func TestSkillsCore_DispatchesProjectRegister(t *testing.T) {
 func TestSkillsCore_VerbEnumerationsNameProjectRegister(t *testing.T) {
 	for _, verb := range []string{"", "no-such-verb"} {
 		var out, errBuf bytes.Buffer
-		SkillsCore(verb, nil, os.ReadFile, &out, &errBuf, func(int) {})
+		SkillsCore(verb, nil, os.ReadFile, testRegistries(os.ReadFile), &out, &errBuf, func(int) {})
 		if !strings.Contains(errBuf.String(), "project-register") {
 			t.Errorf("the verb enumeration for %q must name project-register, got %q", verb, errBuf.String())
 		}
@@ -640,7 +640,7 @@ func runProjectStatus(t *testing.T, args []string) (stdout, stderr string, exitC
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1
-	RenderProjectStatusCore(args, os.ReadFile, os.ReadDir, resolvePathKeepingMissing, &out, &errBuf, func(c int) { exitCode = c })
+	RenderProjectStatusCore(args, os.ReadFile, testRegistries(os.ReadFile), os.ReadDir, resolvePathKeepingMissing, &out, &errBuf, func(c int) { exitCode = c })
 	return out.String(), errBuf.String(), exitCode
 }
 
@@ -809,7 +809,7 @@ func runProjectRetire(t *testing.T, args []string, fsys projectFS) (stdout, stde
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	exitCode = -1
-	RenderProjectRetireCore(args, os.ReadFile, os.ReadDir, os.Stat, resolvePathKeepingMissing, fsys, &out, &errBuf, func(c int) { exitCode = c })
+	RenderProjectRetireCore(args, os.ReadFile, testRegistries(os.ReadFile), os.ReadDir, os.Stat, resolvePathKeepingMissing, fsys, &out, &errBuf, func(c int) { exitCode = c })
 	return out.String(), errBuf.String(), exitCode
 }
 

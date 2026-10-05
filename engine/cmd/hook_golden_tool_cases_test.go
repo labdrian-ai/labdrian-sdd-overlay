@@ -76,6 +76,17 @@ func toolHookGoldenCases() []hookGoldenCase {
 			w.toolHook("a project with a line break and an override character is quoted", e, e.repo, queryTool, "{\"project\":\"a\\nb\u202ec\"}")
 			w.toolHook("a project longer than the bound is cut", e, e.repo, queryTool, `{"project":"`+strings.Repeat("p", 300)+`"}`)
 		}},
+		// The project a denial quotes is cut to 200 characters (projection's maxDetailRunes) and
+		// the cut is marked: the case above shows a project far past the bound, this pair shows
+		// the bound itself, 200 characters whole and 201 cut, so where it falls is pinned too.
+		{"pretooluse-cuts-a-project-name-at-two-hundred-characters", func(w *hookWorld) {
+			e := w.env()
+			e.running(w.t, "proj-1", "wf-1", "odd")
+			for _, n := range []int{199, 200, 201} {
+				w.toolHook(fmt.Sprintf("a project of %d characters", n), e, e.repo, queryTool, `{"project":"`+strings.Repeat("p", n)+`"}`)
+			}
+			w.toolHook("a project of 201 multi-byte characters is cut by characters, not bytes", e, e.repo, queryTool, `{"project":"`+strings.Repeat("é", 201)+`"}`)
+		}},
 		{"pretooluse-denies-every-query-when-the-plan-has-no-project", func(w *hookWorld) {
 			e := w.env()
 			e.running(w.t, "proj-1", "wf-1", "standalone-minimal")

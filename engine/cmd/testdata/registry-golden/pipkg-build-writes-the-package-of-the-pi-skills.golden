@@ -1,0 +1,70 @@
+# a build: the skills for Pi, and the agent
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
+--- stderr ---
+
+--- tree of out ---
+labdrian-pi/
+labdrian-pi/agents/
+labdrian-pi/agents/GADU.md
+labdrian-pi/extensions/
+labdrian-pi/extensions/labdrian-gate.ts
+labdrian-pi/mcp.json
+labdrian-pi/package.json
+labdrian-pi/skills/
+labdrian-pi/skills/_shared/
+labdrian-pi/skills/_shared/anti-generic-design.md
+labdrian-pi/skills/_shared/minimalism-contract.md
+labdrian-pi/skills/alpha/
+labdrian-pi/skills/alpha/SKILL.md
+labdrian-pi/skills/alpha/references/
+labdrian-pi/skills/alpha/references/notes.md
+labdrian-pi/skills/beta/
+labdrian-pi/skills/beta/SKILL.md
+
+--- out/labdrian-pi/package.json ---
+{
+  "name": "labdrian-pi",
+  "version": "0.0.0-dev",
+  "pi": {
+    "skills": [
+      "./skills"
+    ],
+    "agents": [
+      "./agents"
+    ],
+    "extensions": [
+      "./extensions"
+    ],
+    "mcp": "./mcp.json"
+  }
+}
+
+# a build over a build replaces it
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
+--- stderr ---
+
+--- tree of out ---
+labdrian-pi/
+labdrian-pi/agents/
+labdrian-pi/agents/GADU.md
+labdrian-pi/extensions/
+labdrian-pi/extensions/labdrian-gate.ts
+labdrian-pi/mcp.json
+labdrian-pi/package.json
+labdrian-pi/skills/
+labdrian-pi/skills/_shared/
+labdrian-pi/skills/_shared/anti-generic-design.md
+labdrian-pi/skills/_shared/minimalism-contract.md
+labdrian-pi/skills/alpha/
+labdrian-pi/skills/alpha/SKILL.md
+labdrian-pi/skills/alpha/references/
+labdrian-pi/skills/alpha/references/notes.md
+labdrian-pi/skills/beta/
+labdrian-pi/skills/beta/SKILL.md
+

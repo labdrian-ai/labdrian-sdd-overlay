@@ -873,7 +873,7 @@ func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit fu
 		exit(1)
 		return
 	}
-	skills.SkillsCoreAt(verb, args, os.ReadFile, wallClockUTC, newSkillsLocker(), stdout, stderr, exit)
+	skills.SkillsCoreAt(verb, args, os.ReadFile, newRegistryRepository(), wallClockUTC, newSkillsLocker(), stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current
@@ -1454,9 +1454,11 @@ func runPropagateCore(
 	fmt.Fprintf(stdout, "registry: %s scoped row inserted/updated\n", rowLabelForMsg)
 }
 
-// stdinSizeLimit caps how many bytes we read from stdin to prevent a runaway
-// producer from exhausting memory. 4 MiB is far beyond any realistic hook input.
-const stdinSizeLimit = 4 * 1024 * 1024
+// stdinSizeLimit caps how many bytes 'gate-task' reads from stdin to prevent a runaway
+// producer from exhausting memory. It is the bound of the decoder of the Agent call
+// (hookwire.MaxAgentCallBytes), far beyond any realistic hook input: the command reads exactly
+// that many bytes, so an input over it reaches the decoder cut short and is let through.
+const stdinSizeLimit = hookwire.MaxAgentCallBytes
 
 // runGateTask implements the 'gate-task' subcommand.
 // Fails SAFE on any error (exits 0, emits pass-through response).
@@ -1544,7 +1546,8 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	}
 
 	// F4: cap stdin reads to stdinSizeLimit so a runaway producer cannot exhaust memory.
-	// On truncation the JSON will be malformed → the gate absorbs it as pass-through.
+	// On truncation the JSON will be malformed → hookwire's decoder refuses it and the
+	// answer is the pass-through.
 	rawInput, err := io.ReadAll(io.LimitReader(stdin, stdinSizeLimit))
 	if err != nil {
 		// Fail-safe: log to stderr, pass-through on stdout.

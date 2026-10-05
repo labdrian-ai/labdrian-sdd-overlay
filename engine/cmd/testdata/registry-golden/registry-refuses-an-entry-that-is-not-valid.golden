@@ -1,0 +1,203 @@
+# no id
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry is missing required field 'id'
+
+# an empty id
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry is missing required field 'id'
+
+# no path
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path must not be empty
+
+# an empty path
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path must not be empty
+
+# an absolute path
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path "/etc/alpha" must be relative, not absolute
+
+# a path with a dot first
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path "./alpha" must already be a clean relative path
+
+# a path with a slash at its end
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path "alpha/" must already be a clean relative path
+
+# a path with two slashes
+$ skills list --registry <WORLD>/docs/08.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path "a//b" must already be a clean relative path
+
+# a path that climbs
+$ skills list --registry <WORLD>/docs/09.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path "a/../b" must already be a clean relative path
+
+# a path that leaves its root
+$ skills list --registry <WORLD>/docs/10.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path "../alpha" must not contain a ".." component
+
+# a path that is only dots
+$ skills list --registry <WORLD>/docs/11.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": path ".." must not contain a ".." component
+
+# no type of source
+$ skills list --registry <WORLD>/docs/12.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 6: unknown key "mirror" in source
+
+# an unknown type of source
+$ skills list --registry <WORLD>/docs/13.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.type "wizard" is not valid; must be 'core', 'custom', or 'external'
+
+# an empty type of source
+$ skills list --registry <WORLD>/docs/14.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.type "" is not valid; must be 'core', 'custom', or 'external'
+
+# a custom skill with an upstream
+$ skills list --registry <WORLD>/docs/15.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.upstream is not allowed when source.type is 'custom'
+
+# an external skill with an upstream
+$ skills list --registry <WORLD>/docs/16.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.upstream is not allowed when source.type is 'external'
+
+# a core skill whose upstream has no owner
+$ skills list --registry <WORLD>/docs/17.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.upstream.owner must not be empty
+
+# a core skill whose upstream has an owner of white space
+$ skills list --registry <WORLD>/docs/18.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.upstream.owner must not be empty
+
+# no targets
+$ skills list --registry <WORLD>/docs/19.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets must not be empty (R-007)
+
+# targets with no items
+$ skills list --registry <WORLD>/docs/20.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets must not be empty (R-007)
+
+# a target that does not exist
+$ skills list --registry <WORLD>/docs/21.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+
+# a target in capitals
+$ skills list --registry <WORLD>/docs/22.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value "Claude"; must be one of: claude, opencode, codex, pi
+
+# an empty target
+$ skills list --registry <WORLD>/docs/23.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets contains invalid value ""; must be one of: claude, opencode, codex, pi
+
+# no lifecycle
+$ skills list --registry <WORLD>/docs/24.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": lifecycle.updateStrategy "" is not valid; must be 'vendor-merge' or 'overlay-only'
+
+# an update strategy that does not exist
+$ skills list --registry <WORLD>/docs/25.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": lifecycle.updateStrategy "rolling" is not valid; must be 'vendor-merge' or 'overlay-only'
+
+# no update strategy in a lifecycle
+$ skills list --registry <WORLD>/docs/26.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 12: unknown key "other" in lifecycle
+
+# no install
+$ skills list --registry <WORLD>/docs/27.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": install.targets must not be empty (R-007)
+
+# projects on a global skill
+$ skills list --registry <WORLD>/docs/28.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": allowedProjects is only valid for project-scoped entries
+
+# no source
+$ skills list --registry <WORLD>/docs/29.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: entry "alpha": source.type "" is not valid; must be 'core', 'custom', or 'external'
+

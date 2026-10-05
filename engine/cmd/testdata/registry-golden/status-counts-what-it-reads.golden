@@ -1,0 +1,40 @@
+# core and custom are counted, external and project skills are in the total
+$ skills status
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+
+# a registry of nothing
+$ skills status --registry <WORLD>/empty.yaml
+exit: 0
+--- stdout ---
+Total:  0
+Core:   0
+Custom: 0
+Status: OK
+--- stderr ---
+
+# another registry
+$ skills status --registry <WORLD>/other.yaml
+exit: 0
+--- stdout ---
+Total:  3
+Core:   0
+Custom: 3
+Status: OK
+--- stderr ---
+
+# status never reads the manifest, so a missing one is no matter
+$ skills status --manifest <WORLD>/no-manifest
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+

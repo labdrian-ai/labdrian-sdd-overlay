@@ -277,7 +277,7 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 	// tool call, and only a file-edit tool or a longterm-mem query is ever checked
 	// against the workflow. Any other tool is allowed here, without reading the
 	// binding or the workflow log.
-	if !projection.GateRelevant(gatedEditTools, in.Tool) {
+	if !projection.GateRelevant(gatedEditTools(), in.Tool) {
 		return nil
 	}
 	repoKey, ok := hookRepoKey(in.Cwd, processCwd)
@@ -296,11 +296,10 @@ func preToolUse(stdin io.Reader, processCwd string) []byte {
 		return nil
 	}
 
-	gateInput := projection.GateInput{Binding: binding, EditTools: gatedEditTools, Call: projection.ToolCall{Name: in.Tool}}
+	gateInput := projection.GateInput{Binding: binding, EditTools: gatedEditTools(), Call: gateCall(in)}
 	if binding.Classification == projection.ClassificationOwned {
 		w := loadWorkflow(binding.Binding.ProjectID, binding.Binding.WorkflowID)
 		gateInput.Workflow = &w
-		gateInput.Call = gateCall(in)
 	}
 	if beforeGateDecision != nil {
 		beforeGateDecision()

@@ -1,0 +1,49 @@
+# no version
+$ skills list --registry <WORLD>/docs/01.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: missing required top-level field 'version'
+
+# version 2
+$ skills list --registry <WORLD>/docs/02.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "2" is not supported; only version "1" is valid
+
+# version 1.0
+$ skills list --registry <WORLD>/docs/03.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "1.0" is not supported; only version "1" is valid
+
+# version v1
+$ skills list --registry <WORLD>/docs/04.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "v1" is not supported; only version "1" is valid
+
+# an empty version
+$ skills list --registry <WORLD>/docs/05.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "" is not supported; only version "1" is valid
+
+# a version with no value
+$ skills list --registry <WORLD>/docs/06.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 1: unknown top-level key "version"
+
+# a version of 0
+$ skills list --registry <WORLD>/docs/07.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: skills: version "0" is not supported; only version "1" is valid
+

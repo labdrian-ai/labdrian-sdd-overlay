@@ -37,7 +37,7 @@ func TestEveryCopyOfTheGatedEditToolListNamesEveryTool(t *testing.T) {
 		"usage()":                 captureUsage(t),
 		"the cancellation detail": cancellation,
 	}
-	tools := gatedEditTools
+	tools := gatedEditTools()
 	if len(tools) == 0 {
 		t.Fatal("gatedEditTools is empty")
 	}

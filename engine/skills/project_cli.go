@@ -1,7 +1,6 @@
 package skills
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"io/fs"
@@ -70,6 +69,7 @@ import (
 func RenderProjectRegisterCore(
 	args []string,
 	readFile readFileFn,
+	registries RegistryRepository,
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
 	fsys projectFS,
@@ -105,16 +105,8 @@ func RenderProjectRegisterCore(
 		return
 	}
 
-	registryData, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	reg, err := ParseRegistry(bytes.NewReader(registryData))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry %q: %v\n", registryPath, err)
-		exit(1)
+	reg, ok := readRegistryForVerb(registries, registryPath, true, stderr, exit)
+	if !ok {
 		return
 	}
 
@@ -286,6 +278,7 @@ func RenderProjectReviseCore(
 func RenderProjectRetireCore(
 	args []string,
 	readFile readFileFn,
+	registries RegistryRepository,
 	readDir func(string) ([]fs.DirEntry, error),
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
@@ -317,16 +310,8 @@ func RenderProjectRetireCore(
 		return
 	}
 
-	registryData, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	registry, err := ParseRegistry(bytes.NewReader(registryData))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry %q: %v\n", registryPath, err)
-		exit(1)
+	registry, ok := readRegistryForVerb(registries, registryPath, true, stderr, exit)
+	if !ok {
 		return
 	}
 
@@ -388,6 +373,7 @@ func projectRetireCommitOrder(plan ProjectPlan) []ProjectWrite {
 func RenderProjectStatusCore(
 	args []string,
 	readFile readFileFn,
+	registries RegistryRepository,
 	readDir func(string) ([]fs.DirEntry, error),
 	resolvePath func(string) (string, error),
 	stdout, stderr io.Writer,
@@ -412,16 +398,8 @@ func RenderProjectStatusCore(
 	}
 
 	root := filepath.Clean(projectRoot)
-	registryData, err := readFile(registryPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading registry %q: %v\n", registryPath, err)
-		exit(1)
-		return
-	}
-	registry, err := ParseRegistry(bytes.NewReader(registryData))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing registry %q: %v\n", registryPath, err)
-		exit(1)
+	registry, ok := readRegistryForVerb(registries, registryPath, true, stderr, exit)
+	if !ok {
 		return
 	}
 

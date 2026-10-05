@@ -1,12 +1,12 @@
-// Package skills provides parsing and validation for skills.registry.yaml.
-package skills
+package registryyaml
 
 import (
 	"bufio"
 	"fmt"
 	"io"
-	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 // tokenKind identifies the syntactic role of a parsed YAML line.
@@ -28,14 +28,21 @@ type tok struct {
 	lineNum int
 }
 
-// ParseRegistry parses a strict YAML subset from r and returns a Registry.
-// It rejects every construct outside the documented subset with a line-numbered
-// error. The parser never returns partial data on error (R-011).
+// Decode reads a registry from the YAML file r, which is a strict subset of YAML. It rejects every
+// construct outside the documented subset with a line-numbered error.
+//
+// It decodes and does not judge: whether the registry may hold what it holds is the domain's rule
+// (skills.Registry.Validate), which the domain applies to what this returns. So that the domain can
+// name the first fault in the order the file says it (as the file has always been read, entry by
+// entry, with each judged as soon as it was whole), a decoder that fails after some entries are
+// complete returns them with the error: the entries whole and in order up to the fault, and the
+// version if it was read. A fault of the text itself, before anything is read (a tab, a flow
+// sequence, a line longer than the reader's buffer), returns the zero registry.
 // minimal: forced — ADR-1 (zero-dep invariant)
-func ParseRegistry(r io.Reader) (Registry, error) {
+func Decode(r io.Reader) (skills.Registry, error) {
 	tokens, err := tokenize(r)
 	if err != nil {
-		return Registry{}, err
+		return skills.Registry{}, err
 	}
 	p := &tokParser{tokens: tokens}
 	return p.parseDocument()
@@ -250,16 +257,17 @@ func (p *tokParser) advance() *tok {
 	return nil
 }
 
-// parseDocument parses the top-level YAML document and validates required fields.
-func (p *tokParser) parseDocument() (Registry, error) {
-	var reg Registry
+// parseDocument parses the top-level YAML document and checks the fields it must have. On a
+// fault it returns what it had decoded so far with the error (see Decode).
+func (p *tokParser) parseDocument() (skills.Registry, error) {
+	var reg skills.Registry
 	seenVersion := false
 	seenSkills := false
 
 	for p.peek() != nil {
 		t := p.peek()
 		if t.indent != 0 {
-			return Registry{}, fmt.Errorf("line %d: unexpected indentation at document root", t.lineNum)
+			return reg, fmt.Errorf("line %d: unexpected indentation at document root", t.lineNum)
 		}
 		switch t.kind {
 		case tokKeyValue:
@@ -269,7 +277,7 @@ func (p *tokParser) parseDocument() (Registry, error) {
 				seenVersion = true
 				reg.Version = t.val
 			default:
-				return Registry{}, fmt.Errorf("line %d: unknown top-level key %q", t.lineNum, t.key)
+				return reg, fmt.Errorf("line %d: unknown top-level key %q", t.lineNum, t.key)
 			}
 		case tokKeyOnly:
 			p.advance()
@@ -277,35 +285,35 @@ func (p *tokParser) parseDocument() (Registry, error) {
 			case "skills":
 				seenSkills = true
 				entries, err := p.parseSkillEntries(2)
-				if err != nil {
-					return Registry{}, err
-				}
 				reg.Skills = entries
+				if err != nil {
+					return reg, err
+				}
 			default:
-				return Registry{}, fmt.Errorf("line %d: unknown top-level key %q", t.lineNum, t.key)
+				return reg, fmt.Errorf("line %d: unknown top-level key %q", t.lineNum, t.key)
 			}
 		default:
-			return Registry{}, fmt.Errorf("line %d: unexpected token at document root", t.lineNum)
+			return reg, fmt.Errorf("line %d: unexpected token at document root", t.lineNum)
 		}
 	}
 
 	if !seenVersion {
-		return Registry{}, fmt.Errorf("skills: missing required top-level field 'version'")
+		return reg, fmt.Errorf("skills: missing required top-level field 'version'")
 	}
 	if reg.Version != "1" {
-		return Registry{}, fmt.Errorf("skills: version %q is not supported; only version \"1\" is valid", reg.Version)
+		return reg, fmt.Errorf("skills: version %q is not supported; only version \"1\" is valid", reg.Version)
 	}
 	if !seenSkills {
-		return Registry{}, fmt.Errorf("skills: missing required top-level field 'skills'")
+		return reg, fmt.Errorf("skills: missing required top-level field 'skills'")
 	}
 
 	return reg, nil
 }
 
-// parseSkillEntries parses the block sequence of skill entries at seqIndent.
-func (p *tokParser) parseSkillEntries(seqIndent int) ([]Entry, error) {
-	var entries []Entry
-	seen := make(map[string]bool)
+// parseSkillEntries parses the block sequence of skill entries at seqIndent. On a fault it returns
+// the entries that were whole before it with the error.
+func (p *tokParser) parseSkillEntries(seqIndent int) ([]skills.Entry, error) {
+	var entries []skills.Entry
 
 	for {
 		t := p.peek()
@@ -313,22 +321,17 @@ func (p *tokParser) parseSkillEntries(seqIndent int) ([]Entry, error) {
 			break
 		}
 		if t.indent > seqIndent {
-			return nil, fmt.Errorf("line %d: unexpected indentation inside skills sequence", t.lineNum)
+			return entries, fmt.Errorf("line %d: unexpected indentation inside skills sequence", t.lineNum)
 		}
 		if t.kind != tokSeqMapping && t.kind != tokSeqKeyOnly {
-			return nil, fmt.Errorf("line %d: expected sequence item ('- key: value') in skills list", t.lineNum)
+			return entries, fmt.Errorf("line %d: expected sequence item ('- key: value') in skills list", t.lineNum)
 		}
 		p.advance()
 
 		entry, err := p.parseEntry(t.key, t.val, seqIndent+2, t.lineNum)
 		if err != nil {
-			return nil, err
+			return entries, err
 		}
-
-		if seen[entry.ID] {
-			return nil, fmt.Errorf("skills: duplicate id %q", entry.ID)
-		}
-		seen[entry.ID] = true
 		entries = append(entries, entry)
 	}
 
@@ -337,13 +340,13 @@ func (p *tokParser) parseSkillEntries(seqIndent int) ([]Entry, error) {
 
 // parseEntry parses one skill entry. firstKey/firstVal come from the sequence-item
 // token (e.g. "- id: sdd-spec"). Subsequent keys at entryIndent are consumed from
-// the token stream.
-func (p *tokParser) parseEntry(firstKey, firstVal string, entryIndent, lineNum int) (Entry, error) {
-	var e Entry
+// the token stream. The entry is not judged: that is the domain's.
+func (p *tokParser) parseEntry(firstKey, firstVal string, entryIndent, lineNum int) (skills.Entry, error) {
+	var e skills.Entry
 	keysSeen := make(map[string]bool)
 
 	if err := p.applyEntryKey(&e, firstKey, firstVal, entryIndent, lineNum, keysSeen); err != nil {
-		return Entry{}, err
+		return skills.Entry{}, err
 	}
 
 	for {
@@ -356,22 +359,18 @@ func (p *tokParser) parseEntry(firstKey, firstVal string, entryIndent, lineNum i
 		}
 		p.advance()
 		if keysSeen[t.key] {
-			return Entry{}, fmt.Errorf("line %d: duplicate key %q in skill entry", t.lineNum, t.key)
+			return skills.Entry{}, fmt.Errorf("line %d: duplicate key %q in skill entry", t.lineNum, t.key)
 		}
 		if err := p.applyEntryKey(&e, t.key, t.val, entryIndent, t.lineNum, keysSeen); err != nil {
-			return Entry{}, err
+			return skills.Entry{}, err
 		}
-	}
-
-	if err := validateEntry(&e); err != nil {
-		return Entry{}, err
 	}
 
 	return e, nil
 }
 
 // applyEntryKey dispatches a single key within a skill entry.
-func (p *tokParser) applyEntryKey(e *Entry, key, val string, entryIndent, lineNum int, seen map[string]bool) error {
+func (p *tokParser) applyEntryKey(e *skills.Entry, key, val string, entryIndent, lineNum int, seen map[string]bool) error {
 	seen[key] = true
 	switch key {
 	case "id":
@@ -405,8 +404,8 @@ func (p *tokParser) applyEntryKey(e *Entry, key, val string, entryIndent, lineNu
 // parseSource parses the source mapping. entryID is the owning entry's id (may be
 // empty if id appears after source in the YAML) and is used in cross-field error
 // messages (R-114, R-115). sourceLineNum is the line of the "source:" key itself.
-func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (Source, error) {
-	var src Source
+func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (skills.Source, error) {
+	var src skills.Source
 	seen := make(map[string]bool)
 	var repoLineNum, refLineNum int
 
@@ -420,7 +419,7 @@ func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (Sour
 		}
 		p.advance()
 		if seen[t.key] {
-			return Source{}, fmt.Errorf("line %d: duplicate key %q in source", t.lineNum, t.key)
+			return skills.Source{}, fmt.Errorf("line %d: duplicate key %q in source", t.lineNum, t.key)
 		}
 		seen[t.key] = true
 		switch t.key {
@@ -429,7 +428,7 @@ func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (Sour
 		case "upstream":
 			u, err := p.parseUpstream(indent+2, t.lineNum)
 			if err != nil {
-				return Source{}, err
+				return skills.Source{}, err
 			}
 			src.Upstream = &u
 		case "repo":
@@ -439,34 +438,34 @@ func (p *tokParser) parseSource(indent, sourceLineNum int, entryID string) (Sour
 			src.Ref = t.val
 			refLineNum = t.lineNum
 		default:
-			return Source{}, fmt.Errorf("line %d: unknown key %q in source", t.lineNum, t.key)
+			return skills.Source{}, fmt.Errorf("line %d: unknown key %q in source", t.lineNum, t.key)
 		}
 	}
 
 	// Cross-field validation (R-114, R-115, ADR-11): lives here in parseSource
 	// (not validateEntry) so it can reference per-field line numbers from repoLineNum/refLineNum.
 	// These checks run after all source keys are consumed so YAML field order is irrelevant.
-	if src.Type != "" && src.Type != "external" {
+	if src.Type != "" && src.Type != skills.SourceExternal {
 		// repo or ref on a non-external entry is a hard error (mirrors allowedProjects-on-global).
 		if src.Repo != "" {
-			return Source{}, fmt.Errorf("skills: entry %q: source.repo is not allowed when source.type is %q (line %d)", entryID, src.Type, repoLineNum)
+			return skills.Source{}, fmt.Errorf("skills: entry %q: source.repo is not allowed when source.type is %q (line %d)", entryID, src.Type, repoLineNum)
 		}
 		if src.Ref != "" {
-			return Source{}, fmt.Errorf("skills: entry %q: source.ref is not allowed when source.type is %q (line %d)", entryID, src.Type, refLineNum)
+			return skills.Source{}, fmt.Errorf("skills: entry %q: source.ref is not allowed when source.type is %q (line %d)", entryID, src.Type, refLineNum)
 		}
 	}
-	if src.Type == "external" && src.Repo == "" {
+	if src.Type == skills.SourceExternal && src.Repo == "" {
 		// repo is required for external entries; reference the source block's opening line
 		// so the message carries a location that reviewers can find (R-114).
-		return Source{}, fmt.Errorf("skills: entry %q: source.repo is required when source.type is 'external' (line %d)", entryID, sourceLineNum)
+		return skills.Source{}, fmt.Errorf("skills: entry %q: source.repo is required when source.type is 'external' (line %d)", entryID, sourceLineNum)
 	}
 
 	return src, nil
 }
 
 // parseUpstream parses the upstream mapping.
-func (p *tokParser) parseUpstream(indent, lineNum int) (Upstream, error) {
-	var u Upstream
+func (p *tokParser) parseUpstream(indent, lineNum int) (skills.Upstream, error) {
+	var u skills.Upstream
 	seen := make(map[string]bool)
 
 	for {
@@ -479,14 +478,14 @@ func (p *tokParser) parseUpstream(indent, lineNum int) (Upstream, error) {
 		}
 		p.advance()
 		if seen[t.key] {
-			return Upstream{}, fmt.Errorf("line %d: duplicate key %q in upstream", t.lineNum, t.key)
+			return skills.Upstream{}, fmt.Errorf("line %d: duplicate key %q in upstream", t.lineNum, t.key)
 		}
 		seen[t.key] = true
 		switch t.key {
 		case "owner":
 			u.Owner = t.val
 		default:
-			return Upstream{}, fmt.Errorf("line %d: unknown key %q in upstream", t.lineNum, t.key)
+			return skills.Upstream{}, fmt.Errorf("line %d: unknown key %q in upstream", t.lineNum, t.key)
 		}
 	}
 
@@ -494,8 +493,8 @@ func (p *tokParser) parseUpstream(indent, lineNum int) (Upstream, error) {
 }
 
 // parseInstall parses the install mapping.
-func (p *tokParser) parseInstall(indent, lineNum int) (Install, error) {
-	var inst Install
+func (p *tokParser) parseInstall(indent, lineNum int) (skills.Install, error) {
+	var inst skills.Install
 	seen := make(map[string]bool)
 
 	for {
@@ -508,29 +507,29 @@ func (p *tokParser) parseInstall(indent, lineNum int) (Install, error) {
 		}
 		p.advance()
 		if seen[t.key] {
-			return Install{}, fmt.Errorf("line %d: duplicate key %q in install", t.lineNum, t.key)
+			return skills.Install{}, fmt.Errorf("line %d: duplicate key %q in install", t.lineNum, t.key)
 		}
 		seen[t.key] = true
 		switch t.key {
 		case "defaultScope":
-			if t.val != "global" && t.val != "project" {
-				return Install{}, fmt.Errorf("line %d: install.defaultScope %q is not valid; must be 'global' or 'project'", t.lineNum, t.val)
+			if t.val != skills.ScopeGlobal && t.val != skills.ScopeProject {
+				return skills.Install{}, fmt.Errorf("line %d: install.defaultScope %q is not valid; must be 'global' or 'project'", t.lineNum, t.val)
 			}
 			inst.DefaultScope = t.val
 		case "targets":
 			targets, err := p.parseScalarSequence(indent+2, t.lineNum)
 			if err != nil {
-				return Install{}, err
+				return skills.Install{}, err
 			}
 			inst.Targets = targets
 		case "allowedProjects":
 			projects, err := p.parseScalarSequence(indent+2, t.lineNum)
 			if err != nil {
-				return Install{}, err
+				return skills.Install{}, err
 			}
 			inst.AllowedProjects = projects
 		default:
-			return Install{}, fmt.Errorf("line %d: unknown key %q in install", t.lineNum, t.key)
+			return skills.Install{}, fmt.Errorf("line %d: unknown key %q in install", t.lineNum, t.key)
 		}
 	}
 
@@ -538,8 +537,8 @@ func (p *tokParser) parseInstall(indent, lineNum int) (Install, error) {
 }
 
 // parseLifecycle parses the lifecycle mapping.
-func (p *tokParser) parseLifecycle(indent, lineNum int) (Lifecycle, error) {
-	var lc Lifecycle
+func (p *tokParser) parseLifecycle(indent, lineNum int) (skills.Lifecycle, error) {
+	var lc skills.Lifecycle
 	seen := make(map[string]bool)
 
 	for {
@@ -552,14 +551,14 @@ func (p *tokParser) parseLifecycle(indent, lineNum int) (Lifecycle, error) {
 		}
 		p.advance()
 		if seen[t.key] {
-			return Lifecycle{}, fmt.Errorf("line %d: duplicate key %q in lifecycle", t.lineNum, t.key)
+			return skills.Lifecycle{}, fmt.Errorf("line %d: duplicate key %q in lifecycle", t.lineNum, t.key)
 		}
 		seen[t.key] = true
 		switch t.key {
 		case "updateStrategy":
 			lc.UpdateStrategy = t.val
 		default:
-			return Lifecycle{}, fmt.Errorf("line %d: unknown key %q in lifecycle", t.lineNum, t.key)
+			return skills.Lifecycle{}, fmt.Errorf("line %d: unknown key %q in lifecycle", t.lineNum, t.key)
 		}
 	}
 
@@ -583,66 +582,4 @@ func (p *tokParser) parseScalarSequence(indent, lineNum int) ([]string, error) {
 	}
 
 	return items, nil
-}
-
-// --- schema validation ---
-
-var validSourceTypes = map[string]bool{"core": true, "custom": true, "external": true}
-var validTargets = map[string]bool{"claude": true, "opencode": true, "codex": true, "pi": true}
-var validUpdateStrategies = map[string]bool{"vendor-merge": true, "overlay-only": true}
-
-// validateEntry enforces the schema-level constraints on a single Entry.
-func validateEntry(e *Entry) error {
-	if e.ID == "" {
-		return fmt.Errorf("skills: entry is missing required field 'id'")
-	}
-	// R-003: path must be non-empty, relative, contain no ".." component,
-	// and already be Clean — this is the shared containment boundary
-	// pipkg relies on for both the source (overlayRoot/skills/<path>) and
-	// destination (skillsDir/<path>) joins; validateEntry stays
-	// filesystem-free by design (D4), so this check is pure string logic.
-	if e.Path == "" {
-		return fmt.Errorf("skills: entry %q: path must not be empty", e.ID)
-	}
-	if filepath.IsAbs(e.Path) {
-		return fmt.Errorf("skills: entry %q: path %q must be relative, not absolute", e.ID, e.Path)
-	}
-	if filepath.Clean(e.Path) != e.Path {
-		return fmt.Errorf("skills: entry %q: path %q must already be a clean relative path", e.ID, e.Path)
-	}
-	for _, part := range strings.Split(e.Path, "/") {
-		if part == ".." {
-			return fmt.Errorf("skills: entry %q: path %q must not contain a %q component", e.ID, e.Path, "..")
-		}
-	}
-	if !validSourceTypes[e.Source.Type] {
-		return fmt.Errorf("skills: entry %q: source.type %q is not valid; must be 'core', 'custom', or 'external'", e.ID, e.Source.Type)
-	}
-	if e.Source.Type == "custom" && e.Source.Upstream != nil {
-		return fmt.Errorf("skills: entry %q: source.upstream is not allowed when source.type is 'custom'", e.ID)
-	}
-	// WARNING-1: external entries must not carry an upstream block (ADR-11).
-	if e.Source.Type == "external" && e.Source.Upstream != nil {
-		return fmt.Errorf("skills: entry %q: source.upstream is not allowed when source.type is 'external'", e.ID)
-	}
-	if e.Source.Type == "core" && e.Source.Upstream != nil && e.Source.Upstream.Owner == "" {
-		return fmt.Errorf("skills: entry %q: source.upstream.owner must not be empty", e.ID)
-	}
-	// Scope enum is validated with a line number in parseInstall; by the time
-	// validateEntry runs, DefaultScope is always "global" or "project".
-	if e.Install.DefaultScope == "global" && len(e.Install.AllowedProjects) > 0 {
-		return fmt.Errorf("skills: entry %q: allowedProjects is only valid for project-scoped entries", e.ID)
-	}
-	if len(e.Install.Targets) == 0 {
-		return fmt.Errorf("skills: entry %q: install.targets must not be empty (R-007)", e.ID)
-	}
-	for _, target := range e.Install.Targets {
-		if !validTargets[target] {
-			return fmt.Errorf("skills: entry %q: install.targets contains invalid value %q; must be one of: claude, opencode, codex, pi", e.ID, target)
-		}
-	}
-	if !validUpdateStrategies[e.Lifecycle.UpdateStrategy] {
-		return fmt.Errorf("skills: entry %q: lifecycle.updateStrategy %q is not valid; must be 'vendor-merge' or 'overlay-only'", e.ID, e.Lifecycle.UpdateStrategy)
-	}
-	return nil
 }

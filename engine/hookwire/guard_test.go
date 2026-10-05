@@ -10,7 +10,9 @@ package hookwire_test
 // acknowledgement, must not stop it from capturing the receipts the acknowledgement burns.
 
 import (
+	"encoding/json"
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -62,8 +64,9 @@ func TestToolCallAcceptsWhatItCanRead(t *testing.T) {
 // closed, and says why in its denial with the decoder's own words, which the model reads. They
 // are kept byte for byte, though they name the type that was once decoded into (it was the
 // guard's own, in engine/shaper, before the hook format had one home) and the encoding/json
-// words for it; that is a wording an owner may want to change, and deleting legacyDetail in
-// hookwire is the whole of the change.
+// words for it; that is a wording an owner may want to change, and deleting
+// ClearanceGuardDetail is the whole of the change. Only that guard asks for these words: the
+// error of DecodeToolCall itself is the decoder's, with the name of the type it decodes into.
 func TestToolCallDetailsAreTheWordsTheClearanceGuardAlwaysPrinted(t *testing.T) {
 	const toolInputType = `struct { Command string "json:\"command\""; FilePath string "json:\"file_path\""; NotebookPath string "json:\"notebook_path\"" }`
 	for name, tc := range map[string]struct{ data, detail string }{
@@ -98,8 +101,35 @@ func TestToolCallDetailsAreTheWordsTheClearanceGuardAlwaysPrinted(t *testing.T) 
 			if got != (hookwire.ToolCall{}) {
 				t.Errorf("DecodeToolCall(%q) returned %+v with its error, want the zero value", tc.data, got)
 			}
-			if err.Error() != tc.detail {
-				t.Errorf("the detail of %q is %q, want %q", tc.data, err.Error(), tc.detail)
+			if detail := hookwire.ClearanceGuardDetail(err); detail != tc.detail {
+				t.Errorf("the detail of %q is %q, want %q", tc.data, detail, tc.detail)
+			}
+		})
+	}
+}
+
+// The clearance guard's wording is a rewrite of what encoding/json says, and it is a rewrite
+// of text: if the decoder stopped naming its target the way the rewrite expects (a rename of
+// the type, a new Go release), the rewrite would match nothing and the denial would leak the
+// new words without a word of warning. This test is that warning: it fails when the raw error
+// no longer holds what ClearanceGuardDetail replaces, and says so.
+func TestTheClearanceGuardsWordingStillRewritesWhatTheDecoderSays(t *testing.T) {
+	for name, tc := range map[string]struct{ data, named string }{
+		"a value that is not an object": {`[1]`, "Go value of type hookwire.guardHookInput"},
+		"a field of the object":         {`{"tool_input":"ls"}`, "Go struct field guardHookInput.tool_input"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := hookwire.DecodeToolCall([]byte(tc.data))
+			if err == nil {
+				t.Fatalf("DecodeToolCall(%q) = nil, want an error", tc.data)
+			}
+			if !strings.Contains(err.Error(), tc.named) {
+				t.Fatalf("the error of the decoder for %q is %q: it no longer says %q, so hookwire.ClearanceGuardDetail "+
+					"rewrites nothing and the clearance guard's denial would print the decoder's own type name; "+
+					"adjust the rewrite, or, if its wording is to change, delete it (an owner's decision)", tc.data, err.Error(), tc.named)
+			}
+			if detail := hookwire.ClearanceGuardDetail(err); strings.Contains(detail, "hookwire.") {
+				t.Errorf("the detail %q still names a type of hookwire", detail)
 			}
 		})
 	}
@@ -107,9 +137,48 @@ func TestToolCallDetailsAreTheWordsTheClearanceGuardAlwaysPrinted(t *testing.T) 
 
 func TestToolCallDetailKeepsTheErrorItWraps(t *testing.T) {
 	_, err := hookwire.DecodeToolCall([]byte(`{"tool_name":7}`))
-	var typeErr interface{ Unwrap() error }
-	if !errors.As(err, &typeErr) || typeErr.Unwrap() == nil {
+	var typeErr *json.UnmarshalTypeError
+	if !errors.As(err, &typeErr) {
 		t.Errorf("the error %v does not wrap the one of the JSON decoder", err)
+	}
+}
+
+// The clearance guard's wording is its own: another reader of the decoder's error, such as the
+// approve guard, which drops it, is not told the guard's package name for a type that has
+// nothing to do with it.
+func TestTheDecoderOfAToolCallDoesNotSpeakInTheClearanceGuardsWords(t *testing.T) {
+	_, err := hookwire.DecodeToolCall([]byte(`[1]`))
+	if err == nil || strings.Contains(err.Error(), "shaper.") {
+		t.Errorf("DecodeToolCall(an array) = %v, want an error that does not name the shaper", err)
+	}
+	if got := hookwire.ClearanceGuardDetail(errors.New("not a decoding error")); got != "not a decoding error" {
+		t.Errorf("ClearanceGuardDetail of another error = %q, want its own text", got)
+	}
+}
+
+// The bound is inclusive and the refusal is the one of the other decoders: ErrTooLarge, which
+// the clearance guard turns into a denial and the approve guard into an allow.
+func TestTheSizeBoundOfAToolCallIsInclusive(t *testing.T) {
+	pad := func(size int) []byte {
+		prefix, suffix := `{"tool_name":"Bash","tool_input":{"command":"ls","padding":"`, `"}}`
+		return []byte(prefix + strings.Repeat("x", size-len(prefix)-len(suffix)) + suffix)
+	}
+	got, err := hookwire.DecodeToolCall(pad(hookwire.MaxToolCallBytes))
+	if err != nil || got.Command != "ls" {
+		t.Errorf("an input of exactly the bound = %+v, %v, want it read", got, err)
+	}
+	got, err = hookwire.DecodeToolCall(pad(hookwire.MaxToolCallBytes + 1))
+	if !errors.Is(err, hookwire.ErrTooLarge) || got != (hookwire.ToolCall{}) {
+		t.Errorf("an input one byte over the bound = %+v, %v, want the zero value and ErrTooLarge", got, err)
+	}
+	if err != nil && !strings.Contains(err.Error(), strconv.Itoa(hookwire.MaxToolCallBytes)) {
+		t.Errorf("the refusal %q does not say what the bound is", err)
+	}
+	// An input over the bound is refused before it is read, whatever it holds: a call that
+	// would be denied is not judged either, and that is for the caller to answer.
+	over := []byte(`{"tool_name":"Bash","tool_input":{"command":"labdrian skills approve","padding":"` + strings.Repeat("x", hookwire.MaxToolCallBytes) + `"}}`)
+	if _, err := hookwire.DecodeToolCall(over); !errors.Is(err, hookwire.ErrTooLarge) {
+		t.Errorf("a matching command in an input over the bound = %v, want ErrTooLarge", err)
 	}
 }
 

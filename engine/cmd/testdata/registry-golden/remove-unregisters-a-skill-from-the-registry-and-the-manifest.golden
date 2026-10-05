@@ -1,0 +1,64 @@
+# a skill of several
+$ skills remove alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: beta
+    path: beta
+    source:
+      type: core
+      upstream:
+        owner: gentleman-programming
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+        - pi
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: ext-one
+    path: ext-one
+    source:
+      type: external
+      repo: https://example.test/org/ext-one
+      ref: v1.2.0
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: tidy-notes
+    path: tidy-notes
+    source:
+      type: custom
+    install:
+      defaultScope: project
+      targets:
+        - claude
+        - pi
+      allowedProjects:
+        - demo
+        - other
+    lifecycle:
+      updateStrategy: overlay-only
+
+--- overlay.manifest ---
+# the overlay manifest
+engine/go.mod managed
+beta/SKILL.md managed
+ext-one/SKILL.md custom
+tidy-notes/SKILL.md custom
+
+# the skill's files stay
+--- tree of skills/alpha ---
+.approval.json (194 bytes)
+SKILL.md (288 bytes)
+

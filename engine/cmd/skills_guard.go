@@ -9,11 +9,11 @@ package main
 // install-hooks and restart Claude Code. The tests feed it hook JSON directly.
 //
 // The decision is engine/skills' DecideApproveGuard, a pure function of the call;
-// this file only reads stdin (bounded), has engine/hookwire read it into a call,
-// calls it, and has hookwire write the result. It is a speed bump, not a security
-// boundary: it matches the command text and the file name, so it can be bypassed
-// (see engine/skills/approve_guard.go for the rule, the exemptions, and the known
-// bypasses).
+// this file only reads stdin (bounded by hookwire.MaxToolCallBytes), has
+// engine/hookwire read it into a call, calls it, and has hookwire write the
+// result. It is a speed bump, not a security boundary: it matches the command
+// text and the file name, so it can be bypassed (see engine/skills/approve_guard.go
+// for the rule, the exemptions, and the known bypasses).
 //
 // The contract with Claude Code is the projection hook's:
 //
@@ -46,21 +46,12 @@ import (
 // person runs and is not in the skills core's verb list.
 const skillsGuardVerb = "guard-hook"
 
-// approveGuardMaxInputBytes bounds the hook input the guard decides on. Input over the
-// bound is allowed, unjudged: the bound exists so that a hook that runs on every tool call
-// never reads without limit.
-const approveGuardMaxInputBytes = 8 << 20
-
-// beforeApproveGuardDecision is a test seam, nil outside tests. The hook calls it
-// before it decides, so a test can make the hook panic where a bug in it would.
-var beforeApproveGuardDecision func()
-
 // runSkillsWithStdin routes 'skills <verb>': the guard hook, which needs stdin,
 // or the skills core, which does not. Every exit(n) is followed by a return,
 // because tests inject a non-terminating exit.
 func runSkillsWithStdin(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
 	if len(args) > 0 && args[0] == skillsGuardVerb {
-		runSkillsGuardHook(args[1:], stdin, stdout, stderr, exit)
+		runSkillsGuardHook(args[1:], stdin, stdout, stderr, exit, nil)
 		return
 	}
 	runSkillsCore(verbFromArgs(args), args, stdout, stderr, exit)
@@ -68,7 +59,10 @@ func runSkillsWithStdin(args []string, stdin io.Reader, stdout, stderr io.Writer
 
 // runSkillsGuardHook implements 'skills guard-hook'. From the moment the command
 // line has been understood, nothing it does can change the exit code from 0.
-func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int)) {
+//
+// beforeDecision is called after the input has been read and before it is decided,
+// so a test can make the hook panic where a bug in it would; it is nil in the program.
+func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer, exit func(int), beforeDecision func()) {
 	if len(args) > 0 {
 		fmt.Fprintf(stderr, "error: skills guard-hook: unexpected argument %q (it takes none; the hook input is read from stdin)\n", args[0])
 		exit(1)
@@ -90,17 +84,18 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 			exit(0)
 		}
 	}()
-	// One byte past the bound is enough to see the input is over it, and no more
-	// of an endless input is ever read. Input over the bound is not judged.
-	raw, err := io.ReadAll(io.LimitReader(stdin, approveGuardMaxInputBytes+1))
+	// One byte past the bound (hookwire.MaxToolCallBytes, the bound of every guard) is
+	// enough to see the input is over it, and no more of an endless input is ever read.
+	// Input over the bound is not judged.
+	raw, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxToolCallBytes+1))
 	if err != nil {
 		exit(0)
 		return
 	}
-	if beforeApproveGuardDecision != nil {
-		beforeApproveGuardDecision()
+	if beforeDecision != nil {
+		beforeDecision()
 	}
-	verdict := decideApproveGuard(raw)
+	verdict := approveGuardVerdictFor(raw)
 	if verdict.Deny {
 		out, err := hookwire.PreToolUseReply{Deny: true, Reason: verdict.Reason}.Encode()
 		if err == nil {
@@ -110,13 +105,11 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	exit(0)
 }
 
-// decideApproveGuard reads the hook input into a call and decides it. Input it cannot read, and
-// input over the bound, are let through unjudged: a guard that blocked what it could not read
-// would block every Bash and file-edit call of the session.
-func decideApproveGuard(raw []byte) skills.ApproveGuardVerdict {
-	if len(raw) > approveGuardMaxInputBytes {
-		return skills.ApproveGuardVerdict{}
-	}
+// approveGuardVerdictFor reads the hook input into a call and hands it to the policy, whose
+// decision is skills.DecideApproveGuard. Input it cannot read, and input over the bound (which
+// hookwire refuses as it refuses any other it cannot read), are let through unjudged: a guard
+// that blocked what it could not read would block every Bash and file-edit call of the session.
+func approveGuardVerdictFor(raw []byte) skills.ApproveGuardVerdict {
 	call, err := hookwire.DecodeToolCall(raw)
 	if err != nil {
 		return skills.ApproveGuardVerdict{}
