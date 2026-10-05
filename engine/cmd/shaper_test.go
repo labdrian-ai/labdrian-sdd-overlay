@@ -557,17 +557,55 @@ func TestShaperGuardHook_DeniesWhatIsOverTheBound(t *testing.T) {
 		t.Errorf("an unrelated write of exactly the bound: exit %d stderr %q, want it judged and allowed", at.code, at.stderr)
 	}
 	atMarked := runShaperTest([]string{"guard-hook"}, padded(`{"tool_name":"Bash","tool_input":{"command":"shaper clearance record `, hookwire.MaxToolCallBytes))
-	if atMarked.code != 2 || strings.Contains(atMarked.stderr, "could not be decoded") {
+	if atMarked.code != 2 || strings.Contains(atMarked.stderr, "too large") {
 		t.Errorf("a command naming the record verb, of exactly the bound: exit %d stderr %q, want it judged and denied for the command", atMarked.code, atMarked.stderr)
 	}
 	over := runShaperTest([]string{"guard-hook"}, padded(write, hookwire.MaxToolCallBytes+1))
 	if over.code != 2 {
 		t.Fatalf("an unrelated write one byte over the bound: exit %d, want 2: the guard fails closed", over.code)
 	}
-	for _, want := range []string{"speed bump", "hook input could not be decoded", "exceeds the maximum", strconv.Itoa(hookwire.MaxToolCallBytes)} {
-		if !strings.Contains(over.stderr, want) {
-			t.Errorf("the denial %q does not say %q", over.stderr, want)
-		}
+	wantEnding := " (this tool call is larger than the " + strconv.Itoa(hookwire.MaxToolCallBytes) + " bytes the guard reads, so the guard denied it; send a smaller call)\n"
+	if !strings.HasPrefix(over.stderr, shaperGuardDenial) || !strings.HasSuffix(over.stderr, wantEnding) {
+		t.Errorf("the denial is %q, want the guard's message and then %q", over.stderr, wantEnding)
+	}
+}
+
+// shaperGuardDenial is the start of every denial of the clearance guard, the same for a call that
+// names the record and for one the guard could not read.
+const shaperGuardDenial = "labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human"
+
+// The denial for a call the guard cannot read is one stable sentence, the same for every shape
+// the call can have: it says what the guard could not read and what to do, and it carries
+// nothing of the JSON library or of the type the call is read into, which are not the model's to
+// depend on and change with a Go release or a rename.
+func TestShaperGuardHook_TheDenialOfAShapeItCannotReadIsOneStableSentence(t *testing.T) {
+	const wantEnding = " (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)\n"
+	for name, in := range map[string]string{
+		"empty":                    ``,
+		"not JSON":                 `hello`,
+		"a truncated object":       `{"tool_name":"Bash","tool_input":{"command":"ls"`,
+		"two objects":              `{"tool_name":"Bash"}{"tool_name":"Bash"}`,
+		"an array":                 `[1]`,
+		"a string":                 `"Bash"`,
+		"tool_name a number":       `{"tool_name":7}`,
+		"tool_input a string":      `{"tool_input":"ls"}`,
+		"tool_input an array":      `{"tool_input":[1]}`,
+		"command a number":         `{"tool_input":{"command":5}}`,
+		"file_path an object":      `{"tool_input":{"file_path":{}}}`,
+		"notebook_path a boolean":  `{"tool_input":{"notebook_path":false}}`,
+		"two fields of wrong type": `{"tool_name":7,"tool_input":{"command":5}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			r := runShaperTest([]string{"guard-hook"}, in)
+			if r.code != 2 || !strings.HasPrefix(r.stderr, shaperGuardDenial) || !strings.HasSuffix(r.stderr, wantEnding) || strings.Count(r.stderr, "\n") != 1 {
+				t.Errorf("exit %d, stderr %q: want exit 2 and the guard's message, then %q", r.code, r.stderr, wantEnding)
+			}
+			for _, leak := range []string{"json", "JSON", "Go ", "guardHookInput", "unmarshal", "struct", "hookwire", "shaper."} {
+				if strings.Contains(r.stderr, leak) {
+					t.Errorf("the denial %q carries %q, a word of the implementation", r.stderr, leak)
+				}
+			}
+		})
 	}
 }
 
@@ -578,7 +616,7 @@ func TestShaperGuardHook_ReadsAtMostTheBoundPlusOneByte(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	var codes []int
 	runShaperCore([]string{"guard-hook"}, src, &out, &errBuf, func(c int) { codes = append(codes, c) })
-	if !reflect.DeepEqual(codes, []int{2}) || !strings.Contains(errBuf.String(), "exceeds the maximum") {
+	if !reflect.DeepEqual(codes, []int{2}) || !strings.Contains(errBuf.String(), "is larger than the") {
 		t.Errorf("exits %v, stderr %q, want a denial that names the bound", codes, errBuf.String())
 	}
 	// endlessReader (projection_hook_test.go) counts the bytes it was asked for.

@@ -75,17 +75,20 @@ func TestDecideGuard(t *testing.T) {
 }
 
 // The guard fails closed: input the hook adapter could not read is denied, because a guard
-// that cannot see the call cannot vouch for it. The denial says why.
-func TestGuardUnreadableDeniesWithTheReason(t *testing.T) {
-	v := GuardUnreadable("unexpected end of JSON input")
-	if !v.Deny {
-		t.Fatalf("GuardUnreadable() = %+v, want a denial", v)
+// that cannot see the call cannot vouch for it. The denial is one fixed sentence.
+func TestGuardUnreadableDeniesWithOneStableSentence(t *testing.T) {
+	v := GuardUnreadable()
+	want := guardDenyMessage + " (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)"
+	if !v.Deny || v.Reason != want {
+		t.Errorf("GuardUnreadable() = %+v, want a denial with reason %q", v, want)
 	}
-	want := guardDenyMessage + " (hook input could not be decoded: unexpected end of JSON input)"
-	if v.Reason != want {
-		t.Errorf("reason %q, want %q", v.Reason, want)
-	}
-	if v := GuardUnreadable(""); !v.Deny || !strings.HasPrefix(v.Reason, guardDenyMessage) {
-		t.Errorf("GuardUnreadable(\"\") = %+v, want a denial that starts with the guard's message", v)
+}
+
+// A call over the bound is denied too, and the denial names the bound.
+func TestGuardTooLargeDeniesNamingTheBound(t *testing.T) {
+	v := GuardTooLarge(8388608)
+	want := guardDenyMessage + " (this tool call is larger than the 8388608 bytes the guard reads, so the guard denied it; send a smaller call)"
+	if !v.Deny || v.Reason != want {
+		t.Errorf("GuardTooLarge(8388608) = %+v, want a denial with reason %q", v, want)
 	}
 }

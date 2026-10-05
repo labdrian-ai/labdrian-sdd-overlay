@@ -2,10 +2,7 @@ package hookwire
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
-	"reflect"
-	"strings"
 )
 
 // --- what the guards read ---------------------------------------------------------------
@@ -28,12 +25,6 @@ type ToolCall struct {
 // three fields of its input that a guard reads. A field of these of the wrong type, and a
 // tool_input that is not an object, fail the decoding; every other field is ignored, of
 // whatever type.
-//
-// The shape of tool_input (the order of its fields and their tags) is part of what the decoder
-// says when it fails, and that is part of what the model reads in a denial
-// (ClearanceGuardDetail), so it is not to be changed while that wording is kept. The type's
-// name is not: the denial names it by constants, found in the decoder's words through the type
-// itself.
 type guardHookInput struct {
 	ToolName  string `json:"tool_name"`
 	ToolInput struct {
@@ -52,55 +43,17 @@ type guardHookInput struct {
 // object.
 //
 // The error of a value that could not be decoded wraps the one of the JSON decoder, in its
-// words. The clearance guard fails closed and shows the model why; the words it has always
-// shown are ClearanceGuardDetail's.
+// words. Those are for logs and tests: a guard that denies for it words the denial itself, so
+// that what the model reads does not depend on the decoder or on the type it decodes into.
 func DecodeToolCall(data []byte) (ToolCall, error) {
 	if len(data) > MaxToolCallBytes {
 		return ToolCall{}, tooLarge("decode tool call", len(data), MaxToolCallBytes)
 	}
 	var in guardHookInput
 	if err := json.Unmarshal(data, &in); err != nil {
-		return ToolCall{}, &toolCallError{cause: err}
+		return ToolCall{}, fmt.Errorf("decode tool call: %w", err)
 	}
 	return ToolCall{Name: in.ToolName, Command: in.ToolInput.Command, FilePath: in.ToolInput.FilePath, NotebookPath: in.ToolInput.NotebookPath}, nil
-}
-
-// toolCallError is the failure of DecodeToolCall to decode its input as JSON.
-type toolCallError struct{ cause error }
-
-func (e *toolCallError) Error() string { return "decode tool call: " + e.cause.Error() }
-func (e *toolCallError) Unwrap() error { return e.cause }
-
-// The wording of the clearance guard's denial for an input it could not decode is the decoder's
-// own, as it has always been, and it names the type that was decoded into as it was named
-// when that type was the guard's own, in engine/shaper: "shaper.guardHookInput" for a value
-// that is not an object, and "guardHookInput" for a field of one. Both are written here and
-// nowhere else, and are found in the decoder's words by the type itself (guardViewType), not
-// by a copy of its name, so renaming the type does not change a byte of what the guard says.
-const (
-	legacyViewPackage = "shaper"
-	legacyViewName    = "guardHookInput"
-)
-
-// guardViewType is the type DecodeToolCall decodes into, whose name encoding/json puts in the
-// error it returns.
-var guardViewType = reflect.TypeOf(guardHookInput{})
-
-// ClearanceGuardDetail is the text of the error err of DecodeToolCall as the clearance guard has
-// always printed it in a denial: the JSON decoder's own words, with the name of the type that was
-// decoded into as it was before the hook format had one home. It is for that guard alone, which
-// is the only reader of the error that shows it. An error that is not the decoder's, such as the
-// refusal of an input that is too large, is told in its own words.
-//
-// Deleting this function and printing err.Error() in its place is a change to the text of a
-// denial, and an owner's to make.
-func ClearanceGuardDetail(err error) string {
-	var failure *toolCallError
-	if !errors.As(err, &failure) {
-		return err.Error()
-	}
-	text := strings.Replace(failure.cause.Error(), guardViewType.String(), legacyViewPackage+"."+legacyViewName, 1)
-	return strings.Replace(text, "struct field "+guardViewType.Name()+".", "struct field "+legacyViewName+".", 1)
 }
 
 // commandHookInput is the view of a PreToolUse input the review-receipt hook decodes: the tool's
