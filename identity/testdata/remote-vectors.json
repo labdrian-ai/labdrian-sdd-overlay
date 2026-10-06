@@ -1,0 +1,126 @@
+[
+  {
+    "url": "git@github.com:acme/widgets.git",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "https://github.com/acme/widgets",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "https://github.com/acme/widgets.git",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "ssh://git@github.com/acme/widgets.git",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "https://github.com/acme/widgets/",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "https://github.com/acme/widgets.git/",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "HTTPS://GitHub.COM/Acme/Widgets.git",
+    "want": "github.com/Acme/Widgets"
+  },
+  {
+    "url": "github.com:acme/widgets",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "git@GitHub.com:Acme/Widgets.git",
+    "want": "github.com/Acme/Widgets"
+  },
+  {
+    "url": "ssh://git@host.example:2222/x/y.git",
+    "want": "host.example:2222/x/y"
+  },
+  {
+    "url": "https://host.example:8443/x/y",
+    "want": "host.example:8443/x/y"
+  },
+  {
+    "url": "https://user:secret@host.example/x/y.git",
+    "want": "host.example/x/y"
+  },
+  {
+    "url": "https://github.com/acme/widgets.GIT",
+    "want": "github.com/acme/widgets.GIT"
+  },
+  {
+    "url": "https://github.com/acme/widgets.git.git",
+    "want": "github.com/acme/widgets.git"
+  },
+  {
+    "url": "https://github.com/",
+    "want": ""
+  },
+  {
+    "url": "https://github.com",
+    "want": ""
+  },
+  {
+    "url": "git@github.com:",
+    "want": ""
+  },
+  {
+    "url": "git@github.com:/acme/widgets.git",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "file:///srv/git/widgets.git",
+    "want": ""
+  },
+  {
+    "url": "FILE:///srv/git/widgets.git",
+    "want": ""
+  },
+  {
+    "url": "/srv/git/widgets.git",
+    "want": ""
+  },
+  {
+    "url": "../widgets",
+    "want": ""
+  },
+  {
+    "url": "widgets",
+    "want": ""
+  },
+  {
+    "url": "",
+    "want": ""
+  },
+  {
+    "url": "   ",
+    "want": ""
+  },
+  {
+    "url": "  https://github.com/acme/widgets.git  ",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "https://@github.com/acme/widgets",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "url": "https:///acme/widgets",
+    "want": ""
+  },
+  {
+    "url": "C:/work/widgets",
+    "want": "c/work/widgets"
+  },
+  {
+    "url": "https://gitlab.example/group/sub/group/project.git",
+    "want": "gitlab.example/group/sub/group/project"
+  },
+  {
+    "url": "git@gitlab.example:group/sub/project.git",
+    "want": "gitlab.example/group/sub/project"
+  }
+]
