@@ -22,27 +22,29 @@ import (
 // unreadable store from an unusable registry with errors.As, so an adapter that wraps its
 // error still answers. It is pure and reaches nothing the list exists to keep out.
 //
-// The single module-internal exception is pathguardImport, a pure
-// path-containment helper. Its own imports are held to this same allowlist by
-// TestZeroFetchCoversPathguardImports, so the exception cannot widen the
-// transitive surface of engine/skills.
+// The module-internal exceptions are pathguardImport, a pure path-containment helper, and
+// jsonstrictImport (Phase 9, H19), the strict JSON checks the two records the domain reads are
+// decoded through. Their own imports are held to this same allowlist by
+// TestZeroFetchCoversPathguardImports and TestZeroFetchCoversJsonstrictImports, so the exceptions
+// cannot widen the transitive surface of engine/skills.
 var allowedImports = map[string]bool{
-	"bufio":         true,
-	"bytes":         true,
-	"crypto/sha256": true,
-	"encoding/hex":  true,
-	"encoding/json": true,
-	"errors":        true,
-	"fmt":           true,
-	"io":            true,
-	"io/fs":         true,
-	"path":          true,
-	"path/filepath": true,
-	"reflect":       true,
-	"regexp":        true,
-	"sort":          true,
-	"strings":       true,
-	pathguardImport: true,
+	"bufio":          true,
+	"bytes":          true,
+	"crypto/sha256":  true,
+	"encoding/hex":   true,
+	"encoding/json":  true,
+	"errors":         true,
+	"fmt":            true,
+	"io":             true,
+	"io/fs":          true,
+	"path":           true,
+	"path/filepath":  true,
+	"reflect":        true,
+	"regexp":         true,
+	"sort":           true,
+	"strings":        true,
+	pathguardImport:  true,
+	jsonstrictImport: true,
 }
 
 // pathguardDebtImports is what engine/pathguard imports beyond allowedImports: the file system
@@ -53,7 +55,18 @@ var pathguardDebtImports = map[string]string{
 	"os": "H22",
 }
 
-// pathguardImport is the only module-internal package engine/skills may import.
+// jsonstrictImportExtras is what engine/jsonstrict imports beyond allowedImports: the UTF-8 check,
+// pure like the rest of the standard library it uses.
+var jsonstrictImportExtras = map[string]bool{
+	"unicode/utf8": true,
+}
+
+// jsonstrictImport is the second module-internal package engine/skills may import: the strict
+// decoding of the approval record and the project lock (H19, decision D4). Like pathguardImport it
+// is exempted from the git-package ban by exact match, never by prefix.
+const jsonstrictImport = "github.com/labdrian-ai/labdrian-sdd-overlay/engine/jsonstrict"
+
+// pathguardImport is a module-internal package engine/skills may import.
 // Its path contains "git" only through the github.com module host, so it is
 // exempted from the git-package ban by exact match, never by prefix.
 const pathguardImport = "github.com/labdrian-ai/labdrian-sdd-overlay/engine/pathguard"
@@ -112,7 +125,7 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 			t.Errorf("allowedImports must never contain %q", imp)
 		case imp == "net" || strings.HasPrefix(imp, "net/"):
 			t.Errorf("allowedImports must never contain the net package %q", imp)
-		case imp != pathguardImport && strings.Contains(imp, "git"):
+		case imp != pathguardImport && imp != jsonstrictImport && strings.Contains(imp, "git"):
 			t.Errorf("allowedImports must never contain a git-related package %q", imp)
 		}
 	}
@@ -124,9 +137,9 @@ func TestZeroFetchAllowlistExcludesExecAndNet(t *testing.T) {
 		}
 	}
 	// 15 stdlib packages (errors is the one the registry port added, os the one Phase 9 unit H17
-	// took away) plus the reviewer-approved pathguardImport exception.
-	if len(allowedImports) != 16 {
-		t.Errorf("len(allowedImports) = %d, want 16 — widen it only after reviewer approval", len(allowedImports))
+	// took away) plus the reviewer-approved pathguardImport and jsonstrictImport exceptions.
+	if len(allowedImports) != 17 {
+		t.Errorf("len(allowedImports) = %d, want 17 — widen it only after reviewer approval", len(allowedImports))
 	}
 	if allowedImports["os"] {
 		t.Error(`"os" is in allowedImports: engine/skills reaches the file system through its ports (Phase 9 unit H17), and engine/skills/skillsfs is the one place that imports os`)
@@ -168,5 +181,38 @@ func TestZeroFetchCoversPathguardImports(t *testing.T) {
 	}
 	if totalFiles == 0 {
 		t.Fatal("no production .go files found under ../pathguard; the transitive guard walk may be broken")
+	}
+}
+
+// TestZeroFetchCoversJsonstrictImports is TestZeroFetchCoversPathguardImports for jsonstrictImport:
+// every import in the production files of engine/jsonstrict must be an allowlisted stdlib package or
+// one of its pure extras, so nothing else can reach engine/skills transitively through it.
+func TestZeroFetchCoversJsonstrictImports(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, filepath.Join("..", "jsonstrict"), func(fi fs.FileInfo) bool {
+		return !strings.HasSuffix(fi.Name(), "_test.go")
+	}, parser.ImportsOnly)
+	if err != nil {
+		t.Fatalf("go/parser.ParseDir(../jsonstrict): %v", err)
+	}
+
+	totalFiles := 0
+	for _, pkg := range pkgs {
+		for filename, file := range pkg.Files {
+			totalFiles++
+			base := filepath.Base(filename)
+			for _, imp := range file.Imports {
+				path := strings.Trim(imp.Path.Value, `"`)
+				if jsonstrictImportExtras[path] {
+					continue
+				}
+				if path == jsonstrictImport || path == pathguardImport || !allowedImports[path] {
+					t.Errorf("engine/jsonstrict imports %q in %s; it may import only allowlisted stdlib packages", path, base)
+				}
+			}
+		}
+	}
+	if totalFiles == 0 {
+		t.Fatal("no production .go files found under ../jsonstrict; the transitive guard walk may be broken")
 	}
 }

@@ -18,12 +18,13 @@ func (v violation) edge() string { return v.from + " -> " + v.target }
 
 // checker judges the production code of one module against the declared rings.
 type checker struct {
-	modulePath string
-	rings      map[string]Ring
-	packages   []sourcePackage
+	modulePath  string
+	rings       map[string]Ring
+	packages    []sourcePackage
+	pureModules []string
 }
 
-func newChecker(root string, rings map[string]Ring) (*checker, error) {
+func newChecker(root string, rings map[string]Ring, pureModules ...string) (*checker, error) {
 	modulePath, err := readModulePath(root)
 	if err != nil {
 		return nil, err
@@ -32,7 +33,7 @@ func newChecker(root string, rings map[string]Ring) (*checker, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &checker{modulePath: modulePath, rings: rings, packages: packages}, nil
+	return &checker{modulePath: modulePath, rings: rings, packages: packages, pureModules: pureModules}, nil
 }
 
 // violations returns every broken edge in the packages that declare a ring, in a
@@ -97,6 +98,9 @@ func (c *checker) judgeReference(r Ring, ref reference) (target, rule string) {
 	if !r.pure() {
 		return ref.pkg, ""
 	}
+	if c.pureModuleOf(ref.pkg) != "" {
+		return ref.pkg, ""
+	}
 	if isStandard(ref.pkg) {
 		if pureStd[ref.pkg] {
 			return ref.pkg, ""
@@ -115,6 +119,39 @@ func (c *checker) judgeInternalImport(r Ring, dir string) string {
 		return fmt.Sprintf("%s packages may import only %s packages inside the module, and %s is %s", r, r.describeImportable(), dir, got)
 	}
 	return ""
+}
+
+// pureModuleOf returns the pure module an import path belongs to: the module itself or one of its
+// packages, never a module whose path only starts the same way. It returns "" for any other path.
+func (c *checker) pureModuleOf(importPath string) string {
+	for _, module := range c.pureModules {
+		if importPath == module || strings.HasPrefix(importPath, module+"/") {
+			return module
+		}
+	}
+	return ""
+}
+
+// unusedPureModules lists the pure modules that no package of this module imports.
+func (c *checker) unusedPureModules() []string {
+	used := map[string]bool{}
+	for _, pkg := range c.packages {
+		for _, ref := range pkg.refs {
+			if ref.kind == refImport {
+				if module := c.pureModuleOf(ref.pkg); module != "" {
+					used[module] = true
+				}
+			}
+		}
+	}
+	var unused []string
+	for _, module := range c.pureModules {
+		if !used[module] {
+			unused = append(unused, module)
+		}
+	}
+	sort.Strings(unused)
+	return unused
 }
 
 // moduleDir maps an import path of this module to its directory under the root.

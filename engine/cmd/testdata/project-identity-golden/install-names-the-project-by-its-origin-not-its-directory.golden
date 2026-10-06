@@ -1,0 +1,39 @@
+# a repository named demo whose origin is github.com/acme/demo: the skill admitted to the origin
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md (296 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md (296 bytes)
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (255 bytes)
+
+--- demo/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [],
+  "installs": [
+    {
+      "id": "by-origin",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2af0782881ff92ce4cce74656f820ce43119ab8306f75a0a30eed5aba30e3ecf"
+        }
+      ]
+    }
+  ]
+}
+

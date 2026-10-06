@@ -150,7 +150,7 @@ func TestInstallTakesTheOverlayLockBeforeTheProjectLockAndReleasesThemInReverse(
 	f := newInstallFixture(t)
 	locker := &recordingLocker{}
 
-	r := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
+	r := f.runAt("install", f.installArgs(), os.ReadFile, nil, locker)
 	if r.code != 0 {
 		t.Fatalf("exit %d, stderr=%q", r.code, r.stderr)
 	}
@@ -232,7 +232,7 @@ func TestInstallReleasesTheOverlayLockWhenTheProjectLockIsBusy(t *testing.T) {
 	overlay := RegistryLockPath(f.reg)
 	locker := &recordingLocker{failOn: map[string]error{f.project: busyErr{f.project}}}
 
-	r := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
+	r := f.runAt("install", f.installArgs(), os.ReadFile, nil, locker)
 
 	if r.code != ExitBusy || !strings.Contains(r.stderr, "the project "+f.project) {
 		t.Errorf("exit %d, stderr %q, want exit 2 naming the project", r.code, r.stderr)

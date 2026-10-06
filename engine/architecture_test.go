@@ -38,6 +38,11 @@ import (
 //   - skills/skillsfs is the adapter of the skills domain's file-facing ports (H17): the tree of
 //     skills an overlay keeps, and the files of a project and the staged writes of an overlay.
 //     It is the one place engine/skills reaches the operating system through.
+//   - skills/projectidentity is the adapter of the skills domain's ProjectIdentity port (H18): the
+//     sources that name the project a directory is (the id the person gave, the origin remote read
+//     from .git/config without running git, the name of the directory) and the chain that asks them
+//     in order. The rule that reduces a remote url to a name is the identity module's, shared with
+//     longterm-mem (D2); the order of the chain is the composition root's.
 //   - installer, shelltest, capabilitytest, shaper/shapertest (the documents the shaper's
 //     tests share), reviewreceipt/receipttest (the review documents the receipt capture's
 //     tests share) and this guard (the module root) are test-only.
@@ -77,6 +82,7 @@ var rings = map[string]archguard.Ring{
 	"shaper/shapertest":         archguard.Support,
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
+	"skills/projectidentity":    archguard.Adapter,
 	"skills/registryyaml":       archguard.Adapter,
 	"skills/skillsfs":           archguard.Adapter,
 	"statestore":                archguard.Adapter,

@@ -1,0 +1,44 @@
+# a linked worktree of demo is the project its origin names
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in feature-x)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+--- tree of feature-x ---
+.agents/
+.agents/skills/
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md
+.claude/
+.claude/skills/
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md
+.git
+.labdrian/
+.labdrian/procedural-skills.lock.json
+
+# and with --project-id demo it is the project named demo
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in feature-x)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+
+--- tree of feature-x ---
+.agents/
+.agents/skills/
+.agents/skills/by-directory/
+.agents/skills/by-directory/SKILL.md
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md
+.claude/
+.claude/skills/
+.claude/skills/by-directory/
+.claude/skills/by-directory/SKILL.md
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md
+.git
+.labdrian/
+.labdrian/procedural-skills.lock.json
+

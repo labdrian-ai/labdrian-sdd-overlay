@@ -56,7 +56,7 @@ func TestValidateThatRacedTheFirstWriterReadsAgainUnderTheRealLock(t *testing.T)
 	readFile, _ := firstWriterDuringTheRead(t, f, "newbie")
 	locker := &recordingLocker{}
 
-	r := runAt("validate", f.flags(), readFile, nil, locker)
+	r := f.runAt("validate", f.flags(), readFile, nil, locker)
 
 	if r.code != 0 || r.stderr != "" {
 		t.Fatalf("exit %d, stderr %q: validate reported the torn state it read while the first writer ran", r.code, r.stderr)
@@ -86,7 +86,7 @@ func TestValidateWithNoLockFileAndNoWriterReadsOnce(t *testing.T) {
 		return os.ReadFile(name)
 	}
 
-	r := runAt("validate", f.flags(), readFile, nil, locker)
+	r := f.runAt("validate", f.flags(), readFile, nil, locker)
 
 	if r.code != 0 || !strings.Contains(r.stdout, "aligned (1 skills)") {
 		t.Fatalf("exit %d, stdout %q, stderr %q", r.code, r.stdout, r.stderr)
@@ -105,7 +105,7 @@ func TestValidateReportsARealDivergenceFromTheBufferedReadOnce(t *testing.T) {
 	f := newLockFixture(t).withSkills(t, "unregistered")
 	locker := &recordingLocker{}
 
-	r := runAt("validate", f.flags(), os.ReadFile, nil, locker)
+	r := f.runAt("validate", f.flags(), os.ReadFile, nil, locker)
 
 	if r.code != 1 || !strings.Contains(r.stderr, "unregistered") {
 		t.Fatalf("exit %d, stderr %q, want exit 1 naming the unregistered skill", r.code, r.stderr)
@@ -132,7 +132,7 @@ func TestValidateUnderARealLockIsNotRepeated(t *testing.T) {
 		return os.ReadFile(name)
 	}
 
-	if r := runAt("validate", f.flags(), readFile, nil, locker); r.code != 0 {
+	if r := f.runAt("validate", f.flags(), readFile, nil, locker); r.code != 0 {
 		t.Fatalf("exit %d, stderr %q", r.code, r.stderr)
 	}
 	if reads != 1 {
@@ -154,7 +154,7 @@ func TestValidateGivesUpWhenTheLockFileKeepsAppearingAndVanishing(t *testing.T) 
 		return os.ReadFile(name)
 	}
 
-	r := runAt("validate", f.flags(), readFile, nil, locker)
+	r := f.runAt("validate", f.flags(), readFile, nil, locker)
 
 	if r.code != ExitBusy || r.stdout != "" {
 		t.Fatalf("exit %d, stdout %q, stderr %q, want exit %d and nothing on stdout", r.code, r.stdout, r.stderr, ExitBusy)
@@ -197,7 +197,7 @@ func TestValidateRefusesWithTheRealReasonWhenTheLockFileCannotBeInspected(t *tes
 		return os.ReadFile(name)
 	}
 
-	r := runAt("validate", f.flags(), readFile, nil, locker)
+	r := f.runAt("validate", f.flags(), readFile, nil, locker)
 
 	if r.code != 1 || r.stdout != "" {
 		t.Fatalf("exit %d, stdout %q, stderr %q, want exit 1 and nothing on stdout", r.code, r.stdout, r.stderr)

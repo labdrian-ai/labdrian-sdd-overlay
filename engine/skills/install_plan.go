@@ -44,7 +44,7 @@ type InstallInput struct {
 	ProjectRoot string
 	// ProjectID is the --project-id install was given; it is only put in the
 	// refusal that points at adopt.
-	ProjectID  string
+	ProjectID  ProjectID
 	Skills     []InstallSkill
 	LockData   []byte
 	LockExists bool

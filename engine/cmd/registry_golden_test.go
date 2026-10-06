@@ -391,13 +391,21 @@ func TestEveryVerbTheGoldenHeaderNamesHasAGoldenCase(t *testing.T) {
 // ones of the Pi runtime (which the header names as a group, "the Pi runtime verbs"), ends in a
 // verb the header names.
 func checkTheListIsTheHeader(t *testing.T, claimed []string) {
+	const (
+		headerStart = "// The golden files under"
+		headerEnd   = "var updateRegistryGolden"
+	)
 	t.Helper()
 	source, err := os.ReadFile("registry_golden_test.go")
 	if err != nil {
 		t.Fatal(err)
 	}
 	text := string(source)
-	header := text[strings.Index(text, "// The golden files under"):strings.Index(text, "var updateRegistryGolden")]
+	from, to := strings.Index(text, headerStart), strings.Index(text, headerEnd)
+	if from < 0 || to < from {
+		t.Fatalf("registry_golden_test.go has no header between %q and %q: the check that holds the list to the header cannot find it, so say where the header is here", headerStart, headerEnd)
+	}
+	header := text[from:to]
 	named := regexp.MustCompile(`'([a-z -]+)'`).FindAllStringSubmatch(header, -1)
 	if len(named) == 0 {
 		t.Fatal("the header of registry_golden_test.go names no verb in quotes")

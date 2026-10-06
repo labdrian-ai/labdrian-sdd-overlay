@@ -1,0 +1,9 @@
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parse project lock: duplicate JSON object key "version"
+
+--- project/.labdrian/procedural-skills.lock.json ---
+{"version": 1, "version": 1, "skills": []}
+

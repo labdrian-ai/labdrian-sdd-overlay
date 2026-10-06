@@ -1,0 +1,60 @@
+# adopt with nothing installed names the id it would install under
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill by-origin is not installed in this project (neither .claude/skills/by-origin nor .agents/skills/by-origin exists), so there is nothing to adopt; run `labdrian skills install --project-id github.com/acme/demo`
+error: skills adopt: refused, so nothing was adopted
+
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id chosen (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill by-choice is not installed in this project (neither .claude/skills/by-choice nor .agents/skills/by-choice exists), so there is nothing to adopt; run `labdrian skills install --project-id chosen`
+error: skills adopt: refused, so nothing was adopted
+
+# install over a directory it did not install names the id it would adopt under
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+# adopt of a skill that is in one runtime only notes where it is not, under the id
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+unchanged: by-origin
+--- stderr ---
+
+--- demo/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [],
+  "installs": [
+    {
+      "id": "by-origin",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2af0782881ff92ce4cce74656f820ce43119ab8306f75a0a30eed5aba30e3ecf"
+        }
+      ]
+    }
+  ]
+}
+
+# adopt of a skill installed and then changed in the source names the id to install under
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+unchanged: by-origin
+--- stderr ---
+
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: .claude/skills/by-directory is not exactly the current skill, so it cannot be adopted: SKILL.md has other bytes
+error: skills adopt: refused, so nothing was adopted
+

@@ -158,10 +158,11 @@ skills:
 		// The mock registry has only global skills → empty plan → exit 0 with notice.
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		skillsCoreUnlocked(
+		skillsCoreAtIn(
+			inDir(t.TempDir()),
 			"install",
 			[]string{"--registry", "reg.yaml", "--source-root", "/nonexistent", "--project-id", "test-project"},
-			skillsMockReadFile,
+			skillsMockReadFile, testRegistries(skillsMockReadFile), nil, noopLocker{},
 			&out, &errBuf,
 			func(c int) { exitCode = c },
 		)

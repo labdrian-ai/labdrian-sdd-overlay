@@ -1817,6 +1817,9 @@ func TestApply_InvokesLongtermMemInstallOnceForMcpRow(t *testing.T) {
 
 	copyTree(t, filepath.Join(repoRoot, "engine"), filepath.Join(overlayDir, "engine"))
 	copyTree(t, filepath.Join(repoRoot, "longterm-mem"), filepath.Join(overlayDir, "longterm-mem"))
+	// longterm-mem requires identity through a local replace (../identity), so the build the hook
+	// runs finds the module beside it as it does in the whole repository.
+	copyTree(t, filepath.Join(repoRoot, "identity"), filepath.Join(overlayDir, "identity"))
 
 	runGit := func(dir string, args ...string) {
 		t.Helper()

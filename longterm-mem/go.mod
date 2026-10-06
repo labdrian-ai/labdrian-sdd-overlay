@@ -4,6 +4,7 @@ go 1.26.1
 
 require (
 	github.com/labdrian-ai/labdrian-sdd-overlay/archguard v0.0.0
+	github.com/labdrian-ai/labdrian-sdd-overlay/identity v0.0.0
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/pelletier/go-toml/v2 v2.4.3
 	modernc.org/sqlite v1.57.0
@@ -29,3 +30,4 @@ require (
 )
 
 replace github.com/labdrian-ai/labdrian-sdd-overlay/archguard => ../archguard
+replace github.com/labdrian-ai/labdrian-sdd-overlay/identity => ../identity

@@ -70,8 +70,10 @@ type ChangeCatalog interface {
 	// Changes lists the directories under openspec/changes, by name. A project with no
 	// such directory has none.
 	Changes() ([]string, error)
-	// HasArtifact reports whether the change holds a file or a directory called name.
-	HasArtifact(change, name string) bool
+	// HasArtifact reports whether the change holds a file or a directory called name. A change
+	// that cannot be looked at is an error, never an absence: the hook counts the changes that
+	// hold an artifact, and one dropped in silence would let an acknowledgement through.
+	HasArtifact(change, name string) (bool, error)
 }
 
 // Ports are the four things a Service is built over.

@@ -1,0 +1,46 @@
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+# a repository named demo with its files in place and no lock
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+adopted: by-origin
+--- stderr ---
+
+--- demo/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [],
+  "installs": [
+    {
+      "id": "by-origin",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "2af0782881ff92ce4cce74656f820ce43119ab8306f75a0a30eed5aba30e3ecf"
+        }
+      ]
+    }
+  ]
+}
+
+# adopt with the id of a project the files do not belong to
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id chosen (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill by-choice is not installed in this project (neither .claude/skills/by-choice nor .agents/skills/by-choice exists), so there is nothing to adopt; run `labdrian skills install --project-id chosen`
+error: skills adopt: refused, so nothing was adopted
+
+# a renamed checkout of the same origin is the same project: adopt asks for its skill, which is not installed there
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in renamed-checkout)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill by-origin is not installed in this project (neither .claude/skills/by-origin nor .agents/skills/by-origin exists), so there is nothing to adopt; run `labdrian skills install --project-id github.com/acme/demo`
+error: skills adopt: refused, so nothing was adopted
+

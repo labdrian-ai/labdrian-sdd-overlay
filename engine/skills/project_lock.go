@@ -1,12 +1,10 @@
 package skills
 
 import (
-	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"io/fs"
 	"path"
 	"path/filepath"
@@ -139,20 +137,15 @@ type ProjectLockEntry struct {
 }
 
 // ParseProjectLock parses lock file bytes strictly: unknown fields at any
-// level are refused, any version other than 1 is refused, the bytes must
+// level are refused, a key that appears twice at any level is refused, the
+// bytes must be UTF-8, any version other than 1 is refused, the bytes must
 // hold exactly one JSON value with nothing trailing it, and no two entries
 // may share the same id. A missing file is the caller's concern (an empty
 // lock), not this function's — it only ever receives bytes that exist.
 func ParseProjectLock(data []byte) (ProjectLock, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-
 	var l ProjectLock
-	if err := dec.Decode(&l); err != nil {
-		return ProjectLock{}, fmt.Errorf("parse project lock: %w", err)
-	}
-	if err := dec.Decode(new(json.RawMessage)); err != io.EOF {
-		return ProjectLock{}, fmt.Errorf("parse project lock: trailing data after the lock value")
+	if err := decodeRecord(data, "lock", &l); err != nil {
+		return ProjectLock{}, refuseRecord("project lock", err)
 	}
 	if l.Version != 1 {
 		return ProjectLock{}, fmt.Errorf("parse project lock: unsupported version %d, want 1", l.Version)

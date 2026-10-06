@@ -35,13 +35,12 @@ func TestInstallRefusesBeforeLockingWhenItCannotNameItsProjectDirectory(t *testi
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			f := newInstallFixture(t)
-			installCwd = tc.cwd
 			locker := &recordingLocker{}
 			// No project admits a skill: a run that goes ahead writes nothing, so a
 			// failing test cannot leave files behind in the package directory.
 			args := []string{"--registry", f.reg, "--source-root", f.root, "--project-id", "nobody"}
 
-			r := runAt("install", args, os.ReadFile, nil, locker)
+			r := runAtIn(tc.cwd, "install", args, os.ReadFile, nil, locker)
 
 			if r.code != 1 || r.stdout != "" {
 				t.Errorf("exit %d, stdout %q, want exit 1 and nothing on stdout; stderr %q", r.code, r.stdout, r.stderr)
@@ -72,7 +71,7 @@ func TestInstallLocksTheDirectoryItInstallsInto(t *testing.T) {
 	if err := os.MkdirAll(second, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	installCwd = func() (string, error) {
+	cwd := func() (string, error) {
 		calls++
 		if calls == 1 {
 			return first, nil
@@ -81,7 +80,7 @@ func TestInstallLocksTheDirectoryItInstallsInto(t *testing.T) {
 	}
 	locker := &recordingLocker{}
 
-	r := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
+	r := runAtIn(cwd, "install", f.installArgs(), os.ReadFile, nil, locker)
 
 	if r.code != 0 {
 		t.Fatalf("exit %d, stderr %q", r.code, r.stderr)
@@ -198,7 +197,7 @@ func TestAWriterWithARegistryStillTakesTheLock(t *testing.T) {
 	f := newLockFixture(t)
 	locker := &recordingLocker{}
 
-	if r := runAt("sync-manifest", f.flags(), os.ReadFile, nil, locker); r.code != 0 {
+	if r := f.runAt("sync-manifest", f.flags(), os.ReadFile, nil, locker); r.code != 0 {
 		t.Fatalf("exit %d, stderr %q", r.code, r.stderr)
 	}
 	if got := locker.log(); len(got) == 0 {

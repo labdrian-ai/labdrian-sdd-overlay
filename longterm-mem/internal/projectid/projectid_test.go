@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/labdrian-ai/labdrian-sdd-overlay/identity"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/longterm-mem/internal/projectid"
 )
 
@@ -474,7 +475,7 @@ func TestResolve_OriginURLMatchesTheOneGitUses(t *testing.T) {
 		"\turl = https://github.com/acme/widgets.git",
 		"\turl = https://github.com/acme/widgets.git\n\turl = https://github.com/acme/superseded.git", 1))
 
-	want := projectid.NormalizeRemote(git(t, root, "remote", "get-url", "origin"))
+	want := identity.NormalizeRemote(git(t, root, "remote", "get-url", "origin"))
 	if want != "github.com/acme/widgets" {
 		t.Fatalf("fixture did not produce the shape under test: git reports %q", want)
 	}

@@ -52,6 +52,19 @@ func TestTheNoteOfASharedPathNamesTheIdsAndThePath(t *testing.T) {
 	}
 }
 
+// A shared path always has two ids or more when Registry.SharedPaths made it, but the type is
+// public and a value built by hand must not crash the note: it says what it holds instead.
+func TestTheNoteOfAPathWithFewerThanTwoIdsDoesNotPanic(t *testing.T) {
+	for want, shared := range map[string]SharedPath{
+		`note: no skill holds the path "dir"`:          {Path: "dir"},
+		`note: the skill "alpha" holds the path "dir"`: {Path: "dir", IDs: []string{"alpha"}},
+	} {
+		if got := shared.Note(); got != want {
+			t.Errorf("Note() = %q, want %q", got, want)
+		}
+	}
+}
+
 // The rule that refuses a registry still accepts two ids on one path.
 func TestARegistryWithTwoIdsOnOnePathIsValid(t *testing.T) {
 	if err := registryOfEntries(entryAt("alpha", "dir"), entryAt("beta", "dir")).Validate(); err != nil {

@@ -50,10 +50,13 @@ func newInstallFixture(t *testing.T) installFixture {
 	if err := os.MkdirAll(f.project, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	saved := installCwd
-	installCwd = func() (string, error) { return f.project, nil }
-	t.Cleanup(func() { installCwd = saved })
 	return f
+}
+
+// runAt runs a verb that installs into the project of the fixture, never into the directory the
+// tests run in.
+func (f installFixture) runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
+	return runAtIn(inDir(f.project), verb, args, readFile, now, locker)
 }
 
 func (f installFixture) installArgs() []string {
@@ -73,9 +76,9 @@ func TestAnApproveStartedDuringAnInstallWaitsForTheInstallToFinish(t *testing.T)
 	locker := &exclusionLocker{blocked: gate.release}
 
 	installDone := make(chan coreRun, 1)
-	go func() { installDone <- runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
+	go func() { installDone <- f.runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
 	<-gate.arrived
-	approved := runAt("approve", f.approveArgs(), os.ReadFile, fixedClock(approveFixedNow), locker)
+	approved := f.runAt("approve", f.approveArgs(), os.ReadFile, fixedClock(approveFixedNow), locker)
 	gate.release()
 	installed := <-installDone
 
@@ -107,15 +110,10 @@ func TestTwoInstallsIntoDifferentProjectsShareTheOverlayLock(t *testing.T) {
 	locker := &exclusionLocker{blocked: func() { blocked = true; gate.release() }}
 
 	first := make(chan coreRun, 1)
-	go func() { first <- runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
+	go func() { first <- f.runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
 	<-gate.arrived
-	// The first install has resolved its project and is parked; the seam may move.
-	// Restored explicitly here, so no later test depends on the order of this
-	// test's cleanups (newInstallFixture also restores the value it saved).
-	fixtureCwd := installCwd
-	installCwd = func() (string, error) { return otherProject, nil }
-	t.Cleanup(func() { installCwd = fixtureCwd })
-	second := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
+	// The first install has resolved its project and is parked; the second works in another one.
+	second := runAtIn(inDir(otherProject), "install", f.installArgs(), os.ReadFile, nil, locker)
 	gate.release()
 	<-first
 
@@ -132,16 +130,13 @@ func TestTwoInstallsIntoDifferentProjectsShareTheOverlayLock(t *testing.T) {
 // copy of one skill directory.
 func TestTwoInstallsIntoOneProjectAreSerialized(t *testing.T) {
 	f := newInstallFixture(t)
-	if dir, err := installCwd(); err != nil || dir != f.project {
-		t.Fatalf("installCwd() = %q, %v; want this test's project %q (a seam leaked from another test)", dir, err, f.project)
-	}
 	gate := newReadGate(t, f.reg)
 	locker := &exclusionLocker{blocked: gate.release}
 
 	first := make(chan coreRun, 1)
-	go func() { first <- runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
+	go func() { first <- f.runAt("install", f.installArgs(), gate.readFile, nil, locker) }()
 	<-gate.arrived
-	second := runAt("install", f.installArgs(), os.ReadFile, nil, locker)
+	second := f.runAt("install", f.installArgs(), os.ReadFile, nil, locker)
 	gate.release()
 	<-first
 
@@ -181,15 +176,12 @@ func TestConcurrentInstallsIntoOneProjectKeepBothRecords(t *testing.T) {
 	if err := os.MkdirAll(project, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	saved := installCwd
-	installCwd = func() (string, error) { return project, nil }
-	t.Cleanup(func() { installCwd = saved })
 
 	gate := newReadGate(t, filepath.Join(project, filepath.FromSlash(ProjectLockRelPath)))
 	locker := &exclusionLocker{blocked: gate.release}
 	install := func(projectID string) func() coreRun {
 		return func() coreRun {
-			return runAt("install", []string{"--registry", reg, "--source-root", root, "--project-id", projectID}, gate.readFile, nil, locker)
+			return runAtIn(inDir(project), "install", []string{"--registry", reg, "--source-root", root, "--project-id", projectID}, gate.readFile, nil, locker)
 		}
 	}
 

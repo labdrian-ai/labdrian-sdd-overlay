@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"io"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -167,21 +166,15 @@ func validateApprovalRecord(rec ApprovalRecord) error {
 }
 
 // ParseApprovalRecord parses record bytes strictly: unknown fields are
-// refused, the bytes must hold exactly one JSON object with nothing trailing
-// it, the version must be 1, and every field must be valid (a real skill id, a
+// refused, a key that appears twice is refused, the bytes must be UTF-8 and
+// hold exactly one JSON object with nothing trailing it, the version must be 1, and every field must be valid (a real skill id, a
 // lowercase 64-character hex digest, a real UTC timestamp, a non-blank
 // approver). A missing file is the caller's concern (ApprovalAbsent), not this
 // function's.
 func ParseApprovalRecord(data []byte) (ApprovalRecord, error) {
-	dec := json.NewDecoder(bytes.NewReader(data))
-	dec.DisallowUnknownFields()
-
 	var rec ApprovalRecord
-	if err := dec.Decode(&rec); err != nil {
-		return ApprovalRecord{}, fmt.Errorf("parse approval record: %w", err)
-	}
-	if err := dec.Decode(new(json.RawMessage)); err != io.EOF {
-		return ApprovalRecord{}, fmt.Errorf("parse approval record: trailing data after the record value")
+	if err := decodeRecord(data, "record", &rec); err != nil {
+		return ApprovalRecord{}, refuseRecord("approval record", err)
 	}
 	if err := validateApprovalRecord(rec); err != nil {
 		return ApprovalRecord{}, fmt.Errorf("parse approval record: %w", err)

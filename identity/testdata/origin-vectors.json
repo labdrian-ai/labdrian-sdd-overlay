@@ -1,0 +1,106 @@
+[
+  {
+    "config": "[remote \"origin\"]\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote.origin]\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[REMOTE \"origin\"]\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"]\n\tURL = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl=https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"]\r\n\turl = https://github.com/acme/widgets.git\r\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "# a comment\n; another\n[remote \"origin\"]\n\t# inside\n\t; inside\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"upstream\"]\n\turl = https://github.com/other/thing.git\n[remote \"origin\"]\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl = https://github.com/acme/widgets.git\n[remote \"upstream\"]\n\turl = https://github.com/other/thing.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"upstream\"]\n\turl = https://github.com/other/thing.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin2\"]\n\turl = https://github.com/other/thing.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"Origin\"]\n\turl = https://github.com/other/thing.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n\tpushurl = https://github.com/other/thing.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl = https://github.com/acme/widgets.git\n\turl = https://github.com/acme/superseded.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl = ../local\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl = /srv/git/local.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl =\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n\tfetch = +refs/heads/*:refs/remotes/origin/*\n",
+    "want": ""
+  },
+  {
+    "config": "[core]\n\turl = https://github.com/acme/widgets.git\n[remote \"origin\"]\n\tfetch = x\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl = https://github.com/acme/widgets.git\n[core]\n\turl = https://github.com/other/thing.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[ remote \"origin\" ]\n\turl = https://github.com/acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "[remote \"origin\"] url = https://github.com/acme/widgets.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n\turl = git@github.com:acme/widgets.git\n",
+    "want": "github.com/acme/widgets"
+  },
+  {
+    "config": "",
+    "want": ""
+  },
+  {
+    "config": "url = https://github.com/acme/widgets.git\n",
+    "want": ""
+  },
+  {
+    "config": "[remote \"origin\"]\n  url   =   https://github.com/acme/widgets.git   \n",
+    "want": "github.com/acme/widgets"
+  }
+]
