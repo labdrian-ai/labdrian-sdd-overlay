@@ -230,8 +230,8 @@ func TestOpenspecIsLookedForFromTheToplevelTheLocatorReports(t *testing.T) {
 			if err != nil || !reflect.DeepEqual(changes, []string{tc.wantChange}) {
 				t.Fatalf("Changes = %v, %v, want [%s]", changes, err, tc.wantChange)
 			}
-			if !s.HasArtifact(tc.wantChange, "tasks.md") {
-				t.Error("HasArtifact does not find the change's tasks.md under the same root")
+			if found, err := s.HasArtifact(tc.wantChange, "tasks.md"); err != nil || !found {
+				t.Errorf("HasArtifact = %v, %v, want the change's tasks.md found under the same root", found, err)
 			}
 			want := filepath.Join(tc.wantRoot, "openspec", "changes", tc.wantChange, "review-receipts", "review-a.json")
 			if got := s.Location(tc.wantChange, "review-a.json"); got != want {
@@ -377,12 +377,62 @@ func TestHasArtifactFindsAFileOrADirectoryByName(t *testing.T) {
 	}
 
 	for name, want := range map[string]bool{"tasks.md": true, "design.md": true, "proposal.md": false} {
-		if got := s.HasArtifact("c", name); got != want {
-			t.Errorf("HasArtifact(c, %s) = %v, want %v", name, got, want)
+		if got, err := s.HasArtifact("c", name); err != nil || got != want {
+			t.Errorf("HasArtifact(c, %s) = %v, %v, want %v and no error", name, got, err, want)
 		}
 	}
-	if s.HasArtifact("absent", "tasks.md") {
-		t.Error("HasArtifact found an artifact of a change that is not there")
+	if got, err := s.HasArtifact("absent", "tasks.md"); err != nil || got {
+		t.Errorf("HasArtifact(absent, tasks.md) = %v, %v, want no artifact and no error: a change that is not there holds nothing", got, err)
+	}
+}
+
+// An artifact the file system cannot say anything about (here, no permission to look inside the
+// change) is not an artifact that is absent: the hook that counts the active changes would drop the
+// change in silence and let an acknowledgement through, so the port says it cannot tell.
+func TestHasArtifactSaysItCannotTellWhenTheChangeCannotBeLookedAt(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a directory without permissions does not stop root")
+	}
+	root := t.TempDir()
+	s := newStore(t, root, &locator{})
+	write(t, filepath.Join(root, "openspec", "changes", "c", "tasks.md"), "# tasks")
+	closed := filepath.Join(root, "openspec", "changes", "c")
+	if err := os.Chmod(closed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(closed, 0o755) })
+
+	got, err := s.HasArtifact("c", "tasks.md")
+	if err == nil || got {
+		t.Fatalf("HasArtifact = %v, %v, want no artifact and the error of the stat", got, err)
+	}
+	if want := "stat " + filepath.Join(closed, "tasks.md") + ": "; !strings.HasPrefix(err.Error(), want) {
+		t.Errorf("HasArtifact error = %q, want it to start with %q", err, want)
+	}
+}
+
+// Location says where a receipt is for a person to read, and it never fails: when the toplevel's
+// openspec cannot be looked at it names the directory the store was given.
+func TestLocationNamesTheDirectoryTheStoreWasGivenWhenTheToplevelCannotBeLookedAt(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a directory without permissions does not stop root")
+	}
+	top := t.TempDir()
+	sub := filepath.Join(top, "sub")
+	write(t, filepath.Join(sub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+	closed := filepath.Join(top, "openspec")
+	if err := os.MkdirAll(closed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(closed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(closed, 0o755) })
+	s := newStore(t, sub, &locator{obs: gitprov.Observation{Toplevel: top}})
+
+	want := filepath.Join(sub, "openspec", "changes", "sub-change", "review-receipts", "review-a.json")
+	if got := s.Location("sub-change", "review-a.json"); got != want {
+		t.Errorf("Location = %q, want %q", got, want)
 	}
 }
 
@@ -446,8 +496,8 @@ func TestAToplevelOpenspecThatCannotBeLookedAtIsAnErrorAndNotAnAbsence(t *testin
 	if _, err := os.Stat(filepath.Join(sub, "openspec", "changes", "sub-change", "review-receipts")); !os.IsNotExist(err) {
 		t.Errorf("Write put a receipt in the directory below while refusing (stat err=%v)", err)
 	}
-	if s.HasArtifact("sub-change", "tasks.md") {
-		t.Error("HasArtifact found an artifact of the directory below although the toplevel could not be looked at")
+	if found, err := s.HasArtifact("sub-change", "tasks.md"); err == nil || !strings.HasPrefix(err.Error(), wantStat) || found {
+		t.Errorf("HasArtifact = %v, %v, want no artifact and an error that starts %q", found, err, wantStat)
 	}
 	if len(loc.asked) > 1 {
 		t.Errorf("the locator was asked %d times, want at most once", len(loc.asked))

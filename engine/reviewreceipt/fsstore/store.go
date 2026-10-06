@@ -308,11 +308,19 @@ func (s Store) Changes() ([]string, error) {
 
 // HasArtifact is reviewreceipt.ChangeCatalog.HasArtifact: whether the change holds a file or
 // a directory by that name, followed through a link as a person looking at the folder would.
-func (s Store) HasArtifact(change, name string) bool {
+// Only the absence of the name is "no": any other answer of the file system (no permission to look
+// inside the change, an I/O error) is an error that names the path, as it is for the other ports.
+func (s Store) HasArtifact(change, name string) (bool, error) {
 	root, err := s.openspecRoot()
 	if err != nil {
-		return false
+		return false, err
 	}
-	_, err = os.Stat(filepath.Join(root, "openspec", "changes", change, name))
-	return err == nil
+	path := filepath.Join(root, "openspec", "changes", change, name)
+	if _, err := os.Stat(path); err != nil {
+		if os.IsNotExist(err) {
+			return false, nil
+		}
+		return false, fmt.Errorf("stat %s: %w", path, unwrapPathError(err))
+	}
+	return true, nil
 }

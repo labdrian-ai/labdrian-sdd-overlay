@@ -24,6 +24,8 @@ type world struct {
 	changes    []string
 	changesErr error
 	artifacts  map[string][]string
+	// artifactErr is why HasArtifact cannot say, by change.
+	artifactErr map[string]error
 
 	// persisted is the bytes under "<change>/<name>"; the errors are what Read and Write
 	// answer for a key.
@@ -38,7 +40,7 @@ type world struct {
 func newWorld() *world {
 	return &world{
 		docs: map[reviewreceipt.Store][]reviewreceipt.Document{}, docsErr: map[reviewreceipt.Store]error{},
-		artifacts: map[string][]string{}, persisted: map[string][]byte{},
+		artifacts: map[string][]string{}, artifactErr: map[string]error{}, persisted: map[string][]byte{},
 		readErr: map[string]error{}, writeErr: map[string]error{},
 	}
 }
@@ -65,14 +67,17 @@ func (w *world) Changes() ([]string, error) {
 	return w.changes, w.changesErr
 }
 
-func (w *world) HasArtifact(change, name string) bool {
+func (w *world) HasArtifact(change, name string) (bool, error) {
 	w.calls = append(w.calls, "HasArtifact "+change+"/"+name)
+	if err := w.artifactErr[change]; err != nil {
+		return false, err
+	}
 	for _, a := range w.artifacts[change] {
 		if a == name {
-			return true
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 func key(change, name string) string { return change + "/" + name }
@@ -525,6 +530,27 @@ func TestDetectActiveChangeReportsAListingThatFails(t *testing.T) {
 	w.changesErr = errors.New("read /project/openspec/changes: permission denied")
 	if got, err := w.service().DetectActiveChange(); err == nil || err.Error() != "reviewreceipt: read /project/openspec/changes: permission denied" || got != "" {
 		t.Errorf("DetectActiveChange = %q, %v", got, err)
+	}
+}
+
+// A change the catalog cannot look inside is not a change without artifacts: dropping it in
+// silence would let an acknowledgement through past a change that may be the active one.
+func TestDetectActiveChangeReportsAnArtifactThatCannotBeLookedFor(t *testing.T) {
+	w := newWorld()
+	w.changes, w.artifacts = []string{"a", "b"}, map[string][]string{"a": {"tasks.md"}}
+	w.artifactErr["b"] = errors.New("stat /project/openspec/changes/b/proposal.md: permission denied")
+	if got, err := w.service().DetectActiveChange(); err == nil || err.Error() != "reviewreceipt: stat /project/openspec/changes/b/proposal.md: permission denied" || got != "" {
+		t.Errorf("DetectActiveChange = %q, %v, want no change and the error of the catalog", got, err)
+	}
+}
+
+func TestHookDeniesWhenAChangeCannotBeLookedInto(t *testing.T) {
+	w := newWorld()
+	w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
+	w.artifactErr["only"] = errors.New("stat denied")
+	want := "review-receipt: reviewreceipt: stat denied"
+	if v := w.service().CheckCommand(ackCommand); !v.Deny || v.Reason != want {
+		t.Errorf("CheckCommand = %+v, want a denial %q", v, want)
 	}
 }
 

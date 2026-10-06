@@ -202,7 +202,11 @@ func (s *Service) DetectActiveChange() (string, error) {
 			continue
 		}
 		for _, marker := range activeChangeMarkers() {
-			if s.ports.Changes.HasArtifact(name, marker) {
+			held, err := s.ports.Changes.HasArtifact(name, marker)
+			if err != nil {
+				return "", fmt.Errorf("reviewreceipt: %w", err)
+			}
+			if held {
 				active = append(active, name)
 				break
 			}

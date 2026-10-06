@@ -151,20 +151,25 @@ func (r Registry) SharedPaths() []SharedPath {
 		}
 		shared[i].IDs = append(shared[i].IDs, e.ID)
 	}
-	held := shared[:0]
+	var held []SharedPath
 	for _, s := range shared {
 		if len(s.IDs) > 1 {
 			held = append(held, s)
 		}
 	}
-	if len(held) == 0 {
-		return nil
-	}
 	return held
 }
 
-// Note is what a person is told of a shared path: the ids, and the path they share.
+// Note is what a person is told of a shared path: the ids, and the path they share. Registry.SharedPaths
+// only makes paths of two ids or more, but the type is public, so a value of fewer says what it holds
+// and does not crash.
 func (s SharedPath) Note() string {
+	switch len(s.IDs) {
+	case 0:
+		return fmt.Sprintf("note: no skill holds the path %q", s.Path)
+	case 1:
+		return fmt.Sprintf("note: the skill %q holds the path %q", s.IDs[0], s.Path)
+	}
 	ids := make([]string, len(s.IDs))
 	for i, id := range s.IDs {
 		ids[i] = fmt.Sprintf("%q", id)
