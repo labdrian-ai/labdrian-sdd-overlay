@@ -43,10 +43,10 @@ func newOwnFixture(t *testing.T) *ownFixture {
 }
 
 // source builds the files of a skill from a path -> content map.
-func source(files map[string]string) []sourceFile {
-	var out []sourceFile
+func source(files map[string]string) []SourceFile {
+	var out []SourceFile
 	for path, content := range files {
-		out = append(out, sourceFile{Rel: path, Data: []byte(content), Mode: 0o644})
+		out = append(out, SourceFile{Rel: path, Data: []byte(content), Mode: 0o644})
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].Rel < out[j].Rel })
 	return out
@@ -89,7 +89,7 @@ func (f *ownFixture) install(skills ...InstallSkill) InstallPlan {
 		f.t.Fatalf("install refused: %v", refusals)
 	}
 	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, osProjectFS{}, &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
 		f.t.Fatalf("install failed: %v (stderr %q)", err, errOut.String())
 	}
 	return plan
@@ -182,10 +182,10 @@ func TestInstall_AbsentTargetsAreCreatedInBothRuntimesAndRecorded(t *testing.T) 
 
 func TestInstall_AFileKeepsItsSourceModeAndNothingElseIsCreated(t *testing.T) {
 	f := newOwnFixture(t)
-	script := sourceFile{Rel: "scripts/run.sh", Data: []byte("#!/bin/sh\n"), Mode: 0o755}
-	doc := sourceFile{Rel: "SKILL.md", Data: []byte("doc"), Mode: 0o600}
+	script := SourceFile{Rel: "scripts/run.sh", Data: []byte("#!/bin/sh\n"), Mode: 0o755}
+	doc := SourceFile{Rel: "SKILL.md", Data: []byte("doc"), Mode: 0o600}
 
-	f.install(InstallSkill{ID: "pdf", Files: []sourceFile{doc, script}})
+	f.install(InstallSkill{ID: "pdf", Files: []SourceFile{doc, script}})
 
 	for path, want := range map[string]fs.FileMode{
 		".claude/skills/pdf/scripts/run.sh": 0o755,
@@ -227,7 +227,7 @@ func TestInstall_ASecondInstallOfTheSameSourceWritesNothingAndSaysSo(t *testing.
 		t.Errorf("the plan has %d writes, %d deletes, lock %q; want none", len(plan.Writes), len(plan.Deletes), plan.Lock.Rel)
 	}
 	var errOut bytes.Buffer
-	if err := ExecuteInstallPlan(plan, f.root, osProjectFS{}, &errOut); err != nil {
+	if err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &errOut); err != nil {
 		t.Fatal(err)
 	}
 	assertSameTree(t, before, f.snapshot())

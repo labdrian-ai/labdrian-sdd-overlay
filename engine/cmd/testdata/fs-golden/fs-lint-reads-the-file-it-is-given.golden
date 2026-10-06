@@ -1,0 +1,40 @@
+# a skill that passes
+$ skills lint <WORLD>/good/SKILL.md
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# a skill that does not
+$ skills lint <WORLD>/bad/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+[lint:frontmatter-fence] file does not start with a `---` frontmatter fence
+
+# a file that is not there
+$ skills lint <WORLD>/missing.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading "<WORLD>/missing.md": open <WORLD>/missing.md: no such file or directory
+
+# a directory
+$ skills lint <WORLD>/a-directory
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading "<WORLD>/a-directory": read <WORLD>/a-directory: is a directory
+
+# a link
+$ skills lint <WORLD>/link.md
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# a path with no name
+$ skills lint 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint requires a path or --rules
+

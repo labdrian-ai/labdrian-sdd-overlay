@@ -1,0 +1,44 @@
+# .claude is a link to a directory outside the project
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-register: destination ".claude/skills/tidy-worktree": escapes the project root through a symlink
+
+--- state of project ---
+.claude -> ../outside
+
+--- state of outside ---
+(empty)
+
+# the directory of the skill is a link to one outside
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-register: destination ".claude/skills/tidy-worktree": escapes the project root through a symlink
+
+--- state of project ---
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree -> ../../../outside
+
+--- state of outside ---
+(empty)
+
+# SKILL.md of a directory already there is a link to a file outside (refused as a foreign skill: the program never looks at the link)
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-register: foreign skill: ".claude/skills/tidy-worktree" already exists and "tidy-worktree" is not in the lock
+
+--- state of project ---
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md -> ../../../../outside/x.md
+
+--- state of outside ---
+(empty)
+

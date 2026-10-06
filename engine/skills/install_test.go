@@ -346,7 +346,7 @@ skills:
 `
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		RenderInstallCore(
+		renderInstallCore(
 			[]string{"--registry", "reg.yaml", "--source-root", overlayDir, "--project-id", "target-repo"},
 			testRegistries(func(_ string) ([]byte, error) { return []byte(regYAML), nil }),
 			installCwdFn(cwdDir),
@@ -401,7 +401,7 @@ skills:
 `
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		RenderInstallCore(
+		renderInstallCore(
 			[]string{"--registry", "reg.yaml", "--source-root", overlayDir, "--project-id", "target-repo"},
 			testRegistries(func(_ string) ([]byte, error) { return []byte(regYAML), nil }),
 			installCwdFn(cwdDir),
@@ -428,7 +428,7 @@ skills:
 
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		RenderInstallCore(
+		renderInstallCore(
 			[]string{"--registry", "reg.yaml", "--source-root", "/overlay"},
 			testRegistries(func(_ string) ([]byte, error) { return []byte(`version: "1"`), nil }),
 			failCwdFn(),
@@ -457,7 +457,7 @@ skills:
 
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		RenderInstallCore(
+		renderInstallCore(
 			[]string{"--registry", "reg.yaml", "--source-root", "/overlay", "--project-id", "target-repo"},
 			testRegistries(func(_ string) ([]byte, error) { return []byte(regYAML), nil }),
 			installCwdFn(cwdDir),
@@ -487,7 +487,7 @@ skills:
 
 		var out, errBuf bytes.Buffer
 		exitCode := -1
-		RenderInstallCore(
+		renderInstallCore(
 			[]string{"--registry", "reg.yaml", "--source-root", overlayDir, "--project-id", "target-repo"},
 			testRegistries(func(_ string) ([]byte, error) { return []byte(regYAML), nil }),
 			installCwdFn(cwdDir),

@@ -39,7 +39,7 @@ import (
 //     (see TestProjectRetireRealCLI_RollbackOfRollbackReportsIncompletePath).
 //
 // No env-var or hook seam exists in production for injecting a transient
-// fault (skills/skills.go hardcodes osProjectFS{} for the real CLI), and
+// fault (skills/skills.go hardcodes testProjectFS() for the real CLI), and
 // adding one would be a production-only backdoor, so these two real-fs
 // shapes are the complete, honest coverage available: a fault before any
 // mutation (full rollback, nothing to restore, tree untouched) and a fault

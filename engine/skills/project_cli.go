@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path"
 	"path/filepath"
 )
@@ -65,14 +64,14 @@ import (
 // draft path that legitimately begins with a dash can still be named.
 //
 // fsys is an unexported interface on purpose: production callers reach this
-// through SkillsCore, and tests inject osProjectFS{} over t.TempDir().
+// through SkillsCoreAt, and tests inject the file system adapter over t.TempDir().
 func RenderProjectRegisterCore(
 	args []string,
 	readFile readFileFn,
 	registries RegistryRepository,
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
-	fsys projectFS,
+	fsys ProjectFS,
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
@@ -124,7 +123,7 @@ func RenderProjectRegisterCore(
 	lockPath := filepath.Join(filepath.Clean(projectRoot), filepath.FromSlash(ProjectLockRelPath))
 	lockData, err := readFile(lockPath)
 	lockExists := err == nil
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !isAbsent(err) {
 		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
 		exit(1)
 		return
@@ -181,7 +180,7 @@ func RenderProjectReviseCore(
 	readDir func(string) ([]fs.DirEntry, error),
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
-	fsys projectFS,
+	fsys ProjectFS,
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {
@@ -282,7 +281,7 @@ func RenderProjectRetireCore(
 	readDir func(string) ([]fs.DirEntry, error),
 	statFile func(string) (fs.FileInfo, error),
 	resolvePath func(string) (string, error),
-	fsys projectFS,
+	fsys ProjectFS,
 	stdout, stderr io.Writer,
 	exit func(int),
 ) {

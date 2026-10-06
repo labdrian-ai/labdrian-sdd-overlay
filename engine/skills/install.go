@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
-	"os"
 	"path/filepath"
 )
 
@@ -85,7 +84,7 @@ func isWriterTempFile(d fs.DirEntry) bool {
 }
 
 // installEnv is everything install and adopt touch outside their own arguments, so
-// that a test can replace any of it. Production wires the real filesystem.
+// that a test can replace any of it. Production wires it from Deps (installEnvOf).
 type installEnv struct {
 	registries  RegistryRepository                // the registry
 	readProject readFileFn                        // the project lock, and anything else in the project
@@ -93,29 +92,30 @@ type installEnv struct {
 	stat        func(string) (fs.FileInfo, error) // the project's paths
 	readDir     func(string) ([]fs.DirEntry, error)
 	resolve     func(string) (string, error)       // symlink resolution, for containment
-	fsys        projectFS                          // the writes
-	readSource  func(string) ([]sourceFile, error) // a skill's source tree
+	fsys        ProjectFS                          // the writes
+	readSource  func(string) ([]SourceFile, error) // a skill's source tree
 }
 
-// productionInstallEnv is the real filesystem. Registry reads go through readRegistry,
-// so the registry can be injected; the project is always read from disk.
-func productionInstallEnv(registries RegistryRepository, cwd func() (string, error)) installEnv {
+// installEnvOf is the environment install and adopt work in, taken from the Deps of the verb:
+// the registry through its repository, the source of a skill through the tree, and the files of
+// the project through the project's file system. cwd is the directory to install into.
+func installEnvOf(deps Deps, cwd func() (string, error)) installEnv {
 	return installEnv{
-		registries:  registries,
-		readProject: os.ReadFile,
+		registries:  deps.Registries,
+		readProject: deps.ReadFile,
 		cwd:         cwd,
-		stat:        os.Stat,
-		readDir:     os.ReadDir,
-		resolve:     resolvePathKeepingMissing,
-		fsys:        osProjectFS{},
-		readSource:  readSkillSource,
+		stat:        deps.Project.Stat,
+		readDir:     deps.Project.ReadDir,
+		resolve:     deps.Project.ResolvePath,
+		fsys:        deps.Project,
+		readSource:  deps.Tree.ReadSkillSource,
 	}
 }
 
 // RenderInstallCore is the testable CLI entry for `engine skills install`.
-// cwdFn is injected for testability (production callers pass os.Getwd).
-func RenderInstallCore(args []string, registries RegistryRepository, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
-	renderInstall(productionInstallEnv(registries, cwdFn), args, stdout, stderr, exit)
+// cwdFn is injected for testability (production callers pass os.Getwd through Deps.Cwd).
+func RenderInstallCore(args []string, deps Deps, cwdFn func() (string, error), stdout, stderr io.Writer, exit func(int)) {
+	renderInstall(installEnvOf(deps, cwdFn), args, stdout, stderr, exit)
 }
 
 // installContext is what install and adopt have read and decided before either
@@ -221,7 +221,7 @@ func prepareInstall(verb string, env installEnv, args []string, stdout, stderr i
 	// exists and cannot be read must never be replaced by an empty one, which would
 	// disown everything recorded in it.
 	lockData, err := env.readProject(filepath.Join(targetRoot, filepath.FromSlash(ProjectLockRelPath)))
-	if err != nil && !os.IsNotExist(err) {
+	if err != nil && !isAbsent(err) {
 		fmt.Fprintf(stderr, "error: reading project lock %q: %v\n", ProjectLockRelPath, err)
 		exit(1)
 		return installContext{}, false

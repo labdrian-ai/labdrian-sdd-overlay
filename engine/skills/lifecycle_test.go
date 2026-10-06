@@ -399,7 +399,7 @@ func TestAddCoreSuccess(t *testing.T) {
 	exitCode := -1
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -437,7 +437,7 @@ func TestAddCoreSuccess(t *testing.T) {
 	}
 
 	// Validate must return zero divergences.
-	divs, err := Validate(reg, mfPath)
+	divs, err := validateFile(reg, mfPath)
 	if err != nil || len(divs) > 0 {
 		t.Errorf("Validate after add: err=%v, divs=%v", err, divs)
 	}
@@ -469,7 +469,7 @@ func TestAddCoreRejectsHardLintErrorBeforeWrites(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -527,7 +527,7 @@ func TestAddCoreWarningsOnlyProceeds(t *testing.T) {
 	exitCode := -1
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -569,7 +569,7 @@ func TestAddCoreMissingSkillMD(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -604,7 +604,7 @@ func TestAddCoreIDAlreadyPresent(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -636,7 +636,7 @@ func TestAddCoreRegistryWriteFailureIsAtomic(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -673,7 +673,7 @@ func TestAddCoreValidateBeforeWrite(t *testing.T) {
 	exitCode := 0
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -701,7 +701,7 @@ func TestRemoveCoreSuccess(t *testing.T) {
 	exitCode := -1
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile),
+		os.ReadFile, testRegistries(os.ReadFile), testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -730,7 +730,7 @@ func TestRemoveCoreSuccess(t *testing.T) {
 	}
 
 	// Validate must return zero divergences.
-	divs, err := Validate(reg, mfPath)
+	divs, err := validateFile(reg, mfPath)
 	if err != nil || len(divs) > 0 {
 		t.Errorf("Validate after remove: err=%v, divs=%v", err, divs)
 	}
@@ -748,7 +748,7 @@ func TestRemoveCoreIDAbsent(t *testing.T) {
 	exitCode := 0
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile),
+		os.ReadFile, testRegistries(os.ReadFile), testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -777,7 +777,7 @@ func TestRemoveCoreDoesNotDeleteDir(t *testing.T) {
 	exitCode := -1
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile),
+		os.ReadFile, testRegistries(os.ReadFile), testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -811,7 +811,7 @@ func TestRemoveCoreManifestWriteFailureIsAtomic(t *testing.T) {
 	exitCode := 0
 	RemoveCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile),
+		os.ReadFile, testRegistries(os.ReadFile), testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -843,7 +843,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 		exitCode := -1
 		AddCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-			os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+			os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 			&out, &errBuf,
 			func(c int) { exitCode = c },
 		)
@@ -858,7 +858,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 		exitCode := -1
 		RemoveCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "new-skill"},
-			os.ReadFile, testRegistries(os.ReadFile),
+			os.ReadFile, testRegistries(os.ReadFile), testProjectFS(),
 			&out, &errBuf,
 			func(c int) { exitCode = c },
 		)
@@ -877,7 +877,7 @@ func TestAddRemoveCycleValidateAligned(t *testing.T) {
 		if len(reg.Skills) != wantSkills {
 			t.Errorf("%s: expected %d skills, got %d", label, wantSkills, len(reg.Skills))
 		}
-		divs, vErr := Validate(reg, mfPath)
+		divs, vErr := validateFile(reg, mfPath)
 		if vErr != nil || len(divs) > 0 {
 			t.Errorf("%s: Validate: err=%v, divs=%v", label, vErr, divs)
 		}
@@ -917,7 +917,7 @@ func TestAddCoreExternalRepo(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"foo", "--repo", "https://github.com/example/skills"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -965,7 +965,7 @@ func TestAddCoreExternalRepo(t *testing.T) {
 	}
 
 	// Validate must return zero divergences.
-	divs, vErr := Validate(reg, mfPath)
+	divs, vErr := validateFile(reg, mfPath)
 	if vErr != nil || len(divs) > 0 {
 		t.Errorf("SC-65: Validate after external add: err=%v, divs=%v", vErr, divs)
 	}
@@ -986,7 +986,7 @@ func TestAddCoreExternalRepoRef(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"bar", "--repo", "https://example.com/repo", "--ref", "deadbeef"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -1045,7 +1045,7 @@ func TestAddCoreNoRepoStaysCustom(t *testing.T) {
 	exitCode := -1
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "baz"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -1093,7 +1093,7 @@ func TestAddCoreExternalMissingSkillMD(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"missing", "--repo", "https://example.com/repo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)
@@ -1130,7 +1130,7 @@ func TestAddCoreRefWithoutRepo(t *testing.T) {
 	AddCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot,
 			"foo", "--ref", "deadbeef"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat,
+		os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(),
 		&out, &errBuf,
 		func(c int) { exitCode = c },
 	)

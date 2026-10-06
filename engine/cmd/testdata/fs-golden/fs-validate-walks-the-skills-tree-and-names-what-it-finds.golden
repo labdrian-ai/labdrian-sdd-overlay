@@ -1,0 +1,12 @@
+# a tree with a file of every kind
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[UNREGISTERED_ON_DISK] alpha/references/deep/notes.md: skills/alpha/references/deep/notes.md exists on disk but no overlay.manifest row deploys it; add a row for "alpha/references/deep/notes.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] with space/a file.md: skills/with space/a file.md exists on disk but no overlay.manifest row deploys it; add a row for "with space/a file.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] zeta/a.c: skills/zeta/a.c exists on disk but no overlay.manifest row deploys it; add a row for "zeta/a.c" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] zeta/a/b.md: skills/zeta/a/b.md exists on disk but no overlay.manifest row deploys it; add a row for "zeta/a/b.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] zeta/last.md: skills/zeta/last.md exists on disk but no overlay.manifest row deploys it; add a row for "zeta/last.md" to overlay.manifest to register it
+[UNREGISTERED_ON_DISK] ünï/cødé.md: skills/ünï/cødé.md exists on disk but no overlay.manifest row deploys it; add a row for "ünï/cødé.md" to overlay.manifest to register it
+

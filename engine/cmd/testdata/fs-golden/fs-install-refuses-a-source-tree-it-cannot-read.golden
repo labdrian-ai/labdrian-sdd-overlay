@@ -1,0 +1,30 @@
+# a directory of the source with no permission bits
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill tidy-notes: reading its source <WORLD>/overlay/skills/tidy-notes: open <WORLD>/overlay/skills/tidy-notes/references: permission denied
+
+--- state of demo ---
+(empty)
+
+# a file of the source with no permission bits
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill tidy-notes: reading its source <WORLD>/overlay/skills/tidy-notes: reading <WORLD>/overlay/skills/tidy-notes/references/notes.md: open <WORLD>/overlay/skills/tidy-notes/references/notes.md: permission denied
+
+--- state of demo ---
+(empty)
+
+# the SKILL.md of the source with none
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill tidy-notes: reading its source <WORLD>/overlay/skills/tidy-notes: reading <WORLD>/overlay/skills/tidy-notes/SKILL.md: open <WORLD>/overlay/skills/tidy-notes/SKILL.md: permission denied
+
+--- state of demo ---
+(empty)
+

@@ -1,0 +1,39 @@
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# an installed file with no permission bits
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: cannot read .claude/skills/tidy-notes/references/notes.md
+error: skills adopt: refused, so nothing was adopted
+
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: cannot read .claude/skills/tidy-notes/references/notes.md
+error: skills install: refused, so nothing was installed
+
+# an installed directory with none
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: destination .claude/skills/tidy-notes/references/notes.md: could not be resolved: lstat <WORLD>/demo/.claude/skills/tidy-notes/references/notes.md: permission denied
+error: skills adopt: destination .claude/skills/tidy-notes/references/notes.md: could not be resolved: lstat <WORLD>/demo/.claude/skills/tidy-notes/references/notes.md: permission denied
+error: skills adopt: refused, so nothing was adopted
+
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes/references/notes.md: could not be resolved: lstat <WORLD>/demo/.claude/skills/tidy-notes/references/notes.md: permission denied
+error: skills install: destination .claude/skills/tidy-notes/references/notes.md: could not be resolved: lstat <WORLD>/demo/.claude/skills/tidy-notes/references/notes.md: permission denied
+error: skills install: refused, so nothing was installed
+

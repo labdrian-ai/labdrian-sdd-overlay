@@ -1,0 +1,21 @@
+# the manifest is written, the registry's directory cannot be
+$ skills add --source-root <WORLD>/skills --registry <WORLD>/registries/skills.registry.yaml foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: writing registry: writeFileAtomic: create temp: open <WORLD>/registries/.tmp-skills-<N>: permission denied
+
+--- state of . ---
+overlay.manifest 0644 22 602f4f6fe352
+registries/
+registries/.skills.registry.yaml.lock mask 0 e3b0c44298fc
+registries/skills.registry.yaml 0644 204 f4f6d939ffdf
+skills.registry.yaml 0644 204 f4f6d939ffdf
+skills/
+skills/alpha/
+skills/alpha/.approval.json 0644 194 fea84ceb56ba
+skills/alpha/SKILL.md 0644 288 b1349da82d6c
+skills/foo/
+skills/foo/.approval.json 0644 192 3af492fc2a2e
+skills/foo/SKILL.md 0644 284 de83a6ee05ac
+

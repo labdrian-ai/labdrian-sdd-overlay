@@ -1,0 +1,156 @@
+# .claude is a link to a directory outside the project
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: escapes the project root through a symlink
+error: skills install: destination .claude/skills/only-demo: escapes the project root through a symlink
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude -> ../outside
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+
+# .claude/skills is a link to a directory outside the project
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: escapes the project root through a symlink
+error: skills install: destination .claude/skills/only-demo: escapes the project root through a symlink
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude/
+.claude/skills -> ../../outside/skills
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+
+# the directory of a skill is a link to a directory outside the project
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: escapes the project root through a symlink
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude/
+.claude/skills/
+.claude/skills/tidy-notes -> ../../../outside/skills
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+
+# the skill installed, to be linked away
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# a file of an installed skill is a link to a file outside the project
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes/SKILL.md: escapes the project root through a symlink
+error: skills install: destination .claude/skills/tidy-notes/SKILL.md: escapes the project root through a symlink
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md -> ../../../../outside/real.md
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 605 c7a433693d47
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+
+# .agents is a link to a directory inside the project
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents -> elsewhere
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 605 c7a433693d47
+elsewhere/
+elsewhere/skills/
+elsewhere/skills/only-demo/
+elsewhere/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+elsewhere/skills/tidy-notes/
+elsewhere/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+elsewhere/skills/tidy-notes/references/
+elsewhere/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+
+# .claude is a dangling link
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: could not be resolved: lstat <WORLD>/demo/nowhere: no such file or directory
+error: skills install: destination .claude/skills/only-demo: could not be resolved: lstat <WORLD>/demo/nowhere: no such file or directory
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude -> nowhere
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+
+# .claude is a link to itself
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: could not be resolved: EvalSymlinks: too many links
+error: skills install: destination .claude/skills/only-demo: could not be resolved: EvalSymlinks: too many links
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude -> .claude
+
+--- state of outside ---
+real.md 0644 27 cc020b515c2f
+skills/
+

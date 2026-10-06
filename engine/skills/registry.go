@@ -35,10 +35,11 @@ import (
 //     to read the registry as it means (for the YAML file, the must-understand set): it refuses
 //     the store instead.
 //
-// Decode and Encode are the stored form of a registry as bytes. The verbs that write a registry
-// (add, remove) encode what they will write and decode it back before they write it, so that
-// what is written is what a later verb reads; the writing itself, which must be atomic and in step
-// with the manifest, is not the repository's yet (Phase 9 unit H17 moves it).
+// Decode and Encode are the stored form of a registry as bytes. Add and remove call Encode on
+// what they will write, decode the bytes back with Decode and compare, and only then write the
+// bytes themselves; the repository does not write them. They are written through StagedWrites,
+// the port of the writes of an overlay, which stages the registry and the manifest and commits
+// them one after the other.
 type RegistryRepository interface {
 	// Load reads the registry stored at location. Location is opaque to the domain: it is the
 	// value of a verb's --registry flag, or what an adapter says of an overlay.

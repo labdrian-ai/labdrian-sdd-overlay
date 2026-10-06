@@ -39,7 +39,7 @@ func (c *cliInstall) run(extra ...string) (stdout, stderr string, code int) {
 	var out, errBuf bytes.Buffer
 	code = -1
 	args := append([]string{"--registry", "reg.yaml", "--source-root", c.overlay, "--project-id", "target-repo"}, extra...)
-	RenderInstallCore(args, testRegistries(func(string) ([]byte, error) { return []byte(c.registry), nil }),
+	renderInstallCore(args, testRegistries(func(string) ([]byte, error) { return []byte(c.registry), nil }),
 		func() (string, error) { return c.project, nil }, &out, &errBuf, func(n int) { code = n })
 	return out.String(), errBuf.String(), code
 }
@@ -254,7 +254,7 @@ func TestInstallCLI_ACurrentDirectoryThatCannotBeResolvedWritesNothing(t *testin
 	c := newCLIInstall(t, map[string]string{"SKILL.md": "x"})
 	var out, errBuf bytes.Buffer
 	code := -1
-	RenderInstallCore([]string{"--registry", "reg.yaml", "--source-root", c.overlay},
+	renderInstallCore([]string{"--registry", "reg.yaml", "--source-root", c.overlay},
 		testRegistries(func(string) ([]byte, error) { return []byte(c.registry), nil }),
 		failCwdFn(), &out, &errBuf, func(n int) { code = n })
 	if code != 1 || errBuf.Len() == 0 {

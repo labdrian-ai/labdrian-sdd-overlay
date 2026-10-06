@@ -31,6 +31,7 @@ func (busyErr) Busy() bool      { return true }
 // recordingLocker records every lock and unlock, in order, and can be told to
 // fail. It also tracks which paths are held right now.
 type recordingLocker struct {
+	osExists
 	mu     sync.Mutex
 	events []string
 	held   map[string]int
@@ -91,7 +92,7 @@ func modeName(m LockMode) string {
 
 // noopLocker takes no lock at all. Tests whose subject is a verb's own behavior,
 // not the lock, use it through skillsCoreUnlocked.
-type noopLocker struct{}
+type noopLocker struct{ osExists }
 
 func (noopLocker) Lock(string, LockMode) (func(), error)    { return func() {}, nil }
 func (noopLocker) LockDir(string, LockMode) (func(), error) { return func() {}, nil }
@@ -99,13 +100,14 @@ func (noopLocker) LockDir(string, LockMode) (func(), error) { return func() {}, 
 // skillsCoreUnlocked is SkillsCore for tests that exercise a verb's own behavior:
 // no clock, and a locker that never blocks.
 func skillsCoreUnlocked(verb string, args []string, readFile readFileFn, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, readFile, testRegistries(readFile), nil, noopLocker{}, stdout, stderr, exit)
+	skillsCoreAt(verb, args, readFile, testRegistries(readFile), nil, noopLocker{}, stdout, stderr, exit)
 }
 
 // exclusionLocker is a real in-process lock: one exclusive holder or any number of
 // shared ones, per path. blocked runs when a Lock call cannot be granted at once,
 // which is how an interleaving test learns that the other side is waiting.
 type exclusionLocker struct {
+	osExists
 	mu      sync.Mutex
 	locks   map[string]*sync.RWMutex
 	log     []string
@@ -228,7 +230,7 @@ type coreRun struct {
 func runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
 	var out, errBuf bytes.Buffer
 	code := 0
-	SkillsCoreAt(verb, append([]string{verb}, args...), readFile, testRegistries(readFile), now, locker, &out, &errBuf, func(c int) { code = c })
+	skillsCoreAt(verb, append([]string{verb}, args...), readFile, testRegistries(readFile), now, locker, &out, &errBuf, func(c int) { code = c })
 	return coreRun{out.String(), errBuf.String(), code}
 }
 
@@ -267,7 +269,7 @@ func registryIDs(t *testing.T, regPath string) []string {
 
 func manifestIDs(t *testing.T, mfPath string) []string {
 	t.Helper()
-	mv, err := LoadManifestView(mfPath)
+	mv, err := loadManifestViewFile(mfPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -319,7 +321,7 @@ func TestTheRegistryLockIsNotSkillContent(t *testing.T) {
 	root := t.TempDir()
 	writeTestFile(t, filepath.Join(root, "one", "SKILL.md"), lintCleanSkillMD("one"))
 	writeTestFile(t, filepath.Join(root, filepath.Base(RegistryLockPath("skills.registry.yaml"))), "")
-	got, err := ScanSkillFiles(root)
+	got, err := scanSkillFiles(root)
 	if err != nil {
 		t.Fatal(err)
 	}

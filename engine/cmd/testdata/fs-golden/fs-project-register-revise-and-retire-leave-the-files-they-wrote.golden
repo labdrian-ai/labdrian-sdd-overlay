@@ -1,0 +1,71 @@
+# registered
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+--- state of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md 0644 346 61aec427bf15
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md 0644 346 61aec427bf15
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 417 b4f7df636bc7
+
+# revised
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/revised/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: b86b925b9f904a6c8d50f94cce621207a47b33632be6bb9a3b9d064274390ab4
+revision: 2
+--- stderr ---
+
+--- state of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md 0644 359 b86b925b9f90
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md 0644 359 b86b925b9f90
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 417 3922df884de5
+
+# retired
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason not needed any more tidy-worktree
+exit: 0
+--- stdout ---
+removed: .claude/skills/tidy-worktree/SKILL.md
+removed: .agents/skills/tidy-worktree/SKILL.md
+--- stderr ---
+
+--- state of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 35 cae7de3b6af2
+
+# status
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+--- stderr ---
+

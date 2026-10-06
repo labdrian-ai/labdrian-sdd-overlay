@@ -7,7 +7,6 @@ package skills
 import (
 	"fmt"
 	"io"
-	"os"
 	"path/filepath"
 )
 
@@ -24,11 +23,10 @@ const (
 	LockShared
 )
 
-// Locker takes advisory locks on behalf of SkillsCoreAt. It is an interface, and
-// this package does not implement it, because the implementation needs system
-// calls and a clock and this package's import allowlist (zero_fetch_test.go)
-// admits neither: engine/cmd passes one built on engine/filelock, and tests pass
-// fakes.
+// Locker takes advisory locks on behalf of SkillsCoreAt, and tells whether a file is there. It
+// is an interface, and this package does not implement it, because the implementation needs
+// system calls and a clock and this package's import allowlist (zero_fetch_test.go) admits
+// neither: engine/cmd passes one built on engine/filelock, and tests pass fakes.
 //
 // Lock waits at most a bound of its own choosing. It returns the function that
 // releases the lock, or an error: an error that answers Busy() bool with true
@@ -43,6 +41,12 @@ type Locker interface {
 	// for a directory that belongs to the user, such as a project root. It fails,
 	// rather than doing without, when dir cannot be locked.
 	LockDir(dir string, mode LockMode) (unlock func(), err error)
+	// Exists says whether path is there: nil when it is, and otherwise the failure that says why
+	// it is not, with the words of the system. An error that is(fs.ErrNotExist) means the path
+	// is absent, which is an answer; any other (a permission, a loop of links) means the
+	// question could not be answered. The domain asks it of the lock files and the registry
+	// it is about to lock, because the locker is what knows where a lock lives.
+	Exists(path string) error
 }
 
 // ExitBusy is the exit code of a skills verb that could not run because another
@@ -244,7 +248,7 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 		var unlock func()
 		var err error
 		if req.registry != "" && !req.skipRegistryCheck {
-			if _, statErr := os.Stat(req.registry); statErr != nil {
+			if statErr := locker.Exists(req.registry); statErr != nil {
 				releaseAll()
 				fmt.Fprintf(stderr, "error: skills %s: reading registry %q: %v; nothing was locked and nothing was changed\n", verb, req.registry, statErr)
 				exit(1)
@@ -254,7 +258,7 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 		if req.rereads && !req.dir && req.mode == LockShared {
 			// Looked at before the locker is asked: a file that is absent now may be
 			// created by the time the locker opens it, which only costs one more read.
-			if _, statErr := os.Stat(req.path); os.IsNotExist(statErr) {
+			if isAbsent(locker.Exists(req.path)) {
 				provisional = append(provisional, req.path)
 			}
 		}
@@ -312,13 +316,13 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 // reading again cannot clear it, and the appeared flag is still there for a caller
 // that needs to tell the two situations apart. (validate asks about one path, so the
 // verbs cannot produce both; the function's answer is pinned by its own test.)
-func rereadsWhenTheLockFileAppears(provisional []string) (appeared bool, err error) {
+func rereadsWhenTheLockFileAppears(locker Locker, provisional []string) (appeared bool, err error) {
 	for _, path := range provisional {
-		_, statErr := os.Stat(path)
+		statErr := locker.Exists(path)
 		switch {
 		case statErr == nil:
 			appeared = true
-		case !os.IsNotExist(statErr) && err == nil:
+		case !isAbsent(statErr) && err == nil:
 			err = statErr
 		}
 	}

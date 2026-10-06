@@ -1,0 +1,105 @@
+# a first install
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/bin/
+.agents/skills/tidy-notes/bin/run.sh 0644 19 f5dd87fa1cf3
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/nested/
+.agents/skills/tidy-notes/references/nested/gone.md 0644 33 69c4e0827f74
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.agents/skills/tidy-notes/references/old.md 0644 14 3ea75077c171
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/bin/
+.claude/skills/tidy-notes/bin/run.sh 0644 19 f5dd87fa1cf3
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/nested/
+.claude/skills/tidy-notes/references/nested/gone.md 0644 33 69c4e0827f74
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/skills/tidy-notes/references/old.md 0644 14 3ea75077c171
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 1047 2e7b6e201cb1
+
+# a file removed from the source, a directory with it, a file changed and made executable, a file added
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+updated: tidy-notes
+unchanged: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/bin/
+.agents/skills/tidy-notes/bin/run.sh 0755 19 51d5cad9e6f3
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/new.md 0644 6 3428719b7688
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/bin/
+.claude/skills/tidy-notes/bin/run.sh 0755 19 51d5cad9e6f3
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/new.md 0644 6 3428719b7688
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 892 a7cac3546a5c
+
+# a file the user added beside, and a file removed from the source
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+updated: tidy-notes
+unchanged: only-demo
+--- stderr ---
+
+--- state of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.agents/skills/tidy-notes/bin/
+.agents/skills/tidy-notes/bin/run.sh 0755 19 51d5cad9e6f3
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md 0644 296 a4d04cee6b49
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md 0644 298 46b5a07e78bd
+.claude/skills/tidy-notes/bin/
+.claude/skills/tidy-notes/bin/run.sh 0755 19 51d5cad9e6f3
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/mine.md 0644 20 c5a2a3732020
+.claude/skills/tidy-notes/references/notes.md 0644 31 f4a77fd56f81
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 745 224f9600496e
+

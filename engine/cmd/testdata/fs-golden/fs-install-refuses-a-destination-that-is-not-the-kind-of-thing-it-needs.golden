@@ -1,0 +1,73 @@
+# .claude is a file
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: could not be resolved: not a directory
+error: skills install: destination .claude/skills/only-demo: could not be resolved: not a directory
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude 0644 7 da69f286f03c
+
+# .claude/skills is a file
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: destination .claude/skills/tidy-notes: could not be resolved: not a directory
+error: skills install: destination .claude/skills/only-demo: could not be resolved: not a directory
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude/
+.claude/skills 0644 7 da69f286f03c
+
+# the directory of a skill is a file
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: .claude/skills/tidy-notes exists and is not a directory
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude/
+.claude/skills/
+.claude/skills/tidy-notes 0644 7 da69f286f03c
+
+# SKILL.md is a directory
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: .claude/skills/tidy-notes already exists and was not installed by skills install (it has no install record in .labdrian/procedural-skills.lock.json); if it is exactly the current skill, run `labdrian skills adopt --project-id demo` to take ownership of it, otherwise move it away
+error: skills install: refused, so nothing was installed
+
+--- state of demo ---
+.claude/
+.claude/skills/
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md/
+
+# the project lock is a directory
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading project lock ".labdrian/procedural-skills.lock.json": read <WORLD>/demo/.labdrian/procedural-skills.lock.json: is a directory
+
+--- state of demo ---
+.labdrian/
+.labdrian/procedural-skills.lock.json/
+
+# .labdrian is a file
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading project lock ".labdrian/procedural-skills.lock.json": open <WORLD>/demo/.labdrian/procedural-skills.lock.json: not a directory
+
+--- state of demo ---
+.labdrian 0644 7 da69f286f03c
+

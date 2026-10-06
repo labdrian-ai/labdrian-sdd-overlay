@@ -1,0 +1,85 @@
+# a root that does not exist
+$ skills project-register --project-root <WORLD>/missing --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: cannot take the lock on the directory <WORLD>/missing: lstat <WORLD>/missing: no such file or directory
+
+# a root that is a file
+$ skills project-register --project-root <WORLD>/a-file --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: cannot take the lock on the directory <WORLD>/a-file: filelock: open <WORLD>/a-file: open <WORLD>/a-file: not a directory
+
+# a root that is a dangling link
+$ skills project-register --project-root <WORLD>/dangling --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: cannot take the lock on the directory <WORLD>/dangling: lstat <WORLD>/nowhere: no such file or directory
+
+# a root that is a link to the project
+$ skills project-register --project-root <WORLD>/link-to-project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+--- state of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md 0644 346 61aec427bf15
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md 0644 346 61aec427bf15
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 417 b4f7df636bc7
+
+# a root that is relative
+$ skills project-register --project-root project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: --project-root "project" must be an absolute path
+
+# a draft that does not exist
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/missing/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading draft "<WORLD>/drafts/missing/SKILL.md": open <WORLD>/drafts/missing/SKILL.md: no such file or directory
+
+# a draft that is a directory
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/dir/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading draft "<WORLD>/drafts/dir/SKILL.md": read <WORLD>/drafts/dir/SKILL.md: is a directory
+
+# a draft that is a link
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/link.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading draft "<WORLD>/drafts/link.md": open <WORLD>/drafts/link.md: no such file or directory
+
+--- state of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md 0644 346 61aec427bf15
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md 0644 346 61aec427bf15
+.labdrian/
+.labdrian/procedural-skills.lock.json 0644 417 b4f7df636bc7
+

@@ -220,7 +220,7 @@ func TestExecuteInstallPlan_RefusesAPathThatAppearedAfterThePlanWasBuilt(t *test
 	before := f.snapshot()
 	var stderr bytes.Buffer
 
-	err := ExecuteInstallPlan(plan, f.root, osProjectFS{}, &stderr)
+	err := ExecuteInstallPlan(plan, f.root, testProjectFS(), &stderr)
 
 	if err == nil || !strings.Contains(err.Error(), ".agents/skills/pdf/SKILL.md") || !strings.Contains(err.Error(), "skills install") {
 		t.Fatalf("error = %v, want a refusal naming the path, worded for install", err)
@@ -262,7 +262,7 @@ func TestExecuteInstallPlan_WordsEveryFailureForTheVerbThatRanIt(t *testing.T) {
 			}
 			f.write(appeared, "appeared meanwhile\n")
 
-			err := ExecuteInstallPlan(p, f.root, osProjectFS{}, &bytes.Buffer{})
+			err := ExecuteInstallPlan(p, f.root, testProjectFS(), &bytes.Buffer{})
 
 			if err == nil || !strings.HasPrefix(err.Error(), mine) || !strings.Contains(err.Error(), appeared) {
 				t.Fatalf("error = %v, want a refusal that starts %q and names %s", err, mine, appeared)
@@ -329,7 +329,7 @@ func TestPruneEmptyDirs_NeverRemovesASkillDirectoryItself(t *testing.T) {
 				Dirs:    []string{skillDir},
 			}
 
-			pruneEmptyDirs(osProjectFS{}, plan)
+			pruneEmptyDirs(testProjectFS(), plan)
 
 			if !f.exists(".claude/skills/pdf") {
 				t.Error("the skill directory itself was removed")

@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"bytes"
 	"fmt"
 	"strings"
 )
@@ -87,11 +88,14 @@ func Diff(reg Registry, mv ManifestView) []Divergence {
 	return divs
 }
 
-// Validate loads the manifest at manifestPath, calls Diff, and returns the
-// divergences together with a non-nil error when any divergences exist.
-// Zero divergences → nil error.
-func Validate(reg Registry, manifestPath string) ([]Divergence, error) {
-	mv, err := LoadManifestView(manifestPath)
+// ValidateAgainstManifest parses the manifest, calls Diff, and returns the divergences together
+// with a non-nil error when any divergences exist. Zero divergences → nil error. An error with
+// no divergences says the manifest could not be parsed.
+//
+// (Registry.Validate is another thing: it says whether a registry may hold what it holds, and
+// looks at no manifest.)
+func ValidateAgainstManifest(reg Registry, manifest []byte) ([]Divergence, error) {
+	mv, err := loadManifestViewReader(bytes.NewReader(manifest))
 	if err != nil {
 		return nil, err
 	}

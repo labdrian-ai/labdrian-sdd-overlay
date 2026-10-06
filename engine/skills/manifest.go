@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"io"
-	"os"
 	"strings"
 )
 
@@ -25,9 +24,8 @@ type ManifestEntry struct {
 // directories identified by a SKILL.md row.
 type ManifestView map[string]ManifestEntry
 
-// LoadManifestView reads the file at path and returns a ManifestView.
+// loadManifestViewReader parses a ManifestView from r, with these rules:
 //
-// Rules:
 //   - Blank lines and lines starting with '#' are skipped.
 //   - Only rows containing '<path> <tag>' are processed.
 //   - A skill directory is identified by a row whose path ends with '/SKILL.md'.
@@ -35,17 +33,8 @@ type ManifestView map[string]ManifestEntry
 //   - Rows whose first path component matches an infra prefix are excluded.
 //   - Non-SKILL.md rows are ignored for directory discovery; they do not produce entries.
 //   - If multiple SKILL.md rows share the same directory, the first one wins.
-func LoadManifestView(path string) (ManifestView, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		return nil, fmt.Errorf("manifest: open %s: %w", path, err)
-	}
-	defer f.Close()
-	return loadManifestViewReader(f)
-}
-
-// loadManifestViewReader parses a ManifestView from r. It is the pure, reader-based
-// core of LoadManifestView, extracted to allow in-memory callers (ADR-9 step 7).
+//
+// It reads nothing itself: the verbs hand it the bytes of the manifest they were given.
 func loadManifestViewReader(r io.Reader) (ManifestView, error) {
 	mv := make(ManifestView)
 	scanner := bufio.NewScanner(r)

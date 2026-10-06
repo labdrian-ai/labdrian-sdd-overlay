@@ -2,7 +2,6 @@ package skills
 
 import (
 	"fmt"
-	"os"
 	"path/filepath"
 )
 
@@ -130,7 +129,7 @@ func CheckApprovals(reg Registry, sourceRoot string, readFile readFileFn) ([]Div
 		skillPath := filepath.Join(sourceRoot, e.Path, "SKILL.md")
 		skillMD, err := readFile(skillPath)
 		if err != nil {
-			if os.IsNotExist(err) {
+			if isAbsent(err) {
 				sum.SkillFileMissing++
 				continue
 			}

@@ -331,7 +331,7 @@ func TestBaselineSkillThatFailsTheHardLint_ValidateAsksForApprovalAndApproveReso
 	validate := func() (string, string, int) {
 		var out, errBuf bytes.Buffer
 		code := 0 // validate calls exit only to fail
-		RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), ScanSkillFiles, &out, &errBuf, func(c int) { code = c })
+		RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
 		return out.String(), errBuf.String(), code
 	}
 

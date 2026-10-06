@@ -4,7 +4,8 @@ import (
 	"bytes"
 	"fmt"
 	"io"
-	"os"
+	"io/fs"
+	"path/filepath"
 	"reflect"
 	"regexp"
 	"strings"
@@ -103,43 +104,6 @@ func RemoveEntry(reg Registry, id string) (Registry, error) {
 
 // ── I/O helpers ─────────────────────────────────────────────────────────────
 
-// atomicTempPrefix begins the name of every temporary file writeFileAtomic makes,
-// in the directory of the file it is about to replace. A copier that walks a
-// directory another verb may be writing in skips names that carry it and a unique
-// suffix (see copyTree): such a file is half a write, never skill content.
-const atomicTempPrefix = ".tmp-skills-"
-
-// writeFileAtomic writes data to a temp file in the same directory as path,
-// syncs, and returns the temp file path. The caller is responsible for the
-// final os.Rename. This pattern ensures each file is written atomically
-// (ADR-9 dual-temp + rename).
-func writeFileAtomic(path string, data []byte) (string, error) {
-	dir := path[:strings.LastIndex(path, string(os.PathSeparator))+1]
-	if dir == "" {
-		dir = "."
-	}
-	tmp, err := os.CreateTemp(dir, atomicTempPrefix+"*")
-	if err != nil {
-		return "", fmt.Errorf("writeFileAtomic: create temp: %w", err)
-	}
-	name := tmp.Name()
-	if _, err := tmp.Write(data); err != nil {
-		tmp.Close()
-		os.Remove(name)
-		return "", fmt.Errorf("writeFileAtomic: write: %w", err)
-	}
-	if err := tmp.Sync(); err != nil {
-		tmp.Close()
-		os.Remove(name)
-		return "", fmt.Errorf("writeFileAtomic: sync: %w", err)
-	}
-	if err := tmp.Close(); err != nil {
-		os.Remove(name)
-		return "", fmt.Errorf("writeFileAtomic: close: %w", err)
-	}
-	return name, nil
-}
-
 // appendManifestLine returns src with "<id>/SKILL.md custom" appended,
 // ensuring exactly one trailing newline before appending (ADR-5).
 func appendManifestLine(src []byte, id string) []byte {
@@ -226,7 +190,7 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo
 //     grandfathered baseline's (approval_gate.go)
 //   - encoding the new registry and decoding it back is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
-func AddCore(args []string, readFile readFileFn, registries RegistryRepository, statFile func(string) (os.FileInfo, error), stdout, stderr io.Writer, exit func(int)) {
+func AddCore(args []string, readFile readFileFn, registries RegistryRepository, statFile func(string) (fs.FileInfo, error), files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, sourceRoot, id, repo, ref := parseFlags(args)
 
 	if id == "" {
@@ -258,7 +222,7 @@ func AddCore(args []string, readFile readFileFn, registries RegistryRepository, 
 	}
 
 	// 3. Precondition: <sourceRoot>/<id>/SKILL.md must exist (R-060).
-	skillMDPath := sourceRoot + string(os.PathSeparator) + id + string(os.PathSeparator) + "SKILL.md"
+	skillMDPath := sourceRoot + string(filepath.Separator) + id + string(filepath.Separator) + "SKILL.md"
 	if _, err := statFile(skillMDPath); err != nil {
 		fmt.Fprintf(stderr, "error: skill %q: SKILL.md not found at %q: %v\n", id, skillMDPath, err)
 		exit(1)
@@ -345,30 +309,30 @@ func AddCore(args []string, readFile readFileFn, registries RegistryRepository, 
 	}
 
 	// 8. Dual-temp atomic write: manifest first, then registry (ADR-9).
-	manTemp, err := writeFileAtomic(manifestPath, manBytes)
+	manTemp, err := writeFileAtomic(files, manifestPath, manBytes, overlayFileMode)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	regTemp, err := writeFileAtomic(registryPath, regBytes)
+	regTemp, err := writeFileAtomic(files, registryPath, regBytes, overlayFileMode)
 	if err != nil {
-		os.Remove(manTemp)
+		files.Remove(manTemp)
 		fmt.Fprintf(stderr, "error: writing registry: %v\n", err)
 		exit(1)
 		return
 	}
 
 	// 9. Rename: manifest first, then registry.
-	if err := os.Rename(manTemp, manifestPath); err != nil {
-		os.Remove(manTemp)
-		os.Remove(regTemp)
+	if err := files.Rename(manTemp, manifestPath); err != nil {
+		files.Remove(manTemp)
+		files.Remove(regTemp)
 		fmt.Fprintf(stderr, "error: finalizing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	if err := os.Rename(regTemp, registryPath); err != nil {
-		os.Remove(regTemp)
+	if err := files.Rename(regTemp, registryPath); err != nil {
+		files.Remove(regTemp)
 		fmt.Fprintf(stderr, "error: finalizing registry: %v\n", err)
 		exit(1)
 		return
@@ -382,7 +346,7 @@ func AddCore(args []string, readFile readFileFn, registries RegistryRepository, 
 // It reads the registry and manifest, removes the entry (pure), validates
 // the in-memory state, then writes both files atomically (manifest-first per
 // ADR-9). All side effects are injected; no global state is used.
-func RemoveCore(args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
+func RemoveCore(args []string, readFile readFileFn, registries RegistryRepository, files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, _, id, _, _ := parseFlags(args)
 
 	if id == "" {
@@ -449,30 +413,30 @@ func RemoveCore(args []string, readFile readFileFn, registries RegistryRepositor
 	}
 
 	// 6. Dual-temp atomic write: manifest first, then registry (ADR-9).
-	manTemp, err := writeFileAtomic(manifestPath, manBytes)
+	manTemp, err := writeFileAtomic(files, manifestPath, manBytes, overlayFileMode)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	regTemp, err := writeFileAtomic(registryPath, regBytes)
+	regTemp, err := writeFileAtomic(files, registryPath, regBytes, overlayFileMode)
 	if err != nil {
-		os.Remove(manTemp)
+		files.Remove(manTemp)
 		fmt.Fprintf(stderr, "error: writing registry: %v\n", err)
 		exit(1)
 		return
 	}
 
 	// 7. Rename: manifest first, then registry.
-	if err := os.Rename(manTemp, manifestPath); err != nil {
-		os.Remove(manTemp)
-		os.Remove(regTemp)
+	if err := files.Rename(manTemp, manifestPath); err != nil {
+		files.Remove(manTemp)
+		files.Remove(regTemp)
 		fmt.Fprintf(stderr, "error: finalizing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	if err := os.Rename(regTemp, registryPath); err != nil {
-		os.Remove(regTemp)
+	if err := files.Rename(regTemp, registryPath); err != nil {
+		files.Remove(regTemp)
 		fmt.Fprintf(stderr, "error: finalizing registry: %v\n", err)
 		exit(1)
 		return

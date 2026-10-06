@@ -2,7 +2,7 @@ package skills
 
 import (
 	"fmt"
-	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 )
@@ -129,7 +129,7 @@ func checkAdoptable(c *planContext, sk InstallSkill, refusals *[]string) (presen
 
 		info, err := in.Stat(dirAbs)
 		switch {
-		case err != nil && os.IsNotExist(err):
+		case err != nil && isAbsent(err):
 			notes = append(notes, fmt.Sprintf("%s is not installed; run `labdrian skills install --project-id %s` to add it", dirRel, in.ProjectID))
 			continue
 		case err != nil:
@@ -171,7 +171,7 @@ func differencesFromSource(in InstallInput, dir string, sk InstallSkill) ([]stri
 			if rel != "" {
 				childRel = rel + "/" + e.Name()
 			}
-			childAbs := abs + string(os.PathSeparator) + e.Name()
+			childAbs := abs + string(filepath.Separator) + e.Name()
 			switch {
 			case e.IsDir():
 				if err := walk(childAbs, childRel); err != nil {
