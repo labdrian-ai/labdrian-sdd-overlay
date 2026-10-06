@@ -200,7 +200,8 @@ func stripVerb(args []string, verb string) []string {
 // (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006
 // and to the global-skill approval check by CheckApprovals), and also when the reader left fields
 // of the registry out (Registry.CheckVerifiable): validate is the verb that detects drift, so it
-// does not pass a registry it read in part. Every other verb that reads only warns.
+// does not pass a registry it read in part. Every other verb that reads only warns. Two ids on one
+// path are accepted: validate says so in a note, which changes nothing of the exit code.
 //
 // --source-root has no default and no cwd-derived fallback (R-002): a caller
 // that omits it gets a usage error, never a silent scan of the working
@@ -240,6 +241,10 @@ func RenderValidateCore(args []string, readFile readFileFn, registries RegistryR
 	reg, ok := readRegistryForVerb(registries, registryPath, false, stderr, exit)
 	if !ok {
 		return
+	}
+	// Two ids on one path are accepted and not a failure: validate says so (decision 6 of the owner).
+	for _, shared := range reg.SharedPaths() {
+		fmt.Fprintln(stderr, shared.Note())
 	}
 
 	// The manifest is read once, and the registry is compared with what was read. A manifest that

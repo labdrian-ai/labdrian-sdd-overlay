@@ -1,0 +1,20 @@
+# two ids on one path, and a manifest, a disk and approvals that agree
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (2 skills)
+skills/ on disk matches overlay.manifest (1 files)
+global skill approvals verified (2 skills: 2 approved, 0 grandfathered)
+--- stderr ---
+note: the skills "alpha" and "beta" share the path "alpha"
+
+# three ids on one path, in the order the registry says them
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (3 skills)
+skills/ on disk matches overlay.manifest (1 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+note: the skills "alpha", "beta" and "gamma" share the path "alpha"
+

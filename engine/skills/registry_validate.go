@@ -127,3 +127,48 @@ func validateEntry(e *Entry) error {
 	}
 	return nil
 }
+
+// SharedPath is a path that more than one entry of a registry holds, with the ids that hold it in
+// the order of the registry.
+type SharedPath struct {
+	Path string
+	IDs  []string
+}
+
+// SharedPaths are the paths that two or more entries hold, in the order the registry first says
+// each. Two ids on one path are accepted (decision 6 of the owner, as they always were: Validate
+// does not refuse them), and validate says so in a note (Note), because it is a shape worth a look
+// and not a fault.
+func (r Registry) SharedPaths() []SharedPath {
+	var shared []SharedPath
+	index := make(map[string]int, len(r.Skills))
+	for _, e := range r.Skills {
+		i, seen := index[e.Path]
+		if !seen {
+			index[e.Path] = len(shared)
+			shared = append(shared, SharedPath{Path: e.Path, IDs: []string{e.ID}})
+			continue
+		}
+		shared[i].IDs = append(shared[i].IDs, e.ID)
+	}
+	held := shared[:0]
+	for _, s := range shared {
+		if len(s.IDs) > 1 {
+			held = append(held, s)
+		}
+	}
+	if len(held) == 0 {
+		return nil
+	}
+	return held
+}
+
+// Note is what a person is told of a shared path: the ids, and the path they share.
+func (s SharedPath) Note() string {
+	ids := make([]string, len(s.IDs))
+	for i, id := range s.IDs {
+		ids[i] = fmt.Sprintf("%q", id)
+	}
+	last := len(ids) - 1
+	return fmt.Sprintf("note: the skills %s and %s share the path %q", strings.Join(ids[:last], ", "), ids[last], s.Path)
+}
