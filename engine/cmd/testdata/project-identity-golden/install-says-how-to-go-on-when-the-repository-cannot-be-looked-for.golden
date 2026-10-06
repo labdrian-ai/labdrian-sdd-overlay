@@ -1,0 +1,17 @@
+# a .git that cannot be inspected (a link to itself): the directory is named, and --project-id is the way on
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: resolving project identity: cannot look for a git repository in <WORLD>/demo (too many levels of symbolic links); give --project-id to name the project without looking
+
+--- tree of demo ---
+.git (4 bytes)
+
+# naming the project goes past it
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+

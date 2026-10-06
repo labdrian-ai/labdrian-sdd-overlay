@@ -71,16 +71,16 @@ func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
 			case s.endOfOptions && arg == "--":
 				endOfOptions = true
 				continue
-			case contains(s.values, arg):
+			case containsFlag(s.values, arg):
 				if i+1 < len(args) {
 					out.values[arg] = args[i+1]
 					i++
 				}
 				continue
-			case contains(s.switches, arg):
+			case containsFlag(s.switches, arg):
 				out.switches[arg] = true
 				continue
-			case contains(s.wrapper, arg):
+			case containsFlag(s.wrapper, arg):
 				if i+1 < len(args) {
 					i++
 				}
@@ -97,7 +97,8 @@ func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
 	return out, nil
 }
 
-func contains(list []string, s string) bool {
+// containsFlag reports whether the word is one of the flags a spec names.
+func containsFlag(list []string, s string) bool {
 	for _, item := range list {
 		if item == s {
 			return true

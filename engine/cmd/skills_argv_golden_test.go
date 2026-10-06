@@ -6,14 +6,14 @@ import (
 	"testing"
 )
 
-// The golden files under testdata/skills-argv-golden record how the read-only verbs of `skills`
-// read their command line (Phase 9, unit H20, which moves them behind one strict flag parser):
-// 'list', 'status', 'validate' and 'lint'. They record what each form of the command line does
-// today, the valid ones and the mistakes, so that a change to the way the arguments are read is
-// a change that shows: the flags they take, a flag given twice, a flag with no value, a flag
-// they do not know, a word that is no flag, the equals form, and the words of the refusals. The
-// cases that H20 changes on purpose (an unknown flag is refused, decision D4) were recorded
-// from the program before the change and were rewritten in that commit, each read in its diff.
+// The golden files under testdata/skills-argv-golden record how the verbs of `skills` read their
+// command line (Phase 9, unit H20, which moves them behind one strict flag parser): 'list',
+// 'status', 'validate' and 'lint'. They record what each form of the
+// command line does, the valid ones and the mistakes, so that a change to the way the arguments
+// are read is a change that shows: the flags they take, a flag given twice, a flag with no value,
+// a flag they do not know (refused, decision D4), a word that is no flag, the equals form, and
+// the words of the refusals. A case a verb's move changed on purpose was recorded from the
+// program before the move and rewritten in the commit that moved it, each read in its diff.
 //
 // Each case runs the built program in a throwaway world, as the registry goldens do, and is its
 // own subtest. Rewrite them deliberately with

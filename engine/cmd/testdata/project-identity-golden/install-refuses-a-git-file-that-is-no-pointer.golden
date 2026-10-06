@@ -1,0 +1,23 @@
+# a .git that is a file and holds no gitdir line: the repository cannot be read, and the directory name is not used in its place
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: resolving project identity: <WORLD>/demo/.git is a file and holds no "gitdir:" line, so it names no git directory
+
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: resolving project identity: <WORLD>/demo/.git is a file and holds no "gitdir:" line, so it names no git directory
+
+--- tree of demo ---
+.git (23 bytes)
+
+# naming the project goes past it
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+
