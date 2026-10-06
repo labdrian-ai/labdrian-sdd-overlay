@@ -34,6 +34,13 @@ removed: alpha
 version: "1"
 skills:
 
+# -- before the id, and the flags of the wrapper after it: they are still flags
+$ skills remove -- alpha --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/absent.manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/absent.manifest": open <WORLD>/absent.manifest: no such file or directory
+
 # an empty id
 $ skills remove 
 exit: 1

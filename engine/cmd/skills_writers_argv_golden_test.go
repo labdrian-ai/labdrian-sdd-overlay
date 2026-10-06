@@ -225,6 +225,7 @@ func skillsWritersArgvCases() []registryGoldenCase {
 			w.try("-- before the id", "skills", "remove", "--", "alpha")
 			w.show(worldRegistry)
 			w.restoreOverlay(alphaManifest)
+			w.try("-- before the id, and the flags of the wrapper after it: they are still flags", "skills", "remove", "--", "alpha", "--registry", w.path(worldRegistry), "--manifest", w.path("absent.manifest"))
 			w.try("an empty id", "skills", "remove", "")
 		}},
 

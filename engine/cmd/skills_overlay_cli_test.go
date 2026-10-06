@@ -240,6 +240,8 @@ type holdingLocker struct {
 	events []string
 	held   map[string]int
 	fail   error
+	// unseen are the paths the locker says it cannot see, with what it says of each.
+	unseen map[string]error
 }
 
 func (l *holdingLocker) Lock(path string, mode skills.LockMode) (func(), error) {
@@ -248,7 +250,13 @@ func (l *holdingLocker) Lock(path string, mode skills.LockMode) (func(), error) 
 func (l *holdingLocker) LockDir(dir string, mode skills.LockMode) (func(), error) {
 	return l.take("lockdir", dir, mode)
 }
-func (l *holdingLocker) Exists(path string) error { _, err := os.Stat(path); return err }
+func (l *holdingLocker) Exists(path string) error {
+	if err := l.unseen[path]; err != nil {
+		return err
+	}
+	_, err := os.Stat(path)
+	return err
+}
 
 func lockModeName(m skills.LockMode) string {
 	if m == skills.LockShared {
@@ -550,7 +558,22 @@ func TestAddTellsEachDivergenceTheWriteWouldLeaveAndWritesNothing(t *testing.T) 
 type exclusionLocker struct {
 	mu      sync.Mutex
 	locks   map[string]*sync.RWMutex
+	log     []string
 	blocked func()
+}
+
+// record adds one event to the order in which locks were granted and released.
+func (l *exclusionLocker) record(event string) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.log = append(l.log, event)
+}
+
+// events returns the grants and releases so far, in order.
+func (l *exclusionLocker) events() []string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return append([]string(nil), l.log...)
 }
 
 func (l *exclusionLocker) Exists(path string) error { _, err := os.Stat(path); return err }
@@ -568,27 +591,32 @@ func (l *exclusionLocker) rw(path string) *sync.RWMutex {
 }
 
 func (l *exclusionLocker) Lock(path string, mode skills.LockMode) (func(), error) {
-	return l.take(path, mode)
+	return l.take(path, path, mode)
 }
 
+// LockDir locks a directory. A directory and a file that happen to share a path are different
+// locks in the tests as little as they are in the kernel, where they cannot share a path at all.
 func (l *exclusionLocker) LockDir(dir string, mode skills.LockMode) (func(), error) {
-	return l.take("dir:"+dir, mode)
+	return l.take("dir:"+dir, dir, mode)
 }
 
-func (l *exclusionLocker) take(key string, mode skills.LockMode) (func(), error) {
+func (l *exclusionLocker) take(key, path string, mode skills.LockMode) (func(), error) {
 	rw := l.rw(key)
+	name := lockModeName(mode) + " " + filepath.Base(path)
 	if mode == skills.LockShared {
 		if !rw.TryRLock() {
 			l.wait()
 			rw.RLock()
 		}
-		return rw.RUnlock, nil
+		l.record("granted " + name)
+		return func() { l.record("released " + name); rw.RUnlock() }, nil
 	}
 	if !rw.TryLock() {
 		l.wait()
 		rw.Lock()
 	}
-	return rw.Unlock, nil
+	l.record("granted " + name)
+	return func() { l.record("released " + name); rw.Unlock() }, nil
 }
 
 func (l *exclusionLocker) wait() {

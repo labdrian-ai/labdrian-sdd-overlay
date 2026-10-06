@@ -33,6 +33,11 @@ type skillsFlagSpec struct {
 	// endOfOptions makes a bare "--" end the flags: every word after it is a word, even one that
 	// begins with a dash.
 	endOfOptions bool
+	// skipDoubleDash makes a bare "--" be dropped, and the flags after it still flags: the way
+	// the verbs that always let it pass unread (add, remove, sync-manifest) took it. The labdrian
+	// wrapper appends its flags after the arguments of the verb, so a "--" that ended the flags
+	// would turn the registry the wrapper names into a word and leave the verb on its defaults.
+	skipDoubleDash bool
 	// valueIsNeverAFlag makes a value flag refuse a value that begins with a dash, because it is
 	// far more likely to be the next flag than a value; the flag is refused too when it is the
 	// last word and has no value at all. Without it a flag takes whatever follows it. It applies
@@ -79,6 +84,8 @@ func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
 			switch {
 			case s.endOfOptions && arg == "--":
 				endOfOptions = true
+				continue
+			case s.skipDoubleDash && arg == "--":
 				continue
 			case containsFlag(s.values, arg):
 				value, taken, err := s.takeValue(args, i)
@@ -189,30 +196,30 @@ const (
 // it works in, the repository and ref of an external skill, and the id, which is the first word
 // (a later word is not read). "--" ends the flags, as it always passed unread.
 var skillsAddSpec = skillsFlagSpec{
-	verb:         "add",
-	values:       []string{flagRegistry, flagManifest, flagSourceRoot, flagRepo, flagRef},
-	words:        -1,
-	endOfOptions: true,
+	verb:           "add",
+	values:         []string{flagRegistry, flagManifest, flagSourceRoot, flagRepo, flagRef},
+	words:          -1,
+	skipDoubleDash: true,
 }
 
 // skillsRemoveSpec is the command line of `skills remove`: the registry and the manifest, the
 // source root of the wrapper taken and not read, and the id as the first word.
 var skillsRemoveSpec = skillsFlagSpec{
-	verb:         "remove",
-	values:       []string{flagRegistry, flagManifest},
-	wrapper:      []string{flagSourceRoot},
-	words:        -1,
-	endOfOptions: true,
+	verb:           "remove",
+	values:         []string{flagRegistry, flagManifest},
+	wrapper:        []string{flagSourceRoot},
+	words:          -1,
+	skipDoubleDash: true,
 }
 
 // skillsSyncSpec is the command line of `skills sync-manifest`: the registry and the manifest, the
 // source root of the wrapper taken and not read, and no word it reads.
 var skillsSyncSpec = skillsFlagSpec{
-	verb:         "sync-manifest",
-	values:       []string{flagRegistry, flagManifest},
-	wrapper:      []string{flagSourceRoot},
-	words:        -1,
-	endOfOptions: true,
+	verb:           "sync-manifest",
+	values:         []string{flagRegistry, flagManifest},
+	wrapper:        []string{flagSourceRoot},
+	words:          -1,
+	skipDoubleDash: true,
 }
 
 // skillsApproveSpec is the command line of `skills approve`: the skill, the approver and the skills

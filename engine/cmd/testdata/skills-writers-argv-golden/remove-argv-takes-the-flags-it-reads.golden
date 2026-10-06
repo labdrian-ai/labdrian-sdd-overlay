@@ -25,12 +25,22 @@ removed: alpha
 
 # the flags of add, which remove does not read
 $ skills remove --repo https://example.test/foo.git --ref v1 alpha
-exit: 0
+exit: 1
 --- stdout ---
-removed: alpha
 --- stderr ---
+error: skills remove: unknown flag "--repo"
 
 --- skills.registry.yaml ---
 version: "1"
 skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
 

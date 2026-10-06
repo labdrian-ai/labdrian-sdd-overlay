@@ -214,7 +214,7 @@ func TestSkillsFlagSpecsOfTheWritersSayWhatEachVerbReads(t *testing.T) {
 			[]string{"--registry", "r", "--manifest", "m", "--source-root", "s", "--repo", "u", "--ref", "v", "foo"},
 			map[string]string{"--registry": "r", "--manifest": "m", "--source-root": "s", "--repo": "u", "--ref": "v"}, []string{"foo"}},
 		{"add reads the id from the first word and ignores the rest", skillsAddSpec, []string{"foo", "bar"}, nil, []string{"foo", "bar"}},
-		{"add ends its flags at --", skillsAddSpec, []string{"--", "foo"}, nil, []string{"foo"}},
+		{"add drops a --, and the flags after it are still flags", skillsAddSpec, []string{"--", "foo", "--manifest", "m"}, map[string]string{"--manifest": "m"}, []string{"foo"}},
 		{"remove takes the source root of the wrapper and does not read it", skillsRemoveSpec,
 			[]string{"--registry", "r", "--source-root", "s", "foo"}, map[string]string{"--registry": "r"}, []string{"foo"}},
 		{"sync-manifest reads the registry and the manifest", skillsSyncSpec,
