@@ -191,10 +191,10 @@ func TestLockRequestsAreAlwaysOverlayBeforeProject(t *testing.T) {
 		}
 		requests := lockRequestsFor(verb, args, installRoot)
 		for _, req := range requests {
-			if req.dir {
+			if req.Dir {
 				seenDir = true
 			} else if seenDir {
-				t.Errorf("%s asks for the overlay lock %s after a project lock: %v", verb, req.path, requests)
+				t.Errorf("%s asks for the overlay lock %s after a project lock: %v", verb, req.Path, requests)
 			}
 		}
 		if len(requests) > 1 {

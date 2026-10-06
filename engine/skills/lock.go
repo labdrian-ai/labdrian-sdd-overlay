@@ -5,6 +5,7 @@ package skills
 // under it.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -72,25 +73,28 @@ func RegistryLockPath(registryPath string) string {
 	return filepath.Join(filepath.Dir(registryPath), "."+filepath.Base(registryPath)+".lock")
 }
 
-// lockRequest is one lock a verb needs before it runs.
-type lockRequest struct {
-	path    string
-	dir     bool // path is a directory locked itself (a project root), not a lock file
-	mode    LockMode
-	subject string // what the lock protects, for the messages
-	// registry, when set, is a registry file that must exist before this lock is
+// LockRequest is one lock a verb needs before it runs.
+type LockRequest struct {
+	// Path is the lock file, or, for Dir, the directory locked itself.
+	Path string
+	// Dir says Path is a directory locked itself (a project root), not a lock file.
+	Dir  bool
+	Mode LockMode
+	// Subject is what the lock protects, for the messages.
+	Subject string
+	// Registry, when set, is a registry file that must exist before this lock is
 	// asked for, because asking creates the lock file beside it. The exception is a
 	// verb that never reads the registry (approve) and was told which registry's
-	// lock to take: there the path is only the name of the lock, and skipRegistryCheck
+	// lock to take: there the path is only the name of the lock, and SkipRegistryCheck
 	// is set, which leaves out the check that the registry exists before the lock is
 	// taken.
-	registry          string
-	skipRegistryCheck bool
-	// rereads marks a shared lock on a lock file whose holder reads several files
+	Registry          string
+	SkipRegistryCheck bool
+	// Rereads marks a shared lock on a lock file whose holder reads several files
 	// that must agree. When that file does not exist, the lock holds nothing (see
 	// filelock.Shared), so the verb's read is provisional: see
 	// rereadsWhenTheLockFileAppears.
-	rereads bool
+	Rereads bool
 }
 
 // lockRequestsFor lists, in the order they must be taken, the locks a verb needs.
@@ -148,15 +152,15 @@ type lockRequest struct {
 //
 // Every read of shared state happens after the locks are held, in the verb itself,
 // so nothing decided before the lock is trusted after it.
-func lockRequestsFor(verb string, args []string, installRoot string) []lockRequest {
-	var requests []lockRequest
+func lockRequestsFor(verb string, args []string, installRoot string) []LockRequest {
+	var requests []LockRequest
 	overlay := func(mode LockMode, rereads bool) {
 		registryPath, _, _, _, _, _ := parseFlags(args)
-		req := lockRequest{
-			path:    RegistryLockPath(registryPath),
-			mode:    mode,
-			subject: "the registry " + registryPath,
-			rereads: rereads,
+		req := LockRequest{
+			Path:    RegistryLockPath(registryPath),
+			Mode:    mode,
+			Subject: "the registry " + registryPath,
+			Rereads: rereads,
 		}
 		if mode == LockExclusive {
 			// An exclusive lock creates the lock file, and a lock file created beside a
@@ -165,17 +169,17 @@ func lockRequestsFor(verb string, args []string, installRoot string) []lockReque
 			// add, remove, and sync-manifest read the registry and would fail anyway.
 			// approve does not read it, so an explicit path is taken as the name of the
 			// lock; the default path, which is only the working directory's, is not.
-			req.registry = registryPath
-			req.skipRegistryCheck = verb == "approve" && registryPath != defaultRegistryPath
+			req.Registry = registryPath
+			req.SkipRegistryCheck = verb == "approve" && registryPath != defaultRegistryPath
 		}
 		requests = append(requests, req)
 	}
 	project := func(root string, mode LockMode) {
-		requests = append(requests, lockRequest{
-			path:    filepath.Clean(root),
-			dir:     true,
-			mode:    mode,
-			subject: "the project " + filepath.Clean(root),
+		requests = append(requests, LockRequest{
+			Path:    filepath.Clean(root),
+			Dir:     true,
+			Mode:    mode,
+			Subject: "the project " + filepath.Clean(root),
 		})
 	}
 	switch verb {
@@ -217,27 +221,94 @@ func projectRootArg(verb string, args []string) (string, bool) {
 	return parsed.Root, true
 }
 
-// acquireLocks takes every lock the verb needs, in order, and returns the function
-// that releases them in reverse. When one cannot be taken it releases those it
-// holds, says why, calls exit (ExitBusy for a lock that stayed taken, 1 for one
-// that could not be taken at all), and reports false: the verb must not run.
+// LockFailure says in which way the locks of a verb were refused.
+type LockFailure int
+
+const (
+	// LockNotConfigured: the verb needs a lock and no Locker was wired, so it will not run
+	// unserialized with the other skills commands.
+	LockNotConfigured LockFailure = iota + 1
+	// LockRegistryUnreadable: the registry the lock is keyed by cannot be inspected, so the lock
+	// file beside it is not asked for (asking would create it).
+	LockRegistryUnreadable
+	// LockBusy: the lock stayed taken past the bound of the locker; the verb changed nothing and
+	// can be run again.
+	LockBusy
+	// LockUnavailable: the lock could not be taken at all.
+	LockUnavailable
+)
+
+// LockError is why a verb did not get the locks it needs. It says it in the words a person is
+// told ("skills <verb>: ..."), and which exit code answers it: ExitBusy for a lock that stayed
+// taken, 1 for any other.
+type LockError struct {
+	Failure LockFailure
+	// Verb names the verb in the words of the refusal.
+	Verb string
+	// Request is the lock that was being asked for; it is the zero request for LockNotConfigured.
+	Request LockRequest
+	// Locked is the path the locker tried, which can differ from Request.Path: a directory reached
+	// through a symlink is locked where it really is.
+	Locked string
+	// Err is the cause: the failure to inspect the registry, or the locker's error.
+	Err error
+}
+
+func (e *LockError) Unwrap() error { return e.Err }
+
+// ExitCode is the code the verb exits with: ExitBusy when the lock stayed taken, 1 otherwise.
+func (e *LockError) ExitCode() int {
+	if e.Failure == LockBusy {
+		return ExitBusy
+	}
+	return 1
+}
+
+func (e *LockError) Error() string {
+	what := "lock " + e.Locked
+	if e.Request.Dir {
+		what = "lock on the directory " + e.Locked
+	}
+	switch e.Failure {
+	case LockNotConfigured:
+		return fmt.Sprintf("skills %s: no lock is configured, so it will not run unserialized with the other skills commands", e.Verb)
+	case LockRegistryUnreadable:
+		return fmt.Sprintf("skills %s: reading registry %q: %v; nothing was locked and nothing was changed", e.Verb, e.Request.Registry, e.Err)
+	case LockBusy:
+		return fmt.Sprintf("skills %s: another skills command is in progress for %s (%s); nothing was changed, retry in a moment", e.Verb, e.Request.Subject, what)
+	default:
+		return fmt.Sprintf("skills %s: cannot take the %s: %v", e.Verb, what, e.Err)
+	}
+}
+
+// HeldLocks is what AcquireLocks took: Release lets go of it in the reverse of the order it was
+// taken. Provisional lists the lock files of the requests marked Rereads that did not exist when
+// they were asked for, whose shared locks therefore hold nothing: RereadsWhenTheLockFileAppears
+// says what the caller does about them.
+type HeldLocks struct {
+	release     func()
+	Provisional []string
+}
+
+// Release lets go of every lock. It is safe to call on the zero value and more than once.
+func (h HeldLocks) Release() {
+	if h.release != nil {
+		h.release()
+	}
+}
+
+// AcquireLocks takes every lock of requests, in order, for verb. When one cannot be taken it
+// releases those it holds and returns a *LockError saying why: the verb must not run. No request
+// needs no Locker.
 //
-// The lock is held until the release function runs. A production caller exits the
-// process from inside the verb, which skips it; the kernel frees the lock when the
-// process ends.
-//
-// provisional lists the lock files of the requests marked rereads that did not exist
-// when they were asked for, whose shared locks therefore hold nothing:
-// rereadsWhenTheLockFileAppears says what the caller does about them.
-func acquireLocks(verb string, args []string, installRoot string, locker Locker, stderr io.Writer, exit func(int)) (release func(), provisional []string, ok bool) {
-	requests := lockRequestsFor(verb, args, installRoot)
+// The lock is held until Release runs. A production caller exits the process from inside the verb,
+// which skips it; the kernel frees the lock when the process ends.
+func AcquireLocks(verb string, locker Locker, requests []LockRequest) (HeldLocks, error) {
 	if len(requests) == 0 {
-		return func() {}, nil, true
+		return HeldLocks{}, nil
 	}
 	if locker == nil {
-		fmt.Fprintf(stderr, "error: skills %s: no lock is configured, so it will not run unserialized with the other skills commands\n", verb)
-		exit(1)
-		return nil, nil, false
+		return HeldLocks{}, &LockError{Failure: LockNotConfigured, Verb: verb}
 	}
 	var unlocks []func()
 	releaseAll := func() {
@@ -245,51 +316,59 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 			unlocks[i]()
 		}
 	}
+	var provisional []string
 	for _, req := range requests {
 		var unlock func()
 		var err error
-		if req.registry != "" && !req.skipRegistryCheck {
-			if statErr := locker.Exists(req.registry); statErr != nil {
+		if req.Registry != "" && !req.SkipRegistryCheck {
+			if statErr := locker.Exists(req.Registry); statErr != nil {
 				releaseAll()
-				fmt.Fprintf(stderr, "error: skills %s: reading registry %q: %v; nothing was locked and nothing was changed\n", verb, req.registry, statErr)
-				exit(1)
-				return nil, nil, false
+				return HeldLocks{}, &LockError{Failure: LockRegistryUnreadable, Verb: verb, Request: req, Err: statErr}
 			}
 		}
-		if req.rereads && !req.dir && req.mode == LockShared {
+		if req.Rereads && !req.Dir && req.Mode == LockShared {
 			// Looked at before the locker is asked: a file that is absent now may be
 			// created by the time the locker opens it, which only costs one more read.
-			if isAbsent(locker.Exists(req.path)) {
-				provisional = append(provisional, req.path)
+			if isAbsent(locker.Exists(req.Path)) {
+				provisional = append(provisional, req.Path)
 			}
 		}
-		if req.dir {
-			unlock, err = locker.LockDir(req.path, req.mode)
+		if req.Dir {
+			unlock, err = locker.LockDir(req.Path, req.Mode)
 		} else {
-			unlock, err = locker.Lock(req.path, req.mode)
+			unlock, err = locker.Lock(req.Path, req.Mode)
 		}
 		if err != nil {
 			releaseAll()
 			// The lock that failed is named as the locker tried it, which can differ
 			// from the path asked for: a directory reached through a symlink is locked
 			// where it really is, and that is the one another process holds.
-			locked := lockedPath(err, req.path)
-			what := "lock " + locked
-			if req.dir {
-				what = "lock on the directory " + locked
-			}
+			failure := LockUnavailable
 			if isBusy(err) {
-				fmt.Fprintf(stderr, "error: skills %s: another skills command is in progress for %s (%s); nothing was changed, retry in a moment\n", verb, req.subject, what)
-				exit(ExitBusy)
-			} else {
-				fmt.Fprintf(stderr, "error: skills %s: cannot take the %s: %v\n", verb, what, err)
-				exit(1)
+				failure = LockBusy
 			}
-			return nil, nil, false
+			return HeldLocks{}, &LockError{Failure: failure, Verb: verb, Request: req, Locked: lockedPath(err, req.Path), Err: err}
 		}
 		unlocks = append(unlocks, unlock)
 	}
-	return releaseAll, provisional, true
+	return HeldLocks{release: releaseAll, Provisional: provisional}, nil
+}
+
+// acquireLocks takes every lock the verb needs, in order, and returns the function
+// that releases them in reverse. When one cannot be taken it releases those it
+// holds, says why, calls exit (ExitBusy for a lock that stayed taken, 1 for one
+// that could not be taken at all), and reports false: the verb must not run.
+func acquireLocks(verb string, args []string, installRoot string, locker Locker, stderr io.Writer, exit func(int)) (release func(), provisional []string, ok bool) {
+	held, err := AcquireLocks(verb, locker, lockRequestsFor(verb, args, installRoot))
+	if err != nil {
+		var refusal *LockError
+		if errors.As(err, &refusal) {
+			fmt.Fprintf(stderr, "error: %v\n", refusal)
+			exit(refusal.ExitCode())
+		}
+		return nil, nil, false
+	}
+	return held.Release, held.Provisional, true
 }
 
 // rereadsWhenTheLockFileAppears is the answer to the one case a shared lock cannot
@@ -328,6 +407,65 @@ func rereadsWhenTheLockFileAppears(locker Locker, provisional []string) (appeare
 		}
 	}
 	return appeared, err
+}
+
+// ReadRaceError is why a read made under shared locks was not trusted and was not made again:
+// either the lock file could not be inspected (Inspection), which reading again would meet
+// again, or the registry kept changing while it was read for MaxRereadAttempts attempts.
+type ReadRaceError struct {
+	Verb string
+	// Inspection is the failure to tell whether a writer began while the read was made; nil when
+	// the read gave up because the lock file kept appearing.
+	Inspection error
+	// Attempts is how many reads were made.
+	Attempts int
+}
+
+func (e *ReadRaceError) Unwrap() error { return e.Inspection }
+
+// ExitCode is 1 for a lock file that could not be inspected, and ExitBusy for one that kept
+// appearing, because the caller can retry the second and not the first.
+func (e *ReadRaceError) ExitCode() int {
+	if e.Inspection != nil {
+		return 1
+	}
+	return ExitBusy
+}
+
+func (e *ReadRaceError) Error() string {
+	if e.Inspection != nil {
+		return fmt.Sprintf("skills %s: cannot tell whether a writer began while it read: %v; nothing was changed", e.Verb, e.Inspection)
+	}
+	return fmt.Sprintf("skills %s: the registry kept changing while it was being read (%d attempts); nothing was changed, retry in a moment", e.Verb, e.Attempts)
+}
+
+// ReadConsistently makes read under the locks of requests and returns what it read once that
+// read is known to stand: a read made under a shared lock that held nothing (the lock file did
+// not exist) is made again when the file appeared while it read, as rereadsWhenTheLockFileAppears
+// explains. An error is a *LockError, when the locks could not be taken, or a *ReadRaceError,
+// when the read cannot be trusted; in both nothing was returned and nothing was changed.
+func ReadConsistently[T any](verb string, locker Locker, requests []LockRequest, read func() T) (T, error) {
+	var zero T
+	for attempt := 1; ; attempt++ {
+		held, err := AcquireLocks(verb, locker, requests)
+		if err != nil {
+			return zero, err
+		}
+		result := read()
+		raced, statErr := rereadsWhenTheLockFileAppears(locker, held.Provisional)
+		held.Release()
+		switch {
+		case statErr != nil:
+			// Whether a writer began cannot be known, so the read cannot be trusted. It wins over
+			// raced: a read that may be torn is discarded either way, and reading again would meet
+			// the same failure and end in a busy exit.
+			return zero, &ReadRaceError{Verb: verb, Inspection: statErr, Attempts: attempt}
+		case !raced:
+			return result, nil
+		case attempt >= maxRereadAttempts:
+			return zero, &ReadRaceError{Verb: verb, Attempts: attempt}
+		}
+	}
 }
 
 // maxErrorChain bounds a walk along wrapped errors. A real chain is a few links

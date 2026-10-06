@@ -93,8 +93,9 @@ func runLocked(attempt int, verb string, args []string, installRoot string, deps
 		// lock: it is exit 1, with the reason the system gave (which names the path).
 		// It wins over raced: a read that may be torn is discarded either way, and
 		// reading again would meet the same failure and end in a busy exit.
-		fmt.Fprintf(stderr, "error: skills %s: cannot tell whether a writer began while it read: %v; nothing was changed\n", verb, statErr)
-		exit(1)
+		refusal := &ReadRaceError{Verb: verb, Inspection: statErr, Attempts: attempt}
+		fmt.Fprintf(stderr, "error: %v\n", refusal)
+		exit(refusal.ExitCode())
 		return true
 	}
 	if !raced {
@@ -106,8 +107,9 @@ func runLocked(attempt int, verb string, args []string, installRoot string, deps
 		return true
 	}
 	if attempt >= maxRereadAttempts {
-		fmt.Fprintf(stderr, "error: skills %s: the registry kept changing while it was being read (%d attempts); nothing was changed, retry in a moment\n", verb, attempt)
-		exit(ExitBusy)
+		refusal := &ReadRaceError{Verb: verb, Attempts: attempt}
+		fmt.Fprintf(stderr, "error: %v\n", refusal)
+		exit(refusal.ExitCode())
 		return true
 	}
 	return false
