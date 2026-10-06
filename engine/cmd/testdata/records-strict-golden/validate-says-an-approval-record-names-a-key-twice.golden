@@ -1,0 +1,7 @@
+# a global skill whose approval record has the approver twice
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[APPROVAL_MALFORMED] alpha: skill "alpha": approval record <WORLD>/skills/alpha/.approval.json is malformed (parse approval record: duplicate JSON object key "approver"); fix or delete it, then run: labdrian skills approve --id alpha --approver <name>
+

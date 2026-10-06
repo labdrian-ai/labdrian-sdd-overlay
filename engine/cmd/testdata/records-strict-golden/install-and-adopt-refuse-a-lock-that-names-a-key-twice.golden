@@ -1,0 +1,20 @@
+# install over a lock that has installs twice
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills install: the project lock .labdrian/procedural-skills.lock.json cannot be read, so nothing was changed and the lock was left as it is: parse project lock: duplicate JSON object key "installs"
+error: skills install: refused, so nothing was installed
+
+# adopt over a lock that has installs twice
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: the project lock .labdrian/procedural-skills.lock.json cannot be read, so nothing was changed and the lock was left as it is: parse project lock: duplicate JSON object key "installs"
+error: skills adopt: refused, so nothing was adopted
+
+--- tree of demo ---
+.labdrian/
+.labdrian/procedural-skills.lock.json (193 bytes)
+

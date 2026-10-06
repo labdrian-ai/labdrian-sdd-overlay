@@ -1,0 +1,7 @@
+# a global skill whose approval record holds a byte that is not UTF-8
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+[APPROVAL_MALFORMED] beta: skill "beta": approval record <WORLD>/skills/beta/.approval.json is malformed (parse approval record: input is not valid UTF-8); fix or delete it, then run: labdrian skills approve --id beta --approver <name>
+
