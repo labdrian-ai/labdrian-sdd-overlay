@@ -57,12 +57,13 @@ func decodeWith(versions map[string]decoder, r io.Reader) (skills.Registry, erro
 }
 
 // versionOf finds the version the file says it is in. It is the value of the top-level key
-// "version", and, as the strict reader had it, the last one if the file says it more than once.
-// It is a field that every version has and no version reads differently, which is what lets it
-// be read before a decoder is chosen: as a field of the must-understand set, a version that has
-// a block under it is refused, and a file that says none is refused for that.
+// "version". It is a field that every version has and no version reads differently, which is what
+// lets it be read before a decoder is chosen: as a field of the must-understand set, a version that
+// has a block under it is refused, a version said twice is refused (repeatedTopLevelKey: the one
+// field that selects how the rest is read cannot be said two ways), and a file that says none is
+// refused for that.
 func versionOf(tokens []tok) (string, error) {
-	version, found := "", false
+	version, firstLine := "", 0
 	for i, t := range tokens {
 		if t.indent != 0 || t.key != "version" || (t.kind != tokKeyValue && t.kind != tokKeyOnly) {
 			continue
@@ -70,15 +71,26 @@ func versionOf(tokens []tok) (string, error) {
 		if i+1 < len(tokens) && tokens[i+1].indent > t.indent {
 			return "", fmt.Errorf("line %d: %s", t.lineNum, versionField.refusal(nil))
 		}
-		version, found = t.val, true
+		if firstLine != 0 {
+			return "", repeatedTopLevelKey(t.key, t.lineNum, firstLine)
+		}
+		version, firstLine = t.val, t.lineNum
 	}
-	if !found {
+	if firstLine == 0 {
 		if t, ok := keyWithAByteOrderMark(tokens, versionField.path); ok {
 			return "", fmt.Errorf("line %d: the top-level key %q starts with a byte-order mark; save the file without one", t.lineNum, t.key)
 		}
 		return "", fmt.Errorf("skills: missing required top-level field 'version'")
 	}
 	return version, nil
+}
+
+// repeatedTopLevelKey is the refusal of a key of the top level that the file says twice, with the
+// line of the repeat and the line of the first, in the shape of the refusal of a key that repeats
+// inside a mapping ("line N: duplicate key "k" in <where>"). The reader used to take the last: the
+// entries of the first block of a repeated 'skills' were lost without a word.
+func repeatedTopLevelKey(key string, line, first int) error {
+	return fmt.Errorf("line %d: duplicate key %q at the top level (first on line %d)", line, key, first)
 }
 
 // keyWithAByteOrderMark finds the top-level key that is name with a byte-order mark before it, as

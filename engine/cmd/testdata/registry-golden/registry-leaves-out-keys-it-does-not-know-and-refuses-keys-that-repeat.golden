@@ -96,3 +96,31 @@ exit: 1
 --- stderr ---
 error: parsing registry: line 13: duplicate key "updateStrategy" in lifecycle
 
+# a key at the root twice: skills
+$ skills list --registry <WORLD>/docs/14.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: duplicate key "skills" at the top level (first on line 2)
+
+# a key at the root twice: version
+$ skills list --registry <WORLD>/docs/15.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 2: duplicate key "version" at the top level (first on line 1)
+
+# a key at the root twice: version, the second one a version it does not know
+$ skills list --registry <WORLD>/docs/16.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 13: duplicate key "version" at the top level (first on line 1)
+
+# a key at the root twice: one the reader does not know
+$ skills list --registry <WORLD>/docs/17.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: parsing registry: line 14: duplicate key "extra" at the top level (first on line 1)
+

@@ -33,19 +33,19 @@ exit: 0
 alpha	custom	overlay-only	claude
 --- stderr ---
 
-# a version said twice: the last is the version (it is 1)
+# a version said twice, the first of a format it does not know: the repeat is the fault
 $ skills list --registry <WORLD>/docs/06.yaml
-exit: 0
+exit: 1
 --- stdout ---
-alpha	custom	overlay-only	claude
 --- stderr ---
+error: parsing registry: line 2: duplicate key "version" at the top level (first on line 1)
 
-# a version said twice: the last is the version (it is 2)
+# a version said twice, the second of a format it does not know: the repeat is the fault
 $ skills list --registry <WORLD>/docs/07.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: version "2" is not supported; only version "1" is valid
+error: parsing registry: line 13: duplicate key "version" at the top level (first on line 1)
 
 # a version with a block under it
 $ skills list --registry <WORLD>/docs/08.yaml

@@ -39,6 +39,10 @@
 // like a key the reader does not know: the block under a value that should be one is skipped, and
 // the value on the line of a block is noted and the block under it is read.
 //
+// A key said twice at the top of the file is refused, naming both lines, as a key said twice inside
+// a mapping is: whether it is known or not, and including the version. (The format used to take
+// the last, and the entries of the first block of a repeated 'skills' were lost without a word.)
+//
 // The must-understand set of version 1 is the fields whose meaning changes what install, approval or
 // projection does, found by reading what consumes each field. A registry read without one of them
 // would still be a registry and would say something else, with nothing said (a skill with no scope

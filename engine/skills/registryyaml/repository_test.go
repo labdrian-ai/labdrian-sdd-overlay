@@ -182,26 +182,39 @@ func TestTheFirstFaultInTheOrderOfTheFileIsTheOneTheDomainNames(t *testing.T) {
 
 // --- a top-level key that repeats -----------------------------------------------------------
 
-// The format has always taken the last of a top-level key that repeats, where a key repeated
-// inside a mapping is refused. The golden list-reads-the-forms-of-yaml-the-subset-allows pins it
-// from the outside ('the last of two versions wins', 'the second of two skills keys replaces the
-// first'). Tightening it would change which files read, so it is the owner's decision (Phase 9
-// ledger, batch 11a) and, until it is made, this pins it at the adapter: for 'version', and for
-// 'skills', where the second block replaces the first and the entries of the first are not in the
-// registry.
-func TestARepeatedTopLevelKeyTakesTheLast(t *testing.T) {
+// A top-level key that repeats is refused, naming both lines, as a key that repeats inside a
+// mapping is (decision 5 of the owner, 2026-10-05): the format used to take the last, and the
+// entries of the first block of a repeated 'skills' were lost without a word. The words are those of
+// the refusal inside a mapping, with the line of the first.
+func TestARepeatedTopLevelKeyIsRefusedNamingBothLines(t *testing.T) {
 	repo := registryyaml.NewRepository(nil)
-	t.Run("version", func(t *testing.T) {
-		reg, err := repo.Decode([]byte("version: \"2\"\n" + oneEntry))
-		if err != nil || reg.Version != "1" {
-			t.Errorf("Decode() = version %q, %v, want the last of the two, \"1\"", reg.Version, err)
-		}
-	})
-	t.Run("skills", func(t *testing.T) {
-		second := strings.TrimPrefix(strings.Replace(oneEntry, "alpha", "beta", 2), "version: \"1\"\n")
-		reg, err := repo.Decode([]byte(oneEntry + second))
-		if err != nil || len(reg.Skills) != 1 || reg.Skills[0].ID != "beta" {
-			t.Errorf("Decode() = %+v, %v, want only the entry of the last block, beta", reg.Skills, err)
-		}
-	})
+	second := strings.TrimPrefix(strings.Replace(oneEntry, "alpha", "beta", 2), "version: \"1\"\n")
+	for name, tc := range map[string]struct {
+		doc  string
+		want string
+	}{
+		"version, the second one a version the reader knows": {
+			"version: \"2\"\n" + oneEntry, `line 2: duplicate key "version" at the top level (first on line 1)`},
+		"version, the second one a version it does not": {
+			oneEntry + "version: \"2\"\n", fmt.Sprintf(`line %d: duplicate key "version" at the top level (first on line 1)`, strings.Count(oneEntry, "\n")+1)},
+		"skills": {
+			oneEntry + second, fmt.Sprintf(`line %d: duplicate key "skills" at the top level (first on line 2)`, strings.Count(oneEntry, "\n")+1)},
+		"a key the reader does not know": {
+			"extra: 1\n" + oneEntry + "extra: 2\n", fmt.Sprintf(`line %d: duplicate key "extra" at the top level (first on line 1)`, strings.Count(oneEntry, "\n")+2)},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if _, err := repo.Decode([]byte(tc.doc)); err == nil || err.Error() != tc.want {
+				t.Errorf("Decode() = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
+// The refusal comes in the order of the file, as every fault of a decoder does: the entries that
+// were whole before a repeated key are returned with it, so that the domain judges them first.
+func TestARepeatedTopLevelKeyReturnsTheEntriesReadBeforeIt(t *testing.T) {
+	reg, err := registryyaml.NewRepository(nil).Decode([]byte(oneEntry + "skills:\n  - id: beta\n"))
+	if err == nil || len(reg.Skills) != 1 || reg.Skills[0].ID != "alpha" {
+		t.Errorf("Decode() = %+v, %v, want the entry read before the repeated key, alpha, with the refusal", reg.Skills, err)
+	}
 }
