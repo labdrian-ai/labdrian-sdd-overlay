@@ -165,13 +165,31 @@ func (w warningRegistries) tell(reg Registry, err error) {
 
 // CheckWritable says whether the registry may be written back as it is, and when it may not, why:
 // a registry the reader did not read whole would lose what the reader left out, so it is not
-// changed and written (add, remove) and an adapter does not encode it. It is the one owner of that
-// rule and of its words. Reading it, listing it, installing from it lose nothing and are not refused.
-func (r Registry) CheckWritable() error {
+// changed and written (add, remove) and an adapter does not encode it. Reading it, listing it,
+// installing from it lose nothing and are not refused.
+func (r Registry) CheckWritable() error { return r.refuseIfReadInPart("rewriting it would drop them") }
+
+// CheckBuildable says whether a package may be built from the registry, and when it may not, why:
+// a package is an artifact others consume, and one built from a registry the reader did not read
+// whole would be built from a partial read, with no trace of what was left out.
+func (r Registry) CheckBuildable() error {
+	return r.refuseIfReadInPart("a package built from it would be built from a partial read")
+}
+
+// CheckVerifiable says whether the registry may be vouched for, and when it may not, why:
+// validate is the verb a CI uses to detect drift, and a registry the reader did not read whole
+// has parts nobody compared.
+func (r Registry) CheckVerifiable() error {
+	return r.refuseIfReadInPart("validate cannot vouch for a registry it read in part")
+}
+
+// refuseIfReadInPart is the one owner of the rule and of its words: a registry whose Unread is
+// not empty is refused for what the question would cost, and a registry read whole is not.
+func (r Registry) refuseIfReadInPart(consequence string) error {
 	if len(r.Unread) == 0 {
 		return nil
 	}
-	return fmt.Errorf("skills: the registry has fields this program does not read, and rewriting it would drop them: %s", r.UnreadSummary())
+	return fmt.Errorf("skills: the registry has fields this program does not read, and %s: %s", consequence, r.UnreadSummary())
 }
 
 // readRegistryForVerb reads the registry at path for a verb that works on it, and says what a

@@ -26,11 +26,10 @@
 //
 // The reader is tolerant. A field it does not know, in any mapping of the file, is left out and
 // said (skills.Registry.Unread has one note for it, with its line), and what is under it is
-// skipped. The verbs that read a registry warn of what was left out and go on with the rest. A
+// skipped. The verbs that read a registry warn of what was left out and go on with the rest, except
+// 'validate', which is the verb that detects drift and fails on it (Registry.CheckVerifiable). A
 // registry that left something out cannot be written back whole, so the verbs that change it (add,
-// remove) refuse it, and so does Encode. (pipkg reads the registry too, and does not warn: what it
-// builds a package from, an entry's id, path and install.targets, is all of the must-understand
-// set.)
+// remove) refuse it, and so does Encode.
 //
 // What the reader never does is read a field of the must-understand set without understanding it.
 // Such a field in a shape the decoder does not read (a value where a block belongs, a block where a

@@ -198,7 +198,9 @@ func stripVerb(args []string, verb string) []string {
 // Validate) and the on-disk cross-check (DiffOnDisk) in the same run.
 // Exits 0 only when every check is clean, 1 when any divergence is found
 // (fail-loud per R-031/R-032, extended to on-disk divergences by R-005/R-006
-// and to the global-skill approval check by CheckApprovals).
+// and to the global-skill approval check by CheckApprovals), and also when the reader left fields
+// of the registry out (Registry.CheckVerifiable): validate is the verb that detects drift, so it
+// does not pass a registry it read in part. Every other verb that reads only warns.
 //
 // --source-root has no default and no cwd-derived fallback (R-002): a caller
 // that omits it gets a usage error, never a silent scan of the working
@@ -292,7 +294,14 @@ func RenderValidateCore(args []string, readFile readFileFn, registries RegistryR
 		fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
 	}
 
-	if regErr != nil || len(onDiskDivs) > 0 || len(approvalDivs) > 0 {
+	// A registry the reader did not read whole is not passed (decision 3 of the owner): the
+	// warning above said what was left out, and the reason is told last, after every divergence.
+	unreadErr := reg.CheckVerifiable()
+	if unreadErr != nil {
+		fmt.Fprintf(stderr, "error: %v\n", unreadErr)
+	}
+
+	if regErr != nil || len(onDiskDivs) > 0 || len(approvalDivs) > 0 || unreadErr != nil {
 		exit(1)
 		return
 	}
