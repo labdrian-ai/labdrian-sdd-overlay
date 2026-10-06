@@ -1,0 +1,12 @@
+# the origin is github.com/acme/demo, the directory renamed-checkout: nothing is admitted
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in renamed-checkout)
+exit: 0
+--- stdout ---
+no project-scoped skills admitted for project "renamed-checkout"
+--- stderr ---
+
+--- tree of renamed-checkout ---
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+

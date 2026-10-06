@@ -1,0 +1,48 @@
+# an id the registry admits a skill to, in a repository named demo
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id chosen (in demo)
+exit: 0
+--- stdout ---
+installed: by-choice
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/by-choice/
+.agents/skills/by-choice/SKILL.md (296 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-choice/
+.claude/skills/by-choice/SKILL.md (296 bytes)
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (255 bytes)
+
+# the identity of the origin, given as the id, in a directory named elsewhere
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id github.com/acme/demo (in elsewhere)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+--- tree of elsewhere ---
+.agents/
+.agents/skills/
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md (296 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md (296 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (255 bytes)
+
+# an id nothing is admitted to, in the directory that is admitted
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id stranger (in demo)
+exit: 0
+--- stdout ---
+no project-scoped skills admitted for project "stranger"
+--- stderr ---
+

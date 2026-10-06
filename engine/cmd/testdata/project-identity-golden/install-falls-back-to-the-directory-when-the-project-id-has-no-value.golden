@@ -1,0 +1,29 @@
+# --project-id as the last word
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+
+# --project-id with an empty value
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id  (in demo)
+exit: 0
+--- stdout ---
+unchanged: by-directory
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/by-directory/
+.agents/skills/by-directory/SKILL.md (302 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-directory/
+.claude/skills/by-directory/SKILL.md (302 bytes)
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (258 bytes)
+

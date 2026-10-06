@@ -1,0 +1,59 @@
+# a repository with an origin: the lock records the draft and no id of the project
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+--- project/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [
+    {
+      "id": "tidy-worktree",
+      "provenance": "procedural",
+      "candidate": "procedural/candidates/repeated-success/tidy-worktree",
+      "sha256": "61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57",
+      "revision": 1,
+      "targets": [
+        ".claude/skills/tidy-worktree/SKILL.md",
+        ".agents/skills/tidy-worktree/SKILL.md"
+      ]
+    }
+  ]
+}
+
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/revised/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: b86b925b9f904a6c8d50f94cce621207a47b33632be6bb9a3b9d064274390ab4
+revision: 2
+--- stderr ---
+
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason not needed any more tidy-worktree
+exit: 0
+--- stdout ---
+removed: .claude/skills/tidy-worktree/SKILL.md
+removed: .agents/skills/tidy-worktree/SKILL.md
+--- stderr ---
+
+--- project/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": []
+}
+

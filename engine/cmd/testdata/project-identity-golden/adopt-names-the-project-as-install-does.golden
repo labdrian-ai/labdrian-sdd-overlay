@@ -1,0 +1,45 @@
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+
+# a repository named demo with its files in place and no lock
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+adopted: by-directory
+--- stderr ---
+
+--- demo/.labdrian/procedural-skills.lock.json ---
+{
+  "version": 1,
+  "skills": [],
+  "installs": [
+    {
+      "id": "by-directory",
+      "files": [
+        {
+          "path": "SKILL.md",
+          "sha256": "36076e3ce4bbe1acc966de9e4a91c4c9c19cfc60af5d72f7ddeca1d9b36ea1fc"
+        }
+      ]
+    }
+  ]
+}
+
+# adopt with the id of a project the files do not belong to
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id chosen (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills adopt: skill by-choice is not installed in this project (neither .claude/skills/by-choice nor .agents/skills/by-choice exists), so there is nothing to adopt; run `labdrian skills install --project-id chosen`
+error: skills adopt: refused, so nothing was adopted
+
+# a directory that is not admitted anything
+$ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in renamed-checkout)
+exit: 0
+--- stdout ---
+no project-scoped skills admitted for project "renamed-checkout"
+--- stderr ---
+

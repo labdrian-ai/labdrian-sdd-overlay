@@ -1,0 +1,21 @@
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/by-directory/
+.agents/skills/by-directory/SKILL.md (302 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-directory/
+.claude/skills/by-directory/SKILL.md (302 bytes)
+.git/
+.git/HEAD (21 bytes)
+.git/config (36 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (258 bytes)
+

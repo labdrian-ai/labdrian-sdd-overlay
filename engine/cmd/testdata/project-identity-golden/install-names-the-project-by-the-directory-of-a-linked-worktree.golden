@@ -1,0 +1,30 @@
+# a linked worktree of demo is named by its own directory
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in feature-x)
+exit: 0
+--- stdout ---
+no project-scoped skills admitted for project "feature-x"
+--- stderr ---
+
+--- tree of feature-x ---
+.git
+
+# and under the id of the project it is the same project
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in feature-x)
+exit: 0
+--- stdout ---
+installed: by-directory
+--- stderr ---
+
+--- tree of feature-x ---
+.agents/
+.agents/skills/
+.agents/skills/by-directory/
+.agents/skills/by-directory/SKILL.md
+.claude/
+.claude/skills/
+.claude/skills/by-directory/
+.claude/skills/by-directory/SKILL.md
+.git
+.labdrian/
+.labdrian/procedural-skills.lock.json
+
