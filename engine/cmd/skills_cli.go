@@ -19,6 +19,34 @@ import (
 // so it means the working directory of the process.
 const defaultSkillsRegistry = "skills.registry.yaml"
 
+// skillsVerb is a verb of the CLI adapter: it is given the arguments the program was, the verb
+// among them where the person put it.
+type skillsVerb func(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int))
+
+// skillsCLIVerbs are the verbs that run as use cases behind this adapter; every other verb is
+// still run by skills.SkillsCoreAt. A verb that has moved takes no lock here only because it
+// needs none: the ones that do are moved with the locks they take.
+var skillsCLIVerbs = map[string]skillsVerb{
+	"list":   skillsList,
+	"status": skillsStatus,
+	"lint": func(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
+		skillsLint(deps, withoutVerb(args, "lint"), stdout, stderr, exit)
+	},
+}
+
+// withoutVerb removes the first word that is the verb, so that it is not read as the word that
+// follows it: the verbs that take a word (lint takes a path) would otherwise take the verb.
+func withoutVerb(args []string, verb string) []string {
+	for i, a := range args {
+		if a == verb {
+			out := make([]string, 0, len(args)-1)
+			out = append(out, args[:i]...)
+			return append(out, args[i+1:]...)
+		}
+	}
+	return args
+}
+
 // skillsList is `skills list`: one line for each entry of the registry, sorted by id, with its
 // id, source, update strategy and targets, separated by tabs.
 func skillsList(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {

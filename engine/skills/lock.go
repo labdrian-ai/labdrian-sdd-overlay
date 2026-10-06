@@ -114,7 +114,8 @@ type lockRequest struct {
 //     read (rereadsWhenTheLockFileAppears). install is not: it reads one atomic
 //     file, the registry, and a tree that no locked verb writes into except the
 //     approval record and the temporary file behind it, which it never copies.
-//   - list, status, lint: one atomic file or none, so none.
+//   - list, status, lint: one atomic file or none, so none. They run behind use cases in
+//     skills/app and are not dispatched here.
 //
 // Project lock, keyed by the project root directory, taken on the directory itself
 // so that no file appears in the user's repository:

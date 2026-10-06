@@ -1,40 +1,28 @@
 # an unknown flag
 $ skills status --frobnicate
-exit: 0
+exit: 1
 --- stdout ---
-Total:  4
-Core:   1
-Custom: 2
-Status: OK
 --- stderr ---
+error: skills status: unknown flag "--frobnicate"
 
 # an unknown flag with a value, and a registry
 $ skills status --frobnicate yes --registry <WORLD>/skills.registry.yaml
-exit: 0
+exit: 1
 --- stdout ---
-Total:  4
-Core:   1
-Custom: 2
-Status: OK
 --- stderr ---
+error: skills status: unknown flag "--frobnicate"
 
 # a short flag
 $ skills status -v
-exit: 0
+exit: 1
 --- stdout ---
-Total:  4
-Core:   1
-Custom: 2
-Status: OK
 --- stderr ---
+error: skills status: unknown flag "-v"
 
 # the registry flag spelled with an equals sign
 $ skills status --registry=<WORLD>/other/skills.registry.yaml
-exit: 0
+exit: 1
 --- stdout ---
-Total:  4
-Core:   1
-Custom: 2
-Status: OK
 --- stderr ---
+error: skills status: unknown flag "--registry=<WORLD>/other/skills.registry.yaml"
 

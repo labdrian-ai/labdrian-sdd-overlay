@@ -426,14 +426,10 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 
 func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
 	f := newLockFixture(t)
-	writeTestFile(t, filepath.Join(f.dir, "draft.md"), lintCleanSkillMD("draft"))
 	for _, tc := range []struct {
 		verb string
 		args []string
 	}{
-		{"list", []string{"--registry", f.reg}},
-		{"status", []string{"--registry", f.reg}},
-		{"lint", []string{filepath.Join(f.dir, "draft.md")}},
 		{"nuke", nil},
 		{"", nil},
 	} {
@@ -607,7 +603,7 @@ func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
 }
 
 // Without a locker the verbs that change shared state refuse rather than run
-// unserialized; the ones that only read one atomic file need none.
+// unserialized.
 func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	f := newLockFixture(t).withSkills(t, "newbie")
 	before := snapshotFiles(t, f.reg, f.man)
@@ -619,9 +615,6 @@ func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	}
 	if after := snapshotFiles(t, f.reg, f.man); !reflect.DeepEqual(before, after) {
 		t.Error("a verb ran without a lock")
-	}
-	if r := f.runAt("list", []string{"--registry", f.reg}, os.ReadFile, nil, nil); r.code != 0 {
-		t.Errorf("list without a locker: exit %d, stderr=%q, want it to run", r.code, r.stderr)
 	}
 }
 

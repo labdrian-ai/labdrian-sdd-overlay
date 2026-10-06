@@ -873,7 +873,12 @@ func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit fu
 		exit(1)
 		return
 	}
-	skills.SkillsCoreAt(verb, args, newSkillsDeps(), stdout, stderr, exit)
+	deps := newSkillsDeps()
+	if run, ok := skillsCLIVerbs[verb]; ok {
+		run(deps, args, stdout, stderr, exit)
+		return
+	}
+	skills.SkillsCoreAt(verb, args, deps, stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current

@@ -8,16 +8,17 @@ import (
 	"path/filepath"
 )
 
-// SkillsCoreAt is the testable CLI core for `engine skills <verb>`.
-// Dispatches to RenderListCore, RenderStatusCore, RenderValidateCore,
-// RenderInstallCore, AddCore, RemoveCore, SyncCore, RenderLintCore,
-// RenderApproveCore, RenderProjectRegisterCore, RenderProjectReviseCore,
-// RenderProjectStatusCore, or RenderProjectRetireCore.
+// SkillsCoreAt is the testable CLI core for the verbs of `engine skills` that have not yet moved
+// behind a use case (Phase 9 unit H20). Dispatches to RenderValidateCore, RenderInstallCore,
+// AddCore, RemoveCore, SyncCore, RenderApproveCore, RenderProjectRegisterCore,
+// RenderProjectReviseCore, RenderProjectStatusCore, or RenderProjectRetireCore.
+// list, status and lint are not dispatched here: they are use cases in engine/skills/app, run by
+// the CLI adapter in engine/cmd, which reads their arguments with its one strict parser.
 // Unknown or empty verbs fail loud (exit 1), mirroring the prespec pattern (ADR-2).
 // No global state; all I/O is injected through deps. deps.Now returns the current time as an
 // RFC 3339 UTC timestamp for the verbs that record one (approve); the production caller passes
-// the wall clock, and nil is legal for every other verb. A verb that takes the overlay lock, and
-// every one does but list, status and lint, refuses to run unserialized when deps.Locker is nil.
+// the wall clock, and nil is legal for every other verb. Every verb it
+// dispatches takes a lock, and refuses to run unserialized when deps.Locker is nil.
 //
 // deps.Registries is how every verb that works on the registry reads it (and how add and remove
 // encode what they write): the composition root builds one, the verbs know no file format.
@@ -136,10 +137,6 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 		return
 	}
 	switch verb {
-	case "list":
-		RenderListCore(args, registries, stdout, stderr, exit)
-	case "status":
-		RenderStatusCore(args, registries, stdout, stderr, exit)
 	case "validate":
 		RenderValidateCore(args, readFile, registries, deps.Tree.ScanSkillFiles, stdout, stderr, exit)
 	case "install":
@@ -156,8 +153,6 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 		RemoveCore(stripVerb(args, "remove"), readFile, registries, deps.Project, stdout, stderr, exit)
 	case "sync-manifest":
 		SyncCore(stripVerb(args, "sync-manifest"), readFile, registries, deps.Project, stdout, stderr, exit)
-	case "lint":
-		RenderLintCore(stripVerb(args, "lint"), readFile, stdout, stderr, exit)
 	case "approve":
 		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Now, deps.Project, stdout, stderr, exit)
 	case "project-register":

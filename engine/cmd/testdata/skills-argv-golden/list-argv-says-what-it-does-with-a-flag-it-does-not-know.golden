@@ -1,40 +1,28 @@
 # an unknown flag
 $ skills list --frobnicate
-exit: 0
+exit: 1
 --- stdout ---
-alpha	custom	overlay-only	claude,opencode
-beta	core	vendor-merge	claude,opencode,codex,pi
-ext-one	external	overlay-only	claude
-tidy-notes	custom	overlay-only	claude,pi
 --- stderr ---
+error: skills list: unknown flag "--frobnicate"
 
 # an unknown flag with a value, and a registry
 $ skills list --frobnicate yes --registry <WORLD>/skills.registry.yaml
-exit: 0
+exit: 1
 --- stdout ---
-alpha	custom	overlay-only	claude,opencode
-beta	core	vendor-merge	claude,opencode,codex,pi
-ext-one	external	overlay-only	claude
-tidy-notes	custom	overlay-only	claude,pi
 --- stderr ---
+error: skills list: unknown flag "--frobnicate"
 
 # a short flag
 $ skills list -v
-exit: 0
+exit: 1
 --- stdout ---
-alpha	custom	overlay-only	claude,opencode
-beta	core	vendor-merge	claude,opencode,codex,pi
-ext-one	external	overlay-only	claude
-tidy-notes	custom	overlay-only	claude,pi
 --- stderr ---
+error: skills list: unknown flag "-v"
 
 # the registry flag spelled with an equals sign
 $ skills list --registry=<WORLD>/other/skills.registry.yaml
-exit: 0
+exit: 1
 --- stdout ---
-alpha	custom	overlay-only	claude,opencode
-beta	core	vendor-merge	claude,opencode,codex,pi
-ext-one	external	overlay-only	claude
-tidy-notes	custom	overlay-only	claude,pi
 --- stderr ---
+error: skills list: unknown flag "--registry=<WORLD>/other/skills.registry.yaml"
 

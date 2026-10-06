@@ -42,35 +42,6 @@ func skillsMockReadFile(_ string) ([]byte, error) {
 }
 
 func TestSkillsCore(t *testing.T) {
-	t.Run("verb_list", func(t *testing.T) {
-		// "list" with valid registry → exit 0, output has entries.
-		var out, errBuf bytes.Buffer
-		exitCode := 0
-		skillsCore("list", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
-		}
-		if out.Len() == 0 {
-			t.Error("stdout must be non-empty for list")
-		}
-		if !strings.Contains(out.String(), "test-core") {
-			t.Errorf("stdout %q missing test-core entry", out.String())
-		}
-	})
-
-	t.Run("verb_status", func(t *testing.T) {
-		// "status" with valid registry → exit 0, counts and OK in stdout.
-		var out, errBuf bytes.Buffer
-		exitCode := 0
-		skillsCore("status", nil, skillsMockReadFile, testRegistries(skillsMockReadFile), &out, &errBuf, func(c int) { exitCode = c })
-		if exitCode != 0 {
-			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
-		}
-		if !strings.Contains(out.String(), "OK") {
-			t.Errorf("stdout %q missing OK", out.String())
-		}
-	})
-
 	t.Run("verb_validate", func(t *testing.T) {
 		// "validate" with aligned registry+manifest+skills dir → exit 0, "aligned" or "OK" in stdout.
 		// The skills source root is a DEDICATED subdirectory, never the temp dir
@@ -562,32 +533,6 @@ skills:
 			t.Errorf("exit code = %d, want 0; stderr=%q", exitCode, errBuf.String())
 		}
 	})
-}
-
-// TestSkillsCoreLintRoutesToRenderLintCore proves the "lint" verb reaches
-// RenderLintCore through SkillsCore's dispatch, including stripVerb removing
-// the "lint" token itself so the remaining args are parsed as RenderLintCore
-// expects (review-b75e4a27b9494ff8 R3-lint-dispatch-untested: every prior
-// test called RenderLintCore directly, leaving verb routing unexercised).
-func TestSkillsCoreLintRoutesToRenderLintCore(t *testing.T) {
-	var out, errBuf bytes.Buffer
-	exitCode := -1
-
-	skillsCore(
-		"lint",
-		[]string{"lint", "skill.md"},
-		func(string) ([]byte, error) { return []byte(validSkillFile()), nil },
-		nil, // lint reads no registry
-		&out, &errBuf,
-		func(c int) { exitCode = c },
-	)
-
-	if exitCode != 0 {
-		t.Fatalf("expected exit 0 for a clean skill file routed through SkillsCore, got %d, stderr: %q", exitCode, errBuf.String())
-	}
-	if out.String() != "" || errBuf.String() != "" {
-		t.Errorf("expected no output for a clean file, got stdout=%q stderr=%q", out.String(), errBuf.String())
-	}
 }
 
 // TestSkillsCoreUnknownVerbMessage verifies SC-37: an unknown verb exits 1 and

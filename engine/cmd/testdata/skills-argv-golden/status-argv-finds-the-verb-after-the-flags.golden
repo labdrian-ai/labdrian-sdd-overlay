@@ -7,13 +7,10 @@ error: unknown skills verb "<WORLD>/other/skills.registry.yaml" (supported: list
 
 # a flag that takes no part, then the verb
 $ skills --frobnicate status
-exit: 0
+exit: 1
 --- stdout ---
-Total:  4
-Core:   1
-Custom: 2
-Status: OK
 --- stderr ---
+error: skills status: unknown flag "--frobnicate"
 
 # the verb, and a registry named as the verb is
 $ skills --registry status

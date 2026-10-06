@@ -188,3 +188,124 @@ func TestSkillsLintReportsWarningsOnStdoutAndStillPasses(t *testing.T) {
 		t.Errorf("lint = %+v, want the warning on stdout, nothing on stderr, exit 0", got)
 	}
 }
+
+// The same registry listed twice is listed the same way, in order of id whatever order the file
+// has them in, and the bytes are those of the recorded file.
+func TestSkillsListIsDeterministicAndSortedByID(t *testing.T) {
+	const registry = `version: "1"
+skills:
+  - id: zebra-skill
+    path: zebra-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: alpha-skill
+    path: alpha-skill
+    source:
+      type: core
+      upstream:
+        owner: gentle-ai
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+    lifecycle:
+      updateStrategy: vendor-merge
+  - id: middle-skill
+    path: middle-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+`
+	reg := writeCLIFile(t, t.TempDir(), "r.yaml", registry)
+	first := runSkillsVerb(skillsList, skillsTestDeps(), "list", "--registry", reg)
+	second := runSkillsVerb(skillsList, skillsTestDeps(), "list", "--registry", reg)
+	if first.stdout != second.stdout || first.stderr != second.stderr || first.code() != 0 {
+		t.Fatalf("two runs differ or failed: %+v and %+v", first, second)
+	}
+	golden, err := os.ReadFile(filepath.Join("testdata", "skills-cli", "list-deterministic-output.txt"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if first.stdout != string(golden) {
+		t.Errorf("list differs from the recorded output:\ngot:\n%swant:\n%s", first.stdout, golden)
+	}
+}
+
+// A reader that leaves fields out of the registry does not stop a verb that only reads: it goes
+// on with what was read and says, on the error stream, that something was left out. A registry
+// with nothing left out is read in silence.
+func TestSkillsRegistryVerbsWarnInTheWordsOfTheDomain(t *testing.T) {
+	notes := []string{`line 3: unknown key "color" in skill entry`, "line 9: unknown top-level key \"extra\""}
+	reg := skills.Registry{Version: "1", Skills: []skills.Entry{{
+		ID: "alpha", Path: "alpha", Source: skills.Source{Type: "custom"},
+		Install:   skills.Install{DefaultScope: "global", Targets: []string{"claude"}},
+		Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
+	}}}
+	run := func(unread []string) verbRun {
+		reg.Unread = unread
+		deps := skills.Deps{Registries: staticRegistry{reg}}
+		return runSkillsVerb(skillsList, deps, "list")
+	}
+	got := run(notes)
+	if got.stdout != "alpha\tcustom\toverlay-only\tclaude\n" || len(got.exits) != 0 {
+		t.Errorf("the verb printed %q and exited %v, want the entry and no exit", got.stdout, got.exits)
+	}
+	if want := "warning: registry fields left unread: line 3: unknown key \"color\" in skill entry (and 1 more)\n"; got.stderr != want {
+		t.Errorf("stderr = %q, want %q", got.stderr, want)
+	}
+	if got := run(nil); got.stderr != "" || got.stdout == "" || len(got.exits) != 0 {
+		t.Errorf("a registry with nothing left out: %+v, want the entry and silence", got)
+	}
+}
+
+// staticRegistry is a RegistryRepository that reads the one registry it holds from any location.
+type staticRegistry struct{ reg skills.Registry }
+
+func (s staticRegistry) Load(string) (skills.Registry, error) { return s.reg, nil }
+func (staticRegistry) Decode([]byte) (skills.Registry, error) { return skills.Registry{}, nil }
+func (staticRegistry) Encode(skills.Registry) ([]byte, error) { return nil, nil }
+
+// list and status work on the registry alone, and lint on the file it is given: none of them
+// takes a lock, reads the manifest or the approval records, or touches the file system of a
+// project, so a world that wires none of those still runs them.
+func TestSkillsReadOnlyVerbsNeedNoLockAndReadNothingBeside(t *testing.T) {
+	reg := writeCLIFile(t, t.TempDir(), "r.yaml", cliRegistry)
+	only := func(name string) ([]byte, error) {
+		t.Errorf("a verb that reads one file read %q too", name)
+		return nil, os.ErrNotExist
+	}
+	deps := skills.Deps{Registries: newRegistryRepository(), ReadFile: only}
+	for name, fn := range map[string]skillsVerb{"list": skillsList, "status": skillsStatus} {
+		if got := runSkillsVerb(fn, deps, name, "--registry", reg, "--manifest", "m", "--source-root", "s"); got.code() != 0 || got.stdout == "" {
+			t.Errorf("%s with no locker, project or tree wired = %+v, want it to run", name, got)
+		}
+	}
+}
+
+// The verb is the first word that names it, and what follows it is what the verb reads: `lint`
+// is removed before the path is taken, wherever the person put it among the flags of the wrapper.
+func TestSkillsLintIsReachedThroughTheTableAndTakesNoVerbAsPath(t *testing.T) {
+	dir := t.TempDir()
+	good := writeCLIFile(t, dir, "good.md", skillFile("good"))
+	var out, errOut bytes.Buffer
+	var exits []int
+	runSkillsCore("lint", []string{"lint", good}, &out, &errOut, func(c int) { exits = append(exits, c) })
+	if out.String() != "" || errOut.String() != "" || len(exits) != 1 || exits[0] != 0 {
+		t.Errorf("runSkillsCore(lint) printed %q / %q and exited %v, want a clean pass", out.String(), errOut.String(), exits)
+	}
+	if got := withoutVerb([]string{"--rules", "lint", "lint"}, "lint"); strings.Join(got, " ") != "--rules lint" {
+		t.Errorf("withoutVerb removed %q, want only the first word that is the verb", got)
+	}
+}
