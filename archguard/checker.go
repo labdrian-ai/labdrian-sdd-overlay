@@ -146,7 +146,7 @@ func (c *checker) unusedPureModules() []string {
 	}
 	var unused []string
 	for _, module := range c.pureModules {
-		if !used[module] {
+		if !used[module] && !containsString(unused, module) {
 			unused = append(unused, module)
 		}
 	}

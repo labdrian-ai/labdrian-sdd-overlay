@@ -42,8 +42,9 @@ type InstallSkill struct {
 // test controls every path the planner sees and a refusal provably writes nothing.
 type InstallInput struct {
 	ProjectRoot string
-	// ProjectID is the --project-id install was given; it is only put in the
-	// refusal that points at adopt.
+	// ProjectID is the id the ProjectIdentity port resolved for the project (what --project-id
+	// gave, else the origin remote, else the directory name); it is only put in the refusal that
+	// points at adopt.
 	ProjectID  ProjectID
 	Skills     []InstallSkill
 	LockData   []byte

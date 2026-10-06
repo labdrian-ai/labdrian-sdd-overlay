@@ -60,6 +60,14 @@ func TestAPureModuleNobodyImportsIsReportedAsStale(t *testing.T) {
 	}
 }
 
+// A module named twice is one permission, so it is reported once when it is stale.
+func TestAStalePureModuleNamedTwiceIsReportedOnce(t *testing.T) {
+	problems := checkWithPure(t, cleanDomain(), pureModule, pureModule)
+	if len(problems) != 1 {
+		t.Errorf("problems = %q, want the stale module reported once", problems)
+	}
+}
+
 func TestAPureModuleIsNotAnAdapterPermission(t *testing.T) {
 	files := map[string]string{"dom/a.go": "package dom\nimport \"os\"\nimport \"" + pureModule + "\"\nvar _, _ = os.Args, identity.Rule\n"}
 	problems := checkWithPure(t, files, pureModule)
