@@ -29,7 +29,8 @@
 // skipped. The verbs that read a registry warn of what was left out and go on with the rest, except
 // 'validate', which is the verb that detects drift and fails on it (Registry.CheckVerifiable). A
 // registry that left something out cannot be written back whole, so the verbs that change it (add,
-// remove) refuse it, and so does Encode.
+// remove) refuse it, and so does Encode; and 'pipkg build' refuses it too, because it produces an
+// artifact others consume (Registry.CheckBuildable). 'pipkg check' only compares, and warns.
 //
 // What the reader never does is read a field of the must-understand set without understanding it.
 // Such a field in a shape the decoder does not read (a value where a block belongs, a block where a

@@ -13,11 +13,11 @@ pipkg build: pipkg: opening registry: open <WORLD>/refused/builda.yaml: no such 
 
 # build: a registry with a key the reader does not know
 $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/buildb.yaml --dest-dir <WORLD>/out/labdrian-pi
-exit: 0
+exit: 1
 --- stdout ---
-pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
 --- stderr ---
 warning: registry fields left unread: line 7: unknown key "mirror" in source
+pipkg build: pipkg: skills: the registry has fields this program does not read, and a package built from it would be built from a partial read: line 7: unknown key "mirror" in source
 
 # build: a registry of a version it does not know
 $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/buildc.yaml --dest-dir <WORLD>/out/labdrian-pi
@@ -32,6 +32,13 @@ exit: 1
 --- stdout ---
 --- stderr ---
 pipkg build: pipkg: parsing registry: skills: entry "alpha": install.targets contains invalid value "vim"; must be one of: claude, opencode, codex, pi
+
+# the package of the registry the checks below are over, read whole
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/whole.yaml --dest-dir <WORLD>/out/labdrian-pi
+exit: 0
+--- stdout ---
+pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
+--- stderr ---
 
 # check: a registry that is not there
 $ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/refused/checka.yaml --dest-dir <WORLD>/out/labdrian-pi

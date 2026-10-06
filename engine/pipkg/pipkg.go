@@ -146,6 +146,12 @@ func Build(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 	if err != nil {
 		return err
 	}
+	// A package is an artifact others consume: it is not built from a registry the reader did not
+	// read whole, and nothing is written when it refuses (decision 4 of the owner). Check only
+	// compares, so it goes on and the repository's warning says what was left out.
+	if err := reg.CheckBuildable(); err != nil {
+		return fmt.Errorf("pipkg: %w", err)
+	}
 
 	parentDir := filepath.Dir(destDir)
 	if err := os.MkdirAll(parentDir, 0755); err != nil {

@@ -29,8 +29,10 @@ import (
 //     nothing.)
 //   - A store that was read whole and not understood to the last field is a registry, not an
 //     error: the adapter returns what it understood, and Registry.Unread says what it left out,
-//     one note per field. The verbs that read warn of it and go on; the verbs that rewrite the
-//     registry (AddEntry, RemoveEntry) refuse it, because writing it back would drop the fields.
+//     one note per field. The verbs that read warn of it and go on, except validate (which fails,
+//     CheckVerifiable); the verbs that rewrite the registry (AddEntry, RemoveEntry) refuse it,
+//     because writing it back would drop the fields, and so does the build of the Pi package
+//     (CheckBuildable), which would build an artifact from a partial read.
 //     What an adapter must not leave out in silence is the fields its own policy says are needed
 //     to read the registry as it means (for the YAML file, the must-understand set): it refuses
 //     the store instead.
