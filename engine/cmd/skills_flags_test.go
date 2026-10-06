@@ -160,3 +160,82 @@ func TestSkillsLintSpecAcceptsOnePathAndTheRules(t *testing.T) {
 		t.Errorf("error = %v, want the second path refused in the words of lint", err)
 	}
 }
+
+// A verb whose value is never a flag (approve) refuses a value that begins with a dash, and a value
+// flag that is the last word, instead of taking the next flag for its value or leaving it unset.
+func TestSkillsFlagParserCanRefuseAValueThatIsAFlagOrMissing(t *testing.T) {
+	spec := skillsFlagSpec{verb: "demo", values: []string{"--id", "--label"}, wrapper: []string{"--manifest"}, words: 0,
+		extraWord: "skills demo: unexpected argument %q", valueIsNeverAFlag: true,
+		dashValue: func(flag, value string) string {
+			if flag == "--label" {
+				return "skills demo: the label " + value + " starts with a dash"
+			}
+			return ""
+		}}
+	for _, tc := range []struct {
+		name string
+		args []string
+		want string
+	}{
+		{"a value that is a flag", []string{"--id", "--label", "x"}, `skills demo: flag "--id" requires a value; got flag token "--label"`},
+		{"a value that is a short flag", []string{"--id", "-x"}, `skills demo: flag "--id" requires a value; got flag token "-x"`},
+		{"the last word is a value flag", []string{"--label", "x", "--id"}, `skills demo: flag "--id" requires a value`},
+		{"a flag whose refusal is worded for it", []string{"--label", "-x"}, "skills demo: the label -x starts with a dash"},
+		{"a flag of the wrapper that is the last word", []string{"--manifest"}, `skills demo: flag "--manifest" requires a value`},
+		{"a flag of the wrapper followed by a flag", []string{"--manifest", "--id"}, `skills demo: flag "--manifest" requires a value; got flag token "--id"`},
+		{"a word, where there is none", []string{"word"}, `skills demo: unexpected argument "word"`},
+		{"-- is no end of options and is the flag it looks like", []string{"--"}, `skills demo: unknown flag "--"`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := spec.parse(tc.args)
+			var usage *skillsUsageError
+			if !errors.As(err, &usage) || err.Error() != tc.want {
+				t.Errorf("parse(%q) error = %v, want %q", tc.args, err, tc.want)
+			}
+		})
+	}
+	got, err := spec.parse([]string{"--id", "a", "--manifest", "m", "--label", "b"})
+	if err != nil || got.value("--id", "") != "a" || got.value("--label", "") != "b" {
+		t.Errorf("parse of the valid form = %+v, %v", got, err)
+	}
+}
+
+// What each verb that writes reads: the flags it takes, the ones the wrapper appends that it does
+// not, and what is no flag.
+func TestSkillsFlagSpecsOfTheWritersSayWhatEachVerbReads(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		spec   skillsFlagSpec
+		args   []string
+		values map[string]string
+		words  []string
+	}{
+		{"add reads the registry, the manifest, the source root, the repo and the ref", skillsAddSpec,
+			[]string{"--registry", "r", "--manifest", "m", "--source-root", "s", "--repo", "u", "--ref", "v", "foo"},
+			map[string]string{"--registry": "r", "--manifest": "m", "--source-root": "s", "--repo": "u", "--ref": "v"}, []string{"foo"}},
+		{"add reads the id from the first word and ignores the rest", skillsAddSpec, []string{"foo", "bar"}, nil, []string{"foo", "bar"}},
+		{"add ends its flags at --", skillsAddSpec, []string{"--", "foo"}, nil, []string{"foo"}},
+		{"remove takes the source root of the wrapper and does not read it", skillsRemoveSpec,
+			[]string{"--registry", "r", "--source-root", "s", "foo"}, map[string]string{"--registry": "r"}, []string{"foo"}},
+		{"sync-manifest reads the registry and the manifest", skillsSyncSpec,
+			[]string{"--manifest", "m", "--registry", "r"}, map[string]string{"--registry": "r", "--manifest": "m"}, nil},
+		{"approve reads the id, the approver, the source root and the registry whose lock it takes", skillsApproveSpec,
+			[]string{"--id", "foo", "--approver", "A B", "--source-root", "s", "--registry", "r", "--manifest", "m"},
+			map[string]string{"--id": "foo", "--approver": "A B", "--source-root": "s", "--registry": "r"}, nil},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.spec.parse(tc.args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(got.values, orEmptyValues(tc.values)) || !reflect.DeepEqual(got.words, tc.words) {
+				t.Errorf("parse = values %v, words %q, want %v and %q", got.values, got.words, tc.values, tc.words)
+			}
+		})
+	}
+	for name, spec := range map[string]skillsFlagSpec{"remove": skillsRemoveSpec, "sync-manifest": skillsSyncSpec} {
+		if _, err := spec.parse([]string{"--repo", "u"}); err == nil {
+			t.Errorf("%s takes a flag of add, which it does not read", name)
+		}
+	}
+}
