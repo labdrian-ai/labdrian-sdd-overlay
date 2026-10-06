@@ -8,13 +8,9 @@ package skills
 // by the golden files of engine/cmd.
 
 import (
-	"bytes"
 	"errors"
-	"fmt"
 	"io/fs"
-	"os"
 	"path/filepath"
-	"strings"
 	"testing"
 )
 
@@ -60,65 +56,6 @@ func (s *stagedSpy) Remove(name string) error {
 		return err
 	}
 	return s.real.Remove(name)
-}
-
-var errInjectedWrite = errors.New("injected failure")
-
-func TestApproveStagesTheRecordWorldReadableAndPutsBackWhenItCannotCommit(t *testing.T) {
-	root := t.TempDir()
-	writeTestFile(t, filepath.Join(root, "foo", "SKILL.md"), lintCleanSkillMD("foo"))
-	run := func(files StagedWrites) (int, string, string) {
-		var out, errBuf bytes.Buffer
-		code := -1
-		RenderApproveCore([]string{"--id", "foo", "--approver", "reviewer", "--source-root", root},
-			os.ReadFile, fileApprovals(os.ReadFile), fixedClock(approveFixedNow), files, &out, &errBuf, func(c int) { code = c })
-		return code, out.String(), errBuf.String()
-	}
-	record := ApprovalRecordPath(root, "foo")
-
-	failing := newStagedSpy(func(op, _ string, _ int) error {
-		if op == "writetemp" {
-			return errors.New("create temp: no room")
-		}
-		return nil
-	})
-	code, _, stderr := run(failing)
-	want := fmt.Sprintf("error: skills approve: skill %q: writing approval record: writeFileAtomic: create temp: no room\n", "foo")
-	if code != 1 || stderr != want {
-		t.Errorf("approve with a file system that cannot stage = exit %d, stderr %q, want exit 1 and %q", code, stderr, want)
-	}
-
-	failing = newStagedSpy(func(op, _ string, _ int) error {
-		if op == "rename" {
-			return errInjectedWrite
-		}
-		return nil
-	})
-	code, _, stderr = run(failing)
-	want = fmt.Sprintf("error: skills approve: skill %q: writing approval record: finalizing %q: injected failure\n", "foo", record)
-	if code != 1 || stderr != want {
-		t.Errorf("approve with a file system that cannot commit = exit %d, stderr %q, want exit 1 and %q", code, stderr, want)
-	}
-	if _, err := os.Stat(record); !errors.Is(err, fs.ErrNotExist) {
-		t.Errorf("a record is there after a failed commit: %v", err)
-	}
-	entries, _ := os.ReadDir(filepath.Join(root, "foo"))
-	for _, e := range entries {
-		if strings.HasPrefix(e.Name(), atomicTempPrefix) {
-			t.Errorf("the temporary file %s was left behind", e.Name())
-		}
-	}
-
-	working := newStagedSpy(nil)
-	if code, _, stderr := run(working); code != 0 {
-		t.Fatalf("approve = exit %d, stderr %q", code, stderr)
-	}
-	if len(working.perms) != 1 || working.perms[0] != 0o644 {
-		t.Errorf("the record was staged at %v, want 0644: it is committed with the skill", working.perms)
-	}
-	if info, err := os.Stat(record); err != nil || info.Mode().Perm() != 0o644 {
-		t.Errorf("the record is %v, %v, want a file at 0644", info, err)
-	}
 }
 
 // A file is staged in the directory of its destination, and a destination that names no

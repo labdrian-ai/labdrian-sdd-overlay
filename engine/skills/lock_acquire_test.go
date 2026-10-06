@@ -247,18 +247,17 @@ func TestReadConsistentlyDoesNotReadWhenTheLocksCannotBeTaken(t *testing.T) {
 }
 
 // The overlay lock a use case takes is the one the dispatcher takes for the same verb and the
-// same registry: one policy, said once.
+// same registry: one policy, said once. The verbs that run behind a use case take it in their
+// adapter (engine/cmd), which asks OverlayLocks, so the dispatcher takes none for them.
 func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
 	const registry = "/o/skills.registry.yaml"
-	for _, verb := range []string{"approve", "install", "adopt"} {
+	for _, verb := range []string{"install", "adopt"} {
 		want := lockRequestsFor(verb, []string{verb, "--registry", registry}, "")
 		if got := OverlayLocks(verb, registry); len(got) != 1 || len(want) != 1 || got[0] != want[0] {
 			t.Errorf("%s: OverlayLocks = %+v, the dispatcher takes %+v", verb, got, want)
 		}
 	}
-	// The verbs that run behind a use case take their lock in their adapter (engine/cmd), which asks
-	// OverlayLocks, so the dispatcher takes none for them.
-	for _, verb := range []string{"add", "remove", "sync-manifest"} {
+	for _, verb := range []string{"add", "remove", "sync-manifest", "approve"} {
 		if got := lockRequestsFor(verb, []string{verb, "--registry", registry}, ""); len(got) != 0 {
 			t.Errorf("%s: the dispatcher takes %+v, want none: the adapter of the use case takes the lock", verb, got)
 		}

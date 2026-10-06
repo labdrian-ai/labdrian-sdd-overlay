@@ -125,7 +125,7 @@ func TestSkillsCoreUnknownVerbMessage(t *testing.T) {
 	}
 }
 
-// ── T-05: sync-manifest dispatch tests (SC-51, SC-52) ────────────────────────
+// ── sync-manifest in the list of verbs (SC-52) ───────────────────────────────
 
 // TestSkillsCoreDispatchSyncManifest verifies that the verbs listed for an unknown or empty verb
 // include "sync-manifest" (SC-52). The verb itself runs behind its use case, whose adapter is

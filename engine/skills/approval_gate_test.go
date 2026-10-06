@@ -288,17 +288,6 @@ func TestCheckApprovals_AnUnreadableRecordIsUnverifiableNotAbsent(t *testing.T) 
 
 // ---- skills add ---------------------------------------------------------------
 
-func setupFixtureWithoutApprovals(t *testing.T, dir, regContent, mfContent string, ids []string) (regPath, mfPath, root string) {
-	t.Helper()
-	regPath, mfPath, root = setupFixture(t, dir, regContent, mfContent, ids)
-	for _, id := range ids {
-		if err := os.Remove(ApprovalRecordPath(root, id)); err != nil {
-			t.Fatalf("remove fixture record for %q: %v", id, err)
-		}
-	}
-	return regPath, mfPath, root
-}
-
 func snapshotFiles(t *testing.T, paths ...string) map[string]string {
 	t.Helper()
 	out := map[string]string{}

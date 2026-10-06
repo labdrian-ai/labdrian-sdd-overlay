@@ -141,35 +141,6 @@ func TestABusyMessageWithoutAPathNamesTheRequestedLock(t *testing.T) {
 
 // ---- a raw call leaves no lock file behind ---------------------------------------------
 
-// A writer that is about to fail because there is no registry must not first create
-// a lock file beside the registry it did not find. With no --registry the registry
-// is ./skills.registry.yaml in the working directory, wherever a raw engine call
-// happens to be made.
-func TestAWriterWithoutARegistryLocksNothing(t *testing.T) {
-	for verb, args := range map[string][]string{
-		"approve": {"--id", "x", "--approver", "reviewer"},
-	} {
-		t.Run(verb, func(t *testing.T) {
-			chdirToATempDir(t)
-			locker := &recordingLocker{}
-
-			r := runAt(verb, args, os.ReadFile, fixedClock(approveFixedNow), locker)
-
-			if r.code != 1 || r.stdout != "" {
-				t.Errorf("exit %d, stdout %q, stderr %q, want exit 1 and nothing on stdout", r.code, r.stdout, r.stderr)
-			}
-			for _, want := range []string{"skills " + verb, "reading registry", "skills.registry.yaml", "nothing was locked"} {
-				if !strings.Contains(r.stderr, want) {
-					t.Errorf("stderr %q does not contain %q", r.stderr, want)
-				}
-			}
-			if got := locker.log(); len(got) != 0 {
-				t.Errorf("lock events = %v, want none", got)
-			}
-		})
-	}
-}
-
 // chdirToATempDir makes an empty temporary directory the working directory for one
 // test, where a raw call's default registry would be looked for. (testing.T.Chdir
 // needs Go 1.24; the module is on 1.21.)

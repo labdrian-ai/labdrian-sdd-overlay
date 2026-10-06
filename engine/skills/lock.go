@@ -195,10 +195,6 @@ func OverlayLocks(verb, registryPath string) []LockRequest {
 // so nothing decided before the lock is trusted after it.
 func lockRequestsFor(verb string, args []string, installRoot string) []LockRequest {
 	var requests []LockRequest
-	overlay := func(mode LockMode) {
-		registryPath, _, _, _, _, _ := parseFlags(args)
-		requests = append(requests, overlayLockRequest(verb, registryPath, mode, false))
-	}
 	project := func(root string, mode LockMode) {
 		requests = append(requests, LockRequest{
 			Path:    filepath.Clean(root),
@@ -208,10 +204,8 @@ func lockRequestsFor(verb string, args []string, installRoot string) []LockReque
 		})
 	}
 	switch verb {
-	case "approve":
-		overlay(LockExclusive)
 	case "install", "adopt":
-		overlay(LockShared)
+		requests = append(requests, overlayLockRequest(verb, registryOfArgs(args), LockShared, false))
 		if installRoot != "" {
 			project(installRoot, LockExclusive)
 		}
@@ -225,6 +219,29 @@ func lockRequestsFor(verb string, args []string, installRoot string) []LockReque
 		}
 	}
 	return requests
+}
+
+// registryOfArgs is the registry install and adopt lock: the last --registry of their arguments, or
+// the default every verb shares. The flags that the wrapper appends take their value, so that the
+// value of one is not read as a flag, as it always was; install and adopt read their own flags
+// later, after the lock is held. It goes when these two verbs move behind a use case, which locks
+// through OverlayLocks.
+func registryOfArgs(args []string) string {
+	registryPath := defaultRegistryPath
+	for i := 0; i < len(args); i++ {
+		switch args[i] {
+		case "--registry":
+			if i+1 < len(args) {
+				registryPath = args[i+1]
+				i++
+			}
+		case "--manifest", "--source-root", "--repo", "--ref":
+			if i+1 < len(args) {
+				i++
+			}
+		}
+	}
+	return registryPath
 }
 
 // projectRootArg is the project root a project verb will use: what parseProjectArgs,

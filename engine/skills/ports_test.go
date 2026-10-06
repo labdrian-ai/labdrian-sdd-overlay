@@ -231,7 +231,7 @@ func TestAVerbThatNeedsTheTreeRefusesWhenNoneIsWired(t *testing.T) {
 func TestAVerbThatNeedsTheProjectFileSystemRefusesWhenNoneIsWired(t *testing.T) {
 	regPath := filepath.Join(t.TempDir(), "skills.registry.yaml")
 	writeTestFile(t, regPath, minimalRegistry("existing"))
-	for _, verb := range []string{"approve", "install", "adopt", "project-register", "project-revise", "project-status", "project-retire"} {
+	for _, verb := range []string{"install", "adopt", "project-register", "project-revise", "project-status", "project-retire"} {
 		t.Run(verb, func(t *testing.T) {
 			var out, errBuf bytes.Buffer
 			code := -1
