@@ -10,15 +10,15 @@ import (
 
 // The golden files under testdata/project-identity-golden record how the verbs of `skills` that
 // depend on the id of the project name it: 'install' and 'adopt', which admit the skills of a
-// registry to a project by the project's id, and say that id in what they print. The id is what
-// --project-id gives, and without it the name of the directory the program runs in; they were
+// registry to a project by the project's id, and say that id in what they print. The id is, in
+// the owner's order (Phase 9, decision Q8): what --project-id gives, then the origin remote of the
+// repository the program runs in (read from its .git/config without running git), then the name of
+// that directory. A repository whose origin is github.com/acme/demo is that project whatever its
+// directory is called, also from a subdirectory or a linked worktree. These files were first
 // recorded from the program as it was before Phase 9 unit H18 (docs/architecture/
-// hexagonal-target.md) put the id behind a ProjectIdentity port, and they are the contract that
-// move had to keep. The origin remote of a repository is part of the cases on purpose: a
-// repository whose origin is github.com/acme/demo is, to this program, the directory it is in, and
-// a registry that admits a skill to "github.com/acme/demo" admits it to nobody running install
-// without --project-id. A decision of the owner that changes that changes these files, in a diff
-// that is read.
+// hexagonal-target.md) put the id behind a ProjectIdentity port, which named the project by its
+// directory; the owner then put the origin in the chain (2026-10-06), and the cases that changed
+// were renamed for what they pin now.
 //
 // Rewrite them deliberately with
 //
