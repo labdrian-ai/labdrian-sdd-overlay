@@ -1,0 +1,20 @@
+# the last --registry wins
+$ skills status --registry <WORLD>/skills.registry.yaml --registry <WORLD>/other/skills.registry.yaml
+exit: 0
+--- stdout ---
+Total:  1
+Core:   0
+Custom: 1
+Status: OK
+--- stderr ---
+
+# and so when the other comes first
+$ skills status --registry <WORLD>/other/skills.registry.yaml --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+

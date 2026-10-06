@@ -1,0 +1,16 @@
+# --manifest names a file that is not there
+$ skills validate --manifest <WORLD>/absent.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading manifest "<WORLD>/absent.manifest": open <WORLD>/absent.manifest: no such file or directory
+
+# --manifest is the last word: no value, so the manifest of the working directory
+$ skills validate --source-root <WORLD>/skills --manifest
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+

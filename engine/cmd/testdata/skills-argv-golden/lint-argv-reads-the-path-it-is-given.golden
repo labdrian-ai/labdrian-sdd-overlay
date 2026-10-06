@@ -1,0 +1,39 @@
+# a skill that passes
+$ skills lint <WORLD>/good/SKILL.md
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# a skill that does not
+$ skills lint <WORLD>/bad/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+[lint:frontmatter-fence] file does not start with a `---` frontmatter fence
+
+# the verb after the flag
+$ skills --rules lint
+exit: 0
+--- stdout ---
+| ID | Severity | Check |
+|---|---|---|
+| `frontmatter-fence` | hard | The file starts with a `---` line and has a closing `---` line. |
+| `required-fields` | hard | `name`, `description`, `license`, `metadata.author` and `metadata.version` are present and non-empty after unquoting. |
+| `description-one-line` | hard | `description` is a single physical line: no block scalar (`>`, `\|`, `>-`, `\|-`, `>+`, `\|+`) and no indented continuation line. |
+| `description-max` | hard | `description` is at most 250 characters (runes, after unquoting). |
+| `body-hard-budget` | hard | Estimated body tokens are at most 1000. |
+| `description-should` | advisory | `description` is at most 160 characters. |
+| `body-recommended` | advisory | Estimated body tokens are at most 700. |
+| `section-order` | advisory | The canonical H2 headings that are present (Activation Contract, Hard Rules, Decision Gates, Execution Steps, Output Contract, References) appear in canonical order. |
+| `incident-log-shape` | advisory | The body contains an ISO date, an observation reference, or a PR/issue number. |
+| `banned-shell-utility` | advisory | An inline code span, or a line inside a fenced code block, whose first word is `cat`, `grep`, `find`, `sed` or `ls`. |
+| `home-path-leak` | advisory | An absolute home-directory path (`/home/<name>/`, `/Users/<name>/` or `C:\Users\<name>\`) appears anywhere in the file. |
+--- stderr ---
+
+# the path before the verb is the verb
+$ skills <WORLD>/good/SKILL.md lint
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown skills verb "<WORLD>/good/SKILL.md" (supported: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+

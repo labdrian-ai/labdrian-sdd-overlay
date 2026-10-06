@@ -1,0 +1,16 @@
+# the flags first, then the verb
+$ skills --source-root <WORLD>/skills validate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown skills verb "<WORLD>/skills" (supported: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+
+# a flag that takes no part, then the verb
+$ skills --frobnicate validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+

@@ -1,0 +1,20 @@
+# --manifest and --source-root come after every verb: they are not read, and are no mistake
+$ skills status --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+
+# and with a registry, the wrapper's order
+$ skills status --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+

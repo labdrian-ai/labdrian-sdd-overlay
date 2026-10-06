@@ -1,0 +1,28 @@
+# no flags
+$ skills validate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate requires --source-root <skills-dir>
+
+# the other two flags and no source root
+$ skills validate --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate requires --source-root <skills-dir>
+
+# a source root with no value, last
+$ skills validate --source-root
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate requires --source-root <skills-dir>
+
+# a source root that is the empty word
+$ skills validate --source-root 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate requires --source-root <skills-dir>
+
