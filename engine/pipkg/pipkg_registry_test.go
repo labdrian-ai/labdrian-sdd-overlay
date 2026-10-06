@@ -95,3 +95,68 @@ func TestARegistryThatIsADirectoryIsAStoreThatCannotBeRead(t *testing.T) {
 		t.Errorf("Build() = %v, want pipkg: opening registry: ... is a directory", err)
 	}
 }
+
+// Decision 4 of the owner (2026-10-05): a package is an artifact others consume, so it is not built
+// from a registry the reader did not read whole, in the words of the one rule the domain has for
+// it (Registry.CheckBuildable), and nothing is written when it refuses: not the package, and not a
+// package that was already there. Checking a package against such a registry only warns (the
+// warning is the repository's: skills.WarnOfUnread), as it did.
+func TestBuildRefusesARegistryTheReaderLeftFieldsOutOfAndWritesNothing(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	built := filepath.Join(t.TempDir(), "built", "labdrian-pi")
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, built); err != nil {
+		t.Fatal(err)
+	}
+	reg, err := skills.ReadRegistry(fileRegistries, registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg.Unread = []string{`line 3: unknown key "color" in skill entry`}
+	partial := &fakeRegistries{reg: reg}
+
+	if _, err := pipkg.Check(partial, overlayRoot, registryPath, built); err != nil {
+		t.Errorf("Check() = %v, want a check over a registry read in part to go on as it did", err)
+	}
+
+	// A rebuild would clear this file: it is how the test sees whether the package was touched.
+	writeFile(t, filepath.Join(built, "marker.txt"), "left by the last build\n")
+
+	const want = `pipkg: skills: the registry has fields this program does not read, and a package built from it would be built from a partial read: line 3: unknown key "color" in skill entry`
+	before := listTree(t, built)
+
+	if err := pipkg.Build(partial, overlayRoot, registryPath, built); err == nil || err.Error() != want {
+		t.Errorf("Build() over a package that is there = %v, want %q", err, want)
+	}
+	if after := listTree(t, built); after != before {
+		t.Errorf("the package that was there changed when Build refused:\nbefore %s\nafter  %s", before, after)
+	}
+
+	fresh := filepath.Join(t.TempDir(), "parent", "labdrian-pi")
+	if err := pipkg.Build(partial, overlayRoot, registryPath, fresh); err == nil || err.Error() != want {
+		t.Errorf("Build() into a new place = %v, want %q", err, want)
+	}
+	if _, err := os.Stat(filepath.Dir(fresh)); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("Build() made %s while refusing: Stat = %v, want it absent", filepath.Dir(fresh), err)
+	}
+}
+
+// listTree is the names, sizes and contents of the files under dir, in one string.
+func listTree(t *testing.T, dir string) string {
+	t.Helper()
+	var b strings.Builder
+	err := filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		data, err := os.ReadFile(p)
+		if err != nil {
+			return err
+		}
+		b.WriteString(p + "=" + string(data) + "\n")
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return b.String()
+}

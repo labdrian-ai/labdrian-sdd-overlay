@@ -106,8 +106,6 @@ func registryReadingCases() []registryGoldenCase {
 				{"a project skill with no projects", changed("defaultScope: global", "defaultScope: project")},
 				{"a project skill with projects repeated", changed("defaultScope: global", "defaultScope: project\n      allowedProjects:\n        - demo\n        - demo")},
 				{"two entries with the same path", baseEntry + "  - id: beta\n    path: alpha\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"},
-				{"the second of two skills keys replaces the first", baseEntry + "skills:\n  - id: other\n    path: other\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - codex\n    lifecycle:\n      updateStrategy: overlay-only\n"},
-				{"the last of two versions wins", "version: \"2\"\n" + baseEntry},
 			})
 		}},
 		{"remove-shows-everything-the-reader-read-of-the-rest", func(w *registryWorld) {
@@ -320,6 +318,13 @@ func registryRefusalCases() []registryGoldenCase {
 				{"a field of an upstream twice", changed("      type: custom", "      type: core\n      upstream:\n        owner: a\n        owner: b")},
 				{"a field of an install twice", changed("      defaultScope: global", "      defaultScope: global\n      defaultScope: global")},
 				{"a field of a lifecycle twice", changed("      updateStrategy: overlay-only", "      updateStrategy: overlay-only\n      updateStrategy: overlay-only")},
+				// Decision 5 of the owner: the format took the last of a key of the root said twice
+				// (the entries of the first block of 'skills' were lost without a word); it is refused
+				// now, naming both lines, as a key that repeats inside a mapping is.
+				{"a key at the root twice: skills", baseEntry + "skills:\n  - id: other\n    path: other\n    source:\n      type: custom\n    install:\n      defaultScope: global\n      targets:\n        - codex\n    lifecycle:\n      updateStrategy: overlay-only\n"},
+				{"a key at the root twice: version", "version: \"2\"\n" + baseEntry},
+				{"a key at the root twice: version, the second one a version it does not know", baseEntry + "version: \"2\"\n"},
+				{"a key at the root twice: one the reader does not know", "extra: 1\n" + baseEntry + "extra: 2\n"},
 			})
 		}},
 		{"registry-refuses-a-version-it-does-not-know", func(w *registryWorld) {

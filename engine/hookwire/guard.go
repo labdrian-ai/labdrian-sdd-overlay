@@ -37,14 +37,15 @@ type guardHookInput struct {
 // DecodeToolCall reads a PreToolUse input for a guard. It is the decoding of encoding/json, so it
 // takes one JSON value (null is an input with nothing in it), matches a key without regard to
 // case, and takes the last of a repeated key. The input is at most MaxToolCallBytes: a longer one
-// is refused, wrapping ErrTooLarge, whatever it holds, and what to do about a call that was not
-// judged is the guard's to answer (both guards deny it). It fails for text that is not JSON, for a value that is not an object, for a tool_name,
-// command, file_path or notebook_path that is not text and for a tool_input that is not an
-// object.
+// is refused, wrapping ErrTooLarge, whatever it holds. What to do about a call that was not judged
+// is the guard's to answer, and both guards deny it. It fails for text that is not JSON, for a
+// value that is not an object, for a tool_name, command, file_path or notebook_path that is not
+// text and for a tool_input that is not an object.
 //
-// The error of a value that could not be decoded wraps the one of the JSON decoder, in its
-// words. Those are for logs and tests: a guard that denies for it words the denial itself, so
-// that what the model reads does not depend on the decoder or on the type it decodes into.
+// The error of a value that could not be decoded wraps the one of the JSON decoder, in its words.
+// Those words are for logs and tests, never for the model: a guard that denies such a call writes
+// the denial itself, so that what the model reads does not depend on the decoder or on the type it
+// decodes into.
 func DecodeToolCall(data []byte) (ToolCall, error) {
 	if len(data) > MaxToolCallBytes {
 		return ToolCall{}, tooLarge("decode tool call", len(data), MaxToolCallBytes)

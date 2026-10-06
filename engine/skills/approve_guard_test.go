@@ -346,10 +346,10 @@ func TestDecideApproveGuard_AllowsEverythingElseSilently(t *testing.T) {
 // A call the hook did not read because it is over the bound it reads is denied, and the denial
 // names the verb, the bound, and what to do, in one line: the agent controls the length of its
 // own command, so a guard that let the length switch it off would guard nothing.
-func TestApproveGuardOversized_DeniesInOneLineNamingTheVerbAndTheBound(t *testing.T) {
-	v := ApproveGuardOversized(8388608)
+func TestApproveGuardTooLarge_DeniesInOneLineNamingTheVerbAndTheBound(t *testing.T) {
+	v := ApproveGuardTooLarge(8388608)
 	if !v.Deny {
-		t.Fatalf("ApproveGuardOversized = %+v, want a denial", v)
+		t.Fatalf("ApproveGuardTooLarge = %+v, want a denial", v)
 	}
 	for _, want := range []string{"labdrian skills approve guard", `"skills approve"`, "8388608 bytes", "too large", "speed bump"} {
 		if !strings.Contains(v.Reason, want) {

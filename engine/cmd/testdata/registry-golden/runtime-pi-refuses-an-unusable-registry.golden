@@ -1,5 +1,5 @@
 # a package built where the runtime looks for it
-$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/overlay/skills.registry.yaml --dest-dir <WORLD>/state/pi/labdrian-pi
+$ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/whole.yaml --dest-dir <WORLD>/state/pi/labdrian-pi
 exit: 0
 --- stdout ---
 pipkg build: labdrian-pi package written to <WORLD>/state/pi/labdrian-pi
@@ -23,7 +23,7 @@ exit: 1
 $ runtime install --target pi
 exit: 1
 --- stdout ---
-[pi] install: partial — labdrian-pi package built at <WORLD>/state/pi/labdrian-pi but `pi install` failed: fork/exec <WORLD>/no-pi: no such file or directory (output: )
+[pi] install: unsupported — pipkg: skills: the registry has fields this program does not read, and a package built from it would be built from a partial read: line 7: unknown key "mirror" in source
 --- stderr ---
 warning: registry fields left unread: line 7: unknown key "mirror" in source
 

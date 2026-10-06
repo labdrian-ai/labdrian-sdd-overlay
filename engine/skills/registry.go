@@ -29,8 +29,10 @@ import (
 //     nothing.)
 //   - A store that was read whole and not understood to the last field is a registry, not an
 //     error: the adapter returns what it understood, and Registry.Unread says what it left out,
-//     one note per field. The verbs that read warn of it and go on; the verbs that rewrite the
-//     registry (AddEntry, RemoveEntry) refuse it, because writing it back would drop the fields.
+//     one note per field. The verbs that read warn of it and go on, except validate (which fails,
+//     CheckVerifiable); the verbs that rewrite the registry (AddEntry, RemoveEntry) refuse it,
+//     because writing it back would drop the fields, and so does the build of the Pi package
+//     (CheckBuildable), which would build an artifact from a partial read.
 //     What an adapter must not leave out in silence is the fields its own policy says are needed
 //     to read the registry as it means (for the YAML file, the must-understand set): it refuses
 //     the store instead.
@@ -154,6 +156,11 @@ func (w warningRegistries) Decode(data []byte) (Registry, error) {
 	return reg, err
 }
 
+// tell warns only of a registry that is usable, so it judges the registry it was handed with
+// Validate. That is a second validation pass over the registry on every read: the callers
+// (pipkg, the Pi runtime adapter) judge it again, through ReadRegistry, for their own control
+// flow. The cost is one pass over a few dozen entries, paid so that a registry the domain
+// refuses is refused in its own words and never preceded by a warning about it.
 func (w warningRegistries) tell(reg Registry, err error) {
 	if err != nil || reg.Validate() != nil {
 		return
@@ -165,13 +172,31 @@ func (w warningRegistries) tell(reg Registry, err error) {
 
 // CheckWritable says whether the registry may be written back as it is, and when it may not, why:
 // a registry the reader did not read whole would lose what the reader left out, so it is not
-// changed and written (add, remove) and an adapter does not encode it. It is the one owner of that
-// rule and of its words. Reading it, listing it, installing from it lose nothing and are not refused.
-func (r Registry) CheckWritable() error {
+// changed and written (add, remove) and an adapter does not encode it. Reading it, listing it,
+// installing from it lose nothing and are not refused.
+func (r Registry) CheckWritable() error { return r.refuseIfReadInPart("rewriting it would drop them") }
+
+// CheckBuildable says whether a package may be built from the registry, and when it may not, why:
+// a package is an artifact others consume, and one built from a registry the reader did not read
+// whole would be built from a partial read, with no trace of what was left out.
+func (r Registry) CheckBuildable() error {
+	return r.refuseIfReadInPart("a package built from it would be built from a partial read")
+}
+
+// CheckVerifiable says whether the registry may be vouched for, and when it may not, why:
+// validate is the verb a CI uses to detect drift, and a registry the reader did not read whole
+// has parts nobody compared.
+func (r Registry) CheckVerifiable() error {
+	return r.refuseIfReadInPart("validate cannot vouch for a registry it read in part")
+}
+
+// refuseIfReadInPart is the one owner of the rule and of its words: a registry whose Unread is
+// not empty is refused for what the question would cost, and a registry read whole is not.
+func (r Registry) refuseIfReadInPart(consequence string) error {
 	if len(r.Unread) == 0 {
 		return nil
 	}
-	return fmt.Errorf("skills: the registry has fields this program does not read, and rewriting it would drop them: %s", r.UnreadSummary())
+	return fmt.Errorf("skills: the registry has fields this program does not read, and %s: %s", consequence, r.UnreadSummary())
 }
 
 // readRegistryForVerb reads the registry at path for a verb that works on it, and says what a

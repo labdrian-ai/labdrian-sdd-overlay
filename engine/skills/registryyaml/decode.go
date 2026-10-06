@@ -310,6 +310,9 @@ func (p *tokParser) advance() *tok {
 func (p *tokParser) parseDocument() (skills.Registry, error) {
 	var reg skills.Registry
 	seenSkills := false
+	// firstLine is the line each key of the top level was first said on: a key said twice is
+	// refused, whether it is known or not (the version too, which versionOf has already judged).
+	firstLine := make(map[string]int)
 
 	for p.peek() != nil {
 		t := p.peek()
@@ -320,6 +323,10 @@ func (p *tokParser) parseDocument() (skills.Registry, error) {
 			return reg, fmt.Errorf("line %d: unexpected token at document root", t.lineNum)
 		}
 		p.advance()
+		if first, again := firstLine[t.key]; again {
+			return reg, repeatedTopLevelKey(t.key, t.lineNum, first)
+		}
+		firstLine[t.key] = t.lineNum
 		switch t.key {
 		case "version":
 			// Found and judged before this decoder was chosen (versionOf).

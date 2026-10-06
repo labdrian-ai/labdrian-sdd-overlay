@@ -30,7 +30,7 @@ package main
 //     file-edit call, so it fails open, unlike the shaper clearance guard,
 //     which fails closed for its narrower markers. The one exception is input
 //     over the bound: the agent controls the length of its own command, so a
-//     call too large to be judged is denied (skills.ApproveGuardOversized),
+//     call too large to be judged is denied (skills.ApproveGuardTooLarge),
 //     as the clearance guard denies it.
 //
 // It reads no file, runs no subprocess, and makes no network call.
@@ -118,7 +118,7 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 func approveGuardVerdictFor(raw []byte) skills.ApproveGuardVerdict {
 	call, err := hookwire.DecodeToolCall(raw)
 	if errors.Is(err, hookwire.ErrTooLarge) {
-		return skills.ApproveGuardOversized(hookwire.MaxToolCallBytes)
+		return skills.ApproveGuardTooLarge(hookwire.MaxToolCallBytes)
 	}
 	if err != nil {
 		return skills.ApproveGuardVerdict{}

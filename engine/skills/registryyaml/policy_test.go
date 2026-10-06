@@ -199,17 +199,20 @@ func TestAFirstKeyOfAnEntryHasTheShapeOfItsField(t *testing.T) {
 	}
 }
 
-// A file that says its version twice is read as it always was: the last one is the version. (A
-// quirk of the strict reader that the dispatch keeps, so that no file that was read is read
-// differently.)
-func TestAFileThatSaysItsVersionTwiceHasTheLastOne(t *testing.T) {
+// A file that says its version twice is refused, naming both lines, before a decoder is chosen:
+// the version is the one field that selects how the rest is read, so there is no reading of the
+// file in which two of it are not a fault (decision 5 of the owner; the strict reader took the last).
+func TestAFileThatSaysItsVersionTwiceIsRefusedBeforeAnyDecoderIsChosen(t *testing.T) {
 	repo := registryyaml.NewRepository(nil)
-	if reg, err := repo.Decode([]byte("version: \"2\"\n" + policyDoc)); err != nil || reg.Version != "1" {
-		t.Errorf("version 2 then 1 = %+v, %v, want it read as version 1", reg, err)
-	}
-	_, err := repo.Decode([]byte("version: \"1\"\n" + strings.Replace(policyDoc, `"1"`, `"2"`, 1)))
-	if err == nil || !strings.Contains(err.Error(), `version "2" is not supported`) {
-		t.Errorf("version 1 then 2 = %v, want the refusal of version 2", err)
+	const want = `line 2: duplicate key "version" at the top level (first on line 1)`
+	for name, doc := range map[string]string{
+		"2 then 1": "version: \"2\"\n" + policyDoc,
+		"1 then 2": "version: \"1\"\n" + strings.Replace(policyDoc, `"1"`, `"2"`, 1),
+		"3 then 3": "version: \"3\"\nversion: \"3\"\nskills:\n",
+	} {
+		if reg, err := repo.Decode([]byte(doc)); err == nil || err.Error() != want || len(reg.Skills) != 0 {
+			t.Errorf("version %s = %+v, %v, want the refusal %q and no entries", name, reg, err, want)
+		}
 	}
 }
 
@@ -258,19 +261,18 @@ func TestAFieldTheReaderDoesNotKnowIsLeftOutAndSaid(t *testing.T) {
 	}
 }
 
-// Several are told in the order of the file, and the same unknown key at the top of the file twice
-// is told twice (the strict reader never checked the top of the file for a key that repeats).
+// Several are told in the order of the file.
 func TestWhatIsLeftOutIsToldInTheOrderOfTheFile(t *testing.T) {
 	doc := "first: 1\n" +
 		replaceLine(t, policyDoc, "    path: alpha", "    path: alpha\n    second: 2") +
-		"third: 3\nfirst: 4\n"
+		"third: 3\nfourth: 4\n"
 	reg := decoded(t, doc)
 	var keys []string
 	for _, note := range reg.Unread {
 		keys = append(keys, regexp.MustCompile(`"([a-z]+)"`).FindStringSubmatch(note)[1])
 	}
-	if strings.Join(keys, ",") != "first,second,third,first" {
-		t.Errorf("left out %q, want first, second, third and first again, in the order of the file", reg.Unread)
+	if strings.Join(keys, ",") != "first,second,third,fourth" {
+		t.Errorf("left out %q, want first, second, third and fourth, in the order of the file", reg.Unread)
 	}
 }
 

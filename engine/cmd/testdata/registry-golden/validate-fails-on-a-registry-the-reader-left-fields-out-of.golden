@@ -1,0 +1,36 @@
+# a registry that agrees with everything, read whole
+$ skills validate --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+registry and manifest aligned (4 skills)
+skills/ on disk matches overlay.manifest (4 files)
+global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
+--- stderr ---
+
+# the same, with a key at its root that the reader does not know
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+warning: registry fields left unread: line 1: unknown top-level key "extra"
+error: skills: the registry has fields this program does not read, and validate cannot vouch for a registry it read in part: line 1: unknown top-level key "extra"
+
+# and list, which only reads, warns and goes on
+$ skills list
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+warning: registry fields left unread: line 1: unknown top-level key "extra"
+
+# two keys the reader does not know: the first is named, and how many more
+$ skills validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+warning: registry fields left unread: line 29: unknown key "phase" in lifecycle (and 1 more)
+error: skills: the registry has fields this program does not read, and validate cannot vouch for a registry it read in part: line 29: unknown key "phase" in lifecycle (and 1 more)
+

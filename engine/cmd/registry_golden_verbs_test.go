@@ -138,6 +138,35 @@ func registryVerbCases() []registryGoldenCase {
 				return []string{"skills", "validate", "--registry", registry, "--source-root", w.path("skills")}
 			})
 		}},
+		{"validate-fails-on-a-registry-the-reader-left-fields-out-of", func(w *registryWorld) {
+			// Decision 3 of the owner: validate is the verb a CI uses to detect drift, so a registry
+			// that agrees with its manifest and its disk is still not passed when the reader left
+			// something of it out. The verbs that only read keep warning and going on.
+			w.overlay()
+			w.label("a registry that agrees with everything, read whole")
+			w.run("skills", "validate", "--source-root", w.path("skills"))
+			w.put(worldRegistry, "extra: 1\n"+goldenRegistryYAML)
+			w.label("the same, with a key at its root that the reader does not know")
+			w.run("skills", "validate", "--source-root", w.path("skills"))
+			w.label("and list, which only reads, warns and goes on")
+			w.run("skills", "list")
+			w.put(worldRegistry, strings.Replace(goldenRegistryYAML, "      updateStrategy: overlay-only\n", "      updateStrategy: overlay-only\n      phase: x\n", 1)+"mirror: y\n")
+			w.label("two keys the reader does not know: the first is named, and how many more")
+			w.run("skills", "validate", "--source-root", w.path("skills"))
+		}},
+		{"validate-notes-the-ids-that-share-a-path-and-passes", func(w *registryWorld) {
+			// Decision 6 of the owner: two ids on one path were accepted, and still are. validate
+			// says so in a note, on stderr, which is not a failure.
+			w.put(worldManifest, "alpha/SKILL.md custom\n")
+			w.putSkill("alpha", true)
+			two := strings.Replace(registryOf("alpha", "beta"), "  - id: beta\n    path: beta\n", "  - id: beta\n    path: alpha\n", 1)
+			w.put(worldRegistry, two)
+			w.label("two ids on one path, and a manifest, a disk and approvals that agree")
+			w.run("skills", "validate", "--source-root", w.path("skills"))
+			w.put(worldRegistry, strings.NewReplacer("path: beta\n", "path: alpha\n", "path: gamma\n", "path: alpha\n").Replace(registryOf("alpha", "beta", "gamma")))
+			w.label("three ids on one path, in the order the registry says them")
+			w.run("skills", "validate", "--source-root", w.path("skills"))
+		}},
 		{"status-refuses-an-unusable-registry", func(w *registryWorld) {
 			w.eachRegistryState(func(registry string) []string { return []string{"skills", "status", "--registry", registry} })
 		}},

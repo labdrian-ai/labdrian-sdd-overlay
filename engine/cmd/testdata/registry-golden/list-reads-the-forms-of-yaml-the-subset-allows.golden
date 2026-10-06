@@ -111,17 +111,3 @@ alpha	custom	overlay-only	claude
 beta	custom	overlay-only	claude
 --- stderr ---
 
-# the second of two skills keys replaces the first
-$ skills list --registry <WORLD>/docs/17.yaml
-exit: 0
---- stdout ---
-other	custom	overlay-only	codex
---- stderr ---
-
-# the last of two versions wins
-$ skills list --registry <WORLD>/docs/18.yaml
-exit: 0
---- stdout ---
-alpha	custom	overlay-only	claude
---- stderr ---
-

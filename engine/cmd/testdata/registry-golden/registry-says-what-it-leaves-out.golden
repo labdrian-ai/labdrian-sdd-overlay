@@ -14,7 +14,7 @@ alpha	custom	overlay-only	claude
 --- stderr ---
 warning: registry fields left unread: line 1: unknown top-level key "first" (and 2 more)
 
-# the same key it does not know twice at the root
+# two different keys it does not know at the root, around the entries
 $ skills list --registry <WORLD>/docs/03.yaml
 exit: 0
 --- stdout ---

@@ -162,6 +162,15 @@ func registryPackageCases() []registryGoldenCase {
 			w.packageWorld()
 			w.run(w.pipkgArgs("build")...)
 			for _, verb := range []string{"build", "check"} {
+				if verb == "check" {
+					// A build refuses a registry that has a key the reader does not know (decision 4
+					// of the owner), so no build above left the package of the registries below.
+					// The checks compare with the package of the same registry read whole, which is
+					// what the build of that state left before the decision.
+					w.put("refused/whole.yaml", baseEntry)
+					w.label("the package of the registry the checks below are over, read whole")
+					w.run(w.pipkgArgsFor("build", w.path("refused/whole.yaml"))...)
+				}
 				for _, file := range w.putRegistryStates(verb) {
 					w.label("%s: %s", verb, file.label)
 					w.run(w.pipkgArgsFor(verb, file.path)...)
@@ -195,8 +204,12 @@ func registryPackageCases() []registryGoldenCase {
 			w.mkdir("state")
 			w.setenv("OVERLAY_DIR", w.path("overlay"))
 			w.setenv("STATE_DIR", w.path("state"))
+			// The package is built from the registry the states below are made from, read whole: a
+			// build refuses one that has a key the reader does not know (decision 4 of the owner), so
+			// that state no longer leaves a package of its own for the status to compare with.
+			w.put("refused/whole.yaml", baseEntry)
 			w.label("a package built where the runtime looks for it")
-			w.run("pipkg", "build", "--overlay-root", w.path("overlay"), "--registry", w.path("overlay/"+worldRegistry), "--dest-dir", w.path("state/pi/labdrian-pi"))
+			w.run("pipkg", "build", "--overlay-root", w.path("overlay"), "--registry", w.path("refused/whole.yaml"), "--dest-dir", w.path("state/pi/labdrian-pi"))
 			for _, doc := range registryStates() {
 				if doc.isAbsent() {
 					w.remove("overlay/" + worldRegistry)

@@ -576,6 +576,26 @@ func receiptGoldenCases() []receiptGoldenCase {
 			w.tree("toplevel", root)
 			w.tree("sub", sub)
 		}},
+		// A toplevel whose openspec/ the hook cannot look at is not a toplevel without one: the
+		// change the receipt belongs to may be there, so the hook denies and captures nothing, and
+		// does not serve the subdirectory's own openspec in its place.
+		{"hook-in-a-subdirectory-denies-a-toplevel-openspec-it-cannot-look-at", func(w *receiptWorld) {
+			if os.Geteuid() == 0 {
+				w.t.Skip("a directory without permissions does not stop root")
+			}
+			root := w.repo("<ROOT>", false)
+			sub := filepath.Join(root, "sub")
+			w.change(root, "top-change")
+			w.change(sub, "sub-change")
+			w.putReceipt(filepath.Join(root, ".git"), "review-from-below", legacyReceipt("review-from-below", receiptSchemaV2, approved))
+			closed := filepath.Join(root, "openspec")
+			if err := os.Chmod(closed, 0); err != nil {
+				w.t.Fatal(err)
+			}
+			w.t.Cleanup(func() { os.Chmod(closed, 0o755) })
+			w.hook(sub, acknowledgeCommand)
+			w.tree("sub", sub)
+		}},
 		// A repository whose toplevel has no openspec/changes but whose subdirectory has one is
 		// served from that subdirectory, as it always was: it is the one place the hook can put
 		// the receipt, and passing through would lose it.

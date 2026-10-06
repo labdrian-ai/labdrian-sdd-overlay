@@ -36,8 +36,8 @@ func registryPolicyCases() []registryGoldenCase {
 				{"a version of a later format, with entries this reader could not read",
 					"version: \"2\"\nskills:\n  - id: alpha\n    color: red\n    shape: 3\n"},
 				{"a version at the end of the file", strings.Replace(baseEntry, "version: \"1\"\n", "", 1) + "version: \"1\"\n"},
-				{"a version said twice: the last is the version (it is 1)", "version: \"2\"\n" + baseEntry},
-				{"a version said twice: the last is the version (it is 2)", baseEntry + "version: \"2\"\n"},
+				{"a version said twice, the first of a format it does not know: the repeat is the fault", "version: \"2\"\n" + baseEntry},
+				{"a version said twice, the second of a format it does not know: the repeat is the fault", baseEntry + "version: \"2\"\n"},
 				{"a version with a block under it", strings.Replace(baseEntry, "version: \"1\"\n", "version:\n  nested: 1\n", 1)},
 			})
 		}},
@@ -46,7 +46,7 @@ func registryPolicyCases() []registryGoldenCase {
 				{"one key it does not know", "extra: 1\n" + baseEntry},
 				{"three keys it does not know: the first is named, and how many more", "first: 1\n" +
 					changed("    path: alpha", "    path: alpha\n    second: 2") + "third: 3\n"},
-				{"the same key it does not know twice at the root", "extra: 1\n" + baseEntry + "extra: 2\n"},
+				{"two different keys it does not know at the root, around the entries", "extra: 1\n" + baseEntry + "other: 2\n"},
 				{"a key it does not know with a block under it", "extra:\n  nested: 1\n  other:\n    - a\n    - b\n" + baseEntry},
 				{"two keys it does not know in a source and one at the end of the entry",
 					changed("      type: custom", "      type: custom\n      mirror: x\n      mirror2: y") + "    color: red\n"},

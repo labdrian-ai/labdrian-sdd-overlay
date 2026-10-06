@@ -409,3 +409,72 @@ func TestThePackageStartsNoProcess(t *testing.T) {
 		}
 	}
 }
+
+// Only an openspec/changes that does not exist at the toplevel lets the store serve the directory
+// it was given. Any other answer of the file system (here, no permission to look inside openspec/)
+// is not an absence: the receipts could be at the toplevel, and serving the directory below would
+// put them somewhere else. The ports that can say so refuse, naming the path they could not look
+// at, and the hook, which is fail-closed, denies (service_test.go and the golden files).
+func TestAToplevelOpenspecThatCannotBeLookedAtIsAnErrorAndNotAnAbsence(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a directory without permissions does not stop root")
+	}
+	top := t.TempDir()
+	sub := filepath.Join(top, "sub")
+	write(t, filepath.Join(sub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+	closed := filepath.Join(top, "openspec")
+	if err := os.MkdirAll(closed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(closed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(closed, 0o755) })
+	loc := &locator{obs: gitprov.Observation{Toplevel: top}}
+	s := newStore(t, sub, loc)
+
+	wantStat := "stat " + filepath.Join(top, "openspec", "changes") + ": "
+	if changes, err := s.Changes(); err == nil || !strings.HasPrefix(err.Error(), wantStat) || changes != nil {
+		t.Errorf("Changes = %v, %v, want no changes and an error that starts %q", changes, err, wantStat)
+	}
+	if _, err := s.Read("sub-change", "review-a.json"); err == nil || !strings.HasPrefix(err.Error(), wantStat) || errors.Is(err, reviewreceipt.ErrNotPersisted) {
+		t.Errorf("Read = %v, want the error of the stat, which is not an absence of the receipt", err)
+	}
+	if err := s.Write("sub-change", "review-a.json", []byte("{}")); err == nil || !strings.HasPrefix(err.Error(), wantStat) {
+		t.Errorf("Write = %v, want the error of the stat", err)
+	}
+	if _, err := os.Stat(filepath.Join(sub, "openspec", "changes", "sub-change", "review-receipts")); !os.IsNotExist(err) {
+		t.Errorf("Write put a receipt in the directory below while refusing (stat err=%v)", err)
+	}
+	if s.HasArtifact("sub-change", "tasks.md") {
+		t.Error("HasArtifact found an artifact of the directory below although the toplevel could not be looked at")
+	}
+	if len(loc.asked) > 1 {
+		t.Errorf("the locator was asked %d times, want at most once", len(loc.asked))
+	}
+}
+
+// Where openspec/ is looked for is decided once for a store, by what the file system held when it
+// was first asked: a change folder that appears at the toplevel afterwards does not move a store
+// that has already answered from the directory it was given, and a store built afterwards sees it.
+// A hook is one short process, so the decision cannot go stale in it, and every port of one
+// invocation answers from the same place; this pins that, since the comment of the store says it.
+func TestWhereOpenspecIsLookedForIsDecidedOnceForAStore(t *testing.T) {
+	top := t.TempDir()
+	sub := filepath.Join(top, "sub")
+	write(t, filepath.Join(sub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+	loc := &locator{obs: gitprov.Observation{Toplevel: top}}
+	first := newStore(t, sub, loc)
+
+	if changes, err := first.Changes(); err != nil || !reflect.DeepEqual(changes, []string{"sub-change"}) {
+		t.Fatalf("before the toplevel has a change: Changes = %v, %v, want [sub-change]", changes, err)
+	}
+	write(t, filepath.Join(top, "openspec", "changes", "top-change", "tasks.md"), "x")
+
+	if changes, err := first.Changes(); err != nil || !reflect.DeepEqual(changes, []string{"sub-change"}) {
+		t.Errorf("after the toplevel got a change: Changes = %v, %v, want the store to answer from where it first did", changes, err)
+	}
+	if changes, err := newStore(t, sub, loc).Changes(); err != nil || !reflect.DeepEqual(changes, []string{"top-change"}) {
+		t.Errorf("a store built after: Changes = %v, %v, want [top-change]", changes, err)
+	}
+}
