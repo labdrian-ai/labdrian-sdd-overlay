@@ -97,6 +97,45 @@ type LockRequest struct {
 	Rereads bool
 }
 
+// overlayLockRequest is the lock on the overlay of the registry at registryPath that verb takes
+// in mode: the lock file beside the registry, which serializes every verb working on it.
+func overlayLockRequest(verb, registryPath string, mode LockMode, rereads bool) LockRequest {
+	req := LockRequest{
+		Path:    RegistryLockPath(registryPath),
+		Mode:    mode,
+		Subject: "the registry " + registryPath,
+		Rereads: rereads,
+	}
+	if mode == LockExclusive {
+		// An exclusive lock creates the lock file, and a lock file created beside a
+		// registry that does not exist (a raw call made from any directory, with the
+		// default registry path) is litter in a directory that is not an overlay.
+		// add, remove, and sync-manifest read the registry and would fail anyway.
+		// approve does not read it, so an explicit path is taken as the name of the
+		// lock; the default path, which is only the working directory's, is not.
+		req.Registry = registryPath
+		req.SkipRegistryCheck = verb == "approve" && registryPath != defaultRegistryPath
+	}
+	return req
+}
+
+// OverlayLocks is the overlay lock verb takes on the registry at registryPath, as the verbs that
+// work on an overlay take it: exclusive for add, remove, sync-manifest and approve, shared for
+// validate, which reads again when the lock file appears during its read (ReadConsistently), and
+// shared for install and adopt. A verb that takes none (list, status, lint) gets no request.
+// Which verb needs which lock, and why, is explained at lockRequestsFor.
+func OverlayLocks(verb, registryPath string) []LockRequest {
+	switch verb {
+	case "add", "remove", "sync-manifest", "approve":
+		return []LockRequest{overlayLockRequest(verb, registryPath, LockExclusive, false)}
+	case "validate":
+		return []LockRequest{overlayLockRequest(verb, registryPath, LockShared, true)}
+	case "install", "adopt":
+		return []LockRequest{overlayLockRequest(verb, registryPath, LockShared, false)}
+	}
+	return nil
+}
+
 // lockRequestsFor lists, in the order they must be taken, the locks a verb needs.
 //
 // Overlay lock, keyed by the registry the verb names (--registry, or the default
@@ -156,23 +195,7 @@ func lockRequestsFor(verb string, args []string, installRoot string) []LockReque
 	var requests []LockRequest
 	overlay := func(mode LockMode, rereads bool) {
 		registryPath, _, _, _, _, _ := parseFlags(args)
-		req := LockRequest{
-			Path:    RegistryLockPath(registryPath),
-			Mode:    mode,
-			Subject: "the registry " + registryPath,
-			Rereads: rereads,
-		}
-		if mode == LockExclusive {
-			// An exclusive lock creates the lock file, and a lock file created beside a
-			// registry that does not exist (a raw call made from any directory, with the
-			// default registry path) is litter in a directory that is not an overlay.
-			// add, remove, and sync-manifest read the registry and would fail anyway.
-			// approve does not read it, so an explicit path is taken as the name of the
-			// lock; the default path, which is only the working directory's, is not.
-			req.Registry = registryPath
-			req.SkipRegistryCheck = verb == "approve" && registryPath != defaultRegistryPath
-		}
-		requests = append(requests, req)
+		requests = append(requests, overlayLockRequest(verb, registryPath, mode, rereads))
 	}
 	project := func(root string, mode LockMode) {
 		requests = append(requests, LockRequest{

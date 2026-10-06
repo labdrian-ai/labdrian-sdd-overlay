@@ -132,3 +132,7 @@ var skillsLintSpec = skillsFlagSpec{
 	extraWord:    "skills lint: unexpected extra argument %q (lint accepts exactly one path)",
 	endOfOptions: true,
 }
+
+// skillsValidateSpec is the command line of `skills validate`: the registry, the manifest and the
+// source root it checks, in any order, and any words that are no flag, which it does not read.
+var skillsValidateSpec = skillsFlagSpec{verb: "validate", values: []string{flagRegistry, flagManifest, flagSourceRoot}, words: -1}

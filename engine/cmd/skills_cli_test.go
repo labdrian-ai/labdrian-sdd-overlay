@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/skillsfs"
 )
 
 // verbRun is what one call of a skills verb left: both streams and every exit it asked for.
@@ -309,3 +310,8 @@ func TestSkillsLintIsReachedThroughTheTableAndTakesNoVerbAsPath(t *testing.T) {
 		t.Errorf("withoutVerb removed %q, want only the first word that is the verb", got)
 	}
 }
+
+// skillsApprovals and skillsTree are the file system adapters a test of a verb wires, as the
+// composition root does.
+func skillsApprovals() skills.ApprovalRecordStore { return skillsfs.Approvals{} }
+func skillsTree() skills.SkillTree                { return skillsfs.Tree{} }

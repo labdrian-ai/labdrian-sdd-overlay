@@ -245,3 +245,26 @@ func TestReadConsistentlyDoesNotReadWhenTheLocksCannotBeTaken(t *testing.T) {
 		t.Errorf("err = %v after %d reads, want the lock refusal and no read", err, reads)
 	}
 }
+
+// The overlay lock a use case takes is the one the dispatcher takes for the same verb and the
+// same registry: one policy, said once.
+func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
+	const registry = "/o/skills.registry.yaml"
+	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "install", "adopt"} {
+		want := lockRequestsFor(verb, []string{verb, "--registry", registry}, "")
+		if got := OverlayLocks(verb, registry); len(got) != 1 || len(want) != 1 || got[0] != want[0] {
+			t.Errorf("%s: OverlayLocks = %+v, the dispatcher takes %+v", verb, got, want)
+		}
+	}
+	for _, verb := range []string{"list", "status", "lint", "project-status", "nuke", ""} {
+		if got := OverlayLocks(verb, registry); len(got) != 0 {
+			t.Errorf("%s: OverlayLocks = %+v, want no overlay lock", verb, got)
+		}
+	}
+	if got := OverlayLocks("validate", registry); got[0].Mode != LockShared || !got[0].Rereads || got[0].Path != "/o/.skills.registry.yaml.lock" {
+		t.Errorf("validate: %+v, want a shared lock on the lock file beside the registry that is read again if the file appears", got[0])
+	}
+	if got := OverlayLocks("approve", "/o/team.registry.yaml"); !got[0].SkipRegistryCheck {
+		t.Error("approve with an explicit registry path takes it as the name of the lock, and does not need the registry to exist")
+	}
+}
