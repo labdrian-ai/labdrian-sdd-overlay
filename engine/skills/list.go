@@ -7,10 +7,6 @@ import (
 	"strings"
 )
 
-// readFileFn is the type of a function that reads a file by path.
-// Injected for testability; production code uses os.ReadFile.
-type readFileFn func(string) ([]byte, error)
-
 // parseRegistryFlag extracts --registry <path> from args.
 // Defaults to "skills.registry.yaml" (CWD-relative, per R-023).
 func parseRegistryFlag(args []string) string {
