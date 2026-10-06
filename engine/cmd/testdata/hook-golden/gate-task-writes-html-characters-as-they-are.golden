@@ -5,7 +5,7 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- exit ---
 none
 --- stdout ---
-{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d \u003cx\u003e \u0026 y","prompt":"a\u003cb\u003e\u0026c\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d <x> & y","prompt":"a<b>&c\n\n## Skills to load before work\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
 --- stderr ---
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md

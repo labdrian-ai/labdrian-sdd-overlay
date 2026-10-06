@@ -512,15 +512,81 @@ func receiptGoldenCases() []receiptGoldenCase {
 			w.tree("linked worktree", linked)
 			w.tree("main worktree", main)
 		}},
-		{"hook-in-a-subdirectory-looks-for-openspec-there", func(w *receiptWorld) {
+		// openspec/ is found from the toplevel of the working tree the hook is started in, not from
+		// the directory the runner gave it (Phase 9 batch 12a; until then a session started in a
+		// subdirectory found none, passed the acknowledgement through and lost the receipt).
+		{"hook-in-a-subdirectory-captures-into-the-toplevel", func(w *receiptWorld) {
 			root := w.repo("<ROOT>", false)
 			w.change(root, "only-change")
-			if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
+			if err := os.MkdirAll(filepath.Join(root, "sub", "deeper"), 0o755); err != nil {
 				w.t.Fatal(err)
 			}
 			w.putReceipt(filepath.Join(root, ".git"), "review-from-below", legacyReceipt("review-from-below", receiptSchemaV2, approved))
 			w.hook(filepath.Join(root, "sub"), acknowledgeCommand)
+			w.tree("after the hook in sub", root)
+			w.hook(filepath.Join(root, "sub", "deeper"), acknowledgeCommand)
+			w.tree("after the hook in sub/deeper (already captured)", root)
+		}},
+		{"hook-in-a-subdirectory-names-paths-under-the-toplevel", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			w.change(root, "only-change")
+			w.putReceipt(filepath.Join(root, ".git"), "review-atomic", legacyReceipt("review-atomic", receiptSchemaV2, approved))
+			w.put(filepath.Join(root, "openspec", "changes", "only-change", "review-receipts", "review-atomic.json"), `{"different":true}`)
+			if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
+				w.t.Fatal(err)
+			}
+			w.hook(filepath.Join(root, "sub"), acknowledgeCommand)
+			w.hook(root, acknowledgeCommand)
+		}},
+		{"hook-in-a-subdirectory-of-a-repository-without-openspec-passes", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			if err := os.MkdirAll(filepath.Join(root, "sub"), 0o755); err != nil {
+				w.t.Fatal(err)
+			}
+			w.putReceipt(filepath.Join(root, ".git"), "review-orphan", legacyReceipt("review-orphan", receiptSchemaV2, approved))
+			w.hook(filepath.Join(root, "sub"), acknowledgeCommand)
 			w.tree("after", root)
+		}},
+		{"hook-in-a-subdirectory-of-a-linked-worktree-captures-into-its-toplevel", func(w *receiptWorld) {
+			main := w.repo("<MAIN>", false)
+			linked, err := filepath.EvalSymlinks(w.t.TempDir())
+			if err != nil {
+				w.t.Fatal(err)
+			}
+			linked = filepath.Join(linked, "linked")
+			w.git(main, "worktree", "add", "-q", linked, "-b", "linked-branch")
+			w.name(linked, "<LINKED>")
+			w.change(linked, "only-change")
+			if err := os.MkdirAll(filepath.Join(linked, "src"), 0o755); err != nil {
+				w.t.Fatal(err)
+			}
+			w.putReceipt(filepath.Join(main, ".git", "worktrees", "linked"), "review-private", legacyReceipt("review-private", receiptSchemaV2, approved))
+			w.putReceipt(filepath.Join(main, ".git"), "review-common", legacyReceipt("review-common", receiptSchemaV2, approved))
+			w.hook(filepath.Join(linked, "src"), acknowledgeCommand)
+			w.tree("linked worktree", linked)
+			w.tree("main worktree", main)
+		}},
+		{"hook-in-a-subdirectory-prefers-the-toplevels-openspec", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			sub := filepath.Join(root, "sub")
+			w.change(root, "top-change")
+			w.change(sub, "sub-change")
+			w.putReceipt(filepath.Join(root, ".git"), "review-from-below", legacyReceipt("review-from-below", receiptSchemaV2, approved))
+			w.hook(sub, acknowledgeCommand)
+			w.tree("toplevel", root)
+			w.tree("sub", sub)
+		}},
+		// A repository whose toplevel has no openspec/changes but whose subdirectory has one is
+		// served from that subdirectory, as it always was: it is the one place the hook can put
+		// the receipt, and passing through would lose it.
+		{"hook-in-a-subdirectory-serves-its-own-openspec-when-the-toplevel-has-none", func(w *receiptWorld) {
+			root := w.repo("<ROOT>", false)
+			sub := filepath.Join(root, "sub")
+			w.change(sub, "sub-change")
+			w.putReceipt(filepath.Join(root, ".git"), "review-from-below", legacyReceipt("review-from-below", receiptSchemaV2, approved))
+			w.hook(sub, acknowledgeCommand)
+			w.tree("toplevel", root)
+			w.tree("sub", sub)
 		}},
 		{"hook-in-a-subdirectory-with-its-own-openspec", func(w *receiptWorld) {
 			root := w.repo("<ROOT>", false)

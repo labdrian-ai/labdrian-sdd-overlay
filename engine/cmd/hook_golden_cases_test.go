@@ -105,7 +105,7 @@ func gateTaskGoldenCases() []hookGoldenCase {
 			w.gateTask("the order of the input is not the order of the output", agentCall(`{"prompt":"p","model":"opus","subagent_type":"sdd-apply","description":"d"}`), fileArgs...)
 			w.gateTask("non-ASCII text is written as it is", agentCall(`{"description":"é 日本 😀","subagent_type":"sdd-apply","prompt":"café 日本"}`), fileArgs...)
 		}},
-		{"gate-task-escapes-what-json-marshal-escapes", func(w *hookWorld) {
+		{"gate-task-writes-html-characters-as-they-are", func(w *hookWorld) {
 			withContract(w)
 			w.gateTask("angle brackets and an ampersand", agentCall(`{"description":"d <x> & y","subagent_type":"sdd-apply","prompt":"a<b>&c"}`), fileArgs...)
 			w.gateTask("the separators U+2028 and U+2029", agentCall("{\"description\":\"d\",\"subagent_type\":\"sdd-apply\",\"prompt\":\"line\u2028sep\u2029end\"}"), fileArgs...)

@@ -11,19 +11,22 @@
 //     lives under the working tree's own).
 //   - ReceiptSource: the documents of those stores, one directory per lineage holding the
 //     legacy review-receipt.json and the lifecycle review-state.json.
-//   - ReceiptSink: openspec/changes/<change>/review-receipts/ under the project root, where
+//   - ReceiptSink: openspec/changes/<change>/review-receipts/ under the openspec root, where
 //     the project versions what it captured.
-//   - ChangeCatalog: the directories under <project root>/openspec/changes.
+//   - ChangeCatalog: the directories under <openspec root>/openspec/changes.
 //
-// The project root is where openspec/ is looked for, and where git is asked to start: it may
-// be the working tree's toplevel or any directory inside it. The hook's working directory
-// is whatever the runner gives it ($CLAUDE_PROJECT_DIR, or the shell's), and it is not
-// always the toplevel, so git is asked which working tree holds the directory (gitprov's
-// Locate, which finds the toplevel from a subdirectory and judges it as strictly as the rest
-// of the engine does) and the stores are found from there. openspec/ stays under the
-// directory as it was given: a project whose openspec lives below its toplevel is served as
-// it always was, and one started from a subdirectory that has none is passed through, as it
-// always was.
+// The project root is where git is asked to start: it may be the working tree's toplevel or
+// any directory inside it. The hook's working directory is whatever the runner gives it
+// ($CLAUDE_PROJECT_DIR, or the shell's), and it is not always the toplevel, so git is asked
+// which working tree holds the directory (gitprov's Locate, which finds the toplevel from a
+// subdirectory and judges it as strictly as the rest of the engine does) and the stores are
+// found from there. openspec/ is found from that toplevel too: a session started in a
+// subdirectory of the project captures into the project's change, instead of passing the
+// acknowledgement through and losing the receipt. Two cases keep the directory as it was
+// given: when it is the toplevel itself, so the paths printed keep the form they always had,
+// and when the toplevel has no openspec/changes (or git cannot say where it is) but the
+// directory has its own, which is served as it always was, because it is the only place the
+// receipt can go. One question is asked of git for this, the first time a port needs it.
 //
 // Git is reached only through the Locator the composition root hands in, which is gitprov in
 // production; the package starts no process. Files are written with engine/atomicfile.
@@ -46,6 +49,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"sync"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/atomicfile"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gitprov"
@@ -82,6 +86,14 @@ var _ Locator = gitprov.Observer{}
 type Store struct {
 	root string
 	git  Locator
+	// place is where openspec/ is found, decided once and shared by every copy of the value.
+	place *placement
+}
+
+// placement is the directory openspec/ is looked for under, found the first time it is needed.
+type placement struct {
+	once sync.Once
+	dir  string
 }
 
 // New builds the store over the project root, which is where openspec/ is looked for and
@@ -94,7 +106,36 @@ func New(root string, git Locator) (Store, error) {
 	if git == nil {
 		return Store{}, errors.New("review receipt store: a git locator is required")
 	}
-	return Store{root: root, git: git}, nil
+	return Store{root: root, git: git, place: &placement{}}, nil
+}
+
+// openspecRoot is the directory openspec/ is looked for under: the toplevel of the working tree
+// that holds the root, when that is another directory than the root and has openspec/changes,
+// and the root as it was given otherwise (see the package comment).
+func (s Store) openspecRoot() string {
+	if s.place == nil {
+		return s.locateOpenspecRoot()
+	}
+	s.place.once.Do(func() { s.place.dir = s.locateOpenspecRoot() })
+	return s.place.dir
+}
+
+func (s Store) locateOpenspecRoot() string {
+	abs, err := filepath.Abs(s.root)
+	if err != nil || s.git == nil {
+		return s.root
+	}
+	obs, err := s.git.Locate(abs)
+	if err != nil || obs.Toplevel == "" {
+		return s.root
+	}
+	if resolved, err := filepath.EvalSymlinks(abs); err == nil && resolved == obs.Toplevel {
+		return s.root
+	}
+	if info, err := os.Stat(filepath.Join(obs.Toplevel, "openspec", "changes")); err != nil || !info.IsDir() {
+		return s.root
+	}
+	return obs.Toplevel
 }
 
 // Stores is reviewreceipt.TransactionStores.
@@ -159,7 +200,7 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 
 // folder is the review-receipts folder of a change.
 func (s Store) folder(change string) string {
-	return filepath.Join(s.root, "openspec", "changes", change, receiptsFolder)
+	return filepath.Join(s.openspecRoot(), "openspec", "changes", change, receiptsFolder)
 }
 
 // Location is reviewreceipt.ReceiptSink.Location.
@@ -204,7 +245,7 @@ func (s Store) Write(change, name string, data []byte) error {
 // Changes is reviewreceipt.ChangeCatalog. Only a directory is a change, so a stray file or a
 // link is not one.
 func (s Store) Changes() ([]string, error) {
-	dir := filepath.Join(s.root, "openspec", "changes")
+	dir := filepath.Join(s.openspecRoot(), "openspec", "changes")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -224,6 +265,6 @@ func (s Store) Changes() ([]string, error) {
 // HasArtifact is reviewreceipt.ChangeCatalog.HasArtifact: whether the change holds a file or
 // a directory by that name, followed through a link as a person looking at the folder would.
 func (s Store) HasArtifact(change, name string) bool {
-	_, err := os.Stat(filepath.Join(s.root, "openspec", "changes", change, name))
+	_, err := os.Stat(filepath.Join(s.openspecRoot(), "openspec", "changes", change, name))
 	return err == nil
 }

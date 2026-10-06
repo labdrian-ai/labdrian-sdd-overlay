@@ -60,7 +60,7 @@ const MaxEnvelopeBytes = 1 << 20
 // generous; it exists so that a hostile or runaway writer cannot make a guard read without end.
 // A caller that reads stdin reads one byte more than this, which is enough to see the bound was
 // passed. What a guard does with a call it was not given to judge is its own decision: the
-// approve guard fails open, the clearance guard fails closed.
+// approve guard denies it, like the clearance guard.
 const MaxToolCallBytes = 8 << 20
 
 // MaxAgentCallBytes bounds the input DecodeAgentCall accepts. The prompt of a sub-agent can be

@@ -1,0 +1,19 @@
+$ review-receipt hook --cwd <LINKED>/src
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== linked worktree ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-common.json 0600 204 15499d638701
+file openspec/changes/only-change/review-receipts/review-private.json 0600 205 3c2b0e062c16
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
+=== main worktree ===
+(no openspec directory)
+

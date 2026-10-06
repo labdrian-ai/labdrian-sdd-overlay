@@ -1,6 +1,7 @@
 package shaper
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -62,10 +63,21 @@ func DecideGuard(call GuardCall) GuardVerdict {
 	return GuardVerdict{}
 }
 
-// GuardUnreadable is the verdict for a call the caller could not read, with detail saying why. The
-// guard fails closed, unlike the guard of the approval record, which fails open: input it cannot
-// decode is denied, because a guard that cannot see the call cannot vouch for it. The markers
-// are narrow enough to make that affordable.
-func GuardUnreadable(detail string) GuardVerdict {
-	return GuardVerdict{Deny: true, Reason: guardDenyMessage + " (hook input could not be decoded: " + detail + ")"}
+// GuardUnreadable is the verdict for a call the caller could not read. The guard fails closed,
+// unlike the guard of the approval record, which fails open for input it cannot decode: a guard
+// that cannot see the call cannot vouch for it, and the markers are narrow enough to make that
+// affordable. The denial is one sentence that says what the guard could not read and what to do,
+// the same for every shape the call can have: it names nothing of the decoder or of the types
+// the call is read into.
+func GuardUnreadable() GuardVerdict {
+	return GuardVerdict{Deny: true, Reason: guardDenyMessage +
+		" (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)"}
+}
+
+// GuardTooLarge is the verdict for a call longer than the bound bytes the caller reads. It is
+// denied like a call that cannot be read: the guard cannot vouch for a call it was not given to
+// judge. The denial names the bound and what to do.
+func GuardTooLarge(bound int) GuardVerdict {
+	return GuardVerdict{Deny: true, Reason: fmt.Sprintf("%s (this tool call is larger than the %d bytes the guard reads, so the guard denied it; send a smaller call)",
+		guardDenyMessage, bound)}
 }

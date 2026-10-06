@@ -39,15 +39,19 @@ package skills
 //     request body that spells the entry point followed by "skills approve" is
 //     denied, and so is a heredoc line that does. Reword the text, or leave the
 //     entry point out.
-//   - Unusable input is an allow. The hook runs on every Bash and file-edit
-//     call, and a guard that blocked what it could not read would block the
-//     session. This is the opposite of the shaper clearance guard, whose
-//     narrower markers make failing closed affordable. What the guard decides
+//   - Input the hook cannot decode is an allow, and input over the bound the
+//     hook reads is a denial (ApproveGuardOversized). The hook runs on every
+//     Bash and file-edit call, and a guard that blocked what it could not
+//     decode would block the session; but the agent controls the length of its
+//     own command, and a guard that padding could switch off would guard
+//     nothing, so what is too large to be judged is denied, as the shaper
+//     clearance guard denies every call it cannot read. What the guard decides
 //     on is a call (ApproveGuardCall); reading the hook input into one, and
-//     letting through what cannot be read or is over the bound the hook reads,
-//     is the hook adapter's (engine/hookwire, engine/cmd).
+//     answering for what cannot be read, is the hook adapter's
+//     (engine/hookwire, engine/cmd).
 
 import (
+	"fmt"
 	"path"
 	"strings"
 )
@@ -105,6 +109,17 @@ var (
 		"skills/<id>/SKILL.md and run this themselves in a terminal: " + approveHint("<id>") + ". " + approveGuardSpeedBump +
 		": it matches the tool and the file name, so a shell command can still write the file."
 )
+
+// ApproveGuardOversized is the verdict for a call the hook did not judge because it is longer than
+// the bound bytes the hook reads. It is a denial, in one line like the others: it names the verb,
+// the bound, and what to do. The agent controls the length of its own command, so a call that
+// size cannot be allowed unchecked.
+func ApproveGuardOversized(bound int) ApproveGuardVerdict {
+	return ApproveGuardVerdict{Deny: true, Reason: fmt.Sprintf("labdrian skills approve guard: this tool call is too large to be checked "+
+		"(the guard reads at most %d bytes), so it could not be checked for \"skills approve\" or for a write of the approval record %s, "+
+		"and it was denied. Send a smaller call, or ask the person to run what it does themselves in a terminal. %s.",
+		bound, ApprovalRecordName, approveGuardSpeedBump)}
+}
 
 // ApproveGuardCall is the tool call the guard decides about: the name of the tool, the
 // command of a shell tool, and the path fields of the file tools. A field the call does not

@@ -437,7 +437,7 @@ func runShaperClearanceRecord(args []string, stdin io.Reader, stdout, stderr io.
 // every Bash and Write/Edit call and a capped read must not truncate a large
 // unrelated payload into undecodable JSON and deny it without judging it. An
 // input over the bound is denied like any input the guard cannot read, and the
-// denial says the input was too large: the guard cannot vouch for a call it was
+// denial says the input was too large and names the bound: the guard cannot vouch for a call it was
 // not given to judge, and a call that big is not a call it can afford to read.
 func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
 	raw, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxToolCallBytes+1))
@@ -447,9 +447,13 @@ func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
 		return
 	}
 	var verdict shaper.GuardVerdict
-	if call, err := hookwire.DecodeToolCall(raw); err != nil {
-		verdict = shaper.GuardUnreadable(hookwire.ClearanceGuardDetail(err))
-	} else {
+	call, err := hookwire.DecodeToolCall(raw)
+	switch {
+	case errors.Is(err, hookwire.ErrTooLarge):
+		verdict = shaper.GuardTooLarge(hookwire.MaxToolCallBytes)
+	case err != nil:
+		verdict = shaper.GuardUnreadable()
+	default:
 		verdict = shaper.DecideGuard(shaper.GuardCall{Command: call.Command, FilePath: call.FilePath, NotebookPath: call.NotebookPath})
 	}
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}

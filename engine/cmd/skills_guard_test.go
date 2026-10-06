@@ -213,12 +213,13 @@ func TestSkillsGuardHook_ADegradedGuardSaysSo(t *testing.T) {
 	}
 }
 
-// The read is bounded: an endless stdin is judged on what fits, never read to
-// the end.
+// The read is bounded: an endless stdin is never read to the end, and is denied as too large.
 func TestSkillsGuardHook_ReadsAtMostTheBound(t *testing.T) {
 	src := &endlessReader{}
 	r := runGuardHookWith(src)
-	assertGuardSilent(t, "endless input", r)
+	if reason := decodeGuardDenial(t, r); !strings.Contains(reason, "too large") {
+		t.Errorf("endless input: reason %q, want the denial for the size", reason)
+	}
 	// endlessReader (projection_hook_test.go) counts the bytes it was asked for.
 	// One byte past the bound is enough to know the input is over it.
 	if limit := hookwire.MaxToolCallBytes + 1; src.read != limit {
@@ -226,27 +227,37 @@ func TestSkillsGuardHook_ReadsAtMostTheBound(t *testing.T) {
 	}
 }
 
-// The bound is the cause of the allow, not a coincidence of the content: the same call, a
-// command that would be denied, is denied within the bound and let through one byte over it,
-// and the bound is inclusive. A call over the bound is refused by the decoder as unreadable,
-// and an unreadable call is let through: that this guard fails open there is the contract of
-// the hook, and the golden file of the eight mebibytes pins its bytes.
-func TestSkillsGuardHook_AMatchingCallOverTheBoundIsAllowedBecauseOfTheBound(t *testing.T) {
-	const prefix = `{"tool_name":"Bash","tool_input":{"command":"labdrian skills approve --id x","padding":"`
+// The bound is the cause of the denial, not a coincidence of the content: the same call, a
+// command that would be denied, is denied within the bound and denied one byte over it, and so
+// is a command that would be allowed, because the agent controls the length of its own command
+// and a guard that let padding switch it off would guard nothing. The bound is inclusive, and
+// the two denials differ: the one over the bound says the call was too large and names the
+// bound, and the golden file of the eight mebibytes pins its bytes.
+func TestSkillsGuardHook_ACallOverTheBoundIsDeniedBecauseOfTheBound(t *testing.T) {
 	const suffix = `"}}`
-	padded := func(size int) string {
+	padded := func(prefix string, size int) string {
 		return prefix + strings.Repeat("a", size-len(prefix)-len(suffix)) + suffix
 	}
+	const matching = `{"tool_name":"Bash","tool_input":{"command":"labdrian skills approve --id x","padding":"`
+	const unrelated = `{"tool_name":"Bash","tool_input":{"command":"ls","padding":"`
 	for name, size := range map[string]int{
-		"well within the bound":     hookwire.MaxToolCallBytes - 1024,
-		"exactly the bound":         hookwire.MaxToolCallBytes,
-		"the same call, no padding": len(prefix) + len(suffix),
+		"well within the bound": hookwire.MaxToolCallBytes - 1024,
+		"exactly the bound":     hookwire.MaxToolCallBytes,
 	} {
-		if reason := decodeGuardDenial(t, runGuardHook(padded(size))); reason == "" {
-			t.Errorf("%s: a matching call has no reason, want it denied", name)
+		reason := decodeGuardDenial(t, runGuardHook(padded(matching, size)))
+		if reason == "" || strings.Contains(reason, "too large") {
+			t.Errorf("%s: a matching call has reason %q, want the denial of the command", name, reason)
+		}
+		assertGuardSilent(t, name+": an unrelated call", runGuardHook(padded(unrelated, size)))
+	}
+	for name, prefix := range map[string]string{"a matching call": matching, "an unrelated call": unrelated} {
+		reason := decodeGuardDenial(t, runGuardHook(padded(prefix, hookwire.MaxToolCallBytes+1)))
+		for _, want := range []string{"skills approve guard", "too large", fmt.Sprint(hookwire.MaxToolCallBytes), "skills approve"} {
+			if !strings.Contains(reason, want) {
+				t.Errorf("%s one byte over the bound: reason %q does not say %q", name, reason, want)
+			}
 		}
 	}
-	assertGuardSilent(t, "the same call one byte over the bound", runGuardHook(padded(hookwire.MaxToolCallBytes+1)))
 }
 
 // What the guard says when its decision panics is made of the recovered value, which is

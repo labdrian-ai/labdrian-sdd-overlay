@@ -738,12 +738,12 @@ gentle-ai-overlay skills guard-hook
     `--hostname-bin` (bare or as `--flag=value`; flags that only start with the same letters, such as `--pretty` and
     `--pre-glob`, do not count). Reword such a command. The record's real guarantee is unchanged: it matches
     the exact bytes of the skill beside it.
-    Input: the hook JSON on stdin, at most 8 MiB (input over that is allowed, unjudged). Only tool_name and the command,
+    Input: the hook JSON on stdin, at most 8 MiB (input over that is denied, unjudged: the agent controls the length of its own command). Only tool_name and the command,
     file_path, and notebook_path fields of tool_input are read.
     Output: nothing, or exactly one JSON object,
     {"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"..."}},
     with exit 0 (the JSON decides; exit 2 is never used). An allow prints nothing and never permissionDecision "allow".
-    It never blocks on an error: input it cannot read, a failing stdin or stdout, and a recovered internal error all
+    It never blocks on an error: input it cannot decode, a failing stdin or stdout, and a recovered internal error all
     allow the call (unlike the shaper clearance guard, which fails closed for its narrower markers, because this hook runs
     on every Bash and file-edit call). A recovered internal error also shows one short sanitized `systemMessage` naming
     the approve guard and saying the tool call was not checked and was not denied, so a guard that stopped guarding does

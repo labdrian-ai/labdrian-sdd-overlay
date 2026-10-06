@@ -6,7 +6,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal number into Go struct field guardHookInput.tool_name of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # tool_name an object
@@ -16,7 +16,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal object into Go struct field guardHookInput.tool_name of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # tool_name a boolean
@@ -26,7 +26,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal bool into Go struct field guardHookInput.tool_name of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # tool_input a string
@@ -36,7 +36,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal string into Go struct field guardHookInput.tool_input of type struct { Command string "json:\"command\""; FilePath string "json:\"file_path\""; NotebookPath string "json:\"notebook_path\"" })
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # tool_input an array
@@ -46,7 +46,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal array into Go struct field guardHookInput.tool_input of type struct { Command string "json:\"command\""; FilePath string "json:\"file_path\""; NotebookPath string "json:\"notebook_path\"" })
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # tool_input a number
@@ -56,7 +56,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal number into Go struct field guardHookInput.tool_input of type struct { Command string "json:\"command\""; FilePath string "json:\"file_path\""; NotebookPath string "json:\"notebook_path\"" })
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # command a number
@@ -66,7 +66,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal number into Go struct field .tool_input.command of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # command an array
@@ -76,7 +76,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal array into Go struct field .tool_input.command of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # file_path an object
@@ -86,7 +86,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal object into Go struct field .tool_input.file_path of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # notebook_path a boolean
@@ -96,7 +96,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal bool into Go struct field .tool_input.notebook_path of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # two fields of the wrong type: the first is named
@@ -106,7 +106,7 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal number into Go struct field guardHookInput.tool_name of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 
 $ shaper guard-hook
 # a field of the wrong type beside a command that would be denied
@@ -116,5 +116,5 @@ $ shaper guard-hook
 2
 --- stdout ---
 --- stderr ---
-labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (hook input could not be decoded: json: cannot unmarshal number into Go struct field guardHookInput.tool_name of type string)
+labdrian shaper clearance guard: recording a clearance or touching the clearance store is reserved for the human through the Pi /shaper-clear dialog; the model must not run it. This guard matches command and path text only, so it is a speed bump, not a security boundary: any process running as the same OS user can still forge a clearance record, and a clearance is not a signature. (this tool call could not be read as a command or a file path, so the guard denied it; send it again as a well-formed tool call)
 

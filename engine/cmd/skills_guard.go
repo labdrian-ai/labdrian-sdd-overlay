@@ -25,14 +25,18 @@ package main
 //   - The exit code is 0 always, except 1 for a command line that is not
 //     understood. It is never 2, which would block the tool call: a denial is
 //     the JSON above with exit 0, and whatever goes wrong (input that cannot be
-//     read or decoded, input over the bound, a stdin that fails, an answer that
-//     cannot be written, a panic) the tool call goes through. This hook runs on
-//     every Bash and file-edit call, so it fails open, unlike the shaper
-//     clearance guard, which fails closed for its narrower markers.
+//     read or decoded, a stdin that fails, an answer that cannot be written, a
+//     panic) the tool call goes through. This hook runs on every Bash and
+//     file-edit call, so it fails open, unlike the shaper clearance guard,
+//     which fails closed for its narrower markers. The one exception is input
+//     over the bound: the agent controls the length of its own command, so a
+//     call too large to be judged is denied (skills.ApproveGuardOversized),
+//     as the clearance guard denies it.
 //
 // It reads no file, runs no subprocess, and makes no network call.
 
 import (
+	"errors"
 	"fmt"
 	"io"
 
@@ -86,7 +90,7 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 	}()
 	// One byte past the bound (hookwire.MaxToolCallBytes, the bound of every guard) is
 	// enough to see the input is over it, and no more of an endless input is ever read.
-	// Input over the bound is not judged.
+	// Input over the bound is not judged, and is denied.
 	raw, err := io.ReadAll(io.LimitReader(stdin, hookwire.MaxToolCallBytes+1))
 	if err != nil {
 		exit(0)
@@ -106,11 +110,16 @@ func runSkillsGuardHook(args []string, stdin io.Reader, stdout, stderr io.Writer
 }
 
 // approveGuardVerdictFor reads the hook input into a call and hands it to the policy, whose
-// decision is skills.DecideApproveGuard. Input it cannot read, and input over the bound (which
-// hookwire refuses as it refuses any other it cannot read), are let through unjudged: a guard
-// that blocked what it could not read would block every Bash and file-edit call of the session.
+// decision is skills.DecideApproveGuard. Input over the bound, which hookwire refuses wrapping
+// ErrTooLarge, is denied: the agent controls the length of its own command, and a guard that
+// padding could switch off would guard nothing. Input it cannot decode is let through unjudged:
+// a guard that blocked what it could not read would block every Bash and file-edit call of the
+// session.
 func approveGuardVerdictFor(raw []byte) skills.ApproveGuardVerdict {
 	call, err := hookwire.DecodeToolCall(raw)
+	if errors.Is(err, hookwire.ErrTooLarge) {
+		return skills.ApproveGuardOversized(hookwire.MaxToolCallBytes)
+	}
 	if err != nil {
 		return skills.ApproveGuardVerdict{}
 	}

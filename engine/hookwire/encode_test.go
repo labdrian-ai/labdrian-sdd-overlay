@@ -6,6 +6,7 @@ package hookwire_test
 
 import (
 	"encoding/json"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -145,21 +146,46 @@ func TestUpdatedInputLeavesOutAModelThatWasNotThere(t *testing.T) {
 	}
 }
 
-// updatedInput is written the way json.Marshal writes it, which escapes <, > and & (and
-// U+2028 and U+2029): it always was, and Claude Code reads the same JSON either way. The
-// other replies keep those characters as they are.
-func TestUpdatedInputIsWrittenWithHTMLEscapes(t *testing.T) {
-	out, err := hookwire.AgentCall{Description: "d <x> & y", SubagentType: "t"}.UpdatedInput("a<b>&c\u2028")
+// updatedInput is written like the other replies: <, > and & stay as they are (U+2028 and U+2029
+// are still escaped, as they are everywhere). Until Phase 9 batch 12a it was written with
+// json.Marshal, which escapes the first three; the change is of bytes only, and this proves the
+// JSON that Claude Code decodes is the same either way.
+func TestUpdatedInputKeepsHTMLCharactersAsTheOtherRepliesDo(t *testing.T) {
+	model := "m<1>&"
+	call := hookwire.AgentCall{Description: "d <x> & y", SubagentType: "t", Model: &model}
+	const prompt = "a<b>&c\u2028\u2029 \"q\" \\ \t\u0001"
+	out, err := call.UpdatedInput(prompt)
 	if err != nil {
 		t.Fatal(err)
 	}
 	// The escapes are spelled in pieces so no tooling decodes them in this source.
 	esc := func(code string) string { return `\` + "u" + code }
-	want := `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d ` +
-		esc("003c") + `x` + esc("003e") + ` ` + esc("0026") + ` y","prompt":"a` + esc("003c") + `b` + esc("003e") + esc("0026") + `c` + esc("2028") +
-		`","subagent_type":"t"}}}` + "\n"
+	want := `{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"d <x> & y","prompt":"a<b>&c` +
+		esc("2028") + esc("2029") + ` \"q\" \\ \t` + esc("0001") + `","subagent_type":"t","model":"m<1>&"}}}` + "\n"
 	if string(out) != want {
 		t.Errorf("UpdatedInput() = %q, want %q", out, want)
+	}
+
+	// What it wrote before: the same reply through json.Marshal, which escapes < > and &.
+	legacy, err := json.Marshal(map[string]any{"hookSpecificOutput": map[string]any{
+		"hookEventName": "PreToolUse", "permissionDecision": "allow",
+		"updatedInput": map[string]any{"description": call.Description, "prompt": prompt, "subagent_type": call.SubagentType, "model": model},
+	}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(legacy), esc("003c")) {
+		t.Fatalf("the reference reply %q does not escape <: it is not what the encoder used to write", legacy)
+	}
+	var now, before any
+	if err := json.Unmarshal(out, &now); err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(legacy, &before); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(now, before) {
+		t.Errorf("the reply decodes to %v, and decoded to %v before: the change must be of bytes only", now, before)
 	}
 }
 
