@@ -208,7 +208,7 @@ func TestApprove_AnUnchangedBaselineSkillIsApprovedToo(t *testing.T) {
 	e := newApproveEnvWith(t, "legacy", md)
 	setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "legacy", SHA256: SkillDigest([]byte(md))}})
 	reg := Registry{Version: "1", Skills: []Entry{{ID: "legacy", Path: "legacy", Install: Install{DefaultScope: "global"}}}}
-	if divs, sum := CheckApprovals(reg, e.root, os.ReadFile); len(divs) != 0 || sum.Grandfathered != 1 {
+	if divs, sum := CheckApprovals(reg, e.root, fileApprovals(os.ReadFile)); len(divs) != 0 || sum.Grandfathered != 1 {
 		t.Fatalf("before approve: divs=%v summary=%+v, want the skill grandfathered", divs, sum)
 	}
 
@@ -220,7 +220,7 @@ func TestApprove_AnUnchangedBaselineSkillIsApprovedToo(t *testing.T) {
 	if !strings.Contains(stderr, "warning: [lint:body-hard-budget]") {
 		t.Errorf("stderr %q does not carry the finding as a warning", stderr)
 	}
-	if divs, sum := CheckApprovals(reg, e.root, os.ReadFile); len(divs) != 0 || sum.Approved != 1 || sum.Grandfathered != 0 {
+	if divs, sum := CheckApprovals(reg, e.root, fileApprovals(os.ReadFile)); len(divs) != 0 || sum.Approved != 1 || sum.Grandfathered != 0 {
 		t.Errorf("after approve: divs=%v summary=%+v, want the skill approved by its record", divs, sum)
 	}
 }
@@ -331,7 +331,7 @@ func TestBaselineSkillThatFailsTheHardLint_ValidateAsksForApprovalAndApproveReso
 	validate := func() (string, string, int) {
 		var out, errBuf bytes.Buffer
 		code := 0 // validate calls exit only to fail
-		RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
+		RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
 		return out.String(), errBuf.String(), code
 	}
 

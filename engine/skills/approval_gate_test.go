@@ -168,7 +168,7 @@ func TestCheckApprovals_GlobalSkillsNeedAValidRecordAndProjectSkillsDoNot(t *tes
 	writeTestFile(t, filepath.Join(f.root, "stale-one", "SKILL.md"), lintCleanSkillMD("stale-one")+"\nchanged after approval\n")
 	writeTestFile(t, ApprovalRecordPath(f.root, "broken-one"), "{ nope")
 
-	divs, sum := CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 
 	got := classesByPath(divs)
 	want := map[string]DivergenceClass{
@@ -197,21 +197,21 @@ func TestCheckApprovals_GrandfatheredBaselineNeedsNoRecordUntilItsBytesChange(t 
 	original, _ := os.ReadFile(filepath.Join(f.root, "legacy", "SKILL.md"))
 	setBaselineForTest(t, []ApprovalBaselineEntry{{ID: "legacy", SHA256: SkillDigest(original)}})
 
-	divs, sum := CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 	if len(divs) != 0 || sum.Grandfathered != 1 {
 		t.Fatalf("unchanged baseline skill: divs=%v summary=%+v, want none and 1 grandfathered", divs, sum)
 	}
 
 	// Modify the baseline skill: now it needs a record.
 	writeTestFile(t, filepath.Join(f.root, "legacy", "SKILL.md"), string(original)+"\nedited\n")
-	divs, _ = CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, _ = CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 	if got := classesByPath(divs); got["legacy"] != DivApprovalMissing {
 		t.Fatalf("modified baseline skill: divergences = %v, want APPROVAL_MISSING", got)
 	}
 
 	// Approve the modification: clean again, and it is counted as approved.
 	writeValidApproval(t, f.root, "legacy")
-	divs, sum = CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, sum = CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 	if len(divs) != 0 || sum.Approved != 1 || sum.Grandfathered != 0 {
 		t.Fatalf("approved modification: divs=%v summary=%+v", divs, sum)
 	}
@@ -233,7 +233,7 @@ func TestCheckApprovals_LeavesMissingAndUnreadableSkillFilesToTheRightCheck(t *t
 		t.Fatal(err)
 	}
 
-	divs, _ := CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, _ := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 	got := classesByPath(divs)
 	if _, flagged := got["missing-file"]; flagged {
 		t.Error("a missing SKILL.md is already reported by the manifest and on-disk cross-checks; do not report it twice")
@@ -259,7 +259,7 @@ func TestCheckApprovals_TheSummaryAccountsForEveryGlobalEntryExactlyOnce(t *test
 		}
 	}
 
-	divs, sum := CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, sum := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 
 	if sum.Global != 5 {
 		t.Errorf("Global = %d, want 5: project-tier entries are not counted", sum.Global)
@@ -288,7 +288,7 @@ func TestValidateCore_AGlobalEntryWithoutItsSkillFileIsReportedOnceByTheOnDiskCh
 
 	var out, errBuf bytes.Buffer
 	code := 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
 
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1; stdout=%q stderr=%q", code, out.String(), errBuf.String())
@@ -311,7 +311,7 @@ func TestCheckApprovals_AnUnreadableRecordIsUnverifiableNotAbsent(t *testing.T) 
 	if err := os.MkdirAll(ApprovalRecordPath(f.root, "odd"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	divs, _ := CheckApprovals(f.reg, f.root, os.ReadFile)
+	divs, _ := CheckApprovals(f.reg, f.root, fileApprovals(os.ReadFile))
 	if got := classesByPath(divs); got["odd"] != DivApprovalUnverifiable {
 		t.Fatalf("divergences = %v, want APPROVAL_UNVERIFIABLE", got)
 	}
@@ -326,7 +326,7 @@ func TestValidateCore_ReportsApprovalDivergencesAndExitsNonZero(t *testing.T) {
 
 	var out, errBuf bytes.Buffer
 	code := 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
 	if code != 1 {
 		t.Fatalf("exit = %d, want 1; stdout=%q stderr=%q", code, out.String(), errBuf.String())
 	}
@@ -339,7 +339,7 @@ func TestValidateCore_ReportsApprovalDivergencesAndExitsNonZero(t *testing.T) {
 	out.Reset()
 	errBuf.Reset()
 	code = 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d after approving; stderr=%q", code, errBuf.String())
 	}
@@ -367,7 +367,7 @@ func TestValidateCore_TheRecordFileNeedsNoManifestRow(t *testing.T) {
 	}
 	var out, errBuf bytes.Buffer
 	code := 0
-	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
+	RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
 	if code != 0 {
 		t.Fatalf("exit = %d; stderr=%q", code, errBuf.String())
 	}
@@ -395,7 +395,7 @@ func runAdd(t *testing.T, regPath, mfPath, root, id string) addRun {
 	t.Helper()
 	var out, errBuf bytes.Buffer
 	code := -1
-	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, testRegistries(os.ReadFile), os.Stat, testProjectFS(), &out, &errBuf, func(c int) { code = c })
+	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root, id}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), os.Stat, testProjectFS(), &out, &errBuf, func(c int) { code = c })
 	return addRun{out.String(), errBuf.String(), code}
 }
 
@@ -617,7 +617,7 @@ func TestApprovalBaseline_PinnedToTheRepositoryRegistry(t *testing.T) {
 	}
 
 	skillsRoot := filepath.Join(root, "skills")
-	divs, sum := CheckApprovals(reg, skillsRoot, os.ReadFile)
+	divs, sum := CheckApprovals(reg, skillsRoot, fileApprovals(os.ReadFile))
 	for _, d := range divs {
 		t.Errorf("[%s] %s: %s", d.Class, d.Path, d.Detail)
 	}

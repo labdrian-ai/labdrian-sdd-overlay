@@ -123,6 +123,10 @@ var needsProject = map[string]bool{
 	"project-register": true, "project-revise": true, "project-status": true, "project-retire": true,
 }
 
+// needsApprovals lists the verbs that judge whether a skill is approved, through the
+// Deps' Approvals: validate checks every global skill, add and approve the one they are given.
+var needsApprovals = map[string]bool{"validate": true, "add": true, "approve": true}
+
 // dispatchVerb runs the verb. The locks, if it needs any, are already held, and
 // installRoot is the directory install was resolved to and locked.
 func dispatchVerb(verb string, args []string, installRoot string, deps Deps, stdout, stderr io.Writer, exit func(int)) {
@@ -133,6 +137,11 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 		exit(1)
 		return
 	}
+	if deps.Approvals == nil && needsApprovals[verb] {
+		fmt.Fprintf(stderr, "error: skills %s: no approval record store is wired, so it cannot tell whether a skill is approved\n", verb)
+		exit(1)
+		return
+	}
 	if deps.Project == nil && needsProject[verb] {
 		fmt.Fprintf(stderr, "error: skills %s: no project file system is wired, so it cannot read or write files\n", verb)
 		exit(1)
@@ -140,7 +149,7 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 	}
 	switch verb {
 	case "validate":
-		RenderValidateCore(args, readFile, registries, deps.Tree.ScanSkillFiles, stdout, stderr, exit)
+		RenderValidateCore(args, readFile, deps.Approvals, registries, deps.Tree.ScanSkillFiles, stdout, stderr, exit)
 	case "install":
 		env := installEnvOf(deps, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
@@ -150,13 +159,13 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 		env.readProject = readFile
 		renderAdopt(env, args, stdout, stderr, exit)
 	case "add":
-		AddCore(stripVerb(args, "add"), readFile, registries, deps.Project.Stat, deps.Project, stdout, stderr, exit)
+		AddCore(stripVerb(args, "add"), readFile, deps.Approvals, registries, deps.Project.Stat, deps.Project, stdout, stderr, exit)
 	case "remove":
 		RemoveCore(stripVerb(args, "remove"), readFile, registries, deps.Project, stdout, stderr, exit)
 	case "sync-manifest":
 		SyncCore(stripVerb(args, "sync-manifest"), readFile, registries, deps.Project, stdout, stderr, exit)
 	case "approve":
-		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Now, deps.Project, stdout, stderr, exit)
+		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Approvals, deps.Now, deps.Project, stdout, stderr, exit)
 	case "project-register":
 		RenderProjectRegisterCore(stripVerb(args, "project-register"), readFile, registries, deps.Project.Stat, deps.Project.ResolvePath, deps.Project, stdout, stderr, exit)
 	case "project-revise":
@@ -205,7 +214,7 @@ func stripVerb(args []string, verb string) []string {
 // directory. scanSkills is an injected seam (R-003) so the on-disk check is
 // unit-testable without walking a real tree; production callers pass
 // ScanSkillFiles.
-func RenderValidateCore(args []string, readFile readFileFn, registries RegistryRepository, scanSkills func(string) ([]string, error), stdout, stderr io.Writer, exit func(int)) {
+func RenderValidateCore(args []string, readFile readFileFn, records ApprovalRecordStore, registries RegistryRepository, scanSkills func(string) ([]string, error), stdout, stderr io.Writer, exit func(int)) {
 	registryPath := defaultRegistryPath
 	manifestPath := "overlay.manifest"
 	sourceRoot := ""
@@ -285,7 +294,7 @@ func RenderValidateCore(args []string, readFile readFileFn, registries RegistryR
 
 	// Approval check: every global skill needs a valid human-approval record
 	// for its exact SKILL.md bytes, unless it is the grandfathered baseline's.
-	approvalDivs, approvals := CheckApprovals(reg, sourceRoot, readFile)
+	approvalDivs, approvals := CheckApprovals(reg, sourceRoot, records)
 
 	// Full-scan reporting (R-007): print every divergence from all checks in
 	// this one run, never stopping at the first error.

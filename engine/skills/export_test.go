@@ -129,12 +129,28 @@ func loadManifestViewFile(path string) (ManifestView, error) {
 	return loadManifestViewReader(bytes.NewReader(data))
 }
 
+// fileApprovals is the ApprovalRecordStore of a test: the SKILL.md and the record are read from
+// the paths the domain names (SkillMDPath, ApprovalRecordPath) through read, which is os.ReadFile
+// or the in-memory reader of the test, so a reader that gates or counts reads sees these too.
+func fileApprovals(read readFileFn) ApprovalRecordStore { return readerApprovals{read} }
+
+type readerApprovals struct{ read readFileFn }
+
+func (r readerApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
+	return r.read(SkillMDPath(sourceRoot, path))
+}
+
+func (r readerApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
+	return r.read(ApprovalRecordPath(sourceRoot, id))
+}
+
 // testDeps is the Deps of a test: the real file system, and what the test passes. cwd is the working
 // directory the test gives the verbs that install into one; nil wires none, and those verbs refuse,
 // so a test that does not say where it installs cannot install into the directory it runs in.
 func testDeps(cwd func() (string, error), readFile readFileFn, registries RegistryRepository, now func() string, locker Locker) Deps {
 	return Deps{
 		ReadFile:   readFile,
+		Approvals:  fileApprovals(readFile),
 		Registries: registries,
 		Tree:       testTree(),
 		Project:    testProjectFS(),

@@ -19,6 +19,9 @@ type Deps struct {
 	ReadFile FileReader
 	// Registries reads and encodes the registry of an overlay.
 	Registries RegistryRepository
+	// Approvals reads the evidence of an approval: the SKILL.md of a global skill and the record
+	// beside it. The verbs that judge approval (validate, add, approve) refuse without it.
+	Approvals ApprovalRecordStore
 	// Tree walks the tree of skills an overlay keeps and reads the source of one skill.
 	Tree SkillTree
 	// Project reads and writes the files of a project and of an overlay: what install, adopt

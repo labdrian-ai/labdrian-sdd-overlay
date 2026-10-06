@@ -61,7 +61,7 @@ import (
 // RFC 3339 UTC timestamp (YYYY-MM-DDTHH:MM:SSZ); it is injected because this
 // package's import allowlist (zero_fetch_test.go) does not admit "time". A nil
 // now refuses the approval: the verb never invents a timestamp.
-func RenderApproveCore(args []string, readFile readFileFn, now func() string, files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
+func RenderApproveCore(args []string, readFile readFileFn, approvals ApprovalRecordStore, now func() string, files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
 	const verb = "skills approve"
 	var id, approver, sourceRoot string
 	haveApprover := false
@@ -196,7 +196,7 @@ func RenderApproveCore(args []string, readFile readFileFn, now func() string, fi
 
 	digest := SkillDigest(skillData)
 	recordPath := ApprovalRecordPath(sourceRoot, id)
-	status, err := ReadApprovalStatus(sourceRoot, id, skillData, readFile)
+	status, err := ReadApprovalStatus(sourceRoot, id, skillData, approvals)
 	if err != nil {
 		fail("%v", err)
 		return

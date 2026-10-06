@@ -238,7 +238,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode := -1
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath},
-			os.ReadFile, testRegistries(os.ReadFile), neverScan, &out, &errBuf,
+			os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), neverScan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -259,7 +259,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode := 0
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
+			os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -280,7 +280,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode = 0
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
+			os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 0 {
@@ -296,7 +296,7 @@ func TestRenderValidateCoreOnDiskGate(t *testing.T) {
 		exitCode := -1
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
+			os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -352,7 +352,7 @@ skills:
 		exitCode := -1
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
+			os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {
@@ -417,7 +417,7 @@ skills:
 				exitCode := 0
 				RenderValidateCore(
 					[]string{"--registry", absRegPath, "--manifest", absMfPath, "--source-root", tt.sourceRoot},
-					os.ReadFile, testRegistries(os.ReadFile), scan, &out, &errBuf,
+					os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scan, &out, &errBuf,
 					func(c int) { exitCode = c },
 				)
 				if exitCode != 0 {
@@ -449,7 +449,7 @@ skills:
 		exitCode := 0
 		RenderValidateCore(
 			[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-			os.ReadFile, testRegistries(os.ReadFile), failScan, &out, &errBuf,
+			os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), failScan, &out, &errBuf,
 			func(c int) { exitCode = c },
 		)
 		if exitCode != 1 {

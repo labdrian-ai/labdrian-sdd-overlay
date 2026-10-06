@@ -87,7 +87,7 @@ func TestValidateNotesTheIdsThatShareAPathAndStillPasses(t *testing.T) {
 	code := 0
 	RenderValidateCore(
 		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-		os.ReadFile, testRegistries(os.ReadFile), stubScan([]string{"sdd-spec/SKILL.md"}), &out, &errBuf,
+		os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), stubScan([]string{"sdd-spec/SKILL.md"}), &out, &errBuf,
 		func(c int) { code = c },
 	)
 	const note = `note: the skills "sdd-spec" and "sdd-spec-copy" share the path "sdd-spec"` + "\n"

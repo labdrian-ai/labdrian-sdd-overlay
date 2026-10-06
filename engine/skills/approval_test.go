@@ -249,7 +249,7 @@ func TestReadApprovalStatus_ReadsTheRecordNextToTheSkill(t *testing.T) {
 	}
 	skill := []byte("abc")
 
-	st, err := ReadApprovalStatus(root, "my-skill", skill, os.ReadFile)
+	st, err := ReadApprovalStatus(root, "my-skill", skill, fileApprovals(os.ReadFile))
 	if err != nil || st.State != ApprovalAbsent {
 		t.Fatalf("no record file: state=%q err=%v, want absent and no error", st.State, err)
 	}
@@ -257,7 +257,7 @@ func TestReadApprovalStatus_ReadsTheRecordNextToTheSkill(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(dir, ApprovalRecordName), []byte(goodRecordJSON("my-skill", abcDigest)), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	st, err = ReadApprovalStatus(root, "my-skill", skill, os.ReadFile)
+	st, err = ReadApprovalStatus(root, "my-skill", skill, fileApprovals(os.ReadFile))
 	if err != nil || st.State != ApprovalValid {
 		t.Fatalf("matching record: state=%q err=%v, want valid", st.State, err)
 	}
@@ -268,7 +268,7 @@ func TestReadApprovalStatus_AReadFailureIsAnErrorNotAbsent(t *testing.T) {
 	// directory in the record's place) must not be read as "no record": the
 	// caller then treats the approval as unverifiable and refuses.
 	boom := errors.New("input/output error")
-	_, err := ReadApprovalStatus("root", "my-skill", []byte("abc"), func(string) ([]byte, error) { return nil, boom })
+	_, err := ReadApprovalStatus("root", "my-skill", []byte("abc"), fileApprovals(func(string) ([]byte, error) { return nil, boom }))
 	if err == nil {
 		t.Fatal("ReadApprovalStatus must surface a non-not-exist read failure")
 	}
@@ -277,7 +277,7 @@ func TestReadApprovalStatus_AReadFailureIsAnErrorNotAbsent(t *testing.T) {
 	}
 
 	missing := func(string) ([]byte, error) { return nil, &os.PathError{Op: "open", Path: "x", Err: os.ErrNotExist} }
-	st, err := ReadApprovalStatus("root", "my-skill", []byte("abc"), missing)
+	st, err := ReadApprovalStatus("root", "my-skill", []byte("abc"), fileApprovals(missing))
 	if err != nil || st.State != ApprovalAbsent {
 		t.Fatalf("a not-exist error means absent: state=%q err=%v", st.State, err)
 	}

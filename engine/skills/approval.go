@@ -239,9 +239,9 @@ func ClassifyApproval(id string, skillMD, recordData []byte, present bool) Appro
 // classifies it against skillMD. Only "does not exist" means ApprovalAbsent;
 // any other read failure is returned as an error so the caller can refuse
 // rather than treat an unreadable record as no record.
-func ReadApprovalStatus(sourceRoot, id string, skillMD []byte, readFile readFileFn) (ApprovalStatus, error) {
+func ReadApprovalStatus(sourceRoot, id string, skillMD []byte, records ApprovalRecordStore) (ApprovalStatus, error) {
 	path := ApprovalRecordPath(sourceRoot, id)
-	data, err := readFile(path)
+	data, err := records.ReadRecord(sourceRoot, id)
 	if err != nil {
 		if isAbsent(err) {
 			return ApprovalStatus{State: ApprovalAbsent}, nil

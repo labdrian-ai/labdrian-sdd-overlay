@@ -208,7 +208,7 @@ func TestValidateListsTheSkillsTreeThroughTheTreeItIsGiven(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := 0
 	SkillsCoreAt("validate", []string{"validate", "--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot},
-		Deps{ReadFile: os.ReadFile, Registries: testRegistries(os.ReadFile), Tree: tree, Locker: noopLocker{}},
+		Deps{ReadFile: os.ReadFile, Approvals: fileApprovals(os.ReadFile), Registries: testRegistries(os.ReadFile), Tree: tree, Locker: noopLocker{}},
 		&out, &errBuf, func(c int) { code = c })
 
 	if code != 1 || !strings.Contains(errBuf.String(), "[UNREGISTERED_ON_DISK] stray.md") {
@@ -227,7 +227,7 @@ func TestValidateSaysWhatTheTreeSaidWhenItCouldNotBeScanned(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := 0
 	SkillsCoreAt("validate", []string{"validate", "--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot},
-		Deps{ReadFile: os.ReadFile, Registries: testRegistries(os.ReadFile), Tree: tree, Locker: noopLocker{}},
+		Deps{ReadFile: os.ReadFile, Approvals: fileApprovals(os.ReadFile), Registries: testRegistries(os.ReadFile), Tree: tree, Locker: noopLocker{}},
 		&out, &errBuf, func(c int) { code = c })
 
 	want := fmt.Sprintf("error: scanning skills directory %q: the tree is gone\n", skillsRoot)
