@@ -22,7 +22,7 @@ type CopyOp struct {
 // Returns a non-nil error if any entry's id or path contains a traversal
 // sequence that would place Dst outside <targetRoot>/.claude/skills/ or
 // Src outside sourceRoot (R-055).
-func PlanInstall(reg Registry, projectID, sourceRoot, targetRoot string) ([]CopyOp, error) {
+func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot string) ([]CopyOp, error) {
 	// Pre-compute clean containment roots for traversal checks. withinRoot
 	// (pathguard.go) requires already-cleaned arguments.
 	srcRoot := filepath.Clean(sourceRoot)
@@ -33,7 +33,7 @@ func PlanInstall(reg Registry, projectID, sourceRoot, targetRoot string) ([]Copy
 		if e.Install.DefaultScope != "project" {
 			continue
 		}
-		if !containsString(e.Install.AllowedProjects, projectID) {
+		if !containsString(e.Install.AllowedProjects, projectID.String()) {
 			continue
 		}
 
@@ -89,6 +89,7 @@ type installEnv struct {
 	registries  RegistryRepository                // the registry
 	readProject readFileFn                        // the project lock, and anything else in the project
 	cwd         func() (string, error)            // the directory to install into
+	identity    ProjectIdentity                   // which project that directory is
 	stat        func(string) (fs.FileInfo, error) // the project's paths
 	readDir     func(string) ([]fs.DirEntry, error)
 	resolve     func(string) (string, error)       // symlink resolution, for containment
@@ -104,6 +105,7 @@ func installEnvOf(deps Deps, cwd func() (string, error)) installEnv {
 		registries:  deps.Registries,
 		readProject: deps.ReadFile,
 		cwd:         cwd,
+		identity:    deps.Identity,
 		stat:        deps.Project.Stat,
 		readDir:     deps.Project.ReadDir,
 		resolve:     deps.Project.ResolvePath,
@@ -122,7 +124,7 @@ func RenderInstallCore(args []string, deps Deps, cwdFn func() (string, error), s
 // looks at the project: who the project is, which skills are admitted, their source
 // files, and the project lock as it is.
 type installContext struct {
-	projectID  string
+	projectID  ProjectID
 	root       string
 	skills     []InstallSkill
 	lockData   []byte
@@ -130,14 +132,14 @@ type installContext struct {
 }
 
 // prepareInstall parses the arguments the two verbs share (--registry,
-// --source-root, --project-id), resolves the project, and reads the registry, the
+// --source-root, --project-id), asks the identity port which project that is, and reads the registry, the
 // source trees of the admitted skills, and the project lock. It reports false, having
 // already printed and exited, when the verb has nothing more to do: a failure, or no
 // skill admitted for the project.
 func prepareInstall(verb string, env installEnv, args []string, stdout, stderr io.Writer, exit func(int)) (installContext, bool) {
 	registryPath := defaultRegistryPath
 	sourceRoot := ""
-	projectID := ""
+	explicit := ""
 
 	for i := 0; i < len(args); i++ {
 		switch args[i] {
@@ -153,13 +155,13 @@ func prepareInstall(verb string, env installEnv, args []string, stdout, stderr i
 			}
 		case "--project-id":
 			if i+1 < len(args) {
-				projectID = args[i+1]
+				explicit = args[i+1]
 				i++
 			}
 		}
 	}
 
-	// Resolve cwd (targetRoot + basename-derived projectID).
+	// Resolve the directory to install into, and ask which project it is.
 	cwd, err := env.cwd()
 	if err != nil {
 		fmt.Fprintf(stderr, "error: skills %s: resolving project identity: %v\n", verb, err)
@@ -168,8 +170,9 @@ func prepareInstall(verb string, env installEnv, args []string, stdout, stderr i
 	}
 	targetRoot := filepath.Clean(cwd)
 
-	if projectID == "" {
-		projectID = filepath.Base(cwd)
+	projectID, ok := identifyProject(verb, env, cwd, ProjectID(explicit), stderr, exit)
+	if !ok {
+		return installContext{}, false
 	}
 
 	// Read the registry.
@@ -227,6 +230,28 @@ func prepareInstall(verb string, env installEnv, args []string, stdout, stderr i
 		return installContext{}, false
 	}
 	return installContext{projectID: projectID, root: targetRoot, skills: skills, lockData: lockData, lockExists: err == nil}, true
+}
+
+// identifyProject asks the identity port which project dir is. It reports false, having already
+// printed and exited, when the port is not wired, cannot tell, or has no answer: a verb that cannot
+// name its project writes nothing, rather than naming it by a rule of its own.
+func identifyProject(verb string, env installEnv, dir string, explicit ProjectID, stderr io.Writer, exit func(int)) (ProjectID, bool) {
+	if env.identity == nil {
+		fmt.Fprintf(stderr, "error: skills %s: no project identity is wired\n", verb)
+		exit(1)
+		return "", false
+	}
+	id, ok, err := env.identity.Identify(ProjectQuery{Dir: dir, Explicit: explicit})
+	switch {
+	case err != nil:
+		fmt.Fprintf(stderr, "error: skills %s: resolving project identity: %v\n", verb, err)
+	case !ok:
+		fmt.Fprintf(stderr, "error: skills %s: no source of project identity could name the project in %s; give --project-id\n", verb, dir)
+	default:
+		return id, true
+	}
+	exit(1)
+	return "", false
 }
 
 func (c installContext) input(env installEnv) InstallInput {

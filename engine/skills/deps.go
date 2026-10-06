@@ -18,6 +18,10 @@ type Deps struct {
 	Project ProjectFS
 	// Cwd names the working directory, which `skills install` and `adopt` install into.
 	Cwd func() (string, error)
+	// Identity says which project the working directory is, for the verbs that admit skills to a
+	// project by its id (install, adopt). The chain of sources it asks, and their order, is the
+	// composition root's; a nil Identity is a wiring that was forgotten, and those verbs refuse.
+	Identity ProjectIdentity
 	// Locker takes the advisory locks of the verbs that need them.
 	Locker Locker
 	// Now returns the current time as an RFC 3339 UTC timestamp, for the verbs that record one

@@ -262,7 +262,7 @@ skills:
 	var out, errBuf bytes.Buffer
 	code := -1
 	RenderInstallCore([]string{"--registry", "reg.yaml", "--source-root", overlay, "--project-id", "target-repo"},
-		Deps{ReadFile: os.ReadFile, Registries: testRegistries(func(string) ([]byte, error) { return []byte(regYAML), nil }), Tree: tree, Project: testProjectFS()}, installCwdFn(project),
+		Deps{ReadFile: os.ReadFile, Registries: testRegistries(func(string) ([]byte, error) { return []byte(regYAML), nil }), Tree: tree, Project: testProjectFS(), Identity: testIdentity{}}, installCwdFn(project),
 		&out, &errBuf, func(c int) { code = c })
 
 	if code != 0 {
@@ -286,7 +286,7 @@ func TestInstallSaysWhatTheTreeSaidWhenASourceCouldNotBeRead(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	code := -1
 	RenderInstallCore([]string{"--registry", "reg.yaml", "--source-root", overlay, "--project-id", "target-repo"},
-		Deps{ReadFile: os.ReadFile, Registries: testRegistries(func(string) ([]byte, error) { return []byte(regYAML), nil }), Tree: tree, Project: testProjectFS()}, installCwdFn(project),
+		Deps{ReadFile: os.ReadFile, Registries: testRegistries(func(string) ([]byte, error) { return []byte(regYAML), nil }), Tree: tree, Project: testProjectFS(), Identity: testIdentity{}}, installCwdFn(project),
 		&out, &errBuf, func(c int) { code = c })
 
 	want := fmt.Sprintf("error: skill skill-b: reading its source %s: cannot read the source\n", filepath.Join(overlay, "skill-b"))
@@ -318,7 +318,7 @@ func TestAVerbThatNeedsTheTreeRefusesWhenNoneIsWired(t *testing.T) {
 		t.Run(verb, func(t *testing.T) {
 			var out, errBuf bytes.Buffer
 			code := -1
-			deps := testDeps(os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
+			deps := testDeps(inDir(t.TempDir()), os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
 			deps.Tree = nil
 			SkillsCoreAt(verb, []string{verb}, deps, &out, &errBuf, func(c int) { code = c })
 			want := "error: skills " + verb + ": no skill tree is wired, so it cannot read the skills of the overlay\n"
@@ -337,7 +337,7 @@ func TestAVerbThatNeedsTheProjectFileSystemRefusesWhenNoneIsWired(t *testing.T) 
 		t.Run(verb, func(t *testing.T) {
 			var out, errBuf bytes.Buffer
 			code := -1
-			deps := testDeps(os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
+			deps := testDeps(inDir(t.TempDir()), os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
 			deps.Project = nil
 			SkillsCoreAt(verb, []string{verb, "--registry", regPath}, deps, &out, &errBuf, func(c int) { code = c })
 			want := "error: skills " + verb + ": no project file system is wired, so it cannot read or write files\n"
@@ -355,7 +355,7 @@ func TestInstallAndAdoptRefuseWhenNoWorkingDirectoryIsWired(t *testing.T) {
 		t.Run(verb, func(t *testing.T) {
 			var out, errBuf bytes.Buffer
 			code := -1
-			deps := testDeps(os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
+			deps := testDeps(nil, os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
 			deps.Cwd = nil
 			SkillsCoreAt(verb, []string{verb}, deps, &out, &errBuf, func(c int) { code = c })
 			want := "error: skills " + verb + ": cannot resolve the project directory it works in (no working directory is wired); nothing was locked and nothing was " + did + "\n"
@@ -376,7 +376,7 @@ func TestInstallWritesThroughTheProjectFileSystemAndWordsItsFailure(t *testing.T
 	run := func(fsys ProjectFS) (string, int) {
 		var out, errBuf bytes.Buffer
 		code := -1
-		deps := testDeps(os.ReadFile, testRegistries(func(string) ([]byte, error) { return []byte(regYAML), nil }), nil, nil)
+		deps := testDeps(nil, os.ReadFile, testRegistries(func(string) ([]byte, error) { return []byte(regYAML), nil }), nil, nil)
 		deps.Project = fsys
 		RenderInstallCore([]string{"--registry", "reg.yaml", "--source-root", overlay, "--project-id", "target-repo"},
 			deps, installCwdFn(project), &out, &errBuf, func(c int) { code = c })

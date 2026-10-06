@@ -1,0 +1,291 @@
+package projectidentity_test
+
+import (
+	"encoding/json"
+	"errors"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills/projectidentity"
+)
+
+// vectorsDir holds the recorded vectors of the identity module (Phase 9, D2): the same files
+// longterm-mem runs through its own reader of a repository.
+const vectorsDir = "../../../identity/testdata"
+
+func put(t *testing.T, path, content string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func originConfig(url string) string {
+	return "[core]\n\tbare = false\n[remote \"origin\"]\n\turl = " + url + "\n"
+}
+
+// mainCheckout is a repository whose .git directory holds config, made by hand: no git runs.
+func mainCheckout(t *testing.T, config string) string {
+	t.Helper()
+	root := filepath.Join(t.TempDir(), "demo")
+	put(t, filepath.Join(root, ".git", "HEAD"), "ref: refs/heads/main\n")
+	put(t, filepath.Join(root, ".git", "config"), config)
+	return root
+}
+
+func identify(t *testing.T, source skills.ProjectIdentity, q skills.ProjectQuery) (skills.ProjectID, bool) {
+	t.Helper()
+	id, ok, err := source.Identify(q)
+	if err != nil {
+		t.Fatalf("Identify(%+v): %v", q, err)
+	}
+	return id, ok
+}
+
+// ---- explicit and the directory name --------------------------------------------------
+
+func TestExplicitAnswersOnlyWhenTheIdWasGiven(t *testing.T) {
+	if id, ok := identify(t, projectidentity.Explicit{}, skills.ProjectQuery{Dir: "/p/demo", Explicit: "given"}); !ok || id != "given" {
+		t.Errorf("Explicit with an id = %q, %v, want it answered as given", id, ok)
+	}
+	if id, ok := identify(t, projectidentity.Explicit{}, skills.ProjectQuery{Dir: "/p/demo"}); ok || id != "" {
+		t.Errorf("Explicit with no id = %q, %v, want no answer", id, ok)
+	}
+}
+
+func TestDirectoryNameAlwaysAnswersWithTheNameOfTheDirectory(t *testing.T) {
+	for dir, want := range map[string]skills.ProjectID{"/p/demo": "demo", "/p/demo/": "demo", "/": "/", "relative/dir": "dir", "": "."} {
+		if id, ok := identify(t, projectidentity.DirectoryName{}, skills.ProjectQuery{Dir: dir, Explicit: "ignored"}); !ok || id != want {
+			t.Errorf("DirectoryName(%q) = %q, %v, want %q", dir, id, ok, want)
+		}
+	}
+}
+
+// ---- the origin remote, read as a file ------------------------------------------------
+
+func TestGitOriginAnswersTheNormalizedOriginOfTheRepository(t *testing.T) {
+	root := mainCheckout(t, originConfig("git@github.com:acme/demo.git"))
+	if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: root}); !ok || id != "github.com/acme/demo" {
+		t.Errorf("GitOrigin = %q, %v, want github.com/acme/demo", id, ok)
+	}
+}
+
+func TestGitOriginIgnoresTheExplicitIdAndLeavesItToTheChain(t *testing.T) {
+	root := mainCheckout(t, originConfig("git@github.com:acme/demo.git"))
+	if id, _ := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: root, Explicit: "given"}); id != "github.com/acme/demo" {
+		t.Errorf("GitOrigin = %q, want the origin whatever was given", id)
+	}
+}
+
+func TestGitOriginFindsTheRepositoryFromADirectoryBelowItsRoot(t *testing.T) {
+	root := mainCheckout(t, originConfig("https://github.com/acme/demo.git"))
+	below := filepath.Join(root, "a", "b")
+	if err := os.MkdirAll(below, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: below}); !ok || id != "github.com/acme/demo" {
+		t.Errorf("GitOrigin from below the root = %q, %v, want github.com/acme/demo", id, ok)
+	}
+}
+
+func TestGitOriginFollowsALinkedWorktreeToTheCommonDirectory(t *testing.T) {
+	main := mainCheckout(t, originConfig("https://github.com/acme/demo.git"))
+	worktree := filepath.Join(t.TempDir(), "feature-x")
+	gitDir := filepath.Join(main, ".git", "worktrees", "feature-x")
+	put(t, filepath.Join(gitDir, "commondir"), "../..\n")
+	put(t, filepath.Join(worktree, ".git"), "gitdir: "+gitDir+"\n")
+
+	if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: worktree}); !ok || id != "github.com/acme/demo" {
+		t.Errorf("GitOrigin in a linked worktree = %q, %v, want the origin of the repository it belongs to", id, ok)
+	}
+}
+
+func TestGitOriginFollowsARelativeGitdirPointer(t *testing.T) {
+	base := t.TempDir()
+	main := filepath.Join(base, "main")
+	put(t, filepath.Join(main, ".git", "config"), originConfig("https://github.com/acme/demo.git"))
+	put(t, filepath.Join(main, ".git", "worktrees", "wt", "commondir"), "../..")
+	put(t, filepath.Join(base, "wt", ".git"), "gitdir: ../main/.git/worktrees/wt")
+
+	if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: filepath.Join(base, "wt")}); !ok || id != "github.com/acme/demo" {
+		t.Errorf("GitOrigin through a relative pointer = %q, %v, want github.com/acme/demo", id, ok)
+	}
+}
+
+func TestGitOriginTreatsAGitDirectoryWithNoCommondirAsTheCommonDirectory(t *testing.T) {
+	base := t.TempDir()
+	put(t, filepath.Join(base, "modules", "sub", "config"), originConfig("https://github.com/acme/sub.git"))
+	put(t, filepath.Join(base, "sub", ".git"), "gitdir: "+filepath.Join(base, "modules", "sub")+"\n")
+
+	if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: filepath.Join(base, "sub")}); !ok || id != "github.com/acme/sub" {
+		t.Errorf("GitOrigin for a submodule = %q, %v, want github.com/acme/sub", id, ok)
+	}
+}
+
+func TestGitOriginHasNoAnswerWhereThereIsNoOrigin(t *testing.T) {
+	plain := t.TempDir()
+	noOrigin := mainCheckout(t, "[core]\n\tbare = false\n")
+	localOrigin := mainCheckout(t, originConfig("/srv/git/demo.git"))
+	noConfig := filepath.Join(t.TempDir(), "demo")
+	put(t, filepath.Join(noConfig, ".git", "HEAD"), "ref: refs/heads/main\n")
+	notAPointer := filepath.Join(t.TempDir(), "demo")
+	put(t, filepath.Join(notAPointer, ".git"), "this is not a git file\n")
+
+	for name, dir := range map[string]string{"a directory that is no repository": plain, "a repository with no origin": noOrigin, "an origin with no host": localOrigin, "a git directory with no config": noConfig, ".git a file that points nowhere": notAPointer} {
+		if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: dir}); ok || id != "" {
+			t.Errorf("%s: GitOrigin = %q, %v, want no answer", name, id, ok)
+		}
+	}
+}
+
+// A config that is there and cannot be read is a source that could not tell, which is not the same
+// as one with no answer: the chain must not go on to name the project by something less.
+func TestGitOriginSaysItCannotTellWhenTheConfigCannotBeRead(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a file without permissions does not stop root")
+	}
+	root := mainCheckout(t, originConfig("https://github.com/acme/demo.git"))
+	config := filepath.Join(root, ".git", "config")
+	if err := os.Chmod(config, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(config, 0o644) })
+
+	id, ok, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: root})
+	if err == nil || ok || id != "" {
+		t.Fatalf("GitOrigin = %q, %v, %v, want the error of the read", id, ok, err)
+	}
+	if !strings.Contains(err.Error(), config) {
+		t.Errorf("the error %q does not name %s", err, config)
+	}
+}
+
+func TestEveryRecordedRemoteVectorGivesTheRecordedIdentity(t *testing.T) {
+	var vectors []struct {
+		URL  string `json:"url"`
+		Want string `json:"want"`
+	}
+	readVectors(t, "remote-vectors.json", &vectors)
+	if len(vectors) < 30 {
+		t.Fatalf("only %d vectors: the file was truncated", len(vectors))
+	}
+	for _, v := range vectors {
+		v := v
+		t.Run(v.URL, func(t *testing.T) {
+			id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: mainCheckout(t, originConfig(v.URL))})
+			if id != skills.ProjectID(v.Want) || ok != (v.Want != "") {
+				t.Errorf("origin %q gave %q, %v, want %q", v.URL, id, ok, v.Want)
+			}
+		})
+	}
+}
+
+func TestEveryRecordedOriginConfigVectorGivesTheRecordedIdentity(t *testing.T) {
+	var vectors []struct {
+		Config string `json:"config"`
+		Want   string `json:"want"`
+	}
+	readVectors(t, "origin-vectors.json", &vectors)
+	if len(vectors) < 20 {
+		t.Fatalf("only %d vectors: the file was truncated", len(vectors))
+	}
+	for _, v := range vectors {
+		v := v
+		t.Run(strings.ReplaceAll(v.Config, "\n", "|"), func(t *testing.T) {
+			id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: mainCheckout(t, v.Config)})
+			if id != skills.ProjectID(v.Want) || ok != (v.Want != "") {
+				t.Errorf("config %q gave %q, %v, want %q", v.Config, id, ok, v.Want)
+			}
+		})
+	}
+}
+
+func readVectors(t *testing.T, name string, into any) {
+	t.Helper()
+	raw, err := os.ReadFile(filepath.Join(vectorsDir, name))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := json.Unmarshal(raw, into); err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+}
+
+// ---- the chain ------------------------------------------------------------------------
+
+type answer struct {
+	id  skills.ProjectID
+	ok  bool
+	err error
+	// asked counts how many times the source was asked.
+	asked *int
+}
+
+func (a answer) Identify(skills.ProjectQuery) (skills.ProjectID, bool, error) {
+	if a.asked != nil {
+		*a.asked++
+	}
+	return a.id, a.ok, a.err
+}
+
+func TestChainAsksInOrderAndTheFirstAnswerWins(t *testing.T) {
+	var first, second, third int
+	chain := projectidentity.Chain(
+		answer{asked: &first},
+		answer{id: "second", ok: true, asked: &second},
+		answer{id: "third", ok: true, asked: &third},
+	)
+	if id, ok := identify(t, chain, skills.ProjectQuery{Dir: "/p"}); !ok || id != "second" {
+		t.Errorf("Chain = %q, %v, want the answer of the second source", id, ok)
+	}
+	if first != 1 || second != 1 || third != 0 {
+		t.Errorf("sources asked %d, %d, %d times, want 1, 1, 0: the chain stops at the first answer", first, second, third)
+	}
+}
+
+func TestChainHasNoAnswerWhenNoSourceHasOne(t *testing.T) {
+	if id, ok := identify(t, projectidentity.Chain(answer{}, answer{}), skills.ProjectQuery{}); ok || id != "" {
+		t.Errorf("Chain = %q, %v, want no answer", id, ok)
+	}
+	if id, ok := identify(t, projectidentity.Chain(), skills.ProjectQuery{}); ok || id != "" {
+		t.Errorf("an empty Chain = %q, %v, want no answer", id, ok)
+	}
+}
+
+func TestChainStopsAtASourceThatCannotTell(t *testing.T) {
+	boom := errors.New("cannot tell")
+	var later int
+	chain := projectidentity.Chain(answer{err: boom}, answer{id: "later", ok: true, asked: &later})
+	id, ok, err := chain.Identify(skills.ProjectQuery{})
+	if !errors.Is(err, boom) || ok || id != "" || later != 0 {
+		t.Errorf("Chain = %q, %v, %v (later asked %d), want the error and no further question", id, ok, err, later)
+	}
+}
+
+// The order the owner chose (Phase 9, Q8): what the person said, then what the repository says of
+// itself, then what the directory is called.
+func TestTheChainOfTheOwnerNamesTheProjectInTheOrderQ8Gives(t *testing.T) {
+	chain := projectidentity.Chain(projectidentity.Explicit{}, projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
+	withOrigin := mainCheckout(t, originConfig("git@github.com:acme/demo.git"))
+	noOrigin := mainCheckout(t, "[core]\n\tbare = false\n")
+
+	for name, tc := range map[string]struct {
+		q    skills.ProjectQuery
+		want skills.ProjectID
+	}{
+		"explicit beats the origin and the directory":   {skills.ProjectQuery{Dir: withOrigin, Explicit: "given"}, "given"},
+		"the origin beats the directory":                {skills.ProjectQuery{Dir: withOrigin}, "github.com/acme/demo"},
+		"the directory when there is nothing else":      {skills.ProjectQuery{Dir: noOrigin}, "demo"},
+		"the directory when it is no repository at all": {skills.ProjectQuery{Dir: filepath.Join(t.TempDir(), "plain")}, "plain"},
+	} {
+		if id, ok := identify(t, chain, tc.q); !ok || id != tc.want {
+			t.Errorf("%s: Chain = %q, %v, want %q", name, id, ok, tc.want)
+		}
+	}
+}

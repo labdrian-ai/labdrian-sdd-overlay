@@ -304,21 +304,21 @@ func TestAdoptVerb_TakesOwnershipOfAnExistingInstallAndThenInstallLeavesItBe(t *
 	f := newInstallFixture(t)
 	copyByHand(t, f, lintCleanSkillMD("proj"))
 
-	refused := runAt("install", f.installArgs(), os.ReadFile, nil, noopLocker{})
+	refused := f.runAt("install", f.installArgs(), os.ReadFile, nil, noopLocker{})
 	if refused.code != 1 || !strings.Contains(refused.stderr, "skills adopt") {
 		t.Fatalf("install before adopt: exit %d, stderr %q, want a refusal that points at adopt", refused.code, refused.stderr)
 	}
 
-	adopted := runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
+	adopted := f.runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
 	if adopted.code != 0 || !strings.Contains(adopted.stdout, "adopted: proj") {
 		t.Fatalf("adopt: exit %d, stdout %q, stderr %q", adopted.code, adopted.stdout, adopted.stderr)
 	}
 
-	again := runAt("install", f.installArgs(), os.ReadFile, nil, noopLocker{})
+	again := f.runAt("install", f.installArgs(), os.ReadFile, nil, noopLocker{})
 	if again.code != 0 || !strings.Contains(again.stdout, "unchanged: proj") {
 		t.Errorf("install after adopt: exit %d, stdout %q, stderr %q, want unchanged", again.code, again.stdout, again.stderr)
 	}
-	second := runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
+	second := f.runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
 	if second.code != 0 || !strings.Contains(second.stdout, "unchanged: proj") {
 		t.Errorf("a second adopt: exit %d, stdout %q, stderr %q, want unchanged", second.code, second.stdout, second.stderr)
 	}
@@ -331,7 +331,7 @@ func TestAdoptVerb_PrintsTheNoteForTheRuntimeThatDoesNotHaveTheSkill(t *testing.
 	f := newInstallFixture(t)
 	writeTestFile(t, filepath.Join(f.project, ".claude", "skills", "proj", "SKILL.md"), lintCleanSkillMD("proj"))
 
-	r := runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
+	r := f.runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
 
 	want := "adopted: proj\nnote: .agents/skills/proj is not installed; run `labdrian skills install --project-id p` to add it\n"
 	if r.code != 0 || r.stdout != want || r.stderr != "" {
@@ -344,7 +344,7 @@ func TestAdoptVerb_RefusesADifferingDirectoryNamingTheFileAndWritesNothing(t *te
 	copyByHand(t, f, "my own version\n")
 	before := snapshotTree(t, f.project)
 
-	r := runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
+	r := f.runAt("adopt", f.installArgs(), os.ReadFile, nil, noopLocker{})
 
 	if r.code != 1 || r.stdout != "" {
 		t.Fatalf("exit %d, stdout %q, want exit 1 and nothing on stdout", r.code, r.stdout)
@@ -364,7 +364,7 @@ func TestAdoptVerb_TakesTheSameLocksAsInstallInTheSameOrder(t *testing.T) {
 	copyByHand(t, f, lintCleanSkillMD("proj"))
 	locker := &recordingLocker{}
 
-	r := runAt("adopt", f.installArgs(), os.ReadFile, nil, locker)
+	r := f.runAt("adopt", f.installArgs(), os.ReadFile, nil, locker)
 
 	if r.code != 0 {
 		t.Fatalf("exit %d, stderr %q", r.code, r.stderr)
@@ -378,10 +378,9 @@ func TestAdoptVerb_TakesTheSameLocksAsInstallInTheSameOrder(t *testing.T) {
 
 func TestAdoptVerb_RefusesBeforeLockingWhenItCannotNameItsProjectDirectory(t *testing.T) {
 	f := newInstallFixture(t)
-	installCwd = func() (string, error) { return "relative/dir", nil }
 	locker := &recordingLocker{}
 
-	r := runAt("adopt", f.installArgs(), os.ReadFile, nil, locker)
+	r := runAtIn(inDir("relative/dir"), "adopt", f.installArgs(), os.ReadFile, nil, locker)
 
 	if r.code != 1 || !strings.Contains(r.stderr, "skills adopt") || !strings.Contains(r.stderr, "nothing was locked") {
 		t.Errorf("exit %d, stderr %q, want a refusal from skills adopt that says nothing was locked", r.code, r.stderr)

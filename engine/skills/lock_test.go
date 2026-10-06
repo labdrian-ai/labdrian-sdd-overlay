@@ -228,10 +228,20 @@ type coreRun struct {
 // exit code. Some verbs (list, validate) return without calling exit when they
 // succeed, as a process that falls off the end of main does, so that is 0.
 func runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
+	return runAtIn(nil, verb, args, readFile, now, locker)
+}
+
+// runAtIn is runAt for a verb that installs into the directory cwd names. runAt wires none.
+func runAtIn(cwd func() (string, error), verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
 	var out, errBuf bytes.Buffer
 	code := 0
-	skillsCoreAt(verb, append([]string{verb}, args...), readFile, testRegistries(readFile), now, locker, &out, &errBuf, func(c int) { code = c })
+	skillsCoreAtIn(cwd, verb, append([]string{verb}, args...), readFile, testRegistries(readFile), now, locker, &out, &errBuf, func(c int) { code = c })
 	return coreRun{out.String(), errBuf.String(), code}
+}
+
+// inDir is the working directory a test gives a verb: always dir.
+func inDir(dir string) func() (string, error) {
+	return func() (string, error) { return dir, nil }
 }
 
 // runConcurrently runs every job at once and returns their results in order.
@@ -346,25 +356,13 @@ func newLockFixture(t *testing.T) lockFixture {
 	t.Helper()
 	dir := t.TempDir()
 	reg, man, root := setupFixture(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing"})
-	f := lockFixture{dir: dir, reg: reg, man: man, root: root, lockPath: RegistryLockPath(reg), project: t.TempDir()}
-	saved := installCwd
-	installCwd = func() (string, error) { return f.project, nil }
-	t.Cleanup(func() { installCwd = saved })
-	return f
+	return lockFixture{dir: dir, reg: reg, man: man, root: root, lockPath: RegistryLockPath(reg), project: t.TempDir()}
 }
 
-// The lock fixture never leaves install pointed at the working directory of the
-// test process, which is the package directory.
-func TestTheLockFixtureInstallsIntoATemporaryProject(t *testing.T) {
-	f := newLockFixture(t)
-	cwd, err := os.Getwd()
-	if err != nil {
-		t.Fatal(err)
-	}
-	got, err := installCwd()
-	if err != nil || got != f.project || got == cwd {
-		t.Errorf("installCwd() = %q, %v; want the fixture's temporary project %q, not the working directory %q", got, err, f.project, cwd)
-	}
+// runAt runs a verb that installs into the project of the fixture, never into the directory the
+// tests run in.
+func (f lockFixture) runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
+	return runAtIn(inDir(f.project), verb, args, readFile, now, locker)
 }
 
 // withSkillsFor is withSkills for the one verb that needs an unregistered skill
@@ -415,7 +413,7 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 				// project lock, second (see project_dirlock_test.go).
 				want = []string{"lock shared " + f.lockPath, "lockdir exclusive " + f.project, "unlock " + f.project, "unlock " + f.lockPath}
 			}
-			r := runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
+			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
 			if r.code != tc.code {
 				t.Fatalf("exit %d, want %d; stderr=%q", r.code, tc.code, r.stderr)
 			}
@@ -440,7 +438,7 @@ func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
 		{"", nil},
 	} {
 		locker := &recordingLocker{}
-		runAt(tc.verb, tc.args, os.ReadFile, nil, locker)
+		f.runAt(tc.verb, tc.args, os.ReadFile, nil, locker)
 		if got := locker.log(); len(got) != 0 {
 			t.Errorf("verb %q took locks %v, want none", tc.verb, got)
 		}
@@ -466,7 +464,7 @@ func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 	}
 
 	locker := &recordingLocker{}
-	runAt("sync-manifest", []string{"--registry", other, "--manifest", f.man}, os.ReadFile, nil, locker)
+	f.runAt("sync-manifest", []string{"--registry", other, "--manifest", f.man}, os.ReadFile, nil, locker)
 	if got, want := first(locker), "lock exclusive "+filepath.Join(f.dir, "other", ".team.registry.yaml.lock"); got != want {
 		t.Errorf("first event = %q, want %q", got, want)
 	}
@@ -476,7 +474,7 @@ func TestSkillsCoreAt_TheLockIsKeyedByTheRegistryTheVerbNames(t *testing.T) {
 	chdirToATempDir(t)
 	writeTestFile(t, defaultRegistryPath, string(registry))
 	locker = &recordingLocker{}
-	runAt("sync-manifest", []string{"--manifest", f.man}, os.ReadFile, nil, locker)
+	f.runAt("sync-manifest", []string{"--manifest", f.man}, os.ReadFile, nil, locker)
 	if got, want := first(locker), "lock exclusive .skills.registry.yaml.lock"; got != want {
 		t.Errorf("first event without --registry = %q, want %q", got, want)
 	}
@@ -506,7 +504,7 @@ func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
 				}
 				return os.ReadFile(name)
 			}
-			r := runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), readFile, fixedClock(approveFixedNow), locker)
+			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), readFile, fixedClock(approveFixedNow), locker)
 			if r.code != 0 {
 				t.Fatalf("exit %d; stderr=%q", r.code, r.stderr)
 			}
@@ -520,7 +518,7 @@ func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
 func TestSkillsCoreAt_TheLockIsReleasedWhenTheVerbRefuses(t *testing.T) {
 	f := newLockFixture(t)
 	locker := &recordingLocker{}
-	r := runAt("remove", append([]string{"never-registered"}, f.flags()...), os.ReadFile, nil, locker)
+	r := f.runAt("remove", append([]string{"never-registered"}, f.flags()...), os.ReadFile, nil, locker)
 	if r.code != 1 {
 		t.Fatalf("exit %d, want 1; stderr=%q", r.code, r.stderr)
 	}
@@ -551,7 +549,7 @@ func TestSkillsCoreAt_ABusyLockExits2WithARetryMessageAndChangesNothing(t *testi
 			before := snapshotFiles(t, f.reg, f.man, ApprovalRecordPath(f.root, "existing"))
 			locker := &recordingLocker{fail: busyErr{f.lockPath}}
 
-			r := runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
+			r := f.runAt(tc.verb, append(append([]string{}, tc.extra...), f.flags()...), os.ReadFile, fixedClock(approveFixedNow), locker)
 
 			if r.code != ExitBusy || ExitBusy != 2 {
 				t.Errorf("exit %d (ExitBusy %d), want 2", r.code, ExitBusy)
@@ -581,7 +579,7 @@ func TestSkillsCoreAt_ALockThatCannotBeTakenExits1AndDoesNotSayRetry(t *testing.
 	before := snapshotFiles(t, f.reg, f.man)
 	locker := &recordingLocker{fail: fmt.Errorf("open %s: permission denied", f.lockPath)}
 
-	r := runAt("add", append([]string{"newbie"}, f.flags()...), os.ReadFile, nil, locker)
+	r := f.runAt("add", append([]string{"newbie"}, f.flags()...), os.ReadFile, nil, locker)
 
 	if r.code != 1 || r.stdout != "" {
 		t.Fatalf("exit %d, stdout %q, want exit 1 and nothing on stdout", r.code, r.stdout)
@@ -603,7 +601,7 @@ func TestSkillsCoreAt_ALockThatCannotBeTakenExits1AndDoesNotSayRetry(t *testing.
 func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
 	f := newLockFixture(t)
 	locker := &recordingLocker{fail: fmt.Errorf("acquire: %w", busyErr{f.lockPath})}
-	if r := runAt("sync-manifest", f.flags(), os.ReadFile, nil, locker); r.code != ExitBusy {
+	if r := f.runAt("sync-manifest", f.flags(), os.ReadFile, nil, locker); r.code != ExitBusy {
 		t.Errorf("exit %d for a wrapped busy error, want %d; stderr=%q", r.code, ExitBusy, r.stderr)
 	}
 }
@@ -614,7 +612,7 @@ func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	f := newLockFixture(t).withSkills(t, "newbie")
 	before := snapshotFiles(t, f.reg, f.man)
 	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "install", "adopt"} {
-		r := runAt(verb, append([]string{"newbie"}, f.flags()...), os.ReadFile, fixedClock(approveFixedNow), nil)
+		r := f.runAt(verb, append([]string{"newbie"}, f.flags()...), os.ReadFile, fixedClock(approveFixedNow), nil)
 		if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, "no lock is configured") {
 			t.Errorf("%s: exit %d, stdout %q, stderr %q, want exit 1 and a 'no lock is configured' refusal", verb, r.code, r.stdout, r.stderr)
 		}
@@ -622,7 +620,7 @@ func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	if after := snapshotFiles(t, f.reg, f.man); !reflect.DeepEqual(before, after) {
 		t.Error("a verb ran without a lock")
 	}
-	if r := runAt("list", []string{"--registry", f.reg}, os.ReadFile, nil, nil); r.code != 0 {
+	if r := f.runAt("list", []string{"--registry", f.reg}, os.ReadFile, nil, nil); r.code != 0 {
 		t.Errorf("list without a locker: exit %d, stderr=%q, want it to run", r.code, r.stderr)
 	}
 }
@@ -664,7 +662,7 @@ func TestConcurrentAddsBothLandInTheRegistryAndTheManifest(t *testing.T) {
 	locker := &exclusionLocker{blocked: gate.release}
 	add := func(id string) func() coreRun {
 		return func() coreRun {
-			return runAt("add", append([]string{id}, f.flags()...), gate.readFile, nil, locker)
+			return f.runAt("add", append([]string{id}, f.flags()...), gate.readFile, nil, locker)
 		}
 	}
 
@@ -724,9 +722,9 @@ func TestSyncManifestDoesNotEraseAConcurrentAdd(t *testing.T) {
 	locker := &exclusionLocker{blocked: gate.release}
 
 	syncDone := make(chan coreRun, 1)
-	go func() { syncDone <- runAt("sync-manifest", f.flags(), gate.readFile, nil, locker) }()
+	go func() { syncDone <- f.runAt("sync-manifest", f.flags(), gate.readFile, nil, locker) }()
 	<-gate.arrived
-	added := runAt("add", append([]string{"alpha"}, f.flags()...), os.ReadFile, nil, locker)
+	added := f.runAt("add", append([]string{"alpha"}, f.flags()...), os.ReadFile, nil, locker)
 	gate.release()
 	synced := <-syncDone
 
