@@ -147,10 +147,7 @@ func TestABusyMessageWithoutAPathNamesTheRequestedLock(t *testing.T) {
 // happens to be made.
 func TestAWriterWithoutARegistryLocksNothing(t *testing.T) {
 	for verb, args := range map[string][]string{
-		"add":           {"x"},
-		"remove":        {"x"},
-		"sync-manifest": nil,
-		"approve":       {"--id", "x", "--approver", "reviewer"},
+		"approve": {"--id", "x", "--approver", "reviewer"},
 	} {
 		t.Run(verb, func(t *testing.T) {
 			chdirToATempDir(t)
@@ -190,19 +187,6 @@ func chdirToATempDir(t *testing.T) {
 			t.Errorf("restoring the working directory: %v", err)
 		}
 	})
-}
-
-// With a registry, the writer locks as before.
-func TestAWriterWithARegistryStillTakesTheLock(t *testing.T) {
-	f := newLockFixture(t)
-	locker := &recordingLocker{}
-
-	if r := f.runAt("sync-manifest", f.flags(), os.ReadFile, nil, locker); r.code != 0 {
-		t.Fatalf("exit %d, stderr %q", r.code, r.stderr)
-	}
-	if got := locker.log(); len(got) == 0 {
-		t.Error("the writer took no lock")
-	}
 }
 
 // ---- the walk along a chain of wrapped errors ends -------------------------------------

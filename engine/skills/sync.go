@@ -3,7 +3,6 @@ package skills
 import (
 	"bytes"
 	"fmt"
-	"io"
 	"strings"
 )
 
@@ -186,85 +185,4 @@ func SyncManifest(reg Registry, manifest []byte) ([]byte, ChangeReport, error) {
 	}
 
 	return newText, report, nil
-}
-
-// SyncCore is the testable CLI core for `engine skills sync-manifest`.
-// It reads the registry and manifest, regenerates the */SKILL.md rows via
-// SyncManifest (pure), validates the result, then atomically writes the
-// manifest file (registry is never modified — R-109). All side effects are
-// injected; no global state is used.
-//
-// Exit semantics:
-//   - exit 0: success (manifest updated) or "already in sync" (no-op)
-//   - exit 1: any error (registry/manifest read, parse, post-condition, write)
-//
-// On any failure after the temp file is created, the temp file is removed and
-// overlay.manifest is left byte-unchanged (R-102).
-func SyncCore(args []string, readFile readFileFn, registries RegistryRepository, files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
-	registryPath, manifestPath, _, _, _, _ := parseFlags(args)
-
-	// 1. Read the registry.
-	reg, ok := readRegistryForVerb(registries, registryPath, false, stderr, exit)
-	if !ok {
-		return
-	}
-
-	// 2. Read manifest.
-	manifestData, err := readFile(manifestPath)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: reading manifest %q: %v\n", manifestPath, err)
-		exit(1)
-		return
-	}
-
-	// 3. Pure regen (includes internal post-condition self-check).
-	newText, report, err := SyncManifest(reg, manifestData)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: %v\n", err)
-		exit(1)
-		return
-	}
-
-	// 4. No-op: manifest is already in sync.
-	if bytes.Equal(newText, manifestData) {
-		fmt.Fprintln(stdout, "overlay.manifest already in sync")
-		exit(0)
-		return
-	}
-
-	// 5. Belt-and-suspenders validate-before-write (ADR-9 step 7).
-	// SyncManifest already ran this check; this guard catches any unexpected
-	// divergence that might slip through between calls.
-	mv, err := loadManifestViewReader(bytes.NewReader(newText))
-	if err != nil {
-		fmt.Fprintf(stderr, "error: parsing regenerated manifest: %v\n", err)
-		exit(1)
-		return
-	}
-	if divs := Diff(reg, mv); len(divs) > 0 {
-		for _, d := range divs {
-			fmt.Fprintf(stderr, "[%s] %s: %s\n", d.Class, d.Path, d.Detail)
-		}
-		exit(1)
-		return
-	}
-
-	// 6. Atomic write: temp file + rename (R-101, R-102).
-	tmpName, err := writeFileAtomic(files, manifestPath, newText, OverlayFileMode)
-	if err != nil {
-		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
-		exit(1)
-		return
-	}
-	if err := files.Rename(tmpName, manifestPath); err != nil {
-		files.Remove(tmpName)
-		fmt.Fprintf(stderr, "error: finalizing manifest: %v\n", err)
-		exit(1)
-		return
-	}
-
-	// 7. Print summary (R-107).
-	fmt.Fprintf(stdout, "sync-manifest: %d added, %d dropped, %d retagged\n",
-		len(report.Added), len(report.Dropped), len(report.Retagged))
-	exit(0)
 }

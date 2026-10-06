@@ -351,29 +351,3 @@ func TestBaselineSkillThatFailsTheHardLint_ValidateAsksForApprovalAndApproveReso
 		t.Errorf("summary = %+v, want the skill approved by its record", sum)
 	}
 }
-
-// skills add is deliberately unchanged: it still refuses a hard lint finding, so a
-// baseline skill that fails the lint cannot be registered again by add, approved or
-// not. Baseline skills are already registered, so the only way to meet this is to
-// remove one and add it back; the rewrite of these skills (which brings each one
-// within the budget) is the way out. This test states the limit.
-func TestAddCore_ABaselineSkillThatFailsTheHardLintStillCannotBeAddedEvenWhenApproved(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", baselineSkillID})
-	writeTestFile(t, filepath.Join(root, baselineSkillID, "SKILL.md"), overBudgetSkillMD(baselineSkillID))
-	if _, stderr, code := runApprove([]string{"--id", baselineSkillID, "--approver", "reviewer", "--source-root", root}, fixedClock(approveFixedNow)); code != 0 {
-		t.Fatalf("approve: exit %d; %q", code, stderr)
-	}
-	before := snapshotFiles(t, regPath, mfPath)
-
-	r := runAdd(t, regPath, mfPath, root, baselineSkillID)
-
-	if r.code != 1 || !strings.Contains(r.stderr, "[lint:body-hard-budget]") {
-		t.Fatalf("add: exit %d, stderr %q, want a refusal with the lint finding", r.code, r.stderr)
-	}
-	for p, b := range snapshotFiles(t, regPath, mfPath) {
-		if before[p] != b {
-			t.Errorf("%s changed on a refused add", p)
-		}
-	}
-}

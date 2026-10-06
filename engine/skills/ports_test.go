@@ -104,25 +104,6 @@ func TestIsAbsentTellsAMissingPathFromOneThatCannotBeInspected(t *testing.T) {
 
 // --- the locker answers whether a path is there -----------------------------------------------
 
-func TestTheLockerIsAskedWhetherTheRegistryIsThereBeforeAWriterLocksIt(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, skillsRoot := setupFixture(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing", "foo"})
-	locker := &existsLocker{answers: map[string][]error{regPath: {errors.New("the locker cannot see it")}}}
-
-	r := runAt("add", []string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"}, os.ReadFile, nil, locker)
-
-	want := fmt.Sprintf("error: skills add: reading registry %q: the locker cannot see it; nothing was locked and nothing was changed\n", regPath)
-	if r.code != 1 || r.stderr != want {
-		t.Errorf("add = exit %d, stderr %q, want exit 1 and %q", r.code, r.stderr, want)
-	}
-	if locker.locks != 0 {
-		t.Errorf("%d locks were taken, want none: the verb refuses before it asks for one", locker.locks)
-	}
-	if got, _ := os.ReadFile(regPath); string(got) != minimalRegistry("existing") {
-		t.Errorf("the registry was changed to %q", got)
-	}
-}
-
 func TestRereadsWhenTheLockFileAppearsTakesItsAnswersFromTheLocker(t *testing.T) {
 	denied := &fs.PathError{Op: "stat", Path: "denied.lock", Err: syscall.EACCES}
 	for _, tc := range []struct {
@@ -250,7 +231,7 @@ func TestAVerbThatNeedsTheTreeRefusesWhenNoneIsWired(t *testing.T) {
 func TestAVerbThatNeedsTheProjectFileSystemRefusesWhenNoneIsWired(t *testing.T) {
 	regPath := filepath.Join(t.TempDir(), "skills.registry.yaml")
 	writeTestFile(t, regPath, minimalRegistry("existing"))
-	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "install", "adopt", "project-register", "project-revise", "project-status", "project-retire"} {
+	for _, verb := range []string{"approve", "install", "adopt", "project-register", "project-revise", "project-status", "project-retire"} {
 		t.Run(verb, func(t *testing.T) {
 			var out, errBuf bytes.Buffer
 			code := -1

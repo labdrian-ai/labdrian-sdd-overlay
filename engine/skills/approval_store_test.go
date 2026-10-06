@@ -114,7 +114,7 @@ func TestReadApprovalStatusAsksTheStoreForTheRecordOnly(t *testing.T) {
 func TestTheVerbsThatJudgeApprovalRefuseWithoutAStoreWired(t *testing.T) {
 	registry := filepath.Join(t.TempDir(), "skills.registry.yaml")
 	writeTestFile(t, registry, "version: \"1\"\nskills:\n")
-	for _, verb := range []string{"add", "approve"} {
+	for _, verb := range []string{"approve"} {
 		deps := testDeps(nil, func(string) ([]byte, error) { return nil, errors.New("must not be read") }, testRegistries(nil), nil, noopLocker{})
 		deps.Approvals = nil
 		var out, errOut bytes.Buffer

@@ -9,10 +9,11 @@ import (
 
 // SkillsCoreAt is the testable CLI core for the verbs of `engine skills` that have not yet moved
 // behind a use case (Phase 9 unit H20). Dispatches to RenderInstallCore,
-// AddCore, RemoveCore, SyncCore, RenderApproveCore, RenderProjectRegisterCore,
+// RenderApproveCore, RenderProjectRegisterCore,
 // RenderProjectReviseCore, RenderProjectStatusCore, or RenderProjectRetireCore.
-// list, status, lint and validate are not dispatched here: they are use cases in engine/skills/app, run by
-// the CLI adapter in engine/cmd, which reads their arguments with its one strict parser.
+// list, status, lint, validate, add, remove and sync-manifest are not dispatched here: they are
+// use cases in engine/skills/app, run by the CLI adapter in engine/cmd, which reads their
+// arguments with its one strict parser and takes the overlay lock they need.
 // Unknown or empty verbs fail loud (exit 1), mirroring the prespec pattern (ADR-2).
 // No global state; all I/O is injected through deps. deps.Now returns the current time as an
 // RFC 3339 UTC timestamp for the verbs that record one (approve); the production caller passes
@@ -68,13 +69,13 @@ func runLocked(verb string, args []string, installRoot string, deps Deps, stdout
 // the Deps' Project: the writers of the registry, the manifest and the approval records, and the
 // verbs that install into a project or keep its lock.
 var needsProject = map[string]bool{
-	"add": true, "remove": true, "sync-manifest": true, "approve": true, "install": true, "adopt": true,
+	"approve": true, "install": true, "adopt": true,
 	"project-register": true, "project-revise": true, "project-status": true, "project-retire": true,
 }
 
 // needsApprovals lists the verbs that judge whether a skill is approved, through the
 // Deps' Approvals: add and approve judge the one they are given.
-var needsApprovals = map[string]bool{"add": true, "approve": true}
+var needsApprovals = map[string]bool{"approve": true}
 
 // dispatchVerb runs the verb. The locks, if it needs any, are already held, and
 // installRoot is the directory install was resolved to and locked.
@@ -105,12 +106,6 @@ func dispatchVerb(verb string, args []string, installRoot string, deps Deps, std
 		env := installEnvOf(deps, func() (string, error) { return installRoot, nil })
 		env.readProject = readFile
 		renderAdopt(env, args, stdout, stderr, exit)
-	case "add":
-		AddCore(stripVerb(args, "add"), readFile, deps.Approvals, registries, deps.Project.Stat, deps.Project, stdout, stderr, exit)
-	case "remove":
-		RemoveCore(stripVerb(args, "remove"), readFile, registries, deps.Project, stdout, stderr, exit)
-	case "sync-manifest":
-		SyncCore(stripVerb(args, "sync-manifest"), readFile, registries, deps.Project, stdout, stderr, exit)
 	case "approve":
 		RenderApproveCore(stripVerb(args, "approve"), readFile, deps.Approvals, deps.Now, deps.Project, stdout, stderr, exit)
 	case "project-register":

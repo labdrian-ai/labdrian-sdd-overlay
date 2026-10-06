@@ -208,7 +208,7 @@ func lockRequestsFor(verb string, args []string, installRoot string) []LockReque
 		})
 	}
 	switch verb {
-	case "add", "remove", "sync-manifest", "approve":
+	case "approve":
 		overlay(LockExclusive)
 	case "install", "adopt":
 		overlay(LockShared)
