@@ -401,7 +401,6 @@ func TestSkillsCoreAt_TakesTheRegistryLockByVerb(t *testing.T) {
 		{"remove", []string{"existing"}, "exclusive", 0},
 		{"sync-manifest", nil, "exclusive", 0},
 		{"approve", []string{"--id", "existing", "--approver", "reviewer"}, "exclusive", 0},
-		{"validate", nil, "shared", 0},
 		{"install", []string{"--project-id", "p"}, "shared", 0},
 	} {
 		t.Run(tc.verb, func(t *testing.T) {
@@ -487,7 +486,6 @@ func TestSkillsCoreAt_EveryReadOfSharedStateHappensUnderTheLock(t *testing.T) {
 		{"remove", []string{"existing"}},
 		{"sync-manifest", nil},
 		{"approve", []string{"--id", "existing", "--approver", "reviewer"}},
-		{"validate", nil},
 		{"install", []string{"--project-id", "p"}},
 	} {
 		t.Run(tc.verb, func(t *testing.T) {
@@ -537,7 +535,6 @@ func TestSkillsCoreAt_ABusyLockExits2WithARetryMessageAndChangesNothing(t *testi
 		{"remove", []string{"existing"}},
 		{"sync-manifest", nil},
 		{"approve", []string{"--id", "existing", "--approver", "reviewer"}},
-		{"validate", nil},
 		{"install", []string{"--project-id", "p"}},
 	} {
 		t.Run(tc.verb, func(t *testing.T) {
@@ -607,7 +604,7 @@ func TestSkillsCoreAt_RecognizesAWrappedBusyError(t *testing.T) {
 func TestSkillsCoreAt_WithoutALockerTheLockingVerbsFailClosed(t *testing.T) {
 	f := newLockFixture(t).withSkills(t, "newbie")
 	before := snapshotFiles(t, f.reg, f.man)
-	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "install", "adopt"} {
+	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "install", "adopt"} {
 		r := f.runAt(verb, append([]string{"newbie"}, f.flags()...), os.ReadFile, fixedClock(approveFixedNow), nil)
 		if r.code != 1 || r.stdout != "" || !strings.Contains(r.stderr, "no lock is configured") {
 			t.Errorf("%s: exit %d, stdout %q, stderr %q, want exit 1 and a 'no lock is configured' refusal", verb, r.code, r.stdout, r.stderr)

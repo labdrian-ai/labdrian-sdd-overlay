@@ -123,51 +123,6 @@ func TestTheLockerIsAskedWhetherTheRegistryIsThereBeforeAWriterLocksIt(t *testin
 	}
 }
 
-// A shared lock on a lock file that is not there holds nothing, so validate reads again when the
-// file appears during the read. Whether the file is there is the locker's to say.
-func TestValidateReadsAgainWhenTheLockerSaysTheLockFileAppeared(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, skillsRoot := setupFixture(t, dir, minimalRegistry("foo"), minimalManifest("foo"), []string{"foo"})
-	lockFile := RegistryLockPath(regPath)
-	// Absent when the lock is asked for, there once the read is done, there afterwards.
-	locker := &existsLocker{answers: map[string][]error{
-		regPath:  {nil},
-		lockFile: {fs.ErrNotExist, nil, nil},
-	}}
-
-	r := runAt("validate", []string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot}, os.ReadFile, nil, locker)
-
-	if r.code != 0 {
-		t.Fatalf("validate = exit %d, stderr %q", r.code, r.stderr)
-	}
-	if locker.locks != 2 {
-		t.Errorf("%d locks taken, want 2: the verb read once, was told the lock file had appeared, and read again", locker.locks)
-	}
-	if strings.Count(r.stdout, "registry and manifest aligned") != 1 {
-		t.Errorf("stdout %q, want the answer of the second read, printed once", r.stdout)
-	}
-}
-
-func TestValidateRefusesWhenTheLockerCannotSayWhetherTheLockFileAppeared(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, skillsRoot := setupFixture(t, dir, minimalRegistry("foo"), minimalManifest("foo"), []string{"foo"})
-	lockFile := RegistryLockPath(regPath)
-	locker := &existsLocker{answers: map[string][]error{
-		regPath:  {nil},
-		lockFile: {fs.ErrNotExist, &fs.PathError{Op: "stat", Path: lockFile, Err: syscall.EACCES}},
-	}}
-
-	r := runAt("validate", []string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot}, os.ReadFile, nil, locker)
-
-	want := fmt.Sprintf("error: skills validate: cannot tell whether a writer began while it read: stat %s: permission denied; nothing was changed\n", lockFile)
-	if r.code != 1 || r.stderr != want || r.stdout != "" {
-		t.Errorf("validate = exit %d, stdout %q, stderr %q, want exit 1, nothing on stdout and %q", r.code, r.stdout, r.stderr, want)
-	}
-	if locker.locks != 1 {
-		t.Errorf("%d locks taken, want 1: a failure that reading again cannot clear is not read again", locker.locks)
-	}
-}
-
 func TestRereadsWhenTheLockFileAppearsTakesItsAnswersFromTheLocker(t *testing.T) {
 	denied := &fs.PathError{Op: "stat", Path: "denied.lock", Err: syscall.EACCES}
 	for _, tc := range []struct {
@@ -197,44 +152,6 @@ func TestRereadsWhenTheLockFileAppearsTakesItsAnswersFromTheLocker(t *testing.T)
 }
 
 // --- the verbs read the tree through the port -------------------------------------------------
-
-// validate lists the skills tree through the SkillTree it is given: a tree that is nowhere on
-// disk, listed by a fake, is the tree the verb checks the manifest against.
-func TestValidateListsTheSkillsTreeThroughTheTreeItIsGiven(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, skillsRoot := setupFixture(t, dir, minimalRegistry("foo"), minimalManifest("foo"), []string{"foo"})
-	tree := &fakeTree{scan: func(string) ([]string, error) { return []string{"foo/SKILL.md", "stray.md"}, nil }}
-
-	var out, errBuf bytes.Buffer
-	code := 0
-	SkillsCoreAt("validate", []string{"validate", "--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot},
-		Deps{ReadFile: os.ReadFile, Approvals: fileApprovals(os.ReadFile), Registries: testRegistries(os.ReadFile), Tree: tree, Locker: noopLocker{}},
-		&out, &errBuf, func(c int) { code = c })
-
-	if code != 1 || !strings.Contains(errBuf.String(), "[UNREGISTERED_ON_DISK] stray.md") {
-		t.Errorf("validate = exit %d, stderr %q, want the file the tree listed reported as unregistered", code, errBuf.String())
-	}
-	if len(tree.asked) != 1 || tree.asked[0] != "scan "+skillsRoot {
-		t.Errorf("the tree was asked %v, want one scan of the source root", tree.asked)
-	}
-}
-
-func TestValidateSaysWhatTheTreeSaidWhenItCouldNotBeScanned(t *testing.T) {
-	dir := t.TempDir()
-	regPath, mfPath, skillsRoot := setupFixture(t, dir, minimalRegistry("foo"), minimalManifest("foo"), []string{"foo"})
-	tree := &fakeTree{scan: func(string) ([]string, error) { return nil, errors.New("the tree is gone") }}
-
-	var out, errBuf bytes.Buffer
-	code := 0
-	SkillsCoreAt("validate", []string{"validate", "--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot},
-		Deps{ReadFile: os.ReadFile, Approvals: fileApprovals(os.ReadFile), Registries: testRegistries(os.ReadFile), Tree: tree, Locker: noopLocker{}},
-		&out, &errBuf, func(c int) { code = c })
-
-	want := fmt.Sprintf("error: scanning skills directory %q: the tree is gone\n", skillsRoot)
-	if code != 1 || errBuf.String() != want {
-		t.Errorf("validate = exit %d, stderr %q, want exit 1 and %q", code, errBuf.String(), want)
-	}
-}
 
 // install copies the files the SkillTree says a skill has, whatever the directory holds.
 func TestInstallCopiesTheSourceTheTreeReads(t *testing.T) {
@@ -314,7 +231,7 @@ skills:
 
 // A verb that needs the tree and was given none refuses; it does not crash.
 func TestAVerbThatNeedsTheTreeRefusesWhenNoneIsWired(t *testing.T) {
-	for _, verb := range []string{"validate", "install", "adopt"} {
+	for _, verb := range []string{"install", "adopt"} {
 		t.Run(verb, func(t *testing.T) {
 			var out, errBuf bytes.Buffer
 			code := -1

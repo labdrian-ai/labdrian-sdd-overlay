@@ -250,7 +250,7 @@ func TestReadConsistentlyDoesNotReadWhenTheLocksCannotBeTaken(t *testing.T) {
 // same registry: one policy, said once.
 func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
 	const registry = "/o/skills.registry.yaml"
-	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "install", "adopt"} {
+	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "install", "adopt"} {
 		want := lockRequestsFor(verb, []string{verb, "--registry", registry}, "")
 		if got := OverlayLocks(verb, registry); len(got) != 1 || len(want) != 1 || got[0] != want[0] {
 			t.Errorf("%s: OverlayLocks = %+v, the dispatcher takes %+v", verb, got, want)
@@ -261,6 +261,7 @@ func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
 			t.Errorf("%s: OverlayLocks = %+v, want no overlay lock", verb, got)
 		}
 	}
+	// validate is run by a use case, not by the dispatcher, so the policy is only said here.
 	if got := OverlayLocks("validate", registry); got[0].Mode != LockShared || !got[0].Rereads || got[0].Path != "/o/.skills.registry.yaml.lock" {
 		t.Errorf("validate: %+v, want a shared lock on the lock file beside the registry that is read again if the file appears", got[0])
 	}

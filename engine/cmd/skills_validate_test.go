@@ -294,3 +294,156 @@ func TestSkillsValidateNeedsTheSourceRoot(t *testing.T) {
 		t.Errorf("validate = %+v", got)
 	}
 }
+
+// State is read after the lock is taken, never before, and let go of before nothing else is read:
+// a read made before the lock can be stale by the time it is granted.
+func TestSkillsValidateReadsEverythingUnderTheLock(t *testing.T) {
+	w := newValidateWorld(t)
+	locker := &heldLocker{}
+	var outside []string
+	read := func(what string) {
+		if !locker.held() {
+			outside = append(outside, what)
+		}
+	}
+	deps := w.deps(locker)
+	deps.Registries = gatedRegistries{RegistryRepository: deps.Registries, read: read}
+	deps.ReadFile = func(name string) ([]byte, error) { read(name); return os.ReadFile(name) }
+	deps.Approvals = gatedApprovals{ApprovalRecordStore: deps.Approvals, read: read}
+	deps.Tree = gatedTree{SkillTree: deps.Tree, read: read}
+	if got := runSkillsVerb(skillsValidate, deps, w.args...); got.code() != 0 {
+		t.Fatalf("validate = %+v", got)
+	}
+	if len(outside) != 0 {
+		t.Errorf("read %v before the lock was taken or after it was released", outside)
+	}
+}
+
+type heldLocker struct {
+	recordingLocker
+	mu    sync.Mutex
+	count int
+}
+
+func (l *heldLocker) Lock(path string, mode skills.LockMode) (func(), error) {
+	l.mu.Lock()
+	l.count++
+	l.mu.Unlock()
+	return func() { l.mu.Lock(); l.count--; l.mu.Unlock() }, nil
+}
+
+func (l *heldLocker) held() bool {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.count > 0
+}
+
+type gatedRegistries struct {
+	skills.RegistryRepository
+	read func(string)
+}
+
+func (g gatedRegistries) Load(location string) (skills.Registry, error) {
+	g.read("registry " + location)
+	return g.RegistryRepository.Load(location)
+}
+
+type gatedApprovals struct {
+	skills.ApprovalRecordStore
+	read func(string)
+}
+
+func (g gatedApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
+	g.read("skill " + path)
+	return g.ApprovalRecordStore.ReadSkill(sourceRoot, path)
+}
+
+func (g gatedApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
+	g.read("record " + id)
+	return g.ApprovalRecordStore.ReadRecord(sourceRoot, id)
+}
+
+type gatedTree struct {
+	skills.SkillTree
+	read func(string)
+}
+
+func (g gatedTree) ScanSkillFiles(dir string) ([]string, error) {
+	g.read("scan " + dir)
+	return g.SkillTree.ScanSkillFiles(dir)
+}
+
+// 'validate' is the verb a CI uses to detect drift, so it does not pass a registry the reader did
+// not read whole; every other verb that only reads goes on with a warning. The reason comes after
+// every divergence the run found.
+func TestSkillsValidateFailsOnARegistryTheReaderLeftFieldsOutOf(t *testing.T) {
+	w := newValidateWorld(t)
+	w.put("skills.registry.yaml", "extra: 1\n"+registryOf("alpha"))
+	got := runSkillsVerb(skillsValidate, w.deps(&recordingLocker{}), w.args...)
+	if got.code() != 1 || strings.Contains(got.stdout, "aligned") {
+		t.Errorf("validate = %+v, want exit 1 and nothing said of agreement", got)
+	}
+	for _, want := range []string{
+		`warning: registry fields left unread: line 1: unknown top-level key "extra"`,
+		"error: skills: the registry has fields this program does not read, and validate cannot vouch for a registry it read in part: line 1: unknown top-level key \"extra\"",
+	} {
+		if !strings.Contains(got.stderr, want) {
+			t.Errorf("stderr %q should contain %q", got.stderr, want)
+		}
+	}
+}
+
+func TestSkillsValidateTellsEveryDivergenceAndThenWhyItFailsOnUnreadFields(t *testing.T) {
+	w := newValidateWorld(t)
+	w.put("skills.registry.yaml", "extra: 1\n"+registryOf("alpha"))
+	w.put("skills/orphan/notes.md", "x")
+	got := runSkillsVerb(skillsValidate, w.deps(&recordingLocker{}), w.args...)
+	if got.code() != 1 {
+		t.Fatalf("validate = %+v, want exit 1", got)
+	}
+	divergence := strings.Index(got.stderr, "UNREGISTERED_ON_DISK")
+	reason := strings.Index(got.stderr, "error: skills: the registry has fields")
+	if divergence < 0 || reason < 0 || divergence > reason {
+		t.Errorf("stderr %q should name the divergence, and then the reason", got.stderr)
+	}
+	if lines := strings.Count(got.stderr, "\n"); lines != 3 {
+		t.Errorf("stderr has %d lines, want the warning, the divergence and the reason: %q", lines, got.stderr)
+	}
+}
+
+// An approval is a human step, and validate says what is missing without doing it.
+func TestSkillsValidateSaysWhichGlobalSkillsAreNotApprovedAndPassesOnceTheyAre(t *testing.T) {
+	w := newValidateWorld(t)
+	if err := os.Remove(w.path("skills/alpha/" + skills.ApprovalRecordName)); err != nil {
+		t.Fatal(err)
+	}
+	got := runSkillsVerb(skillsValidate, w.deps(&recordingLocker{}), w.args...)
+	if got.code() != 1 || !strings.Contains(got.stderr, "[APPROVAL_MISSING] alpha:") || got.stdout != "" {
+		t.Fatalf("validate = %+v, want exit 1 and the missing approval named, nothing on stdout", got)
+	}
+	w.addSkill("alpha")
+	got = runSkillsVerb(skillsValidate, w.deps(&recordingLocker{}), w.args...)
+	if got.code() != 0 || !strings.Contains(got.stdout, "global skill approvals verified (1 skills: 1 approved, 0 grandfathered)") {
+		t.Errorf("validate = %+v, want a pass that says the approval check", got)
+	}
+}
+
+// A global skill whose SKILL.md is gone is told once, by the on-disk check that owns it, never as
+// an approval finding, and the run does not claim the approvals were verified.
+func TestSkillsValidateReportsAGlobalSkillWithoutItsFileOnceByTheOnDiskCheck(t *testing.T) {
+	w := newValidateWorld(t)
+	if err := os.RemoveAll(w.path("skills/alpha")); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.MkdirAll(w.path("skills"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	got := runSkillsVerb(skillsValidate, w.deps(&recordingLocker{}), w.args...)
+	lines := strings.Split(strings.TrimSpace(got.stderr), "\n")
+	if got.code() != 1 || len(lines) != 1 || !strings.HasPrefix(lines[0], "[MISSING_ON_DISK] alpha/SKILL.md:") {
+		t.Errorf("validate = %+v, want exactly one [MISSING_ON_DISK] line for alpha/SKILL.md", got)
+	}
+	if strings.Contains(got.stderr, "APPROVAL_") || got.stdout != "" {
+		t.Errorf("validate = %+v: the missing file must not be an approval finding, and a failing run claims nothing", got)
+	}
+}

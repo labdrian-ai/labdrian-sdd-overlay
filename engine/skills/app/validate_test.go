@@ -220,3 +220,81 @@ func TestValidateOverlayTreatsSkillsOfProjectScopeAsAutonomous(t *testing.T) {
 		t.Errorf("ValidateOverlay = %+v, %v, want a pass that counted one global skill", res, err)
 	}
 }
+
+func classesOf(divs []skills.Divergence) string {
+	var classes []string
+	for _, d := range divs {
+		classes = append(classes, string(d.Class))
+	}
+	return strings.Join(classes, ",")
+}
+
+func TestValidateOverlayReportsAFileOnDiskThatNoRowDeploysThenPassesOnceItHasOne(t *testing.T) {
+	w := newWorld(t)
+	w.tree.files = []string{"alpha/SKILL.md", "beta/SKILL.md", "orphan/notes.md"}
+	res, err := ValidateOverlay(w.ports(), input())
+	if err != nil || res.Passed() || classesOf(res.OnDisk) != "UNREGISTERED_ON_DISK" {
+		t.Fatalf("ValidateOverlay = %+v, %v, want one UNREGISTERED_ON_DISK divergence", res, err)
+	}
+	w.manifest["overlay.manifest"] += "orphan/notes.md custom\n"
+	res, err = ValidateOverlay(w.ports(), input())
+	if err != nil || !res.Passed() {
+		t.Errorf("ValidateOverlay = %+v, %v, want a pass once the row is added", res, err)
+	}
+}
+
+func TestValidateOverlayReportsARowWithNoFileOnDisk(t *testing.T) {
+	w := newWorld(t)
+	w.manifest["overlay.manifest"] += "ghost/SKILL.md custom\n"
+	res, err := ValidateOverlay(w.ports(), input())
+	if err != nil || res.Passed() || !strings.Contains(classesOf(res.OnDisk), "MISSING_ON_DISK") {
+		t.Errorf("ValidateOverlay = %+v, %v, want a MISSING_ON_DISK divergence", res, err)
+	}
+}
+
+func TestValidateOverlayReportsTheDivergencesOfEveryClassInOneRun(t *testing.T) {
+	w := newWorld(t)
+	// beta has no manifest row; ghost is an orphan row; unregistered/SKILL.md has no row either.
+	w.manifest["overlay.manifest"] = "alpha/SKILL.md custom\nghost/SKILL.md custom\n"
+	w.tree.files = []string{"alpha/SKILL.md", "unregistered/SKILL.md"}
+	res, err := ValidateOverlay(w.ports(), input())
+	if err != nil {
+		t.Fatal(err)
+	}
+	all := classesOf(res.RegistryDivergences) + "," + classesOf(res.OnDisk)
+	for _, class := range []string{"MISSING_IN_MANIFEST", "MISSING_ON_DISK", "UNREGISTERED_ON_DISK"} {
+		if !strings.Contains(all, class) {
+			t.Errorf("divergences %q do not include %s", all, class)
+		}
+	}
+}
+
+// recordingTree remembers the directories it was asked to list.
+type recordingTree struct {
+	treeOf
+	asked *[]string
+}
+
+func (r recordingTree) ScanSkillFiles(dir string) ([]string, error) {
+	*r.asked = append(*r.asked, dir)
+	return r.treeOf.ScanSkillFiles(dir)
+}
+
+// The tree that is listed is the one --source-root names, as it was written: absolute or
+// relative to the process (CI runs it as ../skills), never the working directory.
+func TestValidateOverlayListsTheSourceRootItIsGivenAsItWasGiven(t *testing.T) {
+	for _, root := range []string{"/does-not-matter", "../skills", "skills"} {
+		w := newWorld(t)
+		var asked []string
+		ports := w.ports()
+		ports.Tree = recordingTree{treeOf: w.tree, asked: &asked}
+		in := input()
+		in.SourceRoot = root
+		if _, err := ValidateOverlay(ports, in); err != nil {
+			t.Fatal(err)
+		}
+		if len(asked) != 1 || asked[0] != root {
+			t.Errorf("the tree was asked for %q, want one listing of %q", asked, root)
+		}
+	}
+}

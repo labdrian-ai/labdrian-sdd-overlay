@@ -1,34 +1,28 @@
 # an unknown flag
 $ skills validate --frobnicate --source-root <WORLD>/skills
-exit: 0
+exit: 1
 --- stdout ---
-registry and manifest aligned (4 skills)
-skills/ on disk matches overlay.manifest (4 files)
-global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
 --- stderr ---
+error: skills validate: unknown flag "--frobnicate"
 
 # an unknown flag with a value
 $ skills validate --source-root <WORLD>/skills --frobnicate yes
-exit: 0
+exit: 1
 --- stdout ---
-registry and manifest aligned (4 skills)
-skills/ on disk matches overlay.manifest (4 files)
-global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
 --- stderr ---
+error: skills validate: unknown flag "--frobnicate"
 
 # a short flag
 $ skills validate -x --source-root <WORLD>/skills
-exit: 0
+exit: 1
 --- stdout ---
-registry and manifest aligned (4 skills)
-skills/ on disk matches overlay.manifest (4 files)
-global skill approvals verified (3 skills: 3 approved, 0 grandfathered)
 --- stderr ---
+error: skills validate: unknown flag "-x"
 
 # the source root spelled with an equals sign
 $ skills validate --source-root=<WORLD>/skills
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills validate requires --source-root <skills-dir>
+error: skills validate: unknown flag "--source-root=<WORLD>/skills"
 

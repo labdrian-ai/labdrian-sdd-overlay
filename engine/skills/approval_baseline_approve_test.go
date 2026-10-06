@@ -326,18 +326,16 @@ func TestApprove_NoWarningIsPrintedForAnApprovalThatDoesNotHappen(t *testing.T) 
 // then passes.
 func TestBaselineSkillThatFailsTheHardLint_ValidateAsksForApprovalAndApproveResolvesIt(t *testing.T) {
 	dir := t.TempDir()
-	regPath, mfPath, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry(baselineSkillID), minimalManifest(baselineSkillID), []string{baselineSkillID})
+	_, _, root := setupFixtureWithoutApprovals(t, dir, minimalRegistry(baselineSkillID), minimalManifest(baselineSkillID), []string{baselineSkillID})
 	writeTestFile(t, filepath.Join(root, baselineSkillID, "SKILL.md"), overBudgetSkillMD(baselineSkillID))
-	validate := func() (string, string, int) {
-		var out, errBuf bytes.Buffer
-		code := 0 // validate calls exit only to fail
-		RenderValidateCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", root}, os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), scanSkillFiles, &out, &errBuf, func(c int) { code = c })
-		return out.String(), errBuf.String(), code
+	// What validate says of approvals is what CheckApprovals finds: the verb prints these.
+	check := func() ([]Divergence, ApprovalSummary) {
+		return CheckApprovals(mustParseRegistry(t, minimalRegistry(baselineSkillID)), root, fileApprovals(os.ReadFile))
 	}
 
-	_, stderr, code := validate()
-	if code != 1 || !strings.Contains(stderr, "[APPROVAL_MISSING] "+baselineSkillID) || !strings.Contains(stderr, "differs from the grandfathered baseline") {
-		t.Fatalf("validate before approve: exit %d, stderr %q, want APPROVAL_MISSING naming the changed baseline skill", code, stderr)
+	divs, _ := check()
+	if len(divs) != 1 || divs[0].Class != DivApprovalMissing || divs[0].Path != baselineSkillID || !strings.Contains(divs[0].Detail, "differs from the grandfathered baseline") {
+		t.Fatalf("validate before approve: %+v, want APPROVAL_MISSING naming the changed baseline skill", divs)
 	}
 
 	approveArgs := []string{"--id", baselineSkillID, "--approver", "reviewer", "--source-root", root}
@@ -345,12 +343,12 @@ func TestBaselineSkillThatFailsTheHardLint_ValidateAsksForApprovalAndApproveReso
 		t.Fatalf("approve: exit %d, stderr %q, want success with the finding as a warning", code, stderr)
 	}
 
-	stdout, stderr, code := validate()
-	if code != 0 {
-		t.Fatalf("validate after approve: exit %d, stderr %q, want 0", code, stderr)
+	divs, sum := check()
+	if len(divs) != 0 {
+		t.Fatalf("validate after approve: %+v, want no divergence", divs)
 	}
-	if !strings.Contains(stdout, "global skill approvals verified (1 skills: 1 approved, 0 grandfathered)") {
-		t.Errorf("stdout %q must say the skill is approved by its record", stdout)
+	if sum.Global != 1 || sum.Approved != 1 || sum.Grandfathered != 0 {
+		t.Errorf("summary = %+v, want the skill approved by its record", sum)
 	}
 }
 

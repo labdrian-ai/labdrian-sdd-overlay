@@ -154,7 +154,9 @@ func OverlayLocks(verb, registryPath string) []LockRequest {
 //     creates the lock file, so both work on a read-only overlay. A shared lock on a
 //     lock file that does not exist yet holds nothing, and validate, which reads
 //     files that must agree, is marked to read again when the file appears during its
-//     read (rereadsWhenTheLockFileAppears). install is not: it reads one atomic
+//     read (rereadsWhenTheLockFileAppears; validate runs behind a use case, which takes
+//     this lock through OverlayLocks and ReadConsistently, and this function no longer
+//     lists it). install is not: it reads one atomic
 //     file, the registry, and a tree that no locked verb writes into except the
 //     approval record and the temporary file behind it, which it never copies.
 //   - list, status, lint: one atomic file or none, so none. They run behind use cases in
@@ -193,9 +195,9 @@ func OverlayLocks(verb, registryPath string) []LockRequest {
 // so nothing decided before the lock is trusted after it.
 func lockRequestsFor(verb string, args []string, installRoot string) []LockRequest {
 	var requests []LockRequest
-	overlay := func(mode LockMode, rereads bool) {
+	overlay := func(mode LockMode) {
 		registryPath, _, _, _, _, _ := parseFlags(args)
-		requests = append(requests, overlayLockRequest(verb, registryPath, mode, rereads))
+		requests = append(requests, overlayLockRequest(verb, registryPath, mode, false))
 	}
 	project := func(root string, mode LockMode) {
 		requests = append(requests, LockRequest{
@@ -207,11 +209,9 @@ func lockRequestsFor(verb string, args []string, installRoot string) []LockReque
 	}
 	switch verb {
 	case "add", "remove", "sync-manifest", "approve":
-		overlay(LockExclusive, false)
-	case "validate":
-		overlay(LockShared, true)
+		overlay(LockExclusive)
 	case "install", "adopt":
-		overlay(LockShared, false)
+		overlay(LockShared)
 		if installRoot != "" {
 			project(installRoot, LockExclusive)
 		}
@@ -381,7 +381,7 @@ func AcquireLocks(verb string, locker Locker, requests []LockRequest) (HeldLocks
 // that releases them in reverse. When one cannot be taken it releases those it
 // holds, says why, calls exit (ExitBusy for a lock that stayed taken, 1 for one
 // that could not be taken at all), and reports false: the verb must not run.
-func acquireLocks(verb string, args []string, installRoot string, locker Locker, stderr io.Writer, exit func(int)) (release func(), provisional []string, ok bool) {
+func acquireLocks(verb string, args []string, installRoot string, locker Locker, stderr io.Writer, exit func(int)) (release func(), ok bool) {
 	held, err := AcquireLocks(verb, locker, lockRequestsFor(verb, args, installRoot))
 	if err != nil {
 		var refusal *LockError
@@ -389,9 +389,9 @@ func acquireLocks(verb string, args []string, installRoot string, locker Locker,
 			fmt.Fprintf(stderr, "error: %v\n", refusal)
 			exit(refusal.ExitCode())
 		}
-		return nil, nil, false
+		return nil, false
 	}
-	return held.Release, held.Provisional, true
+	return held.Release, true
 }
 
 // rereadsWhenTheLockFileAppears is the answer to the one case a shared lock cannot
