@@ -28,17 +28,12 @@ func newSkillsDeps() skills.Deps {
 	}
 }
 
-// newProjectIdentity is the chain of sources that name the project a directory is, in the order the
-// program asks them: what the person said with --project-id, and then the name of the directory.
-//
-// The owner's order (Phase 9, decision Q8) has one more link between the two: projectidentity.
-// GitOrigin, the origin remote of the repository read from its .git/config without running git.
-// It is built and tested and it is NOT in this chain yet, because putting it there changes what
-// install and adopt do without --project-id in a repository that has an origin: the project would
-// be github.com/acme/demo where it is demo today, so a registry that admits a skill to demo admits
-// it to nobody in a checkout of that repository, and the goldens under testdata/
-// project-identity-golden say which cases change. That is a decision of the owner, not of the
-// refactor that put the id behind a port (H18); the day it is taken it is one line here.
+// newProjectIdentity is the chain of sources that name the project a directory is, in the owner's
+// order (Phase 9, decision Q8, enabled 2026-10-06): what the person said with --project-id, then
+// the origin remote of the repository (projectidentity.GitOrigin, read from its .git/config
+// without running git), then the name of the directory. A checkout whose origin is
+// github.com/acme/demo is that project whatever its directory is called, so a registry that admits
+// a skill to a project names it by its origin.
 func newProjectIdentity() skills.ProjectIdentity {
-	return projectidentity.Chain(projectidentity.Explicit{}, projectidentity.DirectoryName{})
+	return projectidentity.Chain(projectidentity.Explicit{}, projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
 }

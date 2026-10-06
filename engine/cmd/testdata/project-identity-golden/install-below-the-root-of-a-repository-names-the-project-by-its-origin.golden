@@ -1,0 +1,23 @@
+# a directory below the root of a repository is the project its origin names, and installs into itself
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in monorepo/demo)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+--- tree of monorepo ---
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+demo/
+demo/.agents/
+demo/.agents/skills/
+demo/.agents/skills/by-origin/
+demo/.agents/skills/by-origin/SKILL.md (296 bytes)
+demo/.claude/
+demo/.claude/skills/
+demo/.claude/skills/by-origin/
+demo/.claude/skills/by-origin/SKILL.md (296 bytes)
+demo/.labdrian/
+demo/.labdrian/procedural-skills.lock.json (255 bytes)
+

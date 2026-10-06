@@ -2,28 +2,28 @@
 $ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id (in demo)
 exit: 0
 --- stdout ---
-installed: by-directory
+installed: by-origin
 --- stderr ---
 
 # --project-id with an empty value
 $ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id  (in demo)
 exit: 0
 --- stdout ---
-unchanged: by-directory
+unchanged: by-origin
 --- stderr ---
 
 --- tree of demo ---
 .agents/
 .agents/skills/
-.agents/skills/by-directory/
-.agents/skills/by-directory/SKILL.md (302 bytes)
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md (296 bytes)
 .claude/
 .claude/skills/
-.claude/skills/by-directory/
-.claude/skills/by-directory/SKILL.md (302 bytes)
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md (296 bytes)
 .git/
 .git/HEAD (21 bytes)
 .git/config (135 bytes)
 .labdrian/
-.labdrian/procedural-skills.lock.json (258 bytes)
+.labdrian/procedural-skills.lock.json (255 bytes)
 

@@ -3,7 +3,7 @@ $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WO
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills adopt: skill by-directory is not installed in this project (neither .claude/skills/by-directory nor .agents/skills/by-directory exists), so there is nothing to adopt; run `labdrian skills install --project-id demo`
+error: skills adopt: skill by-origin is not installed in this project (neither .claude/skills/by-origin nor .agents/skills/by-origin exists), so there is nothing to adopt; run `labdrian skills install --project-id github.com/acme/demo`
 error: skills adopt: refused, so nothing was adopted
 
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id chosen (in demo)
@@ -15,19 +15,16 @@ error: skills adopt: refused, so nothing was adopted
 
 # install over a directory it did not install names the id it would adopt under
 $ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
-exit: 1
+exit: 0
 --- stdout ---
+installed: by-origin
 --- stderr ---
-error: skills install: .claude/skills/by-directory already exists and was not installed by skills install (it has no install record in .labdrian/procedural-skills.lock.json); if it is exactly the current skill, run `labdrian skills adopt --project-id demo` to take ownership of it, otherwise move it away
-error: skills install: .agents/skills/by-directory already exists and was not installed by skills install (it has no install record in .labdrian/procedural-skills.lock.json); if it is exactly the current skill, run `labdrian skills adopt --project-id demo` to take ownership of it, otherwise move it away
-error: skills install: refused, so nothing was installed
 
 # adopt of a skill that is in one runtime only notes where it is not, under the id
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
 exit: 0
 --- stdout ---
-adopted: by-directory
-note: .agents/skills/by-directory is not installed; run `labdrian skills install --project-id demo` to add it
+unchanged: by-origin
 --- stderr ---
 
 --- demo/.labdrian/procedural-skills.lock.json ---
@@ -36,11 +33,11 @@ note: .agents/skills/by-directory is not installed; run `labdrian skills install
   "skills": [],
   "installs": [
     {
-      "id": "by-directory",
+      "id": "by-origin",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "36076e3ce4bbe1acc966de9e4a91c4c9c19cfc60af5d72f7ddeca1d9b36ea1fc"
+          "sha256": "2af0782881ff92ce4cce74656f820ce43119ab8306f75a0a30eed5aba30e3ecf"
         }
       ]
     }
@@ -49,16 +46,15 @@ note: .agents/skills/by-directory is not installed; run `labdrian skills install
 
 # adopt of a skill installed and then changed in the source names the id to install under
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
-exit: 1
+exit: 0
 --- stdout ---
+unchanged: by-origin
 --- stderr ---
-error: skills adopt: by-directory is already installed by skills install and is not current with the source; run `labdrian skills install --project-id demo` to update it (adopt only takes ownership of a directory that is exactly the source)
-error: skills adopt: refused, so nothing was adopted
 
 $ skills adopt --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id demo (in demo)
 exit: 1
 --- stdout ---
 --- stderr ---
-error: skills adopt: by-directory is already installed by skills install and is not current with the source; run `labdrian skills install --project-id demo` to update it (adopt only takes ownership of a directory that is exactly the source)
+error: skills adopt: .claude/skills/by-directory is not exactly the current skill, so it cannot be adopted: SKILL.md has other bytes
 error: skills adopt: refused, so nothing was adopted
 

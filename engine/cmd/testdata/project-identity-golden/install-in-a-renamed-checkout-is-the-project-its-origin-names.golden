@@ -1,0 +1,22 @@
+# the origin is github.com/acme/demo, the directory renamed-checkout: the project is the origin, whatever the directory is called
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in renamed-checkout)
+exit: 0
+--- stdout ---
+installed: by-origin
+--- stderr ---
+
+--- tree of renamed-checkout ---
+.agents/
+.agents/skills/
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md (296 bytes)
+.claude/
+.claude/skills/
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md (296 bytes)
+.git/
+.git/HEAD (21 bytes)
+.git/config (135 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (255 bytes)
+

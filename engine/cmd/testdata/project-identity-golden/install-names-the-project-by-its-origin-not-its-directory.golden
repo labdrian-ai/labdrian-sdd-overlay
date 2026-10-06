@@ -1,24 +1,24 @@
-# a repository named demo whose origin is github.com/acme/demo: only the skill admitted to the directory name
+# a repository named demo whose origin is github.com/acme/demo: the skill admitted to the origin
 $ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
 exit: 0
 --- stdout ---
-installed: by-directory
+installed: by-origin
 --- stderr ---
 
 --- tree of demo ---
 .agents/
 .agents/skills/
-.agents/skills/by-directory/
-.agents/skills/by-directory/SKILL.md (302 bytes)
+.agents/skills/by-origin/
+.agents/skills/by-origin/SKILL.md (296 bytes)
 .claude/
 .claude/skills/
-.claude/skills/by-directory/
-.claude/skills/by-directory/SKILL.md (302 bytes)
+.claude/skills/by-origin/
+.claude/skills/by-origin/SKILL.md (296 bytes)
 .git/
 .git/HEAD (21 bytes)
 .git/config (135 bytes)
 .labdrian/
-.labdrian/procedural-skills.lock.json (258 bytes)
+.labdrian/procedural-skills.lock.json (255 bytes)
 
 --- demo/.labdrian/procedural-skills.lock.json ---
 {
@@ -26,11 +26,11 @@ installed: by-directory
   "skills": [],
   "installs": [
     {
-      "id": "by-directory",
+      "id": "by-origin",
       "files": [
         {
           "path": "SKILL.md",
-          "sha256": "36076e3ce4bbe1acc966de9e4a91c4c9c19cfc60af5d72f7ddeca1d9b36ea1fc"
+          "sha256": "2af0782881ff92ce4cce74656f820ce43119ab8306f75a0a30eed5aba30e3ecf"
         }
       ]
     }

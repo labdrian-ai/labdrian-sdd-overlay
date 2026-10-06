@@ -110,10 +110,10 @@ func (w *registryWorld) identityArgs(verb string, extra ...string) []string {
 func projectIdentityCases() []registryGoldenCase {
 	const origin = "git@github.com:acme/demo.git"
 	return []registryGoldenCase{
-		{"install-names-the-project-by-its-directory-whatever-the-origin-says", func(w *registryWorld) {
+		{"install-names-the-project-by-its-origin-not-its-directory", func(w *registryWorld) {
 			w.identityWorld()
 			w.repository("demo", origin)
-			w.label("a repository named demo whose origin is github.com/acme/demo: only the skill admitted to the directory name")
+			w.label("a repository named demo whose origin is github.com/acme/demo: the skill admitted to the origin")
 			w.runIn("demo", w.identityArgs("install")...)
 			w.tree("demo")
 			w.show("demo/.labdrian/procedural-skills.lock.json")
@@ -130,29 +130,29 @@ func projectIdentityCases() []registryGoldenCase {
 			w.runIn("demo", w.identityArgs("install")...)
 			w.tree("demo")
 		}},
-		{"install-in-a-repository-that-is-not-named-as-its-origin-is-not-admitted-the-origin-skill", func(w *registryWorld) {
+		{"install-in-a-renamed-checkout-is-the-project-its-origin-names", func(w *registryWorld) {
 			w.identityWorld()
 			w.repository("renamed-checkout", origin)
-			w.label("the origin is github.com/acme/demo, the directory renamed-checkout: nothing is admitted")
+			w.label("the origin is github.com/acme/demo, the directory renamed-checkout: the project is the origin, whatever the directory is called")
 			w.runIn("renamed-checkout", w.identityArgs("install")...)
 			w.tree("renamed-checkout")
 		}},
-		{"install-names-the-project-by-the-directory-it-runs-in-below-a-repository", func(w *registryWorld) {
+		{"install-below-the-root-of-a-repository-names-the-project-by-its-origin", func(w *registryWorld) {
 			w.identityWorld()
 			w.repository("monorepo", origin)
 			w.mkdir("monorepo/demo")
-			w.label("a directory below the root of a repository takes its own name, and installs into itself")
+			w.label("a directory below the root of a repository is the project its origin names, and installs into itself")
 			w.runIn("monorepo/demo", w.identityArgs("install")...)
 			w.tree("monorepo")
 		}},
-		{"install-names-the-project-by-the-directory-of-a-linked-worktree", func(w *registryWorld) {
+		{"install-in-a-linked-worktree-names-the-project-by-its-origin", func(w *registryWorld) {
 			w.identityWorld()
 			w.repository("demo", origin)
 			w.linkedWorktree("demo", "feature-x", "feature-x")
-			w.label("a linked worktree of demo is named by its own directory")
+			w.label("a linked worktree of demo is the project its origin names")
 			w.runIn("feature-x", w.identityArgs("install")...)
 			w.treeOf("feature-x", false) // the .git file holds a path of the world, whose length varies
-			w.label("and under the id of the project it is the same project")
+			w.label("and with --project-id demo it is the project named demo")
 			w.runIn("feature-x", w.identityArgs("install", "--project-id", "demo")...)
 			w.treeOf("feature-x", false) // the .git file holds a path of the world, whose length varies
 		}},
@@ -169,7 +169,7 @@ func projectIdentityCases() []registryGoldenCase {
 			w.label("an id nothing is admitted to, in the directory that is admitted")
 			w.runIn("demo", w.identityArgs("install", "--project-id", "stranger")...)
 		}},
-		{"install-falls-back-to-the-directory-when-the-project-id-has-no-value", func(w *registryWorld) {
+		{"install-falls-back-to-the-origin-when-the-project-id-has-no-value", func(w *registryWorld) {
 			w.identityWorld()
 			w.repository("demo", origin)
 			w.label("--project-id as the last word")
@@ -188,7 +188,7 @@ func projectIdentityCases() []registryGoldenCase {
 			w.show("demo/.labdrian/procedural-skills.lock.json")
 			w.label("adopt with the id of a project the files do not belong to")
 			w.runIn("demo", w.identityArgs("adopt", "--project-id", "chosen")...)
-			w.label("a directory that is not admitted anything")
+			w.label("a renamed checkout of the same origin is the same project: adopt asks for its skill, which is not installed there")
 			w.repository("renamed-checkout", origin)
 			w.runIn("renamed-checkout", w.identityArgs("adopt")...)
 		}},
