@@ -109,13 +109,9 @@ func registryProjectCases() []registryGoldenCase {
 		{"install-and-adopt-refuse-an-unusable-registry", func(w *registryWorld) {
 			w.projectWorld()
 			for _, verb := range []string{"install", "adopt"} {
-				for i, doc := range registryStates() {
-					path := w.path("refused/" + verb + string(rune('a'+i)) + ".yaml")
-					if i > 0 {
-						w.put("refused/"+verb+string(rune('a'+i))+".yaml", doc.text)
-					}
-					w.label("%s: %s", verb, doc.label)
-					w.runIn("demo", "skills", verb, "--registry", path, "--source-root", w.path("overlay/skills"))
+				for _, file := range w.putRegistryStates(verb) {
+					w.label("%s: %s", verb, file.label)
+					w.runIn("demo", "skills", verb, "--registry", file.path, "--source-root", w.path("overlay/skills"))
 				}
 			}
 			w.tree("demo")
@@ -214,13 +210,9 @@ func registryProjectCases() []registryGoldenCase {
 			w.projectRegisterWorld()
 			w.run(w.registerArgs()...)
 			w.put("drafts/revised/SKILL.md", strings.Replace(goldenProjectDraft("tidy-worktree"), "handed over clean.", "handed over clean and reviewed.", 1))
-			for i, doc := range registryStates() {
-				path := w.path("refused/r" + string(rune('a'+i)) + ".yaml")
-				if i > 0 {
-					w.put("refused/r"+string(rune('a'+i))+".yaml", doc.text)
-				}
-				w.label("revising with: %s", doc.label)
-				w.run("skills", "project-revise", "--project-root", w.path("project"), "--candidate", goldenCandidate, "--registry", path, "--dry-run", w.path("drafts/revised/SKILL.md"))
+			for _, file := range w.putRegistryStates("r") {
+				w.label("revising with: %s", file.label)
+				w.run("skills", "project-revise", "--project-root", w.path("project"), "--candidate", goldenCandidate, "--registry", file.path, "--dry-run", w.path("drafts/revised/SKILL.md"))
 			}
 		}},
 	}

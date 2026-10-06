@@ -25,6 +25,7 @@ exit: 1
 --- stdout ---
 [pi] install: partial — labdrian-pi package built at <WORLD>/state/pi/labdrian-pi but `pi install` failed: fork/exec <WORLD>/no-pi: no such file or directory (output: )
 --- stderr ---
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # status over: a registry with a key the reader does not know
 $ runtime status --target pi
@@ -32,6 +33,7 @@ exit: 1
 --- stdout ---
 [pi] status: partial — labdrian-pi status is unproven: listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi). 'pi --no-extensions' disables the before_agent_start contract-gate extension for that session, and 'pi --no-skills' disables skill discovery, for that session only; neither flag's use is detected at runtime (short aliases: -ne and -ns) — reasons: listed in ~/.pi/agent/settings.json packages (not listed; run: pi install <WORLD>/state/pi/labdrian-pi); longterm-mem registered in mcp.json (not registered; run: longterm-mem register --target pi); subagent runner not proven (neither gentle-pi native subagents (>= 2.6.0) nor the legacy Pi Subagents extension is installed; run: labdrian-overlay apply --target pi); GADU.md linked at ~/.pi/agent/agents/GADU.md (missing; run: labdrian-overlay apply --target pi)
 --- stderr ---
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # install over: a registry of a version it does not know
 $ runtime install --target pi

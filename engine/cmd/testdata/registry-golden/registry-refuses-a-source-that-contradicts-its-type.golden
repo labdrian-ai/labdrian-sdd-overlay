@@ -63,14 +63,14 @@ error: parsing registry: skills: entry "alpha": source.ref is not allowed when s
 
 # the entry is named by the id read so far: after the source, the id is not yet known
 # an external skill with no repository, its id after its source
-$ skills list --registry <WORLD>/docs/01.yaml
+$ skills list --registry <WORLD>/docs/id-order/01.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
 error: parsing registry: skills: entry "": source.repo is required when source.type is 'external' (line 3)
 
 # the same, its id before its source
-$ skills list --registry <WORLD>/docs/02.yaml
+$ skills list --registry <WORLD>/docs/id-order/02.yaml
 exit: 1
 --- stdout ---
 --- stderr ---

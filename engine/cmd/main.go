@@ -414,7 +414,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 	}
 
 	if verb == "build" {
-		if err := pipkg.Build(newRegistryRepository(), overlayRoot, registryPath, destDir); err != nil {
+		if err := pipkg.Build(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir); err != nil {
 			fmt.Fprintf(stderr, "pipkg build: %v\n", err)
 			exit(1)
 			return
@@ -424,7 +424,7 @@ func runPipkgCore(args []string, stdout, stderr io.Writer, exit func(int)) {
 		return
 	}
 
-	report, err := pipkg.Check(newRegistryRepository(), overlayRoot, registryPath, destDir)
+	report, err := pipkg.Check(newWarningRegistryRepository(stderr), overlayRoot, registryPath, destDir)
 	if d := report.Disclosure(); d != "" {
 		fmt.Fprintf(stdout, "pipkg check: %s\n", d)
 	}
@@ -531,7 +531,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 		if current == runtimepkg.TargetOpenCode && targetRoot == "" {
 			targetRoot = runtimepkg.DefaultOpenCodeConfigRoot()
 		}
-		adapter := runtimeAdapterForTarget(current, targetRoot)
+		adapter := runtimeAdapterForTarget(current, targetRoot, stderr)
 		result := runtimeLifecycleResult(adapter, action)
 		fmt.Fprintln(stdout, result.String())
 		// Pi now has a real Status() implementation (pi-lifecycle, slice
@@ -570,7 +570,7 @@ func runRuntimeCore(args []string, stdout io.Writer, stderr io.Writer, exit func
 	exit(0)
 }
 
-func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtimepkg.Adapter {
+func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string, stderr io.Writer) runtimepkg.Adapter {
 	if target == runtimepkg.TargetOpenCode {
 		return runtimepkg.NewOpenCodeAdapter(configRoot)
 	}
@@ -580,7 +580,7 @@ func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string) runtim
 	if target == runtimepkg.TargetCodex {
 		return runtimepkg.NewCodexAdapter(configRoot)
 	}
-	return runtimepkg.NewFoundationAdapter(target, newRegistryRepository())
+	return runtimepkg.NewFoundationAdapter(target, newWarningRegistryRepository(stderr))
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.

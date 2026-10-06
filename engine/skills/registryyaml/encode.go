@@ -7,9 +7,11 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
-// forbiddenChars are characters the tokenizer rejects even inside quotes.
-// A value containing any of them can never round-trip through Decode.
-const forbiddenChars = "{}[]&*!\t"
+// forbiddenChars are characters the tokenizer rejects even inside quotes, and the two that end a
+// line. A value containing any of them can never round-trip through Decode: the reader takes the
+// file a line at a time, so a line feed inside a value would begin another line, and a carriage
+// return at the end of one is dropped with the line ending.
+const forbiddenChars = "{}[]&*!\t\n\r"
 
 // representable reports whether v can be safely emitted in the strict YAML subset.
 // Returns false for values containing tokenizer-forbidden characters (ADR-7).
@@ -60,9 +62,10 @@ func Encode(reg skills.Registry) ([]byte, error) {
 	var b strings.Builder
 
 	// What the reader left out is not in the registry, so the file written from it would not have
-	// it either: that is not the exact inverse of Decode, and it loses what the file said.
-	if len(reg.Unread) > 0 {
-		return nil, fmt.Errorf("registryyaml: the registry has fields that were left unread, and the file written from it would lose them: %s", reg.UnreadSummary())
+	// it either: that is not the exact inverse of Decode, and it loses what the file said. The rule
+	// and its words are the domain's.
+	if err := reg.CheckWritable(); err != nil {
+		return nil, err
 	}
 
 	// Check representability of all scalar values before writing any output.

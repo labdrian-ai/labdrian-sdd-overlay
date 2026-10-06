@@ -7,6 +7,7 @@ package main
 // skills verbs, the Pi package ('pipkg build|check') and the Pi runtime adapter.
 
 import (
+	"io"
 	"os"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
@@ -16,4 +17,11 @@ import (
 // newRegistryRepository returns the repository of the registry file, read from the file system.
 func newRegistryRepository() skills.RegistryRepository {
 	return registryyaml.NewRepository(os.ReadFile)
+}
+
+// newWarningRegistryRepository is newRegistryRepository for what reads a registry through the
+// repository it is given and has no stderr of its own, the Pi package and the Pi runtime adapter:
+// it tells stderr what the reader left out of the registry, as the skills verbs do.
+func newWarningRegistryRepository(stderr io.Writer) skills.RegistryRepository {
+	return skills.WarnOfUnread(newRegistryRepository(), stderr)
 }

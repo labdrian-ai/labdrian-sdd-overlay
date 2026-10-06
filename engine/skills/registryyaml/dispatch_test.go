@@ -77,3 +77,46 @@ func TestTheRefusalOfAVersionSaysWhichVersionsAreValid(t *testing.T) {
 		})
 	}
 }
+
+// A byte-order mark before the first key makes that key not "version", and the file is refused
+// for having no version. The refusal names the key as it is, with the mark, because that is the one
+// clue that points at the encoding of the file and not at a version that is missing.
+func TestAByteOrderMarkBeforeTheVersionIsNamedInTheRefusal(t *testing.T) {
+	_, err := decodeWith(decoders, strings.NewReader("\ufeffversion: \"1\"\nskills:\n"))
+	want := `line 1: the top-level key "\ufeffversion" starts with a byte-order mark; save the file without one`
+	if err == nil || err.Error() != want {
+		t.Errorf("decodeWith() = %v, want %q", err, want)
+	}
+
+	// A file that has no version at all is still refused for that.
+	_, err = decodeWith(decoders, strings.NewReader("skills:\n"))
+	if err == nil || err.Error() != "skills: missing required top-level field 'version'" {
+		t.Errorf("decodeWith() of a file with no version = %v, want it refused for having none", err)
+	}
+}
+
+// The versions this package reads are listed twice, by the decoder that reads each and by the
+// table of its fields (and so its must-understand set). A version in one and not the other would
+// read a file without the set that guards it, which is what this test is here to catch.
+func TestEveryVersionThatHasADecoderHasItsFields(t *testing.T) {
+	for version := range decoders {
+		if _, ok := schemas[version]; !ok {
+			t.Errorf("version %q has a decoder and no table of fields", version)
+		}
+	}
+	for version := range schemas {
+		if _, ok := decoders[version]; !ok {
+			t.Errorf("version %q has a table of fields and no decoder", version)
+		}
+	}
+}
+
+// A decoder that asks for a field its table does not have is a fault of the program, and it is
+// refused like one instead of crashing the verb that read the file.
+func TestAFieldTheSchemaDoesNotHaveIsRefusedNotAPanic(t *testing.T) {
+	p := &tokParser{schema: newSchema(field{path: "id", shape: shapeScalar})}
+	read, err := p.open("path", tok{kind: tokKeyValue, key: "path", val: "x", lineNum: 3}, 0)
+	if read || err == nil || !strings.Contains(err.Error(), `no field "path"`) {
+		t.Errorf("open() of a field the schema does not have = %v, %v, want it not read and an error that names the field", read, err)
+	}
+}

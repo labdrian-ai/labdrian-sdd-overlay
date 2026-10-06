@@ -2,6 +2,7 @@ package main
 
 import (
 	"strings"
+	"testing"
 )
 
 // The cases of the registry goldens that are about the verbs that work with a registry and a
@@ -25,19 +26,54 @@ func registryStates() []registryDoc {
 	}
 }
 
+// isAbsent reports whether the document is the registry that is not there: it has no text, so no
+// file is written for it, and the verb is given the path where it would have been.
+func (d registryDoc) isAbsent() bool { return d.text == "" }
+
+// registryStateFile is one state of a registry as a verb is given it: what the transcript calls it
+// and the path of its file in the world, which holds nothing when the state is the absent one.
+type registryStateFile struct{ label, path string }
+
+// putRegistryStates writes each state of a registry that has a file to refused/<prefix>a.yaml,
+// <prefix>b.yaml and so on, in the order of registryStates, and returns them with their paths. (The
+// files are put under refused/, the name they had when all four were refusals, so that the paths in
+// the golden files stay.) It is the one place that tells the absent state from the others, by
+// whether it has a file and not by its place in the list.
+func (w *registryWorld) putRegistryStates(prefix string) []registryStateFile {
+	w.t.Helper()
+	var files []registryStateFile
+	for i, doc := range registryStates() {
+		rel := "refused/" + prefix + string(rune('a'+i)) + ".yaml"
+		if !doc.isAbsent() {
+			w.put(rel, doc.text)
+		}
+		files = append(files, registryStateFile{label: doc.label, path: w.path(rel)})
+	}
+	return files
+}
+
 // eachRegistryState records the run of a verb, which takes the registry path as the argument
 // --registry, over each state of a registry; the first is a path where there is no file. args is
-// called with the path of the registry to build the arguments. (The files are put under refused/,
-// the name they had when all four were refusals, so that the paths in the golden files stay.)
+// called with the path of the registry to build the arguments.
 func (w *registryWorld) eachRegistryState(args func(registry string) []string) {
 	w.t.Helper()
-	for i, doc := range registryStates() {
-		path := w.path("refused/" + string(rune('a'+i)) + ".yaml")
-		if i > 0 {
-			w.put("refused/"+string(rune('a'+i))+".yaml", doc.text)
+	for _, file := range w.putRegistryStates("") {
+		w.label("%s", file.label)
+		w.run(args(file.path)...)
+	}
+}
+
+// The states are told apart by whether they have a file, not by their place in the list: exactly
+// one of them is the registry that is not there.
+func TestExactlyOneRegistryStateHasNoFile(t *testing.T) {
+	absent := 0
+	for _, doc := range registryStates() {
+		if doc.isAbsent() {
+			absent++
 		}
-		w.label("%s", doc.label)
-		w.run(args(path)...)
+	}
+	if absent != 1 {
+		t.Errorf("%d of the states of a registry have no file, want 1 (the registry that is not there)", absent)
 	}
 }
 

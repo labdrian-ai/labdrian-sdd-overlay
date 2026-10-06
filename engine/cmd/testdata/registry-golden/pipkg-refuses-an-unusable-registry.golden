@@ -17,6 +17,7 @@ exit: 0
 --- stdout ---
 pipkg build: labdrian-pi package written to <WORLD>/out/labdrian-pi
 --- stderr ---
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # build: a registry of a version it does not know
 $ pipkg build --overlay-root <WORLD>/overlay --registry <WORLD>/refused/buildc.yaml --dest-dir <WORLD>/out/labdrian-pi
@@ -47,6 +48,7 @@ exit: 0
 pipkg check: compared against the worktree (overlay root is not a git repository)
 pipkg check: OK (built package matches the current manifest)
 --- stderr ---
+warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # check: a registry of a version it does not know
 $ pipkg check --overlay-root <WORLD>/overlay --registry <WORLD>/refused/checkc.yaml --dest-dir <WORLD>/out/labdrian-pi

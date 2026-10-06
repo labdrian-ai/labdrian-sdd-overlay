@@ -66,7 +66,7 @@ $ skills list --registry <WORLD>/docs/07.yaml
 exit: 1
 --- stdout ---
 --- stderr ---
-error: parsing registry: skills: missing required top-level field 'version'
+error: parsing registry: line 1: the top-level key "\ufeffversion" starts with a byte-order mark; save the file without one
 
 # a line longer than the reader's buffer
 $ skills list --registry <WORLD>/docs/08.yaml

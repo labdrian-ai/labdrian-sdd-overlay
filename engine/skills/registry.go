@@ -115,15 +115,63 @@ func (r Registry) UnreadSummary() string {
 	}
 }
 
-// refuseToDropUnread is what the verbs that change a registry and write it back (add, remove)
-// say to a registry the reader did not read whole: the file written from it would not have what
-// the reader left out, so the registry is not changed. Reading it, listing it, installing from it
-// lose nothing and are not refused.
-func refuseToDropUnread(reg Registry) error {
-	if len(reg.Unread) == 0 {
+// UnreadWarning is what a person is told of the fields the reader left out, in the one wording
+// every caller that tells it uses. It is empty when nothing was left out.
+func (r Registry) UnreadWarning() string {
+	if left := r.UnreadSummary(); left != "" {
+		return "warning: registry fields left unread: " + left
+	}
+	return ""
+}
+
+// WarnOfUnread returns a repository that tells stderr what the reader left out of a registry it
+// loads or decodes, in the words of Registry.UnreadWarning, for the callers that read a registry
+// through the repository they are given and have no stderr of their own (the Pi package, the Pi
+// runtime adapter). It tells it once, and only of a registry that is usable: one the domain
+// refuses is refused in its own words. Everything else is the repository's own answer. A nil
+// repository stays nil, so that what reads through it refuses for want of one.
+func WarnOfUnread(repo RegistryRepository, stderr io.Writer) RegistryRepository {
+	if repo == nil {
 		return nil
 	}
-	return fmt.Errorf("skills: the registry has fields this program does not read, and rewriting it would drop them: %s", reg.UnreadSummary())
+	return warningRegistries{RegistryRepository: repo, stderr: stderr}
+}
+
+type warningRegistries struct {
+	RegistryRepository
+	stderr io.Writer
+}
+
+func (w warningRegistries) Load(location string) (Registry, error) {
+	reg, err := w.RegistryRepository.Load(location)
+	w.tell(reg, err)
+	return reg, err
+}
+
+func (w warningRegistries) Decode(data []byte) (Registry, error) {
+	reg, err := w.RegistryRepository.Decode(data)
+	w.tell(reg, err)
+	return reg, err
+}
+
+func (w warningRegistries) tell(reg Registry, err error) {
+	if err != nil || reg.Validate() != nil {
+		return
+	}
+	if warning := reg.UnreadWarning(); warning != "" {
+		fmt.Fprintln(w.stderr, warning)
+	}
+}
+
+// CheckWritable says whether the registry may be written back as it is, and when it may not, why:
+// a registry the reader did not read whole would lose what the reader left out, so it is not
+// changed and written (add, remove) and an adapter does not encode it. It is the one owner of that
+// rule and of its words. Reading it, listing it, installing from it lose nothing and are not refused.
+func (r Registry) CheckWritable() error {
+	if len(r.Unread) == 0 {
+		return nil
+	}
+	return fmt.Errorf("skills: the registry has fields this program does not read, and rewriting it would drop them: %s", r.UnreadSummary())
 }
 
 // readRegistryForVerb reads the registry at path for a verb that works on it, and says what a
@@ -134,8 +182,8 @@ func refuseToDropUnread(reg Registry) error {
 func readRegistryForVerb(registries RegistryRepository, path string, quotePath bool, stderr io.Writer, exit func(int)) (Registry, bool) {
 	reg, err := ReadRegistry(registries, path)
 	if err == nil {
-		if left := reg.UnreadSummary(); left != "" {
-			fmt.Fprintf(stderr, "warning: registry fields left unread: %s\n", left)
+		if warning := reg.UnreadWarning(); warning != "" {
+			fmt.Fprintln(stderr, warning)
 		}
 		return reg, true
 	}

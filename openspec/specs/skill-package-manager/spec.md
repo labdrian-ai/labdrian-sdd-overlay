@@ -65,6 +65,14 @@ line. When `ref` is absent, parsing MUST still succeed and
 - AND `entry.Source.Ref == ""`
 - AND error is nil
 
+#### Scenario: An unknown key under source is tolerated and reported (SC-70)
+
+- GIVEN a registry YAML with `source.type: external`, `repo`, `ref` and, between them, a key under `source` that the reader does not know (`mirror: elsewhere`)
+- WHEN `ReadRegistry` is called
+- THEN error is nil and the entry is read with the `repo` and the `ref` it says
+- AND `Registry.Unread` holds exactly one note, `line N: unknown key "mirror" in source`, where N is the line of the key
+- (proved by `TestAnUnknownKeyUnderSourceIsToleratedAndReportedWithItsLine` in `engine/skills/registryyaml/policy_test.go`)
+
 ### Requirement: External Entry Requires repo
 
 ID: R-114

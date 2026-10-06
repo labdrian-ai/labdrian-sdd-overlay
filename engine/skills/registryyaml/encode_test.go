@@ -250,6 +250,11 @@ func TestEncodeRejectsUnrepresentable(t *testing.T) {
 		{"asterisk", "foo*bar"},
 		{"exclamation", "foo!bar"},
 		{"tab", "foo\tbar"},
+		// The file is read a line at a time: a line break inside a value would end the value's
+		// line and begin another, so the bytes would not read back as the registry.
+		{"line-feed", "foo\nbar"},
+		{"carriage-return", "foo\rbar"},
+		{"line-feed-at-the-end", "foo\n"},
 	}
 
 	for _, tc := range forbidden {

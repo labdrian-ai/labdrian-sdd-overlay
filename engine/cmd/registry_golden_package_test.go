@@ -162,13 +162,9 @@ func registryPackageCases() []registryGoldenCase {
 			w.packageWorld()
 			w.run(w.pipkgArgs("build")...)
 			for _, verb := range []string{"build", "check"} {
-				for i, doc := range registryStates() {
-					path := w.path("refused/" + verb + string(rune('a'+i)) + ".yaml")
-					if i > 0 {
-						w.put("refused/"+verb+string(rune('a'+i))+".yaml", doc.text)
-					}
-					w.label("%s: %s", verb, doc.label)
-					w.run(w.pipkgArgsFor(verb, path)...)
+				for _, file := range w.putRegistryStates(verb) {
+					w.label("%s: %s", verb, file.label)
+					w.run(w.pipkgArgsFor(verb, file.path)...)
 				}
 			}
 			w.label("and the package that was built is as it was")
@@ -201,11 +197,11 @@ func registryPackageCases() []registryGoldenCase {
 			w.setenv("STATE_DIR", w.path("state"))
 			w.label("a package built where the runtime looks for it")
 			w.run("pipkg", "build", "--overlay-root", w.path("overlay"), "--registry", w.path("overlay/"+worldRegistry), "--dest-dir", w.path("state/pi/labdrian-pi"))
-			for i, doc := range registryStates() {
-				if i > 0 {
-					w.put("overlay/"+worldRegistry, doc.text)
-				} else {
+			for _, doc := range registryStates() {
+				if doc.isAbsent() {
 					w.remove("overlay/" + worldRegistry)
+				} else {
+					w.put("overlay/"+worldRegistry, doc.text)
 				}
 				w.label("install over: %s", doc.label)
 				w.run("runtime", "install", "--target", "pi")
