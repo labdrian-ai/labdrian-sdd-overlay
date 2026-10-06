@@ -126,7 +126,23 @@ type Debt map[string]map[string]string
 // follows the rule. An error means the guard could not run: no go.mod at root, a
 // Go file that does not parse, or no Go package under root at all.
 func Check(root string, rings map[string]Ring, debt Debt) ([]string, error) {
-	c, err := newChecker(root, rings)
+	return CheckWith(root, rings, debt, Options{})
+}
+
+// Options tune a check beyond the rings and the debt.
+type Options struct {
+	// PureModules are modules outside the one being judged, named by module path, that the
+	// caller vouches hold themselves to the pure standard library (the identity module of this
+	// repository, whose own test says so): a domain or application package may import them and
+	// any package of them, where any other module is third-party. Like the debt, the list says
+	// only what exists: a module no package imports is reported, so the permission goes with the
+	// last import.
+	PureModules []string
+}
+
+// CheckWith is Check with options.
+func CheckWith(root string, rings map[string]Ring, debt Debt, opts Options) ([]string, error) {
+	c, err := newChecker(root, rings, opts.PureModules...)
 	if err != nil {
 		return nil, err
 	}
@@ -150,6 +166,9 @@ func Check(root string, rings map[string]Ring, debt Debt) ([]string, error) {
 			"Move the code behind a port instead; if it is existing debt owed to a work unit, "+
 			"add it to knownDebt with that unit's id",
 			v.edge(), v.rule, strings.Join(v.files, ", ")))
+	}
+	for _, module := range c.unusedPureModules() {
+		problems = append(problems, fmt.Sprintf("pure module %s is not imported by any package: delete it from Options.PureModules", module))
 	}
 	for _, d := range stale {
 		problems = append(problems, fmt.Sprintf("known debt %s (%s) is no longer a violation: delete the line from knownDebt", d.edge(), d.unit))
