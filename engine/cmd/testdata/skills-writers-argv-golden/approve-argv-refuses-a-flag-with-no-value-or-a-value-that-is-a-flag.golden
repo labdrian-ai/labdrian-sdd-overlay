@@ -1,0 +1,49 @@
+# --id as the last word
+$ skills approve --approver fixture-reviewer --source-root <WORLD>/skills --id
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--id" requires a value
+
+# --approver as the last word
+$ skills approve --id bar --source-root <WORLD>/skills --approver
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--approver" requires a value
+
+# --source-root as the last word
+$ skills approve --id bar --approver fixture-reviewer --source-root
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--source-root" requires a value
+
+# --id followed by a flag
+$ skills approve --id --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--id" requires a value; got flag token "--approver"
+
+# an approver label that begins with a dash
+$ skills approve --id bar --approver -reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--approver": the label "-reviewer" starts with "-", which would be read as a flag; choose a label that does not start with "-"
+
+# --registry as the last word
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills --registry
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--registry" requires a value
+
+# --manifest followed by a flag
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills --manifest --registry
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: flag "--manifest" requires a value; got flag token "--registry"
+

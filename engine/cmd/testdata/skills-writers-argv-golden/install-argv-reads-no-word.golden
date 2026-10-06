@@ -1,0 +1,56 @@
+# a word that is no flag
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills extra (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+# -- and a word
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills -- extra (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+

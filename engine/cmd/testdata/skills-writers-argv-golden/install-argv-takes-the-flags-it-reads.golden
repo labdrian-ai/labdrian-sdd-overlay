@@ -1,0 +1,74 @@
+# the registry and the source root
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/only-demo/
+.agents/skills/only-demo/SKILL.md (296 bytes)
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/only-demo/
+.claude/skills/only-demo/SKILL.md (296 bytes)
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (605 bytes)
+
+# the flags in another order
+$ skills install --source-root <WORLD>/overlay/skills --registry <WORLD>/overlay/skills.registry.yaml (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# --project-id
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id other (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+--- stderr ---
+
+--- tree of demo ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-notes/
+.agents/skills/tidy-notes/SKILL.md (298 bytes)
+.agents/skills/tidy-notes/references/
+.agents/skills/tidy-notes/references/notes.md (31 bytes)
+.claude/
+.claude/skills/
+.claude/skills/tidy-notes/
+.claude/skills/tidy-notes/SKILL.md (298 bytes)
+.claude/skills/tidy-notes/references/
+.claude/skills/tidy-notes/references/notes.md (31 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (405 bytes)
+
+# the flags of the wrapper, which are taken and not read
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --manifest <WORLD>/overlay/overlay.manifest (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# no registry given: the one of the working directory
+$ skills install --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+

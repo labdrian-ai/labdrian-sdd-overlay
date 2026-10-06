@@ -1,0 +1,40 @@
+# an unknown flag before the id
+$ skills remove --frobnicate alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# an unknown flag after the id
+$ skills remove alpha --frobnicate
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# a short flag before the id
+$ skills remove -v alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "-v": not found in registry
+
+# the equals form of a flag it reads
+$ skills remove --registry=<WORLD>/skills.registry.yaml alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+

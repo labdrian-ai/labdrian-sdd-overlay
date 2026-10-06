@@ -1,0 +1,28 @@
+# --registry twice
+$ skills remove --registry <WORLD>/absent.yaml --registry <WORLD>/skills.registry.yaml alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+# --manifest twice
+$ skills remove --manifest <WORLD>/absent.manifest --manifest <WORLD>/overlay.manifest alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+# --registry as the last word: the default is read
+$ skills remove alpha --registry
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+# --registry before the id: the id is its value
+$ skills remove --registry alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove: reading registry "alpha": stat alpha: no such file or directory; nothing was locked and nothing was changed
+

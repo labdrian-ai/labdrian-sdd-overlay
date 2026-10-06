@@ -1,0 +1,42 @@
+# an unknown flag
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: unknown flag "--frobnicate"
+
+# a short flag
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills -v
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: unknown flag "-v"
+
+# the equals form of a flag it reads
+$ skills approve --id=bar --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: unknown flag "--id=bar"
+
+# a word that is no flag
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills bar
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: unexpected argument "bar" (approve takes --id, not a positional)
+
+# -- is an unknown flag
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills --
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: unknown flag "--"
+
+# a flag of add
+$ skills approve --id bar --approver fixture-reviewer --source-root <WORLD>/skills --repo https://example.test/foo.git
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: unknown flag "--repo"
+

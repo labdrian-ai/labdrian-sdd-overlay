@@ -1,0 +1,50 @@
+# nothing
+$ skills approve
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: requires --id <skill-id>
+
+# no approver
+$ skills approve --id bar --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: requires --approver <label> (a name for the record; the engine cannot verify it)
+
+# an empty approver
+$ skills approve --id bar --approver  --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: approver must not be blank
+
+# no id
+$ skills approve --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: requires --id <skill-id>
+
+# no source root
+$ skills approve --id bar --approver fixture-reviewer
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: requires --source-root <skills-dir>
+
+# an id that is no slug
+$ skills approve --id Bar --approver fixture-reviewer --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: id "Bar": invalid slug (must match ^[a-z0-9][a-z0-9-]*$)
+
+# an approver of two lines
+$ skills approve --id bar --approver one
+two --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills approve: approver must not contain control characters, found '\n'
+

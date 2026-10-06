@@ -1,0 +1,120 @@
+# a second word
+$ skills add foo bar
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# the other word first
+$ skills add bar foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: [APPROVAL_MISSING] skill "bar": no approval record at skills/bar/.approval.json; a human must review the exact SKILL.md bytes and run: labdrian skills approve --id bar --approver <name>
+
+# an empty word before the id
+$ skills add  foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# -- before the id
+$ skills add -- foo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# an id that is no slug
+$ skills add Foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "Foo": invalid slug (must match ^[a-z0-9][a-z0-9-]*$)
+
+# an id that is registered
+$ skills add alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "alpha": already registered
+

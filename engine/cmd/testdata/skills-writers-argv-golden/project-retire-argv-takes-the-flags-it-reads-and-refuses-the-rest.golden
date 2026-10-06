@@ -1,0 +1,136 @@
+# the draft is registered, so that the verbs find a skill to read
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+# --dry-run of a skill that is not there
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --dry-run --reason not needed tidy-worktree
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# --absorbed-into
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --dry-run --reason not needed --absorbed-into other tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: project-retire: absorbed-into target "other" is not verified in overlay registry or project lock
+
+# --reason twice
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --dry-run --reason first --reason second tidy-worktree
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# the flags of the wrapper
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --dry-run --reason x --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills tidy-worktree
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# an unknown flag
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x --frobnicate tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: unknown flag "--frobnicate"
+
+# a short flag
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x -v tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: unknown flag "-v"
+
+# a flag of register
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x --candidate k tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: unknown flag "--candidate"
+
+# --reason as the last word
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml tidy-worktree --reason
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: flag "--reason" requires a value
+
+# --reason followed by a flag
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason --dry-run tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: flag "--reason" requires a value; got flag token "--dry-run"
+
+# a reason that begins with a dash
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason -x tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: flag "--reason" requires a value; got flag token "-x"
+
+# --absorbed-into followed by a flag
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x --absorbed-into --dry-run tidy-worktree
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: flag "--absorbed-into" requires a value; got flag token "--dry-run"
+
+# a second id
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x tidy-worktree other
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire: unexpected extra argument "other" (project-retire accepts exactly one <id>)
+
+# no id
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-retire requires a <id> argument
+
+# no reason
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --dry-run tidy-worktree
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# -- and an id
+$ skills project-retire --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --reason x -- tidy-worktree
+exit: 0
+--- stdout ---
+removed: .claude/skills/tidy-worktree/SKILL.md
+removed: .agents/skills/tidy-worktree/SKILL.md
+--- stderr ---
+
+--- tree of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.labdrian/
+.labdrian/procedural-skills.lock.json (35 bytes)
+

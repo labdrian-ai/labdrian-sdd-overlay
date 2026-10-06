@@ -1,0 +1,43 @@
+# nothing
+$ skills remove
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove requires an <id> argument
+
+# a second word
+$ skills remove alpha beta
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# the other word first
+$ skills remove beta alpha
+exit: 1
+--- stdout ---
+--- stderr ---
+error: id "beta": not found in registry
+
+# -- before the id
+$ skills remove -- alpha
+exit: 0
+--- stdout ---
+removed: alpha
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+
+# an empty id
+$ skills remove 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills remove requires an <id> argument
+

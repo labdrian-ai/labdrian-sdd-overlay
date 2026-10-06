@@ -1,0 +1,95 @@
+# --repo as the last word: it has no value and the entry is custom
+$ skills add foo --repo
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+
+# --source-root as the last word: the default is read
+$ skills add foo --source-root
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+# --repo before the id: the id is its value
+$ skills add --repo foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add requires an <id> argument
+
+# --ref with no --repo
+$ skills add --ref v1 foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: --ref requires --repo (ref is only valid for external entries)
+
+# --registry before the id: the id is its value
+$ skills add --registry foo
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills add: reading registry "foo": stat foo: no such file or directory; nothing was locked and nothing was changed
+
+# --ref as the last word, with a --repo
+$ skills add --repo https://example.test/foo.git foo --ref
+exit: 0
+--- stdout ---
+added: foo
+--- stderr ---
+
+--- skills.registry.yaml ---
+version: "1"
+skills:
+  - id: alpha
+    path: alpha
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: foo
+    path: foo
+    source:
+      type: external
+      repo: https://example.test/foo.git
+    install:
+      defaultScope: global
+      targets:
+        - claude
+        - opencode
+        - codex
+    lifecycle:
+      updateStrategy: overlay-only
+

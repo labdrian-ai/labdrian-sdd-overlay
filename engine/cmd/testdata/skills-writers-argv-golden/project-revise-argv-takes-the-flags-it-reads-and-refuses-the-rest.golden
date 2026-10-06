@@ -1,0 +1,111 @@
+# the draft is registered, so that the verbs find a skill to read
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+# --dry-run
+$ skills project-revise --dry-run --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# the flags of the wrapper
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 2
+--- stderr ---
+
+# an unknown flag
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --frobnicate <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise: unknown flag "--frobnicate"
+
+# a short flag
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml -v <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise: unknown flag "-v"
+
+# a flag of retire
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --reason x <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise: unknown flag "--reason"
+
+# --candidate as the last word
+$ skills project-revise --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md --candidate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise: flag "--candidate" requires a value
+
+# --project-root followed by a flag
+$ skills project-revise --project-root --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise: flag "--project-root" requires a value; got flag token "--candidate"
+
+# a second draft
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise: unexpected extra argument "<WORLD>/drafts/tidy/SKILL.md" (project-revise accepts exactly one <draft-file>)
+
+# no draft
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise requires a <draft-file> argument
+
+# no project root
+$ skills project-revise --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-revise requires --project-root <abs> (there is no working-directory fallback)
+
+# -- and a draft
+$ skills project-revise --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml -- <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 3
+--- stderr ---
+
+--- tree of project ---
+.agents/
+.agents/skills/
+.agents/skills/tidy-worktree/
+.agents/skills/tidy-worktree/SKILL.md (346 bytes)
+.claude/
+.claude/skills/
+.claude/skills/tidy-worktree/
+.claude/skills/tidy-worktree/SKILL.md (346 bytes)
+.labdrian/
+.labdrian/procedural-skills.lock.json (417 bytes)
+

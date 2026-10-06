@@ -1,0 +1,46 @@
+# --registry twice
+$ skills install --registry <WORLD>/absent.yaml --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# --project-id twice
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id stranger --project-id other (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+--- stderr ---
+
+# --source-root twice
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --source-root <WORLD>/absent (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skill tidy-notes: source dir not found: <WORLD>/absent/tidy-notes
+error: skill only-demo: source dir not found: <WORLD>/absent/only-demo
+error: 2 source director(ies) missing
+
+# --project-id as the last word: the project is named by the directory
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills --project-id (in demo)
+exit: 0
+--- stdout ---
+installed: tidy-notes
+installed: only-demo
+--- stderr ---
+
+# --project-id before another flag: that flag is its value
+$ skills install --project-id --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/overlay/skills (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+
+# --source-root as the last word
+$ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root (in demo)
+exit: 1
+--- stdout ---
+--- stderr ---
+error: planning install: skill "tidy-notes": path "tidy-notes" escapes source root — possible traversal
+

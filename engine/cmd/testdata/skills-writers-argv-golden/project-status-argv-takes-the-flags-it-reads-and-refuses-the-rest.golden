@@ -1,0 +1,103 @@
+# the draft is registered, so that the verbs find a skill to read
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+wrote: .claude/skills/tidy-worktree/SKILL.md
+wrote: .agents/skills/tidy-worktree/SKILL.md
+wrote: .labdrian/procedural-skills.lock.json
+sha256: 61aec427bf15307dfe55d0fc4313441d9b7ec9c00be01da5726c0a47937fec57
+revision: 1
+note: Pi loads .agents/skills only after the project is trusted; Pi may prompt once for project trust.
+--- stderr ---
+
+# the flags it reads
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# the flags in another order
+$ skills project-status --registry <WORLD>/overlay/skills.registry.yaml --project-root <WORLD>/project
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# the flags of the wrapper
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# --project-root twice
+$ skills project-status --project-root <WORLD>/absent --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# no registry given: the default is read
+$ skills project-status --project-root <WORLD>/project
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+
+# an unknown flag
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-status: unknown flag "--frobnicate"
+
+# a short flag
+$ skills project-status -v --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-status: unknown flag "-v"
+
+# a flag of register
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml --dry-run
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-status: unknown flag "--dry-run"
+
+# a word that is no flag
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml tidy-worktree
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+
+# --project-root as the last word
+$ skills project-status --registry <WORLD>/overlay/skills.registry.yaml --project-root
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-status: flag "--project-root" requires a value
+
+# --registry followed by a flag
+$ skills project-status --project-root <WORLD>/project --registry --project-root
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-status: flag "--registry" requires a value; got flag token "--project-root"
+
+# no project root
+$ skills project-status --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-status requires --project-root <abs> (there is no working-directory fallback)
+
+# -- and a word
+$ skills project-status --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml -- tidy-worktree
+exit: 0
+--- stdout ---
+tidy-worktree rev:1 owner:agent superseded-by:-
+--- stderr ---
+

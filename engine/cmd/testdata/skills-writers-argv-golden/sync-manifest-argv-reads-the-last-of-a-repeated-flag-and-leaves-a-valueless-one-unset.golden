@@ -1,0 +1,27 @@
+# --manifest twice
+$ skills sync-manifest --manifest <WORLD>/absent.manifest --manifest <WORLD>/overlay.manifest
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+
+# --manifest as the last word: the default is read
+$ skills sync-manifest --manifest
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+
+# --registry twice
+$ skills sync-manifest --registry <WORLD>/absent.yaml --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+

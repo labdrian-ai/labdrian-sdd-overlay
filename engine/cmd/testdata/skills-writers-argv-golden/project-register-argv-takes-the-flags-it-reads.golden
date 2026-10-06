@@ -1,0 +1,66 @@
+# --dry-run, the flags in another order
+$ skills project-register --dry-run --registry <WORLD>/overlay/skills.registry.yaml --candidate procedural/candidates/repeated-success/tidy-worktree --project-root <WORLD>/project <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# the flags of the wrapper, which are taken and not read
+$ skills project-register --dry-run --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# the draft first
+$ skills project-register <WORLD>/drafts/tidy/SKILL.md --dry-run --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# --project-root twice: the second is the one read
+$ skills project-register --dry-run --project-root <WORLD>/absent --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# --candidate twice
+$ skills project-register --dry-run --project-root <WORLD>/project --candidate first --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# --dry-run twice
+$ skills project-register --dry-run --dry-run --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+# -- ends the options
+$ skills project-register --dry-run --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml -- <WORLD>/drafts/tidy/SKILL.md
+exit: 0
+--- stdout ---
+plan: .claude/skills/tidy-worktree/SKILL.md
+plan: .agents/skills/tidy-worktree/SKILL.md
+plan: .labdrian/procedural-skills.lock.json
+--- stderr ---
+
+--- tree of project ---
+(empty)
+

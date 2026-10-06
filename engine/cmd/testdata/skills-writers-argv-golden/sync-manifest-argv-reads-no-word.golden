@@ -1,0 +1,20 @@
+# a word that is no flag
+$ skills sync-manifest alpha
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+
+# -- and a word
+$ skills sync-manifest -- alpha
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+

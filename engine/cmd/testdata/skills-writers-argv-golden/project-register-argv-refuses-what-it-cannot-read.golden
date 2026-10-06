@@ -1,0 +1,94 @@
+# an unknown flag
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --frobnicate <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: unknown flag "--frobnicate"
+
+# a short flag
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml -v <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: unknown flag "-v"
+
+# a misspelled --dry-run
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --dryrun <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: unknown flag "--dryrun"
+
+# the equals form
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --dry-run=true <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: unknown flag "--dry-run=true"
+
+# a flag of retire
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml --reason x <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: unknown flag "--reason"
+
+# --project-root as the last word
+$ skills project-register --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md --project-root
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: flag "--project-root" requires a value
+
+# --candidate followed by a flag
+$ skills project-register --project-root <WORLD>/project --candidate --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: flag "--candidate" requires a value; got flag token "--registry"
+
+# --registry as the last word
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree <WORLD>/drafts/tidy/SKILL.md --registry
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: flag "--registry" requires a value
+
+# a second draft
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register: unexpected extra argument "<WORLD>/drafts/tidy/SKILL.md" (project-register accepts exactly one <draft-file>)
+
+# no draft
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register requires a <draft-file> argument
+
+# no project root
+$ skills project-register --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register requires --project-root <abs> (there is no working-directory fallback)
+
+# no candidate
+$ skills project-register --project-root <WORLD>/project --registry <WORLD>/overlay/skills.registry.yaml <WORLD>/drafts/tidy/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills project-register requires --candidate <key>
+
+# -- and a flag as the draft
+$ skills project-register --project-root <WORLD>/project --candidate procedural/candidates/repeated-success/tidy-worktree --registry <WORLD>/overlay/skills.registry.yaml -- --dry-run
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading draft "--dry-run": open --dry-run: no such file or directory
+
+--- tree of project ---
+(empty)
+

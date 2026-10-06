@@ -1,0 +1,27 @@
+# no flags
+$ skills sync-manifest
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+
+# every flag of the wrapper
+$ skills sync-manifest --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+# --repo and --ref, which it does not read
+$ skills sync-manifest --repo https://example.test/foo.git --ref v1
+exit: 0
+--- stdout ---
+sync-manifest: 1 added, 1 dropped, 0 retagged
+--- stderr ---
+
+--- overlay.manifest ---
+alpha/SKILL.md custom
+
