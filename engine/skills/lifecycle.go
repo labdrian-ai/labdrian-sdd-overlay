@@ -15,6 +15,10 @@ import (
 // hyphens, must start with a letter or digit (ADR-8 slug guard).
 var slugRe = regexp.MustCompile(`^[a-z0-9][a-z0-9-]*$`)
 
+// IsSlug reports whether id is a valid skill identifier: lowercase alphanumeric, hyphens allowed,
+// starting with a letter or a digit.
+func IsSlug(id string) bool { return slugRe.MatchString(id) }
+
 // AddEntry returns a new Registry with a new entry appended for id, using the
 // inferred defaults defined in ADR-8. It fails loudly if:
 //   - id fails the slug guard (R-062)
@@ -104,9 +108,9 @@ func RemoveEntry(reg Registry, id string) (Registry, error) {
 
 // ── I/O helpers ─────────────────────────────────────────────────────────────
 
-// appendManifestLine returns src with "<id>/SKILL.md custom" appended,
+// ManifestWithSkill returns src with "<id>/SKILL.md custom" appended,
 // ensuring exactly one trailing newline before appending (ADR-5).
-func appendManifestLine(src []byte, id string) []byte {
+func ManifestWithSkill(src []byte, id string) []byte {
 	out := make([]byte, len(src))
 	copy(out, src)
 	if len(out) > 0 && out[len(out)-1] != '\n' {
@@ -115,9 +119,9 @@ func appendManifestLine(src []byte, id string) []byte {
 	return append(out, []byte(id+"/SKILL.md custom\n")...)
 }
 
-// filterManifestLines returns src with all lines whose first field equals
+// ManifestWithoutSkill returns src with all lines whose first field equals
 // "<id>/SKILL.md" removed. All other lines are preserved verbatim (ADR-5).
-func filterManifestLines(src []byte, id string) []byte {
+func ManifestWithoutSkill(src []byte, id string) []byte {
 	prefix := id + "/SKILL.md"
 	var out []byte
 	for _, line := range strings.Split(string(src), "\n") {
@@ -293,7 +297,7 @@ func AddCore(args []string, readFile readFileFn, approvals ApprovalRecordStore, 
 		exit(1)
 		return
 	}
-	manBytes := appendManifestLine(manData, id)
+	manBytes := ManifestWithSkill(manData, id)
 	mv, err := loadManifestViewReader(bytes.NewReader(manBytes))
 	if err != nil {
 		fmt.Fprintf(stderr, "error: parsing manifest: %v\n", err)
@@ -309,13 +313,13 @@ func AddCore(args []string, readFile readFileFn, approvals ApprovalRecordStore, 
 	}
 
 	// 8. Dual-temp atomic write: manifest first, then registry (ADR-9).
-	manTemp, err := writeFileAtomic(files, manifestPath, manBytes, overlayFileMode)
+	manTemp, err := writeFileAtomic(files, manifestPath, manBytes, OverlayFileMode)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	regTemp, err := writeFileAtomic(files, registryPath, regBytes, overlayFileMode)
+	regTemp, err := writeFileAtomic(files, registryPath, regBytes, OverlayFileMode)
 	if err != nil {
 		files.Remove(manTemp)
 		fmt.Fprintf(stderr, "error: writing registry: %v\n", err)
@@ -397,7 +401,7 @@ func RemoveCore(args []string, readFile readFileFn, registries RegistryRepositor
 		exit(1)
 		return
 	}
-	manBytes := filterManifestLines(manData, id)
+	manBytes := ManifestWithoutSkill(manData, id)
 	mv, err := loadManifestViewReader(bytes.NewReader(manBytes))
 	if err != nil {
 		fmt.Fprintf(stderr, "error: parsing manifest: %v\n", err)
@@ -413,13 +417,13 @@ func RemoveCore(args []string, readFile readFileFn, registries RegistryRepositor
 	}
 
 	// 6. Dual-temp atomic write: manifest first, then registry (ADR-9).
-	manTemp, err := writeFileAtomic(files, manifestPath, manBytes, overlayFileMode)
+	manTemp, err := writeFileAtomic(files, manifestPath, manBytes, OverlayFileMode)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
 		exit(1)
 		return
 	}
-	regTemp, err := writeFileAtomic(files, registryPath, regBytes, overlayFileMode)
+	regTemp, err := writeFileAtomic(files, registryPath, regBytes, OverlayFileMode)
 	if err != nil {
 		files.Remove(manTemp)
 		fmt.Fprintf(stderr, "error: writing registry: %v\n", err)

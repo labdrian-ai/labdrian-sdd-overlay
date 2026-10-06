@@ -250,7 +250,7 @@ func SyncCore(args []string, readFile readFileFn, registries RegistryRepository,
 	}
 
 	// 6. Atomic write: temp file + rename (R-101, R-102).
-	tmpName, err := writeFileAtomic(files, manifestPath, newText, overlayFileMode)
+	tmpName, err := writeFileAtomic(files, manifestPath, newText, OverlayFileMode)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: writing manifest: %v\n", err)
 		exit(1)

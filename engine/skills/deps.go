@@ -1,9 +1,14 @@
 package skills
 
+import "io/fs"
+
 // FileReader reads a file by name: the port the verbs read the files of an overlay and of a
 // project through (the registry's neighbours, the manifest, the approval records, a SKILL.md to
 // lint). The production one is os.ReadFile, which the composition root chooses.
 type FileReader func(name string) ([]byte, error)
+
+// FileStatter says what a path is: the port a verb asks whether a file is there.
+type FileStatter func(name string) (fs.FileInfo, error)
 
 // readFileFn is the name the verbs that are not yet behind a use case call the port by.
 type readFileFn = FileReader
