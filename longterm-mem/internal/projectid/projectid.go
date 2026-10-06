@@ -47,6 +47,8 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/labdrian-ai/labdrian-sdd-overlay/identity"
 )
 
 // DeclaredFileName is the file a repository carries to name its project
@@ -313,111 +315,14 @@ func declared(repo repository) (string, bool, error) {
 }
 
 // remote reads origin's URL out of the common dir's config and normalizes
-// it. It parses the config file directly because this module may not shell
-// out (R-021); the grammar it needs is one section header and one key.
+// it. The file is read here, because this module may not shell out (R-021);
+// what the text means is the identity module's rule, shared with the engine.
 func remote(commonDir string) (string, bool) {
 	raw, err := os.ReadFile(filepath.Join(commonDir, "config"))
 	if err != nil {
 		return "", false
 	}
-
-	inOrigin := false
-	for _, line := range strings.Split(string(raw), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, "#") || strings.HasPrefix(line, ";") {
-			continue
-		}
-		if strings.HasPrefix(line, "[") {
-			inOrigin = sectionIsOrigin(line)
-			continue
-		}
-		if !inOrigin {
-			continue
-		}
-		key, value, ok := strings.Cut(line, "=")
-		if !ok || strings.ToLower(strings.TrimSpace(key)) != "url" {
-			continue
-		}
-		if normalized := NormalizeRemote(value); normalized != "" {
-			return normalized, true
-		}
-	}
-	return "", false
-}
-
-// sectionIsOrigin recognizes `[remote "origin"]` and the equivalent
-// `[remote.origin]` spelling, case-insensitively on the section name as
-// git itself is.
-func sectionIsOrigin(header string) bool {
-	inner := strings.TrimSpace(strings.Trim(header, "[]"))
-	inner = strings.ReplaceAll(inner, "\"", "")
-	inner = strings.ReplaceAll(inner, ".", " ")
-	fields := strings.Fields(inner)
-	return len(fields) == 2 && strings.EqualFold(fields[0], "remote") && fields[1] == "origin"
-}
-
-// NormalizeRemote reduces a remote URL to its normal form, "host/path":
-// the host lowercased, the path stripped of its leading slash, any
-// trailing slash and any ".git" suffix. All of
-//
-//	git@github.com:acme/widgets.git
-//	https://github.com/acme/widgets
-//	https://github.com/acme/widgets.git
-//	ssh://git@github.com/acme/widgets.git
-//
-// collapse to "github.com/acme/widgets". The path's case is preserved --
-// forge hosts differ on whether it is significant, and folding it would
-// merge two repositories that a case-sensitive host keeps apart, which is
-// the one mistake this package must never make.
-//
-// A local-filesystem remote ("/srv/git/widgets.git", "../widgets") has no
-// host to key on; it returns "" so the chain falls through to the common
-// dir, which for a local remote is the more stable answer anyway.
-//
-// Two normalizations are deliberately NOT done, because each would merge
-// what might be two repositories, and this package's one unforgivable
-// mistake is merging: a port is kept on the host ("host:2222/x" stays
-// distinct from "host/x", since a second daemon on one machine is a
-// different forge), and a ".GIT" suffix is left in place, since the path's
-// case is preserved for the same reason. Both cost at worst a second
-// identity for one repository -- visible, and fixable with a declared
-// file -- where folding them costs one identity for two repositories,
-// which is silent.
-func NormalizeRemote(url string) string {
-	url = strings.TrimSpace(url)
-	if url == "" {
-		return ""
-	}
-
-	var host, path string
-	if scheme, rest, ok := strings.Cut(url, "://"); ok {
-		if strings.EqualFold(scheme, "file") {
-			return ""
-		}
-		hostPart, p, _ := strings.Cut(rest, "/")
-		host, path = hostPart, p
-	} else if before, after, ok := strings.Cut(url, ":"); ok && !strings.Contains(before, "/") {
-		// scp-like: [user@]host:path
-		host, path = before, after
-	} else {
-		return ""
-	}
-
-	if _, h, ok := strings.Cut(host, "@"); ok {
-		host = h
-	}
-	host = strings.ToLower(strings.TrimSpace(host))
-	if host == "" {
-		return ""
-	}
-
-	path = strings.Trim(strings.TrimSpace(path), "/")
-	path = strings.TrimSuffix(path, ".git")
-	path = strings.Trim(path, "/")
-	if path == "" {
-		return ""
-	}
-	return host + "/" + path
+	return identity.OriginRemote(string(raw))
 }
 
 // Correspondence is the result of checking a caller-supplied project name

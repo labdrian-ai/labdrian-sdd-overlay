@@ -127,11 +127,16 @@ var knownDebt = archguard.Debt{
 	},
 }
 
+// pureModules are the modules of this repository that the domain may import: the rules both this
+// module and the engine need (the identity of a project) live in a module of the standard library
+// alone, whose own test holds it to that (Phase 9, D2).
+var pureModules = []string{"github.com/labdrian-ai/labdrian-sdd-overlay/identity"}
+
 // TestArchitectureFollowsTheDependencyRule is the fitness function: it fails on
 // a package without a ring, on a violation that is not known debt, and on debt
 // that is no longer a violation.
 func TestArchitectureFollowsTheDependencyRule(t *testing.T) {
-	problems, err := archguard.Check(".", rings, knownDebt)
+	problems, err := archguard.CheckWith(".", rings, knownDebt, archguard.Options{PureModules: pureModules})
 	if err != nil {
 		t.Fatal(err)
 	}
