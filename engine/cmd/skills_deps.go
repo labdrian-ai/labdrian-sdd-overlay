@@ -18,6 +18,7 @@ import (
 func newSkillsDeps() skills.Deps {
 	return skills.Deps{
 		ReadFile:   os.ReadFile,
+		Approvals:  skillsfs.Approvals{},
 		Registries: newRegistryRepository(),
 		Tree:       skillsfs.Tree{},
 		Project:    skillsfs.Project{},

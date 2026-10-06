@@ -1,0 +1,17 @@
+# no flag: the registry of the working directory
+$ skills list
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+
+# --registry names another one
+$ skills list --registry <WORLD>/other/skills.registry.yaml
+exit: 0
+--- stdout ---
+only-one	custom	overlay-only	claude
+--- stderr ---
+

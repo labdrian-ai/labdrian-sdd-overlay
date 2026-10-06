@@ -9,7 +9,8 @@ import (
 
 // The vectors under testdata/ were recorded from the rules as longterm-mem had them before they
 // moved here (Phase 9, D2), and they are the contract the engine and longterm-mem hold their own
-// readers to: each of them runs the same files through its adapter.
+// readers to. longterm-mem runs the same files through its adapter; the engine does not yet, so
+// its agreement with them is not proved by a test of its own.
 
 func TestNormalizeRemoteMatchesTheRecordedVectors(t *testing.T) {
 	var vectors []struct {

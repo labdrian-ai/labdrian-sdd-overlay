@@ -1,0 +1,28 @@
+# an unknown flag
+$ skills list --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills list: unknown flag "--frobnicate"
+
+# an unknown flag with a value, and a registry
+$ skills list --frobnicate yes --registry <WORLD>/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills list: unknown flag "--frobnicate"
+
+# a short flag
+$ skills list -v
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills list: unknown flag "-v"
+
+# the registry flag spelled with an equals sign
+$ skills list --registry=<WORLD>/other/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills list: unknown flag "--registry=<WORLD>/other/skills.registry.yaml"
+

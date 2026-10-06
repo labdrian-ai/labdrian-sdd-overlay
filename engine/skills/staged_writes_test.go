@@ -81,7 +81,7 @@ func (w writeWorld) add(files StagedWrites) (code int, stderr string) {
 	var out, errBuf bytes.Buffer
 	code = -1
 	AddCore([]string{"--registry", w.reg, "--manifest", w.man, "--source-root", w.skills, "foo"},
-		os.ReadFile, testRegistries(os.ReadFile), os.Stat, files, &out, &errBuf, func(c int) { code = c })
+		os.ReadFile, fileApprovals(os.ReadFile), testRegistries(os.ReadFile), os.Stat, files, &out, &errBuf, func(c int) { code = c })
 	return code, errBuf.String()
 }
 
@@ -327,7 +327,7 @@ func TestApproveStagesTheRecordWorldReadableAndPutsBackWhenItCannotCommit(t *tes
 		var out, errBuf bytes.Buffer
 		code := -1
 		RenderApproveCore([]string{"--id", "foo", "--approver", "reviewer", "--source-root", root},
-			os.ReadFile, fixedClock(approveFixedNow), files, &out, &errBuf, func(c int) { code = c })
+			os.ReadFile, fileApprovals(os.ReadFile), fixedClock(approveFixedNow), files, &out, &errBuf, func(c int) { code = c })
 		return code, out.String(), errBuf.String()
 	}
 	record := ApprovalRecordPath(root, "foo")

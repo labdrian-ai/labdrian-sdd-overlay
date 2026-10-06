@@ -37,7 +37,7 @@ func (e approveEnv) args(extra ...string) []string {
 func runApprove(args []string, now func() string) (stdout, stderr string, code int) {
 	var out, errBuf bytes.Buffer
 	code = -1
-	RenderApproveCore(args, os.ReadFile, now, testProjectFS(), &out, &errBuf, func(c int) { code = c })
+	RenderApproveCore(args, os.ReadFile, fileApprovals(os.ReadFile), now, testProjectFS(), &out, &errBuf, func(c int) { code = c })
 	return out.String(), errBuf.String(), code
 }
 
@@ -197,7 +197,7 @@ func TestApprove_ReplacesAMalformedOrForeignRecord(t *testing.T) {
 				t.Fatalf("exit %d; %q", code, stderr)
 			}
 			skill, _ := os.ReadFile(e.skillPath())
-			st, err := ReadApprovalStatus(e.root, e.id, skill, os.ReadFile)
+			st, err := ReadApprovalStatus(e.root, e.id, skill, fileApprovals(os.ReadFile))
 			if err != nil || st.State != ApprovalValid {
 				t.Fatalf("after approve: state=%q err=%v, want valid", st.State, err)
 			}

@@ -1,0 +1,21 @@
+# the flag first, then a word that is its value and is taken for the verb
+$ skills --registry <WORLD>/other/skills.registry.yaml list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown skills verb "<WORLD>/other/skills.registry.yaml" (supported: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+
+# a flag that takes no part, then the verb
+$ skills --frobnicate list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills list: unknown flag "--frobnicate"
+
+# the verb, and a registry named as the verb is
+$ skills --registry list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "list": open list: no such file or directory
+

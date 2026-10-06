@@ -1,0 +1,17 @@
+# the last --registry wins
+$ skills list --registry <WORLD>/skills.registry.yaml --registry <WORLD>/other/skills.registry.yaml
+exit: 0
+--- stdout ---
+only-one	custom	overlay-only	claude
+--- stderr ---
+
+# and so when the other comes first
+$ skills list --registry <WORLD>/other/skills.registry.yaml --registry <WORLD>/skills.registry.yaml
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+

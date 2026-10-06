@@ -1,0 +1,24 @@
+# --registry is the last word: no value, so the registry of the working directory
+$ skills status --registry
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+
+# --registry is followed by a flag: the flag is its value
+$ skills status --registry --manifest x
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "--manifest": open --manifest: no such file or directory
+
+# --registry is given the empty word
+$ skills status --registry 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "": open : no such file or directory
+

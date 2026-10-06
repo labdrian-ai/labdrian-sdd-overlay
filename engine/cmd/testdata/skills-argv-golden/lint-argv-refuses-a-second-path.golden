@@ -1,0 +1,21 @@
+# two paths: only one is accepted, neither is read
+$ skills lint <WORLD>/good/SKILL.md <WORLD>/bad/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unexpected extra argument "<WORLD>/bad/SKILL.md" (lint accepts exactly one path)
+
+# a second path after the flags of the wrapper
+$ skills lint <WORLD>/good/SKILL.md --source-root <WORLD>/skills <WORLD>/bad/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unexpected extra argument "<WORLD>/bad/SKILL.md" (lint accepts exactly one path)
+
+# --rules and two paths: the second is refused before the rules are printed
+$ skills lint --rules <WORLD>/good/SKILL.md <WORLD>/bad/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unexpected extra argument "<WORLD>/bad/SKILL.md" (lint accepts exactly one path)
+

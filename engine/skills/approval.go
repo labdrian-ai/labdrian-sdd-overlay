@@ -165,12 +165,14 @@ func validateApprovalRecord(rec ApprovalRecord) error {
 	return nil
 }
 
-// ParseApprovalRecord parses record bytes strictly: unknown fields are
-// refused, a key that appears twice is refused, the bytes must be UTF-8 and
-// hold exactly one JSON object with nothing trailing it, the version must be 1, and every field must be valid (a real skill id, a
-// lowercase 64-character hex digest, a real UTC timestamp, a non-blank
-// approver). A missing file is the caller's concern (ApprovalAbsent), not this
-// function's.
+// ParseApprovalRecord parses record bytes strictly. It refuses:
+//   - unknown fields and a key that appears twice;
+//   - bytes that are not UTF-8, or that hold more than one JSON object or anything after it;
+//   - a version other than 1;
+//   - an invalid field: a skill id that is not real, a digest that is not 64 lowercase hex
+//     characters, a timestamp that is not a real UTC one, a blank approver.
+//
+// A missing file is the caller's concern (ApprovalAbsent), not this function's.
 func ParseApprovalRecord(data []byte) (ApprovalRecord, error) {
 	var rec ApprovalRecord
 	if err := decodeRecord(data, "record", &rec); err != nil {
@@ -237,9 +239,9 @@ func ClassifyApproval(id string, skillMD, recordData []byte, present bool) Appro
 // classifies it against skillMD. Only "does not exist" means ApprovalAbsent;
 // any other read failure is returned as an error so the caller can refuse
 // rather than treat an unreadable record as no record.
-func ReadApprovalStatus(sourceRoot, id string, skillMD []byte, readFile readFileFn) (ApprovalStatus, error) {
+func ReadApprovalStatus(sourceRoot, id string, skillMD []byte, records ApprovalRecordStore) (ApprovalStatus, error) {
 	path := ApprovalRecordPath(sourceRoot, id)
-	data, err := readFile(path)
+	data, err := records.ReadRecord(sourceRoot, id)
 	if err != nil {
 		if isAbsent(err) {
 			return ApprovalStatus{State: ApprovalAbsent}, nil

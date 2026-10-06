@@ -117,7 +117,7 @@ type ApprovalSummary struct {
 //
 // The entry's Path names its directory under sourceRoot and is the skill id the
 // record must carry (AddEntry always registers Path == ID).
-func CheckApprovals(reg Registry, sourceRoot string, readFile readFileFn) ([]Divergence, ApprovalSummary) {
+func CheckApprovals(reg Registry, sourceRoot string, records ApprovalRecordStore) ([]Divergence, ApprovalSummary) {
 	var divs []Divergence
 	var sum ApprovalSummary
 	for _, e := range reg.Skills {
@@ -126,8 +126,8 @@ func CheckApprovals(reg Registry, sourceRoot string, readFile readFileFn) ([]Div
 		}
 		sum.Global++
 
-		skillPath := filepath.Join(sourceRoot, e.Path, "SKILL.md")
-		skillMD, err := readFile(skillPath)
+		skillPath := SkillMDPath(sourceRoot, e.Path)
+		skillMD, err := records.ReadSkill(sourceRoot, e.Path)
 		if err != nil {
 			if isAbsent(err) {
 				sum.SkillFileMissing++
@@ -141,7 +141,7 @@ func CheckApprovals(reg Registry, sourceRoot string, readFile readFileFn) ([]Div
 			continue
 		}
 
-		status, err := ReadApprovalStatus(sourceRoot, e.Path, skillMD, readFile)
+		status, err := ReadApprovalStatus(sourceRoot, e.Path, skillMD, records)
 		if err != nil {
 			divs = append(divs, Divergence{Class: DivApprovalUnverifiable, Path: e.Path, Detail: err.Error()})
 			continue

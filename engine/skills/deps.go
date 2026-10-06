@@ -1,5 +1,13 @@
 package skills
 
+// FileReader reads a file by name: the port the verbs read the files of an overlay and of a
+// project through (the registry's neighbours, the manifest, the approval records, a SKILL.md to
+// lint). The production one is os.ReadFile, which the composition root chooses.
+type FileReader func(name string) ([]byte, error)
+
+// readFileFn is the name the verbs that are not yet behind a use case call the port by.
+type readFileFn = FileReader
+
 // Deps is everything the verbs of `engine skills` reach outside themselves: the one value the
 // composition root (engine/cmd) builds and hands to SkillsCoreAt, which hands each verb the part
 // it needs. Every field is a port of this package or a function of the process; the domain
@@ -8,9 +16,12 @@ package skills
 type Deps struct {
 	// ReadFile reads a file by name: the registry's neighbours, the manifest, the approval
 	// records, the files of a project.
-	ReadFile readFileFn
+	ReadFile FileReader
 	// Registries reads and encodes the registry of an overlay.
 	Registries RegistryRepository
+	// Approvals reads the evidence of an approval: the SKILL.md of a global skill and the record
+	// beside it. The verbs that judge approval (validate, add, approve) refuse without it.
+	Approvals ApprovalRecordStore
 	// Tree walks the tree of skills an overlay keeps and reads the source of one skill.
 	Tree SkillTree
 	// Project reads and writes the files of a project and of an overlay: what install, adopt

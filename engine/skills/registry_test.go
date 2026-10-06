@@ -316,31 +316,6 @@ func TestUnreadSummaryTellsTheFirstNoteAndHowManyMore(t *testing.T) {
 	}
 }
 
-// A verb that only reads goes on with what was read and says, on the error stream (a script that
-// reads the output is not changed by it), that something was left out. A registry with nothing
-// left out is read in silence.
-func TestAVerbThatReadsWarnsOfWhatWasLeftOutAndGoesOn(t *testing.T) {
-	run := func(reg Registry) (stdout, stderr string, exits []int) {
-		var out, errOut strings.Builder
-		repo := stubRegistries{load: func(string) (Registry, error) { return reg, nil }}
-		RenderListCore([]string{"--registry", "r.yaml"}, repo, &out, &errOut, func(code int) { exits = append(exits, code) })
-		return out.String(), errOut.String(), exits
-	}
-
-	stdout, stderr, exits := run(unreadRegistry(`line 3: unknown key "color" in skill entry`, "line 9: unknown top-level key \"extra\""))
-	if stdout != "alpha\tcustom\toverlay-only\tclaude\n" || len(exits) != 0 {
-		t.Errorf("the verb printed %q and exited %v, want the entry and no exit", stdout, exits)
-	}
-	if want := "warning: registry fields left unread: line 3: unknown key \"color\" in skill entry (and 1 more)\n"; stderr != want {
-		t.Errorf("stderr = %q, want %q", stderr, want)
-	}
-
-	stdout, stderr, exits = run(unreadRegistry())
-	if stdout != "alpha\tcustom\toverlay-only\tclaude\n" || stderr != "" || len(exits) != 0 {
-		t.Errorf("a registry with nothing left out: stdout %q, stderr %q, exits %v, want the entry and silence", stdout, stderr, exits)
-	}
-}
-
 // A registry that was not read whole cannot be changed and written back without losing what was
 // left out, so the pure transforms that make the next registry refuse it, saying what would be
 // lost, and a registry that was read whole is changed as ever.

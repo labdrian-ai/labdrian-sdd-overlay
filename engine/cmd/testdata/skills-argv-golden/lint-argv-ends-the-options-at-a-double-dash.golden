@@ -1,0 +1,41 @@
+# a path that begins with a dash, after --
+$ skills lint -- -dash/SKILL.md
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# an unknown flag after --: it is the path
+$ skills lint -- --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading "--frobnicate": open --frobnicate: no such file or directory
+
+# -- and two paths
+$ skills lint -- <WORLD>/good/SKILL.md <WORLD>/bad/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unexpected extra argument "<WORLD>/bad/SKILL.md" (lint accepts exactly one path)
+
+# -- and nothing after it
+$ skills lint --
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint requires a path or --rules
+
+# --rules after --: it is a path
+$ skills lint -- --rules
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading "--rules": open --rules: no such file or directory
+
+# -- twice: the second is a path
+$ skills lint -- -- <WORLD>/good/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unexpected extra argument "<WORLD>/good/SKILL.md" (lint accepts exactly one path)
+

@@ -466,8 +466,9 @@ jobs:
   # identity holds the rules that turn what a git repository says about itself into
   # the name of its project (Phase 9, D2). Engine and longterm-mem both require it
   # from their production code through a local replace (../identity); this job is
-  # for its own tests and its recorded vectors, which the two modules also run
-  # through their own readers of the repository.
+  # for its own tests and its recorded vectors. Only longterm-mem runs those vectors
+  # through its own reader of the repository today; the engine's agreement with them
+  # is not yet proved by a test of its own.
   test-identity:
     name: Identity Tests
     runs-on: ubuntu-latest

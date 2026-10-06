@@ -190,7 +190,7 @@ func parseFlags(args []string) (registryPath, manifestPath, sourceRoot, id, repo
 //     grandfathered baseline's (approval_gate.go)
 //   - encoding the new registry and decoding it back is consistent (R-063)
 //   - registry + updated manifest cross-check has zero divergences (ADR-9 step 7)
-func AddCore(args []string, readFile readFileFn, registries RegistryRepository, statFile func(string) (fs.FileInfo, error), files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
+func AddCore(args []string, readFile readFileFn, approvals ApprovalRecordStore, registries RegistryRepository, statFile func(string) (fs.FileInfo, error), files StagedWrites, stdout, stderr io.Writer, exit func(int)) {
 	registryPath, manifestPath, sourceRoot, id, repo, ref := parseFlags(args)
 
 	if id == "" {
@@ -253,7 +253,7 @@ func AddCore(args []string, readFile readFileFn, registries RegistryRepository, 
 	// write, so a refusal leaves the registry and manifest untouched.
 	// Project-tier skills never reach this verb: they register through
 	// project-register and stay autonomous.
-	approval, err := ReadApprovalStatus(sourceRoot, id, skillData, readFile)
+	approval, err := ReadApprovalStatus(sourceRoot, id, skillData, approvals)
 	if err != nil {
 		fmt.Fprintf(stderr, "error: %v\n", err)
 		exit(1)

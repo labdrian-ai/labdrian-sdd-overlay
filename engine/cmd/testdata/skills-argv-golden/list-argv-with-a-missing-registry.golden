@@ -1,0 +1,14 @@
+# no registry in the working directory
+$ skills list
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "skills.registry.yaml": open skills.registry.yaml: no such file or directory
+
+# a registry that is not there
+$ skills list --registry <WORLD>/absent.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "<WORLD>/absent.yaml": open <WORLD>/absent.yaml: no such file or directory
+

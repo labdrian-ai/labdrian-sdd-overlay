@@ -1,0 +1,14 @@
+# the flags first, then the verb
+$ skills --source-root <WORLD>/skills validate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: unknown skills verb "<WORLD>/skills" (supported: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire)
+
+# a flag that takes no part, then the verb
+$ skills --frobnicate validate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate: unknown flag "--frobnicate"
+

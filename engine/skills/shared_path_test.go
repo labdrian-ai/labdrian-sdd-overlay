@@ -1,10 +1,7 @@
 package skills
 
 import (
-	"bytes"
-	"os"
 	"reflect"
-	"strings"
 	"testing"
 )
 
@@ -69,32 +66,5 @@ func TestTheNoteOfAPathWithFewerThanTwoIdsDoesNotPanic(t *testing.T) {
 func TestARegistryWithTwoIdsOnOnePathIsValid(t *testing.T) {
 	if err := registryOfEntries(entryAt("alpha", "dir"), entryAt("beta", "dir")).Validate(); err != nil {
 		t.Errorf("Validate() = %v, want two ids on one path accepted", err)
-	}
-}
-
-func TestValidateNotesTheIdsThatShareAPathAndStillPasses(t *testing.T) {
-	regPath, mfPath := mustWriteValidateFixture(t, "sdd-spec/SKILL.md managed\n")
-	data, err := os.ReadFile(regPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	second := strings.Replace(string(data), "id: sdd-spec", "id: sdd-spec-copy", 1)
-	second = strings.TrimPrefix(second, "version: \"1\"\nskills:\n")
-	if err := os.WriteFile(regPath, append(data, second...), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	var out, errBuf bytes.Buffer
-	code := 0
-	RenderValidateCore(
-		[]string{"--registry", regPath, "--manifest", mfPath, "--source-root", "unused"},
-		os.ReadFile, testRegistries(os.ReadFile), stubScan([]string{"sdd-spec/SKILL.md"}), &out, &errBuf,
-		func(c int) { code = c },
-	)
-	const note = `note: the skills "sdd-spec" and "sdd-spec-copy" share the path "sdd-spec"` + "\n"
-	if errBuf.String() != note {
-		t.Errorf("stderr = %q, want only %q", errBuf.String(), note)
-	}
-	if code != 0 || !strings.Contains(out.String(), "registry and manifest aligned (2 skills)") {
-		t.Errorf("exit %d, stdout %q, want the note to change nothing of the outcome", code, out.String())
 	}
 }

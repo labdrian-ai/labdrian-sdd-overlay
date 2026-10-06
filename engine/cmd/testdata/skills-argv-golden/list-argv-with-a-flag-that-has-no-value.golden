@@ -1,0 +1,24 @@
+# --registry is the last word: no value, so the registry of the working directory
+$ skills list --registry
+exit: 0
+--- stdout ---
+alpha	custom	overlay-only	claude,opencode
+beta	core	vendor-merge	claude,opencode,codex,pi
+ext-one	external	overlay-only	claude
+tidy-notes	custom	overlay-only	claude,pi
+--- stderr ---
+
+# --registry is followed by a flag: the flag is its value
+$ skills list --registry --manifest x
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "--manifest": open --manifest: no such file or directory
+
+# --registry is given the empty word
+$ skills list --registry 
+exit: 1
+--- stdout ---
+--- stderr ---
+error: reading registry "": open : no such file or directory
+

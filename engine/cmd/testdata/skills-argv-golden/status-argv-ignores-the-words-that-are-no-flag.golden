@@ -1,0 +1,30 @@
+# a word after the verb
+$ skills status extra
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+
+# two words
+$ skills status extra more
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+
+# a word after the registry
+$ skills status --registry <WORLD>/skills.registry.yaml extra
+exit: 0
+--- stdout ---
+Total:  4
+Core:   1
+Custom: 2
+Status: OK
+--- stderr ---
+

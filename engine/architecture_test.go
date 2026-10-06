@@ -38,6 +38,9 @@ import (
 //   - skills/skillsfs is the adapter of the skills domain's file-facing ports (H17): the tree of
 //     skills an overlay keeps, and the files of a project and the staged writes of an overlay.
 //     It is the one place engine/skills reaches the operating system through.
+//   - skills/app holds the use cases of `engine skills` (H20): typed inputs and results over the
+//     ports of the skills domain, no argument vector, no printing, no exit. The command line and
+//     the words a person reads are the CLI adapter in cmd.
 //   - skills/projectidentity is the adapter of the skills domain's ProjectIdentity port (H18): the
 //     sources that name the project a directory is (the id the person gave, the origin remote read
 //     from .git/config without running git, the name of the directory) and the chain that asks them
@@ -82,6 +85,7 @@ var rings = map[string]archguard.Ring{
 	"shaper/shapertest":         archguard.Support,
 	"shelltest":                 archguard.Support,
 	"skills":                    archguard.Domain,
+	"skills/app":                archguard.Application,
 	"skills/projectidentity":    archguard.Adapter,
 	"skills/registryyaml":       archguard.Adapter,
 	"skills/skillsfs":           archguard.Adapter,

@@ -1,0 +1,42 @@
+# an unknown flag before the path
+$ skills lint --frobnicate <WORLD>/good/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unknown flag "--frobnicate"
+
+# an unknown flag after the path
+$ skills lint <WORLD>/good/SKILL.md --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unknown flag "--frobnicate"
+
+# a short flag
+$ skills lint -v <WORLD>/good/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unknown flag "-v"
+
+# the equals form of a flag of the wrapper
+$ skills lint --registry=x <WORLD>/good/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unknown flag "--registry=x"
+
+# a bad skill and an unknown flag: the flag is refused first
+$ skills lint <WORLD>/bad/SKILL.md --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unknown flag "--frobnicate"
+
+# --rules and an unknown flag
+$ skills lint --rules --frobnicate
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint: unknown flag "--frobnicate"
+

@@ -37,8 +37,8 @@ ext-one	external	overlay-only	claude
 tidy-notes	custom	overlay-only	claude,pi
 --- stderr ---
 
-# other arguments are not read
-$ skills list extra --unknown --registry <WORLD>/skills.registry.yaml
+# words that are no flag are not read
+$ skills list extra --registry <WORLD>/skills.registry.yaml
 exit: 0
 --- stdout ---
 alpha	custom	overlay-only	claude,opencode
@@ -46,4 +46,11 @@ beta	core	vendor-merge	claude,opencode,codex,pi
 ext-one	external	overlay-only	claude
 tidy-notes	custom	overlay-only	claude,pi
 --- stderr ---
+
+# a flag nobody named is refused (decision D4)
+$ skills list extra --unknown --registry <WORLD>/skills.registry.yaml
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills list: unknown flag "--unknown"
 

@@ -79,7 +79,9 @@ func registryReadingCases() []registryGoldenCase {
 			w.run("skills", "list", "--registry")
 			w.label("a later flag wins")
 			w.run("skills", "list", "--registry", w.path("nothing.yaml"), "--registry", w.path(worldRegistry))
-			w.label("other arguments are not read")
+			w.label("words that are no flag are not read")
+			w.run("skills", "list", "extra", "--registry", w.path(worldRegistry))
+			w.label("a flag nobody named is refused (decision D4)")
 			w.run("skills", "list", "extra", "--unknown", "--registry", w.path(worldRegistry))
 		}},
 		{"list-prints-nothing-for-a-registry-without-skills", func(w *registryWorld) {

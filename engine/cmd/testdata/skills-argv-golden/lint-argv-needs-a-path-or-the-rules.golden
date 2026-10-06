@@ -1,0 +1,14 @@
+# no path
+$ skills lint
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint requires a path or --rules
+
+# only the flags of the wrapper
+$ skills lint --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint requires a path or --rules
+

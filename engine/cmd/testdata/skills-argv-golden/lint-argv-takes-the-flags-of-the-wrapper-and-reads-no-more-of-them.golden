@@ -1,0 +1,25 @@
+# the wrapper appends --registry, --manifest and --source-root after the path
+$ skills lint <WORLD>/good/SKILL.md --registry <WORLD>/skills.registry.yaml --manifest <WORLD>/overlay.manifest --source-root <WORLD>/skills
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# and before it: a value is not taken for the path
+$ skills lint --registry <WORLD>/skills.registry.yaml <WORLD>/good/SKILL.md
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# a flag of the wrapper with no value, last
+$ skills lint <WORLD>/good/SKILL.md --source-root
+exit: 0
+--- stdout ---
+--- stderr ---
+
+# a flag of the wrapper that takes the path as its value: no path is left
+$ skills lint --source-root <WORLD>/good/SKILL.md
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills lint requires a path or --rules
+

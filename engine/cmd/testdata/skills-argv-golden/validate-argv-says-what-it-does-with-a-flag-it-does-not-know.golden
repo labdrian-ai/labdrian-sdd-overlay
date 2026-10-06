@@ -1,0 +1,28 @@
+# an unknown flag
+$ skills validate --frobnicate --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate: unknown flag "--frobnicate"
+
+# an unknown flag with a value
+$ skills validate --source-root <WORLD>/skills --frobnicate yes
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate: unknown flag "--frobnicate"
+
+# a short flag
+$ skills validate -x --source-root <WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate: unknown flag "-x"
+
+# the source root spelled with an equals sign
+$ skills validate --source-root=<WORLD>/skills
+exit: 1
+--- stdout ---
+--- stderr ---
+error: skills validate: unknown flag "--source-root=<WORLD>/skills"
+
