@@ -31,7 +31,7 @@ func TestAddAndRemoveWriteTheRegistryTheRepositoryEncodes(t *testing.T) {
 	var out, errBuf bytes.Buffer
 	exit := -1
 	AddCore([]string{"--registry", regPath, "--manifest", mfPath, "--source-root", skillsRoot, "foo"},
-		os.ReadFile, spy, os.Stat, &out, &errBuf, func(c int) { exit = c })
+		os.ReadFile, spy, os.Stat, testProjectFS(), &out, &errBuf, func(c int) { exit = c })
 	if exit != 0 {
 		t.Fatalf("add exit %d; stderr=%q", exit, errBuf.String())
 	}
@@ -47,7 +47,7 @@ func TestAddAndRemoveWriteTheRegistryTheRepositoryEncodes(t *testing.T) {
 
 	exit = -1
 	RemoveCore([]string{"--registry", regPath, "--manifest", mfPath, "foo"},
-		os.ReadFile, spy, &out, &errBuf, func(c int) { exit = c })
+		os.ReadFile, spy, testProjectFS(), &out, &errBuf, func(c int) { exit = c })
 	if exit != 0 {
 		t.Fatalf("remove exit %d; stderr=%q", exit, errBuf.String())
 	}
