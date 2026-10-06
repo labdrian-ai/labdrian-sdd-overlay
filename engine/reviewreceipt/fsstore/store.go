@@ -26,7 +26,10 @@
 // given: when it is the toplevel itself, so the paths printed keep the form they always had,
 // and when the toplevel has no openspec/changes (or git cannot say where it is) but the
 // directory has its own, which is served as it always was, because it is the only place the
-// receipt can go. One question is asked of git for this, the first time a port needs it.
+// receipt can go. A toplevel whose openspec/changes cannot be looked at for another reason than
+// that it is absent (no permission, an I/O error) is not the second case: the change may be there,
+// so the ports that can say so return the error, and the hook, which is fail-closed, denies. One
+// question is asked of git for this, the first time a port needs it.
 //
 // Git is reached only through the Locator the composition root hands in, which is gitprov in
 // production; the package starts no process. Files are written with engine/atomicfile.
@@ -90,10 +93,12 @@ type Store struct {
 	place *placement
 }
 
-// placement is the directory openspec/ is looked for under, found the first time it is needed.
+// placement is the directory openspec/ is looked for under, found the first time it is needed, or
+// the reason it could not be found.
 type placement struct {
 	once sync.Once
 	dir  string
+	err  error
 }
 
 // New builds the store over the project root, which is where openspec/ is looked for and
@@ -111,31 +116,53 @@ func New(root string, git Locator) (Store, error) {
 
 // openspecRoot is the directory openspec/ is looked for under: the toplevel of the working tree
 // that holds the root, when that is another directory than the root and has openspec/changes,
-// and the root as it was given otherwise (see the package comment).
-func (s Store) openspecRoot() string {
+// and the root as it was given otherwise (see the package comment). It is an error when the
+// toplevel's openspec/changes cannot be looked at for a reason other than its absence: the
+// receipts could be there, so the directory below is not served in its place.
+//
+// A Store that was not built by New (the zero value) has no placement to share, and decides on
+// every use.
+func (s Store) openspecRoot() (string, error) {
 	if s.place == nil {
 		return s.locateOpenspecRoot()
 	}
-	s.place.once.Do(func() { s.place.dir = s.locateOpenspecRoot() })
-	return s.place.dir
+	s.place.once.Do(func() { s.place.dir, s.place.err = s.locateOpenspecRoot() })
+	return s.place.dir, s.place.err
 }
 
-func (s Store) locateOpenspecRoot() string {
+func (s Store) locateOpenspecRoot() (string, error) {
 	abs, err := filepath.Abs(s.root)
 	if err != nil || s.git == nil {
-		return s.root
+		return s.root, nil
 	}
 	obs, err := s.git.Locate(abs)
 	if err != nil || obs.Toplevel == "" {
-		return s.root
+		return s.root, nil
 	}
 	if resolved, err := filepath.EvalSymlinks(abs); err == nil && resolved == obs.Toplevel {
-		return s.root
+		return s.root, nil
 	}
-	if info, err := os.Stat(filepath.Join(obs.Toplevel, "openspec", "changes")); err != nil || !info.IsDir() {
-		return s.root
+	changes := filepath.Join(obs.Toplevel, "openspec", "changes")
+	info, err := os.Stat(changes)
+	switch {
+	case errors.Is(err, fs.ErrNotExist):
+		return s.root, nil
+	case err != nil:
+		return "", fmt.Errorf("stat %s: %w", changes, unwrapPathError(err))
+	case !info.IsDir():
+		return s.root, nil
 	}
-	return obs.Toplevel
+	return obs.Toplevel, nil
+}
+
+// unwrapPathError is the error of the file system behind the path an *fs.PathError names, for a
+// message that names the path itself.
+func unwrapPathError(err error) error {
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		return pathErr.Err
+	}
+	return err
 }
 
 // Stores is reviewreceipt.TransactionStores.
@@ -186,11 +213,7 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 					continue
 				}
 				// The path is named once: the cause of a *fs.PathError, not its own text.
-				var pathErr *fs.PathError
-				if errors.As(err, &pathErr) {
-					err = pathErr.Err
-				}
-				return nil, fmt.Errorf("read %s: %w", path, err)
+				return nil, fmt.Errorf("read %s: %w", path, unwrapPathError(err))
 			}
 			documents = append(documents, reviewreceipt.Document{Shape: file.shape, Data: data, Origin: path})
 		}
@@ -199,13 +222,23 @@ func (s Store) Documents(store reviewreceipt.Store) ([]reviewreceipt.Document, e
 }
 
 // folder is the review-receipts folder of a change.
-func (s Store) folder(change string) string {
-	return filepath.Join(s.openspecRoot(), "openspec", "changes", change, receiptsFolder)
+func (s Store) folder(change string) (string, error) {
+	root, err := s.openspecRoot()
+	if err != nil {
+		return "", err
+	}
+	return filepath.Join(root, "openspec", "changes", change, receiptsFolder), nil
 }
 
-// Location is reviewreceipt.ReceiptSink.Location.
+// Location is reviewreceipt.ReceiptSink.Location. It only says where a receipt is, for a person to
+// read: when the toplevel's openspec cannot be looked at it says the directory the store was
+// given, and nothing is read from or written to it (Read and Write refuse).
 func (s Store) Location(change, name string) string {
-	return filepath.Join(s.folder(change), name)
+	folder, err := s.folder(change)
+	if err != nil {
+		folder = filepath.Join(s.root, "openspec", "changes", change, receiptsFolder)
+	}
+	return filepath.Join(folder, name)
 }
 
 // notPersisted is the error for a receipt with no file. Its text is the file system's own
@@ -220,7 +253,11 @@ func (e notPersisted) Unwrap() []error { return []error{reviewreceipt.ErrNotPers
 
 // Read is reviewreceipt.ReceiptSink.Read.
 func (s Store) Read(change, name string) ([]byte, error) {
-	path := s.Location(change, name)
+	folder, err := s.folder(change)
+	if err != nil {
+		return nil, err
+	}
+	path := filepath.Join(folder, name)
 	data, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -235,7 +272,10 @@ func (s Store) Read(change, name string) ([]byte, error) {
 // put in place by rename, so a reader sees all of the receipt or none and a failure leaves
 // no file behind.
 func (s Store) Write(change, name string, data []byte) error {
-	folder := s.folder(change)
+	folder, err := s.folder(change)
+	if err != nil {
+		return err
+	}
 	if err := os.MkdirAll(folder, 0o755); err != nil {
 		return fmt.Errorf("create %s: %w", folder, err)
 	}
@@ -245,7 +285,11 @@ func (s Store) Write(change, name string, data []byte) error {
 // Changes is reviewreceipt.ChangeCatalog. Only a directory is a change, so a stray file or a
 // link is not one.
 func (s Store) Changes() ([]string, error) {
-	dir := filepath.Join(s.openspecRoot(), "openspec", "changes")
+	root, err := s.openspecRoot()
+	if err != nil {
+		return nil, err
+	}
+	dir := filepath.Join(root, "openspec", "changes")
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -265,6 +309,10 @@ func (s Store) Changes() ([]string, error) {
 // HasArtifact is reviewreceipt.ChangeCatalog.HasArtifact: whether the change holds a file or
 // a directory by that name, followed through a link as a person looking at the folder would.
 func (s Store) HasArtifact(change, name string) bool {
-	_, err := os.Stat(filepath.Join(s.openspecRoot(), "openspec", "changes", change, name))
+	root, err := s.openspecRoot()
+	if err != nil {
+		return false
+	}
+	_, err = os.Stat(filepath.Join(root, "openspec", "changes", change, name))
 	return err == nil
 }

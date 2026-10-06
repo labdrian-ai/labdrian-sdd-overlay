@@ -409,3 +409,47 @@ func TestThePackageStartsNoProcess(t *testing.T) {
 		}
 	}
 }
+
+// Only an openspec/changes that does not exist at the toplevel lets the store serve the directory
+// it was given. Any other answer of the file system (here, no permission to look inside openspec/)
+// is not an absence: the receipts could be at the toplevel, and serving the directory below would
+// put them somewhere else. The ports that can say so refuse, naming the path they could not look
+// at, and the hook, which is fail-closed, denies (service_test.go and the golden files).
+func TestAToplevelOpenspecThatCannotBeLookedAtIsAnErrorAndNotAnAbsence(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a directory without permissions does not stop root")
+	}
+	top := t.TempDir()
+	sub := filepath.Join(top, "sub")
+	write(t, filepath.Join(sub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+	closed := filepath.Join(top, "openspec")
+	if err := os.MkdirAll(closed, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chmod(closed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(closed, 0o755) })
+	loc := &locator{obs: gitprov.Observation{Toplevel: top}}
+	s := newStore(t, sub, loc)
+
+	wantStat := "stat " + filepath.Join(top, "openspec", "changes") + ": "
+	if changes, err := s.Changes(); err == nil || !strings.HasPrefix(err.Error(), wantStat) || changes != nil {
+		t.Errorf("Changes = %v, %v, want no changes and an error that starts %q", changes, err, wantStat)
+	}
+	if _, err := s.Read("sub-change", "review-a.json"); err == nil || !strings.HasPrefix(err.Error(), wantStat) || errors.Is(err, reviewreceipt.ErrNotPersisted) {
+		t.Errorf("Read = %v, want the error of the stat, which is not an absence of the receipt", err)
+	}
+	if err := s.Write("sub-change", "review-a.json", []byte("{}")); err == nil || !strings.HasPrefix(err.Error(), wantStat) {
+		t.Errorf("Write = %v, want the error of the stat", err)
+	}
+	if _, err := os.Stat(filepath.Join(sub, "openspec", "changes", "sub-change", "review-receipts")); !os.IsNotExist(err) {
+		t.Errorf("Write put a receipt in the directory below while refusing (stat err=%v)", err)
+	}
+	if s.HasArtifact("sub-change", "tasks.md") {
+		t.Error("HasArtifact found an artifact of the directory below although the toplevel could not be looked at")
+	}
+	if len(loc.asked) > 1 {
+		t.Errorf("the locator was asked %d times, want at most once", len(loc.asked))
+	}
+}

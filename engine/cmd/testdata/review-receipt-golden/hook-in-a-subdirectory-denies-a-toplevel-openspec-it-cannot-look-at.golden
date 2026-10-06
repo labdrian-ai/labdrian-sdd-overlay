@@ -1,0 +1,14 @@
+$ review-receipt hook --cwd <ROOT>/sub
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"gentle-ai review acknowledge-approved --cwd /repo --lineage review-x"}}
+exit: 2
+--- stdout ---
+--- stderr ---
+review-receipt: reviewreceipt: stat <ROOT>/openspec/changes: permission denied
+
+=== sub ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/sub-change
+file openspec/changes/sub-change/tasks.md 0644 8 b23b81c926c4
+

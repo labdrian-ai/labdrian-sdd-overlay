@@ -556,3 +556,31 @@ func TestARepositoryGitprovRefusesIsRefusedByTheHook(t *testing.T) {
 		}
 	})
 }
+
+// The hook is fail-closed: a toplevel whose openspec/ it cannot look at is not a toplevel without
+// one. Treated as an absence, the hook would serve the directory it was started in, capture the
+// receipt there and let the acknowledgement through, when the change the receipt belongs to is
+// at the toplevel it could not look at.
+func TestAHookDeniesWhenTheToplevelOpenspecCannotBeLookedAt(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("a directory without permissions does not stop root")
+	}
+	repo := gitFixtureRepo(t)
+	sub := filepath.Join(repo, "sub")
+	seedActiveChange(t, repo, "top-change")
+	seedActiveChange(t, sub, "sub-change")
+	writeReceipt(t, gitDirOf(repo), "review-from-below", receipttest.ReceiptSchema, receipttest.Approved)
+	closed := filepath.Join(repo, "openspec")
+	if err := os.Chmod(closed, 0); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { os.Chmod(closed, 0o755) })
+
+	v := serviceFor(t, sub).CheckCommand(ackCommand)
+	if !v.Deny || !strings.Contains(v.Reason, "stat "+filepath.Join(repo, "openspec", "changes")) {
+		t.Errorf("CheckCommand = %+v, want a denial that names the path it could not look at", v)
+	}
+	if _, err := os.Stat(receiptsOf(sub, "sub-change")); !os.IsNotExist(err) {
+		t.Errorf("a receipt was captured under the subdirectory's own openspec (stat err=%v)", err)
+	}
+}
