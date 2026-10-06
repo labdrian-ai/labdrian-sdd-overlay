@@ -76,7 +76,19 @@ when deciding what to copy, but the schema constraint is not relaxed.
 
 ## 2. Project Identity Resolution
 
-### R-046 — Identity derived from git remote origin repo name
+> **Superseded (owner decision, 2026-10-06).** R-046 and R-047 were deferred by this change
+> (ADR-2: the directory name, with `--project-id` as an override). They are replaced by the
+> identity chain of Phase 9 decision Q8, shipped in unit H18 (PR #546): the project id is, in
+> order, what `--project-id` gives; then the origin remote of the repository, read from its
+> `.git/config` without running git (following a linked worktree to its common directory) and
+> normalized to `host/owner/repo` by the shared `identity` module (for example
+> `github.com/labdrian/labdrian-sdd-overlay`); then the name of the directory. There is no failure
+> when a repository has no origin: the directory name answers. The full normalized remote is kept
+> instead of the last path segment so two owners' repositories with the same name stay distinct,
+> and it is the same identity longterm-mem derives. `allowedProjects` entries name projects in that
+> form. The text of R-046 and R-047 below is kept for the record and is not a requirement.
+
+### R-046 — Identity derived from git remote origin repo name (superseded)
 
 WHEN the `install` verb runs, it MUST resolve the current project identity from the
 git remote named `origin` of the cwd repository. The identity string is the last
@@ -89,7 +101,7 @@ Examples:
 
 This same format is what registry authors MUST use in `allowedProjects` entries.
 
-### R-047 — Fail-loud when no project identity is resolvable
+### R-047 — Fail-loud when no project identity is resolvable (superseded)
 
 WHEN cwd has no git remote named `origin` (or running `git remote get-url origin`
 fails for any reason),
