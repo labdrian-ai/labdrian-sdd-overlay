@@ -453,3 +453,28 @@ func TestAToplevelOpenspecThatCannotBeLookedAtIsAnErrorAndNotAnAbsence(t *testin
 		t.Errorf("the locator was asked %d times, want at most once", len(loc.asked))
 	}
 }
+
+// Where openspec/ is looked for is decided once for a store, by what the file system held when it
+// was first asked: a change folder that appears at the toplevel afterwards does not move a store
+// that has already answered from the directory it was given, and a store built afterwards sees it.
+// A hook is one short process, so the decision cannot go stale in it, and every port of one
+// invocation answers from the same place; this pins that, since the comment of the store says it.
+func TestWhereOpenspecIsLookedForIsDecidedOnceForAStore(t *testing.T) {
+	top := t.TempDir()
+	sub := filepath.Join(top, "sub")
+	write(t, filepath.Join(sub, "openspec", "changes", "sub-change", "tasks.md"), "x")
+	loc := &locator{obs: gitprov.Observation{Toplevel: top}}
+	first := newStore(t, sub, loc)
+
+	if changes, err := first.Changes(); err != nil || !reflect.DeepEqual(changes, []string{"sub-change"}) {
+		t.Fatalf("before the toplevel has a change: Changes = %v, %v, want [sub-change]", changes, err)
+	}
+	write(t, filepath.Join(top, "openspec", "changes", "top-change", "tasks.md"), "x")
+
+	if changes, err := first.Changes(); err != nil || !reflect.DeepEqual(changes, []string{"sub-change"}) {
+		t.Errorf("after the toplevel got a change: Changes = %v, %v, want the store to answer from where it first did", changes, err)
+	}
+	if changes, err := newStore(t, sub, loc).Changes(); err != nil || !reflect.DeepEqual(changes, []string{"top-change"}) {
+		t.Errorf("a store built after: Changes = %v, %v, want [top-change]", changes, err)
+	}
+}

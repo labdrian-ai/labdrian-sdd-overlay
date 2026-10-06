@@ -40,7 +40,7 @@ package skills
 //     denied, and so is a heredoc line that does. Reword the text, or leave the
 //     entry point out.
 //   - Input the hook cannot decode is an allow, and input over the bound the
-//     hook reads is a denial (ApproveGuardOversized). The hook runs on every
+//     hook reads is a denial (ApproveGuardTooLarge). The hook runs on every
 //     Bash and file-edit call, and a guard that blocked what it could not
 //     decode would block the session; but the agent controls the length of its
 //     own command, and a guard that padding could switch off would guard
@@ -110,11 +110,11 @@ var (
 		": it matches the tool and the file name, so a shell command can still write the file."
 )
 
-// ApproveGuardOversized is the verdict for a call the hook did not judge because it is longer than
+// ApproveGuardTooLarge is the verdict for a call the hook did not judge because it is longer than
 // the bound bytes the hook reads. It is a denial, in one line like the others: it names the verb,
 // the bound, and what to do. The agent controls the length of its own command, so a call that
 // size cannot be allowed unchecked.
-func ApproveGuardOversized(bound int) ApproveGuardVerdict {
+func ApproveGuardTooLarge(bound int) ApproveGuardVerdict {
 	return ApproveGuardVerdict{Deny: true, Reason: fmt.Sprintf("labdrian skills approve guard: this tool call is too large to be checked "+
 		"(the guard reads at most %d bytes), so it could not be checked for \"skills approve\" or for a write of the approval record %s, "+
 		"and it was denied. Send a smaller call, or ask the person to run what it does themselves in a terminal. %s.",

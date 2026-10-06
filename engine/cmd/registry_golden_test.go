@@ -29,6 +29,8 @@ import (
 // reader and writer to engine/skills/registryyaml, and they are the contract that move had to
 // keep: what each verb says for a registry it can read, and the words of every refusal of one
 // it cannot (a missing file, a line it does not understand, a value outside the vocabulary).
+// Decisions of the owner have changed some of them since, on purpose (the Phase 9 ledger in
+// odd/tasks says which and why), and each such change was read in its diff.
 // A change to a byte of any of them fails here. Rewrite them deliberately with
 //
 //	go test ./cmd -run TestRegistryGolden -update-registry-golden
@@ -164,6 +166,10 @@ func runWithin(timeout time.Duration, bin, dir string, env, args []string) (code
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = dir
 	cmd.Env = env
+	// The kill at the deadline reaches what the program started (ownProcessGroup), and a
+	// descendant that still holds the output pipes does not hold the run for longer than this.
+	ownProcessGroup(cmd)
+	cmd.WaitDelay = 10 * time.Second
 	var out, errOut bytes.Buffer
 	cmd.Stdout, cmd.Stderr = &out, &errOut
 	runErr := cmd.Run()
@@ -359,6 +365,7 @@ func TestEveryVerbTheGoldenHeaderNamesHasAGoldenCase(t *testing.T) {
 		"skills project-status", "skills project-retire", "skills project-revise",
 		"pipkg build", "pipkg check", "runtime install --target pi", "runtime status --target pi",
 	}
+	checkTheListIsTheHeader(t, claimed)
 	entries, err := os.ReadDir(filepath.Join("testdata", "registry-golden"))
 	if err != nil {
 		t.Fatal(err)
@@ -374,6 +381,46 @@ func TestEveryVerbTheGoldenHeaderNamesHasAGoldenCase(t *testing.T) {
 	for _, verb := range claimed {
 		if !strings.Contains(transcripts.String(), "\n$ "+verb+" ") && !strings.Contains(transcripts.String(), "\n$ "+verb+"\n") && !strings.HasPrefix(transcripts.String(), "$ "+verb) {
 			t.Errorf("no golden file records a run of %q, which the header of registry_golden_test.go names", verb)
+		}
+	}
+}
+
+// checkTheListIsTheHeader holds the list of claimed command lines to the header of this file, so
+// that neither can drift from the other: every verb the header names in quotes ('skills list',
+// 'status', 'pipkg build') ends one of the command lines, and every command line, but the
+// ones of the Pi runtime (which the header names as a group, "the Pi runtime verbs"), ends in a
+// verb the header names.
+func checkTheListIsTheHeader(t *testing.T, claimed []string) {
+	t.Helper()
+	source, err := os.ReadFile("registry_golden_test.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := string(source)
+	header := text[strings.Index(text, "// The golden files under"):strings.Index(text, "var updateRegistryGolden")]
+	named := regexp.MustCompile(`'([a-z -]+)'`).FindAllStringSubmatch(header, -1)
+	if len(named) == 0 {
+		t.Fatal("the header of registry_golden_test.go names no verb in quotes")
+	}
+	for _, m := range named {
+		found := false
+		for _, line := range claimed {
+			found = found || strings.HasSuffix(line, m[1])
+		}
+		if !found {
+			t.Errorf("the header names %q, which no command line of the claimed list ends with: add it to the list", m[1])
+		}
+	}
+	for _, line := range claimed {
+		if strings.HasPrefix(line, "runtime ") {
+			continue
+		}
+		found := false
+		for _, m := range named {
+			found = found || strings.HasSuffix(line, m[1])
+		}
+		if !found {
+			t.Errorf("the claimed list has %q, which the header does not name in quotes: name it there or drop it", line)
 		}
 	}
 }

@@ -156,6 +156,11 @@ func (w warningRegistries) Decode(data []byte) (Registry, error) {
 	return reg, err
 }
 
+// tell warns only of a registry that is usable, so it judges the registry it was handed with
+// Validate. That is a second validation pass over the registry on every read: the callers
+// (pipkg, the Pi runtime adapter) judge it again, through ReadRegistry, for their own control
+// flow. The cost is one pass over a few dozen entries, paid so that a registry the domain
+// refuses is refused in its own words and never preceded by a warning about it.
 func (w warningRegistries) tell(reg Registry, err error) {
 	if err != nil || reg.Validate() != nil {
 		return
