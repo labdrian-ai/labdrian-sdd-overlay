@@ -28,14 +28,7 @@ func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot strin
 	dstRoot := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills"))
 
 	var ops []CopyOp
-	for _, e := range reg.Skills {
-		if e.Install.DefaultScope != "project" {
-			continue
-		}
-		if !containsString(e.Install.AllowedProjects, projectID.String()) {
-			continue
-		}
-
+	for _, e := range AdmittedToProject(reg, projectID) {
 		src := filepath.Clean(filepath.Join(sourceRoot, e.Path))
 		dst := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills", e.ID))
 
@@ -58,6 +51,18 @@ func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot strin
 		})
 	}
 	return ops, nil
+}
+
+// AdmittedToProject is the entries of reg that install to a project of that id: the ones whose
+// default scope is the project and whose allowed projects name it, in the order of the registry.
+func AdmittedToProject(reg Registry, projectID ProjectID) []Entry {
+	var admitted []Entry
+	for _, e := range reg.Skills {
+		if e.Install.DefaultScope == "project" && containsString(e.Install.AllowedProjects, projectID.String()) {
+			admitted = append(admitted, e)
+		}
+	}
+	return admitted
 }
 
 // containsString reports whether slice contains s (case-sensitive).

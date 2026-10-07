@@ -3,7 +3,7 @@ $ skills install --registry <WORLD>/overlay/skills.registry.yaml (in demo)
 exit: 1
 --- stdout ---
 --- stderr ---
-error: planning install: skill "tidy-notes": path "tidy-notes" escapes source root — possible traversal
+error: skills install requires --source-root <dir>, the skills tree to read the skills from
 
 # a source root that has not the skills
 $ skills install --registry <WORLD>/overlay/skills.registry.yaml --source-root <WORLD>/empty (in demo)

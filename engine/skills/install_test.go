@@ -2,6 +2,7 @@ package skills
 
 import (
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -31,6 +32,32 @@ func buildRegistry(entries []struct {
 		})
 	}
 	return Registry{Version: "1", Skills: skills}
+}
+
+// AdmittedToProject is the one rule of which entries install to a project, in the order of the
+// registry: the project scope and the project named among the allowed ones, nothing else.
+func TestAdmittedToProjectIsTheEntriesOfTheProjectScopeThatNameTheProject(t *testing.T) {
+	reg := buildRegistry([]struct {
+		id              string
+		scope           string
+		allowedProjects []string
+	}{
+		{"first", "project", []string{"other", "target-repo"}},
+		{"global", "global", []string{"target-repo"}},
+		{"elsewhere", "project", []string{"other"}},
+		{"nobody", "project", nil},
+		{"second", "project", []string{"target-repo"}},
+	})
+	var got []string
+	for _, e := range AdmittedToProject(reg, "target-repo") {
+		got = append(got, e.ID)
+	}
+	if want := []string{"first", "second"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("AdmittedToProject = %v, want %v", got, want)
+	}
+	if got := AdmittedToProject(reg, "stranger"); len(got) != 0 {
+		t.Errorf("AdmittedToProject(a project no entry names) = %v, want none", got)
+	}
 }
 
 // TestPlanInstall is the table-driven suite for the pure planner (T-03).

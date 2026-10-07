@@ -99,6 +99,15 @@ type PlanError struct {
 func (e *PlanError) Error() string { return fmt.Sprintf("planning %s: %v", e.Verb, e.Err) }
 func (e *PlanError) Unwrap() error { return e.Err }
 
+// SourceRootRequiredError is an install or adopt that admits a skill and was given no source root
+// to read it from. It is a missing input, and is told as one; a registry that admits nothing needs
+// no source root.
+type SourceRootRequiredError struct{ Verb string }
+
+func (e *SourceRootRequiredError) Error() string {
+	return fmt.Sprintf("skills %s: no source root is given to read the admitted skills from", e.Verb)
+}
+
 // SourcesMissingError is an admitted skill whose source directory is not there. Every one is
 // listed, not the first: the person fixes them in one go.
 type SourcesMissingError struct{ Missing []skills.CopyOp }
@@ -131,7 +140,7 @@ func (e *PlanRefusal) Error() string {
 
 // InstallProject copies the skills the registry admits to the project into it, and records them
 // in the project lock, all or nothing (skills.PlanInstallOwnership decides, skills.ExecuteInstallPlan
-// carries out). An error is an *IdentityError, a *RegistryError, a *PlanError, a
+// carries out). An error is an *IdentityError, a *RegistryError, a *SourceRootRequiredError, a *PlanError, a
 // *SourcesMissingError, a *SourceReadError, a *ProjectLockReadError, a *PlanRefusal or an
 // *ExecutionError; where it is not an *ExecutionError nothing was written.
 func InstallProject(p InstallPorts, in InstallInput) (InstallResult, error) {
@@ -163,6 +172,9 @@ func runPlanned(verb string, plan func(skills.InstallInput) (skills.InstallPlan,
 	}
 	res.UnreadWarning = warning
 
+	if in.SourceRoot == "" && len(skills.AdmittedToProject(reg, projectID)) > 0 {
+		return res, &SourceRootRequiredError{Verb: verb}
+	}
 	ops, err := skills.PlanInstall(reg, projectID, in.SourceRoot, root)
 	if err != nil {
 		return res, &PlanError{Verb: verb, Err: err}
