@@ -147,6 +147,17 @@ func WarnOfUnread(repo RegistryRepository, stderr io.Writer) RegistryRepository 
 	return warningRegistries{RegistryRepository: repo, stderr: stderr}
 }
 
+// WithoutUnreadWarning returns the repository that repo warns through (WarnOfUnread), without its
+// warning, and any other repository as it is. It is for what refuses a registry that was read in
+// part and says what was left out in the refusal: a build, which the warning would precede with
+// the same words. A nil repository stays nil.
+func WithoutUnreadWarning(repo RegistryRepository) RegistryRepository {
+	if w, ok := repo.(warningRegistries); ok {
+		return w.RegistryRepository
+	}
+	return repo
+}
+
 type warningRegistries struct {
 	RegistryRepository
 	stderr io.Writer

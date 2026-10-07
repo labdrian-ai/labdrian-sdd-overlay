@@ -176,7 +176,10 @@ func registryPackageCases() []registryGoldenCase {
 					w.run(w.pipkgArgsFor(verb, file.path)...)
 				}
 			}
-			w.label("and the package that was built is as it was")
+			// The registry the package was built from has one skill, for Claude only, so the Pi
+			// package holds the shared files and no directory of a skill: that is what a build of
+			// it left, and what every refusal above must leave.
+			w.label("and the package that was built is as it was (its registry has one skill, for claude only, so no skill directory is projected to Pi)")
 			w.treeNames("out")
 		}},
 		{"pipkg-check-reads-the-registry-of-the-deploy-ref-when-it-compares-with-it", func(w *registryWorld) {

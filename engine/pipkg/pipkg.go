@@ -141,13 +141,15 @@ func Build(registries skills.RegistryRepository, overlayRoot, registryPath, dest
 		return err
 	}
 
-	reg, err := loadRegistry(registries, registryPath)
+	// A build refuses a registry the reader did not read whole and says what was left out in the
+	// refusal, so it reads without the repository's warning, which would say it before. (Check
+	// goes on with such a registry and keeps the warning.)
+	reg, err := loadRegistry(skills.WithoutUnreadWarning(registries), registryPath)
 	if err != nil {
 		return err
 	}
 	// A package is an artifact others consume: it is not built from a registry the reader did not
-	// read whole, and nothing is written when it refuses (decision 4 of the owner). Check only
-	// compares, so it goes on and the repository's warning says what was left out.
+	// read whole, and nothing is written when it refuses (decision 4 of the owner).
 	if err := reg.CheckBuildable(); err != nil {
 		return fmt.Errorf("pipkg: %w", err)
 	}

@@ -15,6 +15,7 @@ import (
 	"go/token"
 	"io"
 	"io/fs"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -484,5 +485,37 @@ func TestARepositoryThatWarnsPassesEverythingElseThrough(t *testing.T) {
 	}
 	if WarnOfUnread(nil, io.Discard) != nil {
 		t.Error("WarnOfUnread(nil) is not nil: a verb that was given no repository must still refuse for want of one")
+	}
+}
+
+// What refuses a registry that was read in part says what was left out in the refusal, so it asks
+// for the repository without the warning: the same words once, and not before the error that
+// repeats them. A repository that does not warn is the repository it is, and nil stays nil.
+func TestARepositoryWithoutTheWarningDoesNotTellWhatWasLeftOut(t *testing.T) {
+	left := unreadRegistry(`line 3: unknown key "color" in skill entry`)
+	plain := stubRegistries{
+		load:   func(string) (Registry, error) { return left, nil },
+		decode: func([]byte) (Registry, error) { return left, nil },
+	}
+	var stderr strings.Builder
+	quiet := WithoutUnreadWarning(WarnOfUnread(plain, &stderr))
+	if _, err := ReadRegistry(quiet, "r.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeRegistry(quiet, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want nothing from a repository without the warning", stderr.String())
+	}
+	if got, err := ReadRegistry(quiet, "r.yaml"); err != nil || len(got.Unread) != 1 {
+		t.Errorf("ReadRegistry = %+v, %v, want the registry as the repository read it, with what it left out", got, err)
+	}
+
+	if got := WithoutUnreadWarning(plain); !reflect.DeepEqual(reflect.TypeOf(got), reflect.TypeOf(plain)) {
+		t.Errorf("WithoutUnreadWarning(a repository that does not warn) = %T, want it unchanged", got)
+	}
+	if WithoutUnreadWarning(nil) != nil {
+		t.Error("WithoutUnreadWarning(nil) is not nil: a verb that was given no repository must still refuse for want of one")
 	}
 }

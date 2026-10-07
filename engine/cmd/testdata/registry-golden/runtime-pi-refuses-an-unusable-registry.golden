@@ -25,7 +25,6 @@ exit: 1
 --- stdout ---
 [pi] install: unsupported — pipkg: skills: the registry has fields this program does not read, and a package built from it would be built from a partial read: line 7: unknown key "mirror" in source
 --- stderr ---
-warning: registry fields left unread: line 7: unknown key "mirror" in source
 
 # status over: a registry with a key the reader does not know
 $ runtime status --target pi

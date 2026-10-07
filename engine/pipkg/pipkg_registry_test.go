@@ -118,6 +118,39 @@ func TestCheckTellsWhatTheRepositoryItIsGivenCannotBeBuiltFromInTheWordsBuildUse
 	}
 }
 
+// A build refuses a registry the reader left fields out of and says what it left out in the
+// refusal; the repository that warns would say it once more before the refusal. A check only warns,
+// so it keeps the warning. Each is told once.
+func TestBuildTellsWhatTheReaderLeftOutOnlyInItsRefusalAndCheckOnlyInItsWarning(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	built := filepath.Join(t.TempDir(), "built", "labdrian-pi")
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, built); err != nil {
+		t.Fatal(err)
+	}
+	reg, err := skills.ReadRegistry(fileRegistries, registryPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	reg.Unread = []string{`line 3: unknown key "color" in skill entry`}
+	var stderr strings.Builder
+	repo := skills.WarnOfUnread(&fakeRegistries{reg: reg}, &stderr)
+
+	err = pipkg.Build(repo, overlayRoot, registryPath, built)
+	if err == nil || !strings.Contains(err.Error(), `unknown key "color"`) {
+		t.Errorf("Build() = %v, want the refusal to say what was left out", err)
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("Build warned %q before refusing with the same words", stderr.String())
+	}
+
+	if _, err := pipkg.Check(repo, overlayRoot, registryPath, built); err != nil {
+		t.Fatal(err)
+	}
+	if want := "warning: registry fields left unread: line 3: unknown key \"color\" in skill entry\n"; stderr.String() != want {
+		t.Errorf("Check warned %q, want %q", stderr.String(), want)
+	}
+}
+
 // With the real adapter, a registry path that is a directory is a store that cannot be read, as it
 // is for every skills verb. (Before the port pipkg opened the file and read it as a stream, so a
 // directory was a failure to parse, in the words "skills: read error"; no verb ever said that.)
