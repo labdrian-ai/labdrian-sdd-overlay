@@ -84,6 +84,40 @@ func TestBuildTellsAStoreThatCannotBeReadAsOneThatCouldNotBeOpened(t *testing.T)
 	}
 }
 
+// Check reads the registry through the same repository as Build and tells a fault in the same
+// words: the registry the fake returns is refused by the domain's rule (a path that climbs out of
+// the overlay), or its store cannot be read, and the check stops with the sentence Build uses for
+// each, over a package that was built from the real registry.
+func TestCheckTellsWhatTheRepositoryItIsGivenCannotBeBuiltFromInTheWordsBuildUses(t *testing.T) {
+	overlayRoot, registryPath := fixtureOverlay(t)
+	built := filepath.Join(t.TempDir(), "built", "labdrian-pi")
+	if err := pipkg.Build(fileRegistries, overlayRoot, registryPath, built); err != nil {
+		t.Fatal(err)
+	}
+	cause := &fs.PathError{Op: "open", Path: registryPath, Err: fs.ErrNotExist}
+	for name, tc := range map[string]struct {
+		fake *fakeRegistries
+		want string
+	}{
+		"a registry the domain refuses": {&fakeRegistries{reg: skills.Registry{Version: "1", Skills: []skills.Entry{{
+			ID: "x", Path: "../outside", Source: skills.Source{Type: skills.SourceCustom},
+			Install:   skills.Install{DefaultScope: skills.ScopeGlobal, Targets: []string{"pi"}},
+			Lifecycle: skills.Lifecycle{UpdateStrategy: "overlay-only"},
+		}}}}, `pipkg: parsing registry: skills: entry "x": path "../outside" must not contain a ".." component`},
+		"a store that cannot be read": {&fakeRegistries{err: &skills.RegistryReadError{Err: cause}}, "pipkg: opening registry: " + cause.Error()},
+	} {
+		t.Run(name, func(t *testing.T) {
+			_, err := pipkg.Check(tc.fake, overlayRoot, registryPath, built)
+			if err == nil || err.Error() != tc.want {
+				t.Errorf("Check() = %v, want %q", err, tc.want)
+			}
+			if len(tc.fake.loaded) == 0 {
+				t.Error("Check did not ask the repository it was given for the registry")
+			}
+		})
+	}
+}
+
 // With the real adapter, a registry path that is a directory is a store that cannot be read, as it
 // is for every skills verb. (Before the port pipkg opened the file and read it as a stream, so a
 // directory was a failure to parse, in the words "skills: read error"; no verb ever said that.)

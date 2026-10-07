@@ -10,6 +10,9 @@ package skills
 import (
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"io/fs"
 	"strings"
@@ -189,6 +192,50 @@ func TestReadRegistryTellsAnUnreadableStoreAsItIs(t *testing.T) {
 	}
 	if len(got.Skills) != 0 || got.Version != "" {
 		t.Errorf("ReadRegistry() returned %+v with an error, want the zero registry", got)
+	}
+}
+
+// The rule of the model is the only Validate of the package: the comparison of a registry with
+// the manifest is ValidateAgainstManifest, so that a reader skimming a call site, or a search for
+// Validate, finds one thing. A function named Validate would bring the ambiguity back.
+func TestRegistryValidateIsTheOnlyValidateOfThePackage(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, ".", func(fi fs.FileInfo) bool { return !strings.HasSuffix(fi.Name(), "_test.go") }, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pkg := range pkgs {
+		for name, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "Validate" && fn.Recv == nil {
+					t.Errorf("%s declares the function Validate: the comparison with the manifest is ValidateAgainstManifest", name)
+				}
+			}
+		}
+	}
+}
+
+// There is one answer to whether a registry could not be read at all, as against being read and
+// refused: the callers that word the two differently (the skills verbs, the Pi package) ask it
+// here, and it follows the error however it was wrapped on the way.
+func TestIsUnreadableRegistryTellsAStoreThatCouldNotBeReadFromARegistryThatIsUnusable(t *testing.T) {
+	unreadable := &RegistryReadError{Err: errors.New("open r.yaml: no such file or directory")}
+	for name, tc := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"nothing":                        {nil, false},
+		"a store that could not be read": {unreadable, true},
+		"the same, wrapped":              {fmt.Errorf("pipkg: opening registry: %w", unreadable), true},
+		"a registry the rule refuses":    {errors.New(`skills: duplicate id "a"`), false},
+		"a fault of the reading":         {errors.New("line 9: unexpected indentation"), false},
+		"no repository wired":            {errNoRegistryRepository, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := IsUnreadableRegistry(tc.err); got != tc.want {
+				t.Errorf("IsUnreadableRegistry(%v) = %v, want %v", tc.err, got, tc.want)
+			}
+		})
 	}
 }
 

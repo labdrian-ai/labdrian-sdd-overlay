@@ -37,7 +37,6 @@ import (
 	"archive/tar"
 	_ "embed"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -868,8 +867,7 @@ func loadRegistry(registries skills.RegistryRepository, registryPath string) (sk
 	if err == nil {
 		return reg, nil
 	}
-	var unreadable *skills.RegistryReadError
-	if errors.As(err, &unreadable) {
+	if skills.IsUnreadableRegistry(err) {
 		return skills.Registry{}, fmt.Errorf("pipkg: opening registry: %w", err)
 	}
 	return skills.Registry{}, fmt.Errorf("pipkg: parsing registry: %w", err)
