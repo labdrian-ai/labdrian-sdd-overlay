@@ -246,9 +246,11 @@ func TestReadConsistentlyDoesNotReadWhenTheLocksCannotBeTaken(t *testing.T) {
 	}
 }
 
-// The overlay lock a use case takes is the one the dispatcher takes for the same verb and the
-// same registry: one policy, said once. The verbs that run behind a use case take it in their
-// adapter (engine/cmd), which asks OverlayLocks, so the dispatcher takes none for them.
+// The overlay lock a verb takes is said once, by OverlayLocks. The dispatcher takes it for
+// install and adopt, and these cases hold it equal to what the dispatcher asks. The verbs that run
+// behind a use case take it in their adapter (engine/cmd), and the dispatcher takes none for them;
+// that the adapter takes exactly what OverlayLocks says is held in engine/cmd
+// (TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem), since only that package can run it.
 func TestOverlayLocksAreTheLocksTheDispatcherTakes(t *testing.T) {
 	const registry = "/o/skills.registry.yaml"
 	for _, verb := range []string{"install", "adopt"} {

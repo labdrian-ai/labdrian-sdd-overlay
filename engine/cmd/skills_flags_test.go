@@ -239,3 +239,21 @@ func TestSkillsFlagSpecsOfTheWritersSayWhatEachVerbReads(t *testing.T) {
 		}
 	}
 }
+
+// approve refuses a value that begins with a dash for every flag it takes, the flags the wrapper
+// appends included: the old verb did the same (it took every value through one function), and the
+// wrapper names its paths absolutely, so a path of the wrapper that begins with a dash is not a
+// form the program makes. A person who types one is told which flag lacks a value.
+func TestSkillsApproveRefusesAValueThatBeginsWithADashEvenForAFlagOfTheWrapper(t *testing.T) {
+	for _, flag := range []string{flagManifest, flagRegistry, flagSourceRoot, flagID} {
+		_, err := skillsApproveSpec.parse([]string{flag, "-x/path"})
+		want := `skills approve: flag "` + flag + `" requires a value; got flag token "-x/path"`
+		if err == nil || err.Error() != want {
+			t.Errorf("parse(%s -x/path) error = %v, want %q", flag, err, want)
+		}
+	}
+	// The same path is a value for the verbs that take any value.
+	if got, err := skillsRemoveSpec.parse([]string{flagSourceRoot, "-x/path", "foo"}); err != nil || len(got.words) != 1 {
+		t.Errorf("remove parse = %+v, %v, want the path taken as the value of the wrapper's flag", got, err)
+	}
+}

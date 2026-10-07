@@ -2,6 +2,7 @@ package app
 
 import (
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -167,6 +168,37 @@ func TestApproveRefusesASkillThatIsNotThereOrFailsTheHardLintAndWritesNothing(t 
 	}
 	if len(spy.ops) != 0 {
 		t.Errorf("the writes were called (%q) for a skill that was refused", spy.ops)
+	}
+}
+
+// A SKILL.md that is not there and one that cannot be read are one refusal in the words of the
+// verb, and the refusal carries the cause, so that a person is told which of the two it is and a
+// caller can tell them apart with errors.Is.
+func TestApproveSaysWhetherTheSkillIsMissingOrCannotBeRead(t *testing.T) {
+	w := newApproveWorld(t, "my-skill")
+	for _, tc := range []struct {
+		name  string
+		cause error
+		is    error
+		words string
+	}{
+		{"missing", &fs.PathError{Op: "open", Path: "x", Err: fs.ErrNotExist}, fs.ErrNotExist, "file does not exist"},
+		{"unreadable", &fs.PathError{Op: "open", Path: "x", Err: fs.ErrPermission}, fs.ErrPermission, "permission denied"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			ports := w.ports(newStagedSpy(nil), fixedClock(approvedAt))
+			ports.Files = func(string) ([]byte, error) { return nil, tc.cause }
+			_, err := ApproveSkill(ports, ApproveInput{ID: "my-skill", Approver: "reviewer", ApproverGiven: true, SourceRoot: w.root})
+			var refusal *ApproveRefusal
+			if !errors.As(err, &refusal) || !errors.Is(err, tc.is) {
+				t.Fatalf("err = %v, want an *ApproveRefusal whose cause is %v", err, tc.is)
+			}
+			for _, want := range []string{`skill "my-skill": SKILL.md not found or unreadable at`, tc.words} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("err = %q, want it to say %q", err, want)
+				}
+			}
+		})
 	}
 }
 

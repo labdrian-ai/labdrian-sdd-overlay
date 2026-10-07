@@ -313,6 +313,38 @@ func TestOverlayVerbsTakeTheExclusiveLockOfTheRegistryAndLetGoOfIt(t *testing.T)
 	}
 }
 
+// The policy of which verb takes which overlay lock is said once, in skills.OverlayLocks, and an
+// adapter takes what it says: the locks an adapter asks of the locker are exactly the requests of
+// the policy for the same verb and registry, so that a verb whose adapter drifted from the policy
+// (approve names a registry it does not read, and takes no registry check for it) is caught.
+func TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem(t *testing.T) {
+	for _, tc := range overlayVerbCases {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newOverlayWorld(t)
+			locker := &holdingLocker{}
+			if r := w.run(tc.verb, w.deps(locker, os.ReadFile), tc.args(w)...); r.code() != 0 {
+				t.Fatalf("exit %d; stderr=%q", r.code(), r.stderr)
+			}
+			var want []string
+			for _, req := range skills.OverlayLocks(tc.name, w.reg) {
+				if req.Dir {
+					t.Fatalf("the policy asks a directory lock for %s", tc.name)
+				}
+				want = append(want, "lock "+lockModeName(req.Mode)+" "+req.Path)
+			}
+			var got []string
+			for _, event := range locker.log() {
+				if strings.HasPrefix(event, "lock") {
+					got = append(got, event)
+				}
+			}
+			if len(want) == 0 || !reflect.DeepEqual(got, want) {
+				t.Errorf("the adapter took %v, the policy of OverlayLocks says %v", got, want)
+			}
+		})
+	}
+}
+
 func TestOverlayVerbsLockTheRegistryTheyName(t *testing.T) {
 	w := newOverlayWorld(t)
 	other := filepath.Join(w.dir, "other", "team.registry.yaml")

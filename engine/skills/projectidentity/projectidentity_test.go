@@ -3,6 +3,7 @@ package projectidentity_test
 import (
 	"encoding/json"
 	"errors"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"strings"
@@ -216,7 +217,12 @@ func TestGitOriginSaysWhichDirectoryItCouldNotReadAndHowToGoOn(t *testing.T) {
 	if err == nil || ok || id != "" {
 		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
 	}
-	for _, want := range []string{below, "permission denied", "--project-id"} {
+	// The cause is told by the kind of error and not by the words of one system: the words of a
+	// refused permission differ between platforms.
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Errorf("the error %q does not wrap fs.ErrPermission", err)
+	}
+	for _, want := range []string{below, "--project-id"} {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the error %q does not say %q", err, want)
 		}
