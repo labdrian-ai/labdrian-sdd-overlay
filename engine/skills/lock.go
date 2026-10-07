@@ -5,9 +5,7 @@ package skills
 // under it.
 
 import (
-	"errors"
 	"fmt"
-	"io"
 	"path/filepath"
 )
 
@@ -173,46 +171,6 @@ func ProjectLocks(verb, root string) []LockRequest {
 	return []LockRequest{{Path: clean, Dir: true, Mode: mode, Subject: "the project " + clean}}
 }
 
-// lockRequestsFor lists the locks a verb that the dispatcher still runs needs: the project verbs.
-// The project root is read once, by the same code the verb reads it with (parseProjectArgs), so
-// that what is locked is what is written; a verb that cannot name a usable root (the flag is
-// missing, has no value, or is relative) takes no lock, since it refuses before it reads or writes
-// anything. The overlay locks of the other verbs are OverlayLocks, taken by their adapters.
-//
-// Every read of shared state happens after the locks are held, in the verb itself, so nothing
-// decided before the lock is trusted after it.
-func lockRequestsFor(verb string, args []string) []LockRequest {
-	var requests []LockRequest
-	switch verb {
-	case "project-register", "project-revise", "project-retire":
-		if root, ok := projectRootArg(verb, args); ok {
-			requests = append(requests, ProjectLocks(verb, root)...)
-		}
-	case "project-status":
-		if root, ok := projectRootArg(verb, args); ok {
-			requests = append(requests, ProjectLocks(verb, root)...)
-		}
-	}
-	return requests
-}
-
-// projectRootArg is the project root a project verb will use: what parseProjectArgs,
-// the parser the verb itself uses, reads from the arguments that follow the verb's
-// name. When the command line does not parse, or the root is missing or not
-// absolute, the verb is about to refuse before it reads or writes anything, so there
-// is nothing to lock.
-func projectRootArg(verb string, args []string) (string, bool) {
-	spec, ok := projectArgSpecs[verb]
-	if !ok {
-		return "", false
-	}
-	parsed, err := parseProjectArgs(spec, stripVerb(args, verb))
-	if err != nil || parsed.Root == "" || !filepath.IsAbs(parsed.Root) {
-		return "", false
-	}
-	return parsed.Root, true
-}
-
 // LockFailure says in which way the locks of a verb were refused.
 type LockFailure int
 
@@ -344,23 +302,6 @@ func AcquireLocks(verb string, locker Locker, requests []LockRequest) (HeldLocks
 		unlocks = append(unlocks, unlock)
 	}
 	return HeldLocks{release: releaseAll, Provisional: provisional}, nil
-}
-
-// acquireLocks takes every lock the verb needs, in order, and returns the function
-// that releases them in reverse. When one cannot be taken it releases those it
-// holds, says why, calls exit (ExitBusy for a lock that stayed taken, 1 for one
-// that could not be taken at all), and reports false: the verb must not run.
-func acquireLocks(verb string, args []string, locker Locker, stderr io.Writer, exit func(int)) (release func(), ok bool) {
-	held, err := AcquireLocks(verb, locker, lockRequestsFor(verb, args))
-	if err != nil {
-		var refusal *LockError
-		if errors.As(err, &refusal) {
-			fmt.Fprintf(stderr, "error: %v\n", refusal)
-			exit(refusal.ExitCode())
-		}
-		return nil, false
-	}
-	return held.Release, true
 }
 
 // rereadsWhenTheLockFileAppears is the answer to the one case a shared lock cannot

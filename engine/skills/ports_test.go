@@ -7,12 +7,9 @@ package skills
 // of engine/cmd.
 
 import (
-	"bytes"
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
-	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
@@ -104,27 +101,6 @@ func TestRereadsWhenTheLockFileAppearsTakesItsAnswersFromTheLocker(t *testing.T)
 			}
 			if strings.Join(locker.asked, ",") != strings.Join(tc.paths, ",") {
 				t.Errorf("the locker was asked about %v, want %v: every path, in order", locker.asked, tc.paths)
-			}
-		})
-	}
-}
-
-// --- the project verbs write through the project file system ----------------------------------
-
-// A verb that reads or writes the files of a project and was given no file system refuses.
-func TestAVerbThatNeedsTheProjectFileSystemRefusesWhenNoneIsWired(t *testing.T) {
-	regPath := filepath.Join(t.TempDir(), "skills.registry.yaml")
-	writeTestFile(t, regPath, minimalRegistry("existing"))
-	for _, verb := range []string{"project-register", "project-revise", "project-status", "project-retire"} {
-		t.Run(verb, func(t *testing.T) {
-			var out, errBuf bytes.Buffer
-			code := -1
-			deps := testDeps(inDir(t.TempDir()), os.ReadFile, testRegistries(os.ReadFile), nil, noopLocker{})
-			deps.Project = nil
-			SkillsCoreAt(verb, []string{verb, "--registry", regPath}, deps, &out, &errBuf, func(c int) { code = c })
-			want := "error: skills " + verb + ": no project file system is wired, so it cannot read or write files\n"
-			if code != 1 || errBuf.String() != want || out.Len() != 0 {
-				t.Errorf("%s = exit %d, stdout %q, stderr %q, want exit 1 and %q", verb, code, out.String(), errBuf.String(), want)
 			}
 		})
 	}

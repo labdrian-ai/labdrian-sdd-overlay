@@ -93,7 +93,7 @@ func TestProjectLockE2E_ConcurrentRegistrationsAllLandInTheProjectLock(t *testin
 		results := runAll(jobs)
 
 		registered := map[string]bool{}
-		if data, err := os.ReadFile(projectLockFile(root)); err == nil {
+		if data, err := os.ReadFile(ProjectLockPath(root)); err == nil {
 			lock, perr := ParseProjectLock(data)
 			if perr != nil {
 				t.Fatalf("round %d: the project lock does not parse: %v\n%s", round, perr, data)
@@ -169,7 +169,7 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 
 		registered := map[string]bool{}
 		installRecorded := false
-		if data, err := os.ReadFile(projectLockFile(f.project)); err == nil {
+		if data, err := os.ReadFile(ProjectLockPath(f.project)); err == nil {
 			lock, perr := ParseProjectLock(data)
 			if perr != nil {
 				t.Fatalf("round %d: the project lock does not parse: %v", round, perr)

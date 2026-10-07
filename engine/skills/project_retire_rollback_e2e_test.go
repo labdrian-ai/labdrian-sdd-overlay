@@ -72,6 +72,24 @@ var retireE2EBinary struct {
 // The shared engine binary is removed by TestMain (live_guard_test.go), which
 // also isolates HOME and the XDG state and config directories for the package.
 
+// projectCLIRegistry is a minimal, parseable overlay registry that matches
+// nothing. Registration reads it through --registry for the MatchCandidate
+// identity check (design.md, "Identity"), so every CLI test needs a real,
+// readable one: an unreadable registry is a fail-closed refusal.
+const projectCLIRegistry = `version: "1"
+skills:
+  - id: unrelated-skill
+    path: unrelated-skill
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+`
+
 // buildRetireEngineBinary compiles the real engine binary once per package
 // run into an isolated temp directory, the same way
 // shelltest/overlay_pi_package_build_test.go builds it for its own e2e runs.

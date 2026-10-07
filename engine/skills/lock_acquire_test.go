@@ -246,17 +246,11 @@ func TestReadConsistentlyDoesNotReadWhenTheLocksCannotBeTaken(t *testing.T) {
 	}
 }
 
-// The overlay lock a verb takes is said once, by OverlayLocks, and the adapters of the verbs that
-// run behind a use case take it (engine/cmd holds that they take exactly what it says:
-// TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem and the tests of install and adopt),
-// since only that package can run an adapter. The dispatcher of this package takes none of them.
-func TestTheDispatcherTakesNoOverlayLock(t *testing.T) {
+// The overlay lock a verb takes is said once, by OverlayLocks, and the adapters of the verbs take
+// it (engine/cmd holds that each takes exactly what it says: the tests of the adapters), since only
+// that package can run an adapter.
+func TestOverlayLocksSaysWhichVerbTakesWhichLock(t *testing.T) {
 	const registry = "/o/skills.registry.yaml"
-	for _, verb := range []string{"install", "adopt", "add", "remove", "sync-manifest", "approve", "validate"} {
-		if got := lockRequestsFor(verb, []string{verb, "--registry", registry}); len(got) != 0 {
-			t.Errorf("%s: the dispatcher takes %+v, want none: the adapter of the use case takes the lock", verb, got)
-		}
-	}
 	for _, verb := range []string{"add", "remove", "sync-manifest", "approve"} {
 		if got := OverlayLocks(verb, registry); len(got) != 1 || got[0].Mode != LockExclusive || got[0].Path != "/o/.skills.registry.yaml.lock" {
 			t.Errorf("%s: OverlayLocks = %+v, want an exclusive lock on the lock file beside the registry", verb, got)
@@ -267,7 +261,7 @@ func TestTheDispatcherTakesNoOverlayLock(t *testing.T) {
 			t.Errorf("%s: OverlayLocks = %+v, want a shared lock on the lock file beside the registry, that is not read again", verb, got)
 		}
 	}
-	for _, verb := range []string{"list", "status", "lint", "project-status", "nuke", ""} {
+	for _, verb := range []string{"list", "status", "lint", "project-register", "project-revise", "project-retire", "project-status", "nuke", ""} {
 		if got := OverlayLocks(verb, registry); len(got) != 0 {
 			t.Errorf("%s: OverlayLocks = %+v, want no overlay lock", verb, got)
 		}
@@ -277,5 +271,24 @@ func TestTheDispatcherTakesNoOverlayLock(t *testing.T) {
 	}
 	if got := OverlayLocks("approve", "/o/team.registry.yaml"); !got[0].SkipRegistryCheck {
 		t.Error("approve with an explicit registry path takes it as the name of the lock, and does not need the registry to exist")
+	}
+}
+
+// The lock a verb takes on a project is said once, by ProjectLocks: exclusive for the verbs that
+// write the project, shared for the one that reads it, on the directory itself.
+func TestProjectLocksSaysWhichVerbTakesWhichLockOnTheProject(t *testing.T) {
+	for verb, mode := range map[string]LockMode{
+		"install": LockExclusive, "adopt": LockExclusive, "project-register": LockExclusive,
+		"project-revise": LockExclusive, "project-retire": LockExclusive, "project-status": LockShared,
+	} {
+		got := ProjectLocks(verb, "/p/./project/")
+		if len(got) != 1 || !got[0].Dir || got[0].Mode != mode || got[0].Path != "/p/project" || got[0].Subject != "the project /p/project" || got[0].Registry != "" {
+			t.Errorf("%s: ProjectLocks = %+v, want one %v lock on the directory /p/project", verb, got, mode)
+		}
+	}
+	for _, verb := range []string{"add", "remove", "sync-manifest", "approve", "validate", "list", "status", "lint", "nuke", ""} {
+		if got := ProjectLocks(verb, "/p/project"); len(got) != 0 {
+			t.Errorf("%s: ProjectLocks = %+v, want none", verb, got)
+		}
 	}
 }
