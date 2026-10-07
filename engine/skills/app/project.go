@@ -7,7 +7,6 @@ import (
 	"io"
 	"io/fs"
 	"path"
-	"path/filepath"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
@@ -280,7 +279,7 @@ func ProjectRetire(p ProjectPorts, in ProjectRetireInput) (ProjectRetireResult, 
 		return res, err
 	}
 	res.UnreadWarning = warning
-	root := filepath.Clean(in.ProjectRoot)
+	root := in.ProjectRoot
 	lockData, err := readRequiredProjectLock(p.Locks, root)
 	if err != nil {
 		return res, err
@@ -338,7 +337,7 @@ type ProjectStatusResult struct {
 // *ProjectLockParseError and a *SkillNotInLockError.
 func ProjectStatus(p ProjectPorts, in ProjectStatusInput) (ProjectStatusResult, error) {
 	var res ProjectStatusResult
-	root := filepath.Clean(in.ProjectRoot)
+	root := in.ProjectRoot
 	reg, warning, err := readRegistry(p.Registries, in.RegistryPath)
 	if err != nil {
 		return res, err

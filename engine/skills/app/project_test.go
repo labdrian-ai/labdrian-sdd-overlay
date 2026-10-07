@@ -513,21 +513,28 @@ func TestProjectStatusAnswersForEverySkillOfTheLockAndForOneAskedAbout(t *testin
 }
 
 // A global skill supersedes a project one by the id of the skill or by the last slug of its candidate
-// key: MatchCandidate is an existence and identity lookup, not a claim about content.
+// key: MatchCandidate is an existence and identity lookup, not a claim about content. The key names
+// the skill in Engram, and its last slug is not always the id the draft was registered under.
 func TestProjectStatusSaysWhichGlobalSkillSupersedesBothByIDAndByCandidateSlug(t *testing.T) {
+	global := func(id, path string) skills.Entry {
+		e := entry(id, "custom", "claude")
+		e.Path = path
+		return e
+	}
 	for name, tc := range map[string]struct {
-		entry skills.Entry
-		want  string
+		entry     skills.Entry
+		candidate string
+		want      string
 	}{
-		"the id of the registry matches the id of the project skill": {func() skills.Entry { e := entry(tidyID, "custom", "claude"); e.Path = "skills/replacement"; return e }(), "skills/replacement"},
-		"the last slug of the path matches the candidate slug": {func() skills.Entry {
-			e := entry("replacement", "custom", "claude")
-			e.Path = "skills/tidy-worktree"
-			return e
-		}(), "skills/tidy-worktree"},
+		"the id of the registry matches the id of the project skill":           {global(tidyID, "skills/replacement"), tidyCandidate, "skills/replacement"},
+		"the last slug of the path matches the id of the project skill":        {global("replacement", "skills/tidy-worktree"), tidyCandidate, "skills/tidy-worktree"},
+		"the last slug of the path matches the last slug of the candidate key": {global("replacement", "skills/tidy-up"), "procedural/candidates/repeated-success/tidy-up", "skills/tidy-up"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			w := newRegisteredWorld(t)
+			w := newProjectWorld(t)
+			if _, err := ProjectRegister(w.ports(), ProjectRegisterInput{ProjectRoot: w.root, Candidate: tc.candidate, RegistryPath: projectRegistryPath, DraftPath: w.draft}); err != nil {
+				t.Fatal(err)
+			}
 			w.registry = registryOf(tc.entry)
 
 			res, err := w.status(tidyID)
@@ -536,6 +543,19 @@ func TestProjectStatusSaysWhichGlobalSkillSupersedesBothByIDAndByCandidateSlug(t
 				t.Errorf("ProjectStatus = %+v, %v, want superseded by %s", res, err, tc.want)
 			}
 		})
+	}
+}
+
+// project-status also works on an unclean spelling of the root: the paths it checks are those of
+// the clean one.
+func TestProjectStatusWorksOnAnUncleanSpellingOfTheRoot(t *testing.T) {
+	w := newRegisteredWorld(t)
+	unclean := w.root + string(filepath.Separator) + "." + string(filepath.Separator)
+
+	res, err := ProjectStatus(w.ports(), ProjectStatusInput{ProjectRoot: unclean, RegistryPath: projectRegistryPath})
+
+	if err != nil || len(res.Skills) != 1 || !res.Skills[0].AgentOwned {
+		t.Errorf("ProjectStatus = %+v, %v, want the skill owned by the agent", res, err)
 	}
 }
 
@@ -579,4 +599,21 @@ func (readOnlyProject) Rename(string, string) error { panic("project-status rena
 func (readOnlyProject) Remove(string) error         { panic("project-status removed a file") }
 func (readOnlyProject) MkdirAll(string, fs.FileMode) error {
 	panic("project-status made a directory")
+}
+
+// The project root is cleaned before a retirement is planned, so that a spelling with dots in it
+// plans and removes the same files the clean one does: the executor finds the root again by the
+// paths the plan carries.
+func TestProjectRetireWorksOnAnUncleanSpellingOfTheRoot(t *testing.T) {
+	w := newRegisteredWorld(t)
+	unclean := w.root + string(filepath.Separator) + ".." + string(filepath.Separator) + filepath.Base(w.root)
+
+	res, err := ProjectRetire(w.ports(), ProjectRetireInput{ProjectRoot: unclean, RegistryPath: projectRegistryPath, ID: tidyID, Reason: "human-request"})
+
+	if err != nil || len(res.Removed) != 2 {
+		t.Fatalf("ProjectRetire = %+v, %v, want both files removed", res, err)
+	}
+	if _, err := os.Stat(w.target("claude")); !errors.Is(err, fs.ErrNotExist) {
+		t.Errorf("the skill is still there: %v", err)
+	}
 }
