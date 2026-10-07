@@ -18,8 +18,10 @@ func BaselineLintDecision(id string, hard []error) (warnings []string, refused b
 	return BaselineLintDecisionAgainst(FixedBaseline, id, hard)
 }
 
-// BaselineLintDecisionAgainst is BaselineLintDecision with the baseline the caller names.
+// BaselineLintDecisionAgainst is BaselineLintDecision with the baseline the caller names; a nil
+// baseline is the fixed one.
 func BaselineLintDecisionAgainst(baseline BaselineLookup, id string, hard []error) (warnings []string, refused bool) {
+	baseline = baseline.OrFixed()
 	if len(hard) == 0 {
 		return nil, false
 	}

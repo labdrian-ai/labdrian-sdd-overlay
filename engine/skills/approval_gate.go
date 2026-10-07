@@ -58,8 +58,10 @@ func EvaluateApproval(id, recordPath string, skillMD []byte, status ApprovalStat
 	return EvaluateApprovalAgainst(FixedBaseline, id, recordPath, skillMD, status)
 }
 
-// EvaluateApprovalAgainst is EvaluateApproval with the baseline the caller names.
+// EvaluateApprovalAgainst is EvaluateApproval with the baseline the caller names; a nil baseline is the
+// fixed one.
 func EvaluateApprovalAgainst(baseline BaselineLookup, id, recordPath string, skillMD []byte, status ApprovalStatus) ApprovalVerdict {
+	baseline = baseline.OrFixed()
 	switch status.State {
 	case ApprovalValid:
 		return ApprovalVerdict{OK: true}
@@ -126,8 +128,10 @@ func CheckApprovals(reg Registry, sourceRoot string, records ApprovalRecordStore
 	return CheckApprovalsAgainst(FixedBaseline, reg, sourceRoot, records)
 }
 
-// CheckApprovalsAgainst is CheckApprovals with the baseline the caller names.
+// CheckApprovalsAgainst is CheckApprovals with the baseline the caller names; a nil baseline is the
+// fixed one.
 func CheckApprovalsAgainst(baseline BaselineLookup, reg Registry, sourceRoot string, records ApprovalRecordStore) ([]Divergence, ApprovalSummary) {
+	baseline = baseline.OrFixed()
 	var divs []Divergence
 	var sum ApprovalSummary
 	for _, e := range reg.Skills {
