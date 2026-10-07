@@ -190,6 +190,8 @@ const (
 	flagRef      = "--ref"
 	flagID       = "--id"
 	flagApprover = "--approver"
+	// flagProjectID names the project a directory is, when the person says so.
+	flagProjectID = "--project-id"
 )
 
 // skillsAddSpec is the command line of `skills add`: the registry, the manifest and the skills tree
@@ -241,4 +243,18 @@ var skillsApproveSpec = skillsFlagSpec{
 		}
 		return fmt.Sprintf("skills approve: flag %q: the label %q starts with \"-\", which would be read as a flag; choose a label that does not start with \"-\"", flag, value)
 	},
+}
+
+// skillsInstallSpec is the command line of `skills install` and of `skills adopt`, which read the
+// same flags: the registry that admits skills to projects, the tree they are read from, and the id
+// of the project; the manifest of the wrapper is taken and not read. A word that is no flag is not
+// read, and a "--" is dropped, as install always passed both unread.
+func skillsInstallSpec(verb string) skillsFlagSpec {
+	return skillsFlagSpec{
+		verb:           verb,
+		values:         []string{flagRegistry, flagSourceRoot, flagProjectID},
+		wrapper:        []string{flagManifest},
+		words:          -1,
+		skipDoubleDash: true,
+	}
 }

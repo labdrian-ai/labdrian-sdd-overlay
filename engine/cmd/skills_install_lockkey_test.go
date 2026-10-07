@@ -14,17 +14,33 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
-// runInstallVerb runs install or adopt as the program does and records what it did.
-func runInstallVerb(verb string, deps skills.Deps, args ...string) verbRun {
-	var out, errOut strings.Builder
-	var r verbRun
-	skills.SkillsCoreAt(verb, args, deps, &out, &errOut, func(c int) { r.exits = append(r.exits, c) })
-	r.stdout, r.stderr = out.String(), errOut.String()
-	return r
+// installBackend is a way of running install and adopt: the dispatcher of the domain, and the
+// adapter of the use cases. Both are held to the same answers while the verbs move from one to the
+// other.
+type installBackend struct {
+	name string
+	run  func(verb string, deps skills.Deps, args ...string) verbRun
+}
+
+var installBackends = []installBackend{
+	{"dispatcher", func(verb string, deps skills.Deps, args ...string) verbRun {
+		var out, errOut strings.Builder
+		var r verbRun
+		skills.SkillsCoreAt(verb, args, deps, &out, &errOut, func(c int) { r.exits = append(r.exits, c) })
+		r.stdout, r.stderr = out.String(), errOut.String()
+		return r
+	}},
+	{"adapter", func(verb string, deps skills.Deps, args ...string) verbRun {
+		run := skillsInstall
+		if verb == "adopt" {
+			run = skillsAdopt
+		}
+		return runSkillsVerb(run, deps, args...)
+	}},
 }
 
 // overlayLockTaken is the overlay lock the verb asked the locker for, or "" when it asked for none.
-func overlayLockTaken(t *testing.T, verb string, args ...string) string {
+func overlayLockTaken(t *testing.T, backend installBackend, verb string, args ...string) string {
 	t.Helper()
 	locker := &holdingLocker{}
 	project := t.TempDir()
@@ -32,7 +48,7 @@ func overlayLockTaken(t *testing.T, verb string, args ...string) string {
 		Locker: locker,
 		Cwd:    func() (string, error) { return project, nil },
 	}
-	runInstallVerb(verb, deps, append([]string{verb}, args...)...)
+	backend.run(verb, deps, append([]string{verb}, args...)...)
 	for _, event := range locker.log() {
 		if rest, ok := strings.CutPrefix(event, "lock shared "); ok {
 			return rest
@@ -62,18 +78,39 @@ func TestInstallAndAdoptLockTheRegistryTheCommandLineNames(t *testing.T) {
 		{"the value of --manifest is its value, even when it is --registry", []string{"--manifest", "--registry", reg("a.yaml")}, defaultLock},
 		{"a registry named before the wrapper's flags", []string{"--registry", reg("a.yaml"), "--manifest", "m", "--source-root", "s"}, lockOf("a.yaml")},
 	} {
-		for _, verb := range []string{"install", "adopt"} {
-			t.Run(verb+" "+tc.name, func(t *testing.T) {
-				if got := overlayLockTaken(t, verb, tc.args...); got != tc.want {
-					t.Errorf("%s %q locked %q, want %q", verb, tc.args, got, tc.want)
-				}
-			})
+		for _, backend := range installBackends {
+			for _, verb := range []string{"install", "adopt"} {
+				t.Run(backend.name+" "+verb+" "+tc.name, func(t *testing.T) {
+					if got := overlayLockTaken(t, backend, verb, tc.args...); got != tc.want {
+						t.Errorf("%s %q locked %q, want %q", verb, tc.args, got, tc.want)
+					}
+				})
+			}
 		}
 	}
 	// The lock is shared: install and adopt only read the overlay.
-	locker := &holdingLocker{}
-	runInstallVerb("install", skills.Deps{Locker: locker, Cwd: func() (string, error) { return dir, nil }}, "install", "--registry", reg("a.yaml"))
-	if got := locker.log(); len(got) == 0 || !reflect.DeepEqual(got[0], "lock shared "+lockOf("a.yaml")) {
-		t.Errorf("lock events = %v, want the shared lock of the registry first", got)
+	for _, backend := range installBackends {
+		locker := &holdingLocker{}
+		backend.run("install", skills.Deps{Locker: locker, Cwd: func() (string, error) { return dir, nil }}, "install", "--registry", reg("a.yaml"))
+		if got := locker.log(); len(got) == 0 || !reflect.DeepEqual(got[0], "lock shared "+lockOf("a.yaml")) {
+			t.Errorf("%s: lock events = %v, want the shared lock of the registry first", backend.name, got)
+		}
+	}
+}
+
+// The lock is keyed by the registry the verb then reads, whatever the command line is: both are
+// read by one parser. The dispatcher locked the registry of a second hand-written scan, which took
+// `--project-id --registry r` for a flag and its value, and then read the default registry (the
+// first flag was given the second as its value): the registry that was read was not the one that
+// was locked.
+func TestInstallAndAdoptLockTheRegistryTheyRead(t *testing.T) {
+	adapter := installBackends[1]
+	dir := t.TempDir()
+	r := filepath.Join(dir, "r.yaml")
+	for _, verb := range []string{"install", "adopt"} {
+		got := overlayLockTaken(t, adapter, verb, "--project-id", "--registry", r)
+		if want := skills.RegistryLockPath("skills.registry.yaml"); got != want {
+			t.Errorf("%s locked %q, want %q: the registry it reads, since --registry was the value of --project-id", verb, got, want)
+		}
 	}
 }

@@ -17,15 +17,16 @@ import (
 // newSkillsDeps returns the Deps of the production entry point.
 func newSkillsDeps() skills.Deps {
 	return skills.Deps{
-		ReadFile:   os.ReadFile,
-		Approvals:  skillsfs.Approvals{},
-		Registries: newRegistryRepository(),
-		Tree:       skillsfs.Tree{},
-		Project:    skillsfs.Project{},
-		Cwd:        os.Getwd,
-		Identity:   newProjectIdentity(),
-		Locker:     newSkillsLocker(),
-		Now:        wallClockUTC,
+		ReadFile:     os.ReadFile,
+		Approvals:    skillsfs.Approvals{},
+		Registries:   newRegistryRepository(),
+		Tree:         skillsfs.Tree{},
+		Project:      skillsfs.Project{},
+		ProjectLocks: skillsfs.ProjectLocks{},
+		Cwd:          os.Getwd,
+		Identity:     newProjectIdentity(),
+		Locker:       newSkillsLocker(),
+		Now:          wallClockUTC,
 	}
 }
 

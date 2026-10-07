@@ -240,6 +240,8 @@ type holdingLocker struct {
 	events []string
 	held   map[string]int
 	fail   error
+	// failOn are the paths whose lock is refused, with the error of each.
+	failOn map[string]error
 	// unseen are the paths the locker says it cannot see, with what it says of each.
 	unseen map[string]error
 }
@@ -271,6 +273,10 @@ func (l *holdingLocker) take(kind, path string, mode skills.LockMode) (func(), e
 	if l.fail != nil {
 		l.events = append(l.events, fmt.Sprintf("refused %s %s", lockModeName(mode), path))
 		return nil, l.fail
+	}
+	if err := l.failOn[path]; err != nil {
+		l.events = append(l.events, fmt.Sprintf("refused %s %s", lockModeName(mode), path))
+		return nil, err
 	}
 	if l.held == nil {
 		l.held = map[string]int{}

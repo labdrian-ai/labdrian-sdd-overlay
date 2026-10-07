@@ -32,6 +32,9 @@ type Deps struct {
 	// Project reads and writes the files of a project and of an overlay: what install, adopt
 	// and the project verbs stage, commit and put back.
 	Project ProjectFS
+	// ProjectLocks reads the lock of a project: what install, adopt and the project verbs decide
+	// from. Each refuses without it.
+	ProjectLocks ProjectLockStore
 	// Cwd names the working directory, which `skills install` and `adopt` install into.
 	Cwd func() (string, error)
 	// Identity says which project the working directory is, for the verbs that admit skills to a
