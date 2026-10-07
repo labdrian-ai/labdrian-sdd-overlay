@@ -297,19 +297,52 @@ func TestSkillsReadOnlyVerbsNeedNoLockAndReadNothingBeside(t *testing.T) {
 	}
 }
 
-// The verb is the first word that names it, and what follows it is what the verb reads: `lint`
-// is removed before the path is taken, wherever the person put it among the flags of the wrapper.
+// The verb is the first word that is no flag and no flag's value, and what follows it is what the
+// verb reads: `lint` is not taken for the path, wherever the person put it among the flags of the
+// wrapper, and a word that is a flag's value or comes after the verb is what it is, even when it
+// is spelled like the verb.
 func TestSkillsLintIsReachedThroughTheTableAndTakesNoVerbAsPath(t *testing.T) {
 	dir := t.TempDir()
 	good := writeCLIFile(t, dir, "good.md", skillFile("good"))
-	var out, errOut bytes.Buffer
-	var exits []int
-	runSkillsCore("lint", []string{"lint", good}, &out, &errOut, func(c int) { exits = append(exits, c) })
-	if out.String() != "" || errOut.String() != "" || len(exits) != 1 || exits[0] != 0 {
-		t.Errorf("runSkillsCore(lint) printed %q / %q and exited %v, want a clean pass", out.String(), errOut.String(), exits)
+	for name, args := range map[string][]string{
+		"the verb, then the path":                                            {"lint", good},
+		"the verb after a flag and its value":                                {"--registry", "r.yaml", "lint", good},
+		"a flag whose value is spelled like a verb":                          {"--registry", "lint", "lint", good},
+		"the value of a flag first, as the dispatcher takes it for the verb": {"--registry", "lint", good},
+	} {
+		t.Run(name, func(t *testing.T) {
+			var out, errOut bytes.Buffer
+			var exits []int
+			runSkillsCore("lint", args, &out, &errOut, func(c int) { exits = append(exits, c) })
+			if out.String() != "" || errOut.String() != "" || len(exits) != 1 || exits[0] != 0 {
+				t.Errorf("runSkillsCore(lint, %q) printed %q / %q and exited %v, want a clean pass", args, out.String(), errOut.String(), exits)
+			}
+		})
 	}
-	if got := withoutVerb([]string{"--rules", "lint", "lint"}, "lint"); strings.Join(got, " ") != "--rules lint" {
-		t.Errorf("withoutVerb removed %q, want only the first word that is the verb", got)
+}
+
+// Only the first word is the verb: a later word spelled like it is the path, and one that is a
+// flag's value is never dropped.
+func TestTheVerbWordIsTheFirstWordThatIsNoFlagValue(t *testing.T) {
+	for name, tc := range map[string]struct {
+		args      []string
+		wantWords []string
+	}{
+		"the verb alone":                   {[]string{"lint"}, nil},
+		"the verb and a path spelled so":   {[]string{"lint", "lint"}, []string{"lint"}},
+		"the value of a flag, then a path": {[]string{"--registry", "lint", "x.md"}, []string{"x.md"}},
+		"the verb after the flags":         {[]string{"--rules", "lint"}, nil},
+		"no word spelled like the verb":    {[]string{"x.md"}, []string{"x.md"}},
+	} {
+		t.Run(name, func(t *testing.T) {
+			parsed, err := skillsLintSpec.parseAfterVerb(tc.args)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if !reflect.DeepEqual(parsed.words, tc.wantWords) {
+				t.Errorf("words = %q, want %q", parsed.words, tc.wantWords)
+			}
+		})
 	}
 }
 

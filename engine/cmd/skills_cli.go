@@ -43,21 +43,8 @@ var skillsCLIVerbs = map[string]skillsVerb{
 	"project-status":   skillsProjectStatus,
 	"project-retire":   skillsProjectRetire,
 	"lint": func(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-		skillsLint(deps, withoutVerb(args, "lint"), stdout, stderr, exit)
+		skillsLint(deps, args, stdout, stderr, exit)
 	},
-}
-
-// withoutVerb removes the first word that is the verb, so that it is not read as the word that
-// follows it: the verbs that take a word (lint takes a path) would otherwise take the verb.
-func withoutVerb(args []string, verb string) []string {
-	for i, a := range args {
-		if a == verb {
-			out := make([]string, 0, len(args)-1)
-			out = append(out, args[:i]...)
-			return append(out, args[i+1:]...)
-		}
-	}
-	return args
 }
 
 // skillsList is `skills list`: one line for each entry of the registry, sorted by id, with its
@@ -100,9 +87,9 @@ func skillsStatus(deps skills.Deps, args []string, stdout, stderr io.Writer, exi
 
 // skillsLint is `skills lint`: `lint --rules` prints the rule table and exits 0; `lint <path>`
 // prints each warning on stdout and each hard finding on stderr, and exits 1 when there is a
-// hard finding, since warnings alone never block. args are the arguments with the verb removed.
+// hard finding, since warnings alone never block.
 func skillsLint(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-	parsed, err := skillsLintSpec.parse(args)
+	parsed, err := skillsLintSpec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return
