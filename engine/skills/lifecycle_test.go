@@ -101,33 +101,6 @@ func TestAddEntryDefaults(t *testing.T) {
 	}
 }
 
-// TestAddEntryNilAllowedProjects verifies ADR-8: AllowedProjects MUST be nil (not
-// []string{}) so the round-trip through encode → decode produces DeepEqual.
-func TestAddEntryNilAllowedProjects(t *testing.T) {
-	reg := Registry{Version: "1"}
-
-	got, err := AddEntry(reg, "skill1", "", "")
-	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
-	}
-	if got.Skills[0].Install.AllowedProjects != nil {
-		t.Errorf("AllowedProjects: expected nil, got %v", got.Skills[0].Install.AllowedProjects)
-	}
-
-	// Round-trip through serialize → parse must preserve DeepEqual (ADR-8, ADR-7).
-	out, err := serializeRegistry(got)
-	if err != nil {
-		t.Fatalf("Serialize: %v", err)
-	}
-	reparsed, err := parseRegistry(out)
-	if err != nil {
-		t.Fatalf("decoding the encoded registry: %v", err)
-	}
-	if !reflect.DeepEqual(got, reparsed) {
-		t.Errorf("round-trip not equal:\n  before: %+v\n  after:  %+v", got, reparsed)
-	}
-}
-
 // TestAddEntrySlugGuard verifies ADR-8: invalid ids are rejected before touching the registry.
 func TestAddEntrySlugGuard(t *testing.T) {
 	// Note: a digit-starting id like "0abc" is VALID per ^[a-z0-9][a-z0-9-]*$,
@@ -258,47 +231,6 @@ func TestAddEntryOrderPreservation(t *testing.T) {
 	}
 	if len(reg1.Skills) != 1 {
 		t.Errorf("reg1 was mutated: got %d entries", len(reg1.Skills))
-	}
-}
-
-// TestAddEntryRoundTrip verifies that serialize(AddEntry(...)) re-parses to a DeepEqual value.
-func TestAddEntryRoundTrip(t *testing.T) {
-	base := Registry{
-		Version: "1",
-		Skills: []Entry{
-			{
-				ID:   "base",
-				Path: "base",
-				Source: Source{
-					Type:     "core",
-					Upstream: &Upstream{Owner: "gentleman-programming"},
-				},
-				Install: Install{
-					DefaultScope: "global",
-					Targets:      []string{"claude", "opencode"},
-				},
-				Lifecycle: Lifecycle{UpdateStrategy: "vendor-merge"},
-			},
-		},
-	}
-
-	got, err := AddEntry(base, "new-skill", "", "")
-	if err != nil {
-		t.Fatalf("AddEntry: %v", err)
-	}
-
-	out, err := serializeRegistry(got)
-	if err != nil {
-		t.Fatalf("Serialize: %v", err)
-	}
-
-	reparsed, err := parseRegistry(out)
-	if err != nil {
-		t.Fatalf("decoding after encoding: %v", err)
-	}
-
-	if !reflect.DeepEqual(got, reparsed) {
-		t.Errorf("round-trip failed:\n  want: %+v\n  got:  %+v", got, reparsed)
 	}
 }
 

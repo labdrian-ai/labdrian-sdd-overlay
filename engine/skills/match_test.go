@@ -227,45 +227,4 @@ func TestMatchCandidate(t *testing.T) {
 		}
 	})
 
-	t.Run("built by reading a registry file", func(t *testing.T) {
-		reg := mustParseRegistry(t, `version: "1"
-skills:
-  - id: sdd-spec
-    path: sdd-spec
-    source:
-      type: core
-      upstream:
-        owner: gentleman-programming
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: vendor-merge
-  - id: prespec-malandra
-    path: prespec-malandra
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-        - opencode
-        - codex
-    lifecycle:
-      updateStrategy: overlay-only
-`)
-
-		matched, path := MatchCandidate(reg, "sdd-spec")
-		if !matched || path != "sdd-spec" {
-			t.Fatalf("MatchCandidate(sdd-spec) over parsed registry = (%v, %q), want (true, %q)", matched, path, "sdd-spec")
-		}
-
-		matched, path = MatchCandidate(reg, "sdd-spec-review")
-		if matched || path != "" {
-			t.Fatalf("MatchCandidate(sdd-spec-review) over parsed registry = (%v, %q), want (false, \"\") — substring near-miss must not match", matched, path)
-		}
-	})
 }

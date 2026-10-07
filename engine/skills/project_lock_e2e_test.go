@@ -33,18 +33,33 @@ func newInstallFixture(t *testing.T) installFixture {
 		root:    filepath.Join(dir, "skills"),
 		project: filepath.Join(t.TempDir(), "project"),
 	}
-	regBytes, err := serializeRegistry(buildRegistry([]struct {
-		id              string
-		scope           string
-		allowedProjects []string
-	}{
-		{"glob", "global", nil},
-		{"proj", "project", []string{"p"}},
-	}))
-	if err != nil {
-		t.Fatal(err)
-	}
-	writeTestFile(t, f.reg, string(regBytes))
+	// The registry file as the program reads it: a global skill approve can target and a project
+	// skill admitted to the project p.
+	writeTestFile(t, f.reg, `version: "1"
+skills:
+  - id: glob
+    path: glob
+    source:
+      type: custom
+    install:
+      defaultScope: global
+      targets:
+        - claude
+    lifecycle:
+      updateStrategy: overlay-only
+  - id: proj
+    path: proj
+    source:
+      type: custom
+    install:
+      defaultScope: project
+      targets:
+        - claude
+      allowedProjects:
+        - p
+    lifecycle:
+      updateStrategy: overlay-only
+`)
 	writeTestFile(t, f.man, minimalManifest("glob", "proj"))
 	for _, id := range []string{"glob", "proj"} {
 		writeTestFile(t, filepath.Join(f.root, id, "SKILL.md"), lintCleanSkillMD(id))
