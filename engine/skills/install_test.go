@@ -60,6 +60,22 @@ func TestAdmittedToProjectIsTheEntriesOfTheProjectScopeThatNameTheProject(t *tes
 	}
 }
 
+// With no source root the planner says so when, and only when, an entry is admitted: it is the one
+// place that decides what "admits a skill" means for this.
+func TestPlanInstallWithNoSourceRootIsRefusedOnlyWhenASkillIsAdmitted(t *testing.T) {
+	admits := buildRegistry([]struct {
+		id              string
+		scope           string
+		allowedProjects []string
+	}{{"my-skill", "project", []string{"target-repo"}}})
+	if ops, err := PlanInstall(admits, "target-repo", "", "/target-repo"); err != ErrNoSourceRoot || ops != nil {
+		t.Errorf("PlanInstall(admitted, no source root) = %v, %v, want ErrNoSourceRoot", ops, err)
+	}
+	if ops, err := PlanInstall(admits, "stranger", "", "/target-repo"); err != nil || len(ops) != 0 {
+		t.Errorf("PlanInstall(nothing admitted, no source root) = %v, %v, want nothing and no error", ops, err)
+	}
+}
+
 // TestPlanInstall is the table-driven suite for the pure planner (T-03).
 func TestPlanInstall(t *testing.T) {
 	const sourceRoot = "/overlay/skills"

@@ -2,6 +2,7 @@ package app
 
 import (
 	"bytes"
+	"errors"
 	"fmt"
 	"path/filepath"
 
@@ -172,10 +173,10 @@ func runPlanned(verb string, plan func(skills.InstallInput) (skills.InstallPlan,
 	}
 	res.UnreadWarning = warning
 
-	if in.SourceRoot == "" && len(skills.AdmittedToProject(reg, projectID)) > 0 {
+	ops, err := skills.PlanInstall(reg, projectID, in.SourceRoot, root)
+	if errors.Is(err, skills.ErrNoSourceRoot) {
 		return res, &SourceRootRequiredError{Verb: verb}
 	}
-	ops, err := skills.PlanInstall(reg, projectID, in.SourceRoot, root)
 	if err != nil {
 		return res, &PlanError{Verb: verb, Err: err}
 	}
