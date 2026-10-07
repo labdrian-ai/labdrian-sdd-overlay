@@ -82,22 +82,6 @@ type noopLocker struct{ osExists }
 func (noopLocker) Lock(string, LockMode) (func(), error)    { return func() {}, nil }
 func (noopLocker) LockDir(string, LockMode) (func(), error) { return func() {}, nil }
 
-func registryIDs(t *testing.T, regPath string) []string {
-	t.Helper()
-	data, err := os.ReadFile(regPath)
-	if err != nil {
-		t.Fatal(err)
-	}
-	var ids []string
-	for _, line := range strings.Split(string(data), "\n") {
-		if id, ok := strings.CutPrefix(line, "  - id: "); ok {
-			ids = append(ids, strings.TrimSpace(id))
-		}
-	}
-	sort.Strings(ids)
-	return ids
-}
-
 func manifestIDs(t *testing.T, mfPath string) []string {
 	t.Helper()
 	mv, err := loadManifestViewFile(mfPath)

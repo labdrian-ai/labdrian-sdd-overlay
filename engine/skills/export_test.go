@@ -2,7 +2,7 @@ package skills
 
 // What the tests of this package share. They reach no adapter: the adapters import this package,
 // so a test file of package skills cannot import them, and the tests that need the YAML file of a
-// registry are in the external test package (registryyaml_adapter_test.go). The file system the
+// registry are in the external test package (the adapter tests). The file system the
 // executors write through is stood in for here, by a ProjectFS made of os calls.
 
 import (
@@ -133,3 +133,10 @@ func writeTestFile(t *testing.T, path, content string) {
 		t.Fatalf("write %q: %v", path, err)
 	}
 }
+
+// The registry fixtures of the end-to-end tests, for the external test package that holds them to
+// the encoder.
+const (
+	ProjectCLIRegistryFixture = projectCLIRegistry
+	InstallRegistryFixture    = installFixtureRegistry
+)

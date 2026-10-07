@@ -2,7 +2,7 @@ package skills
 
 // The project lock against the BUILT engine binary: real processes started at the
 // same moment against one project root, in fixtures under t.TempDir(). See
-// registry_lock_e2e_test.go for the environment they run in and for
+// the registry lock tests for the environment they run in and for
 // SKILLS_E2E_ENGINE_BINARY, which measures an older build with these same tests.
 
 import (
@@ -33,33 +33,7 @@ func newInstallFixture(t *testing.T) installFixture {
 		root:    filepath.Join(dir, "skills"),
 		project: filepath.Join(t.TempDir(), "project"),
 	}
-	// The registry file as the program reads it: a global skill approve can target and a project
-	// skill admitted to the project p.
-	writeTestFile(t, f.reg, `version: "1"
-skills:
-  - id: glob
-    path: glob
-    source:
-      type: custom
-    install:
-      defaultScope: global
-      targets:
-        - claude
-    lifecycle:
-      updateStrategy: overlay-only
-  - id: proj
-    path: proj
-    source:
-      type: custom
-    install:
-      defaultScope: project
-      targets:
-        - claude
-      allowedProjects:
-        - p
-    lifecycle:
-      updateStrategy: overlay-only
-`)
+	writeTestFile(t, f.reg, installFixtureRegistry)
 	writeTestFile(t, f.man, minimalManifest("glob", "proj"))
 	for _, id := range []string{"glob", "proj"} {
 		writeTestFile(t, filepath.Join(f.root, id, "SKILL.md"), lintCleanSkillMD(id))
@@ -223,7 +197,7 @@ func TestProjectLockE2E_InstallsAndRegistrationsShareOneProjectWithoutLosingAnyt
 				t.Errorf("round %d: an install exited 0 but its record is not in the project lock", round)
 			}
 		}
-		if reg, man := registryIDs(t, f.reg), manifestIDs(t, f.man); !reflect.DeepEqual(reg, man) {
+		if reg, man := registryIDs(t, bin, f.reg), manifestIDs(t, f.man); !reflect.DeepEqual(reg, man) {
 			t.Errorf("round %d: registry lists %v but the manifest lists %v", round, reg, man)
 		}
 	}

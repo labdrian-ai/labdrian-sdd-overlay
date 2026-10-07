@@ -228,3 +228,27 @@ skills:
 		t.Fatalf("MatchCandidate(sdd-spec-review) over parsed registry = (%v, %q), want (false, \"\") — substring near-miss must not match", matched, path)
 	}
 }
+
+// The registry files that the end-to-end tests write by hand are what the encoder of the program
+// writes, byte for byte: a fixture that drifted from the format would test a file the program never
+// produces.
+func TestTheRegistryFixturesAreWhatTheEncoderWrites(t *testing.T) {
+	for name, fixture := range map[string]string{
+		"the project CLI registry":     skills.ProjectCLIRegistryFixture,
+		"the install fixture registry": skills.InstallRegistryFixture,
+	} {
+		t.Run(name, func(t *testing.T) {
+			reg, err := decode([]byte(fixture))
+			if err != nil {
+				t.Fatalf("the fixture does not decode: %v", err)
+			}
+			got, err := encode(reg)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if string(got) != fixture {
+				t.Errorf("the encoder writes\n%s\nthe fixture is\n%s", got, fixture)
+			}
+		})
+	}
+}
