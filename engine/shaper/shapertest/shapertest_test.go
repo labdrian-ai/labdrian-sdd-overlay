@@ -50,6 +50,24 @@ func TestDocumentWithVariesOnlyWhatItIsAskedTo(t *testing.T) {
 	}
 }
 
+// DocumentWithout removes only the field it names, and GoalV2JSONWithObjective changes only
+// the objective: with the default objective it is the document GoalV2JSON returns.
+func TestDocumentWithoutAndTheObjectiveVariationChangeOnlyWhatTheyName(t *testing.T) {
+	if _, err := shaper.Parse(shapertest.DocumentWithout(t, "architecture")); err == nil {
+		t.Error("shaper.Parse(DocumentWithout(architecture)) accepted a handoff with no architecture")
+	}
+	if _, err := shaper.Parse(shapertest.DocumentWithout(t, "no_such_field")); err != nil {
+		t.Errorf("shaper.Parse(DocumentWithout(no_such_field)) = %v, want the valid handoff", err)
+	}
+	if got, want := shapertest.GoalV2JSONWithObjective("p", "g", shapertest.DefaultObjective), shapertest.GoalV2JSON("p", "g"); got != want {
+		t.Errorf("GoalV2JSONWithObjective(default) = %s, want GoalV2JSON %s", got, want)
+	}
+	g, err := goal.Parse([]byte(shapertest.GoalV2JSONWithObjective("p", "g", "Another objective.")))
+	if err != nil || g.Objective != "Another objective." {
+		t.Errorf("goal.Parse(GoalV2JSONWithObjective) = %q, %v, want the objective it was given", g.Objective, err)
+	}
+}
+
 // recorder is a testing.TB that records a failure instead of ending the test, so a helper
 // that is supposed to fail can be seen failing.
 type recorder struct {

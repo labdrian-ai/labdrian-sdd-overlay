@@ -1,7 +1,6 @@
 package shaper
 
 import (
-	"encoding/json"
 	"reflect"
 	"strings"
 	"testing"
@@ -20,18 +19,11 @@ func documentWith(t *testing.T, changes map[string]any) []byte {
 
 func documentWithout(t *testing.T, field string) []byte {
 	t.Helper()
-	var fields map[string]any
-	if err := json.Unmarshal([]byte(validHandoffJSON), &fields); err != nil {
-		t.Fatalf("decode valid test document: %v", err)
-	}
-	delete(fields, field)
-	data, err := json.Marshal(fields)
-	if err != nil {
-		t.Fatalf("encode test document: %v", err)
-	}
-	return data
+	return shapertest.DocumentWithout(t, field)
 }
 
+// sampleHandoff is the typed value of validHandoffJSON, written out for the domain's own
+// tests; the test below holds the two equal, so neither can drift from the other.
 func sampleHandoff() Handoff {
 	return Handoff{
 		Version:      1,
@@ -41,6 +33,16 @@ func sampleHandoff() Handoff {
 		Stages:       []string{"Extract jsonstrict.", "Refactor goal.Parse onto jsonstrict."},
 		Acceptance:   []string{"go test ./... passes."},
 		OutOfScope:   []string{"Runtime clearance UI."},
+	}
+}
+
+func TestTheTypedSampleHandoffIsWhatTheSharedFixtureParsesTo(t *testing.T) {
+	got, err := Parse([]byte(validHandoffJSON))
+	if err != nil {
+		t.Fatalf("Parse(validHandoffJSON): %v", err)
+	}
+	if want := sampleHandoff(); !reflect.DeepEqual(got, want) {
+		t.Errorf("Parse(validHandoffJSON) = %#v, want sampleHandoff() %#v", got, want)
 	}
 }
 

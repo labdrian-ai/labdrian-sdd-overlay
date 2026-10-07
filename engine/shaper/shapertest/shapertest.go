@@ -41,10 +41,35 @@ func DocumentWith(t testing.TB, changes map[string]any) []byte {
 	return data
 }
 
+// DocumentWithout returns ValidHandoffJSON with the top-level field removed, re-encoded.
+func DocumentWithout(t testing.TB, field string) []byte {
+	t.Helper()
+	var fields map[string]any
+	if err := json.Unmarshal([]byte(ValidHandoffJSON), &fields); err != nil {
+		t.Fatalf("decode valid test document: %v", err)
+	}
+	delete(fields, field)
+	data, err := json.Marshal(fields)
+	if err != nil {
+		t.Fatalf("encode test document: %v", err)
+	}
+	return data
+}
+
+// DefaultObjective is the objective of GoalV2JSON.
+const DefaultObjective = "Bind the handoff to real intent."
+
 // GoalV2JSON is a Goal version 2 for the given project and goal, with no non-goals.
 func GoalV2JSON(projectID, goalID string) string {
+	return GoalV2JSONWithObjective(projectID, goalID, DefaultObjective)
+}
+
+// GoalV2JSONWithObjective is GoalV2JSON with the given objective, which distinguishes
+// which of two otherwise equal documents a test read. The objective is written as it is:
+// it must not need JSON escaping.
+func GoalV2JSONWithObjective(projectID, goalID, objective string) string {
 	return `{"version":2,"project_id":"` + projectID + `","goal_id":"` + goalID + `",` +
-		`"objective":"Bind the handoff to real intent.","scope":"One project.",` +
+		`"objective":"` + objective + `","scope":"One project.",` +
 		`"constraints":[],"non_goals":[],"acceptance_criteria":["Binding succeeds."],` +
 		`"memory_scope":"Project-scoped.","runtime_scope":"Deferred.","delivery_boundary":"No delivery."}`
 }
