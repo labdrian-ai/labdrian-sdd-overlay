@@ -17,7 +17,8 @@ import (
 
 // osProjectFS is the ProjectFS of a test: the files of a temporary directory, with the os calls a
 // real project file system makes. It is a double of the port, as the in-memory ones of the other
-// tests are.
+// tests are. The adapter contract tests of the
+// external package hold it to the real adapter on the same calls.
 type osProjectFS struct{}
 
 func (osProjectFS) Stat(name string) (fs.FileInfo, error)       { return os.Stat(name) }
@@ -64,7 +65,8 @@ func (osExists) Exists(path string) error {
 
 // scanSkillFiles lists the files of a skills tree on disk the way the tree adapter does: every
 // regular file below dir as a slash-separated path relative to it, sorted, leaving out a name that
-// begins with a dot (a directory with it) and anything that is not a regular file.
+// begins with a dot (a directory with it) and anything that is not a regular file. The contract test of the external
+// package (the adapter contract tests) holds it to the adapter on the same files.
 func scanSkillFiles(dir string) ([]string, error) {
 	var out []string
 	err := filepath.WalkDir(dir, func(path string, d fs.DirEntry, err error) error {
@@ -140,3 +142,9 @@ const (
 	ProjectCLIRegistryFixture = projectCLIRegistry
 	InstallRegistryFixture    = installFixtureRegistry
 )
+
+// The doubles of this package that stand in for an adapter, for the contract test that holds each
+// to the adapter it imitates.
+var ScanSkillFilesOfTheDouble = scanSkillFiles
+
+func ProjectFSOfTheDouble() ProjectFS { return testProjectFS() }
