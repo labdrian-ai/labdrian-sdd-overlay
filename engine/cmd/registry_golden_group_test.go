@@ -132,6 +132,26 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 	}
 	holder.Close()
 
+	// The program said it was ready, and what it said has to be so: it is still running (hanging,
+	// not exited), and the descendant it started is alive and in its process group. Without this
+	// a program that wrote the line and ended, with no descendant ever started, would pass: the
+	// FIFO ends all the same.
+	select {
+	case <-runnerDone:
+		t.Fatal("the program had ended when it was to hang, so what follows would prove nothing about a descendant")
+	default:
+	}
+	pid, group := recordedPid(pidFile), recordedPid(groupFile)
+	if pid <= 0 || group <= 0 {
+		t.Fatalf("the program did not record its descendant (pid %d) and its own pid (%d)", pid, group)
+	}
+	if err := syscall.Kill(pid, 0); err != nil {
+		t.Fatalf("the descendant (pid %d) is not alive when the program is killed: %v", pid, err)
+	}
+	if got, err := syscall.Getpgid(pid); err != nil || got != group {
+		t.Fatalf("the descendant (pid %d) is in process group %d (%v), want the program's, %d", pid, got, err, group)
+	}
+
 	kill()
 	if err := <-ran; !errors.Is(err, errRunTimedOut) {
 		t.Fatalf("runUnder() = %v, want errRunTimedOut", err)
