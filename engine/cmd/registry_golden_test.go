@@ -163,6 +163,12 @@ var errRunTimedOut = errors.New("the program did not finish in time")
 func runWithin(timeout time.Duration, bin, dir string, env, args []string) (code int, stdout, stderr string, err error) {
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
+	return runUnder(ctx, bin, dir, env, args)
+}
+
+// runUnder is runWithin for a program that is killed when ctx ends, whether its deadline came or
+// the caller cancelled it (a test that kills the program once it has seen it is ready).
+func runUnder(ctx context.Context, bin, dir string, env, args []string) (code int, stdout, stderr string, err error) {
 	cmd := exec.CommandContext(ctx, bin, args...)
 	cmd.Dir = dir
 	cmd.Env = env

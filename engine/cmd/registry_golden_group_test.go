@@ -3,6 +3,8 @@
 package main
 
 import (
+	"bufio"
+	"context"
 	"errors"
 	"os"
 	"os/exec"
@@ -46,27 +48,52 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// fd 3 is the FIFO, open in the program before it forks, so both hold it from the start. The
-	// pid file is written after that, so that it exists is the proof that the program got as far as
-	// holding the FIFO and starting the descendant before it was killed: without it the read below
-	// would end at once because no writer ever existed, and the test would pass having tried
-	// nothing. A program that is slow to start (a loaded machine) is given a longer deadline, and
-	// one that never starts it fails the test.
-	script := `exec 3>"` + fifo + `"; sleep 3600 & echo $! > "` + pidFile + `"; wait`
-	started := false
-	for _, deadline := range []time.Duration{500 * time.Millisecond, 2 * time.Second, 8 * time.Second} {
-		_ = os.Remove(pidFile)
-		_, _, _, err = runWithin(deadline, sh, dir, nil, []string{"-c", script})
-		if !errors.Is(err, errRunTimedOut) {
-			t.Fatalf("runWithin() = %v, want errRunTimedOut", err)
-		}
-		if _, statErr := os.Stat(pidFile); statErr == nil {
-			started = true
-			break
-		}
+	// The test holds a write end of its own until the program says it is ready: a read of a FIFO
+	// that has no writer yet ends at once, which is the end the test must not mistake for the
+	// death of the descendant.
+	holder, err := os.OpenFile(fifo, os.O_WRONLY, 0)
+	if err != nil {
+		t.Fatal(err)
 	}
-	if !started {
-		t.Fatal("the program did not start its descendant before its deadline, so nothing was proved about it")
+	defer holder.Close()
+
+	// fd 3 is the FIFO, open in the program before it forks, so both hold it from the start. The
+	// program then writes the pid of the descendant to a file and a line to the FIFO: that line is
+	// the readiness handshake. The test waits for it once, bounded, and only then kills the
+	// program, so the kill always reaches a program that holds the FIFO and has a descendant:
+	// without that, the read below would end at once because no writer ever existed, and the test
+	// would pass having tried nothing. A program that never says it is ready fails the test.
+	script := `exec 3>"` + fifo + `"; sleep 3600 & echo $! > "` + pidFile + `"; echo ready >&3; wait`
+	ctx, kill := context.WithCancel(context.Background())
+	defer kill()
+	ran := make(chan error, 1)
+	go func() {
+		_, _, _, err := runUnder(ctx, sh, dir, nil, []string{"-c", script})
+		ran <- err
+	}()
+	ready := make(chan error, 1)
+	go func() {
+		_, err := bufio.NewReader(reader).ReadString('\n')
+		ready <- err
+	}()
+	select {
+	case err := <-ready:
+		if err != nil {
+			t.Fatalf("the program closed the FIFO before it said it was ready: %v", err)
+		}
+	case <-time.After(readyWait):
+		kill()
+		<-ran
+		t.Fatal("the program did not say it held the FIFO and had started its descendant, so nothing was proved about it")
+	}
+	holder.Close()
+	// Whatever happens next, no descendant is left running.
+	pid := descendantPid(t, pidFile)
+	t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })
+
+	kill()
+	if err := <-ran; !errors.Is(err, errRunTimedOut) {
+		t.Fatalf("runUnder() = %v, want errRunTimedOut", err)
 	}
 
 	gone := make(chan error, 1)
@@ -79,12 +106,27 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 		if err == nil {
 			t.Errorf("the program wrote to the FIFO: it was to hold it open and say nothing")
 		}
-	case <-time.After(2 * time.Minute):
-		if data, err := os.ReadFile(pidFile); err == nil {
-			if pid, err := strconv.Atoi(strings.TrimSpace(string(data))); err == nil {
-				_ = syscall.Kill(pid, syscall.SIGKILL)
-			}
-		}
-		t.Error("the descendant of the program still held the FIFO two minutes after the program was killed at its deadline")
+	case <-time.After(readyWait):
+		_ = syscall.Kill(pid, syscall.SIGKILL)
+		t.Error("the descendant of the program still held the FIFO after the program was killed")
 	}
+}
+
+// readyWait bounds a wait that a pass never spends: the program saying it is ready, and the
+// descendant being gone once the program was killed. It is long so that a loaded machine does not
+// fail a test that is right, and it is only ever waited out by a failure.
+const readyWait = time.Minute
+
+// descendantPid is the pid the program wrote before it said it was ready.
+func descendantPid(t *testing.T, pidFile string) int {
+	t.Helper()
+	data, err := os.ReadFile(pidFile)
+	if err != nil {
+		t.Fatalf("the program said it was ready but wrote no pid: %v", err)
+	}
+	pid, err := strconv.Atoi(strings.TrimSpace(string(data)))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return pid
 }
