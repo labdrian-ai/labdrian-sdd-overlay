@@ -157,16 +157,7 @@ func parseLine(trimmed string, indent, lineNum int) (tok, error) {
 // parseContent tokenizes a content string (after stripping any "- " prefix).
 // The isSeqItem flag controls which token kinds are returned for plain scalars.
 func parseContent(content string, indent, lineNum int, isSeqItem bool) (tok, error) {
-	// Locate the first ': ' boundary or a trailing ':' to find the key.
-	colonIdx := -1
-	for i := 0; i < len(content); i++ {
-		if content[i] == ':' {
-			if i+1 == len(content) || content[i+1] == ' ' {
-				colonIdx = i
-				break
-			}
-		}
-	}
+	colonIdx := keyColon(content)
 
 	if colonIdx < 0 {
 		// SUGGESTION-2: block scalar indicator on a standalone line (e.g. just "|-").
@@ -215,6 +206,45 @@ func parseContent(content string, indent, lineNum int, isSeqItem bool) (tok, err
 		return tok{kind: tokSeqMapping, indent: indent, key: key, val: val, lineNum: lineNum}, nil
 	}
 	return tok{kind: tokKeyValue, indent: indent, key: key, val: val, lineNum: lineNum}, nil
+}
+
+// keyColon is the index of the colon that ends the key of content: the first ': ' or a trailing
+// ':'. It is -1 when there is none, and when content is one quoted scalar: what is inside quotes
+// is a value, whatever it holds, so a ': ' there is not the end of a key.
+func keyColon(content string) int {
+	if isWholeQuotedScalar(content) {
+		return -1
+	}
+	for i := 0; i < len(content); i++ {
+		if content[i] == ':' && (i+1 == len(content) || content[i+1] == ' ') {
+			return i
+		}
+	}
+	return -1
+}
+
+// isWholeQuotedScalar reports whether s is one quoted scalar and nothing else: a quote, text in
+// which that quote only appears escaped (\" in double quotes) or doubled (two single quotes in single quotes),
+// and the closing quote. `"a": "b"` starts and ends with a quote and is two scalars with a colon
+// between them, not one.
+func isWholeQuotedScalar(s string) bool {
+	if !isQuotedScalar(s) {
+		return false
+	}
+	q, inner := s[0], s[1:len(s)-1]
+	for i := 0; i < len(inner); i++ {
+		switch {
+		case q == '"' && inner[i] == '\\':
+			i++
+		case inner[i] == q:
+			if q == '\'' && i+1 < len(inner) && inner[i+1] == '\'' {
+				i++
+				continue
+			}
+			return false
+		}
+	}
+	return true
 }
 
 // isQuotedScalar reports whether s is a properly paired quoted string

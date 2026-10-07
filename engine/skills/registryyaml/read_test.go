@@ -623,3 +623,47 @@ func TestALineOverTheLimitIsToldWithItsNumberAndTheLimit(t *testing.T) {
 		}
 	}
 }
+
+// A quoted scalar in a list is a value whatever it holds: a colon followed by a space (or a colon at
+// its end) inside the quotes is part of the value and not the end of a key, so a quoted list item
+// is not taken for a mapping and refused. Unquoted, the same text is a mapping where a scalar is
+// wanted, and is refused as before.
+func TestAQuotedListItemMayHoldAColonAndASpace(t *testing.T) {
+	const head = "version: \"1\"\nskills:\n  - id: my-skill\n    path: my-skill\n    source:\n      type: custom\n    install:\n      defaultScope: project\n      targets:\n        - claude\n      allowedProjects:\n"
+	const tail = "    lifecycle:\n      updateStrategy: overlay-only\n"
+	for name, tc := range map[string]struct {
+		item string
+		want string
+	}{
+		"double quotes":          {`        - "acme: demo"` + "\n", "acme: demo"},
+		"single quotes":          {`        - 'acme: demo'` + "\n", "acme: demo"},
+		"a colon at the end":     {`        - "acme:"` + "\n", "acme:"},
+		"a colon and a quote":    {`        - "say: \"hi\""` + "\n", `say: \"hi\"`},
+		"no colon, as before":    {"        - plain-project\n", "plain-project"},
+		"a colon without space":  {`        - "github.com:8080/acme"` + "\n", "github.com:8080/acme"},
+		"a plain scalar, as is":  {"        - github.com/acme/demo\n", "github.com/acme/demo"},
+		"quoted with a hash too": {`        - "acme: demo #1"` + "\n", "acme: demo #1"},
+		"an escaped quote":       {`        - "a \"b: c\" d"` + "\n", `a \"b: c\" d`},
+		"a doubled quote":        {`        - 'it''s: here'` + "\n", `it''s: here`},
+	} {
+		t.Run(name, func(t *testing.T) {
+			reg, err := readRegistry(head + tc.item + tail)
+			if err != nil {
+				t.Fatalf("a registry with the item %q: %v", strings.TrimSpace(tc.item), err)
+			}
+			if got := reg.Skills[0].Install.AllowedProjects; len(got) != 1 || got[0] != tc.want {
+				t.Errorf("allowedProjects = %q, want [%q]", got, tc.want)
+			}
+		})
+	}
+
+	// Two quoted scalars with a colon between them are a key and a value, as they were: not one
+	// scalar, so the line is still a mapping in a list of scalars.
+	if _, err := readRegistry(head + `        - "acme": "demo"` + "\n" + tail); err == nil {
+		t.Error(`a quoted "acme": "demo" in a list of scalars was accepted as a scalar`)
+	}
+	// The same text without quotes is a mapping in a list of scalars.
+	if _, err := readRegistry(head + "        - acme: demo\n" + tail); err == nil {
+		t.Error("an unquoted `acme: demo` in a list of scalars was accepted")
+	}
+}
