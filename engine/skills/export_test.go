@@ -10,7 +10,6 @@ package skills
 
 import (
 	"bytes"
-	"io"
 	"os"
 	"path/filepath"
 	"testing"
@@ -26,7 +25,7 @@ func UseYAMLRegistries(of func(read func(path string) ([]byte, error)) RegistryR
 
 // testRegistries is the registry repository of a test: the YAML adapter, reading files through
 // read (os.ReadFile, or the in-memory reader of the test).
-func testRegistries(read readFileFn) RegistryRepository {
+func testRegistries(read FileReader) RegistryRepository {
 	if yamlRepositoryOf == nil {
 		panic("skills tests: the YAML adapter was not registered; see registryyaml_hook_test.go")
 	}
@@ -88,18 +87,6 @@ func testProjectFS() ProjectFS {
 	return osProject
 }
 
-// testIdentity is the ProjectIdentity of a test: the id the person gave, and otherwise the name of
-// the directory, as the composition root chains them. It stands in for the adapters, which import
-// this package and so cannot be imported by its tests.
-type testIdentity struct{}
-
-func (testIdentity) Identify(q ProjectQuery) (ProjectID, bool, error) {
-	if q.Explicit != "" {
-		return q.Explicit, true, nil
-	}
-	return ProjectID(filepath.Base(q.Dir)), true, nil
-}
-
 // osExists gives a fake locker the answer of the file system to 'is this path there'.
 type osExists struct{}
 
@@ -132,9 +119,9 @@ func loadManifestViewFile(path string) (ManifestView, error) {
 // fileApprovals is the ApprovalRecordStore of a test: the SKILL.md and the record are read from
 // the paths the domain names (SkillMDPath, ApprovalRecordPath) through read, which is os.ReadFile
 // or the in-memory reader of the test, so a reader that gates or counts reads sees these too.
-func fileApprovals(read readFileFn) ApprovalRecordStore { return readerApprovals{read} }
+func fileApprovals(read FileReader) ApprovalRecordStore { return readerApprovals{read} }
 
-type readerApprovals struct{ read readFileFn }
+type readerApprovals struct{ read FileReader }
 
 func (r readerApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
 	return r.read(SkillMDPath(sourceRoot, path))
@@ -142,38 +129,6 @@ func (r readerApprovals) ReadSkill(sourceRoot, path string) ([]byte, error) {
 
 func (r readerApprovals) ReadRecord(sourceRoot, id string) ([]byte, error) {
 	return r.read(ApprovalRecordPath(sourceRoot, id))
-}
-
-// testDeps is the Deps of a test: the real file system, and what the test passes. cwd is the working
-// directory the test gives the verbs that install into one; nil wires none, and those verbs refuse,
-// so a test that does not say where it installs cannot install into the directory it runs in.
-func testDeps(cwd func() (string, error), readFile readFileFn, registries RegistryRepository, now func() string, locker Locker) Deps {
-	return Deps{
-		ReadFile:   readFile,
-		Approvals:  fileApprovals(readFile),
-		Registries: registries,
-		Tree:       testTree(),
-		Project:    testProjectFS(),
-		Cwd:        cwd,
-		Identity:   testIdentity{},
-		Now:        now,
-		Locker:     locker,
-	}
-}
-
-// skillsCore runs a verb that needs neither the clock nor a lock.
-func skillsCore(verb string, args []string, readFile readFileFn, registries RegistryRepository, stdout, stderr io.Writer, exit func(int)) {
-	skillsCoreAt(verb, args, readFile, registries, nil, nil, stdout, stderr, exit)
-}
-
-// skillsCoreAt runs a verb with the Deps a test gives it: the real tree, and what it passes.
-func skillsCoreAt(verb string, args []string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
-	skillsCoreAtIn(nil, verb, args, readFile, registries, now, locker, stdout, stderr, exit)
-}
-
-// skillsCoreAtIn is skillsCoreAt for a verb that installs into the directory cwd names.
-func skillsCoreAtIn(cwd func() (string, error), verb string, args []string, readFile readFileFn, registries RegistryRepository, now func() string, locker Locker, stdout, stderr io.Writer, exit func(int)) {
-	SkillsCoreAt(verb, args, testDeps(cwd, readFile, registries, now, locker), stdout, stderr, exit)
 }
 
 // writeTestFile writes content to path, making the directories above it.

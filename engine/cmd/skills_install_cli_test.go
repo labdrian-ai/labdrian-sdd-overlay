@@ -892,9 +892,9 @@ func indexOfEvent(events []string, want string) int {
 	return -1
 }
 
-// install and adopt are run by the program through the table of the adapter, not the dispatcher of
-// the domain, which does not know them: the verb is reached, takes the locks of the real locker on
-// the registry and the directory, and reads the registry, which admits nothing to this project.
+// install and adopt are run by the program through the table of the adapter: the verb is reached,
+// takes the locks of the real locker on the registry and the directory, and reads the registry, which
+// admits nothing to this project.
 func TestInstallAndAdoptAreReachedThroughTheProgram(t *testing.T) {
 	w := newInstallCLIWorld(t)
 	for _, verb := range []string{"install", "adopt"} {

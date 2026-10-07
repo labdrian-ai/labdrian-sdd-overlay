@@ -1,12 +1,11 @@
 package skills
 
-// Tests for the overlay lock: which verbs SkillsCoreAt takes it for, in which
+// Tests for the overlay lock: which verbs take it, in which
 // mode, what a busy or failed lock does, and that the interleavings it exists to
 // prevent cannot happen. Nothing here touches the file system outside t.TempDir():
 // the locker is injected, so no real lock file is ever created.
 
 import (
-	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -82,31 +81,6 @@ type noopLocker struct{ osExists }
 
 func (noopLocker) Lock(string, LockMode) (func(), error)    { return func() {}, nil }
 func (noopLocker) LockDir(string, LockMode) (func(), error) { return func() {}, nil }
-
-type coreRun struct {
-	stdout, stderr string
-	code           int
-}
-
-// runAt runs one verb through SkillsCoreAt and returns what it printed and its
-// exit code. Some verbs (list, validate) return without calling exit when they
-// succeed, as a process that falls off the end of main does, so that is 0.
-func runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
-	return runAtIn(nil, verb, args, readFile, now, locker)
-}
-
-// runAtIn is runAt for a verb that installs into the directory cwd names. runAt wires none.
-func runAtIn(cwd func() (string, error), verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
-	var out, errBuf bytes.Buffer
-	code := 0
-	skillsCoreAtIn(cwd, verb, append([]string{verb}, args...), readFile, testRegistries(readFile), now, locker, &out, &errBuf, func(c int) { code = c })
-	return coreRun{out.String(), errBuf.String(), code}
-}
-
-// inDir is the working directory a test gives a verb: always dir.
-func inDir(dir string) func() (string, error) {
-	return func() (string, error) { return dir, nil }
-}
 
 func registryIDs(t *testing.T, regPath string) []string {
 	t.Helper()
@@ -188,47 +162,3 @@ func TestTheRegistryLockIsNotSkillContent(t *testing.T) {
 		t.Errorf("ScanSkillFiles = %v, want %v", got, want)
 	}
 }
-
-// ---- which verbs lock, and how ---------------------------------------------------
-
-// lockFixture is a registry with one skill, its manifest and source tree, all
-// approved, so every locking verb can run for real. project is the temporary
-// directory install is pointed at, so that no test of the lock installs into the
-// directory the tests run in.
-type lockFixture struct {
-	dir, reg, man, root string
-	lockPath            string
-	project             string
-}
-
-func newLockFixture(t *testing.T) lockFixture {
-	t.Helper()
-	dir := t.TempDir()
-	reg, man, root := setupFixture(t, dir, minimalRegistry("existing"), minimalManifest("existing"), []string{"existing"})
-	return lockFixture{dir: dir, reg: reg, man: man, root: root, lockPath: RegistryLockPath(reg), project: t.TempDir()}
-}
-
-// runAt runs a verb that installs into the project of the fixture, never into the directory the
-// tests run in.
-func (f lockFixture) runAt(verb string, args []string, readFile readFileFn, now func() string, locker Locker) coreRun {
-	return runAtIn(inDir(f.project), verb, args, readFile, now, locker)
-}
-
-func TestSkillsCoreAt_TakesNoLockForTheVerbsThatNeedNone(t *testing.T) {
-	f := newLockFixture(t)
-	for _, tc := range []struct {
-		verb string
-		args []string
-	}{
-		{"nuke", nil},
-		{"", nil},
-	} {
-		locker := &recordingLocker{}
-		f.runAt(tc.verb, tc.args, os.ReadFile, nil, locker)
-		if got := locker.log(); len(got) != 0 {
-			t.Errorf("verb %q took locks %v, want none", tc.verb, got)
-		}
-	}
-}
-
-// ---- the interleavings the lock exists to prevent ----------------------------------

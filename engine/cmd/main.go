@@ -81,7 +81,6 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/reviewreceipt"
 	runtimepkg "github.com/labdrian-ai/labdrian-sdd-overlay/engine/runtime"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/settings"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/synctrigger"
 )
 
@@ -869,16 +868,17 @@ func runSkills(args []string) {
 // runSkillsCore is the testable core of the skills subcommand.
 func runSkillsCore(verb string, args []string, stdout, stderr io.Writer, exit func(int)) {
 	if verb == "" {
-		fmt.Fprintln(stderr, "error: skills requires a verb: list, status, validate, install, adopt, add, remove, sync-manifest, lint, approve, project-register, project-revise, project-status, project-retire")
+		fmt.Fprintf(stderr, "error: skills requires a verb: %s\n", skillsVerbList)
 		exit(1)
 		return
 	}
-	deps := newSkillsDeps()
-	if run, ok := skillsCLIVerbs[verb]; ok {
-		run(deps, args, stdout, stderr, exit)
+	run, ok := skillsCLIVerbs[verb]
+	if !ok {
+		fmt.Fprintf(stderr, "error: unknown skills verb %q (supported: %s)\n", verb, skillsVerbList)
+		exit(1)
 		return
 	}
-	skills.SkillsCoreAt(verb, args, deps, stdout, stderr, exit)
+	run(newSkillsDeps(), args, stdout, stderr, exit)
 }
 
 // wallClockUTC is the production clock handed to the skills core: the current

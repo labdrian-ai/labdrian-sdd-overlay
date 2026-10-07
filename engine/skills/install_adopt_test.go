@@ -289,13 +289,6 @@ func TestAdopt_RefusesWhenTheTwoRuntimeDirectoriesAreTheSameDirectory(t *testing
 	}
 }
 
-func TestAdoptVerb_IsListedWithTheOtherVerbs(t *testing.T) {
-	r := runAt("nuke", nil, os.ReadFile, nil, noopLocker{})
-	if !strings.Contains(r.stderr, "adopt") {
-		t.Errorf("the supported-verb list %q does not include adopt", r.stderr)
-	}
-}
-
 func TestAdopt_KeepsTheOtherRecordsOfTheLock(t *testing.T) {
 	f := newOwnFixture(t)
 	f.install(skill("one", map[string]string{"SKILL.md": "one\n"}))

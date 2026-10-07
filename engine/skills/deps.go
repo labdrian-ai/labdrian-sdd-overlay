@@ -10,12 +10,9 @@ type FileReader func(name string) ([]byte, error)
 // FileStatter says what a path is: the port a verb asks whether a file is there.
 type FileStatter func(name string) (fs.FileInfo, error)
 
-// readFileFn is the name the verbs that are not yet behind a use case call the port by.
-type readFileFn = FileReader
-
 // Deps is everything the verbs of `engine skills` reach outside themselves: the one value the
-// composition root (engine/cmd) builds and hands to SkillsCoreAt, which hands each verb the part
-// it needs. Every field is a port of this package or a function of the process; the domain
+// composition root (engine/cmd) builds and hands to the adapter of each verb, which hands its use
+// case the part it needs. Every field is a port of this package or a function of the process; the domain
 // holds no os call of its own (Phase 9 unit H17). A field left nil is a wiring that was
 // forgotten: a verb that needs it refuses, or, for the lock and the clock, says so.
 type Deps struct {

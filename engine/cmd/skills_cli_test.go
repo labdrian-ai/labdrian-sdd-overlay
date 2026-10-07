@@ -5,6 +5,8 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"reflect"
+	"sort"
 	"strings"
 	"testing"
 
@@ -315,3 +317,35 @@ func TestSkillsLintIsReachedThroughTheTableAndTakesNoVerbAsPath(t *testing.T) {
 // composition root does.
 func skillsApprovals() skills.ApprovalRecordStore { return skillsfs.Approvals{} }
 func skillsTree() skills.SkillTree                { return skillsfs.Tree{} }
+
+// A verb the program does not know is refused with the verbs it does, exit 1; a missing one too. No
+// verb runs, so no lock is asked for: the adapter looks the verb up before it builds anything.
+func TestSkillsRefusesAMissingOrUnknownVerbAndListsTheVerbsItKnows(t *testing.T) {
+	for _, tc := range []struct{ verb, want string }{
+		{"", "error: skills requires a verb: " + skillsVerbList + "\n"},
+		{"nuke", "error: unknown skills verb \"nuke\" (supported: " + skillsVerbList + ")\n"},
+		{"project-nuke", "error: unknown skills verb \"project-nuke\" (supported: " + skillsVerbList + ")\n"},
+	} {
+		var out, errOut strings.Builder
+		var exits []int
+		runSkillsCore(tc.verb, []string{tc.verb}, &out, &errOut, func(c int) { exits = append(exits, c) })
+		if out.String() != "" || errOut.String() != tc.want || len(exits) != 1 || exits[0] != 1 {
+			t.Errorf("verb %q: stdout %q, stderr %q, exits %v, want exit 1 and %q", tc.verb, out.String(), errOut.String(), exits, tc.want)
+		}
+	}
+}
+
+// The list of verbs the usage says is the table of verbs that run: a verb that runs and is not in the
+// list is undiscoverable, and a verb in the list that does not run is a lie.
+func TestTheVerbListNamesExactlyTheVerbsThatRun(t *testing.T) {
+	listed := strings.Split(skillsVerbList, ", ")
+	var running []string
+	for verb := range skillsCLIVerbs {
+		running = append(running, verb)
+	}
+	sort.Strings(listed)
+	sort.Strings(running)
+	if !reflect.DeepEqual(listed, running) {
+		t.Errorf("the usage names %v, the program runs %v", listed, running)
+	}
+}

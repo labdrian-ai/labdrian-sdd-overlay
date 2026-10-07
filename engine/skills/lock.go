@@ -1,6 +1,6 @@
 package skills
 
-// The overlay lock: what SkillsCoreAt holds around a verb so that the registry,
+// The overlay lock: what the adapter of a verb holds around it so that the registry,
 // the manifest, the approval records, and the skill tree it reads never change
 // under it.
 
@@ -22,7 +22,7 @@ const (
 	LockShared
 )
 
-// Locker takes advisory locks on behalf of SkillsCoreAt, and tells whether a file is there. It
+// Locker takes advisory locks on behalf of the adapters of the verbs, and tells whether a file is there. It
 // is an interface, and this package does not implement it, because the implementation needs
 // system calls and a clock and this package's import allowlist (zero_fetch_test.go) admits
 // neither: engine/cmd passes one built on engine/filelock, and tests pass fakes.
