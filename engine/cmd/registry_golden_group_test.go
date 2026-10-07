@@ -67,17 +67,20 @@ func TestADescendantOfAProgramThatHangsIsKilledAtItsDeadline(t *testing.T) {
 	// descendant: it ends when they are gone whatever the test did on the way, which is the proof
 	// that nothing was left running even when the reader above failed.
 	witness := openFIFOForReading(t, witnessFifo)
+	// The goroutine of the cleanup is counted here, in the same step as the cleanup is registered,
+	// and not inside it, so that the wait for the goroutines needs no particular place in the order
+	// of the cleanups to see it.
+	goroutines.Add(1)
 	t.Cleanup(func() {
-		defer witness.Close()
 		gone := make(chan struct{})
-		goroutines.Add(1)
 		go func() { defer goroutines.Done(); _, _ = witness.Read(make([]byte, 1)); close(gone) }()
 		select {
 		case <-gone:
 		case <-time.After(descendantGoneWait):
 			t.Error("the program or its descendant was still running at the end of the test")
-			witness.Close()
 		}
+		// The one close: it is also what ends a read that is still waiting, so the goroutine returns.
+		witness.Close()
 	})
 
 	// Kill what the program started: the descendant by its pid when the program recorded it, and
