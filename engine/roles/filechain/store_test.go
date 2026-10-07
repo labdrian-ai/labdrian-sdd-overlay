@@ -228,7 +228,7 @@ func TestChainStoreRefusesSymlinkedChainDirectory(t *testing.T) {
 	}
 	r1 := recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", "")
 	_, err := s.Append([]byte(r1))
-	want := fmt.Sprintf("role chain store: append: role chain store: refusing symlinked store component %q", dir)
+	want := fmt.Sprintf("role chain store: refusing symlinked store component %q", dir)
 	if err == nil || err.Error() != want {
 		t.Fatalf("Append() = %v, want %q", err, want)
 	}
@@ -259,17 +259,18 @@ func TestChainStoreRejectsUnsafePathComponent(t *testing.T) {
 }
 
 // Append builds the chain's directory chain before it loads the chain, so a key that is
-// not a safe path component is refused before any file is looked at. Every failure of
-// Append carries the "append:" step after the store's name, this one included; LoadChain,
-// which has no such step, reports the same refusal without it (the test above). The
-// words are pinned here so that the wrapping cannot be dropped or doubled unnoticed.
-func TestAppendReportsAnUnsafePathComponentAsAnAppendFailure(t *testing.T) {
+// not a safe path component is refused before any file is looked at. The refusal is
+// reported as LoadChain reports it, with the store's name once: Append does not wrap what
+// the directory chain and the chain on disk already say in the store's name, so the name
+// never reads twice (the test above pins the words LoadChain uses). The words are pinned
+// here so that the wrapping cannot come back unnoticed.
+func TestAppendNamesTheStoreOnceWhenItRefusesAnUnsafePathComponent(t *testing.T) {
 	tests := []struct {
 		name, project, goal, chain, want string
 	}{
-		{"parent directory as project", "../escape", "goal-1", "chain-1", `role chain store: append: role chain store: project_id "../escape" contains a path separator or NUL`},
-		{"slash in goal", "proj-1", "a/b", "chain-1", `role chain store: append: role chain store: goal_id "a/b" contains a path separator or NUL`},
-		{"dot-dot chain", "proj-1", "goal-1", "..", `role chain store: append: role chain store: chain_id ".." is not a usable path component`},
+		{"parent directory as project", "../escape", "goal-1", "chain-1", `role chain store: project_id "../escape" contains a path separator or NUL`},
+		{"slash in goal", "proj-1", "a/b", "chain-1", `role chain store: goal_id "a/b" contains a path separator or NUL`},
+		{"dot-dot chain", "proj-1", "goal-1", "..", `role chain store: chain_id ".." is not a usable path component`},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -299,7 +300,7 @@ func TestZeroStoreIsRefused(t *testing.T) {
 		t.Fatalf("LoadChain() = %v, want %q", err, want)
 	}
 	_, err = Store{}.Append([]byte(recordJSON(1, roles.EmptyChainDigest, "shaper", "estimator", "completed", "")))
-	want = "role chain store: append: role chain store: store is not initialized; use NewStore"
+	want = "role chain store: store is not initialized; use NewStore"
 	if err == nil || err.Error() != want {
 		t.Fatalf("Append() = %v, want %q", err, want)
 	}
@@ -432,7 +433,7 @@ func TestChainStoreReportsAnUnusableChainOnDisk(t *testing.T) {
 			},
 			do: func(s Store) error { _, err := s.Append([]byte(r2)); return err },
 			want: func(root string) string {
-				return fmt.Sprintf("role chain store: append: role chain store: refusing symlinked record %q", filepath.Join(chainDir(root), "000002.json"))
+				return fmt.Sprintf("role chain store: refusing symlinked record %q", filepath.Join(chainDir(root), "000002.json"))
 			},
 		},
 	}

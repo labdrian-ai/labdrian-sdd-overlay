@@ -198,13 +198,16 @@ func (s Store) Append(data []byte) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("role chain store: append: %w", err)
 	}
+	// dirParts and loadChain already name the store in what they report, so their
+	// failures are returned as they are: wrapped again they read "role chain store:
+	// append: role chain store: ...".
 	parts, err := s.dirParts(h.ProjectID, h.GoalID, h.ChainID)
 	if err != nil {
-		return "", fmt.Errorf("role chain store: append: %w", err)
+		return "", err
 	}
 	chain, err := loadChain(parts)
 	if err != nil {
-		return "", fmt.Errorf("role chain store: append: %w", err)
+		return "", err
 	}
 	if err := roles.AdmitRecord(chain, roles.ChainRecord{Raw: data, Handoff: h}); err != nil {
 		return "", err
