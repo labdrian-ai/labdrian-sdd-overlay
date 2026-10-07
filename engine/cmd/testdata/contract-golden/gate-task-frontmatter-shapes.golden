@@ -35,14 +35,13 @@ $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path 
 --- stderr ---
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
-# a delimiter inside a value ends the frontmatter there
+# a delimiter inside a value is part of the value
 --- stdin ---
 {"tool_input":{"description":"a sub-agent","prompt":"Do the phase.","subagent_type":"sdd-apply"},"tool_name":"Agent"}
 
 --- stdout ---
-{}
+{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","updatedInput":{"description":"a sub-agent","prompt":"Do the phase.\n\n## a --- b\nskills/_shared/minimalism-contract.md\n","subagent_type":"sdd-apply"}}}
 --- stderr ---
-gate-task: warning: contract frontmatter unparseable: contract frontmatter missing or empty applies_to_phases: cannot derive scope without knowing which phases to inject into (passing through)
 
 $ gate-task --contract-file /virtual/skills/_shared/contract.md --contract-path skills/_shared/minimalism-contract.md
 # spaces around items

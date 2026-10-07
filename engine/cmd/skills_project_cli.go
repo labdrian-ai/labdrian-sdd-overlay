@@ -30,7 +30,7 @@ type projectCommand struct {
 // be aimed at a location derived from where the process happens to be. It reports false, having
 // told why and exited, when the command line is refused.
 func readProjectCommand(spec skillsFlagSpec, args []string, stderr io.Writer, exit func(int)) (projectCommand, bool) {
-	parsed, err := spec.parse(withoutVerb(args, spec.verb))
+	parsed, err := spec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return projectCommand{}, false

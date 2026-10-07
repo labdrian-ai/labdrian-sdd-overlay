@@ -457,7 +457,7 @@ func runShaperGuardHook(stdin io.Reader, stderr io.Writer, exit func(int)) {
 		verdict = shaper.DecideGuard(shaper.GuardCall{Command: call.Command, FilePath: call.FilePath, NotebookPath: call.NotebookPath})
 	}
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
-	_, _ = stderr.Write(reply.Stderr())
+	_, _ = stderr.Write(reply.MessageLine())
 	exit(reply.Code())
 }
 

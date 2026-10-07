@@ -7,6 +7,7 @@ package main
 // skills verbs, the Pi package ('pipkg build|check') and the Pi runtime adapter.
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -16,7 +17,27 @@ import (
 
 // newRegistryRepository returns the repository of the registry file, read from the file system.
 func newRegistryRepository() skills.RegistryRepository {
-	return registryyaml.NewRepository(os.ReadFile)
+	return registryyaml.NewRepository(readRegistryFile)
+}
+
+// readRegistryFile reads the registry file at path, and at most registryyaml.MaxFileBytes of it:
+// one byte more is read to see that the file is over the bound, and the rest of it never is, so
+// asking for a file that is not a registry cannot make the program hold it whole. A file the
+// system will not give is told in the system's words, as os.ReadFile told it.
+func readRegistryFile(path string) ([]byte, error) {
+	f, err := os.Open(path)
+	if err != nil {
+		return nil, err
+	}
+	defer f.Close()
+	data, err := io.ReadAll(io.LimitReader(f, registryyaml.MaxFileBytes+1))
+	if err != nil {
+		return nil, err
+	}
+	if len(data) > registryyaml.MaxFileBytes {
+		return nil, fmt.Errorf("read %s: more than %d bytes, the most a registry may have", path, registryyaml.MaxFileBytes)
+	}
+	return data, nil
 }
 
 // newWarningRegistryRepository is newRegistryRepository for what reads a registry through the

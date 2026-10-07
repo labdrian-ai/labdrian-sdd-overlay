@@ -580,7 +580,10 @@ func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string, stderr
 	if target == runtimepkg.TargetCodex {
 		return runtimepkg.NewCodexAdapter(configRoot)
 	}
-	return runtimepkg.NewFoundationAdapter(target, newWarningRegistryRepository(stderr))
+	if target == runtimepkg.TargetPi {
+		return runtimepkg.NewPiAdapter(newWarningRegistryRepository(stderr))
+	}
+	return runtimepkg.NewFoundationAdapter(target)
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.
@@ -841,7 +844,7 @@ func runReviewReceiptHook(args []string) {
 	}
 	verdict := svc.CheckCommand(command)
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
-	_, _ = os.Stderr.Write(reply.Stderr())
+	_, _ = os.Stderr.Write(reply.MessageLine())
 	os.Exit(reply.Code())
 }
 
@@ -1580,11 +1583,7 @@ func gateTaskCore(args []string, stdin io.Reader, stdout io.Writer, stderr io.Wr
 	// Item 2: emit a stderr diagnostic when the contract frontmatter is broken so
 	// wiring mistakes with a corrupt contract are immediately visible. stdout stays
 	// pass-through '{}' and exit 0 (fail-safe contract UNCHANGED). The gate reads both parses.
-	_, err = contract.Parse(contractContent)
-	if err == nil {
-		_, err = contract.ParseContext(contractContent)
-	}
-	if err != nil {
+	if _, _, err = contract.ParseBoth(contractContent); err != nil {
 		fmt.Fprintf(stderr, "gate-task: warning: contract frontmatter unparseable: %v (passing through)\n", err)
 	}
 

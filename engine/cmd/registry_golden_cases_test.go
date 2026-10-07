@@ -198,12 +198,12 @@ skills:
 			w.run("skills", "remove", "victim")
 			w.show(worldRegistry)
 		}},
-		{"registry-cannot-read-a-list-item-with-a-colon-and-a-space", func(w *registryWorld) {
-			// The reader looks for the colon that ends a key before it looks at quotes, so an item
-			// of a list written "a: b" is the start of a mapping, not a value, and the list ends
-			// there. The writer quotes such a value to keep it, which the reader then cannot read
-			// back. Pinned as it is: the registry that holds one is refused with the words of
-			// what that makes missing. A value that is not an item of a list reads fine.
+		{"registry-reads-a-list-item-with-a-colon-and-a-space", func(w *registryWorld) {
+			// An item of a list written in quotes is one value whatever it holds, so "a: b" is a
+			// project named so and not the start of a mapping: the registry that holds one is read
+			// (it was refused, for the targets it then seemed to lack, because the reader looked
+			// for the colon that ends a key before it looked at quotes). A value that is not an
+			// item of a list reads as it did.
 			const withColon = "version: \"1\"\nskills:\n  - id: alpha\n    path: alpha\n    source:\n      type: custom\n    install:\n      defaultScope: project\n      allowedProjects:\n        - \"a: b\"\n      targets:\n        - claude\n    lifecycle:\n      updateStrategy: overlay-only\n"
 			w.put(worldRegistry, withColon)
 			w.label("a project named 'a: b' in the registry")

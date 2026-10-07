@@ -126,6 +126,7 @@ func installWired(verb string, deps skills.Deps, stderr io.Writer, exit func(int
 func refuseInstall(verb, did string, err error, stderr io.Writer, exit func(int)) {
 	var (
 		registry *app.RegistryError
+		noRoot   *app.SourceRootRequiredError
 		missing  *app.SourcesMissingError
 		refusal  *app.PlanRefusal
 		failed   *app.ExecutionError
@@ -134,6 +135,8 @@ func refuseInstall(verb, did string, err error, stderr io.Writer, exit func(int)
 	case errors.As(err, &registry):
 		refuseRegistry(err, false, stderr, exit)
 		return
+	case errors.As(err, &noRoot):
+		fmt.Fprintf(stderr, "error: skills %s requires --source-root <dir>, the skills tree to read the skills from\n", noRoot.Verb)
 	case errors.As(err, &missing):
 		for _, op := range missing.Missing {
 			fmt.Fprintf(stderr, "error: skill %s: source dir not found: %s\n", op.SkillID, op.Src)

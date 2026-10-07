@@ -111,15 +111,53 @@ func TestParseFrontmatterShapes(t *testing.T) {
 			}
 		})
 	}
+}
 
-	// The first three delimiters are found by text, not by line: a "---" inside a value ends
-	// the frontmatter there, which is how the contracts in use have always been read.
-	got, err := contract.Parse(doc(`injection_point: "## a --- b"`, "applies_to_phases: [sdd-apply]"))
-	if err == nil {
-		t.Fatalf("Parse = %#v, want the frontmatter to end inside the value, leaving no applies_to_phases", got)
+// A delimiter is a line that is "---" and nothing else (white space at the end of the line,
+// and the CR of a CRLF ending, do not count). "---" inside a value, in a longer run of
+// dashes or after other text on its line is part of the frontmatter, not the end of it.
+func TestParseReadsADelimiterOnlyAsAWholeLine(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		content string
+		want    contract.Contract
+	}{
+		{"a --- inside a value", doc(`injection_point: "## a --- b"`, "excluded_phases: [sdd-propose]", "applies_to_phases: [sdd-apply]"),
+			contract.Contract{AppliesTo: []string{"sdd-apply"}, Excluded: []string{"sdd-propose"}, InjectionPoint: "## a --- b"}},
+		{"a longer run of dashes is not a delimiter", "---\ninjection_point: x\n-----\napplies_to_phases: [sdd-apply]\n---\n",
+			contract.Contract{AppliesTo: []string{"sdd-apply"}, InjectionPoint: "x"}},
+		{"a delimiter with text after it is not a delimiter", "---\napplies_to_phases: [sdd-apply]\n--- end\nexcluded_phases: [sdd-propose]\n---\n",
+			contract.Contract{AppliesTo: []string{"sdd-apply"}, Excluded: []string{"sdd-propose"}}},
+		{"white space after a delimiter is not text", "---  \t\napplies_to_phases: [sdd-apply]\n---\t \nbody",
+			contract.Contract{AppliesTo: []string{"sdd-apply"}}},
+		{"an indented --- is not a delimiter", "---\napplies_to_phases: [sdd-apply]\n  ---\nexcluded_phases: [sdd-propose]\n---\n",
+			contract.Contract{AppliesTo: []string{"sdd-apply"}, Excluded: []string{"sdd-propose"}}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := contract.Parse(tc.content)
+			if err != nil {
+				t.Fatalf("Parse: %v", err)
+			}
+			if !reflect.DeepEqual(got, tc.want) {
+				t.Errorf("Parse = %#v, want %#v", got, tc.want)
+			}
+		})
 	}
-	if !errors.Is(err, contract.ErrNoAppliesTo) {
-		t.Errorf("error = %v, want ErrNoAppliesTo", err)
+}
+
+// Without a second delimiter line there is no frontmatter, whatever else contains "---".
+func TestParseRefusesAFrontmatterWhoseClosingDelimiterIsNotAWholeLine(t *testing.T) {
+	for name, content := range map[string]string{
+		"dashes inside a value only":    "---\napplies_to_phases: [sdd-apply]\ninjection_point: a --- b\n",
+		"a longer run of dashes closes": "---\napplies_to_phases: [sdd-apply]\n-----\n",
+		"text after the closing dashes": "---\napplies_to_phases: [sdd-apply]\n--- end\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			got, err := contract.Parse(content)
+			if !errors.Is(err, contract.ErrNoFrontmatter) || !reflect.DeepEqual(got, contract.Contract{}) {
+				t.Errorf("Parse = %#v, %v, want the zero value and ErrNoFrontmatter", got, err)
+			}
+		})
 	}
 }
 
@@ -284,6 +322,42 @@ func TestParseContextNeedsAFrontmatterAndNothingElse(t *testing.T) {
 	}
 	if got, err := contract.ParseContext(doc("excluded_phases: sdd-propose", "language_context", "context_operator")); err != nil || got.ContextRequired() {
 		t.Errorf("ParseContext of a document with no context = %#v, %v, want an empty context and no error", got, err)
+	}
+}
+
+// ParseBoth is Parse and ParseContext over one split of the frontmatter: for every document
+// it returns what the two return, and the error of the scope first, then the context's.
+func TestParseBothIsParseAndParseContext(t *testing.T) {
+	documents := map[string]string{
+		"both":                  doc("applies_to_phases: [sdd-apply]", "excluded_phases: [sdd-propose]", "language_context: [go]", "activation_context: [review]"),
+		"scope only":            doc("applies_to_phases: [sdd-apply]"),
+		"no frontmatter":        "no frontmatter here",
+		"no scope":              doc("language_context: [go]"),
+		"malformed scope":       doc("applies_to_phases: sdd-apply", "language_context: [go"),
+		"malformed context":     doc("applies_to_phases: [sdd-apply]", "language_context: go"),
+		"an operator":           doc("applies_to_phases: [sdd-apply]", "context_operator: prompt_contains"),
+		"both malformed":        doc("applies_to_phases: sdd-apply", "language_context: go"),
+		"no scope and operator": doc("context_operator: prompt_contains"),
+	}
+	for name, content := range documents {
+		t.Run(name, func(t *testing.T) {
+			gotScope, gotContext, gotErr := contract.ParseBoth(content)
+			wantScope, scopeErr := contract.Parse(content)
+			wantContext, contextErr := contract.ParseContext(content)
+			wantErr := scopeErr
+			if wantErr == nil {
+				wantErr = contextErr
+			}
+			if !reflect.DeepEqual(gotErr, wantErr) {
+				t.Fatalf("ParseBoth error = %v, want %v", gotErr, wantErr)
+			}
+			if wantErr != nil {
+				wantScope, wantContext = contract.Contract{}, contract.Context{}
+			}
+			if !reflect.DeepEqual(gotScope, wantScope) || !reflect.DeepEqual(gotContext, wantContext) {
+				t.Errorf("ParseBoth = %#v and %#v, want %#v and %#v", gotScope, gotContext, wantScope, wantContext)
+			}
+		})
 	}
 }
 

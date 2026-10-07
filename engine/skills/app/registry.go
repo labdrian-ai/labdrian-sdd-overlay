@@ -1,8 +1,6 @@
 package app
 
 import (
-	"errors"
-
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
@@ -20,8 +18,7 @@ func (e *RegistryError) Unwrap() error { return e.Err }
 // Unreadable reports whether the store of the registry could not be read at all (it does not
 // exist, or the system refused it), as against a registry that was read and is unusable.
 func (e *RegistryError) Unreadable() bool {
-	var unreadable *skills.RegistryReadError
-	return errors.As(e.Err, &unreadable)
+	return skills.IsUnreadableRegistry(e.Err)
 }
 
 // readRegistry reads the registry at path through the repository, and returns the warning that

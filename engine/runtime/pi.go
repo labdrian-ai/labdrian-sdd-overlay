@@ -180,8 +180,10 @@ func (a PiAdapter) Status() LifecycleResult {
 		return NewLifecycleResult(a.target, ActionStatus, CapabilitySupported,
 			"labdrian-pi package is built, in sync, listed in ~/.pi/agent/settings.json, longterm-mem is registered in its mcp.json, a subagent runner (gentle-pi native subagents or the legacy Pi Subagents extension) is available, and GADU.md is linked. "+piNoDiscoveryFlagsDisclosure, nil)
 	}
+	// The message names each unproven entry. They are not also passed as reasons: the line that
+	// prints a result would tell them a second time after the message.
 	return NewLifecycleResult(a.target, ActionStatus, CapabilityPartial,
-		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, problems)
+		"labdrian-pi status is unproven: "+strings.Join(problems, "; ")+". "+piNoDiscoveryFlagsDisclosure, nil)
 }
 
 func (a PiAdapter) Update() LifecycleResult   { return a.build(ActionUpdate) }

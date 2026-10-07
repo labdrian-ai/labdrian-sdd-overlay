@@ -172,6 +172,22 @@ dir  openspec/changes/only-change/review-receipts
 file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
 file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
 
+# the phrase inside a heredoc: the match is the text, so it is caught
+$ review-receipt hook --cwd <ROOT>
+--- stdin ---
+{"tool_name":"Bash","tool_input":{"command":"bash <<'EOF'\ngentle-ai review acknowledge-approved --cwd /repo --lineage review-x\nEOF"}}
+exit: 0
+--- stdout ---
+--- stderr ---
+
+=== after ===
+dir  openspec
+dir  openspec/changes
+dir  openspec/changes/only-change
+dir  openspec/changes/only-change/review-receipts
+file openspec/changes/only-change/review-receipts/review-one.json 0600 201 130e405e6318
+file openspec/changes/only-change/tasks.md 0644 8 b23b81c926c4
+
 # tool_input a string
 $ review-receipt hook --cwd <ROOT>
 --- stdin ---

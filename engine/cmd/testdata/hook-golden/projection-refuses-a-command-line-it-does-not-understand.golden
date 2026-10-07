@@ -1,5 +1,5 @@
 $ projection 
-# arguments that are not understood
+# no action at all
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -9,7 +9,7 @@ $ projection
 error: projection requires an action: hook
 
 $ projection --event UserPromptSubmit
-# arguments that are not understood
+# an event flag with no action
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -19,7 +19,7 @@ $ projection --event UserPromptSubmit
 error: projection requires an action: hook
 
 $ projection status
-# arguments that are not understood
+# an action that is not hook
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -29,7 +29,7 @@ $ projection status
 error: projection: unknown action "status" (expected hook)
 
 $ projection hook
-# arguments that are not understood
+# the action with no event
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -39,7 +39,7 @@ $ projection hook
 error: projection hook: --event is required (supported: UserPromptSubmit, PreToolUse)
 
 $ projection hook --event
-# arguments that are not understood
+# an event flag with no value
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -49,7 +49,7 @@ $ projection hook --event
 error: projection hook: --event requires a value
 
 $ projection hook --event Stop
-# arguments that are not understood
+# an event the hook does not handle
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -59,7 +59,7 @@ $ projection hook --event Stop
 error: projection hook: unsupported --event "Stop" (supported: UserPromptSubmit, PreToolUse)
 
 $ projection hook --event userpromptsubmit
-# arguments that are not understood
+# an event written in lower case
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -69,7 +69,7 @@ $ projection hook --event userpromptsubmit
 error: projection hook: unsupported --event "userpromptsubmit" (supported: UserPromptSubmit, PreToolUse)
 
 $ projection hook --bogus
-# arguments that are not understood
+# a flag the hook does not know
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -79,7 +79,7 @@ $ projection hook --bogus
 error: projection hook: unknown flag "--bogus"
 
 $ projection hook extra
-# arguments that are not understood
+# a word after the action
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---
@@ -89,7 +89,7 @@ $ projection hook extra
 error: projection hook: unexpected argument "extra"
 
 $ projection hook --event UserPromptSubmit extra
-# arguments that are not understood
+# a word after the event
 --- stdin ---
 {"session_id":"s1","transcript_path":"/t.jsonl","cwd":"<REPO>","permission_mode":"default","hook_event_name":"UserPromptSubmit","prompt":"a prompt"}
 --- exit ---

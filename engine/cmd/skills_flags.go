@@ -76,7 +76,21 @@ func (e *skillsUsageError) Error() string { return e.message }
 // parse splits args. A flag is every word that begins with a dash; one that the spec does not
 // name is refused, naming it, before anything is read or written.
 func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
+	return s.parseArgs(args, false)
+}
+
+// parseAfterVerb is parse for the arguments of a verb with the verb among them, where the person
+// put it among the flags of the wrapper: the first word, which is no flag and no flag's value, is
+// the verb when it is spelled like it, and is not read as the word that follows it (lint's path,
+// add's id). The parser decides which words are values, so a value spelled like the verb is not
+// taken for the verb, and a word after the first is what it is.
+func (s skillsFlagSpec) parseAfterVerb(args []string) (skillsArgs, error) {
+	return s.parseArgs(args, true)
+}
+
+func (s skillsFlagSpec) parseArgs(args []string, verbAmongArgs bool) (skillsArgs, error) {
 	out := skillsArgs{values: map[string]string{}, switches: map[string]bool{}}
+	firstWord := true
 	endOfOptions := false
 	for i := 0; i < len(args); i++ {
 		arg := args[i]
@@ -111,6 +125,12 @@ func (s skillsFlagSpec) parse(args []string) (skillsArgs, error) {
 				continue
 			case strings.HasPrefix(arg, "-"):
 				return skillsArgs{}, &skillsUsageError{fmt.Sprintf("skills %s: unknown flag %q", s.verb, arg)}
+			}
+		}
+		if verbAmongArgs && firstWord {
+			firstWord = false
+			if arg == s.verb {
+				continue
 			}
 		}
 		if s.words >= 0 && len(out.words) >= s.words {

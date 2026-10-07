@@ -2,6 +2,7 @@ package registryyaml
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -28,12 +29,40 @@ type tok struct {
 	lineNum int
 }
 
+// MaxFileBytes is the largest registry file the program reads: 4 MiB, about four hundred times the
+// registry of this repository. The adapter does not read files (its composition root hands it the
+// way to), so the bound is the root's to apply when it reads, and this is where the format says
+// what it is.
+const MaxFileBytes = 4 << 20
+
+// MaxLineBytes is the longest line a registry may have, without its line break. A registry is
+// a short list of short lines, so the limit is far above any real one; it is the bound on what
+// the reader holds of a line, and a line over it is refused with its number. It is this
+// program's own number, 64 KiB, written out: the message and the CHANGELOG say 65536, so it is
+// not borrowed from the scanner's default, and the buffer below is set from it.
+const MaxLineBytes = 64 << 10
+
+// initialLineBuffer is the size the scanner's buffer starts at: registry lines are short, so it
+// starts small and only grows, up to MaxLineBytes, for a line that needs it.
+const initialLineBuffer = 4 << 10
+
+// lineBreakBytes is the room a line break takes in the reader's buffer, so that a line of
+// exactly MaxLineBytes fits whether it ends in "\n" or "\r\n". The buffer is a little roomier
+// than the limit for that; the limit itself is checked on the line, once it is read.
+const lineBreakBytes = len("\r\n")
+
+// errLineTooLong is the refusal of the line numbered lineNum, which is over MaxLineBytes.
+func errLineTooLong(lineNum int) error {
+	return fmt.Errorf("line %d is longer than the %d bytes a line of a registry may have", lineNum, MaxLineBytes)
+}
+
 // tokenize scans the reader line-by-line, checks for forbidden constructs,
 // and emits a flat []tok slice. Any out-of-subset construct causes an
 // immediate line-numbered error.
 func tokenize(r io.Reader) ([]tok, error) {
 	var tokens []tok
 	scanner := bufio.NewScanner(r)
+	scanner.Buffer(make([]byte, 0, initialLineBuffer), MaxLineBytes+lineBreakBytes)
 	lineNum := 0
 	seenContent := false
 	seenDocMarker := false
@@ -41,6 +70,9 @@ func tokenize(r io.Reader) ([]tok, error) {
 	for scanner.Scan() {
 		lineNum++
 		line := scanner.Text()
+		if len(line) > MaxLineBytes {
+			return nil, errLineTooLong(lineNum)
+		}
 
 		// Reject tabs anywhere in the line; the constraint targets indentation.
 		if strings.ContainsRune(line, '\t') {
@@ -98,6 +130,9 @@ func tokenize(r io.Reader) ([]tok, error) {
 	}
 
 	if err := scanner.Err(); err != nil {
+		if errors.Is(err, bufio.ErrTooLong) {
+			return nil, errLineTooLong(lineNum + 1)
+		}
 		return nil, fmt.Errorf("skills: read error: %w", err)
 	}
 
@@ -128,16 +163,7 @@ func parseLine(trimmed string, indent, lineNum int) (tok, error) {
 // parseContent tokenizes a content string (after stripping any "- " prefix).
 // The isSeqItem flag controls which token kinds are returned for plain scalars.
 func parseContent(content string, indent, lineNum int, isSeqItem bool) (tok, error) {
-	// Locate the first ': ' boundary or a trailing ':' to find the key.
-	colonIdx := -1
-	for i := 0; i < len(content); i++ {
-		if content[i] == ':' {
-			if i+1 == len(content) || content[i+1] == ' ' {
-				colonIdx = i
-				break
-			}
-		}
-	}
+	colonIdx := keyColon(content)
 
 	if colonIdx < 0 {
 		// SUGGESTION-2: block scalar indicator on a standalone line (e.g. just "|-").
@@ -186,6 +212,49 @@ func parseContent(content string, indent, lineNum int, isSeqItem bool) (tok, err
 		return tok{kind: tokSeqMapping, indent: indent, key: key, val: val, lineNum: lineNum}, nil
 	}
 	return tok{kind: tokKeyValue, indent: indent, key: key, val: val, lineNum: lineNum}, nil
+}
+
+// keyColon is the index of the colon that ends the key of content: the first ': ' or a trailing
+// ':'. It is -1 when there is none, and when content is one quoted scalar: what is inside quotes
+// is a value, whatever it holds, so a ': ' there is not the end of a key.
+func keyColon(content string) int {
+	if isWholeQuotedScalar(content) {
+		return -1
+	}
+	for i := 0; i < len(content); i++ {
+		if content[i] == ':' && (i+1 == len(content) || content[i+1] == ' ') {
+			return i
+		}
+	}
+	return -1
+}
+
+// isWholeQuotedScalar reports whether s is one quoted scalar and nothing else: it opens with a
+// quote, closes with the same quote, and the opening quote does not occur between them except as
+// follows.
+//   - Double quotes: a quote inside is escaped with a backslash (\"), and a backslash escapes the
+//     character after it.
+//   - Single quotes: a quote inside is doubled (two single quotes).
+//
+// `"a": "b"` opens and closes with a quote but is two scalars with a colon between them.
+func isWholeQuotedScalar(s string) bool {
+	if !isQuotedScalar(s) {
+		return false
+	}
+	q, inner := s[0], s[1:len(s)-1]
+	for i := 0; i < len(inner); i++ {
+		switch {
+		case q == '"' && inner[i] == '\\':
+			i++
+		case inner[i] == q:
+			if q == '\'' && i+1 < len(inner) && inner[i+1] == '\'' {
+				i++
+				continue
+			}
+			return false
+		}
+	}
+	return true
 }
 
 // isQuotedScalar reports whether s is a properly paired quoted string

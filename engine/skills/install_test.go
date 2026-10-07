@@ -2,6 +2,7 @@ package skills
 
 import (
 	"path/filepath"
+	"reflect"
 	"testing"
 )
 
@@ -31,6 +32,48 @@ func buildRegistry(entries []struct {
 		})
 	}
 	return Registry{Version: "1", Skills: skills}
+}
+
+// AdmittedToProject is the one rule of which entries install to a project, in the order of the
+// registry: the project scope and the project named among the allowed ones, nothing else.
+func TestAdmittedToProjectIsTheEntriesOfTheProjectScopeThatNameTheProject(t *testing.T) {
+	reg := buildRegistry([]struct {
+		id              string
+		scope           string
+		allowedProjects []string
+	}{
+		{"first", "project", []string{"other", "target-repo"}},
+		{"global", "global", []string{"target-repo"}},
+		{"elsewhere", "project", []string{"other"}},
+		{"nobody", "project", nil},
+		{"second", "project", []string{"target-repo"}},
+	})
+	var got []string
+	for _, e := range AdmittedToProject(reg, "target-repo") {
+		got = append(got, e.ID)
+	}
+	if want := []string{"first", "second"}; !reflect.DeepEqual(got, want) {
+		t.Errorf("AdmittedToProject = %v, want %v", got, want)
+	}
+	if got := AdmittedToProject(reg, "stranger"); len(got) != 0 {
+		t.Errorf("AdmittedToProject(a project no entry names) = %v, want none", got)
+	}
+}
+
+// With no source root the planner says so when, and only when, an entry is admitted: it is the one
+// place that decides what "admits a skill" means for this.
+func TestPlanInstallWithNoSourceRootIsRefusedOnlyWhenASkillIsAdmitted(t *testing.T) {
+	admits := buildRegistry([]struct {
+		id              string
+		scope           string
+		allowedProjects []string
+	}{{"my-skill", "project", []string{"target-repo"}}})
+	if ops, err := PlanInstall(admits, "target-repo", "", "/target-repo"); err != ErrNoSourceRoot || ops != nil {
+		t.Errorf("PlanInstall(admitted, no source root) = %v, %v, want ErrNoSourceRoot", ops, err)
+	}
+	if ops, err := PlanInstall(admits, "stranger", "", "/target-repo"); err != nil || len(ops) != 0 {
+		t.Errorf("PlanInstall(nothing admitted, no source root) = %v, %v, want nothing and no error", ops, err)
+	}
 }
 
 // TestPlanInstall is the table-driven suite for the pure planner (T-03).

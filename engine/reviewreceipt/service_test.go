@@ -650,6 +650,36 @@ func TestCheckCommandPassesWhatIsNotAnAcknowledgementWithoutAsking(t *testing.T)
 	}
 }
 
+// The marker is matched as text, wherever it sits in the command, and the owner chose to keep it
+// so: an acknowledgement inside a heredoc, a quoted shell string, after other commands or only
+// named by a look-alike is captured before the command runs. A false negative would burn an
+// uncaptured receipt; a false positive is an idempotent capture (see acknowledgeMarker).
+func TestCheckCommandRecognizesTheAcknowledgementWhereverItSitsInTheCommand(t *testing.T) {
+	for name, command := range map[string]string{
+		"inside a heredoc":                   "bash <<'EOF'\n" + ackCommand + "\nEOF",
+		"inside a heredoc with a tab marker": "sh <<-EOF\n\t" + ackCommand + "\n\tEOF",
+		"in a quoted shell string":           `sh -c "` + ackCommand + `"`,
+		"after other commands":               "cd /repo && git status && " + ackCommand,
+		"before another command":             ackCommand + " && echo done",
+		"written to a script, then run":      "cat > ack.sh <<'EOF'\n" + ackCommand + "\nEOF\nsh ack.sh",
+		"only named, as a look-alike":        `echo "` + ackCommand + `" >> log`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			w := newWorld()
+			w.changes, w.artifacts = []string{"only"}, map[string][]string{"only": {"tasks.md"}}
+			w.stores = []reviewreceipt.Store{"s"}
+			w.docs["s"] = []reviewreceipt.Document{approvedReceiptDoc("review-solo")}
+
+			if v := w.service().CheckCommand(command); v.Deny || v.Reason != "" {
+				t.Fatalf("CheckCommand = %+v, want an allow", v)
+			}
+			if !reflect.DeepEqual(w.writes, []string{"only/review-solo.json"}) {
+				t.Errorf("writes = %v, want the receipt captured before the command runs", w.writes)
+			}
+		})
+	}
+}
+
 // Without an active change there is nothing to attach a receipt to: the hook allows, and it
 // never asks where the stores are (so a directory that is not a repository costs nothing).
 func TestHookAllowsWithoutAnActiveChangeAndNeverListsTheStores(t *testing.T) {

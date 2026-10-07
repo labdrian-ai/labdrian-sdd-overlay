@@ -297,6 +297,11 @@ func contractGoldenCases() []contractGoldenCase {
 				{"no applies_to_phases", contractDoc(fmExcluded, fmInject)},
 				{"an empty applies_to_phases list", contractDoc("applies_to_phases: []", fmInject)},
 				{"an applies_to_phases with no value", contractDoc("applies_to_phases:", fmInject)},
+				// A scope that reads and a context that does not: the gate reads both (ParseBoth), so
+				// the warning names the context's fault.
+				{"a language_context that is not a list", contractDoc(fmApplies, fmInject, "language_context: typescript")},
+				{"an activation_context that is not a list", contractDoc(fmApplies, fmInject, "activation_context: review")},
+				{"a context_operator", contractDoc(fmApplies, fmInject, "context_operator: prompt_contains")},
 			} {
 				w.files[contractFile] = c.content
 				w.gate(c.label, input, fileArgs...)
@@ -322,7 +327,7 @@ func contractGoldenCases() []contractGoldenCase {
 				{"CRLF line endings", "---\r\napplies_to_phases: [sdd-apply]\r\nexcluded_phases: [sdd-propose]\r\n---\r\n# c\r\n"},
 				{"a later key wins over an earlier one", contractDoc("applies_to_phases: [sdd-tasks]", "applies_to_phases: [sdd-apply]")},
 				{"a preamble before the delimiters", "preamble text\n---\napplies_to_phases: [sdd-apply]\n---\nbody\n"},
-				{"a delimiter inside a value ends the frontmatter there", contractDoc("injection_point: \"## a --- b\"", "applies_to_phases: [sdd-apply]")},
+				{"a delimiter inside a value is part of the value", contractDoc("injection_point: \"## a --- b\"", "applies_to_phases: [sdd-apply]")},
 				{"spaces around items", contractDoc("applies_to_phases: [ sdd-apply ,  sdd-tasks ]")},
 				{"an empty item between commas", contractDoc("applies_to_phases: [sdd-apply, , sdd-tasks]")},
 				{"a key that merely starts with the name", contractDoc("applies_to_phases_extra: [sdd-apply]", "applies_to_phases: [sdd-tasks]")},

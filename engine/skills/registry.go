@@ -63,6 +63,15 @@ type RegistryReadError struct {
 func (e *RegistryReadError) Error() string { return e.Err.Error() }
 func (e *RegistryReadError) Unwrap() error { return e.Err }
 
+// IsUnreadableRegistry reports whether err says that the store of a registry could not be read
+// at all (a *RegistryReadError, however it was wrapped), as against a registry that was read and
+// is not one the domain accepts. It is the one place that tells the two apart: a caller that
+// words them differently asks it, and does not look for the error type itself.
+func IsUnreadableRegistry(err error) bool {
+	var unreadable *RegistryReadError
+	return errors.As(err, &unreadable)
+}
+
 // errNoRegistryRepository is what a verb says when it was given no way to read a registry: a
 // composition root that forgot it. It is a refusal, not a panic: a verb is never to crash.
 var errNoRegistryRepository = errors.New("skills: no registry repository is wired")
@@ -91,8 +100,7 @@ func DecodeRegistry(repo RegistryRepository, data []byte) (Registry, error) {
 // first in the store, so a fault in them is named before the fault of the reading that stopped
 // after them.
 func judged(reg Registry, readErr error) (Registry, error) {
-	var unreadable *RegistryReadError
-	if errors.As(readErr, &unreadable) {
+	if IsUnreadableRegistry(readErr) {
 		return Registry{}, readErr
 	}
 	if err := reg.Validate(); err != nil {
@@ -137,6 +145,17 @@ func WarnOfUnread(repo RegistryRepository, stderr io.Writer) RegistryRepository 
 		return nil
 	}
 	return warningRegistries{RegistryRepository: repo, stderr: stderr}
+}
+
+// WithoutUnreadWarning returns the repository that repo warns through (WarnOfUnread), without its
+// warning, and any other repository as it is. It is for what refuses a registry that was read in
+// part and says what was left out in the refusal: a build, which the warning would precede with
+// the same words. A nil repository stays nil.
+func WithoutUnreadWarning(repo RegistryRepository) RegistryRepository {
+	if w, ok := repo.(warningRegistries); ok {
+		return w.RegistryRepository
+	}
+	return repo
 }
 
 type warningRegistries struct {

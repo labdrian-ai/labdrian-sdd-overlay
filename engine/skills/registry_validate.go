@@ -48,9 +48,6 @@ var (
 // rule of the model and the only one: it looks at no file and no format, and it is the domain
 // that applies it to every registry an adapter hands over (ReadRegistry, DecodeRegistry).
 //
-// (Validate, the package function of validate.go, is another thing: it compares a registry with the
-// manifest.)
-//
 // The entries are judged in order, and each is judged before the check that its id is new, which
 // is the order a registry has always been refused in.
 func (r Registry) Validate() error {

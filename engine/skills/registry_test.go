@@ -10,8 +10,12 @@ package skills
 import (
 	"errors"
 	"fmt"
+	"go/ast"
+	"go/parser"
+	"go/token"
 	"io"
 	"io/fs"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -189,6 +193,50 @@ func TestReadRegistryTellsAnUnreadableStoreAsItIs(t *testing.T) {
 	}
 	if len(got.Skills) != 0 || got.Version != "" {
 		t.Errorf("ReadRegistry() returned %+v with an error, want the zero registry", got)
+	}
+}
+
+// The rule of the model is the only Validate of the package: the comparison of a registry with
+// the manifest is ValidateAgainstManifest, so that a reader skimming a call site, or a search for
+// Validate, finds one thing. A function named Validate would bring the ambiguity back.
+func TestRegistryValidateIsTheOnlyValidateOfThePackage(t *testing.T) {
+	fset := token.NewFileSet()
+	pkgs, err := parser.ParseDir(fset, ".", func(fi fs.FileInfo) bool { return !strings.HasSuffix(fi.Name(), "_test.go") }, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, pkg := range pkgs {
+		for name, file := range pkg.Files {
+			for _, decl := range file.Decls {
+				if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name.Name == "Validate" && fn.Recv == nil {
+					t.Errorf("%s declares the function Validate: the comparison with the manifest is ValidateAgainstManifest", name)
+				}
+			}
+		}
+	}
+}
+
+// There is one answer to whether a registry could not be read at all, as against being read and
+// refused: the callers that word the two differently (the skills verbs, the Pi package) ask it
+// here, and it follows the error however it was wrapped on the way.
+func TestIsUnreadableRegistryTellsAStoreThatCouldNotBeReadFromARegistryThatIsUnusable(t *testing.T) {
+	unreadable := &RegistryReadError{Err: errors.New("open r.yaml: no such file or directory")}
+	for name, tc := range map[string]struct {
+		err  error
+		want bool
+	}{
+		"nothing":                        {nil, false},
+		"a store that could not be read": {unreadable, true},
+		"the same, wrapped":              {fmt.Errorf("pipkg: opening registry: %w", unreadable), true},
+		"a registry the rule refuses":    {errors.New(`skills: duplicate id "a"`), false},
+		"a fault of the reading":         {errors.New("line 9: unexpected indentation"), false},
+		"no repository wired":            {errNoRegistryRepository, false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			if got := IsUnreadableRegistry(tc.err); got != tc.want {
+				t.Errorf("IsUnreadableRegistry(%v) = %v, want %v", tc.err, got, tc.want)
+			}
+		})
 	}
 }
 
@@ -437,5 +485,37 @@ func TestARepositoryThatWarnsPassesEverythingElseThrough(t *testing.T) {
 	}
 	if WarnOfUnread(nil, io.Discard) != nil {
 		t.Error("WarnOfUnread(nil) is not nil: a verb that was given no repository must still refuse for want of one")
+	}
+}
+
+// What refuses a registry that was read in part says what was left out in the refusal, so it asks
+// for the repository without the warning: the same words once, and not before the error that
+// repeats them. A repository that does not warn is the repository it is, and nil stays nil.
+func TestARepositoryWithoutTheWarningDoesNotTellWhatWasLeftOut(t *testing.T) {
+	left := unreadRegistry(`line 3: unknown key "color" in skill entry`)
+	plain := stubRegistries{
+		load:   func(string) (Registry, error) { return left, nil },
+		decode: func([]byte) (Registry, error) { return left, nil },
+	}
+	var stderr strings.Builder
+	quiet := WithoutUnreadWarning(WarnOfUnread(plain, &stderr))
+	if _, err := ReadRegistry(quiet, "r.yaml"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := DecodeRegistry(quiet, []byte("x")); err != nil {
+		t.Fatal(err)
+	}
+	if stderr.Len() != 0 {
+		t.Errorf("stderr = %q, want nothing from a repository without the warning", stderr.String())
+	}
+	if got, err := ReadRegistry(quiet, "r.yaml"); err != nil || len(got.Unread) != 1 {
+		t.Errorf("ReadRegistry = %+v, %v, want the registry as the repository read it, with what it left out", got, err)
+	}
+
+	if got := WithoutUnreadWarning(plain); !reflect.DeepEqual(reflect.TypeOf(got), reflect.TypeOf(plain)) {
+		t.Errorf("WithoutUnreadWarning(a repository that does not warn) = %T, want it unchanged", got)
+	}
+	if WithoutUnreadWarning(nil) != nil {
+		t.Error("WithoutUnreadWarning(nil) is not nil: a verb that was given no repository must still refuse for want of one")
 	}
 }

@@ -1,9 +1,9 @@
 # a project named 'a: b' in the registry
 $ skills list
-exit: 1
+exit: 0
 --- stdout ---
+alpha	custom	overlay-only	claude
 --- stderr ---
-error: parsing registry: skills: entry "alpha": install.targets must not be empty (R-007)
 
 # a repository with ': ' inside quotes, which is not an item of a list
 $ skills list --registry <WORLD>/docs/01.yaml

@@ -471,6 +471,41 @@ func TestARegistryThatAdmitsNothingToTheProjectIsSaidAndWritesNothing(t *testing
 	sameTree(t, before, w.snapshot())
 }
 
+// With no source root there is nowhere to read the admitted skills from, and that is what is
+// said: a missing input, not a registry path that escapes a root. A registry that admits nothing
+// needs no source and is told so, as it was.
+func TestAnInstallWithNoSourceRootSaysTheSourceRootIsMissingWhenASkillIsAdmitted(t *testing.T) {
+	for _, verb := range []string{"install", "adopt"} {
+		t.Run(verb, func(t *testing.T) {
+			w := newInstallWorld(t, map[string]string{"SKILL.md": "x"})
+			before := w.snapshot()
+			noRoot := func(in *InstallInput) { in.SourceRoot = "" }
+			run := map[string]func(...func(*InstallInput)) (InstallResult, error){"install": w.install, "adopt": w.adopt}[verb]
+
+			res, err := run(noRoot)
+
+			var missing *SourceRootRequiredError
+			if !errors.As(err, &missing) || missing.Verb != verb {
+				t.Fatalf("%s with no source root = %v, want a *SourceRootRequiredError for %s", verb, err, verb)
+			}
+			var planning *PlanError
+			if errors.As(err, &planning) {
+				t.Errorf("%v is a *PlanError: no registry path was planned", err)
+			}
+			if res.ProjectID != "target-repo" {
+				t.Errorf("the result names project %q, want the one that was resolved", res.ProjectID)
+			}
+			sameTree(t, before, w.snapshot())
+		})
+	}
+
+	w := newInstallWorld(t, nil)
+	w.registry = registryOf(projectEntry("some-skill", "other-repo"))
+	if res, err := w.install(func(in *InstallInput) { in.SourceRoot = "" }); err != nil || !res.NoneAdmitted {
+		t.Errorf("InstallProject with no source root and nothing admitted = %+v, %v, want nothing admitted", res, err)
+	}
+}
+
 func TestWhatTheReaderLeftOutOfTheRegistryIsHandedBackEvenWhenTheVerbRefuses(t *testing.T) {
 	w := newInstallWorld(t, map[string]string{"SKILL.md": "x"})
 	w.registry.Unread = []string{`line 3: unknown key "color" in skill entry`}

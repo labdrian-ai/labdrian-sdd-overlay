@@ -22,8 +22,7 @@ import (
 // goalV2JSONWithObjective is a matching Goal v2 document whose objective
 // distinguishes which file was actually read.
 func goalV2JSONWithObjective(objective string) string {
-	return strings.Replace(shapertest.GoalV2JSON("standalone-shaper-handoff", "goal-alpha"),
-		"Bind the handoff to real intent.", objective, 1)
+	return shapertest.GoalV2JSONWithObjective("standalone-shaper-handoff", "goal-alpha", objective)
 }
 
 func mustRename(t *testing.T, from, to string) {

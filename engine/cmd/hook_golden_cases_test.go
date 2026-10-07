@@ -313,19 +313,22 @@ func promptHookGoldenCases() []hookGoldenCase {
 		}},
 		{"projection-refuses-a-command-line-it-does-not-understand", func(w *hookWorld) {
 			e := w.env()
-			for _, args := range [][]string{
-				nil,
-				{"--event", "UserPromptSubmit"},
-				{"status"},
-				{"hook"},
-				{"hook", "--event"},
-				{"hook", "--event", "Stop"},
-				{"hook", "--event", "userpromptsubmit"},
-				{"hook", "--bogus"},
-				{"hook", "extra"},
-				{"hook", "--event", "UserPromptSubmit", "extra"},
+			for _, c := range []struct {
+				label string
+				args  []string
+			}{
+				{"no action at all", nil},
+				{"an event flag with no action", []string{"--event", "UserPromptSubmit"}},
+				{"an action that is not hook", []string{"status"}},
+				{"the action with no event", []string{"hook"}},
+				{"an event flag with no value", []string{"hook", "--event"}},
+				{"an event the hook does not handle", []string{"hook", "--event", "Stop"}},
+				{"an event written in lower case", []string{"hook", "--event", "userpromptsubmit"}},
+				{"a flag the hook does not know", []string{"hook", "--bogus"}},
+				{"a word after the action", []string{"hook", "extra"}},
+				{"a word after the event", []string{"hook", "--event", "UserPromptSubmit", "extra"}},
 			} {
-				w.projection("arguments that are not understood", args, claudePrompt(e.repo), e.dir)
+				w.projection(c.label, c.args, claudePrompt(e.repo), e.dir)
 			}
 			w.projection("the last of a repeated event flag decides", []string{"hook", "--event", "UserPromptSubmit", "--event", "PreToolUse"},
 				claudeToolCall(e.repo, "Edit", `{}`), e.dir)

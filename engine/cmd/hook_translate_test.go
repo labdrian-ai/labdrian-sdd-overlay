@@ -18,6 +18,7 @@ import (
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/gate"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/hookwire"
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/projection"
+	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/workflow"
 )
 
 // decodePreToolUse is the decoded form of a PreToolUse input, which a test cannot build as a
@@ -201,6 +202,45 @@ func TestAContextAtTheProjectionsBoundSurvivesTheEncoder(t *testing.T) {
 	esc := func(code string) string { return `\u` + code }
 	if strings.Contains(string(out), esc("003c")) || strings.Contains(string(out), esc("0026")) {
 		t.Error("the encoder escaped < or &: a prompt reply keeps them as they are")
+	}
+}
+
+// What the projection says of each state a workflow can be in reaches Claude Code whole: the
+// real projection of an open and of a closed workflow, through the mapping of this file and
+// the encoder, is one JSON object that holds the context nested in hookSpecificOutput and
+// nothing at the top level. The text of the context is the projection's own and is not
+// restated here; the worst case of the encoder is the test above.
+func TestTheContextOfEachRealisticStateSurvivesTheEncoder(t *testing.T) {
+	binding := projection.Loaded{Classification: projection.ClassificationOwned, Binding: projection.Binding{
+		Version: projection.BindingVersion, RepoKey: strings.Repeat("a", 64), ProjectID: "proj-1", WorkflowID: "wf-1", BoundAt: "2026-09-29T10:00:00Z",
+	}}
+	for _, status := range []workflow.Status{workflow.StatusCreated, workflow.StatusRunning, workflow.StatusPaused, workflow.StatusClosed} {
+		t.Run(string(status), func(t *testing.T) {
+			result := projection.Project(projection.ProjectionInput{Binding: binding, Workflow: &workflow.Loaded{
+				Classification: workflow.ClassificationOwned,
+				Events:         []workflow.WorkflowEvent{{Kind: workflow.KindCreated, At: "2026-09-29T10:00:00Z"}},
+				State:          workflow.State{Status: status, Profile: "odd", GoalID: "goal-1", GoalDigest: strings.Repeat("c", 64), Stages: []string{"authorize"}},
+			}})
+			if result.Context == "" || len(result.Context) > projection.MaxContextBytes {
+				t.Fatalf("the projection of a %s workflow is %d bytes, want a context within %d", status, len(result.Context), projection.MaxContextBytes)
+			}
+			out, err := promptReply(result).Encode()
+			if err != nil {
+				t.Fatal(err)
+			}
+			var decoded struct {
+				HookSpecific struct {
+					AdditionalContext string `json:"additionalContext"`
+				} `json:"hookSpecificOutput"`
+				AtTopLevel string `json:"additionalContext"`
+			}
+			if err := json.Unmarshal(out, &decoded); err != nil {
+				t.Fatalf("the answer is not JSON: %v\n%s", err, out)
+			}
+			if decoded.HookSpecific.AdditionalContext != result.Context || decoded.AtTopLevel != "" {
+				t.Errorf("the context came back as %q (top level %q), want the projection's %q nested in hookSpecificOutput", decoded.HookSpecific.AdditionalContext, decoded.AtTopLevel, result.Context)
+			}
+		})
 	}
 }
 

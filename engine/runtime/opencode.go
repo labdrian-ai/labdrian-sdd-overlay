@@ -507,11 +507,7 @@ func loadOpenCodePromptConfig() (openCodePromptConfig, error) {
 }
 
 func openCodeContractFromContent(path, content string) (openCodeContractConfig, error) {
-	doc, err := contract.Parse(content)
-	if err != nil {
-		return openCodeContractConfig{}, err
-	}
-	needs, err := contract.ParseContext(content)
+	doc, needs, err := contract.ParseBoth(content)
 	if err != nil {
 		return openCodeContractConfig{}, err
 	}

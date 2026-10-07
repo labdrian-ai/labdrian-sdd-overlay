@@ -83,7 +83,7 @@ func refuseOverlayWrite(err error, stderr io.Writer, exit func(int)) {
 
 // skillsAdd is `skills add <id>`: it registers a skill that is in the skills tree and approved.
 func skillsAdd(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-	parsed, err := skillsAddSpec.parse(withoutVerb(args, "add"))
+	parsed, err := skillsAddSpec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return
@@ -120,7 +120,7 @@ func skillsAdd(deps skills.Deps, args []string, stdout, stderr io.Writer, exit f
 // skillsRemove is `skills remove <id>`: it takes a skill out of the registry and the manifest, and
 // deletes no file of the skill.
 func skillsRemove(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-	parsed, err := skillsRemoveSpec.parse(withoutVerb(args, "remove"))
+	parsed, err := skillsRemoveSpec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return
@@ -150,7 +150,7 @@ func skillsRemove(deps skills.Deps, args []string, stdout, stderr io.Writer, exi
 
 // skillsSync is `skills sync-manifest`: it brings the manifest into line with the registry.
 func skillsSync(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-	parsed, err := skillsSyncSpec.parse(withoutVerb(args, "sync-manifest"))
+	parsed, err := skillsSyncSpec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return
@@ -190,7 +190,7 @@ func skillsSync(deps skills.Deps, args []string, stdout, stderr io.Writer, exit 
 // The lock is the one of the registry the wrapper names, which approve does not read: a path
 // given explicitly is only the name of the lock, and the default is not (skills.OverlayLocks).
 func skillsApprove(deps skills.Deps, args []string, stdout, stderr io.Writer, exit func(int)) {
-	parsed, err := skillsApproveSpec.parse(withoutVerb(args, "approve"))
+	parsed, err := skillsApproveSpec.parseAfterVerb(args)
 	if err != nil {
 		refuseSkillsUsage(err, stderr, exit)
 		return

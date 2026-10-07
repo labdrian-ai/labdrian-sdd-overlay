@@ -105,8 +105,7 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 }
 
 // TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported guards the
-// zero-arg NewPiAdapter() path (used by NewFoundationAdapter(TargetPi) and
-// exercised by TestExpandTarget_Pi): with OVERLAY_DIR unset, wiring the
+// path of NewPiAdapter (exercised by TestExpandTarget_Pi): with OVERLAY_DIR unset, wiring the
 // pipkg calls must not fabricate success.
 func TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported(t *testing.T) {
 	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, "", "", t.TempDir())
@@ -453,6 +452,26 @@ func TestPiAdapter_StatusPartialOnUnprovenEntry(t *testing.T) {
 	}
 	if !strings.Contains(result.Message, "listed in ~/.pi/agent/settings.json") {
 		t.Fatalf("Status message should name the unproven listing entry, got %q", result.Message)
+	}
+}
+
+// What the status finds unproven is told once in the line a person reads: the message names each
+// entry, and the line that prints the result does not list the same entries again after it.
+func TestPiAdapter_StatusTellsEachUnprovenEntryOnce(t *testing.T) {
+	t.Setenv("HOME", t.TempDir())
+	overlayRoot, registryPath := piFixtureOverlay(t)
+	destDir := filepath.Join(t.TempDir(), "labdrian-pi")
+	buildPiPackage(t, overlayRoot, registryPath, destDir)
+
+	result := engineRuntime.NewPiAdapterWithPaths(fileRegistries, overlayRoot, registryPath, destDir).Status()
+	if result.Status != engineRuntime.CapabilityPartial {
+		t.Fatalf("Status = %s, want partial", result)
+	}
+	line := result.String()
+	for _, entry := range []string{"listed in ~/.pi/agent/settings.json packages", "longterm-mem registered in mcp.json", "GADU.md linked at"} {
+		if n := strings.Count(line, entry); n != 1 {
+			t.Errorf("the status line names %q %d times, want once:\n%s", entry, n, line)
+		}
 	}
 }
 

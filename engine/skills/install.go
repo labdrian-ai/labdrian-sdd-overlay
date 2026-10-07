@@ -1,6 +1,7 @@
 package skills
 
 import (
+	"errors"
 	"fmt"
 	"io/fs"
 	"path/filepath"
@@ -15,6 +16,12 @@ type CopyOp struct {
 	Dst     string // <targetRoot>/.claude/skills/<entry.ID>
 }
 
+// ErrNoSourceRoot is what PlanInstall says when the registry admits a skill to the project and it
+// was given no source root to read it from: a missing input, not a path that escapes a root. A
+// registry that admits nothing needs none. The planner owns this rule, so the callers cannot
+// disagree with it about what "admits a skill" means.
+var ErrNoSourceRoot = errors.New("no source root is given to read the admitted skills from")
+
 // PlanInstall filters reg for project-scoped skills allowed for projectID,
 // building one CopyOp per admitted entry. Pure: no filesystem access.
 // Declaration order from reg.Skills is preserved in the returned slice.
@@ -27,15 +34,13 @@ func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot strin
 	srcRoot := filepath.Clean(sourceRoot)
 	dstRoot := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills"))
 
-	var ops []CopyOp
-	for _, e := range reg.Skills {
-		if e.Install.DefaultScope != "project" {
-			continue
-		}
-		if !containsString(e.Install.AllowedProjects, projectID.String()) {
-			continue
-		}
+	admitted := AdmittedToProject(reg, projectID)
+	if sourceRoot == "" && len(admitted) > 0 {
+		return nil, ErrNoSourceRoot
+	}
 
+	var ops []CopyOp
+	for _, e := range admitted {
 		src := filepath.Clean(filepath.Join(sourceRoot, e.Path))
 		dst := filepath.Clean(filepath.Join(targetRoot, ".claude", "skills", e.ID))
 
@@ -58,6 +63,18 @@ func PlanInstall(reg Registry, projectID ProjectID, sourceRoot, targetRoot strin
 		})
 	}
 	return ops, nil
+}
+
+// AdmittedToProject is the entries of reg that install to a project of that id: the ones whose
+// default scope is the project and whose allowed projects name it, in the order of the registry.
+func AdmittedToProject(reg Registry, projectID ProjectID) []Entry {
+	var admitted []Entry
+	for _, e := range reg.Skills {
+		if e.Install.DefaultScope == "project" && containsString(e.Install.AllowedProjects, projectID.String()) {
+			admitted = append(admitted, e)
+		}
+	}
+	return admitted
 }
 
 // containsString reports whether slice contains s (case-sensitive).

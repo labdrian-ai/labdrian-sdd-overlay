@@ -99,6 +99,7 @@ func TestGitOriginFollowsALinkedWorktreeToTheCommonDirectory(t *testing.T) {
 	main := mainCheckout(t, originConfig("https://github.com/acme/demo.git"))
 	worktree := filepath.Join(t.TempDir(), "feature-x")
 	gitDir := filepath.Join(main, ".git", "worktrees", "feature-x")
+	put(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/feature-x\n")
 	put(t, filepath.Join(gitDir, "commondir"), "../..\n")
 	put(t, filepath.Join(worktree, ".git"), "gitdir: "+gitDir+"\n")
 
@@ -110,7 +111,9 @@ func TestGitOriginFollowsALinkedWorktreeToTheCommonDirectory(t *testing.T) {
 func TestGitOriginFollowsARelativeGitdirPointer(t *testing.T) {
 	base := t.TempDir()
 	main := filepath.Join(base, "main")
+	put(t, filepath.Join(main, ".git", "HEAD"), "ref: refs/heads/main\n")
 	put(t, filepath.Join(main, ".git", "config"), originConfig("https://github.com/acme/demo.git"))
+	put(t, filepath.Join(main, ".git", "worktrees", "wt", "HEAD"), "ref: refs/heads/wt\n")
 	put(t, filepath.Join(main, ".git", "worktrees", "wt", "commondir"), "../..")
 	put(t, filepath.Join(base, "wt", ".git"), "gitdir: ../main/.git/worktrees/wt")
 
@@ -121,6 +124,7 @@ func TestGitOriginFollowsARelativeGitdirPointer(t *testing.T) {
 
 func TestGitOriginTreatsAGitDirectoryWithNoCommondirAsTheCommonDirectory(t *testing.T) {
 	base := t.TempDir()
+	put(t, filepath.Join(base, "modules", "sub", "HEAD"), "ref: refs/heads/main\n")
 	put(t, filepath.Join(base, "modules", "sub", "config"), originConfig("https://github.com/acme/sub.git"))
 	put(t, filepath.Join(base, "sub", ".git"), "gitdir: "+filepath.Join(base, "modules", "sub")+"\n")
 
@@ -135,13 +139,149 @@ func TestGitOriginHasNoAnswerWhereThereIsNoOrigin(t *testing.T) {
 	localOrigin := mainCheckout(t, originConfig("/srv/git/demo.git"))
 	noConfig := filepath.Join(t.TempDir(), "demo")
 	put(t, filepath.Join(noConfig, ".git", "HEAD"), "ref: refs/heads/main\n")
-	stalePointer := filepath.Join(t.TempDir(), "demo")
-	put(t, filepath.Join(stalePointer, ".git"), "gitdir: "+filepath.Join(t.TempDir(), "gone")+"\n")
 
-	for name, dir := range map[string]string{"a directory that is no repository": plain, "a repository with no origin": noOrigin, "an origin with no host": localOrigin, "a git directory with no config": noConfig, ".git a pointer to a git directory that is gone": stalePointer} {
+	for name, dir := range map[string]string{"a directory that is no repository": plain, "a repository with no origin": noOrigin, "an origin with no host": localOrigin, "a git directory with no config": noConfig} {
 		if id, ok := identify(t, projectidentity.GitOrigin{}, skills.ProjectQuery{Dir: dir}); ok || id != "" {
 			t.Errorf("%s: GitOrigin = %q, %v, want no answer", name, id, ok)
 		}
+	}
+}
+
+// A pointer is trusted only as far as it leads to a git directory, which always has a HEAD. One
+// that leads nowhere (a worktree or a submodule that was moved or removed since), or to a directory
+// that is no git directory (so that its config is not a repository's), is a repository the source
+// could not read: an error that names the file, the directory it names and how to go on, which is
+// to name the project, and the chain does not go on to name it by the directory.
+func TestGitOriginSaysItCannotTellWhenAPointerLeadsToNoGitDirectory(t *testing.T) {
+	hostileConfig := originConfig("https://github.com/evil/trap.git")
+	// Each case says its own reason, not another's.
+	wantReason := map[string]string{
+		"the git directory is gone": "it has no HEAD",
+		"the HEAD is a directory":   "its HEAD is a directory",
+	}
+	for name, build := range map[string]func(t *testing.T) (dir, gitFile, named string){
+		"the git directory is gone": func(t *testing.T) (string, string, string) {
+			dir := filepath.Join(t.TempDir(), "demo")
+			gone := filepath.Join(t.TempDir(), "gone")
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+gone+"\n")
+			return dir, filepath.Join(dir, ".git"), gone
+		},
+		"the directory is no git directory, whatever its config says": func(t *testing.T) (string, string, string) {
+			dir := filepath.Join(t.TempDir(), "demo")
+			notGit := filepath.Join(t.TempDir(), "notgit")
+			put(t, filepath.Join(notGit, "config"), hostileConfig)
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+notGit+"\n")
+			return dir, filepath.Join(dir, ".git"), notGit
+		},
+		"the common directory is no git directory, whatever its config says": func(t *testing.T) (string, string, string) {
+			base := t.TempDir()
+			dir := filepath.Join(base, "demo")
+			gitDir := filepath.Join(base, "wt-git")
+			notGit := filepath.Join(base, "elsewhere")
+			put(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/wt\n")
+			put(t, filepath.Join(gitDir, "commondir"), notGit+"\n")
+			put(t, filepath.Join(notGit, "config"), hostileConfig)
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
+			return dir, filepath.Join(dir, ".git"), notGit
+		},
+		"the HEAD is a directory": func(t *testing.T) (string, string, string) {
+			dir := filepath.Join(t.TempDir(), "demo")
+			gitDir := filepath.Join(t.TempDir(), "gitdir")
+			if err := os.MkdirAll(filepath.Join(gitDir, "HEAD"), 0o755); err != nil {
+				t.Fatal(err)
+			}
+			put(t, filepath.Join(gitDir, "config"), hostileConfig)
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
+			return dir, filepath.Join(dir, ".git"), gitDir
+		},
+		"the common directory is gone": func(t *testing.T) (string, string, string) {
+			base := t.TempDir()
+			dir := filepath.Join(base, "demo")
+			gitDir := filepath.Join(base, "wt-git")
+			put(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/wt\n")
+			put(t, filepath.Join(gitDir, "commondir"), "../gone\n")
+			put(t, filepath.Join(dir, ".git"), "gitdir: "+gitDir+"\n")
+			return dir, filepath.Join(dir, ".git"), filepath.Join(base, "gone")
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir, gitFile, named := build(t)
+
+			id, ok, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: dir})
+			if err == nil || ok || id != "" {
+				t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+			}
+			for _, want := range []string{gitFile, named, "--project-id"} {
+				if !strings.Contains(err.Error(), want) {
+					t.Errorf("the error %q does not say %q", err, want)
+				}
+			}
+			chained := projectidentity.Chain(projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
+			if id, ok, err := chained.Identify(skills.ProjectQuery{Dir: dir}); err == nil || ok || id != "" {
+				t.Errorf("Chain = %q, %v, %v, want the error, not the name of the directory", id, ok, err)
+			}
+			if want := wantReason[name]; want != "" && !strings.Contains(err.Error(), want) {
+				t.Errorf("the error %q does not say %q", err, want)
+			}
+			// A person who names the project does not need to look.
+			withTheID := projectidentity.Chain(projectidentity.Explicit{}, projectidentity.GitOrigin{}, projectidentity.DirectoryName{})
+			if id, ok, err := withTheID.Identify(skills.ProjectQuery{Dir: dir, Explicit: "given"}); err != nil || !ok || id != "given" {
+				t.Errorf("Chain with --project-id = %q, %v, %v, want it answered as given", id, ok, err)
+			}
+		})
+	}
+}
+
+// A HEAD that cannot be looked at is told as that, whatever the system says: the stat is injected,
+// so the test does not depend on how a platform refuses one. The error is kept, and the way on is
+// the same as for any pointer that leads nowhere.
+func TestGitOriginSaysItCannotTellWhenTheHeadCannotBeLookedAt(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "demo")
+	gitDir := filepath.Join(base, "gitdir")
+	put(t, filepath.Join(gitDir, "HEAD"), "ref: refs/heads/main\n")
+	put(t, filepath.Join(gitDir, "config"), originConfig("https://github.com/acme/demo.git"))
+	gitFile := filepath.Join(dir, ".git")
+	put(t, gitFile, "gitdir: "+gitDir+"\n")
+	denied := &fs.PathError{Op: "stat", Path: filepath.Join(gitDir, "HEAD"), Err: fs.ErrPermission}
+	source := projectidentity.GitOrigin{Stat: func(path string) (fs.FileInfo, error) {
+		if path == filepath.Join(gitDir, "HEAD") {
+			return nil, denied
+		}
+		return os.Stat(path)
+	}}
+
+	id, ok, err := source.Identify(skills.ProjectQuery{Dir: dir})
+	if err == nil || ok || id != "" {
+		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+	}
+	if !errors.Is(err, fs.ErrPermission) {
+		t.Errorf("the error %q does not wrap fs.ErrPermission", err)
+	}
+	for _, want := range []string{gitFile, gitDir, "whose HEAD cannot be looked at", "--project-id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error %q does not say %q", err, want)
+		}
+	}
+}
+
+// The real file system, where a HEAD that links to itself cannot be looked at whoever asks: the
+// same refusal as the injected one above, reached without a seam where symlinks are supported.
+func TestGitOriginSaysItCannotTellWhenTheHeadLinksToItself(t *testing.T) {
+	base := t.TempDir()
+	dir := filepath.Join(base, "demo")
+	loop := filepath.Join(base, "loop")
+	if err := os.MkdirAll(loop, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink("HEAD", filepath.Join(loop, "HEAD")); err != nil {
+		t.Skipf("no symlinks to make a HEAD that links to itself: %v", err)
+	}
+	put(t, filepath.Join(dir, ".git"), "gitdir: "+loop+"\n")
+
+	_, _, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: dir})
+	if err == nil || !strings.Contains(err.Error(), "whose HEAD cannot be looked at") || !strings.Contains(err.Error(), "--project-id") {
+		t.Errorf("error = %v, want it to say the HEAD cannot be looked at and how to go on", err)
 	}
 }
 

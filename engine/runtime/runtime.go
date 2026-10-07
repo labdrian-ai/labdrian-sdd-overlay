@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/contract"
-	"github.com/labdrian-ai/labdrian-sdd-overlay/engine/skills"
 )
 
 type Target string
@@ -179,9 +178,12 @@ func ExpandTarget(target Target) []Target {
 	return []Target{TargetClaude, TargetOpenCode, TargetCodex, TargetPi}
 }
 
-// NewFoundationAdapter returns the adapter of target. registries is how the adapters that build
-// a package from the skills registry (Pi) read it; the others do not read the registry.
-func NewFoundationAdapter(target Target, registries skills.RegistryRepository) Adapter {
+// NewFoundationAdapter returns the adapter of target for the targets that read no registry:
+// Claude, OpenCode and Codex, and, for any other target, the foundation that reports every
+// action unsupported. Pi builds a package from the skills registry and is built with
+// NewPiAdapter, which is given the way to read it; this function never builds it, so a caller
+// that forgot the registry gets the honest "unsupported" and not an adapter with no registry.
+func NewFoundationAdapter(target Target) Adapter {
 	if target == TargetOpenCode {
 		return NewOpenCodeAdapter(DefaultOpenCodeConfigRoot())
 	}
@@ -190,9 +192,6 @@ func NewFoundationAdapter(target Target, registries skills.RegistryRepository) A
 	}
 	if target == TargetCodex {
 		return NewCodexAdapter(DefaultCodexConfigRoot())
-	}
-	if target == TargetPi {
-		return NewPiAdapter(registries)
 	}
 	return foundationAdapter{target: target}
 }
