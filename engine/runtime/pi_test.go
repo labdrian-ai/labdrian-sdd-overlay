@@ -105,8 +105,7 @@ func TestPiAdapter_ApplyInstallSyncCheck_WiredToPipkg(t *testing.T) {
 }
 
 // TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported guards the
-// zero-arg NewPiAdapter() path (used by NewFoundationAdapter(TargetPi) and
-// exercised by TestExpandTarget_Pi): with OVERLAY_DIR unset, wiring the
+// path of NewPiAdapter (exercised by TestExpandTarget_Pi): with OVERLAY_DIR unset, wiring the
 // pipkg calls must not fabricate success.
 func TestPiAdapter_ApplyWithoutOverlayRoot_StaysHonestlyUnsupported(t *testing.T) {
 	adapter := engineRuntime.NewPiAdapterWithPaths(fileRegistries, "", "", t.TempDir())

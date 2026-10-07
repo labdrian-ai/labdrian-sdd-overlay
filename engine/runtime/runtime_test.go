@@ -177,10 +177,7 @@ func TestExpandTarget_Pi(t *testing.T) {
 		t.Fatalf("ExpandTarget(pi) = %#v, want [pi]", single)
 	}
 
-	adapter := engineRuntime.NewFoundationAdapter(engineRuntime.TargetPi, fileRegistries)
-	if _, ok := adapter.(engineRuntime.PiAdapter); !ok {
-		t.Fatalf("NewFoundationAdapter(pi) should return PiAdapter, got %T", adapter)
-	}
+	var adapter engineRuntime.Adapter = engineRuntime.NewPiAdapter(fileRegistries)
 	if adapter.Target() != engineRuntime.TargetPi {
 		t.Fatalf("PiAdapter.Target() = %q, want %q", adapter.Target(), engineRuntime.TargetPi)
 	}
@@ -231,7 +228,7 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 	}
 
 	t.Setenv("HOME", t.TempDir())
-	claude := engineRuntime.NewFoundationAdapter(engineRuntime.TargetClaude, fileRegistries)
+	claude := engineRuntime.NewFoundationAdapter(engineRuntime.TargetClaude)
 	if _, ok := claude.(engineRuntime.ClaudeAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(claude) should return ClaudeAdapter foundation")
 	}
@@ -239,7 +236,7 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 		t.Fatalf("Claude foundation status should be unsupported in an empty HOME sandbox, got target=%q status=%q", claude.Target(), claude.Status().Status)
 	}
 
-	codex := engineRuntime.NewFoundationAdapter(engineRuntime.TargetCodex, fileRegistries)
+	codex := engineRuntime.NewFoundationAdapter(engineRuntime.TargetCodex)
 	if _, ok := codex.(engineRuntime.CodexAdapter); !ok {
 		t.Fatalf("NewFoundationAdapter(codex) should return CodexAdapter foundation")
 	}
@@ -247,7 +244,17 @@ func TestExpandTargetAndFoundationAdapters(t *testing.T) {
 		t.Fatalf("Codex foundation status should be partial in an empty HOME sandbox, got target=%q status=%q", codex.Target(), codex.Status().Status)
 	}
 
-	unknown := engineRuntime.NewFoundationAdapter(engineRuntime.Target("future"), fileRegistries)
+	// Pi reads the skills registry and is built with NewPiAdapter, which is given the way to read
+	// it; the foundation never stands in for it, it reports the target unsupported.
+	pi := engineRuntime.NewFoundationAdapter(engineRuntime.TargetPi)
+	if _, ok := pi.(engineRuntime.PiAdapter); ok {
+		t.Fatalf("NewFoundationAdapter(pi) returned a PiAdapter built with no registry")
+	}
+	if result := pi.Apply(); result.Target != engineRuntime.TargetPi || result.Status != engineRuntime.CapabilityUnsupported {
+		t.Fatalf("NewFoundationAdapter(pi).Apply() = %#v, want the pi target reported unsupported", result)
+	}
+
+	unknown := engineRuntime.NewFoundationAdapter(engineRuntime.Target("future"))
 	for _, result := range []engineRuntime.LifecycleResult{
 		unknown.Apply(), unknown.Install(), unknown.Status(), unknown.SyncCheck(), unknown.Update(), unknown.Rollback(), unknown.Uninstall(),
 	} {

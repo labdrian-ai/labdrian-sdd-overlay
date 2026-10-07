@@ -580,7 +580,10 @@ func runtimeAdapterForTarget(target runtimepkg.Target, configRoot string, stderr
 	if target == runtimepkg.TargetCodex {
 		return runtimepkg.NewCodexAdapter(configRoot)
 	}
-	return runtimepkg.NewFoundationAdapter(target, newWarningRegistryRepository(stderr))
+	if target == runtimepkg.TargetPi {
+		return runtimepkg.NewPiAdapter(newWarningRegistryRepository(stderr))
+	}
+	return runtimepkg.NewFoundationAdapter(target)
 }
 
 // parseRuntimeArgs parses minimal runtime subcommand arguments.
