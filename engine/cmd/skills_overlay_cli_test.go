@@ -351,6 +351,32 @@ func TestOverlayVerbsTakeExactlyTheLocksThePolicySaysForThem(t *testing.T) {
 	}
 }
 
+// approve takes a value that begins with a dash for the next flag, for the flags the wrapper
+// appends as much as for the ones a person types: the verb cannot tell the two apart, and a
+// `--manifest` typed with no value would otherwise swallow `--id`. The wrapper names its paths with
+// $OVERLAY_DIR, which is absolute unless a person sets it to a relative path that begins with a
+// dash. The old verb refused it the same way. A real invocation is refused, says which flag, asks
+// for no lock and writes nothing.
+func TestApproveRefusesAWrapperPathThatBeginsWithADashAndAsksForNoLock(t *testing.T) {
+	w := newOverlayWorld(t)
+	locker := &holdingLocker{}
+	before := w.snapshot()
+
+	r := w.run(skillsApprove, w.deps(locker, os.ReadFile),
+		"approve", "--id", "existing", "--approver", "reviewer", "--source-root", w.root, "--registry", w.reg, "--manifest", "-overlay/overlay.manifest")
+
+	want := "error: skills approve: flag \"--manifest\" requires a value; got flag token \"-overlay/overlay.manifest\"\n"
+	if r.code() != 1 || r.stdout != "" || r.stderr != want {
+		t.Errorf("exit %d, stdout %q, stderr %q, want exit 1 and %q", r.code(), r.stdout, r.stderr, want)
+	}
+	if got := locker.log(); len(got) != 0 {
+		t.Errorf("lock events = %v, want none", got)
+	}
+	if !reflect.DeepEqual(before, w.snapshot()) {
+		t.Error("a refused approve changed files")
+	}
+}
+
 func TestOverlayVerbsLockTheRegistryTheyName(t *testing.T) {
 	w := newOverlayWorld(t)
 	other := filepath.Join(w.dir, "other", "team.registry.yaml")

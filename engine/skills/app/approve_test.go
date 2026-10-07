@@ -284,3 +284,31 @@ func TestApprovePutsBackWhatItStagedWhenItCannotWriteTheRecord(t *testing.T) {
 		})
 	}
 }
+
+// The baseline that decides which lint findings are warnings is the one the caller names: a skill
+// it names is approved with its legacy findings told as warnings, one it does not is refused.
+func TestApproveReadsWhichSkillsAreLegacyFromTheBaselineItIsGiven(t *testing.T) {
+	overBudget := skillFor("legacy-x") + strings.Repeat("Another line of the procedure, long enough to count.\n", 100)
+	for _, tc := range []struct {
+		name     string
+		baseline skills.BaselineLookup
+		refused  bool
+	}{
+		{"named", func(id string) (string, bool) { return "", id == "legacy-x" }, false},
+		{"not named", func(id string) (string, bool) { return "", false }, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			w := newApproveWorld(t, "legacy-x")
+			put(t, filepath.Join(w.root, "legacy-x", "SKILL.md"), overBudget)
+			ports := w.ports(newStagedSpy(nil), fixedClock(approvedAt))
+			ports.Baseline = tc.baseline
+
+			res, err := ApproveSkill(ports, ApproveInput{ID: "legacy-x", Approver: "reviewer", ApproverGiven: true, SourceRoot: w.root})
+
+			var lint *LintRefusal
+			if tc.refused != errors.As(err, &lint) || (!tc.refused && (err != nil || len(res.Warnings) == 0)) {
+				t.Errorf("ApproveSkill = %+v, %v, want refused=%v", res, err, tc.refused)
+			}
+		})
+	}
+}

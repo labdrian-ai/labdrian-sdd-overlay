@@ -36,6 +36,8 @@ type AddPorts struct {
 	Approvals skills.ApprovalRecordStore
 	// Staged writes the manifest and the registry.
 	Staged skills.StagedWrites
+	// Baseline says which skills are grandfathered; nil is the baseline the domain pins.
+	Baseline skills.BaselineLookup
 }
 
 // AddResult is what add did, or how far it got: UnreadWarning says what the reader left out of
@@ -138,7 +140,7 @@ func AddSkill(p AddPorts, in AddInput) (AddResult, error) {
 	if err != nil {
 		return res, err
 	}
-	if verdict := skills.EvaluateApproval(in.ID, skills.ApprovalRecordPath(in.SourceRoot, in.ID), skillData, approval); !verdict.OK {
+	if verdict := skills.EvaluateApprovalAgainst(p.Baseline.OrFixed(), in.ID, skills.ApprovalRecordPath(in.SourceRoot, in.ID), skillData, approval); !verdict.OK {
 		return res, &NotApprovedError{Class: verdict.Class, Detail: verdict.Detail}
 	}
 

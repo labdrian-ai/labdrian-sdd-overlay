@@ -234,6 +234,37 @@ func TestGitOriginSaysWhichDirectoryItCouldNotReadAndHowToGoOn(t *testing.T) {
 	}
 }
 
+// The same refusal, reached in a way that does not depend on permissions, so that it is proved for
+// root too: a .git that links to itself cannot be looked at, whoever asks. The cause is kept, and
+// the way on is the same.
+func TestGitOriginSaysWhichDirectoryItCouldNotLookAtWhateverTheUser(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "project")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(".git", filepath.Join(dir, ".git")); err != nil {
+		t.Skipf("cannot make a symbolic link here: %v", err)
+	}
+
+	id, ok, err := projectidentity.GitOrigin{}.Identify(skills.ProjectQuery{Dir: dir})
+
+	if err == nil || ok || id != "" {
+		t.Fatalf("GitOrigin = %q, %v, %v, want an error", id, ok, err)
+	}
+	for _, want := range []string{dir, "--project-id"} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("the error %q does not say %q", err, want)
+		}
+	}
+	var pathErr *fs.PathError
+	if errors.As(err, &pathErr) {
+		t.Errorf("the error %q carries the path error of the system twice", err)
+	}
+	if errors.Unwrap(err) == nil {
+		t.Errorf("the error %q does not keep its cause", err)
+	}
+}
+
 func TestEveryRecordedRemoteVectorGivesTheRecordedIdentity(t *testing.T) {
 	var vectors []struct {
 		URL  string `json:"url"`

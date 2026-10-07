@@ -55,13 +55,18 @@ func approveHint(id string) string {
 // no filesystem access. `skills add` and `skills validate` share it, so they
 // can never disagree about what is approved.
 func EvaluateApproval(id, recordPath string, skillMD []byte, status ApprovalStatus) ApprovalVerdict {
+	return EvaluateApprovalAgainst(FixedBaseline, id, recordPath, skillMD, status)
+}
+
+// EvaluateApprovalAgainst is EvaluateApproval with the baseline the caller names.
+func EvaluateApprovalAgainst(baseline BaselineLookup, id, recordPath string, skillMD []byte, status ApprovalStatus) ApprovalVerdict {
 	switch status.State {
 	case ApprovalValid:
 		return ApprovalVerdict{OK: true}
 
 	case ApprovalAbsent:
 		digest := SkillDigest(skillMD)
-		pinned, inBaseline := baselineDigest(id)
+		pinned, inBaseline := baseline(id)
 		if inBaseline && pinned == digest {
 			return ApprovalVerdict{OK: true, Grandfathered: true}
 		}
@@ -118,6 +123,11 @@ type ApprovalSummary struct {
 // The entry's Path names its directory under sourceRoot and is the skill id the
 // record must carry (AddEntry always registers Path == ID).
 func CheckApprovals(reg Registry, sourceRoot string, records ApprovalRecordStore) ([]Divergence, ApprovalSummary) {
+	return CheckApprovalsAgainst(FixedBaseline, reg, sourceRoot, records)
+}
+
+// CheckApprovalsAgainst is CheckApprovals with the baseline the caller names.
+func CheckApprovalsAgainst(baseline BaselineLookup, reg Registry, sourceRoot string, records ApprovalRecordStore) ([]Divergence, ApprovalSummary) {
 	var divs []Divergence
 	var sum ApprovalSummary
 	for _, e := range reg.Skills {
@@ -147,7 +157,7 @@ func CheckApprovals(reg Registry, sourceRoot string, records ApprovalRecordStore
 			continue
 		}
 
-		verdict := EvaluateApproval(e.Path, ApprovalRecordPath(sourceRoot, e.Path), skillMD, status)
+		verdict := EvaluateApprovalAgainst(baseline, e.Path, ApprovalRecordPath(sourceRoot, e.Path), skillMD, status)
 		switch {
 		case !verdict.OK:
 			divs = append(divs, Divergence{Class: verdict.Class, Path: e.Path, Detail: verdict.Detail})
