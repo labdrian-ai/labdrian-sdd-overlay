@@ -107,9 +107,10 @@ func (r ExitReply) Code() int {
 	return ExitAllow
 }
 
-// Stderr is what the hook writes to stderr: the message and a line break, or nothing for no
-// message.
-func (r ExitReply) Stderr() []byte {
+// MessageLine is the message as a line: the message and a line break, or nothing for no
+// message. It only renders; the caller decides where the line goes (the hooks write it to
+// stderr, which is where Claude Code reads the reason of a block).
+func (r ExitReply) MessageLine() []byte {
 	if r.Message == "" {
 		return nil
 	}

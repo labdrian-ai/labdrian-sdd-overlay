@@ -165,26 +165,26 @@ func TestExitReplySaysAllowAndBlockByTheExitStatus(t *testing.T) {
 
 // What a hook of this kind says goes to stderr, which Claude Code feeds to the model on a block:
 // the message and a line break, and nothing for no message.
-func TestExitReplyWritesItsMessageAsALine(t *testing.T) {
-	if got := string((hookwire.ExitReply{Block: true, Message: "denied: why"}).Stderr()); got != "denied: why\n" {
-		t.Errorf("Stderr() = %q, want the message and a line break", got)
+func TestExitReplyRendersItsMessageAsALine(t *testing.T) {
+	if got := string((hookwire.ExitReply{Block: true, Message: "denied: why"}).MessageLine()); got != "denied: why\n" {
+		t.Errorf("MessageLine() = %q, want the message and a line break", got)
 	}
-	if got := (hookwire.ExitReply{}).Stderr(); len(got) != 0 {
+	if got := (hookwire.ExitReply{}).MessageLine(); len(got) != 0 {
 		t.Errorf("an allow wrote %q, want nothing", got)
 	}
-	if got := string((hookwire.ExitReply{Block: true, Message: "two\nlines\n"}).Stderr()); got != "two\nlines\n\n" {
-		t.Errorf("Stderr() = %q, want the message as it is and one line break more", got)
+	if got := string((hookwire.ExitReply{Block: true, Message: "two\nlines\n"}).MessageLine()); got != "two\nlines\n\n" {
+		t.Errorf("MessageLine() = %q, want the message as it is and one line break more", got)
 	}
 	// A block with no message is still a block, and says nothing.
 	r := hookwire.ExitReply{Block: true}
-	if r.Code() != hookwire.ExitBlock || len(r.Stderr()) != 0 {
-		t.Errorf("a block with no message = exit %d, %q, want exit 2 and nothing", r.Code(), r.Stderr())
+	if r.Code() != hookwire.ExitBlock || len(r.MessageLine()) != 0 {
+		t.Errorf("a block with no message = exit %d, %q, want exit 2 and nothing", r.Code(), r.MessageLine())
 	}
 	// A message on an allow is still said: the caller decides what it says.
-	if got := string((hookwire.ExitReply{Message: "note"}).Stderr()); got != "note\n" {
+	if got := string((hookwire.ExitReply{Message: "note"}).MessageLine()); got != "note\n" {
 		t.Errorf("a message on an allow = %q, want it said", got)
 	}
-	if strings.Contains(string((hookwire.ExitReply{Block: true, Message: "x"}).Stderr()), "\r") {
-		t.Error("Stderr() writes a carriage return")
+	if strings.Contains(string((hookwire.ExitReply{Block: true, Message: "x"}).MessageLine()), "\r") {
+		t.Error("MessageLine() writes a carriage return")
 	}
 }

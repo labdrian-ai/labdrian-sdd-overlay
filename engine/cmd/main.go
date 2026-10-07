@@ -841,7 +841,7 @@ func runReviewReceiptHook(args []string) {
 	}
 	verdict := svc.CheckCommand(command)
 	reply := hookwire.ExitReply{Block: verdict.Deny, Message: verdict.Reason}
-	_, _ = os.Stderr.Write(reply.Stderr())
+	_, _ = os.Stderr.Write(reply.MessageLine())
 	os.Exit(reply.Code())
 }
 
